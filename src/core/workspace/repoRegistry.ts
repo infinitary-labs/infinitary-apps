@@ -45,7 +45,12 @@ import type { NamingRule } from "@shared/runbooks";
 import { PERSONAL_WORKSPACE_NAME } from "../paths";
 import { CostLimitStore } from "../storage/costLimitStore";
 import type { AppDatabase } from "../storage/db";
-import { ensureRepoProject, joinableProject, ProjectStore } from "../storage/projectStore";
+import {
+  ensureRepoProject,
+  joinableProject,
+  type ProjectRecord,
+  ProjectStore,
+} from "../storage/projectStore";
 import type { SettingsStore } from "../storage/settingsStore";
 import { prepared } from "../storage/statements";
 import { APP_GIT_IDENTITY, git, isGitRepo } from "./git";
@@ -109,6 +114,9 @@ type Row = {
   batch_json?: string | null;
   no_checks_json?: string | null;
 };
+
+/** Where a new repository goes: a task key of its own, or the existing project it joins by key. */
+type Into = { key?: string | undefined; project?: string | undefined };
 
 const ROW_COLUMNS =
   "id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, contribution_json, batch_json, no_checks_json";
@@ -411,9 +419,10 @@ export class RepoRegistry {
    */
   async setup(spec: RepoSetupSpec): Promise<RepoSetupResult> {
     mkdirSync(this.fleetRoot, { recursive: true });
-    if (spec.kind === "clone") return this.clone(spec.origin, spec.name, spec.key);
-    if (spec.kind === "init") return this.init(spec.name, spec.key);
-    return this.adopt(spec.path, spec.name, spec.key);
+    const into = { key: spec.key, project: spec.project };
+    if (spec.kind === "clone") return this.clone(spec.origin, spec.name, into);
+    if (spec.kind === "init") return this.init(spec.name, into);
+    return this.adopt(spec.path, spec.name, into);
   }
 
   /**
@@ -438,7 +447,7 @@ export class RepoRegistry {
       const existing = sameOrigin(origin);
       if (existing) return { existing: fromRow(existing) };
       const name = this.uniqueName(spec.name ?? nameFromOrigin(origin), this.newProjectParent());
-      return { name, origin, host: lives(origin), startsGit: false, ...this.chosenKey(spec.key) };
+      return { name, origin, host: lives(origin), startsGit: false, ...this.chosenPlace(spec) };
     }
     if (spec.kind === "init") {
       const name = spec.name.trim();
@@ -450,7 +459,7 @@ export class RepoRegistry {
       if (this.nameTaken(name, this.newProjectParent())) {
         throw new Error(`A fleet entry named "${name}" already exists; pick another name.`);
       }
-      return { name, origin: null, host: null, startsGit: false, ...this.chosenKey(spec.key) };
+      return { name, origin: null, host: null, startsGit: false, ...this.chosenPlace(spec) };
     }
     const abs = resolve(spec.path.trim());
     let isDirectory = false;
@@ -480,13 +489,42 @@ export class RepoRegistry {
       origin,
       host: lives(origin),
       startsGit,
-      ...this.chosenKey(spec.key),
+      ...this.chosenPlace(spec),
     };
   }
 
   /** A chosen task key as a check reads it: normalized, or refused in words. */
   private chosenKey(key: string | undefined): { key?: string } {
     return key === undefined ? {} : { key: this.projects.freeKey(key) };
+  }
+
+  /**
+   * Where a new repository goes, as a check reads it: the existing project
+   * it joins (INF-4220), or the task key chosen for its own; refused in words.
+   */
+  private chosenPlace(spec: { key?: string | undefined; project?: string | undefined }): {
+    key?: string;
+    project?: { key: string; name: string };
+  } {
+    if (spec.project === undefined) return this.chosenKey(spec.key);
+    const joined = this.joining(spec.project, spec.key);
+    return { project: { key: joined.key, name: joined.name } };
+  }
+
+  /** The project a new repository joins, by its task key, or the refusal in words. */
+  private joining(projectKey: string, key: string | undefined): ProjectRecord {
+    if (key !== undefined)
+      throw new Error("A repository joins a project or gets a task key of its own, never both.");
+    const project = this.projects.byKey(projectKey.trim());
+    if (!project) throw new Error(`No project has the task key ${projectKey.trim()}.`);
+    joinableProject(this.db, project.id);
+    return project;
+  }
+
+  /** What `insert` saves for a chosen place: the project id it joins, or its own task key. */
+  private placeOf(into: Into): { projectKey?: string; project?: string } {
+    if (into.project === undefined) return { projectKey: this.chosenKey(into.key).key };
+    return { project: this.joining(into.project, into.key).id };
   }
 
   /**
@@ -888,21 +926,62 @@ export class RepoRegistry {
       const project = this.projects.forRepo(id);
       this.db.prepare("DELETE FROM repos WHERE id = ?").run(id);
       this.projection?.delete(id);
+      if (!project) return;
       // The project archives once its last repository leaves, never deletes:
       // its closed tasks stay readable.
-      if (project) this.projects.archiveIfEmpty(project.id);
+      this.projects.archiveIfEmpty(project.id);
+      // One left of several (INF-4220): a project of one is named with its
+      // repository, so it takes that repository's name back.
+      const left = this.projects.repositoriesOf(project.id);
+      if (left.length === 1 && left[0]) this.projects.renameForRepo(left[0].id, left[0].name);
     });
     drop();
   }
 
-  private async clone(originRaw: string, name?: string, key?: string): Promise<RepoSetupResult> {
+  /**
+   * The project a registered repository belongs to, with how many it holds
+   * (INF-4220); undefined for a repository no longer here.
+   */
+  projectOf(
+    repoId: string,
+  ): { id: string; key: string; name: string; repositories: number } | undefined {
+    if (!this.get(repoId)) return undefined;
+    const project = this.projects.forRepo(repoId);
+    if (!project) return undefined;
+    const { id, key, name } = project;
+    return { id, key, name, repositories: this.projects.repositoriesOf(id).length };
+  }
+
+  /**
+   * Name a project of several repositories (INF-4220). A project of one is
+   * named with its repository, through `configure`, as before.
+   */
+  renameProject(projectId: string, raw: string): { id: string; name: string; was: string } {
+    const name = raw.trim();
+    if (!name) throw new Error("A project needs a name.");
+    const project = this.projects.get(projectId);
+    if (project?.kind !== "repo" || project.archivedAt !== null)
+      throw new Error("That project is not here. It may have been removed.");
+    if (this.projects.repositoriesOf(projectId).length < 2)
+      throw new Error(
+        `${project.name} is named with its repository; rename the repository instead.`,
+      );
+    this.projects.rename(projectId, name);
+    return { id: projectId, name, was: project.name };
+  }
+
+  private async clone(
+    originRaw: string,
+    name: string | undefined,
+    into: Into,
+  ): Promise<RepoSetupResult> {
     const origin = originRaw.trim();
     if (!origin) throw new Error("clone needs a remote URL in origin.");
     const existing = this.db
       .prepare(`SELECT ${ROW_COLUMNS} FROM repos WHERE origin = ? AND setup_kind = 'clone'`)
       .get(origin) as Row | undefined;
     if (existing) return { repo: fromRow(existing), created: false };
-    const { key: projectKey } = this.chosenKey(key);
+    const place = this.placeOf(into);
     const parent = this.newProjectParent();
     const repoName = this.uniqueName(name ?? nameFromOrigin(origin), parent);
     const target = join(parent, repoName);
@@ -918,12 +997,12 @@ export class RepoRegistry {
       setupKind: "clone",
       origin,
       delivery: "direct-pr",
-      projectKey,
+      ...place,
     });
     return { repo, created: true, ...(createdInitialCommit ? { createdInitialCommit } : {}) };
   }
 
-  private async init(nameRaw: string, key?: string): Promise<RepoSetupResult> {
+  private async init(nameRaw: string, into: Into): Promise<RepoSetupResult> {
     const name = nameRaw.trim();
     if (!/^[\w][\w.-]*$/.test(name)) {
       throw new Error(
@@ -934,7 +1013,7 @@ export class RepoRegistry {
     if (this.nameTaken(name, parent)) {
       throw new Error(`A fleet entry named "${name}" already exists; pick another name.`);
     }
-    const { key: projectKey } = this.chosenKey(key);
+    const place = this.placeOf(into);
     const target = join(parent, name);
     await git(parent, ["init", "-b", "main", name]);
     this.linkFromFleetRoot(parent, name);
@@ -945,12 +1024,16 @@ export class RepoRegistry {
       setupKind: "init",
       origin: null,
       delivery: "local-only",
-      projectKey,
+      ...place,
     });
     return { repo, created: true, ...(createdInitialCommit ? { createdInitialCommit } : {}) };
   }
 
-  private async adopt(pathRaw: string, name?: string, key?: string): Promise<RepoSetupResult> {
+  private async adopt(
+    pathRaw: string,
+    name: string | undefined,
+    into: Into,
+  ): Promise<RepoSetupResult> {
     const abs = resolve(pathRaw.trim());
     let isDirectory = false;
     try {
@@ -966,7 +1049,7 @@ export class RepoRegistry {
       | Row
       | undefined;
     if (existing) return { repo: fromRow(existing), created: false };
-    const { key: projectKey } = this.chosenKey(key);
+    const place = this.placeOf(into);
 
     const initializedGit = !(await isGitRepo(abs));
     if (initializedGit) await git(abs, ["init", "-b", "main"]);
@@ -984,7 +1067,7 @@ export class RepoRegistry {
       setupKind: "adopt",
       origin,
       delivery: origin ? "direct-pr" : "local-only",
-      projectKey,
+      ...place,
     });
     return {
       repo,
@@ -1003,6 +1086,8 @@ export class RepoRegistry {
     delivery: RepoDelivery;
     /** The task key chosen for it, checked free; derived from the name when absent. */
     projectKey?: string | undefined;
+    /** The existing project it joins, by id, checked joinable. */
+    project?: string | undefined;
   }): RepoView {
     const repo = saveNewRepo(
       this.db,

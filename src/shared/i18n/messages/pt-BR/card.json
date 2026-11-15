@@ -133,6 +133,7 @@
   "cardRecordNoVerdict": "Seu imediato ainda não disse.",
   "cardRecordPartOf": "Parte de",
   "cardRecordParts": "Partes",
+  "cardRecordProjectRepository": "{project} · {repository}",
   "cardRecordRunsOn": "Roda em",
   "cardRecordSpend": "Gasto",
   "cardRecordStillStarting": "Ainda começando. Você pode continuar trabalhando.",

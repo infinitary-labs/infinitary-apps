@@ -51,6 +51,7 @@
   "feedProjectCreated": "{who}Projet {name} · créé",
   "feedProjectLinked": "{who}Projet {name} · lié",
   "feedProjectRemoved": "{who}Projet {name} · retiré",
+  "feedProjectRepositoryAdded": "{who}Projet {project} · {name} ajouté",
   "feedProjectSettings": "{who}Projet {name} · réglages : {delivery}, {merging}",
   "feedProjectSettingsCare": "{who}Projet {name} · réglages : {delivery}, {merging}, soin : {care}",
   "feedPullOpened": "Demande de tirage ouverte",

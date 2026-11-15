@@ -51,6 +51,7 @@
   "feedProjectCreated": "{who}项目 {name} · 已创建",
   "feedProjectLinked": "{who}项目 {name} · 已关联",
   "feedProjectRemoved": "{who}项目 {name} · 已移除",
+  "feedProjectRepositoryAdded": "{who}项目 {project} · 已添加 {name}",
   "feedProjectSettings": "{who}项目 {name} · 设置：{delivery}，{merging}",
   "feedProjectSettingsCare": "{who}项目 {name} · 设置：{delivery}，{merging}，把关：{care}",
   "feedPullOpened": "已创建拉取请求",

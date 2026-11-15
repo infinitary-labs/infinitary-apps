@@ -309,6 +309,7 @@
 "cardRecordNoVerdict" = "لم يُبدِ نائب القبطان رأيه بعد.";
 "cardRecordPartOf" = "جزء من";
 "cardRecordParts" = "الأجزاء";
+"cardRecordProjectRepository" = "%1$@ · %2$@";
 "cardRecordRunsOn" = "تعمل على";
 "cardRecordSpend" = "الإنفاق";
 "cardRecordStillStarting" = "لا تزال قيد البدء. يمكنك متابعة العمل.";
@@ -654,6 +655,7 @@
 "feedProjectCreated" = "%2$@المشروع %1$@ · أُنشئ";
 "feedProjectLinked" = "%2$@المشروع %1$@ · رُبط";
 "feedProjectRemoved" = "%2$@المشروع %1$@ · أُزيل";
+"feedProjectRepositoryAdded" = "%3$@المشروع %2$@ · أُضيف %1$@";
 "feedProjectSettings" = "%4$@المشروع %3$@ · الإعدادات: %1$@، %2$@";
 "feedProjectSettingsCare" = "%5$@المشروع %4$@ · الإعدادات: %2$@، %3$@، العناية: %1$@";
 "feedPullOpened" = "فُتح طلب سحب";
@@ -1880,6 +1882,11 @@
 "settingsAddProjectTaskKeyPlaceholder" = "من اسمه";
 "settingsAddProjectWrongHost" = "الصق رابط مشروع على %1$@. لمستضيف آخر، اسأل نائب القبطان.";
 "settingsAddProjectYourRepos" = "مستودعاتك على %1$@";
+"settingsAddRepositoryAdded" = "أُضيف %1$@ إلى %2$@.";
+"settingsAddRepositoryLabel" = "إضافة مستودع إلى %1$@";
+"settingsAddRepositoryNew" = "مستودع جديد";
+"settingsAddRepositoryNext" = "ينضم المستودع الذي تضيفه هنا إلى %2$@، وتأخذ مهامه رمز المهام %1$@.";
+"settingsAddRepositoryTitle" = "إضافة مستودع";
 "settingsAppearanceCardFull" = "كامل";
 "settingsAppearanceCardMaximized" = "مكبّر";
 "settingsAppearanceCardSize" = "حجم البطاقة الافتراضي";
@@ -2550,6 +2557,7 @@
 "settingsProjectsFolderPickerFailed" = "تعذّر فتح منتقي المجلدات. يُرجى المحاولة مجددًا.";
 "settingsProjectsFolderSave" = "حفظ";
 "settingsProjectsFolderUseDefault" = "استخدام الافتراضي";
+"settingsProjectsGroupNameDescription" = "يحتفظ مشروعك برمزه %1$@ وسجله. ويحتفظ كل مستودع باسمه.";
 "settingsProjectsIntro" = "أضف مشروعًا هنا أو اطلب ذلك من نائب القبطان، وافتح مشروعًا لتغيير طريقة عمله. لا يذكر الصف إلا ما يختلف عن المشروع الجديد، الذي يُقدَّم كطلبات سحب حيث يُستضاف، وينتظر كلمتك قبل الدمج، ويأخذ العناية الافتراضية، ويعمل على حاسوب يُختار تلقائيًا.";
 "settingsProjectsLabel" = "المشاريع";
 "settingsProjectsLocalCareful" = "التغييرات التي تُدمج محليًا تُنجز بتأنٍّ، دون مراجعة - فلا يوجد طلب سحب للاطلاع عليه.";
@@ -2567,6 +2575,7 @@
 "settingsProjectsRemoveNamed" = "إزالة %1$@";
 "settingsProjectsRemoveTitle" = "إزالة المشروع";
 "settingsProjectsRemoving" = "جارٍ الإزالة...";
+"settingsProjectsRepositoriesLabel" = "المستودعات";
 "settingsProjectsRequireChecks" = "طلب فحوصات طلبات السحب";
 "settingsProjectsRequireChecksFound" = "متوقف منذ %1$@، حين لم يجد فرد طاقم %2$@ أي فحوصات.";
 "settingsProjectsRequireChecksOff" = "هذا المشروع لا يشغّل أي فحوصات، لذا تُدمج تغييراته دون انتظار. أول فحص يعمل يعيد تشغيل هذا الخيار.";

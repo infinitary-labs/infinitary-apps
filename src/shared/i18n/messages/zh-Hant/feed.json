@@ -51,6 +51,7 @@
   "feedProjectCreated": "{who}專案 {name} · 已建立",
   "feedProjectLinked": "{who}專案 {name} · 已連結",
   "feedProjectRemoved": "{who}專案 {name} · 已移除",
+  "feedProjectRepositoryAdded": "{who}專案 {project} · 已加入 {name}",
   "feedProjectSettings": "{who}專案 {name} · 設定：{delivery}，{merging}",
   "feedProjectSettingsCare": "{who}專案 {name} · 設定：{delivery}，{merging}，謹慎度：{care}",
   "feedPullOpened": "已開啟 pull request",

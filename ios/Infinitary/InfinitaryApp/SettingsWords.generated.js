@@ -8719,6 +8719,100 @@ ${events}` : prompt;
     }
     return `No projects yet`;
   }
+  function settingsProjectsRepositoryCount(input) {
+    const count = formatNumber(input.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input.count)) {
+          case "zero":
+            return `${count} مستودع`;
+          case "one":
+            return `${count} مستودع`;
+          case "two":
+            return `${count} مستودعان`;
+          case "few":
+            return `${count} مستودعات`;
+          case "many":
+            return `${count} مستودعًا`;
+          default:
+            return `${count} مستودع`;
+        }
+      case "de":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} Repository`;
+          default:
+            return `${count} Repositorys`;
+        }
+      case "es":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} repositorio`;
+          case "many":
+            return `${count} de repositorios`;
+          default:
+            return `${count} repositorios`;
+        }
+      case "fr":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} dépôt`;
+          case "many":
+            return `${count} de dépôts`;
+          default:
+            return `${count} dépôts`;
+        }
+      case "ja":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count} 個のリポジトリ`;
+        }
+      case "ko":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `저장소 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input.count)) {
+          case "one":
+            return `${count} repositório`;
+          case "many":
+            return `${count} de repositórios`;
+          default:
+            return `${count} repositórios`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count} 个仓库`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input.count)) {
+          default:
+            return `${count} 個存放庫`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input.count, "en")) {
+          case "one":
+            return `[${count} ŕéþöšîţöŕý ~~~~]`;
+          default:
+            return `[${count} ŕéþöšîţöŕîéš ~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input.count, "en")) {
+          case "one":
+            return `${count}‮ repository‬`;
+          default:
+            return `${count}‮ repositories‬`;
+        }
+    }
+    switch (pluralCategory(input.count)) {
+      case "one":
+        return `${count} repository`;
+      default:
+        return `${count} repositories`;
+    }
+  }
   function settingsProjectsRequireChecks() {
     switch (currentLanguage()) {
       case "ar":
@@ -14096,23 +14190,27 @@ ${events}` : prompt;
   });
   const repoSetupKindSchema = _enum(["clone", "init", "adopt"]);
   const projectKeyChoiceSchema = string().trim().min(1).max(16);
+  const projectJoinSchema = string().trim().min(1).max(16);
   discriminatedUnion("kind", [
     strictObject({
       kind: literal("clone"),
       origin: string().trim().min(1),
       name: string().optional(),
-      key: projectKeyChoiceSchema.optional()
+      key: projectKeyChoiceSchema.optional(),
+      project: projectJoinSchema.optional()
     }),
     strictObject({
       kind: literal("init"),
       name: string().trim().min(1),
-      key: projectKeyChoiceSchema.optional()
+      key: projectKeyChoiceSchema.optional(),
+      project: projectJoinSchema.optional()
     }),
     strictObject({
       kind: literal("adopt"),
       path: string().trim().min(1),
       name: string().optional(),
-      key: projectKeyChoiceSchema.optional()
+      key: projectKeyChoiceSchema.optional(),
+      project: projectJoinSchema.optional()
     })
   ]);
   const repoKindSchema = _enum(["project", "personal"]);
@@ -14605,7 +14703,9 @@ ${events}` : prompt;
       repoId: string(),
       name: string(),
       path: string(),
-      kind: repoSetupKindSchema
+      kind: repoSetupKindSchema,
+      /** The project it joined, by name, when that project holds another repository (INF-4220). */
+      project: string().optional()
     }),
     object({
       type: literal("repo_configured"),
@@ -15792,6 +15892,44 @@ ${events}` : prompt;
       return settingsProjectsCostAmount();
     }
   };
+  function namesOf(project) {
+    if (project.repos) return project.repos.map((repo) => repo.name);
+    return project.repo ? [project.repo.name] : [];
+  }
+  function projectEntries(repos, projects) {
+    const owner = /* @__PURE__ */ new Map();
+    for (const project of projects) {
+      if (project.archived) continue;
+      for (const name of namesOf(project)) owner.set(name, project);
+    }
+    const entries = [];
+    const groups = /* @__PURE__ */ new Map();
+    for (const repo of repos) {
+      const project = owner.get(repo.name);
+      const held = project ? namesOf(project).filter((name) => repos.some((r) => r.name === name)) : [];
+      if (!project || held.length < 2) {
+        entries.push({
+          kind: "one",
+          repo,
+          project: project ? { id: project.id, key: project.key, name: project.name } : null
+        });
+        continue;
+      }
+      const group = groups.get(project.id);
+      if (group) {
+        group.repos.push(repo);
+        continue;
+      }
+      const entry = {
+        kind: "several",
+        project: { id: project.id, key: project.key, name: project.name },
+        repos: [repo]
+      };
+      groups.set(project.id, entry);
+      entries.push(entry);
+    }
+    return entries;
+  }
   const PROJECT_POLICY_WORDS = {
     /** What "Where changes go" says on every project but the personal workspace. */
     get delivery() {
@@ -16477,7 +16615,19 @@ ${events}` : prompt;
   }
   function projectsPage(input) {
     const { repos, folder, devices, home } = input;
-    const projects = repos.map((repo) => {
+    const entries = projectEntries(repos, input.projects ?? []);
+    const groupOf = /* @__PURE__ */ new Map();
+    for (const entry of entries)
+      if (entry.kind === "several")
+        for (const repo of entry.repos)
+          groupOf.set(repo.id, {
+            id: entry.project.id,
+            name: entry.project.name,
+            line: `${entry.project.key} · ${settingsProjectsRepositoryCount({ count: entry.repos.length })}`
+          });
+    const ordered = entries.flatMap((entry) => entry.kind === "one" ? [entry.repo] : entry.repos);
+    const projects = ordered.map((repo) => {
+      const group = groupOf.get(repo.id);
       const personal = repo.kind === "personal";
       const computers = devices?.length || repo.kind === "project" && repo.origin ? devices ?? [] : null;
       const words = projectRowWords(repo, folder, computers ? runsOnWhere(repo, computers) : null);
@@ -16485,6 +16635,7 @@ ${events}` : prompt;
       return {
         id: repo.id,
         name: repo.name,
+        ...group ? { group } : {},
         line: words.join(" · "),
         ...!personal && folder !== null && words.includes(PROJECT_ROW_WORDS.linked) ? { path: repo.path } : {},
         personal,
@@ -16523,7 +16674,9 @@ ${events}` : prompt;
       };
     });
     return {
-      summary: projectsSummary(repos),
+      summary: projectsSummary(
+        entries.map((entry) => entry.kind === "one" ? entry.repo : entry.repos[0])
+      ),
       projects,
       ...repos.every((repo) => repo.kind === "personal") ? { empty: PHONE_SETTINGS_WORDS.noProjects(home) } : {},
       foot: PHONE_SETTINGS_WORDS.projectsThere(home)

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { HERE } from "./deviceNames";
 import { AUTOMATIC_COMPUTER } from "./placement";
 import {
+  projectJoinSchema,
   projectKeyChoiceSchema,
   type RepoView,
   repoDeliverySchema,
@@ -46,12 +47,14 @@ export const projectSetupProposalSchema = z.discriminatedUnion("kind", [
     origin: z.string().trim().min(1),
     name: z.string().optional(),
     key: projectKeyChoiceSchema.optional(),
+    project: projectJoinSchema.optional(),
     ...suggestions,
   }),
   z.strictObject({
     kind: z.literal("init"),
     name: z.string().trim().min(1),
     key: projectKeyChoiceSchema.optional(),
+    project: projectJoinSchema.optional(),
     ...suggestions,
   }),
   z.strictObject({
@@ -59,6 +62,7 @@ export const projectSetupProposalSchema = z.discriminatedUnion("kind", [
     path: z.string().trim().min(1),
     name: z.string().optional(),
     key: projectKeyChoiceSchema.optional(),
+    project: projectJoinSchema.optional(),
     ...suggestions,
   }),
 ]);
@@ -95,7 +99,10 @@ export const SETUP_CARD_FIELDS = {
 /** The card's words. */
 export const SETUP_CARD_WORDS = {
   title: (name: string) => `Add ${name} as a project?`,
+  /** A repository joining an existing project (INF-4220). */
+  titleInto: (name: string, project: string) => `Add ${name} to ${project}?`,
   add: "Add project",
+  addInto: "Add repository",
   notNow: "Not now",
   landing: `How it lands on ${HERE.this}`,
   link: "Link the folder where it is",
@@ -106,6 +113,9 @@ export const SETUP_CARD_WORDS = {
   care: "Rigor",
   /** The fact naming the task key Firstmate asked for, when it named one. */
   key: "Task key",
+  /** The fact naming the project a repository joins, and its key. */
+  project: "Project",
+  projectFact: (name: string, key: string) => `${name} · ${key}`,
 } as const;
 
 /** How the captain answered a setup card, as Firstmate hears it once. */

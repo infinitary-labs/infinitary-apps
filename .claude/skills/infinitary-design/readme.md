@@ -51,7 +51,7 @@ The product feeling: **calm, peaceful, confident, futuristic, a bit of space-tra
   Notes stay on the stack regardless of age or reading; only ordinary lifecycle actions remove them.
   Reading the exact released update on a foreground desktop, iPhone or iPad clears its new mark everywhere without moving anyone's selection.
   A closed card can be read again as a **past card** (`components/cards/ResponseCard`, "Past card"): a shell-held, read-only entry with a PAST strip, the version last seen with its figures, the submitted answers, the offered buttons shown inert with the chosen one marked, and its thread beside it with no reply row.
-- **Tasks** — every ask the captain makes lands in a task record (`FM3K-12` keys, one project per managed repo plus Scratch).
+- **Tasks** — every ask the captain makes lands in a task record (`FM3K-12` keys, each project holding one or more managed repositories, plus Scratch).
   The captain reads the record in two places and writes it in none: the **now panel** (right side rail; `components/now/NowPanel`) is what IS - the host title row carries its header buttons, Search tasks and Open task board, between the panel title and collapse button, and Open task board stays beside the collapsed counts; expanded content has rows for "waiting on you" and "working", and "queued" / "backlog" / "done · 7d" collapsed to a count, with no waiting/working counts line.
   Collapsed Tasks says its waiting/working counts as its collapsed summary.
   Everything richer hides behind a rest or a click: resting on a row opens the crew summary beside it (the same panel a crewmate opens).
@@ -105,6 +105,7 @@ The product feeling: **calm, peaceful, confident, futuristic, a bit of space-tra
 - **Integrations** - Settings -> Integrations, between Automation and Devices (`components/integrations/IntegrationRow`): one row per connection outside the projects, signed in as the person, on the forge rows' rhythm, with a chevron that opens its actions.
   A project kept on this computer never needs it, and nothing anywhere suggests it does.
 - **Projects** - Settings -> Projects draws every project in one list box: a closed row shows the project's name and, in quiet mono words after it, only what is set differently from a new project (builds in place, linked with its folder when it sits outside the projects folder, local merge, merges on its own, Quick or Careful care, runs on a named computer); the open row holds its settings.
+  A project of several repositories is one group: its name, key and count, opening to its Name, a row for each repository and Add a repository (`components/projects/ProjectRepositories`).
 - **Projects folder** - one line under Add project, at the foot of the Projects list box (`components/projects/ProjectsFolder`): the folder the first mate clones into and starts new projects in, chosen with the system's folder picker, "default" while it is the app's own.
   Projects already set up never move.
 - **Devices** (captain's picks on FI3-681 and FI3-682, 2026-10-03; pairing's rules are the app's `docs/devices.md`) - the first mate lives on one computer, and the person adds their other computers once.

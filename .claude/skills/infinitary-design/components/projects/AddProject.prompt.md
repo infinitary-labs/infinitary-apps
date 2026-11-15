@@ -22,3 +22,4 @@ A quiet line names the projects folder and says new projects merge on this compu
 Pending additions say “Adding...”; refusal and success are polite live text under the control.
 Settings may close while setup continues.
 Adding never wakes the first mate.
+Inside a project, the same row is the project's Add a repository row, with no Task key field (`ProjectRepositories.prompt.md`).

@@ -227,14 +227,16 @@ import Observation
     // MARK: - Projects
 
     private func readProjects() async {
-        async let repos = ask(.projects), folder = ask(.projectsFolder)
+        // The projects the repositories belong to come with them, so a project of several reads as one group.
+        async let repos = ask(.projects), folder = ask(.projectsFolder), names = ask(.automationProjects)
         let devices = await readDevices()
-        let (own, place) = (await repos, await folder)
+        let (own, place, groups) = (await repos, await folder, await names)
         guard keep([(.repos, own)]) else {
             if !away { projects = nil }
             return
         }
         take(.folder, place, otherwise: .null)
+        take(.names, groups, otherwise: .array([]))
         take(.devices, devices, otherwise: .null)
         buildProjects()
     }
@@ -242,7 +244,7 @@ import Observation
     private func buildProjects() {
         guard let repos = answers[.repos] else { return }
         projects = page("projects", [
-            "repos": repos, "folder": answers[.folder]?["path"] ?? .null,
+            "repos": repos, "projects": answers[.names] ?? .array([]), "folder": answers[.folder]?["path"] ?? .null,
             "devices": answers[.devices] ?? .null, "home": .string(session.mac.name),
         ], keeping: projects)
     }

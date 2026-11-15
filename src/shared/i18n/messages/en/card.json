@@ -128,6 +128,7 @@
   "cardRecordNoVerdict": "Your first mate has not said yet.",
   "cardRecordPartOf": "Part of",
   "cardRecordParts": "Parts",
+  "cardRecordProjectRepository": "{project} · {repository}",
   "cardRecordRunsOn": "Runs on",
   "cardRecordSpend": "Spend",
   "cardRecordStillStarting": "Still starting. You can keep working.",

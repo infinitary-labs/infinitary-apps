@@ -123,6 +123,7 @@
   "cardRecordNoVerdict": "你的大副还没有表态。",
   "cardRecordPartOf": "隶属于",
   "cardRecordParts": "组成部分",
+  "cardRecordProjectRepository": "{project} · {repository}",
   "cardRecordRunsOn": "运行于",
   "cardRecordSpend": "花费",
   "cardRecordStillStarting": "仍在启动。你可以继续工作。",

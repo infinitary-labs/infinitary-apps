@@ -123,6 +123,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | reply | 답장 | |
 | repo | (not used) | 프로젝트 instead |
 | report | 보고, 보고하다 | |
+| repository (one of a project's) | 저장소 | GitHub's own Korean word; "저장소 추가", "저장소 2개". Names one of a project's repositories; what work belongs to stays 프로젝트. |
 | review | 검토 | |
 | revision (of a knowledge entry) | 수정본 | "Revision 3" is 수정본 3; kept apart from 버전 |
 | revision (of a knowledge entry) | 수정본 | 수정본 {revision}; 버전 stays for a project version |

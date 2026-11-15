@@ -51,6 +51,7 @@
   "feedProjectCreated": "{who}プロジェクト {name} · 作成済み",
   "feedProjectLinked": "{who}プロジェクト {name} · リンク済み",
   "feedProjectRemoved": "{who}プロジェクト {name} · 削除済み",
+  "feedProjectRepositoryAdded": "{who}プロジェクト {project} · {name} を追加",
   "feedProjectSettings": "{who}プロジェクト {name} · 設定：{delivery}、{merging}",
   "feedProjectSettingsCare": "{who}プロジェクト {name} · 設定：{delivery}、{merging}、慎重さ：{care}",
   "feedPullOpened": "プルリクエストを作成しました",

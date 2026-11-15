@@ -123,6 +123,7 @@
   "cardRecordNoVerdict": "일등항해사가 아직 말하지 않았어요.",
   "cardRecordPartOf": "상위 작업",
   "cardRecordParts": "부분",
+  "cardRecordProjectRepository": "{project} · {repository}",
   "cardRecordRunsOn": "실행 위치",
   "cardRecordSpend": "사용 비용",
   "cardRecordStillStarting": "아직 시작하는 중이에요. 계속 작업해도 돼요.",

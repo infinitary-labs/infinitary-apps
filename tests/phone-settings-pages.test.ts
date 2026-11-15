@@ -130,6 +130,7 @@ test("the phone's Settings pages say what the computer holds, in the computer's 
         dollars: page<PhoneUsage>("usage", { summary: usage, unit: "usd", home: HOME }),
         projects: page<PhoneProjects>("projects", {
           repos: await read("inf:repos:list"),
+          projects,
           folder: (await read<{ path: string }>("inf:repos:folder")).path,
           devices: null,
           home: HOME,

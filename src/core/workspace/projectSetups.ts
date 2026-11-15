@@ -133,6 +133,7 @@ export class ProjectSetups {
               origin: checked.origin,
               name: checked.name,
               ...(checked.key ? { key: checked.key } : {}),
+              ...(checked.project ? { project: checked.project.key } : {}),
             },
           }
         : {}),
@@ -148,7 +149,7 @@ export class ProjectSetups {
     this.options.raiseCard(setupCard(cardId, offer, checked, computers));
     return {
       cardId,
-      text: `The captain's setup card for ${offer.name} is up (${cardId}): where it comes from, how it lands, and its settings, with your suggestions selected. Nothing is added until they click ${WORDS.add} there, and you hear once how they answered; start work that needs it only once they have added it. Say nothing more about it now.`,
+      text: `The captain's setup card for ${offer.name} is up (${cardId}): where it comes from, how it lands, and its settings, with your suggestions selected. Nothing is added until they click ${checked.project ? WORDS.addInto : WORDS.add} there, and you hear once how they answered; start work that needs it only once they have added it. Say nothing more about it now.`,
     };
   }
 
@@ -317,8 +318,14 @@ function setupCard(
             ...(checked.origin ? [fact("From", checked.origin, true)] : []),
             ...(offer.clone ? [] : [fact(`On ${HERE.this}`, "Linked where it is")]),
           ];
-  // The key Firstmate asked for, as the check normalized it; none, and the app derives one.
-  const facts = checked.key ? [...where, fact(WORDS.key, checked.key, true)] : where;
+  // The project it joins (INF-4220), or the key Firstmate asked for, as the
+  // check normalized it; neither, and the app derives a key.
+  const into = checked.project;
+  const facts = into
+    ? [...where, fact(WORDS.project, WORDS.projectFact(into.name, into.key))]
+    : checked.key
+      ? [...where, fact(WORDS.key, checked.key, true)]
+      : where;
   const work = offer.work
     ? `<p>Once it is added, your first mate starts this work: ${escapeCardText(offer.work)}${/[.!?]$/.test(offer.work) ? "" : "."}</p>`
     : "";
@@ -384,10 +391,12 @@ function setupCard(
   const arg = JSON.stringify(offer);
   return {
     id,
-    title: WORDS.title(offer.name),
+    title: into ? WORDS.titleInto(offer.name, into.name) : WORDS.title(offer.name),
     meta: FIRSTMATE_CARD_META,
     body: [
-      `<p>Your first mate asks to add <b>${escapeCardText(offer.name)}</b> to your projects. Nothing changes until you click ${WORDS.add}.</p>`,
+      into
+        ? `<p>Your first mate asks to add the repository <b>${escapeCardText(offer.name)}</b> to your project <b>${escapeCardText(into.name)}</b>. Its tasks take the key ${escapeCardText(into.key)}. Nothing changes until you click ${WORDS.addInto}.</p>`
+        : `<p>Your first mate asks to add <b>${escapeCardText(offer.name)}</b> to your projects. Nothing changes until you click ${WORDS.add}.</p>`,
       work,
       `<div class="inf-facts">${facts.join("")}</div>`,
       startsGit,
@@ -398,7 +407,7 @@ function setupCard(
     actions: [
       {
         id: "add",
-        label: WORDS.add,
+        label: into ? WORDS.addInto : WORDS.add,
         variant: "primary",
         default: true,
         effect: { kind: "host", op: "add-project", arg },

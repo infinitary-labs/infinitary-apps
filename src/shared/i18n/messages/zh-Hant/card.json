@@ -123,6 +123,7 @@
   "cardRecordNoVerdict": "你的大副還沒表示意見。",
   "cardRecordPartOf": "隸屬於",
   "cardRecordParts": "部分",
+  "cardRecordProjectRepository": "{project} · {repository}",
   "cardRecordRunsOn": "執行於",
   "cardRecordSpend": "花費",
   "cardRecordStillStarting": "仍在啟動中。你可以繼續工作。",

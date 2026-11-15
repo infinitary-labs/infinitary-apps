@@ -51,6 +51,7 @@
   "feedProjectCreated": "{who}프로젝트 {name} · 만듦",
   "feedProjectLinked": "{who}프로젝트 {name} · 연결됨",
   "feedProjectRemoved": "{who}프로젝트 {name} · 제거됨",
+  "feedProjectRepositoryAdded": "{who}프로젝트 {project} · {name} 추가됨",
   "feedProjectSettings": "{who}프로젝트 {name} · 설정: {delivery}, {merging}",
   "feedProjectSettingsCare": "{who}프로젝트 {name} · 설정: {delivery}, {merging}, 주의 수준: {care}",
   "feedPullOpened": "끌어오기 요청을 열었어요",

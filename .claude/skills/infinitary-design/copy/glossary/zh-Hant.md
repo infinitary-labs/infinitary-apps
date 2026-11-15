@@ -115,8 +115,9 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | recovery key | 復原金鑰 | Taiwan writes 復原, not 恢復. |
 | redacted (decision records) | 去識別化 | Taiwan's word for records with personal details stripped. |
 | Remove (a device) | 移除 | Standard. |
-| repo (never said) | 專案 | 存放庫 only where a sentence points at GitHub. |
+| repo (never said) | 專案 | The app's noun for what work belongs to stays 專案. |
 | report | 回報 | Taiwan's everyday word for reporting back. |
+| repository (one of a project's) | 存放庫 | GitHub's own Traditional Chinese word; 「加入存放庫」「2 個存放庫」. Names one of a project's repositories, or the thing on GitHub. |
 | restore (Secrets from a backup) | 還原 | Kept apart from 復原, which the recovery key and recovery states use. |
 | review | 審查 | As in 已通過審查. |
 | revision (of a record) | 修訂 | 修訂 {revision}. |

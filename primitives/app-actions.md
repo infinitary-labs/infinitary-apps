@@ -53,7 +53,7 @@ Keyboard commands are a separate catalog (`KEYBOARD_COMMANDS` in `src/shared/key
 
 ## Compositions
 
-- Settings → Projects and the first mate's `project-settings` / `project-runs-on` share this path ([projects-and-working-copies.md](projects-and-working-copies.md)).
+- Settings → Projects and the first mate's `project-settings`, `project-runs-on` and `project-name` share this path ([projects-and-working-copies.md](projects-and-working-copies.md)).
 - Settings → Automation's edits are catalog lines over `inf:automation:list` ([automation.md](automation.md)).
 - Settings → Intelligence (first mate model and account, crew slots, pins, routing, decision answerer) is catalog lines ([intelligence-buckets.md](intelligence-buckets.md)).
 - Proposal and hand-over cards are ordinary host cards under [cards-and-consent.md](cards-and-consent.md); `show-card` brings a card forward and runs no effect.

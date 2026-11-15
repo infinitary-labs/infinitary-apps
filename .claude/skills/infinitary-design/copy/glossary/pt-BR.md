@@ -106,6 +106,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | Remove / Leave (a device) | Remover / Sair | |
 | repo (avoided) | projeto | |
 | report | relatório, relatar | The verb in feed lines: "Relatou: ...". |
+| repository (one of a project's) | repositório | "Adicionar um repositório", "2 repositórios". Names one of a project's repositories; what work belongs to stays projeto. |
 | resets | renova | "renova sex." for an allowance. |
 | review | revisão | |
 | revision (of a knowledge record) | versão | Kept apart from "revisão", which is review. |

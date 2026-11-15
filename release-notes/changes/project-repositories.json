@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "project-repositories",
+      "kind": "feature",
+      "area": "projects",
+      "title": "Put several repositories in one project",
+      "body": "A project can now hold more than one repository, such as an app and its service. Open a project in Settings › Projects and use Add a repository, or ask your first mate to add one to a project. Its tasks take the project's task key, and a task's record names the project with the repository it works in. Each repository keeps its own Ask before merging and Rigor settings, and a project of several gets a name of its own.",
+      "picture": {
+        "dark": "project-repositories-dark.webp",
+        "light": "project-repositories-light.webp",
+        "alt": "Settings, Projects, with the Wallet project open: its name, its two repositories wallet and wallet-api, and an Add a repository row"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

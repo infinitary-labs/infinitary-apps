@@ -16,6 +16,7 @@ import { focusPanelCard } from "../app/shellCommands";
 import type { RecordView } from "../app/stack";
 import { useShellStore } from "../app/store";
 import { useModelNames } from "../app/useModelNames";
+import { useProjectFact } from "../character/crew/useCrewBoard";
 import { ResponseCard } from "../design/cards/ResponseCard";
 import { RecordCell, TaskFactRows, TaskFactStrip, useMinute } from "../design/core/TaskFacts";
 import { TaskResourceUse } from "../design/core/TaskResourceUse";
@@ -253,6 +254,9 @@ export function RecordCard({
     }
     return { ...detail, startAttempt: { phase: "preparing" as const, since: Date.now() } };
   }, [detail, optimisticStart]);
+  // Its project, with the repository beside it in a project of several (INF-4220).
+  const projectFactWords = useProjectFact(shown?.projectId, shown?.repo?.name);
+  const projectWords = shown?.repo ? projectFactWords : "";
   // The record's own reading of the start replaces the pressed copy.
   useEffect(() => {
     if (detail?.startAttempt || detail?.status === "active") setOptimisticStart(false);
@@ -389,7 +393,7 @@ export function RecordCard({
                   <RecordGoal detail={shown} open={wordsOpen} onToggle={toggleWords} />
                 </>
               }
-              {...(shown.repo ? { project: shown.repo.name } : {})}
+              {...(projectWords ? { project: projectWords } : {})}
               planView="list"
               omitStrip
               pullRequests

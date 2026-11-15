@@ -118,8 +118,9 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | record (a Usage record) | سجل | Plural "سجلات". |
 | release | إصدار | "أُصدرت" for "Released"; "نسخة" is a version of the work. |
 | Remove (a device) | إزالة | |
-| repo (never said) | مشروع | "مستودع" only where a sentence points at GitHub. |
+| repo (never said) | مشروع | The app's noun for what work belongs to stays مشروع. |
 | report | تقرير | |
+| repository (one of a project's) | مستودع | Plural مستودعات; "إضافة مستودع", "{count} مستودعات". Names one of a project's repositories, or the thing on GitHub. |
 | review | المراجعة | |
 | revision (of a knowledge entry) | التعديل | "التعديل 3"; kept apart from "نسخة" and from "المراجعة" (review). |
 | revision (of a knowledge entry) | التعديل | "التعديل {revision}"; "المراجعة" is the review and "نسخة" a version. |

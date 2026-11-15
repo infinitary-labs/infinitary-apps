@@ -309,6 +309,7 @@
 "cardRecordNoVerdict" = "Votre second ne s’est pas encore prononcé.";
 "cardRecordPartOf" = "Fait partie de";
 "cardRecordParts" = "Parties";
+"cardRecordProjectRepository" = "%1$@ · %2$@";
 "cardRecordRunsOn" = "S’exécute sur";
 "cardRecordSpend" = "Dépense";
 "cardRecordStillStarting" = "Démarrage en cours. Vous pouvez continuer à travailler.";
@@ -654,6 +655,7 @@
 "feedProjectCreated" = "%2$@Projet %1$@ · créé";
 "feedProjectLinked" = "%2$@Projet %1$@ · lié";
 "feedProjectRemoved" = "%2$@Projet %1$@ · retiré";
+"feedProjectRepositoryAdded" = "%3$@Projet %2$@ · %1$@ ajouté";
 "feedProjectSettings" = "%4$@Projet %3$@ · réglages : %1$@, %2$@";
 "feedProjectSettingsCare" = "%5$@Projet %4$@ · réglages : %2$@, %3$@, soin : %1$@";
 "feedPullOpened" = "Demande de tirage ouverte";
@@ -1880,6 +1882,11 @@
 "settingsAddProjectTaskKeyPlaceholder" = "D’après son nom";
 "settingsAddProjectWrongHost" = "Collez le lien d’un projet %1$@. Pour un autre hébergeur, demandez à votre second.";
 "settingsAddProjectYourRepos" = "Vos dépôts %1$@";
+"settingsAddRepositoryAdded" = "%1$@ ajouté à %2$@.";
+"settingsAddRepositoryLabel" = "Ajouter un dépôt à %1$@";
+"settingsAddRepositoryNew" = "Nouveau dépôt";
+"settingsAddRepositoryNext" = "Un dépôt ajouté ici rejoint %2$@, et ses tâches prennent la clé des tâches %1$@.";
+"settingsAddRepositoryTitle" = "Ajouter un dépôt";
 "settingsAppearanceCardFull" = "Pleine";
 "settingsAppearanceCardMaximized" = "Agrandie";
 "settingsAppearanceCardSize" = "Taille des cartes par défaut";
@@ -2550,6 +2557,7 @@
 "settingsProjectsFolderPickerFailed" = "Impossible d’ouvrir le sélecteur de dossier. Veuillez réessayer.";
 "settingsProjectsFolderSave" = "Enregistrer";
 "settingsProjectsFolderUseDefault" = "Utiliser le dossier par défaut";
+"settingsProjectsGroupNameDescription" = "Votre projet garde sa clé %1$@ et son historique. Chaque dépôt garde son propre nom.";
 "settingsProjectsIntro" = "Ajoutez un projet ici ou demandez-le à votre second, et ouvrez-en un pour changer son fonctionnement. Une ligne indique seulement ce qui diffère d’un nouveau projet, qui est proposé en demandes de tirage là où il est hébergé, attend votre accord avant de fusionner, prend le soin Par défaut et s’exécute sur un ordinateur choisi automatiquement.";
 "settingsProjectsLabel" = "Projets";
 "settingsProjectsLocalCareful" = "Les modifications fusionnées localement sont faites avec minutie, sans revue – il n’y a pas de demande de tirage à examiner.";
@@ -2567,6 +2575,7 @@
 "settingsProjectsRemoveNamed" = "Retirer %1$@";
 "settingsProjectsRemoveTitle" = "Retirer le projet";
 "settingsProjectsRemoving" = "Retrait...";
+"settingsProjectsRepositoriesLabel" = "Dépôts";
 "settingsProjectsRequireChecks" = "Exiger les vérifications des demandes de tirage";
 "settingsProjectsRequireChecksFound" = "Désactivé depuis le %1$@, quand l’équipier de %2$@ n’a trouvé aucune vérification.";
 "settingsProjectsRequireChecksOff" = "Ce projet n’exécute aucune vérification, donc ses modifications sont fusionnées sans attendre. La première vérification qui s’exécute le réactive.";

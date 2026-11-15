@@ -20,6 +20,18 @@ Putting the setup card aside leaves its offer and operation row pending and send
 That wake skips the inbox's coalescing window, so the first mate answers the click at once (`docs/inbox.md`).
 Settings' own Add project adds at once and shows no card.
 
+## Adding a repository to a project
+
+A project may hold several repositories, and each task works in one of them (`docs/architecture.md`, rev-11).
+A repository joins a project when it is added, never later: setup's `project` names the project by its task key, and the repository's tasks take that key.
+`project` and `key` are never both given, and Scratch, the personal workspace and an unknown key are refused in words before anything is cloned, created or linked (`RepoRegistry.joining`).
+The first mate passes `project` to `project-setup`; the setup card then asks "Add {repository} to {project}?", shows a Project fact instead of Task key, and its button reads Add repository.
+Settings' Add a repository row adds to a project at once: inside a project of one's opened row, and at the end of a project of several's group.
+A repository moves to another project only by being removed and added again; there is no move action.
+Delivery, autonomy, rigor, scope and Runs on stay with each repository, and the project's directions reach every repository in it.
+A project of several has a name of its own, which its group's Name field and the first mate's `project-name` action change through `inf:projects:rename` (`RepoRegistry.renameProject`), with one feed line and operation; a project of one is named with its repository and renamed with it.
+A project that shrinks back to one repository takes that repository's name again, in the same transaction that removes the other (`RepoRegistry.unregister`).
+
 ## Choosing a task key
 
 A project's key prefixes every task key it mints, such as `INF` in `INF-12`, and it is chosen once, when the project is added (FI3-1787, step 4 of the Infinitary rename).

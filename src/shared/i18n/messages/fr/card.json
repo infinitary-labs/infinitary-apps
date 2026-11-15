@@ -133,6 +133,7 @@
   "cardRecordNoVerdict": "Votre second ne s’est pas encore prononcé.",
   "cardRecordPartOf": "Fait partie de",
   "cardRecordParts": "Parties",
+  "cardRecordProjectRepository": "{project} · {repository}",
   "cardRecordRunsOn": "S’exécute sur",
   "cardRecordSpend": "Dépense",
   "cardRecordStillStarting": "Démarrage en cours. Vous pouvez continuer à travailler.",

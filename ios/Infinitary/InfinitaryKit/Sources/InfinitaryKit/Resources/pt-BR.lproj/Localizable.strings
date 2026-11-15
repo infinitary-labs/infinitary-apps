@@ -309,6 +309,7 @@
 "cardRecordNoVerdict" = "Seu imediato ainda não disse.";
 "cardRecordPartOf" = "Parte de";
 "cardRecordParts" = "Partes";
+"cardRecordProjectRepository" = "%1$@ · %2$@";
 "cardRecordRunsOn" = "Roda em";
 "cardRecordSpend" = "Gasto";
 "cardRecordStillStarting" = "Ainda começando. Você pode continuar trabalhando.";
@@ -654,6 +655,7 @@
 "feedProjectCreated" = "%2$@Projeto %1$@ · criado";
 "feedProjectLinked" = "%2$@Projeto %1$@ · vinculado";
 "feedProjectRemoved" = "%2$@Projeto %1$@ · removido";
+"feedProjectRepositoryAdded" = "%3$@Projeto %2$@ · %1$@ adicionado";
 "feedProjectSettings" = "%4$@Projeto %3$@ · ajustes: %1$@, %2$@";
 "feedProjectSettingsCare" = "%5$@Projeto %4$@ · ajustes: %2$@, %3$@, cuidado: %1$@";
 "feedPullOpened" = "Abriu uma solicitação de pull";
@@ -1880,6 +1882,11 @@
 "settingsAddProjectTaskKeyPlaceholder" = "A partir do nome";
 "settingsAddProjectWrongHost" = "Cole o link de um projeto do %1$@. Para outro host, pergunte ao seu imediato.";
 "settingsAddProjectYourRepos" = "Seus repositórios do %1$@";
+"settingsAddRepositoryAdded" = "%1$@ adicionado a %2$@.";
+"settingsAddRepositoryLabel" = "Adicionar um repositório a %1$@";
+"settingsAddRepositoryNew" = "Novo repositório";
+"settingsAddRepositoryNext" = "Um repositório adicionado aqui entra em %2$@, e as tarefas dele usam a chave das tarefas %1$@.";
+"settingsAddRepositoryTitle" = "Adicionar um repositório";
 "settingsAppearanceCardFull" = "Completo";
 "settingsAppearanceCardMaximized" = "Maximizado";
 "settingsAppearanceCardSize" = "Tamanho padrão dos cartões";
@@ -2550,6 +2557,7 @@
 "settingsProjectsFolderPickerFailed" = "Não foi possível abrir o seletor de pastas. Tente de novo.";
 "settingsProjectsFolderSave" = "Salvar";
 "settingsProjectsFolderUseDefault" = "Usar a padrão";
+"settingsProjectsGroupNameDescription" = "Seu projeto mantém a chave %1$@ e o histórico. Cada repositório mantém o próprio nome.";
 "settingsProjectsIntro" = "Adicione um projeto aqui ou peça ao seu imediato, e abra um para mudar como ele funciona. Uma linha mostra só o que está diferente de um projeto novo, que é oferecido como solicitações de pull onde fica, espera sua palavra antes de mesclar, usa o cuidado Padrão e roda em um computador escolhido automaticamente.";
 "settingsProjectsLabel" = "Projetos";
 "settingsProjectsLocalCareful" = "As alterações mescladas localmente são feitas com cuidado, sem revisão - não há solicitação de pull para olhar.";
@@ -2567,6 +2575,7 @@
 "settingsProjectsRemoveNamed" = "Remover %1$@";
 "settingsProjectsRemoveTitle" = "Remover projeto";
 "settingsProjectsRemoving" = "Removendo...";
+"settingsProjectsRepositoriesLabel" = "Repositórios";
 "settingsProjectsRequireChecks" = "Exigir verificações nas solicitações de pull";
 "settingsProjectsRequireChecksFound" = "Desativado desde %1$@, quando o tripulante de %2$@ não encontrou verificações.";
 "settingsProjectsRequireChecksOff" = "Este projeto não roda verificações, então suas alterações são mescladas sem esperar. A primeira verificação que rodar volta a ativar isto.";

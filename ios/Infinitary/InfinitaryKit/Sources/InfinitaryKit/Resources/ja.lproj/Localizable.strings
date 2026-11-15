@@ -309,6 +309,7 @@
 "cardRecordNoVerdict" = "一等航海士はまだ判断を述べていません。";
 "cardRecordPartOf" = "所属";
 "cardRecordParts" = "パート";
+"cardRecordProjectRepository" = "%1$@ · %2$@";
 "cardRecordRunsOn" = "実行先";
 "cardRecordSpend" = "費用";
 "cardRecordStillStarting" = "まだ開始中です。作業を続けられます。";
@@ -654,6 +655,7 @@
 "feedProjectCreated" = "%2$@プロジェクト %1$@ · 作成済み";
 "feedProjectLinked" = "%2$@プロジェクト %1$@ · リンク済み";
 "feedProjectRemoved" = "%2$@プロジェクト %1$@ · 削除済み";
+"feedProjectRepositoryAdded" = "%3$@プロジェクト %2$@ · %1$@ を追加";
 "feedProjectSettings" = "%4$@プロジェクト %3$@ · 設定：%1$@、%2$@";
 "feedProjectSettingsCare" = "%5$@プロジェクト %4$@ · 設定：%2$@、%3$@、慎重さ：%1$@";
 "feedPullOpened" = "プルリクエストを作成しました";
@@ -1880,6 +1882,11 @@
 "settingsAddProjectTaskKeyPlaceholder" = "名前から作成";
 "settingsAddProjectWrongHost" = "%1$@ のプロジェクトのリンクを貼り付けてください。ほかのホストについては、一等航海士に頼んでください。";
 "settingsAddProjectYourRepos" = "あなたの %1$@ リポジトリ";
+"settingsAddRepositoryAdded" = "%1$@ を %2$@ に追加しました。";
+"settingsAddRepositoryLabel" = "%1$@ にリポジトリを追加";
+"settingsAddRepositoryNew" = "新しいリポジトリ";
+"settingsAddRepositoryNext" = "ここで追加したリポジトリは %2$@ に加わり、そのタスクはタスクキー %1$@ を使います。";
+"settingsAddRepositoryTitle" = "リポジトリを追加";
 "settingsAppearanceCardFull" = "フル";
 "settingsAppearanceCardMaximized" = "最大化";
 "settingsAppearanceCardSize" = "カードの標準サイズ";
@@ -2550,6 +2557,7 @@
 "settingsProjectsFolderPickerFailed" = "フォルダの選択画面を開けませんでした。もう一度お試しください。";
 "settingsProjectsFolderSave" = "保存";
 "settingsProjectsFolderUseDefault" = "既定を使う";
+"settingsProjectsGroupNameDescription" = "プロジェクトのタスクキー %1$@ と履歴はそのまま残ります。各リポジトリは自分の名前を保ちます。";
 "settingsProjectsIntro" = "ここでプロジェクトを追加するか、一等航海士に頼んでください。プロジェクトを開くと動作を変更できます。各行には、新しいプロジェクトと異なる設定だけが表示されます。新しいプロジェクトは、保管先でプルリクエストとして出され、マージ前にあなたの承認を待ち、慎重さは標準で、自動で選ばれたコンピューターで実行されます。";
 "settingsProjectsLabel" = "プロジェクト";
 "settingsProjectsLocalCareful" = "ローカルでマージされる変更は慎重に行われますが、レビューはありません。確認するプルリクエストがないためです。";
@@ -2567,6 +2575,7 @@
 "settingsProjectsRemoveNamed" = "%1$@ を削除";
 "settingsProjectsRemoveTitle" = "プロジェクトを削除";
 "settingsProjectsRemoving" = "削除中...";
+"settingsProjectsRepositoriesLabel" = "リポジトリ";
 "settingsProjectsRequireChecks" = "プルリクエストのチェックを必須にする";
 "settingsProjectsRequireChecksFound" = "%1$@からオフ。%2$@の乗組員がチェックがないことを確認しました。";
 "settingsProjectsRequireChecksOff" = "このプロジェクトはチェックを実行しないため、変更は待たずにマージされます。チェックが1つでも実行されると、この設定はオンに戻ります。";

@@ -604,6 +604,8 @@ export type FirstmateApi = {
   projects: {
     /** Scratch plus every project the managed repositories belong to, with live counts. */
     list: () => Promise<ProjectView[]>;
+    /** Name a project of several repositories; one of one is named with its repository. */
+    rename: (projectId: string, name: string) => Promise<{ id: string; name: string }>;
   };
   quota: {
     snapshot: () => Promise<QuotaSnapshotView | null>;

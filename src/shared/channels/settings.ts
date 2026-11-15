@@ -28,6 +28,16 @@ export const settingsChannels = {
     request: z.tuple([]),
     response: z.array(projectViewSchema),
   },
+  // A project of several repositories takes a name of its own (INF-4220,
+  // `project-repositories-settings.md`); a project of one is named with its
+  // repository through `inf:repos:configure`.
+  "inf:projects:rename": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([z.string().min(1), z.string().trim().min(1)]),
+    response: z.object({ id: z.string(), name: z.string(), was: z.string() }),
+  },
   // The captain's presentation choices, held by the core so a fresh window
   // profile cannot forget them (src/shared/preferences.ts).
   "inf:settings:appearance:get": {

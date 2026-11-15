@@ -58,6 +58,7 @@ import {
   runsOnSaid,
 } from "./repos";
 import { type DeviceSignIns, signInPlace } from "./signIns";
+import type { ProjectView } from "./tasks";
 
 /**
  * Stable permissions, independent of Settings tabs. Captain can run every
@@ -330,7 +331,7 @@ const actionLines = {
     change: "inf:repos:setup",
     current: "inf:repos:list",
     value: projectSetupProposalSchema,
-    line: "Propose a project at any time - on the captain's message, a crewmate's report, or your own judgment: app_change checks it, changes nothing, and puts up the captain's setup card, where only their Add project click adds it. clone needs origin (remote URL), init needs name (new local project), adopt needs path (absolute existing folder; a plain one gets git). clone and init go in the projects folder; adopt links in place, and the card also offers a fresh clone when the folder has a remote. Pass key (2-4 letters or digits, INF for INF-1) only when the captain chose the task key; otherwise the app derives one from the name, and it refuses a key another project has. Suggest delivery, autonomy, rigor and runsOn (work computer name/id, or null) only when you know them; the card otherwise shows today's defaults. work names, in a few words, the waiting work you start once they add it. You hear once how they answered. A project already on the list gets no card and is named instead. Settings adds its own projects at once.",
+    line: "Propose a project at any time - on the captain's message, a crewmate's report, or your own judgment: app_change checks it, changes nothing, and puts up the captain's setup card, where only their Add project click adds it. clone needs origin (remote URL), init needs name (new local project), adopt needs path (absolute existing folder; a plain one gets git). clone and init go in the projects folder; adopt links in place, and the card also offers a fresh clone when the folder has a remote. Pass key (2-4 letters or digits, INF for INF-1) only when the captain chose the task key; otherwise the app derives one from the name, and it refuses a key another project has. To add a repository to an existing project instead, pass project (that project's task key) and no key; its tasks then take that key, and Scratch and the personal workspace take none. Suggest delivery, autonomy, rigor and runsOn (work computer name/id, or null) only when you know them; the card otherwise shows today's defaults. work names, in a few words, the waiting work you start once they add it. You hear once how they answered. A project already on the list gets no card and is named instead. Settings adds its own projects at once.",
     toRequest: (v, _c, expandHome) => {
       const { delivery, autonomy, rigor, runsOn, work, ...spec } = v;
       return [
@@ -396,6 +397,32 @@ const actionLines = {
       ),
     }),
     done: (v) => (v.description as string | undefined) ?? repoPolicyOutcome(v.repo as RepoView),
+  },
+  // A project of several repositories has a name of its own (INF-4220,
+  // docs/fleet.md "Adding a repository to a project"); a project of one is
+  // named with its repository through project-settings.
+  "project-name": {
+    area: "projects",
+    tier: "asked",
+    change: "inf:projects:rename",
+    current: "inf:projects:list",
+    value: z.strictObject({
+      projectId: z.string().min(1),
+      name: z.string().trim().min(1),
+    }),
+    line: "Name a project of several repositories when asked (projectId from the current projects); its key, history and each repository's own name stay. A project of one is named with its repository through project-settings.",
+    toRequest: (v) => [v.projectId, v.name],
+    readValue: (c) => ({
+      projects: (c as ProjectView[])
+        .filter((project) => !project.archived && (project.repos?.length ?? 0) > 1)
+        .map(({ id, key, name, repos }) => ({
+          id,
+          key,
+          name,
+          repositories: (repos ?? []).map((repo) => repo.name),
+        })),
+    }),
+    done: (v) => `Renamed project ${v.was as string} to ${v.name as string}`,
   },
   // Where a project's next task starts (docs/helper.md, "Runs on"): asked,
   // like the project's other settings. A task already started finishes

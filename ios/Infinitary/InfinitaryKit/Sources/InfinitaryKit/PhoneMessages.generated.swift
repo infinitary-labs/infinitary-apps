@@ -323,6 +323,7 @@ public enum PhoneMessages {
     public static func `cardRecordNoVerdict`() -> String { PhoneWords.format("cardRecordNoVerdict", []) }
     public static func `cardRecordPartOf`() -> String { PhoneWords.format("cardRecordPartOf", []) }
     public static func `cardRecordParts`() -> String { PhoneWords.format("cardRecordParts", []) }
+    public static func `cardRecordProjectRepository`(`project`: String, `repository`: String) -> String { PhoneWords.format("cardRecordProjectRepository", [`project`, `repository`]) }
     public static func `cardRecordRunsOn`() -> String { PhoneWords.format("cardRecordRunsOn", []) }
     public static func `cardRecordSpend`() -> String { PhoneWords.format("cardRecordSpend", []) }
     public static func `cardRecordStillStarting`() -> String { PhoneWords.format("cardRecordStillStarting", []) }
@@ -677,6 +678,7 @@ public enum PhoneMessages {
     public static func `feedProjectCreated`(`name`: String, `who`: String) -> String { PhoneWords.format("feedProjectCreated", [`name`, `who`]) }
     public static func `feedProjectLinked`(`name`: String, `who`: String) -> String { PhoneWords.format("feedProjectLinked", [`name`, `who`]) }
     public static func `feedProjectRemoved`(`name`: String, `who`: String) -> String { PhoneWords.format("feedProjectRemoved", [`name`, `who`]) }
+    public static func `feedProjectRepositoryAdded`(`name`: String, `project`: String, `who`: String) -> String { PhoneWords.format("feedProjectRepositoryAdded", [`name`, `project`, `who`]) }
     public static func `feedProjectSettings`(`delivery`: String, `merging`: String, `name`: String, `who`: String) -> String { PhoneWords.format("feedProjectSettings", [`delivery`, `merging`, `name`, `who`]) }
     public static func `feedProjectSettingsCare`(`care`: String, `delivery`: String, `merging`: String, `name`: String, `who`: String) -> String { PhoneWords.format("feedProjectSettingsCare", [`care`, `delivery`, `merging`, `name`, `who`]) }
     public static func `feedPullOpened`() -> String { PhoneWords.format("feedPullOpened", []) }
@@ -1961,6 +1963,11 @@ public enum PhoneMessages {
     public static func `settingsAddProjectTaskKeyPlaceholder`() -> String { PhoneWords.format("settingsAddProjectTaskKeyPlaceholder", []) }
     public static func `settingsAddProjectWrongHost`(`host`: String) -> String { PhoneWords.format("settingsAddProjectWrongHost", [`host`]) }
     public static func `settingsAddProjectYourRepos`(`host`: String) -> String { PhoneWords.format("settingsAddProjectYourRepos", [`host`]) }
+    public static func `settingsAddRepositoryAdded`(`name`: String, `project`: String) -> String { PhoneWords.format("settingsAddRepositoryAdded", [`name`, `project`]) }
+    public static func `settingsAddRepositoryLabel`(`project`: String) -> String { PhoneWords.format("settingsAddRepositoryLabel", [`project`]) }
+    public static func `settingsAddRepositoryNew`() -> String { PhoneWords.format("settingsAddRepositoryNew", []) }
+    public static func `settingsAddRepositoryNext`(`key`: String, `project`: String) -> String { PhoneWords.format("settingsAddRepositoryNext", [`key`, `project`]) }
+    public static func `settingsAddRepositoryTitle`() -> String { PhoneWords.format("settingsAddRepositoryTitle", []) }
     public static func `settingsAppearanceCardFull`() -> String { PhoneWords.format("settingsAppearanceCardFull", []) }
     public static func `settingsAppearanceCardMaximized`() -> String { PhoneWords.format("settingsAppearanceCardMaximized", []) }
     public static func `settingsAppearanceCardSize`() -> String { PhoneWords.format("settingsAppearanceCardSize", []) }
@@ -2647,6 +2654,7 @@ public enum PhoneMessages {
     public static func `settingsProjectsFolderPickerFailed`() -> String { PhoneWords.format("settingsProjectsFolderPickerFailed", []) }
     public static func `settingsProjectsFolderSave`() -> String { PhoneWords.format("settingsProjectsFolderSave", []) }
     public static func `settingsProjectsFolderUseDefault`() -> String { PhoneWords.format("settingsProjectsFolderUseDefault", []) }
+    public static func `settingsProjectsGroupNameDescription`(`key`: String) -> String { PhoneWords.format("settingsProjectsGroupNameDescription", [`key`]) }
     public static func `settingsProjectsIntro`() -> String { PhoneWords.format("settingsProjectsIntro", []) }
     public static func `settingsProjectsLabel`() -> String { PhoneWords.format("settingsProjectsLabel", []) }
     public static func `settingsProjectsLocalCareful`() -> String { PhoneWords.format("settingsProjectsLocalCareful", []) }
@@ -2664,6 +2672,8 @@ public enum PhoneMessages {
     public static func `settingsProjectsRemoveNamed`(`name`: String) -> String { PhoneWords.format("settingsProjectsRemoveNamed", [`name`]) }
     public static func `settingsProjectsRemoveTitle`() -> String { PhoneWords.format("settingsProjectsRemoveTitle", []) }
     public static func `settingsProjectsRemoving`() -> String { PhoneWords.format("settingsProjectsRemoving", []) }
+    public static func `settingsProjectsRepositoriesLabel`() -> String { PhoneWords.format("settingsProjectsRepositoriesLabel", []) }
+    public static func `settingsProjectsRepositoryCount`(`count`: Int) -> String { PhoneWords.format("settingsProjectsRepositoryCount", [`count`]) }
     public static func `settingsProjectsRequireChecks`() -> String { PhoneWords.format("settingsProjectsRequireChecks", []) }
     public static func `settingsProjectsRequireChecksFound`(`date`: String, `task`: String) -> String { PhoneWords.format("settingsProjectsRequireChecksFound", [`date`, `task`]) }
     public static func `settingsProjectsRequireChecksOff`() -> String { PhoneWords.format("settingsProjectsRequireChecksOff", []) }
@@ -3594,6 +3604,7 @@ extension PhoneWords {
         "cardRecordNoVerdict": [],
         "cardRecordPartOf": [],
         "cardRecordParts": [],
+        "cardRecordProjectRepository": ["project", "repository"],
         "cardRecordRunsOn": [],
         "cardRecordSpend": [],
         "cardRecordStillStarting": [],
@@ -3948,6 +3959,7 @@ extension PhoneWords {
         "feedProjectCreated": ["name", "who"],
         "feedProjectLinked": ["name", "who"],
         "feedProjectRemoved": ["name", "who"],
+        "feedProjectRepositoryAdded": ["name", "project", "who"],
         "feedProjectSettings": ["delivery", "merging", "name", "who"],
         "feedProjectSettingsCare": ["care", "delivery", "merging", "name", "who"],
         "feedPullOpened": [],
@@ -5232,6 +5244,11 @@ extension PhoneWords {
         "settingsAddProjectTaskKeyPlaceholder": [],
         "settingsAddProjectWrongHost": ["host"],
         "settingsAddProjectYourRepos": ["host"],
+        "settingsAddRepositoryAdded": ["name", "project"],
+        "settingsAddRepositoryLabel": ["project"],
+        "settingsAddRepositoryNew": [],
+        "settingsAddRepositoryNext": ["key", "project"],
+        "settingsAddRepositoryTitle": [],
         "settingsAppearanceCardFull": [],
         "settingsAppearanceCardMaximized": [],
         "settingsAppearanceCardSize": [],
@@ -5918,6 +5935,7 @@ extension PhoneWords {
         "settingsProjectsFolderPickerFailed": [],
         "settingsProjectsFolderSave": [],
         "settingsProjectsFolderUseDefault": [],
+        "settingsProjectsGroupNameDescription": ["key"],
         "settingsProjectsIntro": [],
         "settingsProjectsLabel": [],
         "settingsProjectsLocalCareful": [],
@@ -5935,6 +5953,8 @@ extension PhoneWords {
         "settingsProjectsRemoveNamed": ["name"],
         "settingsProjectsRemoveTitle": [],
         "settingsProjectsRemoving": [],
+        "settingsProjectsRepositoriesLabel": [],
+        "settingsProjectsRepositoryCount": ["count"],
         "settingsProjectsRequireChecks": [],
         "settingsProjectsRequireChecksFound": ["date", "task"],
         "settingsProjectsRequireChecksOff": [],
@@ -6637,6 +6657,7 @@ extension PhoneWords {
         "settingsProjectsBatchHeldChecksUnnamed": "count",
         "settingsProjectsBatchSentBack": "count",
         "settingsProjectsCount": "count",
+        "settingsProjectsRepositoryCount": "count",
         "shellGateFreshCheckLine": "count",
         "shellProjectMoreCount": "count",
         "uiCardStackNew": "count",

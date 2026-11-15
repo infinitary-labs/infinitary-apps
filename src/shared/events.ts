@@ -181,6 +181,8 @@ export const fmEventSchema = z.discriminatedUnion("type", [
     name: z.string(),
     path: z.string(),
     kind: repoSetupKindSchema,
+    /** The project it joined, by name, when that project holds another repository (INF-4220). */
+    project: z.string().optional(),
   }),
   z.object({
     type: z.literal("repo_configured"),

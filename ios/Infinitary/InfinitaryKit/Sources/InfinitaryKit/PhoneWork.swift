@@ -313,8 +313,17 @@ public struct PhoneBoard: Decodable, Sendable {
         /// Whether a repository backs the project, and whether it is archived: a row leaves out the project's name where
         /// only one such project could be meant (the Mac's `hasSingleRegisteredRepoProject`).
         public let repo: Repo?
+        /// Every repository the project holds, first first; absent from an older Mac, read as `repo` alone.
+        public let repos: [Repo]?
         public let archived: Bool?
         public struct Repo: Decodable, Sendable { public let name: String }
+
+        /// A task's Project fact (the Mac's `projectFact`): the project's name, and the repository the task works
+        /// in beside it when the project holds more than one.
+        public func fact(repository: String?) -> String {
+            guard let repository, (repos?.count ?? 0) > 1 else { return name }
+            return PhoneMessages.cardRecordProjectRepository(project: name, repository: repository)
+        }
     }
 
     /// The Mac's `applyTaskBoardDelta` (src/shared/tasks.ts): this board when the delta is older, the next board when

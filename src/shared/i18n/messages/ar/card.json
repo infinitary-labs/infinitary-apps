@@ -148,6 +148,7 @@
   "cardRecordNoVerdict": "لم يُبدِ نائب القبطان رأيه بعد.",
   "cardRecordPartOf": "جزء من",
   "cardRecordParts": "الأجزاء",
+  "cardRecordProjectRepository": "{project} · {repository}",
   "cardRecordRunsOn": "تعمل على",
   "cardRecordSpend": "الإنفاق",
   "cardRecordStillStarting": "لا تزال قيد البدء. يمكنك متابعة العمل.",

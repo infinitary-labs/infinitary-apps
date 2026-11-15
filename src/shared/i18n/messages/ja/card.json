@@ -123,6 +123,7 @@
   "cardRecordNoVerdict": "一等航海士はまだ判断を述べていません。",
   "cardRecordPartOf": "所属",
   "cardRecordParts": "パート",
+  "cardRecordProjectRepository": "{project} · {repository}",
   "cardRecordRunsOn": "実行先",
   "cardRecordSpend": "費用",
   "cardRecordStillStarting": "まだ開始中です。作業を続けられます。",

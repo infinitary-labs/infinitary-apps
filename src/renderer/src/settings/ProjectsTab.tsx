@@ -11,6 +11,7 @@ import {
 } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
 import type { DeviceSignIns } from "@shared/signIns";
+import type { ProjectView } from "@shared/tasks";
 import {
   AUTONOMY_SWITCH_NAME,
   AUTONOMY_WORDS,
@@ -30,6 +31,7 @@ import { FOLDER_THERE_WORDS } from "./addProjectWords";
 import { BatchHoldPanel } from "./BatchHoldPanel";
 import { ProjectCostLimit } from "./ProjectCostLimit";
 import { PROJECT_COST_WORDS } from "./projectCostWords";
+import { type GroupProject, projectEntries } from "./projectGroups";
 import {
   BATCH_OWN_WORDS,
   batchNoHostWords,
@@ -110,7 +112,14 @@ export function drainPendingPolicy(
 
 export function ProjectsTab() {
   const [repos, setRepos] = useState<RepoView[]>([]);
+  // The projects the repositories belong to (INF-4220), so a project of several is one group.
+  const [projects, setProjects] = useState<ProjectView[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [openProject, setOpenProject] = useState<string | null>(null);
+  // A confirmation for the group a repository just joined, and the row to focus after.
+  const [notice, setNotice] = useState<{ project: string; text: string } | null>(null);
+  const focusRow = useRef<string | null>(null);
+  const list = useRef<HTMLDivElement>(null);
   const pending = useRef(new Map<string, RepoPolicyPatch>());
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const writing = useRef(new Set<string>());
@@ -121,7 +130,10 @@ export function ProjectsTab() {
   const folderPath = folder.value?.path ?? null;
 
   useEffect(() => {
-    const refresh = () => void window.infinitary.repos.list().then(setRepos);
+    const refresh = () => {
+      void window.infinitary.repos.list().then(setRepos);
+      void window.infinitary.projects.list().then(setProjects, () => undefined);
+    };
     refresh();
     const off = window.infinitary.events.on((event) => {
       if (event.type === "repo_setup" || event.type === "repo_unregistered") refresh();
@@ -176,6 +188,56 @@ export function ProjectsTab() {
     );
   };
 
+  // A project or repository just added. Its project is read first, so a
+  // repository that joins a project is listed straight inside the project's
+  // group: the group opens with the confirmation in its Add a repository row,
+  // since the project of one's row the add began in gives way to the group,
+  // and focus moves to the new repository's row. Added from a project's own
+  // Add a repository row without joining (already added elsewhere, or the
+  // projects unread), the row stays open, its confirmation and focus with it.
+  const added = (repo: RepoView, said: string, intoProject: boolean) => {
+    const listIt = () =>
+      setRepos((current) =>
+        current.some((entry) => entry.id === repo.id) ? current : [...current, repo],
+      );
+    void window.infinitary.projects.list().then(
+      (next) => {
+        listIt();
+        setProjects(next);
+        const joined = next.find(
+          (one) => !one.archived && one.repos?.some((r) => r.name === repo.name),
+        );
+        if (joined && (joined.repos?.length ?? 0) > 1) {
+          setOpenId(null);
+          setOpenProject(joined.id);
+          setNotice({ project: joined.id, text: said });
+          focusRow.current = repo.id;
+        } else if (!intoProject) {
+          setOpenId(repo.id);
+        }
+      },
+      () => {
+        listIt();
+        if (!intoProject) setOpenId(repo.id);
+      },
+    );
+  };
+  // The confirmation is handed to the group's Add a repository row as it
+  // mounts, then dropped so the row does not show it again when reopened.
+  useEffect(() => {
+    if (notice) setNotice(null);
+  }, [notice]);
+  useEffect(() => {
+    const id = focusRow.current;
+    if (!id) return;
+    const button = list.current?.querySelector<HTMLButtonElement>(
+      `[data-project="${CSS.escape(id)}"] > button`,
+    );
+    if (!button) return;
+    focusRow.current = null;
+    button.focus();
+  });
+
   const chooseRunsOn = (id: string, deviceId: string | null) => {
     setRunsOnError(null);
     setRepos((current) =>
@@ -209,6 +271,7 @@ export function ProjectsTab() {
         {m.settingsProjectsIntro()}
       </div>
       <div
+        ref={list}
         style={{
           background: "var(--bg-1)",
           border: "1px solid var(--line-1)",
@@ -228,36 +291,61 @@ export function ProjectsTab() {
             {m.settingsProjectsEmpty()}
           </div>
         )}
-        {repos.map((repo) => (
-          <ProjectRow
-            key={repo.id}
-            repo={repo}
-            folder={folderPath}
-            open={openId === repo.id}
-            onToggle={() => setOpenId((current) => (current === repo.id ? null : repo.id))}
-            onPatch={(changes) => patch(repo.id, changes)}
-            computers={
-              computers?.length || (repo.kind === "project" && repo.origin)
-                ? (computers ?? [])
-                : null
-            }
-            onRunsOn={(deviceId) => chooseRunsOn(repo.id, deviceId)}
-            runsOnError={openId === repo.id ? runsOnError : null}
-            onRemoved={() => {
-              setOpenId((current) => (current === repo.id ? null : current));
-              setRepos((current) => current.filter((entry) => entry.id !== repo.id));
-            }}
-          />
-        ))}
-        <AddProject
-          repos={repos}
-          onAdded={(repo) => {
-            setRepos((current) =>
-              current.some((entry) => entry.id === repo.id) ? current : [...current, repo],
-            );
-            setOpenId(repo.id);
-          }}
-        />
+        {projectEntries(repos, projects).map((entry) => {
+          const row = (repo: RepoView, into: GroupProject | null) => (
+            <ProjectRow
+              key={repo.id}
+              repo={repo}
+              repos={repos}
+              into={into}
+              onAdded={added}
+              folder={folderPath}
+              open={openId === repo.id}
+              onToggle={() => setOpenId((current) => (current === repo.id ? null : repo.id))}
+              onPatch={(changes) => patch(repo.id, changes)}
+              computers={
+                computers?.length || (repo.kind === "project" && repo.origin)
+                  ? (computers ?? [])
+                  : null
+              }
+              onRunsOn={(deviceId) => chooseRunsOn(repo.id, deviceId)}
+              runsOnError={openId === repo.id ? runsOnError : null}
+              onRemoved={() => {
+                setOpenId((current) => (current === repo.id ? null : current));
+                setRepos((current) => current.filter((one) => one.id !== repo.id));
+                void window.infinitary.projects.list().then(setProjects, () => undefined);
+              }}
+            />
+          );
+          if (entry.kind === "one") return row(entry.repo, entry.project);
+          return (
+            <ProjectGroup
+              key={entry.project.id}
+              project={entry.project}
+              count={entry.repos.length}
+              open={openProject === entry.project.id}
+              onToggle={() =>
+                setOpenProject((current) =>
+                  current === entry.project.id ? null : entry.project.id,
+                )
+              }
+              onRenamed={(name) =>
+                setProjects((current) =>
+                  current.map((one) => (one.id === entry.project.id ? { ...one, name } : one)),
+                )
+              }
+            >
+              {entry.repos.map((repo) => row(repo, null))}
+              <AddProject
+                repos={repos}
+                into={entry.project}
+                onAdded={added}
+                notice={notice?.project === entry.project.id ? notice.text : null}
+              />
+            </ProjectGroup>
+          );
+        })}
+        <AddProject repos={repos} onAdded={added} />
         <ProjectsFolderLine folder={folder} />
       </div>
     </div>
@@ -523,6 +611,9 @@ function ProjectDetails({ repo }: { repo: RepoView }) {
 
 function ProjectRow({
   repo,
+  repos,
+  into,
+  onAdded,
   folder,
   open,
   onToggle,
@@ -533,6 +624,11 @@ function ProjectRow({
   runsOnError,
 }: {
   repo: RepoView;
+  /** Every repository listed, for the Add a repository row. */
+  repos: RepoView[];
+  /** Its project, when this row is a project of one that can take another repository. */
+  into: GroupProject | null;
+  onAdded: (repo: RepoView, said: string, intoProject: boolean) => void;
   /** The projects folder, or null while it is unread. */
   folder: string | null;
   open: boolean;
@@ -790,6 +886,16 @@ function ProjectRow({
               {PROJECT_POLICY_WORDS.carefulLocal}
             </div>
           )}
+          {!personal && into && (
+            <div
+              style={{
+                borderTop: "1px solid var(--line-1)",
+                margin: "0 calc(-1 * var(--space-4))",
+              }}
+            >
+              <AddProject repos={repos} into={into} onAdded={onAdded} />
+            </div>
+          )}
           {!personal && <RemoveProject repo={repo} onRemoved={onRemoved} />}
         </div>
       )}
@@ -855,6 +961,156 @@ function PolicyRow({
         <div style={{ fontSize: "var(--text-xs)", color: "var(--fg-3)" }}>{description}</div>
       </div>
       {control}
+    </div>
+  );
+}
+
+/**
+ * A project of several repositories (INF-4220, design skill
+ * components/projects/ProjectRepositories): one row naming the project and
+ * how many repositories it holds, opening to the project's own Name, a row
+ * for each repository with today's controls, and Add a repository.
+ */
+function ProjectGroup({
+  project,
+  count,
+  open,
+  onToggle,
+  onRenamed,
+  children,
+}: {
+  project: GroupProject;
+  count: number;
+  open: boolean;
+  onToggle: () => void;
+  onRenamed: (name: string) => void;
+  children: ReactNode;
+}) {
+  const reveal = useInPlaceReveal(open);
+  const [name, setName] = useState(project.name);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => setName(project.name), [project.name]);
+  const changed = name.trim() !== "" && name.trim() !== project.name;
+  const save = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const renamed = await window.infinitary.projects.rename(project.id, name);
+      onRenamed(renamed.name);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : String(caught));
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <div data-project-group={project.key} style={{ borderBottom: "1px solid var(--line-1)" }}>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-label={
+          open
+            ? m.settingsProjectsRowExpanded({ name: project.name })
+            : m.settingsProjectsRowCollapsed({ name: project.name })
+        }
+        onClick={onToggle}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          width: "100%",
+          padding: "12px 18px",
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          textAlign: "start",
+          color: "inherit",
+          font: "inherit",
+        }}
+      >
+        <span style={{ display: "flex", alignItems: "baseline", gap: 12, minWidth: 0 }}>
+          <span style={{ fontSize: "var(--text-sm)", color: "var(--fg-1)", whiteSpace: "nowrap" }}>
+            {project.name}
+          </span>
+          <span
+            data-project-words
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "var(--text-xs)",
+              color: "var(--fg-3)",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {project.key} · {m.settingsProjectsRepositoryCount({ count })}
+          </span>
+        </span>
+        <span
+          style={{
+            display: "inline-flex",
+            color: "var(--fg-3)",
+            transform: open ? "rotate(180deg)" : "none",
+            transition: "transform var(--dur-fast) var(--ease-out)",
+          }}
+        >
+          {chevron}
+        </span>
+      </button>
+      {open && (
+        <div data-in-place-reveal={reveal ? "drift" : undefined}>
+          <form
+            style={{ padding: "0 18px" }}
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (changed && !saving) void save();
+            }}
+          >
+            <PolicyRow
+              title={m.settingsProjectsName()}
+              description={m.settingsProjectsGroupNameDescription({ key: project.key })}
+              control={
+                <span style={{ display: "flex", gap: "var(--space-2)" }}>
+                  <Input
+                    aria-label={m.settingsProjectsNameLabel()}
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                  />
+                  <Button
+                    type="submit"
+                    size="sm"
+                    variant="secondary"
+                    disabled={!changed || saving}
+                    pending={saving}
+                  >
+                    {m.settingsProjectsFolderSave()}
+                  </Button>
+                </span>
+              }
+            />
+            <SettingError error={error} surface="project-name" />
+          </form>
+          <div
+            style={{
+              padding: "var(--space-2) 18px",
+              borderTop: "1px solid var(--line-1)",
+              fontSize: "var(--text-xs)",
+              fontWeight: 500,
+              letterSpacing: "var(--tracking-label)",
+              textTransform: "uppercase",
+              color: "var(--fg-3)",
+            }}
+          >
+            {m.settingsProjectsRepositoriesLabel()}
+          </div>
+          <div
+            data-project-repositories={project.key}
+            style={{ marginInlineStart: "var(--space-4)", borderTop: "1px solid var(--line-1)" }}
+          >
+            {children}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

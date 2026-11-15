@@ -218,6 +218,18 @@ export class ProjectStore {
       .run(name, repoId);
   }
 
+  /**
+   * Name a project of its own, keeping its key, sequence and task history
+   * (INF-4220): Settings' Name for a project of several repositories.
+   */
+  rename(projectId: string, name: string): void {
+    this.db
+      .prepare(
+        "UPDATE projects SET name = ? WHERE id = ? AND kind = 'repo' AND archived_at IS NULL",
+      )
+      .run(name, projectId);
+  }
+
   /** A row verbatim (the task export's reload); the caller checked for collisions. */
   insert(project: ProjectRecord): void {
     this.db

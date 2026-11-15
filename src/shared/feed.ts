@@ -179,6 +179,11 @@ export function feedLineFrom(event: FmEvent): Omit<FeedLine, "at"> | null {
     }
     case "repo_setup": {
       const fills = { who: byWho(event.actor), name: event.name };
+      if (event.project)
+        return line(
+          "info",
+          said("feedProjectRepositoryAdded", { ...fills, project: event.project }),
+        );
       return line(
         "info",
         event.kind === "clone"

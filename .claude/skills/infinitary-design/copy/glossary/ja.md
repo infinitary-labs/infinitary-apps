@@ -126,7 +126,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | Reduce motion (macOS) | 視差効果を減らす | macOS's own Japanese setting name, used only in the path to it. |
 | Remove (a device) | 削除 | At the computer where the first mate lives. |
 | report | 報告 | 「報告：{summary}」. |
-| repository (avoided as the app's noun) | プロジェクト | Vocabulary rule; リポジトリ only where GitHub itself is meant. |
+| repository (one of a project's) | リポジトリ | 「リポジトリを追加」「2 個のリポジトリ」. Names one of a project's repositories, or GitHub's own; what work belongs to stays プロジェクト. |
 | revision (of a record) | 改訂 | 「改訂 {revision}」. |
 | rigor (the level) | 慎重さ | 「慎重さ：{care}」 replaces "{care} rigor". |
 | Runbooks | ランブック | Settings section name. |

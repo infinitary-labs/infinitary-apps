@@ -2,7 +2,7 @@ import { forgeOf } from "@shared/forge";
 import type { ForgeProject, ForgesView } from "@shared/forges";
 import * as m from "@shared/i18n/messages.generated";
 import type { RepoSetupSpec, RepoView } from "@shared/repos";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useShellStore } from "../app/store";
 import { Button, Input } from "../design";
 import { useFirstMatePlace } from "../devices/useFirstMatePlace";
@@ -15,21 +15,40 @@ import {
   TASK_KEY_WORDS,
   taskKeyTyped,
 } from "./addProjectWords";
+import type { GroupProject } from "./projectGroups";
 
 /** The add row's mode that takes a folder's path on the first mate's computer. */
 const FOLDER_MODE = "folder";
 
 /**
  * Design skill components/projects/AddProject: the foot of the projects list
- * box, above the folder line. Setup continues if Settings closes.
+ * box, above the folder line. Setup continues if Settings closes. With
+ * `into` it is a project's Add a repository row (design skill
+ * components/projects/ProjectRepositories, INF-4220): the same pills, no
+ * task key, and what it adds joins that project.
  */
 export function AddProject({
   repos,
   onAdded,
+  into,
+  notice,
 }: {
   repos: RepoView[];
-  onAdded: (repo: RepoView) => void;
+  /**
+   * What was added, with the confirmation this row shows for it, and whether
+   * it was added from a project's Add a repository row.
+   */
+  onAdded: (repo: RepoView, said: string, intoProject: boolean) => void;
+  /** The existing project the added repository joins. */
+  into?: GroupProject;
+  /**
+   * A confirmation this row starts with: a project of one's own row, where
+   * the add began, gives way to the project's group once it holds two.
+   */
+  notice?: string | null;
 }) {
+  // Several of these rows can be on the page at once, so each names its own fields.
+  const ids = useId();
   const thisMac = useShellStore((s) => s.thisMac);
   // A view adds a folder on the first mate's computer by its path there.
   const there = isView(thisMac) ? thisMac.name : null;
@@ -44,7 +63,7 @@ export function AddProject({
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(notice ?? null);
   const [folder, setFolder] = useState("");
   // The task key the next added project takes; empty, it comes from the name.
   const [taskKey, setTaskKey] = useState("");
@@ -109,17 +128,19 @@ export function AddProject({
     setStatus(null);
     try {
       const result = await window.infinitary.repos.setup(
-        taskKey ? { ...spec, key: taskKey } : spec,
+        into ? { ...spec, project: into.key } : taskKey ? { ...spec, key: taskKey } : spec,
       );
-      onAdded(result.repo);
+      const said =
+        into && result.created
+          ? m.settingsAddRepositoryAdded({ name: result.repo.name, project: into.name })
+          : result.initializedGit
+            ? m.settingsAddProjectAddedGit({ name: result.repo.name })
+            : result.created
+              ? m.settingsAddProjectAdded({ name: result.repo.name })
+              : m.settingsAddProjectAlreadyAdded({ name: result.repo.name });
+      onAdded(result.repo, said, !!into);
       if (result.created) setTaskKey("");
-      setStatus(
-        result.initializedGit
-          ? m.settingsAddProjectAddedGit({ name: result.repo.name })
-          : result.created
-            ? m.settingsAddProjectAdded({ name: result.repo.name })
-            : m.settingsAddProjectAlreadyAdded({ name: result.repo.name }),
-      );
+      setStatus(said);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally {
@@ -149,8 +170,10 @@ export function AddProject({
   };
   return (
     <section
-      aria-label={m.settingsAddProjectLabel()}
-      data-add-project
+      aria-label={
+        into ? m.settingsAddRepositoryLabel({ project: into.name }) : m.settingsAddProjectLabel()
+      }
+      {...(into ? { "data-add-repository": into.key } : { "data-add-project": "" })}
       style={{
         padding: "var(--space-4) var(--space-4) var(--space-3)",
         fontSize: "var(--text-sm)",
@@ -168,7 +191,7 @@ export function AddProject({
             textTransform: "uppercase",
           }}
         >
-          {m.settingsAddProjectLabel()}
+          {into ? m.settingsAddRepositoryTitle() : m.settingsAddProjectLabel()}
         </span>
         <Button
           variant="secondary"
@@ -236,40 +259,47 @@ export function AddProject({
           >
             <path d="M5 12h14M12 5v14" />
           </svg>
-          {m.settingsAddProjectNew()}
+          {into ? m.settingsAddRepositoryNew() : m.settingsAddProjectNew()}
         </Button>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "var(--space-2)",
-            marginInlineStart: "auto",
-            color: "var(--fg-2)",
-          }}
-        >
-          <label htmlFor="add-project-key">{TASK_KEY_WORDS.label}</label>
-          <Input
-            id="add-project-key"
-            mono
-            value={taskKey}
-            placeholder={TASK_KEY_WORDS.placeholder}
-            onChange={(event) => {
-              setTaskKey(taskKeyTyped(event.target.value));
-              setError(null);
-              setStatus(null);
-            }}
-            disabled={!!busy}
-            // A small Button's height, and wide enough for the placeholder's 13
-            // mono characters with their padding and border.
+        {!into && (
+          <div
             style={{
-              width: "calc(13ch + 2 * var(--space-3) + var(--space-1))",
-              padding: "calc(var(--space-1) * 1.5) var(--space-3)",
-              fontSize: "var(--text-sm)",
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--space-2)",
+              marginInlineStart: "auto",
+              color: "var(--fg-2)",
             }}
-          />
-        </div>
+          >
+            <label htmlFor={`${ids}-key`}>{TASK_KEY_WORDS.label}</label>
+            <Input
+              id={`${ids}-key`}
+              mono
+              value={taskKey}
+              placeholder={TASK_KEY_WORDS.placeholder}
+              onChange={(event) => {
+                setTaskKey(taskKeyTyped(event.target.value));
+                setError(null);
+                setStatus(null);
+              }}
+              disabled={!!busy}
+              // A small Button's height, and wide enough for the placeholder's 13
+              // mono characters with their padding and border.
+              style={{
+                width: "calc(13ch + 2 * var(--space-3) + var(--space-1))",
+                padding: "calc(var(--space-1) * 1.5) var(--space-3)",
+                fontSize: "var(--text-sm)",
+              }}
+            />
+          </div>
+        )}
       </div>
-      {taskKey && (
+      {into && (
+        <p style={{ color: "var(--fg-3)", margin: "var(--space-2) 0 0" }}>
+          {m.settingsAddRepositoryNext({ key: into.key, project: into.name })}
+        </p>
+      )}
+      {!into && taskKey && (
         <p style={{ color: "var(--fg-3)", margin: "var(--space-2) 0 0" }}>
           {TASK_KEY_WORDS.next(taskKey)}
         </p>
@@ -289,10 +319,10 @@ export function AddProject({
                 void add({ kind: "adopt", path: folderPath.trim() }, "folder");
               }}
             >
-              <label htmlFor="add-project-folder-path">{FOLDER_THERE_WORDS.label(there)}</label>
+              <label htmlFor={`${ids}-folder`}>{FOLDER_THERE_WORDS.label(there)}</label>
               <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-2)" }}>
                 <Input
-                  id="add-project-folder-path"
+                  id={`${ids}-folder`}
                   value={folderPath}
                   onChange={(event) => setFolderPath(event.target.value)}
                   disabled={!!busy}
@@ -311,10 +341,10 @@ export function AddProject({
                 void add({ kind: "init", name: name.trim() }, "new");
               }}
             >
-              <label htmlFor="new-project-name">{m.settingsAddProjectName()}</label>
+              <label htmlFor={`${ids}-name`}>{m.settingsAddProjectName()}</label>
               <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-2)" }}>
                 <Input
-                  id="new-project-name"
+                  id={`${ids}-name`}
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   disabled={!!busy}
@@ -424,7 +454,7 @@ export function AddProject({
                   }}
                   style={{ marginTop: "var(--space-3)" }}
                 >
-                  <label htmlFor="project-link">
+                  <label htmlFor={`${ids}-link`}>
                     {signedIn
                       ? m.settingsAddProjectOrPasteLink({ host: host.name })
                       : m.settingsAddProjectPasteLink({ host: host.name })}
@@ -433,7 +463,7 @@ export function AddProject({
                     style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-2)" }}
                   >
                     <Input
-                      id="project-link"
+                      id={`${ids}-link`}
                       mono
                       placeholder={`https://${host.host}/owner/project`}
                       value={link}

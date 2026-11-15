@@ -18,6 +18,11 @@ The app writes the card from what it checked, never the first mate, so the butto
 It is a host card: the Attention chip with "first mate" as its meta, no reply field, and its id comes from the project, so asking again for the same project revises the one card.
 A project already on the list gets no card.
 
+**Adding a repository to a project.**
+When the first mate names an existing project by its task key, the card adds a repository to that project instead (`ProjectRepositories.prompt.md`).
+Its title asks "Add eddies-wallet-backend to Eddie's Wallet?", its facts name the Project as "Eddie's Wallet · EDW" in place of a Task key, and its button reads "Add repository".
+Its settings are the repository's own, as on any setup card.
+
 **What it says.**
 The title asks "Add dotfiles-private as a project?", with the name the project will get.
 The first sentence: "Your first mate asks to add **dotfiles-private** to your projects.

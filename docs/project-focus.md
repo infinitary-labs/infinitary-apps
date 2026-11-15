@@ -20,6 +20,7 @@ How the pill looks and moves is the design skill's `components/core/ProjectFocus
 ## Which projects get a pill
 
 Every project set up in Settings gets one, in the task board's order.
+A project of several repositories gets one pill, which counts and focuses the tasks of every repository in it.
 Scratch (the project with no repository) and the app's own workspace, personal, get one only while each has a task the Tasks panel lists (the captain's answer to INF-1292).
 The board's project view says which repository is the workspace (`repo.kind` is `personal`), so the rule reads a typed fact, never the name.
 An archived project gets none.

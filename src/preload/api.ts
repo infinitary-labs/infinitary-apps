@@ -417,6 +417,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
     },
     projects: {
       list: () => invoke("inf:projects:list"),
+      rename: (projectId, name) => invoke("inf:projects:rename", projectId, name),
     },
     quota: {
       snapshot: () => invoke("inf:quota:snapshot"),

@@ -34,6 +34,9 @@ Work that changes no files (an answer, a question) needs no working copy.
 
 Setup is `clone` (with `origin`), `init` (with `name`) or `adopt` (with `path`), each with an optional task key; adopt links an existing folder in place and never moves it.
 A key is chosen once at setup, normalized to capitals, 2-4 letters or digits, and never reused by another project, removed ones included.
+Instead of a key, setup may name an existing project by its task key (`project`), and the repository joins that project, whose key its tasks then take; naming both is refused, and so are Scratch, the personal workspace and an unknown key, before anything is cloned, created or linked.
+A project of one repository is named with that repository; one of several has a name of its own, which `RepoRegistry.renameProject` changes (`inf:projects:rename`).
+A repository moves to another project only by being removed and added again.
 Delivery is `direct-pr` or `local-only`, defaulted by whether the project has a remote; autonomy is a flag (on means the agent may land green work itself); rigor is `quick`, `standard` or `reviewed`, with `standard` every project's standing value ([delivery rigor](../docs/delivery-rigor.md)).
 Each of the three is a repository default with a per-task ask on the captain's own words, derived live by its one function, so changing a project's default reaches work already in flight.
 Each ordinary project may carry nullable scope text describing what work belongs there, saved by `RepoRegistry.configure`; the personal workspace takes none.
@@ -61,6 +64,8 @@ A task on a computer that runs work keeps its working copy there; its close save
 **Settings → Projects (2026-09-19)** may expose scope, delivery, autonomy, and standing rigor (accordion with a row chevron).
 Setup and removal are shared by Settings and `app_change` (`project-setup`, `project-remove`); the first mate removes a project only on the captain's own words.
 The personal workspace's row is locked and reads "builds in place".
+A project of several repositories is one group in Settings → Projects, with its name, a row for each repository and an Add a repository row; a project of one shows Add a repository inside its own row.
+Delivery, autonomy, rigor and scope stay with each repository; directions reach every repository in the project.
 Settings writes through the same action-catalog dispatcher as `app_change` ([app-actions.md](app-actions.md)).
 Fleet management is agent-operated (`docs/fleet.md`): Settings may add and remove projects through `app_change`'s dispatcher (`project-setup`, `project-remove`); removal never deletes repo data.
 The first mate's `project-setup` only proposes: the host's setup card adds a project only on the captain's Add project click, and a proposed settings change that is not the captain's exact words applies only from its own card.

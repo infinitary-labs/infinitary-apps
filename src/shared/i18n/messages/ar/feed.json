@@ -51,6 +51,7 @@
   "feedProjectCreated": "{who}المشروع {name} · أُنشئ",
   "feedProjectLinked": "{who}المشروع {name} · رُبط",
   "feedProjectRemoved": "{who}المشروع {name} · أُزيل",
+  "feedProjectRepositoryAdded": "{who}المشروع {project} · أُضيف {name}",
   "feedProjectSettings": "{who}المشروع {name} · الإعدادات: {delivery}، {merging}",
   "feedProjectSettingsCare": "{who}المشروع {name} · الإعدادات: {delivery}، {merging}، العناية: {care}",
   "feedPullOpened": "فُتح طلب سحب",

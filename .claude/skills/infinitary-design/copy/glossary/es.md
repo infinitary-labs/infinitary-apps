@@ -110,8 +110,9 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | rebase merges, merge commits (the host's settings) | fusiones con cambio de base (rebase), confirmaciones de fusión | Named only as the settings where the project lives, following GitHub's Spanish docs, with "rebase" beside it because that settings page is in English; the app's own action stays "poner al día". |
 | rebase, conflict (never said) | poner al día | One English line says "conflicts"; it reads "choca con trabajo más reciente". |
 | Remove (a device) | Quitar | |
-| repo (never said) | proyecto | "repositorio" only where the sentence points at GitHub. |
+| repo (never said) | proyecto | The app's noun for what work belongs to stays proyecto. |
 | report | informar, informe | "Informó: …". |
+| repository (one of a project's) | repositorio | "Agregar un repositorio", "2 repositorios". Names one of a project's repositories, or the thing on GitHub. |
 | resets (an allowance) | se renueva | "se renueva: 14:32". |
 | review | revisión | "Superó su revisión". |
 | revision (of a knowledge record) | versión | Kept apart from "revisión", which is review. |

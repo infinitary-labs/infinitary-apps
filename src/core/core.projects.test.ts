@@ -510,6 +510,92 @@ describe("the core, driven with no Electron in the process", () => {
     }
   });
 
+  // INF-4220's piece 2: the first mate's add card can put a repository in an existing project, whose
+  // next task takes the project's key, the feed names the project, and the project takes a name of its own.
+  it("adds a repository to an existing project from the first mate's card, and names the project on its own", async () => {
+    const told = vi.spyOn(core.services.firstmate, "notifyOp").mockImplementation(() => null);
+    const change = createAppTools({
+      dispatch: core.dispatch,
+      propose: async (_action, value) => (await core.services.projectSetups.propose(value)).text,
+      actor: () => ({ kind: "firstmate", wake: "captain" }),
+    }).find((t) => t.name === "app_change");
+    if (!change) throw new Error("Missing app_change");
+    const events: { type: string; project?: string; text?: string }[] = [];
+    const detach = core.events.subscribe((channel, payload) => {
+      if (channel === "inf:event") events.push(payload as (typeof events)[number]);
+    });
+    try {
+      const wallet = await core.dispatch("inf:repos:setup", [
+        { kind: "init", name: "wallet-app", key: "WAL" },
+      ]);
+      await change.run({
+        action: "project-setup",
+        value: { kind: "init", name: "wallet-service", project: "wal" },
+        evidence: "put wallet-service in the WAL project",
+      });
+      const card = core.services.supervisor.cards
+        .snapshot()
+        .find((c) => c.title === SETUP_CARD_WORDS.titleInto("wallet-service", "wallet-app"));
+      expect(card?.body).toContain(`>${SETUP_CARD_WORDS.project}</span>`);
+      expect(card?.body).not.toContain(`>${SETUP_CARD_WORDS.key}</span>`);
+      expect(card?.actions?.[0]?.label).toBe(SETUP_CARD_WORDS.addInto);
+      await core.dispatch("inf:cards:act", [card?.id ?? "", "add", "chrome"]);
+      await waitFor(() => told.mock.calls.length > 0, 10_000);
+      expect(told.mock.calls[0]?.[0].facts).toMatchObject({
+        outcome: "added",
+        name: "wallet-service",
+      });
+
+      const service = core.services.repos.list().find((repo) => repo.name === "wallet-service");
+      const project = (await core.dispatch("inf:projects:list", [])).find(
+        (one) => one.key === "WAL",
+      );
+      expect(project?.repos?.map((repo) => repo.name)).toEqual(["wallet-app", "wallet-service"]);
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          type: "repo_setup",
+          name: "wallet-service",
+          project: "wallet-app",
+        }),
+      );
+      const task = core.services.tasks.create({
+        id: "wallet-service-task",
+        title: "Check the service",
+        prompt: "p",
+        repoId: service?.id ?? null,
+      });
+      expect(task.key).toMatch(/^WAL-\d+$/);
+
+      await core.dispatch("inf:projects:rename", [project?.id ?? "", "Wallet"]);
+      const renamed = (await core.dispatch("inf:projects:list", [])).find(
+        (one) => one.key === "WAL",
+      );
+      expect(renamed?.name).toBe("Wallet");
+      expect(core.services.repos.get(wallet.repo.id)?.name).toBe("wallet-app");
+      // The first mate names it the same way, on the captain's words, with one feed line.
+      await change.run({
+        action: "project-name",
+        value: { projectId: project?.id ?? "", name: "Eddie's Wallet" },
+        evidence: "call the wallet project Eddie's Wallet",
+      });
+      expect(
+        (await core.dispatch("inf:projects:list", [])).find((one) => one.key === "WAL")?.name,
+      ).toBe("Eddie's Wallet");
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          type: "personalized",
+          text: "Renamed project Wallet to Eddie's Wallet",
+        }),
+      );
+    } finally {
+      detach();
+      told.mockRestore();
+      for (const card of core.services.supervisor.cards.snapshot())
+        if (card.id.startsWith("card-project-setup-"))
+          core.services.supervisor.cards.hostCards.withdrawHostCard(card.id, "test over");
+    }
+  });
+
   // Regression: the normal Settings and removal callers release the app's fork push address before changing metadata.
   it("cleans a contribution push address through Settings and project removal", async () => {
     const folder = scratchDir("contribution-cleanup-");

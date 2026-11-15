@@ -299,9 +299,16 @@ public struct PhoneProjectsPage: Decodable, Sendable, Equatable {
         public let text: String
         public let warn: Bool
     }
+    /// The project of several repositories a row is one of, named once above its rows.
+    public struct Group: Decodable, Sendable, Equatable {
+        public let id: String
+        public let name: String
+        public let line: String
+    }
     public struct Project: Decodable, Sendable, Equatable, Identifiable {
         public let id: String
         public let name: String
+        public let group: Group?
         public let line: String
         public let path: String?
         public let personal: Bool

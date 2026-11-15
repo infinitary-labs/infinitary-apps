@@ -3,6 +3,7 @@ import type { ProjectView, TaskBoard, TaskDetail, TaskView } from "@shared/tasks
 import { useEffect, useMemo, useState } from "react";
 import { useModelNames } from "../../app/useModelNames";
 import { appReadExecutor } from "../../plugins/reads/appExecutor";
+import { projectFact } from "./projectFact";
 
 /**
  * What a crewmate's summary projects (`taskFactsOf`): its board row, and the
@@ -10,11 +11,8 @@ import { appReadExecutor } from "../../plugins/reads/appExecutor";
  */
 export type CrewFacts = { task: TaskView; modelName: (model: string) => string };
 
-/**
- * The project name a Tasks row would show for this id: the board's own
- * project list, and an empty string when that list has no such project.
- */
-export function useProjectName(projectId: string | undefined): string {
+/** The board's project list, read again whenever the board changes. */
+function useBoardProjects(): readonly ProjectView[] {
   const [projects, setProjects] = useState<readonly ProjectView[]>([]);
   useEffect(
     () =>
@@ -28,8 +26,29 @@ export function useProjectName(projectId: string | undefined): string {
       ),
     [],
   );
+  return projects;
+}
+
+/**
+ * The project name a Tasks row would show for this id: the board's own
+ * project list, and an empty string when that list has no such project.
+ */
+export function useProjectName(projectId: string | undefined): string {
+  const projects = useBoardProjects();
   if (!projectId) return "";
   return projects.find((project) => project.id === projectId)?.name ?? "";
+}
+
+/** The Project fact of a task's record, read from the board's project list. */
+export function useProjectFact(
+  projectId: string | undefined,
+  repository: string | undefined,
+): string {
+  const projects = useBoardProjects();
+  return projectFact(
+    projectId ? projects.find((project) => project.id === projectId) : undefined,
+    repository,
+  );
 }
 
 /** The rows of the same sequenced board the Tasks panel paints. */

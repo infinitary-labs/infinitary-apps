@@ -34,6 +34,14 @@ public enum PhoneRecord {
         public let blocked: Bool
     }
 
+    /// The record's Project fact, as the Mac's record writes it (INF-4220): the project's name, with the repository
+    /// beside it in a project of several; the repository alone while the board has not named the project.
+    public static func projectFact(_ task: PhoneTask, board: PhoneBoard?) -> String? {
+        let project = board?.projects.first(where: { $0.id == task.projectId })
+        guard let repository = task.repo?.name else { return project?.name }
+        return project?.fact(repository: repository) ?? repository
+    }
+
     /// Open work that never started: the only work Drop task drops before a start.
     static func unstartedWork(_ task: PhoneTask) -> Bool {
         task.kind == "work" && task.status == "open" && task.startedAt == nil && task.activity == nil

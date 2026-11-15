@@ -2,18 +2,25 @@ import { execFileSync } from "node:child_process";
 import { realpathSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { captainTurn, renderWake } from "../../src/core/orchestrator/wakes";
 import { projectKeyInUseWords } from "../../src/core/tasks/projectKey";
 import {
   ADD_PROJECT_WORDS,
   newProjectWords,
   TASK_KEY_WORDS,
 } from "../../src/renderer/src/settings/addProjectWords";
+import * as m from "../../src/shared/i18n/messages.generated";
 import { scratchDir } from "../helpers/scratchDirs";
+import type { ScriptedCall } from "../helpers/scriptedCalls";
+import { waitForFirstmateIdle } from "./crew";
 import { seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { redirectGitClone } from "./homeFixtures";
-import { launchApp } from "./launch";
+import { type LaunchedApp, launchApp } from "./launch";
 import { projectRow } from "./projects";
+import { promptInput } from "./prompt";
+import { served } from "./providerRequest";
 import { assertReadableSettingsFeedback, assertSettingsFits } from "./settings";
+import { focusOn, pressKey, pressWindowKey, typeInto } from "./windowKeys";
 
 // Optional task evidence export is outside the working copy, like the host's evidence folder.
 const evidence = process.env.INFINITARY_TASK_EVIDENCE;
@@ -266,5 +273,131 @@ test("clones a project from a GitHub Enterprise host the app is signed in to, as
   } finally {
     await launched.close();
     await github.close();
+  }
+});
+
+/** The captain's words, answered by a Firstmate turn that makes `calls`; the tools' results. */
+async function ask(launched: LaunchedApp, words: string, calls: ScriptedCall[]): Promise<string[]> {
+  if (!launched.mockProvider) throw new Error("Asking Firstmate needs the mock provider");
+  await waitForFirstmateIdle(launched.page);
+  const answer = launched.mockProvider.scriptFirstmateTurn(
+    served({ kind: "user", origin: "captain", body: renderWake(captainTurn(words, false)) }),
+    calls,
+  );
+  const input = promptInput(launched.page);
+  await pressWindowKey(launched.app, "l", ["meta"]);
+  await expect(input).toBeFocused();
+  await typeInto(input, words);
+  await pressKey(input, "Enter");
+  await expect
+    .poll(answer.outcome, { timeout: 30_000 })
+    .toMatchObject({ state: "closed", results: calls.map(() => expect.any(String)) });
+  return answer.outcome().results;
+}
+
+/**
+ * The captain's ask on INF-4220: a project may hold several repositories.
+ * In Settings, by keys alone, a person adds a second repository to a project
+ * from that project's own row; the two become one project with its name
+ * above a row for each, and a task filed in the new repository takes the
+ * project's task key, not one of its own.
+ */
+test("adds a second repository to a project by keys, and a task filed in it takes the project's key", async () => {
+  const home = scratchDir("infinitary-add-repository-home-");
+  const launched = await launchApp({
+    withMockProvider: true,
+    homeDir: home,
+    env: { GIT_CONFIG_GLOBAL: join(home, ".gitconfig"), GIT_CONFIG_NOSYSTEM: "1" },
+  });
+  try {
+    const { app, page } = launched;
+    const { repo: wallet } = await page.evaluate(() =>
+      window.infinitary.repos.setup({ kind: "init", name: "wallet", key: "WAL" }),
+    );
+    const projectOf = async (name: string) =>
+      (await page.evaluate(() => window.infinitary.projects.list())).find((project) =>
+        project.repos?.some((repo) => repo.name === name),
+      );
+    const walletProject = await projectOf("wallet");
+    if (!walletProject) throw new Error("The wallet project was not listed");
+
+    await pressWindowKey(app, ",", ["meta"]);
+    const projectsTab = page.locator('[role="tab"][id$="-tab-projects"]');
+    await focusOn(projectsTab);
+    await pressKey(projectsTab, "Enter");
+    const row = projectRow(page, wallet.id).getByRole("button", {
+      name: m.settingsProjectsRowCollapsed({ name: "wallet" }),
+    });
+    await pressKey(row, "Enter");
+    await expect(
+      projectRow(page, wallet.id).getByRole("button", {
+        name: m.settingsProjectsRowExpanded({ name: "wallet" }),
+      }),
+    ).toHaveAttribute("aria-expanded", "true");
+
+    // The open row of a project of one offers Add a repository, into this project.
+    const into = page.locator('[data-add-repository="WAL"]');
+    await expect(into).toContainText(
+      m.settingsAddRepositoryNext({ key: "WAL", project: walletProject.name }),
+    );
+    const fresh = into.getByRole("button", { name: m.settingsAddRepositoryNew(), exact: true });
+    await pressKey(fresh, "Enter");
+    const name = into.getByLabel(m.settingsAddProjectName(), { exact: true });
+    await focusOn(name);
+    await typeInto(name, "wallet-api");
+    await pressKey(name, "Enter");
+
+    // One project now: its name above a row for each repository.
+    const group = page.locator('[data-project-group="WAL"]');
+    const repositories = group.locator("[data-project-repositories]");
+    await expect(repositories.locator("[data-project]")).toHaveCount(2);
+    const repos = await page.evaluate(() => window.infinitary.repos.list());
+    const api = repos.find((repo) => repo.name === "wallet-api");
+    if (!api) throw new Error("wallet-api was not added");
+    await expect(repositories.locator(`[data-project="${api.id}"]`)).toBeVisible();
+    // The add began in the project of one's row, which gave way to the group:
+    // the group's Add a repository row confirms it, and focus is on the new row.
+    await expect(group.locator('[data-add-repository="WAL"]')).toContainText(
+      m.settingsAddRepositoryAdded({ name: "wallet-api", project: walletProject.name }),
+    );
+    await expect(
+      repositories.locator(`[data-project="${api.id}"]`).getByRole("button", {
+        name: m.settingsProjectsRowCollapsed({ name: "wallet-api" }),
+      }),
+    ).toBeFocused();
+    await assertSettingsFits(page);
+    expect((await projectOf("wallet-api"))?.id).toBe(walletProject.id);
+
+    // The project of several takes a name of its own, by keys.
+    const projectName = group.getByLabel(m.settingsProjectsNameLabel(), { exact: true });
+    await focusOn(projectName);
+    await pressKey(projectName, "ControlOrMeta+a");
+    await typeInto(projectName, "Wallet");
+    await pressKey(projectName, "Enter");
+    await expect(
+      group.getByRole("button", { name: m.settingsProjectsRowExpanded({ name: "Wallet" }) }),
+    ).toBeVisible();
+    await expect.poll(async () => (await projectOf("wallet-api"))?.name).toBe("Wallet");
+
+    // A task filed in the new repository takes the project's key.
+    await pressWindowKey(app, "Escape");
+    await expect(projectsTab).toHaveCount(0);
+    const [planned] = await ask(launched, "File the balance endpoint.", [
+      {
+        name: "create_task",
+        args: {
+          title: "Balance endpoint",
+          goal: "The service answers a wallet's balance.",
+          user_words: "file the balance endpoint",
+          repo_id: api.id,
+        },
+      },
+    ]);
+    const [, key] = /Planned (\S+) /.exec(planned ?? "") ?? [];
+    expect(key).toMatch(/^WAL-\d+$/);
+    const board = await page.evaluate(() => window.infinitary.tasks.board());
+    expect(board.tasks.find((task) => task.key === key)?.projectId).toBe(walletProject.id);
+  } finally {
+    await launched.close();
   }
 });

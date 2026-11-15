@@ -64,6 +64,7 @@ import { accountHandlers, CHANGES_THERE } from "./dispatcher/accountHandlers";
 import { accountTrail } from "./dispatcher/accountTrail";
 import { createActionTrail } from "./dispatcher/actionTrail";
 import { cardMediaHandlers } from "./dispatcher/cardMedia";
+import { renameProject } from "./dispatcher/projectRename";
 import type { CoreEventSink } from "./events";
 import { SignInRequiredError, signInRefusal } from "./forge";
 import type { HostCapabilities } from "./host";
@@ -372,6 +373,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
             });
           });
         }
+        if (result.created && spec.project) services.tasks.invalidatePresentation(); // the board's project names its repositories
         return { ...result, repo: services.repos.get(result.repo.id) ?? result.repo };
       } catch (caught) {
         // A refused task key is checked before any clone, so it is never a sign-in.
@@ -404,6 +406,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       if (tasks.length > 0) throw new Error(repoRemovalRefusal(repo.name, tasks));
       await services.projectContributions.clearPushAddress(repo.id);
       services.repos.unregister(repo.id);
+      services.tasks.invalidatePresentation(); // its project may hold one fewer, or take its last one's name
       return { id: repo.id, name: repo.name };
     },
     "inf:repos:batch-answer": (repoId, answer) => services.batches.answerOrThrow(repoId, answer),
@@ -896,6 +899,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     ...privateSiteChannels(() => services.browsers?.privateSites, NO_TASK_BROWSERS),
 
     "inf:projects:list": () => services.taskProtocol.projects(),
+    "inf:projects:rename": (projectId, name) => renameProject(services, projectId, name),
 
     "inf:quota:snapshot": () => services.quota.latest() ?? null,
 
@@ -1600,6 +1604,8 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
           ? `Changed ${repo.name}: ${descriptions.join("; ")}.`
           : undefined;
         trail(name, { repo, ...(description ? { description } : {}) }, actor);
+      } else if (name === "project-name") {
+        trail(name, result as Record<string, unknown>, actor);
       } else if (name === "project-runs-on") {
         const repo = result as RepoView;
         const was = (before.get(name) as RepoView[]).find((entry) => entry.id === repo.id);

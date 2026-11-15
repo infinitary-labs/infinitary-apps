@@ -309,6 +309,7 @@
 "cardRecordNoVerdict" = "Dein erster Offizier hat sich noch nicht geäußert.";
 "cardRecordPartOf" = "Teil von";
 "cardRecordParts" = "Teile";
+"cardRecordProjectRepository" = "%1$@ · %2$@";
 "cardRecordRunsOn" = "Läuft auf";
 "cardRecordSpend" = "Kosten";
 "cardRecordStillStarting" = "Startet noch. Du kannst weiterarbeiten.";
@@ -654,6 +655,7 @@
 "feedProjectCreated" = "%2$@Projekt %1$@ · erstellt";
 "feedProjectLinked" = "%2$@Projekt %1$@ · verknüpft";
 "feedProjectRemoved" = "%2$@Projekt %1$@ · entfernt";
+"feedProjectRepositoryAdded" = "%3$@Projekt %2$@ · %1$@ hinzugefügt";
 "feedProjectSettings" = "%4$@Projekt %3$@ · Einstellungen: %1$@, %2$@";
 "feedProjectSettingsCare" = "%5$@Projekt %4$@ · Einstellungen: %2$@, %3$@, Sorgfalt: %1$@";
 "feedPullOpened" = "Einen Pull Request erstellt";
@@ -1880,6 +1882,11 @@
 "settingsAddProjectTaskKeyPlaceholder" = "Aus seinem Namen";
 "settingsAddProjectWrongHost" = "Füg einen Projektlink von %1$@ ein. Für einen anderen Host frag deinen ersten Offizier.";
 "settingsAddProjectYourRepos" = "Deine Projekte auf %1$@";
+"settingsAddRepositoryAdded" = "%1$@ zu %2$@ hinzugefügt.";
+"settingsAddRepositoryLabel" = "Ein Repository zu %1$@ hinzufügen";
+"settingsAddRepositoryNew" = "Neues Repository";
+"settingsAddRepositoryNext" = "Ein hier hinzugefügtes Repository gehört zu %2$@, und seine Aufgaben tragen das Aufgabenkürzel %1$@.";
+"settingsAddRepositoryTitle" = "Ein Repository hinzufügen";
 "settingsAppearanceCardFull" = "Voll";
 "settingsAppearanceCardMaximized" = "Maximiert";
 "settingsAppearanceCardSize" = "Standardgröße der Karten";
@@ -2550,6 +2557,7 @@
 "settingsProjectsFolderPickerFailed" = "Die Ordnerauswahl konnte nicht geöffnet werden. Bitte versuch es erneut.";
 "settingsProjectsFolderSave" = "Speichern";
 "settingsProjectsFolderUseDefault" = "Standard verwenden";
+"settingsProjectsGroupNameDescription" = "Dein Projekt behält seinen Schlüssel %1$@ und seinen Verlauf. Jedes Repository behält seinen eigenen Namen.";
 "settingsProjectsIntro" = "Füg hier ein Projekt hinzu oder frag deinen ersten Offizier, und öffne eines, um zu ändern, wie es arbeitet. Eine Zeile nennt nur, was anders eingestellt ist als bei einem neuen Projekt: Das wird als Pull Requests dort angeboten, wo es liegt, wartet vor dem Zusammenführen auf dein Wort, nutzt Sorgfalt Standard und läuft auf einem automatisch gewählten Computer.";
 "settingsProjectsLabel" = "Projekte";
 "settingsProjectsLocalCareful" = "Lokal zusammengeführte Änderungen werden sorgfältig erledigt, aber ohne Review – es gibt keinen Pull Request, den man ansehen könnte.";
@@ -2567,6 +2575,7 @@
 "settingsProjectsRemoveNamed" = "%1$@ entfernen";
 "settingsProjectsRemoveTitle" = "Projekt entfernen";
 "settingsProjectsRemoving" = "Wird entfernt ...";
+"settingsProjectsRepositoriesLabel" = "Repositorys";
 "settingsProjectsRequireChecks" = "Überprüfungen für Pull Requests verlangen";
 "settingsProjectsRequireChecksFound" = "Aus seit %1$@, als das Crewmitglied von %2$@ keine Überprüfungen fand.";
 "settingsProjectsRequireChecksOff" = "Dieses Projekt führt keine Überprüfungen aus, daher werden seine Änderungen ohne Warten zusammengeführt. Die erste Überprüfung, die läuft, schaltet dies wieder ein.";

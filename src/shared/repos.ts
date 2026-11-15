@@ -31,23 +31,33 @@ export type RepoSetupKind = z.infer<typeof repoSetupKindSchema>;
  */
 export const projectKeyChoiceSchema = z.string().trim().min(1).max(16);
 
+/**
+ * An existing project a new repository joins instead of getting its own
+ * (INF-4220), by its task key (`EDW`); never together with `key`. Scratch,
+ * the personal workspace's project and a removed project are refused.
+ */
+export const projectJoinSchema = z.string().trim().min(1).max(16);
+
 export const repoSetupSpecSchema = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("clone"),
     origin: z.string().trim().min(1),
     name: z.string().optional(),
     key: projectKeyChoiceSchema.optional(),
+    project: projectJoinSchema.optional(),
   }),
   z.strictObject({
     kind: z.literal("init"),
     name: z.string().trim().min(1),
     key: projectKeyChoiceSchema.optional(),
+    project: projectJoinSchema.optional(),
   }),
   z.strictObject({
     kind: z.literal("adopt"),
     path: z.string().trim().min(1),
     name: z.string().optional(),
     key: projectKeyChoiceSchema.optional(),
+    project: projectJoinSchema.optional(),
   }),
 ]);
 export type RepoSetupSpec = z.infer<typeof repoSetupSpecSchema>;
@@ -471,7 +481,15 @@ export type RepoSetupResult = z.infer<typeof repoSetupResultSchema>;
  */
 export type RepoSetupCheck =
   | { existing: RepoView }
-  | { name: string; origin: string | null; host: RepoHost; startsGit: boolean; key?: string };
+  | {
+      name: string;
+      origin: string | null;
+      host: RepoHost;
+      startsGit: boolean;
+      key?: string;
+      /** The existing project it would join, when the spec names one. */
+      project?: { key: string; name: string };
+    };
 
 /** Tasks still on a project. Any open or active task blocks its removal. */
 export const repoRemovalSchema = z.object({

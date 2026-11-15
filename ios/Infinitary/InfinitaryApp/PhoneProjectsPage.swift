@@ -8,10 +8,19 @@ struct PhoneProjectsView: View {
     let open: (String) -> Void
     let back: () -> Void
 
-    /// The projects the Settings row counts, then the personal workspace in a list of its own: it is not one of the
-    /// counted projects, so the count reads as the first list's rows.
+    /// The projects the Settings row counts, a project of several repositories in a list of its own, named above its
+    /// rows, where its first repository sits; then the personal workspace in a list of its own, since it is not one
+    /// of the counted projects.
     private var groups: [[PhoneProjectsPage.Project]] {
-        [page.projects.filter { !$0.personal }, page.projects.filter(\.personal)].filter { !$0.isEmpty }
+        var lists: [[PhoneProjectsPage.Project]] = []
+        for project in page.projects where !project.personal {
+            if let last = lists.last?.last, last.group?.id == project.group?.id {
+                lists[lists.count - 1].append(project)
+            } else {
+                lists.append([project])
+            }
+        }
+        return (lists + [page.projects.filter(\.personal)]).filter { !$0.isEmpty }
     }
 
     var body: some View {
@@ -20,6 +29,12 @@ struct PhoneProjectsView: View {
                 PhoneNoteLine(empty, color: PhoneTheme.muted).accessibilityIdentifier("projects-empty")
             }
             ForEach(groups, id: \.first?.id) { group in
+                if let named = group.first?.group {
+                    VStack(alignment: .leading, spacing: 2) {
+                        PhoneSectionLabel(named.name)
+                        Text(named.line).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
+                    }.accessibilityElement(children: .combine).accessibilityIdentifier("project-group-\(named.id)")
+                }
                 PhoneList {
                     ForEach(group) { project in
                         Button { open(project.id) } label: {

@@ -115,6 +115,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | redacted (decision records) | 脱敏 | The mainland word for records with personal details stripped. |
 | Remove (a device) | 移除 | |
 | report | 汇报 | |
+| repository (one of a project's) | 仓库 | GitHub's own Simplified Chinese word; 「添加仓库」「2 个仓库」. Names one of a project's repositories; what work belongs to stays 项目. |
 | review (the reviewer's pass) | 审查 | |
 | revision (of a record) | 修订 | 修订 {revision}. |
 | rigor levels: Quick, Default, Careful | 快速、默认、谨慎 | A record cell reads 快速把关, and a settings line reads 把关：谨慎. |

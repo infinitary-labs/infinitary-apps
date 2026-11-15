@@ -579,6 +579,46 @@ describe("RepoRegistry chosen task key", () => {
     expect(projects.byKey("ZZ")).toBeUndefined();
   });
 
+  // INF-4220: Settings' Add a repository and the first mate's setup card name the project by its key.
+  it("adds a repository to an existing project by its key, by every way of adding", async () => {
+    const first = await registry.setup({ kind: "init", name: "eddies-wallet", key: "EDW" });
+    const origin = scratchDir("infinitary-origin-");
+    await git(origin, ["init", "-q", "-b", "main"]);
+    await git(origin, [...APP_GIT_IDENTITY, "commit", "-q", "--allow-empty", "-m", "chore: init"]);
+    const folder = scratchDir("infinitary-adopt-");
+
+    expect(
+      await registry.check({ kind: "init", name: "wallet-api", project: "edw" }),
+    ).toMatchObject({ name: "wallet-api", project: { key: "EDW", name: "eddies-wallet" } });
+    const created = await registry.setup({ kind: "init", name: "wallet-api", project: "edw" });
+    const cloned = await registry.setup({ kind: "clone", origin, project: "EDW" });
+    const adopted = await registry.setup({ kind: "adopt", path: folder, project: "EDW" });
+    const project = projects.forRepo(first.repo.id);
+    expect([created, cloned, adopted].map(({ repo }) => projects.forRepo(repo.id))).toEqual([
+      project,
+      project,
+      project,
+    ]);
+    expect(projects.list().map((one) => one.key)).toEqual(["SCR", "EDW"]);
+    if (!project) throw new Error("No project for eddies-wallet");
+    expect(projects.allocateSeq(project.id).key).toBe("EDW-1");
+  });
+
+  it("refuses to add a repository to an unknown project, or with a key of its own too, before anything is made", async () => {
+    await registry.setup({ kind: "init", name: "eddies-wallet", key: "EDW" });
+    await expect(registry.setup({ kind: "init", name: "lost", project: "NOPE" })).rejects.toThrow(
+      "No project has the task key NOPE.",
+    );
+    await expect(
+      registry.setup({ kind: "init", name: "both", project: "EDW", key: "BOTH" }),
+    ).rejects.toThrow("A repository joins a project or gets a task key of its own, never both.");
+    await expect(registry.check({ kind: "init", name: "x", project: "SCR" })).rejects.toThrow(
+      "Scratch takes no repository.",
+    );
+    expect(registry.list().map((repo) => repo.name)).toEqual(["eddies-wallet"]);
+    expect(existsSync(join(fleetRoot, "lost"))).toBe(false);
+  });
+
   it("refuses a key a project already has, or one that is no key, before anything is made", async () => {
     const first = await registry.setup({ kind: "init", name: "first", key: "INF" });
     const origin = scratchDir("infinitary-origin-");
@@ -770,6 +810,38 @@ describe("a project of several repositories", () => {
     });
     registry.configure(solo.id, { name: "solo-renamed" });
     expect(projects.forRepo(solo.id)?.name).toBe("solo-renamed");
+  });
+
+  it("names a project of several repositories on its own, and refuses one of one", () => {
+    const { db, registry, projects, project, app, api } = eddiesWallet();
+    expect(registry.renameProject(project.id, " Eddie's Wallet ")).toEqual({
+      id: project.id,
+      name: "Eddie's Wallet",
+      was: "eddies-wallet",
+    });
+    expect(projects.get(project.id)).toMatchObject({ name: "Eddie's Wallet", key: "EDW" });
+    expect(registry.projectOf(api.id)).toMatchObject({ key: "EDW", repositories: 2 });
+    expect(registry.get(app.id)?.name).toBe("eddies-wallet");
+    const solo = seedProject(db, { id: "r-solo", name: "solo", path: "/fleet/solo" });
+    const soloProject = projects.forRepo(solo.id);
+    expect(() => registry.renameProject(soloProject?.id ?? "", "Other")).toThrow(
+      "solo is named with its repository; rename the repository instead.",
+    );
+    expect(() => registry.renameProject("scratch", "Other")).toThrow(
+      "That project is not here. It may have been removed.",
+    );
+  });
+
+  it("names a project that shrinks back to one repository with that repository", () => {
+    const { registry, projects, project, app, api } = eddiesWallet();
+    registry.renameProject(project.id, "Eddie's Wallet");
+    registry.unregister(app.id);
+    expect(projects.get(project.id)).toMatchObject({
+      name: "eddies-wallet-backend",
+      key: "EDW",
+      archivedAt: null,
+    });
+    expect(registry.projectOf(api.id)).toMatchObject({ name: "eddies-wallet-backend" });
   });
 
   it("archives the project only when its last repository is removed", () => {

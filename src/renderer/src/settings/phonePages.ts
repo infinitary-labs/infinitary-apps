@@ -60,6 +60,7 @@ import {
   runWords,
 } from "./automationWords";
 import { PROJECT_COST_WORDS } from "./projectCostWords";
+import { projectEntries } from "./projectGroups";
 import {
   batchNoHostWords,
   PROJECT_POLICY_WORDS,
@@ -759,6 +760,12 @@ export type PhoneChoice = { value: string; label: string };
 export type PhoneProject = {
   id: string;
   name: string;
+  /**
+   * The project of several repositories this row is one of (INF-4220): its
+   * id, its name and its line, drawn once above its rows; absent for a
+   * project of one.
+   */
+  group?: { id: string; name: string; line: string };
   /** How the project differs from a new one, in the row's own words; empty for none. */
   line: string;
   path?: string;
@@ -816,6 +823,8 @@ function costOf(limit: CostLimit | null | undefined): PhoneProject["cost"] {
 /** Settings → Projects on the phone: each project and the standing choices its row holds. */
 export function projectsPage(input: {
   repos: RepoView[];
+  /** The projects the repositories belong to (`inf:projects:list`); absent from an older phone. */
+  projects?: ProjectView[];
   /** The projects folder, or null while it is unread. */
   folder: string | null;
   /** The computers that run work, or null where the first mate offers no Devices. */
@@ -823,7 +832,20 @@ export function projectsPage(input: {
   home: string;
 }): PhoneProjects {
   const { repos, folder, devices, home } = input;
-  const projects = repos.map((repo): PhoneProject => {
+  // A project of several repositories is one group, named once above its rows (INF-4220).
+  const entries = projectEntries(repos, input.projects ?? []);
+  const groupOf = new Map<string, NonNullable<PhoneProject["group"]>>();
+  for (const entry of entries)
+    if (entry.kind === "several")
+      for (const repo of entry.repos)
+        groupOf.set(repo.id, {
+          id: entry.project.id,
+          name: entry.project.name,
+          line: `${entry.project.key} · ${m.settingsProjectsRepositoryCount({ count: entry.repos.length })}`,
+        });
+  const ordered = entries.flatMap((entry) => (entry.kind === "one" ? [entry.repo] : entry.repos));
+  const projects = ordered.map((repo): PhoneProject => {
+    const group = groupOf.get(repo.id);
     const personal = repo.kind === "personal";
     // As the computer's row: a project with an address can be placed even before any computer is paired.
     const computers =
@@ -833,6 +855,7 @@ export function projectsPage(input: {
     return {
       id: repo.id,
       name: repo.name,
+      ...(group ? { group } : {}),
       line: words.join(" · "),
       ...(!personal && folder !== null && words.includes(PROJECT_ROW_WORDS.linked)
         ? { path: repo.path }
@@ -883,7 +906,9 @@ export function projectsPage(input: {
     };
   });
   return {
-    summary: projectsSummary(repos),
+    summary: projectsSummary(
+      entries.map((entry) => (entry.kind === "one" ? entry.repo : (entry.repos[0] as RepoView))),
+    ),
     projects,
     ...(repos.every((repo) => repo.kind === "personal")
       ? { empty: PHONE_SETTINGS_WORDS.noProjects(home) }

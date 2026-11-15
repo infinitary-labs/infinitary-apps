@@ -2211,6 +2211,30 @@
       <string>%1$ld مشروع</string>
     </dict>
   </dict>
+  <key>settingsProjectsRepositoryCount</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%1$ld مستودع</string>
+      <key>one</key>
+      <string>%1$ld مستودع</string>
+      <key>two</key>
+      <string>%1$ld مستودعان</string>
+      <key>few</key>
+      <string>%1$ld مستودعات</string>
+      <key>many</key>
+      <string>%1$ld مستودعًا</string>
+      <key>other</key>
+      <string>%1$ld مستودع</string>
+    </dict>
+  </dict>
   <key>shellGateFreshCheckLine</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

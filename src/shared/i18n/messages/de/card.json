@@ -128,6 +128,7 @@
   "cardRecordNoVerdict": "Dein erster Offizier hat sich noch nicht geäußert.",
   "cardRecordPartOf": "Teil von",
   "cardRecordParts": "Teile",
+  "cardRecordProjectRepository": "{project} · {repository}",
   "cardRecordRunsOn": "Läuft auf",
   "cardRecordSpend": "Kosten",
   "cardRecordStillStarting": "Startet noch. Du kannst weiterarbeiten.",

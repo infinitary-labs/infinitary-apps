@@ -309,6 +309,7 @@
 "cardRecordNoVerdict" = "Your first mate has not said yet.";
 "cardRecordPartOf" = "Part of";
 "cardRecordParts" = "Parts";
+"cardRecordProjectRepository" = "%1$@ · %2$@";
 "cardRecordRunsOn" = "Runs on";
 "cardRecordSpend" = "Spend";
 "cardRecordStillStarting" = "Still starting. You can keep working.";
@@ -654,6 +655,7 @@
 "feedProjectCreated" = "%2$@Project %1$@ · created";
 "feedProjectLinked" = "%2$@Project %1$@ · linked";
 "feedProjectRemoved" = "%2$@Project %1$@ · removed";
+"feedProjectRepositoryAdded" = "%3$@Project %2$@ · added %1$@";
 "feedProjectSettings" = "%4$@Project %3$@ · settings: %1$@, %2$@";
 "feedProjectSettingsCare" = "%5$@Project %4$@ · settings: %2$@, %3$@, rigor: %1$@";
 "feedPullOpened" = "Opened a pull request";
@@ -1880,6 +1882,11 @@
 "settingsAddProjectTaskKeyPlaceholder" = "From its name";
 "settingsAddProjectWrongHost" = "Paste a %1$@ project link. For another host, ask your first mate.";
 "settingsAddProjectYourRepos" = "Your %1$@ repos";
+"settingsAddRepositoryAdded" = "Added %1$@ to %2$@.";
+"settingsAddRepositoryLabel" = "Add a repository to %1$@";
+"settingsAddRepositoryNew" = "New repository";
+"settingsAddRepositoryNext" = "A repository added here joins %2$@, and its tasks take the task key %1$@.";
+"settingsAddRepositoryTitle" = "Add a repository";
 "settingsAppearanceCardFull" = "Full";
 "settingsAppearanceCardMaximized" = "Maximized";
 "settingsAppearanceCardSize" = "Default card size";
@@ -2550,6 +2557,7 @@
 "settingsProjectsFolderPickerFailed" = "Could not open the folder picker. Please try again.";
 "settingsProjectsFolderSave" = "Save";
 "settingsProjectsFolderUseDefault" = "Use default";
+"settingsProjectsGroupNameDescription" = "Your project keeps its key %1$@ and its history. Each repository keeps its own name.";
 "settingsProjectsIntro" = "Add a project here or ask your first mate, and open one to change how it works. A row says only what is set differently from a new project, which is offered as pull requests where it lives, waits for your word before merging, takes Default rigor and runs on a computer chosen automatically.";
 "settingsProjectsLabel" = "Projects";
 "settingsProjectsLocalCareful" = "Changes that merge locally are done carefully, without a review - there is no pull request to look at.";
@@ -2567,6 +2575,7 @@
 "settingsProjectsRemoveNamed" = "Remove %1$@";
 "settingsProjectsRemoveTitle" = "Remove project";
 "settingsProjectsRemoving" = "Removing...";
+"settingsProjectsRepositoriesLabel" = "Repositories";
 "settingsProjectsRequireChecks" = "Require pull request checks";
 "settingsProjectsRequireChecksFound" = "Off since %1$@, when the crewmate of %2$@ found no checks.";
 "settingsProjectsRequireChecksOff" = "This project runs no checks, so its changes merge without waiting for any. The first check that runs turns this back on.";

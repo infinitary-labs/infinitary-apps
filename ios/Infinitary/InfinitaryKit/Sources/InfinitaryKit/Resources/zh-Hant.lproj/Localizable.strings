@@ -309,6 +309,7 @@
 "cardRecordNoVerdict" = "你的大副還沒表示意見。";
 "cardRecordPartOf" = "隸屬於";
 "cardRecordParts" = "部分";
+"cardRecordProjectRepository" = "%1$@ · %2$@";
 "cardRecordRunsOn" = "執行於";
 "cardRecordSpend" = "花費";
 "cardRecordStillStarting" = "仍在啟動中。你可以繼續工作。";
@@ -654,6 +655,7 @@
 "feedProjectCreated" = "%2$@專案 %1$@ · 已建立";
 "feedProjectLinked" = "%2$@專案 %1$@ · 已連結";
 "feedProjectRemoved" = "%2$@專案 %1$@ · 已移除";
+"feedProjectRepositoryAdded" = "%3$@專案 %2$@ · 已加入 %1$@";
 "feedProjectSettings" = "%4$@專案 %3$@ · 設定：%1$@，%2$@";
 "feedProjectSettingsCare" = "%5$@專案 %4$@ · 設定：%2$@，%3$@，謹慎度：%1$@";
 "feedPullOpened" = "已開啟 pull request";
@@ -1880,6 +1882,11 @@
 "settingsAddProjectTaskKeyPlaceholder" = "取自它的名稱";
 "settingsAddProjectWrongHost" = "請貼上 %1$@ 專案連結。如果是其他主機，請問你的大副。";
 "settingsAddProjectYourRepos" = "你的 %1$@ 存放庫";
+"settingsAddRepositoryAdded" = "已將 %1$@ 加入 %2$@。";
+"settingsAddRepositoryLabel" = "在 %1$@ 中加入存放庫";
+"settingsAddRepositoryNew" = "新增存放庫";
+"settingsAddRepositoryNext" = "在這裡加入的存放庫會成為 %2$@ 的一部分，它的任務使用任務編號前綴 %1$@。";
+"settingsAddRepositoryTitle" = "加入存放庫";
 "settingsAppearanceCardFull" = "全寬";
 "settingsAppearanceCardMaximized" = "最大化";
 "settingsAppearanceCardSize" = "預設卡片大小";
@@ -2550,6 +2557,7 @@
 "settingsProjectsFolderPickerFailed" = "無法開啟資料夾選擇器。請再試一次。";
 "settingsProjectsFolderSave" = "儲存";
 "settingsProjectsFolderUseDefault" = "使用預設";
+"settingsProjectsGroupNameDescription" = "你的專案會保留它的任務編號前綴 %1$@ 和歷史。每個存放庫保留自己的名稱。";
 "settingsProjectsIntro" = "在這裡加入專案或請你的大副加入，開啟專案就能更改它的運作方式。每一列只顯示和新專案不同的設定；新專案預設在專案所在處以 pull request 提出、合併前等你同意、使用預設謹慎度，並在自動選擇的電腦上執行。";
 "settingsProjectsLabel" = "專案";
 "settingsProjectsLocalCareful" = "本機合併的變更會謹慎完成，但沒有審查，因為沒有 pull request 可以看。";
@@ -2567,6 +2575,7 @@
 "settingsProjectsRemoveNamed" = "移除 %1$@";
 "settingsProjectsRemoveTitle" = "移除專案";
 "settingsProjectsRemoving" = "正在移除…";
+"settingsProjectsRepositoriesLabel" = "存放庫";
 "settingsProjectsRequireChecks" = "要求 pull request 檢查";
 "settingsProjectsRequireChecksFound" = "自 %1$@ 起關閉：%2$@ 的船員發現沒有檢查。";
 "settingsProjectsRequireChecksOff" = "這個專案不執行檢查，所以變更不用等待就會合併。第一次有檢查執行時，這一項會重新開啟。";

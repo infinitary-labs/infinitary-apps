@@ -17,7 +17,7 @@ The right column is the whole list of allowed forms; pick the one the sentence n
 
 | Never say | Say |
 | --- | --- |
-| repo, as the app's noun | your project, the project. "repository" is allowed when the sentence points at GitHub, and in text only the models read |
+| repo, as the app's noun | your project, the project. "repository" names one of a project's repositories where a project holds several or can take another (Settings → Projects' "2 repositories" and "Add a repository", the setup card's "Add repository"), points at GitHub, or sits in text only the models read; the project is still what work, keys and tasks belong to |
 | worktree, working tree, checkout | a working copy (the isolated copy this app makes). A git branch is "branch" |
 | land, landing, landed, ship, put it in | merge; "merge the pull request", "merge the branch", "merge when checks pass", "merge after fixing errors", "Merged #N on GitHub", "Merged \"title\" into main", "Cannot merge" |
 | file, filed (for a task that starts now or by itself) | start, with its moment: "starts now", "starts once INF-12 merges", "starts when INF-11 finishes". File means the backlog alone: "Filed INF-12 in the backlog", "it waits for your Start". The board's Queued lane keeps its name |
@@ -115,7 +115,7 @@ Never use: factory, autopilot, replace, 10x, "AI Studio" as a name, or words tha
 **Where the table does not apply.**
 Observe (a developer surface in development and alpha builds only), the record pane's evidence rows and the fact strip's identifiers, a crewmate's own report to the first mate (it is read by a model), the corpus and the exporters, and everything under `docs/`.
 Code comments and the AGENTS file keep their technical names; they are not the app.
-Text only the models read may say "repository" and "remote"; a card still does not, except "repository" when the sentence points at GitHub.
+Text only the models read may say "repository" and "remote"; a card still does not, except "repository" when the sentence points at GitHub or names one of a project's repositories.
 
 **Evidence, never a filter.**
 The rule is measured by a hand-scored sample in the replay gate (`tests/fixtures/plain-language/labels.jsonl`, scored by `scripts/interaction-metrics.ts`), not by a banned-word lint: "the checks failed" needs the word "checks", and a word list would fight honest text.

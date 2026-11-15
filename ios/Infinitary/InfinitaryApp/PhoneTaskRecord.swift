@@ -158,7 +158,7 @@ struct PhoneTaskRecord: View {
             VStack(alignment: .leading, spacing: Self.rowGap) {
                 relations
                 goal(now: now)
-                if let project = task.repo?.name ?? session.board?.projects.first(where: { $0.id == task.projectId })?.name {
+                if let project = PhoneRecord.projectFact(task, board: session.board) {
                     row(PhoneMessages.phoneRecordProject(), id: "task-record-project") { Text(project).foregroundStyle(PhoneTheme.text) }
                 }
                 if let current = facts.now {

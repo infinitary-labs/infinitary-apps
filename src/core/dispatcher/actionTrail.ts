@@ -144,6 +144,7 @@ export function createActionTrail(
       });
     } else if (name === "project-setup") {
       const repo = value.repo as RepoView;
+      const project = services.repos.projectOf(repo.id);
       services.broadcastEvent({
         type: "repo_setup",
         repoId: repo.id,
@@ -151,6 +152,7 @@ export function createActionTrail(
         path: repo.path,
         kind: repo.setupKind,
         actor: actor.kind,
+        ...(project && project.repositories > 1 ? { project: project.name } : {}),
       });
     } else if (name === "project-settings")
       services.broadcastEvent({

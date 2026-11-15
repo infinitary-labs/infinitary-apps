@@ -51,6 +51,7 @@
   "feedProjectCreated": "{who}Proyecto {name} · creado",
   "feedProjectLinked": "{who}Proyecto {name} · vinculado",
   "feedProjectRemoved": "{who}Proyecto {name} · quitado",
+  "feedProjectRepositoryAdded": "{who}Proyecto {project} · se agregó {name}",
   "feedProjectSettings": "{who}Proyecto {name} · configuración: {delivery}, {merging}",
   "feedProjectSettingsCare": "{who}Proyecto {name} · configuración: {delivery}, {merging}, cuidado: {care}",
   "feedPullOpened": "Abrió una solicitud de incorporación de cambios",

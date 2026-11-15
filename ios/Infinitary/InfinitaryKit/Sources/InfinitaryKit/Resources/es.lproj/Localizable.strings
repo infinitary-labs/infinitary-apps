@@ -309,6 +309,7 @@
 "cardRecordNoVerdict" = "Tu primer oficial aún no se ha pronunciado.";
 "cardRecordPartOf" = "Parte de";
 "cardRecordParts" = "Partes";
+"cardRecordProjectRepository" = "%1$@ · %2$@";
 "cardRecordRunsOn" = "Se ejecuta en";
 "cardRecordSpend" = "Gasto";
 "cardRecordStillStarting" = "Todavía se está iniciando. Puedes seguir trabajando.";
@@ -654,6 +655,7 @@
 "feedProjectCreated" = "%2$@Proyecto %1$@ · creado";
 "feedProjectLinked" = "%2$@Proyecto %1$@ · vinculado";
 "feedProjectRemoved" = "%2$@Proyecto %1$@ · quitado";
+"feedProjectRepositoryAdded" = "%3$@Proyecto %2$@ · se agregó %1$@";
 "feedProjectSettings" = "%4$@Proyecto %3$@ · configuración: %1$@, %2$@";
 "feedProjectSettingsCare" = "%5$@Proyecto %4$@ · configuración: %2$@, %3$@, cuidado: %1$@";
 "feedPullOpened" = "Abrió una solicitud de incorporación de cambios";
@@ -1880,6 +1882,11 @@
 "settingsAddProjectTaskKeyPlaceholder" = "A partir de su nombre";
 "settingsAddProjectWrongHost" = "Pega el enlace de un proyecto de %1$@. Para otro sitio, pregúntale a tu primer oficial.";
 "settingsAddProjectYourRepos" = "Tus repositorios de %1$@";
+"settingsAddRepositoryAdded" = "Se agregó %1$@ a %2$@.";
+"settingsAddRepositoryLabel" = "Agregar un repositorio a %1$@";
+"settingsAddRepositoryNew" = "Nuevo repositorio";
+"settingsAddRepositoryNext" = "Un repositorio añadido aquí se une a %2$@, y sus tareas llevan la clave de tareas %1$@.";
+"settingsAddRepositoryTitle" = "Agregar un repositorio";
 "settingsAppearanceCardFull" = "Completa";
 "settingsAppearanceCardMaximized" = "Maximizada";
 "settingsAppearanceCardSize" = "Tamaño predeterminado de las tarjetas";
@@ -2550,6 +2557,7 @@
 "settingsProjectsFolderPickerFailed" = "No se pudo abrir el selector de carpetas. Vuelve a intentarlo.";
 "settingsProjectsFolderSave" = "Guardar";
 "settingsProjectsFolderUseDefault" = "Usar la predeterminada";
+"settingsProjectsGroupNameDescription" = "Tu proyecto mantiene su clave %1$@ y su historial. Cada repositorio mantiene su propio nombre.";
 "settingsProjectsIntro" = "Agrega un proyecto aquí o pídeselo a tu primer oficial, y abre uno para cambiar cómo funciona. Una fila solo indica lo que difiere de un proyecto nuevo, que se ofrece como solicitudes de incorporación de cambios donde se aloja, espera tu palabra antes de fusionar, usa el cuidado Predeterminado y se ejecuta en una computadora elegida automáticamente.";
 "settingsProjectsLabel" = "Proyectos";
 "settingsProjectsLocalCareful" = "Los cambios que se fusionan localmente se hacen con cuidado, sin revisión: no hay ninguna solicitud de incorporación de cambios que mirar.";
@@ -2567,6 +2575,7 @@
 "settingsProjectsRemoveNamed" = "Quitar %1$@";
 "settingsProjectsRemoveTitle" = "Quitar proyecto";
 "settingsProjectsRemoving" = "Quitando...";
+"settingsProjectsRepositoriesLabel" = "Repositorios";
 "settingsProjectsRequireChecks" = "Exigir comprobaciones en las solicitudes de incorporación de cambios";
 "settingsProjectsRequireChecksFound" = "Desactivado desde %1$@, cuando el tripulante de %2$@ no encontró comprobaciones.";
 "settingsProjectsRequireChecksOff" = "Este proyecto no ejecuta comprobaciones, así que sus cambios se fusionan sin esperar ninguna. La primera comprobación que se ejecute vuelve a activarlo.";

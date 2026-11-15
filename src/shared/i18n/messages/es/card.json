@@ -133,6 +133,7 @@
   "cardRecordNoVerdict": "Tu primer oficial aún no se ha pronunciado.",
   "cardRecordPartOf": "Parte de",
   "cardRecordParts": "Partes",
+  "cardRecordProjectRepository": "{project} · {repository}",
   "cardRecordRunsOn": "Se ejecuta en",
   "cardRecordSpend": "Gasto",
   "cardRecordStillStarting": "Todavía se está iniciando. Puedes seguir trabajando.",

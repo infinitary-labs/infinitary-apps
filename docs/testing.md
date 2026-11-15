@@ -578,6 +578,7 @@ Each rolling alpha run holds the concurrency group `rolling-alpha-from-main-run-
 Only its `find` job, for the moments GitHub takes to start an alpha and put it in its group, and its `ended` job, which confirms every alpha ended, take a machine, about a minute each.
 An alpha run that holds no group, such as one started before the groups, is still waited for by polling in the `ended` job.
 A failed cut ends the wait too, so it never holds main's fixes; an alpha run that never started holds nothing after ten minutes, and that polling ends before GitHub's six-hour job limit.
+Its scripts ask GitHub again after a server error, the answer GitHub gives a request that takes it more than ten seconds, so one slow answer does not fail main's check.
 While it waits, merges keep queueing in the one waiting run; when main moved meanwhile, the run cancels itself, so the waiting run checks every merge at once.
 While the captain has paused the rolling pipeline, a run a push started cancels itself in that first job, and the next merge after Resume starts the run that covers the pause (`docs/alpha.md`, "Pausing the rolling pipeline").
 The newest passing run of `main.yml` is main's green mark: its commit is the newest version main's full check passed, and no other record names it.

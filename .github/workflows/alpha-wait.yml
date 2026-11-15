@@ -31,6 +31,13 @@ name: Wait for the alpha cut
 # started cancels itself here, before any check behind this job starts. A
 # check started by hand still runs. Resuming re-runs nothing: the next merge's
 # check covers every merge made during the pause.
+#
+# GitHub's answers: GitHub ends a request it takes more than ten seconds to
+# answer with a server error, and one such answer must not fail main's check.
+# Each script here asks again after a server error (github-script's `retries`
+# input) and asks for no more than it reads: main's runs only as far back as
+# the ten minutes the previous run's alpha is waited for, and no run's pull
+# requests.
 on:
   workflow_call:
     inputs:
@@ -61,6 +68,7 @@ jobs:
         if: vars.ROLLING_ALPHA_PAUSED == 'true' && github.event_name != 'workflow_dispatch'
         uses: actions/github-script@v7
         with:
+          retries: 3
           script: |
             await core.summary.addHeading('Paused by the captain').addRaw(`The rolling pipeline is paused, so this check of ${context.sha} cancels itself. After Resume, the next merge's check covers every merge made meanwhile.`).write();
             await github.rest.actions.cancelWorkflowRun({...context.repo, run_id: context.runId});
@@ -72,13 +80,17 @@ jobs:
         if: vars.ROLLING_ALPHA_PAUSED != 'true' || github.event_name == 'workflow_dispatch'
         uses: actions/github-script@v7
         with:
+          retries: 3
           script: |
             const minute = 60_000;
             const pause = (ms) => new Promise((done) => setTimeout(done, ms));
             const started = Date.now();
             const {data: me} = await github.rest.actions.getWorkflowRun({...context.repo, run_id: context.runId});
+            // The previous run matters only for ten minutes after it ended,
+            // and no twenty main runs end in ten minutes.
             const {data: mains} = await github.rest.actions.listWorkflowRuns({
-              ...context.repo, workflow_id: 'main.yml', branch: 'main', status: 'completed', per_page: 100
+              ...context.repo, workflow_id: 'main.yml', branch: 'main', status: 'completed',
+              exclude_pull_requests: true, per_page: 20
             });
             // A main run from before batches of the person's own was started by the team queue's dispatch.
             const previous = mains.workflow_runs
@@ -89,7 +101,7 @@ jobs:
             let waited = false;
             for (;;) {
               const {data} = await github.rest.actions.listWorkflowRuns({
-                ...context.repo, workflow_id: 'release.yml', per_page: 100
+                ...context.repo, workflow_id: 'release.yml', exclude_pull_requests: true, per_page: 100
               });
               const alphas = data.workflow_runs.filter((run) => run.display_title?.startsWith(prefix));
               const running = alphas.filter((run) => run.status !== 'completed');
@@ -148,6 +160,7 @@ jobs:
         env:
           WAITED: ${{ needs.find.outputs.alphas }}
         with:
+          retries: 3
           script: |
             const minute = 60_000;
             const pause = (ms) => new Promise((done) => setTimeout(done, ms));
@@ -156,7 +169,7 @@ jobs:
             const waited = JSON.parse(process.env.WAITED || '[]');
             for (;;) {
               const {data} = await github.rest.actions.listWorkflowRuns({
-                ...context.repo, workflow_id: 'release.yml', per_page: 100
+                ...context.repo, workflow_id: 'release.yml', exclude_pull_requests: true, per_page: 100
               });
               const alphas = data.workflow_runs.filter((run) => run.display_title?.startsWith(prefix));
               // Normally none: each ended before its group let the wait go on.

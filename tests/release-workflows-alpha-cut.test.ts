@@ -578,7 +578,12 @@ describe("an alpha with nothing new to build", () => {
  */
 describe("the next main check waits for the alpha cut", () => {
   type Job = { uses?: string; needs?: string | string[] };
-  type Step = { name: string; if?: string; with?: { script?: string } };
+  type Step = {
+    name: string;
+    if?: string;
+    uses?: string;
+    with?: { script?: string; retries?: number; "retry-exempt-status-codes"?: string };
+  };
   type WaitJob = {
     if?: string;
     strategy?: { matrix: { run: string } };
@@ -803,10 +808,14 @@ describe("the next main check waits for the alpha cut", () => {
             data: { id: run_id, run_number: 75 },
           }),
           listWorkflowRuns: async ({ workflow_id, ...filters }: Record<string, unknown>) => {
+            // GitHub answers at most a page of runs, newest first, and no
+            // script here reads a run's pull requests.
+            const page = (runs: Run[]) => runs.slice(0, Number(filters.per_page ?? 30));
+            expect(filters.exclude_pull_requests).toBe(true);
             if (workflow_id === "main.yml") {
               expect(filters).toMatchObject({ branch: "main", status: "completed" });
               expect(filters.event).toBeUndefined();
-              return { data: { workflow_runs: options.mains } };
+              return { data: { workflow_runs: page(options.mains) } };
             }
             // Every release starts by dispatch (INF-3738), so rolling alphas
             // are found by name among every release run.
@@ -814,7 +823,7 @@ describe("the next main check waits for the alpha cut", () => {
               workflow_id: "release.yml",
               event: undefined,
             });
-            return { data: { workflow_runs: listed() } };
+            return { data: { workflow_runs: page(listed()) } };
           },
           cancelWorkflowRun: async ({ run_id }: { run_id: number }) => {
             cancelled.push(run_id);
@@ -1059,5 +1068,31 @@ describe("the next main check waits for the alpha cut", () => {
     expect(ungrouped.minutes).toBeGreaterThan(340);
     expect(ungrouped.minutes).toBeLessThan(360);
     expect(ungrouped.summary).toContain("had not ended");
+  });
+
+  /**
+   * Main run 605 failed in seconds when GitHub answered the find step's list
+   * of main's runs with a server error, "502 Server Error", which GitHub
+   * sends when a request takes it more than ten seconds. github-script asks
+   * again after such an answer only when its `retries` input is set, and
+   * never for the status codes its `retry-exempt-status-codes` input names.
+   */
+  it("asks GitHub again after a server error in every step that reads or cancels a run", () => {
+    const steps = [...wait.jobs.find.steps, ...wait.jobs.ended.steps].filter((step) =>
+      step.uses?.startsWith("actions/github-script@"),
+    );
+    expect(steps.map((step) => step.name)).toEqual([
+      pauseStep?.name,
+      findStep?.name,
+      wait.jobs.ended.steps[0]?.name,
+    ]);
+    for (const step of steps) {
+      expect(step.with?.retries, step.name).toBeGreaterThan(0);
+      const exempt = (step.with?.["retry-exempt-status-codes"] ?? "").split(",").map(Number);
+      expect(
+        exempt.filter((status) => status >= 500),
+        step.name,
+      ).toEqual([]);
+    }
   });
 });

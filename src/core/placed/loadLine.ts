@@ -16,11 +16,13 @@ import {
   type ResourceObservation,
 } from "@shared/resources";
 import { z } from "zod";
+import { hostPlatform } from "../platform";
 import { memoryUsedBytes } from "./memoryUsed";
 import { type ProcessReading, readProcesses, readReceiptProcess } from "./processResources";
 import { processRoots } from "./processRoots";
 import { memoryMarginBytes, resourceCapacity } from "./resourceCapacity";
 import type { CpuWindow, ProcessWindow } from "./resourceSampler";
+import { windowsJobs } from "./windowsProcesses";
 
 const heldSchema = z.object({
   id: z.string().uuid(),
@@ -61,7 +63,12 @@ export type LoadJournalEntry = {
   why?: string;
 };
 
-export type LoadClaim = { pid: number; demand: LoadDemand; parent?: string };
+/**
+ * `caller` is the wrapper's own caller where the system cannot say who
+ * started the leader: on Windows the leader's parent reads as none, so the
+ * wrapper names the outer program it was started by (docs/heavy-runs.md, "On Windows").
+ */
+export type LoadClaim = { pid: number; demand: LoadDemand; parent?: string; caller?: number };
 export type LoadReceipt = { hold: string; pid: number; payload: number; started: string };
 /**
  * A claim's answer: its run, or, when the process table could not be read
@@ -77,8 +84,13 @@ export type TaskLoad = {
   read: () => LoadSnapshot;
 };
 
-/** Signal zero observes existence only. It never kills, pauses or changes scheduling. */
+/**
+ * Signal zero observes existence only. It never kills, pauses or changes scheduling.
+ * Windows has no process groups: there the group is the job the app made, and
+ * it exists while a program is in it.
+ */
 export function loadGroupExists(group: number): boolean {
+  if (hostPlatform() === "win32") return windowsJobs.exists(group);
   try {
     process.kill(-group, 0);
     return true;
@@ -86,6 +98,12 @@ export function loadGroupExists(group: number): boolean {
     return (error as NodeJS.ErrnoException).code !== "ESRCH";
   }
 }
+
+/** The Windows jobs a heavy run's group is (`WindowsJobs`). */
+export type LoadJobs = {
+  lead: (pid: number, started: string) => string | undefined;
+  adopt: (pid: number, started: string) => boolean;
+};
 
 /**
  * One line on a work computer. The native wrapper is its own process-group
@@ -121,6 +139,12 @@ export class LoadLine {
       stateFile: string;
       processes?: () => Promise<ProcessReading[] | null>;
       groupExists?: (group: number) => boolean;
+      /**
+       * Windows starts no group for the wrapper, so the line makes its asking
+       * program lead a job (`WindowsJobs.lead`), answering its birth, and finds
+       * a saved run's job again after a restart (`adopt`). Absent on other systems.
+       */
+      jobs?: LoadJobs;
       overridden?: (taskId: string) => boolean;
       changed?: () => void;
       now?: () => number;
@@ -376,14 +400,24 @@ export class LoadLine {
         );
       return this.runOf(parent.id);
     }
+    if (row.group !== row.pid && this.jobs()?.lead(row.pid, row.started) === row.started)
+      row.group = row.pid;
     if (row.group !== row.pid)
       throw new Error(
-        "The run must ask from its own process group through infinitary-load-axi run.",
+        "The run must ask from its own process group through infinitary-load-axi run. Run the command again through it; on Windows a run that asked that way may have taken a number whose earlier group is still running, and its next start gets another.",
       );
     if (this.left.has(`${row.pid}:${row.started}`)) throw new Error(CALLER_GONE);
     const byPid = new Map(rows?.map((row) => [row.pid, row]));
-    const parentRow = row.parent === ADOPTER_PID ? undefined : byPid.get(row.parent);
-    const caller = parentRow ? { pid: parentRow.pid, started: parentRow.started } : undefined;
+    // Only a leader with no parent the system can name takes the caller the wrapper names.
+    const named =
+      row.parent === 0 && Number.isSafeInteger(input.caller) && (input.caller ?? 0) > 0
+        ? byPid.get(input.caller ?? 0)
+        : undefined;
+    const parentRow = row.parent === ADOPTER_PID ? undefined : (byPid.get(row.parent) ?? named);
+    const caller =
+      parentRow && !parentRow.exited
+        ? { pid: parentRow.pid, started: parentRow.started }
+        : undefined;
     const existing = this.held.find((held) => held.pid === row.pid && held.started === row.started);
     if (existing) {
       if (
@@ -626,14 +660,18 @@ export class LoadLine {
     this.options.changed?.();
   }
 
-  /** A waiter only: the recorded caller ended, or the wrapper now has another parent. */
+  /**
+   * A waiter only: the recorded caller ended, or the wrapper now has another
+   * parent. A leader with no parent the system can name (Windows) keeps the
+   * caller its wrapper named, and leaves when that program ends.
+   */
   private callerGone(held: Held, byPid: Map<number, ProcessReading>): boolean {
     if (held.state !== "waiting" || !held.caller) return false;
     const leader = byPid.get(held.pid);
     if (!leader || leader.started !== held.started) return false;
     const caller = byPid.get(held.caller.pid);
     return (
-      leader.parent !== held.caller.pid ||
+      (leader.parent !== 0 && leader.parent !== held.caller.pid) ||
       !caller ||
       caller.started !== held.caller.started ||
       caller.exited === true
@@ -671,7 +709,12 @@ export class LoadLine {
   }
 
   private track(held: Held): void {
+    this.jobs()?.adopt(held.pid, held.started);
     this.roots.set(held.id, processRoots.addGroup(held.pid, held.taskId, held.started));
+  }
+
+  private jobs(): LoadJobs | undefined {
+    return this.options.jobs ?? (hostPlatform() === "win32" ? windowsJobs : undefined);
   }
 
   private watch(): void {

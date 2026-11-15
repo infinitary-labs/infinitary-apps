@@ -231,8 +231,8 @@ export class CommandDoor {
    * The refusal for a request the crew made, whatever its shell carries -
    * a program this app started, or one left in a crewmate shell's group
    * while its task is open - or for one whose caller the system could not
-   * name. A system the app cannot read callers on (Windows) leaves the
-   * launcher's own check, of a task shell's key, as the only one.
+   * name. A system the app cannot read callers on leaves the launcher's own
+   * check, of a task shell's key, as the only one.
    */
   private async crewRefusal(request: IncomingMessage): Promise<Refusal | undefined> {
     const { remotePort, localPort } = request.socket;

@@ -26,7 +26,8 @@ The program tells the task channel its process number with the task's key, then 
 When the app cannot be told within the program's wait, the command still runs.
 The command itself first restores the client's own search path from its shell snapshot, so a system's shell start-up files that set another do not hide the app's commands.
 With a prefix, the client also runs its command-line tool servers and command hooks through it; a crewmate's session declares neither (`settingSources: []`, `strictMcpConfig: true`, and its hooks are the app's own in-process callbacks), and those would run in the client's group, which neither they nor the client leads, so the channel would keep none of them.
-A prefix the person set for their own client stays theirs, so a command left running from that crewmate's shell is not refused; Windows, where the door has no reading, and a command folder whose path the client would split at ` -` get no prefix.
+On Windows the client runs every command in Git Bash, so the app sets only the prefix, and the program runs the command in Git Bash's bash; the app makes the program lead a Windows job in place of a process group (`docs/heavy-runs.md`, "On Windows").
+A prefix the person set for their own client stays theirs, so a command left running from that crewmate's shell is not refused; a command folder whose path the client would split at ` -` gets no prefix.
 `claudeSession.test.ts` holds the two settings and a person's own prefix kept, and `captainCommands.test.ts` a program left running from a shell started the client's way, refused after the shell ended.
 
 ## Notes

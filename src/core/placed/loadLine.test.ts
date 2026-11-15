@@ -9,6 +9,7 @@ import {
   JOURNAL_FILE,
   JOURNAL_MAX_BYTES,
   type LoadClaimAnswer,
+  type LoadJobs,
   type LoadJournalEntry,
   LoadLine,
 } from "./loadLine";
@@ -569,7 +570,7 @@ describe("verified processor startup coverage", () => {
 describe("reservations that nothing uses", () => {
   const wall = Date.parse("2026-11-03T22:41:00-08:00");
   const table = (text: string) => processesFromPs(text) ?? [];
-  function line(rows: () => ProcessReading[]) {
+  function line(rows: () => ProcessReading[], jobs?: LoadJobs) {
     const folder = scratchDir("unused-line-");
     const created = new LoadLine({
       stateFile: join(folder, "holds.json"),
@@ -577,6 +578,7 @@ describe("reservations that nothing uses", () => {
       wallClock: () => wall,
       processes: async () => rows(),
       groupExists: () => true,
+      ...(jobs ? { jobs } : {}),
     });
     lines.push(created);
     const journal = (): LoadJournalEntry[] =>
@@ -669,6 +671,59 @@ describe("reservations that nothing uses", () => {
       { event: "blocked", running: 1 },
       { event: "release", why: "it left the line: its caller ended" },
       { event: "refuse", why: expect.stringContaining("caller has ended") },
+    ]);
+  });
+
+  it("on Windows, removes a waiter whose wrapper's named caller ended", async () => {
+    // INF-4253: Git Bash starts a heavy run's leader with no parent Windows can
+    // name, so the wrapper names the shell that ran it. Rows are shaped like
+    // the Windows live proof's: crewmate shell 15884 ran two wrappers, 16340
+    // and 16388, whose leaders 16020 and 16412 read no parent.
+    const birth = (n: number) => `win:1340774113061${n}`;
+    const win = (pid: number, parent: number): ProcessReading => ({
+      pid,
+      parent,
+      group: 0,
+      started: birth(pid),
+      residentBytes: 3_000_000,
+    });
+    let rows = [
+      win(15884, 11208),
+      win(16340, 15884),
+      win(16020, 0),
+      win(16388, 15884),
+      win(16412, 0),
+    ];
+    const led: number[] = [];
+    const jobs: LoadJobs = {
+      lead: (pid, started) => {
+        led.push(pid);
+        return started;
+      },
+      adopt: () => true,
+    };
+    const f = line(() => rows, jobs);
+    f.line.observe(busy, rows);
+    const front = await f.line
+      .forTask("running")
+      .claim({ pid: 16020, caller: 16340, demand: { cpu: 8, memoryBytes: 8 * gib } });
+    expect(front.state).toBe("running");
+    const waiter = { pid: 16412, caller: 16388, demand: { cpu: 6, memoryBytes: 10 * gib } };
+    expect((await f.line.forTask("INF-4253").claim(waiter)).state).toBe("waiting");
+    expect(led).toEqual([16020, 16412]);
+
+    // While the named caller runs, a leader with no parent keeps its place.
+    f.line.observe(busy, rows);
+    expect(f.line.snapshot().runs.map((run) => run.taskId)).toEqual(["running", "INF-4253"]);
+
+    // The command is stopped: its wrapper 16388 ends, and the waiter leaves.
+    rows = rows.filter((row) => row.pid !== 16388);
+    f.line.observe(busy, rows);
+    expect(f.line.snapshot().runs.map((run) => run.taskId)).toEqual(["running"]);
+    expect(f.journal().filter((entry) => entry.taskId === "INF-4253")).toMatchObject([
+      { event: "wait" },
+      { event: "blocked" },
+      { event: "release", why: "it left the line: its caller ended" },
     ]);
   });
 

@@ -2,7 +2,7 @@ import { mkdirSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { folderOwners, workingFoldersFromLsof } from "./workingFolders";
+import { folderOwners, under, workingFoldersFromLsof } from "./workingFolders";
 
 /**
  * INF-4072 finding 3: a program counts against the task whose folders it works in.
@@ -41,5 +41,30 @@ describe("a program's working folder names its task", () => {
       { taskId: "task-b", folders: [`${other}/`] },
     ]);
     expect(Object.fromEntries(owners)).toEqual({ 4211: "task-a", 4300: "task-a", 4301: "task-b" });
+  });
+});
+
+describe("a Windows folder holds a path", () => {
+  it("whatever case Windows names either in, and never a neighbour that only starts the same", () => {
+    // Windows names one folder in more than one case (INF-4253): a program's
+    // working folder reads as the shell wrote it, the task's as the app did.
+    const task = ["C:\\Users\\kun\\AppData\\Roaming\\infinitary\\work\\worktrees\\858b7095"];
+    expect(
+      under(
+        "c:\\users\\kun\\appdata\\roaming\\infinitary\\work\\worktrees\\858b7095\\src",
+        task,
+        "\\",
+      ),
+    ).toBe(true);
+    expect(
+      under("C:\\Users\\kun\\AppData\\Roaming\\infinitary\\work\\worktrees\\858b7095", task, "\\"),
+    ).toBe(true);
+    expect(
+      under(
+        "C:\\Users\\kun\\AppData\\Roaming\\infinitary\\work\\worktrees\\858b7095-old",
+        task,
+        "\\",
+      ),
+    ).toBe(false);
   });
 });

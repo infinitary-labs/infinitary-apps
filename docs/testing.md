@@ -329,7 +329,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   Those known folders keep their existing file-entry exemption; no program is exempted by name.
   The work-mode journey launches each child in its own group, snapshots its descendants (including detached display keepers) before stopping them, and awaits the direct child's close (`tests/helpers/stopChildTree.ts`).
   The next run ends holders of abandoned roots before removing those roots, never touching roots whose owning run is alive.
-  An unreadable holder list or a surviving program fails the run and keeps its root for the next sweep; Windows has no folder-holder reading.
+  An unreadable holder list or a surviving program fails the run and keeps its root for the next sweep; on Windows the reading finds only programs working in a root or started from it, not one holding a file there open.
   `tests/run-temp-root.test.ts` drives both real runners, including a clean run, detached holders, forced termination, removed socket folders, multiple leftovers, a concurrent live run and Vitest's real Chromium beside an unrelated leaked daemon.
   `tests/stop-child-tree.test.ts` drives real shell, app and keeper trees, including a detached keeper and children whose shell already exited.
   The run-root regression's real browser requires `pnpm exec playwright install --only-shell chromium` before local rounds; the integration and native-unit CI lanes install it through the shared browser action.

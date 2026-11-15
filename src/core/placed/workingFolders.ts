@@ -3,6 +3,7 @@ import { sep } from "node:path";
 import { RESOURCE_READ_TIMEOUT_MS } from "@shared/resources";
 import { hostPlatform } from "../platform";
 import { readLsof } from "./openFiles";
+import { readWindowsPlaces } from "./windowsProcesses";
 
 /**
  * The folder each program works in, and the open task whose folders hold it
@@ -28,9 +29,14 @@ export async function prefixesOf(folders: readonly string[]): Promise<string[]> 
   return [...prefixes];
 }
 
-/** The path is one of the folders or inside one. */
-export function under(path: string, prefixes: readonly string[]): boolean {
-  return prefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}${sep}`));
+/** The path is one of the folders or inside one; Windows' paths compare without case, as it names them. */
+export function under(path: string, prefixes: readonly string[], separator: string = sep): boolean {
+  const fold = separator === "\\" ? (text: string) => text.toLowerCase() : (text: string) => text;
+  const folded = fold(path);
+  return prefixes.some((prefix) => {
+    const at = fold(prefix);
+    return folded === at || folded.startsWith(`${at}${separator}`);
+  });
 }
 
 /** Each program's working folder from lsof's `-d cwd -F pn` listing on a Mac. */
@@ -61,6 +67,13 @@ export async function readWorkingFolders(
       { timeoutMs: RESOURCE_READ_TIMEOUT_MS, maxBuffer: 16 * 1024 * 1024 },
     );
     return listed === null ? null : workingFoldersFromLsof(listed);
+  }
+  if (platform === "win32") {
+    const places = readWindowsPlaces(pids, { image: false });
+    if (!places) return null;
+    return new Map(
+      [...places].flatMap(([pid, place]) => (place.folder ? [[pid, place.folder] as const] : [])),
+    );
   }
   if (platform !== "linux") return null;
   const folders = new Map<number, string>();

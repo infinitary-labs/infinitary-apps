@@ -42,6 +42,9 @@ export function compileLoadSupervisor(out: string, universal = false): void {
 }
 
 export function buildLoadSupervisor(): void {
+  // Windows has no fork or process groups: a heavy run there runs its program
+  // in a Windows job of its own with no supervisor (docs/heavy-runs.md, "On Windows").
+  if (process.platform === "win32") return;
   const out = resolve(root, "vendor/load-bin/infinitary-load-supervisor");
   const stamp = `${out}.source`;
   const want = createHash("sha256")

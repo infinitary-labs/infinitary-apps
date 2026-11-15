@@ -16,20 +16,22 @@ import { hostPlatform } from "../platform";
  * The program runs the command in `CLAUDE_CODE_SHELL`, so that variable
  * names the shell the client itself chooses first: its own setting when it
  * names a bash or zsh that runs, then the person's login shell when it is
- * one, then the system's zsh or bash, in the client's order. A prefix the
- * person set for their own client is theirs, and stays; Windows, where the
- * door has no reading, and a program path the client would split at ` -`
- * get no prefix.
+ * one, then the system's zsh or bash, in the client's order. On Windows the
+ * client runs every command in Git Bash, so the variable is left alone and
+ * the program runs the command in Git Bash's own bash. A prefix the person
+ * set for their own client is theirs, and stays; a program path the client
+ * would split at ` -` gets no prefix.
  */
 export function withCrewShell(
   env: NodeJS.ProcessEnv,
   shell: { path: readonly string[] } | undefined,
   runs: (path: string) => boolean = isProgram,
 ): NodeJS.ProcessEnv {
-  if (!shell || hostPlatform() === "win32" || env.CLAUDE_CODE_SHELL_PREFIX) return env;
+  if (!shell || env.CLAUDE_CODE_SHELL_PREFIX) return env;
   const program = shell.path
     .map((dir) => join(dir, CREW_SHELL_PROGRAM))
     .find((path) => !path.includes(" -") && runs(path));
+  if (program && hostPlatform() === "win32") return { ...env, CLAUDE_CODE_SHELL_PREFIX: program };
   const clientShell = program ? crewClientShell(env, runs) : undefined;
   if (!program || !clientShell) return env;
   return { ...env, CLAUDE_CODE_SHELL: clientShell, CLAUDE_CODE_SHELL_PREFIX: program };

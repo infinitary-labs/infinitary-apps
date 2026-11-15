@@ -177,3 +177,104 @@ describe("a Claude crewmate's shell that names itself", () => {
     expect(groups.of(APP)).toBeUndefined();
   });
 });
+
+// Windows has no process groups: a Claude crewmate's command runs through the
+// crew shell program, which Git Bash starts as a Windows program the app's
+// client started, and the app makes it lead a job (INF-4253). Rows are shaped
+// like the Windows live proof's table: the app 9412 started the client 11208,
+// which started the crew shell program 15884; births are Windows' own stamps.
+const WIN_APP = 9412;
+const WIN_SHELL = 15884;
+const WIN_SHELL_BIRTH = "win:134077411306182311";
+const winRows = (shellParent: number): ProcessReading[] => [
+  { pid: 4, parent: 0, group: 0, started: "win:134076811120000000", residentBytes: 0 },
+  { pid: WIN_APP, parent: 7720, group: 0, started: "win:134077402001934520", residentBytes: 4e8 },
+  { pid: 11208, parent: WIN_APP, group: 0, started: "win:134077410811034412", residentBytes: 3e8 },
+  { pid: WIN_SHELL, parent: shellParent, group: 0, started: WIN_SHELL_BIRTH, residentBytes: 6e6 },
+];
+
+describe("a Claude crewmate's shell on Windows", () => {
+  it("makes a program the app started lead a job, and keeps that job as the crew's", async () => {
+    const asked: Array<[number, string]> = [];
+    const groups = new ShellGroups();
+    const claimed = await claimShellGroup(groups, "task-w", WIN_SHELL, {
+      appPid: WIN_APP,
+      platform: "win32",
+      read: async () => winRows(11208),
+      jobs: {
+        lead: (pid, started) => {
+          asked.push([pid, started ?? ""]);
+          return started;
+        },
+      },
+    });
+    expect(claimed).toBe(true);
+    expect(asked).toEqual([[WIN_SHELL, WIN_SHELL_BIRTH]]);
+    expect(groups.of(WIN_SHELL)).toEqual({
+      owner: "task-w",
+      shellEnded: false,
+      started: WIN_SHELL_BIRTH,
+    });
+  });
+
+  it("keeps a job's programs the crew's by the job's own birth, whichever program later holds its leader's number", async () => {
+    const groups = new ShellGroups();
+    await claimShellGroup(groups, "task-w", WIN_SHELL, {
+      appPid: WIN_APP,
+      platform: "win32",
+      read: async () => winRows(11208),
+      jobs: { lead: (_pid, started) => started },
+    });
+    const shells = (group: number) => groups.of(group);
+    // The crew shell ended; Windows gave its number to a program its command
+    // started, inside the same job, which also holds 17220.
+    const inJob = (pid: number, started: string, groupStarted: string): ProcessReading => ({
+      pid,
+      parent: 0,
+      group: WIN_SHELL,
+      groupStarted,
+      started,
+      residentBytes: 2e6,
+    });
+    const reused = [
+      inJob(WIN_SHELL, "win:134077411952230017", WIN_SHELL_BIRTH),
+      inJob(17220, "win:134077411306990402", WIN_SHELL_BIRTH),
+    ];
+    const byPid = new Map(reused.map((row) => [row.pid, row]));
+    for (const program of reused) expect(inCrewShell(program, byPid, shells)).toBe(true);
+    // A later job the app made under that number, for a program outside the crew.
+    const later = inJob(WIN_SHELL, "win:134077412480001123", "win:134077412480001123");
+    expect(inCrewShell(later, new Map([[WIN_SHELL, later]]), shells)).toBe(false);
+  });
+
+  it("keeps nothing when the app did not start the program, or the job under its number still holds an earlier program", async () => {
+    const groups = new ShellGroups();
+    let asked = 0;
+    // The same program started by a person's terminal (7720), not the app.
+    expect(
+      await claimShellGroup(groups, "task-w", WIN_SHELL, {
+        appPid: WIN_APP,
+        platform: "win32",
+        read: async () => winRows(7720),
+        jobs: {
+          lead: (_pid, started) => {
+            asked += 1;
+            return started;
+          },
+        },
+      }),
+    ).toBe(false);
+    expect(asked).toBe(0);
+    // Windows gave an ended shell's number to this program while its job still
+    // holds what that shell left running: the job leads no new group.
+    expect(
+      await claimShellGroup(groups, "task-w", WIN_SHELL, {
+        appPid: WIN_APP,
+        platform: "win32",
+        read: async () => winRows(11208),
+        jobs: { lead: () => undefined },
+      }),
+    ).toBe(false);
+    expect(groups.of(WIN_SHELL)).toBeUndefined();
+  });
+});

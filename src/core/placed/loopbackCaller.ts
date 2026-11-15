@@ -4,6 +4,7 @@ import { hostPlatform } from "../platform";
 import { procOpenFiles, procPids, readLsof } from "./openFiles";
 import { descendsFrom, type ProcessReading, readProcesses } from "./processResources";
 import type { ShellGroup } from "./shellGroups";
+import { readWindowsLoopbackOwners } from "./windowsProcesses";
 
 /**
  * Who asked over a loopback connection this app accepted, as the system
@@ -11,8 +12,10 @@ import type { ShellGroup } from "./shellGroups";
  * the connection's other end, and whether it is the crew's. It is when this
  * app started it, directly or through programs it started, or when it is in
  * the process group a crewmate shell started while that shell's task is
- * open. Only process numbers, parents and groups are read; no name,
- * argument or environment of any program is read into the app.
+ * open. On Windows a group is the job the app put that shell in, which
+ * every program it starts stays in after it ends. Only process numbers,
+ * parents and groups are read; no name, argument or environment of any
+ * program is read into the app.
  *
  * A program a crewmate shell left running, with `&` or nohup, has a parent
  * the app never was once the shell ends, and is still in the shell's group.
@@ -107,7 +110,9 @@ async function procPeers(ends: LoopbackEnds): Promise<number[] | null> {
  * living program leading a group with that number is the shell itself, or
  * one that took the number after the shell ended, whose group is another:
  * its birth stamp tells which when the app read the shell's, and otherwise
- * whether the shell has ended does.
+ * whether the shell has ended does. On Windows the group is a job the app
+ * made, which a program inside it can take the leader's number from, so the
+ * birth the app kept for that job decides instead.
  */
 export function inCrewShell(
   row: ProcessReading,
@@ -116,6 +121,7 @@ export function inCrewShell(
 ): boolean {
   const shell = shells(row.group);
   if (!shell) return false;
+  if (row.groupStarted !== undefined) return shell.started === row.groupStarted;
   const leader = byPid.get(row.group);
   if (!leader || leader.exited || leader.group !== row.group) return true;
   return shell.started !== undefined ? leader.started === shell.started : !shell.shellEnded;
@@ -133,10 +139,16 @@ export async function loopbackCaller(
   options: { appPid?: number; shells?: (group: number) => ShellGroup | undefined } = {},
 ): Promise<CallerReading> {
   const platform = hostPlatform();
-  if (platform !== "darwin" && platform !== "linux") return { status: "unsupported" };
+  if (platform !== "darwin" && platform !== "linux" && platform !== "win32")
+    return { status: "unsupported" };
   if (!Number.isSafeInteger(ends.clientPort) || !Number.isSafeInteger(ends.serverPort))
     return { status: "unreadable" };
-  const peers = platform === "darwin" ? await lsofPeers(ends) : await procPeers(ends);
+  const peers =
+    platform === "darwin"
+      ? await lsofPeers(ends)
+      : platform === "win32"
+        ? readWindowsLoopbackOwners(ends)
+        : await procPeers(ends);
   if (!peers || peers.length === 0) return { status: "unreadable" };
   const rows = await readProcesses();
   if (!rows) return { status: "unreadable" };

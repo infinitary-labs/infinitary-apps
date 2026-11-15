@@ -83,7 +83,8 @@ export function loadAxi(
         },
       },
       claim: {
-        usage: "claim --pid <group> --processors <number> --memory-mib <number> [--parent <hold>]",
+        usage:
+          "claim --pid <group> --processors <number> --memory-mib <number> [--parent <hold>] [--caller <pid>]",
         description:
           "The run wrapper's admission request. It registers only its live process group; it cannot release a running hold.",
         flags: {
@@ -91,6 +92,7 @@ export function loadAxi(
           "--processors": "value",
           "--memory-mib": "value",
           "--parent": "value",
+          "--caller": "value",
         },
         run: async (args, connection) => {
           const pid = Number(args.flags["--pid"]);
@@ -104,10 +106,18 @@ export function loadAxi(
               "VALIDATION_ERROR",
             );
           const parent = args.flags["--parent"];
+          const caller =
+            args.flags["--caller"] === undefined ? undefined : Number(args.flags["--caller"]);
+          if (caller !== undefined && (!Number.isSafeInteger(caller) || caller <= 0))
+            throw new AxiError(
+              "Name the caller by its positive process number.",
+              "VALIDATION_ERROR",
+            );
           const reply = await connection.call(`claim:${pid}:${parent ?? ""}`, "load.claim", {
             pid,
             demand: parsed.data,
             ...(typeof parent === "string" ? { parent } : {}),
+            ...(caller !== undefined ? { caller } : {}),
           });
           return `${output(reply)}retrySeconds: ${RESOURCE_REFRESH_MS / 1000}\n`;
         },

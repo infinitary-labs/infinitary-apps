@@ -8,6 +8,7 @@ import { appendOverflow, capWithOverflow, overflowFilePath } from "../overflow";
 import { windowsBash } from "../pi/windowsBash";
 import { processRoots } from "../placed/processRoots";
 import type { ShellGroups } from "../placed/shellGroups";
+import { windowsJobs } from "../placed/windowsProcesses";
 import { hostPlatform } from "../platform";
 import type { TaskShell } from "../session/session";
 import type { AppDatabase } from "../storage/db";
@@ -225,19 +226,27 @@ export class JobManager {
         input.shell,
       ),
       // Its own process group, so killing a job kills what it spawned. On
-      // Windows that would be a console of its own, so it shares none and
-      // shows no window: its tree is killed by process id (`killGroup`).
-      detached: !windows,
+      // Windows, detached keeps it out of the job the app's process library
+      // puts its other children in, which ends them when the app exits, so
+      // what a command leaves running outlives the app as on a Mac; it has
+      // no console and shows no window, and Git Bash gives the console
+      // programs it starts a hidden one. Its tree is killed by process id
+      // there (`killGroup`).
+      detached: true,
       windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
     });
     if (child.pid) {
       const releaseRoot = processRoots.add(child.pid, input.ownerId);
       // Detached, the shell leads a group numbered after it, which a program
-      // it starts in the background stays in after the shell ends.
-      const shellEnded = windows
-        ? undefined
-        : this.options.shellGroups?.add(child.pid, input.ownerId);
+      // it starts in the background stays in after the shell ends. On
+      // Windows the shell leads a job instead, numbered after it the same way.
+      const started = windows ? windowsJobs.lead(child.pid) : undefined;
+      const shellEnded = !windows
+        ? this.options.shellGroups?.add(child.pid, input.ownerId)
+        : started
+          ? this.options.shellGroups?.add(child.pid, input.ownerId, started)
+          : undefined;
       child.once("exit", () => {
         releaseRoot();
         shellEnded?.();

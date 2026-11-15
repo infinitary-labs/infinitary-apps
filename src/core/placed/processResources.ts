@@ -5,13 +5,20 @@ import { type ProcessResources, RESOURCE_READ_TIMEOUT_MS } from "@shared/resourc
 import { hostEnv } from "../hostEnv";
 import { hostPlatform } from "../platform";
 import type { ProcessGroupOwner } from "./processRoots";
+import { readWindowsProcesses } from "./windowsProcesses";
 
 const exec = promisify(execFile);
 
 export type ProcessReading = {
   pid: number;
   parent: number;
+  /** Its process group; on Windows the leader of the smallest job the app put it in, or 0 in none. */
   group: number;
+  /**
+   * On Windows, the birth of the program the app made lead that job: the
+   * group's own identity, whichever program holds the leader's number now.
+   */
+  groupStarted?: string;
   started: string;
   /** Wall-clock birth, at the stamp's whole-second precision or finer; absent when unreadable. */
   bornMs?: number;
@@ -44,7 +51,7 @@ export function descendsFrom(
   return false;
 }
 
-/** A Mac's lstart stamp counts whole seconds, so a birth reads up to one second early. */
+/** A Mac's lstart stamp counts whole seconds, so a birth reads up to one second early; Windows' is finer. */
 const BIRTH_STAMP_PRECISION_MS = 1000;
 
 /** ps TIME is cumulative, unlike %CPU's lifetime average on a Mac. */
@@ -164,6 +171,8 @@ async function linuxBootMs(): Promise<number | undefined> {
 }
 
 export async function readProcesses(): Promise<ProcessReading[] | null> {
+  // Windows lists its programs itself; each one's group is the job the app put it in.
+  if (hostPlatform() === "win32") return readWindowsProcesses();
   if (hostPlatform() !== "darwin" && hostPlatform() !== "linux") return null;
   try {
     const { stdout } = await exec(

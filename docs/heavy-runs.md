@@ -17,7 +17,7 @@ After fresh admission the group leader becomes a small native supervisor, which 
 The supervisor forwards termination and interrupt signals, waits for the payload and returns its exit status; it never stops a payload for load or a missing receipt.
 It exports the inherited hold before payload creation; verified nesting execs in that same group without creating another supervisor or changing its startup charge.
 A shell asynchronous payload would inherit ignored interrupt handling, so `scripts/load-supervisor.c` owns fork, signal forwarding and waiting instead.
-The build compiles this helper for both Mac chips or the current Linux architecture, following the existing native git-launcher pattern, and ships it outside the archive in `load-bin`.
+The build compiles this helper for both Mac chips or the current Linux architecture, following the existing native git-launcher pattern, and ships it outside the archive in `load-bin`; Windows builds none ("On Windows").
 Disposable native checks use the same compiled helper.
 The waiting wrapper prints line facts on standard error, leaving the admitted program's standard output intact.
 Short claim requests use the existing two-second cadence and bypass the shell's kept-answer mechanism; the waiting wrapper is itself the shell job.
@@ -135,6 +135,23 @@ This project's local virtual Macs borrow a virtual place through `borrow-virtual
 Their phone and journey gates reuse `BORROWED_PLACE` and do not ask this load line; the virtual Mac appears here only as measured load.
 Programs that never declare a run stay visible through measured resource use; the app does not pretend to contain them.
 
+## On Windows
+
+Windows has no process groups, so the app makes a named Windows job object stand in for each one (`WindowsJobs` in `src/core/placed/windowsProcesses.ts`).
+The launcher runs under Git Bash, which numbers its programs itself, so it reads its Windows process number from `/proc/$$/winpid` and claims with that.
+At the first claim the app makes the waiting wrapper lead a job of its own, named after the wrapper's number and birth stamp, and puts in it the programs the wrapper already started.
+No program in the job may leave it, because Git Bash's programs leave every job that allows it, so a program the payload starts stays in it after its parent ends.
+A program's group in the process table is the leader of the smallest job the app keeps that lists it, and 0 when none does.
+A job is alive while it lists a living program; after a restart the app reopens a saved hold's job by its name, and one it cannot open has ended.
+A crewmate's Pi shell starts detached, outside the job the app's process library puts its other children in, which would end every program in it when the app exits, so a run and a program a command left running outlive the app as they do on a Mac.
+After admission the wrapper runs the payload as its child and exits with its status, with no native supervisor and no launch receipt.
+It does not exec it: Git Bash's exec of one of its own programs, such as a script, ends the leader's Windows process, which the app reads as the run's end, so the leader lives exactly as long as the payload.
+Windows may give an ended leader's number to a new program while its job still holds one; the app then keeps that job as the number's group and makes no new job under it, so the new program leads none.
+The process table, birth stamps (`win:` and the creation time in 100-nanosecond ticks), processor time and resident memory come from the system itself, never from a program the app starts.
+Windows keeps a program's parent number after the parent ends and may give that number to a newer program, so a parent missing from the table or born after its child reads as no parent.
+The leader is started by an exec that Git Bash makes a new Windows program, so it reads as having no parent; the wrapper names its caller instead, the outer wrapper's Windows number from `/proc/$PPID/winpid`, as `claim --caller`.
+The app takes a named caller only for a leader with no parent it can read, records it with its birth stamp, and takes the waiting run out of the line when that program ends, as it does on Mac and Linux.
+
 ## The journal
 
 Beside its saved holds the line appends one JSON line per event to `load/journal.jsonl`, with the wall-clock time, task id, hold and declaration.
@@ -167,4 +184,5 @@ It exercises queue order, unchanged streams and exit status, pressure admission,
 `src/core/axi/channel.test.ts` checks the launcher's transport-timeout classification and that an interrupted non-load action remains terminal rather than gaining retry permission.
 `src/core/placed/loadLine.test.ts` covers an exited program's reservation dropping to its leftovers' use, a waiter whose caller ended leaving the line, and the journal's entries and size.
 `src/core/placed/processResources.test.ts` exercises declared-group attribution, PID reuse and explicit nested roots using recorded process metadata.
+`src/core/placed/windowsProcesses.integration.test.ts` runs only on Windows: it reads the real process table, connection table and working folders, keeps a job's programs after its leader ends, and runs a heavy run through the real launcher under Git Bash to its exit status.
 This project's own local phone gate and journey runs declare their runs through this command (`docs/testing.md`, "A local heavy run's place").

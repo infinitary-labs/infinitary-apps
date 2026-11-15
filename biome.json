@@ -347,6 +347,7 @@
         "!src/core/placed/processResources.integration.test.ts",
         "!src/core/placed/placementFacts.integration.test.ts",
         "!src/core/placed/loadLine.integration.test.ts",
+        "!src/core/placed/windowsProcesses.integration.test.ts",
         "!src/core/orchestrator/captainOverrides.checks.test.ts",
         "!src/core/orchestrator/captainOverrides.mergeClick.test.ts",
         "!src/core/orchestrator/crewBrief.context.test.ts",

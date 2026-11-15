@@ -18,7 +18,7 @@ Every record close goes through `TaskClosing.closeAndPurge`, which begins the sw
 The working copy's retirement and the temporary folder's removal (`TaskTempFiles`) wait for the sweep, so nothing that holds a folder is moved away under it.
 
 1. Each registered stop runs once, newest first, in its own process group with the host's environment, for at most a minute; the file is emptied first, so a close asked again runs none, and a stop that failed or did not finish is kept (see "What a close leaves").
-2. The app lists the programs that hold a file open under the working copy or the temporary folder, or work in one of them: through `lsof` on a Mac and `/proc` on Linux (`src/core/placed/folderHolders.ts`).
+2. The app lists the programs that hold a file open under the working copy or the temporary folder, or work in one of them: through `lsof` on a Mac, `/proc` on Linux, and on Windows each program's working folder and program file as the system lists them (`src/core/placed/folderHolders.ts`).
    Only the names under those folders are kept from what the system lists.
    A reading cut short at its time limit counts as unreadable, never as a list with no holders.
 3. A holder is left alone when it is the app, one of its ancestors or anything the app started (a live task's shell commands among them), when it runs in a heavy-run group another live task declared (`docs/heavy-runs.md`), or when it was already running before the task started.
@@ -56,7 +56,7 @@ A report recorded while that warning is open is named in the next warning's noti
 The pressure notice offers no cleanup action.
 
 A close with no stops and no holders writes nothing.
-Windows has no holder reading, so only the registered stops run there.
+On Windows a holder is a program whose working folder or program file is under the task's folders, read from the system itself; Windows does not list which program holds a file open, so a program that only keeps a file there open is not found.
 
 ## A task carried on by another
 

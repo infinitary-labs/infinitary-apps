@@ -201,20 +201,22 @@ Once that shell has ended, a living program with the group's number leads anothe
 A Claude crewmate's client starts each command's shell in a group of its own too, which the app does not start, so the client is told to run each command through `resources/axi-bin/infinitary-crew-shell` (`CLAUDE_CODE_SHELL_PREFIX`; `docs/claude-client.md`, "A crewmate's shell").
 That program tells the task channel its process number with the task's key, then runs the command; the channel keeps the shell's group for the key's task (`claimShellGroup`) only when the program, or the shell that started it as a child, leads that group and Infinitary started that leader, directly or through programs it started, so no program can name another's group; a claim it could not keep is logged.
 The app never hears that shell end, so it keeps the shell's birth stamp from the process table: a living leader of the group with another stamp took the number later, and is not the crew's.
-On a Mac it finds the connection's owner with lsof, and on Linux in `/proc/net/tcp` and the programs' open files; on both it reads the parents and groups in the process table (`readProcesses`), reading only process numbers.
+On a Mac it finds the connection's owner with lsof, on Linux in `/proc/net/tcp` and the programs' open files, and on Windows in the system's connection table; on each it reads the parents and groups in the process table (`readProcesses`), reading only process numbers.
+On Windows a shell's group is a Windows job the app makes for it, since Windows has none: a crewmate's Pi shell leads one from its start, and `infinitary-crew-shell` tells the app its Windows process number, which Git Bash reads from `/proc/$$/winpid`, so the app makes it lead one before it runs a Claude crewmate's command (`docs/heavy-runs.md`, "On Windows").
+There `infinitary-crew-shell` runs the command as its child rather than replacing itself, so its number stays its own while the command runs, and a program is in a crew shell's job by the birth the app kept for that job, never by which program holds the leader's number later.
 A request whose caller the system could not name is refused too, with help to run the command again.
-Windows has no reading yet, so there the launcher's check is the only one.
 
 The account stays the only boundary on the computer (`docs/connection.md`, "Reading the key is the permission"), and a crewmate's shell runs with no sandbox (the captain's decision in `src/core/pi/bashTool.ts`), so the door cannot refuse:
 
 - a program that starts a process group of its own, as setsid and tmux do, once the program that started it has ended;
 - a program a crewmate hands to the system to start, such as through launchd or another app;
 - a program left running from before the app last started, whose shell's group the app no longer keeps;
+- on Windows, a program a shell started when Windows had given the shell a number whose earlier job still held a program, since the app makes no second job under that number (`docs/heavy-runs.md`, "On Windows");
 - a program a Claude crewmate's shell left running when the person set their own `CLAUDE_CODE_SHELL_PREFIX`, which the app keeps, or when the program could not tell the app in time, since the command runs either way;
 - the local door's connection path, which the window uses and which admits by the door's key alone.
 
 The first two and the last take a deliberate way round.
-The other two can happen in ordinary work: a program still running when the app restarted, or a Claude crewmate's command on a computer whose own Claude setup names a prefix.
+The other three can happen in ordinary work: a program still running when the app restarted, a Windows number given again while its earlier job still runs, or a Claude crewmate's command on a computer whose own Claude setup names a prefix.
 Nothing a crewmate is given points it at the command (`docs/personal-resources.md`), and the door refuses it from a crewmate's own shell, through another script, by hand or with a cleared variable.
 
 ## The Secrets foundation command

@@ -113,6 +113,21 @@ if [ -z "$group" ] && [ -z "${INFINITARY_LOAD_HOLD:-}" ]; then
 fi
 
 launcher=${0%/*}/infinitary-load-axi
+# Git Bash numbers its programs itself; the app reads Windows' own number, and
+# makes this program lead a Windows job in place of the group above.
+# Windows also reads no parent for this program, so it names its caller: the
+# wrapper that started it, whose end takes a waiting run out of the line.
+self=$$
+windows=
+caller=()
+if [ -r "/proc/$$/winpid" ]; then
+  read -r self < "/proc/$$/winpid"
+  windows=1
+  if [ -n "$group" ] && [ -r "/proc/$PPID/winpid" ]; then
+    read -r outer < "/proc/$PPID/winpid"
+    caller=(--caller "$outer")
+  fi
+fi
 last=
 retryDelay=
 while :; do
@@ -123,7 +138,7 @@ while :; do
   # /bin/sh starts the launcher rather than its path: macOS 26 keeps a 1 KB
   # kernel buffer each time a script starts another script by path.
   answer=$(INFINITARY_SHELL_CAP_MS= FM3000_SHELL_CAP_MS= INFINITARY_SHELL_ID= \
-    /bin/sh "$launcher" claim --pid "$$" --processors "$cpu" --memory-mib "$memory" "${parent[@]}" 2>&1)
+    /bin/sh "$launcher" claim --pid "$self" --processors "$cpu" --memory-mib "$memory" "${parent[@]}" "${caller[@]}" 2>&1)
   code=$?
   state=
   hold=
@@ -156,6 +171,11 @@ while :; do
       [ -n "$hold" ] || invalid 'The app answered without the run’s hold.'
       if [ -n "${INFINITARY_LOAD_HOLD:-}" ]; then exec -- "$@"; fi
       export INFINITARY_LOAD_HOLD=$hold
+      # Windows has no native supervisor or launch receipt: the program runs
+      # in this job as this leader's child. Git Bash's exec of one of its own
+      # programs would end this Windows process, which the app reads as the
+      # run's end, so the leader waits and answers with the program's status.
+      if [ -n "$windows" ]; then "$@"; exit $?; fi
       supervisor=${0%/*}/../load-bin/infinitary-load-supervisor
       [ -x "$supervisor" ] || supervisor=${0%/*}/../../vendor/load-bin/infinitary-load-supervisor
       [ -x "$supervisor" ] || invalid 'The native run supervisor is missing; nothing started.'

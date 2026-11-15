@@ -5,14 +5,16 @@ import { cutText } from "@shared/textCut";
 import { hostPlatform } from "../platform";
 import { procOpenFiles, procPids, readLsof } from "./openFiles";
 import { descendsFrom, type ProcessReading, readProcesses } from "./processResources";
+import { programName, readWindowsPlaces } from "./windowsProcesses";
 import { prefixesOf, under } from "./workingFolders";
 
 /**
  * The programs still holding a closed task's folders, and their end
  * (docs/leftover-programs.md, "Programs holding its folders"). A holder has a file
- * open under one of the folders or works in one. Only the names under those
- * folders are kept from what the system lists; no other path, argument or
- * environment of any program is read into the app.
+ * open under one of the folders or works in one; on Windows it works in one
+ * or runs a program file from one. Only the names under those folders, and
+ * a program file's own name, are kept from what the system lists; no other
+ * path, argument or environment of any program is read into the app.
  */
 
 /** One program holding a folder: its number, its birth as the system lists it, and its name. */
@@ -89,6 +91,27 @@ async function procHolders(
   return holders;
 }
 
+/**
+ * Each of this account's programs that works in one of the folders or runs
+ * a program file from one, on Windows, which keeps such a folder from being
+ * removed. A file a program holds open there without either is not read.
+ */
+function windowsHolders(
+  pids: readonly number[],
+  prefixes: readonly string[],
+  excluded: readonly string[],
+): Map<number, string> | null {
+  const places = readWindowsPlaces(pids, { image: true });
+  if (!places) return null;
+  const holders = new Map<number, string>();
+  for (const [pid, { folder, image }] of places) {
+    const held = [folder, image].filter((name): name is string => name !== undefined);
+    if (held.some((name) => under(name, prefixes) && !under(name, excluded)))
+      holders.set(pid, image ? programName(image) : "");
+  }
+  return holders;
+}
+
 /** The app's own process, its ancestors and every program it started: never a leftover. */
 function ownFamily(
   rows: readonly ProcessReading[],
@@ -129,17 +152,27 @@ export async function findFolderHolders(
   options: HolderOptions = {},
 ): Promise<HoldersReading> {
   const platform = hostPlatform();
-  if (platform !== "darwin" && platform !== "linux") return { status: "unsupported" };
+  if (platform !== "darwin" && platform !== "linux" && platform !== "win32")
+    return { status: "unsupported" };
   const prefixes = await prefixesOf(folders);
   if (prefixes.length === 0) return { status: "checked", holders: [] };
   const excluded = await prefixesOf(options.excludeFolders ?? []);
+  // Windows names a holder from the table it lists, so it reads the table first.
+  const listed = platform === "win32" ? await readProcesses() : undefined;
+  if (listed === null) return { status: "unreadable" };
   const named =
     platform === "darwin"
       ? await lsofHolders(prefixes, excluded)
-      : await procHolders(prefixes, excluded);
+      : platform === "win32"
+        ? windowsHolders(
+            (listed ?? []).map((row) => row.pid),
+            prefixes,
+            excluded,
+          )
+        : await procHolders(prefixes, excluded);
   if (!named) return { status: "unreadable" };
   if (named.size === 0) return { status: "checked", holders: [] };
-  const rows = await readProcesses();
+  const rows = listed ?? (await readProcesses());
   if (!rows) return { status: "unreadable" };
   const family = ownFamily(rows, options.appPid ?? process.pid, options.protectDescendants ?? true);
   const holders: FolderHolder[] = [];

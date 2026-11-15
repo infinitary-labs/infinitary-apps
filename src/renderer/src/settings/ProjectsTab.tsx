@@ -704,6 +704,21 @@ function ProjectRow({
           {squashOnly && <BatchNote words={SQUASH_ONLY_WORDS} data="squash-only" id={repo.id} />}
           {ownBatch && <BatchNote words={BATCH_OWN_WORDS.note} data="own-batch" id={repo.id} />}
           {held?.hold && <BatchHoldPanel repo={repo} batch={{ ...held, hold: held.hold }} />}
+          {/* Right below Where changes go and its notes, since it says how those changes merge. */}
+          {readsPullRequestChecks(repo) && (
+            <PolicyRow
+              title={PROJECT_POLICY_WORDS.checksTitle}
+              description={PROJECT_POLICY_WORDS.checks(repo.noChecks)}
+              wrapsBesideControl
+              control={
+                <Switch
+                  checked={!repo.noChecks}
+                  aria-label={PROJECT_POLICY_WORDS.checksTitle}
+                  onChange={(requireChecks) => onPatch({ requireChecks })}
+                />
+              }
+            />
+          )}
           <PolicyRow
             title={AUTONOMY_SWITCH_NAME}
             description={PROJECT_POLICY_WORDS.asks(personal, repo.autonomy)}
@@ -742,20 +757,6 @@ function ProjectRow({
               )
             }
           />
-          {readsPullRequestChecks(repo) && (
-            <PolicyRow
-              title={PROJECT_POLICY_WORDS.checksTitle}
-              description={PROJECT_POLICY_WORDS.checks(repo.noChecks)}
-              wrapsBesideControl
-              control={
-                <Switch
-                  checked={!repo.noChecks}
-                  aria-label={PROJECT_POLICY_WORDS.checksTitle}
-                  onChange={(requireChecks) => onPatch({ requireChecks })}
-                />
-              }
-            />
-          )}
           {!personal && repo.costLimit !== undefined && (
             <PolicyRow
               title={PROJECT_COST_WORDS.title}

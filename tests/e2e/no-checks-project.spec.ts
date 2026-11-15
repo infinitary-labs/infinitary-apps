@@ -9,7 +9,7 @@ import { noChecksRecordSchema } from "../../src/shared/repos";
 import {
   MERGE_WHEN_CHECKS_PASS_WORDS,
   MERGE_WORDS,
-  RIGOR_WORDS,
+  PROJECT_DELIVERY_WORDS,
 } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
@@ -33,8 +33,8 @@ const git = (...args: string[]) => execFileSync("git", args, { stdio: "pipe" }).
 /**
  * INF-2114, the captain's checked improvement: "A project with no checks is
  * a recorded fact: its card offers Merge now, nothing watches for two
- * hours", and the approved plan's choice to show it "in Settings → Projects,
- * as a switch beside Care" that the captain flips by keys.
+ * hours", shown in Settings → Projects as a switch the captain flips by
+ * keys, which the captain later moved to sit right below Where changes go.
  *
  * A project on GitHub whose pull requests run no checks: a local stand-in
  * GitHub serves the app's real sign-in, forge and merge and lists no check
@@ -99,21 +99,25 @@ test("a project recorded by keys as running no checks shows its merge card at on
           : null;
       });
 
-    // Settings → Projects: Require pull request checks sits after Care, on
-    // for a new project, and the captain turns it off by keys.
+    // Settings → Projects: Require pull request checks is the next control
+    // after Where changes go, on for a new project, and the captain turns it
+    // off by keys.
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     await page.getByRole("tab", { name: "Projects", exact: true }).click();
     const row = projectRow(page, "repo-meterlab");
     const header = row.getByRole("button", { expanded: false });
     await expect(header).toBeVisible();
     await pressKey(header, "Enter");
-    const quick = row.getByRole("radio", { name: RIGOR_WORDS.quick });
-    await expect(quick).toBeChecked();
+    const pullRequests = row.getByRole("radio", {
+      name: PROJECT_DELIVERY_WORDS["direct-pr"],
+      exact: true,
+    });
+    await expect(pullRequests).toBeChecked();
     const require = row.getByRole("switch", { name: PROJECT_POLICY_WORDS.checksTitle });
     await expect(require).toHaveAttribute("aria-checked", "true");
     await expect(row).toContainText(PROJECT_POLICY_WORDS.checksOn);
-    await focusOn(quick);
-    await pressKey(quick, "Tab");
+    await focusOn(pullRequests);
+    await pressKey(pullRequests, "Tab");
     await expect(require).toBeFocused();
     await pressKey(require, "Space");
     await expect(require).toHaveAttribute("aria-checked", "false");

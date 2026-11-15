@@ -10,10 +10,11 @@ import {
   statSync,
   writeSync,
 } from "node:fs";
-import { dirname, join, relative, sep } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { speaksRecordRefresh } from "@shared/contractFeatures";
 import type { WorkOrderResponse } from "@shared/work";
 import { errorText } from "../personal/errorText";
+import { STAGED_FOLDER } from "../session/stagingFolders";
 import { claudeCallsBetween } from "../storage/sessionReader";
 import type { WorkDevices } from "./workDevices";
 
@@ -64,6 +65,15 @@ export class RecordCopy {
   /** The Claude calls the copy holds, and those whose results it holds. */
   private readonly calls = new Set<string>();
   private readonly results = new Set<string>();
+  /**
+   * What this Mac's copy holds of each session's staged skills, by the
+   * session's folder under `staged`: walked once when the folder is first
+   * seen, then kept up to date from what each copy writes, since only the
+   * copy writes there. A copy then walks the record's own files and lists
+   * `staged` once, never every skill file in it (INF-4224: staged skills were
+   * 97% of what each walk read, and dozens of walks in one turn stalled the app).
+   */
+  private staged: { dir: string; folders: Map<string, Map<string, number>> } | undefined;
 
   /** `dir` is where this Mac keeps the copy: its open session's record folder. */
   constructor(
@@ -155,11 +165,11 @@ export class RecordCopy {
         const answer = (await devices.ask(deviceId, "inf:session:copy", [
           {
             task,
-            from: copiedFiles(recordDir),
+            from: this.held(recordDir),
             ...(refresh ? { refresh: true } : {}),
           },
         ])) as WorkOrderResponse<"inf:session:copy">;
-        for (const file of answer.files) writeAt(recordDir, file);
+        for (const file of answer.files) this.write(recordDir, file);
         refresh = false;
         more = answer.more && answer.files.length > 0;
       }
@@ -190,7 +200,7 @@ export class RecordCopy {
         let more = true;
         while (more) {
           const from = [
-            ...copiedFiles(recordDir).filter((file) => !wanted.has(file.name)),
+            ...this.held(recordDir).filter((file) => !wanted.has(file.name)),
             ...[...wanted]
               .filter(([name]) => !whole.has(name))
               .map(([name, offset]) => ({ name, offset })),
@@ -200,7 +210,7 @@ export class RecordCopy {
           ])) as WorkOrderResponse<"inf:session:copy">;
           for (const file of answer.files) {
             if (!wanted.has(file.name)) {
-              writeAt(recordDir, file);
+              this.write(recordDir, file);
               continue;
             }
             if (whole.has(file.name)) continue;
@@ -212,6 +222,7 @@ export class RecordCopy {
             const target = join(recordDir, ...file.name.split("/"));
             mkdirSync(dirname(target), { recursive: true });
             renameSync(join(staging, ...file.name.split("/")), target);
+            this.wrote(recordDir, file.name, end);
             whole.add(file.name);
           }
           more = answer.more && answer.files.length > 0;
@@ -230,6 +241,63 @@ export class RecordCopy {
         this.options.log(`could not copy ${task}'s record home whole: ${errorText(caught)}`),
     );
     return run;
+  }
+
+  /**
+   * Every file of this Mac's copy, by its path under the record's folder,
+   * with where it ends: the record's own files walked, and the staged skills
+   * from what the copy already knows it holds of each session's folder.
+   */
+  private held(dir: string): { name: string; offset: number }[] {
+    if (this.staged?.dir !== dir) this.staged = { dir, folders: new Map() };
+    const known = this.staged.folders;
+    const stagedDir = join(dir, STAGED_FOLDER);
+    let present: Dirent[];
+    try {
+      present = readdirSync(stagedDir, { withFileTypes: true });
+    } catch {
+      present = [];
+    }
+    const names = new Set(present.map((entry) => entry.name));
+    // A session's folder removed here is forgotten; one first seen is walked once.
+    for (const name of [...known.keys()]) if (!names.has(name)) known.delete(name);
+    for (const entry of present) {
+      if (known.has(entry.name)) continue;
+      const prefix = `${STAGED_FOLDER}/${entry.name}`;
+      const path = join(stagedDir, entry.name);
+      known.set(
+        entry.name,
+        new Map(
+          entry.isDirectory()
+            ? copiedFiles(path).map((file) => [`${prefix}/${file.name}`, file.offset])
+            : fileEnd(path).map((offset) => [prefix, offset]),
+        ),
+      );
+    }
+    return [
+      ...copiedFiles(dir, STAGED_FOLDER),
+      ...[...known.values()].flatMap((files) =>
+        [...files].map(([name, offset]) => ({ name, offset })),
+      ),
+    ];
+  }
+
+  /** One copied stretch written to this Mac's copy, and kept in what it knows it holds. */
+  private write(
+    dir: string,
+    file: { name: string; size: number; offset: number; data: string },
+  ): void {
+    if (writeAt(dir, file))
+      this.wrote(dir, file.name, file.offset + Buffer.byteLength(file.data, "base64"));
+  }
+
+  /** A staged file of this Mac's copy now ends at `end`. */
+  private wrote(dir: string, name: string, end: number): void {
+    const [top, folder] = name.split("/");
+    if (top !== STAGED_FOLDER || !folder || this.staged?.dir !== dir) return;
+    const files = this.staged.folders.get(folder);
+    if (files) files.set(name, end);
+    else this.staged.folders.set(folder, new Map([[name, end]]));
   }
 }
 
@@ -252,32 +320,50 @@ function transcripts(dir: string): { path: string; offset: number }[] {
   });
 }
 
-/** Every file of this Mac's copy, by its path under the record's folder, with where it ends. */
-function copiedFiles(dir: string): { name: string; offset: number }[] {
-  let names: string[];
+/**
+ * Every file under `dir`, by its path there, with where it ends; a folder
+ * at its top named `skip` is left out.
+ */
+function copiedFiles(dir: string, skip?: string): { name: string; offset: number }[] {
+  const files: { name: string; offset: number }[] = [];
+  const walk = (folder: string, prefix: string) => {
+    let entries: Dirent[];
+    try {
+      entries = readdirSync(folder, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const name = prefix ? `${prefix}/${entry.name}` : entry.name;
+      const path = join(folder, entry.name);
+      if (entry.isDirectory()) {
+        if (!(prefix === "" && entry.name === skip)) walk(path, name);
+        continue;
+      }
+      for (const offset of fileEnd(path)) files.push({ name, offset });
+    }
+  };
+  walk(dir, "");
+  return files;
+}
+
+/** Where the file at `path` ends, when it is a file; none when it is not, or is gone. */
+function fileEnd(path: string): number[] {
   try {
-    names = readdirSync(dir, { recursive: true, encoding: "utf8" }) as string[];
+    const stat = statSync(path);
+    return stat.isFile() ? [stat.size] : [];
   } catch {
     return [];
   }
-  return names.flatMap((name) => {
-    try {
-      const stat = statSync(join(dir, name));
-      if (!stat.isFile()) return [];
-      return [{ name: relative(dir, join(dir, name)).split(sep).join("/"), offset: stat.size }];
-    } catch {
-      return [];
-    }
-  });
 }
 
 /** One copied stretch of a file, written at its offset; the file ends where the stretch does. */
 function writeAt(
   dir: string,
   file: { name: string; size: number; offset: number; data: string },
-): void {
+): boolean {
   const path = join(dir, ...file.name.split("/"));
-  if (relative(dir, path).startsWith("..")) return;
+  if (relative(dir, path).startsWith("..")) return false;
   mkdirSync(dirname(path), { recursive: true });
   const bytes = Buffer.from(file.data, "base64");
   const fd = openSync(path, "a+");
@@ -292,4 +378,5 @@ function writeAt(
   } finally {
     closeSync(handle);
   }
+  return true;
 }

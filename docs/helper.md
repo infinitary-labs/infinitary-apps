@@ -672,6 +672,7 @@ Its parts sit beside it in `src/core/placed/`: what the crew reads of the comput
   A continuation's end keeps one final coalesced copy for its completed text or the tail left by a client exit, without repeating afterward.
   Live copies never hold up a step's events; a turn's end waits for any transfer already in flight before flushing its final record.
   A turn's end, reconnect and session release flush the copy without the live throttle, from where each file's copy ends; Observe and the Crewmate tab read that copy for a task on another computer.
+  Where each file's copy ends is read from disk for the record's own files only: the skills each session staged under `staged/` are walked once when their session's folder first appears, then kept from what each copy writes, so a copy lists `staged/` once instead of reading every staged file (`RecordCopy`).
   On protocol 8.15 or later, the first piece's copy order requests a fresh app-owned record from the live session before the computer reads it, so a Claude client's mid-turn tail does not wait for its minute tick.
   The home omits that request on older computers, which retain the cached-source behavior until updated.
   A file the computer wrote again shorter, after `delete-outside` replaced the words from outside in it, is copied whole instead: into a folder beside the copy, `crewmates/<task>/sessions.whole/`, and renamed over this Mac's file once whole, so the copy never mixes the old words with the new, while the rest of the record is copied on as usual (`RecordCopy.copyWhole`).

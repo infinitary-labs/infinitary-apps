@@ -929,6 +929,16 @@ it("reads the same from disk for a step of a placed Claude turn however many cal
   }
 });
 
+// INF-4224: the home walked every staged skill file of a record before each
+// copy of it, 97% of what a walk read, and dozens of walks in one turn of the
+// event loop stalled the app; a step's copy lists the staged folder once.
+it("reads none of the record's staged skills for a step of a placed Claude turn", async () => {
+  const step = await homeReadsOverOneStep(1);
+  expect(Object.entries(step.reads).filter(([read]) => read.endsWith(" record:staged"))).toEqual([
+    ["list record:staged", 1],
+  ]);
+});
+
 // INF-341 F2: only refresh-capable Claude needs eventless open-call polling.
 it.each([
   { backend: "claude", protocolVersion: "8.14.0" },

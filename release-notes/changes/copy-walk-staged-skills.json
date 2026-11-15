@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "copy-walk-staged-skills",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Crewmates on another computer no longer pause the window",
+      "body": "While crewmates work on another computer, the window no longer pauses for a moment each time their conversations are brought over.",
+      "noPicture": "The window looks the same; the change removes short pauses while conversations from another computer are brought over.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

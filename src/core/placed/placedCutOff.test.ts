@@ -517,6 +517,8 @@ async function world() {
         forges: () => ({
           view: () => ({ signIns: [], hosts: [] }),
           start: async () => {},
+          startBrowser: async () => {},
+          signInWithKey: async () => ({ ok: false, problem: "not-server", host: null }),
           // No GitHub CLI there.
           signInWithCli: async (host) => ({ ok: false, problem: "missing", host }),
           cancel: () => {},

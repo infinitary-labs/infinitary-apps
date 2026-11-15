@@ -805,7 +805,8 @@ export class SessionHost {
             const refused: WorkOrderResponse<"inf:working-copy:prepare"> = {
               refused: "forge-sign-in",
               host: caught.host,
-              name: "GitHub",
+              // A long server address fits the order's word; the home names the host itself.
+              name: caught.place.slice(0, 64),
             };
             answer = refused;
           }

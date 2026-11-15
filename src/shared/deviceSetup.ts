@@ -1,7 +1,9 @@
 import type { CardAction } from "./cards";
 import { HERE } from "./deviceNames";
 import { type FoundTools, namesInWords } from "./devices";
+import { forgePlace, kindByName } from "./forge";
 import { catalogEntry } from "./providers";
+import type { RepoHost } from "./repos";
 import type { ComputerSignIns, signInPlace } from "./signIns";
 
 /**
@@ -32,6 +34,32 @@ function escapeHtml(value: string): string {
 
 /** The host where a computer's clones and pushes need their own sign-in. */
 export const GITHUB_HOST = "github.com";
+
+/**
+ * The host a project needs that computer's own sign-in for, when that
+ * computer offers one from here (docs/forge.md, "A computer's own
+ * sign-in"): a host it lists, such as github.com, or one of a kind of
+ * server it signs in to by an address, such as GitLab or GitHub Enterprise.
+ * Undefined for a project kept only here, on a plain Git host, or on a host
+ * a computer too old to offer it would be tried for instead.
+ */
+export function computerForgeHost(
+  forges: ComputerSignIns["forges"],
+  host: RepoHost | undefined,
+): string | undefined {
+  if (!forges || !host?.name || (host.kind !== "github" && host.kind !== "gitlab"))
+    return undefined;
+  const name = host.name;
+  if (forges.hosts.some((entry) => entry.host === name)) return name;
+  // github.com signs in with its own code; only another host is offered by its kind.
+  if (name === GITHUB_HOST) return undefined;
+  return forges.servers?.some((server) => server.kind === host.kind) ? name : undefined;
+}
+
+/** The person's word for a host a computer signs in to ("GitHub", "GitLab", "github.example.com"). */
+export function computerForgeName(host: string): string {
+  return forgePlace({ kind: kindByName(host) ?? "github", host }) ?? host;
+}
 
 /** The setup card: one per computer, raised again under the same id as its facts change. */
 export function deviceSetupCardId(deviceId: string): string {

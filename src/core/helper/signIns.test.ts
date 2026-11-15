@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { FmEvent } from "@shared/events";
+import { GITHUB_ENTERPRISE, GITLAB } from "@shared/forges";
 import { parseInvokeRequest } from "@shared/ipc";
 import { STARTER_SLOTS } from "@shared/modelSlots";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
@@ -66,6 +67,63 @@ const CLAUDE_CODE_PAGE =
   "https://claude.com/cai/oauth/authorize?code=true&redirect_uri=https%3A%2F%2Fplatform.claude.com%2Foauth%2Fcode%2Fcallback&state=s0042";
 /** What GitHub hands the computer for an approved code: its own sign-in, never the home's. */
 const GITHUB_SIGN_IN = "gho_standin_computer_0042";
+
+/** A key the captain made on their GitHub Enterprise server and typed at home, for the computer. */
+const ENTERPRISE_KEY = "ghp_standin_enterprise_0042";
+
+/** What GitLab on the person's own server hands the computer for an approved browser code. */
+const GITLAB_SIGN_IN = "standin-gitlab-access-0042";
+
+/** A public application the person registered on their GitLab server; never a secret. */
+const GITLAB_APPLICATION = "standin0application0id0042";
+
+/**
+ * A GitHub Enterprise server and a GitLab server of the person's own, as the
+ * computer asks them: GitHub Enterprise's "who is this" answers only the
+ * key made there; GitLab's browser code is pending once, then hands the
+ * computer its own sign-in, which its "who is this" answers.
+ */
+function standInServers() {
+  const asked: { url: string; auth?: string }[] = [];
+  let pending = 1;
+  vi.stubGlobal("fetch", async (input: string | URL | Request, init?: RequestInit) => {
+    const url = input instanceof Request ? input.url : String(input);
+    const auth = new Headers(init?.headers).get("authorization") ?? undefined;
+    asked.push({ url, ...(auth ? { auth } : {}) });
+    const json = (status: number, value: unknown) =>
+      new Response(JSON.stringify(value), {
+        status,
+        headers: { "content-type": "application/json" },
+      });
+    if (url === "https://github.example.com/api/v3/user")
+      return auth === `Bearer ${ENTERPRISE_KEY}` || auth === `token ${ENTERPRISE_KEY}`
+        ? json(200, { login: "mona" })
+        : json(401, { message: "Bad credentials" });
+    if (url === "https://gitlab.example.com/oauth/authorize_device")
+      return json(200, {
+        device_code: "standin-gitlab-device",
+        user_code: "GLAB-0042",
+        verification_uri: "https://gitlab.example.com/oauth/device",
+        expires_in: 900,
+        interval: 1,
+      });
+    if (url === "https://gitlab.example.com/oauth/token")
+      return pending-- > 0
+        ? json(400, { error: "authorization_pending" })
+        : json(200, {
+            access_token: GITLAB_SIGN_IN,
+            token_type: "Bearer",
+            expires_in: 7200,
+            scope: "api write_repository",
+          });
+    if (url === "https://gitlab.example.com/api/v4/user")
+      return auth === `Bearer ${GITLAB_SIGN_IN}`
+        ? json(200, { username: "tanuki" })
+        : json(401, { message: "401 Unauthorized" });
+    return json(404, {});
+  });
+  return { asked };
+}
 
 /** What GitHub CLI there prints for github.com: its own sign-in, never one the app made. */
 const GITHUB_CLI_SIGN_IN = "gho_standin_githubcli_0042";
@@ -1331,7 +1389,11 @@ describe("a computer that runs work signs in to its own subscriptions from its h
     // It offers GitHub, and is not signed in there yet.
     await expect
       .poll(() => world.group()?.signIns?.forges)
-      .toEqual({ signIns: [], hosts: [{ host: "github.com", name: "GitHub" }] });
+      .toEqual({
+        signIns: [],
+        hosts: [{ host: "github.com", name: "GitHub" }],
+        servers: [GITHUB_ENTERPRISE, GITLAB],
+      });
 
     const { signInId } = await world.signIns.startForge(world.deviceId, "github.com");
     await expect
@@ -1422,6 +1484,7 @@ describe("a computer that runs work signs in to its own subscriptions from its h
         signIns: [],
         hosts: [{ host: "github.com", name: "GitHub" }],
         githubCli: true,
+        servers: [GITHUB_ENTERPRISE, GITLAB],
       });
 
     expect(await world.signIns.forgeWithCli(world.deviceId, "github.com")).toEqual({
@@ -1472,6 +1535,143 @@ describe("a computer that runs work signs in to its own subscriptions from its h
     expect(existsSync(join(forges, "github.com"))).toBe(false);
   });
 
+  // INF-4280's audit item 7: a computer signs in to GitHub Enterprise and
+  // GitLab from home, not github.com alone.
+  it("signs a computer in to GitHub Enterprise with a key typed at home, which it keeps and its git answers that host with", async () => {
+    const servers = standInServers();
+    const askpass = join(__dirname, "../../../resources/git-askpass");
+    const world = await joined({ gitAskpass: askpass });
+    world.signIns.read();
+    await expect
+      .poll(() => world.group()?.signIns?.forges?.servers)
+      .toEqual([GITHUB_ENTERPRISE, GITLAB]);
+
+    // A key the server does not answer for is not kept there.
+    expect(
+      await world.signIns.forgeWithKey(world.deviceId, {
+        kind: "github",
+        address: "https://github.example.com/acme/api",
+        key: "ghp_standin_revoked_0042",
+      }),
+    ).toEqual({ ok: false, problem: "refused", host: "github.example.com" });
+    expect(existsSync(join(world.dataDir, "forges", "github.example.com"))).toBe(false);
+
+    expect(
+      await world.signIns.forgeWithKey(world.deviceId, {
+        kind: "github",
+        address: "https://github.example.com/acme/api",
+        key: ENTERPRISE_KEY,
+      }),
+    ).toEqual({ ok: true, host: "github.example.com" });
+    // Its row is the host's own address, signed in as who the server says.
+    expect(world.group()?.signIns?.forges?.signIns).toEqual([
+      expect.objectContaining({
+        host: "github.example.com",
+        name: "github.example.com",
+        login: "mona",
+        state: "ok",
+        server: GITHUB_ENTERPRISE,
+      }),
+    ]);
+    expect(world.group()?.signIns?.forges?.hosts).toContainEqual({
+      host: "github.example.com",
+      name: "github.example.com",
+      server: GITHUB_ENTERPRISE,
+    });
+
+    // The key is in the computer's own store, which its git answers that host from alone.
+    const forges = join(world.dataDir, "forges");
+    expect(new ForgeSignInStore(forges).read("github.example.com")).toMatchObject({
+      token: ENTERPRISE_KEY,
+      kind: "github",
+      gitUser: "x-access-token",
+    });
+    expect(statSync(join(forges, "github.example.com", "sign-in.json")).mode & 0o777).toBe(0o600);
+    expect(hostEnv()).toMatchObject({ GIT_ASKPASS: askpass, INFINITARY_GIT_SIGNIN_DIR: forges });
+    expect(hostEnv().GIT_CONFIG_PARAMETERS).toContain(
+      "'credential.https://github.example.com.helper='",
+    );
+    // Nothing the home said, pushed or saved holds the key.
+    expect(JSON.stringify([world.emitted, world.events, world.signIns.view()])).not.toContain(
+      ENTERPRISE_KEY,
+    );
+    expect(savedText(world.homeDir).filter(({ text }) => text.includes(ENTERPRISE_KEY))).toEqual(
+      [],
+    );
+    expect(servers.asked).toContainEqual({
+      url: "https://github.example.com/api/v3/user",
+      auth: expect.stringContaining(ENTERPRISE_KEY),
+    });
+
+    // Signing it out from home deletes it there.
+    await world.signIns.signOutForge(world.deviceId, "github.example.com");
+    await expect.poll(() => world.group()?.signIns?.forges?.signIns).toEqual([]);
+    expect(existsSync(join(forges, "github.example.com"))).toBe(false);
+  });
+
+  it("signs a computer in to GitLab on the person's own server with a browser code read at home", async () => {
+    const servers = standInServers();
+    const world = await joined({ gitAskpass: join(__dirname, "../../../resources/git-askpass") });
+    world.signIns.read();
+    await expect
+      .poll(() => world.group()?.signIns?.forges?.servers)
+      .toEqual([GITHUB_ENTERPRISE, GITLAB]);
+    // Until then its git keeps the computer's own login for every GitLab
+    // host, gitlab.com included (review of INF-4287, the captain's choice:
+    // only a host with a sign-in here is answered by the app alone).
+    const helpers = () => hostEnv().GIT_CONFIG_PARAMETERS ?? "";
+    expect(helpers()).toContain("'credential.https://github.com.helper='");
+    expect(helpers()).not.toContain("gitlab");
+
+    const { signInId } = await world.signIns.forgeBrowser(world.deviceId, {
+      kind: "gitlab",
+      address: "gitlab.example.com",
+      applicationId: GITLAB_APPLICATION,
+    });
+    await expect
+      .poll(() => world.steps(signInId).find((step) => step.kind === "notice"))
+      .toMatchObject({
+        notice: {
+          providerId: "gitlab.example.com",
+          kind: "device_code",
+          userCode: "GLAB-0042",
+          url: "https://gitlab.example.com/oauth/device",
+        },
+      });
+    // The captain enters the code on GitLab's page; the computer asks until it says yes.
+    expect(await world.ended(signInId)).toEqual({ kind: "ended", outcome: "signed-in" });
+    await expect
+      .poll(() => world.group()?.signIns?.forges?.signIns)
+      .toEqual([
+        expect.objectContaining({
+          host: "gitlab.example.com",
+          login: "tanuki",
+          state: "ok",
+          server: GITLAB,
+          applicationId: GITLAB_APPLICATION,
+        }),
+      ]);
+    expect(
+      new ForgeSignInStore(join(world.dataDir, "forges")).read("gitlab.example.com"),
+    ).toMatchObject({
+      token: GITLAB_SIGN_IN,
+      kind: "gitlab",
+      gitUser: "oauth2",
+      applicationId: GITLAB_APPLICATION,
+    });
+    // Signed in, that host is answered by the app's sign-in alone; gitlab.com,
+    // with none here, still keeps the computer's own.
+    expect(helpers()).toContain("'credential.https://gitlab.example.com.helper='");
+    expect(helpers()).not.toContain("'credential.https://gitlab.com.helper='");
+    expect(servers.asked).toContainEqual({
+      url: "https://gitlab.example.com/api/v4/user",
+      auth: `Bearer ${GITLAB_SIGN_IN}`,
+    });
+    expect(JSON.stringify([world.emitted, world.events, world.signIns.view()])).not.toContain(
+      GITLAB_SIGN_IN,
+    );
+  });
+
   it("offers no GitHub CLI sign-in on a computer without GitHub CLI", async () => {
     const world = await joined();
     world.signIns.read();
@@ -1480,6 +1680,7 @@ describe("a computer that runs work signs in to its own subscriptions from its h
       .toEqual({
         signIns: [],
         hosts: [{ host: "github.com", name: "GitHub" }],
+        servers: [GITHUB_ENTERPRISE, GITLAB],
       });
     await expect(world.signIns.forgeWithCli(world.deviceId, "github.com")).rejects.toThrow(
       "does not offer GitHub CLI's sign-in there",

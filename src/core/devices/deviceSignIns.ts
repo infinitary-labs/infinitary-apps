@@ -3,7 +3,14 @@ import { hasSince16, speaksCustomApi } from "@shared/contractFeatures";
 import { HERE } from "@shared/deviceNames";
 import { type ComputerReach, type DeviceView, deviceRunsWork } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
-import type { ForgeCliSignInResult } from "@shared/forges";
+import { hostOfAddress } from "@shared/forge";
+import {
+  type ForgeBrowserSignIn,
+  type ForgeCliSignInResult,
+  type ForgeKeySignIn,
+  type ForgeKeySignInResult,
+  isForgeHostName,
+} from "@shared/forges";
 import { catalogEntry } from "@shared/providers";
 import {
   type ComputerSignIns,
@@ -38,13 +45,18 @@ import type { WorkDevices } from "../placed/workDevices";
  * The same holds for the computer's own sign-in where projects live, which
  * its clones and pushes use (docs/forge.md, "A computer's own sign-in"):
  * Settings -> Integrations starts the host's device flow there, the code to read
- * comes back as a step, and that computer finishes the sign-in itself.
+ * comes back as a step, and that computer finishes the sign-in itself. A key
+ * for GitLab or GitHub Enterprise rides one order to it, as a custom API key
+ * does, and is held nowhere here.
  */
 
 /** A computer that takes Keep going on credits for its own accounts (`computer-keep-going.md`). */
 const COMPUTER_KEEP_GOING = contractChange("computer-keep-going");
 /** A computer that renames, pauses and prefers its own accounts and reads its allowance on request. */
 const COMPUTER_ACCOUNT_SETTINGS = contractChange("computer-account-settings");
+
+/** A computer that signs in to GitLab and GitHub Enterprise from here (`computer-forge-servers.md`). */
+const COMPUTER_FORGE_SERVERS = contractChange("computer-forge-servers");
 
 type Running = DeviceSignInFlow & {
   /** The person's word for a project host ("GitHub"). */
@@ -253,7 +265,13 @@ export class DeviceSignIns {
     const device = this.computer(deviceId);
     const words = signInPlace({ ...device, onThisMac: device.onThisMac === true });
     const forges = this.said.get(deviceId)?.signIns?.forges;
-    if (!forges?.githubCli || !forges.hosts.some((entry) => entry.host === host))
+    // A GitHub Enterprise host it is not signed in to yet is named by its
+    // address, only to a computer that signs in to such hosts from here.
+    const offered =
+      forges?.hosts.some((entry) => entry.host === host) ||
+      (this.takesForgeServers(deviceId) &&
+        forges?.servers?.some((server) => server.kind === "github"));
+    if (!forges?.githubCli || !offered)
       throw new Error(`${words.who} does not offer GitHub CLI's sign-in there.`);
     if (!this.options.work.inReach(deviceId))
       throw new Error(`${words.who} is out of reach, so nothing was asked.`);
@@ -267,6 +285,76 @@ export class DeviceSignIns {
     if (!parsed.success)
       throw new Error(`${words.who} answered in a shape ${HERE.this} does not know.`);
     return parsed.data;
+  }
+
+  /**
+   * Signs that computer in to GitLab or a host on the person's own server
+   * with a key made there. The key rides one order and is held nowhere
+   * here: not in this object, an event, or a feed line. The answer says
+   * only whether the host answered for it; the rows it changed arrive as
+   * that computer's sign-ins, and this resolves once they have.
+   */
+  async forgeWithKey(deviceId: string, input: ForgeKeySignIn): Promise<ForgeKeySignInResult> {
+    const who = this.offersServers(deviceId, input.kind);
+    let answer: unknown;
+    try {
+      answer = await this.options.work.ask(deviceId, "inf:sign-ins:forge-key", [input]);
+    } catch (error) {
+      throw reachable(error, who);
+    }
+    const parsed = signInOrders["inf:sign-ins:forge-key"].response.safeParse(answer);
+    if (!parsed.success) throw new Error(`${who} answered in a shape ${HERE.this} does not know.`);
+    if (parsed.data.ok) await this.refresh(deviceId);
+    return parsed.data;
+  }
+
+  /**
+   * Starts GitLab's browser code sign-in on that computer with the public
+   * application the person registered on the host; its code and end arrive
+   * as `inf:devices:sign-in`, as the device flow's do, and `cancel` stops it.
+   */
+  async forgeBrowser(deviceId: string, input: ForgeBrowserSignIn): Promise<{ signInId: string }> {
+    const who = this.offersServers(deviceId, input.kind);
+    const host = hostOfAddress(input.address);
+    if (!host || !isForgeHostName(host)) throw new Error("Check the server address.");
+    const signInId = randomBytes(16).toString("base64url");
+    this.begin({
+      signInId,
+      deviceId,
+      providerId: host,
+      target: "forge",
+      phase: "running",
+      name: host,
+    });
+    try {
+      await this.options.work.ask(deviceId, "inf:sign-ins:forge-browser", [{ signInId, ...input }]);
+    } catch (error) {
+      this.end(signInId, {
+        kind: "ended",
+        outcome: "failed",
+        error: reachable(error, who).message,
+      });
+      throw reachable(error, who);
+    }
+    return { signInId };
+  }
+
+  /** Whether that computer signs in to GitLab and GitHub Enterprise from here (`computer-forge-servers.md`). */
+  takesForgeServers(deviceId: string): boolean {
+    return listsChange(this.options.work.version(deviceId)?.changes, COMPUTER_FORGE_SERVERS);
+  }
+
+  /** That computer's name, once it is known to offer this kind of server and is in reach; else why not. */
+  private offersServers(deviceId: string, kind: string): string {
+    this.computer(deviceId);
+    const who = this.who(deviceId);
+    if (!this.takesForgeServers(deviceId))
+      throw new Error(`Update Infinitary on ${who} to sign in to this host there.`);
+    if (!this.said.get(deviceId)?.signIns?.forges?.servers?.some((server) => server.kind === kind))
+      throw new Error(`${who} does not offer a sign-in to that kind of server.`);
+    if (!this.options.work.inReach(deviceId))
+      throw new Error(`${who} is out of reach, so nothing was sent.`);
+    return who;
   }
 
   /**

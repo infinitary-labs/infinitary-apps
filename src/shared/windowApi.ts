@@ -424,6 +424,13 @@ export type FirstmateApi = {
     forgeSignIn: (deviceId: string, host: string) => Promise<{ signInId: string }>;
     /** Signs that computer in through its own GitHub CLI's sign-in; the answer carries no token. */
     forgeSignInWithCli: (deviceId: string, host: string) => Promise<ForgeCliSignInResult>;
+    /** Signs that computer in to GitLab or GitHub Enterprise with a key, kept only there; the answer carries no key. */
+    forgeSignInWithKey: (deviceId: string, input: ForgeKeySignIn) => Promise<ForgeKeySignInResult>;
+    /** Starts GitLab's browser code sign-in on that computer; its code rides `onSignIn`. */
+    forgeSignInWithBrowser: (
+      deviceId: string,
+      input: ForgeBrowserSignIn,
+    ) => Promise<{ signInId: string }>;
     /** Signs that computer out where projects live. */
     forgeSignOut: (deviceId: string, host: string) => Promise<{ ok: true }>;
     /**

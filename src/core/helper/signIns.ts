@@ -183,13 +183,26 @@ export class SignInHost {
       case "inf:sign-ins:forge": {
         const [forge] = request as SignInOrderRequest<"inf:sign-ins:forge">;
         // Asked again: it is already running.
-        if (this.forging !== forge.signInId) this.forge(forge.signInId, forge.host);
+        if (this.forging !== forge.signInId)
+          this.forge(forge.signInId, (step) => this.options.forges.start(forge.host, step));
         return { ok: true };
       }
       case "inf:sign-ins:forge-cli": {
         const [cli] = request as SignInOrderRequest<"inf:sign-ins:forge-cli">;
         // The rows it changed reach the home as its sign-ins, whole; the answer carries no token.
         return this.options.forges.signInWithCli(cli.host);
+      }
+      case "inf:sign-ins:forge-key": {
+        const [input] = request as SignInOrderRequest<"inf:sign-ins:forge-key">;
+        // The key is kept only in this computer's store; the answer names the host, never the key.
+        return this.options.forges.signInWithKey(input);
+      }
+      case "inf:sign-ins:forge-browser": {
+        const [{ signInId, ...input }] =
+          request as SignInOrderRequest<"inf:sign-ins:forge-browser">;
+        if (this.forging !== signInId)
+          this.forge(signInId, (step) => this.options.forges.startBrowser(input, step));
+        return { ok: true };
       }
       case "inf:sign-ins:forge-out": {
         const [out] = request as SignInOrderRequest<"inf:sign-ins:forge-out">;
@@ -355,13 +368,18 @@ export class SignInHost {
    * since only one code is ever on screen. Its code and its end go to the
    * home as steps, and the rows it changed as this computer's sign-ins.
    */
-  private forge(signInId: string, host: string): void {
+  private forge(
+    signInId: string,
+    start: (step: (step: SignInStep) => void) => Promise<void>,
+  ): void {
     this.forging = signInId;
-    const run = this.options.forges
-      .start(host, (step) => {
-        if (step.kind === "ended" && this.forging === signInId) this.forging = undefined;
-        void this.step(signInId, step);
-      })
+    const run = Promise.resolve()
+      .then(() =>
+        start((step) => {
+          if (step.kind === "ended" && this.forging === signInId) this.forging = undefined;
+          void this.step(signInId, step);
+        }),
+      )
       .catch((error: unknown) => {
         if (this.forging === signInId) this.forging = undefined;
         void this.step(signInId, { kind: "ended", outcome: "failed", error: messageOf(error) });

@@ -441,27 +441,7 @@ export class ForgeSignIns {
    * offer here is not known.
    */
   knownHosts(): KnownForgeHost[] {
-    const offered = new Set(this.options.providers.map((provider) => provider.host));
-    const known = new Map<string, ForgeKind>();
-    for (const server of this.options.servers ?? []) {
-      for (const host of server.hosts ?? []) known.set(host, server.kind);
-    }
-    for (const host of this.options.store.hosts()) {
-      if (offered.has(host)) continue;
-      const record = this.options.store.read(host);
-      // A sign-in on file that names no kind is GitHub's, the one kind that ever wrote one.
-      const kind = (record && record !== "unreadable" ? record.kind : undefined) ?? "github";
-      if (this.serverFor(kind)) known.set(host, kind);
-    }
-    for (const entry of this.options.projectHosts?.() ?? []) {
-      if (offered.has(entry.host) || known.has(entry.host) || !isForgeHostName(entry.host))
-        continue;
-      if (isPublicForgeHost(entry.host) || !this.serverFor(entry.kind)) continue;
-      known.set(entry.host, entry.kind);
-    }
-    return [...known]
-      .map(([host, kind]) => ({ host, kind }))
-      .sort((a, b) => a.host.localeCompare(b.host));
+    return forgeKnownHosts(this.options);
   }
 
   /**
@@ -472,16 +452,7 @@ export class ForgeSignIns {
    * helpers, as it did before the app knew it.
    */
   gitHosts(): string[] {
-    const servers = this.knownHosts()
-      .map(({ host }) => host)
-      .filter((host) => this.isSignedIn(host));
-    return [
-      ...new Set([
-        ...this.options.providers.map((provider) => provider.host),
-        ...(this.options.servers ?? []).flatMap((server) => server.hosts ?? []),
-        ...servers,
-      ]),
-    ];
+    return forgeGitHosts(this.options);
   }
 
   /** Whether a host has a sign-in on file (whatever its health). */
@@ -587,7 +558,10 @@ export class ForgeSignIns {
   }
 
   /** Start the existing code flow using a public application registered on this host. */
-  async signInWithBrowser(input: ForgeBrowserSignIn): Promise<ForgeSignInFlow> {
+  async signInWithBrowser(
+    input: ForgeBrowserSignIn,
+    options: { onEnd?: (ending: ForgeSignInEnding) => void } = {},
+  ): Promise<ForgeSignInFlow> {
     const host = hostOfAddress(input.address);
     const server = this.serverFor(input.kind);
     if (
@@ -601,7 +575,7 @@ export class ForgeSignIns {
     )
       throw new Error("Check the server address and Application ID");
     this.onServers.set(host, server.signIn(host, input.applicationId.trim()));
-    return this.signIn(host);
+    return this.signIn(host, options);
   }
 
   /**
@@ -1213,4 +1187,65 @@ function isoOf(ms: number): string {
 
 function messageOf(caught: unknown): string {
   return caught instanceof Error ? caught.message : String(caught);
+}
+
+/** What the two host rules below read: a store, the hosts that offer the code and the kinds of server. */
+type ForgeHostSources = {
+  store: ForgeSignInStore;
+  providers: readonly Pick<ForgeSignInProvider, "host">[];
+  servers?: readonly Pick<ForgeServer, "kind" | "hosts">[] | undefined;
+  projectHosts?: (() => readonly KnownForgeHost[]) | undefined;
+};
+
+/**
+ * The hosts on the person's own server a store's owner knows, each with
+ * its kind (`ForgeSignIns.knownHosts`): each public host a kind of server
+ * names, every one with a sign-in on file, and every one the person's
+ * projects live on; a kind of server not offered is not known. The home
+ * and a computer that runs work read the same rule over their own stores.
+ */
+export function forgeKnownHosts(sources: ForgeHostSources): KnownForgeHost[] {
+  const offered = new Set(sources.providers.map((provider) => provider.host));
+  const serverFor = (kind: string) => sources.servers?.some((server) => server.kind === kind);
+  const known = new Map<string, ForgeKind>();
+  for (const server of sources.servers ?? []) {
+    for (const host of server.hosts ?? []) known.set(host, server.kind as ForgeKind);
+  }
+  for (const host of sources.store.hosts()) {
+    if (offered.has(host)) continue;
+    const record = sources.store.read(host);
+    // A sign-in on file that names no kind is GitHub's, the one kind that ever wrote one.
+    const kind = (record && record !== "unreadable" ? record.kind : undefined) ?? "github";
+    if (serverFor(kind)) known.set(host, kind);
+  }
+  for (const entry of sources.projectHosts?.() ?? []) {
+    if (offered.has(entry.host) || known.has(entry.host) || !isForgeHostName(entry.host)) continue;
+    if (isPublicForgeHost(entry.host) || !serverFor(entry.kind)) continue;
+    known.set(entry.host, entry.kind);
+  }
+  return [...known]
+    .map(([host, kind]) => ({ host, kind }))
+    .sort((a, b) => a.host.localeCompare(b.host));
+}
+
+/** The known hosts a store holds a readable sign-in for, read the same way at home and on a computer. */
+export function forgeFiledHosts(sources: ForgeHostSources): string[] {
+  return forgeKnownHosts(sources)
+    .map(({ host }) => host)
+    .filter((host) => {
+      const record = sources.store.read(host);
+      return record !== undefined && record !== "unreadable";
+    });
+}
+
+/** The hosts git answers with this Mac's sign-in alone (`ForgeSignIns.gitHosts`). */
+function forgeGitHosts(sources: ForgeHostSources): string[] {
+  const filed = forgeFiledHosts(sources);
+  return [
+    ...new Set([
+      ...sources.providers.map((provider) => provider.host),
+      ...(sources.servers ?? []).flatMap((server) => server.hosts ?? []),
+      ...filed,
+    ]),
+  ];
 }

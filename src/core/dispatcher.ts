@@ -531,6 +531,8 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       services.deviceSignIns.startForge(deviceId, host),
     "inf:devices:forge-sign-in-cli": (deviceId, host) =>
       services.deviceSignIns.forgeWithCli(deviceId, host),
+    "inf:devices:forge-sign-in-key": (...a) => services.deviceSignIns.forgeWithKey(...a),
+    "inf:devices:forge-sign-in-browser": (...a) => services.deviceSignIns.forgeBrowser(...a),
     "inf:devices:forge-sign-out": (deviceId, host) =>
       services.deviceSignIns.signOutForge(deviceId, host),
     // The key rides connect once and is parsed out of the answer before it returns.

@@ -1,5 +1,6 @@
 import type { Card } from "@shared/cards";
 import {
+  computerForgeHost,
   DEVICE_SETUP_ACTIONS,
   type DeviceSetupFacts,
   deviceForgeSignInCardId,
@@ -14,7 +15,6 @@ import {
 } from "@shared/deviceSetup";
 import { type DeviceKind, deviceRunsWork, type FoundTools } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
-import { forgeOf } from "@shared/forge";
 import { AUTOMATIC_COMPUTER } from "@shared/placement";
 import type { RepoView } from "@shared/repos";
 import { type ComputerSignIns, signInPlace } from "@shared/signIns";
@@ -94,30 +94,29 @@ export class DeviceSetup {
     this.refresh(device.id);
   }
 
-  /** A computer said something new of its sign-ins: its rows may have moved, and a GitHub wait may end. */
+  /** A computer said something new of its sign-ins: its rows may have moved, and a wait for a host's sign-in may end. */
   signInsChanged(deviceId: string): void {
     this.refresh(deviceId);
     const signIns = this.options.signIns.lastSaid(deviceId);
-    if (signIns?.forges?.signIns.some((entry) => entry.host === GITHUB_HOST))
-      this.options.forgeReady?.(deviceId, GITHUB_HOST);
+    for (const entry of signIns?.forges?.signIns ?? [])
+      this.options.forgeReady?.(deviceId, entry.host);
   }
 
   /**
    * A project's Runs on changed: every computer's project row may have
-   * moved, and a project that lives on GitHub set to run on a computer with
-   * no GitHub sign-in of its own needs that sign-in before its next task.
+   * moved, and a project that lives on GitHub or GitLab set to run on a
+   * computer with no sign-in of its own there needs it before its next task.
    */
   runsOnChanged(repo: RepoView): void {
     for (const device of this.options.devices())
       if (deviceRunsWork(device.kind)) this.refresh(device.id);
     const deviceId = repo.runsOn;
     if (!deviceId || deviceId === AUTOMATIC_COMPUTER) return;
-    const where = forgeOf(repo.origin);
-    if (where.kind !== "github" || where.host !== GITHUB_HOST) return;
-    const host = where.host;
+    if (!repo.host?.name || (repo.host.kind !== "github" && repo.host.kind !== "gitlab")) return;
     void this.options.signIns.signInsOf(deviceId).then((signIns) => {
       // Only a sign-in that computer offers from here is asked for.
-      if (!signIns?.forges?.hosts.some((entry) => entry.host === host)) return;
+      const host = computerForgeHost(signIns?.forges, repo.host);
+      if (!host || !signIns?.forges) return;
       if (signIns.forges.signIns.some((entry) => entry.host === host)) return;
       this.options.forgeNeeded?.(deviceId, host, { id: repo.id, name: repo.name });
     });
@@ -143,10 +142,16 @@ export class DeviceSetup {
       this.raised.delete(deviceId);
       this.found.delete(deviceId);
       this.options.cards.withdraw(deviceSetupCardId(deviceId), "the computer was removed");
-      this.options.cards.withdraw(
-        deviceForgeSignInCardId(GITHUB_HOST, deviceId),
-        "the computer was removed",
-      );
+      // Each host a project lives on may have raised its own card for it.
+      const hosts = new Set([GITHUB_HOST]);
+      for (const repo of this.options.repos.list())
+        if (repo.host?.name && (repo.host.kind === "github" || repo.host.kind === "gitlab"))
+          hosts.add(repo.host.name);
+      for (const host of hosts)
+        this.options.cards.withdraw(
+          deviceForgeSignInCardId(host, deviceId),
+          "the computer was removed",
+        );
     }
   }
 

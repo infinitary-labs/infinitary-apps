@@ -72,6 +72,8 @@ A device not signed in reads its name over "not signed in to GitHub", with a sec
 Settings → Projects holds no sign-in, this computer's or a device's (the captain: it "should be only in integrations tab").
 Where that device has GitHub CLI installed, the aside closes as GitHub's own does on this computer (`components/integrations/IntegrationRow.prompt.md`): below a `--line-1` hairline, one `--text-sm --fg-3` line, "If your organization blocks apps like Infinitary, use the GitHub sign-in that GitHub CLI already holds on Mac mini.", and a small "Use GitHub CLI" that asks that device's own GitHub CLI; its row then reads "Mac mini · through GitHub CLI · clones and pushes its own work".
 This computer's own GitHub connection above it is the one pull requests are still opened, checked and merged with.
+Under a device's rows, a `fm-forges-add` strip holds a `HostChip` per kind of server that device signs in to, "+ GitHub Enterprise on Mac mini" and "+ GitLab on Mac mini".
+A chip opens the same key form, or GitLab's browser setup, as this computer's own (`components/integrations/IntegrationRow.prompt.md`), its words naming that device ("It stays on Mac mini."); the signed-in host then joins the device's rows as "github.example.com · mona" over "Mac mini · clones and pushes its own work".
 When a project is set to run on a device with no GitHub sign-in, the app raises its own card (chip "Attention"), "Sign in to GitHub on Mac mini": "website runs on Mac mini now.
 Mac mini needs its own GitHub sign-in to clone it and push." and "Its next task waits for it.
 This computer's GitHub sign-in is not sent there.", with one primary "Sign in to GitHub on Mac mini" that opens Integrations with that sign-in started.

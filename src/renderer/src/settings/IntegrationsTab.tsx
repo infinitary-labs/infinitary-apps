@@ -414,7 +414,7 @@ export function IntegrationsTab() {
             {browser === integration.kind && browserAside}
           </div>
         ))}
-        {/* Each other computer's own GitHub sign-in, for its clones and pushes (docs/forge.md, "A computer's own sign-in"). */}
+        {/* Each other computer's own GitHub, GitHub Enterprise and GitLab sign-ins, for its clones and pushes (docs/forge.md, "A computer's own sign-in"). */}
         <DeviceForgeRows onAny={setComputerRows} />
         {view.addable.length > 0 && (
           <div className="fm-forges-add">

@@ -2,7 +2,8 @@ import type { AccountView } from "@shared/accounts";
 import type { Card } from "@shared/cards";
 import { DEVICE_SETUP_ACTIONS, deviceSetupCardId } from "@shared/deviceSetup";
 import type { FmEvent } from "@shared/events";
-import type { RepoView } from "@shared/repos";
+import { forgeOf } from "@shared/forge";
+import { type RepoView, repoHostFrom } from "@shared/repos";
 import type { ComputerSignIns } from "@shared/signIns";
 import { describe, expect, it } from "vitest";
 import { DeviceSetup } from "./deviceSetup";
@@ -39,7 +40,7 @@ function repo(name: string, origin: string | null, runsOn: string | null): RepoV
     setupKind: "adopt",
     kind: "project",
     origin,
-    host: origin ? { kind: "github", name: "GitHub" } : null,
+    host: origin ? repoHostFrom(forgeOf(origin)) : null,
     delivery: "direct-pr",
     autonomy: false,
     rigor: null,
@@ -256,9 +257,14 @@ describe("finishing a computer's setup", () => {
   it("takes a removed computer's cards with it", () => {
     const at = world();
     at.setup.joined(MINI, undefined, false);
+    // A GitLab project set to run there raised its host's own card for it.
+    at.repos.push(repo("api", "https://gitlab.com/acme/api.git", "d1"));
+    const gitlabCard = "card-forge-gitlab.com-d1";
+    at.stack.set(gitlabCard, { id: gitlabCard, title: "Sign in to GitLab on Mac mini" } as never);
     at.devices.length = 0;
     at.setup.devicesChanged();
     expect(at.stack.has(CARD)).toBe(false);
     expect(at.withdrawn).toContainEqual([CARD, "the computer was removed"]);
+    expect(at.withdrawn).toContainEqual([gitlabCard, "the computer was removed"]);
   });
 });

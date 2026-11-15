@@ -337,7 +337,7 @@ The home reads where the device dialed from off its socket, never from what it s
 `startHelper` (`src/core/helper/run.ts`) is the whole composition: the data folder, the grant, and `HomeLink`, the device's side of the connection the app as a view also uses (`docs/view.md`, "Reaching the other Mac").
 Unlike `createServices` it has no first mate, task record, scheduler or sharing: the home keeps all of those.
 Beside the link it holds the crewmate conversations its home opens here (below); it is sent no push (`docs/connection.md`).
-Every child it starts - git, a crewmate's shell, Claude's client - carries the app's own git helper pointed at this computer's `forges/` (`configureComputerGit`, `src/core/helper/forges.ts`; `docs/forge.md`, "Git that never prompts"), so its git answers GitHub only with this computer's own sign-in and never prompts.
+Every child it starts - git, a crewmate's shell, Claude's client - carries the app's own git helper pointed at this computer's `forges/` (`configureComputerGit`, `src/core/helper/forges.ts`; `docs/forge.md`, "Git that never prompts"), so its git answers GitHub, GitHub Enterprise and GitLab only with this computer's own sign-in and never prompts.
 Every git it starts - a clone, a crewmate's shell, a removal's look at a working copy - is the app's own, as the home's is: every command takes it before anything looks for git or runs it (`adoptBundledGit`, `src/core/workspace/bundledGit.ts`, from `runCli`; `docs/forge.md`, "The app's own git").
 So a Mac with no developer tools clones, commits and pushes, and its join tells the home it has git.
 
@@ -833,7 +833,7 @@ An explicit computer stays the captain's choice; Automatic chooses separately fo
   A task whose computer serves nothing now but a sign-in a cut-off withholds there waits the same way for that sign-in (below, "Its own sign-ins"): "api's next task waits for Mac mini's own Claude sign-in." once when the sign-in is lost or refused, and "api's next task waits for Mac mini's Claude plan's allowance, which resets 1:10pm." once when the allowance is spent, with no day's line either way, and "api's next task started on Mac mini." once that sign-in serves again; Start now answers with the same distinction.
   A task whose computer has no sign-in at all waits the same way, as queued work with no gate: "Mac mini has no sign-ins yet. api's next task waits until it has one." once, nothing tried there, Start now refusing with the same words, and the task started by itself the moment that computer reports a sign-in (`TaskPlacement.deviceSignInsChanged`), with "api's next task started on Mac mini."
   (`docs/devices.md`, "Finishing its setup").
-  A task for a project that lives on GitHub, whose computer offers a GitHub sign-in from here and holds none, waits behind that sign-in's gate (`forge-sign-in:github.com@<device>`), with "api's next task waits for Mac mini's own GitHub sign-in." once and the host's GitHub card for that computer unless its setup card already asks; the gate lifts, and the task starts, the moment that computer reports the sign-in (`docs/forge.md`, "A computer's own sign-in").
+  A task for a project that lives on GitHub, GitHub Enterprise or GitLab, whose computer offers that host's sign-in from here and holds none, waits behind that sign-in's gate (`forge-sign-in:<host>@<device>`), with "api's next task waits for Mac mini's own GitHub sign-in." once and the host's GitHub card for that computer unless its setup card already asks; the gate lifts, and the task starts, the moment that computer reports the sign-in (`docs/forge.md`, "A computer's own sign-in").
   A project whose computer was removed from the list keeps waiting, as "The other computer", until it is set to run elsewhere.
 - **A card from there.**
   A crewmate card's head names where its task runs right after its meta line, the task's title, as "Fix the footer · on Mac mini" (`Card.place`, migration 67).
@@ -1076,14 +1076,14 @@ Nothing moves work on its own, to balance load or to fail over.
 ## Its own sign-ins
 
 A computer that runs work signs in to its own subscriptions, and a task it runs uses only those (design skill `components/devices/SignInOnAMac`).
-A computer also signs in to GitHub for its own clones and pushes, with a code or through its own GitHub CLI's sign-in (`docs/forge.md`, "A computer's own sign-in").
+A computer also signs in to GitHub for its own clones and pushes, with a code or through its own GitHub CLI's sign-in, and to GitHub Enterprise and GitLab with a key or GitLab's browser code (`docs/forge.md`, "A computer's own sign-in").
 Nothing of the home's sign-ins is sent here, and nothing of these goes to the home but the account rows, the allowance read here, and who GitHub says it is.
 
 - **The stores.**
   `startComputerAccounts` (`src/core/helper/accounts.ts`) keeps an `AccountVault` over `work/accounts/`, with Pi's accounts and Claude on this macOS user's own login, and `startComputerForges` (`src/core/helper/forges.ts`) a `ForgeSignIns` over `work/forges/`.
   They are loaded with the first order about sign-ins, the first conversation, or at start when either store already holds a sign-in, so a computer that signs in to nothing never loads them, and a short-lived GitHub sign-in keeps renewing with nobody asking.
 - **The flow runs here, and is drawn at the home.**
-  The home asks the orders in `src/shared/signIns.ts`: `inf:sign-ins:list`, `start`, `answer`, `cancel` and `remove`, and for GitHub `forge` and `forge-out`, and from `CUSTOM_API_SIGN_INS_SINCE` the `custom-*` orders (`SignInHost`, `src/core/helper/signIns.ts`).
+  The home asks the orders in `src/shared/signIns.ts`: `inf:sign-ins:list`, `start`, `answer`, `cancel` and `remove`, and for GitHub `forge` and `forge-out`, from `computer-forge-servers` `forge-key` and `forge-browser`, and from `CUSTOM_API_SIGN_INS_SINCE` the `custom-*` orders (`SignInHost`, `src/core/helper/signIns.ts`).
   A custom API connection is typed at the home and kept here: this computer reads the address, fetches the model list, checks each model and saves, so a localhost address is this computer.
   The key, headers or token command ride once inside `inf:sign-ins:custom-connect` and stay in this computer's store; the command runs here and its produced tokens stay only in memory; the home keeps no copy in a file, a feed line, a card or a conversation.
   What this computer says of its sign-ins includes its custom connections, with no key, and the models each account can serve, so a provider the home's catalog lacks can still take a task here.
@@ -1129,7 +1129,8 @@ Nothing of the home's sign-ins is sent here, and nothing of these goes to the ho
   `inf:sign-ins:cancel` stops it, and so does a newer one, since only one code is on screen at a time.
   The code running out ends it as "The code expired.", GitHub out of reach as "Could not reach GitHub - try again.", and a no on GitHub's page quietly.
   Its health and a short-lived sign-in's renewal run on this computer's own minute tick, as the home's own do on its; the home holds no store for it, so it can neither read nor renew it.
-  This computer's sign-ins whole carry the host it is signed in to, who GitHub says it is and its health, and every host it offers (`forges`), never the sign-in itself.
+  GitHub Enterprise and GitLab sign in here too, with a key the home sends once (`inf:sign-ins:forge-key`) or GitLab's browser code (`inf:sign-ins:forge-browser`), each kept in `forges/`.
+  This computer's sign-ins whole carry the host it is signed in to, who the host says it is and its health, every host it offers and the kinds of server it signs in to (`forges`), never the sign-in itself.
 - **Allowance and renewal, here alone.**
   This computer reads each account's allowance with its own store every five minutes and after a sign-in, and tells the home its sign-ins whole as `inf:work:sign-ins` after any change.
   A 401 is handled here, and non-Claude proactive renewal runs on this computer's own clock (`CredentialHealthService`); the home holds no store for these accounts, so it cannot renew one.

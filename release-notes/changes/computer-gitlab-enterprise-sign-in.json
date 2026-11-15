@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "computer-gitlab-enterprise-sign-in",
+      "kind": "feature",
+      "area": "devices",
+      "title": "A computer that runs work signs in to GitLab and GitHub Enterprise",
+      "body": "Settings → Integrations now offers GitLab and GitHub Enterprise under each computer that runs work, beside its GitHub row. Paste a key or read GitLab's code here, and that computer keeps its own sign-in for its clones and pushes. A project on GitLab or your company's GitHub set to run there waits for that sign-in and starts once it is in place.",
+      "picture": {
+        "dark": "computer-gitlab-enterprise-sign-in-dark.webp",
+        "light": "computer-gitlab-enterprise-sign-in-light.webp",
+        "alt": "Settings → Integrations with a computer signed in to github.example.com as mona, and chips to add GitHub Enterprise and GitLab on that computer"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

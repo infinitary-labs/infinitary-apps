@@ -1,7 +1,9 @@
+import { hereAs } from "@shared/deviceNames";
 import { hostOfAddress } from "@shared/forge";
 import {
   FORGE_BROWSER_WORDS,
   FORGE_SECTION_WORDS,
+  type ForgeBrowserSignIn,
   type ForgeServerView,
   type ForgesView,
   forgeAddressExample,
@@ -23,6 +25,7 @@ export function ForgeBrowserAside({
   onDone,
   onKey,
   onCancel,
+  computer,
 }: {
   address: string;
   applicationId?: string | undefined;
@@ -32,13 +35,19 @@ export function ForgeBrowserAside({
   onDone: () => void;
   onKey: (address: string) => void;
   onCancel: () => void;
+  /**
+   * A computer that runs work the sign-in runs on and is kept on instead of
+   * this one: its name in the words, and its own order to start the code.
+   */
+  computer?: { who: string; start: (input: ForgeBrowserSignIn) => Promise<unknown> };
 }) {
   const [address, setAddress] = useState(initialAddress);
   const [applicationId, setApplicationId] = useState(savedApplicationId ?? "");
   const [checking, setChecking] = useState(false);
   const [failed, setFailed] = useState(false);
   const ids = useId();
-  const here = useHereAs();
+  const hereAsThis = useHereAs();
+  const here = computer ? (text: string) => hereAs(text, computer.who) : hereAsThis;
   const host = hostOfAddress(address);
   // The reason rides the view's push, which may land just before or after the refusal.
   const problem = !failed
@@ -52,11 +61,8 @@ export function ForgeBrowserAside({
     setChecking(true);
     setFailed(false);
     try {
-      await window.infinitary.forges.signInWithBrowser({
-        kind: server.kind,
-        address,
-        applicationId: applicationId.trim(),
-      });
+      const input = { kind: server.kind, address, applicationId: applicationId.trim() };
+      await (computer ? computer.start(input) : window.infinitary.forges.signInWithBrowser(input));
       onDone();
     } catch {
       setFailed(true);

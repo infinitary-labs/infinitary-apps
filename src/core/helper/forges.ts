@@ -1,12 +1,25 @@
 import { join } from "node:path";
-import type { ForgeCliSignInResult } from "@shared/forges";
+import { hostOfAddress, type KnownForgeHost } from "@shared/forge";
+import {
+  type ForgeBrowserSignIn,
+  type ForgeCliSignInResult,
+  type ForgeKeySignIn,
+  type ForgeKeySignInResult,
+  type ForgeSignInFlow,
+  forgeStartProblemText,
+} from "@shared/forges";
 import type { ComputerForges, SignInStep } from "@shared/signIns";
 import {
+  type ForgeServer,
   type ForgeSignInEnding,
   type ForgeSignInProvider,
   ForgeSignInStore,
   ForgeSignIns,
+  ForgeStartError,
+  forgeFiledHosts,
+  forgeKnownHosts,
   forgeSignInProviders,
+  forgeSignInServers,
   type GitHubCli,
   githubCliFor,
 } from "../forge";
@@ -22,9 +35,11 @@ import { configureGitSignIn } from "../hostEnv";
  *   work/forges/<host>/sign-in.json    0700 / 0600, one per host
  *   work/forges/health.log             one dated line per change of health
  *
- * The host's device flow runs here: its code to read goes to the home, the
- * captain enters it on the host's page there, and this computer finishes the
- * sign-in itself. Health and renewal run on this computer's own clock; the
+ * The host's device flow runs here - GitHub's, or GitLab's browser code
+ * with an application the person registered there: its code to read goes to
+ * the home, the captain enters it on the host's page there, and this
+ * computer finishes the sign-in itself. A key for GitLab or GitHub
+ * Enterprise is typed at the home and crosses once, to be kept here. Health and renewal run on this computer's own clock; the
  * home holds no store for it, so it can neither read nor renew one.
  */
 
@@ -37,6 +52,8 @@ export type ComputerForgesOptions = {
   packaged: boolean;
   /** The hosts' sign-ins; the app's own (`forgeSignInProviders`) unless a test stands in its own. */
   providers?: ForgeSignInProvider[];
+  /** The kinds of server signed in to by an address; the app's own (`forgeSignInServers`) unless a test stands in its own. */
+  servers?: ForgeServer[];
   /** This computer's own GitHub CLI; the one on its search path unless a test stands in its own. */
   cli?: GitHubCli;
   /** A sign-in made or gone, or a change of its health or of who the host says it is. */
@@ -56,6 +73,16 @@ export type HeldForges = {
    * running here ends first, cancelled.
    */
   start: (host: string, step: (step: SignInStep) => void) => Promise<void>;
+  /**
+   * Starts GitLab's browser code sign-in here with the public application
+   * the person registered on that host; the same steps as `start`.
+   */
+  startBrowser: (input: ForgeBrowserSignIn, step: (step: SignInStep) => void) => Promise<void>;
+  /**
+   * Signs in to GitLab or GitHub Enterprise with a key made there, kept
+   * here only once the host answers for it; the answer carries no key.
+   */
+  signInWithKey: (input: ForgeKeySignIn) => Promise<ForgeKeySignInResult>;
   /**
    * Signs a GitHub host in through this computer's own GitHub CLI: only the
    * way and the program's path are kept, never its token, and the answer
@@ -81,6 +108,15 @@ export function holdsForgeSignIn(dataDir: string): boolean {
   return new ForgeSignInStore(computerForgesDir(dataDir)).hosts().length > 0;
 }
 
+/** The hosts this computer knows other than the code's, each with its kind, by the home's own rule (`forgeKnownHosts`). */
+export function computerKnownHosts(dataDir: string, packaged = true): KnownForgeHost[] {
+  return forgeKnownHosts({
+    store: new ForgeSignInStore(computerForgesDir(dataDir)),
+    providers: forgeSignInProviders({ packaged }),
+    servers: forgeSignInServers({ packaged }),
+  });
+}
+
 /**
  * Git that never prompts, and answers a host the app signs in to only with
  * this computer's own sign-in (`src/core/hostEnv.ts`): every child this
@@ -92,22 +128,39 @@ export function configureComputerGit(options: {
   askpass: string;
   packaged: boolean;
 }): void {
+  const dir = computerForgesDir(options.dataDir);
+  const providers = forgeSignInProviders({ packaged: options.packaged });
+  const servers = forgeSignInServers({ packaged: options.packaged });
   configureGitSignIn({
     askpass: options.askpass,
-    signInDir: computerForgesDir(options.dataDir),
-    hosts: forgeSignInProviders({ packaged: options.packaged }).map((provider) => provider.host),
+    signInDir: dir,
+    // github.com, and every other host only once it is signed in to here,
+    // read at each spawn: a host signed in to after the start is answered by
+    // this computer's own sign-in alone from its next child on, and one with
+    // no sign-in here keeps the computer's own git login, so a GitLab project
+    // still clones there under a home too old to offer GitLab's sign-in.
+    hosts: () => [
+      ...new Set([
+        ...providers.map((provider) => provider.host),
+        ...forgeFiledHosts({ store: new ForgeSignInStore(dir), providers, servers }),
+      ]),
+    ],
   });
 }
 
 /** What an ended flow says at home, in the words this Mac's own row uses (design skill `components/projects/ForgeRow`). */
-function endStep(ending: ForgeSignInEnding, name: string): SignInStep {
+function endStep(ending: ForgeSignInEnding, name: string, why?: string): SignInStep {
   switch (ending) {
     case "signed-in":
       return { kind: "ended", outcome: "signed-in" };
     case "expired":
       return { kind: "ended", outcome: "failed", error: "The code expired." };
     case "failed":
-      return { kind: "ended", outcome: "failed", error: `Could not reach ${name} - try again.` };
+      return {
+        kind: "ended",
+        outcome: "failed",
+        error: why ?? `Could not reach ${name} - try again.`,
+      };
     default:
       // The person said no on the host's page, or it was stopped: quiet.
       return { kind: "ended", outcome: "cancelled" };
@@ -117,18 +170,25 @@ function endStep(ending: ForgeSignInEnding, name: string): SignInStep {
 export function startComputerForges(options: ComputerForgesOptions): HeldForges {
   const log = options.log ?? (() => {});
   const providers = options.providers ?? forgeSignInProviders({ packaged: options.packaged });
+  const servers = options.servers ?? forgeSignInServers({ packaged: options.packaged });
   let told = "";
   const view = (): ComputerForges => {
     const whole = signIns.view();
+    const signedIn = new Set(whole.signIns.map((row) => row.host));
     return {
       signIns: whole.signIns.map(({ projects: _here, ...row }) => row),
-      hosts: whole.hosts,
+      // A host of a kind of server gets a row once it is signed in to here;
+      // until then its kind's chip offers it, so an older home, which knows
+      // only the code, is never offered a host it would start a code for.
+      hosts: whole.hosts.filter((host) => !host.server || signedIn.has(host.host)),
+      ...(whole.servers?.length ? { servers: whole.servers } : {}),
       ...(whole.githubCli ? { githubCli: true } : {}),
     };
   };
   const signIns: ForgeSignIns = new ForgeSignIns({
     store: new ForgeSignInStore(computerForgesDir(options.dataDir)),
     providers,
+    servers,
     cli: options.cli ?? githubCliFor({ packaged: options.packaged }),
     // No project lives here: the home keeps the record of them.
     projectsOn: () => 0,
@@ -145,6 +205,47 @@ export function startComputerForges(options: ComputerForgesOptions): HeldForges 
   told = JSON.stringify(view().signIns);
   const nameOf = (host: string) => signIns.nameOf(host) ?? host;
 
+  /**
+   * One flow here: its code goes to `step` as a notice once known, and its
+   * end once. A start the host refuses says why in the end's words.
+   */
+  const run = async (
+    host: string,
+    step: (step: SignInStep) => void,
+    begin: (onEnd: (ending: ForgeSignInEnding) => void) => Promise<ForgeSignInFlow>,
+  ): Promise<void> => {
+    let ended = false;
+    const end = (ending: ForgeSignInEnding, why?: string) => {
+      if (ended) return;
+      ended = true;
+      step(endStep(ending, nameOf(host), why));
+    };
+    let flow: ForgeSignInFlow;
+    try {
+      flow = await begin(end);
+    } catch (error) {
+      log(
+        `a sign-in to ${host} could not start: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      end(
+        "failed",
+        error instanceof ForgeStartError ? forgeStartProblemText(error.problem, host) : undefined,
+      );
+      return;
+    }
+    if (ended) return;
+    step({
+      kind: "notice",
+      notice: {
+        providerId: host,
+        kind: "device_code",
+        message: `Enter this code on ${nameOf(host)}.`,
+        url: flow.verificationUri,
+        userCode: flow.userCode,
+      },
+    });
+  };
+
   let timer: NodeJS.Timeout | undefined;
   signIns.recordApp("start");
   if (options.clock !== false) {
@@ -155,40 +256,18 @@ export function startComputerForges(options: ComputerForgesOptions): HeldForges 
 
   return {
     view,
-    start: async (host, step) => {
+    start: (host, step) => {
       if (!signIns.nameOf(host)) throw new Error(`This computer offers no sign-in to ${host}.`);
-      let ended = false;
-      const end = (ending: ForgeSignInEnding) => {
-        if (ended) return;
-        ended = true;
-        step(endStep(ending, nameOf(host)));
-      };
-      let flow: Awaited<ReturnType<ForgeSignIns["signIn"]>>;
-      try {
-        flow = await signIns.signIn(host, { onEnd: end });
-      } catch (error) {
-        log(
-          `a sign-in to ${host} could not start: ${error instanceof Error ? error.message : String(error)}`,
-        );
-        end("failed");
-        return;
-      }
-      if (ended) return;
-      step({
-        kind: "notice",
-        notice: {
-          providerId: host,
-          kind: "device_code",
-          message: `Enter this code on ${nameOf(host)}.`,
-          url: flow.verificationUri,
-          userCode: flow.userCode,
-        },
-      });
+      return run(host, step, (onEnd) => signIns.signIn(host, { onEnd }));
     },
-    signInWithCli: (host) => {
-      if (!signIns.nameOf(host)) throw new Error(`This computer offers no sign-in to ${host}.`);
-      return signIns.signInWithCli(`https://${host}`);
+    startBrowser: (input, step) => {
+      const host = hostOfAddress(input.address) ?? input.address;
+      return run(host, step, (onEnd) => signIns.signInWithBrowser(input, { onEnd }));
     },
+    signInWithKey: (input) => signIns.signInWithKey(input),
+    // A GitHub Enterprise host it is not signed in to yet is named by its
+    // address; the service refuses one that is not GitHub's.
+    signInWithCli: (host) => signIns.signInWithCli(`https://${host}`),
     cancel: () => signIns.cancel(),
     signOut: (host) => {
       if (!signIns.nameOf(host)) throw new Error(`This computer offers no sign-in to ${host}.`);

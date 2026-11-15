@@ -19,7 +19,12 @@ import {
   joinOutcomeSchema,
   thisMacSchema,
 } from "../devices";
-import { forgeCliSignInResultSchema } from "../forges";
+import {
+  forgeBrowserSignInSchema,
+  forgeCliSignInResultSchema,
+  forgeKeySignInResultSchema,
+  forgeKeySignInSchema,
+} from "../forges";
 import { joinAtAnswerSchema, joinAtOptionsSchema } from "../joinByAddress";
 import { nearbyMacsViewSchema } from "../nearbyMacs";
 import {
@@ -272,6 +277,23 @@ export const deviceChannels = {
     reach: "views",
     request: z.tuple([z.string().min(1).max(64), forgeHostSchema]),
     response: forgeCliSignInResultSchema,
+  },
+  // GitLab or GitHub Enterprise there, from computer-forge-servers: the key
+  // rides once to that computer and the answer never carries it; GitLab's
+  // browser code runs there and its code to read rides `inf:devices:sign-in`.
+  "inf:devices:forge-sign-in-key": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().min(1).max(64), forgeKeySignInSchema]),
+    response: forgeKeySignInResultSchema,
+  },
+  "inf:devices:forge-sign-in-browser": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().min(1).max(64), forgeBrowserSignInSchema]),
+    response: z.object({ signInId: signInIdSchema }),
   },
   "inf:devices:forge-sign-out": {
     effect: "change",

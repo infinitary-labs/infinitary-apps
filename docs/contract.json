@@ -7375,6 +7375,32 @@
                               "way": {
                                 "type": "string",
                                 "const": "cli"
+                              },
+                              "server": {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 32
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 64
+                                  },
+                                  "browser": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "name"
+                                ]
+                              },
+                              "applicationId": {
+                                "type": "string",
+                                "maxLength": 256
                               }
                             },
                             "required": [
@@ -7401,10 +7427,57 @@
                                 "type": "string",
                                 "minLength": 1,
                                 "maxLength": 64
+                              },
+                              "server": {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 32
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 64
+                                  },
+                                  "browser": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "name"
+                                ]
                               }
                             },
                             "required": [
                               "host",
+                              "name"
+                            ]
+                          }
+                        },
+                        "servers": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 32
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 64
+                              },
+                              "browser": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "kind",
                               "name"
                             ]
                           }
@@ -8235,6 +8308,159 @@
               "host"
             ]
           }
+        ]
+      }
+    },
+    "inf:devices:forge-sign-in-key": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "address": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              },
+              "key": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              }
+            },
+            "required": [
+              "kind",
+              "address",
+              "key"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "minItems": 2,
+        "items": false
+      },
+      "response": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": true
+              },
+              "host": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 253
+              }
+            },
+            "required": [
+              "ok",
+              "host"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": false
+              },
+              "problem": {
+                "type": "string",
+                "enum": [
+                  "address",
+                  "public-host",
+                  "key",
+                  "refused",
+                  "unreachable",
+                  "not-server"
+                ]
+              },
+              "host": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 253
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "ok",
+              "problem",
+              "host"
+            ]
+          }
+        ]
+      }
+    },
+    "inf:devices:forge-sign-in-browser": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "address": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              },
+              "applicationId": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{20,256}$"
+              }
+            },
+            "required": [
+              "kind",
+              "address",
+              "applicationId"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "minItems": 2,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "signInId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          }
+        },
+        "required": [
+          "signInId"
         ]
       }
     },
@@ -69155,6 +69381,33 @@
                         "way": {
                           "type": "string",
                           "const": "cli"
+                        },
+                        "server": {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 32
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 64
+                            },
+                            "browser": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "applicationId": {
+                          "type": "string",
+                          "maxLength": 256
                         }
                       },
                       "required": [
@@ -69181,12 +69434,61 @@
                           "type": "string",
                           "minLength": 1,
                           "maxLength": 64
+                        },
+                        "server": {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 32
+                            },
+                            "name": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 64
+                            },
+                            "browser": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "name"
+                          ],
+                          "additionalProperties": false
                         }
                       },
                       "required": [
                         "host",
                         "name"
                       ]
+                    }
+                  },
+                  "servers": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 32
+                        },
+                        "name": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        },
+                        "browser": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "name"
+                      ],
+                      "additionalProperties": false
                     }
                   },
                   "githubCli": {
@@ -80464,6 +80766,32 @@
                               "way": {
                                 "type": "string",
                                 "const": "cli"
+                              },
+                              "server": {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 32
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 64
+                                  },
+                                  "browser": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "name"
+                                ]
+                              },
+                              "applicationId": {
+                                "type": "string",
+                                "maxLength": 256
                               }
                             },
                             "required": [
@@ -80490,10 +80818,57 @@
                                 "type": "string",
                                 "minLength": 1,
                                 "maxLength": 64
+                              },
+                              "server": {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 32
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 64
+                                  },
+                                  "browser": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "name"
+                                ]
                               }
                             },
                             "required": [
                               "host",
+                              "name"
+                            ]
+                          }
+                        },
+                        "servers": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 32
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 64
+                              },
+                              "browser": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "kind",
                               "name"
                             ]
                           }
@@ -81899,6 +82274,33 @@
                               "way": {
                                 "type": "string",
                                 "const": "cli"
+                              },
+                              "server": {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 32
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 64
+                                  },
+                                  "browser": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "name"
+                                ],
+                                "additionalProperties": false
+                              },
+                              "applicationId": {
+                                "type": "string",
+                                "maxLength": 256
                               }
                             },
                             "required": [
@@ -81925,12 +82327,61 @@
                                 "type": "string",
                                 "minLength": 1,
                                 "maxLength": 64
+                              },
+                              "server": {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 32
+                                  },
+                                  "name": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 64
+                                  },
+                                  "browser": {
+                                    "type": "boolean"
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "name"
+                                ],
+                                "additionalProperties": false
                               }
                             },
                             "required": [
                               "host",
                               "name"
                             ]
+                          }
+                        },
+                        "servers": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 32
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 64
+                              },
+                              "browser": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "name"
+                            ],
+                            "additionalProperties": false
                           }
                         },
                         "githubCli": {
@@ -85526,6 +85977,33 @@
                       "way": {
                         "type": "string",
                         "const": "cli"
+                      },
+                      "server": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 32
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64
+                          },
+                          "browser": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "name"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "applicationId": {
+                        "type": "string",
+                        "maxLength": 256
                       }
                     },
                     "required": [
@@ -85552,12 +86030,61 @@
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 64
+                      },
+                      "server": {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 32
+                          },
+                          "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64
+                          },
+                          "browser": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "name"
+                        ],
+                        "additionalProperties": false
                       }
                     },
                     "required": [
                       "host",
                       "name"
                     ]
+                  }
+                },
+                "servers": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 32
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "browser": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "name"
+                    ],
+                    "additionalProperties": false
                   }
                 },
                 "githubCli": {
@@ -86203,6 +86730,152 @@
               ],
               "additionalProperties": false
             }
+          ]
+        }
+      },
+      "inf:sign-ins:forge-key": {
+        "effect": "change",
+        "request": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                "address": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                },
+                "key": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                }
+              },
+              "required": [
+                "kind",
+                "address",
+                "key"
+              ]
+            }
+          ],
+          "minItems": 1,
+          "items": false
+        },
+        "response": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "ok": {
+                  "type": "boolean",
+                  "const": true
+                },
+                "host": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 253
+                }
+              },
+              "required": [
+                "ok",
+                "host"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "ok": {
+                  "type": "boolean",
+                  "const": false
+                },
+                "problem": {
+                  "type": "string",
+                  "enum": [
+                    "address",
+                    "public-host",
+                    "key",
+                    "refused",
+                    "unreachable",
+                    "not-server"
+                  ]
+                },
+                "host": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 253
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "ok",
+                "problem",
+                "host"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "inf:sign-ins:forge-browser": {
+        "effect": "change",
+        "request": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                "address": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 2000
+                },
+                "applicationId": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9_-]{20,256}$"
+                },
+                "signInId": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                }
+              },
+              "required": [
+                "kind",
+                "address",
+                "applicationId",
+                "signInId"
+              ]
+            }
+          ],
+          "minItems": 1,
+          "items": false
+        },
+        "response": {
+          "type": "object",
+          "properties": {
+            "ok": {
+              "type": "boolean",
+              "const": true
+            }
+          },
+          "required": [
+            "ok"
           ]
         }
       },

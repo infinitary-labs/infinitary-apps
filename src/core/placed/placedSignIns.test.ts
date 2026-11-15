@@ -5,8 +5,10 @@ import {
   deviceForgeGateRef,
   deviceForgeSignInCardId,
   deviceForgeWaitLine,
+  deviceSetupCardId,
   noSignInsWaitLine,
 } from "@shared/deviceSetup";
+import { GITHUB_ENTERPRISE, GITLAB } from "@shared/forges";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import type { ComputerForges } from "@shared/signIns";
 import { workOrders } from "@shared/work";
@@ -546,6 +548,73 @@ describe("a task that runs on a computer that runs work", () => {
     await expect.poll(() => at.holds().workingCopies).toEqual(["t-github"]);
   });
 
+  // INF-4280's audit item 7: a computer that signs in to GitLab and GitHub
+  // Enterprise from here holds a project there for its own sign-in too.
+  it("holds a task for a GitLab project until its computer has its own GitLab sign-in, and starts it once it does", async () => {
+    const forges: ComputerForges = {
+      hosts: [{ host: "github.com", name: "GitHub" }],
+      signIns: [],
+      servers: [GITHUB_ENTERPRISE, GITLAB],
+    };
+    const at = await world(undefined, {
+      routing: THIS_MAC_ON_CODEX,
+      signedInTo: [computerAccount("acct_grok_there", "xai")],
+      served: GROK_THERE,
+      forges: () => forges,
+    });
+    const home = at.home();
+    const project = await gitProject();
+    await git(project.home, ["remote", "set-url", "origin", "https://gitlab.com/acme/website.git"]);
+    const { repo } = await adoptHere(home.repos, project.home);
+    home.repos.setRunsOn(repo.id, at.deviceId);
+    seedTask(home.tasks, {
+      id: "t-gitlab",
+      title: "website",
+      prompt: "Fix the footer.",
+      status: "queued",
+      repoId: repo.id,
+    });
+    await home.supervisor.starts.dispatchQueuedTask("t-gitlab");
+    const place = home.placed.placeOf(at.deviceId);
+    expect(home.tasks.get("t-gitlab")).toMatchObject({
+      status: "open",
+      deviceId: at.deviceId,
+      gate: { kind: "captain", ref: deviceForgeGateRef("gitlab.com", at.deviceId) },
+    });
+    expect(at.bound).toEqual([]);
+    expect(feed(home)).toContain(
+      deviceForgeWaitLine(`${repo.name}'s next task`, place.who, "GitLab"),
+    );
+    const cardId = deviceForgeSignInCardId("gitlab.com", at.deviceId);
+    await expect
+      .poll(() => home.cards().find((card) => card.id === cardId))
+      .toMatchObject({
+        title: `Sign in to GitLab ${place.where}`,
+        actions: [
+          expect.objectContaining({
+            effect: expect.objectContaining({
+              forgeSignInOn: { deviceId: at.deviceId, host: "gitlab.com" },
+            }),
+          }),
+        ],
+      });
+
+    // Signed in to GitLab there: the card comes down and the task starts.
+    model([{ text: "Done." }]);
+    forges.signIns.push({
+      host: "gitlab.com",
+      name: "GitLab",
+      login: "tanuki",
+      state: "ok",
+      since: 1,
+      server: GITLAB,
+    });
+    await git(project.home, ["remote", "set-url", "origin", project.origin]);
+    await home.signIns.refresh(at.deviceId);
+    await expect.poll(() => home.tasks.get("t-gitlab")?.status).toBe("active");
+    await expect.poll(() => home.cards().some((card) => card.id === cardId)).toBe(false);
+  });
+
   it("holds a task whose clone GitHub refused on its computer, typed, for that computer's own sign-in (FI3-1350)", async () => {
     let refuse = true;
     const at = await world(undefined, {
@@ -587,6 +656,62 @@ describe("a task that runs on a computer that runs work", () => {
     await home.supervisor.placement.resumeDeviceForgeSignInTasks(at.deviceId, "github.com");
     await expect.poll(() => home.tasks.get("t-refused")?.status).toBe("active");
     expect(at.holds().workingCopies).toEqual(["t-refused"]);
+  });
+
+  it("holds a task whose clone GitLab refused on its computer behind that computer's own GitLab sign-in, not GitHub's", async () => {
+    let refuse = true;
+    const at = await world(undefined, {
+      routing: THIS_MAC_ON_CODEX,
+      signedInTo: [computerAccount("acct_grok_there", "xai")],
+      served: GROK_THERE,
+      // Its git is refused by gitlab.com for want of a GitLab sign-in there.
+      refuseClone: () => refuse && "https://gitlab.com/acme/api.git",
+    });
+    const home = at.home();
+    const project = await gitProject();
+    const { repo } = await adoptHere(home.repos, project.home);
+    home.repos.setRunsOn(repo.id, at.deviceId);
+    seedTask(home.tasks, {
+      id: "t-gitlab-refused",
+      title: "api",
+      prompt: "Fix the footer.",
+      status: "queued",
+      repoId: repo.id,
+    });
+    const place = home.placed.placeOf(at.deviceId);
+    // The computer's setup card is up: it asks for github.com's sign-in
+    // alone, so GitLab's card still goes up beside it.
+    home.supervisor.cards.hostCards.raiseHostCard({
+      id: deviceSetupCardId(at.deviceId),
+      title: `Set up ${place.label}`,
+      meta: place.label,
+      body: "<p>Sign in to GitHub there.</p>",
+      actions: [],
+    });
+    await home.supervisor.starts.dispatchQueuedTask("t-gitlab-refused");
+    expect(home.tasks.get("t-gitlab-refused")).toMatchObject({
+      status: "open",
+      deviceId: at.deviceId,
+      gate: { kind: "captain", ref: deviceForgeGateRef("gitlab.com", at.deviceId) },
+    });
+    expect(feed(home)).toContain(
+      deviceForgeWaitLine(`${repo.name}'s next task`, place.who, "GitLab"),
+    );
+    await expect
+      .poll(() =>
+        home.cards().some((card) => card.id === deviceForgeSignInCardId("gitlab.com", at.deviceId)),
+      )
+      .toBe(true);
+    expect(
+      home.cards().some((card) => card.id === deviceForgeSignInCardId("github.com", at.deviceId)),
+    ).toBe(false);
+    // GitLab's sign-in there releases it; GitHub's would not.
+    await home.supervisor.placement.resumeDeviceForgeSignInTasks(at.deviceId, "github.com");
+    expect(home.tasks.get("t-gitlab-refused")?.status).toBe("open");
+    model([{ text: "Done." }]);
+    refuse = false;
+    await home.supervisor.placement.resumeDeviceForgeSignInTasks(at.deviceId, "gitlab.com");
+    await expect.poll(() => home.tasks.get("t-gitlab-refused")?.status).toBe("active");
   });
 
   it("starts nothing for a task whose computer takes no work, and never runs it here", async () => {

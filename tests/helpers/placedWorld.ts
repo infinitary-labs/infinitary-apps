@@ -14,7 +14,7 @@ import { createForgeResolver, type Forge } from "../../src/core/forge";
 import type { ComputerAccounts } from "../../src/core/helper/accounts";
 import { ComputerBrowsers } from "../../src/core/helper/browsers";
 import { cleanUp } from "../../src/core/helper/cleanUp";
-import type { HeldForges } from "../../src/core/helper/forges";
+import { computerKnownHosts, type HeldForges } from "../../src/core/helper/forges";
 import { joinHome } from "../../src/core/helper/join";
 import { PlacedTasks } from "../../src/core/helper/placedTasks";
 import { type HelperRun, startHelper } from "../../src/core/helper/run";
@@ -28,7 +28,7 @@ import type { ModelRuntime } from "../../src/core/pi/types";
 import type { CrewmateTool } from "../../src/core/session/tools";
 import { forkChildProcess } from "../../src/core/sql/forkChildProcess";
 import { seedTask } from "../../src/core/tasks/seedTask";
-import { ForgeAuthRequiredError } from "../../src/core/workspace/forgeAuth";
+import { ForgeAuthRequiredError, forgeAuthRequired } from "../../src/core/workspace/forgeAuth";
 import { git } from "../../src/core/workspace/git";
 import {
   beginAnthropicStream,
@@ -248,6 +248,8 @@ export function signedInTo(
   const forges = {
     view: () => forgesView?.() ?? { signIns: [], hosts: [] },
     start: async () => {},
+    startBrowser: async () => {},
+    signInWithKey: async () => ({ ok: false, problem: "not-server", host: null }),
     // No GitHub CLI there.
     signInWithCli: async (host) => ({ ok: false, problem: "missing", host }),
     cancel: () => {},
@@ -273,7 +275,7 @@ export async function world(
     /** The computer's own sign-ins where projects live, as it lists them. */
     forges?: () => ComputerForges;
     /** Whether the computer's clone is refused by GitHub for want of its own sign-in there. */
-    refuseClone?: () => boolean;
+    refuseClone?: () => boolean | string;
     /** What the computer's conversations run on; this file's stub unless named. */
     runtime?: ModelRuntime;
     /**
@@ -392,8 +394,21 @@ export async function world(
           // as its git would say it (`forgeAuthRequired`).
           const prepare = copies.prepare.bind(copies);
           copies.prepare = async (task, project, seed) => {
-            if (options.refuseClone?.())
+            const refused = options.refuseClone?.();
+            if (refused === true)
               throw new ForgeAuthRequiredError("GitHub requires sign-in to fetch this project.");
+            if (typeof refused === "string") {
+              // That address's host refused it, read the way this computer reads
+              // its git's words, by the hosts it knows (`computerKnownHosts`).
+              const said = forgeAuthRequired(
+                refused,
+                {
+                  stderr: `remote: HTTP Basic: Access denied\nfatal: Authentication failed for '${refused}/'`,
+                },
+                computerKnownHosts(dir),
+              );
+              throw said ?? new Error(`${refused} was not read as wanting a sign-in`);
+            }
             return prepare(task, project, seed);
           };
         }

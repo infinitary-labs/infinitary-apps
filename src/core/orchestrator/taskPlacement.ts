@@ -3,17 +3,18 @@ import { isRepairAssessment } from "@shared/checkRepair";
 import { isCustomApiProvider } from "@shared/customApi";
 import { COMPUTER, HERE, PLACE_SAID } from "@shared/deviceNames";
 import {
+  computerForgeHost,
+  computerForgeName,
   deviceForgeGateReason,
   deviceForgeGateRef,
   deviceForgeSignInCardId,
   deviceForgeWaitLine,
   deviceSetupCardId,
-  GITHUB_HOST,
   noSignInsWaitLine,
   updateWaitLine,
 } from "@shared/deviceSetup";
 import { noNewWorkDayLine, noNewWorkWaitLine } from "@shared/deviceUpdateNudge";
-import { forgeOf, forgePlace } from "@shared/forge";
+import { GITHUB_COM } from "@shared/forge";
 import { type Said, said, saidLine } from "@shared/i18n/said";
 import { offeringKey } from "@shared/modelSlots";
 import {
@@ -660,13 +661,12 @@ export class TaskPlacement {
     // A task there is routed among that computer's own sign-ins; a home
     // that routes nothing binds what it was given, whatever the computer has.
     if (signIns.accounts.length === 0 && this.options.router) return { kind: "no-sign-ins" };
-    const origin = repoId ? this.options.repos.get(repoId)?.origin : undefined;
-    const where = forgeOf(origin);
-    if (where.kind !== "github" || where.host !== GITHUB_HOST || !signIns.forges) return undefined;
-    // Only a sign-in that computer offers from here is worth waiting for; a
-    // computer too old to offer one is tried, and a refusal there is typed.
-    const host = where.host;
-    if (!signIns.forges.hosts.some((entry) => entry.host === host)) return undefined;
+    // Only a sign-in that computer offers from here is worth waiting for -
+    // github.com's code, or GitLab and GitHub Enterprise by their address;
+    // a computer too old to offer one is tried, and a refusal there is typed.
+    const repo = repoId ? this.options.repos.get(repoId) : undefined;
+    const host = computerForgeHost(signIns.forges, repo?.host ?? undefined);
+    if (!host || !signIns.forges) return undefined;
     return signIns.forges.signIns.some((entry) => entry.host === host)
       ? undefined
       : { kind: "forge", host };
@@ -693,7 +693,7 @@ export class TaskPlacement {
   /** The gate a task waits behind for its computer's own GitHub sign-in. */
   holdForDeviceForge(taskId: string, deviceId: string, host: string): void {
     const who = this.options.machines?.placeOf(deviceId).who ?? "the computer it runs on";
-    const name = forgePlace({ kind: "github", host }) ?? host;
+    const name = computerForgeName(host);
     const gate = {
       kind: "captain" as const,
       ref: deviceForgeGateRef(host, deviceId),
@@ -882,7 +882,7 @@ export class TaskPlacement {
   ): void {
     const place = this.options.machines?.placeOf(deviceId);
     if (!place) return;
-    const name = forgePlace({ kind: "github", host }) ?? host;
+    const name = computerForgeName(host);
     // Said once per subject and computer, until that computer signs in.
     const said = `${deviceForgeGateRef(host, deviceId)}\n${subject.key}`;
     if (!this.deviceForgeSaid.has(said)) {
@@ -892,7 +892,9 @@ export class TaskPlacement {
         text: deviceForgeWaitLine(subject.name, place.who, name),
       });
     }
-    if (this.host.cards.has(deviceSetupCardId(deviceId))) return;
+    // The setup card asks for github.com's sign-in alone, so only that
+    // host's card waits behind it; every other host asks for its own.
+    if (host === GITHUB_COM && this.host.cards.has(deviceSetupCardId(deviceId))) return;
     this.host.cards.hostCards.addDeviceForgeSignInCard({
       deviceId,
       host,
@@ -945,7 +947,7 @@ export class TaskPlacement {
       this.options.tasks.placement.setGate(
         record.id,
         null,
-        "its computer's own GitHub sign-in is ready",
+        `its computer's own ${computerForgeName(host)} sign-in is ready`,
       );
       await this.host.dispatchQueuedTask(record.id);
     }

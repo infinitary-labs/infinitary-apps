@@ -18,7 +18,15 @@ import {
 } from "./customApi";
 import { COMPUTER } from "./deviceNames";
 import { computerReachSchema, deviceLabel, userDisplayName } from "./devices";
-import { FORGE_HOST_NAME, forgeCliSignInResultSchema, forgeSignInStateSchema } from "./forges";
+import {
+  FORGE_HOST_NAME,
+  forgeBrowserSignInSchema,
+  forgeCliSignInResultSchema,
+  forgeKeySignInResultSchema,
+  forgeKeySignInSchema,
+  forgeServerViewSchema,
+  forgeSignInStateSchema,
+} from "./forges";
 import { listedIds } from "./modelListing";
 import { reasoningCapabilitiesSchema } from "./modelSlots";
 import { authNoticeSchema, authPromptSchema, providerViewSchema } from "./providers";
@@ -80,9 +88,32 @@ export const computerForgesSchema = z.object({
       since: z.number().int().nonnegative(),
       /** Made through that computer's own GitHub CLI, which it asks for each sign-in. */
       way: z.literal("cli").optional(),
+      /** A host on the person's own server, or GitLab: its kind (`computer-forge-servers`). */
+      server: forgeServerViewSchema.optional(),
+      /** The public Application ID a GitLab browser sign-in used there; never a secret. */
+      applicationId: z.string().max(256).optional(),
     }),
   ),
-  hosts: z.array(z.object({ host: forgeHostSchema, name: z.string().min(1).max(64) })),
+  /**
+   * The hosts a sign-in row is drawn for: each one that signs in with a
+   * code whatever the computer has (github.com), and each other one it is
+   * signed in to, with its kind.
+   */
+  hosts: z.array(
+    z.object({
+      host: forgeHostSchema,
+      name: z.string().min(1).max(64),
+      server: forgeServerViewSchema.optional(),
+    }),
+  ),
+  /**
+   * The kinds of server it signs in to by an address there, with a key or,
+   * for GitLab, a browser code (`inf:sign-ins:forge-key`,
+   * `inf:sign-ins:forge-browser`): GitHub Enterprise and GitLab. Absent from
+   * a computer without `computer-forge-servers`, which signs in to
+   * github.com alone.
+   */
+  servers: z.array(forgeServerViewSchema).optional(),
   /**
    * GitHub CLI is installed there, so its GitHub row offers "Use GitHub CLI"
    * (`inf:sign-ins:forge-cli`). An older computer that leaves it out
@@ -274,6 +305,29 @@ export const signInOrders = {
     effect: "change",
     request: z.tuple([z.object({ host: forgeHostSchema })]),
     response: forgeCliSignInResultSchema,
+  },
+  /**
+   * Signs that computer in to GitLab or a host on the person's own server
+   * with a key made there, from `computer-forge-servers` (docs/forge.md, "A
+   * computer's own sign-in"). The key rides this order once and is kept only
+   * in that computer's store; the answer says whether the host answered for
+   * it, never the key.
+   */
+  "inf:sign-ins:forge-key": {
+    effect: "change",
+    request: z.tuple([forgeKeySignInSchema]),
+    response: forgeKeySignInResultSchema,
+  },
+  /**
+   * Starts GitLab's browser code sign-in there with a public application the
+   * person registered on that host, from `computer-forge-servers`. Its code
+   * to read comes as a `notice` step and its end as `ended`, as
+   * `inf:sign-ins:forge`'s do.
+   */
+  "inf:sign-ins:forge-browser": {
+    effect: "change",
+    request: z.tuple([forgeBrowserSignInSchema.extend({ signInId: signInIdSchema })]),
+    response: okSchema,
   },
   /** Signs that computer out where a project lives: its sign-in there is deleted. */
   "inf:sign-ins:forge-out": {

@@ -11,7 +11,7 @@ import {
 } from "node:fs";
 import { mkdir, readFile, rename, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { forgeOf } from "@shared/forge";
+import { forgeOf, type KnownForgeHost } from "@shared/forge";
 import {
   type BundledRef,
   PLACED_COPY_CHUNK_BYTES,
@@ -94,6 +94,11 @@ export type WorkingCopiesOptions = Pick<WorkspaceServiceOptions, "pnpm" | "pool"
    * live (`../helper/forges.ts`), which its git answers that host with.
    */
   signedInTo?: (host: string) => boolean;
+  /**
+   * The hosts other than github.com this computer signs in to, each with its
+   * kind, so a refused clone there reads as that host's sign-in being needed.
+   */
+  knownHosts?: () => readonly KnownForgeHost[];
 };
 
 /** A slow or silent remote must not hold the home's start for long. */
@@ -118,9 +123,11 @@ export class WorkingCopies {
   private readonly chains = new Map<string, Promise<unknown>>();
   private readonly arriving = new Map<string, Arriving>();
   private readonly signedInTo: (host: string) => boolean;
+  private readonly knownHosts: () => readonly KnownForgeHost[];
 
   constructor(dataDir: string, options: WorkingCopiesOptions = {}) {
     this.signedInTo = options.signedInTo ?? (() => false);
+    this.knownHosts = options.knownHosts ?? (() => []);
     this.worktreesDir = worktreesDirOf(dataDir);
     this.reposDir = join(dataDir, "repos");
     this.bundlesDir = join(dataDir, "bundles");
@@ -397,7 +404,7 @@ export class WorkingCopies {
       return { dir, cloned: true };
     } catch (caught) {
       await rm(making, { recursive: true, force: true }).catch(() => undefined);
-      throw forgeAuthRequired(origin, caught) ?? caught;
+      throw forgeAuthRequired(origin, caught, this.knownHosts()) ?? caught;
     }
   }
 

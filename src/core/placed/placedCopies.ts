@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { speaksInfinitaryNames } from "@shared/contractFeatures";
 import { preparedPublicationRemote } from "@shared/contributions";
 import { HERE } from "@shared/deviceNames";
+import { computerForgeName } from "@shared/deviceSetup";
 import type { FmEvent } from "@shared/events";
 import { forgeOf } from "@shared/forge";
 import {
@@ -184,8 +185,12 @@ export class PlacedCopies {
     if ("refused" in answer) {
       if (committed)
         this.options.tasks.placement.releasePlacement(taskId, committed.orderId, "ended");
+      // The host the computer named, so the task waits behind that host's
+      // own gate and card, and its sign-in there releases it.
       throw new ForgeAuthRequiredError(
         `${answer.name} requires ${name}'s own sign-in to fetch this project.`,
+        answer.host,
+        computerForgeName(answer.host),
       );
     }
     if (base && answer.headSha !== base.headSha)

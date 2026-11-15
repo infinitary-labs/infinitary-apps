@@ -128,7 +128,13 @@ export type {
   ForgeSignInProvider,
   ForgeSignInRecord,
 } from "./signIns";
-export { ForgeSignInStore, ForgeSignIns } from "./signIns";
+export {
+  ForgeSignInStore,
+  ForgeSignIns,
+  ForgeStartError,
+  forgeFiledHosts,
+  forgeKnownHosts,
+} from "./signIns";
 
 /**
  * Every host the app offers its own sign-in to, as the sign-in service asks
@@ -157,8 +163,8 @@ export function forgeSignInProviders(options: {
  * GitHub Enterprise and GitLab, with each kind's API address, sign-in
  * check and git user name. GitLab also names its public host and offers
  * browser sign-in with a per-host Application ID.
- * Only the home offers these; a computer that runs work signs in to
- * github.com alone.
+ * The home and a computer that runs work both offer them (`docs/forge.md`,
+ * "A computer's own sign-in").
  */
 export function forgeSignInServers(options: {
   packaged: boolean;

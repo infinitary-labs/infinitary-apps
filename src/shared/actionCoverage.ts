@@ -63,6 +63,10 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
     "GitHub sign-in on a computer that runs work, started by the captain's click in Settings",
   "inf:devices:forge-sign-in-cli":
     "GitHub sign-in through a computer's own GitHub CLI, on the captain's click in Settings",
+  "inf:devices:forge-sign-in-key":
+    "GitLab or GitHub Enterprise key sign-in on a computer that runs work, on the captain's click in Settings; the key goes there once",
+  "inf:devices:forge-sign-in-browser":
+    "GitLab browser sign-in on a computer that runs work, started by the captain's click in Settings",
   "inf:devices:forge-sign-out": "Signs a computer that runs work out of its own GitHub sign-in",
   "inf:devices:custom:connect":
     "Sign-in preparation: the key, headers or token command go to that computer once; the command runs there and its output stays private",

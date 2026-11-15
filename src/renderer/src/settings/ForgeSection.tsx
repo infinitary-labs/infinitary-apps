@@ -1,8 +1,12 @@
+import { hereAs } from "@shared/deviceNames";
 import { hostOfAddress } from "@shared/forge";
 import {
   FORGE_BROWSER_WORDS,
   FORGE_SECTION_WORDS,
+  type ForgeCliSignInResult,
   type ForgeHostView,
+  type ForgeKeySignIn,
+  type ForgeKeySignInResult,
   type ForgeServerView,
   type ForgeSignInFlow,
   type ForgeSignInView,
@@ -74,7 +78,7 @@ export function forgeRowView(signIn: Pick<ForgeSignInView, "state" | "name">): {
 }
 
 /** Server sign-in setup on screen: the host it is for ("" for a new address) and the kind of server. */
-type KeyForm = { host: string; server: ForgeServerView; method?: "key" };
+export type KeyForm = { host: string; server: ForgeServerView; method?: "key" };
 
 /**
  * The host forms other than github.com, whose device-code flow the
@@ -279,26 +283,39 @@ export function HostChip({
  * the core, which asks the host who the key is before keeping it; the key
  * field clears either way, and what went wrong reads in the status line.
  */
-function KeyAside({
+export function KeyAside({
   form,
   githubCli,
   onDone,
   onCancel,
   onBrowser,
+  computer,
 }: {
   form: KeyForm;
-  /** GitHub CLI is on this computer and the server is GitHub Enterprise: offer its sign-in. */
+  /** GitHub CLI is where the key is kept and the server is GitHub Enterprise: offer its sign-in. */
   githubCli: boolean;
   onDone: () => void;
   onCancel: () => void;
   onBrowser?: ((address: string) => void) | undefined;
+  /**
+   * A computer that runs work the key is kept on instead of this one
+   * (docs/forge.md, "A computer's own sign-in"): its name in the words, and
+   * its own orders for the key and for its own GitHub CLI.
+   */
+  computer?: {
+    who: string;
+    where: string;
+    signIn: (input: ForgeKeySignIn) => Promise<ForgeKeySignInResult>;
+    cli: (host: string) => Promise<ForgeCliSignInResult>;
+  };
 }) {
   const [address, setAddress] = useState(form.host);
   const [key, setKey] = useState("");
   const [checking, setChecking] = useState(false);
   const [problem, setProblem] = useState("");
   const ids = useId();
-  const here = useHereAs();
+  const hereAsThis = useHereAs();
+  const here = computer ? (text: string) => hereAs(text, computer.who) : hereAsThis;
   const host = hostOfAddress(address);
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -306,11 +323,10 @@ function KeyAside({
     setChecking(true);
     setProblem("");
     try {
-      const result = await window.infinitary.forges.signInWithKey({
-        kind: form.server.kind,
-        address,
-        key,
-      });
+      const input = { kind: form.server.kind, address, key };
+      const result = await (computer
+        ? computer.signIn(input)
+        : window.infinitary.forges.signInWithKey(input));
       setKey("");
       if (result.ok) onDone();
       else setProblem(forgeKeyProblemText(result.problem, result.host, form.server));
@@ -400,7 +416,13 @@ function KeyAside({
           {m.settingsForgeCancel()}
         </Button>
       </div>
-      {githubCli && host && <GitHubCliLine address={host} onDone={onDone} />}
+      {githubCli && host && (
+        <GitHubCliLine
+          address={host}
+          onDone={onDone}
+          {...(computer ? { where: computer.where, ask: () => computer.cli(host) } : {})}
+        />
+      )}
     </form>
   );
 }

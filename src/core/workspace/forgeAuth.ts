@@ -40,8 +40,8 @@ export function forgeAuthRequired(
 ): ForgeAuthRequiredError | undefined {
   const where = forgeOf(origin, known);
   if (!SIGNED_IN_KINDS.has(where.kind) || !where.host) return undefined;
-  // The home knows its public key hosts too. A work computer currently
-  // offers only GitHub's code; never hold it for a sign-in it cannot make.
+  // GitLab is held only where the caller knows it as GitLab (its public
+  // host or a sign-in on file); never hold it for a sign-in it cannot make.
   if (
     where.kind === "gitlab" &&
     !known.some((entry) => entry.host === where.host && entry.kind === "gitlab")

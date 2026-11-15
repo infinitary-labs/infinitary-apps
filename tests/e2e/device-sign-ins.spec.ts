@@ -15,7 +15,13 @@ import type { QuotaHttp } from "../../src/core/quota/http";
 import { DEVICE_FORGE_WORDS } from "../../src/renderer/src/settings/deviceForgeWords";
 import { CLAUDE_CLIENT_MISSING_TEXT } from "../../src/shared/claudeClient";
 import { deviceSetupTitle } from "../../src/shared/deviceSetup";
-import { FORGE_CLI_WORDS, forgeCliOffer } from "../../src/shared/forges";
+import {
+  FORGE_CLI_WORDS,
+  FORGE_SECTION_WORDS,
+  forgeCliOffer,
+  forgeKeyProblemText,
+  GITHUB_ENTERPRISE,
+} from "../../src/shared/forges";
 import * as m from "../../src/shared/i18n/messages.generated";
 import { INTEGRATIONS_WORDS } from "../../src/shared/integrations";
 import { signInPlace } from "../../src/shared/signIns";
@@ -39,7 +45,7 @@ import { promptInput } from "./prompt";
 import { feedLineOf } from "./rails";
 import { savedText } from "./savedText";
 import { expectNoCard, shownCard } from "./stack";
-import { pressKey, typeInto, untilFocused } from "./windowKeys";
+import { focusOn, pressKey, typeInto, untilFocused } from "./windowKeys";
 
 /**
  * A computer that runs work signs in to its own subscriptions from the Mac
@@ -113,6 +119,13 @@ function standInProviders(): () => void {
       return grokPending-- > 0
         ? json(400, { error: "authorization_pending" })
         : json(200, { access_token: "e2e-grok", refresh_token: "e2e-grok-r", expires_in: 3600 });
+    // GitHub Enterprise on the person's own server, which only the computer asks.
+    if (url === "https://github.example.com/api/v3/user") {
+      const auth = new Headers(init?.headers).get("authorization");
+      return auth === `Bearer ${COMPUTER_ENTERPRISE}` || auth === `token ${COMPUTER_ENTERPRISE}`
+        ? json(200, { login: "mona" })
+        : json(401, { message: "Bad credentials" });
+    }
     if (url === "https://auth.openai.com/oauth/token")
       return json(200, {
         access_token: CODEX_ACCESS,
@@ -126,6 +139,8 @@ function standInProviders(): () => void {
   };
 }
 
+/** A key the person made on their GitHub Enterprise server for the computer. */
+const COMPUTER_ENTERPRISE = "ghp_e2e_enterprise_7731";
 /** The access in the Claude login Claude Code keeps on the computer. */
 const COMPUTER_CLAUDE = "e2e-claude-access-7731";
 
@@ -291,10 +306,11 @@ test.afterEach(async () => {
   for (const app of apps.splice(0)) await app.close();
   restoreFetch?.();
   restoreFetch = undefined;
+  // Every address the GitHub stand-in pointed this process at goes with it,
+  // so a later test's own server is never sent to a stand-in that closed.
+  for (const name of Object.keys(github?.env ?? {})) delete process.env[name];
   await github?.close();
   github = undefined;
-  delete process.env.INFINITARY_GITHUB_OAUTH_URL;
-  delete process.env.INFINITARY_GITHUB_API_URL;
   // The computer in this process pointed its git at its own store.
   configureGitSignIn(undefined);
 });
@@ -743,6 +759,67 @@ test("a computer signs in to GitHub for its own clones and pushes from Settings 
   await page.getByRole("menuitem", { name: "Sign out" }).click();
   await expect(row).toHaveAttribute("data-forge-state", "none");
   expect(savedText(dataDir).filter(({ text }) => text.includes(COMPUTER_GITHUB))).toEqual([]);
+});
+
+test("a computer signs in to GitHub Enterprise with a key typed here, by keys, and nothing typed is kept here", async () => {
+  const { app, page, deviceId, dataDir } = await homeAndComputer();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("tab", { name: INTEGRATIONS_WORDS.title, exact: true }).click();
+
+  // Under the computer's rows, the servers it signs in to: GitHub Enterprise and GitLab.
+  const servers = page.locator(`[data-device-forge-servers="${deviceId}"]`);
+  const chip = servers.locator('[data-forge-chip="github@' + deviceId + '"]');
+  await expect(servers.locator("[data-forge-chip]")).toHaveCount(2);
+  await pressKey(chip, "Enter");
+
+  // The key form opens on its address; the computer is who it signs in.
+  const form = servers.locator('[data-forge-key-form="github"]');
+  const address = form.getByLabel(FORGE_SECTION_WORDS.address, { exact: true });
+  const key = form.getByLabel(FORGE_SECTION_WORDS.key, { exact: true });
+  await expect(address).toBeFocused();
+  await typeInto(address, "https://github.example.com/acme/api");
+  // Tab passes the button that opens the server's key page, then reaches the key.
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
+  await typeInto(key, "ghp_e2e_revoked_7731");
+  await page.keyboard.press("Enter");
+  // The server refused that key; the field clears and the form says why.
+  await expect(form.locator("[data-forge-key-problem]")).toHaveText(
+    forgeKeyProblemText("refused", "github.example.com", GITHUB_ENTERPRISE),
+  );
+  await expect(key).toHaveValue("");
+
+  await focusOn(key);
+  await typeInto(key, COMPUTER_ENTERPRISE);
+  await page.keyboard.press("Enter");
+  const row = page.locator(
+    `[data-device-forge-row="${deviceId}"][data-forge-host="github.example.com"]`,
+  );
+  await expect(row).toHaveAttribute("data-forge-state", "ok");
+  await expect(row).toContainText("mona");
+  await expect(form).toHaveCount(0);
+
+  // The computer keeps the key in its own store; nothing the home keeps holds it.
+  expect(
+    savedText(app.userDataDir).filter(({ text }) => text.includes(COMPUTER_ENTERPRISE)),
+  ).toEqual([]);
+  expect(
+    savedText(join(dataDir, "forges")).some(({ text }) => text.includes(COMPUTER_ENTERPRISE)),
+  ).toBe(true);
+  // Its git answers that server with it.
+  const answer = (prompt: string) =>
+    execFileSync("sh", [ASKPASS, prompt], { env: hostEnv(), encoding: "utf8" }).trim();
+  expect(answer("Password for 'https://x-access-token@github.example.com':")).toBe(
+    COMPUTER_ENTERPRISE,
+  );
+
+  // Its menu, by keys, signs it out there, and the row goes.
+  await pressKey(row.getByRole("button", { name: /actions$/ }), "Enter");
+  const signOut = page.locator('[data-menu-item="sign-out"]');
+  await expect(signOut).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(row).toHaveCount(0);
+  expect(savedText(dataDir).filter(({ text }) => text.includes(COMPUTER_ENTERPRISE))).toEqual([]);
 });
 
 /** GitHub CLI on the computer, signed in to github.com with a sign-in of its own; it logs every call. */

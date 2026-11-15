@@ -185,6 +185,7 @@ Its permissions and effects are one `task_permissions` row with a column each: t
 The row carries `format` 1, and a later format names its own number.
 The delivery column keeps only history: the closed policy snapshot and an older release's copy of the latest result.
 `TaskStore` is the one writer, beneath `TaskService`, and a record still reads every one of these facts under the field it read before (`delivery`, and the settle under `pendingSettle`), so no reader changed; `splitDelivery` in `src/core/storage/taskDeliveryFields.ts` names which field goes where, and a field it does not name is evidence.
+A read record composes its `delivery` from the rows that read took the first time something reads the field, so a list whose reader never reads it decodes none of its change evidence; a spread, copy or clone reads it as any field, and a write to the field replaces it.
 A write of a task's whole delivery facts replaces its evidence and its delivery permissions with the ones it carries, as the column did before them, and a settle that has not run is its own field.
 It writes again only what moves (INF-2220): the evidence row when any of its columns would change, each permission column whose value would change, the history row and the turn's declarations when theirs would.
 A write that would move none of them, carrying no timeline line, is an exact no-op: the task keeps its updated time and the board does not move.

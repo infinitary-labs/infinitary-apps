@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "task-list-delivery-on-first-read",
+      "reason": "A read task decodes its saved change evidence only when something reads it, and the freeze check runs on a record as heavy as a long-used one with a merge that files a required action; reads stay correct and the time saved on a long record is too small for a person to notice."
+    }
+  ]
+}

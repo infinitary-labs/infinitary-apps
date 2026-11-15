@@ -12,6 +12,7 @@ import { changePresentationSchema } from "../../src/shared/changePresentation";
 import type { CheckRepairLedger } from "../../src/shared/checkRepair";
 import type { LiveValidation } from "../../src/shared/liveValidation";
 import { liveValidationSchema } from "../../src/shared/liveValidation";
+import type { WorkShape } from "../../src/shared/routingPolicy";
 import { BOARD_RECENT_MS } from "../../src/shared/tasks";
 import { seedDelivery } from "../helpers/taskDelivery";
 
@@ -21,17 +22,25 @@ import { seedDelivery } from "../helpers/taskDelivery";
  * size") and the latency measure. Each count is a reading of the captain's
  * record, never a guess:
  *
- * - 160,094 task events (INF-2059's reading, the history the open messages
- *   walked);
- * - about 3,400 tasks (INF-940's reading, the task list sorted through a
- *   disk file);
+ * - 287,538 task events and 7,847 tasks (INF-4224's reading, taken
+ *   because a record of 3,400 thin tasks read every task in 18 ms where the
+ *   captain's took 308-426 ms);
  * - 33 open messages in 13 chains (INF-2061's reading);
  * - the rest is INF-3896's reading, taken because a record with none of it
  *   ran every suspect path under 40 ms while the captain's paused the app:
  *   goals, cards with the offers that carry their words, links between
  *   tasks, the delivery records a task board row carries (its change story,
  *   live validation and CI repair), the board's week of closed work, the
- *   open cards that name earlier work, and the heaviest task record.
+ *   open cards that name earlier work, and the heaviest task record;
+ * - INF-4224's reading of what makes each task heavier to read: the work
+ *   shape a started task carries (its routing, its contract and its
+ *   placement request), the delivery evidence and the required-action
+ *   offers a crewmate's card leaves, the tasks the captain's required
+ *   actions filed, and the links between tasks;
+ * - INF-4224's column sizes of the task tables, taken because a record with
+ *   all of the above still read every task three times faster than the
+ *   captain's: every task's brief, the closed tasks' final reports and the
+ *   words the delivery evidence holds.
  *
  * Only counts and sizes come from the captain's record; every word is made
  * here. Every row goes through the stores the app writes with (`seedTask`,
@@ -40,8 +49,8 @@ import { seedDelivery } from "../helpers/taskDelivery";
  * crewmate's progress lines, the most common event the app records.
  */
 export const CAPTAIN_RECORD = {
-  taskEvents: 160_094,
-  tasks: 3_400,
+  taskEvents: 287_538,
+  tasks: 7_847,
   openMessages: 33,
   chains: 13,
   /** Every closed task's goal together, and the longest one. */
@@ -51,7 +60,7 @@ export const CAPTAIN_RECORD = {
   cards: 6_449,
   cardBodyChars: 66_786_785,
   /** Links between tasks. */
-  links: 3_872,
+  links: 4_032,
   /** Rows on the full task board: the chains plus the week's closed work. */
   boardRows: 1_701,
   /** What the board's rows carry in delivery records, part by part. */
@@ -63,6 +72,22 @@ export const CAPTAIN_RECORD = {
   openCardKeysOffBoard: 15,
   /** The heaviest task record: the card offers opening it reads. */
   heaviestOffers: 248,
+  /** Closed tasks carrying each part of a started task's work shape. */
+  shapes: { routing: 6_738, contract: 6_081, placementRequest: 3_169 },
+  /** Closed tasks whose delivery evidence names the change's mode and version. */
+  deliveryEvidence: 6_030,
+  /** Closed tasks whose card declared required actions, most of them none. */
+  requiredActionOffers: 1_727,
+  /** The tasks the captain's required actions filed, each done. */
+  requiredActionTasks: 67,
+  /** Every task's brief together. */
+  promptChars: 33_787_959,
+  /** Closed tasks with a final report, and those reports together. */
+  outcomes: 6_670,
+  outcomeChars: 16_285_597,
+  /** Delivery evidence rows that carry more than the mode and version, and their words together. */
+  evidenceRows: 3_680,
+  evidenceChars: 46_522_443,
 } as const;
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -71,7 +96,7 @@ const HOUR_MS = 60 * 60 * 1000;
  * Rows written in one transaction before the seed hands the event loop a
  * turn. The one writer prepares its statements on every call, and
  * better-sqlite3 frees a statement only on a turn after the garbage
- * collector finds it unused, so a seed that wrote all 160,094 events in one
+ * collector finds it unused, so a seed that wrote INF-2059's 160,094 events in one
  * synchronous call held every statement it had prepared until it returned,
  * several gigabytes in the test's worker, and the Linux runner ended the
  * freeze journey with "worker process exited unexpectedly (signal=SIGKILL)".
@@ -274,17 +299,55 @@ export async function seedCaptainSizedRecord(
       }
     };
     const R = CAPTAIN_RECORD;
-    const closed = R.tasks - R.chains;
+    // The required actions file the rest of the captain's tasks themselves.
+    const seeded = R.tasks - R.requiredActionTasks;
+    const closed = seeded - R.chains;
     // The board's week holds the newest closed work, one close every
     // `spacing`, and the older work closed before it at the same pace.
     const boardClosed = R.boardRows - R.chains;
     const spacing = BOARD_RECENT_MS / (boardClosed + 1);
     const closedAt = (index: number) => now - (closed - index) * spacing;
     const firstOnBoard = closed - boardClosed;
+    // The board's rows carry their delivery parts; the older evidence rows
+    // carry the rest of the evidence's words as a change story.
+    const boardEvidence = R.delivery.presentation + R.delivery.liveValidation + R.delivery.ciRepair;
+    const olderEvidence = R.evidenceRows - boardClosed;
     const longest = closed - 1;
     const goalEach = (index: number) =>
       index === longest ? R.longestGoal : share(R.goalChars - R.longestGoal, closed - 1, index);
-    await inTurns(0, R.tasks, (index) => {
+    // The newest closed work carries each part of the work shape and the
+    // delivery evidence, as work started since those records began does.
+    const newest = (index: number) => closed - 1 - index;
+    const shape = (index: number, at: number): WorkShape | undefined =>
+      newest(index) < R.shapes.routing
+        ? {
+            kind: "implement",
+            kind_source: "classifier",
+            rigor: "standard",
+            autonomy: false,
+            intelligence: "high",
+            ...(newest(index) < R.shapes.contract ? { deliverable: "change" as const } : {}),
+            ...(newest(index) < R.shapes.placementRequest
+              ? { start_wait_since: { policy: at - HOUR_MS } }
+              : {}),
+          }
+        : undefined;
+    // The required-action offers spread over the closed work, the one in
+    // `offers` of them that declared an action among the work older than
+    // the board's week, so the tasks they file keep the board's own count.
+    const offerRank = (index: number) => Math.floor((index * R.requiredActionOffers) / closed);
+    const offers = (index: number) => offerRank(index + 1) !== offerRank(index);
+    const olderOffers = offerRank(firstOnBoard);
+    const declares = (index: number) => {
+      const rank = offerRank(index);
+      return (
+        offers(index) &&
+        rank < olderOffers &&
+        Math.floor(((rank + 1) * R.requiredActionTasks) / olderOffers) !==
+          Math.floor((rank * R.requiredActionTasks) / olderOffers)
+      );
+    };
+    await inTurns(0, seeded, (index) => {
       const id = `history-${index}`;
       const isChain = index >= closed;
       const at = isChain ? now - HOUR_MS : closedAt(index);
@@ -292,21 +355,81 @@ export async function seedCaptainSizedRecord(
       seedTask(tasks, {
         id,
         title: `Earlier work ${index}`,
-        prompt: `Finish piece ${index} of the earlier work.`,
+        prompt: prose(share(R.promptChars, seeded, index), index + 5),
         status: isChain ? "queued" : "completed",
         ...(isChain ? { startPolicy: "on-request" as const } : {}),
         ...(isChain ? {} : { intent: { goal: prose(goalEach(index), index), userWords: "" } }),
+        ...(isChain ? {} : { shape: shape(index, at) }),
+        ...(!isChain && newest(index) < R.outcomes
+          ? { outcome: prose(share(R.outcomeChars, R.outcomes, newest(index)), index + 9) }
+          : {}),
         createdAt: clock,
       });
-      if (!isChain && index >= firstOnBoard) {
+      if (!isChain && newest(index) < R.deliveryEvidence) {
         const part = index - firstOnBoard;
         seedDelivery(tasks, id, {
-          presentation: story(id, share(R.delivery.presentation, boardClosed, part)),
-          liveValidation: validation(id, share(R.delivery.liveValidation, boardClosed, part), at),
-          ciRepair: repair(id, share(R.delivery.ciRepair, boardClosed, part), at),
+          mode: "local-only",
+          headSha: commit(`${id}-head`),
+          ...(index >= firstOnBoard
+            ? {
+                presentation: story(id, share(R.delivery.presentation, boardClosed, part)),
+                liveValidation: validation(
+                  id,
+                  share(R.delivery.liveValidation, boardClosed, part),
+                  at,
+                ),
+                ciRepair: repair(id, share(R.delivery.ciRepair, boardClosed, part), at),
+              }
+            : newest(index) < R.evidenceRows
+              ? {
+                  presentation: story(
+                    id,
+                    share(
+                      R.evidenceChars - boardEvidence,
+                      olderEvidence,
+                      newest(index) - boardClosed,
+                    ),
+                  ),
+                }
+              : {}),
         });
       }
       clock = at;
+      if (!isChain && offers(index)) {
+        const action = declares(index)
+          ? [
+              {
+                id: "install",
+                target: "the work computer",
+                title: `Install piece ${index} on the work computer`,
+                consequence: prose(80, index),
+                instructions: [prose(60, index + 1), prose(60, index + 2)],
+                criterion: prose(80, index + 3),
+                prerequisites: [],
+                completion: { kind: "manual" as const, label: "I installed it" },
+              },
+            ]
+          : [];
+        tasks.delivery.declareRequiredActions(
+          id,
+          {
+            cardId: `history-offer-card-${index}`,
+            offerId: `history-offer-${index}`,
+            head: commit(`${id}-head`),
+            actions: action,
+          },
+          action.length > 0,
+        );
+        // The captain did each action the card asked for, from its card.
+        for (const filed of tasks.listWithRequirementFrom(id, [])) {
+          const shown = tasks.delivery.presentCaptainAction(filed.id);
+          if (
+            !shown ||
+            !tasks.delivery.completeCaptainAction(filed.id, shown.generation, "confirmed")
+          )
+            throw new Error(`The required action ${filed.id} filed could not be confirmed`);
+        }
+      }
       if (!isChain)
         tasks.close(
           id,
@@ -371,8 +494,9 @@ export async function seedCaptainSizedRecord(
       atTime(createdAt + 60_000, () => cards.resolve(id, "go"));
     });
     // Links between closed work: each to the work before it, then to the
-    // work two before it, and so on, so no two are the same.
-    await inTurns(0, R.links, (index) => {
+    // work two before it, and so on, so no two are the same. Each filed
+    // required action already links its task to the work that declared it.
+    await inTurns(0, R.links - R.requiredActionTasks, (index) => {
       const step = 1 + Math.floor(index / closed);
       const from = index % closed;
       tasks.graph.link(
@@ -450,15 +574,23 @@ export async function seedCaptainSizedRecord(
       tasks: count("SELECT COUNT(*) AS n FROM tasks"),
       cards: count("SELECT COUNT(*) AS n FROM cards WHERE resolved_at IS NOT NULL"),
       links: count("SELECT COUNT(*) AS n FROM task_links"),
+      offers: count(
+        "SELECT COUNT(*) AS n FROM task_permissions WHERE required_action_offer_json IS NOT NULL",
+      ),
+      filed: count(
+        "SELECT COUNT(*) AS n FROM task_permissions WHERE captain_action_json IS NOT NULL",
+      ),
     };
     if (
       counts.taskEvents !== R.taskEvents ||
       counts.tasks !== R.tasks ||
       counts.cards !== R.cards ||
-      counts.links !== R.links
+      counts.links !== R.links ||
+      counts.offers !== R.requiredActionOffers ||
+      counts.filed !== R.requiredActionTasks
     )
       throw new Error(
-        `The seeded record holds ${counts.tasks} tasks, ${counts.taskEvents} task events, ${counts.cards} closed cards and ${counts.links} links, not the captain's ${R.tasks}, ${R.taskEvents}, ${R.cards} and ${R.links}.`,
+        `The seeded record holds ${counts.tasks} tasks, ${counts.taskEvents} task events, ${counts.cards} closed cards, ${counts.links} links, ${counts.offers} required-action offers and ${counts.filed} filed actions, not the captain's ${R.tasks}, ${R.taskEvents}, ${R.cards}, ${R.links}, ${R.requiredActionOffers} and ${R.requiredActionTasks}.`,
       );
     return { chainTasks, heaviestTask };
   } finally {

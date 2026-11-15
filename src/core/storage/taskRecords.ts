@@ -145,22 +145,40 @@ function withReferences(
 type DeliveryRecords = { evidence?: EvidenceRow; permissions?: PermissionRow };
 
 /**
- * A record's delivery facts and its settle that has not run, as its
- * evidence and permission rows hold them beside the history its column
- * keeps (INF-1296 piece 4). An older field nothing reads stays out, as it
- * did when the column held it.
+ * Gives `record` its `field` as `compute` answers it on the first read, from
+ * the saved text the read already holds, so the value is the one saved when
+ * the record was read whenever it is first asked for. The field is an own,
+ * enumerable property like any other, so a spread, a copy or a comparison
+ * reads it; a write replaces it. A list of tasks whose readers never ask
+ * for a field decodes none of it (INF-4314).
  */
-function withDeliveryRecords(record: TaskRecord, rows: DeliveryRecords): TaskRecord {
-  const delivery = composeDelivery(
-    record.delivery as Record<string, unknown> | null,
-    rows.evidence,
-    rows.permissions,
-  );
-  return {
-    ...record,
-    delivery: withoutRetired(delivery as TaskDelivery | null, "landedAt"),
-    pendingSettle: parseJson<PendingSettleIntent>(rows.permissions?.pending_settle_json ?? null),
-  };
+function onFirstRead<K extends keyof TaskRecord>(
+  record: TaskRecord,
+  field: K,
+  compute: () => TaskRecord[K],
+): TaskRecord {
+  let known = false;
+  let value: TaskRecord[K];
+  Object.defineProperty(record, field, {
+    configurable: true,
+    enumerable: true,
+    get() {
+      if (!known) {
+        value = compute();
+        known = true;
+      }
+      return value;
+    },
+    set(next: TaskRecord[K]) {
+      Object.defineProperty(record, field, {
+        configurable: true,
+        enumerable: true,
+        writable: true,
+        value: next,
+      });
+    },
+  });
+  return record;
 }
 
 /**
@@ -169,6 +187,12 @@ function withDeliveryRecords(record: TaskRecord, rows: DeliveryRecords): TaskRec
  * holds it, and its delivery facts with their evidence and permission
  * rows. `execution` and `delivery` are undefined on a database from before
  * those tables, whose row still holds those columns itself.
+ *
+ * The delivery facts are composed when first read (`onFirstRead`): their
+ * evidence holds the change's whole story, live validation and repair
+ * ledger, most of a long record's saved words, and a list of the board's
+ * rows read none of it. An older field nothing reads stays out, as it did
+ * when the column held it.
  */
 function composed(
   record: TaskRecord,
@@ -178,23 +202,46 @@ function composed(
   delivery?: DeliveryRecords,
 ): TaskRecord {
   const shape = withPolicies(withReferences(record.shape, references), policies);
-  if (delivery) record = withDeliveryRecords(record, delivery);
-  if (!execution) return shape === record.shape ? record : { ...record, shape };
-  return {
+  const history = record.delivery;
+  const result: TaskRecord = {
     ...record,
     shape,
-    sessionFile: execution.sessionFile,
-    accountId: execution.accountId,
-    deviceId: execution.deviceId,
-    placement: execution.placement,
-    idleSince: execution.idleSince,
-    recoveryRung: execution.recoveryRung,
-    recoveryCount: execution.recoveryCount,
-    recoveryAt: execution.recoveryAt,
-    startNotice: execution.startNotice,
-    backlogSince: execution.backlogSince,
-    delivery: withTurn(record.delivery, execution.turn),
+    ...(execution
+      ? {
+          sessionFile: execution.sessionFile,
+          accountId: execution.accountId,
+          deviceId: execution.deviceId,
+          placement: execution.placement,
+          idleSince: execution.idleSince,
+          recoveryRung: execution.recoveryRung,
+          recoveryCount: execution.recoveryCount,
+          recoveryAt: execution.recoveryAt,
+          startNotice: execution.startNotice,
+          backlogSince: execution.backlogSince,
+        }
+      : {}),
+    ...(delivery
+      ? {
+          pendingSettle: parseJson<PendingSettleIntent>(
+            delivery.permissions?.pending_settle_json ?? null,
+          ),
+        }
+      : {}),
   };
+  if (!delivery && !execution) return result;
+  return onFirstRead(result, "delivery", () => {
+    const saved = delivery
+      ? withoutRetired(
+          composeDelivery(
+            history as Record<string, unknown> | null,
+            delivery.evidence,
+            delivery.permissions,
+          ) as TaskDelivery | null,
+          "landedAt",
+        )
+      : history;
+    return execution ? withTurn(saved, execution.turn) : saved;
+  });
 }
 
 /**

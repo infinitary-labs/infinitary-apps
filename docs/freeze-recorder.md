@@ -155,12 +155,15 @@ It proves the facts and wording served, not a model's subsequent judgment, and u
 
 ## Before a change merges
 
-The freeze journey (`tests/e2e/main-thread-freeze.spec.ts`, INF-2061's plan, built as INF-2068) runs the actual app with the recorder on, on a record the captain's size: 160,094 task events, 3,400 tasks and 33 open messages in 13 chains, each a reading of the captain's own record (`tests/e2e/captainSizedRecord.ts`).
-INF-3896's reading adds what a record with none of it never made slow: the closed tasks' goals, 6,449 answered cards with the offers that carry their words, 3,872 links, a board of 1,701 rows holding a week of closed work with its change stories, live validation and CI repair records, nine open cards naming earlier work, and a heaviest task record of 248 offers.
+The freeze journey (`tests/e2e/main-thread-freeze.spec.ts`, INF-2061's plan, built as INF-2068) runs the actual app with the recorder on, on a record the captain's size: 287,538 task events, 7,847 tasks and 33 open messages in 13 chains, each a reading of the captain's own record (`tests/e2e/captainSizedRecord.ts`).
+INF-3896's reading adds what a record with none of it never made slow: the closed tasks' goals, 6,449 answered cards with the offers that carry their words, a board of 1,701 rows holding a week of closed work with its change stories, live validation and CI repair records, nine open cards naming earlier work, and a heaviest task record of 248 offers.
+INF-4224's reading adds what makes each task heavier to read: the work shape a started task carries, delivery evidence on 6,030 tasks, 1,727 required-action offers, the 67 tasks the captain's required actions filed, and 4,032 links.
+Its column sizes add the words each task holds: every task's brief, the closed tasks' final reports and the words in the delivery evidence.
 Only counts and sizes come from the captain's record; every word is made in the seed.
 It drives the work that repeats: first mate turns, which read the open messages before and after each, the task board, typing, and five minute passes with the answer-delivery sweep.
 It also starts a crewmate and waits for its first report, which comes after its first turn opened: every start-path stall the captain's record held ran in that stretch (INF-2297).
 It then starts nine crewmates from one first mate turn while the window takes typing, and finds their nine tasks with one board read per try, so the journey's own reads stay out of the stalls it grades.
+It then merges a local-only change whose story declares a required action, with the captain's click on its merge card: on the captain's record that close's step that files the action's task read every task and held the main thread 491 ms (INF-4224).
 It fails, naming the call path, on any recorded stall of 250 ms or more of the main thread's own processor time (`cpuMs`).
 It grades processor time, never wall time, so a busy test computer that stretches a stall does not fail it.
 Every run prints and annotates its busiest stall, so a change that brings the app nearer the line shows before it crosses it.

@@ -1,13 +1,19 @@
+import { execFileSync } from "node:child_process";
+import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import type { FreezeLine } from "../../src/core/freeze/freezeRecorder";
 import { appPathsFor } from "../../src/core/paths";
+import { openDatabase } from "../../src/core/storage/db";
 import { git } from "../../src/core/workspace/git";
+import { shortTaskTitle } from "../../src/shared/taskTitle";
+import { MERGE_WORDS } from "../../src/shared/vocabulary";
 import { readFreezes, readPasses } from "../helpers/freezeRecord";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedCaptainSizedRecord } from "./captainSizedRecord";
 import { waitForFirstmateIdle } from "./crew";
 import { launchApp, SHORT_TICK } from "./launch";
 import { REACT_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { reportLine, startedLine, taskKey, taskKeys } from "./rails";
 import { readSavedData } from "./savedData";
@@ -16,6 +22,13 @@ import {
   FREEZE_BURST_WORDS,
   scriptFreezeBurst,
 } from "./scenarios/freezeBurst";
+import {
+  FREEZE_MERGE_ACTION,
+  FREEZE_MERGE_MARKER,
+  FREEZE_MERGE_TITLE,
+  freezeMerge,
+} from "./scenarios/freezeMerge";
+import { showCard, shownCard } from "./stack";
 import { boardEntry, openBoardButton } from "./taskBoard";
 import { typeInto } from "./windowKeys";
 
@@ -25,7 +38,8 @@ import { typeInto } from "./windowKeys";
  * actual app on a record the captain's size with the freeze recorder on,
  * drives the work that repeats - first mate turns, which read the open
  * messages before and after each, a crewmate's start through its first
- * report, several starts issued together while typing, the minute passes
+ * report, several starts issued together while typing, a merged close
+ * whose change declared a required action (INF-4224), the minute passes
  * with the answer-delivery sweep, the task board and typing - and fails,
  * naming the call path, on any stretch of the main
  * thread's own processor time at or over the line.
@@ -37,7 +51,8 @@ import { typeInto } from "./windowKeys";
  * (scripts/main-thread-waits.ts).
  *
  * Promised result: no recorded stall reaches the line. Data: the captain's
- * readings (captainSizedRecord.ts), plus the reported nine-start burst.
+ * readings (captainSizedRecord.ts), plus the reported nine-start burst and
+ * one local-only project whose change merges with a required action.
  * Completion signals: every start and first report, retained window input,
  * and the minute passes the app reports on its own output.
  * Prerequisites: none beyond a built app;
@@ -49,6 +64,8 @@ import { typeInto } from "./windowKeys";
  * INF-1956, INF-2059) each held the main thread 800 ms or more at a time.
  */
 const FREEZE_LINE_CPU_MS = 250;
+/** The local-only project whose change merges with a required action. */
+const GAUGE_PROJECT = "gaugelab";
 /** Minute passes to drive after the turns: each runs every check the minute pass holds. */
 const MINUTE_PASSES = 5;
 
@@ -86,10 +103,10 @@ const passStep = (line: FreezeLine) => {
 };
 
 test("the main thread never spends 250 ms of its own processor time at once on a record the captain's size", async () => {
-  // Seeding 160,094 events through the one writer takes most of a minute on
-  // a shared runner; the passes, turns and the crewmate's start take about
-  // another.
-  test.setTimeout(270_000);
+  // Seeding 287,538 events through the one writer takes about two minutes
+  // on a shared runner; the passes, turns, starts and the merge take about
+  // two more.
+  test.setTimeout(420_000);
   const userDataDir = scratchDir("infinitary-freeze-journey-");
   // The seed hands this worker's event loop a turn between its transactions,
   // which is when the statements it prepared are freed (WRITES_PER_TURN).
@@ -111,6 +128,31 @@ test("the main thread never spends 250 ms of its own processor time at once on a
   console.log(
     `[freeze journey] the seed ran over ${turns} turns; the worker grew from ${Math.round(startRss / 2 ** 20)} MiB to at most ${Math.round(largestRss / 2 ** 20)} MiB`,
   );
+  // The project whose change merges with a required action: local-only, so
+  // the captain's merge click puts it on its own main with no forge.
+  const gaugeDir = join(userDataDir, GAUGE_PROJECT);
+  const gitIn = (...args: string[]) => execFileSync("git", args, { stdio: "pipe" });
+  gitIn("init", "--initial-branch=main", gaugeDir);
+  gitIn("-C", gaugeDir, "config", "user.name", "Test");
+  gitIn("-C", gaugeDir, "config", "user.email", "test@localhost");
+  gitIn("-C", gaugeDir, "commit", "--allow-empty", "-m", "chore: seed the gauge");
+  const db = openDatabase(userDataDir);
+  try {
+    seedProject(db, {
+      id: `repo-${GAUGE_PROJECT}`,
+      path: gaugeDir,
+      name: GAUGE_PROJECT,
+      setupKind: "init",
+      origin: null,
+      runsOn: null,
+      delivery: "local-only",
+      autonomy: false,
+      rigor: "quick",
+      addedAt: 1,
+    });
+  } finally {
+    db.close();
+  }
   // A seed that never gives the loop a turn holds every statement again.
   expect(turns).toBeGreaterThan(0);
   const recordPath = appPathsFor(userDataDir).freezeRecordPath;
@@ -121,6 +163,7 @@ test("the main thread never spends 250 ms of its own processor time at once on a
   const app = await launchApp({
     userDataDir,
     withMockProvider: true,
+    scenarios: [freezeMerge()],
     env: { ...SHORT_TICK, INFINITARY_FREEZE_RECORDER: "1" },
   });
   // Each pass reports its synchronous run on the app's own output
@@ -227,6 +270,32 @@ test("the main thread never spends 250 ms of its own processor time at once on a
         windowDraft: draft,
       }),
     );
+    // A merged close whose change declared a required action (INF-4224):
+    // on the captain's record its step that files the action's task read
+    // every task and held the main thread 491 ms.
+    const gauge = `${GAUGE_PROJECT} ${FREEZE_MERGE_MARKER}`;
+    await say(page, `${SPAWN_PROMPT_MARKER} ${gauge}`);
+    const gaugeKey = await taskKey(page, gauge);
+    // The burst's own cards stack ahead of the merge card, so the walk
+    // pages to it once it has joined the stack.
+    await waitForFirstmateIdle(page);
+    await expect(() => showCard(page, FREEZE_MERGE_TITLE)).toPass({ timeout: 60_000 });
+    const mergeCard = shownCard(page, FREEZE_MERGE_TITLE);
+    step("while a change with a required action merged");
+    await mergeCard.getByRole("button", { name: MERGE_WORDS.land, exact: true }).click();
+    const board = () => page.evaluate(() => window.infinitary.tasks.board());
+    const gaugeId = (await board()).tasks.find((row) => row.key === gaugeKey)?.id;
+    if (!gaugeId) throw new Error("The gauge task never reached the board.");
+    await expect
+      .poll(() => page.evaluate((id) => window.infinitary.tasks.detail(id), gaugeId), {
+        timeout: 30_000,
+      })
+      .toMatchObject({ status: "done" });
+    // The close filed the captain's action as a task of its own.
+    const filed = shortTaskTitle(FREEZE_MERGE_ACTION.title);
+    await expect
+      .poll(async () => (await board()).tasks.some((row) => row.title === filed))
+      .toBe(true);
     step("while the task board opened");
     await openBoardButton(page).click();
     await expect(boardEntry(page)).toBeVisible();

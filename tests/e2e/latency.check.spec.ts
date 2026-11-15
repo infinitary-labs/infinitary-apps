@@ -275,7 +275,7 @@ function scrollTasks(page: Page, ms: number): Promise<number> {
 test("typing and scrolling on a record the captain's size, while six crewmates write, stay under the latency bar", {
   tag: [PERF_TAG, MAC_ONLY_TAG],
 }, async () => {
-  // Seeding 160,094 events through the one writer takes most of a minute;
+  // Seeding 287,538 events through the one writer takes about a minute;
   // commissioning six crewmates and the three measured stretches take
   // about another.
   const userDataDir = scratchDir("infinitary-latency-check-");

@@ -67,10 +67,10 @@ export class PlacedAccounts
     // Only the models its sign-ins say they serve, as an Automatic start
     // routes among; an account that lists none, and every account of a
     // computer too old to say, takes this Mac's catalog for its provider.
-    return (
+    const pool =
       actualComputerPool(who, catalogWhereUnlisted(signIns, models), models, now) ??
-      computerPool(who, signIns, models, now)
-    );
+      computerPool(who, signIns, models, now);
+    return { ...pool, deviceId: machine };
   }
 
   servingAccount(session: ModelSession): string | undefined {
@@ -133,7 +133,9 @@ export function accountKey(deviceId: string, accountId: string): string {
   return `${accountId}@${deviceId}`;
 }
 
-function parseAccountKey(account: string): { deviceId: string; accountId: string } | undefined {
+export function parseAccountKey(
+  account: string,
+): { deviceId: string; accountId: string } | undefined {
   const at = account.lastIndexOf("@");
   if (at <= 0 || at === account.length - 1) return undefined;
   return { accountId: account.slice(0, at), deviceId: account.slice(at + 1) };

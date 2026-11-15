@@ -29,7 +29,7 @@ import { useShellStore } from "../app/store";
 import type { RowMenuItem } from "../design";
 import { Button, Input } from "../design";
 import { useFirstMatePlace } from "../devices/useFirstMatePlace";
-import { awayNote, DEVICE_SIGN_INS_WORDS } from "./accountRows";
+import { awayNote, DEVICE_SIGN_INS_WORDS, offersKeepGoing } from "./accountRows";
 import { LABEL_GAP, ROW_GAP, SECTION_GAP } from "./settingRows";
 import { useDeviceSignIns } from "./useDeviceSignIns";
 
@@ -73,6 +73,12 @@ export type DeviceAccountRowProps = {
   signInOff?: string;
   onSignIn: () => void;
   menu: RowMenuItem[];
+  /**
+   * Its Keep going on credits switch, saved on that computer (docs/quota.md):
+   * absent where its provider sells no credits. `updateNote` says why it is
+   * dim while that computer's Infinitary cannot take it yet.
+   */
+  keepGoing?: { onSelect: () => void; updateNote?: string };
 };
 
 /** Under a computer's label while it is not in reach: out of reach, or connecting while its connection is being made. */
@@ -226,6 +232,23 @@ export function DeviceSignInGroups({
                           account.kind === "api_key" ? "api_key" : "oauth",
                           account.id,
                         ),
+                      ...(offersKeepGoing(account)
+                        ? {
+                            keepGoing: {
+                              onSelect: () =>
+                                void window.infinitary.accounts
+                                  .keepGoing(
+                                    account.id,
+                                    !account.keepGoingOnCredits,
+                                    device.deviceId,
+                                  )
+                                  .catch(() => {}),
+                              ...(device.keepGoing
+                                ? {}
+                                : { updateNote: m.settingsDevicesSignInsKeepGoingUpdate() }),
+                            },
+                          }
+                        : {}),
                       menu: [
                         {
                           id: "disconnect",

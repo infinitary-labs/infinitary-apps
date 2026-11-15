@@ -18,6 +18,7 @@ import {
   signInPlace,
 } from "@shared/signIns";
 import { DeviceOutOfReachError, type WorkDeviceContact } from "../connection/connection";
+import { contractChange, listsChange } from "../connection/contractChanges";
 import type { CoreEventSink } from "../events";
 import { narrowServedThere } from "../models/piAccountLists";
 import type { WorkDevices } from "../placed/workDevices";
@@ -39,6 +40,9 @@ import type { WorkDevices } from "../placed/workDevices";
  * Settings -> Integrations starts the host's device flow there, the code to read
  * comes back as a step, and that computer finishes the sign-in itself.
  */
+
+/** A computer that takes Keep going on credits for its own accounts (`computer-keep-going.md`). */
+const COMPUTER_KEEP_GOING = contractChange("computer-keep-going");
 
 type Running = DeviceSignInFlow & {
   /** The person's word for a project host ("GitHub"). */
@@ -107,6 +111,7 @@ export class DeviceSignIns {
         onThisMac: device.onThisMac === true,
         reach: this.options.reachOf?.(device.id) ?? (inReach ? "in-reach" : "out-of-reach"),
         customApi: speaksCustomApi(this.options.work.version(device.id)?.contract ?? ""),
+        keepGoing: this.takesKeepGoing(device.id),
         signIns: this.narrowed(said?.signIns ?? null),
         flows: [...this.running.values()]
           .filter((flow) => flow.deviceId === device.id)
@@ -296,6 +301,35 @@ export class DeviceSignIns {
     const parsed = signInOrders[channel].response.safeParse(answer);
     if (!parsed.success) throw new Error(`${who} answered in a shape ${HERE.this} does not know.`);
     return parsed.data as SignInOrderResponse<C>;
+  }
+
+  /**
+   * Turns Keep going on credits on or off for one of that computer's own
+   * accounts (docs/quota.md), saved only there. Only the account id and the
+   * switch cross; its rows come back as that computer's sign-ins, whole,
+   * and this resolves once they have.
+   */
+  async keepGoing(deviceId: string, accountId: string, on: boolean): Promise<{ ok: true }> {
+    this.computer(deviceId);
+    const who = this.who(deviceId);
+    if (!this.takesKeepGoing(deviceId))
+      throw new Error(`Update Infinitary on ${who} to keep going on credits there.`);
+    if (!this.said.get(deviceId)?.signIns?.accounts.some((account) => account.id === accountId))
+      throw new Error(`${who} has no account with that id. Look in Settings → Intelligence.`);
+    if (!this.options.work.inReach(deviceId))
+      throw new Error(`${who} is out of reach, so nothing was sent.`);
+    try {
+      await this.options.work.ask(deviceId, "inf:sign-ins:keep-going", [{ accountId, on }]);
+    } catch (error) {
+      throw reachable(error, who);
+    }
+    await this.refresh(deviceId);
+    return { ok: true };
+  }
+
+  /** Whether that computer takes `inf:sign-ins:keep-going` (`computer-keep-going.md`). */
+  takesKeepGoing(deviceId: string): boolean {
+    return listsChange(this.options.work.version(deviceId)?.changes, COMPUTER_KEEP_GOING);
   }
 
   /** Signs that computer out where a project lives; its sign-in there is deleted. */
@@ -543,6 +577,12 @@ export class DeviceSignIns {
     if (!device)
       throw new Error("No computer that runs work has that id. Look in Settings → Devices.");
     return device;
+  }
+
+  /** How words name a computer that runs work (`signInPlace`); undefined for no such computer. */
+  placeOf(deviceId: string): ReturnType<typeof signInPlace> | undefined {
+    const device = this.computers().find((candidate) => candidate.id === deviceId);
+    return device ? signInPlace({ ...device, onThisMac: device.onThisMac === true }) : undefined;
   }
 
   private who(deviceId: string): string {

@@ -2185,6 +2185,7 @@
 "settingsDevicesSignInsEnterCode" = "Open the link in your browser here and enter this code. %1$@ finishes the sign-in itself.";
 "settingsDevicesSignInsFailed" = "%2$@ could not sign in to %1$@.";
 "settingsDevicesSignInsGoesOnce" = "It goes to %2$@ once. %1$@ keeps no copy.";
+"settingsDevicesSignInsKeepGoingUpdate" = "Update Infinitary there first";
 "settingsDevicesSignInsKeyFor" = "The key for %1$@";
 "settingsDevicesSignInsNone" = "No sign-ins yet.";
 "settingsDevicesSignInsOpenLink" = "Open the link";

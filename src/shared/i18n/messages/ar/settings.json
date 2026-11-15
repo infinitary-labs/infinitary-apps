@@ -429,6 +429,7 @@
   "settingsDevicesSignInsEnterCode": "افتح الرابط في متصفحك هنا وأدخل هذا الرمز. يُكمل {who} تسجيل الدخول بنفسه.",
   "settingsDevicesSignInsFailed": "تعذّر على {who} تسجيل الدخول إلى {provider}.",
   "settingsDevicesSignInsGoesOnce": "يُرسل إلى {who} مرة واحدة. لا يحتفظ {home} بنسخة منه.",
+  "settingsDevicesSignInsKeepGoingUpdate": "حدّث Infinitary هناك أولًا",
   "settingsDevicesSignInsKeyFor": "المفتاح لـ{who}",
   "settingsDevicesSignInsNone": "لا تسجيلات دخول بعد.",
   "settingsDevicesSignInsOpenLink": "فتح الرابط",

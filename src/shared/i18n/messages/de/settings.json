@@ -393,6 +393,7 @@
   "settingsDevicesSignInsEnterCode": "Öffne den Link hier in deinem Browser und gib diesen Code ein. {who} schließt die Anmeldung selbst ab.",
   "settingsDevicesSignInsFailed": "{who} konnte sich nicht bei {provider} anmelden.",
   "settingsDevicesSignInsGoesOnce": "Er geht einmal an {who}. {home} behält keine Kopie.",
+  "settingsDevicesSignInsKeepGoingUpdate": "Dort zuerst Infinitary aktualisieren",
   "settingsDevicesSignInsKeyFor": "Der Schlüssel für {who}",
   "settingsDevicesSignInsNone": "Noch keine Anmeldungen.",
   "settingsDevicesSignInsOpenLink": "Link öffnen",

@@ -2185,6 +2185,7 @@
 "settingsDevicesSignInsEnterCode" = "Öffne den Link hier in deinem Browser und gib diesen Code ein. %1$@ schließt die Anmeldung selbst ab.";
 "settingsDevicesSignInsFailed" = "%2$@ konnte sich nicht bei %1$@ anmelden.";
 "settingsDevicesSignInsGoesOnce" = "Er geht einmal an %2$@. %1$@ behält keine Kopie.";
+"settingsDevicesSignInsKeepGoingUpdate" = "Dort zuerst Infinitary aktualisieren";
 "settingsDevicesSignInsKeyFor" = "Der Schlüssel für %1$@";
 "settingsDevicesSignInsNone" = "Noch keine Anmeldungen.";
 "settingsDevicesSignInsOpenLink" = "Link öffnen";

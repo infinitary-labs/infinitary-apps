@@ -2185,6 +2185,7 @@
 "settingsDevicesSignInsEnterCode" = "여기 브라우저에서 링크를 열고 이 코드를 입력하세요. 로그인은 %1$@이(가) 직접 마무리해요.";
 "settingsDevicesSignInsFailed" = "%2$@이(가) %1$@에 로그인하지 못했어요.";
 "settingsDevicesSignInsGoesOnce" = "%2$@(으)로 한 번만 보내요. %1$@에는 사본이 남지 않아요.";
+"settingsDevicesSignInsKeepGoingUpdate" = "먼저 그곳의 Infinitary 업데이트 필요";
 "settingsDevicesSignInsKeyFor" = "%1$@에서 쓸 키";
 "settingsDevicesSignInsNone" = "아직 로그인이 없어요.";
 "settingsDevicesSignInsOpenLink" = "링크 열기";

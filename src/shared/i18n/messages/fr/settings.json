@@ -402,6 +402,7 @@
   "settingsDevicesSignInsEnterCode": "Ouvrez le lien dans votre navigateur ici et saisissez ce code. {who} termine la connexion lui-même.",
   "settingsDevicesSignInsFailed": "{who} n’a pas pu se connecter à {provider}.",
   "settingsDevicesSignInsGoesOnce": "Envoyé une seule fois à {who}. {home} n’en garde aucune copie.",
+  "settingsDevicesSignInsKeepGoingUpdate": "Mettez d’abord Infinitary à jour là-bas",
   "settingsDevicesSignInsKeyFor": "La clé pour {who}",
   "settingsDevicesSignInsNone": "Aucune connexion pour l’instant.",
   "settingsDevicesSignInsOpenLink": "Ouvrir le lien",

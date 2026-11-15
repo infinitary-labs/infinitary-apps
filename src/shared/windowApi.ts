@@ -794,7 +794,8 @@ export type FirstmateApi = {
     setEnabled: (accountId: string, enabled: boolean) => Promise<{ ok: true }>;
     pin: (providerId: string, accountId: string | null) => Promise<{ ok: true }>;
     /** Keep going on credits once the allowance is spent (docs/quota.md), on or off. */
-    keepGoing: (accountId: string, on: boolean) => Promise<{ ok: true }>;
+    /** With `deviceId`, the account is that computer that runs work's own. */
+    keepGoing: (accountId: string, on: boolean, deviceId?: string) => Promise<{ ok: true }>;
   };
   /**
    * The app's own sign-ins where projects live (git integration PR 1.2):

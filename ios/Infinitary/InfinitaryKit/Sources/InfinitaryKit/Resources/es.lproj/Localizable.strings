@@ -2185,6 +2185,7 @@
 "settingsDevicesSignInsEnterCode" = "Abre el enlace en tu navegador aquí y escribe este código. %1$@ termina el inicio de sesión por su cuenta.";
 "settingsDevicesSignInsFailed" = "%2$@ no pudo iniciar sesión en %1$@.";
 "settingsDevicesSignInsGoesOnce" = "Va a %2$@ una sola vez. %1$@ no guarda ninguna copia.";
+"settingsDevicesSignInsKeepGoingUpdate" = "Primero actualiza Infinitary allí";
 "settingsDevicesSignInsKeyFor" = "La clave para %1$@";
 "settingsDevicesSignInsNone" = "Todavía sin inicios de sesión.";
 "settingsDevicesSignInsOpenLink" = "Abrir el enlace";

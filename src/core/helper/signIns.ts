@@ -241,6 +241,23 @@ export class SignInHost {
         void this.report();
         return view;
       }
+      case "inf:sign-ins:keep-going": {
+        const [keep] = request as SignInOrderRequest<"inf:sign-ins:keep-going">;
+        const { vault } = this.options.accounts;
+        if (!vault.get(keep.accountId))
+          throw new Error("This computer has no account with that id.");
+        // Saved only here; the vault refuses a provider that sells no credits.
+        vault.setKeepGoingOnCredits(keep.accountId, keep.on);
+        // A spent allowance held after a refusal ends when the provider says
+        // its credits answer: the switch is what was missing.
+        const row = this.options.accounts
+          .allowance()
+          ?.providers.find((provider) => provider.accountId === keep.accountId);
+        if (keep.on && row?.credits?.state === "available")
+          vault.noteCreditsAvailable(keep.accountId);
+        void this.report();
+        return { ok: true };
+      }
       default:
         throw new Error(`${channel} is not a request this computer answers.`);
     }

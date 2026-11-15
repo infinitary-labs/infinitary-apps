@@ -560,17 +560,18 @@ export class AutomaticPlacement {
     const reading = id
       ? this.options.work.ask(id, PLACEMENT_FACTS_ORDER, [request]).then((raw) => {
           const answer = placementFactsAnswerSchema.parse(raw);
+          const pool = actualComputerPool(
+            id,
+            this.options.protectedIds
+              ? narrowServedThere(answer.signIns, this.options.protectedIds)
+              : answer.signIns,
+            this.options.catalog(),
+            Date.now(),
+          );
           return {
             facts: answer,
             signIns: answer.signIns,
-            pool: actualComputerPool(
-              id,
-              this.options.protectedIds
-                ? narrowServedThere(answer.signIns, this.options.protectedIds)
-                : answer.signIns,
-              this.options.catalog(),
-              Date.now(),
-            ),
+            pool: pool && { ...pool, deviceId: id },
             started,
             generation,
           };

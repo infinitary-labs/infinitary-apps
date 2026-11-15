@@ -65,6 +65,8 @@ export type RoutingPool = {
   note: string;
   /** The computer these sign-ins are on, by name, for the record. */
   place?: string;
+  /** The computer these sign-ins are on, by id: its run-out card names it. */
+  deviceId?: string;
   readings?: import("@shared/quota").QuotaProviderView[];
   /** The computer's existing account-binding policy, before session attachment. */
   modelAccounts?: ReadonlyMap<string, string>;
@@ -86,10 +88,12 @@ export type RoutePreview = {
   selection?: SelectionFacts;
   /**
    * Providers whose spent allowance at the asked level made this work drop
-   * a level or wait (this Mac's own sign-ins only): their run-out card may
-   * offer Keep going on credits once the decision is committed.
+   * a level or wait: their run-out card may offer Keep going on credits
+   * once the decision is committed.
    */
   spentAt?: string[];
+  /** The computer that runs work whose sign-ins `spentAt` names; absent, this Mac's own. */
+  spentOn?: string;
 };
 
 export type RouteOptions = {
@@ -165,7 +169,7 @@ export class Router {
        * providers' allowance is spent at the asked level: the crew's
        * run-out card (docs/quota.md "Keep going on credits").
        */
-      onSpentAt?: (piProviders: string[]) => void;
+      onSpentAt?: (piProviders: string[], deviceId?: string) => void;
     },
   ) {}
 
@@ -209,8 +213,8 @@ export class Router {
 
   /** Record the preview chosen by atomic placement, never another speculative candidate. */
   commit(taskId: string, evaluation: RoutePreview): RouteResult {
-    const { result, reasons, candidates, accountId, selection, spentAt } = evaluation;
-    if (spentAt && spentAt.length > 0) this.options.onSpentAt?.(spentAt);
+    const { result, reasons, candidates, accountId, selection, spentAt, spentOn } = evaluation;
+    if (spentAt && spentAt.length > 0) this.options.onSpentAt?.(spentAt, spentOn);
     this.options.decisions.recordRouting({
       taskId,
       provider: result.choice?.provider ?? null,
@@ -510,13 +514,14 @@ export class Router {
 
 /**
  * The providers whose spent allowance at the asked level made a decision on
- * this Mac's own sign-ins drop a level or find nothing.
+ * this Mac's own sign-ins, or on one computer that runs work's, drop a level
+ * or find nothing.
  */
 function spentAtLevel(
   decision: ReturnType<typeof route>,
   pool: RoutingPool | undefined,
-): { spentAt?: string[] } {
-  if (pool) return {};
+): { spentAt?: string[]; spentOn?: string } {
+  if (pool && !pool.deviceId) return {};
   const dropped =
     !decision.choice ||
     (decision.servedBucket !== undefined && isDowngrade(decision.bucket, decision.servedBucket));
@@ -529,7 +534,8 @@ function spentAtLevel(
         .map((candidate) => candidate.provider),
     ),
   ];
-  return providers.length > 0 ? { spentAt: providers } : {};
+  if (providers.length === 0) return {};
+  return { spentAt: providers, ...(pool?.deviceId ? { spentOn: pool.deviceId } : {}) };
 }
 
 /** Premium asks and escalation keep the supervisor's existing never-downward gate. */

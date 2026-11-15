@@ -2273,6 +2273,7 @@ public enum PhoneMessages {
     public static func `settingsDevicesSignInsEnterCode`(`who`: String) -> String { PhoneWords.format("settingsDevicesSignInsEnterCode", [`who`]) }
     public static func `settingsDevicesSignInsFailed`(`provider`: String, `who`: String) -> String { PhoneWords.format("settingsDevicesSignInsFailed", [`provider`, `who`]) }
     public static func `settingsDevicesSignInsGoesOnce`(`home`: String, `who`: String) -> String { PhoneWords.format("settingsDevicesSignInsGoesOnce", [`home`, `who`]) }
+    public static func `settingsDevicesSignInsKeepGoingUpdate`() -> String { PhoneWords.format("settingsDevicesSignInsKeepGoingUpdate", []) }
     public static func `settingsDevicesSignInsKeyFor`(`who`: String) -> String { PhoneWords.format("settingsDevicesSignInsKeyFor", [`who`]) }
     public static func `settingsDevicesSignInsNone`() -> String { PhoneWords.format("settingsDevicesSignInsNone", []) }
     public static func `settingsDevicesSignInsOpenLink`() -> String { PhoneWords.format("settingsDevicesSignInsOpenLink", []) }
@@ -5524,6 +5525,7 @@ extension PhoneWords {
         "settingsDevicesSignInsEnterCode": ["who"],
         "settingsDevicesSignInsFailed": ["provider", "who"],
         "settingsDevicesSignInsGoesOnce": ["home", "who"],
+        "settingsDevicesSignInsKeepGoingUpdate": [],
         "settingsDevicesSignInsKeyFor": ["who"],
         "settingsDevicesSignInsNone": [],
         "settingsDevicesSignInsOpenLink": [],

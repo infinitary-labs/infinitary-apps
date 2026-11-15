@@ -9,7 +9,13 @@ import { awayWord } from "@shared/devices";
 import { formatTime } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import { API_KEY_LABEL, CLAUDE_PROVIDER_ID } from "@shared/providers";
-import { isKeychainValueFailure, isSensedProvider, type QuotaProviderView } from "@shared/quota";
+import {
+  allowanceProviderOf,
+  CREDITS_SWITCH_PROVIDERS,
+  isKeychainValueFailure,
+  isSensedProvider,
+  type QuotaProviderView,
+} from "@shared/quota";
 import { formatDurationShort, providerScopes, windowSignals } from "@shared/quotaSignals";
 import type { DeviceSignIns } from "@shared/signIns";
 import type { StatusDotTone } from "../design/core/StatusDot";
@@ -381,4 +387,10 @@ export function awayNote(device: Pick<DeviceSignIns, "reach" | "asOf">): string 
   if (!device.asOf) return away;
   const time = formatTime(device.asOf, { hour: "2-digit", minute: "2-digit" });
   return `${away} · ${m.settingsDevicesSignInsAsOf({ time })}`;
+}
+
+/** Whether this account's provider sells credits past its allowance (docs/quota.md). */
+export function offersKeepGoing(account: AccountView): boolean {
+  const provider = allowanceProviderOf(account.providerId);
+  return provider !== undefined && CREDITS_SWITCH_PROVIDERS.includes(provider);
 }

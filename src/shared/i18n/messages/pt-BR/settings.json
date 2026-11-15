@@ -402,6 +402,7 @@
   "settingsDevicesSignInsEnterCode": "Abra o link no seu navegador aqui e digite este código. {who} conclui o login sozinho.",
   "settingsDevicesSignInsFailed": "{who} não conseguiu fazer login no {provider}.",
   "settingsDevicesSignInsGoesOnce": "Vai para {who} uma única vez. {home} não guarda cópia.",
+  "settingsDevicesSignInsKeepGoingUpdate": "Atualize o Infinitary lá primeiro",
   "settingsDevicesSignInsKeyFor": "A chave para {who}",
   "settingsDevicesSignInsNone": "Nenhum login ainda.",
   "settingsDevicesSignInsOpenLink": "Abrir o link",

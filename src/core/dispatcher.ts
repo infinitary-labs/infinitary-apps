@@ -1191,8 +1191,8 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       return { ok: true as const };
     },
 
-    "inf:accounts:keep-going": (accountId, on) => {
-      services.setKeepGoingOnCredits(accountId, on);
+    "inf:accounts:keep-going": async (accountId, on, deviceId) => {
+      await services.setKeepGoingOnCredits(accountId, on, deviceId);
       return { ok: true as const };
     },
 
@@ -1493,6 +1493,13 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
           ? await handlers[ACTIONS[name].current as keyof CoreHandlers]()
           : null,
       );
+    // Keep going on credits for a computer that runs work's own account is
+    // read from what that computer says of its accounts, not this Mac's.
+    const keepGoingThere =
+      channel === "inf:accounts:keep-going" && typeof args[2] === "string" ? args[2] : undefined;
+    const accountsThere = () =>
+      keepGoingThere ? (services.deviceSignIns.lastSaid(keepGoingThere)?.accounts ?? []) : [];
+    if (keepGoingThere) before.set("account-keep-going", accountsThere());
     if (actor.kind === "captain" && actor.projectBefore !== undefined) {
       const current = before.get(names[0] as ActionName);
       const previous = (current as RepoView[]).find((repo) => repo.id === args[0]);
@@ -1576,9 +1583,12 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     if (names.length) automationSaid = undefined;
     const result = await handler(...args);
     for (const name of names) {
-      const after = ACTIONS[name].current
-        ? await handlers[ACTIONS[name].current as keyof CoreHandlers]()
-        : null;
+      const after =
+        keepGoingThere && name === "account-keep-going"
+          ? accountsThere()
+          : ACTIONS[name].current
+            ? await handlers[ACTIONS[name].current as keyof CoreHandlers]()
+            : null;
       if (
         !ACTIONS[name].alwaysTrail &&
         name !== "refresh-usage" &&
@@ -1798,6 +1808,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
           args,
           before.get(name) as AccountView[],
           after as AccountView[],
+          keepGoingThere ? services.deviceSignIns.placeOf(keepGoingThere)?.where : undefined,
         );
         trail(name, said, actor, step);
       } else if (ACTIONS[name].alwaysTrail || name === "refresh-usage")

@@ -384,6 +384,7 @@
   "settingsDevicesSignInsEnterCode": "在这里的浏览器中打开链接并输入此代码。{who} 会自行完成登录。",
   "settingsDevicesSignInsFailed": "{who} 无法登录 {provider}。",
   "settingsDevicesSignInsGoesOnce": "它只会发送给 {who} 一次。{home} 不保留副本。",
+  "settingsDevicesSignInsKeepGoingUpdate": "请先在那里更新 Infinitary",
   "settingsDevicesSignInsKeyFor": "{who} 的密钥",
   "settingsDevicesSignInsNone": "尚无登录。",
   "settingsDevicesSignInsOpenLink": "打开链接",

@@ -1130,6 +1130,10 @@ Nothing of the home's sign-ins is sent here, and nothing of these goes to the ho
   This computer reads each account's allowance with its own store every five minutes and after a sign-in, and tells the home its sign-ins whole as `inf:work:sign-ins` after any change.
   A 401 is handled here, and non-Claude proactive renewal runs on this computer's own clock (`CredentialHealthService`); the home holds no store for these accounts, so it cannot renew one.
   Claude sessions renew themselves here too; only an idle rejection asks the client once, with no health-tick status poll or renewal wait.
+- **Keep going on credits, saved here.**
+  A Claude or Codex account here carries its own Keep going on credits switch (`docs/quota.md`, "Keep going on credits"), saved in this computer's own store; the home turns it with the `inf:sign-ins:keep-going` order, sent only to a computer that lists the `computer-keep-going` change (`DeviceSignIns.keepGoing`).
+  This computer lays the switch over the allowance it reads (`stampSnapshot`) before it tells the home, so the home's routing sees a spent allowance on credits as it sees its own, and a reading or the switch turned on while credits read `available` ends a spent allowance's cut-off here early.
+  A computer without the change shows the item dimmed in its row's menu, with a note to update Infinitary there first.
 - **A turn's facts are this computer's.**
   A typed cut-off a conversation here meets - a lost sign-in, a refusal, a spent allowance - is recorded on the account it is bound to, in this computer's own store (`AccountVault.noteCutOff`, through `ownAccounts` in `src/core/helper/conversations.ts`), where its own health reads clear it as the home's clear its own: its minute's read sees a login signed in again here, a good allowance reading or a turn that succeeded on it clears a sign-out, and a spent allowance ends at its reset.
   The home records none of it on its own accounts, so its first mate and crew keep serving from its own subscriptions, and no cut-off on the home's accounts holds a task that runs here either.

@@ -283,9 +283,10 @@ export type CoreServices = {
   /**
    * An account's Keep going on credits switch (docs/quota.md): saved by the
    * vault, read at once by routing and the first mate, and a crew run-out
-   * card offering it goes when it turns on.
+   * card offering it goes when it turns on. With `deviceId`, the account is
+   * that computer that runs work's own, and its switch is saved there.
    */
-  setKeepGoingOnCredits: (accountId: string, on: boolean) => void;
+  setKeepGoingOnCredits: (accountId: string, on: boolean, deviceId?: string) => Promise<void>;
   settings: SettingsStore;
   /** The one writer of the captain's presentation preferences; pushes every write. */
   preferences: ShellPreferencesService;

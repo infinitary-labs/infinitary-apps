@@ -12,12 +12,8 @@ import * as m from "@shared/i18n/messages.generated";
 import type { QuotaProviderView } from "@shared/quota";
 import { KEYCHAIN_VALUE_FAILURE_DETAIL } from "@shared/quota";
 import { describe, expect, it } from "vitest";
-import {
-  firstmateAccountChoices,
-  keepGoingItem,
-  offersKeepGoing,
-  rowView,
-} from "./SubscriptionsTab";
+import { offersKeepGoing } from "./accountRows";
+import { firstmateAccountChoices, keepGoingItem, rowView } from "./SubscriptionsTab";
 import { SUBSCRIPTIONS_WORDS } from "./subscriptionsWords";
 
 const account: AccountView = {

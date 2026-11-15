@@ -2185,6 +2185,7 @@
 "settingsDevicesSignInsEnterCode" = "Abra o link no seu navegador aqui e digite este código. %1$@ conclui o login sozinho.";
 "settingsDevicesSignInsFailed" = "%2$@ não conseguiu fazer login no %1$@.";
 "settingsDevicesSignInsGoesOnce" = "Vai para %2$@ uma única vez. %1$@ não guarda cópia.";
+"settingsDevicesSignInsKeepGoingUpdate" = "Atualize o Infinitary lá primeiro";
 "settingsDevicesSignInsKeyFor" = "A chave para %1$@";
 "settingsDevicesSignInsNone" = "Nenhum login ainda.";
 "settingsDevicesSignInsOpenLink" = "Abrir o link";

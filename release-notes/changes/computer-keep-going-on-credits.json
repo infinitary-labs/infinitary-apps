@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "computer-keep-going-on-credits",
+      "kind": "improvement",
+      "title": "Keep going on credits for a computer that runs work",
+      "body": "A Claude or Codex account that a computer running your work signed in to on its own can now keep going on the provider's credits too. Turn it on from that account's menu in Settings, Intelligence, under the computer, from the card that appears when its allowance runs out, or by asking your first mate. The switch is kept on that computer, and the feed says when its account starts spending credits and when they run out. A computer that has not updated Infinitary yet shows the item dimmed, with a note to update it first.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "computer-keep-going-on-credits-dark.webp",
+        "light": "computer-keep-going-on-credits-light.webp",
+        "alt": "Settings, Intelligence: the Claude account of a computer that runs work as Builder has its menu open, offering Keep going on credits, only after every included allowance."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

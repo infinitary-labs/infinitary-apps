@@ -2185,6 +2185,7 @@
 "settingsDevicesSignInsEnterCode" = "在這裡的瀏覽器中開啟連結並輸入這組代碼。%1$@ 會自行完成登入。";
 "settingsDevicesSignInsFailed" = "%2$@ 無法登入 %1$@。";
 "settingsDevicesSignInsGoesOnce" = "它只會傳送給 %2$@ 一次。%1$@ 不會保留副本。";
+"settingsDevicesSignInsKeepGoingUpdate" = "請先在那裡更新 Infinitary";
 "settingsDevicesSignInsKeyFor" = "%1$@ 的金鑰";
 "settingsDevicesSignInsNone" = "還沒有登入。";
 "settingsDevicesSignInsOpenLink" = "開啟連結";

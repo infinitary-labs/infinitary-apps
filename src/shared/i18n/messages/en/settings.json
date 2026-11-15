@@ -393,6 +393,7 @@
   "settingsDevicesSignInsEnterCode": "Open the link in your browser here and enter this code. {who} finishes the sign-in itself.",
   "settingsDevicesSignInsFailed": "{who} could not sign in to {provider}.",
   "settingsDevicesSignInsGoesOnce": "It goes to {who} once. {home} keeps no copy.",
+  "settingsDevicesSignInsKeepGoingUpdate": "Update Infinitary there first",
   "settingsDevicesSignInsKeyFor": "The key for {who}",
   "settingsDevicesSignInsNone": "No sign-ins yet.",
   "settingsDevicesSignInsOpenLink": "Open the link",

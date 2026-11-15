@@ -16,6 +16,7 @@ import { DEVICE_FORGE_WORDS } from "../../src/renderer/src/settings/deviceForgeW
 import { CLAUDE_CLIENT_MISSING_TEXT } from "../../src/shared/claudeClient";
 import { deviceSetupTitle } from "../../src/shared/deviceSetup";
 import { FORGE_CLI_WORDS, forgeCliOffer } from "../../src/shared/forges";
+import * as m from "../../src/shared/i18n/messages.generated";
 import { INTEGRATIONS_WORDS } from "../../src/shared/integrations";
 import { signInPlace } from "../../src/shared/signIns";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -38,6 +39,7 @@ import { promptInput } from "./prompt";
 import { feedLineOf } from "./rails";
 import { savedText } from "./savedText";
 import { expectNoCard, shownCard } from "./stack";
+import { pressKey } from "./windowKeys";
 
 /**
  * A computer that runs work signs in to its own subscriptions from the Mac
@@ -132,7 +134,15 @@ const CODEX_USED = 12;
 /** The share of Claude's session used, for the computer's own login alone. */
 const CLAUDE_USED = 27;
 
-/** The allowance's stand-in readings, `CODEX_USED` and `CLAUDE_USED`. */
+/**
+ * Whether Claude's session reads as used up there, with extra usage on and
+ * `CLAUDE_CREDITS_USED` of it spent: a test sets it, and each test starts without it.
+ */
+let claudeSpent = false;
+/** The share of Claude's extra usage spent while `claudeSpent` holds. */
+const CLAUDE_CREDITS_USED = 10;
+
+/** The allowance's stand-in readings, `CODEX_USED` and `CLAUDE_USED`, or Claude spent. */
 const allowance: QuotaHttp = async (url, init) => {
   if (url === "https://chatgpt.com/backend-api/wham/usage")
     return {
@@ -154,9 +164,12 @@ const allowance: QuotaHttp = async (url, init) => {
           status: 200,
           json: {
             five_hour: {
-              utilization: CLAUDE_USED,
+              utilization: claudeSpent ? 100 : CLAUDE_USED,
               resets_at: new Date(Date.now() + 2 * 3_600_000).toISOString(),
             },
+            ...(claudeSpent
+              ? { extra_usage: { is_enabled: true, utilization: CLAUDE_CREDITS_USED } }
+              : {}),
           },
         }
       : { status: 401 };
@@ -272,6 +285,7 @@ let github: GitHubStub | undefined;
 const runs: HelperRun[] = [];
 const apps: LaunchedApp[] = [];
 test.afterEach(async () => {
+  claudeSpent = false;
   await Promise.all(runs.splice(0).map((run) => run.stop()));
   await catalogRefreshesSettled();
   for (const app of apps.splice(0)) await app.close();
@@ -577,6 +591,40 @@ test("a computer already signed in to Claude uses that login, and asks for no co
   expect(claude.seen.pasted).toEqual([]);
   expect(saved.queries.length).toBeGreaterThan(0);
   expect(saved.queries.filter((query) => query.interactive === true)).toEqual([]);
+});
+
+test("a computer's own Claude account keeps going on credits, turned on by keys from its row here", async () => {
+  // Claude there has used up its session, and extra usage is on.
+  claudeSpent = true;
+  const claude = scriptedClaude(true);
+  const saved = savedPasswords(true);
+  const { page, deviceId } = await homeAndComputer({
+    claude: claude.options,
+    keychain: saved.keychain,
+  });
+  await openIntelligence(page);
+  const group = page.locator(`[data-device-sign-ins="${deviceId}"]`);
+  await group.locator('[data-connect-provider="anthropic-claude"]').click();
+  const claudeRow = group.locator('[data-account-row]:has-text("Claude")');
+  await expect(claudeRow).toHaveCount(1);
+  await expect(claudeRow).toContainText(
+    m.settingsSubscriptionsCreditsClaudeAvailableUsed({ percent: String(CLAUDE_CREDITS_USED) }),
+  );
+
+  // The row's menu offers the switch, and Enter on it turns it on there.
+  const kebab = claudeRow.getByRole("button", { name: /actions$/ });
+  await pressKey(kebab, "Enter");
+  const item = page.locator('[data-menu-item="keep-going"]');
+  await expect(item).toHaveText(new RegExp(m.settingsSubscriptionsMenuKeepGoing()));
+  // The menu opens on its first item, the switch.
+  await expect(item).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(claudeRow).toContainText(m.settingsSubscriptionsCreditsKeepsGoing());
+
+  // The same menu now offers to stop.
+  await pressKey(kebab, "Enter");
+  await expect(item).toHaveText(new RegExp(m.settingsSubscriptionsMenuStopKeepingGoing()));
+  await page.keyboard.press("Escape");
 });
 
 test("a computer signs in to GitHub for its own clones and pushes from Settings -> Integrations here", async () => {

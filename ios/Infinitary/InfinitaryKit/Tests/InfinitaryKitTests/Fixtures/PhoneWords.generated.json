@@ -1418,6 +1418,7 @@
   {"said":{"m":"settingsDevicesSignInsEnterCode","a":{"who":"‹who›"}},"words":"Open the link in your browser here and enter this code. ‹who› finishes the sign-in itself."},
   {"said":{"m":"settingsDevicesSignInsFailed","a":{"provider":"‹provider›","who":"‹who›"}},"words":"‹who› could not sign in to ‹provider›."},
   {"said":{"m":"settingsDevicesSignInsGoesOnce","a":{"home":"‹home›","who":"‹who›"}},"words":"It goes to ‹who› once. ‹home› keeps no copy."},
+  {"said":{"m":"settingsDevicesSignInsKeepGoingUpdate"},"words":"Update Infinitary there first"},
   {"said":{"m":"settingsDevicesSignInsKeyFor","a":{"who":"‹who›"}},"words":"The key for ‹who›"},
   {"said":{"m":"settingsDevicesSignInsNone"},"words":"No sign-ins yet."},
   {"said":{"m":"settingsDevicesSignInsOpenLink"},"words":"Open the link"},

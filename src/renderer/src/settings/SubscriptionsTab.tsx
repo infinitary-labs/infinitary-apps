@@ -6,7 +6,6 @@ import type { AuthNotice, AuthPromptView, ProviderView } from "@shared/providers
 import { CLAUDE_PROVIDER_ID, catalogEntry } from "@shared/providers";
 import {
   allowanceProviderOf,
-  CREDITS_SWITCH_PROVIDERS,
   type PiModelRefView,
   type QuotaProviderView,
   type QuotaSnapshotView,
@@ -37,7 +36,7 @@ import type { RowMenuItem } from "../design";
 import { Button, Input, QuotaMicroMeter, RowMenu, StatusDot, Switch } from "../design";
 import { useOverflowTitle } from "../design/core/overflowTitle";
 import { useRestLabel } from "../design/core/restLabel";
-import { clockOf, rowView } from "./accountRows";
+import { clockOf, offersKeepGoing, rowView } from "./accountRows";
 import { CostLimitRow } from "./CostLimitRow";
 import { DeviceSignInGroups } from "./DeviceSignIns";
 import { FIRSTMATE_SELECT_STYLE, FirstmateModelRow, SettingRow } from "./GeneralTab";
@@ -258,12 +257,6 @@ export function keepGoingItem(
     ...(off ? { disabled: true } : {}),
     onSelect,
   };
-}
-
-/** Whether this account's provider sells credits past its allowance. */
-export function offersKeepGoing(account: AccountView): boolean {
-  const provider = allowanceProviderOf(account.providerId);
-  return provider !== undefined && CREDITS_SWITCH_PROVIDERS.includes(provider);
 }
 
 export function AccountRow({
@@ -1144,7 +1137,20 @@ export function SubscriptionsTab() {
             onSignIn={row.onSignIn}
             onShowModels={() => {}}
             onResetSlots={() => {}}
-            menu={row.menu}
+            menu={
+              row.keepGoing
+                ? [
+                    {
+                      ...keepGoingItem(row.account, row.quotaRow, row.keepGoing.onSelect),
+                      ...(row.keepGoing.updateNote
+                        ? { detail: row.keepGoing.updateNote, disabled: true }
+                        : {}),
+                    },
+                    { separator: true },
+                    ...row.menu,
+                  ]
+                : row.menu
+            }
             place={row.place}
           />
         )}

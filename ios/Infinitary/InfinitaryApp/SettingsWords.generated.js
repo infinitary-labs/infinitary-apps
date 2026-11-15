@@ -13585,6 +13585,15 @@ ${events}` : prompt;
     },
     "inf:sign-ins:custom-recheck": {
       request: tuple([string().min(1).max(256)])
+    },
+    /**
+     * Turns one of that computer's own accounts' Keep going on credits switch
+     * on or off (docs/quota.md), saved only there, from the contract change
+     * `computer-keep-going`. Only the account id and the switch cross; its
+     * rows reach the home as that computer's sign-ins, whole.
+     */
+    "inf:sign-ins:keep-going": {
+      request: tuple([object({ accountId: string().min(1).max(256), on: boolean() })])
     }
   });
   ({
@@ -13636,6 +13645,11 @@ ${events}` : prompt;
      * means it does not, so the chip stays disabled.
      */
     customApi: boolean().optional(),
+    /**
+     * It takes Keep going on credits for its own accounts (the contract change
+     * `computer-keep-going`). Absent means it does not, so the item stays dim.
+     */
+    keepGoing: boolean().optional(),
     /** Active sign-ins and failures awaiting Done; absent on an older home. */
     flows: array(deviceSignInFlowSchema).optional()
   });

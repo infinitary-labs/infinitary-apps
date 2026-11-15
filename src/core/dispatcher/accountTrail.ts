@@ -13,9 +13,15 @@ export function accountTrail(
   args: readonly unknown[],
   before: AccountView[],
   after: AccountView[],
+  /**
+   * Where the account is, for one on a computer that runs work ("on Mac
+   * mini"), whose own accounts `before` and `after` then are.
+   */
+  where?: string,
 ): { value: Record<string, unknown>; step?: SettingStep } {
   const account = before.find((a) => a.id === args[0]);
-  const target = String(args[0]);
+  // A computer's account is named by its key, so its run is never this Mac's.
+  const target = typeof args[2] === "string" ? `${args[0]}@${args[2]}` : String(args[0]);
   if (name === "account-prefer") {
     // Which account a provider prefers, by id: the state a run of prefers settles.
     const preferred = (list: AccountView[]) =>
@@ -25,8 +31,9 @@ export function accountTrail(
       step: { target, from: preferred(before), to: preferred(after) },
     };
   }
+  const named = account?.label ?? args[0];
   const value = {
-    accountId: account?.label ?? args[0],
+    accountId: where ? `${named} ${where}` : named,
     label: args[1],
     paused: !args[1],
     on: args[1],

@@ -384,6 +384,7 @@
   "settingsDevicesSignInsEnterCode": "ここのブラウザでリンクを開き、このコードを入力してください。サインインは {who} が自分で完了します。",
   "settingsDevicesSignInsFailed": "{who} は {provider} にサインインできませんでした。",
   "settingsDevicesSignInsGoesOnce": "{who} に一度だけ送られます。{home} にはコピーが残りません。",
+  "settingsDevicesSignInsKeepGoingUpdate": "先にそちらの Infinitary をアップデートしてください",
   "settingsDevicesSignInsKeyFor": "{who} のキー",
   "settingsDevicesSignInsNone": "サインインはまだありません。",
   "settingsDevicesSignInsOpenLink": "リンクを開く",

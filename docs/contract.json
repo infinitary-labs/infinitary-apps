@@ -7679,6 +7679,9 @@
             "customApi": {
               "type": "boolean"
             },
+            "keepGoing": {
+              "type": "boolean"
+            },
             "flows": {
               "type": "array",
               "items": {
@@ -19122,6 +19125,11 @@
           },
           {
             "type": "boolean"
+          },
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
           }
         ],
         "minItems": 2,
@@ -80565,6 +80573,9 @@
             "customApi": {
               "type": "boolean"
             },
+            "keepGoing": {
+              "type": "boolean"
+            },
             "flows": {
               "type": "array",
               "items": {
@@ -87417,6 +87428,45 @@
             "allowStorageDefault",
             "certificates",
             "models"
+          ]
+        }
+      },
+      "inf:sign-ins:keep-going": {
+        "effect": "change",
+        "request": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "object",
+              "properties": {
+                "accountId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "on": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "accountId",
+                "on"
+              ]
+            }
+          ],
+          "minItems": 1,
+          "items": false
+        },
+        "response": {
+          "type": "object",
+          "properties": {
+            "ok": {
+              "type": "boolean",
+              "const": true
+            }
+          },
+          "required": [
+            "ok"
           ]
         }
       }

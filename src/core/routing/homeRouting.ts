@@ -54,7 +54,7 @@ export function startHomeRouting(options: {
   ledger: DecisionStore;
   ticker: Ticker;
   /** A committed crew decision dropped a level or waits on these providers' spent allowance. */
-  onSpentAt?: (piProviders: string[]) => void;
+  onSpentAt?: (piProviders: string[], deviceId?: string) => void;
 }): HomeRouting {
   const { standIns, settings, vault, served, auth, quota, placedWork, ledger, ticker } = options;
   // The routing pool: account-served models plus base-runtime custom

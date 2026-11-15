@@ -332,6 +332,17 @@ export const signInOrders = {
     request: z.tuple([z.string().min(1).max(256)]),
     response: customApiViewSchema,
   },
+  /**
+   * Turns one of that computer's own accounts' Keep going on credits switch
+   * on or off (docs/quota.md), saved only there, from the contract change
+   * `computer-keep-going`. Only the account id and the switch cross; its
+   * rows reach the home as that computer's sign-ins, whole.
+   */
+  "inf:sign-ins:keep-going": {
+    effect: "change",
+    request: z.tuple([z.object({ accountId: z.string().min(1).max(256), on: z.boolean() })]),
+    response: okSchema,
+  },
 } as const satisfies Record<
   `inf:sign-ins:${string}`,
   { effect: "read" | "change"; request: z.ZodType; response: z.ZodType }
@@ -421,6 +432,11 @@ export const deviceSignInsSchema = z.object({
    * means it does not, so the chip stays disabled.
    */
   customApi: z.boolean().optional(),
+  /**
+   * It takes Keep going on credits for its own accounts (the contract change
+   * `computer-keep-going`). Absent means it does not, so the item stays dim.
+   */
+  keepGoing: z.boolean().optional(),
   /** Active sign-ins and failures awaiting Done; absent on an older home. */
   flows: z.array(deviceSignInFlowSchema).optional(),
 });

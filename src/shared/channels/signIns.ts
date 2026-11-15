@@ -195,11 +195,13 @@ export const signInChannels = {
     response: okSchema,
   },
   // Keep going on credits (docs/quota.md): the account's switch, on or off.
+  // A third element names the computer that runs work whose own account it
+  // is (`computer-keep-going`), where the switch is saved.
   "inf:accounts:keep-going": {
     effect: "change",
     surface: "core",
     reach: "views",
-    request: z.tuple([z.string(), z.boolean()]),
+    request: z.tuple([z.string(), z.boolean(), z.string().min(1).max(64).optional()]),
     response: okSchema,
   },
   "inf:accounts:pin": {

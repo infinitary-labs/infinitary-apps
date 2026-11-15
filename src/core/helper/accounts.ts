@@ -19,6 +19,7 @@ import { PiAccountBackend } from "../pi/piAccountBackend";
 import { PiAuthService } from "../pi/piAuth";
 import { type ManagedAuth, quotaEntryForPiProvider } from "../quota/auth";
 import { managedFromClaudeStore } from "../quota/claudeAuthResolve";
+import { CreditsWatch, stampSnapshot } from "../quota/creditsSwitch";
 import { createQuotaFetcher } from "../quota/fetchQuota";
 import { createQuotaHttp, type QuotaHttp } from "../quota/http";
 import { claudeAccessOutcome, type ProviderOutcome } from "../quota/outcome";
@@ -62,7 +63,10 @@ export type ComputerAccounts = {
   speedExpiresAt?: (accountId: string, id: string) => number | undefined;
   /** What this computer can sign in to, with why it cannot (Claude Code not installed). */
   providers: () => ProviderView[];
-  /** The newest reading of every account's allowance; null before the first. */
+  /**
+   * The newest reading of every account's allowance, each row with its Keep
+   * going on credits switch laid over it; null before the first.
+   */
   allowance: () => QuotaSnapshotView | null;
   /** Reads the allowance now; one read at a time. */
   readAllowance: (reason: string) => Promise<QuotaSnapshotView | null>;
@@ -251,6 +255,12 @@ export async function startComputerAccounts(
     });
   };
   let latest: QuotaSnapshotView | null = null;
+  // Keep going on credits (docs/quota.md), saved on this computer's own
+  // accounts: laid over each reading as the home lays its own, so the home
+  // routes a spent account here on credits while the switch serves.
+  const stamped = (): QuotaSnapshotView | null =>
+    latest && stampSnapshot(latest, (accountId) => vault.servesOnCredits(accountId));
+  const creditsWatch = new CreditsWatch((accountId) => vault.keepsGoingOnCredits(accountId));
   let reading: Promise<QuotaSnapshotView | null> | undefined;
   const readAllowance = (reason: string): Promise<QuotaSnapshotView | null> => {
     for (const account of vault.list()) {
@@ -261,12 +271,17 @@ export async function startComputerAccounts(
     reading ??= fetch(reason)
       .then(({ snapshot }) => {
         latest = mergeStaleProviders(snapshot, latest ?? undefined, now());
-        options.onAllowance(latest);
-        return latest;
+        // Credits that answer again (a top-up) end a refusal held here; the
+        // home says the feed's lines from the rows it hears.
+        for (const accountId of creditsWatch.observe(latest, now()).available)
+          vault.noteCreditsAvailable(accountId);
+        const view = stamped() ?? latest;
+        options.onAllowance(view);
+        return view;
       })
       .catch((error: unknown) => {
         options.log?.(`the allowance could not be read: ${messageOf(error)}`);
-        return latest;
+        return stamped();
       })
       .finally(() => {
         reading = undefined;
@@ -305,7 +320,7 @@ export async function startComputerAccounts(
     speedCapabilities: (accountId, id) => served.speeds(accountId, id),
     speedExpiresAt: (accountId, id) => served.speedExpiresAt(accountId, id),
     providers,
-    allowance: () => latest,
+    allowance: stamped,
     readAllowance,
     close: () => {
       for (const timer of timers) clearInterval(timer);

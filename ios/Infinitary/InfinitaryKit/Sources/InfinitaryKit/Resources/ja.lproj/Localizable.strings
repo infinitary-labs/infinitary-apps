@@ -2185,6 +2185,7 @@
 "settingsDevicesSignInsEnterCode" = "ここのブラウザでリンクを開き、このコードを入力してください。サインインは %1$@ が自分で完了します。";
 "settingsDevicesSignInsFailed" = "%2$@ は %1$@ にサインインできませんでした。";
 "settingsDevicesSignInsGoesOnce" = "%2$@ に一度だけ送られます。%1$@ にはコピーが残りません。";
+"settingsDevicesSignInsKeepGoingUpdate" = "先にそちらの Infinitary をアップデートしてください";
 "settingsDevicesSignInsKeyFor" = "%1$@ のキー";
 "settingsDevicesSignInsNone" = "サインインはまだありません。";
 "settingsDevicesSignInsOpenLink" = "リンクを開く";

@@ -695,8 +695,10 @@ const actionLines = {
         providers: device.signIns?.providers.map((provider) => provider.id) ?? [],
         signedIn:
           device.signIns?.accounts.map((account) => ({
+            id: account.id,
             provider: account.providerId,
             label: account.label,
+            keepGoingOnCredits: account.keepGoingOnCredits === true,
           })) ?? [],
       })),
     }),
@@ -1407,9 +1409,13 @@ const actionLines = {
     tier: "own-words",
     change: "inf:accounts:keep-going",
     current: "inf:accounts:list",
-    value: z.strictObject({ accountId: z.string().min(1), on: z.boolean() }),
-    line: "Turn an account's Keep going on credits on or off by id, only on typed captain words: once its allowance is spent it keeps serving on credits set up with its provider, after every included allowance. Claude and Codex only.",
-    toRequest: (v) => [v.accountId, v.on],
+    value: z.strictObject({
+      accountId: z.string().min(1),
+      on: z.boolean(),
+      deviceId: z.string().min(1).max(64).optional(),
+    }),
+    line: "Turn an account's Keep going on credits on or off by id, only on typed captain words: once its allowance is spent it keeps serving on credits set up with its provider, after every included allowance. Claude and Codex only. For an account on a computer that runs work, also pass its deviceId; device-sign-in's state lists its accounts by id.",
+    toRequest: (v) => (v.deviceId ? [v.accountId, v.on, v.deviceId] : [v.accountId, v.on]),
     readValue: (c) => ({
       accounts: (c as AccountView[]).map((a) => ({
         id: a.id,

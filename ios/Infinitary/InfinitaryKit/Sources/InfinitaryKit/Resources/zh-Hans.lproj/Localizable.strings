@@ -2185,6 +2185,7 @@
 "settingsDevicesSignInsEnterCode" = "在这里的浏览器中打开链接并输入此代码。%1$@ 会自行完成登录。";
 "settingsDevicesSignInsFailed" = "%2$@ 无法登录 %1$@。";
 "settingsDevicesSignInsGoesOnce" = "它只会发送给 %2$@ 一次。%1$@ 不保留副本。";
+"settingsDevicesSignInsKeepGoingUpdate" = "请先在那里更新 Infinitary";
 "settingsDevicesSignInsKeyFor" = "%1$@ 的密钥";
 "settingsDevicesSignInsNone" = "尚无登录。";
 "settingsDevicesSignInsOpenLink" = "打开链接";

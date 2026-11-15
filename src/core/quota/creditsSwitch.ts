@@ -57,12 +57,21 @@ function nameOf(row: QuotaProviderView): string {
 export class CreditsWatch {
   private readonly seen = new Map<string, Seen>();
 
-  /** `switchOn` reads the account's switch itself, held by a refusal or not. */
-  constructor(private readonly switchOn: (accountId: string) => boolean) {}
+  /**
+   * `switchOn` reads the account's switch itself, held by a refusal or not;
+   * `where` says which computer that runs work the accounts are on ("on
+   * Mac mini"), absent for this Mac's own.
+   */
+  constructor(
+    private readonly switchOn: (accountId: string) => boolean,
+    private readonly where?: string,
+  ) {}
 
   observe(snapshot: QuotaSnapshotView, now: number): CreditsChange {
     const lines: string[] = [];
     const available: string[] = [];
+    const named = (row: QuotaProviderView) =>
+      this.where ? `${nameOf(row)} ${this.where}` : nameOf(row);
     for (const row of snapshot.providers) {
       const accountId = row.accountId;
       if (!accountId) continue;
@@ -75,14 +84,14 @@ export class CreditsWatch {
       if (spending && !before.spending) {
         const reset = limitingResetOf(row, now);
         lines.push(
-          `${nameOf(row)} is spending credits now: its allowance is used up${
+          `${named(row)} is spending credits now: its allowance is used up${
             reset !== undefined ? ` until ${clockTime(reset)}` : ""
           }.`,
         );
       }
       if (state === "spent" && before.state !== "spent") {
         lines.push(
-          `${nameOf(row)} has used up its credits. Work on it waits until its allowance resets.`,
+          `${named(row)} has used up its credits. Work on it waits until its allowance resets.`,
         );
       }
       if (state === "available" && (before.state === "spent" || before.state === "off")) {

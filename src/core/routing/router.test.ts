@@ -738,6 +738,40 @@ describe("Router - reviewer placement (R9, delivery rigor phase 3)", () => {
     });
   });
 
+  // INF-4275: a computer's spent allowance offers its own run-out card, naming that computer.
+  it("names the spent providers of a computer's own sign-ins, and that computer, once the decision is committed", () => {
+    const db = openInMemoryDatabase();
+    const spent: [string[], string | undefined][] = [];
+    const router = new Router({
+      decisions: new DecisionStore(db),
+      settings: new SettingsStore(db),
+      quota: fakeQuota({
+        generatedAt: "now",
+        models: [
+          { provider: "codex", id: "gpt-5.5", label: "gpt-5.5", effectivePercentRemaining: 90 },
+        ],
+      }),
+      availableModels: () => [{ provider: "openai-codex", id: "gpt-5.5" }],
+      onSpentAt: (providers, deviceId) => spent.push([providers, deviceId]),
+    });
+    // The computer's own Codex account has used up its allowance there.
+    const pool = {
+      available: [{ provider: "openai-codex", id: "gpt-5.5" }],
+      catalog: [
+        { provider: "codex", id: "gpt-5.5", label: "gpt-5.5", effectivePercentRemaining: 0 },
+      ],
+      note: "Mac mini's own sign-ins (openai-codex): 1 model",
+      deviceId: "mini",
+    };
+    const prepared = { pool, placed: { work: [], samples: [], charges: {} } };
+    // The first mate asked for medium, the only level that model sits at.
+    const shape: WorkShape = { ...UNCLEAR, intelligence: "medium" };
+    expect(router.preview("add a settings row", shape, prepared)?.result.choice).toBeUndefined();
+    expect(spent).toEqual([]);
+    router.decide("placed", "add a settings row", shape, prepared);
+    expect(spent).toEqual([[["openai-codex"], "mini"]]);
+  });
+
   // INF-443 piece 2: the captain asked why so many tasks went to one
   // provider whose allowance was tight; the record must show every
   // candidate's score and reading, the 0% ones the router skips included.

@@ -74,6 +74,59 @@ describe("a computer's sign-ins view", () => {
       signIns.dispose();
     }
   });
+  // INF-4275: an older computer cannot save Keep going on credits, so the home never sends it.
+  it("sends Keep going on credits only to a computer that lists the change, for an account it has", async () => {
+    const changes: string[] = [];
+    const ask = vi.fn(async (_deviceId: string, channel: string) =>
+      channel === "inf:sign-ins:list"
+        ? {
+            providers: [],
+            accounts: [
+              {
+                id: "acct-codex",
+                providerId: "openai-codex",
+                kind: "subscription_oauth",
+                label: "Work",
+                enabled: true,
+                connected: true,
+                pinned: false,
+                createdAt: 1,
+              },
+            ],
+            quota: null,
+          }
+        : { ok: true },
+    );
+    const signIns = new DeviceSignIns({
+      devices: () => [MINI],
+      work: {
+        ask,
+        onWorkDevice: () => () => {},
+        inReach: () => true,
+        version: () => ({ contract: PROTOCOL_VERSION, takesWork: true, changes: [...changes] }),
+      },
+      emit: () => {},
+      broadcastEvent: () => {},
+    });
+    try {
+      await signIns.refresh(MINI.id);
+      expect(signIns.view()[0]?.keepGoing).toBe(false);
+      await expect(signIns.keepGoing(MINI.id, "acct-codex", true)).rejects.toThrow(
+        "Update Infinitary on Mac mini to keep going on credits there.",
+      );
+      changes.push("computer-keep-going");
+      expect(signIns.view()[0]?.keepGoing).toBe(true);
+      await expect(signIns.keepGoing(MINI.id, "acct-elsewhere", true)).rejects.toThrow(
+        "Mac mini has no account with that id.",
+      );
+      await expect(signIns.keepGoing(MINI.id, "acct-codex", true)).resolves.toEqual({ ok: true });
+      expect(ask.mock.calls.filter(([, channel]) => channel === "inf:sign-ins:keep-going")).toEqual(
+        [[MINI.id, "inf:sign-ins:keep-going", [{ accountId: "acct-codex", on: true }]]],
+      );
+    } finally {
+      signIns.dispose();
+    }
+  });
   // INF-2186: account posture narrowed the same remote model list for every task row.
   it("narrows each computer's sign-ins once per projection and drops the snapshot after a new answer", () => {
     const model = { provider: "openai-codex", id: "gpt-6.1-sol" };

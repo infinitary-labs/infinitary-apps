@@ -262,9 +262,14 @@ function firstmatePauseActions(input: FirstmatePauseCard): CardAction[] {
       ];
 }
 
-/** The crew's run-out card for one account (docs/quota.md "Keep going on credits"). */
-export function creditsOfferCardId(accountId: string): string {
-  return `card-credits-offer-${accountId}`;
+/**
+ * The crew's run-out card for one account (docs/quota.md "Keep going on
+ * credits"); `deviceId` names the computer that runs work it is on.
+ */
+export function creditsOfferCardId(accountId: string, deviceId?: string): string {
+  return deviceId
+    ? `card-credits-offer-${deviceId}-${accountId}`
+    : `card-credits-offer-${accountId}`;
 }
 
 /**
@@ -281,13 +286,27 @@ export function creditsOfferCard(input: {
   /** When its allowance resets, in clock time, when known. */
   resetsAt?: string;
   credits: { usedPercent?: number; balance?: string };
+  /**
+   * The computer that runs work the account is on, by id and as words say
+   * where ("on Mac mini"): its switch is saved there, so the button sends
+   * the account's key there (`accountKey`, src/core/placed/placedAccounts.ts).
+   */
+  computer?: { deviceId: string; where: string };
 }): Omit<Card, "author" | "priority" | "status" | "createdAt"> {
+  const { computer } = input;
+  const until = input.resetsAt ? ` until ${input.resetsAt}` : "";
   return {
-    id: creditsOfferCardId(input.accountId),
-    title: `${input.name} has used up its allowance${input.resetsAt ? ` until ${input.resetsAt}` : ""}`,
+    id: creditsOfferCardId(input.accountId, computer?.deviceId),
+    title: computer
+      ? `${input.name} ${computer.where} has used up its allowance${until}`
+      : `${input.name} has used up its allowance${until}`,
     meta: "Crew work",
-    body: `${creditsOfferSentence(input.credits)} Crew work drops to a weaker model or waits until then unless you keep going on credits. Your first mate and crew would then spend them only after every included allowance.`,
-    actions: [keepGoingAction(input.accountId, true)],
+    body: computer
+      ? `${creditsOfferSentence(input.credits)} Crew work ${computer.where} drops to a weaker model or waits until then unless you keep going on credits. Crew work there would then spend them only after every included allowance.`
+      : `${creditsOfferSentence(input.credits)} Crew work drops to a weaker model or waits until then unless you keep going on credits. Your first mate and crew would then spend them only after every included allowance.`,
+    actions: [
+      keepGoingAction(computer ? `${input.accountId}@${computer.deviceId}` : input.accountId, true),
+    ],
   };
 }
 

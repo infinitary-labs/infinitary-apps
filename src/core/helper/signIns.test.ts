@@ -223,10 +223,14 @@ function standInSavedPasswords(options: { allows: boolean }) {
 function standInAllowance(codexModels?: readonly string[]): {
   http: QuotaHttp;
   asked: { url: string; auth?: string }[];
+  /** What Codex's usage says from the next read on: how much is used, and its credits. */
+  codex: { usedPercent: number; credits?: Record<string, unknown> };
 } {
   const asked: { url: string; auth?: string }[] = [];
+  const codex: { usedPercent: number; credits?: Record<string, unknown> } = { usedPercent: 12 };
   return {
     asked,
+    codex,
     http: async (url, init) => {
       asked.push({
         url,
@@ -242,11 +246,12 @@ function standInAllowance(codexModels?: readonly string[]): {
             plan_type: "plus",
             rate_limit: {
               primary_window: {
-                used_percent: 12,
+                used_percent: codex.usedPercent,
                 limit_window_seconds: 18_000,
                 reset_after_seconds: 3_600,
               },
             },
+            ...(codex.credits ? { credits: codex.credits } : {}),
           },
         };
       // Claude's, for the computer's own login alone.
@@ -723,6 +728,67 @@ describe("a computer that runs work signs in to its own subscriptions from its h
     expect(binding).toMatchObject({ backend: "pi", accountId: account.id });
     await expect(bindHere({ backend: "pi", provider: "xai" }, accounts)).rejects.toThrow(
       noSignInHere("xai"),
+    );
+  });
+
+  // INF-4275: a computer's own account keeps going on credits, set from its home.
+  it("keeps a computer's own Codex account going on credits from home, saved there, so its spent allowance routes on credits", async () => {
+    standInProviders();
+    const world = await joined();
+    // Its allowance is used up, and ChatGPT says the account has credits.
+    world.allowance.codex.usedPercent = 100;
+    world.allowance.codex.credits = { has_credits: true, balance: "12.50" };
+    await signInToCodex(world);
+    const account = await vi.waitFor(() => {
+      const found = world
+        .group()
+        ?.signIns?.accounts.find((row) => row.providerId === "openai-codex");
+      if (!found) throw new Error("not yet");
+      return found;
+    });
+    const row = () =>
+      world.group()?.signIns?.quota?.providers.find((entry) => entry.accountId === account.id);
+    await expect.poll(() => row()?.credits?.state).toBe("available");
+    const onCredits = () => {
+      const signIns = world.group()?.signIns ?? null;
+      const models = (signIns?.served ?? []).flatMap((served) =>
+        served.models.map((model) => ({ ...model, name: model.name ?? model.id })),
+      );
+      return actualComputerPool("Mac mini", signIns, models, Date.now())?.catalog.some(
+        (model) => model.onCredits === true,
+      );
+    };
+    // A computer on this build takes the switch; with it off, nothing serves on credits.
+    expect(world.group()?.keepGoing).toBe(true);
+    expect(onCredits()).toBe(false);
+    // Codex refused a turn there: the spent allowance is held until its reset.
+    const { accounts } = await world.held();
+    accounts.vault.noteCutOff(account.id, {
+      class: "no_headroom",
+      resetsAt: Date.now() + 3_600_000,
+    });
+
+    await world.signIns.keepGoing(world.deviceId, account.id, true);
+    // Its credits answer, so the switch ends that hold there at once.
+    expect(accounts.vault.cutOff(account.id)).toBeUndefined();
+    expect(world.group()?.signIns?.accounts.find((entry) => entry.id === account.id)).toMatchObject(
+      { keepGoingOnCredits: true },
+    );
+    expect(row()?.keepGoingOnCredits).toBe(true);
+    expect(onCredits()).toBe(true);
+    // Saved on the computer's own account, and nowhere at home.
+    expect(
+      savedText(world.dataDir).some(({ text }) => text.includes('"keepGoingOnCredits": true')),
+    ).toBe(true);
+    expect(
+      savedText(world.homeDir).filter(({ text }) => text.includes("keepGoingOnCredits")),
+    ).toEqual([]);
+
+    await world.signIns.keepGoing(world.deviceId, account.id, false);
+    expect(row()?.keepGoingOnCredits).toBeUndefined();
+    expect(onCredits()).toBe(false);
+    await expect(world.signIns.keepGoing(world.deviceId, "acct_elsewhere", true)).rejects.toThrow(
+      "Builder has no account with that id.",
     );
   });
 

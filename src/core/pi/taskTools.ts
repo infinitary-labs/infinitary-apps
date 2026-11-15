@@ -59,6 +59,8 @@ export type TaskToolsDelegate = {
     /** A task ref, or the empty string to clear the parent. */
     parent?: string;
     project?: string;
+    /** With project: the repository it moves into, when the project holds several. */
+    repository?: string;
     startPolicy?: TaskStartPolicy;
     /** Why started work goes back to the backlog (start_policy on-request, INF-2062). */
     reason?: string;
@@ -302,6 +304,12 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       project: Type.Optional(
         Type.String({
           description: "Move to this project (its key: backlog, or tasks with projects)",
+        }),
+      ),
+      repository: Type.Optional(
+        Type.String({
+          description:
+            "With project: the repository it moves into, by name, when that project holds several",
         }),
       ),
       basis: Type.Optional(
@@ -617,6 +625,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         ...(params.priority !== undefined ? { priority: params.priority } : {}),
         ...(params.parent !== undefined ? { parent: params.parent } : {}),
         ...(params.project !== undefined ? { project: params.project } : {}),
+        ...(params.repository !== undefined ? { repository: params.repository } : {}),
         ...(params.start_policy ? { startPolicy: params.start_policy } : {}),
         ...(params.start_policy && params.reason?.trim() ? { reason: params.reason.trim() } : {}),
         ...(params.captain_stop ? { captainStop: true } : {}),

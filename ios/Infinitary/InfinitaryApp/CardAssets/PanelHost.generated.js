@@ -72715,6 +72715,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     why: string().min(1).max(4e3).optional(),
     /** The project a new step is filed in, by key; the origin's when absent. */
     project: taskRef.optional(),
+    /**
+     * The repository a new step works in, by name (INF-4220): needed when the
+     * step's project is not the origin's and holds several; in the origin's
+     * project, the origin's repository when absent.
+     */
+    repository: taskRef.optional(),
     /** Tasks whose merge the step waits for, by key: each a `blocks` link into it. */
     blockedBy: array(taskRef).optional(),
     /**
@@ -81667,20 +81673,27 @@ ${FRAME_QUESTION_SCRIPT}
     toId: string(),
     type: taskLinkTypeSchema
   });
+  const projectRepoViewSchema = object({
+    name: string(),
+    delivery: repoDeliverySchema,
+    autonomy: boolean(),
+    /**
+     * The repository's kind: `personal` for the app's own workspace
+     * (major 15). An older home sends none, read as `project`.
+     */
+    kind: repoKindSchema.optional()
+  });
   const projectViewSchema = object({
     id: string(),
     key: string(),
     name: string(),
-    repo: object({
-      name: string(),
-      delivery: repoDeliverySchema,
-      autonomy: boolean(),
-      /**
-       * The repository's kind: `personal` for the app's own workspace
-       * (major 15). An older home sends none, read as `project`.
-       */
-      kind: repoKindSchema.optional()
-    }).nullable(),
+    /** The project's first repository, for a reader of one; null for Scratch. */
+    repo: projectRepoViewSchema.nullable(),
+    /**
+     * Every repository the project holds, first first (INF-4220); an older
+     * home sends none, read as `repo` alone.
+     */
+    repos: array(projectRepoViewSchema).optional(),
     archived: boolean(),
     counts: object({
       /** Broader durable attention, including holds and dead dependencies. */
@@ -82694,7 +82707,7 @@ ${FRAME_QUESTION_SCRIPT}
         pushes: ["inf:tasks", "inf:tasks:delta"],
         events: (event) => event.type === "repo_setup" || event.type === "repo_configured" || event.type === "repo_runs_on" || event.type === "repo_batch" || event.type === "repo_unregistered"
       },
-      description: "Scratch plus one project per managed repo, with live counts."
+      description: "Scratch plus every project the managed repositories belong to, with live counts."
     }),
     // The person's open proposed changes where their projects live (git
     // integration PR 1.2), read through the app's own sign-in: one request,

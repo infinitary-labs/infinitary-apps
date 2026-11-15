@@ -67,6 +67,12 @@ export type KnowledgeDeps = {
   projects: {
     get: (id: string) => KnowledgeProject | undefined;
     list: () => KnowledgeProject[];
+    /**
+     * Every repository in the same project as this one, itself included
+     * (INF-4220): a direction saved for any of them reaches a crewmate in
+     * each. Absent, a repository is its own project.
+     */
+    together?: (id: string) => string[];
   };
   /** Task reports a finding may cite. */
   tasks?: {

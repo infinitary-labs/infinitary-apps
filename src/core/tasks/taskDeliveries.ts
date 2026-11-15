@@ -934,6 +934,8 @@ export class TaskDeliveries {
         if (!project || project.archivedAt !== null)
           return `${at} names no project "${step.project}".`;
       }
+      const placing = this.stepRepository(sourceId, step, at);
+      if ("refused" in placing) return placing.refused;
       for (const ref of step.blockedBy ?? []) {
         const blocker = this.tasks.resolve(ref);
         if (!blocker) return `${at} waits for no task "${ref}".`;
@@ -946,6 +948,51 @@ export class TaskDeliveries {
       if (holding) return holding;
     }
     return undefined;
+  }
+
+  /**
+   * Where a new step works (INF-4220): its project's repository it names,
+   * else the origin's in the origin's project, else the step's project's
+   * only one. A step filed in another project of several repositories must
+   * name one, and is refused with their names, so nothing is guessed.
+   */
+  private stepRepository(
+    sourceId: string,
+    step: AfterMergeStep,
+    at: string,
+  ): { projectId: string; repoId: string | null } | { refused: string } {
+    const source = this.tasks.get(sourceId);
+    const named = step.project
+      ? (this.tasks.projects.byKey(step.project) ?? this.tasks.projects.get(step.project))
+      : undefined;
+    const project =
+      named && named.archivedAt === null
+        ? named
+        : source && this.tasks.projects.get(source.projectId);
+    if (!project) return { projectId: source?.projectId ?? "", repoId: source?.repoId ?? null };
+    const repositories = this.tasks.projects.repositoriesOf(project.id);
+    const names = repositories.map((repository) => repository.name).join(", ");
+    if (step.repository) {
+      const wanted = step.repository.trim().toLowerCase();
+      const found = repositories.find(
+        (repository) =>
+          repository.id === step.repository?.trim() || repository.name.toLowerCase() === wanted,
+      );
+      return found
+        ? { projectId: project.id, repoId: found.id }
+        : {
+            refused: repositories.length
+              ? `${at} names no repository "${step.repository}" in ${project.name}; its repositories are ${names}.`
+              : `${at} names a repository, and ${project.name} holds none.`,
+          };
+    }
+    if (source && project.id === source.projectId)
+      return { projectId: project.id, repoId: source.repoId };
+    if (repositories.length > 1)
+      return {
+        refused: `${at} is filed in ${project.name}, which holds several repositories (${names}): name the one it works in with repository.`,
+      };
+    return { projectId: project.id, repoId: repositories[0]?.id ?? null };
   }
 
   /**
@@ -1122,10 +1169,9 @@ export class TaskDeliveries {
       const existing = this.tasks.get(id);
       if (existing) return { key: keyOrId(existing), title: existing.title };
       const goal = (step.goal ?? "").trim();
-      const project = step.project
-        ? (this.tasks.projects.byKey(step.project) ?? this.tasks.projects.get(step.project))
-        : undefined;
-      const elsewhere = project && project.archivedAt === null && project.id !== source.projectId;
+      // Checked when the story was prepared; a repository removed since
+      // leaves the step in the origin's place.
+      const placed = this.stepRepository(sourceId, step, "");
       const record = this.tasks.create({
         id,
         kind: "work",
@@ -1143,8 +1189,7 @@ export class TaskDeliveries {
           },
           undefined,
         ),
-        repoId: elsewhere ? project.repoId : source.repoId,
-        projectId: elsewhere ? project.id : source.projectId,
+        ...("refused" in placed ? { repoId: source.repoId, projectId: source.projectId } : placed),
         startPolicy: "when-ready",
         actor: "host",
         createdAt: at,

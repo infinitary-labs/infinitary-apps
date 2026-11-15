@@ -4,7 +4,10 @@ A project binds work to its files and to its delivery rules, and a working copy 
 
 ## Intended use
 
-Register every repository the fleet works in as one project with a stable id, a task key, a workspace kind, where it lives (its approved hosting address and forge kind) and its standing delivery, autonomy and rigor.
+Register every repository the fleet works in with a stable id, a workspace kind, where it lives (its approved hosting address and forge kind) and its standing delivery, autonomy and rigor.
+Each repository belongs to one project, named by its `repos.project_id`, which owns the task key; a project may hold several repositories, and each task works in exactly one of them.
+A new repository gets a project of its own unless it joins an existing one (`NewRepoRow.project`), and a project is archived, never deleted, when its last repository leaves.
+Read a project's repositories through `ProjectStore.repositoriesOf` and a repository's project through `ProjectStore.forRepo`; `projects.repo_id` only records the repository a project was made with.
 Give each task that changes code its own git worktree and branch, started from the default branch fetched at dispatch, so tasks never share a checkout.
 The personal workspace builds in place, with no worktree and no delivery; ordinary work explicitly declared `in_folder` also runs in its project's folder without a task working copy (`docs/task-record.md`).
 Ship a change through the project's posture: a pull or merge request through the forge seam, or a local land, and retire the working copy when the task closes.

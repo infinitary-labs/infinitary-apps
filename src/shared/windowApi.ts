@@ -595,7 +595,7 @@ export type FirstmateApi = {
     size: (taskId: string, size: TaskBrowserSize | null) => Promise<{ ok: true }>;
   };
   projects: {
-    /** Scratch plus one per managed repo, with live counts. */
+    /** Scratch plus every project the managed repositories belong to, with live counts. */
     list: () => Promise<ProjectView[]>;
   };
   quota: {

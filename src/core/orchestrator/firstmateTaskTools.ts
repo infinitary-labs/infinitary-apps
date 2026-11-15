@@ -161,6 +161,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
           const moves = {
             ...(input.correctRequiredAction ? { correctRequiredAction: true } : {}),
             ...(input.project !== undefined ? { project: input.project } : {}),
+            ...(input.repository !== undefined ? { repository: input.repository } : {}),
             ...(input.parent !== undefined ? { parent: input.parent } : {}),
           };
           // A program's bound is the captain's consent (INF-799): raised only on the captain's turn.

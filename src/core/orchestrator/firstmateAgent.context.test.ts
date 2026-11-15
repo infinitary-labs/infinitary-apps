@@ -164,8 +164,10 @@ describe("INF-1117: scope snapshots follow changes and context lifetime", () => 
   });
 
   it("serves all project scopes once, then after edits, clearing, membership changes, compaction and reattachment", async () => {
-    const { agent, session, repos, events } = setup();
+    const { agent, session, repos, events, tasks } = setup();
     const { repo } = await repos.setup({ kind: "adopt", path: process.cwd() });
+    // The project each repository belongs to, by its key (INF-4220).
+    const project = tasks.projects.forRepo(repo.id)?.key;
     const scope = "Tools and dashboards for our astronomy club.";
     repos.configure(repo.id, { scope });
     const next = async () => {
@@ -177,7 +179,7 @@ describe("INF-1117: scope snapshots follow changes and context lifetime", () => 
     };
     const snapshot = (value: string) => ({
       note: expect.any(String),
-      projects: [{ repo_id: repo.id, name: repo.name, scope: value }],
+      projects: [{ repo_id: repo.id, name: repo.name, project, scope: value }],
     });
     expect((await next()).project_scopes).toEqual(snapshot(scope));
     expect((await next()).project_scopes).toBeUndefined();

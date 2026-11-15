@@ -6,11 +6,13 @@ import {
   appliedVersions,
   columnNames,
   REVERSE_MIGRATION_64,
+  REVERSE_PROJECT_MEMBERSHIP,
   REVERSE_PROJECT_QUEUE,
   tmpUserData,
 } from "../../../tests/helpers/migrations";
 import { RepoRegistry } from "../workspace/repoRegistry";
-import { openDatabase, openInMemoryDatabase } from "./db";
+import { DATABASE_VERSION, openDatabase, openInMemoryDatabase } from "./db";
+import { ProjectStore } from "./projectStore";
 import { dropViews } from "./views";
 
 // The project migrations: scope, standing rigor, workspace kind, where a project lives and where
@@ -241,5 +243,73 @@ describe("migration 64 (where a project's tasks run, multi-machine piece 11)", (
     expect(columnNames(reopened, "repos")).toEqual(columnsAt63);
     expect(reopened.prepare("SELECT COUNT(*) AS n FROM repos").get()).toEqual({ n: 1 });
     reopened.close();
+  });
+});
+
+// INF-4220 piece 1: each repository names the project it belongs to, filled from the project it was made with.
+describe("project membership (a project can hold several repositories)", () => {
+  it("fills each repository's project from a record with several projects, reads the same projects, and reverses", () => {
+    const dir = tmpUserData();
+    const before = openDatabase(dir, DATABASE_VERSION - 1);
+    const columnsBefore = columnNames(before, "repos");
+    const repo = before.prepare(
+      "INSERT INTO repos (id, path, name, setup_kind, origin, delivery, autonomy, added_at) VALUES (?, ?, ?, 'clone', ?, 'direct-pr', 0, ?)",
+    );
+    const project = before.prepare(
+      "INSERT INTO projects (id, key, name, kind, repo_id, next_seq, created_at, archived_at) VALUES (?, ?, ?, 'repo', ?, ?, 1, NULL)",
+    );
+    repo.run(
+      "r-app",
+      "/w/eddies-wallet",
+      "eddies-wallet",
+      "https://github.com/o/eddies-wallet.git",
+      1,
+    );
+    repo.run(
+      "r-api",
+      "/w/eddies-wallet-backend",
+      "eddies-wallet-backend",
+      "https://github.com/o/eddies-wallet-backend.git",
+      2,
+    );
+    project.run("proj-r-app", "EDW", "eddies-wallet", "r-app", 31);
+    project.run("proj-r-api", "EDWB", "eddies-wallet-backend", "r-api", 3);
+    before.close();
+
+    const upgraded = openDatabase(dir);
+    expect(appliedVersions(upgraded)).toEqual(ALL_VERSIONS);
+    expect(upgraded.prepare("SELECT id, project_id FROM repos ORDER BY added_at").all()).toEqual([
+      { id: "r-app", project_id: "proj-r-app" },
+      { id: "r-api", project_id: "proj-r-api" },
+    ]);
+    const projects = new ProjectStore(upgraded);
+    expect(projects.forRepo("r-app")?.key).toBe("EDW");
+    expect(projects.forRepo("r-api")?.key).toBe("EDWB");
+    expect(projects.repositoriesOf("proj-r-app")).toEqual([
+      { id: "r-app", name: "eddies-wallet", kind: "project" },
+    ]);
+    expect(projects.allocateSeq("proj-r-app")).toEqual({ seq: 31, key: "EDW-31" });
+
+    dropViews(upgraded);
+    upgraded.exec(REVERSE_PROJECT_MEMBERSHIP);
+    expect(columnNames(upgraded, "repos")).toEqual(columnsBefore);
+    expect(upgraded.prepare("SELECT COUNT(*) AS n FROM repos").get()).toEqual({ n: 2 });
+    upgraded.close();
+  });
+
+  // INF-4269's review: a project made for a repository saved without one
+  // must list that repository, as the app's own add does.
+  it("names the project made for a registered repository that names none", () => {
+    const db = openInMemoryDatabase();
+    db.prepare(
+      "INSERT INTO repos (id, path, name, setup_kind, origin, delivery, autonomy, added_at) VALUES ('r-app', '/w/eddies-wallet', 'eddies-wallet', 'clone', NULL, 'direct-pr', 0, 1)",
+    ).run();
+    const projects = new ProjectStore(db);
+    const project = projects.ensureForRepo({ id: "r-app", name: "eddies-wallet" });
+    expect(projects.forRepo("r-app")?.id).toBe(project.id);
+    expect(projects.repositoriesOf(project.id)).toEqual([
+      { id: "r-app", name: "eddies-wallet", kind: "project" },
+    ]);
+    db.close();
   });
 });

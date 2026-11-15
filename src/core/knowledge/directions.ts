@@ -192,11 +192,15 @@ export class StandingDirections {
   }
 
   private visible(actor: KnowledgeActor, row: DirectionRow): boolean {
-    // Global directions stay private to Firstmate. Crew receive their project's
-    // directions, including when a brief is carried to another computer.
+    // Global directions stay private to Firstmate. Crew receive their
+    // project's directions - those saved for any repository in it (INF-4220)
+    // - including when a brief is carried to another computer.
+    if (actor.kind === "firstmate") return true;
+    const projects = this.handle.deps.projects;
+    if (row.scope === PRIVATE_SCOPE || !projects.get(row.scope) || !projects.get(actor.repoId))
+      return false;
     return (
-      actor.kind === "firstmate" ||
-      (row.scope === actor.repoId && Boolean(this.handle.deps.projects.get(actor.repoId)))
+      row.scope === actor.repoId || Boolean(projects.together?.(actor.repoId).includes(row.scope))
     );
   }
 

@@ -66,6 +66,7 @@ Task tools offer no saving grant, and a task shape an older build saved with its
 Every reference stays inside its collection, and an unreadable entry is indistinguishable from a missing one.
 Project directions follow exact identifiers, never a matching project name.
 Only that project's directions reach a crewmate, including fresh, resumed and placed turns; private global directions stay with the first mate.
+A direction is saved for one repository, and reaches a crewmate in every repository of the same project (`KnowledgeDeps.projects.together`).
 A development practice the captain states for a project, such as how its tests, style, structure or commits work, is never a direction: it is how that project works, so the first mate has a crewmate write it into the project's own `AGENTS.md`, or the `CLAUDE.md` it keeps instead.
 How the first mate runs a project's work, such as who merges, when work starts and which models it uses, stays a direction.
 

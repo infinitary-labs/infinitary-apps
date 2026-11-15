@@ -70785,6 +70785,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     why: string().min(1).max(4e3).optional(),
     /** The project a new step is filed in, by key; the origin's when absent. */
     project: taskRef.optional(),
+    /**
+     * The repository a new step works in, by name (INF-4220): needed when the
+     * step's project is not the origin's and holds several; in the origin's
+     * project, the origin's repository when absent.
+     */
+    repository: taskRef.optional(),
     /** Tasks whose merge the step waits for, by key: each a `blocks` link into it. */
     blockedBy: array(taskRef).optional(),
     /**

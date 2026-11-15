@@ -40,7 +40,7 @@ import type { NamingRule } from "@shared/runbooks";
 import { PERSONAL_WORKSPACE_NAME } from "../paths";
 import { CostLimitStore } from "../storage/costLimitStore";
 import type { AppDatabase } from "../storage/db";
-import { ensureRepoProject, ProjectStore } from "../storage/projectStore";
+import { ensureRepoProject, joinableProject, ProjectStore } from "../storage/projectStore";
 import type { SettingsStore } from "../storage/settingsStore";
 import { prepared } from "../storage/statements";
 import { APP_GIT_IDENTITY, git, isGitRepo } from "./git";
@@ -168,6 +168,12 @@ export type NewRepoRow = {
   addedAt?: number | undefined;
   /** The task key chosen for it, checked free; derived from the name when absent. */
   projectKey?: string | undefined;
+  /**
+   * An existing project it joins instead of getting its own (INF-4220), by
+   * id; never together with `projectKey`. Scratch, the personal
+   * workspace's project and a removed project are refused.
+   */
+  project?: string | undefined;
 };
 
 /**
@@ -203,10 +209,18 @@ export function saveNewRepo(
           : null
         : spec.runsOn,
   };
+  if (spec.project !== undefined && spec.projectKey !== undefined)
+    throw new Error("A repository joins a project or gets a key of its own, never both.");
+  if (spec.project !== undefined && kind === "personal")
+    throw new Error("The personal workspace keeps a project of its own.");
   db.transaction(() => {
+    const projectId =
+      spec.project === undefined
+        ? ensureRepoProject(db, repo, Date.now(), spec.projectKey)
+        : joinableProject(db, spec.project);
     db.prepare(
-      `INSERT INTO repos (id, path, name, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, added_at, runs_on)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO repos (id, path, name, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, added_at, runs_on, project_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       repo.id,
       repo.path,
@@ -221,8 +235,8 @@ export function saveNewRepo(
       repo.rigor,
       spec.addedAt ?? Date.now(),
       repo.runsOn,
+      projectId,
     );
-    ensureRepoProject(db, repo, Date.now(), spec.projectKey);
   })();
   return repo;
 }
@@ -241,7 +255,7 @@ export class RepoRegistry {
     }
   }
 
-  /** One project per managed repo (task-system D5), born and archived with the row. */
+  /** Each managed repo's project (task-system D5, INF-4220): born with its first row, archived with its last. */
   private readonly projects: ProjectStore;
   private readonly costLimits: CostLimitStore;
   /** Who hears a project's Runs on change (`onRunsOn`). */
@@ -793,10 +807,12 @@ export class RepoRegistry {
       }
     }
     const drop = this.db.transaction(() => {
+      const project = this.projects.forRepo(id);
       this.db.prepare("DELETE FROM repos WHERE id = ?").run(id);
       this.projection?.delete(id);
-      // The project archives, never deletes: its closed tasks stay readable.
-      this.projects.archiveForRepo(id);
+      // The project archives once its last repository leaves, never deletes:
+      // its closed tasks stay readable.
+      if (project) this.projects.archiveIfEmpty(project.id);
     });
     drop();
   }

@@ -365,6 +365,10 @@ export async function createServices(
     projects: {
       get: (id) => repos.get(id),
       list: () => repos.list(),
+      together: (id) => {
+        const project = tasks.projects.forRepo(id);
+        return project ? tasks.projects.repositoriesOf(project.id).map((repo) => repo.id) : [id];
+      },
     },
     tasks: {
       resolve: (ref) => {

@@ -336,12 +336,68 @@ describe("the task graph (task-system P2)", () => {
       });
 
       // A removed project takes no task, and the refusal writes nothing.
-      tasks.projects.archiveForRepo("r2");
+      // Removed as unregister removes it: the project archives when its last repository leaves.
+      db.prepare("DELETE FROM repos WHERE id = 'r2'").run();
+      tasks.projects.archiveIfEmpty("proj-r2");
       const before = tasks.get("step");
       expect(() => tasks.updateFields("step", { project: "INF" }, "firstmate")).toThrow(
         `Refused: infinitary was removed, so ${before?.key} cannot move there.`,
       );
       expect(tasks.get("step")).toEqual(before);
+    });
+
+    // INF-4220 piece 1: a project may hold several repositories, and a task
+    // moved into one works in exactly one of them, never a guessed one.
+    it("a task moved into a project of several repositories keeps its own there, else takes the one named, else is refused with their names", () => {
+      const { db, tasks, work } = setup();
+      seedProject(db, {
+        id: "r-app",
+        name: "eddies-wallet",
+        path: "/fleet/eddies-wallet",
+        key: "EDW",
+        addedAt: 2,
+      });
+      seedProject(db, {
+        id: "r-api",
+        name: "eddies-wallet-backend",
+        path: "/fleet/eddies-wallet-backend",
+        project: "proj-r-app",
+        addedAt: 3,
+      });
+      const where = (id: string) => [tasks.get(id)?.key, tasks.get(id)?.repoId];
+
+      // Its own repository, when the project holds it.
+      work("own", { repoId: "r-api" });
+      tasks.updateFields("own", { project: "SCR" }, "firstmate");
+      tasks.updateFields("own", { project: "EDW" }, "firstmate");
+      expect(where("own")).toEqual(["EDW-2", "r-api"]);
+
+      // From a repository the project does not hold, nothing is guessed.
+      work("elsewhere", { repoId: "r1" });
+      const before = tasks.get("elsewhere");
+      expect(() => tasks.updateFields("elsewhere", { project: "EDW" }, "firstmate")).toThrow(
+        `Refused: eddies-wallet holds several repositories (eddies-wallet, eddies-wallet-backend), so ${before?.key} cannot move there without one: name its repository.`,
+      );
+      expect(tasks.get("elsewhere")).toEqual(before);
+      expect(() =>
+        tasks.updateFields("elsewhere", { project: "EDW", repository: "wallet" }, "firstmate"),
+      ).toThrow(
+        'Refused: eddies-wallet holds no repository "wallet"; its repositories are eddies-wallet, eddies-wallet-backend.',
+      );
+
+      // The one named, by name.
+      tasks.updateFields(
+        "elsewhere",
+        { project: "EDW", repository: "eddies-wallet-backend" },
+        "firstmate",
+      );
+      expect(where("elsewhere")).toEqual(["EDW-3", "r-api"]);
+
+      // A project of one gives its only repository, as before.
+      work("solo", { repoId: "r-api" });
+      tasks.updateFields("solo", { project: "NIA" }, "firstmate");
+      expect(where("solo")).toEqual([tasks.get("solo")?.key, "r1"]);
+      expect(tasks.get("solo")?.key).toMatch(/^NIA-/);
     });
 
     // INF-61's R1: INF-5, moved to Scratch and then to notes, still opened

@@ -150,6 +150,9 @@ export const BOARD_PUSH_COALESCE_MS = 40;
 /** Most closed tasks a typed search returns. */
 const SEARCH_LIMIT = 50;
 
+/** A project's counts while it has no tasks. */
+const NO_COUNTS = { needsYou: 0, waitingOnYou: 0, open: 0, active: 0, doneRecent: 0 } as const;
+
 /** How the board reaches clients on one push. */
 export type BoardPushMode = "snapshot" | "delta";
 
@@ -1669,22 +1672,20 @@ export class TaskProtocol {
     project: ProjectRecord,
     counts: Map<string, ProjectView["counts"]>,
   ): ProjectView {
-    const repo = project.repoId ? this.options.repos.get(project.repoId) : undefined;
+    const repos = this.options.tasks.projects.repositoriesOf(project.id).flatMap((member) => {
+      const repo = this.options.repos.get(member.id);
+      return repo
+        ? [{ name: repo.name, delivery: repo.delivery, autonomy: repo.autonomy, kind: repo.kind }]
+        : [];
+    });
     return {
       id: project.id,
       key: project.key,
       name: project.name,
-      repo: repo
-        ? { name: repo.name, delivery: repo.delivery, autonomy: repo.autonomy, kind: repo.kind }
-        : null,
+      repo: repos[0] ?? null,
+      ...(repos.length > 0 ? { repos } : {}),
       archived: project.archivedAt !== null,
-      counts: counts.get(project.id) ?? {
-        needsYou: 0,
-        waitingOnYou: 0,
-        open: 0,
-        active: 0,
-        doneRecent: 0,
-      },
+      counts: counts.get(project.id) ?? NO_COUNTS,
     };
   }
 }

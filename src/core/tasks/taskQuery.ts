@@ -56,7 +56,16 @@ export type TaskQueryInput = {
 };
 
 /** One project as the `projects` read names it. */
-export type TaskQueryProject = { key: string; name: string; folder?: string };
+/** One repository of a project of several, with its folder where it has one. */
+export type TaskQueryRepository = { name: string; folder?: string };
+export type TaskQueryProject = {
+  key: string;
+  name: string;
+  /** The first repository's folder. */
+  folder?: string;
+  /** Present when the project holds several repositories, first first (INF-4220). */
+  repositories?: TaskQueryRepository[];
+};
 
 /**
  * Where a task's crewmate ran, as a by-key read names it (INF-1217): the
@@ -550,14 +559,26 @@ function toRow(
   };
 }
 
-/** Every project the record keeps, by key, with its folder where it has one. */
+/**
+ * Every project the record keeps, by key, with its folder where it has one,
+ * and each of its repositories when it holds several.
+ */
 function projectRows(tasks: TaskService, reach: TaskQueryReach): TaskQueryProject[] {
   return tasks.projects
     .list()
     .filter((project) => project.archivedAt === null)
     .map((project) => {
-      const folder = project.repoId ? reach.projectFolder?.(project.repoId) : undefined;
-      return { key: project.key, name: project.name, ...(folder ? { folder } : {}) };
+      const repositories = tasks.projects.repositoriesOf(project.id).map((repository) => {
+        const folder = reach.projectFolder?.(repository.id);
+        return { name: repository.name, ...(folder ? { folder } : {}) };
+      });
+      const folder = repositories[0]?.folder;
+      return {
+        key: project.key,
+        name: project.name,
+        ...(folder ? { folder } : {}),
+        ...(repositories.length > 1 ? { repositories } : {}),
+      };
     });
 }
 

@@ -101,13 +101,15 @@ const notesTables = (db: ReturnType<typeof openInMemoryDatabase>) =>
     )
     .all();
 
-function fixture() {
+/** `together`: the repositories that share one project (INF-4220); each alone when absent. */
+function fixture(together: string[][] = []) {
   const projects = [HARBOR, DOCK];
   let clock = 1_792_000_000_000;
   const knowledge = new KnowledgeService({
     projects: {
       get: (id) => projects.find((project) => project.id === id),
       list: () => projects,
+      together: (id) => together.find((group) => group.includes(id)) ?? [id],
     },
     now: () => (clock += 1000),
   });
@@ -300,5 +302,50 @@ describe("the directions an agent is served", () => {
     );
     expect(heading).not.toContain("No record grants permission.");
     expect(served).toContain("local development signing needs no consent");
+  });
+});
+
+// INF-4220 piece 1, the captain's answer "Every repository in the project":
+// a direction saved for one repository reaches crew in every repository of
+// its project, and no further.
+describe("directions across a project's repositories", () => {
+  const dockTests = {
+    op: "add",
+    id: "dock-tests",
+    scope: DOCK.id,
+    text: "Run dock's journeys before every merge.",
+    reason: "The captain asked.",
+  } as const;
+  const standingIds = (knowledge: KnowledgeService, repoId: string) =>
+    knowledge.directions
+      .standing(crewOn(repoId))
+      .map((row) => row.id)
+      .sort();
+
+  it("reaches a crewmate in another repository of the same project", () => {
+    const { knowledge } = fixture([[HARBOR.id, DOCK.id]]);
+    knowledge.directions.carry(notesDatabase(NOTES));
+    knowledge.directions.change(dockTests);
+    expect(standingIds(knowledge, HARBOR.id)).toEqual([
+      "dock-tests",
+      "keep-harbor-green",
+      "suggest-small-prs",
+    ]);
+    expect(standingIds(knowledge, DOCK.id)).toEqual([
+      "dock-tests",
+      "keep-harbor-green",
+      "suggest-small-prs",
+    ]);
+  });
+
+  it("stays in its own repository when the two are separate projects", () => {
+    const { knowledge, removeProject } = fixture();
+    knowledge.directions.carry(notesDatabase(NOTES));
+    knowledge.directions.change(dockTests);
+    expect(standingIds(knowledge, HARBOR.id)).toEqual(["keep-harbor-green", "suggest-small-prs"]);
+    expect(standingIds(knowledge, DOCK.id)).toEqual(["dock-tests"]);
+    // A removed repository's directions reach no one, as before.
+    removeProject(DOCK.id);
+    expect(standingIds(knowledge, HARBOR.id)).toEqual(["keep-harbor-green", "suggest-small-prs"]);
   });
 });

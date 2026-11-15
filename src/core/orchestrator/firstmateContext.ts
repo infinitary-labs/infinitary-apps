@@ -429,8 +429,22 @@ export class FirstmateContext {
       .map((repo) => ({
         repo_id: repo.id,
         name: repo.name,
+        ...this.projectFact(repo),
         scope: repo.scope || "not set",
       }));
+  }
+
+  /**
+   * The project a repository belongs to (INF-4220): its key, and its name
+   * where it is not the repository's, as in a project of several.
+   */
+  private projectFact(repo: { id: string; name: string }): Record<string, string> {
+    const project = this.options.tasks.projects.forRepo(repo.id);
+    if (!project) return {};
+    return {
+      project: project.key,
+      ...(project.name !== repo.name ? { project_name: project.name } : {}),
+    };
   }
 
   /**
@@ -568,6 +582,7 @@ export class FirstmateContext {
           value: {
             name: repo.name,
             repo_id: repo.id,
+            ...this.projectFact(repo),
             path: repo.path,
             setup: repo.setupKind,
             workspace: repo.kind,

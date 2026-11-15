@@ -39,6 +39,8 @@ export type ProjectSeed = {
   addedAt?: number;
   /** The project's task key; derived from the name when absent, as the registry derives it. */
   key?: string;
+  /** An existing project it joins, by id, instead of one of its own (INF-4220); never with `key`. */
+  project?: string;
 };
 
 export function seedProject(db: AppDatabase, seed: ProjectSeed): RepoView {
@@ -55,5 +57,6 @@ export function seedProject(db: AppDatabase, seed: ProjectSeed): RepoView {
     runsOn: seed.runsOn,
     addedAt: seed.addedAt,
     projectKey: seed.key,
+    project: seed.project,
   });
 }

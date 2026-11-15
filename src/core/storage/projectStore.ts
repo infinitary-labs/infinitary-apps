@@ -7,13 +7,17 @@ import {
 import type { AppDatabase } from "./db";
 
 /**
- * Projects (task-system design section 8, captain decision D5): one per
- * managed repo plus Scratch. A project owns the per-project task sequence
- * that mints keys like `FM3K-12` (D6). Scratch is seeded by migration 17,
- * receives every task that is not about a repo, and is never archived.
- * Repo projects are created in the same transaction as the repo row and
- * archived - never deleted - when the repo is unregistered, so a closed
- * task's key still resolves.
+ * Projects (task-system design section 8, captain decision D5, amended by
+ * INF-4220): each managed repository belongs to one project, named by its
+ * `repos.project_id`, and a project may hold several; plus Scratch. A
+ * project owns the per-project task sequence that mints keys like
+ * `FM3K-12` (D6). Scratch is seeded by migration 17, receives every task
+ * that is not about a repo, and is never archived. A repository's own
+ * project is created in the same transaction as the repo row, unless the
+ * repository joins an existing one, and is archived - never deleted - when
+ * its last repository is unregistered, so a closed task's key still
+ * resolves. `projects.repo_id` stays the repository a project was made
+ * with; nothing reads it for membership.
  */
 
 export const SCRATCH_PROJECT_ID = "scratch";
@@ -55,7 +59,10 @@ function fromRow(row: Row): ProjectRecord {
   };
 }
 
-/** The id a repo's project carries; deterministic so migrations and runtime agree. */
+/** One repository of a project, as its membership lists it. */
+export type ProjectRepository = { id: string; name: string; kind: "project" | "personal" };
+
+/** The id a repo's own project carries; deterministic so migrations and runtime agree. */
 export function repoProjectId(repoId: string): string {
   return `proj-${repoId}`;
 }
@@ -116,8 +123,37 @@ export function ensureRepoProject(
   return id;
 }
 
+/**
+ * The project a new repository joins instead of getting its own (INF-4220),
+ * or its refusal: Scratch, the personal workspace's project and a removed
+ * project take no repository.
+ */
+export function joinableProject(db: AppDatabase, projectId: string): string {
+  const row = db.prepare("SELECT * FROM projects WHERE id = ?").get(projectId) as Row | undefined;
+  if (!row) throw new Error(`Unknown project "${projectId}".`);
+  if (row.kind === "scratch") throw new Error(`${row.name} takes no repository.`);
+  if (row.archived_at !== null) throw new Error(`${row.name} was removed, so nothing can join it.`);
+  const personal = db
+    .prepare("SELECT 1 FROM repos WHERE project_id = ? AND kind = 'personal'")
+    .get(projectId);
+  if (personal) throw new Error(`${row.name} is the personal workspace and takes no repository.`);
+  return row.id;
+}
+
 export class ProjectStore {
+  private membership: boolean | undefined;
   constructor(private readonly db: AppDatabase) {}
+
+  /**
+   * Whether the record names each repository's project (`repos.project_id`);
+   * a record opened at an older version reads each repository as its own.
+   */
+  private hasMembership(): boolean {
+    this.membership ??= (
+      this.db.prepare("PRAGMA table_info(repos)").all() as { name: string }[]
+    ).some((column) => column.name === "project_id");
+    return this.membership;
+  }
 
   get(id: string): ProjectRecord | undefined {
     const row = this.db.prepare("SELECT * FROM projects WHERE id = ?").get(id) as Row | undefined;
@@ -131,8 +167,29 @@ export class ProjectStore {
     return row ? fromRow(row) : undefined;
   }
 
+  /**
+   * The project a repository belongs to; for one no longer registered, the
+   * project it was made with, so its closed tasks still read theirs.
+   */
   forRepo(repoId: string): ProjectRecord | undefined {
-    return this.get(repoProjectId(repoId));
+    if (!this.hasMembership()) return this.get(repoProjectId(repoId));
+    const row = this.db
+      .prepare("SELECT p.* FROM repos r JOIN projects p ON p.id = r.project_id WHERE r.id = ?")
+      .get(repoId) as Row | undefined;
+    return row ? fromRow(row) : this.get(repoProjectId(repoId));
+  }
+
+  /** A project's registered repositories, oldest first; none for Scratch or a removed project. */
+  repositoriesOf(projectId: string): ProjectRepository[] {
+    if (!this.hasMembership())
+      return this.db
+        .prepare(
+          "SELECT r.id, r.name, r.kind FROM projects p JOIN repos r ON r.id = p.repo_id WHERE p.id = ?",
+        )
+        .all(projectId) as ProjectRepository[];
+    return this.db
+      .prepare("SELECT id, name, kind FROM repos WHERE project_id = ? ORDER BY added_at, id")
+      .all(projectId) as ProjectRepository[];
   }
 
   scratch(): ProjectRecord {
@@ -147,9 +204,18 @@ export class ProjectStore {
     return rows.map(fromRow);
   }
 
-  /** Rename the project without changing its key, sequence or task history. */
+  /**
+   * Rename a repository's project with it, without changing its key,
+   * sequence or task history - only while it is the project's one
+   * repository: a project of several keeps a name of its own.
+   */
   renameForRepo(repoId: string, name: string): void {
-    this.db.prepare("UPDATE projects SET name = ? WHERE repo_id = ?").run(name, repoId);
+    this.db
+      .prepare(
+        `UPDATE projects SET name = ? WHERE id = (SELECT project_id FROM repos WHERE id = ?)
+         AND (SELECT COUNT(*) FROM repos WHERE project_id = projects.id) = 1`,
+      )
+      .run(name, repoId);
   }
 
   /** A row verbatim (the task export's reload); the caller checked for collisions. */
@@ -197,17 +263,31 @@ export class ProjectStore {
     return freeProjectKey(this.db, key);
   }
 
-  /** The repo's project, created if missing (project-setup's half of D5). */
+  /**
+   * The repo's own project, created if missing (project-setup's half of D5),
+   * and named as the project of a registered repository that names none, so
+   * `forRepo` and `repositoriesOf` read the same membership.
+   */
   ensureForRepo(repo: { id: string; name: string }, key?: string): ProjectRecord {
     const id = ensureRepoProject(this.db, repo, Date.now(), key);
+    if (this.hasMembership())
+      this.db
+        .prepare("UPDATE repos SET project_id = ? WHERE id = ? AND project_id IS NULL")
+        .run(id, repo.id);
     return this.get(id) as ProjectRecord;
   }
 
-  /** unregister_repo archives; closed tasks under the project stay readable. */
-  archiveForRepo(repoId: string): void {
+  /**
+   * unregister_repo archives the project its last repository left; closed
+   * tasks under it stay readable. One that still holds a repository stays.
+   */
+  archiveIfEmpty(projectId: string): void {
     this.db
-      .prepare("UPDATE projects SET archived_at = ? WHERE repo_id = ? AND archived_at IS NULL")
-      .run(Date.now(), repoId);
+      .prepare(
+        `UPDATE projects SET archived_at = ? WHERE id = ? AND kind = 'repo' AND archived_at IS NULL
+         AND NOT EXISTS (SELECT 1 FROM repos WHERE project_id = ?)`,
+      )
+      .run(Date.now(), projectId, projectId);
   }
 
   /**

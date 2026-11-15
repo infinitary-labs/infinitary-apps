@@ -603,21 +603,26 @@ describe("seedProject, the journeys' project seed", () => {
     vi.unstubAllEnvs();
   });
 
-  /** Every saved column but the ones a seed chooses itself: the id, the folder, and when. */
+  /**
+   * Every saved column but the ones a seed chooses itself: the ids, the
+   * folder, and when. The repository's project is kept as whether it names
+   * the project made with it.
+   */
   function saved(db: ReturnType<typeof openInMemoryDatabase>, id: string) {
     const {
       id: _id,
       path: _path,
       added_at: _added,
+      project_id: projectId,
       ...repo
     } = db.prepare("SELECT * FROM repos WHERE id = ?").get(id) as Record<string, unknown>;
     const {
-      id: _project,
+      id: projectOwnId,
       repo_id: _repo,
       created_at: _created,
       ...project
     } = db.prepare("SELECT * FROM projects WHERE repo_id = ?").get(id) as Record<string, unknown>;
-    return { repo, project };
+    return { repo, project, member: projectId === projectOwnId };
   }
 
   it.each([
@@ -648,5 +653,91 @@ describe("seedProject, the journeys' project seed", () => {
     expect(saved(seeded, "repo-meterlab")).toEqual(saved(added, repo.id));
     added.close();
     seeded.close();
+  });
+});
+
+// INF-4220 piece 1, the captain's chosen direction: "A project holds several
+// repositories, each task works in one". Nothing joins one yet; the record
+// already keeps it.
+describe("a project of several repositories", () => {
+  function eddiesWallet() {
+    const { db, registry, workspaceDir } = setup();
+    const projects = new ProjectStore(db);
+    const app = seedProject(db, {
+      id: "r-app",
+      name: "eddies-wallet",
+      path: "/fleet/eddies-wallet",
+      origin: "https://github.com/example/eddies-wallet.git",
+      key: "EDW",
+      addedAt: 1,
+    });
+    const project = projects.forRepo(app.id);
+    if (!project) throw new Error("eddies-wallet has no project");
+    const api = seedProject(db, {
+      id: "r-api",
+      name: "eddies-wallet-backend",
+      path: "/fleet/eddies-wallet-backend",
+      origin: "https://github.com/example/eddies-wallet-backend.git",
+      project: project.id,
+      addedAt: 2,
+    });
+    return { db, registry, workspaceDir, projects, project, app, api };
+  }
+
+  it("joins a repository to an existing project, which then lists both", () => {
+    const { projects, project, api } = eddiesWallet();
+    expect(projects.forRepo(api.id)).toEqual(project);
+    expect(projects.repositoriesOf(project.id).map((repo) => repo.name)).toEqual([
+      "eddies-wallet",
+      "eddies-wallet-backend",
+    ]);
+    // No second project was made for the joining repository.
+    expect(projects.list().map((one) => one.key)).toEqual(["SCR", "EDW"]);
+  });
+
+  it("refuses to join Scratch, the personal workspace, a removed project, or a key of its own too", () => {
+    const { db, registry, workspaceDir, projects, project } = eddiesWallet();
+    const seed = { id: "r-x", name: "x", path: "/fleet/x" };
+    expect(() => seedProject(db, { ...seed, project: "scratch" })).toThrow(
+      "Scratch takes no repository.",
+    );
+    expect(() => seedProject(db, { ...seed, project: project.id, key: "XX" })).toThrow(
+      "A repository joins a project or gets a key of its own, never both.",
+    );
+    const personal = registry.ensurePersonal(workspaceDir);
+    const personalProject = projects.forRepo(personal.id);
+    expect(() => seedProject(db, { ...seed, project: personalProject?.id })).toThrow(
+      /is the personal workspace and takes no repository/,
+    );
+    const other = seedProject(db, { id: "r-old", name: "old", path: "/fleet/old" });
+    const oldProject = projects.forRepo(other.id);
+    registry.unregister(other.id);
+    expect(() => seedProject(db, { ...seed, project: oldProject?.id })).toThrow(
+      "old was removed, so nothing can join it.",
+    );
+    expect(registry.get("r-x")).toBeUndefined();
+  });
+
+  it("keeps the project's own name when one of several repositories is renamed", () => {
+    const { db, registry, projects, project, api } = eddiesWallet();
+    registry.configure(api.id, { name: "wallet-service" });
+    expect(projects.get(project.id)?.name).toBe("eddies-wallet");
+    // A project of one is renamed with its repository, as before.
+    const solo = seedProject(db, {
+      id: "r-solo",
+      name: "solo",
+      path: "/fleet/solo",
+    });
+    registry.configure(solo.id, { name: "solo-renamed" });
+    expect(projects.forRepo(solo.id)?.name).toBe("solo-renamed");
+  });
+
+  it("archives the project only when its last repository is removed", () => {
+    const { registry, projects, project, app, api } = eddiesWallet();
+    registry.unregister(app.id);
+    expect(projects.get(project.id)?.archivedAt).toBeNull();
+    expect(projects.repositoriesOf(project.id).map((repo) => repo.id)).toEqual([api.id]);
+    registry.unregister(api.id);
+    expect(projects.get(project.id)?.archivedAt).not.toBeNull();
   });
 });

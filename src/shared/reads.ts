@@ -455,7 +455,7 @@ export const readCatalog = {
         event.type === "repo_batch" ||
         event.type === "repo_unregistered",
     },
-    description: "Scratch plus one project per managed repo, with live counts.",
+    description: "Scratch plus every project the managed repositories belong to, with live counts.",
   }),
   // The person's open proposed changes where their projects live (git
   // integration PR 1.2), read through the app's own sign-in: one request,

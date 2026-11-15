@@ -325,8 +325,10 @@ declare module "@infinitary/contracts" {
     id: string;
     key: string;
     name: string;
-    /** The managed repository it lives in, by its name; null for Scratch. */
+    /** The managed repository it lives in, by its name - its first one; null for Scratch. */
     repo: { name: string } | null;
+    /** Every repository it holds, by name, first first; absent from an older app. */
+    repos?: { name: string }[];
     archived: boolean;
     counts: {
       needsYou: number;

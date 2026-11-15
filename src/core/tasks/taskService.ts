@@ -68,6 +68,7 @@ import {
 } from "../storage/taskSelection";
 import { compactBrief, expandBrief, reportHash } from "./briefReceipt";
 import { admitUnderParent, type ContainerLoop, reopenHeldContainers } from "./containerParents";
+import { moveTargetRepository } from "./projectMove";
 import { latestResultOf, type ReportEntry, reportEntryOf, type TaskResult } from "./reportEntry";
 import { TaskArchive } from "./taskArchive";
 import { TaskCapture } from "./taskCapture";
@@ -133,6 +134,8 @@ export type UpdateTaskPatch = {
    */
   direction?: string;
   project?: string;
+  /** With `project`: the repository it moves into, by name or id (`moveTargetRepository`). */
+  repository?: string;
   parent?: string;
   /** Attach/recover a spec on unstarted work; empty clears it. */
   basis?: string;
@@ -1089,7 +1092,7 @@ export class TaskService {
       if (patch.project !== undefined) {
         const project = this.projects.byKey(patch.project) ?? this.projects.get(patch.project);
         if (!project) throw new TaskGraphRefusal(`Unknown project "${patch.project}".`);
-        const moved = this.moveToProject(id, project.id, actor);
+        const moved = this.moveToProject(id, project.id, actor, patch.repository);
         if (moved.key !== record.key) changes.push(`moved to ${project.name} as ${moved.key}`);
         record = this.writer.mustGet(id);
       }
@@ -1488,11 +1491,17 @@ export class TaskService {
    * subtree moves with it, into this project's repository when it has one,
    * except a part bound to a repository of its own (`moveWithin`).
    */
-  moveToProject(id: string, projectId: string, actor: TaskEventActor): TaskRecord {
+  moveToProject(
+    id: string,
+    projectId: string,
+    actor: TaskEventActor,
+    repository?: string,
+  ): TaskRecord {
     const at = this.writer.now();
     const run = this.writer.write((): TaskRecord => {
       const record = this.writer.mustGet(id);
-      if (record.projectId !== projectId) this.moveWithin(record, projectId, actor, at);
+      if (record.projectId !== projectId)
+        this.moveWithin(record, projectId, actor, at, undefined, repository);
       return this.writer.mustGet(id);
     });
     return run();
@@ -1877,7 +1886,7 @@ export class TaskService {
    * The subtree follows, so children never end up in a foreign project.
    * The moved task takes `repoId`, so its working copy, pull request and
    * checks are where it lands (INF-8): the new parent's on a re-parent, as
-   * `create` gives a child, else the project's; where that is none
+   * `create` gives a child, else `moveTargetRepository`'s; where that is none
    * (Scratch, or a parent with none) it keeps its own. Each part takes what
    * its parent takes, as `create` gives a child, unless it is bound to a
    * repository of its own, which it keeps. A removed project takes no task,
@@ -1890,6 +1899,7 @@ export class TaskService {
     actor: TaskEventActor,
     at: number,
     repoId?: string | null,
+    repository?: string,
   ): void {
     const project = this.projects.get(projectId);
     if (!project) throw new Error(`Unknown project "${projectId}".`);
@@ -1911,7 +1921,10 @@ export class TaskService {
         );
       }
     }
-    const target = repoId === undefined ? project.repoId : repoId;
+    const target =
+      repoId === undefined
+        ? moveTargetRepository(project, this.projects, record, repository)
+        : repoId;
     const rows = [record, ...descendants];
     const before = new Map(rows.map((row) => [row.id, row.repoId]));
     const after = new Map<string, string | null>();

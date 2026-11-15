@@ -738,6 +738,7 @@ describe("the task protocol (task-system P3)", () => {
         key: "NIA",
         name: "nimbus-api",
         repo: { name: "nimbus-api", delivery: "direct-pr", autonomy: true },
+        repos: [{ name: "nimbus-api", delivery: "direct-pr", autonomy: true }],
         archived: false,
         counts: { needsYou: 1, waitingOnYou: 1, open: 1, active: 1, doneRecent: 0 },
       },

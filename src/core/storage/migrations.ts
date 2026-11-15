@@ -1399,6 +1399,19 @@ export const MIGRATIONS: readonly Migration[] = [
     addColumn(db, "pushed_quota", "overage_reason", "TEXT");
     addColumn(db, "pushed_quota", "using_overage", "INTEGER");
   },
+  // INF-4220 piece 1 (primitives/projects-and-working-copies.md): each
+  // repository names the one project it belongs to, so a project can hold
+  // several. Filled from the project each repository was made with
+  // (`projects.repo_id`), which stays as that first repository and is no
+  // longer read for membership. `RepoRegistry` is the only writer; no
+  // published view reads it. Dropping the index and the column reverses it.
+  (db) => {
+    addColumn(db, "repos", "project_id", "TEXT");
+    db.exec(`
+      UPDATE repos SET project_id = (SELECT id FROM projects WHERE projects.repo_id = repos.id);
+      CREATE INDEX repos_project ON repos (project_id);
+    `);
+  },
 ];
 
 /**

@@ -842,6 +842,8 @@ type Project = {
   key: string;
   name: string;
   repo: { name: string } | null;
+  /** Every repository it holds, first first; absent from an older app. */
+  repos?: { name: string }[];
   archived: boolean;
   counts: Record<string, number>;
 };
@@ -851,23 +853,33 @@ async function project(args: AxiArguments, connection: CaptainConnection): Promi
   const verb = verbOf(args, ["list", "show"], "project");
   const projects = await read<Project[]>(connection, "project", "inf:projects:list");
   const repos = await read<Repo[]>(connection, "project", "inf:repos:list");
-  const rowOf = (one: Project) => {
-    const repo = repos.find((candidate) => candidate.name === one.repo?.name);
-    return {
-      key: one.key,
-      name: one.name,
-      folder: repo?.path ?? "",
-      runs_on: repo ? (repo.runsOn ?? "this computer") : "",
-      open: one.counts.open ?? 0,
-      active: one.counts.active ?? 0,
-      delivery: repo?.delivery ?? "",
-    };
+  // One row for each repository a project holds (INF-4220): one for a project of one, as before.
+  const rowsOf = (one: Project) =>
+    (one.repos ?? (one.repo ? [one.repo] : [undefined])).map((member) => {
+      const repo = member && repos.find((candidate) => candidate.name === member.name);
+      return {
+        key: one.key,
+        name: one.name,
+        ...((one.repos?.length ?? 0) > 1 ? { repository: member?.name ?? "" } : {}),
+        folder: repo?.path ?? "",
+        runs_on: repo ? (repo.runsOn ?? "this computer") : "",
+        open: one.counts.open ?? 0,
+        active: one.counts.active ?? 0,
+        delivery: repo?.delivery ?? "",
+      };
+    });
+  const rowOf = (one: Project): Record<string, unknown> => {
+    const [first, ...rest] = rowsOf(one);
+    return rest.length ? { ...first, repositories: [first, ...rest] } : { ...first };
   };
   if (verb === "list") {
-    const rows = projects.filter((one) => !one.archived).map(rowOf);
+    const rows = projects.filter((one) => !one.archived).flatMap(rowsOf);
+    const fields = rows.some((row) => "repository" in row)
+      ? ["key", "name", "repository", "folder", "runs_on"]
+      : ["key", "name", "folder", "runs_on"];
     return printed(
       args,
-      listed("projects", rows, ["key", "name", "folder", "runs_on"], args, "0 projects"),
+      listed("projects", rows, fields, args, "0 projects"),
       rows.length > 0 ? [`${C} task list --project <key>`] : [],
     );
   }

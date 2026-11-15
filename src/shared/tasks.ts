@@ -513,22 +513,28 @@ export const taskLinkViewSchema = z.object({
 });
 export type TaskLinkView = z.infer<typeof taskLinkViewSchema>;
 
+const projectRepoViewSchema = z.object({
+  name: z.string(),
+  delivery: repoDeliverySchema,
+  autonomy: z.boolean(),
+  /**
+   * The repository's kind: `personal` for the app's own workspace
+   * (major 15). An older home sends none, read as `project`.
+   */
+  kind: repoKindSchema.optional(),
+});
+
 export const projectViewSchema = z.object({
   id: z.string(),
   key: z.string(),
   name: z.string(),
-  repo: z
-    .object({
-      name: z.string(),
-      delivery: repoDeliverySchema,
-      autonomy: z.boolean(),
-      /**
-       * The repository's kind: `personal` for the app's own workspace
-       * (major 15). An older home sends none, read as `project`.
-       */
-      kind: repoKindSchema.optional(),
-    })
-    .nullable(),
+  /** The project's first repository, for a reader of one; null for Scratch. */
+  repo: projectRepoViewSchema.nullable(),
+  /**
+   * Every repository the project holds, first first (INF-4220); an older
+   * home sends none, read as `repo` alone.
+   */
+  repos: z.array(projectRepoViewSchema).optional(),
   archived: z.boolean(),
   counts: z.object({
     /** Broader durable attention, including holds and dead dependencies. */

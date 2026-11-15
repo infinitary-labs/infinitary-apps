@@ -7,6 +7,8 @@ import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { presentationContentHash } from "../forge/presentation";
 import { AskEnding } from "../orchestrator/askEnding";
 import { afterMergeWords } from "../orchestrator/deliveryWakes";
+import type { ProjectRecord } from "../storage/projectStore";
+import { seedProject } from "../workspace/seedProject";
 import { seedTask } from "./seedTask";
 import { TaskService } from "./taskService";
 
@@ -56,10 +58,17 @@ function dop299Story(
 }
 
 function setup(afterMerge?: ChangePresentation["afterMerge"]) {
-  const tasks = new TaskService({ db: freshDatabase(), strict: true });
+  const db = freshDatabase();
+  const tasks = new TaskService({ db, strict: true });
   // DOP-299's own project, and the app's, where the work it waited for ran.
-  tasks.projects.ensureForRepo({ id: "dotfiles", name: "dotfiles-private" }, "DOP");
-  const app = tasks.projects.ensureForRepo({ id: "infinitary", name: "Infinitary" }, "INF");
+  seedProject(db, {
+    id: "dotfiles",
+    name: "dotfiles-private",
+    path: "/fleet/dotfiles",
+    key: "DOP",
+  });
+  seedProject(db, { id: "infinitary", name: "Infinitary", path: "/fleet/infinitary", key: "INF" });
+  const app = tasks.projects.forRepo("infinitary") as ProjectRecord;
   const origin = seedTask(tasks, {
     id: "dop29900",
     title: "Place the split Mac jobs",
@@ -75,7 +84,7 @@ function setup(afterMerge?: ChangePresentation["afterMerge"]) {
     status: "idle",
   });
   declare(tasks, origin, afterMerge);
-  return { tasks, origin, split, app };
+  return { db, tasks, origin, split, app };
 }
 
 function declare(
@@ -354,6 +363,34 @@ describe("after-merge steps at the merge", () => {
 
     tasks.close(split.id, { status: "done", reason: "merged", actor: "host" });
     expect(tasks.graph.listReady().map((row) => row.id)).toContain(filed?.id);
+  });
+
+  // INF-4220 piece 1: a step filed in another project that holds several
+  // repositories names the one it works in, so nothing is guessed.
+  it("files a step in the repository it names when its project holds several, and refuses one that names none", () => {
+    const step = { ...DOP299_STEP[0], project: "INF" } as AfterMergeStep;
+    const { db, tasks, origin, app } = setup([{ ...step, repository: "infinitary-infra" }]);
+    seedProject(db, {
+      id: "infinitary-infra",
+      name: "infinitary-infra",
+      path: "/fleet/infinitary-infra",
+      project: app.id,
+    });
+    const refusal = (one: AfterMergeStep) => tasks.delivery.afterMergeRefusal(origin.id, [one]);
+    expect(refusal(step)).toBe(
+      "afterMerge step 1 is filed in Infinitary, which holds several repositories (Infinitary, infinitary-infra): name the one it works in with repository.",
+    );
+    expect(refusal({ ...step, repository: "website" })).toBe(
+      'afterMerge step 1 names no repository "website" in Infinitary; its repositories are Infinitary, infinitary-infra.',
+    );
+    expect(refusal({ ...step, repository: "infinitary-infra" })).toBeUndefined();
+    // In the origin's own project, the origin's repository, as before.
+    expect(refusal(DOP299_STEP[0] as AfterMergeStep)).toBeUndefined();
+
+    tasks.close(origin.id, { status: "done", reason: "merged", actor: "host" });
+    const [filed] = continueTasks(tasks);
+    expect(filed).toMatchObject({ projectId: app.id, repoId: "infinitary-infra" });
+    expect(filed?.key).toMatch(/^INF-/);
   });
 
   it("starts an existing unstarted task the step names, once the work it waits for merges", () => {

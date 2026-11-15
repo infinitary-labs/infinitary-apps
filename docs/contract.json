@@ -32967,6 +32967,40 @@
                     }
                   ]
                 },
+                "repos": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "delivery": {
+                        "type": "string",
+                        "enum": [
+                          "direct-pr",
+                          "queue-pr",
+                          "local-only"
+                        ]
+                      },
+                      "autonomy": {
+                        "type": "boolean"
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "project",
+                          "personal"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "delivery",
+                      "autonomy"
+                    ]
+                  }
+                },
                 "archived": {
                   "type": "boolean"
                 },
@@ -43814,6 +43848,40 @@
                   "type": "null"
                 }
               ]
+            },
+            "repos": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "delivery": {
+                    "type": "string",
+                    "enum": [
+                      "direct-pr",
+                      "queue-pr",
+                      "local-only"
+                    ]
+                  },
+                  "autonomy": {
+                    "type": "boolean"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "project",
+                      "personal"
+                    ]
+                  }
+                },
+                "required": [
+                  "name",
+                  "delivery",
+                  "autonomy"
+                ]
+              }
             },
             "archived": {
               "type": "boolean"
@@ -60824,6 +60892,23 @@
                 },
                 "folder": {
                   "type": "string"
+                },
+                "repositories": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "folder": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ]
+                  }
                 }
               },
               "required": [
@@ -61750,6 +61835,11 @@
                           "maxLength": 4000
                         },
                         "project": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        },
+                        "repository": {
                           "type": "string",
                           "minLength": 1,
                           "maxLength": 64
@@ -62804,6 +62894,11 @@
                               "maxLength": 4000
                             },
                             "project": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 64
+                            },
+                            "repository": {
                               "type": "string",
                               "minLength": 1,
                               "maxLength": 64
@@ -72362,6 +72457,40 @@
                     }
                   ]
                 },
+                "repos": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "delivery": {
+                        "type": "string",
+                        "enum": [
+                          "direct-pr",
+                          "queue-pr",
+                          "local-only"
+                        ]
+                      },
+                      "autonomy": {
+                        "type": "boolean"
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "project",
+                          "personal"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "delivery",
+                      "autonomy"
+                    ]
+                  }
+                },
                 "archived": {
                   "type": "boolean"
                 },
@@ -75849,6 +75978,40 @@
                       "type": "null"
                     }
                   ]
+                },
+                "repos": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "delivery": {
+                        "type": "string",
+                        "enum": [
+                          "direct-pr",
+                          "queue-pr",
+                          "local-only"
+                        ]
+                      },
+                      "autonomy": {
+                        "type": "boolean"
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "project",
+                          "personal"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "delivery",
+                      "autonomy"
+                    ]
+                  }
                 },
                 "archived": {
                   "type": "boolean"

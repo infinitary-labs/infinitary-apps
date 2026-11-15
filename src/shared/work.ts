@@ -694,7 +694,17 @@ export const workRequests = {
       rows: z.array(z.record(z.string(), z.unknown())),
       total: z.number().int().nonnegative(),
       projects: z
-        .array(z.object({ key: z.string(), name: z.string(), folder: z.string().optional() }))
+        .array(
+          z.object({
+            key: z.string(),
+            name: z.string(),
+            folder: z.string().optional(),
+            // Each repository of a project of several (`project-repositories.md`).
+            repositories: z
+              .array(z.object({ name: z.string(), folder: z.string().optional() }))
+              .optional(),
+          }),
+        )
         .optional(),
       order: z.array(z.string()).optional(),
     }),

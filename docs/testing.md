@@ -1089,7 +1089,8 @@ On Linux it counts a process waiting in the kernel with a stop already pending a
 It prints its schedule, the processes it found and the ones stopped at each long stop.
 Cancelled, it lets the tree go and gives it five seconds to end before killing what is left.
 Its own experiment limit is 15 minutes (`--timeout`, required, in seconds), and its run, pause and stall arguments reproduce another chosen load; compare unchanged and changed code with the same arguments.
-`tests/starve-check.test.ts` holds it over real detached process trees.
+The limit is an alarm, as `timeout` keeps its own: a `SIGALRM` sent to the controller ends the experiment as the limit does, with status 124 and the same cleanup.
+`tests/starve-check.test.ts` holds it over real detached process trees, and sends its deadline case's alarm only once the whole tree is stopped, so a slow start on a loaded runner cannot end the experiment first.
 The `perf` input sets `INFINITARY_PERF_BUDGETS=1` for the Mac command, for a quiet graded run.
 Neither input changes where the files are placed or the Linux overflow jobs.
 

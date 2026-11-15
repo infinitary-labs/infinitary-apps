@@ -4,6 +4,8 @@
 Detached sessions (including Playwright's Electron) stay descendants. Simulator
 services started by launchd do not. Never signal a shared service or a lease.
 The requested experiment has its own limit; ordinary test budgets stay unchanged.
+The limit is an alarm, as `timeout` keeps its own: a SIGALRM sent from outside
+ends the experiment the same way, at a moment its sender chooses.
 """
 import argparse
 import ctypes
@@ -242,16 +244,23 @@ def main():
         parser.error("pass the check command after --")
 
     interrupted = None
+    limit_reached = False
 
     def interrupt(number, _frame):
         nonlocal interrupted
         interrupted = number
 
+    def expire(_number, _frame):
+        nonlocal limit_reached
+        limit_reached = True
+
     for number in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
         signal.signal(number, interrupt)
+    signal.signal(signal.SIGALRM, expire)
 
     started = time.monotonic()
-    deadline = started + args.timeout
+    # INF-4366: the limit's alarm; a SIGALRM sent from outside ends it the same way.
+    signal.setitimer(signal.ITIMER_REAL, args.timeout)
     print(f"Starvation: run {args.run_seconds}s, pause {args.pause_seconds}s, "
           f"stall {args.stall_seconds}s after each {args.stall_every}s of throttled execution; "
           f"owned descendants including detached sessions; experiment limit {args.timeout}s", flush=True)
@@ -281,10 +290,10 @@ os.execvp(sys.argv[2], sys.argv[2:])
         os.close(gate_write)
 
     def stopping():
-        return interrupted is not None or time.monotonic() >= deadline or child.poll() is not None
+        return interrupted is not None or limit_reached or child.poll() is not None
 
     def rest(seconds):
-        until = min(time.monotonic() + seconds, deadline)
+        until = time.monotonic() + seconds
         while not stopping() and time.monotonic() < until:
             time.sleep(min(0.05, max(0, until - time.monotonic())))
 

@@ -125,12 +125,17 @@ it("resumes its observed pause set without requiring another process inspection"
   expect(readFileSync(marker, "utf8")).toBe("resumed work completed");
 });
 
-it.each(["signal", "deadline"] as const)(
+// INF-4366: the deadline is the limit's own alarm, sent once the whole tree is
+// frozen, so a loaded runner's slow starts cannot end the experiment first.
+it.each([
+  ["signal", "SIGTERM", 143],
+  ["deadline", "SIGALRM", 124],
+] as const)(
   "cleans up detached descendants on %s without touching a sibling",
-  async (ending) => {
+  async (_ending, ender, status) => {
     const sentinel = spawn("python3", ["-c", "import signal; signal.pause()"], { stdio: "ignore" });
     const sentinelExit = new Promise((resolve) => sentinel.once("close", resolve));
-    const work = experiment("hold", ending === "signal" ? 20 : 3);
+    const work = experiment("hold", 20);
     try {
       const grandchild = (await work.wait("fixture grandchild ")).split(" ")[2];
       const paused = await work.wait("Starvation: stall", (line) =>
@@ -138,8 +143,8 @@ it.each(["signal", "deadline"] as const)(
       );
       for (const line of work.lines.filter((value) => value.startsWith("fixture ")))
         expect(paused).toContain(`${line.split(" ")[2]}:T`);
-      if (ending === "signal") work.child.kill("SIGTERM");
-      expect(await work.result).toBe(ending === "signal" ? 143 : 124);
+      work.child.kill(ender);
+      expect(await work.result).toBe(status);
       await assertStopped(work.lines);
       expect(sentinel.exitCode).toBeNull();
       expect(sentinel.signalCode).toBeNull();
@@ -157,6 +162,26 @@ it.each(["signal", "deadline"] as const)(
   },
   20_000,
 );
+
+// INF-886: the requested limit ends a command that is still running on its own.
+it("ends a command still running at its experiment limit", async () => {
+  const ended = await execute("python3", [
+    "scripts/starve-check.py",
+    "--timeout",
+    "0.5",
+    "--",
+    "python3",
+    "-c",
+    "import signal; signal.pause()",
+  ]).then(
+    () => {
+      throw new Error("The experiment ended without reaching its limit");
+    },
+    (error: { code?: number; stdout?: string }) => error,
+  );
+  expect(ended.code).toBe(124);
+  expect(ended.stdout).toContain("experiment limit reached");
+});
 
 // INF-1145: on Linux a scan landed between a spawn's vfork and its exec; the
 // stopped child held its parent in vfork short of T and the freeze never ended.

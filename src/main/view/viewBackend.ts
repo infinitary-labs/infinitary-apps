@@ -7,6 +7,7 @@ import {
   PANELS_IN_EVERY_WINDOW,
 } from "@core/connection/connection";
 import { computerName } from "@core/devices/computerName";
+import { dialHome } from "@core/devices/dial";
 import { HomeLink, type HomeLinkOptions, type HomeLinkState } from "@core/devices/homeLink";
 import type { Joined, JoinedHome } from "@core/devices/joinedHome";
 import type { HostNotifications } from "@core/host";
@@ -159,7 +160,7 @@ export type ViewBackendOptions = {
   /**
    * How the link dials: for a Mac that Mac reaches over its own SSH, the
    * route this Mac's work keeps (docs/view.md, "A Mac that runs work");
-   * by default the grant's address.
+   * by default every address the grant keeps, then `find`.
    */
   dial?: HomeLinkOptions["dial"];
   /**
@@ -170,6 +171,12 @@ export type ViewBackendOptions = {
   approver?: () => MacApproverHost | undefined;
   /** This Mac's own name, as it joined the other computer (`ownComputerName`); macOS's name for it by default. */
   name?: () => Promise<string>;
+  /**
+   * The addresses heard announcing Infinitary on the local network, the
+   * default dial's last way to that Mac (docs/devices.md, "Finding the home
+   * again"); none when absent.
+   */
+  find?: () => Promise<readonly string[]>;
 };
 
 export class ViewBackend {
@@ -223,7 +230,18 @@ export class ViewBackend {
       grant: options.record.grant,
       // A Mac that also runs this home's work says this connection controls it.
       as: "view",
-      ...(options.dial ? { dial: options.dial } : {}),
+      dial:
+        options.dial ??
+        ((grant, reached) =>
+          dialHome(grant, { reached, ...(options.find ? { find: options.find } : {}) })),
+      // Every address that Mac offers, kept for the next time this Mac starts.
+      onRoutes: (routes) => {
+        try {
+          this.joined.routes(routes.at, routes.also);
+        } catch (error) {
+          console.warn(`[view] could not keep where the other computer listens: ${String(error)}`);
+        }
+      },
       onPush: (channel, pushed, replayed) => {
         // The first mate's own cards name its computer where they say this computer.
         if (channel === "inf:cards") this.cardsHeard = namedCards(pushed, () => this.homeName());
@@ -275,7 +293,8 @@ export class ViewBackend {
 
   /** The other Mac's address, as its grant dials it. */
   private homeAddress(): string {
-    return splitDialAddress(this.record.grant.at)?.host ?? this.record.grant.at;
+    const at = this.joined.read()?.grant.at ?? this.record.grant.at;
+    return splitDialAddress(at)?.host ?? at;
   }
 
   /** The other Mac's name: as it says it, as it was saved when this Mac joined, or its address. */

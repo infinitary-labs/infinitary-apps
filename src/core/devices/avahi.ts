@@ -23,7 +23,7 @@ export const AVAHI_BROWSE_ARGS = [
 
 /**
  * What Avahi's `avahi-publish` is asked as a Linux home announces itself to a
- * phone (docs/devices.md, "Announcing to a phone"): the service under the
+ * phone (docs/devices.md, "Announcing to devices"): the service under the
  * name at the port, in the local domain at this computer's own host name, as
  * dns-sd's `-R` does on a Mac. `--no-fail` waits for Avahi's
  * daemon while it is not running, rather than ending; avahi-publish itself

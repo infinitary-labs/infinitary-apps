@@ -2,11 +2,26 @@ import { type DeviceView, isPhone } from "@shared/devices";
 import type { DnsSdRun } from "./dnsSd";
 
 /**
- * How this computer announces itself for a phone to join or reconnect (docs/devices.md,
- * "Announcing to a phone"): Bonjour's `_infinitary._tcp` in the local domain,
- * at the port the connection listens on, so the phone can find this computer before
- * joining or after its address moved. It carries no key and no secret: the
- * phone proves this computer by the invitation's or its saved public-key pin.
+ * Whether a device on the list may look for this computer's announcement
+ * (docs/devices.md, "Announcing to devices"): a phone, and every other
+ * device that dials this computer at an address - not one on this computer
+ * itself, which dials loopback, and not one that reaches it only through this
+ * computer's own SSH connection (`onSsh`), which never dials an address.
+ */
+export function looksForAnnouncement(
+  device: DeviceView,
+  onSsh: ReadonlySet<string> = new Set(),
+): boolean {
+  return isPhone(device) || (device.onThisMac !== true && !onSsh.has(device.id));
+}
+
+/**
+ * How this computer announces itself for a device to join or reconnect
+ * (docs/devices.md, "Announcing to devices"): Bonjour's `_infinitary._tcp` in
+ * the local domain, at the port the connection listens on, so a phone can
+ * find this computer before joining, and a phone or another computer after
+ * its address moved. It carries no key and no secret: the device proves this
+ * computer by the invitation's or its saved public-key pin.
  */
 export const ANNOUNCE_SERVICE = "_infinitary._tcp";
 
@@ -37,7 +52,8 @@ const RETRY_FIRST_MS = 5_000;
 const RETRY_MOST_MS = 60_000;
 
 /**
- * Announces this computer while a phone is on the list or a usable direct invitation is open,
+ * Announces this computer while a device that looks for it is on the list
+ * (`looksForAnnouncement`) or a usable direct invitation is open,
  * with macOS's own `dns-sd -R`, Avahi's `avahi-publish` or Windows' own
  * `DnsServiceRegister`, held by this app's pipe (`runDnsSdHeld`,
  * `runWindowsAnnouncement`) so it ends with the app however that went. It stops when neither
@@ -47,7 +63,7 @@ export class HomeAnnouncement {
   private readonly options: HomeAnnouncementOptions;
   private readonly later: (ms: number, fire: () => void) => () => void;
   private running: { stop: () => void } | null = null;
-  /** Whether a phone is listed or a usable direct invitation is open now. */
+  /** Whether a device that looks for it is listed or a usable direct invitation is open now. */
   private wanted = false;
   private disposed = false;
   private retry: (() => void) | null = null;
@@ -71,10 +87,20 @@ export class HomeAnnouncement {
     return this.running !== null;
   }
 
-  /** Announce while a phone is listed or a usable direct invitation is open. */
-  devicesChanged(devices: readonly DeviceView[], phoneMayJoin = false): void {
+  /**
+   * Announce while a device that looks for it is listed or a usable direct
+   * invitation is open; `onSsh` names the devices that reach this computer
+   * only through its own SSH connection.
+   */
+  devicesChanged(
+    devices: readonly DeviceView[],
+    phoneMayJoin = false,
+    onSsh: ReadonlySet<string> = new Set(),
+  ): void {
     if (this.disposed) return;
-    this.wanted = (devices.some(isPhone) || phoneMayJoin) && this.options.run !== null;
+    this.wanted =
+      (devices.some((device) => looksForAnnouncement(device, onSsh)) || phoneMayJoin) &&
+      this.options.run !== null;
     if (this.wanted && !this.running && !this.retry) this.start();
     if (!this.wanted) this.stop();
   }

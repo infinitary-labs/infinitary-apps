@@ -1,7 +1,13 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { COMPUTER } from "@shared/deviceNames";
-import { type DeviceGrant, deviceGrantSchema, leftReasonSchema } from "@shared/devices";
+import {
+  type DeviceGrant,
+  deviceGrantSchema,
+  dialAddressSchema,
+  leftReasonSchema,
+  PAIRING_LINK_ALSO_MAX,
+} from "@shared/devices";
 import { type Appearance, appearanceSchema, type Layout, layoutSchema } from "@shared/preferences";
 import { z } from "zod";
 import { writePrivate } from "./identity";
@@ -19,6 +25,12 @@ import { writePrivate } from "./identity";
  */
 
 const HOME_FILE = "home.json";
+/**
+ * The home's other addresses, beside the grant rather than in it, so a
+ * version that knows only the grant still reads `home.json` as it was
+ * (docs/devices.md, "Finding the home again").
+ */
+export const HOME_ADDRESSES_FILE = "home-addresses.json";
 const LEFT_FILE = "left.json";
 const LOOK_FILE = "appearance.json";
 
@@ -37,12 +49,20 @@ export type OwnLook = { appearance: Appearance; layout: Layout; keyboard?: unkno
 
 const joinedSchema = z.strictObject({
   version: z.literal(1),
-  grant: deviceGrantSchema,
+  // Never with `also`, which `HOME_ADDRESSES_FILE` keeps.
+  grant: deviceGrantSchema.omit({ also: true }),
   /** The other Mac's own name, from its welcome; null until it has said it. */
   name: z.string().min(1).max(128).nullable(),
   joinedAt: z.number().int().nonnegative(),
 });
-export type Joined = z.infer<typeof joinedSchema>;
+export type Joined = Omit<z.infer<typeof joinedSchema>, "grant"> & { grant: DeviceGrant };
+
+const addressesSchema = z.strictObject({
+  version: z.literal(1),
+  /** The grant these addresses lead to; another grant's are none. */
+  deviceId: z.string().min(1).max(64),
+  also: z.array(dialAddressSchema).min(1).max(PAIRING_LINK_ALSO_MAX),
+});
 
 const leftSchema = z.strictObject({
   version: z.literal(1),
@@ -78,20 +98,44 @@ export class JoinedHome {
   read(): Joined | null {
     const path = join(this.dir, HOME_FILE);
     if (!existsSync(path)) return null;
+    let joined: Joined;
     try {
-      return joinedSchema.parse(JSON.parse(readFileSync(path, "utf8")));
+      joined = joinedSchema.parse(JSON.parse(readFileSync(path, "utf8")));
     } catch {
       this.onProblem(
         `The ${COMPUTER.one} this app controlled cannot be read; it starts as its own.`,
       );
       return null;
     }
+    const also = joined.grant.via === "ssh" ? null : this.readAddresses(joined.grant.deviceId);
+    return also ? { ...joined, grant: { ...joined.grant, also } } : joined;
+  }
+
+  /** The home's other addresses this grant keeps; none when unread, unreadable or another grant's. */
+  private readAddresses(deviceId: string): string[] | null {
+    const path = join(this.dir, HOME_ADDRESSES_FILE);
+    if (!existsSync(path)) return null;
+    try {
+      const read = addressesSchema.parse(JSON.parse(readFileSync(path, "utf8")));
+      return read.deviceId === deviceId ? read.also : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Writes the grant without its other addresses, and those beside it. */
+  private writeHome(joined: Joined): void {
+    const { also, ...grant } = joined.grant;
+    this.write(HOME_FILE, { ...joined, grant });
+    if (also && also.length > 0 && grant.via !== "ssh")
+      this.write(HOME_ADDRESSES_FILE, { version: 1, deviceId: grant.deviceId, also });
+    else rmSync(join(this.dir, HOME_ADDRESSES_FILE), { force: true });
   }
 
   /** Joins: the grant and when, with no name until that Mac says it. Clears any left note. */
   join(grant: DeviceGrant, joinedAt: number): Joined {
     const joined: Joined = { version: 1, grant, name: null, joinedAt };
-    this.write(HOME_FILE, joined);
+    this.writeHome(joined);
     rmSync(join(this.dir, LEFT_FILE), { force: true });
     return joined;
   }
@@ -105,14 +149,33 @@ export class JoinedHome {
   dialAt(at: string, via?: DeviceGrant["via"]): void {
     const joined = this.read();
     if (!joined || (joined.grant.at === at && (!via || joined.grant.via === via))) return;
-    this.write(HOME_FILE, { ...joined, grant: { ...joined.grant, at, ...(via ? { via } : {}) } });
+    this.writeHome({ ...joined, grant: { ...joined.grant, at, ...(via ? { via } : {}) } });
+  }
+
+  /**
+   * Where the home answered and every other address it offered in its
+   * welcome (docs/devices.md, "Finding the home again"): the grant dials
+   * there first, then the others, from now on. A grant that reaches its home
+   * only through the home's SSH keeps no address of its own to try.
+   */
+  routes(at: string, also: readonly string[]): void {
+    const joined = this.read();
+    if (!joined || joined.grant.via === "ssh") return;
+    const kept = joined.grant.also ?? [];
+    if (
+      joined.grant.at === at &&
+      kept.length === also.length &&
+      kept.every((each, index) => also[index] === each)
+    )
+      return;
+    this.writeHome({ ...joined, grant: { ...joined.grant, at, also: [...also] } });
   }
 
   /** The other Mac said its own name; kept so it is said while that Mac is out of reach. */
   name(name: string): void {
     const joined = this.read();
     if (!joined || joined.name === name) return;
-    this.write(HOME_FILE, { ...joined, name });
+    this.writeHome({ ...joined, name });
   }
 
   /**
@@ -123,7 +186,7 @@ export class JoinedHome {
   onHomeMac(onHomeMac: boolean): void {
     const joined = this.read();
     if (!joined || joined.grant.onHomeMac === onHomeMac) return;
-    this.write(HOME_FILE, { ...joined, grant: { ...joined.grant, onHomeMac } });
+    this.writeHome({ ...joined, grant: { ...joined.grant, onHomeMac } });
   }
 
   /**
@@ -134,6 +197,7 @@ export class JoinedHome {
    */
   leave(note: LeftNote, unfinished?: readonly string[], deviceId?: string): void {
     rmSync(join(this.dir, HOME_FILE), { force: true });
+    rmSync(join(this.dir, HOME_ADDRESSES_FILE), { force: true });
     rmSync(join(this.dir, LOOK_FILE), { force: true });
     this.write(LEFT_FILE, {
       version: 1,

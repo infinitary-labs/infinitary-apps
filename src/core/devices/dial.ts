@@ -25,6 +25,7 @@ import {
   type HomeVia,
   isPhone,
   linkAddresses,
+  PAIRING_LINK_ALSO_MAX,
   parsePairingLink,
   splitDialAddress,
 } from "@shared/devices";
@@ -86,6 +87,15 @@ export type DialOptions = {
   relay?: string | null;
   /** Ends a Firstmate fetch at once, as when the run that asked for it stops (`fetchFirstmate`). */
   signal?: AbortSignal;
+  /**
+   * A connection's last way to its home (`dialHome`): the addresses heard
+   * announcing Infinitary on the local network right now (`./findHome.ts`),
+   * looked for only once every address the grant keeps did not answer with
+   * the home's key. Each is checked against that key like any other.
+   */
+  find?: () => Promise<readonly string[]>;
+  /** Told the address a connection's dial reached its home at (`dialHome`). */
+  reached?: (at: string) => void;
 };
 
 /**
@@ -273,6 +283,112 @@ async function answeredAt(
   throw mismatch ?? last ?? new Error(`Could not reach the ${COMPUTER.one}.`);
 }
 
+/**
+ * Dials every address at once and answers the first that answers with the
+ * home's key; each other that answers is closed. Rejects once all failed:
+ * with `HomeKeyMismatchError` when one answered with another key, so a
+ * computer that took the home's old address is never taken for it.
+ */
+function pinnedAny(
+  addresses: readonly string[],
+  homeKey: string,
+  device: DeviceKey | null,
+  options: DialOptions,
+): Promise<{ at: string; socket: TLSSocket }> {
+  return new Promise((resolve, reject) => {
+    if (addresses.length === 0) {
+      reject(new Error(`Could not reach the ${COMPUTER.one}.`));
+      return;
+    }
+    let left = addresses.length;
+    let won = false;
+    let last: unknown;
+    let mismatch: HomeKeyMismatchError | null = null;
+    for (const at of addresses) {
+      pinnedSocket({ address: at }, homeKey, device, options).then(
+        (socket) => {
+          if (won) {
+            socket.destroy();
+            return;
+          }
+          won = true;
+          resolve({ at, socket });
+        },
+        (error: unknown) => {
+          if (error instanceof HomeKeyMismatchError) mismatch = error;
+          else last = error;
+          left -= 1;
+          if (left === 0 && !won) reject(mismatch ?? last);
+        },
+      );
+    }
+  });
+}
+
+/**
+ * Where a connection reaches its home (docs/devices.md, "Finding the home
+ * again"): the address that answered last, then every address the grant
+ * keeps at once, then, when none answered with the home's key, every address
+ * announcing Infinitary on the local network at once (`find`), each time
+ * beside the address that answered last. A
+ * grant that reaches its home only through the home's SSH, or a dial that
+ * names its target, goes only there, as before.
+ */
+async function pinnedRoute(
+  grant: DeviceGrant,
+  options: DialOptions,
+): Promise<{ at: string; socket: TLSSocket }> {
+  if (options.target || grant.via === "ssh") {
+    return {
+      at: grant.at,
+      socket: await pinnedSocket(targetOf(grant, options.target), grant.homeKey, grant, options),
+    };
+  }
+  const tried = new Set<string>([grant.at]);
+  let failure: unknown;
+  let mismatch: HomeKeyMismatchError | null = null;
+  const failed = (error: unknown) => {
+    if (error instanceof HomeKeyMismatchError) mismatch = error;
+    else failure = error;
+  };
+  try {
+    return {
+      at: grant.at,
+      socket: await pinnedSocket({ address: grant.at }, grant.homeKey, grant, options),
+    };
+  } catch (error) {
+    failed(error);
+  }
+  // The address that answered last is dialed again beside the others, so a
+  // home that comes back there while they are still being tried is found at once.
+  const kept = linkAddresses(grant);
+  for (const at of kept) tried.add(at);
+  if (kept.length > 1) {
+    try {
+      return await pinnedAny(kept, grant.homeKey, grant, options);
+    } catch (error) {
+      failed(error);
+    }
+  }
+  if (options.find) {
+    let found: readonly string[] = [];
+    try {
+      found = await options.find();
+    } catch {
+      // Nothing heard on the local network is no way to the home.
+    }
+    const fresh = found.filter((at) => !tried.has(at) && splitDialAddress(at) !== null);
+    if (fresh.length > 0) {
+      try {
+        return await pinnedAny([grant.at, ...fresh], grant.homeKey, grant, options);
+      } catch (error) {
+        failed(error);
+      }
+    }
+  }
+  throw mismatch ?? failure ?? new Error(`Could not reach the ${COMPUTER.one}.`);
+}
+
 /** What a device says about itself when it uses a link. */
 type PairingDevice = {
   kind: DeviceKind;
@@ -313,6 +429,7 @@ export async function claimLink(
   const { grant, at } = await pair(link, own, device, false, options);
   return deviceGrantSchema.parse({
     at,
+    ...otherAddresses(link, at),
     homeKey: link.key,
     deviceId: grant.deviceId,
     kind: grant.kind,
@@ -358,11 +475,30 @@ export async function findHomeAgain(
   const answer = await pair(link, grant, { ...device, kind: link.kind }, true, options);
   if (answer.grant.deviceId !== grant.deviceId)
     throw new PairRefusedError("other", `${HOME.The} answered for another device.`);
+  const { also: _also, ...kept } = grant;
   return deviceGrantSchema.parse({
-    ...grant,
+    ...kept,
     at: answer.at,
+    ...otherAddresses(link, answer.at),
     ...(link.via ? { via: link.via } : {}),
   });
+}
+
+/**
+ * The link's other addresses a grant keeps beside the one that answered, so
+ * a connection tries them when that one does not (docs/devices.md, "Finding
+ * the home again"); none for a link over the home's SSH, which never dials
+ * an address.
+ */
+function otherAddresses(
+  link: { at: string; also?: readonly string[]; via?: HomeVia },
+  at: string,
+): { also?: string[] } {
+  if (link.via) return {};
+  const also = linkAddresses(link)
+    .filter((each) => each !== at)
+    .slice(0, PAIRING_LINK_ALSO_MAX);
+  return also.length > 0 ? { also } : {};
 }
 
 /**
@@ -570,12 +706,16 @@ export async function fetchFirstmate(
  * Dials the home with a grant: TLS pinned again with the device's own key
  * shown, then the WebSocket upgrade on `CONNECTION_PATH`. Nothing secret
  * rides the request at all. Answers the socket as soon as it is created; the
- * caller waits for `open`. A grant that reaches its home only through the
- * home's SSH connection dials only the socket `options.target` names.
+ * caller waits for `open`. It tries every address the grant keeps, then
+ * those `find` hears announcing (`pinnedRoute`), and tells `reached` the one
+ * that answered with the home's key. A grant that reaches its home only
+ * through the home's SSH connection dials only the socket `options.target`
+ * names.
  */
 export async function dialHome(grant: DeviceGrant, options: DialOptions = {}): Promise<WebSocket> {
-  const socket = await pinnedSocket(targetOf(grant, options.target), grant.homeKey, grant, options);
-  return new WebSocket(homeSocketUrl(grant.at, CONNECTION_PATH), {
+  const { at, socket } = await pinnedRoute(grant, options);
+  options.reached?.(at);
+  return new WebSocket(homeSocketUrl(at, CONNECTION_PATH), {
     createConnection: () => socket,
     perMessageDeflate: false,
     maxPayload: CONNECTION_MAX_FRAME_BYTES,

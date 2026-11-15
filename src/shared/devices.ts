@@ -694,7 +694,16 @@ export type DeviceAddresses = z.infer<typeof deviceAddressesSchema>;
  * home's SSH").
  */
 export const deviceGrantSchema = z.strictObject({
+  /** The address that answered last, dialed first. */
   at: dialAddressSchema,
+  /**
+   * The home's other addresses, tried after `at` (docs/devices.md, "Finding
+   * the home again"): the link's other addresses, then each welcome's list,
+   * as many as a link carries. Absent on one that reaches its home only
+   * through the home's SSH. Never saved in the grant's own file, which an
+   * older version must still read: `JoinedHome` keeps them beside it.
+   */
+  also: z.array(dialAddressSchema).max(PAIRING_LINK_ALSO_MAX).optional(),
   /** The home's pin. */
   homeKey: keyTextSchema,
   deviceId: z.string().min(1).max(64),
@@ -714,6 +723,30 @@ export const deviceGrantSchema = z.strictObject({
   onHomeMac: z.boolean().optional(),
 });
 export type DeviceGrant = z.infer<typeof deviceGrantSchema>;
+
+/**
+ * Where a grant dials once its home answered at `answered` and offered
+ * `offered` in its welcome (docs/devices.md, "Finding the home again"): the
+ * address that answered first, then every address the home offers now, as
+ * many as a link carries. A welcome that offers none, as an older home's,
+ * keeps the addresses the grant had. Null when nothing changed, and for a
+ * grant that reaches its home only through the home's SSH, which never
+ * dials an address.
+ */
+export function grantRoutes(
+  grant: Pick<DeviceGrant, "at" | "also" | "via">,
+  answered: string,
+  offered: readonly string[] | undefined,
+): { at: string; also: string[] } | null {
+  if (grant.via === "ssh") return null;
+  const others = offered?.length ? offered : [grant.at, ...(grant.also ?? [])];
+  const also = linkAddresses({ at: answered, also: others }).slice(1, 1 + PAIRING_LINK_ALSO_MAX);
+  const same =
+    answered === grant.at &&
+    also.length === (grant.also ?? []).length &&
+    also.every((at, index) => grant.also?.[index] === at);
+  return same ? null : { at: answered, also };
+}
 
 /**
  * Why this Mac stopped controlling another (docs/view.md): its person chose

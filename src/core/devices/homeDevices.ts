@@ -458,10 +458,11 @@ export async function startHomeDevices(options: {
     user: thisUser(),
     changed: (view) => emit("inf:devices:nearby", view),
   });
-  // While a phone is on the list this computer announces itself over Bonjour
-  // so the phone can find it again (docs/devices.md, "Announcing to a
-  // phone"): with dns-sd, on Linux with Avahi's avahi-publish where it has
-  // one, and on Windows with Windows' own announcement (./windowsAnnounce.ts).
+  // While a device that dials this computer at an address is on the list,
+  // this computer announces itself over Bonjour so that device can find it
+  // again (docs/devices.md, "Announcing to devices"): with dns-sd, on Linux
+  // with Avahi's avahi-publish where it has one, and on Windows with Windows'
+  // own announcement (./windowsAnnounce.ts).
   const avahiPublish =
     !dnsSd && hostPlatform() === "linux" ? findOnPath("avahi-publish", hostEnv()) : undefined;
   const announcer = dnsSd || avahiPublish;
@@ -472,8 +473,14 @@ export async function startHomeDevices(options: {
     name: () => ownComputerName({ packaged, env: process.env }),
     port: devices.port,
   });
-  homeAnnouncement.devicesChanged(devices.list(), devices.phoneMayJoin());
-  devices.subscribe(() => homeAnnouncement.devicesChanged(devices.list(), devices.phoneMayJoin()));
+  const announceFor = () =>
+    homeAnnouncement.devicesChanged(
+      devices.list(),
+      devices.phoneMayJoin(),
+      new Set(devices.sshConnections().map((each) => each.deviceId)),
+    );
+  announceFor();
+  devices.subscribe(announceFor);
   // A phone signed in to this computer over SSH asks the open app for a
   // one-use phone link at its door (docs/devices.md, "A phone that joins by
   // its address"); with no door, the phone says so and nothing joins. This

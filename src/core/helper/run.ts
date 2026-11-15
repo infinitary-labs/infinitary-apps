@@ -142,10 +142,17 @@ export type StartHelperOptions = {
   appVersion?: string;
   /**
    * Opens the WebSocket to the home: by default where the grant dials now,
-   * read again on every dial (`homeDialOptions`), unless a test stands in
-   * its own.
+   * read again on every dial (`homeDialOptions`), then every other address
+   * it keeps, then `findHome`, unless a test stands in its own.
    */
-  dial?: (grant: DeviceGrant) => Promise<WebSocket>;
+  dial?: (grant: DeviceGrant, reached: (at: string) => void) => Promise<WebSocket>;
+  /**
+   * The addresses heard announcing Infinitary on the local network, the
+   * dial's last way to the home (docs/helper.md, "Finding the home again"):
+   * the command passes this computer's own Bonjour, or a development run's
+   * dns-sd stand-in (`homeFinder`); none when left out.
+   */
+  findHome?: () => Promise<readonly string[]>;
   retryMs?: readonly number[];
   now?: () => number;
   /**
@@ -325,6 +332,10 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
       log(`could not keep where the home is dialed: ${String(error)}`);
     }
   }
+  // The grant the link dials now, which the home's update order and a
+  // published download fetch with too: it follows the home's routes.
+  let dialing: DeviceGrant = grant;
+
   // A Claude login Firstmate made for a home this user left, which the join
   // kept for this run: signed out here, in this user's login session, before
   // a sign-in or a conversation could use it (docs/helper.md, "Removed").
@@ -478,7 +489,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
           signal: stopUpdating.signal,
           ...(options.trialSeconds ? { trialSeconds: options.trialSeconds } : {}),
         }))
-    )(joined.grant, stopUpdating.signal);
+    )(dialing, stopUpdating.signal);
     let answer: WorkUpdateAnswer;
     try {
       const { afterRun, ...answered } = await updating;
@@ -517,7 +528,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
     try {
       const getting = downloadHere({
         dataDir,
-        grant: joined.grant,
+        grant: dialing,
         now: options.now,
         homeProtocol: link.state().homeVersion,
         background: options.background ?? null,
@@ -559,6 +570,10 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
   };
 
   const automaticStartup = readAutomaticStartup(dataDir);
+  const findHome = options.findHome;
+  // On the home's own Mac the home is always at loopback (`homeDialOptions`):
+  // no other route or announcement is a way to it, and none is kept.
+  const routesFor = (dialing: DeviceGrant) => !homePlace(dialing, options.interfaces).thisMac;
   const link: HomeLink = new HomeLink({
     grant,
     // A Mac that also controls its home says this connection is its work.
@@ -573,8 +588,27 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
     // A home that reaches this computer through its own SSH connection is
     // dialed at the route its connection keeps now, never at the grant's
     // address; with no route the dial fails, and the link keeps trying.
+    // Any other grant tries every address the home offered, then its
+    // announcement on the local network.
     dial:
-      options.dial ?? ((grant) => dialHome(grant, homeDialOptions(dataDir, grant, options.now))),
+      options.dial ??
+      ((grant, reached) =>
+        dialHome(routesFor(grant) ? grant : { ...grant, also: [] }, {
+          ...homeDialOptions(dataDir, grant, options.now),
+          reached,
+          ...(findHome && routesFor(grant) ? { find: findHome } : {}),
+        })),
+    // Every address the home offers, kept for this computer's next run.
+    onRoutes: (routes) => {
+      const kept = joinedHome.read()?.grant;
+      if (!kept || !routesFor(kept)) return;
+      dialing = { ...dialing, at: routes.at, also: routes.also };
+      try {
+        joinedHome.routes(routes.at, routes.also);
+      } catch (error) {
+        log(`could not keep where the home listens: ${String(error)}`);
+      }
+    },
     ...(options.retryMs ? { retryMs: options.retryMs } : {}),
     ...(options.now ? { now: options.now } : {}),
     // A computer that runs work is sent no pushes.

@@ -77604,7 +77604,16 @@ ${FRAME_QUESTION_SCRIPT}
     firewall: deviceFirewallSchema.optional()
   });
   strictObject({
+    /** The address that answered last, dialed first. */
     at: dialAddressSchema,
+    /**
+     * The home's other addresses, tried after `at` (docs/devices.md, "Finding
+     * the home again"): the link's other addresses, then each welcome's list,
+     * as many as a link carries. Absent on one that reaches its home only
+     * through the home's SSH. Never saved in the grant's own file, which an
+     * older version must still read: `JoinedHome` keeps them beside it.
+     */
+    also: array(dialAddressSchema).max(PAIRING_LINK_ALSO_MAX).optional(),
     /** The home's pin. */
     homeKey: keyTextSchema,
     deviceId: string().min(1).max(64),

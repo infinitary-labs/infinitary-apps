@@ -7,19 +7,27 @@ import type { DnsSdRun } from "./dnsSd";
 /**
  * INF-64 piece 1: while a phone is on the list, this Mac announces itself
  * over Bonjour so the phone can find it again (docs/devices.md, "Announcing
- * to a phone"); INF-95: so does a Linux home, with Avahi. Against a stand-in
+ * to devices"); INF-95: so does a Linux home, with Avahi; INF-4207 piece 1:
+ * so it does for a computer that dials it at an address. Against a stand-in
  * for dns-sd or avahi-publish in memory; never the system's own.
  */
 
-const device = (kind: DeviceView["kind"], system?: DeviceView["system"]): DeviceView =>
+const device = (
+  kind: DeviceView["kind"],
+  system?: DeviceView["system"],
+  onThisMac = false,
+): DeviceView =>
   ({
-    id: kind + (system ?? ""),
+    id: kind + (system ?? "") + (onThisMac ? "-here" : ""),
     kind,
     name: "X",
     pairedAt: 1,
-    onThisMac: false,
+    onThisMac,
     ...(system ? { system } : {}),
   }) as DeviceView;
+
+/** Another user on this Mac, or a second app here: it dials loopback, never an address. */
+const here = (kind: DeviceView["kind"]) => device(kind, "macos", true);
 
 function announcer(
   args: (name: string, port: number) => readonly string[] = dnsSdAnnounceArgs,
@@ -64,10 +72,10 @@ describe("announcing to a phone", () => {
 
   it("announces under this Mac's name at the connection's port while a phone is on the list, and once", async () => {
     const { announcement, started } = announcer();
-    announcement.devicesChanged([device("mac", "macos")]);
+    announcement.devicesChanged([here("work")]);
     await settle();
     expect(started).toEqual([]);
-    announcement.devicesChanged([device("mac", "macos"), device("view", "ios")]);
+    announcement.devicesChanged([here("work"), device("view", "ios")]);
     announcement.devicesChanged([device("view", "ios"), device("view", "ios")]);
     await settle();
     expect(started).toEqual([["-R", "Kun’s Mac mini", ANNOUNCE_SERVICE, "local.", "47623"]]);
@@ -88,7 +96,7 @@ describe("announcing to a phone", () => {
     await settle();
     announcement.devicesChanged([device("view", "ios")]);
     expect(stopped).toEqual([]);
-    announcement.devicesChanged([device("mac", "macos")]);
+    announcement.devicesChanged([here("mac")]);
     expect(stopped).toEqual([0]);
     expect(announcement.announcing).toBe(false);
     announcement.devicesChanged([device("view", "ios")]);
@@ -96,6 +104,27 @@ describe("announcing to a phone", () => {
     expect(started).toHaveLength(2);
     announcement.dispose();
     expect(stopped).toEqual([0, 1]);
+  });
+
+  // INF-4207 piece 1: a Mac's window and a computer that runs work find their home by
+  // its announcement after its address moved, so it is made for them too.
+  it("announces for a computer that dials this one at an address, never for one here or on this computer's own SSH", async () => {
+    const { announcement, started, stopped } = announcer();
+    const onSsh = new Set(["work-ssh"]);
+    const sshComputer = { ...device("work", "macos"), id: "work-ssh" };
+    announcement.devicesChanged([here("work"), here("view"), sshComputer], false, onSsh);
+    await settle();
+    expect(started).toEqual([]);
+    announcement.devicesChanged([here("work"), sshComputer, device("work", "linux")], false, onSsh);
+    await settle();
+    expect(started).toEqual([["-R", "Kun’s Mac mini", ANNOUNCE_SERVICE, "local.", "47623"]]);
+    announcement.devicesChanged([here("work"), device("mac", "macos")], false, onSsh);
+    await settle();
+    expect(started).toHaveLength(1);
+    expect(stopped).toEqual([]);
+    announcement.devicesChanged([here("work"), sshComputer], false, onSsh);
+    expect(stopped).toEqual([0]);
+    announcement.dispose();
   });
 
   it("starts nothing when the phone left before the name was read, and nothing where dns-sd is missing", async () => {

@@ -20,6 +20,7 @@ What a view keeps is `JoinedHome`'s (`src/core/devices/joinedHome.ts`), the one 
 | File | Holds |
 | --- | --- |
 | `home.json` | The grant (`docs/devices.md`, "Joining"), with this Mac's own key, the other Mac's name once it has said it, and when it joined |
+| `home-addresses.json` | The other Mac's other addresses, refreshed from each welcome, kept beside the grant so a version that knows only the grant still reads `home.json` (`docs/devices.md`, "Finding the home again") |
 | `appearance.json` | This Mac's own look while it controls the other: size, theme, wash, crew model names, default card size and how its panels sit, and the keys a person changed here (`docs/keyboard.md`) |
 | `left.json` | The Mac it last stopped controlling, and whether it left or was removed |
 
@@ -262,6 +263,7 @@ A view posts the other Mac's card-worthy moments to this Mac's Notification Cent
 ## Reaching the other Mac
 
 `HomeLink` dials with the grant, says hello with the cursor it holds, and keeps the cursor in memory only.
+The grant keeps every address the other Mac offers, refreshed from each welcome, and a dial that reaches none listens for that Mac's announcement on the local network, checking its key at every address (`docs/devices.md`, "Finding the home again"), so a change of that Mac's address leaves the window out of reach only while no route answers.
 On macOS it dials through macOS's own nc, as every device does (`docs/devices.md`, "Through macOS's own nc"); the app opened here is the responsible code for that nc, so on a local-network address macOS asks the person at this Mac about the local network once, as it would for a dial of the app's own.
 
 - **Contact** is `reaching` until it has heard the other Mac since it started, `in-reach` once welcomed, `lost` when contact goes, and `closed` when the other Mac said it was quitting (`1001`).
@@ -372,6 +374,7 @@ The first-launch gate stays derived (`docs/first-launch.md`); the line only says
   `src/core/core.connection.test.ts` holds the first mate's side with a real panel: a view is answered the same files as its own window, nothing for another version, and its word on where a panel was drawn is not kept; `src/main/shell.test.ts` the view's side, the files asked there, its panels switch followed, no panel being built heard, and an older first mate's panels left off.
 - `tests/e2e/update-channels.spec.ts`, "a Mac controlling a newer Firstmate on another Mac is offered its own update": the other Mac's newer contract named in the top bar, this Mac's own offer there, its release page opened here, and the other Mac offered nothing.
 - `src/main/shell.test.ts`, "a Mac that controls another and runs its work": joining with a link for a Mac keeps the grant for its work and sets it up in the background, a Mac a command added opens as a view with its work's grant and never again as the device it left, and a grant that only runs work stays the work's; `src/core/helper/fromWindow.test.ts` the work folder's side.
+- `tests/e2e/view-home-moved.spec.ts`: the other Mac starts again at another address, which no address the window keeps names; the window refuses another computer announcing Infinitary with a key of its own, comes back by the other Mac's announcement, keeps its new address, and that Mac pairs nothing new.
 - `tests/e2e/view.spec.ts`, "a Mac joined at its first launch also runs that Mac's work": the home standing in another Mac for each app, a link pasted at first launch joins a Mac that controls and, its work started, is in reach to run work; a Mac a command added opens Infinitary there and controls with no first launch and no new link, and its Leave says it stops its work too.
 - `src/core/devices/remoteLoginLink.test.ts`, "asking a computer for a link by its address", and `src/core/devices/phoneDoor.test.ts`, "the computer link command": the key line then a link, a port kept with its key line, not open, this app's own link, the password once, and the command under each login shell with each reason it makes no link.
 - `tests/e2e/join-by-address.spec.ts`: a fresh app, by keys only, joins another app on the same computer by its address over a local SSH server, answers the key line, controls it and is listed as a Mac.

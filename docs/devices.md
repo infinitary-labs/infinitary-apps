@@ -242,11 +242,12 @@ A Mac the last browse announced stays two seconds for the next one to announce i
 So an Infinitary that stopped without a word leaves nothing listening for long.
 A development run may stand in its own program with `INFINITARY_DNS_SD`; a packaged app ignores it, and every end-to-end launch sets one that finds nothing, so a test never listens on the Mac's own network.
 
-### Announcing to a phone
+### Announcing to devices
 
-While a phone (a device whose system is `ios`) is on Your devices, or an unspent direct computer invitation is open, this computer announces itself over Bonjour as `_infinitary._tcp` in the local domain, at the port the connection listens on (`HomeAnnouncement`, `src/core/devices/announce.ts`): a Mac under its own name in System Settings, a Linux or Windows home under its host name.
+While a device that may look for it is on Your devices, or an unspent direct computer invitation is open, this computer announces itself over Bonjour as `_infinitary._tcp` in the local domain, at the port the connection listens on (`HomeAnnouncement`, `src/core/devices/announce.ts`): a Mac under its own name in System Settings, a Linux or Windows home under its host name.
+A device that may look for it is a phone (a device whose system is `ios`), or a computer that dials this one at an address: a Mac that controls this first mate or runs its work, which is neither on this computer nor reached through this computer's own SSH (`looksForAnnouncement`).
 An open invitation lets the first phone find this computer before it has joined; invitations through SSH and commands for another user do not announce.
-The phone browses for that to find this computer again after its address moved, and then dials it and checks the key it was paired with (above, "Joining"), so the announcement carries no key and no secret.
+A device browses for that to find this computer again after its address moved, and then dials it and checks the key it was paired with (above, "Joining"; below, "Finding the home again"), so the announcement carries no key and no secret.
 A Mac runs macOS's own `dns-sd -R` (or a development run's `INFINITARY_DNS_SD` stand-in, on either system).
 A Linux home runs Avahi's `avahi-publish --no-fail --service` from its search path (`avahiAnnounceArgs`, `src/core/devices/avahi.ts`), from the same package as `avahi-browse` above.
 Neither has an end of its own, so a shell holds it with the app's pipe (`runDnsSdHeld`, `src/core/devices/dnsSd.ts`): it is killed once the pipe closes, when the announcement stops or the app is gone however it went, so a quit or a crash leaves no announcement.
@@ -254,13 +255,13 @@ A Windows home has no program that announces from the command line, so Windows' 
 PowerShell holds it on the app's pipe and takes it back with `DnsServiceDeRegister` once the pipe closes, so a quit or a crash leaves no announcement running; a stop that closes the pipe ends PowerShell after five seconds if it has not ended by then.
 Another computer that already heard it may still answer from its own cache until the record's two-minute lifetime runs out.
 A dot or backslash in the computer's name is escaped, so the name stays one label.
-It starts when the list gains a phone or a direct invitation opens, and stops once neither remains or the app quits, for good: a change during quit starts nothing.
-Stop, expiry and spending the last invitation stop its announcement unless a phone is now on the list.
+It starts when the list gains such a device or a direct invitation opens, and stops once neither remains or the app quits, for good: a change during quit starts nothing.
+Stop, expiry and spending the last invitation stop its announcement unless such a device is now on the list.
 One that ends by itself, as when mDNSResponder restarts, starts again while either condition holds, five seconds later and doubling up to a minute.
 Avahi's daemon restarting does not end one: `avahi-publish` publishes again by itself, and with `--no-fail` one started while the daemon is not running waits for it.
 Another computer on the network announcing the same name makes dns-sd or Avahi announce under another, such as `studio #2`.
 A second announcement under the same name on the same Linux computer, as a second person's Infinitary there with a phone of their own, is refused by Avahi as a local name collision and ends, so it is tried again as above until the name is free.
-A computer with no phone and no open direct invitation announces nothing.
+A computer with no such device and no open direct invitation announces nothing.
 A Linux home announces nothing where it has no `avahi-publish` (Ubuntu's `avahi-utils`, Fedora's `avahi-tools`, Arch's `avahi`), and nothing its phone can hear where its Avahi does not publish a user's services, which Avahi refuses as not permitted, or its firewall keeps mDNS out (Ubuntu's ufw lets it in).
 NixOS publishes one only with `services.avahi.publish.enable` and `services.avahi.publish.userServices` set.
 The native phone reader, its scan-code panel and its isolated tests are described in `docs/ios.md`.
@@ -562,9 +563,19 @@ No log, feed line, record entry or file carries it.
 
 ## Finding the home again
 
-A device keeps the address its link named (`at` in its grant), so after this Mac's address changes - the captain chose another, or the network gave it another - the device dials where this Mac was.
+A Mac that controls this first mate and a computer that runs work keep every address this Mac offers, so a change of this Mac's address - the captain chose another, or the network gave it another - strands neither while one still answers.
+The grant keeps the address that answered last (`at`) and up to eight others (`also`): those the link named, then those each welcome offers (`addresses`, this Mac's addresses now, below "Where devices find this Mac"), refreshed on every connection (`grantRoutes`, `src/shared/devices.ts`; `JoinedHome.routes`).
+The others are kept beside the grant in `home-addresses.json` (0600, with the grant's `deviceId`), never in `home.json`, so a version that knows only the grant, as after a revert or a move from the alpha to the stable channel, still reads `home.json` and dials `at` alone.
+An address the welcome no longer offers is dropped then, and the grant is written only when what it keeps changed.
+Each dial tries the address that answered last alone, then every address the grant keeps at once, then, when none answered with this Mac's key, every address heard announcing Infinitary on the local network at once beside the one that answered last (`dialHome`, `src/core/devices/dial.ts`; above, "Announcing to devices").
+Listening asks the system's Bonjour - macOS's own `dns-sd -B` then `-L`, or Avahi's `avahi-browse --resolve` on Linux, or a development run's `INFINITARY_DNS_SD` stand-in - and sends nothing (`homeFinder`, `src/core/devices/findHome.ts`); a computer with none of them has no last way to try.
+The first address that answers with this Mac's key wins and the others are closed; one that answers with another key is refused with `HomeKeyMismatchError` and nothing of it is kept, as at the address that answered last, so another computer that took this Mac's old address or announces Infinitary under its name is never taken for it.
+The address that answered is kept as `at`, dialed first from then on.
+How often a device tries again stays as it was (`HomeLink`'s retry steps).
+A device reached through this Mac's own SSH dials only the route that connection keeps (below, "Through the home's SSH"), and a computer that runs work on this Mac itself dials only loopback: neither keeps other addresses or listens for the announcement.
+
 Another user on this Mac is not stranded so: its command's link names loopback, which no address change moves, and its work dials loopback from its next run whenever its grant names one of this Mac's own addresses, as one kept before that did (`docs/helper.md`, "Finding the home again").
-A Mac that controls this first mate comes back by Leave and a new link (`docs/view.md`, "Leave").
+When no address answers and nothing announcing Infinitary answers with this Mac's key, as when the device is on another network, a Mac that controls this first mate comes back by Leave and a new link (`docs/view.md`, "Leave").
 A computer that runs work comes back by a new link from this Mac, in a new command, which it uses to find this Mac where it is now, as the same computer (design skill `components/devices/AddAMac`, "Finding this computer again"; `docs/helper.md`, "Finding the home again"):
 
 1. The device sees that the link's `key` is the pin of the home its grant names, checks that key answers at the link's `at`, and sends `POST /pair` there with `"again": true`, showing the key it was paired with rather than a new one (`findHomeAgain`, `src/core/devices/dial.ts`).
@@ -578,7 +589,7 @@ That answer is how the device hears it was removed, so the home forgets the key'
 The device removes what Infinitary set up there, as a removal would have, then uses the same link to join anew, with a new key.
 A link from another home is refused on the device before anything is sent while the home it runs work for answers ("This user already runs work for MacBook Pro.").
 While that home does not answer, the device asks its person to leave it first, as a removal would, keeping unmerged work (`docs/helper.md`, "Leaving a home that is gone").
-Nothing follows this Mac to its new address on its own.
+Without a new link, a device follows this Mac to a new address only through the addresses it keeps and the announcement, as above.
 
 A computer added by its address is never stranded so: this Mac's own SSH connection forwards to wherever this Mac listens (below, "Through the home's SSH").
 Add it at its address (`RemoteLogin.add`) still finds such a computer again when it is out of reach, and sets its copy of Infinitary up anew.
@@ -792,7 +803,7 @@ That path and body never change across majors either, nor across the two spellin
 
 ## Every connection after
 
-The device opens TLS to `at` showing its key, checks the home's pin before it sends a request, and asks for the WebSocket upgrade on `/connection`.
+The device opens TLS to `at`, or another address it keeps or hears (above, "Finding the home again"), showing its key, checks the home's pin before it sends a request, and asks for the WebSocket upgrade on `/connection`.
 The home admits the request when the key the socket showed is on its list.
 Nothing secret rides the request: no header, path or query carries one.
 
@@ -868,7 +879,7 @@ The rest ride `also`, at most `PAIRING_LINK_ALSO_MAX` (eight) of them, since eve
 A Mac with more addresses than that offers the first nine in this order, and a device that joined hears every one in its welcome.
 Container bridges are left out.
 The connection listens on loopback plus every one of those addresses, never a wildcard, a public address or a link-local address (`docs/connection.md`).
-The other computer tries each in order and keeps the one that answered.
+The other computer tries each in order and keeps the one that answered, with the others beside it, refreshed from each welcome (above, "Finding the home again").
 The link in the command for another user on this Mac names `127.0.0.1` alone, since that user dials from this Mac itself.
 The addresses on offer are this Mac's own private IPv4 addresses right now (`offeredAddresses`, `src/core/connection/addresses.ts`): the local network's first, Wi-Fi and Ethernet before other interfaces, then the shared range a private network service hands out.
 A bridge Linux makes for containers or virtual machines (Docker's `docker0` and `br-`, libvirt's `virbr`) is left out, since no other computer reaches it.
@@ -1096,7 +1107,7 @@ A link that expires with nothing paired stops the listener.
 | Another macOS user on this Mac | Loopback gets no shortcut: it takes the same TLS and a key the home paired. The devices folder is 0700 and its files 0600. The window's own IPC is not reachable from another user. |
 | A web page in a browser on either Mac | A request with an `Origin` is refused on `/connection` and `/pair`. The home sends no CORS headers, and a browser trusts neither key. |
 | A page or a document opens a link | The Mac does not handle the join scheme. The phone treats an opened link as a proposal and requires confirmation before sending it; it always joins as a view, never a computer that runs work. |
-| Someone on the same network sees the announcement | While a phone is on the list or a direct computer invitation is open, any network this computer is on, public Wi-Fi included, learns that Infinitary runs here, this computer's name and the connection's port. It carries no key and no secret, and learning it joins nothing: a device still needs an open link and the home's pin. |
+| Someone on the same network sees the announcement | While a phone or a computer that dials this one at an address is on the list, or a direct computer invitation is open, any network this computer is on, public Wi-Fi included, learns that Infinitary runs here, this computer's name and the connection's port. It carries no key and no secret, and learning it joins nothing: a device still needs an open link and the home's pin. A device looking for its home dials what it hears and refuses any computer that does not answer with the home's key, keeping nothing of it. |
 | A device says `system` to change what it becomes | The word can only narrow a link for a Mac to a `view`; it never widens, and a link for another user refuses it. |
 | Work run as another macOS user on this Mac reads the captain's files | Nothing in the app: macOS opens every home folder to every user on the Mac, outside private folders such as Desktop, Documents and Library, so that user reads the rest of the captain's home folder. The card, the Terminal question and Devices say so, and the app changes no permission (the captain's pick on FI3-862, words only). The files command reaches no further: it reads a home file for that user's tasks as that user, never inside those private folders (`docs/files.md`, "Another user on this Mac"). |
 | Work run as the captain on the home Mac | A computer that runs work dialing from this Mac as the home's own macOS user is refused (`same-user`): its work would read and change everything the captain can. Where it dialed from is read off the socket; the user is its own word, so this guards a mistake, and code already running as the captain is out of pairing's reach (below). |
@@ -1143,7 +1154,7 @@ A link that expires with nothing paired stops the listener.
 - Linux on an Arm chip, and Windows, by their address: no Linux Arm build is published, and Windows would be an adapter of its own (`FAR_SYSTEMS`).
 - The command for another computer from a Linux home to a Mac, and a Mac updated over the connection from a Linux home, unpack the published zip with that Mac's own ditto; no test runs a Linux home with a Mac on its other side.
 - What runs work, and the requests it asks, are `docs/helper.md`.
-- A device following this Mac to a new address on its own: after the address changes, a Mac that controls it needs Leave and a new link, and another Mac that runs work a new command (above, "Finding the home again"); one added by its address is reached over this Mac's own SSH, and another user on this Mac dials loopback, neither of which moves.
+- A device following this Mac to a new address it neither keeps nor hears announced: when the device is on another network after the address changes, a Mac that controls it still needs Leave and a new link, and another Mac that runs work a new command (above, "Finding the home again"); one added by its address is reached over this Mac's own SSH, and another user on this Mac dials loopback, neither of which moves.
 - Updating, over the connection, a computer joined before `WORK_UPDATE_SINCE`: it knows no update order, so a new command run there once updates it.
 - Checking on a real Mac that a Mac added by its address starts its work at its user's next login; the tests stand in launchd.
 - Checking that the connection follows a real network change, a laptop joining another Wi-Fi: the tests stand in this Mac's network.
@@ -1183,7 +1194,10 @@ A link that expires with nothing paired stops the listener.
   Its pairing folder has a space in its path, as Application Support does.
 - `src/core/devices/nearby.test.ts`: Macs nearby against dns-sd's own lines in memory - each Mac asked its name once, four at a time, this Mac left out and nothing listed before its names are read, a Mac gone from every interface taken off, macOS's policy-denied answer said and a Mac that answers after listed, another error or an ended run said as could not look, a browse that ran its time followed by another with no blink, and nothing running once stopped or a minute after the last ask; `src/core/devices/dnsSd.test.ts` the same through a stand-in program, every run gone once stopped.
   `src/shared/nearbyMacs.test.ts`: the address a Mac fills in and which Macs read as on your list; `src/renderer/src/settings/DevicesTab.test.tsx`: the list, its states and its keys.
-- `src/core/devices/announce.test.ts`: this Mac announces itself over Bonjour while a phone is on the list or a direct invitation is open, once, under its own name at the connection's port, stops when neither remains, starts again after a run that ended by itself, and starts nothing once disposed, and a Linux home asks `avahi-publish` for the same; `src/core/devices/dnsSd.test.ts` the held run ending dns-sd when stopped.
+- `src/core/devices/homeRoutes.test.ts`: against the real pairing and connection on loopback, a device keeps every address the welcome offers and comes back at one once its own is gone, a computer that runs work finds its home by the announcement once no address it keeps answers, and a route answering with another key is refused whether kept or heard, and nothing of it is kept.
+- `src/core/devices/findHome.test.ts`: what dns-sd's browse and lookup and Avahi's resolved lines say of where each computer announcing Infinitary can be reached, and nothing when macOS does not let it look.
+- `tests/e2e/view-home-moved.spec.ts`: a Mac controlling another finds it at its new address by its announcement and refuses another computer announcing Infinitary (`docs/view.md`).
+- `src/core/devices/announce.test.ts`: this Mac announces itself over Bonjour while a phone or a computer that dials it at an address is on the list, or a direct invitation is open, never for one on this computer or on its own SSH, once, under its own name at the connection's port, stops when neither remains, starts again after a run that ended by itself, and starts nothing once disposed, and a Linux home asks `avahi-publish` for the same; `src/core/devices/dnsSd.test.ts` the held run ending dns-sd when stopped.
   `src/core/devices/pairing.test.ts`: a phone joins as a `view` by a link for a Mac or an older `view`, is refused a link for another user here, finds the home again, and is never a computer that runs work.
 - `tests/e2e/devices-address.spec.ts`, "lists Macs nearby but this one": with a stand-in dns-sd, this Mac is not a row, ↓ and Enter fill the field with the user name selected, a changed user name is typed, the Mac is added over a throwaway SSH server and marked on the list when the aside opens again, and closing it leaves no run of dns-sd; "has not allowed the local network": the list says so and a private network's name still goes in.
 - `src/core/devices/remoteLogin.test.ts`, "how far the copy has gone": a copy of incompressible bytes over a throwaway SSH server, its count said at every piece, each more than the last, its last count the archive's own size, one run of lines in the feed's words between preparing and starting, no total and no percentage; said at most once a second, a second copy says fewer counts and the same last one.

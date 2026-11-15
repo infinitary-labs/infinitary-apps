@@ -1078,7 +1078,8 @@ describe("a home on this Mac while this Mac's network address changes", () => {
 
     const { said } = start(dataDir, () => address);
     await expect.poll(() => said).toEqual([inReach]);
-    // Kept so, with everything else in the grant as it was.
+    // Kept so, with everything else in the grant as it was: on the home's own
+    // Mac loopback is its one way there, so no other address the home offers is kept.
     expect(new JoinedHome(dataDir).read()?.grant).toEqual({ ...outcome.grant, at: at.at });
 
     address = network("192.168.65.77");

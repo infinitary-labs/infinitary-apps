@@ -16,6 +16,7 @@ import { browserLookup } from "../browser/connectionGuard";
 import { ClaudeAuthBackend } from "../claude/claudeAuth";
 import { defaultClaudeConfigDir } from "../claude/claudeQuota";
 import { ownComputerName } from "../devices/computerName";
+import { homeFinder } from "../devices/findHome";
 import { shellWord } from "../devices/shellWord";
 import type { HostChildSpawner, HostKeychain, HostTaskBrowser } from "../host";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
@@ -476,10 +477,17 @@ export async function runCli(args: readonly string[], context: CliContext): Prom
       // A development run may stand in the publisher check a download here
       // runs, for a stand-in release a test serves; an installed app never does.
       const verifier = place.packaged ? undefined : settingFrom(context.env, "CODESIGN")?.trim();
+      // Where this computer listens for its home's announcement once no
+      // address it keeps answers: this computer's own Bonjour, or a
+      // development run's dns-sd stand-in (docs/helper.md, "Finding the home again").
+      const findHome = homeFinder(
+        place.packaged ? undefined : settingFrom(context.env, "DNS_SD")?.trim() || undefined,
+      );
       const started = startHelper({
         dataDir,
         say: io.say,
         packaged: place.packaged,
+        ...(findHome ? { findHome } : {}),
         appVersion: context.version,
         ...(context.source ? { source: context.source } : {}),
         ...(verifier ? { verifier } : {}),

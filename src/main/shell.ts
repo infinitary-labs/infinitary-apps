@@ -131,6 +131,8 @@ export type ShellOptions = {
   returnHost?: string;
   /** This Mac's approver of Secrets uses, made when it becomes a view (`ViewBackendOptions.approver`). */
   approver?: ViewBackendOptions["approver"];
+  /** How a view hears its home's announcement (`ViewBackendOptions.find`). */
+  findHome?: () => Promise<readonly string[]>;
   now?: () => number;
   /** Opens a view; tests stand in their own link. */
   view?: Pick<ViewBackendOptions, "link">;
@@ -649,7 +651,8 @@ export class Shell {
     if (!work || joined.grant.kind !== "mac") return;
     const there = windowFromWork(work.dataDir, null);
     if (!there || there.grant.deviceId !== joined.grant.deviceId) return;
-    this.options.joined.dialAt(there.grant.at, there.grant.via);
+    if (there.grant.via === "ssh") this.options.joined.dialAt(there.grant.at, there.grant.via);
+    else this.options.joined.routes(there.grant.at, there.grant.also ?? joined.grant.also ?? []);
   }
 
   private becomeView(): void {
@@ -672,6 +675,7 @@ export class Shell {
       ...(this.options.returnHost ? { returnHost: this.options.returnHost } : {}),
       ...(this.options.approver ? { approver: this.options.approver } : {}),
       name: this.options.deviceName,
+      ...(this.options.findHome ? { find: this.options.findHome } : {}),
       ...(this.options.view?.link ? { link: this.options.view.link } : {}),
     });
     this.mode = { kind: "view", view };

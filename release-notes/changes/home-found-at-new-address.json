@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "home-found-at-new-address",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Your other computers find your first mate's computer when its address changes",
+      "body": "A Mac that controls your first mate, and a computer that runs its work, now keep every address your first mate's computer offers and refresh them each time they connect. When none of them answers, as after the network gave that computer a new address, they listen for it on the local network and come back on their own, with no new link. They only accept the computer they were paired with: another computer at its old address, or announcing Infinitary under its name, is refused.",
+      "noPicture": "Nothing on screen changes: the window comes back into reach where it used to stay out of reach.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

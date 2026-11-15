@@ -19,7 +19,7 @@ A phone can scan that code, paste its link or open an `infinitary://join` link, 
 On a computer with no screen at hand, `infinitary link --phone` prints the same code and link in its terminal, from the Infinitary running there (`docs/run.md`, "A link by command").
 Its first screen welcomes the person in the Mac's first-launch words, “Welcome aboard Infinitary”, with the three ways in, Scan the code, Paste its link and Join by its address, as rows in one list and Nearby as one plain line under it.
 Nearby browses `_infinitary._tcp` and opens the scanner; an announcement supplies a possible address, never a key or permission.
-The computer, a Mac or a Linux home with Avahi, announces while a usable direct computer invitation is open as well as while a phone is on its list, so first-phone discovery works (`docs/devices.md`, "Announcing to a phone").
+The computer, a Mac or a Linux home with Avahi, announces while a usable direct computer invitation is open as well as while a phone, or another computer that dials it at an address, is on its list, so first-phone discovery works (`docs/devices.md`, "Announcing to devices").
 Camera and Local Network permissions have separate explanations; a camera refusal offers pasting rather than reading the clipboard automatically.
 
 `InfinitaryKit` owns strict link parsing, the device identity, pinned transport and the view session (`ReadOnlySession`, the foundation’s original type).

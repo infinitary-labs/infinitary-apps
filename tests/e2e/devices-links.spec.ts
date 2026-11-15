@@ -203,7 +203,7 @@ test("a device says what it is when it connects, and Devices names a phone a pho
 });
 
 /**
- * INF-64 piece 1 (docs/devices.md, "Joining" and "Announcing to a phone"):
+ * INF-64 piece 1 (docs/devices.md, "Joining" and "Announcing to devices"):
  * a stand-in phone joins with a link for a Mac and is a view, not a
  * computer that runs work; this Mac announces itself over Bonjour while a phone
  * can join or is listed, and stops once neither holds. Never macOS's dns-sd.

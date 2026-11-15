@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import type { MachineLoginOutcome } from "@shared/accounts";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { MADE_LOGIN_FILE } from "../claude/claudeAuth";
-import { JoinedHome } from "../devices/joinedHome";
+import { HOME_ADDRESSES_FILE, JoinedHome } from "../devices/joinedHome";
 import {
   type BackgroundContext,
   forgetInstalled,
@@ -190,6 +190,7 @@ export async function cleanUp(options: CleanUpOptions): Promise<CleanUpResult> {
   if (finished() && kept.length === 0) {
     remove(join(dataDir, "left.json"));
     remove(join(dataDir, "home.json"));
+    remove(join(dataDir, HOME_ADDRESSES_FILE));
     if (!finished()) joinedHome.setUnfinished(unremoved);
   }
   const result = {

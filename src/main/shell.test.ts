@@ -957,9 +957,8 @@ describe("the app as a view of another Mac", () => {
 });
 
 /**
- * A Mac that both controls Firstmate on another and runs its work
- * (docs/view.md, "A Mac that runs work"): one device on that Mac's list,
- * whose window and work keep the same grant.
+ * A Mac that both controls Firstmate on another and runs its work (docs/view.md, "A Mac that
+ * runs work"): one device on that Mac's list, whose window and work keep the same grant.
  */
 describe("a Mac that controls another and runs its work", () => {
   const workDir = () => join(scratchDir("infinitary-shell-work-"), "work");
@@ -981,7 +980,8 @@ describe("a Mac that controls another and runs its work", () => {
     await expect.poll(() => background.mock.calls.length).toBe(1);
     // The background starts this app itself: no copy to keep.
     expect(background).toHaveBeenCalledWith({ launcher: null, app: null });
-    expect(new JoinedHome(dataDir).read()?.grant).toEqual(air.joined.read()?.grant);
+    const work = new JoinedHome(dataDir).read()?.grant;
+    expect({ ...air.joined.read()?.grant, also: undefined }).toEqual(work);
   });
 
   it("opens as a view of the home its work runs for, with no new link, and never again as the device it left", async () => {
@@ -999,7 +999,7 @@ describe("a Mac that controls another and runs its work", () => {
     expect(mini.startCore).not.toHaveBeenCalled();
     await mini.until(() => mini.view().contact === "in-reach");
     expect(mini.view()).toMatchObject({ name: "MacBook Pro", runsWork: true });
-    expect(mini.joined.read()?.grant).toEqual(grant);
+    expect({ ...mini.joined.read()?.grant, also: undefined }).toEqual(grant);
 
     await mini.shell.leave();
     // Its work keeps the grant until it hears it was removed; Firstmate

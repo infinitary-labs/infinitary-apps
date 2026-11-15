@@ -5,6 +5,7 @@ import { openCommandDoor } from "@core/axi/commandDoor";
 import { defaultClaudeConfigDir } from "@core/claude/claudeQuota";
 import { startConnection } from "@core/connection/connection";
 import { ownComputerName } from "@core/devices/computerName";
+import { homeFinder } from "@core/devices/findHome";
 import { JoinedHome } from "@core/devices/joinedHome";
 import { dueMove } from "@core/folderMove/due";
 import { startInBackground } from "@core/helper/background";
@@ -823,6 +824,13 @@ export async function startApp(
       const standInReturnHost = isDev
         ? settingFrom(process.env, "SIGN_IN_RETURN_HOST")?.trim() || undefined
         : undefined;
+      // A view that cannot reach its home at any address it keeps listens
+      // for the home's announcement (docs/devices.md, "Finding the home
+      // again"): through a development run's dns-sd stand-in, so a test never
+      // listens on this computer's own network; a packaged app ignores it.
+      const findHome = homeFinder(
+        isDev ? settingFrom(process.env, "DNS_SD")?.trim() || undefined : undefined,
+      );
       const { serviceManager } = work;
       // Whether the program this window runs was replaced since it started,
       // read where a run follows it (`followInstalledProgram`).
@@ -972,6 +980,7 @@ export async function startApp(
             ? { custody: own.custody, authentication: own.authentication }
             : nativeApprover({ platform: hostPlatform(), choice: userDataChoice });
         },
+        ...(findHome ? { findHome } : {}),
         // A view runs no core, and still tells this Mac when its own app has an update.
         // Its update channel is kept in the data folder, beside a run too.
         updates: createInstalledUpdateChecker({

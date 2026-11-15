@@ -18,7 +18,13 @@ import {
 } from "@shared/connection";
 import type { ContractAccess } from "@shared/contractFeatures";
 import { COMPUTER } from "@shared/deviceNames";
-import type { DeviceChip, DeviceGrant, DeviceRole, DeviceSystem } from "@shared/devices";
+import {
+  type DeviceChip,
+  type DeviceGrant,
+  type DeviceRole,
+  type DeviceSystem,
+  grantRoutes,
+} from "@shared/devices";
 import { type CoreInvokeChannel, invokeContract, PROTOCOL_VERSION, VIEW_FLOOR } from "@shared/ipc";
 import type { WebSocket } from "ws";
 import { CONTRACT_CHANGES } from "../connection/contractChanges";
@@ -140,8 +146,18 @@ export type HomeLinkOptions = {
    * Unsaid when it answers false.
    */
   failedUpdate?: () => boolean;
-  /** Opens the WebSocket; `dialHome` unless a test stands in its own. */
-  dial?: (grant: DeviceGrant) => Promise<WebSocket>;
+  /**
+   * Opens the WebSocket; `dialHome` unless a test stands in its own. It is
+   * told the grant's addresses as they stand, and tells `reached` the
+   * address that answered when it is not the grant's `at`.
+   */
+  dial?: (grant: DeviceGrant, reached: (at: string) => void) => Promise<WebSocket>;
+  /**
+   * The addresses the home offered and the one that answered, once a welcome
+   * makes them differ from the grant's (docs/devices.md, "Finding the home
+   * again"): the next dial tries them, and the device keeps them on its grant.
+   */
+  onRoutes?: (routes: { at: string; also: string[] }) => void;
   /**
    * Every push the home numbers, in order, replayed ones included:
    * `replayed` for one a welcome sent again because the device missed it.
@@ -216,11 +232,14 @@ type Asked = Pending & {
 type Ending = { welcomed: boolean; refusedStatus?: number; closeCode?: number };
 
 export class HomeLink {
-  private readonly grant: DeviceGrant;
+  /** The grant it dials with, whose addresses follow each welcome. */
+  private grant: DeviceGrant;
+  /** Where the newest dial reached the home. */
+  private reachedAt: string;
   private readonly protocolVersion: string;
   /** The spelling its requests are written in to the home that welcomed it. */
   private spelling: Spelling = FIRST_SPELLING;
-  private readonly dial: (grant: DeviceGrant) => Promise<WebSocket>;
+  private readonly dial: (grant: DeviceGrant, reached: (at: string) => void) => Promise<WebSocket>;
   private readonly now: () => number;
   private readonly retryMs: readonly number[];
   private readonly pingMs: number;
@@ -260,8 +279,9 @@ export class HomeLink {
 
   constructor(private readonly options: HomeLinkOptions) {
     this.grant = options.grant;
+    this.reachedAt = options.grant.at;
     this.protocolVersion = options.protocolVersion ?? PROTOCOL_VERSION;
-    this.dial = options.dial ?? ((grant) => dialHome(grant));
+    this.dial = options.dial ?? ((grant, reached) => dialHome(grant, { reached }));
     this.now = options.now ?? Date.now;
     this.retryMs = options.retryMs?.length ? options.retryMs : DEFAULT_RETRY_MS;
     this.pingMs = options.pingMs ?? 10_000;
@@ -387,7 +407,10 @@ export class HomeLink {
     this.attempting = true;
     let ending: Ending = { welcomed: false };
     try {
-      const socket = await this.dial(this.grant);
+      this.reachedAt = this.grant.at;
+      const socket = await this.dial(this.grant, (at) => {
+        this.reachedAt = at;
+      });
       if (this.stopped) {
         // Closed while the dial was under way: nobody reads this socket. Its
         // handshake is not finished, so ending it raises an error event, and
@@ -561,6 +584,7 @@ export class HomeLink {
       this.options.speaks ?? OWN_SPELLING,
     );
     this.open = socket;
+    this.followRoutes(frame.addresses);
     this.failures = 0;
     this.refusals = 0;
     this.grace = false;
@@ -581,6 +605,21 @@ export class HomeLink {
     // Every work request the home has not answered goes again, on this connection.
     for (const asked of this.asked) if (!asked.sentOn) this.sendAsked(socket, asked);
     this.wake();
+  }
+
+  /**
+   * Keeps every address the home offers in this welcome, after the one that
+   * answered, so the next dial finds it wherever it is still listening.
+   */
+  private followRoutes(offered: readonly string[] | undefined): void {
+    const routes = grantRoutes(this.grant, this.reachedAt, offered);
+    if (!routes) return;
+    this.grant = { ...this.grant, at: routes.at, also: routes.also };
+    try {
+      this.options.onRoutes?.(routes);
+    } catch {
+      // Kept for this run all the same; the next welcome tells it again.
+    }
   }
 
   /** One request the home asked: the answer, or why there is none, on the socket it came on. */

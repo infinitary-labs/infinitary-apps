@@ -35,6 +35,7 @@ Until it is made, Infinitary's work is read where it is, in Firstmate 3000's fol
 | File | Holds |
 | --- | --- |
 | `home.json` | The grant (`docs/devices.md`, "Joining"), with whether this computer runs on the home's own Mac once the home has said it (below, "In the background"), the home's name once it has said it, and when it joined, written by `JoinedHome` (`src/core/devices/joinedHome.ts`), the same writer the app as a view uses; for a Mac that joined at Infinitary's first launch, the window keeps its grant here too (below, "A Mac that also controls") |
+| `home-addresses.json` | The home's other addresses beside the grant's own, refreshed from each welcome, kept apart so a version that knows only the grant still reads `home.json` (`docs/devices.md`, "Finding the home again"); none on the home's own Mac or over the home's SSH |
 | `route.json`, `route.lock` | For a home that reaches this computer through its own SSH connection, the private socket that connection forwards to it now, written by `HomeRoute` (`src/core/helper/route.ts`), its one writer (below, "Through the home's SSH") |
 | `left.json` | The home that removed it, which `status` says while the removal has not finished or unmerged work is kept; it goes once nothing is kept |
 | `running.lock` | The process that works from the folder now |
@@ -110,9 +111,11 @@ A link from another home while the one kept does not answer asks to leave that o
 
 ## Finding the home again
 
-The grant dials the address its link named, so once the home's address changes this computer is out of reach of it and keeps trying where it was ("MacBook Pro is out of reach.
+The grant keeps every address the home offers, refreshed from each welcome, and a dial that reaches none listens for the home's announcement on the local network through the system's Bonjour, checking the home's key at every address (`docs/devices.md`, "Finding the home again"); the command passes the way to listen (`homeFinder`, from `startHelper`'s `findHome`).
+Once none of those answers with the home's key, as when the home is on another network, this computer is out of reach of it and keeps trying ("MacBook Pro is out of reach.
 This computer keeps trying.").
 A home on this Mac is dialed at loopback, where it listens too and which no network change moves: the command for another user here names it, and each run dials loopback at the same port whenever the grant names one of this Mac's own network addresses, and keeps the grant so (`homeDialAddress`, `src/core/helper/join.ts`, from `startHelper`).
+Such a grant keeps no other address and never listens for the announcement, since loopback is its one way there.
 Such a grant was kept before the command named loopback, or by a user here added at its address over Remote Login; a grant naming another Mac, a name, or loopback already dials where it did.
 A new command from the home, run once here as the same user, finds it where it is now, as the same computer (`docs/devices.md`, "Finding the home again"; design skill `components/devices/AddAMac`, "Finding this computer again").
 A computer added by its address needs nothing run here: the home reaches it over its own SSH connection wherever the home is, and Add it at its address reaches it over Remote Login and starts the join below with a new link on its input (below, "Started by the home").

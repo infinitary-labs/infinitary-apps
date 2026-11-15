@@ -66,3 +66,53 @@ export function standInDnsSd(
   );
   return path;
 }
+
+/**
+ * A stand-in for dns-sd that hears homes announcing Infinitary
+ * (`_infinitary._tcp`, docs/devices.md, "Finding the home again"), so a test
+ * moves a home's address without this Mac's own network: `-B` for that
+ * service lists the names `announce` last wrote, read again on every run,
+ * and `-L <name>` answers the address it named; any other service, and every
+ * run before `announce`, hears nothing. Each run ends once its `-t` seconds
+ * ran out, as dns-sd's does.
+ */
+export function standInHomeAnnouncements(): {
+  program: string;
+  announce: (homes: readonly { name: string; at: string }[]) => void;
+} {
+  const dir = scratchDir("infinitary-dns-sd-homes-");
+  const path = join(dir, "dns-sd");
+  const names = join(dir, "names");
+  writeFileSync(names, "");
+  writeFileSync(
+    path,
+    [
+      "#!/bin/sh",
+      "t=120",
+      'if [ "$1" = "-t" ]; then t="$2"; shift 2; fi',
+      `d=${shellWord(dir)}`,
+      'case "$1" in',
+      "-B)",
+      '  if [ "$2" = "_infinitary._tcp" ]; then',
+      '    while IFS= read -r name; do [ -n "$name" ] && printf \'12:00:00.000  Add        2  14 local.               _infinitary._tcp.    %s\\n\' "$name"; done < "$d/names"',
+      "  fi",
+      "  ;;",
+      "-L)",
+      '  if [ "$3" = "_infinitary._tcp" ] && [ -f "$d/at-$2" ]; then',
+      '    printf \'12:00:00.000  %s._infinitary._tcp.local. can be reached at %s (interface 14)\\n\' "$2" "$(cat "$d/at-$2")"',
+      "  fi",
+      "  ;;",
+      "esac",
+      'exec sleep "$t"',
+      "",
+    ].join("\n"),
+    { mode: 0o755 },
+  );
+  return {
+    program: path,
+    announce: (homes) => {
+      for (const home of homes) writeFileSync(join(dir, `at-${home.name}`), home.at);
+      writeFileSync(names, homes.map((home) => `${home.name}\n`).join(""));
+    },
+  };
+}

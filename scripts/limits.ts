@@ -101,6 +101,11 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/core/devices/dial.ts": {
     ANSWER_MAX_BYTES: physical("pairing fails in words: the home's answer is too long"),
   },
+  "src/core/devices/findHome.ts": {
+    ANNOUNCED_HOMES_MAX: physical(
+      "each name and address is a process; the rest go unheard this look, and the next try looks again",
+    ),
+  },
   "src/core/devices/publishedBuilds.ts": {
     MAX_BYTES: physical("file deleted; said as a download that stopped, bound not named"),
   },

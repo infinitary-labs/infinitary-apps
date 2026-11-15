@@ -57,6 +57,11 @@ Each line also notes what the main thread's last heartbeat before the stall said
 `speed` is how long a fixed piece of work, the speed probe (`SPEED_PROBE_ROUNDS`, about 6 microseconds on a Mac's fast core), took the main thread in nanoseconds: `beforeNs` in the heartbeat before the stall, `afterNs` in the heartbeat that ended it, and `fastestNs`, the fastest it ran in this run so far.
 A before or after several times the fastest is the main thread running slowly, such as on an efficiency core or while the system throttles the app, rather than doing more work; the main thread's processor time alone cannot tell the two apart.
 A start carries the window and the speed before; only a completion has the speed after.
+Each line also notes sleep and paging, so a stall right after the computer wakes can be told from the app's own work (INF-4224, which could only infer that a 3-second stall followed the captain's Mac sleeping, and saw the app's resident memory at 539 MB just after it against 930 MB before).
+`sleep` is the newest time the computer slept in this run, as the watchdog saw it: `wokeAt`, when its next look found the wall clock had run on past the monotonic clock, which stops while the computer sleeps, and `sleptMs`, by how much.
+It is the newest sleep up to the line's writing, however long ago, so a reader compares `wokeAt` with `at`; a clock set by hand reads the same way.
+`paging` holds the whole process's page faults between the heartbeat before the stall and the one that ended it, `majorFaults` for pages it waited on the disk for, from a file or swap, and `minorFaults` for the rest, with its resident memory at each (`rssBeforeBytes`, `rssAfterBytes`); resident memory growing across a stall is memory paged back in.
+The watchdog reads both on its own thread, since both are the process's, at each heartbeat; only a completion has `paging`.
 `build` preserves the recording computer's existing source identity (version, source commit or unknown, and whether its source is mutable), not the investigating checkout's identity.
 It records no arguments, values or text, and nothing sends it anywhere: Diagnostics sends nothing new.
 

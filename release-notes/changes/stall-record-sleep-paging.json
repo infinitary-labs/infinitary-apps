@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "stall-record-sleep-paging",
+      "reason": "The alpha-only stall record now notes the computer's newest sleep and the page faults and resident memory across each stall, for diagnosing stalls. Nothing a person sees changes."
+    }
+  ]
+}

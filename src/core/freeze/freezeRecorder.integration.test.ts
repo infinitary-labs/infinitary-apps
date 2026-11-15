@@ -151,6 +151,30 @@ describe("the freeze recorder", () => {
     expect(written).toMatchObject({ window: "hidden", speed });
   });
 
+  // The captain's pick on INF-4224: "Stall record: note sleep, wake and
+  // memory paged back in, so a stall like the 3-second one can be explained."
+  // The hold brings 128 MB into the process, as paging memory back in does; a
+  // computer that stayed awake through it notes no sleep.
+  it("notes the memory brought in during a stall and no sleep when the computer stayed awake", async () => {
+    const recordPath = join(scratchDir("infinitary-freeze-paging-"), "freezes.jsonl");
+    const bytes = 128 * 1024 * 1024;
+    let held: Buffer | undefined;
+    const seen = await recordStall(recordPath, () => {
+      held = Buffer.allocUnsafe(bytes).fill(1);
+      walkEveryRow(FREEZE_THRESHOLD_MS * 4);
+    });
+
+    const paging = seen.paging;
+    expect(held?.length).toBe(bytes);
+    expect((paging?.majorFaults ?? 0) + (paging?.minorFaults ?? 0)).toBeGreaterThan(0);
+    expect((paging?.rssAfterBytes ?? 0) - (paging?.rssBeforeBytes ?? 0)).toBeGreaterThanOrEqual(
+      bytes / 2,
+    );
+    expect(seen.sleep).toBeUndefined();
+    const [written] = readFreezes(recordPath).filter((line) => line.incidentId === seen.incidentId);
+    expect(written).toMatchObject({ paging });
+  });
+
   // The captain's pick on INF-4076: "Start timing each minute-pass step",
   // tagging each stall with the step that was running.
   it("tags a stall with the minute pass's step running and the work still unsettled, and keeps each pass's timing", async () => {

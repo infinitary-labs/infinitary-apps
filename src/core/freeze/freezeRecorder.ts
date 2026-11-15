@@ -70,6 +70,30 @@ const stepSchema = z.object({
   unsettled: z.array(z.string()).optional(),
 });
 
+/**
+ * The newest time the computer slept before or during a stall, as the
+ * watchdog saw it: its wall clock ran on while its monotonic clock, which
+ * stops while the computer sleeps, did not. A clock set by hand reads the
+ * same way.
+ */
+const sleepSchema = z.object({
+  wokeAt: z.string(),
+  sleptMs: z.number().int().nonnegative(),
+});
+
+/**
+ * The whole process's page faults between the heartbeat before a stall and
+ * the one that ended it, and its resident memory at each: `majorFaults` are
+ * pages it waited on the disk for, from a file or swap, and `minorFaults`
+ * the rest. Resident memory growing across a stall is memory paged back in.
+ */
+const pagingSchema = z.object({
+  majorFaults: z.number().int().nonnegative(),
+  minorFaults: z.number().int().nonnegative(),
+  rssBeforeBytes: z.number().int().nonnegative(),
+  rssAfterBytes: z.number().int().nonnegative(),
+});
+
 const frameSchema = z.object({
   name: z.string(),
   file: z.string(),
@@ -102,6 +126,10 @@ export const freezeLineSchema = z.object({
   speed: speedSchema.optional(),
   // Optional for old records and stalls outside every step.
   step: stepSchema.optional(),
+  // Optional for old records and runs whose computer has not slept.
+  sleep: sleepSchema.optional(),
+  // Optional for old records.
+  paging: pagingSchema.optional(),
 });
 export type FreezeLine = z.infer<typeof freezeLineSchema>;
 
@@ -119,6 +147,7 @@ export const freezeIncidentSchema = z.union([
     window: windowStateSchema.optional(),
     speed: speedSchema.optional(),
     step: stepSchema.optional(),
+    sleep: sleepSchema.optional(),
   }),
 ]);
 export type FreezeIncident = z.infer<typeof freezeIncidentSchema>;

@@ -48,7 +48,10 @@ export function isFreezeRecorderEnabled(build: {
  * Enabled only after the stall, a wait's pause landed in code that ran after
  * the wait (INF-2061's lab). Once it has handed over a previous run's
  * unfinished stalls it says `{ recovered: true }`. The incident start is written before asking for names; completion adds the
- * processor time when the next heartbeat arrives. A gap the watchdog's
+ * processor time when the next heartbeat arrives, and the process's page
+ * faults and resident memory across the stall. Each line notes the newest
+ * time the computer slept, seen as its wall clock running on past the
+ * monotonic one, which stops in sleep. A gap the watchdog's
  * own timer also slept through is the whole computer pausing, such as
  * sleep, and is no freeze.
  */
@@ -95,16 +98,37 @@ let stepMark = null;
 let passLines = null;
 let passWriting = Promise.resolve();
 let tickAt = performance.now();
+let tickWall = Date.now();
+// The newest time the computer slept: the wall clock ran on while the
+// monotonic one, which stops while the computer sleeps, did not.
+let lastSleep = null;
+// The process's page faults and resident memory at the last heartbeat, read
+// here, since both are the whole process's, to see memory paged back in.
+let beatMemory = null;
 let stall = null;
 let capturing = null;
 
 const cpuOf = (usage) => usage.user + usage.system;
+
+function memoryNow() {
+  const usage = process.resourceUsage();
+  return { major: usage.majorPageFault, minor: usage.minorPageFault, rss: process.memoryUsage.rss() };
+}
 
 // What the main thread's heartbeats said about the windows and its speed
 // just before a stall, and the speed in the heartbeat that ended it.
 function noteContext(line, target) {
   if (target.window) line.window = target.window;
   if (target.step) line.step = target.step;
+  if (lastSleep) line.sleep = { ...lastSleep };
+  if (target.memoryBefore && target.memoryAfter) {
+    line.paging = {
+      majorFaults: Math.max(0, target.memoryAfter.major - target.memoryBefore.major),
+      minorFaults: Math.max(0, target.memoryAfter.minor - target.memoryBefore.minor),
+      rssBeforeBytes: target.memoryBefore.rss,
+      rssAfterBytes: target.memoryAfter.rss,
+    };
+  }
   if (target.probeBefore !== undefined && fastestProbe !== null) {
     line.speed = { beforeNs: target.probeBefore, fastestNs: fastestProbe };
     if (target.probeAfter !== undefined) line.speed.afterNs = target.probeAfter;
@@ -242,6 +266,7 @@ parentPort.on("message", (message) => {
     stall = null;
     done.endedAt = now;
     done.cpuAfter = message.cpu;
+    done.memoryAfter = memoryNow();
     if (probe !== null) done.probeAfter = probe;
     done.completedAt = new Date().toISOString();
     if (done.frames || capturing !== done) write(done);
@@ -251,12 +276,19 @@ parentPort.on("message", (message) => {
   beatWall = Date.now();
   beatCpu = message.cpu;
   beatProbe = probe;
+  beatMemory = memoryNow();
 });
 
 setInterval(() => {
   const now = performance.now();
+  const wall = Date.now();
   const slept = record !== null && now - tickAt >= record.thresholdMs;
+  const asleepMs = wall - tickWall - (now - tickAt);
+  if (record !== null && asleepMs >= record.thresholdMs) {
+    lastSleep = { wokeAt: new Date(wall).toISOString(), sleptMs: Math.round(asleepMs) };
+  }
   tickAt = now;
+  tickWall = wall;
   if (!record) return;
   if (slept) {
     if (!stall) beatAt = now;
@@ -266,6 +298,7 @@ setInterval(() => {
   stall = { incidentId: randomUUID(), at: new Date(beatWall).toISOString(), startedAt: beatAt, cpuBefore: beatCpu };
   if (windowState) stall.window = windowState;
   if (beatProbe !== null) stall.probeBefore = beatProbe;
+  if (beatMemory) stall.memoryBefore = beatMemory;
   if (stepMark && (stepMark.running || stepMark.unsettled.length)) {
     stall.step = {};
     if (stepMark.running) stall.step.running = stepMark.running;

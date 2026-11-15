@@ -1,6 +1,8 @@
 import { readFileSync, writeFileSync } from "node:fs";
+import { relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { transformWithEsbuild } from "vite";
+import { staleGeneratedFile } from "./github-errors.ts";
 
 // A card part a runbook ships is copied into a card body, whose size is capped. Its code - the
 // readable sources under src/core/runbooks/parts/, minified here - is the app's own part
@@ -68,6 +70,6 @@ outputs.push([APP_PARTS, `${JSON.stringify(appParts, null, 2)}\n`]);
 for (const [path, text] of outputs) {
   const output = fileURLToPath(new URL(path, import.meta.url));
   if (process.argv.includes("--check")) {
-    if (readFileSync(output, "utf8") !== text) throw new Error("Run node scripts/generate-runbook-parts.ts to refresh the runbook parts.");
+    if (readFileSync(output, "utf8") !== text) throw staleGeneratedFile(relative(fileURLToPath(new URL("..", import.meta.url)), output), "node scripts/generate-runbook-parts.ts");
   } else writeFileSync(output, text);
 }

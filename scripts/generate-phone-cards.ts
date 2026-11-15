@@ -1,7 +1,8 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { build } from "vite";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
+import { staleGeneratedFile } from "./github-errors.ts";
 
 /**
  * INF-64 piece 4: bundle the actual desktop bridge/styles, not a second form implementation.
@@ -13,7 +14,7 @@ function keep(name: string, contents: string | Buffer) {
   const path = join(directory, name);
   const bytes = Buffer.from(contents);
   if (check) {
-    if (!readFileSync(path).equals(bytes)) throw new Error(`Run node scripts/generate-phone-cards.ts (${name})`);
+    if (!readFileSync(path).equals(bytes)) throw staleGeneratedFile(relative(REPO_ROOT, path), "node scripts/generate-phone-cards.ts");
   } else { mkdirSync(directory, { recursive: true }); writeFileSync(path, bytes); }
 }
 /** One parent page's script, bundled from its entry as one readable classic script. */

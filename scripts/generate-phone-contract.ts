@@ -1,8 +1,9 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { type openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 import { isMarked, openMarkingRunner, swiftWords } from "./phone-word-marks.ts";
 import { assertPhoneReaderShapes } from "./phone-contract-shapes.ts";
+import { staleGeneratedFile } from "./github-errors.ts";
 
 /** Wire constants and feed-changing types come from their Mac owners, not native copies. */
 const contract = JSON.parse(readFileSync(join(REPO_ROOT, "docs/contract.json"), "utf8"));
@@ -169,7 +170,7 @@ try {
   const cardWords = await phoneCardWords(runner);
   const wordsPath = join(REPO_ROOT, "ios/Infinitary/InfinitaryApp/PhoneCardWords.generated.swift");
   if (process.argv.includes("--check")) {
-    if (readFileSync(wordsPath, "utf8") !== cardWords) throw new Error("Run node scripts/generate-phone-contract.ts");
+    if (readFileSync(wordsPath, "utf8") !== cardWords) throw staleGeneratedFile(relative(REPO_ROOT, wordsPath), "node scripts/generate-phone-contract.ts");
   } else writeFileSync(wordsPath, cardWords);
   // The bytes a phone signs come from the verifier's own layout, so the order has one owner.
   const { DECISION_FORMAT, DECISION_BINDINGS, DECISION_ALLOW } = await runner.import<typeof import("../src/core/secrets/approvals.ts")>(join(REPO_ROOT, "src/core/secrets/approvals.ts"));
@@ -225,7 +226,7 @@ try {
   const path = join(REPO_ROOT, "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneContract.generated.swift");
   const generated = text + cardEnum + requestEnum + limits + groupEnum + rowWordsEnum + rowMoveWordsEnum + recordWordsEnum + pastWords + sshCommands + diagnosticsEnum + decision + googleWords + panelEnum;
   if (process.argv.includes("--check")) {
-    if (readFileSync(path, "utf8") !== generated) throw new Error("Run node scripts/generate-phone-contract.ts");
+    if (readFileSync(path, "utf8") !== generated) throw staleGeneratedFile(relative(REPO_ROOT, path), "node scripts/generate-phone-contract.ts");
   } else writeFileSync(path, generated);
 } finally { await runner.close(); }
 

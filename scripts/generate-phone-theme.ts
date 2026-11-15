@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { REPO_ROOT } from "./moduleRunner.ts";
+import { staleGeneratedFile } from "./github-errors.ts";
 
 /** SwiftUI reads the design skill's colors, spacing and radii, not a parallel theme. */
 const css = readFileSync(join(REPO_ROOT, ".claude/skills/infinitary-design/tokens/colors.css"), "utf8");
@@ -88,7 +89,7 @@ const outputs = {
 for (const [file, contents] of Object.entries(outputs)) {
   const path = join(REPO_ROOT, file);
   if (process.argv.includes("--check")) {
-    if (!existsSync(path) || readFileSync(path, "utf8") !== contents) throw new Error("Run node scripts/generate-phone-theme.ts");
+    if (!existsSync(path) || readFileSync(path, "utf8") !== contents) throw staleGeneratedFile(file, "node scripts/generate-phone-theme.ts");
   } else {
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, contents);

@@ -315,6 +315,21 @@ describe("the pull request's direct-reader round", () => {
     expect(args.at(-1)).toBe("src/shared/actions.test.ts");
   });
 
+  // INF-4305: the pull request check's failed reader named its reason only in
+  // the log, since naming reporters drops Vitest's own GitHub one.
+  it("keeps Vitest's GitHub error lines inside GitHub Actions, beside the console and JSON reports", () => {
+    const reporters = (env: Record<string, string>) =>
+      reachArgs(["src/shared/actions.test.ts"], "report.json", env).filter((arg) =>
+        arg.startsWith("--reporter="),
+      );
+    expect(reporters({ GITHUB_ACTIONS: "true" })).toEqual([
+      "--reporter=default",
+      "--reporter=github-actions",
+      "--reporter=json",
+    ]);
+    expect(reporters({})).toEqual(["--reporter=default", "--reporter=json"]);
+  });
+
   it("passes when Vitest's report shows every selected reader ran", () => {
     const files = ["src/shared/actions.test.ts", "tests/release-workflows-pr-checks.test.ts"];
     let reportFile = "";

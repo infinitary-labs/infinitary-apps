@@ -46,6 +46,7 @@ import {
   PSEUDO_LANGUAGES,
   SOURCE_LANGUAGE,
 } from "../src/shared/i18n/languages.ts";
+import { printErrors } from "./github-errors.ts";
 
 export const CATALOG_DIR = "src/shared/i18n/messages";
 export const COMPILED_PATH = "src/shared/i18n/messages.generated.ts";
@@ -908,7 +909,7 @@ async function main(): Promise<void> {
       }
     }
     if (problems.length) {
-      console.error(problems.join("\n"));
+      printErrors(problems, { title: "Message catalogs" });
       process.exitCode = 1;
     }
   }

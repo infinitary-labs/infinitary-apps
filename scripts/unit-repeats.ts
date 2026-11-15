@@ -98,8 +98,17 @@ export function selectLinuxReach(changed: readonly string[], root = ROOT): Linux
   return reach;
 }
 
-/** One round, no retry, and a JSON report of the files that ran. */
-export function reachArgs(files: readonly string[], reportFile: string): string[] {
+/**
+ * One round, no retry, and a JSON report of the files that ran. Naming
+ * reporters drops the GitHub one Vitest adds on its own inside GitHub
+ * Actions, so it is named again there: a failure stays an annotation the
+ * check's summary shows (docs/testing.md, "A failed check says why").
+ */
+export function reachArgs(
+  files: readonly string[],
+  reportFile: string,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): string[] {
   return [
     "exec",
     "vitest",
@@ -107,6 +116,7 @@ export function reachArgs(files: readonly string[], reportFile: string): string[
     "--retry",
     "0",
     "--reporter=default",
+    ...(env.GITHUB_ACTIONS === "true" ? ["--reporter=github-actions"] : []),
     "--reporter=json",
     `--outputFile.json=${reportFile}`,
     ...REACH_PROJECTS.flatMap((project) => ["--project", project]),

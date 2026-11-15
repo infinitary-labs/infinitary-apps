@@ -395,10 +395,12 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     "batch-checks.yml:failures",
     "batch-checks.yml:confirm",
     "batch-checks.yml:passed",
-    // The batch's watch of its code checks and its stop after a failed one:
-    // a reading and an echo, each on a hosted machine.
+    // The batch's watch of its code checks, its stops after a failed one and
+    // the one job that then names the failure: a reading and echoes, each
+    // on a hosted machine.
     "batch-checks.yml:watch",
     "batch-checks.yml:stop",
+    "batch-checks.yml:stopped",
   ];
   // DOP-251's plan: each kind is one stage of moving Linux jobs to the Mac
   // mini's Linux guests (docs/testing.md, "Each Linux job's kind").

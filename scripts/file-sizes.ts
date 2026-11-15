@@ -17,6 +17,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { printErrors } from "./github-errors.ts";
 
 /** The captain's bar: a code file longer than this is too long. */
 export const SIZE_CEILING = 2000;
@@ -85,7 +86,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   } else {
     const problems = sizeProblems(sizes, OVER_CEILING);
     if (problems.length) {
-      console.error(problems.join("\n"));
+      printErrors(problems, { title: "Size check" });
       process.exitCode = 1;
     }
   }

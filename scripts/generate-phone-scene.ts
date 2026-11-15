@@ -7,6 +7,7 @@ import type { TaskDetail, TaskView } from "../src/shared/tasks.ts";
 import { BATCH_GATE } from "../src/shared/batchGate.ts";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 import type { PanelTaskBoard, PanelTaskRow } from "../src/shared/personal/contracts.ts";
+import { staleGeneratedFile } from "./github-errors.ts";
 
 /** The parts of the Mac's Tasks panel (src/panels/now/rows.ts) this reads; that module builds with the renderer, not here. */
 type NowBoard = PanelTaskBoard;
@@ -673,7 +674,7 @@ try {
     const path = join(REPO_ROOT, file);
     const text = `${JSON.stringify(data, null, 2)}\n`;
     if (process.argv.includes("--check")) {
-      if (readFileSync(path, "utf8") !== text) throw new Error("Run node scripts/generate-phone-scene.ts");
+      if (readFileSync(path, "utf8") !== text) throw staleGeneratedFile(file, "node scripts/generate-phone-scene.ts");
     } else writeFileSync(path, text);
   }
 } finally { await runner.close(); }

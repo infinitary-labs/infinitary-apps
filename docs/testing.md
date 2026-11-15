@@ -206,6 +206,19 @@ It counts work, never time (captain's B1), and a walk that returns no rows is th
 It sees only the reads it drives; a new read the app repeats on its main thread joins it.
 The fixture seeds through `outsideCensus` (`tests/helpers/statementCheck.ts`), so the statement check does not read a stack for each of the seeding's prepares; the reads it measures are still recorded and planned.
 
+## A failed check says why
+
+A check's reason reaches GitHub's summary of the check, not only its log (INF-4305): a step that prints its reason as plain text and exits 1 leaves the summary at "Process completed with exit code 1."
+Inside GitHub Actions (`GITHUB_ACTIONS=true`) every check prints its refusal in GitHub's error format, which the summary shows as an annotation beside the file it names:
+
+- Playwright adds its `github` reporter beside the console and JSON reporters (`playwright.config.ts`).
+- Vitest adds its `github-actions` reporter itself only when a run names no reporters, so a run that writes the timing file (`INFINITARY_TEST_TIMING_FILE`, `vitest.config.ts`) and the pull request check's run of the tests that read a change (`reachArgs` in `scripts/unit-repeats.ts`) name it again beside the default and JSON reporters.
+- The size check, the message catalogs' check, every generator's `--check` and the release-notes command print each refusal through `scripts/github-errors.ts`, naming the file a refusal leads with or the generated file out of step and the command that refreshes it; outside GitHub Actions they print the same plain lines as before.
+- A merge batch stopped at failed code checks fails one job that names the failed step, and its stops pass ("The swept batch").
+
+`tests/failure-annotations.test.ts` runs the real configurations, a real generator and the batch's stop steps as a check in GitHub Actions runs them, and `tests/github-errors.test.ts` holds the error format.
+A new check that refuses with words prints them through `printErrors` or `errorLine`.
+
 ## The size check
 
 A code file the project tracks is at most 2,000 lines, the captain's bar for a file that is too long (INF-2625).
@@ -618,8 +631,9 @@ Beside it, the `critical-path` job runs the critical path on the same version on
 The `startup` job runs the Linux automatic startup fixtures, `linux-startup.yml`, on the same version on GitHub's hosted Ubuntu, so they run before a merge (the captain's pick on INF-3052, "In the batch check, beside the critical-path journey").
 The last job, `Merge batch · Batch passed (tree T; base B)`, passes once all three passed, or once the confirm passed, and names the tree T of the batch's version and the main version B its branch left `main` at.
 The batch stops at its first code-check failure (the captain's pick on INF-3925): its `watch` job reads the run until the sweep's `Code checks and build (Linux)` job ends, and when that job failed, its `stop` job enters the concurrency group of every other sweep job (`verify.yml`'s lanes and test groups and `source-journeys.yml`'s journey groups, each its own) with cancel-in-progress, which cancels each one, queued or running (`scripts/batch-stop.mjs`).
-Each stop job then fails, so the batch ends failed minutes in; its failed code checks name no test file, so nothing is confirmed, and the batch holds.
-The stop cancels single jobs, never a whole called check, and its jobs fail rather than pass: GitHub ends a run cancelled when a called check was cancelled, or when jobs were cancelled and none of its own jobs failed, and a cancelled run is no verdict on the batch.
+Each stop job passes with a notice, and the `stopped` job after them, `Merge batch · Batch stopped because the code checks failed`, fails with one error line naming the code checks' failed step (the watch's `failed` output), so the batch's failed checks are the code checks and that one job rather than twenty stops ("A failed check says why").
+Its failed code checks name no test file, so nothing is confirmed, and the batch holds.
+The stop cancels single jobs, never a whole called check: the jobs it cancels still show as cancelled checks, and GitHub may end the run itself cancelled, as it ended a batch whose stops all failed, so the batch's verdict is its failed checks, never the run's ending.
 The critical path and the startup fixtures end within a few minutes and run on, and the watch never fails a batch itself.
 When a check fails, the `failures` job reads each failed job's log for the test files it names as failed (`scripts/batch-failures.mjs`), and the `confirm` job runs each of those files three rounds with no retries on the same version, on hosted Linux when a Linux job failed and on the `release_split` Mac when a Mac job did (`scripts/batch-confirm.ts`; the captain's pick on INF-3012, "A only: the confirm step").
 A failed job whose log names no test file failed for something no rerun of a test answers, so nothing runs again.

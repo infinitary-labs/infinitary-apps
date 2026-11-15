@@ -129,6 +129,8 @@ function project({ phoneCards = false } = {}): string {
   for (const path of [
     "scripts/generate-messages.ts",
     "scripts/move-catalogs.ts",
+    // How the checks print a refusal, which the compiler and the card generator import.
+    "scripts/github-errors.ts",
     PHONE_INFO_PLIST,
   ]) {
     mkdirSync(dirname(join(root, path)), { recursive: true });

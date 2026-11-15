@@ -121,6 +121,10 @@ export default defineConfig({
   reporter: [
     // The console reporter Playwright picks on its own: dots on CI, a line per test here.
     [process.env.CI ? "dot" : "list"],
+    // Inside GitHub Actions, each failure as an annotation, so the check's
+    // summary says which journey failed and why (docs/testing.md, "A failed
+    // check says why"), not only the step's exit code.
+    ...(process.env.GITHUB_ACTIONS === "true" ? [["github"] as ["github"]] : []),
     // The machine-readable result, beside the run's result directories;
     // verify.yml names the fixed path it keeps and summarizes (docs/testing.md).
     ["json", { outputFile: join(run, "e2e-results.json") }],

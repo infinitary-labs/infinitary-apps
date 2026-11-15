@@ -305,10 +305,17 @@ export default defineConfig({
     // vitest otherwise blanks every .css module, query or not.
     css: true,
     // A run that names a file also writes each test file's time there, as the
-    // record scripts/shard-timings.ts balances the unit groups by.
+    // record scripts/shard-timings.ts balances the unit groups by. Naming
+    // reporters drops the GitHub one Vitest adds on its own inside GitHub
+    // Actions, so it is named again: each failure stays an annotation the
+    // check's summary shows (docs/testing.md, "A failed check says why").
     ...(process.env.INFINITARY_TEST_TIMING_FILE
       ? {
-          reporters: ["default", ["json", { outputFile: process.env.INFINITARY_TEST_TIMING_FILE }]],
+          reporters: [
+            "default",
+            ...(process.env.GITHUB_ACTIONS === "true" ? ["github-actions"] : []),
+            ["json", { outputFile: process.env.INFINITARY_TEST_TIMING_FILE }],
+          ],
         }
       : {}),
     // --shard gives each group about the same measured time, not the same count of files.

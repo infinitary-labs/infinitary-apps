@@ -1,6 +1,12 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { CODE_CHECKS, codeChecksState, WATCH, watch } from "../scripts/batch-stop.mjs";
+import {
+  CODE_CHECKS,
+  codeChecksFailure,
+  codeChecksState,
+  WATCH,
+  watch,
+} from "../scripts/batch-stop.mjs";
 import { loadYamlFile, workflowString, workflowValue } from "./helpers/releaseWorkflows.ts";
 
 // The captain's pick on INF-3925: "Stop a batch at its first code-check
@@ -99,7 +105,33 @@ describe("the code checks' watch", () => {
     });
     expect(reads).toBe(4);
     expect(warnings).toHaveLength(1);
-    expect(outputs).toEqual({ code_checks: "failure" });
+    // Run 839's reading lists no steps, so the words name the job alone.
+    expect(outputs).toEqual({
+      code_checks: "failure",
+      failed: "Code checks and build (Linux) failed",
+    });
+  });
+});
+
+// INF-4305's finding: a batch whose size check refused one file showed one
+// failed code check beside twenty failed stops and nineteen cancelled checks.
+// The reading is that batch run as GitHub listed its jobs once it ended.
+type ListedJob = {
+  name: string;
+  status: string;
+  conclusion: string | null;
+  steps: { name: string; conclusion: string | null }[];
+};
+const sizeCheckRun = JSON.parse(
+  readFileSync(new URL("./fixtures/batch-stop/batch-run-size-check.json", import.meta.url), "utf8"),
+) as ListedJob[];
+
+describe("what the stopped batch names", () => {
+  it("names the code checks' failed step from the batch run whose size check refused a file", () => {
+    expect(codeChecksState(sizeCheckRun)).toBe("failed");
+    expect(codeChecksFailure(sizeCheckRun)).toBe(
+      'Code checks and build (Linux) failed at "Run pnpm check"',
+    );
   });
 });
 
@@ -110,6 +142,7 @@ type Job = {
   uses?: string;
   with?: Record<string, unknown>;
   "continue-on-error"?: boolean;
+  outputs?: Record<string, string>;
   concurrency?: { group: string; "cancel-in-progress"?: boolean };
   strategy?: { matrix: Record<string, unknown> };
   steps?: { run?: string; with?: Record<string, string> }[];
@@ -185,10 +218,33 @@ describe("batch-checks.yml stops at a failed code check", () => {
     );
   });
 
+  // INF-4305: the real failure stands out. The stops pass, and one failed job
+  // of the batch's own names what failed, so the batch still fails; what each
+  // step prints is tests/failure-annotations.test.ts's.
+  it("fails one stopped job after the stops, only after failed code checks", () => {
+    const stopped = jobs.stopped!;
+    expect(stopped.needs).toEqual(["watch", "stop"]);
+    const runs = (code_checks: string) =>
+      workflowValue(stopped.if!, {
+        inputs,
+        needs: {
+          watch: { result: "success", outputs: { code_checks } },
+          stop: { result: "success" },
+        },
+      });
+    expect(runs("failure")).toBe(true);
+    expect(runs("success")).toBe(false);
+    expect(runs("")).toBe(false);
+  });
+
   it("watches with the batch-stop script, and never fails the batch by watching", () => {
     const watcher = jobs.watch!;
     expect(watcher["continue-on-error"]).toBe(true);
     expect(workflowString(watcher.name!, { inputs }).endsWith(WATCH)).toBe(true);
     expect(watcher.steps![0]!.with!["sparse-checkout"]).toBe("scripts/batch-stop.mjs");
+    expect(watcher.outputs).toEqual({
+      code_checks: "${{ steps.watch.outputs.code_checks }}",
+      failed: "${{ steps.watch.outputs.failed }}",
+    });
   });
 });

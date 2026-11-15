@@ -6,7 +6,11 @@ export const CODE_CHECKS: string;
 export const WATCH: string;
 /** What one reading of the run's jobs says of the code checks. */
 export function codeChecksState(jobs: readonly StopJob[]): "failed" | "passed" | "running" | "absent";
-/** The watch job: writes the output `code_checks`, `failure` or `success`, once the code checks end. */
+/** What failed in the code checks, in words: each failed job's last name part and its failed steps. */
+export function codeChecksFailure(
+  jobs: readonly (StopJob & { steps?: readonly { name: string; conclusion: string | null }[] })[],
+): string;
+/** The watch job: writes the output `code_checks`, `failure` or `success`, once the code checks end, and `failed` on a failure. */
 export function watch(script: {
   github: unknown;
   context: unknown;

@@ -73,6 +73,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readPicture } from "../src/core/pictureFormat.ts";
+import { printErrors } from "./github-errors.ts";
 import {
   ARCHIVE_FILE,
   archivedEntries,
@@ -949,7 +950,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     console.log(run(process.argv.slice(2)));
   } catch (error) {
     if (error instanceof Refusal) {
-      for (const problem of error.problems) console.error(problem);
+      printErrors(error.problems, { title: "Release notes" });
       process.exit(1);
     }
     throw error;

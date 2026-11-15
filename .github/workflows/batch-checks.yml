@@ -19,9 +19,11 @@ name: Batch checks
 # The batch stops at its first code-check failure (the captain's pick on
 # INF-3925): the watch job reads this run until the sweep's code checks end,
 # and when they failed, a stop job per sweep job enters that job's own
-# concurrency group with cancel-in-progress and cancels it, so the batch ends
-# failed minutes in (scripts/batch-stop.mjs). The critical path and the
-# startup fixtures end in a few minutes and run on.
+# concurrency group with cancel-in-progress and cancels it, and the stopped
+# job then fails naming the code checks' failed step, so the batch ends
+# failed minutes in with one red line of its own that points at the real
+# failure (scripts/batch-stop.mjs). The critical path and the startup
+# fixtures end in a few minutes and run on.
 #
 # Its jobs lead with the trigger its caller names, Merge batch
 # (scripts/ci-job-names.mjs).
@@ -117,6 +119,7 @@ jobs:
     continue-on-error: true
     outputs:
       code_checks: ${{ steps.watch.outputs.code_checks }}
+      failed: ${{ steps.watch.outputs.failed }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -134,10 +137,8 @@ jobs:
   # After failed code checks: each sweep job's own concurrency group
   # (verify.yml's lanes and test groups, source-journeys.yml's journey
   # groups), entered with cancel-in-progress, which cancels that job, queued
-  # or running. Each stop then fails, which ends the batch failed: with
-  # every stop passing, GitHub ends a batch whose jobs were cancelled
-  # cancelled, as it does when a whole called check is cancelled, and a
-  # cancelled check is no verdict on the batch.
+  # or running. Each stop passes, so the stops add no red line of their own
+  # beside the real failure; the stopped job below holds the batch failed.
   stop:
     needs: watch
     if: ${{ !cancelled() && needs.watch.outputs.code_checks == 'failure' }}
@@ -173,8 +174,23 @@ jobs:
     steps:
       - env:
           JOB: ${{ matrix.job }}
+        run: echo "::notice::The code checks failed, so this batch stopped its $JOB job."
+
+  # After the stops: one failed job that names what failed in the code
+  # checks, the batch's own verdict. A cancelled job is no verdict on the
+  # batch, so without a failed job of its own the batch would read only as
+  # its failed code checks among the jobs the stops cancelled; this one says
+  # which check failed and where its reason is.
+  stopped:
+    needs: [watch, stop]
+    if: ${{ !cancelled() && needs.watch.outputs.code_checks == 'failure' }}
+    name: ${{ format('{0} · Batch stopped because the code checks failed', inputs.trigger) }}
+    runs-on: ubuntu-24.04
+    steps:
+      - env:
+          FAILED: ${{ needs.watch.outputs.failed }}
         run: |
-          echo "::error::The code checks failed, so this batch stopped its $JOB job."
+          echo "::error title=The code checks failed::${FAILED:-The code checks failed}. Their own error lines say why; the batch stopped its other checks, which show as cancelled."
           exit 1
 
   # After a failed check: what the confirm runs again, from the failed jobs'

@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { build } from "vite";
 import { REPO_ROOT } from "./moduleRunner.ts";
+import { staleGeneratedFile } from "./github-errors.ts";
 
 /**
  * The phone's Settings pages run the computer's own row rules and words
@@ -37,5 +38,5 @@ if (process.argv[1] && process.argv[1].endsWith("generate-phone-settings.ts")) {
   const script = await phoneSettingsScript();
   if (!process.argv.includes("--check")) writeFileSync(path, script);
   else if (readFileSync(path, "utf8") !== script)
-    throw new Error("Run node scripts/generate-phone-settings.ts");
+    throw staleGeneratedFile(PHONE_SETTINGS_SCRIPT, "node scripts/generate-phone-settings.ts");
 }

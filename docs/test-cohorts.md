@@ -204,6 +204,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/orchestrator/reviews.test.ts` | real git in scratch projects for the review cases, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
 | `src/core/orchestrator/crewBrief.test.ts` | real git in scratch projects for some rigor and picture cases, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
 | `tests/e2e-lanes.test.ts` | playwright --list over every spec, and the real runner over fixture specs | 60 s; 180 s on the listing (Linux fastest 35.7 s; it grows with the suite) |
+| `tests/failure-annotations.test.ts` | the real Playwright and Vitest configurations over one failing fixture test each, a generator's check in a scratch tree and the merge batch's stop steps in bash, as a check inside GitHub Actions runs them | 15 s (a Mac fastest 0.6 s a case; not yet measured on Linux) |
 | `tests/journey-groups.test.ts` | node running the journey groups command with a stand-in pnpm, and playwright --list over one spec | 5 s default; 60 s on the listing |
 | `tests/checks-mode.test.ts` | git with a scratch home's settings, the `test:phone` and `replay:gate` package scripts, the real Playwright runner over one spec, each refusing before setup | 5 s default, 30 s on the runner |
 | `tests/e2e-contract-lint.test.ts` | Biome, with the repository's plugins, over a fixture spec | 5 s default |

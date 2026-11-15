@@ -153,7 +153,13 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(config.retries ?? 0).toBe(0);
     expect(config.use).toMatchObject({ trace: "retain-on-failure", screenshot: "only-on-failure" });
     const reporters = Array.isArray(config.reporter) ? config.reporter : [];
-    expect(reporters.map(([name]) => name)).toEqual([process.env.CI ? "dot" : "list", "json"]);
+    // Inside GitHub Actions the github reporter also names each failure in
+    // the check's summary (docs/testing.md, "A failed check says why").
+    expect(reporters.map(([name]) => name)).toEqual([
+      process.env.CI ? "dot" : "list",
+      ...(process.env.GITHUB_ACTIONS === "true" ? ["github"] : []),
+      "json",
+    ]);
     // Each local run keeps its JSON result beside its result directories
     // (tests/e2e/runEvidence.ts); verify names the fixed path it keeps.
     const json = reporters.find(([name]) => name === "json")?.[1] as { outputFile?: string };

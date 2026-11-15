@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -354,6 +354,18 @@ describe("the pull request's notes step", () => {
       "release-notes/changes/init.json": note("first-feature", "A clearer title"),
     });
     expect(() => f.cli("change", "--base", "main")).toThrow(/adds no file/);
+    // Inside GitHub Actions the refusal is an error line, so the check's
+    // summary says why it failed (INF-4305; docs/testing.md, "A failed check
+    // says why").
+    const step = spawnSync(
+      process.execPath,
+      ["scripts/release-notes.ts", "change", "--base", "main", "--repo", f.dir],
+      { encoding: "utf8", env: { ...process.env, GITHUB_ACTIONS: "true" } },
+    );
+    expect(step.status).toBe(1);
+    expect(step.stderr).toMatch(
+      /^::error title=Release notes::this change adds no file under release-notes\/changes\/ with a note or an exclusion/,
+    );
     const { area: _area, ...noArea } = note("bad").entries[0] as Record<string, unknown>;
     f.commit("feat: a note without its area", {
       "release-notes/changes/bad.json": { entries: [noArea] },

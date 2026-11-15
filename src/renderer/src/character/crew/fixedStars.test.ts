@@ -1,15 +1,16 @@
 // Fixed stars (INF-3634): the captain's Approve and build of "Try the fixed
 // stars with a new look and new places" - the constellation in the upper-left
 // sky, the glint in the crewmate's own light, every crewmate the Tasks panel
-// lists under Pinned, with the settings staged on that plan
-// (tests/fixtures/crew-orbits/fixed-stars-settings.json).
+// lists under Pinned, with the settings staged on that plan and the captain's
+// later revisions (tests/fixtures/crew-orbits/fixed-stars-settings.json).
+// The later ask: the stars sit a bit farther apart and farther from the orbit.
 
 import type { TaskView } from "@shared/tasks";
 import { describe, expect, it } from "vitest";
 import staged from "../../../../../tests/fixtures/crew-orbits/fixed-stars-settings.json";
 import { pinnedCrewOf } from "./crewSignal";
 import { FIXED_STARS, type StarOrbit, skyPlaces } from "./fixedStars";
-import { CrewOrbit, DEFAULT_ORBIT, type OrbitFrame } from "./orbit";
+import { CrewOrbit, DEFAULT_ORBIT, type OrbitFrame, PLANES_GLYPH_PX } from "./orbit";
 import { CROWDED_PLANES, planeRadius } from "./orbitalPlanes";
 
 const DEG = Math.PI / 180;
@@ -45,7 +46,10 @@ const corner = (p: { x: number; y: number }) =>
 
 describe("the constellation's places", () => {
   it("holds the look and room the captain staged", () => {
-    const product = staged.pinned_crew_look.product;
+    const product = Object.assign(
+      { ...staged.pinned_crew_look.product },
+      ...staged.revisions.map((revision) => revision.product),
+    );
     expect(staged.answers).toEqual({
       place: "sky",
       star: "glint",
@@ -74,6 +78,24 @@ describe("the constellation's places", () => {
           const reach = Math.max(...orbits.map((o) => reachOf(o, theta)));
           expect(Math.hypot(p.x, p.y)).toBeGreaterThan(reach + FIXED_STARS.clearOfOrbitPx - 1);
         }
+      }
+    }
+  });
+
+  it("keeps each star clear of its neighbours' long rays for as many pins as the captain's fleet, at every crew size", () => {
+    // The captain's own fleet: eleven pins over a full crew, five of them once
+    // drawn within a ray of each other in the upper-left corner.
+    const reach = FIXED_STARS.rays * PLANES_GLYPH_PX;
+    for (let crew = 1; crew <= 72; crew++) {
+      const orbits = orbitsFor(crew);
+      for (let pinned = 2; pinned <= 11; pinned++) {
+        const { points } = skyPlaces(pinned, orbits);
+        for (const [i, p] of points.entries())
+          for (const q of points.slice(i + 1))
+            expect(
+              Math.hypot(p.x - q.x, p.y - q.y),
+              `${pinned} pins over ${crew} crew`,
+            ).toBeGreaterThan(reach);
       }
     }
   });

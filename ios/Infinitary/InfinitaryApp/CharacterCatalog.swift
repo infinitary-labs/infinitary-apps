@@ -45,7 +45,7 @@ struct CharacterCatalog: Decodable, Sendable {
         let joined: Bool
         let joinLight, joinGap, depth, placeRate, blendRate: Double
         let corners, rho, jitter: [Double]
-        let stepDeg, roomPx, reachDeg: Double
+        let stepDeg, narrowStepDeg, roomPx, reachDeg: Double
     }
     let fixedStars: FixedStars
     static let shared: CharacterCatalog = {

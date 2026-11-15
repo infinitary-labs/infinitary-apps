@@ -51,7 +51,7 @@ try {
   const { FLICKER_TUNING } = await runner.import<typeof import("../src/renderer/src/character/flicker.ts")>(join(character, "flicker.ts"));
   const { REPLY_EMOTES, replyFrame } = await runner.import<typeof import("../src/renderer/src/character/replies.ts")>(join(character, "replies.ts"));
   const { CAPTAIN_BREATH_MS, CrewOrbit, DEFAULT_ORBIT, PLANES_GLYPH_PX, REMOTE_TRIP, WAIT_ARC_RATE } = await runner.import<typeof import("../src/renderer/src/character/crew/orbit.ts")>(join(character, "crew/orbit.ts"));
-  const { CORNERS, FIXED_STARS, JITTER, REACH_DEG, RHO, ROOM_PX, STEP_DEG, skyPlaces } = await runner.import<typeof import("../src/renderer/src/character/crew/fixedStars.ts")>(join(character, "crew/fixedStars.ts"));
+  const { CORNERS, FIXED_STARS, JITTER, NARROW_STEP_DEG, REACH_DEG, RHO, ROOM_PX, STEP_DEG, skyPlaces } = await runner.import<typeof import("../src/renderer/src/character/crew/fixedStars.ts")>(join(character, "crew/fixedStars.ts"));
   const { CONSTELLATION } = await runner.import<typeof import("../src/renderer/src/character/crew/constellation.ts")>(join(character, "crew/constellation.ts"));
   const { FIRSTMATE_SESSION_ID } = await runner.import<typeof import("../src/shared/observe.ts")>(join(REPO_ROOT, "src/shared/observe.ts"));
   const { DEPENDENCY_VISUAL } = await runner.import<typeof import("../src/shared/dependencyVisual.ts")>(join(REPO_ROOT, "src/shared/dependencyVisual.ts"));
@@ -102,7 +102,7 @@ try {
       captain: { ...CAPTAIN_LIGHT, breathMs: CAPTAIN_BREATH_MS },
       wait: { ...WAIT_LIGHT, arcRate: WAIT_ARC_RATE },
       batch: BATCH_GATE,
-      fixedStars: { ...FIXED_STARS, corners: CORNERS, rho: RHO, jitter: JITTER, stepDeg: STEP_DEG, roomPx: ROOM_PX, reachDeg: REACH_DEG },
+      fixedStars: { ...FIXED_STARS, corners: CORNERS, rho: RHO, jitter: JITTER, stepDeg: STEP_DEG, narrowStepDeg: NARROW_STEP_DEG, roomPx: ROOM_PX, reachDeg: REACH_DEG },
     },
     "ios/Infinitary/InfinitaryTests/PhoneSceneTraces.generated.json": REPLY_EMOTES.flatMap((emote) =>
       [0, 0.05, 0.15, 0.25, 0.4, 0.55, 0.7, 0.85, 1].map((progress) => ({ emote, progress, frame: replyFrame(emote, progress) }))),

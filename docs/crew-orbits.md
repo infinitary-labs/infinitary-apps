@@ -546,7 +546,8 @@ A crewmate whose task the Tasks panel lists under Pinned leaves its orbit and ha
 `crewSignal.ts`'s `pinnedCrewOf` reads the list from the board the way the Tasks panel does: pins oldest first, each pinned task's open parts under it by priority, and only tasks with a crewmate in orbit.
 A program's running part stays on its branch and is not a star.
 `CrewOrbit.setPinned(ids)` takes that order, and `ComputerOrbits` hands it to every local orbit.
-The places come from `fixedStars.ts`'s `skyPlaces`: a loose zigzag grown both ways from the upper-left diagonal, each star at its own share of the room between the widest reach of either occupied orbit plus 40 px and 240 px from the center on each axis.
+The places come from `fixedStars.ts`'s `skyPlaces`: a loose zigzag grown both ways from the upper-left diagonal, each star at its own share of the room between the widest reach of either occupied orbit plus 50 px and 240 px from the center on each axis.
+Neighbours in a corner sit 11 to 12 degrees apart and alternate nearer and farther out on both sides of the diagonal; where the arc cannot grow both ways, it slides along the corner to stay in its room.
 A corner whose room runs out hands on to the lower right, then the upper right, then the lower left; past what every corner holds, the two roomiest tighten.
 A hairline in the stars' own light joins neighbours in pin order within one corner, never across two.
 A star keeps its membership of its orbit, so the orbit's radius does not change, but it takes no seat: the seated crew re-space as if it had left, and make room again when it is unpinned.
@@ -560,7 +561,7 @@ The summary of a pinned task wears the filled pin beside its key, named Pinned.
 Reduced motion draws one settled frame: every star at its place, the glint steady.
 The near crew canvas publishes the settled stars as `data-crew-stars`, and `data-plane-crew` leaves them out.
 
-`fixedStars.test.ts` covers the staged settings, the places at every crew size, the joins, the seat re-spacing, the easing, the rush and the unpin, and who is listed; `tests/e2e/crew-fixed-stars.spec.ts` pins a task by keys and reads its star off the stage; the phone reads the same places and look from the generated scene data.
+`fixedStars.test.ts` covers the staged settings and their later revision, the places at every crew size, the room between neighbours, the joins, the seat re-spacing, the easing, the rush and the unpin, and who is listed; `tests/e2e/crew-fixed-stars.spec.ts` pins a task by keys and reads its star off the stage; the phone reads the same places and look from the generated scene data.
 
 ## Batch gate
 

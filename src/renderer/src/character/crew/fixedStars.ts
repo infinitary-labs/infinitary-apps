@@ -16,7 +16,7 @@ const DEG = Math.PI / 180;
 /** The captain's staged settings and the look's fixed numbers. */
 export const FIXED_STARS = {
   /** Room kept between a star and the widest reach of either orbit beneath it, scene px. */
-  clearOfOrbitPx: 40,
+  clearOfOrbitPx: 50,
   /** A star keeps this far from the center on each axis, scene px; the stage reaches 262. */
   edgePx: 240,
   /** The long rays, up and down, in glyph heights; the side rays are `sideRay` of them. */
@@ -54,9 +54,10 @@ export const RHO = [
 ] as const;
 /** A small turn off each star's even spacing, degrees, so the scatter reads loose. */
 export const JITTER = [0, 1.5, -2, 1, -1.5, 2, -1, 0.5, -2, 1.5, 0, -1, 2] as const;
-/** The widest step between neighbours in a corner, degrees, and the narrowest room a star takes, px. */
+/** The widest and narrowest steps between neighbours in a corner, degrees, and the narrowest room a star takes, px. */
 export const STEP_DEG = 12;
-export const ROOM_PX = 28;
+export const NARROW_STEP_DEG = 11;
+export const ROOM_PX = 16;
 /** How far either side of its diagonal a corner reaches, degrees. */
 export const REACH_DEG = 41;
 
@@ -128,7 +129,7 @@ export function skyPlaces(count: number, orbits: readonly StarOrbit[]): SkyPlace
     const to = c === -135 ? -44 : c + REACH_DEG;
     const s = span(c, from, to);
     spans.push(s);
-    const take = Math.min(left, Math.floor((s[1] - s[0]) / 9) + 1);
+    const take = Math.min(left, Math.floor((s[1] - s[0]) / NARROW_STEP_DEG) + 1);
     takes.push(take);
     left -= take;
   }
@@ -150,10 +151,16 @@ export function skyPlaces(count: number, orbits: readonly StarOrbit[]): SkyPlace
       else if ((j % 2 === 1 && canR) || !canL) offs.push(++r);
       else offs.push(-++l);
     }
+    // Where the arc cannot grow both ways from the diagonal, it slides along the corner to stay in its room.
+    const anchor = Math.min(
+      Math.max(c, lo - Math.min(...offs) * step),
+      hi - Math.max(...offs) * step,
+    );
     const base = points.length;
     for (const o of offs) {
-      const i = ((o % 13) + 13) % 13;
-      points.push(sky(c + o * step + (JITTER[i] ?? 0) * Math.min(1, step / 8), RHO[i] ?? 0.5));
+      // The left side counts on from the far end of the tables, so the zigzag never sets two near stars side by side.
+      const i = (((o < 0 ? o - 1 : o) % 13) + 13) % 13;
+      points.push(sky(anchor + o * step + (JITTER[i] ?? 0) * Math.min(1, step / 8), RHO[i] ?? 0.5));
     }
     // The hairline runs across the corner, from one end of its arc to the other.
     const along = offs.map((_, i) => i).sort((a, b) => (offs[a] ?? 0) - (offs[b] ?? 0));

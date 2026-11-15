@@ -24,5 +24,11 @@
       "easeIn": "--dur-med",
       "reducedMotion": "one settled frame, the mark steady"
     }
-  }
+  },
+  "revisions": [
+    {
+      "provenance": "The captain later asked for the pinned crewmates' stars to sit a bit farther apart and a bit farther from the orbit; this clearance answers it, shown on before and after pictures of one fleet",
+      "product": { "clearOfOrbitPx": 50 }
+    }
+  ]
 }

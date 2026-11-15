@@ -64,7 +64,7 @@ enum PhoneFixedStars {
             let to = c == -135 ? -44 : c + t.reachDeg
             let s = span(c, from: from, to: to)
             spans.append(s)
-            let take = min(left, Int(((s.1 - s.0) / 9).rounded(.down)) + 1)
+            let take = min(left, Int(((s.1 - s.0) / t.narrowStepDeg).rounded(.down)) + 1)
             takes.append(take); left -= take
         }
         var x = 0
@@ -80,10 +80,13 @@ enum PhoneFixedStars {
                 let canL = c - Double(l + 1) * step >= lo - 0.01
                 if j == 0 { offs.append(0) } else if (j % 2 == 1 && canR) || !canL { r += 1; offs.append(r) } else { l += 1; offs.append(-l) }
             }
+            // Where the arc cannot grow both ways from the diagonal, it slides along the corner to stay in its room.
+            let anchor = min(max(c, lo - Double(offs.min() ?? 0) * step), hi - Double(offs.max() ?? 0) * step)
             let base = result.points.count, n = t.rho.count
             for o in offs {
-                let i = ((o % n) + n) % n
-                result.points.append(sky(c + Double(o) * step + t.jitter[i] * min(1, step / 8), t.rho[i]))
+                // The left side counts on from the far end of the tables, so the zigzag never sets two near stars side by side.
+                let k = o < 0 ? o - 1 : o, i = ((k % n) + n) % n
+                result.points.append(sky(anchor + Double(o) * step + t.jitter[i] * min(1, step / 8), t.rho[i]))
             }
             // The hairline runs across the corner, from one end of its arc to the other.
             let along = offs.indices.sorted { offs[$0] != offs[$1] ? offs[$0] < offs[$1] : $0 < $1 }

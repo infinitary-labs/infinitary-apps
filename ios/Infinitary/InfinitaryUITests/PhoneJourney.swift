@@ -130,7 +130,7 @@ import XCTest
         // Reading an absent button's value fails at once, so a join still under way is waited for first.
         XCTAssertTrue(button.waitForPresence(timeout: timeout), app.debugDescription)
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == %@", words), object: button, timeout: timeout), .completed, app.debugDescription)
-        if words == "In reach" { XCTAssertFalse(app.otherElements["reach-line"].exists, "In reach, no line under the bar repeats it") }
+        if words == "Live" { XCTAssertFalse(app.otherElements["reach-line"].exists, "Live, no line under the bar repeats it") }
     }
 
     /// Away past the app's background time (`INFINITARY_TEST_BACKGROUND_TIME`): the app closes its connection when it ends.
@@ -161,7 +161,7 @@ import XCTest
 
     func join() async throws {
         try await submitLink()
-        reach("In reach", timeout: 20)
+        reach("Live", timeout: 20)
     }
 
     // INF-662 piece 2 (the captain's "Both at once, journey in parts"): the journey's parts are tests, each run from
@@ -350,7 +350,7 @@ import XCTest
             for (command, dark) in [("appearance-dark", true), ("appearance-light", false)] {
                 _ = try await home(command, budget: displayBudget)
                 app.terminate(); try await launchPhoneApp(app)
-                reach("In reach", timeout: 20)
+                reach("Live", timeout: 20)
                 XCTAssertTrue(app.staticTexts["last-turn-you"].waitForPresence(timeout: 10))
                 let name = dark ? "talk-hero-dark" : "talk-hero-light"
                 let screenshot = try appearancePicture(name, dark: dark)
@@ -451,7 +451,7 @@ import XCTest
         try await launchPhoneApp(app)
         let start = app.buttons.matching(NSPredicate(format: "identifier IN %@", ["paste-link", "computer-details"])).firstMatch
         XCTAssertTrue(start.waitForPresence(timeout: 10), app.debugDescription)
-        if app.buttons["paste-link"].exists { try await join() } else { reach("In reach", timeout: 20) }
+        if app.buttons["paste-link"].exists { try await join() } else { reach("Live", timeout: 20) }
         _ = try await home("empty-cards")
         _ = try await home("biometry-enroll")
         let ready = try await home("secrets-ready")
@@ -642,7 +642,7 @@ import XCTest
         app.launchEnvironment["INFINITARY_DAMAGED_APPROVAL"] = "1"
         try await launchPhoneApp(app)
         app.launchEnvironment.removeValue(forKey: "INFINITARY_DAMAGED_APPROVAL")
-        reach("In reach", timeout: 20)
+        reach("Live", timeout: 20)
         openSettings()
         let again = app.buttons["approval-set-up"]
         XCTAssertTrue(again.waitForPresence(timeout: 20), app.debugDescription)

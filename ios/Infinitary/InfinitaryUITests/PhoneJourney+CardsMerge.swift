@@ -44,7 +44,7 @@ extension PhoneJourney {
         // Back in reach, the card asks for its thread again, after the failed read's ending reached the card.
         _ = try await home("card-action-held")
         _ = try await home("release-card-action")
-        reach("In reach")
+        reach("Live")
         picture("card-thread-read-across-drop")
         XCTAssertFalse(line.exists, "A thread read the drop failed leaves no out-of-reach line once in reach")
     }

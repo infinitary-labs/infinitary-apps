@@ -189,6 +189,8 @@ export class ViewBackend {
   private readonly joined: JoinedHome;
   private readonly record: Joined;
   private caughtUp = 0;
+  /** The pushes a replaying welcome sent again are still arriving. */
+  private replaying = false;
   private readonly pictures = new Map<string, Uint8Array>();
   private pictureBytes = 0;
   private seeding: Promise<void> | null = null;
@@ -268,6 +270,13 @@ export class ViewBackend {
         if (channel === "inf:computers:resources")
           options.broadcast("inf:computers:resources", payload);
       },
+      // Counted before the state turns in reach, and said with it, so the
+      // window goes from out of reach to catching up with no moment of live
+      // between.
+      onWelcoming: (catchUp, missed) => {
+        this.replaying = catchUp === "replay" && missed > 0;
+        if (catchUp === "reload") this.caughtUp += 1;
+      },
       onCaughtUp: (catchUp) => {
         if (!this.look.seeded()) void this.seedLook();
         void this.readPanels();
@@ -282,9 +291,12 @@ export class ViewBackend {
           // Whether the sign-in there still waits is not known: its page again starts anew.
           this.endSignInReturn();
           this.notices.startOver();
-          this.caughtUp += 1;
-          this.changed();
         }
+      },
+      onReplayed: () => {
+        if (!this.replaying) return;
+        this.replaying = false;
+        this.changed();
       },
       onState: (state) => this.followed(state),
     });
@@ -323,6 +335,7 @@ export class ViewBackend {
         : {}),
       heardAt: state.heardAt,
       caughtUp: this.caughtUp,
+      ...(this.replaying ? { replaying: true as const } : {}),
       ...(this.record.grant.kind === "mac" ? { runsWork: true } : {}),
       ...(this.homeLacks(EVERY_VIEW_ASKS) ? { needsUpdateThere: true as const } : {}),
       ...(this.homeLacks(BROWSER_FROM_ANY_VIEW) ? { browserNeedsUpdateThere: true as const } : {}),
@@ -640,6 +653,8 @@ export class ViewBackend {
       this.options.onRemoved();
       return;
     }
+    // A replay cut short ends with the connection; the next welcome says again.
+    if (state.contact === "lost" || state.contact === "closed") this.replaying = false;
     this.changed();
   }
 

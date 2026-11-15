@@ -33,7 +33,7 @@ extension PhoneJourney {
         // With the library the build made, a fresh launch draws the panel under its title and owner word.
         _ = try await home("panel-library-restore")
         app.terminate(); try await launchPhoneApp(app)
-        reach("In reach", timeout: 20)
+        reach("Live", timeout: 20)
         tab("Panels", repeatDiscarded: false)
         XCTAssertTrue(header.waitForPresence(timeout: 20), app.debugDescription)
         XCTAssertTrue(header.label.contains("TALLY") && header.label.contains("yours"), "Its title and owner word: \(header.label)")
@@ -60,7 +60,7 @@ extension PhoneJourney {
         XCTAssertTrue(tally(42).waitForAbsence(timeout: 10), "Folded, the panel's body leaves the column")
         XCTAssertEqual(header.value as? String, "folded")
         app.terminate(); try await launchPhoneApp(app)
-        reach("In reach", timeout: 20)
+        reach("Live", timeout: 20)
         try await pressPhoneKey("4", modifiers: .command, in: app)
         XCTAssertTrue(header.waitForPresence(timeout: 20), app.debugDescription)
         XCTAssertEqual(header.value as? String, "folded", "The fold survives a relaunch")

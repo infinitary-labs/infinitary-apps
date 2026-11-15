@@ -13,7 +13,7 @@ How it looks and reads is the design skill's `components/devices/JoinAnotherMac`
   The window's core requests go to the other Mac through `ViewBackend` (`src/main/view/viewBackend.ts`) and its link to that Mac, `HomeLink` (`src/core/devices/homeLink.ts`).
 
 The window's calls, its pushes, its look, its frames' card pictures, its permissions and its focus and wake hooks all go through the shell, so nothing else in the main process reads a core directly.
-The window asks `inf:devices:this-mac`, a host channel, for what this app is, and follows its push of the same name: `home`, with the Mac it last left, or `view`, with that Mac's name, its address, when this Mac joined, whether it is in reach and as of when, whether the two copies of Infinitary are too far apart to make changes, and how many times it had to read everything again.
+The window asks `inf:devices:this-mac`, a host channel, for what this app is, and follows its push of the same name: `home`, with the Mac it last left, or `view`, with that Mac's name, its address, when this Mac joined, whether it is in reach and since when it was last heard, whether the two copies of Infinitary are too far apart to make changes, how many times it had to read everything again, and whether the pushes a welcome replays are still arriving (`replaying`).
 
 What a view keeps is `JoinedHome`'s (`src/core/devices/joinedHome.ts`), the one writer over `userData/joined/` (0700, every file 0600):
 
@@ -274,6 +274,7 @@ On macOS it dials through macOS's own nc, as every device does (`docs/devices.md
   A change asked while the other Mac is out of reach is refused at once, and a request in flight when the connection drops is refused and never asked again, whether or not the other Mac had done it.
   Only a read asked while the device is still reaching the other Mac - at its start, or in the one attempt right after a drop - waits for that attempt.
 - **Catching up**: a welcome that replays sends the missed pushes in order and nothing else is needed.
+  `HomeLink` says each welcome to `onWelcoming` before its state turns in reach, with how many pushes it missed, and to `onReplayed` once the last push it sent again is handled; `ViewBackend` says `replaying` from the one to the other, and only when something was missed.
   A welcome that reloads - the other Mac restarted, or this one was away longer than its journal keeps - raises `caughtUp`, and the window reads everything again in place (`resync` in the shell store, and `resyncReads`, `src/renderer/src/plugins/reads/resync.ts`, which every read subscription follows).
   Nothing typed is lost to a reload: the window does not start over.
 - **Read only**: a welcome whose `access` is `read` (`docs/contract.md`) means the two copies of Infinitary are too far apart; the window says which one is newer and makes no changes but one.
@@ -281,10 +282,22 @@ On macOS it dials through macOS's own nc, as every device does (`docs/devices.md
   When the newer one is there, the window asks for this Mac to be updated, and this Mac's own update notice is how.
   A development run may stand in another contract version for the Mac where the first mate lives with `INFINITARY_CONTRACT_VERSION`, and its view floor with `INFINITARY_VIEW_FLOOR`, so a view on the same build reads as too far apart; a packaged app ignores both.
 
+## Live, catching up or out of reach
+
+The top line, at the top bar's left (`RemoteControlLine`), says how fresh what the window shows is (`freshnessOf`, `src/renderer/src/devices/viewWords.ts`):
+
+- **Live**: "Controlling your first mate on MacBook Pro · live", once every change there is shown here.
+- **Catching up**: "· catching up on what was missed" while a replay's pushes arrive, or "· catching up, reading everything again" while a reload's reads are under way (`catchUpOf`).
+  The window counts a reload read once `resync` has answered: the store's `rereadThrough` follows `caughtUp` only then.
+  A reload is counted in the same word that says the Mac is in reach, so nothing reads live between out of reach and catching up.
+- **Out of reach**: "MacBook Pro is out of reach · since 14:32", the time in mono, and "since Nov 11 14:32" when that was not today (`sinceWhen`).
+
+The line carries `data-freshness` and, while catching up, `data-catch-up` (`replay` or `reload`).
+Catching up changes nothing about what is refused: changes are on as soon as the other Mac is in reach, and words typed while it was out of reach stay in the input, never sent.
+
 ## Out of reach in the window
 
-- **The top line**, at the top bar's left: "Controlling your first mate on MacBook Pro", or "MacBook Pro is out of reach · as of 14:32" with the time in mono (`RemoteControlLine`).
-- **One pill** under the top bar says why changes are off: asleep or on another network, Infinitary closed there, or a newer or older Infinitary there; when contact returns it reads "MacBook Pro is back.
+- **One pill** under the top bar says why changes are off: asleep or on another network, Infinitary closed there, or a newer or older Infinitary there; when contact returns and the catch-up is done it reads "MacBook Pro is back.
   This computer caught up." and fades (`ViewPill`).
 - **Changes are off** (`changesOff`, `src/renderer/src/devices/viewWords.ts`) while the other Mac is not in reach or too far apart: card buttons are marked off, still Tab stops whose reason is their description and shows on rest, the pointer's or the keyboard's focus, unless the notice already shows it whole (`docs/keyboard.md`, "Facts shown on rest"), a close says why it did not happen, and sending from the input or a reply refuses at once with "Not sent.
   Your words stay here until MacBook Pro is back." under it.
@@ -378,5 +391,5 @@ The first-launch gate stays derived (`docs/first-launch.md`); the line only says
 - `tests/e2e/view.spec.ts`, "a Mac joined at its first launch also runs that Mac's work": the home standing in another Mac for each app, a link pasted at first launch joins a Mac that controls and, its work started, is in reach to run work; a Mac a command added opens Infinitary there and controls with no first launch and no new link, and its Leave says it stops its work too.
 - `src/core/devices/remoteLoginLink.test.ts`, "asking a computer for a link by its address", and `src/core/devices/phoneDoor.test.ts`, "the computer link command": the key line then a link, a port kept with its key line, not open, this app's own link, the password once, and the command under each login shell with each reason it makes no link.
 - `tests/e2e/join-by-address.spec.ts`: a fresh app, by keys only, joins another app on the same computer by its address over a local SSH server, answers the key line, controls it and is listed as a Mac.
-- `tests/e2e/view.spec.ts`: two apps on one Mac - a fresh app joins at its first launch, shows the other's cards with their pictures, its feed and its tasks, an answer in either shows in the other, a button that opens Devices opens that Mac's Devices here and makes its link, out of reach refuses changes and never sends them, a restart there catches it up, it restarts as a view with its record untouched, and Leave returns it to its own first launch.
+- `tests/e2e/view.spec.ts`: two apps on one Mac - a fresh app joins at its first launch, shows the other's cards with their pictures, its feed and its tasks, an answer in either shows in the other, a button that opens Devices opens that Mac's Devices here and makes its link, out of reach says since when and refuses changes and never sends them, a restart there reads out of reach, catching up by reading everything again and live in that order, it restarts as a view with its record untouched, and Leave returns it to its own first launch.
   A second journey drops a picture, a text file and a PDF on a view: the picture and the text reach the other Mac's first mate and are kept there, and the PDF, dropped or chosen, on the input or a reply, is refused with no path of this Mac sent.

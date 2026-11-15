@@ -27,5 +27,12 @@
   "devicesRemoteBack": "{name} voltou",
   "devicesRemoteChangesOff": "As alterações estão desativadas",
   "devicesRemoteControlling": "Controlando {name}",
+  "devicesRemoteLineCatchingUp": "· recuperando o que perdeu",
+  "devicesRemoteLineControlling": "Controlando seu imediato em",
+  "devicesRemoteLineLive": "· ao vivo",
+  "devicesRemoteLineOutOfReach": "está fora de alcance",
+  "devicesRemoteLineOutOfReachSince": "está fora de alcance · desde",
+  "devicesRemoteLineReadOnly": "· somente leitura",
+  "devicesRemoteLineReadingAgain": "· atualizando, lendo tudo de novo",
   "devicesRemoteOutOfReach": "{name} está fora de alcance"
 }

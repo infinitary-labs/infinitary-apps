@@ -3,7 +3,15 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useShellStore } from "../app/store";
 import { StatusDot } from "../design";
 import { textIsHidden, useOverflowTitle } from "../design/core/overflowTitle";
-import { backWords, clockTime, isView, pillWords, topLine, type ViewMac } from "./viewWords";
+import {
+  backWords,
+  type CatchUp,
+  catchUpOf,
+  isView,
+  pillWords,
+  topLine,
+  type ViewMac,
+} from "./viewWords";
 import "./remoteControl.css";
 
 /**
@@ -13,20 +21,44 @@ import "./remoteControl.css";
  * are off, or that it is back.
  */
 
-/** At the top bar's left: "Controlling your Firstmate on MacBook Pro", or that it is out of reach. */
-export function RemoteControlLine() {
-  const thisMac = useShellStore((s) => s.thisMac);
-  if (!isView(thisMac)) return null;
-  return <RemoteControlLineView mac={thisMac} />;
+/**
+ * How this Mac catches up with the one it controls, or null while it is not
+ * (docs/view.md, "Live, catching up or out of reach").
+ */
+export function useCatchUp(mac: ViewMac | null): CatchUp | null {
+  const rereadThrough = useShellStore((s) => s.rereadThrough);
+  return mac ? catchUpOf(mac, rereadThrough) : null;
 }
 
-export function RemoteControlLineView({ mac }: { mac: ViewMac }) {
-  const line = topLine(mac);
-  const away = mac.contact === "lost" || mac.contact === "closed";
+/** At the top bar's left: "Controlling your first mate on MacBook Pro · live", catching up, or that it is out of reach. */
+export function RemoteControlLine() {
+  const thisMac = useShellStore((s) => s.thisMac);
+  const catchUp = useCatchUp(isView(thisMac) ? thisMac : null);
+  if (!isView(thisMac)) return null;
+  return <RemoteControlLineView mac={thisMac} catchUp={catchUp} />;
+}
+
+export function RemoteControlLineView({
+  mac,
+  catchUp = null,
+}: {
+  mac: ViewMac;
+  catchUp?: CatchUp | null;
+}) {
+  const line = topLine(mac, catchUp);
+  const away = line.freshness === "out-of-reach";
   const nameFit = useOverflowTitle(line.name);
-  const stateFit = useOverflowTitle([line.lead, line.name, line.tail].filter(Boolean).join(" "));
+  const stateFit = useOverflowTitle(
+    [line.lead, line.name, line.tail, line.when].filter(Boolean).join(" "),
+  );
   return (
-    <div className="fm-remote-line" data-remote-control={mac.contact} ref={stateFit.ref}>
+    <div
+      className="fm-remote-line"
+      data-remote-control={mac.contact}
+      data-freshness={line.freshness}
+      data-catch-up={catchUp ?? undefined}
+      ref={stateFit.ref}
+    >
       <StatusDot
         tone={line.tone}
         label={
@@ -41,9 +73,9 @@ export function RemoteControlLineView({ mac }: { mac: ViewMac }) {
         {line.name}
       </span>
       {line.tail && <span className="fm-remote-lead">{line.tail}</span>}
-      {away && mac.heardAt !== null && (
-        <span className="fm-remote-time" data-as-of="">
-          {clockTime(mac.heardAt)}
+      {line.when && (
+        <span className="fm-remote-time" data-since="">
+          {line.when}
         </span>
       )}
     </div>
@@ -58,6 +90,8 @@ export function ViewPill() {
   const thisMac = useShellStore((s) => s.thisMac);
   const mac = isView(thisMac) ? thisMac : null;
   const words = mac ? pillWords(mac) : null;
+  // "Is back" waits until what was missed is applied: it says this Mac caught up.
+  const catchingUp = useCatchUp(mac) !== null;
   // Contact that returns says so once, then fades.
   const [back, setBack] = useState<"shown" | "fading" | null>(null);
   const wasAway = useRef(false);
@@ -68,7 +102,7 @@ export function ViewPill() {
       setBack(null);
       return;
     }
-    if (!wasAway.current || mac?.contact !== "in-reach") return;
+    if (!wasAway.current || mac?.contact !== "in-reach" || catchingUp) return;
     wasAway.current = false;
     setBack("shown");
     const fade = window.setTimeout(() => setBack("fading"), BACK_SHOWN_MS);
@@ -77,7 +111,7 @@ export function ViewPill() {
       window.clearTimeout(fade);
       window.clearTimeout(gone);
     };
-  }, [away, mac?.contact]);
+  }, [away, mac?.contact, catchingUp]);
   const notice = mac ? (words ?? (back ? backWords(mac) : null)) : null;
   const repeats =
     notice !== null &&

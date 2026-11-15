@@ -11,7 +11,7 @@ extension PhoneJourney {
         let hero = try await home("hero-card")
         XCTAssertTrue(cardHeading(try XCTUnwrap(hero["title"] as? String)).waitForPresence(timeout: 10), app.debugDescription)
         app.terminate(); try await launchPhoneApp(app)
-        reach("In reach", timeout: 20)
+        reach("Live", timeout: 20)
         try await composeAndSend()
     }
 

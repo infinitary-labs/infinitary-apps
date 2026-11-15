@@ -12,32 +12,35 @@ struct PhoneReach: View {
                     .frame(width: 6, height: 6).accessibilityHidden(true)
                 Text(session.reachWords).accessibilityIdentifier("contact")
             }
-            if let time = session.reachTime { Text(PhoneMessages.phoneReachAsOf(time: time)) }
+            if let time = session.reachTime { Text(PhoneMessages.phoneReachSince(time: time)) }
         }.font(PhoneFont.micro).foregroundStyle(PhoneTheme.secondary)
     }
 }
 
 extension ReadOnlySession {
     /// The reach, in the words the reach line and the computer button share. INF-2668: they follow the patient
-    /// `reach`, so a redial the computer answers within the captain's 20 s says nothing.
+    /// `reach`, so a redial the computer answers within the captain's 20 s says nothing. INF-4207 piece 2: Live once
+    /// every change is shown, and a catch-up says whether it replays what was missed or reads everything again.
     var reachWords: String {
         switch reach {
-        case "in-reach": PhoneMessages.phoneReachInReach()
+        case "in-reach": PhoneMessages.phoneReachLive()
         case "reaching": PhoneMessages.phoneReachReaching()
+        case "catching-up":
+            catchingUp == "replay" ? PhoneMessages.phoneReachCatchingUp() : PhoneMessages.phoneReachReadingAgain()
         default: PhoneMessages.phoneReachOutOfReach()
         }
     }
 
-    /// When the computer was last heard, shown only while it is out of reach; reaching it again needs no time.
+    /// Since when the computer is out of reach, naming the day when it was not today; reaching it again needs no time.
     var reachTime: String? {
-        guard reach != "in-reach", reach != "reaching", let heardAt else { return nil }
-        return PhoneFormats.time(heardAt)
+        guard reach != "in-reach", reach != "reaching", reach != "catching-up", let heardAt else { return nil }
+        return PhoneFormats.since(heardAt)
     }
 
     /// INF-1062: the computer button in the top bar says the reach to VoiceOver, with its time while out of reach.
     var reachLine: String {
         guard let reachTime else { return reachWords }
-        return PhoneMessages.phoneReachLine(reach: reachWords, time: reachTime)
+        return PhoneMessages.phoneReachLineSince(reach: reachWords, time: reachTime)
     }
 
     /// INF-589 item 11: the reach line says out of reach, so the one line where changes are made says only that
@@ -47,6 +50,7 @@ extension ReadOnlySession {
         switch reach {
         case "in-reach": contact == "in-reach" ? changeRefusal : nil
         case "reaching": nil
+        case "catching-up": contact == "in-reach" ? changeRefusal : nil
         default: PhoneMessages.phoneReachChangesOff(computer: mac.name)
         }
     }

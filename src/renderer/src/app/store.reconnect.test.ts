@@ -2,7 +2,7 @@ import type { Card, CardMessage } from "@shared/cards";
 import type { ThisMac } from "@shared/devices";
 import type { TaskBoard, TaskView } from "@shared/tasks";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { changesOffWords } from "../devices/viewWords";
+import { catchUpOf, changesOffWords } from "../devices/viewWords";
 import { onResync } from "../plugins/reads/resync";
 import { useShellStore } from "./store";
 import { card, DECIDE, resetShell, settle } from "./storeTestKit";
@@ -217,6 +217,29 @@ describe("reading everything again after a gap (docs/view.md)", () => {
     expect(infinitary.conversation.lastTurn).toHaveBeenCalledTimes(1);
     // An unreadable first-run answer still settles the input.
     expect(state().firstRunSettled).toBe(true);
+  });
+
+  // INF-4207 piece 2: live waits until what was missed is applied.
+  it("says it reads everything again until the reads answer, and only then live", async () => {
+    useShellStore.setState({ rereadThrough: 2 });
+    let answer: (cards: Card[]) => void = () => {};
+    infinitary.cards.list.mockImplementation(
+      () =>
+        new Promise<Card[]>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const catchUp = () => {
+      const mac = state().thisMac;
+      return mac?.role === "view" ? catchUpOf(mac, state().rereadThrough) : "not a view";
+    };
+
+    state().applyThisMac(view("in-reach", 3));
+    await settle();
+    expect(catchUp()).toBe("reload");
+    answer(stackThere);
+    await settle();
+    expect(catchUp()).toBe(null);
   });
 
   it("keeps a stack that changed while its read was out", async () => {

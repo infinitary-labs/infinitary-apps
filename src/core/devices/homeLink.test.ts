@@ -179,6 +179,10 @@ function follow(
   /** Each `live` frame, for this connection alone and never numbered. */
   const lives: { channel: string; payload: unknown }[] = [];
   const catchUps: ("replay" | "reload")[] = [];
+  /** Each welcome's count of missed pushes, and the contact it was said under. */
+  const welcomes: { missed: number; contact: string }[] = [];
+  /** How many pushes had been handled each time a replay ended. */
+  const replayed: number[] = [];
   const sockets: WebSocket[] = [];
   /** Every frame on the wire, as the device wrote it and as it heard it. */
   const wire: { sent: Record<string, unknown>[]; heard: Record<string, unknown>[] } = {
@@ -211,7 +215,9 @@ function follow(
       replays.push(replayed);
     },
     onLive: (channel, payload) => lives.push({ channel, payload }),
+    onWelcoming: (_catchUp, missed) => welcomes.push({ missed, contact: link.state().contact }),
     onCaughtUp: (catchUp) => catchUps.push(catchUp),
+    onReplayed: () => replayed.push(pushes.length),
     onState: (state) => states.push(state),
     ...(options.onInvoke ? { onInvoke: options.onInvoke } : {}),
     retryMs: options.retryMs ?? [20],
@@ -228,6 +234,8 @@ function follow(
     replays,
     lives,
     catchUps,
+    welcomes,
+    replayed,
     sockets,
     wire,
     until,
@@ -464,6 +472,11 @@ describe("the device's side of the connection", () => {
       "inf:cards",
       "inf:models:changed",
     ]);
+    // INF-4207 piece 2: the welcome says how many it missed before the state turns in reach, and
+    // the replay's end is said once its last push is handled, so a view says live only then.
+    expect(air.welcomes.map((welcome) => welcome.missed)).toEqual([0, 2]);
+    expect(air.welcomes[0]?.contact).toBe("reaching");
+    expect(air.replayed).toEqual([3]);
     // The two it missed came again with the welcome, and it can tell them
     // from a new push: a page to open is opened only as it arrives.
     at.events.emit("inf:cards", []);

@@ -27,5 +27,12 @@
   "devicesRemoteBack": "{name} is back",
   "devicesRemoteChangesOff": "Changes are off",
   "devicesRemoteControlling": "Controlling {name}",
+  "devicesRemoteLineCatchingUp": "· catching up on what was missed",
+  "devicesRemoteLineControlling": "Controlling your first mate on",
+  "devicesRemoteLineLive": "· live",
+  "devicesRemoteLineOutOfReach": "is out of reach",
+  "devicesRemoteLineOutOfReachSince": "is out of reach · since",
+  "devicesRemoteLineReadOnly": "· read only",
+  "devicesRemoteLineReadingAgain": "· catching up, reading everything again",
   "devicesRemoteOutOfReach": "{name} is out of reach"
 }

@@ -39,7 +39,7 @@ extension PhoneJourney {
         XCTAssertTrue(app.staticTexts["Your phone is reading your Mac"].waitForPresence(timeout: 10))
 
         app.terminate(); try await launchPhoneApp(app)
-        reach("In reach", timeout: 20)
+        reach("Live", timeout: 20)
         let afterLaunch = try await home("state", method: "GET")
         XCTAssertEqual((afterLaunch["devices"] as? [[String: Any]])?.first?["id"] as? String, phone["id"] as? String)
 
@@ -59,7 +59,7 @@ extension PhoneJourney {
         _ = try await home("capture-start")
         let change = try await home("change")
         _ = try await home("online")
-        reach("In reach", timeout: 20)
+        reach("Live", timeout: 20)
         let title = try XCTUnwrap(change["title"] as? String)
         showCard(title)
         XCTAssertTrue(cardHeading(title).waitForPresence(timeout: 10))

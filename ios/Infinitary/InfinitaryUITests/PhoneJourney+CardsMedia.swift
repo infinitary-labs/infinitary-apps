@@ -162,7 +162,7 @@ extension PhoneJourney {
         reveal(bodyButton); tapOnPhone(bodyButton)
         picture("card-out-of-reach")
         _ = try await home("online")
-        reach("In reach", timeout: 20)
+        reach("Live", timeout: 20)
         let afterReconnect = try await home("card-state", method: "GET")
         let writes: ([String: Any]) -> Int = { state in (state["calls"] as? [[String: Any]] ?? []).filter { $0["channel"] as? String == "inf:cards:act" }.count }
         XCTAssertEqual(writes(afterReconnect), writes(atDisconnect), "An offline body action is never replayed")
@@ -278,7 +278,7 @@ extension PhoneJourney {
         XCTAssertTrue(app.webViews.staticTexts[try XCTUnwrap(late["words"] as? String)].waitForPresence(timeout: 10))
         _ = try await home("board-read-held")
         _ = try await home("release-board-read")
-        reach("In reach", timeout: 20)
+        reach("Live", timeout: 20)
         _ = try await home("late-picture-asked")
         picture("card-picture-after-reaching")
         tapOnPhone(app.buttons["put-aside-card"])
@@ -349,7 +349,7 @@ extension PhoneJourney {
         app.terminate()
         app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL"]
         try await launchPhoneApp(app)
-        reach("In reach", timeout: 20)
+        reach("Live", timeout: 20)
         showCard(try XCTUnwrap(hero["title"] as? String))
         let largeChoice = app.buttons["card-action-keep"]
         reveal(largeChoice)

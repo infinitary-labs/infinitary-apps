@@ -27,5 +27,12 @@
   "devicesRemoteBack": "عاد {name}",
   "devicesRemoteChangesOff": "التغييرات متوقفة",
   "devicesRemoteControlling": "التحكم في {name}",
+  "devicesRemoteLineCatchingUp": "· يلحق بما فاته",
+  "devicesRemoteLineControlling": "التحكم في نائب القبطان على",
+  "devicesRemoteLineLive": "· مباشر",
+  "devicesRemoteLineOutOfReach": "خارج المتناول",
+  "devicesRemoteLineOutOfReachSince": "خارج المتناول · منذ",
+  "devicesRemoteLineReadOnly": "· للقراءة فقط",
+  "devicesRemoteLineReadingAgain": "· يلحق، ويقرأ كل شيء من جديد",
   "devicesRemoteOutOfReach": "{name} خارج المتناول"
 }

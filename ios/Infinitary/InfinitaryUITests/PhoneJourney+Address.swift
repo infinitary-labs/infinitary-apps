@@ -95,7 +95,7 @@ extension PhoneJourney {
         XCTAssertTrue(key.waitForPresence(timeout: 10))
         _ = try await home("ssh-authorize", body: key.label)
         tapOnPhone(app.buttons["ssh-try-again"])
-        reach("In reach", timeout: 30)
+        reach("Live", timeout: 30)
         let joined = try await home("state", method: "GET")
         let devices = try XCTUnwrap(joined["devices"] as? [[String: Any]])
         XCTAssertEqual(devices.count, 1)

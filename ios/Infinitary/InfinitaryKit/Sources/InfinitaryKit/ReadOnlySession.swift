@@ -178,6 +178,12 @@ public struct PhoneNotice: Equatable, Sendable {
     /// only then do the words follow `contact`, so a cell pause passes unnoticed and a dead path is named within
     /// half a minute.
     public private(set) var reach = "reaching"
+    /// INF-4207 piece 2: after the words left In reach, how a welcome brings the phone level with the computer, until
+    /// what it missed is read: `replay` while the missed pushes arrive, `reload` while it reads everything again. The
+    /// patient `reach` says `catching-up` meanwhile, and says In reach only once the screens are current.
+    public private(set) var catchingUp: String? {
+        didSet { if catchingUp != oldValue { settleReach() } }
+    }
     public private(set) var heardAt: Date?
     public private(set) var removed = false
     /// How many times the computer came back in reach after the words said Out of reach (INF-589 item 12; INF-2668,
@@ -677,8 +683,12 @@ public struct PhoneNotice: Equatable, Sendable {
                 return
             }
         }
-        guard reach != contact else { return }
-        reach = contact
+        // INF-4207 piece 2: once the words left In reach, a catch-up is named until what was missed is read; a redial
+        // the words never showed stays In reach.
+        let target = catchingUp != nil && reach != "in-reach" && (contact == "in-reach" || contact == "reaching")
+            ? "catching-up" : contact
+        guard reach != target else { return }
+        reach = target
         // Only Out of reach said while the phone keeps trying makes the next In reach a return.
         if reach == "lost", loop != nil { missed = true }
     }
@@ -868,6 +878,7 @@ public struct PhoneNotice: Equatable, Sendable {
         while alive(current) {
             failCalls()
             pending.removeAll(); waitingSince.removeAll(); dirty.removeAll(); ready.removeAll()
+            catchingUp = nil
             access = "read"; firstmateBusy = false; firstmateObserved = false; firstmateFolding = false
             // Out of reach stays while later rounds try again on their own; a reopen says it is reaching.
             if attempt == 0 || woken { contact = "reaching" }
@@ -1092,7 +1103,10 @@ public struct PhoneNotice: Equatable, Sendable {
             // read; only the scene's two small reads, and reads a cut left unanswered, go again, unawaited. A change
             // whose result was lost still waits on the full reads that settle it.
             let lost = ledger.intents.contains { if case .unknown = $0.state { true } else { false } }
+            // INF-4207 piece 2: a catch-up after the phone was in reach before is named; the first connection is not one.
+            let named = reaches > 0
             if catchUp == "replay", caughtUp, !lost {
+                catchingUp = named && seq > sequence ? "replay" : nil
                 let again = owed.union(sceneObservations ? [PhoneRequest.conversationState.rawValue, PhoneRequest.computers.rawValue] : [])
                 ready.formUnion(initialReads); markReady(PhoneContract.cards)
                 for channel in again.sorted() {
@@ -1101,6 +1115,7 @@ public struct PhoneNotice: Equatable, Sendable {
                 }
                 return
             }
+            catchingUp = named ? "reload" : nil
             for channel in initialReads {
                 guard self.socket === socket, !Task.isCancelled else { return }
                 try await refresh(channel, on: socket)
@@ -1113,7 +1128,7 @@ public struct PhoneNotice: Equatable, Sendable {
             let replayed = seq <= welcomeSeq
             if !replayed { showHeld() }
             let holding = held != nil
-            defer { if seq >= welcomeSeq { showHeld() } }
+            defer { if seq >= welcomeSeq { showHeld(); settleCatchUp() } }
             if holding, frame["channel"] as? String == "inf:cards" {
                 guard frame["payload"] != nil else { throw PhoneError.invalidReply }
                 syncedCards = try decoded.cards(); held?.cardsChanged = true
@@ -1276,6 +1291,13 @@ public struct PhoneNotice: Equatable, Sendable {
         contact = "in-reach"
         if missed { missed = false; returns += 1 }
         if reached { reaches += 1; onSecretsChanged?(); wakeReachWaiters(); handUsage() }
+        settleCatchUp()
+    }
+
+    /// INF-4207 piece 2: the catch-up ends once every first read has answered and the replay's last push is shown.
+    private func settleCatchUp() {
+        guard catchingUp != nil, contact == "in-reach", caughtUp, sequence >= welcomeSeq, held == nil else { return }
+        catchingUp = nil
     }
 
     /// INF-2773: the route and its preference are worked out once per connection, in the step that turns it In reach,

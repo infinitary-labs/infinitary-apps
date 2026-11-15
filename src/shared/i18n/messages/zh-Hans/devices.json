@@ -27,5 +27,12 @@
   "devicesRemoteBack": "{name} 已恢复联系",
   "devicesRemoteChangesOff": "暂不能更改",
   "devicesRemoteControlling": "正在控制 {name}",
+  "devicesRemoteLineCatchingUp": "· 正在补上错过的更改",
+  "devicesRemoteLineControlling": "控制大副：",
+  "devicesRemoteLineLive": "· 实时",
+  "devicesRemoteLineOutOfReach": "无法联系",
+  "devicesRemoteLineOutOfReachSince": "无法联系 · 自",
+  "devicesRemoteLineReadOnly": "· 只读",
+  "devicesRemoteLineReadingAgain": "· 正在追上，重新读取全部内容",
   "devicesRemoteOutOfReach": "{name} 无法联系"
 }

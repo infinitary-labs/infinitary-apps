@@ -612,6 +612,13 @@ public enum PhoneMessages {
     public static func `devicesRemoteBack`(`name`: String) -> String { PhoneWords.format("devicesRemoteBack", [`name`]) }
     public static func `devicesRemoteChangesOff`() -> String { PhoneWords.format("devicesRemoteChangesOff", []) }
     public static func `devicesRemoteControlling`(`name`: String) -> String { PhoneWords.format("devicesRemoteControlling", [`name`]) }
+    public static func `devicesRemoteLineCatchingUp`() -> String { PhoneWords.format("devicesRemoteLineCatchingUp", []) }
+    public static func `devicesRemoteLineControlling`() -> String { PhoneWords.format("devicesRemoteLineControlling", []) }
+    public static func `devicesRemoteLineLive`() -> String { PhoneWords.format("devicesRemoteLineLive", []) }
+    public static func `devicesRemoteLineOutOfReach`() -> String { PhoneWords.format("devicesRemoteLineOutOfReach", []) }
+    public static func `devicesRemoteLineOutOfReachSince`() -> String { PhoneWords.format("devicesRemoteLineOutOfReachSince", []) }
+    public static func `devicesRemoteLineReadOnly`() -> String { PhoneWords.format("devicesRemoteLineReadOnly", []) }
+    public static func `devicesRemoteLineReadingAgain`() -> String { PhoneWords.format("devicesRemoteLineReadingAgain", []) }
     public static func `devicesRemoteOutOfReach`(`name`: String) -> String { PhoneWords.format("devicesRemoteOutOfReach", [`name`]) }
     public static func `dialogAdd`() -> String { PhoneWords.format("dialogAdd", []) }
     public static func `dialogAttach`() -> String { PhoneWords.format("dialogAttach", []) }
@@ -1388,12 +1395,14 @@ public enum PhoneMessages {
     public static func `phonePromptCamera`() -> String { PhoneWords.format("phonePromptCamera", []) }
     public static func `phonePromptFaceId`() -> String { PhoneWords.format("phonePromptFaceId", []) }
     public static func `phonePromptLocalNetwork`() -> String { PhoneWords.format("phonePromptLocalNetwork", []) }
-    public static func `phoneReachAsOf`(`time`: String) -> String { PhoneWords.format("phoneReachAsOf", [`time`]) }
+    public static func `phoneReachCatchingUp`() -> String { PhoneWords.format("phoneReachCatchingUp", []) }
     public static func `phoneReachChangesOff`(`computer`: String) -> String { PhoneWords.format("phoneReachChangesOff", [`computer`]) }
-    public static func `phoneReachInReach`() -> String { PhoneWords.format("phoneReachInReach", []) }
-    public static func `phoneReachLine`(`reach`: String, `time`: String) -> String { PhoneWords.format("phoneReachLine", [`reach`, `time`]) }
+    public static func `phoneReachLineSince`(`reach`: String, `time`: String) -> String { PhoneWords.format("phoneReachLineSince", [`reach`, `time`]) }
+    public static func `phoneReachLive`() -> String { PhoneWords.format("phoneReachLive", []) }
     public static func `phoneReachOutOfReach`() -> String { PhoneWords.format("phoneReachOutOfReach", []) }
     public static func `phoneReachReaching`() -> String { PhoneWords.format("phoneReachReaching", []) }
+    public static func `phoneReachReadingAgain`() -> String { PhoneWords.format("phoneReachReadingAgain", []) }
+    public static func `phoneReachSince`(`time`: String) -> String { PhoneWords.format("phoneReachSince", [`time`]) }
     public static func `phoneRecordAttentionBlockedGuidance`() -> String { PhoneWords.format("phoneRecordAttentionBlockedGuidance", []) }
     public static func `phoneRecordAttentionDependencyDropped`() -> String { PhoneWords.format("phoneRecordAttentionDependencyDropped", []) }
     public static func `phoneRecordAttentionDependencyDroppedGuidance`() -> String { PhoneWords.format("phoneRecordAttentionDependencyDroppedGuidance", []) }
@@ -3872,6 +3881,13 @@ extension PhoneWords {
         "devicesRemoteBack": ["name"],
         "devicesRemoteChangesOff": [],
         "devicesRemoteControlling": ["name"],
+        "devicesRemoteLineCatchingUp": [],
+        "devicesRemoteLineControlling": [],
+        "devicesRemoteLineLive": [],
+        "devicesRemoteLineOutOfReach": [],
+        "devicesRemoteLineOutOfReachSince": [],
+        "devicesRemoteLineReadOnly": [],
+        "devicesRemoteLineReadingAgain": [],
         "devicesRemoteOutOfReach": ["name"],
         "dialogAdd": [],
         "dialogAttach": [],
@@ -4648,12 +4664,14 @@ extension PhoneWords {
         "phonePromptCamera": [],
         "phonePromptFaceId": [],
         "phonePromptLocalNetwork": [],
-        "phoneReachAsOf": ["time"],
+        "phoneReachCatchingUp": [],
         "phoneReachChangesOff": ["computer"],
-        "phoneReachInReach": [],
-        "phoneReachLine": ["reach", "time"],
+        "phoneReachLineSince": ["reach", "time"],
+        "phoneReachLive": [],
         "phoneReachOutOfReach": [],
         "phoneReachReaching": [],
+        "phoneReachReadingAgain": [],
+        "phoneReachSince": ["time"],
         "phoneRecordAttentionBlockedGuidance": [],
         "phoneRecordAttentionDependencyDropped": [],
         "phoneRecordAttentionDependencyDroppedGuidance": [],

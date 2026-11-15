@@ -174,10 +174,23 @@ export type HomeLinkOptions = {
    */
   onInvoke?: (channel: string, args: unknown) => Promise<unknown>;
   /**
+   * At each welcome, before its state says the home is in reach again: how
+   * it catches up, and for a replay how many pushes it missed, so a view
+   * never shows a moment of live before it starts catching up
+   * (docs/view.md, "Live, catching up or out of reach").
+   */
+  onWelcoming?: (catchUp: "replay" | "reload", missed: number) => void;
+  /**
    * After each welcome: `replay` when the pushes the device missed follow,
    * `reload` when it must read its state again through ordinary requests.
    */
   onCaughtUp?: (catchUp: "replay" | "reload") => void;
+  /**
+   * After the last push a replaying welcome sent again is handled, so what
+   * the device holds is as current as the home (docs/view.md, "Live,
+   * catching up or out of reach").
+   */
+  onReplayed?: () => void;
   /** Every change to the state above. */
   onState?: (state: HomeLinkState) => void;
   now?: () => number;
@@ -529,15 +542,23 @@ export class HomeLink {
         if (frame.t === "push") {
           if (this.cursor) this.cursor = { epoch: this.cursor.epoch, seq: frame.seq };
           // A replayed push a later whole list replaced moves the cursor and carries nothing.
-          if (ownChannel(frame.channel) === REPLACED_PUSH_CHANNEL) return;
-          try {
-            this.options.onPush(
-              ownChannel(frame.channel),
-              frame.payload,
-              frame.seq <= this.welcomedAt,
-            );
-          } catch {
-            // One listener's failure is not the connection's.
+          if (ownChannel(frame.channel) !== REPLACED_PUSH_CHANNEL) {
+            try {
+              this.options.onPush(
+                ownChannel(frame.channel),
+                frame.payload,
+                frame.seq <= this.welcomedAt,
+              );
+            } catch {
+              // One listener's failure is not the connection's.
+            }
+          }
+          if (frame.seq === this.welcomedAt) {
+            try {
+              this.options.onReplayed?.();
+            } catch {
+              // As for a push.
+            }
           }
         } else if (frame.t === "live") {
           try {
@@ -577,6 +598,10 @@ export class HomeLink {
   }
 
   private welcome(socket: WebSocket, frame: Extract<HomeFrame, { t: "welcome" }>): void {
+    const missed =
+      frame.catchUp === "replay" && this.cursor?.epoch === frame.epoch
+        ? Math.max(0, frame.seq - this.cursor.seq)
+        : 0;
     this.cursor = { epoch: frame.epoch, seq: frame.seq };
     this.welcomedAt = frame.seq;
     this.spelling = spellingFor(
@@ -588,6 +613,11 @@ export class HomeLink {
     this.failures = 0;
     this.refusals = 0;
     this.grace = false;
+    try {
+      this.options.onWelcoming?.(frame.catchUp, missed);
+    } catch {
+      // As for a push.
+    }
     this.update({
       contact: "in-reach",
       access: frame.access,

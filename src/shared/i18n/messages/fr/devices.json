@@ -27,5 +27,12 @@
   "devicesRemoteBack": "{name} est de retour",
   "devicesRemoteChangesOff": "Les modifications sont désactivées",
   "devicesRemoteControlling": "Contrôle de {name}",
+  "devicesRemoteLineCatchingUp": "· rattrapage de ce qui a été manqué",
+  "devicesRemoteLineControlling": "Contrôle de votre second sur",
+  "devicesRemoteLineLive": "· en direct",
+  "devicesRemoteLineOutOfReach": "est hors de portée",
+  "devicesRemoteLineOutOfReachSince": "est hors de portée · depuis",
+  "devicesRemoteLineReadOnly": "· lecture seule",
+  "devicesRemoteLineReadingAgain": "· rattrapage, tout est relu",
   "devicesRemoteOutOfReach": "{name} est hors de portée"
 }

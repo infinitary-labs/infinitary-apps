@@ -27,5 +27,12 @@
   "devicesRemoteBack": "{name} と連絡がつきました",
   "devicesRemoteChangesOff": "変更できません",
   "devicesRemoteControlling": "{name} を操作中",
+  "devicesRemoteLineCatchingUp": "· 見逃した変更を取り込み中",
+  "devicesRemoteLineControlling": "一等航海士を操作中：",
+  "devicesRemoteLineLive": "· 最新",
+  "devicesRemoteLineOutOfReach": "と連絡がつきません",
+  "devicesRemoteLineOutOfReachSince": "と連絡がつきません · 最終",
+  "devicesRemoteLineReadOnly": "· 閲覧のみ",
+  "devicesRemoteLineReadingAgain": "· 追いつき中、すべてを読み直しています",
   "devicesRemoteOutOfReach": "{name} と連絡がつきません"
 }

@@ -12798,6 +12798,12 @@ ${events}` : prompt;
       homeUpdates: literal(true).optional(),
       heardAt: number().int().nonnegative().nullable(),
       caughtUp: number().int().nonnegative(),
+      /**
+       * The pushes this Mac missed are still arriving from a welcome that
+       * replays them, so the window says it is catching up until they are in
+       * (docs/view.md, "Live, catching up or out of reach").
+       */
+      replaying: literal(true).optional(),
       runsWork: boolean().optional(),
       /**
        * The first mate there is too old to answer what every view now asks

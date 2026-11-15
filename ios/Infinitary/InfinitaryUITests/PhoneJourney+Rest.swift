@@ -127,7 +127,7 @@ extension PhoneJourney {
         try await background()
         _ = try await home("scene-current-home")
         app.activate()
-        reach("In reach", timeout: 20)
+        reach("Live", timeout: 20)
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == 'idle'"), object: character, timeout: 20), .completed)
     }
 
@@ -136,7 +136,7 @@ extension PhoneJourney {
     private func verifySceneContact() async throws {
         app.terminate()
         try await launchPhoneApp(app)
-        reach("In reach", timeout: 20)
+        reach("Live", timeout: 20)
         let character = app.otherElements["phone-character"]
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == 'working'"), object: character, timeout: 20), .completed)
         picture("native-scene-initial-busy")
@@ -144,7 +144,7 @@ extension PhoneJourney {
         try await background()
         _ = try await home("scene-older-home")
         app.activate()
-        reach("In reach", timeout: 20)
+        reach("Live", timeout: 20)
         XCTAssertEqual(character.value as? String, "Activity unknown")
         let legacy = try await home("scene-observations")
         XCTAssertEqual(legacy["reads"] as? Int, 0, "An older home receives neither new read")

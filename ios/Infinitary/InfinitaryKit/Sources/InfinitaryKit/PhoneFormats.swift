@@ -68,6 +68,13 @@ public enum PhoneFormats {
         date.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened, locale: locale))
     }
 
+    /// INF-4207 piece 2: the time of day, with the month and day in front when it is not today: `3:12 PM`, `Oct 5, 3:12 PM`.
+    public static func since(_ date: Date, now: Date = Date(), locale: Locale = locale) -> String {
+        Calendar.current.isDate(date, inSameDayAs: now)
+            ? time(date, locale: locale)
+            : date.formatted(Date.FormatStyle(locale: locale).month(.abbreviated).day().hour().minute())
+    }
+
     /// The month and day alone: `Oct 5`.
     public static func monthDay(_ date: Date, locale: Locale = locale) -> String {
         date.formatted(Date.FormatStyle(locale: locale).month(.abbreviated).day())

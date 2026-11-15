@@ -18,6 +18,7 @@ import { catalogEntry } from "../../../shared/providers";
 import { type RemoteLoginCopy, remoteLoginWords } from "../../../shared/remoteLogin";
 import { type DeviceSignIns, signInPlace } from "../../../shared/signIns";
 import { runsForAnotherFirstmate, sshConnectionWords } from "../../../shared/sshConnection";
+import { sinceWhen } from "../devices/viewWords";
 
 /**
  * The words of Settings -> Devices (`DevicesTab.tsx`; design skill
@@ -248,14 +249,6 @@ export function joinedWhen(at: number, now: number): string {
   if (date.toDateString() === day.toDateString()) return m.settingsDevicesJoinedToday({ time });
   day.setDate(day.getDate() - 1);
   if (date.toDateString() === day.toDateString()) return m.settingsDevicesJoinedYesterday({ time });
-  return `${formatDate(date, { month: "short", day: "numeric" })} ${time}`;
-}
-
-/** "14:02" today, otherwise "Oct 1 14:02": since when a device is out of reach. */
-function sinceWhen(at: number, now: number): string {
-  const date = new Date(at);
-  const time = formatTime(date, { hour: "2-digit", minute: "2-digit" });
-  if (date.toDateString() === new Date(now).toDateString()) return time;
   return `${formatDate(date, { month: "short", day: "numeric" })} ${time}`;
 }
 

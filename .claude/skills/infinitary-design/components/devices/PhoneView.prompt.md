@@ -45,8 +45,9 @@ A permission refusal says how to allow the camera or local network, without repl
 Once joined, the top bar is one row: a Settings button at the left, the Home, Tasks, Activity and, while the computer has panels to draw, Panels strip in the middle and the computer button at the right; the computer's name is in its sheet, not the bar.
 The strip is Apple's segmented control of three or four icons, a house for Home, a checklist for Tasks, a pulse line for Activity and three stacked panes for Panels, with VoiceOver reading each tab's name; on iOS 26 the system draws it on glass, and it carries no unread dot.
 The computer button is the Lucide computer glyph; a dot in the warning color sits at its corner only while the computer is out of reach, because a dot asks for attention, and VoiceOver hears the reach as its value.
-In reach the bar says nothing more.
-Out of reach is said once, by one line under the bar on every tab with its dot, state and last-heard time; no strip above the content or line on a card repeats it, and only the current in-memory view remains.
+In reach the bar says nothing more, and VoiceOver hears "Live".
+Coming back after the words said out of reach, the line under the bar says "Catching up on what was missed" or "Catching up, reading everything again" until what was missed is shown, then goes.
+Out of reach is said once, by one line under the bar on every tab with its dot, state and "since" the last-heard time, with its day when that was not today; no strip above the content or line on a card repeats it, and only the current in-memory view remains.
 The message capsule and a card's reply row dim, and one line under the message box says only “Changes are off until <computer> is back.”, as the Mac says it.
 The computer button opens a native sheet with the computer's name, its reach and its address.
 The Settings button, the Lucide gear, opens a sheet at full height on a list of General, Appearance, Projects, Intelligence, Runbooks, Usage, Automation, Integrations and Devices, the desktop's names in the desktop's order.

@@ -132,6 +132,14 @@ type ShellCore = {
   thisMac: ThisMac | null;
   applyThisMac: (thisMac: ThisMac) => void;
   /**
+   * The newest `caughtUp` of the Mac this one controls whose reading of
+   * everything again has finished here; while it is behind, the window says
+   * it is catching up (docs/view.md, "Live, catching up or out of reach").
+   * -1 until the first `thisMac` is read, whose count the window's own
+   * first reads cover.
+   */
+  rereadThrough: number;
+  /**
    * Whether Settings -> Devices is offered here (`inf:devices:shown`,
    * docs/devices.md): its commands are listed only then. False until read;
    * a computer that controls the first mate reads it from that computer.
@@ -145,9 +153,11 @@ type ShellCore = {
   secretsShown: boolean;
   /**
    * Reads the stage again from the Mac this one controls, after a gap it
-   * could not replay (that Mac restarted, or this one was away too long).
+   * could not replay (that Mac restarted, or this one was away too long),
+   * settling once the cards, their threads, the board, the release notes,
+   * the first launch's state and the last turn are read.
    */
-  resync: () => void;
+  resync: () => Promise<void>;
   init: () => void;
   /** Re-read the first-launch state from the core (after an account change). */
   loadFirstRun: () => Promise<void>;
@@ -181,8 +191,8 @@ export type ShellSet = StoreApi<ShellState>["setState"];
 export type ShellGet = StoreApi<ShellState>["getState"];
 
 /** Reads the notes the app showed; unanswered, the last known stay. */
-function readReleaseNotes(): void {
-  void window.infinitary.releaseNotes
+function readReleaseNotes(): Promise<void> {
+  return window.infinitary.releaseNotes
     .list()
     .then((releaseNotes) => useShellStore.setState({ releaseNotes }))
     .catch(() => {});
@@ -197,9 +207,9 @@ function readDevicesShown(): void {
 }
 
 /** Seeds the crew orbit's roster from the board, and each active work task's activity. */
-function readBoard(): void {
+function readBoard(): Promise<void> {
   // The orbit has no use for closed rows: they never fly.
-  void readBoardWithoutClosed()
+  return readBoardWithoutClosed()
     .then((board) => {
       seedCrew(crewOrbit(), board.tasks, stageNow(), board.links);
       reconcileCrew(crewOrbit(), board, stageNow());
@@ -251,11 +261,14 @@ export const useShellStore = create<ShellState>()((set, get) => ({
   pendingDeviceSignIn: null,
   pendingDeviceForgeSignIn: null,
   thisMac: null,
+  rereadThrough: -1,
   devicesShown: false,
   secretsShown: false,
   applyThisMac: (thisMac) => {
     const before = get().thisMac;
     set({ thisMac });
+    // The window's own first reads cover what the first answer counts.
+    if (get().rereadThrough < 0 && isView(thisMac)) set({ rereadThrough: thisMac.caughtUp });
     if (isView(before) && changesOff(before) && !changesOff(thisMac)) {
       // Changes are on again: what said they were off goes, the words stay.
       const off = changesOffWords(before);
@@ -269,7 +282,12 @@ export const useShellStore = create<ShellState>()((set, get) => ({
         ),
       }));
     }
-    if (isView(before) && isView(thisMac) && thisMac.caughtUp > before.caughtUp) get().resync();
+    if (isView(before) && isView(thisMac) && thisMac.caughtUp > before.caughtUp) {
+      const through = thisMac.caughtUp;
+      void get()
+        .resync()
+        .then(() => set((s) => ({ rereadThrough: Math.max(s.rereadThrough, through) })));
+    }
     // The window on the first mate's own computer missed pushes over the
     // local door, or now asks directly (docs/view.md): it reads everything again.
     if (
@@ -277,7 +295,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       before?.role === "home" &&
       (thisMac.caughtUp ?? 0) > (before.caughtUp ?? 0)
     )
-      get().resync();
+      void get().resync();
     if (
       isView(thisMac) &&
       thisMac.contact === "in-reach" &&
@@ -285,22 +303,25 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     )
       readDevicesShown();
   },
-  resync: () => {
+  resync: async () => {
     set({ cardsSnapshotLoaded: false });
-    void readCardsAgain(get, () => set({ cardsSnapshotLoaded: true })).catch(() => {});
+    const reads: Promise<unknown>[] = [
+      readCardsAgain(get, () => set({ cardsSnapshotLoaded: true })).catch(() => {}),
+    ];
     // Every thread this window has read is read again.
     for (const cardId of Object.keys(get().threads))
-      void window.infinitary.cards
-        .thread(cardId)
-        .then((thread) => get().applyThread(thread.cardId, thread.messages))
-        .catch(() => {});
-    readReleaseNotes();
+      reads.push(
+        window.infinitary.cards
+          .thread(cardId)
+          .then((thread) => get().applyThread(thread.cardId, thread.messages))
+          .catch(() => {}),
+      );
+    reads.push(readReleaseNotes());
     // A turn that ended while this Mac was away said so to nobody here.
     set({ firstmateBusy: false, firstmateFolding: false });
-    readBoard();
-    void get().loadFirstRun();
-    void get().loadLastTurn();
+    reads.push(readBoard(), get().loadFirstRun(), get().loadLastTurn());
     resyncReads();
+    await Promise.allSettled(reads);
   },
   init: () => {
     if (get().initialized) return;
@@ -310,7 +331,10 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     void window.infinitary.devices
       .thisMac()
       .then((thisMac) => {
-        if (!get().thisMac) set({ thisMac });
+        if (get().thisMac) return;
+        set({ thisMac });
+        // The window's own first reads cover what the first answer counts.
+        if (get().rereadThrough < 0 && isView(thisMac)) set({ rereadThrough: thisMac.caughtUp });
       })
       .catch(() => {});
     // Asked once: a build offers Devices or not for as long as it runs. A
@@ -333,7 +357,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       set({ cardsSnapshotLoaded: true, bootCardId: shownEntry(get())?.id ?? null }),
     ).catch(() => {});
     // The crew orbit's roster at boot (a side channel, never shell state).
-    readBoard();
+    void readBoard();
     // A new or cleared wait, and a task's parts and their links, arrive on the
     // sequenced board, not on task_changed, and so does a record erased with
     // no close of its own, such as a failed start's (INF-2371). The stage reads the board the
@@ -361,7 +385,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       .catch(() => {});
     // What's new reads the notes the app showed (docs/release-notes.md).
     window.infinitary.releaseNotes.onChange((releaseNotes) => set({ releaseNotes }));
-    readReleaseNotes();
+    void readReleaseNotes();
     // The graphics gate: no card or adapter where the model runs means the
     // voice affordance hides entirely.
     void recognizerPlace()

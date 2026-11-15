@@ -309,7 +309,7 @@ export function isCheckedFile(path: string): boolean {
  */
 export const RAW_WORDS_LEDGER: Readonly<Record<string, number>> = {
   "src/panels/now/words.ts": 6,
-  "src/renderer/src/devices/viewWords.ts": 32,
+  "src/renderer/src/devices/viewWords.ts": 28,
 };
 
 /** Each problem with the files' raw words against the ledger, as one line. */

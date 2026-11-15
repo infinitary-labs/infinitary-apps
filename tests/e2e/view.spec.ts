@@ -19,6 +19,7 @@ import {
   leftLine,
   notSentWords,
   pillWords,
+  sinceWhen,
   topLine as topLineWords,
   type ViewMac,
 } from "../../src/renderer/src/devices/viewWords";
@@ -234,6 +235,39 @@ async function watchBackPill(page: Page): Promise<() => Promise<string[]>> {
   return () =>
     page.evaluate(() => [...((window as unknown as { __backSaid?: string[] }).__backSaid ?? [])]);
 }
+/**
+ * Watch how fresh the top line says the view is (docs/view.md, "Live,
+ * catching up or out of reach"). A catch-up can pass in a moment, so the
+ * watch records each state, and how it catches up, the moment it shows; the
+ * returned reader lists them since the watch began.
+ */
+async function watchFreshness(page: Page): Promise<() => Promise<string[]>> {
+  await page.evaluate(() => {
+    const w = window as unknown as { __freshSaid?: string[]; __freshWatch?: MutationObserver };
+    w.__freshWatch?.disconnect();
+    const said: string[] = [];
+    w.__freshSaid = said;
+    const look = () => {
+      const line = document.querySelector("[data-remote-control]");
+      const fresh = line?.getAttribute("data-freshness");
+      if (!fresh) return;
+      const how = line?.getAttribute("data-catch-up");
+      const state = how ? `${fresh}:${how}` : fresh;
+      if (said.at(-1) !== state) said.push(state);
+    };
+    const observer = new MutationObserver(look);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["data-freshness", "data-catch-up"],
+    });
+    w.__freshWatch = observer;
+    look();
+  });
+  return () =>
+    page.evaluate(() => [...((window as unknown as { __freshSaid?: string[] }).__freshSaid ?? [])]);
+}
 /** Words the view says in the state given, which says some. */
 function said(words: string | null): string {
   if (words === null) throw new Error("The view says nothing in that state.");
@@ -303,6 +337,9 @@ test("a second Mac joins at its first launch, controls this Firstmate, rides out
       // The window starts over as the other Mac's.
       await expect(topLine(page)).toHaveAttribute("data-remote-control", "in-reach");
       await expect(topLine(page)).toContainText(topLineWords(seenPro("in-reach")).lead);
+      // Live once it has read what that Mac holds.
+      await expect(topLine(page)).toHaveAttribute("data-freshness", "live");
+      await expect(topLine(page)).toContainText(said(topLineWords(seenPro("in-reach")).tail));
       await expect(topLine(page)).toContainText("MacBook Pro");
       expect(
         (await pro.page.evaluate(() => window.infinitary.devices.list())).map((d) => d.name),
@@ -358,11 +395,19 @@ test("a second Mac joins at its first launch, controls this Firstmate, rides out
       await expect(page.locator('[data-screen-label="Settings"]')).toHaveCount(0);
     });
 
-    await test.step("while that Mac is out of reach it says as of when, and refuses changes", async () => {
+    await test.step("while that Mac is out of reach it says since when, and refuses changes", async () => {
       const { page } = air as LaunchedApp;
       await pro.close();
       await expect(topLine(page)).toHaveAttribute("data-remote-control", "closed");
+      await expect(topLine(page)).toHaveAttribute("data-freshness", "out-of-reach");
       await expect(topLine(page)).toContainText(said(topLineWords(seenPro("closed", 0)).tail));
+      // Since the last word it heard there, naming the day when it was not today.
+      const away = await page.evaluate(() => window.infinitary.devices.thisMac());
+      const heardAt = away.role === "view" ? away.heardAt : null;
+      expect(heardAt).not.toBeNull();
+      await expect(topLine(page).locator("[data-since]")).toHaveText(
+        sinceWhen(heardAt as number, Date.now()),
+      );
       await expect(page.locator("[data-view-pill]")).toContainText(
         said(pillWords(seenPro("closed"))),
       );
@@ -389,10 +434,19 @@ test("a second Mac joins at its first launch, controls this Firstmate, rides out
       });
       db.close();
       const backSaid = await watchBackPill(page);
+      const freshSaid = await watchFreshness(page);
       pro = await launchApp({ userDataDir: homeDir, reuseMockProvider: provider, env: proEnv });
       await expect(topLine(page)).toHaveAttribute("data-remote-control", "in-reach", {
         timeout: 30_000,
       });
+      await expect(topLine(page)).toHaveAttribute("data-freshness", "live", { timeout: 30_000 });
+      // Out of reach, then catching up by reading everything again - a restart
+      // there began a new numbering - and live only once that is read.
+      expect((await freshSaid()).filter((state) => state !== "reaching")).toEqual([
+        "out-of-reach",
+        "catching-up:reload",
+        "live",
+      ]);
       await expect.poll(backSaid).toContain(backWords(seenPro("in-reach")));
       await expect.poll(() => shownIds(page)).toContain("tide");
       await showCard(page, "Name the harbour");

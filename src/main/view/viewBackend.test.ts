@@ -353,3 +353,77 @@ it("sends what pressed a card's button only to a home that reads it", async () =
     ["inf:cards:note-done", noteDone({ ...pressed, input })],
   ]);
 });
+
+// INF-4207 piece 2: a window says it is catching up while a replay's missed pushes arrive, and live after.
+it("tells the window it replays from the welcome until the replay's last push, and a reload raises its count", () => {
+  let link: HomeLinkOptions | undefined;
+  const said: { replaying: boolean; caughtUp: number }[] = [];
+  const state: HomeLinkState = {
+    contact: "in-reach",
+    access: "full",
+    homeVersion: PROTOCOL_VERSION,
+    homeChanges: [],
+    name: null,
+    takesWork: null,
+    onHomeMac: null,
+    heardAt: null,
+    removed: false,
+  };
+  const view = new ViewBackend({
+    joined: new JoinedHome(scratchDir("view-replay-")),
+    record: {
+      version: 1,
+      grant: {
+        at: "127.0.0.1:1",
+        homeKey: "unused",
+        deviceId: "view",
+        kind: "view",
+        key: "unused",
+        cert: "unused",
+      },
+      name: null,
+      joinedAt: 1,
+    },
+    broadcast: () => {},
+    notifications: { supported: () => false, focused: () => true, show: () => {} },
+    onThisMac: (thisMac) => {
+      if (thisMac.role === "view")
+        said.push({ replaying: thisMac.replaying === true, caughtUp: thisMac.caughtUp });
+    },
+    onRemoved: () => {},
+    // No update action is used here.
+    updates: {} as UpdateChecker,
+    link: (options) => {
+      link = options;
+      return {
+        start: () => {},
+        state: () => state,
+        invoke: (async () => null) as never,
+        leave: async () => true,
+        close: () => {},
+      };
+    },
+  });
+  views.push(view);
+  const welcome = (catchUp: "replay" | "reload", missed: number) => {
+    link?.onWelcoming?.(catchUp, missed);
+    link?.onState?.({ ...state, contact: "in-reach" });
+    link?.onCaughtUp?.(catchUp);
+  };
+  welcome("replay", 2);
+  expect(said.at(-1)).toEqual({ replaying: true, caughtUp: 0 });
+  link?.onReplayed?.();
+  expect(said.at(-1)).toEqual({ replaying: false, caughtUp: 0 });
+  // A welcome that missed nothing replays nothing.
+  const before = said.length;
+  welcome("replay", 0);
+  expect(said.slice(before).some((entry) => entry.replaying)).toBe(false);
+  // A reload is counted in the same word that says the Mac is back.
+  const reloading = said.length;
+  welcome("reload", 0);
+  expect(said.slice(reloading)).toEqual([{ replaying: false, caughtUp: 1 }]);
+  // A replay cut short by the connection's end is not said as still arriving.
+  welcome("replay", 3);
+  link?.onState?.({ ...state, contact: "lost" });
+  expect(said.at(-1)).toEqual({ replaying: false, caughtUp: 1 });
+});

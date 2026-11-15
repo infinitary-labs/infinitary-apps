@@ -1,7 +1,7 @@
 import { type CardAction, opensSettings, takesTaskBrowser } from "@shared/cards";
 import type { ComposerNotice } from "@shared/composer";
 import type { JoinOutcome, ThisMac } from "@shared/devices";
-import { formatTime } from "@shared/i18n/format";
+import { formatDate, formatTime } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import { COMPUTER, HERE } from "../../../shared/deviceNames";
 
@@ -59,11 +59,6 @@ export function messagesWhileReading(thisMac: ThisMac | null): boolean {
     thisMac.readOnly !== null &&
     thisMac.messagesWhileReading === true
   );
-}
-
-/** "14:32": the clock the app's other lines use. */
-export function clockTime(at: number): string {
-  return formatTime(at, { hour: "2-digit", minute: "2-digit" });
 }
 
 /** What to do while the other Mac has a newer Firstmate: the tooltip, and the pill after its name. */
@@ -186,28 +181,95 @@ export function namedNoticeWords(notice: ComposerNotice, mac: ViewMac): string |
 }
 
 /**
- * The top line's parts: the dot, the words before the name, the name, and
- * what follows it - "· as of 14:32" while out of reach, "· read only" while
- * the Firstmates are too far apart.
+ * How a replay or a reread brings this Mac level with the other one after a
+ * gap (docs/view.md, "Live, catching up or out of reach"): `replay` while the
+ * changes it missed arrive one by one, `reload` while it reads everything
+ * again.
  */
-export function topLine(mac: ViewMac): {
+export type CatchUp = "replay" | "reload";
+
+/**
+ * Whether this Mac is catching up, and how: only while the other Mac is in
+ * reach, reading everything again until the window has read the newest
+ * `caughtUp` (`rereadThrough`), then the missed changes still arriving.
+ */
+export function catchUpOf(mac: ViewMac, rereadThrough: number): CatchUp | null {
+  if (mac.contact !== "in-reach") return null;
+  if (mac.caughtUp > rereadThrough) return "reload";
+  return mac.replaying ? "replay" : null;
+}
+
+/**
+ * How current what this Mac shows is: `reaching` before it has heard the
+ * other Mac since it started, `live` while every change there is shown here,
+ * `catching-up` while missed changes are still being applied, and
+ * `out-of-reach` once contact is gone.
+ */
+export type Freshness = "reaching" | "live" | "catching-up" | "out-of-reach";
+
+export function freshnessOf(mac: ViewMac, catchUp: CatchUp | null): Freshness {
+  if (mac.contact === "lost" || mac.contact === "closed") return "out-of-reach";
+  if (mac.contact === "reaching") return "reaching";
+  return catchUp ? "catching-up" : "live";
+}
+
+/** "14:02" today, otherwise "Nov 11 14:02": since when the other Mac is out of reach. */
+export function sinceWhen(at: number, now: number): string {
+  const date = new Date(at);
+  const time = formatTime(date, { hour: "2-digit", minute: "2-digit" });
+  if (date.toDateString() === new Date(now).toDateString()) return time;
+  return `${formatDate(date, { month: "short", day: "numeric" })} ${time}`;
+}
+
+/**
+ * The top line's parts: the dot, the words before the name, the name, what
+ * follows it - "· live", "· catching up on what was missed", "· catching
+ * up, reading everything again", "· read only" while the Firstmates are too
+ * far apart, or "is out of reach · since" - and the time, in mono, that
+ * names the day when it was not today.
+ */
+export function topLine(
+  mac: ViewMac,
+  catchUp: CatchUp | null = null,
+  now: number = Date.now(),
+): {
   tone: "ok" | "warn" | "ring";
   lead: string;
   name: string;
   tail: string | null;
+  when: string | null;
+  freshness: Freshness;
 } {
-  if (mac.contact === "lost" || mac.contact === "closed")
+  const freshness = freshnessOf(mac, catchUp);
+  if (freshness === "out-of-reach")
     return {
       tone: "warn",
       lead: "",
       name: mac.name,
-      tail: mac.heardAt === null ? "is out of reach" : "is out of reach · as of",
+      tail:
+        mac.heardAt === null
+          ? m.devicesRemoteLineOutOfReach()
+          : m.devicesRemoteLineOutOfReachSince(),
+      when: mac.heardAt === null ? null : sinceWhen(mac.heardAt, now),
+      freshness,
     };
+  const tail =
+    freshness === "catching-up"
+      ? catchUp === "reload"
+        ? m.devicesRemoteLineReadingAgain()
+        : m.devicesRemoteLineCatchingUp()
+      : mac.readOnly
+        ? m.devicesRemoteLineReadOnly()
+        : freshness === "live"
+          ? m.devicesRemoteLineLive()
+          : null;
   return {
-    tone: mac.contact === "reaching" ? "ring" : mac.readOnly ? "warn" : "ok",
-    lead: "Controlling your first mate on",
+    tone: freshness === "live" ? (mac.readOnly ? "warn" : "ok") : "ring",
+    lead: m.devicesRemoteLineControlling(),
     name: mac.name,
-    tail: mac.readOnly ? "· read only" : null,
+    tail,
+    when: null,
+    freshness,
   };
 }
 

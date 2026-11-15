@@ -12,9 +12,9 @@ import {
   browserNotHereWords,
   browserShownThereWords,
   browserWaitsForUpdate,
+  catchUpOf,
   changesOff,
   changesOffWords,
-  clockTime,
   doneThereWords,
   firstMatePlace,
   googleUpdateThereWords,
@@ -59,18 +59,56 @@ const noop = () => {};
 const NEVER = /\b(home|server|host|offline|connection|socket|sync)\b/i;
 
 describe("controlling another Mac", () => {
-  it("names the Mac it controls, and says as of when it last heard it while it is out of reach", () => {
-    expect(topLine(PRO)).toEqual({
+  // INF-4207 piece 2: live, catching up, or out of reach since a time that names the day.
+  it("says live, catching up and how, or out of reach since a time that names the day", () => {
+    expect(topLine(PRO, null, NOW)).toEqual({
       tone: "ok",
       lead: "Controlling your first mate on",
       name: "MacBook Pro",
+      tail: "· live",
+      when: null,
+      freshness: "live",
+    });
+    expect(topLine(PRO, "replay", NOW)).toMatchObject({
+      tone: "ring",
+      tail: "· catching up on what was missed",
+      freshness: "catching-up",
+    });
+    expect(topLine(PRO, "reload", NOW)).toMatchObject({
+      tail: "· catching up, reading everything again",
+      freshness: "catching-up",
+    });
+    expect(topLine({ ...PRO, contact: "reaching" }, null, NOW)).toMatchObject({
       tail: null,
+      freshness: "reaching",
+    });
+    expect(topLine({ ...PRO, readOnly: "newer-there" }, null, NOW).tail).toBe("· read only");
+    // Out of reach the same day says the time; another day names the day too.
+    const today = topLine(AWAY, null, NOW);
+    expect(today).toMatchObject({ tail: "is out of reach · since", freshness: "out-of-reach" });
+    expect(today.when).not.toMatch(/Oct/);
+    const yesterday = topLine(AWAY, null, new Date(2026, 9, 4, 9, 0).getTime());
+    expect(yesterday.when).toContain("Oct 3");
+    expect(yesterday.when).toContain(today.when);
+    expect(topLine({ ...AWAY, heardAt: null }, null, NOW)).toMatchObject({
+      tail: "is out of reach",
+      when: null,
     });
     const away = renderToStaticMarkup(<RemoteControlLineView mac={AWAY} />);
     expect(away).toContain("MacBook Pro");
-    expect(away).toContain("is out of reach · as of");
-    expect(away).toContain(`data-as-of="">${clockTime(AWAY.heardAt ?? 0)}<`);
-    expect(topLine({ ...PRO, readOnly: "newer-there" }).tail).toBe("· read only");
+    expect(away).toContain('data-freshness="out-of-reach"');
+    for (const tail of [today.tail, topLine(PRO, "replay").tail, topLine(PRO, "reload").tail])
+      expect(tail).not.toMatch(NEVER);
+  });
+
+  it("is catching up while the window reads everything again, then while missed changes arrive", () => {
+    // The window has read through the newest count: live.
+    expect(catchUpOf(PRO, 1)).toBeNull();
+    // A welcome that reloaded raised the count the window has not read through yet.
+    expect(catchUpOf({ ...PRO, caughtUp: 2 }, 1)).toBe("reload");
+    expect(catchUpOf({ ...PRO, replaying: true }, 1)).toBe("replay");
+    // Out of reach is said over any catch-up.
+    expect(catchUpOf({ ...AWAY, caughtUp: 2, replaying: true }, 1)).toBeNull();
   });
 
   it("turns changes off while the Mac is out of reach or too far apart, and says why", () => {

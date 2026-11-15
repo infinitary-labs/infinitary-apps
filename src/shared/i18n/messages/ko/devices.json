@@ -27,5 +27,12 @@
   "devicesRemoteBack": "{name} 다시 연결됨",
   "devicesRemoteChangesOff": "변경 꺼짐",
   "devicesRemoteControlling": "{name} 제어 중",
+  "devicesRemoteLineCatchingUp": "· 놓친 변경 사항을 따라잡는 중",
+  "devicesRemoteLineControlling": "일등항해사 제어 중:",
+  "devicesRemoteLineLive": "· 실시간",
+  "devicesRemoteLineOutOfReach": "연락 닿지 않음",
+  "devicesRemoteLineOutOfReachSince": "연락 닿지 않음 · 마지막 연락",
+  "devicesRemoteLineReadOnly": "· 읽기 전용",
+  "devicesRemoteLineReadingAgain": "· 따라잡는 중, 모두 다시 읽는 중",
   "devicesRemoteOutOfReach": "{name} 연락 닿지 않음"
 }

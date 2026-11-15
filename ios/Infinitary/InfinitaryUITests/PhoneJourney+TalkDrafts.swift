@@ -22,7 +22,7 @@ extension PhoneJourney {
         verifyPhoneComposerBounds(app: app)
         picture("offline-draft")
         _ = try await home("online")
-        reach("In reach", timeout: 20)
+        reach("Live", timeout: 20)
         let after = try await home("talk-state", method: "GET")
         XCTAssertEqual((after["writes"] as? [Any])?.count, allWrites.count, "Reconnecting never sends the retained draft")
         XCTAssertEqual(input.value as? String, "Keep this unsent draft")
@@ -40,7 +40,7 @@ extension PhoneJourney {
         verifyPhoneComposerBounds(app: app)
         picture("unconfirmed-send")
         _ = try await home("online")
-        reach("In reach", timeout: 20)
+        reach("Live", timeout: 20)
         let unconfirmed = app.buttons["change-notice"]
         XCTAssertTrue(unconfirmed.waitForPresence(timeout: 20), app.debugDescription)
         XCTAssertEqual(unconfirmed.label, "Could not confirm the change. Check your computer before sending it again.")
@@ -62,7 +62,7 @@ extension PhoneJourney {
         verifyPhoneComposerBounds(app: app)
         picture("lost-answer-kept")
         _ = try await home("online")
-        reach("In reach", timeout: 20)
+        reach("Live", timeout: 20)
         XCTAssertTrue(app.staticTexts["last-turn-sending"].waitForAbsence(timeout: 20), "The snapshot after reconnecting settles the message")
         XCTAssertEqual(lastYou.label, "Keep this unsent draft", "The message the computer holds stays the last turn")
         XCTAssertFalse(app.buttons["change-notice"].exists, "A change the computer holds is never taken back")
@@ -71,7 +71,7 @@ extension PhoneJourney {
         // The draft the next sections carry across homes, typed again.
         focusForPhoneTyping(input, in: app); input.typeText("Keep this unsent draft")
         _ = try await home("read-only")
-        reach("In reach", timeout: 20)
+        reach("Live", timeout: 20)
         // While the phone redials, its words still say In reach and changes wait for contact, so neither shows the phone has
         // heard the newer home; the refusal line does, so it is waited for before the send button is read (phone run
         // 42180903041 read it once, mid-redial, and found no line).
@@ -88,7 +88,7 @@ extension PhoneJourney {
         picture("read-only-draft")
         // INF-1649, the captain's direction A: a newer home whose major kept views answers this phone in full.
         _ = try await home("within-floor")
-        reach("In reach", timeout: 20)
+        reach("Live", timeout: 20)
         XCTAssertTrue(app.staticTexts["connection-refusal"].waitForAbsence(timeout: 20), "Within the floor nothing refuses a change")
         // INF-2755: while the phone redials, its words still say In reach and the refusal line is already gone (INF-2668),
         // but changes wait for contact with full access, so the send button is waited for rather than read once.
@@ -107,7 +107,7 @@ extension PhoneJourney {
         // A home older than this phone's floor: the line names the computer, and the draft waits.
         focusForPhoneTyping(input, in: app); input.typeText("Sent to an older computer")
         _ = try await home("older-home")
-        reach("In reach", timeout: 20)
+        reach("Live", timeout: 20)
         XCTAssertTrue(app.staticTexts["connection-refusal"].waitForPresence(timeout: 20))
         XCTAssertEqual(app.staticTexts["connection-refusal"].label,
                        "Your first mate still hears your messages. Buttons come back once Infinitary on your computer is updated.")
@@ -158,7 +158,7 @@ extension PhoneJourney {
         focusForPhoneTyping(input, in: app); input.typeText("Sent to an older computer")
         // A home at this phone's floor answers it in full, and the draft sends there.
         _ = try await home("older-home-within")
-        reach("In reach", timeout: 20)
+        reach("Live", timeout: 20)
         XCTAssertTrue(app.staticTexts["connection-refusal"].waitForAbsence(timeout: 20), "On a home its floor reaches nothing refuses a change")
         // INF-2755: the same redial as within the floor, so the send button is waited for before the tap.
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "enabled == true"), object: app.buttons["send-message"], timeout: 20),
@@ -199,7 +199,7 @@ extension PhoneJourney {
 
         // INF-82: Command-Return sends the complete multiline ask once, not merely hides a keyboard.
         app.terminate(); try await launchPhoneApp(app)
-        reach("In reach", timeout: 20)
+        reach("Live", timeout: 20)
         XCTAssertTrue(input.waitForPresence(timeout: 10))
         // A multiline field exposes its empty value differently from placeholderValue.
         // Read that state before typing, then require Send to restore it.

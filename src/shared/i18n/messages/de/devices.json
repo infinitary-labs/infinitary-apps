@@ -27,5 +27,12 @@
   "devicesRemoteBack": "{name} ist wieder da",
   "devicesRemoteChangesOff": "Änderungen sind aus",
   "devicesRemoteControlling": "{name} wird gesteuert",
+  "devicesRemoteLineCatchingUp": "· holt Verpasstes nach",
+  "devicesRemoteLineControlling": "Du steuerst deinen ersten Offizier auf",
+  "devicesRemoteLineLive": "· live",
+  "devicesRemoteLineOutOfReach": "ist außer Reichweite",
+  "devicesRemoteLineOutOfReachSince": "ist außer Reichweite · seit",
+  "devicesRemoteLineReadOnly": "· nur lesen",
+  "devicesRemoteLineReadingAgain": "· holt auf, liest alles neu",
   "devicesRemoteOutOfReach": "{name} ist außer Reichweite"
 }

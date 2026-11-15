@@ -52,14 +52,20 @@ This computer stops controlling it and running its work." over "Its unmerged wor
 While MacBook Pro is out of reach the second line reads "MacBook Pro is out of reach, so it lists this computer until you remove it there."
 Leaving returns this app to its own first launch (`JoinAnotherMac.prompt.md`), and MacBook Pro's feed says "MacBook Air left." when it can.
 
+**Live, catching up or out of reach.**
+The top line says how fresh what this window shows is.
+Live: an `ok` dot and "Controlling your first mate on MacBook Pro · live", once every change there is shown here.
+Catching up: a `ring` dot and "· catching up on what was missed" while the changes it missed arrive, or "· catching up, reading everything again" while it reads everything again; it turns live only once they are shown.
+Catching up changes nothing that is refused: changes are on, and words typed while MacBook Pro was out of reach stay in the input.
+
 **Out of reach.**
-When contact is lost the dot turns `warn` and the top line reads "MacBook Pro is out of reach · as of 14:32", the time in mono being the last moment this computer heard from it.
+When contact is lost the dot turns `warn` and the top line reads "MacBook Pro is out of reach · since 14:32", the time in mono being the last moment this computer heard from it, with its day, "since Nov 11 14:32", when that was not today.
 One line stands centered under the top bar, a pill (`--bg-1`, `--line-2`, `--radius-pill`, `--text-sm --fg-1`, a `warn` dot) that says why:
 - lost contact: "Changes are off until MacBook Pro is back.
   It may be asleep, or on another network."
 - Infinitary quit there: "Infinitary is closed on MacBook Pro.
   Changes are off until it opens again."
-- a newer Infinitary there: the top line ends "· read only", with no "as of", because news keeps arriving; the pill reads "MacBook Pro has a newer Infinitary.
+- a newer Infinitary there: the top line ends "· read only", with no "since", because news keeps arriving; the pill reads "MacBook Pro has a newer Infinitary.
   Update Infinitary on this computer to make changes."
   This computer's update notice, when its channel offers a newer version, is the way to act on it.
   For an older MacBook Pro that answers its own update from afar (`home-update`, `docs/view.md` "Updating the first mate's computer"), Settings → General carries one more row under Update channel, "Infinitary on MacBook Pro": its description says where that update stands ("MacBook Pro has 0.7.2-alpha.590 ready."), and its control is a small secondary Update MacBook Pro.

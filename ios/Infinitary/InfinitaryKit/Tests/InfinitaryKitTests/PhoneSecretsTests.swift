@@ -20,6 +20,12 @@ import Testing
         private(set) var offered: [String] = []
         /// Runs when a key is offered, before the answer arrives: the home's card raises a Secrets change then.
         var onEnroll: () -> Void = {}
+        /// While set, each approvals read takes the answer as the home holds it when asked, and sends it only when
+        /// `answerHeld` lets it go: the home answers each read on its own, in any order.
+        var holdsReads = false
+        private var held: [CheckedContinuation<Void, Never>?] = []
+        var heldReads: Int { held.count }
+        func answerHeld(_ read: Int) { held[read]?.resume(); held[read] = nil }
 
         func request<T: Decodable & Sendable>(_ channel: PhoneRequest, args: [Any], as: T.Type) async throws -> T {
             let input = try #require(args.first as? [String: Any])
@@ -32,14 +38,15 @@ import Testing
                 onEnroll()
             default: throw PhoneError.invalidReply
             }
-            // As ReadOnlySession.request: an answer that arrives after its caller was cancelled is not taken.
-            try Task.checkCancellation()
             let holds = enrolled.flatMap { $0.device == device ? $0 : nil }
             let answer: [String: Any] = [
                 "availability": "available", "home": "c41a5779-70bc-400b-929d-19f4c4ed06ea",
                 "device": holds.map { ["label": "iPhone", "generation": 1, "key": $0.key] as [String: Any] } ?? NSNull(),
                 "offered": !offered.isEmpty, "waiting": waiting,
             ].merging(asked.map { ["asked": $0] } ?? [:]) { $1 }
+            if holdsReads, channel == .secretApprovals { await withCheckedContinuation { held.append($0) } }
+            // As ReadOnlySession.request: an answer that arrives after its caller was cancelled is not taken.
+            try Task.checkCancellation()
             return try JSONDecoder().decode(T.self, from: JSONSerialization.data(withJSONObject: answer))
         }
     }
@@ -125,6 +132,39 @@ import Testing
         #expect(home.offered == [key.publicKey])
         #expect(secrets.problem == nil)
         #expect(secrets.standing == .offered)
+    }
+
+    /// INF-4168: the computer stopped approvals from this phone and another device, four Secrets changes in one frame.
+    /// The phone read again through a view task restarted on each change, which SwiftUI skipped for the last one, so
+    /// Settings kept saying this phone approves. Each change now starts its own read, and the last change's answer
+    /// stands even when the earlier reads answer after it.
+    @Test func changesThatArriveTogetherEndAtTheLastAnswer() async throws {
+        let keychain = ApprovalStorageTests.Keychain()
+        let kept = try ApprovalKey.create(on: .simulator, in: keychain)
+        let home = Home()
+        home.enrolled = (kept.device, kept.publicKey)
+        let secrets = Self.secrets(home, keychain)
+        await secrets.read()
+        #expect(secrets.standing == .enrolled)
+
+        // Stop approvals for each device: the question asked, then the answer saved, each announced as a change.
+        // This phone's enrollment ends with the last change.
+        home.holdsReads = true
+        var reads: [Task<Void, Never>] = []
+        for change in 1...4 {
+            if change == 4 { home.enrolled = nil }
+            secrets.changed()
+            reads.append(try #require(secrets.rereading))
+            // The read runs on this actor: it reaches the home once this test lets the actor go, at most a few turns.
+            for _ in 0..<100 where home.heldReads < change { await Task.yield() }
+            try #require(home.heldReads == change, "Each change reaches the home with a read of its own")
+        }
+        for read in reads.indices.reversed() {
+            home.answerHeld(read)
+            await reads[read].value
+        }
+        #expect(secrets.approvals?.device == nil)
+        #expect(secrets.standing == .none, "The switch reads off once the computer stopped this phone's approvals")
     }
 
     /// INF-3042: real Secrets receipt states distinguish acceptance from waiting, refusal and uncertainty.

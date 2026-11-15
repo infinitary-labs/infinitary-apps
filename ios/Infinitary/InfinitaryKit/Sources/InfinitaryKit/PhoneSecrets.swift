@@ -83,13 +83,16 @@ public struct PhoneApprovals: Decodable, Sendable, Equatable {
     @ObservationIgnored private var loaded = false
     @ObservationIgnored private var reading = 0
     /// The offer this phone makes by itself when the computer asks. It runs on its own, as the switch's does: the
-    /// card it raises pushes a Secrets change that cancels the read which started it.
+    /// card it raises pushes a Secrets change, whose read takes over from the one which started it.
     @ObservationIgnored private(set) var asking: Task<Void, Never>?
+    /// The newest read a change notice started (`changed`).
+    @ObservationIgnored private(set) var rereading: Task<Void, Never>?
 
     public convenience init(session: ReadOnlySession, label: String, loadKey: @escaping () throws -> ApprovalKey? = ApprovalKey.load,
                             createKey: @escaping () throws -> ApprovalKey = ApprovalKey.create,
                             replaceKey: @escaping (ApprovalKey.Damage) throws -> ApprovalKey = ApprovalKey.replace) {
         self.init(home: session, label: label, loadKey: loadKey, createKey: createKey, replaceKey: replaceKey)
+        session.onSecretsChanged = { [weak self] in self?.changed() }
     }
 
     init(home: any SecretsHome, label: String = "iPhone", loadKey: @escaping () throws -> ApprovalKey?,
@@ -110,6 +113,12 @@ public struct PhoneApprovals: Decodable, Sendable, Equatable {
 
     /// The waiting use the home raised this card for, if it is one.
     public func use(card: String) -> PhoneApprovals.Use? { approvals?.waiting.first { $0.card == card } }
+
+    /// The home's Secrets changed, or contact came back: every notice starts a read of its own, and only the newest
+    /// read's answer stands (`reading`), so changes that arrive together end at the home's last answer (INF-4168).
+    func changed() {
+        rereading = Task { await read() }
+    }
 
     /// Reads the home's answer again. A home without phone approvals refuses the read, and the phone shows none.
     /// When the person turned this phone's switch on at the computer (INF-1690 piece 4), the phone offers its key

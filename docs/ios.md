@@ -365,6 +365,7 @@ While Appearance is open the control holds focus and the left and right arrow ke
 Both sit on the system's glass with the same headings and spacing: the computer's sheet opens at half height and can be pulled up, and Settings opens at full height, since its nine sections do not fit half a screen.
 Leave, or Forget while out of reach, is the computer sheet's second section under its own heading.
 While the computer's Secrets are set up and open, Settings → Devices also shows Secrets approvals: the Approves secret uses switch, the code to compare with the computer's card, or that this device can allow uses, and Set up approvals again in place of the switch for a damaged record.
+The phone reads its approvals again at each Secrets change the computer announces and each time it reaches the computer, from the connection itself rather than a view's restart, which SwiftUI skips when several changes arrive in one frame: each change starts a read of its own, and only the newest read's answer is shown.
 While the keyboard is open, Done takes Settings' place in the leading slot and the Hide keyboard command (Shift-Command-K) dismisses it without sending or clearing the draft.
 A keyboard-will-show notice whose keyboard frame has no height brings no keyboard, so neither Done nor the message box's keyboard flag follow it (`phoneKeyboardArrives`): iOS posts one when an iPhone Duo turns or its window moves between its displays.
 The dismissal command does not belong to the keyboard’s transient accessory view.
@@ -1075,6 +1076,7 @@ Each part starts from its own fresh home and a clean app on its device's one sim
 Native package tests exercise the Mac-produced link and certificate fixture and certificate/public-key compatibility without using a Mac Keychain.
 They check the Secrets approval key's storage through a stand-in that answers with the Keychain's own statuses.
 With a stand-in home that answers as `SecretsSettings` does, they check that turning on Approves secret uses keeps a kept key the phone could not read before and replaces only a record it refuses.
+They check that several Secrets changes that arrive together end at the home's last answer, even when the earlier reads answer after it.
 They check that a damaged record is refused by loading, by turning on Approves secret uses and by a new key, that a locked phone never offers to set up again, and that only Set up approvals again replaces it, leaving it on a failed read, an unsupported device, a changed record or a failed write.
 App-hosted tests repair a missing certificate in the disposable simulator's own Keychain and inject protected-data read failures to check retry and the joining explanation.
 An app-hosted test replaces the approval key in that Keychain and reads the new key under the same device name.

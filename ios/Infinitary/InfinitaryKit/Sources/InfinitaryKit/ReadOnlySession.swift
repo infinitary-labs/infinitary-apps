@@ -99,8 +99,10 @@ public struct PhoneNotice: Equatable, Sendable {
     public private(set) var sceneGeneration = 0
     @ObservationIgnored private var sceneObservations = false
     public private(set) var workRevision = 0
-    /// Rises when the home's Secrets change or contact comes back, so this phone reads its approvals again.
-    public private(set) var secretsRevision = 0
+    /// Runs once for each Secrets change the home announces and each time contact comes back, so this phone reads its
+    /// approvals again (`PhoneSecrets.changed`). It is called here, never through a view: SwiftUI drops a `.task(id:)`
+    /// restart when its id moves twice in one frame, and the last of several changes that arrived together went unread.
+    @ObservationIgnored public var onSecretsChanged: (() -> Void)?
     /// Bumps when the computer says something a Settings page shows changed: an allowance reading, a sign-in on a
     /// computer that runs work, an automation or a project. The page that is open reads again.
     public private(set) var settingsRevision = 0
@@ -1186,7 +1188,7 @@ public struct PhoneNotice: Equatable, Sendable {
                let payload = frame["payload"], let value = try? PhoneJSON.read(payload) {
                 onPanelPush(channel, value)
             }
-            if frame["channel"] as? String == "inf:secrets:changed" { secretsRevision += 1 }
+            if frame["channel"] as? String == "inf:secrets:changed" { onSecretsChanged?() }
             // A replay ends in reach, where the open page reads again anyway.
             if !replayed, let channel = frame["channel"] as? String,
                Self.settingsPushes.contains(channel)
@@ -1273,7 +1275,7 @@ public struct PhoneNotice: Equatable, Sendable {
         if reached { reachRoute() }
         contact = "in-reach"
         if missed { missed = false; returns += 1 }
-        if reached { reaches += 1; secretsRevision += 1; wakeReachWaiters(); handUsage() }
+        if reached { reaches += 1; onSecretsChanged?(); wakeReachWaiters(); handUsage() }
     }
 
     /// INF-2773: the route and its preference are worked out once per connection, in the step that turns it In reach,

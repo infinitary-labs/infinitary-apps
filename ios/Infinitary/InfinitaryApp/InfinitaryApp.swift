@@ -252,8 +252,6 @@ struct PhoneView: View {
         PhoneWorkspace(session: session, stage: PhoneCards(session: session),
             tasks: PhoneTasks(session: session), composer: MessageComposer(session: session))
             .environment(model.secrets)
-            // The home's Secrets changed, or contact came back: what this phone may approve is read again.
-            .task(id: session.secretsRevision) { await model.secrets?.read() }
             .id(session.mac.deviceID)
             // INF-589 item 12: a soft tap when the computer comes back after it was lost.
             .sensoryFeedback(.phone, trigger: session.returns)

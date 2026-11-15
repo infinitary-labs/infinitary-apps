@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
 import type { WorkInvokeChannel } from "@shared/ipc";
 import type { TaskBrowserCommandResult } from "@shared/taskBrowser";
+import { workRequests } from "@shared/work";
 import {
   type BrowserOrderChannel,
   type BrowserOrderRequest,
   browserOrders,
   isBrowserOrderChannel,
-  workRequests,
-} from "@shared/work";
+} from "@shared/workBrowsers";
 import { AxiChannel, type TaskShell } from "../axi/channel";
 import type { GuardLookup } from "../browser/connectionGuard";
 import type { SignInStore } from "../browser/savedSignInGrants";
@@ -42,7 +42,7 @@ import { taskStopsCommand } from "../tasks/taskStops";
  * metadata only: no use, value or custody is here (docs/secrets.md).
  *
  * The captain's side is the home's: it asks the orders in
- * `browserOrders` (src/shared/work.ts) - his view's pictures and room, his
+ * `browserOrders` (src/shared/workBrowsers.ts) - his view's pictures and room, his
  * Take control, input and Return control, Stop browser and Open again, a
  * request card's pause, a saved sign-in he lends or removes, the task's
  * close - and hears each browser's fact as it changes, and its pictures

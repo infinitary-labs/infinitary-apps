@@ -6,7 +6,7 @@ import { type PlacementRequirements, placementRequirementsSchema } from "@shared
 import { TASK_CARD_VIA } from "@shared/provenance";
 import { reasoningWord } from "@shared/reasoning";
 import { DROP_BEFORE_START } from "@shared/recordDrop";
-import { deliveryForRecord, opensPullRequest, type RepoView } from "@shared/repos";
+import type { RepoView } from "@shared/repos";
 import type { WorkShape } from "@shared/routingPolicy";
 import { pinActivity, pinMissingRefusal } from "@shared/taskPin";
 import type { PlanItem } from "@shared/taskPlan";
@@ -68,7 +68,7 @@ import {
 } from "../storage/taskSelection";
 import { compactBrief, expandBrief, reportHash } from "./briefReceipt";
 import { admitUnderParent, type ContainerLoop, reopenHeldContainers } from "./containerParents";
-import { moveTargetRepository } from "./projectMove";
+import { moveIntoProject, type ProjectMoveContext } from "./projectMove";
 import { latestResultOf, type ReportEntry, reportEntryOf, type TaskResult } from "./reportEntry";
 import { TaskArchive } from "./taskArchive";
 import { TaskCapture } from "./taskCapture";
@@ -419,11 +419,13 @@ export class TaskService {
   readonly archive: TaskArchive;
   readonly projects: ProjectStore;
   private readonly writer: TaskWriter;
+  private readonly moves: ProjectMoveContext;
 
   constructor(private readonly options: TaskServiceOptions) {
     this.writer = new TaskWriter(options);
     this.projects = this.writer.projects;
     this.graph = new TaskGraph(this.writer, this);
+    this.moves = { writer: this.writer, graph: this.graph, repos: options.repos };
     this.capture = new TaskCapture(this.writer, this);
     this.placement = new TaskPlacement(this.writer);
     this.delivery = new TaskDeliveries(this.writer, this);
@@ -1472,7 +1474,7 @@ export class TaskService {
         );
       }
       if (parent.projectId !== record.projectId) {
-        this.moveWithin(record, parent.projectId, actor, at, parent.repoId);
+        moveIntoProject(this.moves, record, parent.projectId, actor, at, parent.repoId);
       }
       this.writer.patch(id, { parentId, updatedAt: at });
       this.writer.addEvent({
@@ -1494,7 +1496,7 @@ export class TaskService {
    * minted there (the old one is retired, never reused) and a `moved`
    * event carries both. Children follow their parent's project, so the
    * subtree moves with it, into this project's repository when it has one,
-   * except a part bound to a repository of its own (`moveWithin`).
+   * except a part bound to a repository of its own (`moveIntoProject`).
    */
   moveToProject(
     id: string,
@@ -1506,7 +1508,7 @@ export class TaskService {
     const run = this.writer.write((): TaskRecord => {
       const record = this.writer.mustGet(id);
       if (record.projectId !== projectId)
-        this.moveWithin(record, projectId, actor, at, undefined, repository);
+        moveIntoProject(this.moves, record, projectId, actor, at, undefined, repository);
       return this.writer.mustGet(id);
     });
     return run();
@@ -1882,98 +1884,6 @@ export class TaskService {
       if (project) return project;
     }
     return this.projects.scratch();
-  }
-
-  /**
-   * Re-key a task into another project (inside the caller's transaction).
-   * Only an open row with no workspace may move: a worktree is bound to a
-   * repo, and a crewmate's brief already names the project it works in.
-   * The subtree follows, so children never end up in a foreign project.
-   * The moved task takes `repoId`, so its working copy, pull request and
-   * checks are where it lands (INF-8): the new parent's on a re-parent, as
-   * `create` gives a child, else `moveTargetRepository`'s; where that is none
-   * (Scratch, or a parent with none) it keeps its own. Each part takes what
-   * its parent takes, as `create` gives a child, unless it is bound to a
-   * repository of its own, which it keeps. A removed project takes no task,
-   * and a repository with no remote takes no row the captain asked to ship
-   * as a pull request.
-   */
-  private moveWithin(
-    record: TaskRecord,
-    projectId: string,
-    actor: TaskEventActor,
-    at: number,
-    repoId?: string | null,
-    repository?: string,
-  ): void {
-    const project = this.projects.get(projectId);
-    if (!project) throw new Error(`Unknown project "${projectId}".`);
-    if (project.archivedAt !== null) {
-      throw new TaskGraphRefusal(
-        `Refused: ${project.name} was removed, so ${keyOrId(record)} cannot move there.`,
-      );
-    }
-    if (record.status !== "open" || record.worktreeDir || record.placement) {
-      throw new TaskGraphRefusal(
-        `Refused: ${keyOrId(record)} is ${record.placement ? "committed to a computer" : record.status === "open" ? "bound to a workspace" : record.status} and cannot move to another project; only open work that has not started can.`,
-      );
-    }
-    const descendants = this.graph.descendants(record.id);
-    for (const descendant of descendants) {
-      if (descendant.status !== "open" || descendant.worktreeDir || descendant.placement) {
-        throw new TaskGraphRefusal(
-          `Refused: its child ${keyOrId(descendant)} is ${descendant.placement ? "committed to a computer" : descendant.status === "open" ? "bound to a workspace" : descendant.status}, so the subtree cannot move to another project.`,
-        );
-      }
-    }
-    const target =
-      repoId === undefined
-        ? moveTargetRepository(project, this.projects, record, repository)
-        : repoId;
-    const rows = [record, ...descendants];
-    const before = new Map(rows.map((row) => [row.id, row.repoId]));
-    const after = new Map<string, string | null>();
-    const moves = rows.map((row) => {
-      let to = row.repoId;
-      if (row.id === record.id) to = target ?? row.repoId;
-      // A part that had its parent's repository, or none, followed it there.
-      else if (row.parentId && (row.repoId === null || row.repoId === before.get(row.parentId)))
-        to = after.get(row.parentId) ?? null;
-      after.set(row.id, to);
-      return { row, repoId: to };
-    });
-    // As a plan is refused a direct-pr ask with no remote to open it on
-    // (CrewSupervisor.resolveSpawnDelivery), before anything is written.
-    for (const { row, repoId: to } of moves) {
-      if (!to || to === row.repoId || !this.options.repos) continue;
-      const repo = this.options.repos.get(to);
-      if (repo?.kind === "personal" || repo?.origin) continue;
-      if (!opensPullRequest(deliveryForRecord(row, "local-only"))) continue;
-      const name = repo?.name ?? project.name;
-      const handle = keyOrId(row);
-      throw new TaskGraphRefusal(
-        `Refused: ${handle} asks to ship as a pull request (direct-pr), and ${name} has no remote to open one on, so ${handle} cannot move there. Configure a remote for ${name}, or set ${handle}'s delivery to local-only first.`,
-      );
-    }
-    for (const { row, repoId: to } of moves) {
-      const { seq, key } = this.projects.allocateSeq(project.id);
-      this.writer.patch(row.id, { projectId: project.id, key, seq, repoId: to, updatedAt: at });
-      this.writer.addEvent({
-        taskId: row.id,
-        at,
-        actor,
-        kind: "moved",
-        text: `moved to ${project.name} as ${key} (was ${keyOrId(row)})`,
-        data: {
-          fromProjectId: row.projectId,
-          toProjectId: project.id,
-          fromKey: row.key,
-          toKey: key,
-          ...(to !== row.repoId ? { fromRepoId: row.repoId, toRepoId: to } : {}),
-        },
-        feed: false,
-      });
-    }
   }
 
   /**

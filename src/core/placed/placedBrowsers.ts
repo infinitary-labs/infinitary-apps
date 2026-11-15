@@ -17,7 +17,7 @@ import {
   type BrowserOrderRequest,
   type BrowserOrderResponse,
   browserOrders,
-} from "@shared/work";
+} from "@shared/workBrowsers";
 import { siteNamed } from "../browser/browserRecord";
 import type { BrowserAnswer } from "../browser/crewmateCommands";
 import type { PrivateSites } from "../browser/privateSites";

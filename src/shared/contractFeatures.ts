@@ -220,7 +220,7 @@ export const PLACED_SEED_SINCE = "3.1.0";
 
 /**
  * The first contract a computer that runs work keeps its tasks' own
- * browsers on (`browserOrders`, src/shared/work.ts; docs/task-browser.md,
+ * browsers on (`browserOrders`, src/shared/workBrowsers.ts; docs/task-browser.md,
  * "On another computer"): its roster says so, its crewmates are given
  * `infinitary-browser-axi`, and it answers the captain's side of each browser. One
  * that speaks an older one gives its tasks no browser.

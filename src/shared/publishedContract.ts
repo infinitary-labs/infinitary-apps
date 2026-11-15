@@ -42,8 +42,6 @@ import { VIEW_OPEN_LISTS } from "./openLists";
 import { RESOURCE_OBSERVATIONS_SINCE, RESOURCE_ORDER, resourceOrders } from "./resources";
 import { SIGN_IN_ORDER_CHANNELS, signInOrders } from "./signIns";
 import {
-  BROWSER_ORDER_CHANNELS,
-  browserOrders,
   DOWNLOAD_ORDER_CHANNELS,
   downloadOrders,
   UPDATE_ORDER_CHANNELS,
@@ -51,11 +49,12 @@ import {
   WORK_ORDER_CHANNELS,
   workOrders,
 } from "./work";
+import { BROWSER_ORDER_CHANNELS, browserOrders } from "./workBrowsers";
 
 /**
  * The published contract (docs/contract.md): every core request and push of
  * `src/shared/ipc.ts`, the orders a home asks a computer that runs work
- * (`src/shared/work.ts`, `src/shared/signIns.ts`), and the connection's envelope around them
+ * (`src/shared/work.ts`, `src/shared/workBrowsers.ts`, `src/shared/signIns.ts`), and the connection's envelope around them
  * (`src/shared/connection.ts`), as JSON Schema, with the version and the
  * version rule. `scripts/generate-contract.ts` writes it to
  * docs/contract.json, and `publishedContract.test.ts` fails when that file
@@ -242,7 +241,7 @@ export function publishedContract() {
       ),
     },
     // What a home asks a computer that runs work about its tasks' own
-    // browsers there (`src/shared/work.ts`, docs/task-browser.md "On another
+    // browsers there (`src/shared/workBrowsers.ts`, docs/task-browser.md "On another
     // computer"), from `since` on, published the same way.
     browserOrders: {
       since: TASK_BROWSERS_THERE_SINCE,

@@ -13,7 +13,6 @@ import { RESOURCE_ORDER, type ResourceMemory, resourceOrders } from "@shared/res
 import { isSignInOrderChannel } from "@shared/signIns";
 import {
   downloadOrders,
-  isBrowserOrderChannel,
   placedTaskFolders,
   type UpdateProgress,
   updateOrders,
@@ -24,6 +23,7 @@ import {
   type WorkUpdateAnswer,
   worktreesDirOf,
 } from "@shared/work";
+import { isBrowserOrderChannel } from "@shared/workBrowsers";
 import type { WebSocket } from "ws";
 import { dialHome } from "../devices/dial";
 import { HomeLink, type HomeLinkState } from "../devices/homeLink";

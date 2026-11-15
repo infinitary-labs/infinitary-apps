@@ -565,7 +565,7 @@ The captain reads and drives it from the home as the captain does one here (`Pla
 - Its fact is the one that computer last said (`inf:work:browser`), sent once each time it changes and asked for whole each time that computer comes back into reach (`inf:task-browser:facts`).
   The record's Browser line, a card's door, the view and the idle ladder read it as they read a fact here.
 - While a view watches, that computer sends the page's pictures (`inf:work:browser-frame`), the newest one at a time, and the room a maximized view gives the page goes there.
-- Take control, the captain's input, Return control, Stop browser, Open again, a request card's pause and the task's close are orders to that computer (`browserOrders`, `src/shared/work.ts`), answered there by the same rules.
+- Take control, the captain's input, Return control, Stop browser, Open again, a request card's pause and the task's close are orders to that computer (`browserOrders`, `src/shared/workBrowsers.ts`), answered there by the same rules.
   Out of reach, each is refused in words and nothing is done.
 - What that computer has the home do once - a line on the task's timeline, the crewmate's wake on a return, a saved sign-in copied back - arrives as a work request that the conversation's ledger answers once (`inf:work:browser-event`, `docs/helper.md` "Holding a conversation").
 - A saved sign-in stays the home's (`WebSignIns`).

@@ -77,6 +77,7 @@ export const PROBES = [
       "src/shared/remoteLogin.ts",
       "src/shared/sshConnection.ts",
       "src/shared/work.ts",
+      "src/shared/workBrowsers.ts",
       "tests/helpers/computerClaude.ts",
       "tests/helpers/connectionClient.ts",
       "tests/helpers/dnsSdStandIn.ts",

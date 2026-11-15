@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "browser-orders-and-project-move-split",
+      "reason": "Internal: the task browser's work-computer orders move out of the work orders file into their own file, and moving a task into another project moves out of the task service into its existing project-move file, so both stay under the size check's line ceiling once the batched changes combine; nothing a person sees changes."
+    }
+  ]
+}

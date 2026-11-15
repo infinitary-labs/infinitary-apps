@@ -27,13 +27,13 @@ import {
 import { resourceOrders } from "./resources";
 import { SIGN_IN_ORDER_CHANNELS } from "./signIns";
 import {
-  BROWSER_ORDER_CHANNELS,
   DOWNLOAD_ORDER_CHANNELS,
   downloadOrders,
   UPDATE_ORDER_CHANNELS,
   WORK_ORDER_CHANNELS,
   WORK_PROGRESS_ORDER,
 } from "./work";
+import { BROWSER_ORDER_CHANNELS } from "./workBrowsers";
 
 // This test reads docs/contract.json through CONTRACT_FILE, which the pull
 // request check's selector (scripts/unit-reach.ts) cannot see from here: a

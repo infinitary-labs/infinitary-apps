@@ -69,6 +69,7 @@ import { PublishedBuilds, standInTapFetch } from "./publishedBuilds";
 import { RemoteLogin } from "./remoteLogin";
 import { systemSsh } from "./ssh";
 import { SshConnections } from "./sshConnections";
+import { runWindowsAnnouncement, windowsAnnounceArgs } from "./windowsAnnounce";
 
 /**
  * The home's devices wiring (docs/devices.md): pairing, the computers that
@@ -459,13 +460,15 @@ export async function startHomeDevices(options: {
   });
   // While a phone is on the list this computer announces itself over Bonjour
   // so the phone can find it again (docs/devices.md, "Announcing to a
-  // phone"): with dns-sd, or on Linux with Avahi's avahi-publish where it has one.
+  // phone"): with dns-sd, on Linux with Avahi's avahi-publish where it has
+  // one, and on Windows with Windows' own announcement (./windowsAnnounce.ts).
   const avahiPublish =
     !dnsSd && hostPlatform() === "linux" ? findOnPath("avahi-publish", hostEnv()) : undefined;
   const announcer = dnsSd || avahiPublish;
+  const windowsAnnounces = !dnsSd && hostPlatform() === "win32";
   const homeAnnouncement = new HomeAnnouncement({
-    run: announcer ? runDnsSdHeld(announcer) : null,
-    args: dnsSd ? dnsSdAnnounceArgs : avahiAnnounceArgs,
+    run: announcer ? runDnsSdHeld(announcer) : windowsAnnounces ? runWindowsAnnouncement() : null,
+    args: dnsSd ? dnsSdAnnounceArgs : windowsAnnounces ? windowsAnnounceArgs : avahiAnnounceArgs,
     name: () => ownComputerName({ packaged, env: process.env }),
     port: devices.port,
   });

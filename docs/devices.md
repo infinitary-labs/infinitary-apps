@@ -244,17 +244,21 @@ A development run may stand in its own program with `INFINITARY_DNS_SD`; a packa
 
 ### Announcing to a phone
 
-While a phone (a device whose system is `ios`) is on Your devices, or an unspent direct computer invitation is open, this computer announces itself over Bonjour as `_infinitary._tcp` in the local domain, at the port the connection listens on (`HomeAnnouncement`, `src/core/devices/announce.ts`): a Mac under its own name in System Settings, a Linux home under its host name.
+While a phone (a device whose system is `ios`) is on Your devices, or an unspent direct computer invitation is open, this computer announces itself over Bonjour as `_infinitary._tcp` in the local domain, at the port the connection listens on (`HomeAnnouncement`, `src/core/devices/announce.ts`): a Mac under its own name in System Settings, a Linux or Windows home under its host name.
 An open invitation lets the first phone find this computer before it has joined; invitations through SSH and commands for another user do not announce.
 The phone browses for that to find this computer again after its address moved, and then dials it and checks the key it was paired with (above, "Joining"), so the announcement carries no key and no secret.
 A Mac runs macOS's own `dns-sd -R` (or a development run's `INFINITARY_DNS_SD` stand-in, on either system).
 A Linux home runs Avahi's `avahi-publish --no-fail --service` from its search path (`avahiAnnounceArgs`, `src/core/devices/avahi.ts`), from the same package as `avahi-browse` above.
 Neither has an end of its own, so a shell holds it with the app's pipe (`runDnsSdHeld`, `src/core/devices/dnsSd.ts`): it is killed once the pipe closes, when the announcement stops or the app is gone however it went, so a quit or a crash leaves no announcement.
+A Windows home has no program that announces from the command line, so Windows' own PowerShell makes Windows' own call, `DnsServiceRegister`, which its DNS client service answers since Windows 10 (1809), under the computer's host name at `<host name>.local`, never Windows' older 15-letter computer name (`runWindowsAnnouncement`, `src/core/devices/windowsAnnounce.ts`).
+PowerShell holds it on the app's pipe and takes it back with `DnsServiceDeRegister` once the pipe closes, so a quit or a crash leaves no announcement running; a stop that closes the pipe ends PowerShell after five seconds if it has not ended by then.
+Another computer that already heard it may still answer from its own cache until the record's two-minute lifetime runs out.
+A dot or backslash in the computer's name is escaped, so the name stays one label.
 It starts when the list gains a phone or a direct invitation opens, and stops once neither remains or the app quits, for good: a change during quit starts nothing.
 Stop, expiry and spending the last invitation stop its announcement unless a phone is now on the list.
 One that ends by itself, as when mDNSResponder restarts, starts again while either condition holds, five seconds later and doubling up to a minute.
 Avahi's daemon restarting does not end one: `avahi-publish` publishes again by itself, and with `--no-fail` one started while the daemon is not running waits for it.
-Another computer on the network announcing the same name makes either tool announce under another, such as `studio #2`.
+Another computer on the network announcing the same name makes dns-sd or Avahi announce under another, such as `studio #2`.
 A second announcement under the same name on the same Linux computer, as a second person's Infinitary there with a phone of their own, is refused by Avahi as a local name collision and ends, so it is tried again as above until the name is free.
 A computer with no phone and no open direct invitation announces nothing.
 A Linux home announces nothing where it has no `avahi-publish` (Ubuntu's `avahi-utils`, Fedora's `avahi-tools`, Arch's `avahi`), and nothing its phone can hear where its Avahi does not publish a user's services, which Avahi refuses as not permitted, or its firewall keeps mDNS out (Ubuntu's ufw lets it in).

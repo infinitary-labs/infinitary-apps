@@ -1,5 +1,5 @@
 import { rm } from "node:fs/promises";
-import { homedir, hostname, userInfo } from "node:os";
+import { homedir, hostname, tmpdir, userInfo } from "node:os";
 import { basename, join } from "node:path";
 import { openCommandDoor } from "@core/axi/commandDoor";
 import { defaultClaudeConfigDir } from "@core/claude/claudeQuota";
@@ -14,6 +14,7 @@ import { type Core, startCore } from "@core/index";
 import { isAllowedOpenExternalUrl } from "@core/openExternal";
 import { appPathsFor } from "@core/paths";
 import { dataFolderRefusal } from "@core/storage/dataFolderRefusal";
+import { clearPrivateTemp, keepDataFolderPrivate } from "@core/storage/ownerOnly";
 import {
   SAVED_DATA_REFUSAL_TITLE,
   UnsupportedSavedDataError,
@@ -405,6 +406,22 @@ export async function startApp(
   // window opened beside it") and keeps a browser profile of its own, since
   // the run's holds the folder's; it asks before it asks for the lock.
   const dataDir = app.getPath("userData");
+  // On Windows the data folder takes an owner-only access list before
+  // anything writes it, or is refused as an unsafe place; a system temporary
+  // folder another account can read gives way to one inside it
+  // (src/core/storage/ownerOnly.ts, docs/windows-private-files.md).
+  const privacy = move
+    ? null
+    : await keepDataFolderPrivate({
+        platform: hostPlatform(),
+        dataDir,
+        env: process.env,
+        tempDir: tmpdir(),
+      });
+  if (privacy?.refused) {
+    const { why, detail } = privacy.refused;
+    console.warn(`[data folder] not kept private (${why})${detail ? `: ${detail}` : ""}`);
+  }
   // It joins too when it opens between two commands, where a start entry
   // will start the next: it waits for that one, under its notice, and
   // starts no first mate of its own unless the person chose Start it here
@@ -436,7 +453,7 @@ export async function startApp(
     move ||
     startsHere ||
     ownStartEntry() === "mac-daemon" ||
-    dataFolderRefusal(dataDir) ||
+    dataFolderRefusal(dataDir, privacy) ||
     joinedHere.read() ||
     windowFromWork(work.place.dataDir, joinedHere.leftDeviceId())
       ? null
@@ -477,6 +494,9 @@ export async function startApp(
     if (windowless) endRun(1, RUN_WORDS.alreadyOpen);
     else app.quit();
   } else {
+    // The launch that holds the folder clears what earlier ones left in its
+    // own temporary folder; a window beside a run leaves it to the run.
+    if (privacy?.temp && !besideRun) await clearPrivateTemp(privacy.temp);
     // A run notes that it holds the folder, for a window opened beside it,
     // and stops cleanly on a signal (below).
     let stopRun: () => void = () => {};
@@ -981,7 +1001,7 @@ export async function startApp(
       configurePermissions(session.defaultSession, rendererSource, () => shell.dictationEnabled());
       // A folder that moved to Infinitary, or one a move holds, is never opened
       // here: nothing is started on it (./savedDataRefusal.ts).
-      const refusal = dataFolderRefusal(dataDir);
+      const refusal = dataFolderRefusal(dataDir, privacy);
       if (refusal) {
         if (windowless) endRun(1, RUN_WORDS.refusal(refusal));
         else await showDataRefusal(hideWindow, refusal);

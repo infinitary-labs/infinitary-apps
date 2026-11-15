@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "windows-private-files",
+      "reason": "Windows is not a supported platform yet: on Windows the data folder now takes an owner-only access list or is refused, a temporary folder others can read gives way to one inside it, and a Windows home announces itself to phones with Windows' own call. Mac and Linux behave as before."
+    }
+  ]
+}

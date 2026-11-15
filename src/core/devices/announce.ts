@@ -18,12 +18,13 @@ export function dnsSdAnnounceArgs(name: string, port: number): string[] {
 export type HomeAnnouncementOptions = {
   /**
    * What announces, held until stopped: a Mac's dns-sd, a Linux home's
-   * avahi-publish, or null where this computer has neither (and no stand-in).
+   * avahi-publish, a Windows home's own `DnsServiceRegister`, or null where
+   * this computer has none of them (and no stand-in).
    */
   run: DnsSdRun | null;
-  /** What that program is asked to announce `name` at `port`: `dnsSdAnnounceArgs` or `avahiAnnounceArgs`. */
+  /** What that program is asked to announce `name` at `port`: `dnsSdAnnounceArgs`, `avahiAnnounceArgs` or `windowsAnnounceArgs`. */
   args: (name: string, port: number) => readonly string[];
-  /** The name this computer announces under: a Mac's own name in System Settings, a Linux home's own name on the network. */
+  /** The name this computer announces under: a Mac's own name in System Settings, a Linux or Windows home's own name on the network. */
   name: () => Promise<string>;
   /** The port the connection listens on. */
   port: number;
@@ -37,8 +38,9 @@ const RETRY_MOST_MS = 60_000;
 
 /**
  * Announces this computer while a phone is on the list or a usable direct invitation is open,
- * with macOS's own `dns-sd -R` or Avahi's `avahi-publish`, held by this app's pipe
- * (`runDnsSdHeld`) so it ends with the app however that went. It stops when neither
+ * with macOS's own `dns-sd -R`, Avahi's `avahi-publish` or Windows' own
+ * `DnsServiceRegister`, held by this app's pipe (`runDnsSdHeld`,
+ * `runWindowsAnnouncement`) so it ends with the app however that went. It stops when neither
  * condition holds, and a run that ends by itself restarts only while either condition still holds.
  */
 export class HomeAnnouncement {

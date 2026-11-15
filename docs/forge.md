@@ -303,6 +303,7 @@ A computer that runs work (`docs/helper.md`) signs in to GitHub for its own clon
   The computer asks GitHub for the code and sends it here as a step of the sign-in (`inf:work:sign-in`, a `device_code` notice); the captain enters it on GitHub's page here, and the computer asks GitHub until it says yes and keeps the sign-in.
   Each flow's end reaches whoever started it once (`signIn(host, { onEnd })`), so the computer says signed in, "The code expired.", "Could not reach GitHub - try again." or, for a no on GitHub's page or a Cancel, nothing.
   `inf:devices:forge-sign-out` deletes the sign-in there.
+  The first mate signs a computer out the same way, with `forge-sign-out` and that computer's `deviceId` (`inf:forges:sign-out`'s last element, `DeviceSignIns.signOutForge`), which refuses a host the computer holds no sign-in to and names the hosts it does.
 - **Or GitHub CLI's sign-in there.**
   A computer with GitHub CLI on its own search path says so with its forges (`githubCli`), and its GitHub aside in Integrations then closes with the line "Use GitHub CLI", as this Mac's does ("GitHub CLI's sign-in" below), naming that computer.
   The click asks `inf:devices:forge-sign-in-cli`, which asks the computer `inf:sign-ins:forge-cli` (`DeviceSignIns.forgeWithCli`); the computer asks its own GitHub CLI and GitHub who that is (`ForgeSignIns.signInWithCli`), keeps only the way and the program's path, and answers whether it kept it, so no token crosses or reaches a log.

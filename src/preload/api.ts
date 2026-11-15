@@ -627,17 +627,23 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
         readableRequest("inf:accounts:sign-in", () => invoke("inf:accounts:sign-in", accountId)),
       remove: (accountId) =>
         readableRequest("inf:accounts:remove", () => invoke("inf:accounts:remove", accountId)),
-      rename: (accountId, label) =>
+      rename: (accountId, label, deviceId) =>
         readableRequest("inf:accounts:rename", () =>
-          invoke("inf:accounts:rename", accountId, label),
+          deviceId
+            ? invoke("inf:accounts:rename", accountId, label, deviceId)
+            : invoke("inf:accounts:rename", accountId, label),
         ),
-      setEnabled: (accountId, enabled) =>
+      setEnabled: (accountId, enabled, deviceId) =>
         readableRequest("inf:accounts:set-enabled", () =>
-          invoke("inf:accounts:set-enabled", accountId, enabled),
+          deviceId
+            ? invoke("inf:accounts:set-enabled", accountId, enabled, deviceId)
+            : invoke("inf:accounts:set-enabled", accountId, enabled),
         ),
-      pin: (providerId, accountId) =>
+      pin: (providerId, accountId, deviceId) =>
         readableRequest("inf:accounts:pin", () =>
-          invoke("inf:accounts:pin", providerId, accountId),
+          deviceId
+            ? invoke("inf:accounts:pin", providerId, accountId, deviceId)
+            : invoke("inf:accounts:pin", providerId, accountId),
         ),
       keepGoing: (accountId, on, deviceId) =>
         readableRequest("inf:accounts:keep-going", () =>

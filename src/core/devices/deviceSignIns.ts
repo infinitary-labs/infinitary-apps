@@ -43,6 +43,8 @@ import type { WorkDevices } from "../placed/workDevices";
 
 /** A computer that takes Keep going on credits for its own accounts (`computer-keep-going.md`). */
 const COMPUTER_KEEP_GOING = contractChange("computer-keep-going");
+/** A computer that renames, pauses and prefers its own accounts and reads its allowance on request. */
+const COMPUTER_ACCOUNT_SETTINGS = contractChange("computer-account-settings");
 
 type Running = DeviceSignInFlow & {
   /** The person's word for a project host ("GitHub"). */
@@ -112,6 +114,7 @@ export class DeviceSignIns {
         reach: this.options.reachOf?.(device.id) ?? (inReach ? "in-reach" : "out-of-reach"),
         customApi: speaksCustomApi(this.options.work.version(device.id)?.contract ?? ""),
         keepGoing: this.takesKeepGoing(device.id),
+        accountSettings: this.takesAccountSettings(device.id),
         signIns: this.narrowed(said?.signIns ?? null),
         flows: [...this.running.values()]
           .filter((flow) => flow.deviceId === device.id)
@@ -332,14 +335,89 @@ export class DeviceSignIns {
     return listsChange(this.options.work.version(deviceId)?.changes, COMPUTER_KEEP_GOING);
   }
 
+  /**
+   * Renames, pauses or resumes, or prefers one of that computer's own
+   * accounts (docs/helper.md, "Its own sign-ins"), saved only there. Its
+   * rows come back as that computer's sign-ins, whole, and this resolves
+   * once they have.
+   */
+  async setAccount(
+    deviceId: string,
+    order:
+      | { kind: "rename"; accountId: string; label: string }
+      | { kind: "set-enabled"; accountId: string; enabled: boolean }
+      | { kind: "pin"; providerId: string; accountId: string | null },
+  ): Promise<{ ok: true }> {
+    this.computer(deviceId);
+    const who = this.who(deviceId);
+    if (!this.takesAccountSettings(deviceId))
+      throw new Error(`Update Infinitary on ${who} to change its accounts from here.`);
+    const accounts = this.said.get(deviceId)?.signIns?.accounts ?? [];
+    if (order.accountId !== null && !accounts.some((account) => account.id === order.accountId))
+      throw new Error(`${who} has no account with that id. Look in Settings → Intelligence.`);
+    if (!this.options.work.inReach(deviceId))
+      throw new Error(`${who} is out of reach, so nothing was sent.`);
+    try {
+      if (order.kind === "rename")
+        await this.options.work.ask(deviceId, "inf:sign-ins:rename", [
+          { accountId: order.accountId, label: order.label },
+        ]);
+      else if (order.kind === "set-enabled")
+        await this.options.work.ask(deviceId, "inf:sign-ins:set-enabled", [
+          { accountId: order.accountId, enabled: order.enabled },
+        ]);
+      else
+        await this.options.work.ask(deviceId, "inf:sign-ins:pin", [
+          { providerId: order.providerId, accountId: order.accountId },
+        ]);
+    } catch (error) {
+      throw reachable(error, who);
+    }
+    await this.refresh(deviceId);
+    return { ok: true };
+  }
+
+  /**
+   * Has every computer in reach read its accounts' allowance now, as
+   * Settings' Refresh and the first mate's refresh read this Mac's
+   * (docs/quota.md). A computer without `computer-account-settings` is
+   * only asked for its sign-ins again. Resolves once each answered or
+   * could not; a refusal leaves that computer's last reading as it was.
+   */
+  async readAllowance(): Promise<void> {
+    await Promise.all(
+      this.computers()
+        .filter((device) => this.options.work.inReach(device.id))
+        .map(async (device) => {
+          if (this.takesAccountSettings(device.id))
+            await this.options.work
+              .ask(device.id, "inf:sign-ins:read-allowance", [])
+              .catch(() => undefined);
+          await this.refresh(device.id);
+        }),
+    );
+  }
+
+  /** Whether that computer takes the orders of `computer-account-settings.md`. */
+  takesAccountSettings(deviceId: string): boolean {
+    return listsChange(this.options.work.version(deviceId)?.changes, COMPUTER_ACCOUNT_SETTINGS);
+  }
+
   /** Signs that computer out where a project lives; its sign-in there is deleted. */
   async signOutForge(deviceId: string, host: string): Promise<{ ok: true }> {
     this.computer(deviceId);
+    const forges = this.said.get(deviceId)?.signIns?.forges;
+    if (forges && !forges.signIns.some((signIn) => signIn.host === host))
+      throw new Error(
+        `${this.who(deviceId)} has no sign-in to ${host}. Signed in: ${forges.signIns.map((signIn) => signIn.host).join(", ") || "none"}.`,
+      );
     try {
       await this.options.work.ask(deviceId, "inf:sign-ins:forge-out", [{ host }]);
     } catch (error) {
       throw reachable(error, this.who(deviceId));
     }
+    // Its rows come back whole before this resolves, so a trail reads them.
+    await this.refresh(deviceId);
     return { ok: true };
   }
 
@@ -405,6 +483,7 @@ export class DeviceSignIns {
     } catch (error) {
       throw reachable(error, this.who(deviceId));
     }
+    await this.refresh(deviceId);
     const parsed = signInOrders["inf:sign-ins:remove"].response.safeParse(answer);
     const login = parsed.success ? parsed.data.login : undefined;
     if (providerId)

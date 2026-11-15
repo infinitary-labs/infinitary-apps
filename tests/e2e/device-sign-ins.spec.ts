@@ -39,7 +39,7 @@ import { promptInput } from "./prompt";
 import { feedLineOf } from "./rails";
 import { savedText } from "./savedText";
 import { expectNoCard, shownCard } from "./stack";
-import { pressKey } from "./windowKeys";
+import { pressKey, typeInto, untilFocused } from "./windowKeys";
 
 /**
  * A computer that runs work signs in to its own subscriptions from the Mac
@@ -616,7 +616,9 @@ test("a computer's own Claude account keeps going on credits, turned on by keys 
   await pressKey(kebab, "Enter");
   const item = page.locator('[data-menu-item="keep-going"]');
   await expect(item).toHaveText(new RegExp(m.settingsSubscriptionsMenuKeepGoing()));
-  // The menu opens on its first item, the switch.
+  // The menu opens on Prefer for crew work, as this Mac's rows do; the switch is next.
+  await expect(page.locator('[data-menu-item="prefer"]')).toBeFocused();
+  await page.keyboard.press("ArrowDown");
   await expect(item).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(claudeRow).toContainText(m.settingsSubscriptionsCreditsKeepsGoing());
@@ -625,6 +627,56 @@ test("a computer's own Claude account keeps going on credits, turned on by keys 
   await pressKey(kebab, "Enter");
   await expect(item).toHaveText(new RegExp(m.settingsSubscriptionsMenuStopKeepingGoing()));
   await page.keyboard.press("Escape");
+});
+
+test("a computer's own account is preferred, renamed and paused by keys from its row here, and saved only there", async () => {
+  const { app, page, deviceId, dataDir } = await homeAndComputer();
+  await openIntelligence(page);
+  const group = page.locator(`[data-device-sign-ins="${deviceId}"]`);
+  await group.locator('[data-connect-provider="openrouter"]').click();
+  await group.getByRole("button", { name: "API key", exact: true }).click();
+  const aside = group.locator('[data-device-sign-in-provider="openrouter"]');
+  await aside.getByLabel(`The key for ${PLACE.who}`).fill(KEY);
+  await aside.getByRole("button", { name: `Send to ${PLACE.who}`, exact: true }).click();
+  const row = group.locator('[data-account-row]:has-text("OpenRouter")');
+  await expect(row).toHaveCount(1);
+  const kebab = row.getByRole("button", { name: /actions$/ });
+
+  // The menu opens on Prefer for crew work, and Enter prefers it there.
+  await pressKey(kebab, "Enter");
+  const prefer = page.locator('[data-menu-item="prefer"]');
+  await expect(prefer).toHaveText(new RegExp(m.settingsSubscriptionsMenuPrefer()));
+  await expect(prefer).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(row.locator("[data-crew-preferred]")).toBeVisible();
+
+  // Rename asks for its new name in the row, and Enter saves it there.
+  await pressKey(kebab, "Enter");
+  await pressKey(page.locator('[data-menu-item="rename"]'), "Enter");
+  const name = row.getByPlaceholder(m.settingsSubscriptionsRenamePlaceholder());
+  await untilFocused(name);
+  await page.keyboard.press("ControlOrMeta+A");
+  await typeInto(name, "Studio router");
+  await page.keyboard.press("Enter");
+  await expect(row.locator("[data-account-name]")).toContainText("Studio router");
+
+  // Pause keeps its sign-in and marks the row paused.
+  await pressKey(kebab, "Enter");
+  const pause = page.locator('[data-menu-item="pause"]');
+  await expect(pause).toHaveText(m.settingsSubscriptionsMenuPause());
+  await pressKey(pause, "Enter");
+  await expect(row).toHaveAttribute("data-paused", "true");
+  await pressKey(kebab, "Enter");
+  await expect(pause).toHaveText(m.settingsSubscriptionsMenuResume());
+  await page.keyboard.press("Escape");
+
+  // The computer's own account store keeps all three; the home's keeps none
+  // (its record still names the account in the feed lines it showed).
+  const there = savedText(join(dataDir, "accounts"));
+  expect(there.some(({ text }) => text.includes("Studio router"))).toBe(true);
+  const home = join(app.userDataDir, "accounts");
+  const kept = existsSync(home) ? savedText(home) : [];
+  expect(kept.filter(({ text }) => text.includes("Studio router"))).toEqual([]);
 });
 
 test("a computer signs in to GitHub for its own clones and pushes from Settings -> Integrations here", async () => {
@@ -813,7 +865,8 @@ test("a custom API added on a computer is kept there and its model can be placed
     await expect(
       block.block.getByRole("button", { name: "Disconnect", exact: true }),
     ).toBeVisible();
-    await expect(block.block.getByRole("button", { name: "Pause", exact: true })).toHaveCount(0);
+    // It pauses there like any of that computer's accounts.
+    await expect(block.block.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
     await expect(block.firstmate("operator-model")).toHaveCount(0);
 
     const models = await openModelsBoard(page);

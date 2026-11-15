@@ -258,9 +258,42 @@ export class SignInHost {
         void this.report();
         return { ok: true };
       }
+      case "inf:sign-ins:rename": {
+        const [rename] = request as SignInOrderRequest<"inf:sign-ins:rename">;
+        this.ownAccount(rename.accountId);
+        this.options.accounts.vault.rename(rename.accountId, rename.label);
+        void this.report();
+        return { ok: true };
+      }
+      case "inf:sign-ins:set-enabled": {
+        const [set] = request as SignInOrderRequest<"inf:sign-ins:set-enabled">;
+        this.ownAccount(set.accountId);
+        // A paused account keeps its sign-in; the home's routing skips it.
+        this.options.accounts.vault.setEnabled(set.accountId, set.enabled);
+        void this.report();
+        return { ok: true };
+      }
+      case "inf:sign-ins:pin": {
+        const [pin] = request as SignInOrderRequest<"inf:sign-ins:pin">;
+        if (pin.accountId !== null) this.ownAccount(pin.accountId);
+        // The vault refuses an account of another provider.
+        this.options.accounts.vault.setPin(pin.providerId, pin.accountId);
+        void this.report();
+        return { ok: true };
+      }
+      case "inf:sign-ins:read-allowance":
+        // The reading reaches the home as this computer's sign-ins, whole.
+        await this.options.accounts.readAllowance("demand");
+        return { ok: true };
       default:
         throw new Error(`${channel} is not a request this computer answers.`);
     }
+  }
+
+  /** Refuses an account this computer does not hold. */
+  private ownAccount(accountId: string): void {
+    if (!this.options.accounts.vault.get(accountId))
+      throw new Error("This computer has no account with that id.");
   }
 
   private start(start: SignInOrderRequest<"inf:sign-ins:start">[0]): void {

@@ -36,6 +36,9 @@ import { providerViewSchema } from "../providers";
 import { type ChannelDeclaration, okSchema } from "./common";
 
 /** Sign-ins: subscriptions and their accounts, custom API connections, where projects live, and integrations. */
+/** The computer that runs work a change is for; absent, it is this Mac's own. */
+const DEVICE = z.string().min(1).max(64).optional();
+
 export const signInChannels = {
   "inf:auth:providers": {
     effect: "read",
@@ -173,25 +176,27 @@ export const signInChannels = {
     request: z.tuple([z.string()]),
     response: accountViewSchema,
   },
+  // A last element names the computer that runs work whose own account it
+  // is (`computer-account-settings`): the change is made and saved there.
   "inf:accounts:remove": {
     effect: "change",
     surface: "core",
     reach: "views",
-    request: z.tuple([z.string()]),
+    request: z.tuple([z.string(), DEVICE]),
     response: okSchema,
   },
   "inf:accounts:rename": {
     effect: "change",
     surface: "core",
     reach: "views",
-    request: z.tuple([z.string(), z.string().min(1).max(ACCOUNT_LABEL_MAX)]),
+    request: z.tuple([z.string(), z.string().min(1).max(ACCOUNT_LABEL_MAX), DEVICE]),
     response: okSchema,
   },
   "inf:accounts:set-enabled": {
     effect: "change",
     surface: "core",
     reach: "views",
-    request: z.tuple([z.string(), z.boolean()]),
+    request: z.tuple([z.string(), z.boolean(), DEVICE]),
     response: okSchema,
   },
   // Keep going on credits (docs/quota.md): the account's switch, on or off.
@@ -201,14 +206,14 @@ export const signInChannels = {
     effect: "change",
     surface: "core",
     reach: "views",
-    request: z.tuple([z.string(), z.boolean(), z.string().min(1).max(64).optional()]),
+    request: z.tuple([z.string(), z.boolean(), DEVICE]),
     response: okSchema,
   },
   "inf:accounts:pin": {
     effect: "change",
     surface: "core",
     reach: "views",
-    request: z.tuple([z.string(), z.string().nullable()]),
+    request: z.tuple([z.string(), z.string().nullable(), DEVICE]),
     response: okSchema,
   },
   // The app's own sign-ins where projects live (git integration PR 1.2,
@@ -273,11 +278,13 @@ export const signInChannels = {
     request: z.tuple([]),
     response: forgesViewSchema,
   },
+  // A second element signs a computer that runs work out of its own sign-in
+  // there (`computer-account-settings`); the answer is still this Mac's view.
   "inf:forges:sign-out": {
     effect: "change",
     surface: "core",
     reach: "views",
-    request: z.tuple([z.string().min(1).max(253)]),
+    request: z.tuple([z.string().min(1).max(253), DEVICE]),
     response: forgesViewSchema,
   },
   // The person's open proposed changes where their projects live, read

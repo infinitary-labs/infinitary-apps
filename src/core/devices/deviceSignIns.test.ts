@@ -127,6 +127,90 @@ describe("a computer's sign-ins view", () => {
       signIns.dispose();
     }
   });
+  // INF-4280's audit, fixes 1 and 3: an older computer cannot take the new orders, so the home never sends them.
+  it("sends account settings and an allowance read only to a computer that lists the change", async () => {
+    const changes: string[] = [];
+    const ask = vi.fn(async (_deviceId: string, channel: string) =>
+      channel === "inf:sign-ins:list"
+        ? {
+            providers: [],
+            accounts: [
+              {
+                id: "acct-codex",
+                providerId: "openai-codex",
+                kind: "subscription_oauth",
+                label: "Work",
+                enabled: true,
+                connected: true,
+                pinned: false,
+                createdAt: 1,
+              },
+            ],
+            quota: null,
+            forges: {
+              signIns: [
+                { host: "github.com", name: "GitHub", login: "octo", state: "ok", since: 1 },
+              ],
+              hosts: [{ host: "github.com", name: "GitHub" }],
+            },
+          }
+        : { ok: true },
+    );
+    const signIns = new DeviceSignIns({
+      devices: () => [MINI],
+      work: {
+        ask,
+        onWorkDevice: () => () => {},
+        inReach: () => true,
+        version: () => ({ contract: PROTOCOL_VERSION, takesWork: true, changes: [...changes] }),
+      },
+      emit: () => {},
+      broadcastEvent: () => {},
+    });
+    const sent = (channel: string) => ask.mock.calls.filter(([, asked]) => asked === channel);
+    const pause = { kind: "set-enabled", accountId: "acct-codex", enabled: false } as const;
+    try {
+      await signIns.refresh(MINI.id);
+      expect(signIns.view()[0]?.accountSettings).toBe(false);
+      await expect(signIns.setAccount(MINI.id, pause)).rejects.toThrow(
+        "Update Infinitary on Mac mini to change its accounts from here.",
+      );
+      // An older computer is only asked for its sign-ins again.
+      const listed = sent("inf:sign-ins:list").length;
+      await signIns.readAllowance();
+      expect(sent("inf:sign-ins:read-allowance")).toEqual([]);
+      expect(sent("inf:sign-ins:list").length).toBe(listed + 1);
+
+      changes.push("computer-account-settings");
+      expect(signIns.view()[0]?.accountSettings).toBe(true);
+      await expect(
+        signIns.setAccount(MINI.id, { ...pause, accountId: "acct-elsewhere" }),
+      ).rejects.toThrow("Mac mini has no account with that id.");
+      await expect(signIns.setAccount(MINI.id, pause)).resolves.toEqual({ ok: true });
+      await signIns.setAccount(MINI.id, {
+        kind: "pin",
+        providerId: "openai-codex",
+        accountId: null,
+      });
+      expect(sent("inf:sign-ins:set-enabled")).toEqual([
+        [MINI.id, "inf:sign-ins:set-enabled", [{ accountId: "acct-codex", enabled: false }]],
+      ]);
+      expect(sent("inf:sign-ins:pin")).toEqual([
+        [MINI.id, "inf:sign-ins:pin", [{ providerId: "openai-codex", accountId: null }]],
+      ]);
+      await signIns.readAllowance();
+      expect(sent("inf:sign-ins:read-allowance")).toEqual([
+        [MINI.id, "inf:sign-ins:read-allowance", []],
+      ]);
+      // INF-4280's audit, fix 2: a host it holds no sign-in to is refused before anything is sent.
+      await expect(signIns.signOutForge(MINI.id, "gitlab.com")).rejects.toThrow(
+        "Mac mini has no sign-in to gitlab.com. Signed in: github.com.",
+      );
+      expect(sent("inf:sign-ins:forge-out")).toEqual([]);
+    } finally {
+      signIns.dispose();
+    }
+  });
   // INF-2186: account posture narrowed the same remote model list for every task row.
   it("narrows each computer's sign-ins once per projection and drops the snapshot after a new answer", () => {
     const model = { provider: "openai-codex", id: "gpt-6.1-sol" };

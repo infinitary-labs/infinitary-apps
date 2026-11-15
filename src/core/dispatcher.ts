@@ -60,6 +60,7 @@ import { CONTRACT_CHANGES } from "./connection/contractChanges";
 import type { CoreServices } from "./coreServices";
 import { isCaptainInput } from "./devices/captainPlaces";
 import { RemoteLoginRefusedError } from "./devices/remoteLogin";
+import { accountHandlers, CHANGES_THERE } from "./dispatcher/accountHandlers";
 import { accountTrail } from "./dispatcher/accountTrail";
 import { createActionTrail } from "./dispatcher/actionTrail";
 import { cardMediaHandlers } from "./dispatcher/cardMedia";
@@ -899,7 +900,15 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     // Settings' Refresh and command search's Recheck allowance are the
     // first mate's recheck: a switched login is read first, and a seat paused
     // on a spent allowance reads its way back.
-    "inf:quota:refresh": async () => (await services.firstmate.recheckAllowance()) ?? null,
+    // Each computer that runs work in reach reads its own allowance at the
+    // same time; its reading arrives as its sign-ins.
+    "inf:quota:refresh": async () => {
+      const [snapshot] = await Promise.all([
+        services.firstmate.recheckAllowance(),
+        services.deviceSignIns.readAllowance(),
+      ]);
+      return snapshot ?? null;
+    },
 
     // An older window opening Subscriptions; nothing is read only on that
     // press any more, so it answers the snapshot.
@@ -1147,59 +1156,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       return view;
     },
 
-    "inf:accounts:remove": async (accountId) => {
-      const removed = services.vault.get(accountId);
-      const custom = isCustomApiProvider(removed?.providerId ?? "");
-      if (custom) {
-        services.vault.customClose(accountId);
-        await services.firstmate.disconnectAccount(accountId);
-        await services.supervisor.sessions.disconnectAccount(accountId);
-      }
-      await services.vault.remove(accountId);
-      services.servedModels.forget(accountId);
-      if (custom && removed) {
-        services.slots.forgetProvider(removed.providerId);
-        const routing = services.settings.getRoutingSettings();
-        services.settings.setRoutingSettings({
-          ...routing,
-          pins: routing.pins.filter((pin) => pin.provider !== removed.providerId),
-        });
-      }
-      emit("inf:models:changed", { ok: true });
-      // A removed flagship un-pins; the agent re-derives at the next idle
-      // boundary and announces the move.
-      if (!custom && services.settings.getFirstmateAccount() === accountId) {
-        services.settings.setFirstmateAccount(null);
-      }
-      services.firstRun.reconcile();
-      return { ok: true as const };
-    },
-
-    "inf:accounts:rename": (accountId, label) => {
-      services.vault.rename(accountId, label);
-      emit("inf:models:changed", { ok: true });
-      return { ok: true as const };
-    },
-
-    "inf:accounts:set-enabled": async (accountId, enabled) => {
-      services.vault.setEnabled(accountId, enabled);
-      if (enabled && isCustomApiProvider(services.vault.get(accountId)?.providerId ?? ""))
-        await services.vault.runtimeFor(accountId);
-      if (enabled) void services.servedModels.refresh(accountId);
-      services.firstRun.reconcile();
-      emit("inf:models:changed", { ok: true });
-      return { ok: true as const };
-    },
-
-    "inf:accounts:keep-going": async (accountId, on, deviceId) => {
-      await services.setKeepGoingOnCredits(accountId, on, deviceId);
-      return { ok: true as const };
-    },
-
-    "inf:accounts:pin": (providerId, accountId) => {
-      services.vault.setPin(providerId, accountId);
-      return { ok: true as const };
-    },
+    ...accountHandlers(services, emit),
 
     // The sign-ins where projects live (git integration PR 1.2): the
     // service pushes the whole view as `inf:forges` after every change.
@@ -1220,8 +1177,10 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
 
     "inf:forges:changes": () => services.forgeChanges(),
 
-    "inf:forges:sign-out": (host) => {
-      services.forges.signOut(host);
+    "inf:forges:sign-out": async (host, deviceId) => {
+      // A computer that runs work's own sign-in there, for its clones and pushes.
+      if (deviceId) await services.deviceSignIns.signOutForge(deviceId, host);
+      else services.forges.signOut(host);
       return services.forges.view();
     },
 
@@ -1493,13 +1452,21 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
           ? await handlers[ACTIONS[name].current as keyof CoreHandlers]()
           : null,
       );
-    // Keep going on credits for a computer that runs work's own account is
-    // read from what that computer says of its accounts, not this Mac's.
-    const keepGoingThere =
-      channel === "inf:accounts:keep-going" && typeof args[2] === "string" ? args[2] : undefined;
-    const accountsThere = () =>
-      keepGoingThere ? (services.deviceSignIns.lastSaid(keepGoingThere)?.accounts ?? []) : [];
-    if (keepGoingThere) before.set("account-keep-going", accountsThere());
+    // A change to a computer that runs work's own account or project sign-in
+    // is read from what that computer says, not this Mac's.
+    const thereAt = CHANGES_THERE[channel];
+    const there =
+      thereAt !== undefined && typeof args[thereAt] === "string"
+        ? (args[thereAt] as string)
+        : undefined;
+    const stateThere = (name: ActionName) => {
+      const said = there ? services.deviceSignIns.lastSaid(there) : null;
+      return name === "forge-sign-out"
+        ? (said?.forges ?? { signIns: [], hosts: [] })
+        : (said?.accounts ?? []);
+    };
+    const whereThere = there ? services.deviceSignIns.placeOf(there)?.where : undefined;
+    if (there) for (const name of names) before.set(name, stateThere(name));
     if (actor.kind === "captain" && actor.projectBefore !== undefined) {
       const current = before.get(names[0] as ActionName);
       const previous = (current as RepoView[]).find((repo) => repo.id === args[0]);
@@ -1512,6 +1479,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       const next = args[0];
       if (
         channel === "inf:accounts:remove" &&
+        !there &&
         args[0] === (services.firstmate.boundAccount() ?? services.settings.getFirstmateAccount())
       )
         throw new Error("The first mate cannot disconnect the account it is running on.");
@@ -1583,12 +1551,11 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     if (names.length) automationSaid = undefined;
     const result = await handler(...args);
     for (const name of names) {
-      const after =
-        keepGoingThere && name === "account-keep-going"
-          ? accountsThere()
-          : ACTIONS[name].current
-            ? await handlers[ACTIONS[name].current as keyof CoreHandlers]()
-            : null;
+      const after = there
+        ? stateThere(name)
+        : ACTIONS[name].current
+          ? await handlers[ACTIONS[name].current as keyof CoreHandlers]()
+          : null;
       if (
         !ACTIONS[name].alwaysTrail &&
         name !== "refresh-usage" &&
@@ -1748,7 +1715,8 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       } else if (name === "integration-add") {
         trail(name, integrationSignInValue(channel, args), actor);
       } else if (name === "forge-sign-out") {
-        trail(name, { host: args[0] }, actor);
+        // Names the host, and the computer when it was not this Mac's sign-in.
+        trail(name, { host: args[0], ...(whereThere ? { where: whereThere } : {}) }, actor);
       } else if (name === "private-site-allow") {
         trail(name, { site: addedPrivateSite(before.get(name), after) }, actor);
       } else if (name === "direction") {
@@ -1811,7 +1779,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
           args,
           before.get(name) as AccountView[],
           after as AccountView[],
-          keepGoingThere ? services.deviceSignIns.placeOf(keepGoingThere)?.where : undefined,
+          there ? { deviceId: there, ...(whereThere ? { where: whereThere } : {}) } : undefined,
         );
         trail(name, said, actor, step);
       } else if (ACTIONS[name].alwaysTrail || name === "refresh-usage")

@@ -106,7 +106,9 @@ Claude adopts the login already on that computer; with none, or when Sign in aga
 A browser sign-in whose link sends the browser back to the Mac it opens on (Codex, OpenRouter) asks for the address of the page the browser ends on, which cannot be reached from another Mac; running as another user on this Mac, it says that user finishes the sign-in itself when the browser comes back.
 A computer older than `FORGE_SIGN_INS_SINCE` still ends a Claude sign-in with no login there as "Claude Code signs in on Mac mini itself", and the aside says to log in there once.
 A Claude row shows the allowance that computer read with its own login, or, when macOS there would have to ask first, why it is not read there, with no Retry: that computer never asks on a screen nobody may be at (`docs/helper.md`, "Claude's allowance, never asking").
-A row's menu holds Disconnect, which signs that computer out, and the feed says so; Sign in again runs on that computer too.
+A row's menu holds Prefer for crew work, Rename (not for Claude) and Pause, each saved on that computer (`docs/helper.md`, "Prefer, rename and pause, saved here"), and Disconnect, which signs that computer out, and the feed says so; Sign in again runs on that computer too.
+A computer whose Infinitary predates those orders shows the three dimmed, with a note to update it there first; its saved Custom API connections gain Pause and Resume beside Disconnect on the same terms.
+Refresh asks each computer to read its allowance now.
 For Claude, Disconnect signs that computer's own Claude login out only when Infinitary made it there from the pasted code, leaves a login that was there before, and the feed line says which (`docs/helper.md`, "Its own sign-ins").
 The first mate's card for a sign-in on a computer opens this tab with that sign-in started (`pendingDeviceSignIn`) when the home publishes current `flows`.
 A newer window connected to a home without that view keeps each computer's accounts, allowance, Disconnect and saved Custom API connections.

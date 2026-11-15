@@ -7765,6 +7765,9 @@
             "keepGoing": {
               "type": "boolean"
             },
+            "accountSettings": {
+              "type": "boolean"
+            },
             "flows": {
               "type": "array",
               "items": {
@@ -19119,6 +19122,11 @@
         "prefixItems": [
           {
             "type": "string"
+          },
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
           }
         ],
         "minItems": 1,
@@ -19145,6 +19153,11 @@
         "prefixItems": [
           {
             "type": "string"
+          },
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
           },
           {
             "type": "string",
@@ -19179,6 +19192,11 @@
           },
           {
             "type": "boolean"
+          },
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
           }
         ],
         "minItems": 2,
@@ -19249,6 +19267,11 @@
                 "type": "null"
               }
             ]
+          },
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
           }
         ],
         "minItems": 2,
@@ -20128,6 +20151,11 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 253
+          },
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
           }
         ],
         "minItems": 1,
@@ -80826,6 +80854,9 @@
             "keepGoing": {
               "type": "boolean"
             },
+            "accountSettings": {
+              "type": "boolean"
+            },
             "flows": {
               "type": "array",
               "items": {
@@ -87706,6 +87737,153 @@
           ],
           "minItems": 1,
           "items": false
+        },
+        "response": {
+          "type": "object",
+          "properties": {
+            "ok": {
+              "type": "boolean",
+              "const": true
+            }
+          },
+          "required": [
+            "ok"
+          ]
+        }
+      },
+      "inf:sign-ins:rename": {
+        "effect": "change",
+        "request": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "object",
+              "properties": {
+                "accountId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                }
+              },
+              "required": [
+                "accountId",
+                "label"
+              ]
+            }
+          ],
+          "minItems": 1,
+          "items": false
+        },
+        "response": {
+          "type": "object",
+          "properties": {
+            "ok": {
+              "type": "boolean",
+              "const": true
+            }
+          },
+          "required": [
+            "ok"
+          ]
+        }
+      },
+      "inf:sign-ins:set-enabled": {
+        "effect": "change",
+        "request": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "object",
+              "properties": {
+                "accountId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "enabled": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "accountId",
+                "enabled"
+              ]
+            }
+          ],
+          "minItems": 1,
+          "items": false
+        },
+        "response": {
+          "type": "object",
+          "properties": {
+            "ok": {
+              "type": "boolean",
+              "const": true
+            }
+          },
+          "required": [
+            "ok"
+          ]
+        }
+      },
+      "inf:sign-ins:pin": {
+        "effect": "change",
+        "request": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "object",
+              "properties": {
+                "providerId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "accountId": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "providerId",
+                "accountId"
+              ]
+            }
+          ],
+          "minItems": 1,
+          "items": false
+        },
+        "response": {
+          "type": "object",
+          "properties": {
+            "ok": {
+              "type": "boolean",
+              "const": true
+            }
+          },
+          "required": [
+            "ok"
+          ]
+        }
+      },
+      "inf:sign-ins:read-allowance": {
+        "effect": "change",
+        "request": {
+          "type": "array",
+          "maxItems": 0
         },
         "response": {
           "type": "object",

@@ -792,6 +792,89 @@ describe("a computer that runs work signs in to its own subscriptions from its h
     );
   });
 
+  // INF-4280's audit, fix 1: a computer's own account is renamed, paused and preferred from its home.
+  it("renames, pauses and prefers a computer's own Codex account from home, saved only there, so its routing there follows", async () => {
+    standInProviders();
+    const world = await joined();
+    await signInToCodex(world);
+    const account = await vi.waitFor(() => {
+      const found = world
+        .group()
+        ?.signIns?.accounts.find((row) => row.providerId === "openai-codex");
+      if (!found) throw new Error("not yet");
+      return found;
+    });
+    const seen = () => world.group()?.signIns?.accounts.find((row) => row.id === account.id);
+    const pooled = () => {
+      const signIns = world.group()?.signIns ?? null;
+      const models = (signIns?.served ?? []).flatMap((served) =>
+        served.models.map((model) => ({ ...model, name: model.name ?? model.id })),
+      );
+      return actualComputerPool("Mac mini", signIns, models, Date.now())?.catalog.length ?? 0;
+    };
+    await expect.poll(pooled).toBeGreaterThan(0);
+    expect(world.group()?.accountSettings).toBe(true);
+
+    await world.signIns.setAccount(world.deviceId, {
+      kind: "rename",
+      accountId: account.id,
+      label: "Studio Codex",
+    });
+    expect(seen()?.label).toBe("Studio Codex");
+    await world.signIns.setAccount(world.deviceId, {
+      kind: "pin",
+      providerId: "openai-codex",
+      accountId: account.id,
+    });
+    expect(seen()?.pinned).toBe(true);
+    // Paused there, its models leave that computer's routing; its sign-in stays.
+    await world.signIns.setAccount(world.deviceId, {
+      kind: "set-enabled",
+      accountId: account.id,
+      enabled: false,
+    });
+    expect(seen()).toMatchObject({ enabled: false, connected: true });
+    expect(pooled()).toBe(0);
+    // Saved in the computer's own store, and nowhere at home.
+    expect(savedText(world.dataDir).some(({ text }) => text.includes("Studio Codex"))).toBe(true);
+    expect(savedText(world.homeDir).filter(({ text }) => text.includes("Studio Codex"))).toEqual(
+      [],
+    );
+
+    await world.signIns.setAccount(world.deviceId, {
+      kind: "set-enabled",
+      accountId: account.id,
+      enabled: true,
+    });
+    await expect.poll(pooled).toBeGreaterThan(0);
+    await expect(
+      world.signIns.setAccount(world.deviceId, {
+        kind: "set-enabled",
+        accountId: "acct_elsewhere",
+        enabled: false,
+      }),
+    ).rejects.toThrow("Builder has no account with that id.");
+  });
+
+  // INF-4280's audit, fix 3: Refresh asks each computer to read its allowance now, not at its next tick.
+  it("has a computer read its own allowance now when the home refreshes", async () => {
+    standInProviders();
+    const world = await joined();
+    await signInToCodex(world);
+    const left = () =>
+      world.group()?.signIns?.quota?.providers.find((row) => row.provider === "codex")?.windows[0]
+        ?.percentRemaining;
+    await expect.poll(left).toBe(100 - world.allowance.codex.usedPercent);
+    const usage = () =>
+      world.allowance.asked.filter((ask) => ask.url.endsWith("/wham/usage")).length;
+    const before = usage();
+    world.allowance.codex.usedPercent = 64;
+
+    await world.signIns.readAllowance();
+    expect(usage()).toBe(before + 1);
+    expect(left()).toBe(36);
+  });
+
   it("signs a computer out of one of its own accounts from home", async () => {
     const world = await joined();
     const { signInId } = await world.signIns.start(world.deviceId, "openrouter", "api_key");

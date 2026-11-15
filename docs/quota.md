@@ -170,6 +170,7 @@ The fact lives on the account's registry row (`cutOff`, additive: a row an older
   The sensor keeps each Claude answer under the login it was asked with (`createQuotaFetcher`'s `loginOf`): an answer the old login got is never served from the five-minute ledger, and one that lands after the switch is dropped as `skipped`.
   An unchanged login keeps its spacing, its backoff and its genuine refusal.
   The captain's Recheck allowance (the spent-allowance card, command search, Subscriptions' Refresh) refreshes with `demand`, the one reason that may ask for access (`FirstmateAgent.recheckAllowance`).
+  The same Refresh asks each computer that runs work to read its own allowance now, which never asks for access there (`docs/helper.md`, "Allowance and renewal, here alone").
   That same store read supplies the login before the sensor considers a cached answer.
 - **A refusal never renews.**
   `AccountVault.renew` answers `withheld` without asking the backend while a refusal stands; the health tick already skips a degraded account, and the sensor's 401 path reads `withheld` as `renewal_withheld` (not knowing), never a sign-out.

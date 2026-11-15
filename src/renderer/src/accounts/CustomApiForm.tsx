@@ -1517,19 +1517,25 @@ function FirstmateChoice({ view, onDone }: { view: CustomApiView; onDone: () => 
 type FirstmateModel = { provider: string; id: string } | null;
 
 /**
- * One connection saved on a computer that runs work: status, Edit and
- * Disconnect. No Pause, and no Firstmate choice — that model stays on this Mac.
+ * One connection saved on a computer that runs work: status, Edit, Pause or
+ * Resume, and Disconnect. No Firstmate choice — that model stays on this Mac.
  */
 export function RemoteCustomConnection({
   view,
   client,
   place,
   onDisconnect,
+  onSetEnabled,
+  pauseOff,
 }: {
   view: CustomApiView;
   client: CustomApiClient;
   place: { who: string; on: string };
   onDisconnect: (accountId: string) => void;
+  /** Pauses or resumes it, saved on that computer. */
+  onSetEnabled: (accountId: string, enabled: boolean) => void;
+  /** Why Pause is off while that computer's Infinitary cannot take it yet. */
+  pauseOff?: string;
 }) {
   const [editing, setEditing] = useState(false);
   const [armed, setArmed] = useState(false);
@@ -1554,11 +1560,27 @@ export function RemoteCustomConnection({
             ? CUSTOM_TOKEN_FAILURE.status
             : ready
               ? m.accountsCustomApiStatusReady()
-              : m.accountsCustomApiStatusNotChecked()}
+              : view.enabled
+                ? m.accountsCustomApiStatusNotChecked()
+                : checked
+                  ? m.accountsCustomApiStatusPaused()
+                  : m.accountsCustomApiStatusPausedNotChecked()}
         </span>
         <span className="fm-custom-acts">
           <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
             {m.accountsCustomApiEdit()}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            off={Boolean(pauseOff) || (!view.enabled && !checked)}
+            note={
+              pauseOff ??
+              (!view.enabled && !checked ? m.accountsCustomApiResumeNeedsCheck() : undefined)
+            }
+            onClick={() => onSetEnabled(accountId, !view.enabled)}
+          >
+            {view.enabled ? m.accountsCustomApiPause() : m.accountsCustomApiResume()}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setArmed(true)}>
             {m.accountsCustomApiDisconnect()}

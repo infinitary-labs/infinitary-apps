@@ -77287,6 +77287,7 @@ ${FRAME_QUESTION_SCRIPT}
   }
   const CUT_OFF_CLASSES = ["signed_out", "no_headroom", "refused"];
   const CLAUDE_ACCESS_SOURCES = ["organization", "claude-settings"];
+  const ACCOUNT_LABEL_MAX = 64;
   const credentialKindSchema = _enum(["subscription_oauth", "api_key"]);
   const accountViewSchema = object({
     id: string(),
@@ -79200,6 +79201,40 @@ ${FRAME_QUESTION_SCRIPT}
      */
     "inf:sign-ins:keep-going": {
       request: tuple([object({ accountId: string().min(1).max(256), on: boolean() })])
+    },
+    /**
+     * Renames, pauses or resumes, and prefers one of that computer's own
+     * accounts, saved only there, from the contract change
+     * `computer-account-settings`. Its rows reach the home as that computer's
+     * sign-ins, whole, so its routing there reads the same switch and pin.
+     */
+    "inf:sign-ins:rename": {
+      request: tuple([
+        object({
+          accountId: string().min(1).max(256),
+          label: string().min(1).max(ACCOUNT_LABEL_MAX)
+        })
+      ])
+    },
+    "inf:sign-ins:set-enabled": {
+      request: tuple([object({ accountId: string().min(1).max(256), enabled: boolean() })])
+    },
+    /** One account per provider crew work prefers there; null clears it. */
+    "inf:sign-ins:pin": {
+      request: tuple([
+        object({
+          providerId: string().min(1).max(256),
+          accountId: string().min(1).max(256).nullable()
+        })
+      ])
+    },
+    /**
+     * Reads every account's allowance there now, rather than at its next
+     * tick (`computer-account-settings`); the reading reaches the home as
+     * that computer's sign-ins, whole, and this answers once it is read.
+     */
+    "inf:sign-ins:read-allowance": {
+      request: tuple([])
     }
   });
   ({
@@ -79256,6 +79291,12 @@ ${FRAME_QUESTION_SCRIPT}
      * `computer-keep-going`). Absent means it does not, so the item stays dim.
      */
     keepGoing: boolean().optional(),
+    /**
+     * It renames, pauses and prefers its own accounts and reads its allowance
+     * on request (the contract change `computer-account-settings`). Absent
+     * means it does not, so those items stay dim.
+     */
+    accountSettings: boolean().optional(),
     /** Active sign-ins and failures awaiting Done; absent on an older home. */
     flows: array(deviceSignInFlowSchema).optional()
   });

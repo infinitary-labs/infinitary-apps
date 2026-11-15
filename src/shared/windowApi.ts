@@ -790,9 +790,10 @@ export type FirstmateApi = {
     /** Sign an existing account in again, into its own store; nothing else moves. */
     signIn: (accountId: string) => Promise<AccountView>;
     remove: (accountId: string) => Promise<{ ok: true }>;
-    rename: (accountId: string, label: string) => Promise<{ ok: true }>;
-    setEnabled: (accountId: string, enabled: boolean) => Promise<{ ok: true }>;
-    pin: (providerId: string, accountId: string | null) => Promise<{ ok: true }>;
+    /** With `deviceId`, rename, pause and prefer act on that computer that runs work's own account. */
+    rename: (accountId: string, label: string, deviceId?: string) => Promise<{ ok: true }>;
+    setEnabled: (accountId: string, enabled: boolean, deviceId?: string) => Promise<{ ok: true }>;
+    pin: (providerId: string, accountId: string | null, deviceId?: string) => Promise<{ ok: true }>;
     /** Keep going on credits once the allowance is spent (docs/quota.md), on or off. */
     /** With `deviceId`, the account is that computer that runs work's own. */
     keepGoing: (accountId: string, on: boolean, deviceId?: string) => Promise<{ ok: true }>;

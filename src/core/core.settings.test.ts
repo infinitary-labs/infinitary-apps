@@ -1126,6 +1126,91 @@ describe("the core, driven with no Electron in the process", () => {
     await core.dispatch("inf:presence:set", [before]);
   });
 
+  // INF-4280's audit, fixes 1 to 3: the first mate's account actions reach a computer that runs
+  // work's own accounts and GitHub sign-in, and Refresh asks it to read its allowance now. The
+  // computer itself is helper/signIns.test.ts's; here its home's link answers.
+  it("reaches a computer that runs work's own accounts and GitHub sign-in through the first mate's actions", async () => {
+    const tools = createAppTools({
+      dispatch: core.dispatch,
+      actor: () => ({ kind: "firstmate", wake: "captain" }),
+    });
+    const change = tools.find((t) => t.name === "app_change");
+    if (!change) throw new Error("Missing app tools");
+    const ask = async (action: string, value: unknown) =>
+      (await change.run({ action, value, evidence: "captain typed it" })).text;
+    const computer = core.services.deviceSignIns;
+    const account = {
+      id: "acct-codex-mini",
+      providerId: "openai-codex",
+      kind: "subscription_oauth" as const,
+      label: "Studio",
+      enabled: true,
+      connected: true,
+      pinned: false,
+      createdAt: 1,
+    };
+    let said = {
+      providers: [],
+      accounts: [account],
+      quota: null,
+      forges: {
+        signIns: [
+          { host: "github.com", name: "GitHub", login: "octo", state: "ok" as const, since: 1 },
+        ],
+        hosts: [{ host: "github.com", name: "GitHub" }],
+      },
+    };
+    const lastSaid = vi
+      .spyOn(computer, "lastSaid")
+      .mockImplementation((id) => (id === "mini" ? said : null));
+    const placeOf = vi
+      .spyOn(computer, "placeOf")
+      .mockImplementation((id) =>
+        id === "mini" ? { label: "Mac mini", who: "Mac mini", where: "on Mac mini" } : undefined,
+      );
+    const setAccount = vi.spyOn(computer, "setAccount").mockImplementation(async (_id, order) => {
+      if (order.kind === "set-enabled")
+        said = { ...said, accounts: [{ ...account, enabled: order.enabled }] };
+      return { ok: true };
+    });
+    const signOut = vi.spyOn(computer, "signOut").mockImplementation(async () => {
+      said = { ...said, accounts: [] };
+      return { ok: true };
+    });
+    const signOutForge = vi.spyOn(computer, "signOutForge").mockImplementation(async () => {
+      said = { ...said, forges: { ...said.forges, signIns: [] } };
+      return { ok: true };
+    });
+    const readAllowance = vi.spyOn(computer, "readAllowance").mockResolvedValue();
+    const home = await core.dispatch("inf:accounts:list", []);
+    const feed = async () => (await core.dispatch("inf:feed:recent", [])).map((line) => line.text);
+    try {
+      await ask("account-pause", { accountId: account.id, paused: true, deviceId: "mini" });
+      expect(setAccount).toHaveBeenCalledWith("mini", {
+        kind: "set-enabled",
+        accountId: account.id,
+        enabled: false,
+      });
+      expect(await feed()).toContain("First mate · account Studio on Mac mini paused");
+
+      await ask("account-disconnect", { accountId: account.id, deviceId: "mini" });
+      expect(signOut).toHaveBeenCalledWith("mini", account.id);
+      expect(await feed()).toContain("First mate · account Studio on Mac mini disconnected");
+
+      await ask("forge-sign-out", { host: "github.com", deviceId: "mini" });
+      expect(signOutForge).toHaveBeenCalledWith("mini", "github.com");
+      expect(await feed()).toContain("First mate · GitHub signed out on Mac mini");
+      // This Mac's own accounts were never touched.
+      expect(await core.dispatch("inf:accounts:list", [])).toEqual(home);
+
+      await core.dispatch("inf:quota:refresh", []);
+      expect(readAllowance).toHaveBeenCalledTimes(1);
+    } finally {
+      for (const spy of [lastSaid, placeOf, setAccount, signOut, signOutForge, readAllowance])
+        spy.mockRestore();
+    }
+  });
+
   it("brings a closed card forward through the one show-card door for the captain and Firstmate alike", async () => {
     const events: FmEvent[] = [];
     const detach = core.events.subscribe((channel, payload) => {

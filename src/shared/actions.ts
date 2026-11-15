@@ -700,8 +700,11 @@ const actionLines = {
             id: account.id,
             provider: account.providerId,
             label: account.label,
+            paused: !account.enabled,
+            preferred: account.pinned,
             keepGoingOnCredits: account.keepGoingOnCredits === true,
           })) ?? [],
+        projectSignIns: device.signIns?.forges?.signIns.map((signIn) => signIn.host) ?? [],
       })),
     }),
     done: () => "offered a sign-in on a computer that runs work",
@@ -1153,9 +1156,14 @@ const actionLines = {
     tier: "own-words",
     change: "inf:forges:sign-out",
     current: "inf:forges:list",
-    value: z.strictObject({ host: z.string().trim().toLowerCase().min(1).max(253) }),
-    line: "Sign out of one project host the app is signed in to (github.com, a GitHub Enterprise or GitLab host) only on the captain's typed words.",
+    value: z.strictObject({
+      host: z.string().trim().toLowerCase().min(1).max(253),
+      deviceId: z.string().min(1).max(64).optional(),
+    }),
+    line: "Sign out of one project host the app is signed in to (github.com, a GitHub Enterprise or GitLab host) only on the captain's typed words. To sign a computer that runs work out of its own sign-in, used for its clones and pushes, also pass its deviceId; device-sign-in's state lists its project sign-ins.",
     toRequest: (v, c) => {
+      // That computer refuses a host it holds no sign-in to.
+      if (v.deviceId) return [v.host, v.deviceId];
       if (!(c as ForgesView).signIns.some((signIn) => signIn.host === v.host))
         throw new Error(
           `No sign-in to ${v.host}. Signed in: ${(c as ForgesView).signIns.map((signIn) => signIn.host).join(", ") || "none"}.`,
@@ -1163,7 +1171,8 @@ const actionLines = {
       return [v.host];
     },
     readValue: (c) => ({ hosts: c }),
-    done: (v) => (v.host === "github.com" ? "GitHub signed out" : `${v.host} signed out`),
+    done: (v) =>
+      `${v.host === "github.com" ? "GitHub" : v.host} signed out${v.where ? ` ${v.where}` : ""}`,
   },
   diagnostics: {
     fields: ["diagnostics"],
@@ -1368,9 +1377,10 @@ const actionLines = {
     value: z.strictObject({
       accountId: z.string().min(1),
       label: z.string().trim().min(1).max(64),
+      deviceId: z.string().min(1).max(64).optional(),
     }),
-    line: "Rename an account by id.",
-    toRequest: (v) => [v.accountId, v.label],
+    line: "Rename an account by id. For an account on a computer that runs work, also pass its deviceId; device-sign-in's state lists its accounts by id.",
+    toRequest: (v) => (v.deviceId ? [v.accountId, v.label, v.deviceId] : [v.accountId, v.label]),
     readValue: (c) => ({
       accounts: (c as AccountView[]).map((a) => ({ id: a.id, label: a.label })),
     }),
@@ -1381,9 +1391,14 @@ const actionLines = {
     tier: "asked",
     change: "inf:accounts:set-enabled",
     current: "inf:accounts:list",
-    value: z.strictObject({ accountId: z.string().min(1), paused: z.boolean() }),
-    line: "Pause or resume an account by id; keeps its sign-in.",
-    toRequest: (v) => [v.accountId, !v.paused],
+    value: z.strictObject({
+      accountId: z.string().min(1),
+      paused: z.boolean(),
+      deviceId: z.string().min(1).max(64).optional(),
+    }),
+    line: "Pause or resume an account by id; keeps its sign-in. For an account on a computer that runs work, also pass its deviceId; device-sign-in's state lists its accounts by id.",
+    toRequest: (v) =>
+      v.deviceId ? [v.accountId, !v.paused, v.deviceId] : [v.accountId, !v.paused],
     readValue: (c) => ({
       accounts: (c as AccountView[]).map((a) => ({ id: a.id, paused: !a.enabled })),
     }),
@@ -1394,9 +1409,14 @@ const actionLines = {
     tier: "asked",
     change: "inf:accounts:pin",
     current: "inf:accounts:list",
-    value: z.strictObject({ provider: z.string().min(1), accountId: z.string().min(1).nullable() }),
-    line: "Prefer an account of a provider for crew work; null clears the preference. The first mate's own account is firstmate-account.",
-    toRequest: (v) => [v.provider, v.accountId],
+    value: z.strictObject({
+      provider: z.string().min(1),
+      accountId: z.string().min(1).nullable(),
+      deviceId: z.string().min(1).max(64).optional(),
+    }),
+    line: "Prefer an account of a provider for crew work; null clears the preference. The first mate's own account is firstmate-account. For a computer that runs work, also pass its deviceId: its preference covers only crew work there, from device-sign-in's state.",
+    toRequest: (v) =>
+      v.deviceId ? [v.provider, v.accountId, v.deviceId] : [v.provider, v.accountId],
     readValue: (c) => ({
       accounts: (c as AccountView[]).map((a) => ({
         id: a.id,
@@ -1432,9 +1452,12 @@ const actionLines = {
     tier: "own-words",
     change: "inf:accounts:remove",
     current: "inf:accounts:list",
-    value: z.strictObject({ accountId: z.string().min(1) }),
-    line: "Disconnect an account only on typed captain words. Cannot disconnect the account running the first mate.",
-    toRequest: (v) => [v.accountId],
+    value: z.strictObject({
+      accountId: z.string().min(1),
+      deviceId: z.string().min(1).max(64).optional(),
+    }),
+    line: "Disconnect an account only on typed captain words. Cannot disconnect the account running the first mate. For an account on a computer that runs work, also pass its deviceId; device-sign-in's state lists its accounts by id.",
+    toRequest: (v) => (v.deviceId ? [v.accountId, v.deviceId] : [v.accountId]),
     readValue: (c) => ({ accounts: (c as AccountView[]).map((a) => ({ id: a.id })) }),
     done: (v) => `account ${v.accountId} disconnected`,
   },

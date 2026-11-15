@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { accountViewSchema, type MachineLoginOutcome, machineLoginOutcomeSchema } from "./accounts";
+import {
+  ACCOUNT_LABEL_MAX,
+  accountViewSchema,
+  type MachineLoginOutcome,
+  machineLoginOutcomeSchema,
+} from "./accounts";
 import { crewSpeedSchema } from "./crewSpeed";
 import {
   customApiAddressSchema,
@@ -343,6 +348,48 @@ export const signInOrders = {
     request: z.tuple([z.object({ accountId: z.string().min(1).max(256), on: z.boolean() })]),
     response: okSchema,
   },
+  /**
+   * Renames, pauses or resumes, and prefers one of that computer's own
+   * accounts, saved only there, from the contract change
+   * `computer-account-settings`. Its rows reach the home as that computer's
+   * sign-ins, whole, so its routing there reads the same switch and pin.
+   */
+  "inf:sign-ins:rename": {
+    effect: "change",
+    request: z.tuple([
+      z.object({
+        accountId: z.string().min(1).max(256),
+        label: z.string().min(1).max(ACCOUNT_LABEL_MAX),
+      }),
+    ]),
+    response: okSchema,
+  },
+  "inf:sign-ins:set-enabled": {
+    effect: "change",
+    request: z.tuple([z.object({ accountId: z.string().min(1).max(256), enabled: z.boolean() })]),
+    response: okSchema,
+  },
+  /** One account per provider crew work prefers there; null clears it. */
+  "inf:sign-ins:pin": {
+    effect: "change",
+    request: z.tuple([
+      z.object({
+        providerId: z.string().min(1).max(256),
+        accountId: z.string().min(1).max(256).nullable(),
+      }),
+    ]),
+    response: okSchema,
+  },
+  /**
+   * Reads every account's allowance there now, rather than at its next
+   * tick (`computer-account-settings`); the reading reaches the home as
+   * that computer's sign-ins, whole, and this answers once it is read.
+   */
+  "inf:sign-ins:read-allowance": {
+    effect: "change",
+    request: z.tuple([]),
+    response: okSchema,
+  },
 } as const satisfies Record<
   `inf:sign-ins:${string}`,
   { effect: "read" | "change"; request: z.ZodType; response: z.ZodType }
@@ -437,6 +484,12 @@ export const deviceSignInsSchema = z.object({
    * `computer-keep-going`). Absent means it does not, so the item stays dim.
    */
   keepGoing: z.boolean().optional(),
+  /**
+   * It renames, pauses and prefers its own accounts and reads its allowance
+   * on request (the contract change `computer-account-settings`). Absent
+   * means it does not, so those items stay dim.
+   */
+  accountSettings: z.boolean().optional(),
   /** Active sign-ins and failures awaiting Done; absent on an older home. */
   flows: z.array(deviceSignInFlowSchema).optional(),
 });

@@ -79,6 +79,17 @@ export type DeviceAccountRowProps = {
    * dim while that computer's Infinitary cannot take it yet.
    */
   keepGoing?: { onSelect: () => void; updateNote?: string };
+  /**
+   * Rename, Pause or Resume, and Prefer for crew work there, each saved on
+   * that computer (docs/helper.md, "Its own sign-ins"). `updateNote` says
+   * why they are dim while that computer's Infinitary cannot take them yet.
+   */
+  settings: {
+    rename: (label: string) => Promise<unknown>;
+    setEnabled: (enabled: boolean) => Promise<unknown>;
+    togglePin: () => Promise<unknown>;
+    updateNote?: string;
+  };
 };
 
 /** Under a computer's label while it is not in reach: out of reach, or connecting while its connection is being made. */
@@ -249,6 +260,25 @@ export function DeviceSignInGroups({
                             },
                           }
                         : {}),
+                      settings: {
+                        rename: (label) =>
+                          window.infinitary.accounts.rename(account.id, label, device.deviceId),
+                        setEnabled: (enabled) =>
+                          window.infinitary.accounts.setEnabled(
+                            account.id,
+                            enabled,
+                            device.deviceId,
+                          ),
+                        togglePin: () =>
+                          window.infinitary.accounts.pin(
+                            account.providerId,
+                            account.pinned ? null : account.id,
+                            device.deviceId,
+                          ),
+                        ...(device.accountSettings
+                          ? {}
+                          : { updateNote: m.settingsDevicesSignInsKeepGoingUpdate() }),
+                      },
                       menu: [
                         {
                           id: "disconnect",
@@ -276,6 +306,14 @@ export function DeviceSignInGroups({
                       .signOut(device.deviceId, accountId)
                       .catch(() => {})
                   }
+                  onSetEnabled={(accountId, enabled) =>
+                    void window.infinitary.accounts
+                      .setEnabled(accountId, enabled, device.deviceId)
+                      .catch(() => {})
+                  }
+                  {...(device.accountSettings
+                    ? {}
+                    : { pauseOff: m.settingsDevicesSignInsKeepGoingUpdate() })}
                 />
               ))}
               {accounts.length === 0 && !device.signIns?.custom?.length && (

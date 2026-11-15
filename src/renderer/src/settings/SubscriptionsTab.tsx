@@ -259,6 +259,57 @@ export function keepGoingItem(
   };
 }
 
+/**
+ * Prefer for crew work, Rename (never for Claude, which follows its own
+ * identity) and Pause or Resume, in that order: one account's own settings,
+ * the same on this Mac and on a computer that runs work. `off` dims each,
+ * saying why, while that computer cannot take them yet.
+ */
+export function accountSettingItems(
+  account: AccountView,
+  on: {
+    onTogglePin: () => void;
+    onStartRename: () => void;
+    onSetEnabled: (enabled: boolean) => void;
+  },
+  off?: string,
+): RowMenuItem[] {
+  const dim = off ? { detail: off, disabled: true } : {};
+  return [
+    {
+      id: "prefer",
+      label: account.pinned
+        ? m.settingsSubscriptionsMenuStopPreferring()
+        : m.settingsSubscriptionsMenuPrefer(),
+      trailing: (
+        <span style={{ color: "var(--accent)", fontFamily: "var(--font-mono)" }}>
+          {CREW_PREFERRED_MARK}
+        </span>
+      ),
+      onSelect: on.onTogglePin,
+      ...dim,
+    },
+    ...(account.providerId === CLAUDE_PROVIDER_ID
+      ? []
+      : [
+          {
+            id: "rename",
+            label: m.settingsSubscriptionsMenuRename(),
+            onSelect: on.onStartRename,
+            ...dim,
+          },
+        ]),
+    {
+      id: "pause",
+      label: account.enabled
+        ? m.settingsSubscriptionsMenuPause()
+        : m.settingsSubscriptionsMenuResume(),
+      onSelect: () => on.onSetEnabled(!account.enabled),
+      ...dim,
+    },
+  ];
+}
+
 export function AccountRow({
   account,
   providerName,
@@ -340,30 +391,15 @@ export function AccountRow({
         : undefined;
   const repeatedFit = useOverflowTitle(repeated);
 
+  const [prefer, ...settings] = accountSettingItems(account, {
+    onTogglePin,
+    onStartRename,
+    onSetEnabled,
+  });
   const items: RowMenuItem[] = menu ?? [
-    {
-      id: "prefer",
-      label: account.pinned
-        ? m.settingsSubscriptionsMenuStopPreferring()
-        : m.settingsSubscriptionsMenuPrefer(),
-      trailing: (
-        <span style={{ color: "var(--accent)", fontFamily: "var(--font-mono)" }}>
-          {CREW_PREFERRED_MARK}
-        </span>
-      ),
-      onSelect: onTogglePin,
-    },
+    ...(prefer ? [prefer] : []),
     ...(onKeepGoing ? [keepGoingItem(account, quotaRow, onKeepGoing)] : []),
-    ...(account.providerId === CLAUDE_PROVIDER_ID
-      ? []
-      : [{ id: "rename", label: m.settingsSubscriptionsMenuRename(), onSelect: onStartRename }]),
-    {
-      id: "pause",
-      label: account.enabled
-        ? m.settingsSubscriptionsMenuPause()
-        : m.settingsSubscriptionsMenuResume(),
-      onSelect: () => onSetEnabled(!account.enabled),
-    },
+    ...settings,
     ...(hasModels
       ? [
           { id: "models", label: m.settingsSubscriptionsMenuModelSlots(), onSelect: onShowModels },
@@ -875,6 +911,15 @@ export function SubscriptionsTab() {
     );
   };
 
+  // A change to a computer that runs work's own account: a refusal (out of
+  // reach, not updated) is said above the list, since its rows are that
+  // computer's word, not this Mac's saved state.
+  const thereSaid = (change: Promise<unknown>) =>
+    change.then(
+      () => setError(null),
+      (caught: unknown) => setError(caught instanceof Error ? caught.message : String(caught)),
+    );
+
   const answerPrompt = (value: string | null) => {
     if (!prompt) return;
     if (value === null) cancelled.current = true;
@@ -1124,33 +1169,53 @@ export function SubscriptionsTab() {
             {...(row.quotaRow ? { quotaRow: row.quotaRow } : {})}
             isFlagship={false}
             hasModels={false}
-            renaming={false}
+            renaming={renamingId === row.account.id}
             signingIn={row.signingIn}
             signInOff={row.signInOff}
-            refreshing={false}
-            onStartRename={() => {}}
-            onRename={() => {}}
-            onCancelRename={() => {}}
-            onTogglePin={() => {}}
-            onSetEnabled={() => {}}
+            refreshing={refreshing}
+            onStartRename={() => setRenamingId(row.account.id)}
+            onRename={(label) => {
+              const trimmed = label.trim();
+              if (!trimmed) {
+                setRenamingId(null);
+                return;
+              }
+              void thereSaid(row.settings.rename(trimmed)).then(() => setRenamingId(null));
+            }}
+            onCancelRename={() => setRenamingId(null)}
+            onTogglePin={() => void thereSaid(row.settings.togglePin())}
+            onSetEnabled={(enabled) => void thereSaid(row.settings.setEnabled(enabled))}
             onDisconnect={() => {}}
             onSignIn={row.onSignIn}
             onShowModels={() => {}}
             onResetSlots={() => {}}
-            menu={
-              row.keepGoing
-                ? [
-                    {
-                      ...keepGoingItem(row.account, row.quotaRow, row.keepGoing.onSelect),
-                      ...(row.keepGoing.updateNote
-                        ? { detail: row.keepGoing.updateNote, disabled: true }
-                        : {}),
-                    },
-                    { separator: true },
-                    ...row.menu,
-                  ]
-                : row.menu
-            }
+            menu={(() => {
+              const [prefer, ...settings] = accountSettingItems(
+                row.account,
+                {
+                  onTogglePin: () => void thereSaid(row.settings.togglePin()),
+                  onStartRename: () => setRenamingId(row.account.id),
+                  onSetEnabled: (enabled) => void thereSaid(row.settings.setEnabled(enabled)),
+                },
+                row.settings.updateNote,
+              );
+              return [
+                ...(prefer ? [prefer] : []),
+                ...(row.keepGoing
+                  ? [
+                      {
+                        ...keepGoingItem(row.account, row.quotaRow, row.keepGoing.onSelect),
+                        ...(row.keepGoing.updateNote
+                          ? { detail: row.keepGoing.updateNote, disabled: true }
+                          : {}),
+                      },
+                    ]
+                  : []),
+                ...settings,
+                { separator: true },
+                ...row.menu,
+              ];
+            })()}
             place={row.place}
           />
         )}

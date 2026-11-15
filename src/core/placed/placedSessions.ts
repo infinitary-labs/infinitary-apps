@@ -25,6 +25,7 @@ import {
   workOrders,
 } from "@shared/work";
 import { DeviceOutOfReachError, type WorkDeviceContact } from "../connection/connection";
+import { contractChange, listsChange } from "../connection/contractChanges";
 import {
   dueIn,
   dueRule,
@@ -45,6 +46,7 @@ import type {
   SessionFactory,
   SessionSpec,
 } from "../session/session";
+import type { SecretUsesElsewhere } from "../session/tools";
 import { sameNames } from "../session/workRecovery";
 import type { TaskRecord, TaskRetentionFields } from "../storage/taskRecords";
 import { noteLeftovers, openSuccessor } from "../tasks/leftoverPrograms";
@@ -92,6 +94,9 @@ import type { WorkDevices } from "./workDevices";
  * kept in `placedLedger.ts`, the record copied home in `recordCopy.ts`, and
  * the computer's own accounts read in `placedAccounts.ts`.
  */
+
+/** Uses of this Mac's Secrets whose programs run on that computer (`secret-uses-elsewhere.md`). */
+const SECRET_USES_ELSEWHERE = contractChange("secret-uses-elsewhere");
 
 /** How long a computer with work is out of reach before the feed says so. */
 const OUT_OF_REACH_LINE_MS = 60_000;
@@ -243,6 +248,13 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   readonly copies: PlacedCopies;
   private readonly devices = new Map<string, Device>();
   private readonly placed = new Map<string, Placed>();
+  /**
+   * Each task's Secrets uses on the computer that runs it, as its session
+   * last named them: a program that ends while its task closes is still
+   * heard, and once its conversation there is gone its uses end, so a
+   * program that outlives its task records `unknown`.
+   */
+  private readonly secretUses = new Map<string, SecretUsesElsewhere>();
   private host: PlacedHost | undefined;
   private readonly startedAt: number;
   private readonly log: (line: string) => void;
@@ -400,6 +412,18 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
    */
   takesSecrets(machine: string): boolean {
     return this.keepsBrowsers(machine) && this.options.devices.takesCurrentWork(machine);
+  }
+
+  /**
+   * Whether the computer's Secrets command asks this Mac for uses whose
+   * programs run there (`secret-uses-elsewhere.md`, docs/secrets.md "On a
+   * computer that runs work").
+   */
+  takesSecretUses(machine: string): boolean {
+    return (
+      this.takesSecrets(machine) &&
+      listsChange(this.options.devices.version(machine)?.changes, SECRET_USES_ELSEWHERE)
+    );
   }
 
   prepare(
@@ -571,7 +595,11 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     const copyBack =
       channel === "inf:work:browser-event" &&
       (request as InvokeRequest<"inf:work:browser-event">[0]).event.kind === "sign-in";
-    if (TaskService.isClosed(record) && !copyBack)
+    // A Secrets program started there tells how it ended after the close too.
+    const secretEnded =
+      channel === "inf:work:secret-use" &&
+      (request as InvokeRequest<"inf:work:secret-use">[0]).input.op === "ended";
+    if (TaskService.isClosed(record) && !copyBack && !secretEnded)
       throw new Error(`That task is closed on ${HERE.this}.`);
     // A browser's fact and pictures are said once, and the next says it whole.
     if (channel === "inf:work:browser") {
@@ -589,6 +617,22 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       return {
         signIn: this.options.browsers?.()?.automaticSignIn?.(asked.task, site),
       } as InvokeResponse<C>;
+    }
+    // A Secrets use there is decided here; its values go once and are never kept
+    // in the call ledger (docs/secrets.md, "On a computer that runs work").
+    if (channel === "inf:work:secret-use" || channel === "inf:work:secret-take") {
+      const uses = TaskService.isClosed(record)
+        ? this.secretUses.get(asked.task)
+        : (await this.live(this.load(asked.task, deviceId))).callbacks?.secretUses;
+      if (!uses) throw new Error("That tool is not this task's.");
+      this.secretUses.set(asked.task, uses);
+      const computer = { id: deviceId, label: this.nameOf(deviceId) };
+      if (channel === "inf:work:secret-take") {
+        const { request: use } = request as InvokeRequest<"inf:work:secret-take">[0];
+        return (await uses.take(computer, use, asked.callId ?? "")) as InvokeResponse<C>;
+      }
+      const { input } = request as InvokeRequest<"inf:work:secret-use">[0];
+      return (await uses.use(computer, input)) as InvokeResponse<C>;
     }
     if (channel === "inf:work:private-sites") {
       return {
@@ -766,6 +810,8 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       // Its files on the captain's other computers, asked of this Mac (docs/files.md).
       ...(spec.callbacks?.files && this.takesFiles(deviceId) ? { files: true } : {}),
       ...(spec.callbacks?.secretsCatalog && this.takesSecrets(deviceId) ? { secrets: true } : {}),
+      // Its uses, decided here and run there (docs/secrets.md, "On a computer that runs work").
+      ...(spec.callbacks?.secretUses && this.takesSecretUses(deviceId) ? { secretUses: true } : {}),
       ...(resume ? { resume } : {}),
       ...(spec.bounds?.request?.retries !== undefined
         ? { retries: spec.bounds.request.retries }
@@ -888,9 +934,12 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       }
       const placed = this.load(entry.task, device.id);
       const session = heldSession(placed);
-      // That computer restarted: the conversation this Mac holds opens there again.
-      if (session && !entry.open) adopting.push(this.reopen(placed, session, device.id));
-      else if (session) session.adopt(entry, entry.seq >= placed.through);
+      // That computer restarted: the conversation this Mac holds opens there
+      // again, and a Secrets program it started there tells nothing more.
+      if (session && !entry.open) {
+        this.secretUsesGone(entry.task, device.id);
+        adopting.push(this.reopen(placed, session, device.id));
+      } else if (session) session.adopt(entry, entry.seq >= placed.through);
       // A turn this Mac does not follow: a restart here left it running there.
       else if (entry.running) adopting.push(this.live(placed).catch(() => undefined));
       this.heard(placed, entry);
@@ -1351,6 +1400,15 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return answer.status === "changed" || answers > 0 || names.size > 0 ? "changed" : "unchanged";
   }
 
+  /**
+   * The task's conversation there closed for good or restarted: its taken
+   * Secrets uses end unknown. Its uses stay named, so a report that arrives
+   * later still finds them and changes nothing.
+   */
+  private secretUsesGone(taskId: string, deviceId: string): void {
+    this.secretUses.get(taskId)?.gone({ id: deviceId, label: this.nameOf(deviceId) });
+  }
+
   private closeIfClosed(taskId: string): void {
     const record = this.options.tasks.get(taskId);
     if (!record?.deviceId || !TaskService.isClosed(record)) return;
@@ -1371,7 +1429,10 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     placed.endedCalls.clear();
     placed.record.cancelLive();
     this.closeThere(deviceId, taskId).then(
-      () => this.copies.retire(taskId),
+      () => {
+        this.secretUsesGone(taskId, deviceId);
+        return this.copies.retire(taskId);
+      },
       (caught: unknown) => {
         placed.closed = false;
         this.log(`could not close ${taskId} there yet: ${errorText(caught)}`);

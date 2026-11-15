@@ -114,6 +114,19 @@ export function crewmateToolDelegate(): Required<
         return [];
       },
     },
+    secretUses: {
+      use: async (computer, input) => {
+        calls.push({ callback: "secretUses.use", input: { computer, input } });
+        return { receipt: null };
+      },
+      take: async (computer, request, call) => {
+        calls.push({ callback: "secretUses.take", input: { computer, request, call } });
+        return { state: "unavailable" };
+      },
+      gone: (computer) => {
+        calls.push({ callback: "secretUses.gone", input: { computer } });
+      },
+    },
     files: {
       computers: async () => ({ text: answer("files.computers", "computers named")() }),
       list: async (target) => ({ text: answer("files.list", "folder listed")(target) }),

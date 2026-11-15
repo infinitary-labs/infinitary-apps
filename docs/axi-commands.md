@@ -223,7 +223,8 @@ Nothing a crewmate is given points it at the command (`docs/personal-resources.m
 The optional grant is exercised only with disposable adapters today; the normal app entry supplies no protected owner and production tasks do not receive it.
 A local task granted the facade receives `CREWMATE_SECRETS_LINE` from `src/core/secrets/commandWords.ts`, naming discovery, exact requests, withheld values and the separate approval boundary.
 A shell without that grant receives no such instruction.
-A task on another computer is granted the catalog alone on that computer's own task channel and receives `CREWMATE_SECRETS_CATALOG_LINE`: `list` and `show` ask the home, and every use answers `unavailable` ([`secrets.md`](secrets.md), "Current command seam").
+A task on a computer that runs work whose app takes such uses is granted the same facade on that computer's own task channel: `list` and `show` ask the home, and each use is decided by the home's Secrets and run there ([`secrets.md`](secrets.md), "On a computer that runs work").
+A task on any other computer is granted the catalog alone and receives `CREWMATE_SECRETS_CATALOG_LINE`: `list` and `show` ask the home, and every use answers `unavailable` ([`secrets.md`](secrets.md), "Current command seam").
 Bare invocation and `list` show the metadata of every secret the captain added, `inject` submits an exact operation using references, and `status`/`cancel` read or withdraw unused requests.
 There is no value-returning getter, approval operation, raw output mode or global environment export.
 The channel's task label is organizational context, not authenticated secret authority.

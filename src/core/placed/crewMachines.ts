@@ -171,6 +171,11 @@ export type CrewMachines = {
   /** Metadata-only Secrets catalog through the authenticated task channel. */
   takesSecrets?(machine: string): boolean;
   /**
+   * Whether the computer's Secrets command asks the home for uses, whose
+   * programs run there (docs/secrets.md, "On a computer that runs work").
+   */
+  takesSecretUses?(machine: string): boolean;
+  /**
    * Whether the computer gives its crewmates `infinitary-files-axi`, each
    * list and copy asked of the home (docs/files.md); false while the home
    * cannot tell.

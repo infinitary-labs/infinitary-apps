@@ -129,6 +129,8 @@ export type ShellOptions = {
   openPage?: (url: string) => Promise<void>;
   /** Where a view catches a sign-in's return (`ViewBackendOptions.returnHost`). */
   returnHost?: string;
+  /** This Mac's approver of Secrets uses, made when it becomes a view (`ViewBackendOptions.approver`). */
+  approver?: ViewBackendOptions["approver"];
   now?: () => number;
   /** Opens a view; tests stand in their own link. */
   view?: Pick<ViewBackendOptions, "link">;
@@ -668,6 +670,8 @@ export class Shell {
       updates: this.options.updates,
       ...(this.options.openPage ? { openPage: this.options.openPage } : {}),
       ...(this.options.returnHost ? { returnHost: this.options.returnHost } : {}),
+      ...(this.options.approver ? { approver: this.options.approver } : {}),
+      name: this.options.deviceName,
       ...(this.options.view?.link ? { link: this.options.view.link } : {}),
     });
     this.mode = { kind: "view", view };

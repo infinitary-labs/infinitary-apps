@@ -152,7 +152,15 @@ export class CrewToolHooks {
     machine: string,
   ): Pick<
     CrewmateSpec,
-    "browser" | "shell" | "integrations" | "load" | "files" | "secrets" | "secretsCatalog" | "stops"
+    | "browser"
+    | "shell"
+    | "integrations"
+    | "load"
+    | "files"
+    | "secrets"
+    | "secretsCatalog"
+    | "secretUses"
+    | "stops"
   > {
     const { browsers, taskCommands, integrations, machines, load, files, secrets, stops } =
       this.core.options;
@@ -174,6 +182,10 @@ export class CrewToolHooks {
           : {}),
         ...(files && machines?.takesFiles?.(machine) ? { files: files.forTask(task.id) } : {}),
         ...(command ? { secretsCatalog: { list: () => command.list() } } : {}),
+        // Its uses are decided here and run there (docs/secrets.md, "On a computer that runs work").
+        ...(command && secrets?.elsewhere && machines?.takesSecretUses?.(machine)
+          ? { secretUses: secrets.elsewhere(task.id) }
+          : {}),
       };
     }
     if (!taskCommands) return {};

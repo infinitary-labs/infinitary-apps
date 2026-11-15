@@ -43,11 +43,11 @@ Nothing shows an existing value, prefix or encoded substitute.
 
 ## Quiet rows
 
-Four rows under the list open in place, each a disclosure with its name on the left and a short muted summary on the right: Saved decisions (how many), Approve from your phone (the phone's name, or Not set up), What happened (how many uses and the newest) and Keep a copy.
+Four rows under the list open in place, each a disclosure with its name on the left and a short muted summary on the right: Saved decisions (how many), Approve from a phone or Mac (the approving device's name, or Not set up), What happened (how many uses and the newest) and Keep a copy.
 Saved decisions are the existing Never, Ask and Allow rules, each in one plain sentence that names its secret and the run it covers, such as Always give Website deployment (Staging) to /bin/sh deploy.sh --staging. or Never give Planning calendar to anyone., with Remove.
 Remove asks on that decision's row, quoting that sentence, with Keep it and Remove decision, and Remove decision needs fresh system confirmation; a click alone grants nothing.
 The page has no rule editor, dropdowns or program rehearsal form: a decision is made only on a request's approval card, and the crew checks a run before asking.
-Approve from your phone lists each enrolled device with the code compared when it enrolled, beside Stop approvals; with none, it says to turn on Approves secret uses beside the phone in Settings → Devices, where approvals are set up (`components/devices/DevicesTab`, "Approving secret uses").
+Approve from a phone or Mac lists each enrolled phone or Mac with the code compared when it enrolled, beside Stop approvals; with none, it says "No phone or Mac approves uses." and to turn on Approves secret uses beside it in Settings → Devices, where approvals are set up (`components/devices/DevicesTab`, "Approving secret uses").
 What happened reports metadata, storage use and export, with explicit deletion asked in place, Delete Secrets history? with Keep history and Delete history, and no automatic retention cutoff; each record names its secrets, state, time, reason and recipient.
 History labels imported records as recovered history, with their source and recovery time under a disclosure, never as live approvals.
 Keep a copy uses native file choices; a separately held recovery key never enters a card, a conversation or an agent-readable reply.

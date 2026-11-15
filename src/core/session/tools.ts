@@ -9,6 +9,11 @@ import type { PutOffUntil } from "@shared/putOff";
 import type { RequiredAction, RequiredActionRevisionInput } from "@shared/requiredActions";
 import type { Rigor } from "@shared/rigor";
 import type { RiskAssessment, RiskDeclaration } from "@shared/risk";
+import type {
+  PlacedSecretTakeAnswer,
+  PlacedSecretUseAnswer,
+  PlacedSecretUseInput,
+} from "@shared/workSecrets";
 import { type Static, type TObject, type TUnsafe, Type } from "typebox";
 import { z } from "zod";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
@@ -23,7 +28,7 @@ import type { TaskIntegrations } from "../integrations";
 import type { RecordInput } from "../knowledge/writes";
 import type { PanelCaptureResult, PanelPlaceResult } from "../personal/personalExtensions";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
-import type { SecretsCatalog } from "../secrets/requests";
+import type { SecretsCatalog, UseComputer } from "../secrets/requests";
 import type { CardRefusal, CardRefusalReason } from "../storage/taskRecords";
 import type { TaskQueryInput, TaskQueryProject, TaskQueryRow } from "../tasks/taskQuery";
 import type { ReportDeclaration } from "../tasks/taskTurns";
@@ -519,10 +524,28 @@ export type CrewmateToolDelegate = {
   /** Metadata only, asked of the home; never a value or use. */
   secretsCatalog?: SecretsCatalog;
   /**
+   * Uses of the home's Secrets for a task on a computer that runs work
+   * (docs/secrets.md, "On a computer that runs work"): the home decides each
+   * one and hands an approved use's values to that computer once.
+   */
+  secretUses?: SecretUsesElsewhere;
+  /**
    * The captain's factual knowledge (docs/knowledge.md), handed to every crewmate, in every build: on a
    * computer that runs work, each call asks the home.
    */
   knowledge?: KnowledgeBinding;
+};
+
+/**
+ * One task's Secrets uses from a computer that runs work, answered by the
+ * home's Secrets; the computer is the work route's own, never the request's.
+ */
+export type SecretUsesElsewhere = {
+  use(computer: UseComputer, input: PlacedSecretUseInput): Promise<PlacedSecretUseAnswer>;
+  /** `call` is the work call's own id: the same call asked again receives the same values. */
+  take(computer: UseComputer, request: string, call: string): Promise<PlacedSecretTakeAnswer>;
+  /** Its conversation there closed for good or restarted: programs it started tell nothing more. */
+  gone(computer: UseComputer): void;
 };
 
 /** A tool's answer, whichever runtime carries it: the text, then any pictures. */

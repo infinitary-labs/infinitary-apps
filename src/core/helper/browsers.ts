@@ -22,7 +22,7 @@ import type { TaskFiles } from "../files/taskFiles";
 import type { HostBrowserFrame, HostChildSpawner, HostTaskBrowser } from "../host";
 import type { TaskIntegrations } from "../integrations";
 import type { LoadLine } from "../placed/loadLine";
-import type { SecretsCatalog } from "../secrets/requests";
+import type { SecretsCatalog, SecretsCommand } from "../secrets/requests";
 import type { LeftBehindHere } from "../tasks/leftBehind";
 import { taskStopsCommand } from "../tasks/taskStops";
 
@@ -266,6 +266,8 @@ export class ComputerBrowsers {
       load?: boolean;
       files?: TaskFiles;
       secretsCatalog?: SecretsCatalog;
+      /** Its uses, asked of the home and run here (docs/secrets.md, "On a computer that runs work"). */
+      secrets?: SecretsCommand;
       stops?: boolean;
     },
   ): { browser?: CrewmateBrowser; shell: TaskShell } {
@@ -276,6 +278,7 @@ export class ComputerBrowsers {
       ...(tools.integrations ? { integrations: tools.integrations } : {}),
       ...(tools.files ? { files: tools.files } : {}),
       ...(tools.secretsCatalog ? { secretsCatalog: tools.secretsCatalog } : {}),
+      ...(tools.secrets ? { secrets: tools.secrets } : {}),
       // Its stops are kept in its folder here, beside its shell (docs/leftover-programs.md).
       ...(tools.stops && this.options.taskFolder
         ? {

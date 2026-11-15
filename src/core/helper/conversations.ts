@@ -1,4 +1,5 @@
 import { appendFileSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import type { WorkInvokeChannel } from "@shared/ipc";
@@ -257,9 +258,16 @@ export async function startConversations(options: {
           return undefined;
         })
       : undefined;
+  // The private copies a Secrets use binds here, in this app's own folder:
+  // those an earlier run of this app left go before any use binds again.
+  const secretRunsDir = join(options.dataDir, "secret-runs");
+  await rm(secretRunsDir, { recursive: true, force: true }).catch((error: unknown) =>
+    log(`could not remove the Secrets runs an earlier start left: ${messageOf(error)}`),
+  );
   host = new SessionHost({
     tasks,
     copies,
+    secretRunsDir,
     ...(options.source ? { source: options.source } : {}),
     ask: options.ask,
     factories: {

@@ -1,5 +1,6 @@
 import type { HostCapabilities } from "@core/host";
 import type { BuildFlavor } from "@shared/userDataFolders";
+import type { FreshAuthentication } from "../../core/secrets/approvals";
 import type { SecretCustody } from "../../core/secrets/custody";
 import { accountKeychainPath } from "../runEnvironment";
 import type { UserDataChoice } from "../userDataDir";
@@ -30,6 +31,40 @@ export const SECRETS_CUSTODY_NAMES: Readonly<Record<BuildFlavor, string>> = {
   release: "Infinitary Secrets",
   dev: "Infinitary Secrets (development)",
 };
+
+/**
+ * The name this Mac's own approval key is kept under when it approves Secrets
+ * uses for another computer (docs/secrets.md, "Remote decisions"): one per
+ * flavor, apart from that flavor's own Secrets, so approving never reads them.
+ */
+export const SECRET_APPROVER_NAMES: Readonly<Record<BuildFlavor, string>> = {
+  release: "Infinitary Secret Approvals",
+  dev: "Infinitary Secret Approvals (development)",
+};
+
+/** What a Mac approves with: its own custody for its key and its own fresh confirmation. */
+export type NativeApprover = { custody: SecretCustody; authentication: FreshAuthentication };
+
+/**
+ * This Mac's approver, made when its window becomes a view of another
+ * computer: only on macOS, only on the person's own data folder, as Secrets
+ * are, and only where Touch ID or the password can confirm the person.
+ */
+export function nativeApprover(input: {
+  platform: NodeJS.Platform;
+  choice: UserDataChoice;
+}): NativeApprover | undefined {
+  if (input.choice.kind !== "flavor" || input.platform !== "darwin") return undefined;
+  const api = loadDarwinCustodyApi(accountKeychainPath());
+  const authentication = createDarwinFreshAuthentication();
+  if (!api || !authentication) return undefined;
+  return {
+    custody: createDarwinSecretCustody(api, {
+      service: SECRET_APPROVER_NAMES[input.choice.flavor],
+    }),
+    authentication,
+  };
+}
 
 /** What the Mac composition takes from the app besides its custody name. */
 export type DarwinSecretsHost = {

@@ -27,15 +27,15 @@ The disposable adapters under `tests/helpers/` are fixtures, not a fallback for 
 ## Current command seam
 
 `infinitary-secrets-axi` is shipped through the shared launcher and isolated command process.
-It runs only where the host explicitly supplies a Secrets capability; the supervisor then grants its closed facade to local tasks, and the catalog alone to a task on another computer.
-The app supplies one on macOS and Linux ("In the app"), an isolated run supplies none, and another computer receives no use grant before its own owner is enrolled.
+It runs only where the host explicitly supplies a Secrets capability; the supervisor then grants its closed facade to local tasks and to a task on a computer that runs work whose app takes such uses, and the catalog alone to a task on any other computer.
+The app supplies one on macOS and Linux ("In the app"), an isolated run supplies none, and a computer that runs work receives a use grant only when its app lists the change that takes such uses ("On a computer that runs work").
 Discovery is global: every task's command lists the same secrets the captain added, whatever its project or computer, and the task's name selects nothing.
 Bare invocation and `list` return that metadata and current receipts; `show <reference>` describes one entry.
 A listed secret carries its environment label when it has one, as context beside its name, never as a filter.
 Listing or naming a reference grants no access: each use still needs that entry to be agent-visible and an exact approval or Allow rule.
 A task on another computer lists and shows the same catalog: its command there asks the home over the authenticated work route (`inf:work:secrets`), whose answer holds each secret's reference, name, version and environment label and nothing else.
-There, `inject`, `status` and `cancel` answer `unavailable` with a fixed explanation, because a use runs only for a task on the computer that keeps the value.
-No value, receipt, approval or custody reaches that computer, and its crewmate reads `CREWMATE_SECRETS_CATALOG_LINE` instead of `CREWMATE_SECRETS_LINE`.
+On a computer whose app lists the contract change `secret-uses-elsewhere`, the same command also checks and asks for uses ("On a computer that runs work"), and its crewmate reads `CREWMATE_SECRETS_LINE`.
+On an older one, `inject`, `status` and `cancel` answer `unavailable` with a fixed explanation, no value, receipt, approval or custody reaches it, and its crewmate reads `CREWMATE_SECRETS_CATALOG_LINE`.
 `inject --env '{"SERVICE_TOKEN":"s1"}' --reason 'Check staging' --id staging-check -- /bin/sh ./scripts/check-staging.sh` submits references and an explicit argument vector.
 The example neither approves that script nor reads a secret.
 The channel adds the calling shell's working folder as the request's working directory, which the recipient binds like any other fact and which never grants authority.
@@ -168,7 +168,7 @@ A hidden entry's row (the view's `kept`, "App sign-ins") instead says Infinitary
 A server's key (the view's `kept` with `forProgram`, "Programs that keep running") says Infinitary keeps it for a server added in Integrations and gives it to the server each time it starts, without asking, and offers Manage in Integrations with no saved decisions; the controller refuses Replace and Forget on it too.
 Secure entry asks for a name, the masked value and an optional place, never a reference: the controller makes one from the name when saving.
 The form locates the returned entry through the controller's `saved` receipt; replacements keep their existing reference and exact-record checks.
-Four quiet rows below the list open in place: Saved decisions, Approve from your phone, What happened (history) and Keep a copy (recovery).
+Four quiet rows below the list open in place: Saved decisions, Approve from a phone or Mac, What happened (history) and Keep a copy (recovery).
 The page ends with Website sign-ins in every storage state (`docs/task-browser.md`, "Saved sign-ins"): they keep their own storage, outside the protected owner, and the section says so (the consumer register's Remembered websites row).
 Saved decisions are the existing Never, Ask and Allow rules, each as one plain sentence with Remove, which proposes the rules without it and asks on that decision's row ("Asking in place"); the page has no rule editor and no rehearsal form: the crew checks a run before asking.
 A decision is saved only from an approval card: Always allow this run saves an Allow for that exact run, and Don't allow saves nothing.
@@ -295,6 +295,22 @@ Opening private output files and rechecking the bound recipient finish before th
 The operation key a rule names is the digest of these facts.
 Sibling files a script reads while it runs and programs the recipient starts are not bound, a recipient's own children may outlive it, and a program that cannot run from a copy cannot be served this way.
 
+## On a computer that runs work
+
+A crewmate on a computer that runs work asks for a use as one here does, and Secrets on the home decides it (INF-4207's plan, piece 6).
+The home must take such uses (`takesSecretUses`: the computer takes secrets and lists `secret-uses-elsewhere`), and the task's spec then carries `secretUses`, which grants that computer's command `SecretUsesThere` (`src/core/helper/secretUses.ts`).
+It binds the recipient there, where the program runs, in a private folder of that computer's app (`secret-runs`), and sends the bound facts to the home with `inf:work:secret-use`: `check`, `inject`, `status`, `cancel` and how a run `ended`.
+The home answers through `SecretsSettings.elsewhere`, for the task and computer the work route names, never the request's words.
+`ProtectedSecrets.prepareElsewhere` makes the same checks, journal lines, card, saved decisions and history as a use here, and the card and history name the computer ("On computer", `computer` on a history use).
+A saved decision's operation is `elsewhereOperation`: the digest of the computer and the bound facts, so a decision saved for one computer never covers the same program on another, and the intent is named by computer too.
+Once the use starts, the home's last authorization check hands its values to `SecretHandoffs`, and the computer takes them once with `inf:work:secret-take`: the take checks the saved decisions again at that moment, answers the values once, and answers `taken` to any other call after that.
+The work route asks a call cut off by a dropped connection again under the same call id, so that one call receives the same values again until the use ends or its lifetime passes.
+That computer checks its bound files again, starts the program with the values in its environment from its private copies, fills the value buffers with zeros, and reports the exit code or signal with `ended`.
+A change before the start ends the use `invalidated`, values never taken within the request's lifetime end it `unavailable`, and a start that failed or was lost after the take ends it `unknown`.
+A program keeps running when its task closes, and a report of how it ended counts only until the home hears that its conversation there is gone, so a program that outlives its task almost always records `unknown`; once the home hears that computer closed the task's conversation for good, or that computer restarted, a use whose values were taken and that has not reported ends `unknown`, one started but not taken ends `unavailable`, one still waiting is cancelled, and a take still waiting from before answers `unavailable`.
+The values cross only the authenticated work route, as base64 strings that JavaScript cannot fill with zeros, and the ledger of work requests keeps neither channel.
+The home must be in reach to start a new use: a take that cannot reach the home starts nothing, and the home ends the use when no take arrives.
+
 ## Journal and reconciliation
 
 The journal (`<userData>/secrets/history.jsonl`) records each use's request, approval, consumption and end, one line per event, synced before the call returns.
@@ -352,7 +368,7 @@ The home records the paired device whose request offered the key (`paired` on th
 The same key offered again from a paired phone the home has not linked it to, such as a key enrolled before the home recorded which phone it came from, raises the same card, and confirming it links the key at the next generation.
 The card shows eight digits from SHA-256 of the offered key (`approvalCode`), which the phone computes from its own key and shows in its Settings; the captain compares them, and only Confirm and allow on this computer, with this computer's fresh confirmation, saves the device into the authority file at its next generation.
 The phone's own copy of that card says to do it on the computer.
-Settings → Secrets → Approve from your phone also lists each enrolled device with its code and Stop approvals, which asks the same question on its row and the same system confirmation.
+Settings → Secrets → Approve from a phone or Mac also lists each enrolled device with its code and Stop approvals, which asks the same question on its row and the same system confirmation.
 A change of devices moves the authority revision, so a use already waiting under the earlier authority is invalidated rather than run.
 A restore from a recovery backup keeps no enrolled device ("Recovery boundary"), so each phone sets up approvals again.
 
@@ -381,6 +397,15 @@ The system's confirmation names the same secrets and the task (`task`), or the r
 The shared approval body names each secret the same way, describes confirmation without assigning it to a particular device, and labels temporary read access as available only on the computer.
 Like every card's choices, Allow once and Don't allow take a press only once the card's body is revealed at its drawn height (`docs/ios.md`, INF-1574).
 The simulator has no Secure Enclave, so there the key is a software key behind the simulator's own Face ID.
+
+A Mac that views the first mate's computer approves the same way (`MacApprover`, `src/main/view/macApprover.ts`), set up once on the home like a phone.
+Settings → Devices shows Approves secret uses on a paired Mac's row too (`approvesSecretUses`); turning it on asks that Mac, which makes a P-256 key and offers it from its window.
+Its key lives in that Mac's login Keychain under its own name (`SECRET_APPROVER_NAMES`, apart from that Mac's own Secrets), only on the person's own data folder, and its public half is all that leaves.
+The home's enrollment card shows in that Mac's window with the code that Mac computes from its own key added beneath, and the captain confirms on the home.
+Each use card's action passes name their answer (`allow-once:`, `deny:`, `allow-short:`, `allow-always:`, `secretUseAnswerOf`), a fact the home declares, so the Mac knows which press is an Allow.
+An Allow once pressed in that Mac's window never reaches the home as a press: the Mac reads the use's challenge, asks its own LocalAuthentication (Touch ID or its password), signs, and sends `inf:secrets:decide`.
+A Mac never set up, or one whose key the home does not hold, refuses with where to set it up; a lasting allowance is refused with words that send the captain to the home, and Don't allow goes to the home as pressed.
+The home leaves any Allow pass a paired view presses unspent (`askingView`), so its own confirmation never rises for a press made elsewhere.
 The phone check's `testSecretsApprovals` enrolls the simulator, allows one brokered read with its Face ID and denies another, against the real controller with disposable custody.
 Before it allows, it reads the shared body's prepared environment and computer-only temporary scope, scrolling to that scope while the choices stay pinned.
 
@@ -397,6 +422,7 @@ These remain unproven in the app:
 
 - Saved decisions, phone approvals, history export and storage use, and End access against native custody, beyond the journeys' disposable custody.
 - An Allow from a real iPhone or iPad, whose Secure Enclave key and Face ID, Touch ID or passcode only a device has.
+- An Allow from a second Mac's real Touch ID and Keychain, and a program run on a real computer that runs work over its work route.
 - Each consumer migration in the register below.
 
 No real keychain or signing access occurs in a check without the captain's separate consent.

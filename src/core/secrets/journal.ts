@@ -37,6 +37,11 @@ export type JournalEntry =
        * predates it reads the use as one with no approval.
        */
       given?: true;
+      /**
+       * The computer that runs work the program ran on, by the name the person
+       * knows it by (docs/secrets.md, "On a computer that runs work").
+       */
+      computer?: string;
     }
   | { kind: "approved"; request: string; method: ApprovalMethod; device?: string }
   /** Written and synced before the recipient starts; the effect may follow. */
@@ -62,6 +67,8 @@ export type HistoryItem = {
   signIn?: true;
   /** The person gave its keys with the program (docs/secrets.md, "Programs that keep running"); no one approved it. */
   given?: true;
+  /** The computer that runs work the program ran on, when it was not this one. */
+  computer?: string;
   device?: string;
   reconciled?: true;
   recoveredFrom?: string;
@@ -208,6 +215,7 @@ export class UseJournal {
           requestedAt: at,
           state: "waiting",
           ...(entry.given ? { given: true as const } : {}),
+          ...(entry.computer ? { computer: entry.computer } : {}),
         });
         continue;
       }

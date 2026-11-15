@@ -71,7 +71,7 @@ function useOpenSecrets(): [SecretsView | null, (action: SecretAction) => void, 
   return [view, act, busy];
 }
 
-/** The line under a paired phone's summary and its switch, or nothing while Secrets are not open. */
+/** The line under a paired phone's or Mac's summary and its switch, or nothing while Secrets are not open. */
 export function PhoneApprovals({ paired, name }: { paired: string; name: string }) {
   const [view, act, busy] = useOpenSecrets();
   const approval = view ? phoneApprovalOf(view, paired) : null;

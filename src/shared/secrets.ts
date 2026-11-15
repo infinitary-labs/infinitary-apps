@@ -100,6 +100,8 @@ export const secretHistorySchema = z.strictObject({
    * it, so it has no `approval`.
    */
   given: z.literal(true).optional(),
+  /** The computer that runs work the program ran on, when it was not this one (docs/secrets.md, "On a computer that runs work"). */
+  computer: z.string().optional(),
   device: z.string().optional(),
   reconciled: z.literal(true).optional(),
   /** Historical metadata imported from a recovery archive, never live authority. */
@@ -354,11 +356,11 @@ export const SHORT_READ_USES = 20;
 
 /**
  * The quiet rows under the Secrets list, each opening in place: saved
- * decisions, phone approvals, what happened and a copy kept elsewhere.
+ * decisions, approvals from a phone or Mac, what happened and a copy kept elsewhere.
  */
 export const SECRETS_AREAS = [
   { value: "decisions", label: "Saved decisions" },
-  { value: "phone", label: "Approve from your phone" },
+  { value: "phone", label: "Approve from a phone or Mac" },
   { value: "history", label: "What happened" },
   { value: "copy", label: "Keep a copy" },
 ] as const;
@@ -410,7 +412,7 @@ export const SECRETS_WORDS = {
   end: "End access",
   devicesRegion: "Devices that approve uses",
   noDevices:
-    "No iPhone or iPad approves uses. To add one, turn on Approves secret uses beside it in Settings → Devices.",
+    "No phone or Mac approves uses. To add one, turn on Approves secret uses beside it in Settings → Devices.",
   stopApprovals: "Stop approvals",
   history: "History stays here until you delete it. Exports contain metadata, never secret values.",
   noReveal: "The value stays hidden after saving. Only an approved use can receive it.",
@@ -505,7 +507,7 @@ export const SECRETS_RECOVERY_WORDS = {
   },
 } as const;
 
-/** The words of a phone's Secrets approvals on this computer, around the label the device offered. */
+/** The words of a phone's or Mac's Secrets approvals on this computer, around the label the device offered. */
 export const SECRET_DEVICE_WORDS = {
   enrollTitle: (label: string) => `Let ${label} approve Secrets uses?`,
   confirm: "Confirm and allow",
@@ -515,10 +517,10 @@ export const SECRET_DEVICE_WORDS = {
   keep: "Keep approvals",
   stopped: (label: string) => `${label} no longer approves Secrets uses.`,
   unchanged: "Nothing changed. Confirmation failed or Secrets changed while you were deciding.",
-  /** The switch on a paired phone's row in Settings -> Devices. */
+  /** The switch on a paired phone's or Mac's row in Settings -> Devices. */
   approves: "Approves secret uses",
   on: (code: string) =>
-    `Each Allow there asks for its Face ID, Touch ID or passcode. Code ${code}.`,
+    `Each Allow there asks for its own Face ID, Touch ID, passcode or password. Code ${code}.`,
   waiting: (name: string) => `Waiting for ${name}. Open Infinitary there to show its code.`,
   comparing: (name: string) =>
     `${name} offered its key. Check that the card's code matches the one ${name} shows.`,
@@ -527,7 +529,24 @@ export const SECRET_DEVICE_WORDS = {
     `${label} will no longer approve Secrets uses. Uses it could approve wait for you on this computer instead.`,
     `${label} stays paired. The system will ask you to confirm.`,
   ],
-  cancelled: "The switch was turned off before this phone was confirmed.",
+  cancelled: "The switch was turned off before this device was confirmed.",
+} as const;
+
+/** What a Mac that approves Secrets uses for another computer says in its own window. */
+export const SECRET_MAC_WORDS = {
+  /** The reason macOS shows beside Touch ID or the password prompt. */
+  confirm: (home: string) => `allow one Secrets use on ${home}`,
+  /** Added to the home's enrollment card in this Mac's window, for the comparison. */
+  code: (code: string) => `This Mac shows the code ${code}.`,
+  notSetUp: (home: string) =>
+    `This Mac does not approve Secrets uses. To set it up, turn on Approves secret uses on its row in Settings, Devices, then confirm it on ${home}.`,
+  /** Where this window cannot keep an approval key at all, as on Linux. */
+  cannotApprove: (home: string) =>
+    `This computer cannot approve Secrets uses. Allow this use on ${home}, or on a phone or Mac set up to approve them.`,
+  saveOnHome: (home: string) => `Save a decision on ${home}. This Mac can allow one use at a time.`,
+  gone: "This use no longer waits for an answer.",
+  notConfirmed: "Nothing was allowed. This Mac did not confirm you.",
+  refused: (home: string) => `${home} did not take this approval.`,
 } as const;
 
 /** The secrets a title names: "the X secret", "the X and Y secrets", or a count, from names `secretNames.secretName` gave. */
@@ -563,6 +582,8 @@ export const SECRET_APPROVAL_CARD_WORDS = {
   goesIn: "goes in as",
   runs: "Runs",
   in: "In folder",
+  /** The computer that runs work a program runs on, when it is not the home (docs/secrets.md, "On a computer that runs work"). */
+  on: "On computer",
   sends: "Sends to",
   request: "Request",
   reason: "Its reason",
@@ -572,6 +593,9 @@ export const SECRET_APPROVAL_CARD_WORDS = {
   read: `On your computer, repeats only this exact read, up to ${SHORT_READ_USES} times. You can stop it in Settings → Secrets.`,
   always:
     "On your computer, saves this exact run: the same program, files, arguments and folder. Anything different asks again.",
+  /** The same line for a run on a computer that runs work, whose saved decision covers only that computer. */
+  alwaysOn: (computer: string) =>
+    `Saves this exact run on ${computer} only: the same program, files, arguments and folder. Anything different, or another computer, asks again.`,
   /** The standing sentences after the button lines; `confirm` ends them. */
   keep: (many: boolean) =>
     many ? "What receives them can keep them." : "What receives it can keep it.",
@@ -602,6 +626,9 @@ export const SECRET_CHECKED_WORDS = {
   file: "File",
   arguments: "Arguments",
   folder: "Working folder",
+  /** A program that runs on a computer that runs work, which checks its files again right before it starts. */
+  computer: "Runs on",
+  computerValue: (name: string) => `${name}, which checks these files again right before it starts`,
   secrets: "Secrets go in as",
   gets: "gets",
   output: "Output",
@@ -664,3 +691,18 @@ export const SAVED_DECISION_WORDS = {
   unchanged:
     "Your saved decisions did not change. Confirmation failed or they changed while you were deciding.",
 } as const;
+
+/**
+ * Which answer a use card's action gives, written at the start of its pass
+ * (`allow-once:<id>`), so a window on another computer knows which answer to
+ * sign with its own key (docs/secrets.md, "Remote decisions").
+ */
+export const SECRET_USE_ANSWERS = ["allow-once", "deny", "allow-short", "allow-always"] as const;
+export type SecretUseAnswer = (typeof SECRET_USE_ANSWERS)[number];
+
+export function secretUseAnswerOf(pass: string): SecretUseAnswer | undefined {
+  const kind = pass.slice(0, pass.indexOf(":"));
+  return (SECRET_USE_ANSWERS as readonly string[]).includes(kind)
+    ? (kind as SecretUseAnswer)
+    : undefined;
+}

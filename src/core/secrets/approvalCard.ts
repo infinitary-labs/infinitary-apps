@@ -22,7 +22,14 @@ export type SecretRun =
   | { kind: "service"; label: string; destination: string; operation: string };
 
 /** A program's run as `runWords` names it; which variable gets which secret is not part of its words. */
-type ProgramRun = { kind: "program"; program: string; argv: readonly string[]; cwd: string };
+type ProgramRun = {
+  kind: "program";
+  program: string;
+  argv: readonly string[];
+  cwd: string;
+  /** The computer that runs work it runs on, by the name the person knows it by; absent here. */
+  computer?: string;
+};
 
 /** Who asks and what runs, beside the use: the task's own title when a task asked. */
 export type SecretAsk = { task: string | null; run: SecretRun };
@@ -64,12 +71,14 @@ const FINGERPRINT_SHOWN = 12;
 export function checkedFacts(
   facts: RecipientFacts,
   secrets: readonly { ref: string; label: string; environment?: string }[],
+  computer?: string,
 ): { name: string; value: string }[] {
   const words = SECRET_CHECKED_WORDS;
   const print = (sha256: string) => `${words.fingerprint} ${sha256.slice(0, FINGERPRINT_SHOWN)}`;
   const bound = (file: { path: string; sha256: string; copied: boolean }) =>
     `${file.path} · ${file.copied ? words.copied : words.inPlace} · ${print(file.sha256)}`;
   return [
+    ...(computer ? [{ name: words.computer, value: words.computerValue(computer) }] : []),
     { name: words.program, value: bound(facts.executable) },
     ...(facts.interpreter
       ? [
@@ -173,8 +182,8 @@ export function secretApprovalBody(
   const words = SECRET_APPROVAL_CARD_WORDS;
   const run = ask.run;
   const many = use.secrets.length > 1;
-  const row = (name: string, value: string, quiet = false) =>
-    `<div><dt>${text(name)}</dt><dd${quiet ? ' class="secret-request-quiet"' : ""}>${value}</dd></div>`;
+  const row = (name: string, value: string, quiet = false, allow?: "once" | "lasting") =>
+    `<div${allow ? ` data-secret-allow="${allow}"` : ""}><dt>${text(name)}</dt><dd${quiet ? ' class="secret-request-quiet"' : ""}>${value}</dd></div>`;
   const variables = (ref: string) =>
     run.kind === "program"
       ? Object.entries(run.env)
@@ -190,7 +199,8 @@ export function secretApprovalBody(
   const what =
     run.kind === "program"
       ? row(words.runs, `<code class="secret-request-cmd">${text(runWords(run))}</code>`) +
-        row(words.in, `<code>${text(run.cwd)}</code>`)
+        row(words.in, `<code>${text(run.cwd)}</code>`) +
+        (run.computer ? row(words.on, `<b>${text(run.computer)}</b>`) : "")
       : row(words.sends, `<code class="secret-request-cmd">${text(run.destination)}</code>`) +
         row(words.request, text(run.operation));
   const checked = [
@@ -203,9 +213,15 @@ export function secretApprovalBody(
     // Each check reads as words; a path inside one wraps anywhere.
     ...use.facts.map((fact) => row(fact.name, text(fact.value))),
   ].join("");
+  // Each allow line says which kind of allow it explains, so a window that offers fewer can leave it out.
   const second = use.shortReadEligible
-    ? row(SECRETS_WORDS.short, text(words.read))
-    : row(SECRETS_WORDS.always, text(words.always));
+    ? row(SECRETS_WORDS.short, text(words.read), false, "lasting")
+    : row(
+        SECRETS_WORDS.always,
+        text(run.kind === "program" && run.computer ? words.alwaysOn(run.computer) : words.always),
+        false,
+        "lasting",
+      );
   return `<style>
     .secret-request { max-width:44rem; color:var(--fg-2); }
     .secret-request :is(p, dl, ul, summary) { max-width:none; }
@@ -248,7 +264,7 @@ export function secretApprovalBody(
       <dl class="secret-request-deep" aria-label="Secrets as checked">${checked}</dl>
     </details>
     <dl class="secret-request-allows" aria-label="What allowing covers">
-      ${row(SECRETS_WORDS.once, text(words.once(many)))}
+      ${row(SECRETS_WORDS.once, text(words.once(many)), false, "once")}
       ${second}
     </dl>
     <p class="secret-request-fine">${text(`${words.keep(many)} ${words.never} ${words.confirm}`)}</p>

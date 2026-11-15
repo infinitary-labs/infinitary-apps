@@ -255,8 +255,11 @@ export function crewmateSessionSpec(
         (spec.shell !== undefined || spec.machineId !== LOCAL_MACHINE_ID),
       spec.load,
       spec.runbookText,
-      // Secrets requests run only here; a task on another computer lists the catalog alone.
-      spec.secrets === true && spec.shell !== undefined && spec.machineId === LOCAL_MACHINE_ID
+      // Secrets uses run here, or there when the home decides them for that
+      // computer (docs/secrets.md, "On a computer that runs work"); a computer
+      // without them lists the catalog alone.
+      (spec.secrets === true && spec.shell !== undefined && spec.machineId === LOCAL_MACHINE_ID) ||
+        (spec.secretUses !== undefined && spec.machineId !== LOCAL_MACHINE_ID)
         ? "use"
         : spec.secretsCatalog !== undefined && spec.machineId !== LOCAL_MACHINE_ID
           ? "list"

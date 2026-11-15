@@ -44,6 +44,11 @@ import {
 import { firstReleaseReportSchema } from "./taskRelease";
 import { toolObservationSchema } from "./toolCompletion";
 import { commitSchema, placedTaskIdSchema, workingCopyBaseSchema } from "./workIdentity";
+import {
+  placedSecretTakeAnswerSchema,
+  placedSecretUseAnswerSchema,
+  placedSecretUseInputSchema,
+} from "./workSecrets";
 
 /**
  * A crewmate's conversation held on a computer that runs work (piece 8,
@@ -253,6 +258,8 @@ export const placedSpecSchema = z.object({
    * computer that keeps task browsers, whose task channel the command rides.
    */
   secrets: z.boolean().optional(),
+  /** With `secrets`, uses decided on the home and run there (`secret-uses-elsewhere.md`). */
+  secretUses: z.boolean().optional(),
 });
 export type PlacedSpec = z.infer<typeof placedSpecSchema>;
 
@@ -865,12 +872,30 @@ export const workRequests = {
    * The Secrets command's list and show: the home reads its own catalog
    * for the crewmate, the same one a crewmate of its own lists
    * (docs/secrets.md, "Current command seam"). It answers metadata only;
-   * no work request asks for a use, so a value never leaves the home.
+   * a use's values leave the home only through `inf:work:secret-take`.
    */
   "inf:work:secrets": {
     effect: "read",
     request: asked({ input: z.strictObject({}) }),
     response: placedSecretsSchema,
+  },
+  /** The Secrets command's uses there, decided on the home, answered with receipts, never kept. */
+  "inf:work:secret-use": {
+    effect: "change",
+    repeats: "safe",
+    request: asked({ input: placedSecretUseInputSchema }),
+    response: placedSecretUseAnswerSchema,
+  },
+  /**
+   * An approved use's values, taken once and never kept in the call ledger,
+   * or the state it ended in. The take spends the values, and the same call
+   * asked again after a cut-off receives the same values until the use ends.
+   */
+  "inf:work:secret-take": {
+    effect: "change",
+    repeats: "safe",
+    request: asked({ request: z.string().min(1) }),
+    response: placedSecretTakeAnswerSchema,
   },
   /** One card picture's verified copy, asked before the card that names it. */
   "inf:work:picture": {

@@ -6,6 +6,7 @@ import {
   EVERY_VIEW_ASKS,
   PANELS_IN_EVERY_WINDOW,
 } from "@core/connection/connection";
+import { computerName } from "@core/devices/computerName";
 import { HomeLink, type HomeLinkOptions, type HomeLinkState } from "@core/devices/homeLink";
 import type { Joined, JoinedHome } from "@core/devices/joinedHome";
 import type { HostNotifications } from "@core/host";
@@ -35,6 +36,7 @@ import { personalSnapshotSchema } from "@shared/personal/manifest";
 import { type ShellPreferences, shellPreferencesSchema } from "@shared/preferences";
 import { BrowserWatches, isBrowserWatchChannel } from "./browserWatches";
 import { pressInputFor } from "./cardPressInput";
+import { MacApprover, type MacApproverHost } from "./macApprover";
 import { namedCards, namedHere, namedHereError } from "./namedHere";
 import { ViewLook } from "./viewLook";
 import { ViewNotices } from "./viewNotices";
@@ -160,12 +162,23 @@ export type ViewBackendOptions = {
    * by default the grant's address.
    */
   dial?: HomeLinkOptions["dial"];
+  /**
+   * What this Mac approves the other computer's Secrets uses with, made when
+   * first needed (docs/secrets.md, "Remote decisions"); none, and an Allow
+   * pressed here is refused with where to set this Mac up.
+   */
+  approver?: () => MacApproverHost | undefined;
+  /** This Mac's own name, as it joined the other computer (`ownComputerName`); macOS's name for it by default. */
+  name?: () => Promise<string>;
 };
 
 export class ViewBackend {
   readonly look: ViewLook;
   private readonly link: Link;
   private readonly notices: ViewNotices;
+  private readonly approver: MacApprover;
+  /** The other Mac's cards as last heard, named here, before this Mac's approver shapes them. */
+  private cardsHeard: unknown;
   private readonly joined: JoinedHome;
   private readonly record: Joined;
   private caughtUp = 0;
@@ -190,6 +203,17 @@ export class ViewBackend {
     this.notices = new ViewNotices(options.notifications, (channel, args) =>
       this.link.invoke(channel, args),
     );
+    this.approver = new MacApprover({
+      host: () => options.approver?.(),
+      label: () => (options.name ? options.name() : computerName()),
+      home: () => this.homeName(),
+      invoke: (channel, args) => this.link.invoke(channel, args),
+      // The window's cards follow whether this Mac approves.
+      changed: () => {
+        if (this.cardsHeard !== undefined)
+          options.broadcast("inf:cards", this.approver.shown(this.cardsHeard));
+      },
+    });
     this.browsers = new BrowserWatches(
       (channel, args) => this.link.invoke(channel, args),
       () => this.homeLacks(BROWSER_FROM_ANY_VIEW),
@@ -202,8 +226,10 @@ export class ViewBackend {
       ...(options.dial ? { dial: options.dial } : {}),
       onPush: (channel, pushed, replayed) => {
         // The first mate's own cards name its computer where they say this computer.
-        const payload =
-          channel === "inf:cards" ? namedCards(pushed, () => this.homeName()) : pushed;
+        if (channel === "inf:cards") this.cardsHeard = namedCards(pushed, () => this.homeName());
+        const payload = channel === "inf:cards" ? this.approver.shown(this.cardsHeard) : pushed;
+        // A use or the captain's switch for this Mac changed there.
+        if (channel === "inf:secrets:changed") void this.approver.refresh();
         if (channel === "inf:cards") this.notices.observe(payload);
         if (channel === "inf:app:open-page") this.openPage(payload, replayed);
         if (channel === "inf:app:sign-in-page") void this.openSignInPage(payload, replayed);
@@ -227,6 +253,7 @@ export class ViewBackend {
       onCaughtUp: (catchUp) => {
         if (!this.look.seeded()) void this.seedLook();
         void this.readPanels();
+        void this.approver.refresh();
         // A new connection: the other Mac forgot every watch with the last one.
         this.browsers.again();
         // Read again whole - at the start too - what the other Mac holds is
@@ -300,6 +327,15 @@ export class ViewBackend {
       return (await this.browsers.view(channel, rawArgs, viewer)) as InvokeResponse<C>;
     if (!isViewInvokeChannel(channel))
       throw new Error(`${channel} is answered only on ${HOME.the}.`);
+    // An Allow on a Secrets use is this Mac's own signed answer, never a press there.
+    if (
+      channel === "inf:cards:act" &&
+      typeof rawArgs[0] === "string" &&
+      typeof rawArgs[1] === "string"
+    ) {
+      const answered = await this.approver.act(rawArgs[0], rawArgs[1]);
+      if (answered) return answered as InvokeResponse<C>;
+    }
     // An older home strips unknown command settings, potentially preserving an old key.
     const commandInput =
       channel === "inf:accounts:custom:connect"

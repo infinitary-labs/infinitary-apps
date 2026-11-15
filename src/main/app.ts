@@ -66,7 +66,7 @@ import {
   startAtLoginFor,
 } from "./host/electronHost";
 import { createElectronKeychainFile, readElectronKeychainStatus } from "./host/electronKeychain";
-import { nativeSecrets } from "./host/nativeSecrets";
+import { nativeApprover, nativeSecrets } from "./host/nativeSecrets";
 import { openWindowStandIn } from "./host/openWindowStandIn";
 import { broadcast, registerIpc } from "./ipc";
 import { followWindowCommands, moveCommands, shellCommands } from "./keyboard";
@@ -942,6 +942,16 @@ export async function startApp(
           if (isAllowedOpenExternalUrl(url)) await host.openExternal(url);
         },
         ...(standInReturnHost ? { returnHost: standInReturnHost } : {}),
+        // A Mac viewing another computer may approve its Secrets uses with its
+        // own key and Touch ID (docs/secrets.md, "Remote decisions"). A start
+        // that brings its own Secrets custody and confirmation, as a check's
+        // does, approves with those: a view keeps no Secrets of its own.
+        approver: () => {
+          const own = capabilities.secrets;
+          return own?.authentication
+            ? { custody: own.custody, authentication: own.authentication }
+            : nativeApprover({ platform: hostPlatform(), choice: userDataChoice });
+        },
         // A view runs no core, and still tells this Mac when its own app has an update.
         // Its update channel is kept in the data folder, beside a run too.
         updates: createInstalledUpdateChecker({

@@ -1,4 +1,5 @@
 import {
+  approvesSecretUses,
   automaticStartupOf,
   automaticStartupWords,
   type DeviceView,
@@ -6,7 +7,6 @@ import {
   deviceLabel,
   deviceRunsWork,
   deviceWords,
-  isPhone,
 } from "@shared/devices";
 import * as m from "@shared/i18n/messages.generated";
 import { remoteLoginWords } from "@shared/remoteLogin";
@@ -66,7 +66,7 @@ export function DeviceRow({
           <span className="fm-devices-name">{device.name}</span>
           <span className="fm-devices-detail">{here(deviceDetail(device, now))}</span>
           {summary && <span className="fm-devices-summary">{summary}</span>}
-          {isPhone(device) && <PhoneApprovals paired={device.id} name={device.name} />}
+          {approvesSecretUses(device) && <PhoneApprovals paired={device.id} name={device.name} />}
         </span>
         <Button
           variant="secondary"
@@ -171,6 +171,7 @@ export function DeviceRow({
             {here(deviceWords.otherVersion(other))}
           </span>
         )}
+        {approvesSecretUses(device) && <PhoneApprovals paired={device.id} name={label} />}
       </span>
       {!settling && (
         <span className="fm-devices-state" data-tone={state.tone}>

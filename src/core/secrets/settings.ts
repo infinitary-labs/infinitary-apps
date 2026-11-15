@@ -18,8 +18,14 @@ import {
   type SecretRehearsal,
   type SecretRehearsalInput,
   type SecretsView,
+  type SecretUseAnswer,
   secretsNamed,
 } from "@shared/secrets";
+import type {
+  PlacedSecretTakeAnswer,
+  PlacedSecretUseAnswer,
+  PlacedSecretUseInput,
+} from "@shared/workSecrets";
 import { askingView } from "../askedFromAView";
 import type { HostSecretsRecovery } from "../host";
 import { escapeCardText } from "../orchestrator/cardText";
@@ -34,9 +40,11 @@ import {
 import { approvalCode, approvalKey, type RemoteDecision } from "./approvals";
 import type { ApprovalDevice, Rule } from "./authority";
 import { type BrokeredUse, type SecretBroker, validBrokeredUse } from "./brokers";
+import { SecretHandoffs } from "./handoffs";
 import type { HistoryItem } from "./journal";
 import type { ProtectedSecrets, ProtectedSecretsOptions } from "./protected";
 import { SHORT_READ_SECONDS, SHORT_READ_USES } from "./readAccess";
+import type { RecipientFacts } from "./recipient";
 import type { RecoveryFiles } from "./recoveryArchive";
 import {
   type EndedUseReceipt,
@@ -45,6 +53,7 @@ import {
   SecretRequests,
   type SecretsCommand,
   type UseCheckInput,
+  type UseComputer,
   type UseReceipt,
   type UseState,
   validInjection,
@@ -66,7 +75,12 @@ export type SecretsSettingsOptions = {
 };
 type Owner = { protected: ProtectedSecrets; requests: SecretRequests };
 /** Where an offer's answer comes from: a host card's chrome, or the question on its row in Settings. */
-type Offer = { group: string; run: () => Promise<void>; place: "card" | "settings" };
+type Offer = {
+  group: string;
+  run: () => Promise<void>;
+  place: "card" | "settings";
+  kind?: SecretUseAnswer;
+};
 type Question = NonNullable<SecretsView["question"]>;
 
 /**
@@ -82,6 +96,10 @@ export class SecretsSettings {
   private readonly taskOf = new Map<string, Set<string>>();
   private readonly awaiting = new Map<string, Set<string>>();
   private readonly brokers = new Map<string, SecretBroker>();
+  /** Values of approved uses whose programs run on a computer that runs work, each handed once. */
+  private readonly handoffs = new SecretHandoffs();
+  /** The computer each such use runs on, by request: only that computer and task take or end it. */
+  private readonly elsewhereOf = new Map<string, { computer: string; task: string }>();
   /** Host consumers awaiting a use's end (`use`), by request. */
   private readonly ending = new Map<string, (receipt: UseReceipt) => void>();
   /** Each card choice still running, by its card's group. */
@@ -140,6 +158,7 @@ export class SecretsSettings {
   }
 
   private receiptChanged(receipt: UseReceipt): void {
+    this.handoffs.wake(receipt.request);
     if (receipt.state !== "waiting" && receipt.state !== "executing") {
       const group = `use-${receipt.request}`;
       for (const [id, offer] of this.offers) if (offer.group === group) this.offers.delete(id);
@@ -295,7 +314,7 @@ export class SecretsSettings {
       reason: script?.reason ?? broker?.reason ?? historical?.reason ?? "",
       recipient: script?.facts.executable.path ?? broker?.facts.label ?? historical?.program ?? "",
       facts: script
-        ? checkedFacts(script.facts, script.secrets)
+        ? checkedFacts(script.facts, script.secrets, script.computer?.label)
         : broker
           ? brokerCheckedFacts(broker.facts, broker.secrets)
           : [],
@@ -704,7 +723,7 @@ export class SecretsSettings {
         <p>Check that this code matches the one Infinitary shows on ${label}:</p>
         <p><code class="inf-mono" style="font-size:14px">${approvalCode(input.key)}</code></p>
         <p>If the codes differ, choose Not now.</p>
-        <p>Each Allow from ${label} needs its Face ID, Touch ID or passcode, for that one use. It never receives a secret, and your saved decisions still apply.</p>
+        <p>Each Allow from ${label} needs its own Face ID, Touch ID, passcode or password, for that one use. It never receives a secret, and your saved decisions still apply.</p>
         ${current && current.publicKey !== input.key ? `<p>This replaces the approvals ${escapeCardText(current.label)} could give before.</p>` : ""}
         <p>The system will ask you to confirm.</p>`,
         [
@@ -829,6 +848,7 @@ export class SecretsSettings {
           argv: script.facts.argv,
           cwd: script.facts.cwd,
           env: script.facts.env,
+          ...(script.computer ? { computer: script.computer.label } : {}),
         },
       };
     const broker = owner.protected.describeBrokered(request);
@@ -953,11 +973,11 @@ export class SecretsSettings {
       // The footer draws the default last, so this reads Don't allow, the
       // second allow, then Allow once: the refusal stands apart (INF-4087).
       [
-        { label: SECRETS_WORDS.once, run: () => confirm(false) },
-        { label: SECRETS_WORDS.deny, run: deny },
+        { label: SECRETS_WORDS.once, run: () => confirm(false), kind: "allow-once" },
+        { label: SECRETS_WORDS.deny, run: deny, kind: "deny" },
         use.shortReadEligible
-          ? { label: SECRETS_WORDS.short, run: () => confirm(true) }
-          : { label: SECRETS_WORDS.always, run: always },
+          ? { label: SECRETS_WORDS.short, run: () => confirm(true), kind: "allow-short" }
+          : { label: SECRETS_WORDS.always, run: always, kind: "allow-always" },
       ],
       this.taskOf.get(request)?.values().next().value,
     );
@@ -1020,13 +1040,23 @@ export class SecretsSettings {
     group: string,
     title: string,
     body: string,
-    actions: { label: string; run: () => Promise<void> }[],
+    actions: { label: string; run: () => Promise<void>; kind?: SecretUseAnswer }[],
     taskId?: string,
   ): void {
     for (const [id, offer] of this.offers) if (offer.group === group) this.offers.delete(id);
-    const offered = actions.map((action) => ({ ...action, id: randomUUID() }));
+    // A use card's pass names its answer, so a window on another computer
+    // answers it with that computer's own key (docs/secrets.md, "Remote decisions").
+    const offered = actions.map((action) => ({
+      ...action,
+      id: action.kind ? `${action.kind}:${randomUUID()}` : randomUUID(),
+    }));
     for (const action of offered)
-      this.offers.set(action.id, { group, run: action.run, place: "card" });
+      this.offers.set(action.id, {
+        group,
+        run: action.run,
+        place: "card",
+        ...(action.kind ? { kind: action.kind } : {}),
+      });
     this.offeredCard = `card-secrets-${group}`;
     this.options.raise({
       id: this.offeredCard,
@@ -1091,6 +1121,10 @@ export class SecretsSettings {
   async decide(id: string, place: Offer["place"] = "card"): Promise<void> {
     const offer = this.offers.get(id);
     if (!offer || offer.place !== place) return;
+    // An Allow pressed in a window on another computer needs that computer's
+    // own key and confirmation (`inf:secrets:decide`), never this computer's:
+    // the pass stays unspent and the use keeps waiting.
+    if (offer.kind && offer.kind !== "deny" && askingView()) return;
     for (const [key, sibling] of this.offers)
       if (sibling.group === offer.group) this.offers.delete(key);
     if (this.question?.group === offer.group) this.question = null;
@@ -1146,6 +1180,128 @@ export class SecretsSettings {
         return owner?.requests.cancel(request);
       },
     };
+  }
+
+  /**
+   * A task's Secrets on a computer that runs work (docs/secrets.md, "On a
+   * computer that runs work"): what that computer asks for its task, with
+   * the facts its recipient bound there. The home decides each use with the
+   * same card, saved decisions and history as one here; an approved use's
+   * values go to that computer once, through `take`. The computer and task
+   * are the work route's own, never the request's words.
+   */
+  async elsewhere(
+    context: { task: string; computer: UseComputer },
+    input: PlacedSecretUseInput,
+  ): Promise<PlacedSecretUseAnswer> {
+    const owner = await this.ready();
+    const mine = (request: string) => {
+      const placed = this.elsewhereOf.get(request);
+      return placed?.computer === context.computer.id && placed.task === context.task;
+    };
+    const receipt = (found: UseReceipt | undefined) =>
+      found ? { request: found.request, state: found.state, ...exitOf(found) } : null;
+    switch (input.op) {
+      case "check":
+        return {
+          check: owner
+            ? await owner.requests.checkElsewhere(
+                context.computer.id,
+                input.facts as RecipientFacts,
+              )
+            : { problem: "unavailable" },
+        };
+      case "inject": {
+        if (!owner) return { receipt: { request: input.id, state: "unavailable" } };
+        // The computer names the intent too, so a run there never answers one asked here.
+        const intent = taskIntent(context.task, `${context.computer.id}\u0000${input.id}`);
+        const handed = await owner.requests.injectElsewhere(intent, {
+          id: input.id,
+          reason: input.reason,
+          facts: input.facts as RecipientFacts,
+          computer: { ...context.computer },
+          hand: (request, values, authorized, launched) =>
+            this.handoffs.hand(request, values, authorized, launched),
+        });
+        if (!this.elsewhereOf.has(handed.request))
+          this.elsewhereOf.set(handed.request, {
+            computer: context.computer.id,
+            task: context.task,
+          });
+        if (!mine(handed.request))
+          throw new Error("This intent already names a different operation.");
+        this.track(owner, handed, context.task);
+        if (handed.state === "waiting") await this.offerUse(owner, handed.request);
+        return { receipt: receipt(owner.requests.status(handed.request) ?? handed) };
+      }
+      case "status":
+        return {
+          receipt:
+            owner && mine(input.request) ? receipt(owner.requests.status(input.request)) : null,
+        };
+      case "cancel": {
+        if (!owner || !mine(input.request)) return { receipt: null };
+        this.awaiting.get(input.request)?.delete(context.task);
+        return { receipt: receipt(await owner.requests.cancel(input.request)) };
+      }
+      case "ended":
+        if (mine(input.request)) this.handoffs.ended(input.request, input.result);
+        return { ok: true };
+    }
+  }
+
+  /**
+   * That computer's take of an approved use's values: once, after the home's
+   * last authorization check and that use's start, or the state it reached
+   * without them. It waits while the use waits for approval, at most until
+   * the use's own lifetime ends.
+   */
+  async take(
+    context: { task: string; computer: UseComputer },
+    request: string,
+    call: string,
+  ): Promise<PlacedSecretTakeAnswer> {
+    const owner = await this.ready();
+    if (!owner) return { state: "unavailable" };
+    for (;;) {
+      // Checked at each wake: a take its computer forgot, gone with its conversation, takes nothing.
+      const placed = this.elsewhereOf.get(request);
+      if (placed?.computer !== context.computer.id || placed.task !== context.task)
+        return { state: "unavailable" };
+      // The work route asks a cut-off call again under its own id: that call receives the same values.
+      const given = this.handoffs.take(request, call);
+      if ("values" in given) return given;
+      if (given.none === "taken") return { state: "taken" };
+      if (given.none === "changed") return { state: "invalidated" };
+      const status = owner.requests.status(request);
+      if (!status) return { state: "unavailable" };
+      if (status.state === "executing" && !this.handoffs.taken(request)) {
+        // Started, its values not yet handed: they follow at once.
+        await this.handoffs.wait(request, this.now() + SECRET_REQUEST_LIFETIME_MS, this.now());
+        continue;
+      }
+      if (status.state !== "waiting") return { state: status.state };
+      const expires = owner.requests.pending(request)?.expires ?? this.now();
+      await this.handoffs.wait(request, expires, this.now());
+    }
+  }
+
+  /**
+   * The task's conversation on that computer closed for good or restarted
+   * there, so nothing there follows its uses any more: a use whose values it
+   * took ends unknown, one started but not taken ends unsent, one still
+   * waiting is cancelled, and a take still waiting from before answers
+   * unavailable instead of spending values later.
+   */
+  elsewhereGone(context: { task: string; computer: string }): void {
+    for (const [request, placed] of [...this.elsewhereOf]) {
+      if (placed.computer !== context.computer || placed.task !== context.task) continue;
+      this.elsewhereOf.delete(request);
+      this.handoffs.gone(request);
+      if (this.owner?.requests.status(request)?.state === "waiting")
+        void this.owner.requests.cancel(request).catch(() => undefined);
+      this.handoffs.wake(request);
+    }
   }
 
   /** Core composition supplies executable adapters, never data from a renderer or agent. */
@@ -1293,6 +1449,11 @@ export class SecretsSettings {
       ...owner.protected.history().flatMap((item) => item.secrets),
     ]);
   }
+}
+
+/** A receipt's exit code, when it has one. */
+function exitOf(receipt: UseReceipt): { exitCode?: number } {
+  return receipt.exitCode === undefined ? {} : { exitCode: receipt.exitCode };
 }
 
 /** Namespace idempotency, not authority: two tasks may choose the same local intent name. */

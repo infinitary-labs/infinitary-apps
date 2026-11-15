@@ -37,18 +37,25 @@ The box's foot is the `ConnectChips` row shape: the micro label `ADD` and three 
 A phone opens the scan-code panel described in `PhoneView.prompt.md`, including the current TestFlight-only availability.
 Every build shows all three chips, installed and development alike.
 
-**Approving secret uses** (INF-1690 piece 4, captain's pick: "In Devices, as a switch on the paired iPhone").
-While Secrets are set up and open on this computer, each phone's row adds, under its summary, the core `Switch` with its label "Approves secret uses" after it, then one `--text-sm --fg-2` line that says where it stands.
+**Approving secret uses** (INF-1690 piece 4, captain's pick: "In Devices, as a switch on the paired iPhone"; INF-4207 decision 8 adds a Mac "set up once on the home, like a phone").
+While Secrets are set up and open on this computer, the row of each phone, and of each Mac that controls this computer, adds, under its summary, the core `Switch` with its label "Approves secret uses" after it, then one `--text-sm --fg-2` line that says where it stands.
 A build without protected storage, or storage that is not open, draws no switch.
 Off, there is no line.
 Turned on, it reads on at once and the line says "Waiting for Kun's iPhone.
 Open Infinitary there to show its code."; once the phone offers its key it says "Kun's iPhone offered its key.
 Check that the card's code matches the one Kun's iPhone shows.", with a small secondary Button "Compare codes" that shows the host's code card, which stays the one confirmation, asking for this computer's own Touch ID or password.
-Confirmed, the line reads "Each Allow there asks for its Face ID, Touch ID or passcode.
+Confirmed, the line reads "Each Allow there asks for its own Face ID, Touch ID, passcode or password.
 Code 1234 5678."
 Turning it off before the card is confirmed takes the card down; turning it off once the phone approves asks under the switch, never on a card: "Stop approvals from Kun's iPhone?", its two sentences, a small secondary "Keep approvals", focused, and a small danger "Stop approvals", which asks this computer's own confirmation; until it is answered the switch stays on, and Keep approvals returns focus to the switch.
 The switch takes Tab and answers Space, like every switch.
 On the phone, its Settings shows the same switch under Secrets approvals; it only turns on there, and while on it says to turn it off in Settings → Devices on the computer.
+On a Mac, Infinitary's window shows this computer's own cards: the code card adds one line, "This Mac shows the code 1234 5678.", for the comparison.
+A use card there is cut down as a phone's is: while that Mac approves, it offers "Allow once", the primary, and "Don't allow", a ghost; a lasting allowance stays this computer's, so the card leaves out the line explaining it and adds one line in its own fine print: "Save a decision on MacBook Pro.
+This Mac can allow one use at a time."
+While it does not approve, the card offers only "Don't allow", leaves out the lines explaining each allow, and adds one line in its fine print naming where to set it up: "This Mac does not approve Secrets uses.
+To set it up, turn on Approves secret uses on its row in Settings, Devices, then confirm it on MacBook Pro."
+A window that can keep no approval key, as on Linux, names where to answer instead: "This computer cannot approve Secrets uses.
+Allow this use on MacBook Pro, or on a phone or Mac set up to approve them."
 
 **Bringing a computer back.**
 A computer that runs work looks for this computer where its link or command said, so after this computer's address changes it stays out of reach until it hears where this computer is now (`AddAMac.prompt.md`, "Finding this computer again").

@@ -438,6 +438,7 @@
         "!src/core/axi/captainCommands.test.ts",
         "!src/core/integrations/providers/inbox.test.ts",
         "!src/core/secrets/protected.test.ts",
+        "!src/core/secrets/elsewhere.test.ts",
         "!src/core/utilityQos.test.ts",
         "!src/core/workspace/repoRegistry.test.ts",
         "!src/core/workspace/projectContributions.test.ts",

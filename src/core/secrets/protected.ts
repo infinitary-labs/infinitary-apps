@@ -17,7 +17,12 @@ import {
 import { type CustodyRefusal, canonical, RootKeys, type SecretCustody, sha256 } from "./custody";
 import { type HistoryItem, type JournalSnapshot, UseJournal } from "./journal";
 import { ReadAccess, type ReadPermission, SHORT_READ_SECONDS, SHORT_READ_USES } from "./readAccess";
-import { prepareRecipient, type RecipientFacts } from "./recipient";
+import {
+  type PreparedRecipient,
+  prepareRecipient,
+  RECIPIENT_VARIABLES,
+  type RecipientFacts,
+} from "./recipient";
 import {
   clearRecovery,
   openRecovery,
@@ -34,6 +39,8 @@ import {
 } from "./recoveryHome";
 import { type StagedRecovery, stageRecovery } from "./recoveryStage";
 import {
+  type ElsewhereCheck,
+  type ElsewhereUse,
   type Injection,
   inputDigest,
   type PreparedUse,
@@ -41,6 +48,7 @@ import {
   type SecretsBackend,
   type UseCheck,
   type UseCheckInput,
+  type UseComputer,
   type UseReceipt,
   type UseState,
   validInjection,
@@ -81,6 +89,8 @@ export type UseDescription = {
   /** The operation key a saved Allow names (`recipient.ts`), so a card can save this exact run. */
   operation: string;
   facts: RecipientFacts;
+  /** The computer the program runs on, when it is not this one. */
+  computer?: UseComputer;
   secrets: PreparedSecret[];
   reason: string;
   evaluation: Evaluation;
@@ -253,14 +263,8 @@ export class ProtectedSecrets implements SecretsBackend {
     const ready = this.ready;
     const epoch = this.materialEpoch;
     if (!ready || !input.cwd || !(await this.custodyCurrent())) return undefined;
-    const refs = [...new Set(Object.values(input.env))].sort();
-    const entries: VaultEntry[] = [];
-    for (const ref of refs) {
-      const entry = await ready.vault.entry(ref);
-      // Unknown and hidden references answer the same: unavailable, naming nothing.
-      if (!entry?.discoverable) return undefined;
-      entries.push(entry);
-    }
+    const entries = await this.crewEntries(ready, input.env);
+    if (!entries) return undefined;
     const runDir = join(this.options.dir, "runs", request);
     const base = this.options.environment();
     const recipient = await prepareRecipient(
@@ -272,6 +276,73 @@ export class ProtectedSecrets implements SecretsBackend {
       await rm(runDir, { recursive: true, force: true });
       return undefined;
     }
+    return this.offerUse(ready, epoch, request, input, entries, recipient, base);
+  }
+
+  /**
+   * A use whose program runs on a computer that runs work (docs/secrets.md,
+   * "On a computer that runs work"). That computer's recipient bound the
+   * facts; this owner checks the secrets, meets the saved decisions with an
+   * operation key that names the computer too, journals the use, raises the
+   * same approval, and at the start hands the values to that computer once,
+   * after its last authorization check. The computer checks its bound facts
+   * again right before the program starts.
+   */
+  async prepareElsewhere(
+    use: ElsewhereUse,
+    request: string,
+    _expires: number,
+  ): Promise<PreparedUse | undefined> {
+    if (this.recovering || this.retired) return undefined;
+    const ready = this.ready;
+    const epoch = this.materialEpoch;
+    const input = elsewhereInjection(use);
+    if (!ready || !input || !(await this.custodyCurrent())) return undefined;
+    const entries = await this.crewEntries(ready, input.env);
+    if (!entries) return undefined;
+    const facts = structuredClone(use.facts);
+    const recipient: PreparedRecipient = {
+      facts,
+      operation: elsewhereOperation(use.computer.id, facts),
+      // That computer checks its bound files again right before the start.
+      check: async () => true,
+      launch: async (values, _base, authorized, launched) =>
+        authorized() ? use.hand(request, values, authorized, launched) : "changed",
+      dispose: async () => {},
+    };
+    return this.offerUse(ready, epoch, request, input, entries, recipient, {}, use.computer);
+  }
+
+  /** Every secret a crew request names, each one the crew may use; nothing when any is not. */
+  private async crewEntries(
+    ready: Ready,
+    env: Record<string, string>,
+  ): Promise<VaultEntry[] | undefined> {
+    const entries: VaultEntry[] = [];
+    for (const ref of [...new Set(Object.values(env))].sort()) {
+      const entry = await ready.vault.entry(ref);
+      // Unknown and hidden references answer the same: unavailable, naming nothing.
+      if (!entry?.discoverable) return undefined;
+      entries.push(entry);
+    }
+    return entries;
+  }
+
+  /**
+   * The checked crew use, here or on a computer that runs work: its saved
+   * decision, digest and journal lines, and the launch behind every check.
+   */
+  private async offerUse(
+    ready: Ready,
+    epoch: number,
+    request: string,
+    input: Injection,
+    entries: VaultEntry[],
+    recipient: PreparedRecipient,
+    base: NodeJS.ProcessEnv,
+    computer?: UseComputer,
+  ): Promise<PreparedUse | undefined> {
+    const refs = entries.map((entry) => entry.ref);
     const authority = ready.authority.authority;
     const evaluation = ready.authority.evaluate(refs, recipient.operation);
     const versions = entries.map(({ ref, version, revision }) => ({ ref, version, revision }));
@@ -296,6 +367,7 @@ export class ProtectedSecrets implements SecretsBackend {
         program: recipient.facts.executable.path,
         reason: input.reason,
         rule: evaluation.effect,
+        ...(computer ? { computer: computer.label } : {}),
       });
       if (evaluation.effect === "allow")
         await ready.journal.append({ kind: "approved", request, method: "rule" });
@@ -308,6 +380,7 @@ export class ProtectedSecrets implements SecretsBackend {
       request,
       operation: recipient.operation,
       facts: recipient.facts,
+      ...(computer ? { computer: { ...computer } } : {}),
       secrets: entries.map(preparedSecret),
       reason: input.reason,
       evaluation,
@@ -862,6 +935,30 @@ export class ProtectedSecrets implements SecretsBackend {
   }
 
   /**
+   * The crew's pre-check for a run on a computer that runs work: that
+   * computer checked the folder, program and files and bound their facts;
+   * this owner checks each named secret and the saved decision the exact run
+   * there meets, without journaling, approving or running anything.
+   */
+  async checkElsewhere(computer: string, facts: RecipientFacts): Promise<ElsewhereCheck> {
+    if (this.recovering || this.retired) return { problem: "unavailable" };
+    const ready = this.ready;
+    if (!ready || !(await this.custodyCurrent())) return { problem: "unavailable" };
+    const input = elsewhereInjection({
+      id: "check",
+      reason: "Check before asking",
+      facts,
+      computer: { id: computer, label: computer },
+      hand: async () => "undeliverable",
+    });
+    if (!input) return { problem: "unavailable" };
+    const refs = [...new Set(Object.values(input.env))].sort();
+    for (const ref of refs)
+      if (!(await ready.vault.entry(ref))?.discoverable) return { problem: "secret" };
+    return { decision: ready.authority.evaluate(refs, elsewhereOperation(computer, facts)).effect };
+  }
+
+  /**
    * Metadata-only rehearsal for the `inf:secrets:rehearse` request: which rules
    * a use would meet and its checked facts, without journaling, approving or
    * running anything. No surface calls it since the crew's pre-check (`check`)
@@ -970,7 +1067,9 @@ export class ProtectedSecrets implements SecretsBackend {
         createdAt: this.now(),
         sourceHome: ready.authority.authority.home,
         values: [],
-        history: structuredClone(ready.journal.history()),
+        // A build that predates runs elsewhere reads an archive strictly, so
+        // the computer a use ran on stays with this home's own history.
+        history: structuredClone(ready.journal.history()).map(({ computer: _, ...item }) => item),
       };
       let files: RecoveryFiles | undefined;
       try {
@@ -1174,4 +1273,35 @@ export class ProtectedSecrets implements SecretsBackend {
 
 function preparedSecret({ ref, label, version, environment }: VaultEntry): PreparedSecret {
   return { ref, label, version, ...(environment !== undefined ? { environment } : {}) };
+}
+
+/**
+ * The operation key a saved decision names for a run on a computer that runs
+ * work: its bound facts and that computer, so a decision saved for a run
+ * there never covers the same run here or on another computer.
+ */
+export function elsewhereOperation(computer: string, facts: RecipientFacts): string {
+  return sha256(canonical({ computer, facts }));
+}
+
+/**
+ * The request a run elsewhere stands for, checked as a request here is: no
+ * variable a recipient keeps from its computer or a launcher controls, and
+ * facts that name each variable and argument as the injection would.
+ */
+function elsewhereInjection(use: ElsewhereUse): Injection | undefined {
+  const input: Injection = {
+    id: use.id,
+    reason: use.reason,
+    env: { ...use.facts.env },
+    argv: [...use.facts.argv],
+    cwd: use.facts.cwd,
+  };
+  if (!validInjection(input)) return undefined;
+  if (
+    Object.keys(input.env).some((name) => (RECIPIENT_VARIABLES as readonly string[]).includes(name))
+  )
+    return undefined;
+  if (use.facts.delivery !== "environment") return undefined;
+  return input;
 }

@@ -60,6 +60,18 @@ export function isPhone(device: { system?: DeviceSystem | undefined }): boolean 
   return device.system === "ios";
 }
 
+/**
+ * Whether a device may approve Secrets uses with a key of its own
+ * (docs/secrets.md, "Remote decisions"): a phone, or a Mac that may control
+ * this Firstmate, which signs with its own Touch ID or password.
+ */
+export function approvesSecretUses(device: {
+  kind: DeviceKind;
+  system?: DeviceSystem | undefined;
+}): boolean {
+  return isPhone(device) || (device.system === "macos" && deviceControls(device.kind));
+}
+
 /** The chip a device runs on, as its system names it: Apple silicon and Arm are `arm64`. */
 export const deviceChipSchema = z.enum(["arm64", "x64"]);
 export type DeviceChip = z.infer<typeof deviceChipSchema>;

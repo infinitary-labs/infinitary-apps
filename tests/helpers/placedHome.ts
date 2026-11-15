@@ -54,6 +54,7 @@ import type {
   SessionBinding,
   SessionFactory,
 } from "../../src/core/session/session";
+import type { SecretUsesElsewhere } from "../../src/core/session/tools";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { type AppDatabase, openDatabase } from "../../src/core/storage/db";
 import { DecisionStore } from "../../src/core/storage/decisionStore";
@@ -194,8 +195,11 @@ export function startPlacedHome(options: {
   files?: { home: string; name: string };
   /** The program process the crew's programs run in; absent, no crewmate here is served start_program. */
   programProcess?: import("../../src/core/orchestrator/crewSupervisorOptions").CrewSupervisorOptions["programProcess"];
-  /** Metadata-only command reach for the home's tasks. */
-  secrets?: { forTask: (taskId: string) => SecretsCommand };
+  /** Metadata-only command reach for the home's tasks, and with `elsewhere` its uses from a computer that runs work. */
+  secrets?: {
+    forTask: (taskId: string) => SecretsCommand;
+    elsewhere?: (taskId: string) => SecretUsesElsewhere;
+  };
   runbooks?: Runbooks;
   /**
    * This Mac's own subscriptions, for a home that routes as `createServices`

@@ -36,10 +36,12 @@ import {
   workOrders,
   workRequests,
 } from "@shared/work";
+import { placedSecretTakeAnswerSchema, placedSecretUseAnswerSchema } from "@shared/workSecrets";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
 import { WorkRequestAbortedError } from "../devices/homeLink";
 import { filesAskedOfHome, type TaskFiles } from "../files/taskFiles";
 import { PLACED_RELEASE_FILE_REFUSAL } from "../forge";
+import { hostEnv } from "../hostEnv";
 import {
   ClaudeFiles,
   conversationFiles,
@@ -57,7 +59,7 @@ import {
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import { verifyKeptValidationEvidenceSync } from "../pi/validationEvidence";
-import type { SecretsCatalog } from "../secrets/requests";
+import type { SecretsCatalog, SecretsCommand } from "../secrets/requests";
 import { type SelfSourceReader, sourceContext } from "../selfSource/resolve";
 import { serveAnswerFiles } from "../session/answerFiles";
 import { followCompletions } from "../session/followCompletions";
@@ -88,6 +90,7 @@ import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import type { MovedFolders } from "../workspace/workMove";
 import { carryStory, type PlacedMedia, sendCardData, sendPictures } from "./placedStoryMedia";
 import type { PlacedJob, PlacedTaskState, PlacedTasks } from "./placedTasks";
+import { SecretUsesThere } from "./secretUses";
 import { PLACED_REQUEST_WAIT_MS } from "./toolWait";
 import type { WorkingCopies } from "./workingCopies";
 
@@ -126,6 +129,12 @@ import type { WorkingCopies } from "./workingCopies";
 export type SessionHostOptions = {
   source?: SelfSourceReader;
   tasks: PlacedTasks;
+  /**
+   * This app's own folder for the private copies a Secrets use binds here
+   * (docs/secrets.md, "On a computer that runs work"). Absent, a task here
+   * lists the home's catalog alone.
+   */
+  secretRunsDir?: string;
   /** Asks the home one work request; asked again after every drop until it answers. */
   ask: (channel: WorkInvokeChannel, args: unknown, signal?: AbortSignal) => Promise<unknown>;
   /** This computer's own factories. */
@@ -199,6 +208,7 @@ export type SessionHostOptions = {
         load?: boolean;
         files?: TaskFiles;
         secretsCatalog?: SecretsCatalog;
+        secrets?: SecretsCommand;
         stops?: boolean;
       },
     ) => { browser?: CrewmateBrowser; shell: TaskShell };
@@ -318,6 +328,8 @@ type Held = {
 
 export class SessionHost {
   private readonly held = new Map<string, Held>();
+  /** Each task's Secrets uses here, kept across its grants so an intent answers its first use. */
+  private readonly secretUses = new Map<string, SecretUsesThere>();
   private readonly now: () => number;
   private readonly log: (line: string) => void;
   private stopped = false;
@@ -909,6 +921,10 @@ export class SessionHost {
               ...(spec.integrations ? { integrations: this.integrationsOf(held) } : {}),
               ...(spec.files ? { files: this.filesOf(held) } : {}),
               ...(spec.secrets ? { secretsCatalog: this.secretsOf(held) } : {}),
+              // Its uses, decided by the home and run here (docs/secrets.md, "On a computer that runs work").
+              ...(spec.secrets && spec.secretUses && this.options.secretRunsDir
+                ? { secrets: this.secretUsesOf(held, this.options.secretRunsDir) }
+                : {}),
             })
           : undefined;
       // An answer too long to read whole is saved here, beside its shell.
@@ -1243,6 +1259,10 @@ export class SessionHost {
     // Its browser goes with it, copying a saved sign-in back as any stop
     // does, and its commands answer nothing more.
     this.options.commands?.close(held.task);
+    // A program already started keeps running and still tells the home how it
+    // ended; a report that arrives after the home hears this conversation
+    // closed finds that use already ended as unknown.
+    this.secretUses.delete(held.task);
     if (session) {
       session.dispose();
       await session.closed();
@@ -1636,6 +1656,33 @@ export class SessionHost {
           ),
         ).secrets,
     };
+  }
+
+  /**
+   * The task's Secrets uses here: each asked of the home, which decides it and
+   * hands an approved use's values once; never kept in a call's record.
+   */
+  private secretUsesOf(held: Held, runsDir: string): SecretUsesThere {
+    const kept = this.secretUses.get(held.task);
+    if (kept) return kept;
+    const catalog = this.secretsOf(held);
+    const uses = new SecretUsesThere({
+      runsDir,
+      environment: () => hostEnv(),
+      home: {
+        list: () => catalog.list(),
+        use: async (input) =>
+          placedSecretUseAnswerSchema.parse(
+            await this.call(held, "inf:work:secret-use", { callId: randomUUID(), input }),
+          ),
+        take: async (request) =>
+          placedSecretTakeAnswerSchema.parse(
+            await this.call(held, "inf:work:secret-take", { callId: randomUUID(), request }),
+          ),
+      },
+    });
+    this.secretUses.set(held.task, uses);
+    return uses;
   }
 
   /**

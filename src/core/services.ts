@@ -1184,6 +1184,12 @@ export async function createServices(
       ? {
           secrets: {
             forTask: (taskId: string) => secrets.commandFor({ task: taskId }),
+            elsewhere: (taskId: string) => ({
+              use: (computer, input) => secrets.elsewhere({ task: taskId, computer }, input),
+              take: (computer, request, call) =>
+                secrets.take({ task: taskId, computer }, request, call),
+              gone: (computer) => secrets.elsewhereGone({ task: taskId, computer: computer.id }),
+            }),
           },
         }
       : {}),

@@ -40,7 +40,7 @@ import type { Router } from "../routing/router";
 import type { Runbooks } from "../runbooks/runbooks";
 import type { SecretsCommand } from "../secrets/requests";
 import type { SessionBinding, SessionFactories, SessionSpec, TaskShell } from "../session/session";
-import type { DeclaredCardInput } from "../session/tools";
+import type { DeclaredCardInput, SecretUsesElsewhere } from "../session/tools";
 import type { CardStore } from "../storage/cardStore";
 import type { InboxStore } from "../storage/inboxStore";
 import type { TaskService } from "../tasks/taskService";
@@ -532,8 +532,15 @@ export type CrewSupervisorOptions = {
    * through `infinitary-integrations-axi` on its task channel. Absent, it has none.
    */
   integrations?: { forTask: (taskId: string) => TaskIntegrations };
-  /** Metadata and exact requests, never values or authority. */
-  secrets?: { forTask: (taskId: string) => SecretsCommand };
+  /**
+   * Metadata and exact requests, never values or authority; and a task's uses
+   * from a computer that runs work, decided here (docs/secrets.md, "On a
+   * computer that runs work").
+   */
+  secrets?: {
+    forTask: (taskId: string) => SecretsCommand;
+    elsewhere?: (taskId: string) => SecretUsesElsewhere;
+  };
   /**
    * Each task's own browser (docs/task-browser.md), on this Mac or on the
    * computer its task runs on ("On another computer"): absent, its crewmate

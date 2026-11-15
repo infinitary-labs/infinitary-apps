@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { type BrokeredUse, brokerInputDigest, validBrokeredUse } from "./brokers";
+import type { LaunchResult, RecipientFacts } from "./recipient";
 
 /** Metadata only. Values never cross this contract. Task labels are not authority (INF-1093). */
 /** One listed secret: metadata only, with the captain's environment label when it has one. */
@@ -54,6 +55,38 @@ export type UseCheck =
       files: string[];
       folder: string;
     };
+/**
+ * A computer that runs work, where a use's program runs instead of here
+ * (docs/secrets.md, "On a computer that runs work"): its device id, which a
+ * saved decision binds, and the name the person knows it by.
+ */
+export type UseComputer = { id: string; label: string };
+
+/**
+ * A use whose program runs on a computer that runs work: the facts that
+ * computer's recipient bound there, and how the values reach it. `hand` gives
+ * the values to that computer once and answers how its program ended; the
+ * backend calls it only after its last authorization check, and `authorized`
+ * is checked again when that computer takes them.
+ */
+export type ElsewhereUse = {
+  id: string;
+  reason: string;
+  facts: RecipientFacts;
+  computer: UseComputer;
+  hand: (
+    request: string,
+    values: Record<string, Buffer>,
+    authorized: () => boolean,
+    launched?: () => void,
+  ) => Promise<LaunchResult>;
+};
+
+/** A run elsewhere's pre-check on this side: the named secrets and the saved decision it meets. */
+export type ElsewhereCheck =
+  | { problem: "secret" | "unavailable" }
+  | { decision: "never" | "ask" | "allow" };
+
 export type EndedUseReceipt = UseReceipt & {
   state: Exclude<UseState, "waiting" | "executing">;
 };
@@ -95,6 +128,14 @@ export interface SecretsBackend {
   prepare(input: Injection, request: string, expires: number): Promise<PreparedUse | undefined>;
   /** The same checks `prepare` makes, and nothing recorded, approved or run. */
   check?(input: UseCheckInput): Promise<UseCheck>;
+  /** A use whose program runs on a computer that runs work, bound there. */
+  prepareElsewhere?(
+    use: ElsewhereUse,
+    request: string,
+    expires: number,
+  ): Promise<PreparedUse | undefined>;
+  /** The secrets and saved decision a run on a computer that runs work meets. */
+  checkElsewhere?(computer: string, facts: RecipientFacts): Promise<ElsewhereCheck>;
   /** A registered trusted adapter, not an arbitrary value getter. */
   prepareBrokered?(
     input: BrokeredUse,
@@ -213,6 +254,55 @@ export class SecretRequests {
     if (this.paused || !this.backend.check) return { problem: "unavailable" };
     try {
       return await this.backend.check(copied);
+    } catch {
+      // Backend errors may contain values; never serialize their text.
+      return { problem: "unavailable" };
+    }
+  }
+
+  /**
+   * A use whose program runs on a computer that runs work (docs/secrets.md,
+   * "On a computer that runs work"): the same intent, approval and journal as
+   * one here, with that computer's bound facts. The intent is the caller's,
+   * namespaced to that computer and task, so one task's id never answers
+   * another's.
+   */
+  async injectElsewhere(intent: string, use: ElsewhereUse): Promise<UseReceipt> {
+    const copied: ElsewhereUse = {
+      ...structuredClone({ ...use, hand: undefined }),
+      hand: use.hand,
+    };
+    if (
+      !validInjection({
+        id: copied.id,
+        reason: copied.reason,
+        env: copied.facts.env,
+        argv: copied.facts.argv,
+        cwd: copied.facts.cwd,
+      })
+    )
+      throw new Error("Invalid injection request.");
+    const digest = createHash("sha256")
+      .update(
+        JSON.stringify({
+          computer: copied.computer.id,
+          reason: copied.reason,
+          facts: copied.facts,
+        }),
+      )
+      .digest("hex");
+    return this.submit(intent, digest, (request, expires) =>
+      this.backend.prepareElsewhere
+        ? this.backend.prepareElsewhere(copied, request, expires)
+        : Promise.resolve(undefined),
+    );
+  }
+
+  /** A run elsewhere's pre-check: it records, approves and runs nothing. */
+  async checkElsewhere(computer: string, facts: RecipientFacts): Promise<ElsewhereCheck> {
+    if (this.paused || !this.backend.checkElsewhere) return { problem: "unavailable" };
+    try {
+      return await this.backend.checkElsewhere(computer, structuredClone(facts));
     } catch {
       // Backend errors may contain values; never serialize their text.
       return { problem: "unavailable" };

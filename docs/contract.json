@@ -47566,6 +47566,9 @@
                   "type": "boolean",
                   "const": true
                 },
+                "computer": {
+                  "type": "string"
+                },
                 "device": {
                   "type": "string"
                 },
@@ -48213,6 +48216,9 @@
                 "given": {
                   "type": "boolean",
                   "const": true
+                },
+                "computer": {
+                  "type": "string"
                 },
                 "device": {
                   "type": "string"
@@ -49080,6 +49086,9 @@
                 "given": {
                   "type": "boolean",
                   "const": true
+                },
+                "computer": {
+                  "type": "string"
                 },
                 "device": {
                   "type": "string"
@@ -64306,6 +64315,596 @@
         },
         "required": [
           "secrets"
+        ]
+      }
+    },
+    "inf:work:secret-use": {
+      "effect": "change",
+      "reach": "work",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "task": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,64}$"
+              },
+              "callId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "input": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "op": {
+                        "type": "string",
+                        "const": "check"
+                      },
+                      "facts": {
+                        "type": "object",
+                        "properties": {
+                          "executable": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "sha256": {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{64}$"
+                              },
+                              "copied": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "sha256",
+                              "copied"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "interpreter": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "sha256": {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{64}$"
+                              },
+                              "copied": {
+                                "type": "boolean"
+                              },
+                              "arg": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "sha256",
+                              "copied"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "argv": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "inputs": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "path": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "sha256": {
+                                  "type": "string",
+                                  "pattern": "^[0-9a-f]{64}$"
+                                },
+                                "index": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "path",
+                                "sha256",
+                                "index"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "cwd": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "env": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "string"
+                            }
+                          },
+                          "delivery": {
+                            "type": "string",
+                            "const": "environment"
+                          }
+                        },
+                        "required": [
+                          "executable",
+                          "argv",
+                          "inputs",
+                          "cwd",
+                          "env",
+                          "delivery"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "op",
+                      "facts"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "op": {
+                        "type": "string",
+                        "const": "inject"
+                      },
+                      "id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "reason": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "facts": {
+                        "type": "object",
+                        "properties": {
+                          "executable": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "sha256": {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{64}$"
+                              },
+                              "copied": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "sha256",
+                              "copied"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "interpreter": {
+                            "type": "object",
+                            "properties": {
+                              "path": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "sha256": {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{64}$"
+                              },
+                              "copied": {
+                                "type": "boolean"
+                              },
+                              "arg": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "path",
+                              "sha256",
+                              "copied"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "argv": {
+                            "minItems": 1,
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "inputs": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "path": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "sha256": {
+                                  "type": "string",
+                                  "pattern": "^[0-9a-f]{64}$"
+                                },
+                                "index": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "path",
+                                "sha256",
+                                "index"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "cwd": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "env": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "string"
+                            }
+                          },
+                          "delivery": {
+                            "type": "string",
+                            "const": "environment"
+                          }
+                        },
+                        "required": [
+                          "executable",
+                          "argv",
+                          "inputs",
+                          "cwd",
+                          "env",
+                          "delivery"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "op",
+                      "id",
+                      "reason",
+                      "facts"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "op": {
+                        "type": "string",
+                        "const": "status"
+                      },
+                      "request": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "op",
+                      "request"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "op": {
+                        "type": "string",
+                        "const": "cancel"
+                      },
+                      "request": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "op",
+                      "request"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "op": {
+                        "type": "string",
+                        "const": "ended"
+                      },
+                      "request": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "result": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "exitCode": {
+                                "type": "integer",
+                                "minimum": -9007199254740991,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "exitCode"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "signal": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "signal"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "outcome": {
+                                "type": "string",
+                                "enum": [
+                                  "changed",
+                                  "undeliverable",
+                                  "failed",
+                                  "lost"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "outcome"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "op",
+                      "request",
+                      "result"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            },
+            "required": [
+              "task",
+              "callId",
+              "input"
+            ]
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "check": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "problem": {
+                        "type": "string",
+                        "enum": [
+                          "secret",
+                          "unavailable"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "problem"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "decision": {
+                        "type": "string",
+                        "enum": [
+                          "never",
+                          "ask",
+                          "allow"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "decision"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "check"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "receipt": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "request": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "state": {
+                        "type": "string",
+                        "enum": [
+                          "waiting",
+                          "executing",
+                          "completed",
+                          "denied",
+                          "cancelled",
+                          "expired",
+                          "invalidated",
+                          "unavailable",
+                          "unknown"
+                        ]
+                      },
+                      "exitCode": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "request",
+                      "state"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "receipt"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": true
+              }
+            },
+            "required": [
+              "ok"
+            ]
+          }
+        ]
+      }
+    },
+    "inf:work:secret-take": {
+      "effect": "change",
+      "reach": "work",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "task": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,64}$"
+              },
+              "callId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "request": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "task",
+              "callId",
+              "request"
+            ]
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "values": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "values"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "state": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "waiting",
+                      "executing",
+                      "completed",
+                      "denied",
+                      "cancelled",
+                      "expired",
+                      "invalidated",
+                      "unavailable",
+                      "unknown"
+                    ]
+                  },
+                  {
+                    "type": "string",
+                    "const": "taken"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "state"
+            ]
+          }
         ]
       }
     },
@@ -82003,6 +82602,9 @@
                       "type": "boolean"
                     },
                     "secrets": {
+                      "type": "boolean"
+                    },
+                    "secretUses": {
                       "type": "boolean"
                     }
                   },

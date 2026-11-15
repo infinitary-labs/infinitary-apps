@@ -1138,4 +1138,79 @@ describe("a task that runs on a computer that runs work", () => {
     ).resolves.toEqual({ ok: true });
     expect(heard).toEqual([["event", at.deviceId, "t-closed", signIn]]);
   });
+
+  // Intent: INF-4207 piece 6's review (INF-4277): a Secrets program started
+  // there tells the home how it ended even after its task closed, and once
+  // the conversation there closed for good the home ends the uses it took,
+  // so none stays executing and holds back a Secrets restore. Secrets on the
+  // home are a recording stand-in here; elsewhere.test.ts owns what they do.
+  it("hears a closed task's Secrets program end, and ends its uses once its conversation there closed", async () => {
+    const heard: unknown[][] = [];
+    const at = await world(undefined, {
+      taskChannel: await bundleAxiProcess(),
+      secrets: {
+        forTask: () => ({
+          list: async () => [],
+          receipts: () => [],
+          check: async () => ({ problem: "unavailable" }),
+          inject: async (input) => ({ request: input.id, state: "unavailable" }),
+          cancel: async () => undefined,
+          status: () => undefined,
+        }),
+        elsewhere: (task) => ({
+          use: async (computer, input) => {
+            heard.push(["use", task, computer.id, input.op]);
+            return input.op === "ended" ? { ok: true } : { receipt: null };
+          },
+          take: async (computer, request, call) => {
+            heard.push(["take", task, computer.id, request, call]);
+            return { state: "unavailable" };
+          },
+          gone: (computer) => {
+            heard.push(["gone", task, computer.id]);
+          },
+        }),
+      },
+    });
+    model([{ text: "Deploying." }]);
+    await at.start("t-deploy");
+    const home = at.home();
+    await expect.poll(() => home.tasks.get("t-deploy")?.activity).toBe("idle");
+    expect(home.placed.takesSecretUses(at.deviceId)).toBe(true);
+    await expect(
+      home.placed.answer(at.deviceId, "inf:work:secret-take", {
+        task: "t-deploy",
+        callId: "take-1",
+        request: "use-1",
+      }),
+    ).resolves.toEqual({ state: "unavailable" });
+    expect(heard).toEqual([["take", "t-deploy", at.deviceId, "use-1", "take-1"]]);
+
+    await home.supervisor.sessions.interruptCrewmate("t-deploy", "cancel");
+    await expect.poll(() => heard.at(-1)).toEqual(["gone", "t-deploy", at.deviceId]);
+    const ended = {
+      task: "t-deploy",
+      callId: "ended-1",
+      input: { op: "ended" as const, request: "use-1", result: { exitCode: 0 } },
+    };
+    await expect(home.placed.answer(at.deviceId, "inf:work:secret-use", ended)).resolves.toEqual({
+      ok: true,
+    });
+    expect(heard.at(-1)).toEqual(["use", "t-deploy", at.deviceId, "ended"]);
+    // Nothing new starts for a closed task: only how a started program ended is heard.
+    await expect(
+      home.placed.answer(at.deviceId, "inf:work:secret-take", {
+        task: "t-deploy",
+        callId: "take-2",
+        request: "use-2",
+      }),
+    ).rejects.toThrow("That task is closed on");
+    await expect(
+      home.placed.answer(at.deviceId, "inf:work:secret-use", {
+        task: "t-deploy",
+        callId: "status-1",
+        input: { op: "status", request: "use-1" },
+      }),
+    ).rejects.toThrow("That task is closed on");
+  });
 });

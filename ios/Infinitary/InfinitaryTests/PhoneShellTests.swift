@@ -121,6 +121,63 @@ import XCTest
         XCTAssertEqual(PhoneActivity.age(line.at, now: at.addingTimeInterval(7200)), "2h")
         XCTAssertEqual(PhoneActivity.age(line.at, now: at.addingTimeInterval(172800)), "2d")
     }
+
+    /// INF-1208's direction A: the sidebar follows the window's room, measured on the iPhone Duo simulator in Xcode 27.1
+    /// and on the phone check's iPad and iPhone, never the kind of device.
+    func testSidebarFollowsTheWindowsRoom() {
+        // An iPad Pro 11-inch on its side and upright, as before.
+        XCTAssertTrue(PhoneLayout.wide(horizontal: .regular, vertical: .regular, size: CGSize(width: 1210, height: 834)))
+        XCTAssertFalse(PhoneLayout.wide(horizontal: .regular, vertical: .regular, size: CGSize(width: 834, height: 1210)))
+        // A large iPhone on its side is regular in width but compact in height, and keeps the strip.
+        XCTAssertFalse(PhoneLayout.wide(horizontal: .regular, vertical: .compact, size: CGSize(width: 956, height: 440)))
+        // iPhone Duo open like a book: the content left by the vertical bar, 867 by 501 points, regular both ways.
+        XCTAssertTrue(PhoneLayout.wide(horizontal: .regular, vertical: .regular, size: CGSize(width: 867, height: 501)))
+        // Open on its side, 669 by 783, and closed, 382 by 510 and compact in width: no sidebar.
+        XCTAssertFalse(PhoneLayout.wide(horizontal: .regular, vertical: .regular, size: CGSize(width: 669, height: 783)))
+        XCTAssertFalse(PhoneLayout.wide(horizontal: .compact, vertical: .regular, size: CGSize(width: 382, height: 510)))
+    }
+
+    /// INF-1208's direction A: the card crossed the Duo's fold. Home's column beside the 277-point sidebar starts 278
+    /// points into the window, and the fold's 40 points (margins included) stand at 455 in the window.
+    func testHomeKeepsToTheWiderSideOfTheFold() {
+        let column = 867.0 - 278, fold = CGRect(x: 455 - 278, y: 0, width: 40, height: 669)
+        XCTAssertEqual(PhoneLayout.keepOff(folds: [fold], width: column), .init(leading: fold.maxX, trailing: 0))
+        // With no sidebar the column starts at the window's edge, and the fold leaves the wider side on its left.
+        let wholeWidth = PhoneLayout.keepOff(folds: [CGRect(x: 455, y: 0, width: 40, height: 669)], width: 480)
+        XCTAssertEqual(wholeWidth, .init(leading: 0, trailing: 480 - 455))
+        // On its side the fold runs across, which A leaves alone, as it does a fold outside the column.
+        XCTAssertEqual(PhoneLayout.keepOff(folds: [CGRect(x: 0, y: 455, width: 669, height: 40)], width: 669), .init())
+        XCTAssertEqual(PhoneLayout.keepOff(folds: [CGRect(x: -200, y: 0, width: 40, height: 669)], width: 589), .init())
+        XCTAssertEqual(PhoneLayout.keepOff(folds: [], width: 589), .init())
+    }
+
+    /// The captain, on the first take: "isn't the after state clearly wasting a lot of horizontal space?" On an open Duo
+    /// the sidebar reaches the fold, so no strip of empty stage stands between them; the iPad keeps its share.
+    func testSidebarReachesTheFold() {
+        // The Duo open like a book: 867 points of content, the fold's 40 points (margins included) at 455.
+        let duo = PhoneLayout.sidebarWidth(width: 867, folds: [CGRect(x: 455, y: 0, width: 40, height: 669)])
+        XCTAssertEqual(duo, 455)
+        // Home then starts one point (the divider) past the sidebar, and keeps right of the fold.
+        XCTAssertEqual(PhoneLayout.keepOff(folds: [CGRect(x: 455 - 456, y: 0, width: 40, height: 669)], width: 867 - 456),
+                       .init(leading: 39, trailing: 0))
+        // An iPad Pro 11-inch on its side has no fold and keeps 32 percent, up to 320 points.
+        XCTAssertEqual(PhoneLayout.sidebarWidth(width: 1210, folds: []), 320)
+        // A fold across the window moves nothing.
+        XCTAssertEqual(PhoneLayout.sidebarWidth(width: 867, folds: [CGRect(x: 0, y: 455, width: 867, height: 40)]), 867 * 0.32)
+    }
+
+    /// INF-1208's direction A: the probe's own readings of the notices iOS posts when a Duo turns or folds, beside a real
+    /// keyboard's. Only a keyboard with height brings Done into Settings' place.
+    func testOnlyAKeyboardWithHeightArrives() {
+        func notice(_ frame: CGRect?) -> Notification {
+            Notification(name: UIResponder.keyboardWillShowNotification, object: nil,
+                         userInfo: frame.map { [UIResponder.keyboardFrameEndUserInfoKey: NSValue(cgRect: $0)] })
+        }
+        XCTAssertFalse(phoneKeyboardArrives(notice(CGRect(x: 0, y: 669, width: 951, height: 0))))
+        XCTAssertFalse(phoneKeyboardArrives(notice(CGRect(x: 0, y: 951, width: 653, height: 0))))
+        XCTAssertTrue(phoneKeyboardArrives(notice(CGRect(x: 0, y: 517, width: 466, height: 291))))
+        XCTAssertTrue(phoneKeyboardArrives(notice(nil)))
+    }
 }
 
 /// The top bar as `PhoneView` and `PhoneWorkspace` draw it: the tab controller with its own bar hidden, Settings at the

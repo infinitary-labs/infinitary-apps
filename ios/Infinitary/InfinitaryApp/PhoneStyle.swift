@@ -14,6 +14,71 @@ enum PhoneColumn {
     UIDevice.current.userInterfaceIdiom == .phone && vertical == .compact
 }
 
+/// INF-1208's direction A: the layout follows the room the window has, never the kind of device. iPhone Duo is a phone
+/// to the code in every pose, yet open it has the room of a small iPad.
+enum PhoneLayout {
+    /// The sidebar stands beside the stage wherever the window is regular both ways and wider than tall: an iPad on its
+    /// side, as before, and an open Duo like a book. A large iPhone on its side is compact in height and keeps the strip.
+    static func wide(horizontal: UserInterfaceSizeClass?, vertical: UserInterfaceSizeClass?, size: CGSize) -> Bool {
+        horizontal == .regular && vertical == .regular && size.width > size.height
+    }
+
+    /// What Home's column keeps clear of a fold running down it: the frames of the window's division regions in the
+    /// column's own space, each with Apple's margins, and the column's width. The card and the message box take the wider
+    /// side of the fold, so neither crosses it; a fold across the window, or one outside the column, moves nothing.
+    static func keepOff(folds: [CGRect], width: CGFloat) -> FoldInset {
+        var inset = FoldInset()
+        for fold in folds where fold.height > fold.width && fold.maxX > 0 && fold.minX < width {
+            if width - fold.maxX >= fold.minX { inset.leading = max(inset.leading, fold.maxX) }
+            else { inset.trailing = max(inset.trailing, width - fold.minX) }
+        }
+        return inset
+    }
+    struct FoldInset: Equatable { var leading: CGFloat = 0; var trailing: CGFloat = 0 }
+
+    /// The sidebar's width in the wide layout: the iPad's share of the window, or, where a fold runs down the window past
+    /// that share, the room up to the fold, so the sidebar fills the page left of it and Home the page right of it, with
+    /// no strip of empty stage between the sidebar and the fold. Folds are the window's division regions in the
+    /// workspace's own space, each with Apple's margins.
+    static func sidebarWidth(width: CGFloat, folds: [CGRect]) -> CGFloat {
+        let share = min(320, width * 0.32)
+        let fold = folds.filter { $0.height > $0.width && $0.minX > share && $0.maxX < width }.map(\.minX).min()
+        return fold ?? share
+    }
+}
+
+/// INF-1208's direction A: Home's column on the wider side of a foldable's fold (`PhoneLayout.keepOff`). The fold's
+/// region is read from iOS 27.1, flat or folded, so the layout does not jump as the hinge moves; before iOS 27.1 there
+/// is no fold to read and nothing moves.
+private struct PhoneFoldSide: ViewModifier {
+    @State private var inset = PhoneLayout.FoldInset()
+    func body(content: Content) -> some View {
+        content.padding(.leading, inset.leading).padding(.trailing, inset.trailing)
+            .background {
+                if #available(iOS 27.1, *) {
+                    GeometryReader { geometry in
+                        let folds = geometry.reservedRegions(kind: .division, options: .includeInactive).map(\.frame)
+                        Color.clear.onChange(of: PhoneLayout.keepOff(folds: folds, width: geometry.size.width), initial: true) { _, kept in
+                            inset = kept
+                        }
+                    }
+                }
+            }
+    }
+}
+
+extension View {
+    func phoneKeepsOffTheFold() -> some View { modifier(PhoneFoldSide()) }
+}
+
+/// INF-1208's direction A: whether a keyboard-will-show notice brings a keyboard on screen. When an iPhone Duo turns, or
+/// its window moves between its displays, iOS posts one whose keyboard frame has no height and no keyboard comes; the
+/// Done button and the message box's keyboard flag leave such a notice alone. A notice with no frame is believed.
+func phoneKeyboardArrives(_ note: Notification) -> Bool {
+    guard let end = (note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue else { return true }
+    return end.height > 0
+}
+
 /// INF-3468, the captain: "have a little margin between the focused textbox and the bottom edge of the card".
 enum PhoneTyping {
     /// The room under a card's text box that holds the keyboard: 16 points, the same as the box's inset from the card's

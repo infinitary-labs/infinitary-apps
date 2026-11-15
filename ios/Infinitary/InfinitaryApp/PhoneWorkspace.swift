@@ -106,12 +106,14 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
         _panels = State(initialValue: PhonePanelsModel(session: session, context: context))
     }
 
-    private var wide: Bool {
-        UIDevice.current.userInterfaceIdiom == .pad && horizontalSize == .regular && viewport.width > viewport.height
-    }
-    private var sidebarWidth: CGFloat { min(320, viewport.width * 0.32) }
+    /// INF-1208's direction A: the window's room decides, so an open iPhone Duo gets the iPad's sidebar (`PhoneLayout`).
+    private var wide: Bool { PhoneLayout.wide(horizontal: horizontalSize, vertical: verticalSize, size: viewport) }
+    /// INF-1208's direction A: on an open iPhone Duo the sidebar reaches the fold (`PhoneLayout.sidebarWidth`).
+    private var sidebarWidth: CGFloat { PhoneLayout.sidebarWidth(width: viewport.width, folds: folds) }
+    /// The window's division regions in the workspace's space, read from iOS 27.1; none before it.
+    @State private var folds: [CGRect] = []
     private enum Rail: Hashable { case tasks, activity, panels }
-    /// A landscape iPad always shows the stage with its sidebar, without losing the compact tab selection.
+    /// The wide layout (an iPad on its side, an open Duo) always shows the stage with its sidebar, without losing the compact tab selection.
     private var shown: PhoneTab { wideBar || homeAhead ? .home : selection }
     private var tabs: [PhoneTab] {
         PhoneTab.allCases.filter { ($0 != .tasks || tasks != nil) && ($0 != .panels || panels.available) }
@@ -131,7 +133,7 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
             if panels.available { tab(.panels) { noticed(PhonePanelsColumn(model: panels).background(PhoneTheme.background)) } }
         }
         .toolbar {
-            // INF-1062: the strip sits in the bar's middle; a landscape iPad shows the stage beside its sidebar and needs none.
+            // INF-1062: the strip sits in the bar's middle; the wide layout shows the stage beside its sidebar and needs none.
             if !wideBar {
                 ToolbarItem(placement: .principal) {
                     PhoneTabStrip(tabs: tabs, selection: $selection)
@@ -172,8 +174,8 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
         .onChange(of: shown == .home, initial: true) { _, visible in messageContext.cardsVisible = visible }
         // The message box is Home's alone, so a keyboard typing into it closes with the tab it leaves.
         .onChange(of: shown) { _, tab in if tab != .home { dismissPhoneKeyboard() } }
-        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
-            messageContext.keyboardUp = true
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { note in
+            if phoneKeyboardArrives(note) { messageContext.keyboardUp = true }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
             messageContext.keyboardUp = false
@@ -203,13 +205,16 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
             // Measure window space without treating the keyboard as an orientation change.
             GeometryReader { geometry in
                 Color.clear.onChange(of: geometry.size, initial: true) { _, size in viewport = size }
+                if #available(iOS 27.1, *) {
+                    let found = geometry.reservedRegions(kind: .division, options: .includeInactive).map(\.frame)
+                    Color.clear.onChange(of: found, initial: true) { _, found in folds = found }
+                }
             }.ignoresSafeArea(.keyboard)
         }
         .background {
             PhoneResizeWatch(resizing: resizing) { size in
                 // A rotation into the wide layout brings Home in before it starts, so Home turns with the window.
-                guard UIDevice.current.userInterfaceIdiom == .pad, horizontalSize == .regular, size.width > size.height,
-                      !wideBar, !homeAhead, selection != .home else { return false }
+                guard PhoneLayout.wide(horizontal: horizontalSize, vertical: verticalSize, size: size), !wideBar, !homeAhead, selection != .home else { return false }
                 homeAhead = true
                 let ended = resizing.ended
                 resizing.ended = { ended(); homeAhead = false }
@@ -266,6 +271,8 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
                         .padding(.bottom, composerAside ? PhoneTheme.space2 : 0)
                 }
             }
+            // INF-1208's direction A: on an open iPhone Duo the card and the message box keep to one side of its fold.
+            .phoneKeepsOffTheFold()
         }.phoneSceneBackdrop().background(PhoneTheme.background)
     }
 

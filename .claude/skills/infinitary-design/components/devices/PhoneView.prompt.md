@@ -119,7 +119,10 @@ The tab shows only while the computer has a panel to draw; Computer keeps its pl
 
 The compact shell switches between Home, Tasks, Activity and Panels with the strip in the top bar; there is no bottom tab bar.
 Tasks joins the strip when the task reader is present, never as an inert placeholder.
-Landscape iPad uses two columns: a sidebar with Activity and, when present, Tasks and Panels as a segmented control at its top, each scrolling alone, with the stage alongside at up to 560 points, and no strip in the bar.
+A window with room for two columns, an iPad on its side or an iPhone Duo open like a book, uses two columns: a sidebar with Activity and, when present, Tasks and Panels as a segmented control at its top, each scrolling alone, with the stage alongside at up to 560 points, and no strip in the bar.
+The window's room decides, regular in width and height and wider than tall, never the kind of device; a large iPhone on its side keeps the strip.
+On a foldable the stage, its card and the message box keep to the wider side of a fold that runs down the window, never across it.
+There the sidebar reaches the fold, so the sidebar fills the page left of it and Home the page right of it.
 Portrait and narrow multitasking return to one column with the strip; the tablet's width and height decide the layout, not its physical orientation alone.
 On any width the card with its pager, the message box, Tasks, Activity and Panels share one centred reading column of 560 points with its gutters, so the message box lines up with the card.
 Activity is newest first on both devices, following the captain's submitted answer over the plan's bottom-up sidebar sentence.

@@ -366,12 +366,17 @@ Both sit on the system's glass with the same headings and spacing: the computer'
 Leave, or Forget while out of reach, is the computer sheet's second section under its own heading.
 While the computer's Secrets are set up and open, Settings → Devices also shows Secrets approvals: the Approves secret uses switch, the code to compare with the computer's card, or that this device can allow uses, and Set up approvals again in place of the switch for a damaged record.
 While the keyboard is open, Done takes Settings' place in the leading slot and the Hide keyboard command (Shift-Command-K) dismisses it without sending or clearing the draft.
+A keyboard-will-show notice whose keyboard frame has no height brings no keyboard, so neither Done nor the message box's keyboard flag follow it (`phoneKeyboardArrives`): iOS posts one when an iPhone Duo turns or its window moves between its displays.
 The dismissal command does not belong to the keyboard’s transient accessory view.
 Apple's iPhone keyboard has no hide key and no app may add one, so while the software keyboard is up for a card's reply or the message box, a keyboard-down button sits inside that field just before its send circle, on an iPhone and an iPad alike (INF-3106, `PhoneHideKeyboard.swift`).
 It is a neutral circle the size of send's, drawn on send itself so the two share one center line however many lines the field holds, and it leaves with the keyboard; it takes no room above the keyboard, so the layout around the field stays as it was.
 The tabs read Home, Tasks, Activity and Panels, in that order; Panels shows only as "Panels" below says.
-The iPad's wide landscape workspace places a sidebar beside the stage, with Tasks, Activity and, when it shows, Panels as a segmented control at its top, opening on Tasks, each scrolling alone, keeps the composer at the stage's foot and shows no strip in the bar.
-Portrait or narrow multitasking returns to the strip; layout measurement excludes the keyboard.
+The wide workspace places a sidebar beside the stage, with Tasks, Activity and, when it shows, Panels as a segmented control at its top, opening on Tasks, each scrolling alone, keeps the composer at the stage's foot and shows no strip in the bar.
+The window's room decides it, never the kind of device (`PhoneLayout.wide`, INF-1208's direction A): a window regular in width and height and wider than tall, so an iPad on its side and an iPhone Duo open like a book, which is a phone to the code in every pose.
+A large iPhone on its side is compact in height and keeps the strip, as do portrait, narrow multitasking, a Duo closed and a Duo open on its side; layout measurement excludes the keyboard.
+On a foldable, Home's column of stage, card, pager and message box keeps to the wider side of a fold that runs down it (`PhoneLayout.keepOff`, `phoneKeepsOffTheFold`), so on an open Duo beside the sidebar the card sits right of the fold and the crew scene centres there.
+Where a fold runs down the window past the sidebar's usual share, the sidebar reaches the fold (`PhoneLayout.sidebarWidth`), so on an open Duo it fills the page left of the fold and Home the page right of it, with no strip of empty stage between them.
+It reads the window's division regions from iOS 27.1, frames that already hold Apple's margins, including an inactive fold, so nothing moves as the hinge bends; a fold across the window, as on a Duo open on its side, moves nothing, and before iOS 27.1 there is no fold to read.
 A rotation moves the sidebar and the stage with its animation, and nothing else enters or leaves the window inside it (INF-1590): views that did at times left one of its animations started and never stopped, and XCTest's wait for the app to settle then never ended.
 So a turn into landscape brings Home in just before its animation starts, laid out at once and unanimated, because Home put back after that animation came back short by a keyboard inset it took while out of the window.
 Home brought in that way is already laid out at the new size while the window is still upright, so the workspace's fill reaches past its foot and the system's white never shows.
@@ -406,6 +411,7 @@ The main thread only hands the renderer what it shows (the roster, the state, th
 That display link requests the permitted screen cadence up to 120 frames per second, with the iPhone ProMotion opt-in, and 30 while Low Power Mode is on (`PhoneSceneRate`, INF-3851).
 The render thread reads Low Power Mode at each frame and changes the link's range only when the rate changes; iOS still chooses the delivered cadence under power and thermal constraints.
 The clock advances by elapsed time, excludes hidden/background time and stops callbacks while hidden, inactive or under Reduce Motion, which shows a settled pose without emotes.
+The character's own clock (`CharacterDisplayClock`) ticks with the display its window is on, read from the window's scene, and moves to the other display when an iPhone Duo folds or opens; it never reads the main screen, which on a Duo is the outer display even while the inner one is lit.
 `scripts/generate-phone-scene.ts` generates native geometry, targets, timing and reply comparison traces from the desktop owners; the phone gate checks that they are current.
 Simulator callback timings measure that run, not physical ProMotion delivery, battery use or thermal behavior.
 The DEBUG-only cadence observer identifies its target drawing and records its mode, warmed heat and rotation so another window cannot contaminate a sample.

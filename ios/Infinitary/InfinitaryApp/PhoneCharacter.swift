@@ -30,6 +30,7 @@ struct PhoneCharacter: View {
         .onDisappear { visible = false; clock.setRunning(false); CharacterCues.left(motion) }
         .onChange(of: reduceMotion) { _, _ in syncClock() }
         .onChange(of: phase) { _, _ in syncClock() }
+        .background { PhoneWindowSceneReader { clock.show(in: $0) }.accessibilityHidden(true) }
     }
 
     private func syncClock() {

@@ -32,19 +32,24 @@ export type OwnDisplay = { display: string; stop: () => void };
 /**
  * Starts the display and points this process at it (`DISPLAY`,
  * `XAUTHORITY`); null with no Xvfb on the search path, or one that would not
- * start. Never on a system other than Linux, or in a Wayland session, where
- * Chromium chose Wayland at its start and would never open an X display.
+ * start. Never on a system other than Linux, or where Chromium chose Wayland,
+ * since it chooses once at its start, before this code runs, and would then
+ * never open an X display. Electron writes its choice into the command line
+ * (`--ozone-platform`): Wayland whenever `XDG_SESSION_TYPE` says `wayland`
+ * and no switch names another, whatever display variables there are.
  */
 export async function startOwnDisplay(options: {
   platform: string;
   env: NodeJS.ProcessEnv;
+  /** Chromium's display system, `app.commandLine.getSwitchValue("ozone-platform")`. */
+  chromiumPlatform: string;
   /** The work folder, which keeps the display's key. */
   dataDir: string;
   /** The Xvfb to run; the search path's by default. */
   xvfb?: string;
 }): Promise<OwnDisplay | null> {
   const { env } = options;
-  if (options.platform !== "linux" || env.WAYLAND_DISPLAY) return null;
+  if (options.platform !== "linux" || options.chromiumPlatform === "wayland") return null;
   const xvfb = options.xvfb ?? findOnPath("Xvfb", hostEnv());
   if (!xvfb) return null;
   mkdirSync(options.dataDir, { recursive: true, mode: 0o700 });

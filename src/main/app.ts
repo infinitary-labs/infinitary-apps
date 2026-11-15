@@ -382,6 +382,7 @@ export async function startApp(
       await startOwnDisplay({
         platform: hostPlatform(),
         env: process.env,
+        chromiumPlatform: app.commandLine.getSwitchValue("ozone-platform"),
         dataDir: app.getPath("userData"),
       }),
     );

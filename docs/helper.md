@@ -252,7 +252,8 @@ For a computer added by address the home's SSH connection still supplies the rou
 This adds no startup adapter or container configuration, and neither linger, removing and re-adding, nor updating supplies a missing supported startup system.
 Whether it runs is `ActiveState`, the property systemd answers, never its words.
 Taking it away removes the link first, so it never starts at another login, then the unit; then systemd reads the folder again, forgets a failed state, and stops it without waiting, since the run asking may be the service itself.
-The run draws on a display of its own (below, "No screen needed"), so the unit leaves out a Wayland session's display it might inherit (`UnsetEnvironment=WAYLAND_DISPLAY`).
+The run draws on a display of its own (below, "No screen needed"), so the unit's command names Chromium's X11 platform (`--ozone-platform=x11` before `work run`) and the unit leaves out a Wayland session's display it might inherit (`UnsetEnvironment=WAYLAND_DISPLAY`).
+Chromium chooses its platform once, at its start, before the app's code runs, and left to choose, Electron picks Wayland whenever `XDG_SESSION_TYPE` says `wayland`, which a compositor such as niri puts into the user's systemd; only the command line overrides that, whatever the session's variables say.
 A computer whose search path holds no systemctl sets nothing up in the background: its work runs only while someone runs `work run`.
 
 A development run may stand in its own service manager with `INFINITARY_LAUNCHCTL` on a Mac or `INFINITARY_SYSTEMCTL` on Linux, and carries its stand-ins (`INFINITARY_HELPER_DATA_DIR`, `INFINITARY_FOLDER_SPELLING`, `INFINITARY_DEVICE_NAME`, `INFINITARY_LAUNCHCTL`, `INFINITARY_SYSTEMCTL`, `INFINITARY_CLAUDE_CLI`, `INFINITARY_SYSTEM_GIT`, `PI_OFFLINE`) into the agent; one whose data a test isolated with `INFINITARY_HELPER_DATA_DIR` and no stand-in sets up nothing in the background, so no test ever loads an agent.
@@ -300,7 +301,7 @@ So the work mode on Linux draws on a display of its own, as Orca's windowless mo
 - **Gone when the work mode is.**
   Xvfb runs under a small keeper in a session of its own, which ends it once the work mode's end of its input closes, so the display outlives every window Chromium closes on the way out, and Ctrl-C in a terminal reaches the work mode alone; under systemd the stop reaches the run first and the keeper after it (above).
 - **Its own over the person's.**
-  It draws on its own display even inside a desktop session, which can end while the work runs on; only in a Wayland session, where Chromium chose Wayland at its start, does it draw on the session's.
+  It draws on its own display even inside a desktop session, which can end while the work runs on; only where Chromium chose Wayland at its start, which Electron writes into the command line (`--ozone-platform`), does it draw on the session's.
 - **No Xvfb.**
   Each Linux package requires it (`docs/linux-packages.md`); an AppImage cannot, so with no Xvfb the work mode draws on an X session's display when it has one, and otherwise says "Infinitary needs Xvfb to run work on a computer with no screen." and "Install Xvfb with your system's software, then run this again." and exits 1.
 

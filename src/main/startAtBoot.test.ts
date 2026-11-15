@@ -138,7 +138,7 @@ describe("starting at boot on Linux", () => {
       BOOT_WORDS.log(SERVICE),
     ]);
     const text = readFileSync(unit, "utf8");
-    expect(text).toContain('ExecStart="/opt/Infinitary/infinitary" "run"\n');
+    expect(text).toContain('ExecStart="/opt/Infinitary/infinitary" "--ozone-platform=x11" "run"\n');
     // An update's 75 starts the new version; a file to fix (78) is not retried.
     expect(text).toContain("Restart=on-failure\n");
     expect(text).toContain(`RestartPreventExitStatus=${RUN_SETTINGS_EXIT}\n`);
@@ -189,7 +189,7 @@ describe("starting at boot on Linux", () => {
     writeFileSync(join(root, "settings.json"), '{ "path": ["/usr/bin", "/bin"] }');
     await runStartAtBoot({ off: false, settings: "settings.json" }, c);
     expect(readFileSync(unit, "utf8")).toContain(
-      `ExecStart="/opt/Infinitary/infinitary" "run" "--settings" "${join(root, "settings.json")}"\n`,
+      `ExecStart="/opt/Infinitary/infinitary" "--ozone-platform=x11" "run" "--settings" "${join(root, "settings.json")}"\n`,
     );
 
     const fresh = context("on");

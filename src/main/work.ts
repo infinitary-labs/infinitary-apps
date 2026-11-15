@@ -98,7 +98,11 @@ export async function prepareWorkMode(args: readonly string[]): Promise<boolean>
   const platform = hostPlatform();
   if (platform !== "linux" || !DRAWING_COMMANDS.has(args[0] ?? "")) return true;
   const { place } = workContext();
-  if (await startOwnDisplay({ platform, env: process.env, dataDir: place.dataDir })) return true;
+  const chromiumPlatform = app.commandLine.getSwitchValue("ozone-platform");
+  if (
+    await startOwnDisplay({ platform, env: process.env, chromiumPlatform, dataDir: place.dataDir })
+  )
+    return true;
   if (process.env.DISPLAY || process.env.WAYLAND_DISPLAY) return true;
   process.stdout.write(`${helperWords.needsDisplay.join("\n")}\n`, () => app.exit(1));
   return false;

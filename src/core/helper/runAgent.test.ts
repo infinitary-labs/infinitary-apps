@@ -9,6 +9,7 @@ import {
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { execStart } from "../../../tests/helpers/unitExecStart";
 import { bootPlist, bootUnit, wantedBy } from "./background";
 import {
   loginAgentFile,
@@ -172,7 +173,7 @@ describe("the command the window starts, on Linux", () => {
       ["--user", "start", LABEL],
     ]);
     const text = readFileSync(unit, "utf8");
-    expect(text).toContain(`ExecStart="/usr/bin/infinitary" "run"`);
+    expect(text).toContain(`ExecStart="/usr/bin/infinitary" "--ozone-platform=x11" "run"`);
     expect(text).toContain("Restart=on-failure");
     expect(runAgentAtLogin(context)).toBe(false);
     setRunAgentAtLogin(context, true);
@@ -207,6 +208,43 @@ describe("the command the window starts, on Linux", () => {
     expect(readFileSync(unit, "utf8")).toBe(
       bootUnit({ launcher: context.launcher, env: context.env }),
     );
+  });
+
+  // A user's report on Infinitary 0.8.0 under niri, reproduced on a real niri session by INF-4321:
+  // niri puts XDG_SESSION_TYPE=wayland into the user's systemd, Electron picks Wayland from it,
+  // finds no display and ends, and systemd starts it again every ten seconds. Chromium chooses
+  // before the app's code runs, so the unit's command names X11, the run's own display, and the
+  // unit 0.8.0 wrote, word for word, is written again at the window's next start.
+  it("starts the run on X11 whatever session the user's systemd describes, even over 0.8.0's unit", async () => {
+    const { context, unit } = linux();
+    mkdirSync(dirname(unit), { recursive: true });
+    writeFileSync(
+      unit,
+      [
+        '# Infinitary started at boot for this user (docs/run.md, "Starting at boot").',
+        "[Unit]",
+        "Description=Infinitary",
+        "StartLimitIntervalSec=0",
+        "",
+        "[Service]",
+        "Type=simple",
+        "UnsetEnvironment=WAYLAND_DISPLAY",
+        'ExecStart="/usr/bin/infinitary" "run"',
+        "Restart=on-failure",
+        "RestartSec=10",
+        "RestartPreventExitStatus=78",
+        "TimeoutStopSec=20",
+        "KillMode=mixed",
+        "",
+        "[Install]",
+        "WantedBy=default.target",
+        "",
+      ].join("\n"),
+    );
+    await startRunAgent(context);
+    const text = readFileSync(unit, "utf8");
+    expect(text).toBe(bootUnit({ launcher: context.launcher, env: context.env }));
+    expect(execStart(text)).toEqual(["/usr/bin/infinitary", "--ozone-platform=x11", "run"]);
   });
 
   it("starts nothing with no user manager to start it, and forgets its unit on forget", async () => {

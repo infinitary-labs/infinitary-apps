@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "linux-wayland-background-run",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Your first mate starts on Linux desktops that use Wayland",
+      "body": "On some Linux desktops that use Wayland, the first mate's background service stopped every few seconds, and the window kept saying Infinitary stopped. The service now draws on its own hidden display there, so the first mate starts and stays running. Opening Infinitary once updates the service, with nothing for you to change by hand.",
+      "noPicture": "The fix is in how the background service starts on Linux; the window looks the same once the first mate runs.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

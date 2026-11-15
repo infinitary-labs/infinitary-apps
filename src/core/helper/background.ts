@@ -225,6 +225,15 @@ export function servicePlist(options: {
 }
 
 /**
+ * Chromium's display system for a Linux unit's run: X11, on the display the
+ * run starts of its own (src/main/ownDisplay.ts). Chromium chooses once, at
+ * its start, before the app's code runs, so only the command line can choose
+ * for it; left to choose, Electron picks Wayland from the session the user's
+ * systemd describes, a session the run must outlive and may not reach.
+ */
+const OWN_DISPLAY_SWITCH = "--ozone-platform=x11";
+
+/**
  * A Linux user's service: `<app> work run` started by that user's own
  * systemd whenever they are logged in (`WantedBy=default.target`), and again
  * ten seconds after it ends, as launchd keeps a Mac's agent alive. Like the
@@ -240,7 +249,13 @@ export function serviceUnit(options: {
   env: Readonly<Record<string, string>>;
 }): string {
   const log = unitValue(join(options.dataDir, "service.log"));
-  const words = [options.launcher.executable, ...options.launcher.args, "work", "run"];
+  const words = [
+    options.launcher.executable,
+    ...options.launcher.args,
+    OWN_DISPLAY_SWITCH,
+    "work",
+    "run",
+  ];
   return [
     '# Infinitary\'s work for this user (docs/helper.md, "In the background").',
     "[Unit]",
@@ -289,6 +304,7 @@ export function bootUnit(options: {
   const words = [
     options.launcher.executable,
     ...options.launcher.args,
+    OWN_DISPLAY_SWITCH,
     "run",
     ...(options.settings ? ["--settings", options.settings] : []),
   ];

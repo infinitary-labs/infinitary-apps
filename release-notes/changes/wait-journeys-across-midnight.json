@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "wait-journeys-across-midnight",
+      "reason": "Test-only: the wait-reason journeys print the same wait times on the app's minute clock and the test's own clock at any time of day, including across midnight; the app is unchanged."
+    }
+  ]
+}

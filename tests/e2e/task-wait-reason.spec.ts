@@ -97,6 +97,19 @@ async function cyanSpreads(page: Page): Promise<number[]> {
   });
 }
 
+/**
+ * A zone where it is about noon at `at` (INF-4246). A wait's time names its day only when that
+ * day is not today, and the app reads today from a minute clock (useMinute) that can trail this
+ * test's by up to a minute, so around midnight the two could disagree on today. A checks watch
+ * is armed at the real moment and reads a minute later, so no seeded time can keep its day off
+ * today; in this zone no midnight falls while the journey runs.
+ */
+function middayZone(at: number): string {
+  // Etc/GMT+N is N hours behind UTC, so it is noon there when UTC reads 12 + N.
+  const behind = new Date(at).getUTCHours() - 12;
+  return behind === 0 ? "Etc/UTC" : `Etc/GMT${behind > 0 ? "+" : ""}${behind}`;
+}
+
 function fixture(): string {
   const userDataDir = scratchDir("infinitary-wait-reason-");
   const db = openDatabase(userDataDir);
@@ -181,7 +194,12 @@ function fixture(): string {
 }
 
 test("a cardless wait opens its record with the reported reason, while a real choice opens its card", async () => {
-  const app = await launchApp({ userDataDir: fixture(), withMockProvider: true });
+  const zone = middayZone(Date.now());
+  const app = await launchApp({
+    userDataDir: fixture(),
+    withMockProvider: true,
+    env: { TZ: zone },
+  });
   try {
     const { page } = app;
     await resizeWindow(app.app, page, { width: 1440, height: 1000 });
@@ -259,7 +277,7 @@ test("a cardless wait opens its record with the reported reason, while a real ch
       ?.waits?.find((wait) => wait.kind === "checks");
     if (!watch) throw new Error("Missing current check watch");
     await expect(recordCard(page).locator("[data-task-watch]")).toHaveText(
-      taskWaitText(watch, Date.now()),
+      taskWaitText(watch, Date.now(), true, zone),
     );
     await expect(recordCard(page).locator("[data-record-status-reason]")).toHaveCount(0);
     if (dir) await regionShot(recordCard(page), join(dir, "checks-record.png"));
@@ -289,12 +307,17 @@ test("a queued premium ask held for premium allowance says in its record why it 
   const userDataDir = scratchDir("infinitary-held-ask-");
   const db = openDatabase(userDataDir);
   const tasks = new TaskService({ db, strict: true });
+  // Held since yesterday, so the day its wait was recorded is off today on the app's minute clock
+  // and this test's alike, even around midnight (INF-4246, see middayZone).
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
   seedTask(tasks, {
     id: "premium",
     title: "Redraw the harbour map",
     status: "queued",
     shape: { kind: "implement", premium_ask: true },
     gate: { kind: "quota-reset", ref: "bucket:premium" },
+    createdAt: yesterday.getTime(),
   });
   db.close();
   const app = await launchApp({ userDataDir, withMockProvider: true });
@@ -341,8 +364,14 @@ test("a queued premium ask held for premium allowance says in its record why it 
 test("grouped waits reconcile into kanban and task card, the hover stays short, and lists add nothing", async () => {
   const dir = scratchDir("infinitary-wait-views-");
   const db = openDatabase(dir);
-  const now = Date.now();
-  const tasks = new TaskService({ db, strict: true, now: () => now });
+  // A wait's time names its day only when that day is not today, and the app reads today from a
+  // minute clock (useMinute) that can trail this test's by up to a minute, so around midnight the
+  // two could disagree on today (INF-4246). These tasks were written yesterday and the
+  // continuation starts in two days: every day printed here is off today on both clocks.
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const tasks = new TaskService({ db, strict: true, now: () => yesterday.getTime() });
   seedTask(tasks, {
     id: "owner",
     title: "Prepare website update",
@@ -361,9 +390,9 @@ test("grouped waits reconcile into kanban and task card, the hover stays short, 
     text: "The website update is ready after its prerequisite.",
   });
   tasks.graph.link("owner", "waiter", "blocks", "crewmate", true);
-  const tomorrow = new Date(now);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  tasks.placement.setGate("waiter", { kind: "at-time", until: tomorrow.getTime() });
+  const continuation = new Date(today);
+  continuation.setDate(today.getDate() + 2);
+  tasks.placement.setGate("waiter", { kind: "at-time", until: continuation.getTime() });
   db.close();
   const launched = await launchApp({ userDataDir: dir, withMockProvider: true });
   const { app, page } = launched;

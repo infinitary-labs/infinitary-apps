@@ -1550,6 +1550,8 @@
 "phoneSettingsCapabilityRead" = "カード、アクティビティ、タスクを読み込みます。%1$@";
 "phoneSettingsConversationStays" = "会話はコンピューターに残ります。";
 "phoneSettingsDevices" = "デバイス";
+"phoneSettingsFoldSplit" = "折り目で分ける";
+"phoneSettingsFoldSplitScope" = "本のように開くと、このスマートフォンは折り目の片側に「タスク」と「アクティビティ」、もう片側に「ホーム」を表示します。オフにすると iPad と同じ配置になります。";
 "phoneSettingsGeneral" = "一般";
 "phoneSettingsGoogleSignedIn" = "サインイン済み";
 "phoneSettingsGoogleSignedOut" = "サインインしていません";

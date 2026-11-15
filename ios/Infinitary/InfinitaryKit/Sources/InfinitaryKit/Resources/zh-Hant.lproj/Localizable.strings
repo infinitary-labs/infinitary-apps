@@ -1550,6 +1550,8 @@
 "phoneSettingsCapabilityRead" = "讀取卡片、動態和任務。%1$@";
 "phoneSettingsConversationStays" = "對話會留在你的電腦上。";
 "phoneSettingsDevices" = "裝置";
+"phoneSettingsFoldSplit" = "在摺痕處分開";
+"phoneSettingsFoldSplitScope" = "像書一樣展開時，這支手機會在摺痕一側顯示「任務」和「動態」，另一側顯示「首頁」。關閉後會以 iPad 的方式排列。";
 "phoneSettingsGeneral" = "一般";
 "phoneSettingsGoogleSignedIn" = "已登入";
 "phoneSettingsGoogleSignedOut" = "未登入";

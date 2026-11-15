@@ -515,6 +515,8 @@
   "phoneSettingsCapabilityRead": "读取卡片、动态和任务。{update}",
   "phoneSettingsConversationStays": "对话保留在你的电脑上。",
   "phoneSettingsDevices": "设备",
+  "phoneSettingsFoldSplit": "在折痕处分开",
+  "phoneSettingsFoldSplitScope": "像书一样展开时，这部手机在折痕一侧显示任务和动态，另一侧显示主页。关闭后按 iPad 的方式排布。",
   "phoneSettingsGeneral": "通用",
   "phoneSettingsGoogleSignedIn": "已登录",
   "phoneSettingsGoogleSignedOut": "未登录",

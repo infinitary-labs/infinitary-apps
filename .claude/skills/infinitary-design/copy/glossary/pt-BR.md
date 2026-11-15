@@ -55,6 +55,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | file (to the backlog) | registrar no backlog | "Por que foi registrada". |
 | fingerprint (a computer's key) | impressão digital |  |
 | first mate | imediato | The Brazilian naval term for a ship's second-in-command; a common noun, lowercase: "seu imediato", "Imediato" only as a short label. |
+| fold (where an iPhone Duo folds) | a dobra | |
 | font (Settings → Appearance) | fonte | |
 | forget (a computer, on the phone) | Esquecer | Pairs with "Sair" for Leave. |
 | gate | crivo | What work passes before it merges: "passar por um crivo"; never "verificações", which are the checks. |

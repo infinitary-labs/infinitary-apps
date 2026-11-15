@@ -1550,6 +1550,8 @@
 "phoneSettingsCapabilityRead" = "Lit les cartes, l’Activité et les tâches. %1$@";
 "phoneSettingsConversationStays" = "La conversation reste sur votre ordinateur.";
 "phoneSettingsDevices" = "Appareils";
+"phoneSettingsFoldSplit" = "Séparer au pli";
+"phoneSettingsFoldSplitScope" = "Ouvert comme un livre, ce téléphone affiche Tâches et Activité d’un côté du pli et Accueil de l’autre. Désactivez-le pour une disposition comme sur un iPad.";
 "phoneSettingsGeneral" = "Général";
 "phoneSettingsGoogleSignedIn" = "Connecté";
 "phoneSettingsGoogleSignedOut" = "Non connecté";

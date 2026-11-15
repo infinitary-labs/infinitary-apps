@@ -610,6 +610,8 @@
   "phoneSettingsCapabilityRead": "يقرأ البطاقات والنشاط والمهام. {update}",
   "phoneSettingsConversationStays": "تبقى المحادثة على حاسوبك.",
   "phoneSettingsDevices": "الأجهزة",
+  "phoneSettingsFoldSplit": "التقسيم عند الطيّة",
+  "phoneSettingsFoldSplitScope": "عند فتح هذا الهاتف ككتاب، تظهر المهام والنشاط على جانب من الطيّة والرئيسية على الجانب الآخر. عند إيقافه، يُعرض كما يُعرض على iPad.",
   "phoneSettingsGeneral": "عام",
   "phoneSettingsGoogleSignedIn": "تم تسجيل الدخول",
   "phoneSettingsGoogleSignedOut": "لم يُسجَّل الدخول",

@@ -63,6 +63,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | file (to the backlog) | إدراج | Used only for the backlog, never for a task that starts now. |
 | fingerprint (a computer's key) | بصمة |  |
 | first mate | نائب القبطان | The ship's second-in-command, a common noun; used without "your" because the captain is the reader, and "النائب" only as the thread's one-word author tag. |
+| fold (where an iPhone Duo folds) | الطيّة | |
 | font (Settings → Appearance) | خط | |
 | form (a dialog to fill in) | استمارة | Never "نموذج", which names a model. |
 | gate (the checks work passes before it merges) | بوابة | As in "بوابة الجودة", the usual Arabic for a quality gate. |

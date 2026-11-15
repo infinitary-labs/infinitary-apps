@@ -1550,6 +1550,8 @@
 "phoneSettingsCapabilityRead" = "Lê cartões, Atividade e tarefas. %1$@";
 "phoneSettingsConversationStays" = "A conversa fica no seu computador.";
 "phoneSettingsDevices" = "Dispositivos";
+"phoneSettingsFoldSplit" = "Dividir na dobra";
+"phoneSettingsFoldSplitScope" = "Aberto como um livro, este celular mostra Tarefas e Atividade de um lado da dobra e Início do outro. Desligue para organizar como um iPad.";
 "phoneSettingsGeneral" = "Geral";
 "phoneSettingsGoogleSignedIn" = "Login feito";
 "phoneSettingsGoogleSignedOut" = "Sem login";

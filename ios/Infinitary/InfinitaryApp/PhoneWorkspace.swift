@@ -87,6 +87,7 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
     @Environment(\.horizontalSizeClass) private var horizontalSize
     @Environment(\.verticalSizeClass) private var verticalSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(PhoneAppearance.self) private var appearance: PhoneAppearance?
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
     @State private var viewport = CGSize.zero
     @State private var selection = PhoneTab.home
@@ -109,7 +110,9 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
     /// INF-1208's direction A: the window's room decides, so an open iPhone Duo gets the iPad's sidebar (`PhoneLayout`).
     private var wide: Bool { PhoneLayout.wide(horizontal: horizontalSize, vertical: verticalSize, size: viewport) }
     /// INF-1208's direction A: on an open iPhone Duo the sidebar reaches the fold (`PhoneLayout.sidebarWidth`).
-    private var sidebarWidth: CGFloat { PhoneLayout.sidebarWidth(width: viewport.width, folds: folds) }
+    private var sidebarWidth: CGFloat {
+        PhoneLayout.sidebarWidth(width: viewport.width, folds: PhoneLayout.heeded(folds: folds, split: appearance?.splitAtFold ?? true))
+    }
     /// The window's division regions in the workspace's space, read from iOS 27.1; none before it.
     @State private var folds: [CGRect] = []
     private enum Rail: Hashable { case tasks, activity, panels }
@@ -207,7 +210,11 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
                 Color.clear.onChange(of: geometry.size, initial: true) { _, size in viewport = size }
                 if #available(iOS 27.1, *) {
                     let found = geometry.reservedRegions(kind: .division, options: .includeInactive).map(\.frame)
-                    Color.clear.onChange(of: found, initial: true) { _, found in folds = found }
+                    Color.clear.onChange(of: found, initial: true) { _, found in
+                        folds = found
+                        // Split at the fold shows in Settings once this device has shown a fold.
+                        if PhoneLayout.foldsDown(found) { appearance?.sawFold() }
+                    }
                 }
             }.ignoresSafeArea(.keyboard)
         }

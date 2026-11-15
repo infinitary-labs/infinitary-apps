@@ -36,6 +36,13 @@ enum PhoneLayout {
     }
     struct FoldInset: Equatable { var leading: CGFloat = 0; var trailing: CGFloat = 0 }
 
+    /// The folds the layout heeds: every one while Split at the fold is on, none while it is off, so an open Duo then
+    /// lays out as an iPad does, its sidebar at the iPad's share and Home's card centred across the fold.
+    static func heeded(folds: [CGRect], split: Bool) -> [CGRect] { split ? folds : [] }
+
+    /// Whether a window's division regions hold a fold running down it, as an iPhone Duo open like a book has.
+    static func foldsDown(_ folds: [CGRect]) -> Bool { folds.contains { $0.height > $0.width } }
+
     /// The sidebar's width in the wide layout: the iPad's share of the window, or, where a fold runs down the window past
     /// that share, the room up to the fold, so the sidebar fills the page left of it and Home the page right of it, with
     /// no strip of empty stage between the sidebar and the fold. Folds are the window's division regions in the
@@ -51,13 +58,15 @@ enum PhoneLayout {
 /// region is read from iOS 27.1, flat or folded, so the layout does not jump as the hinge moves; before iOS 27.1 there
 /// is no fold to read and nothing moves.
 private struct PhoneFoldSide: ViewModifier {
+    @Environment(PhoneAppearance.self) private var appearance: PhoneAppearance?
     @State private var inset = PhoneLayout.FoldInset()
     func body(content: Content) -> some View {
         content.padding(.leading, inset.leading).padding(.trailing, inset.trailing)
             .background {
                 if #available(iOS 27.1, *) {
                     GeometryReader { geometry in
-                        let folds = geometry.reservedRegions(kind: .division, options: .includeInactive).map(\.frame)
+                        let found = geometry.reservedRegions(kind: .division, options: .includeInactive).map(\.frame)
+                        let folds = PhoneLayout.heeded(folds: found, split: appearance?.splitAtFold ?? true)
                         Color.clear.onChange(of: PhoneLayout.keepOff(folds: folds, width: geometry.size.width), initial: true) { _, kept in
                             inset = kept
                         }

@@ -60,6 +60,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | file (to the backlog) | classer | "Pourquoi elle a été classée"; only for the backlog. |
 | fingerprint (a computer's key) | empreinte |  |
 | first mate | second | The French navy and merchant-marine term for a ship's second-in-command ("le second"); a common noun, "votre second", "Second" only as a short label or at a sentence start. |
+| fold (where an iPhone Duo folds) | le pli | |
 | font (Settings → Appearance) | police | |
 | gate (the checks work passes before it merges) | point de contrôle | "Ici, rien ne passe par un point de contrôle"; kept apart from "les vérifications". |
 | header (a request's) | en-tête | Masculine: "un en-tête". |

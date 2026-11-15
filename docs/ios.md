@@ -350,7 +350,7 @@ The names, the sheet's own Settings title and Back are the catalog's messages, n
 The phone's four own sections, Settings, Done and Back to Settings are the phone's own messages (`PhoneMessages.phoneSettings…`, `phoneCommonSettings`, `phoneCommonDone`); the five pages read from the computer take the computer's own tab names (`PhoneMessages.panelSettings…`).
 Back's spoken name on a page under a section is `phoneSettingsBackTo`, and from a page under a page it is the shared `shellTopBarBack`.
 Each row has its name, one current-state line and a chevron, with no icon, and opens its page inside the same sheet on iPhone and iPad alike.
-General holds Infinitary and its version, Appearance holds Theme, Integrations holds Google on the computer it controls (below), and Devices holds This phone (This iPad on a tablet), what it can do and the existing Approves secret uses switch while the computer offers it.
+General holds Infinitary and its version, Appearance holds Theme, Language and, on a device that folds, Split at the fold, Integrations holds Google on the computer it controls (below), and Devices holds This phone (This iPad on a tablet), what it can do and the existing Approves secret uses switch while the computer offers it.
 Projects, Intelligence, Runbooks, Usage and Automation are the computer's own pages ("Settings pages in the computer's words", below).
 Back goes one page back, from a page under a section to that section and from a section to the list, Command-[ presses Back, Done closes from any page, and Command-Comma opens the list.
 The list starts focused on General; arrow keys move among the rows and Return or Space opens the focused section, with native keyboard focus on its controls.
@@ -362,6 +362,11 @@ The choice is saved in the app's own defaults, never in the connection file, so 
 It never reaches the computer, and the computer's Theme never reaches the phone; asking the first mate to switch the theme still switches the computer's.
 Under Theme, Language names the language the phone speaks, in that language, and opens Infinitary's page in iOS Settings, where iOS sets it; the line above it says the computer keeps its own language, which the crew writes in (`docs/i18n.md`, "On the phone").
 Tab or the down arrow from Theme reaches the row, Return or Space opens it, and the up arrow goes back to Theme.
+Under Language, on a device that has shown a fold running down its window (an iPhone Duo open like a book), Split at the fold is this device's own switch (`PhoneFoldSplit`), saved beside Theme and never sent to the computer.
+It starts on; off, the layout heeds no fold, so the open Duo lays out as an iPad does: the sidebar at the iPad's share and Home's card centred across the fold (`PhoneLayout.heeded`).
+Whether the device has shown such a fold is saved too, so the switch stays while the Duo is closed, and a device that never folds never shows it.
+Tab or the down arrow from Language reaches it, Return or Space turns it, and the up arrow goes back to Language.
+The join part's Appearance steps drive it by keys on a simulator launched with `INFINITARY_FOLD_SEEN`, which only a simulator build reads beside `INFINITARY_ISOLATED_PHONE_TEST`, to save that a fold was seen.
 The launch screen, which iOS draws before the app runs, keeps the device's own appearance.
 While Appearance is open the control holds focus and the left and right arrow keys move the choice, with no command of its own; an unseen shortcut under the sheet never hears an unmodified arrow.
 `PhoneLookTests` holds the saved choice, and the join-read part chooses Dark on a light simulator, sees it drawn dark before and after a relaunch, and chooses Device again by keyboard.
@@ -382,6 +387,7 @@ The phone check's journeys follow the same rule: a step that differs by layout r
 They read the kind of device only for what the iPad itself has: its words, its keyboard's suggestion row and its number-pad popover.
 On a foldable, Home's column of stage, card, pager and message box keeps to the wider side of a fold that runs down it (`PhoneLayout.keepOff`, `phoneKeepsOffTheFold`), so on an open Duo beside the sidebar the card sits right of the fold and the crew scene centres there.
 Where a fold runs down the window past the sidebar's usual share, the sidebar reaches the fold (`PhoneLayout.sidebarWidth`), so on an open Duo it fills the page left of the fold and Home the page right of it, with no strip of empty stage between them.
+Both follow Split at the fold under Settings → Appearance; with it off neither moves, as on an iPad.
 It reads the window's division regions from iOS 27.1, frames that already hold Apple's margins, including an inactive fold, so nothing moves as the hinge bends; a fold across the window, as on a Duo open on its side, moves nothing, and before iOS 27.1 there is no fold to read.
 A rotation moves the sidebar and the stage with its animation, and nothing else enters or leaves the window inside it (INF-1590): views that did at times left one of its animations started and never stopped, and XCTest's wait for the app to settle then never ended.
 So a turn into landscape brings Home in just before its animation starts, laid out at once and unanimated, because Home put back after that animation came back short by a keyboard inset it took while out of the window.

@@ -534,6 +534,8 @@
   "phoneSettingsCapabilityRead": "Liest Karten, Aktivität und Aufgaben. {update}",
   "phoneSettingsConversationStays": "Die Unterhaltung bleibt auf deinem Computer.",
   "phoneSettingsDevices": "Geräte",
+  "phoneSettingsFoldSplit": "An der Falz teilen",
+  "phoneSettingsFoldSplitScope": "Wie ein Buch aufgeklappt zeigt dieses Telefon Aufgaben und Aktivität auf der einen Seite der Falz und die Übersicht auf der anderen. Schalte es aus, damit es sich wie ein iPad anordnet.",
   "phoneSettingsGeneral": "Allgemein",
   "phoneSettingsGoogleSignedIn": "Angemeldet",
   "phoneSettingsGoogleSignedOut": "Nicht angemeldet",

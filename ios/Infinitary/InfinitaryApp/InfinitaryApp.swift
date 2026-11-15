@@ -3,7 +3,7 @@ import SwiftUI
 
 @main struct InfinitaryApp: App {
     @State private var model = PhoneModel()
-    @State private var appearance = PhoneAppearance()
+    @State private var appearance: PhoneAppearance
     @Environment(\.scenePhase) private var phase
 
     init() {
@@ -13,7 +13,12 @@ import SwiftUI
         if environment["INFINITARY_ISOLATED_PHONE_TEST"] == "1", environment["INFINITARY_DAMAGED_APPROVAL"] == "1" {
             ApprovalKey.damageForPhoneCheck()
         }
+        // The join part's Appearance steps ask a simulator with no fold to show Split at the fold, as an open Duo would.
+        if environment["INFINITARY_ISOLATED_PHONE_TEST"] == "1", environment["INFINITARY_FOLD_SEEN"] == "1" {
+            PhoneFoldSplit.saveFoldSeen()
+        }
         #endif
+        _appearance = State(initialValue: PhoneAppearance())
     }
 
     var body: some Scene {

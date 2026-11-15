@@ -1550,6 +1550,8 @@
 "phoneSettingsCapabilityRead" = "Lee tarjetas, Actividad y tareas. %1$@";
 "phoneSettingsConversationStays" = "La conversación se queda en tu computadora.";
 "phoneSettingsDevices" = "Dispositivos";
+"phoneSettingsFoldSplit" = "Dividir en el pliegue";
+"phoneSettingsFoldSplitScope" = "Abierto como un libro, este teléfono muestra Tareas y Actividad a un lado del pliegue e Inicio al otro. Desactívalo para que se organice como un iPad.";
 "phoneSettingsGeneral" = "General";
 "phoneSettingsGoogleSignedIn" = "Sesión iniciada";
 "phoneSettingsGoogleSignedOut" = "Sin sesión iniciada";

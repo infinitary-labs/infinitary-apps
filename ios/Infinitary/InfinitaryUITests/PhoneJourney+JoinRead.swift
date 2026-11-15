@@ -91,6 +91,7 @@ extension PhoneJourney {
         app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: [])
         app.typeKey("\n", modifierFlags: [])
         try await phoneTheme()
+        try await phoneFoldSplit()
         try await settingsBack()
         XCTAssertTrue(app.staticTexts["Theme: Device"].exists, "The list reads the current saved choice")
         XCTAssertTrue(app.staticTexts["Google: Not signed in"].exists, "The list reads the computer's Google state")
@@ -245,5 +246,48 @@ extension PhoneJourney {
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: theme.buttons["Device"], timeout: 10),
                        .completed, "In Settings the left arrow moves the theme from Dark to Device")
         try drawn("phone-theme-device", dark: false)
+    }
+
+    /// The captain's Split at the fold switch by keys, on a simulator told at launch that it has seen a fold, as an open
+    /// iPhone Duo would: Theme holds focus as Appearance opens, the down arrow passes Language to the switch, Space and
+    /// Return each flip it, and the choice it was left at survives a relaunch. Leaves Appearance open with the switch off.
+    /// Data: the join part's test home. Resources: this part's own simulator; no account or signing.
+    func phoneFoldSplit() async throws {
+        app.launchEnvironment["INFINITARY_FOLD_SEEN"] = "1"
+        app.terminate(); try await launchPhoneApp(app)
+        app.launchEnvironment.removeValue(forKey: "INFINITARY_FOLD_SEEN")
+        reach("In reach", timeout: 20)
+        try await openAppearanceByKeys()
+        let split = app.switches["phone-fold-split"]
+        XCTAssertTrue(split.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(split.value as? String, "1", "Split at the fold starts on")
+        waitForSteadyTarget(app.segmentedControls["phone-theme"])
+        // As phoneTheme's arrow, each unmodified key is one actual input with visible-result proof, no wait or retry.
+        app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: [])
+        app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: [])
+        app.typeKey(" ", modifierFlags: [])
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == '0'"), object: split, timeout: 10), .completed,
+                       "Down past Language reaches the switch and Space turns it off: \(app.debugDescription)")
+        // As PhoneKeys owns, Xcode emits the physical Return for LF, not CR.
+        app.typeKey("\n", modifierFlags: [])
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == '1'"), object: split, timeout: 10), .completed,
+                       "Return turns the switch back on")
+        app.typeKey(" ", modifierFlags: [])
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == '0'"), object: split, timeout: 10), .completed,
+                       "Space turns it off again")
+        app.terminate(); try await launchPhoneApp(app)
+        reach("In reach", timeout: 20)
+        try await openAppearanceByKeys()
+        XCTAssertTrue(split.waitForPresence(timeout: 10), "The switch stays once a fold was seen: \(app.debugDescription)")
+        XCTAssertEqual(split.value as? String, "0", "The choice survives a relaunch")
+    }
+
+    /// Command-Comma opens Settings' list and Appearance opens from it.
+    private func openAppearanceByKeys() async throws {
+        try await pressPhoneKey(",", modifiers: .command, in: app)
+        let appearance = app.buttons["phone-settings-appearance"]
+        XCTAssertTrue(appearance.waitForPresence(timeout: 10), app.debugDescription)
+        tapOnPhone(appearance)
+        XCTAssertTrue(app.segmentedControls["phone-theme"].waitForPresence(timeout: 10), app.debugDescription)
     }
 }

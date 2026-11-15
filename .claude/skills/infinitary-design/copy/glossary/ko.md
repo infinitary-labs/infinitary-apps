@@ -61,6 +61,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | file (to the backlog) | 백로그에 등록 | "Why it was filed" is 등록한 이유 |
 | fingerprint (a computer's key) | 지문 |  |
 | first mate | 일등항해사 | The ship's second-in-command, a common noun; the thread's short author tag is 항해사 |
+| fold (where an iPhone Duo folds) | 접히는 부분 | |
 | font (Settings → Appearance) | 글꼴 | |
 | forget (a computer, on the phone) | 지우기 | As iOS forgets a network; kept apart from 제거 and 나가기. |
 | gate | 관문 | What work passes before it merges; kept apart from 검사 |

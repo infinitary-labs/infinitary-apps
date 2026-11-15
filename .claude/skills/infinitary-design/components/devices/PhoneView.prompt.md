@@ -53,7 +53,7 @@ The computer button opens a native sheet with the computer's name, its reach and
 The Settings button, the Lucide gear, opens a sheet at full height on a list of General, Appearance, Projects, Intelligence, Runbooks, Usage, Automation, Integrations and Devices, the desktop's names in the desktop's order.
 Each row has no icon: its section name, one current-state line and a trailing chevron, in the shared list shape.
 A row opens its page in the same sheet, on iPad as on iPhone, never a sidebar.
-General shows Infinitary and the version, Appearance shows Theme, and Devices shows This phone (This iPad on a tablet), its current capability and the existing Approves secret uses switch when the computer offers it.
+General shows Infinitary and the version, Appearance shows Theme, Language and, on a device that folds, Split at the fold, and Devices shows This phone (This iPad on a tablet), its current capability and the existing Approves secret uses switch when the computer offers it.
 Sections with nothing to show stay off the list.
 Back returns one page, with Command-[ from the keyboard, and Done closes from any page.
 The list starts focused on General, arrow keys move between its rows and bring the one they reach into view, and Return or Space opens one; native controls retain their keyboard focus treatment.
@@ -124,6 +124,7 @@ A window with room for two columns, an iPad on its side or an iPhone Duo open li
 The window's room decides, regular in width and height and wider than tall, never the kind of device; a large iPhone on its side keeps the strip.
 On a foldable the stage, its card and the message box keep to the wider side of a fold that runs down the window, never across it.
 There the sidebar reaches the fold, so the sidebar fills the page left of it and Home the page right of it.
+Split at the fold, a switch under Settings → Appearance on a device that folds, starts on; off, the open Duo lays out as an iPad does, its card centred across the fold.
 Portrait and narrow multitasking return to one column with the strip; the tablet's width and height decide the layout, not its physical orientation alone.
 On any width the card with its pager, the message box, Tasks, Activity and Panels share one centred reading column of 560 points with its gutters, so the message box lines up with the card.
 Activity is newest first on both devices, following the captain's submitted answer over the plan's bottom-up sidebar sentence.

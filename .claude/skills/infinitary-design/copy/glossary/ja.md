@@ -68,6 +68,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | finding | 知見 | A recorded claim with evidence, as on cards. |
 | fingerprint (a computer's key) | フィンガープリント | 指紋 would read as Touch ID. |
 | first mate | 一等航海士 | The ship's officer term, a common noun; the thread's short author label is 航海士. |
+| fold (where an iPhone Duo folds) | 折り目 | |
 | font (Settings → Appearance) | フォント | |
 | forget (a computer, on the phone) | 登録を解除 | Kept apart from 削除 (Remove) and 離脱 (Leave). |
 | gate | 関門 | The checks work passes before it merges; ゲート would read as a physical gate. |

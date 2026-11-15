@@ -166,6 +166,19 @@ import XCTest
         XCTAssertEqual(PhoneLayout.sidebarWidth(width: 867, folds: [CGRect(x: 0, y: 455, width: 867, height: 40)]), 867 * 0.32)
     }
 
+    /// The captain: "is there a way for the user to not split the view, but instead see what an ipad would see?" With
+    /// Split at the fold off, the open Duo's fold moves nothing: the sidebar keeps the iPad's share and Home's card
+    /// stays centred across the fold. On, it splits as before; the switch shows once a fold runs down a window.
+    func testSplitAtTheFoldOffLaysOutAsAnIPad() {
+        let fold = CGRect(x: 455, y: 0, width: 40, height: 669)
+        XCTAssertEqual(PhoneLayout.heeded(folds: [fold], split: false), [])
+        XCTAssertEqual(PhoneLayout.heeded(folds: [fold], split: true), [fold])
+        XCTAssertTrue(PhoneLayout.foldsDown([fold]))
+        // Open on its side the fold runs across, and an iPad has none: neither brings the switch.
+        XCTAssertFalse(PhoneLayout.foldsDown([CGRect(x: 0, y: 455, width: 669, height: 40)]))
+        XCTAssertFalse(PhoneLayout.foldsDown([]))
+    }
+
     /// INF-1208's direction A: the probe's own readings of the notices iOS posts when a Duo turns or folds, beside a real
     /// keyboard's. Only a keyboard with height brings Done into Settings' place.
     func testOnlyAKeyboardWithHeightArrives() {

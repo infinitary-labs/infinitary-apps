@@ -61,6 +61,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | finding | 發現 | Counter 項, as on cards. |
 | fingerprint (a computer's key) | 指紋 |  |
 | first mate | 大副 | The ship's second-in-command in Chinese naval usage, written as a common noun, often 你的大副. |
+| fold (where an iPhone Duo folds) | 摺痕 | |
 | font (Settings → Appearance) | 字體 | |
 | forget (a computer, on the phone) | 忘記 | As Apple's 忘記此網路; Leave stays 退出. |
 | gate (the checks work passes before it merges) | 把關 | As in 不經過把關; 閘門 and 關卡 are avoided. |

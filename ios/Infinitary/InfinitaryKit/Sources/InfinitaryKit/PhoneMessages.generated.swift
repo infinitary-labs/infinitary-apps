@@ -1620,6 +1620,8 @@ public enum PhoneMessages {
     public static func `phoneSettingsCapabilityRead`(`update`: String) -> String { PhoneWords.format("phoneSettingsCapabilityRead", [`update`]) }
     public static func `phoneSettingsConversationStays`() -> String { PhoneWords.format("phoneSettingsConversationStays", []) }
     public static func `phoneSettingsDevices`() -> String { PhoneWords.format("phoneSettingsDevices", []) }
+    public static func `phoneSettingsFoldSplit`() -> String { PhoneWords.format("phoneSettingsFoldSplit", []) }
+    public static func `phoneSettingsFoldSplitScope`() -> String { PhoneWords.format("phoneSettingsFoldSplitScope", []) }
     public static func `phoneSettingsGeneral`() -> String { PhoneWords.format("phoneSettingsGeneral", []) }
     public static func `phoneSettingsGoogleSignedIn`() -> String { PhoneWords.format("phoneSettingsGoogleSignedIn", []) }
     public static func `phoneSettingsGoogleSignedOut`() -> String { PhoneWords.format("phoneSettingsGoogleSignedOut", []) }
@@ -4889,6 +4891,8 @@ extension PhoneWords {
         "phoneSettingsCapabilityRead": ["update"],
         "phoneSettingsConversationStays": [],
         "phoneSettingsDevices": [],
+        "phoneSettingsFoldSplit": [],
+        "phoneSettingsFoldSplitScope": [],
         "phoneSettingsGeneral": [],
         "phoneSettingsGoogleSignedIn": [],
         "phoneSettingsGoogleSignedOut": [],

@@ -6,8 +6,23 @@ import UIKit
 /// A change is saved at once, so it survives a relaunch and an update, and it is never sent to the computer.
 @MainActor @Observable final class PhoneAppearance {
     var look: PhoneLook { didSet { look.save() } }
+    /// The captain's Split at the fold (`PhoneFoldSplit`): off, an open iPhone Duo lays out as an iPad does.
+    var splitAtFold: Bool { didSet { PhoneFoldSplit.save(splitAtFold) } }
+    /// Whether this device has shown a fold, which brings Split at the fold into Settings → Appearance.
+    private(set) var foldSeen: Bool
 
-    init() { look = PhoneLook.saved() }
+    init() {
+        look = PhoneLook.saved()
+        splitAtFold = PhoneFoldSplit.saved()
+        foldSeen = PhoneFoldSplit.foldSeen()
+    }
+
+    /// A window reported a fold running down it, as an iPhone Duo open like a book does.
+    func sawFold() {
+        guard !foldSeen else { return }
+        foldSeen = true
+        PhoneFoldSplit.saveFoldSeen()
+    }
 
     /// The next choice to the left (-1) or right (1) of the current one, kept at the ends, as a segmented control's
     /// arrows move.

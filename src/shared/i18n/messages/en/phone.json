@@ -534,6 +534,8 @@
   "phoneSettingsCapabilityRead": "Reads cards, Activity and tasks. {update}",
   "phoneSettingsConversationStays": "Conversation stays on your computer.",
   "phoneSettingsDevices": "Devices",
+  "phoneSettingsFoldSplit": "Split at the fold",
+  "phoneSettingsFoldSplitScope": "Open like a book, this phone shows Tasks and Activity on one side of the fold and Home on the other. Turn it off to lay out as an iPad does.",
   "phoneSettingsGeneral": "General",
   "phoneSettingsGoogleSignedIn": "Signed in",
   "phoneSettingsGoogleSignedOut": "Not signed in",

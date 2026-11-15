@@ -14,6 +14,7 @@ struct PhoneSettingsSheet: View {
     @Environment(PhoneSettings.self) private var settings: PhoneSettings?
     @FocusState private var themeFocused: Bool
     @FocusState private var languageFocused: Bool
+    @FocusState private var foldFocused: Bool
     @Environment(\.openURL) private var openURL
     @State private var section: Section?
     /// The pages opened inside a section, outermost first: an automation, its review, a project.
@@ -394,6 +395,32 @@ struct PhoneSettingsSheet: View {
             .onKeyPress(.downArrow) { languageFocused = true; return .handled }
             .onAppear { themeFocused = true }
             language
+            if appearance.foldSeen { foldSplit(appearance) }
+        }
+    }
+
+    /// The captain, on an iPhone Duo open like a book: "is there a way for the user to not split the view, but instead
+    /// see what an ipad would see?" Split at the fold is this device's own switch (`PhoneFoldSplit`), on by default and
+    /// shown once the device has shown a fold. Tab, or the down arrow from Language, reaches it; Return or Space turns it,
+    /// and the up arrow goes back to Language.
+    private func foldSplit(_ appearance: PhoneAppearance) -> some View {
+        @Bindable var appearance = appearance
+        return VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+            HStack(spacing: PhoneTheme.space3) {
+                Text(PhoneMessages.phoneSettingsFoldSplit()).font(PhoneFont.headline)
+                Spacer(minLength: 0)
+                Toggle(PhoneMessages.phoneSettingsFoldSplit(), isOn: $appearance.splitAtFold)
+                    .labelsHidden().tint(PhoneTheme.accent)
+                    .focusable().focused($foldFocused)
+                    .onKeyPress(.return) { appearance.splitAtFold.toggle(); return .handled }
+                    .onKeyPress(.space) { appearance.splitAtFold.toggle(); return .handled }
+                    .onKeyPress(.upArrow) { languageFocused = true; return .handled }
+                    .overlay { if foldFocused { Capsule().strokeBorder(PhoneTheme.accent, lineWidth: 1.5).padding(-3) } }
+                    .accessibilityIdentifier("phone-fold-split")
+            }
+            .padding(.top, PhoneTheme.space3)
+            Text(PhoneMessages.phoneSettingsFoldSplitScope())
+                .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary).fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -415,6 +442,10 @@ struct PhoneSettingsSheet: View {
                 .onKeyPress(.return) { openLanguage(); return .handled }
                 .onKeyPress(.space) { openLanguage(); return .handled }
                 .onKeyPress(.upArrow) { themeFocused = true; return .handled }
+                .onKeyPress(.downArrow) {
+                    guard appearance?.foldSeen == true else { return .ignored }
+                    foldFocused = true; return .handled
+                }
                 .accessibilityIdentifier("phone-language")
             }
             .overlay { if languageFocused { RoundedRectangle(cornerRadius: PhoneTheme.cardRadius, style: .continuous).strokeBorder(PhoneTheme.accent, lineWidth: 1.5) } }

@@ -57,6 +57,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | file (to the backlog) | anotar | "Por qué se anotó"; only for the backlog, never for work that starts now. |
 | fingerprint (a computer's key) | huella digital |  |
 | first mate | primer oficial | The ship's officer who is second-in-command; a common noun, lowercase: "tu primer oficial", "Primer oficial" only as a short label; "oficial" alone in the thread's short author tag. |
+| fold (where an iPhone Duo folds) | el pliegue | |
 | font (Settings → Appearance) | fuente | |
 | gate | control | The checks work passes before it merges: "Aquí nada pasa por un control." |
 | header (a request's) | encabezado | |

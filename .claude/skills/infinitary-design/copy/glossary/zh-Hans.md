@@ -62,6 +62,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | finding | 发现 | Measure word 条, as on cards. |
 | fingerprint (a computer's key) | 指纹 |  |
 | first mate | 大副 | The ship's second-in-command, a common noun, never a name. |
+| fold (where an iPhone Duo folds) | 折痕 | |
 | font (Settings → Appearance) | 字体 | |
 | forget (a computer, on the phone) | 忘记 | Leave stays 离开. |
 | gate (the checks work passes before it merges) | 把关 | The same word as the Rigor setting: 不经过任何把关. |

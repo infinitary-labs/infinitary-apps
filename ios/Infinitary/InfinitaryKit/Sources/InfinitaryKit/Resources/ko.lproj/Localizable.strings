@@ -1550,6 +1550,8 @@
 "phoneSettingsCapabilityRead" = "카드, 활동, 작업을 읽어요. %1$@";
 "phoneSettingsConversationStays" = "대화는 컴퓨터에 머물러요.";
 "phoneSettingsDevices" = "기기";
+"phoneSettingsFoldSplit" = "접히는 부분에서 나누기";
+"phoneSettingsFoldSplitScope" = "책처럼 펼치면 이 휴대폰은 접히는 부분 한쪽에 작업과 활동을, 다른 쪽에 홈을 표시해요. 끄면 iPad처럼 배치돼요.";
 "phoneSettingsGeneral" = "일반";
 "phoneSettingsGoogleSignedIn" = "로그인됨";
 "phoneSettingsGoogleSignedOut" = "로그인 안 됨";

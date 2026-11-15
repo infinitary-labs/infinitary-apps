@@ -67,6 +67,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | fingerprint (a computer's key) | Fingerabdruck |  |
 | first mate | erster Offizier | The German merchant-navy rank for a ship's second-in-command; a common noun with a lowercase adjective mid-sentence ("dein erster Offizier"), "Erster Offizier" only at a sentence start or as a short label. |
 | first mate (thread author tag) | Offizier | The very short author label in a card's thread. |
+| fold (where an iPhone Duo folds) | die Falz | |
 | font (Settings → Appearance) | Schrift | |
 | forget (a computer, on the phone) | vergessen | Pairs with "Verlassen" for Leave. |
 | gate (what work passes before it merges) | Kontrolle | Kept apart from "Überprüfungen" and "Review". |

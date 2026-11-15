@@ -23,6 +23,10 @@ import { AUTOMATIC_COMPUTER, placementRequirementsSchema } from "@shared/placeme
 import {
   BATCH_HOST_REFUSAL,
   deliveryChoices,
+  NO_CHECKS_REFUSAL,
+  type NoChecksChange,
+  type NoChecksRecord,
+  noChecksRecordSchema,
   type ProjectsFolderView,
   type RepoDelivery,
   type RepoKind,
@@ -32,6 +36,7 @@ import {
   type RepoSetupResult,
   type RepoSetupSpec,
   type RepoView,
+  readsPullRequestChecks,
   repoHostFrom,
   runsHereOnly,
 } from "@shared/repos";
@@ -102,10 +107,11 @@ type Row = {
   placement_requirements_json?: string | null;
   contribution_json?: string | null;
   batch_json?: string | null;
+  no_checks_json?: string | null;
 };
 
 const ROW_COLUMNS =
-  "id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, contribution_json, batch_json";
+  "id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, contribution_json, batch_json, no_checks_json";
 
 function fromRow(row: Row): RepoView {
   const contribution = row.contribution_json ? JSON.parse(row.contribution_json) : null;
@@ -136,7 +142,18 @@ function fromRow(row: Row): RepoView {
         }
       : {}),
     ...(row.batch_json ? batchOf(row.batch_json) : {}),
+    ...(row.no_checks_json ? noChecksOf(row.no_checks_json) : {}),
   };
+}
+
+/** The record that the project runs no checks; a garbled value reads as none, so checks hold. */
+function noChecksOf(json: string): { noChecks?: NoChecksRecord } {
+  try {
+    const parsed = noChecksRecordSchema.safeParse(JSON.parse(json));
+    return parsed.success ? { noChecks: parsed.data } : {};
+  } catch {
+    return {};
+  }
 }
 
 /** The saved line and open batch; a garbled value reads as none. */
@@ -262,6 +279,8 @@ export class RepoRegistry {
   private readonly runsOnListeners = new Set<(repo: RepoView) => void>();
   /** Who hears a project's line of approved changes or its open batch change (`onBatch`). */
   private readonly batchListeners = new Set<(repo: RepoView) => void>();
+  /** Who hears the app start or end a project's no-checks record (`onNoChecks`). */
+  private readonly noChecksListeners = new Set<(repo: RepoView, change: NoChecksChange) => void>();
 
   constructor(
     private readonly db: AppDatabase,
@@ -603,6 +622,11 @@ export class RepoRegistry {
           this.db.prepare("UPDATE repos SET contribution_json = NULL WHERE id = ?").run(id);
         if (changes.costLimit !== undefined)
           this.costLimits.setLimit("project", id, changes.costLimit, Date.now());
+        // Off keeps a record already there, with the task and evidence that started it.
+        if (changes.requireChecks !== undefined && changes.requireChecks === !!repo.noChecks)
+          this.db
+            .prepare("UPDATE repos SET no_checks_json = ? WHERE id = ?")
+            .run(changes.requireChecks ? null : JSON.stringify({ at: Date.now() }), id);
         this.projects.renameForRepo(id, name);
       })();
     } catch (error) {
@@ -668,6 +692,18 @@ export class RepoRegistry {
       !deliveryChoices(host).includes("queue-pr")
     )
       throw new Error(BATCH_HOST_REFUSAL);
+    // Only a project that reads pull request checks, as this patch leaves
+    // it, may record that it runs none: a local merge reads no checks.
+    if (
+      changes.requireChecks === false &&
+      !readsPullRequestChecks({
+        kind: repo.kind,
+        delivery: changes.delivery ?? repo.delivery,
+        origin: changes.origin === undefined ? repo.origin : changes.origin,
+        host,
+      })
+    )
+      throw new Error(NO_CHECKS_REFUSAL);
     if (
       name !== repo.name &&
       (!/^[\w][\w.-]*$/.test(name) || this.nameTaken(name, undefined, ownFolder))
@@ -766,6 +802,48 @@ export class RepoRegistry {
   /** Keep that the app looked in this project for the team queue's files. */
   recordTeamQueueLooked(id: string): void {
     this.db.prepare("UPDATE repos SET queue_offered = 0 WHERE id = ?").run(id);
+  }
+
+  /**
+   * Record that a project runs no pull request checks, from a crewmate's
+   * declaration with its task, version and evidence (docs/forge.md, "A
+   * project with no checks"). A record already there is kept as it is.
+   */
+  recordNoChecks(id: string, record: NoChecksRecord): RepoView | undefined {
+    const repo = this.get(id);
+    if (!repo || repo.kind === "personal") return undefined;
+    if (repo.noChecks) return repo;
+    this.db
+      .prepare("UPDATE repos SET no_checks_json = ? WHERE id = ?")
+      .run(JSON.stringify(noChecksRecordSchema.parse(record)), id);
+    this.projection?.delete(id);
+    const next = this.get(id) as RepoView;
+    for (const listener of [...this.noChecksListeners])
+      listener(next, { kind: "recorded", record });
+    return next;
+  }
+
+  /**
+   * End a project's no-checks record because a check ran on one of its
+   * changes: its checks hold the merge again. `check` names that check and
+   * `change` the change it ran on, in the host's words.
+   */
+  endNoChecks(id: string, ran: { check: string; change: string }): RepoView | undefined {
+    const repo = this.get(id);
+    if (!repo?.noChecks) return undefined;
+    this.db.prepare("UPDATE repos SET no_checks_json = NULL WHERE id = ?").run(id);
+    this.projection?.delete(id);
+    const next = this.get(id) as RepoView;
+    for (const listener of [...this.noChecksListeners]) listener(next, { kind: "ended", ...ran });
+    return next;
+  }
+
+  /** Hears the app start or end a project's no-checks record, after it is written. */
+  onNoChecks(listener: (repo: RepoView, change: NoChecksChange) => void): () => void {
+    this.noChecksListeners.add(listener);
+    return () => {
+      this.noChecksListeners.delete(listener);
+    };
   }
 
   /** Hears each change of a project's line or open batch, after it is written; answers its own unsubscribe. */

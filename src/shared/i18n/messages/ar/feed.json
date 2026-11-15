@@ -40,6 +40,8 @@
   "feedMergesOnItsOwn": "يدمج تلقائيًا",
   "feedMoved": "نُقلت إلى نموذج أقوى: تستمر باسم {key}",
   "feedMovedOnTier": "نُقلت إلى نموذج أقوى: {tier}؛ تستمر باسم {key}",
+  "feedNoChecksEnded": "المشروع {name} · يطلب فحوصات طلبات السحب من جديد: عمل {check} على {change}.",
+  "feedNoChecksRecorded": "المشروع {name} · لا يشغّل فحوصات طلبات السحب، كما وجد فرد طاقم {task}. تُدمج تغييراته دون انتظار الفحوصات.",
   "feedNoted": "ملاحظة: {text}",
   "feedPersonalized": "نائب القبطان · خصّص: {text}",
   "feedProblem": "مشكلة: {problem}",

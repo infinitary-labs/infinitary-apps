@@ -636,6 +636,8 @@
 "feedMergesOnItsOwn" = "يدمج تلقائيًا";
 "feedMoved" = "نُقلت إلى نموذج أقوى: تستمر باسم %1$@";
 "feedMovedOnTier" = "نُقلت إلى نموذج أقوى: %2$@؛ تستمر باسم %1$@";
+"feedNoChecksEnded" = "المشروع %3$@ · يطلب فحوصات طلبات السحب من جديد: عمل %2$@ على %1$@.";
+"feedNoChecksRecorded" = "المشروع %1$@ · لا يشغّل فحوصات طلبات السحب، كما وجد فرد طاقم %2$@. تُدمج تغييراته دون انتظار الفحوصات.";
 "feedNoted" = "ملاحظة: %1$@";
 "feedPersonalized" = "نائب القبطان · خصّص: %1$@";
 "feedProblem" = "مشكلة: %1$@";
@@ -2554,11 +2556,17 @@
 "settingsProjectsRemoveNamed" = "إزالة %1$@";
 "settingsProjectsRemoveTitle" = "إزالة المشروع";
 "settingsProjectsRemoving" = "جارٍ الإزالة...";
+"settingsProjectsRequireChecks" = "طلب فحوصات طلبات السحب";
+"settingsProjectsRequireChecksFound" = "متوقف منذ %1$@، حين لم يجد فرد طاقم %2$@ أي فحوصات.";
+"settingsProjectsRequireChecksOff" = "هذا المشروع لا يشغّل أي فحوصات، لذا تُدمج تغييراته دون انتظار. أول فحص يعمل يعيد تشغيل هذا الخيار.";
+"settingsProjectsRequireChecksOn" = "لا يُدمج التغيير إلا بعد أن تجتاز فحوصاته.";
+"settingsProjectsRequireChecksSince" = "متوقف منذ %1$@.";
 "settingsProjectsRigorDescription" = "مدى دقة فحص العمل هنا.";
 "settingsProjectsRowCare" = "العناية: %1$@";
 "settingsProjectsRowCollapsed" = "%1$@، مطويّ";
 "settingsProjectsRowExpanded" = "%1$@، موسّع";
 "settingsProjectsRowLinked" = "مرتبط";
+"settingsProjectsRowNoChecks" = "بلا فحوصات";
 "settingsProjectsRowPersonal" = "يُبنى في مكانه";
 "settingsProjectsRowRuns" = "يعمل %1$@";
 "settingsProjectsSaveDetails" = "حفظ التفاصيل";

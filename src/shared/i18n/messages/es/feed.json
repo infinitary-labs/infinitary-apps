@@ -40,6 +40,8 @@
   "feedMergesOnItsOwn": "fusiona por su cuenta",
   "feedMoved": "Pasó a un modelo más potente: continúa como {key}",
   "feedMovedOnTier": "Pasó a un modelo más potente: {tier}; continúa como {key}",
+  "feedNoChecksEnded": "Proyecto {name} · vuelve a exigir comprobaciones: {check} se ejecutó en {change}.",
+  "feedNoChecksRecorded": "Proyecto {name} · no ejecuta comprobaciones en las solicitudes de incorporación de cambios, según encontró el tripulante de {task}. Sus cambios se fusionan sin esperar comprobaciones.",
   "feedNoted": "Anotado: {text}",
   "feedPersonalized": "Primer oficial · personalizó: {text}",
   "feedProblem": "Problema: {problem}",

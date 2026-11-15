@@ -18,7 +18,7 @@ import { BATCH_CHECK, BATCH_WAITING_WORDS, presentationCommitMessage } from "../
 import { seedProject } from "../workspace/seedProject";
 import { BATCH_MERGE_WORDS, type MergeGuard } from "./changeMerge";
 import { BATCH_OPEN_WORDS } from "./changePublication";
-import { BATCH_DECLARATION_WORDS } from "./checkChangeTool";
+import { BATCH_DECLARATION_WORDS, PROJECT_ABSENCE_WORDS } from "./checkChangeTool";
 import { MERGE_CARD_WORDS } from "./mergeCardSteps";
 
 // Intent: the captain's approved plan for batches of their own, piece 1: "each change is a
@@ -381,6 +381,68 @@ describe("the merge of a change that joins a batch", () => {
       receipt: { head: HEAD, sha: id(`merge of ${commit}`) },
     });
     expect(at.heard.settled).toEqual([[TASK]]);
+  });
+
+  // INF-2114, the captain's checked improvement: "A project with no checks is
+  // a recorded fact". Its crewmate records it once from its own pushed
+  // version, and a batch of the project reads every change in it as declared.
+  it("records the project as running no checks from its pushed version's declaration", async () => {
+    const at = home();
+    at.forge.states = [];
+    await at.confirmed();
+    const said = await at.service.checkTool.checkForCrew(TASK, {
+      absentChecks: {
+        headSha: HEAD,
+        evidence: "The default branch holds no workflow, and its rules require no checks.",
+        localGate: "The project's own tests passed at this version.",
+        project: true,
+      },
+    });
+    expect(said).toContain(PROJECT_ABSENCE_WORDS.recorded);
+    expect(at.repos.get(REPO)?.noChecks).toMatchObject({
+      task: at.tasks.get(TASK)?.key,
+      head: HEAD,
+    });
+    // A later version needs no declaration of its own.
+    expect(at.service.checks.declaredAbsent(TASK, "c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f7")).toBe(
+      true,
+    );
+  });
+
+  it("merges a change of a project recorded as running no checks with its batch, where no check ran on either", async () => {
+    const at = home();
+    at.forge.states = [];
+    at.repos.configure(REPO, { requireChecks: false });
+    await at.confirmed();
+    const guard = at.guard();
+    // Its own reading, where no check ran, holds nothing: it goes in line.
+    expect(await at.service.merges.merge(TASK, guard)).toMatchObject({ ok: false, stop: "queue" });
+    await at.pass();
+    (at.forge.batch as NonNullable<BatchHostForge["batch"]>).readiness = "clean";
+    await at.pass();
+    expect(await at.service.merges.merge(TASK, guard)).toMatchObject({
+      ok: true,
+      line: "Merged with batch #31 on GitHub",
+    });
+    expect(at.heard.settled).toEqual([[TASK]]);
+  });
+
+  // INF-2114's review: a project whose workflows run only on pull requests
+  // runs them on its batch's, which is the first check that runs there.
+  it("ends the project's record when a check runs on its batch pull request, and the check holds the batch", async () => {
+    const at = home();
+    at.forge.states = [];
+    at.repos.configure(REPO, { requireChecks: false });
+    await at.confirmed();
+    expect(await at.service.merges.merge(TASK, at.guard())).toMatchObject({
+      ok: false,
+      stop: "queue",
+    });
+    await at.pass();
+    at.forge.report([{ name: "build", state: "pending" }], "clean");
+    await at.pass();
+    expect(at.repos.get(REPO)?.noChecks).toBeUndefined();
+    expect(at.forge.calls.filter((call) => call.startsWith("putIn"))).toEqual([]);
   });
 
   it("puts nothing in line while the pushed branch's own checks have not passed", async () => {

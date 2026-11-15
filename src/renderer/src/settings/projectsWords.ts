@@ -1,7 +1,7 @@
-import { formatList } from "@shared/i18n/format";
+import { formatDate, formatList } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import { AUTOMATIC_COMPUTER } from "@shared/placement";
-import type { RepoView } from "@shared/repos";
+import { type NoChecksRecord, type RepoView, readsPullRequestChecks } from "@shared/repos";
 import { type DeviceSignIns, devicePlace } from "@shared/signIns";
 import { AUTONOMY_WORDS, PROJECT_DELIVERY_WORDS, RIGOR_WORDS } from "@shared/vocabulary";
 
@@ -37,6 +37,31 @@ export const PROJECT_POLICY_WORDS = {
   /** The personal workspace's rigor, in place of a choice. */
   get rigorNone() {
     return m.settingsProjectsCareNone();
+  },
+  /** The Require pull request checks row's name and its switch's (docs/forge.md, "A project with no checks"). */
+  get checksTitle() {
+    return m.settingsProjectsRequireChecks();
+  },
+  /**
+   * What the Require pull request checks row says under its name: on, that
+   * checks hold the merge; off, that the project runs none, since when, and
+   * the task whose crewmate found it.
+   */
+  checks: (noChecks: NoChecksRecord | undefined) => {
+    if (!noChecks) return PROJECT_POLICY_WORDS.checksOn;
+    const date = formatDate(noChecks.at, { month: "short", day: "numeric" });
+    const since = noChecks.task
+      ? m.settingsProjectsRequireChecksFound({ date, task: noChecks.task })
+      : m.settingsProjectsRequireChecksSince({ date });
+    return `${PROJECT_POLICY_WORDS.checksOff} ${since}`;
+  },
+  /** Under Require pull request checks while it is on. */
+  get checksOn() {
+    return m.settingsProjectsRequireChecksOn();
+  },
+  /** Under Require pull request checks while it is off, before when and by whom. */
+  get checksOff() {
+    return m.settingsProjectsRequireChecksOff();
   },
   /** Under the rows of a project that merges locally and asks for Careful. */
   get carefulLocal() {
@@ -125,6 +150,9 @@ export const PROJECT_ROW_WORDS = {
     return m.settingsProjectsRowCare({ care: RIGOR_WORDS.reviewed });
   },
   runs: (where: string) => m.settingsProjectsRowRuns({ where }),
+  get noChecks() {
+    return m.settingsProjectsRowNoChecks();
+  },
 } as const;
 
 /** Whether `path` is the projects folder or inside it. */
@@ -141,7 +169,10 @@ export function inProjectsFolder(path: string, folder: string): boolean {
  * null when Runs on is not drawn.
  */
 export function projectRowWords(
-  repo: Pick<RepoView, "kind" | "path" | "delivery" | "autonomy" | "rigor" | "runsOn">,
+  repo: Pick<
+    RepoView,
+    "kind" | "path" | "delivery" | "autonomy" | "rigor" | "runsOn" | "noChecks" | "origin" | "host"
+  >,
   folder: string | null,
   runsWhere: string | null,
 ): string[] {
@@ -152,6 +183,7 @@ export function projectRowWords(
   if (repo.autonomy) words.push(PROJECT_ROW_WORDS.mergesOnItsOwn);
   if (repo.rigor === "quick") words.push(PROJECT_ROW_WORDS.quick);
   if (repo.rigor === "reviewed") words.push(PROJECT_ROW_WORDS.careful);
+  if (repo.noChecks && readsPullRequestChecks(repo)) words.push(PROJECT_ROW_WORDS.noChecks);
   if (runsWhere && repo.runsOn && repo.runsOn !== AUTOMATIC_COMPUTER)
     words.push(PROJECT_ROW_WORDS.runs(runsWhere));
   return words;

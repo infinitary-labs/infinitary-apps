@@ -201,7 +201,7 @@ export type CheckChangeInput = {
    * This exact head intentionally has no checks. The host stores it on the
    * review; an empty or unreadable check list alone never qualifies.
    */
-  absentChecks?: { headSha: string; evidence: string; localGate: string };
+  absentChecks?: { headSha: string; evidence: string; localGate: string; project?: boolean };
   /**
    * Prepare `pull` as a merge past the branch rules (FI3-1571 piece 2): the
    * version the crewmate read and the method. GitHub only; only the
@@ -318,7 +318,12 @@ export const checkChangeInputSchema = z.object({
     .optional(),
   pull: z.number().int().min(1).optional(),
   absentChecks: z
-    .object({ headSha: z.string(), evidence: z.string(), localGate: z.string() })
+    .object({
+      headSha: z.string(),
+      evidence: z.string(),
+      localGate: z.string(),
+      project: z.boolean().optional(),
+    })
     .optional(),
   skipRules: z.object({ headSha: z.string(), method: z.literal("squash") }).optional(),
   batch: batchDeclarationSchema.optional(),

@@ -438,10 +438,11 @@ export const CHECK_CHANGE_TOOL = crewmateTool({
           headSha: Type.String(),
           evidence: Type.String(),
           localGate: Type.String(),
+          project: Type.Optional(Type.Boolean()),
         },
         {
           description:
-            "Head-bound declaration that this version intentionally has no checks, with workflow evidence and the local gate result. Does not waive a failed, pending or unreadable check.",
+            "Head-bound declaration that this version intentionally has no checks, with workflow evidence and the local gate result. Does not waive a failed, pending or unreadable check. project true, for your own change only, also records that the whole project runs no checks, when the evidence shows its default branch runs none: later changes read no checks, unwatched, until a check runs.",
         },
       ),
     ),

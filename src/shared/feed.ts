@@ -192,6 +192,8 @@ export function feedLineFrom(event: FmEvent): Omit<FeedLine, "at"> | null {
       // The standing rigor is named only when the repository declares one
       // (delivery rigor phase 3); a derived rigor is the default and says
       // nothing here.
+      if (event.said)
+        return { kind: "info", text: event.description ?? englishOf(event.said), said: event.said };
       if (event.description) return { kind: "info", text: event.description };
       const fills = {
         who: byWho(event.actor),

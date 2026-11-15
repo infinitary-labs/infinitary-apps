@@ -40,6 +40,8 @@
   "feedMergesOnItsOwn": "führt selbst zusammen",
   "feedMoved": "Zu einem stärkeren Modell gewechselt: geht weiter als {key}",
   "feedMovedOnTier": "Zu einem stärkeren Modell gewechselt: {tier}; geht weiter als {key}",
+  "feedNoChecksEnded": "Projekt {name} · verlangt wieder Überprüfungen für Pull Requests: {check} lief auf {change}.",
+  "feedNoChecksRecorded": "Projekt {name} · führt keine Überprüfungen für Pull Requests aus, wie das Crewmitglied von {task} feststellte. Seine Änderungen werden ohne Warten auf Überprüfungen zusammengeführt.",
   "feedNoted": "Notiert: {text}",
   "feedPersonalized": "Erster Offizier · personalisiert: {text}",
   "feedProblem": "Problem: {problem}",

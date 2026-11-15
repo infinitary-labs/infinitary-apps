@@ -40,6 +40,8 @@
   "feedMergesOnItsOwn": "自動でマージ",
   "feedMoved": "より強力なモデルに移行：{key} として続行",
   "feedMovedOnTier": "より強力なモデルに移行：{tier}。{key} として続行",
+  "feedNoChecksEnded": "プロジェクト {name} · プルリクエストのチェックを再び必須にしました：{change}で{check}が実行されました。",
+  "feedNoChecksRecorded": "プロジェクト {name} · {task}の乗組員が確認したとおり、プルリクエストのチェックを実行しません。変更はチェックを待たずにマージされます。",
   "feedNoted": "メモ：{text}",
   "feedPersonalized": "一等航海士 · パーソナライズ：{text}",
   "feedProblem": "問題：{problem}",

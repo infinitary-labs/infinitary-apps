@@ -636,6 +636,8 @@
 "feedMergesOnItsOwn" = "自動でマージ";
 "feedMoved" = "より強力なモデルに移行：%1$@ として続行";
 "feedMovedOnTier" = "より強力なモデルに移行：%2$@。%1$@ として続行";
+"feedNoChecksEnded" = "プロジェクト %3$@ · プルリクエストのチェックを再び必須にしました：%1$@で%2$@が実行されました。";
+"feedNoChecksRecorded" = "プロジェクト %1$@ · %2$@の乗組員が確認したとおり、プルリクエストのチェックを実行しません。変更はチェックを待たずにマージされます。";
 "feedNoted" = "メモ：%1$@";
 "feedPersonalized" = "一等航海士 · パーソナライズ：%1$@";
 "feedProblem" = "問題：%1$@";
@@ -2554,11 +2556,17 @@
 "settingsProjectsRemoveNamed" = "%1$@ を削除";
 "settingsProjectsRemoveTitle" = "プロジェクトを削除";
 "settingsProjectsRemoving" = "削除中...";
+"settingsProjectsRequireChecks" = "プルリクエストのチェックを必須にする";
+"settingsProjectsRequireChecksFound" = "%1$@からオフ。%2$@の乗組員がチェックがないことを確認しました。";
+"settingsProjectsRequireChecksOff" = "このプロジェクトはチェックを実行しないため、変更は待たずにマージされます。チェックが1つでも実行されると、この設定はオンに戻ります。";
+"settingsProjectsRequireChecksOn" = "変更はチェックに合格してからマージされます。";
+"settingsProjectsRequireChecksSince" = "%1$@からオフ。";
 "settingsProjectsRigorDescription" = "ここでの作業をどれだけ念入りに確認するか。";
 "settingsProjectsRowCare" = "慎重さ：%1$@";
 "settingsProjectsRowCollapsed" = "%1$@、折りたたみ";
 "settingsProjectsRowExpanded" = "%1$@、展開";
 "settingsProjectsRowLinked" = "リンク済み";
+"settingsProjectsRowNoChecks" = "チェックなし";
 "settingsProjectsRowPersonal" = "その場で作成";
 "settingsProjectsRowRuns" = "%1$@ 実行";
 "settingsProjectsSaveDetails" = "詳細を保存";

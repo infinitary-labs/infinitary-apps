@@ -40,6 +40,8 @@
   "feedMergesOnItsOwn": "merges on its own",
   "feedMoved": "Moved to a stronger model: continues as {key}",
   "feedMovedOnTier": "Moved to a stronger model: {tier}; continues as {key}",
+  "feedNoChecksEnded": "Project {name} · requires pull request checks again: {check} ran on {change}.",
+  "feedNoChecksRecorded": "Project {name} · runs no pull request checks, as the crewmate of {task} found. Its changes merge without waiting for checks.",
   "feedNoted": "Noted: {text}",
   "feedPersonalized": "First mate · personalized: {text}",
   "feedProblem": "Problem: {problem}",

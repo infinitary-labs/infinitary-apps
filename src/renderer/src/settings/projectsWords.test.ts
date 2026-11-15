@@ -46,6 +46,13 @@ describe("projectRowWords", () => {
     expect(projectRowWords({ ...cloned, rigor: "quick" }, FOLDER, null)).toEqual([
       PROJECT_ROW_WORDS.quick,
     ]);
+    // INF-2114: Require pull request checks off is a way the project differs.
+    expect(projectRowWords({ ...cloned, noChecks: { at: 1 } }, FOLDER, null)).toEqual([
+      PROJECT_ROW_WORDS.noChecks,
+    ]);
+    // A plain Git host runs no checks at all, so its row has nothing to say about them.
+    const plain = { ...cloned, host: { kind: "git" as const, name: "git.example.org" } };
+    expect(projectRowWords({ ...plain, noChecks: { at: 1 } }, FOLDER, null)).toEqual([]);
   });
 
   it("calls a project outside the projects folder linked, and one beside it by name is not inside", () => {

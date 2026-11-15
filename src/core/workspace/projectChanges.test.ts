@@ -68,6 +68,39 @@ describe("the app's exact-change card", () => {
     expect(current.scope).toBeNull();
   });
 
+  // INF-2114: the plan's "the first mate also on your word" reaches Require
+  // pull request checks through this card wherever the captain's exact words
+  // do not apply, and the project keeps the setting as its no-checks record.
+  it("words Require pull request checks from the project's record and the change", async () => {
+    const row = async (project: RepoView, requireChecks: boolean) => {
+      const raised: Omit<Card, "author" | "priority" | "status" | "createdAt">[] = [];
+      const changes = new ProjectChanges({
+        repos: { get: () => project, checkDetails: async () => {} } as unknown as RepoRegistry,
+        devices: () => [],
+        raiseCard: (card) => raised.push(card),
+        tell: () => {},
+      });
+      changes.bindDispatch((async (channel: string) => {
+        if (channel === "inf:repos:list") return [project];
+        throw new Error(`No ${channel} here.`);
+      }) as CoreDispatch);
+      await changes.request(
+        "project-settings",
+        { repoId: project.id, changes: { requireChecks } },
+        { kind: "firstmate", wake: "other" },
+      );
+      const cells = raised[0]?.body.match(
+        /<tr><th>Require pull request checks<\/th><td[^>]*>([^<]*)<\/td><td[^>]*>([^<]*)<\/td><\/tr>/,
+      );
+      return cells?.slice(1);
+    };
+    expect(await row(WEBSITE, false)).toEqual(["On", "Off"]);
+    expect(await row({ ...WEBSITE, noChecks: { at: 1, task: "INF-7" } }, true)).toEqual([
+      "Off",
+      "On",
+    ]);
+  });
+
   it("offers a primary Apply change as the default and a ghost Not now", async () => {
     const raised: Omit<Card, "author" | "priority" | "status" | "createdAt">[] = [];
     const changes = new ProjectChanges({

@@ -1624,6 +1624,9 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
           JSON.stringify(was?.placementRequirements) !== JSON.stringify(repo.placementRequirements)
         )
           descriptions.push("computer requirements");
+        // Require pull request checks (docs/forge.md, "A project with no checks").
+        if (was && !was.noChecks !== !repo.noChecks)
+          descriptions.push(`${repo.noChecks ? "runs no" : "requires"} pull request checks`);
         const description = descriptions.length
           ? `Changed ${repo.name}: ${descriptions.join("; ")}.`
           : undefined;

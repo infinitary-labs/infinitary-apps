@@ -40,6 +40,8 @@
   "feedMergesOnItsOwn": "fusionne seul",
   "feedMoved": "Passée à un modèle plus puissant : se poursuit en {key}",
   "feedMovedOnTier": "Passée à un modèle plus puissant : {tier} ; se poursuit en {key}",
+  "feedNoChecksEnded": "Projet {name} · exige de nouveau les vérifications : {check} s’est exécutée sur {change}.",
+  "feedNoChecksRecorded": "Projet {name} · n’exécute aucune vérification de demande de tirage, comme l’a constaté l’équipier de {task}. Ses modifications sont fusionnées sans attendre de vérifications.",
   "feedNoted": "Noté : {text}",
   "feedPersonalized": "Second · personnalisé : {text}",
   "feedProblem": "Problème : {problem}",

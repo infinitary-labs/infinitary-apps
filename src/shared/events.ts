@@ -186,6 +186,12 @@ export const fmEventSchema = z.discriminatedUnion("type", [
     type: z.literal("repo_configured"),
     /** Exact name, folder or approved address change, when one changed. */
     description: z.string().optional(),
+    /**
+     * The line as a fact, worded where it is shown, when the app itself
+     * started or ended the project's no-checks record; `description` is its
+     * English (docs/i18n.md, "Saved facts").
+     */
+    said: saidSchema.optional(),
     actor: z.enum(["captain", "firstmate"]).optional(),
     repoId: z.string(),
     name: z.string(),

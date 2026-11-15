@@ -659,6 +659,8 @@ public enum PhoneMessages {
     public static func `feedMergesOnItsOwn`() -> String { PhoneWords.format("feedMergesOnItsOwn", []) }
     public static func `feedMoved`(`key`: String) -> String { PhoneWords.format("feedMoved", [`key`]) }
     public static func `feedMovedOnTier`(`key`: String, `tier`: String) -> String { PhoneWords.format("feedMovedOnTier", [`key`, `tier`]) }
+    public static func `feedNoChecksEnded`(`change`: String, `check`: String, `name`: String) -> String { PhoneWords.format("feedNoChecksEnded", [`change`, `check`, `name`]) }
+    public static func `feedNoChecksRecorded`(`name`: String, `task`: String) -> String { PhoneWords.format("feedNoChecksRecorded", [`name`, `task`]) }
     public static func `feedNoted`(`text`: String) -> String { PhoneWords.format("feedNoted", [`text`]) }
     public static func `feedPersonalized`(`text`: String) -> String { PhoneWords.format("feedPersonalized", [`text`]) }
     public static func `feedProblem`(`problem`: String) -> String { PhoneWords.format("feedProblem", [`problem`]) }
@@ -2651,11 +2653,17 @@ public enum PhoneMessages {
     public static func `settingsProjectsRemoveNamed`(`name`: String) -> String { PhoneWords.format("settingsProjectsRemoveNamed", [`name`]) }
     public static func `settingsProjectsRemoveTitle`() -> String { PhoneWords.format("settingsProjectsRemoveTitle", []) }
     public static func `settingsProjectsRemoving`() -> String { PhoneWords.format("settingsProjectsRemoving", []) }
+    public static func `settingsProjectsRequireChecks`() -> String { PhoneWords.format("settingsProjectsRequireChecks", []) }
+    public static func `settingsProjectsRequireChecksFound`(`date`: String, `task`: String) -> String { PhoneWords.format("settingsProjectsRequireChecksFound", [`date`, `task`]) }
+    public static func `settingsProjectsRequireChecksOff`() -> String { PhoneWords.format("settingsProjectsRequireChecksOff", []) }
+    public static func `settingsProjectsRequireChecksOn`() -> String { PhoneWords.format("settingsProjectsRequireChecksOn", []) }
+    public static func `settingsProjectsRequireChecksSince`(`date`: String) -> String { PhoneWords.format("settingsProjectsRequireChecksSince", [`date`]) }
     public static func `settingsProjectsRigorDescription`() -> String { PhoneWords.format("settingsProjectsRigorDescription", []) }
     public static func `settingsProjectsRowCare`(`care`: String) -> String { PhoneWords.format("settingsProjectsRowCare", [`care`]) }
     public static func `settingsProjectsRowCollapsed`(`name`: String) -> String { PhoneWords.format("settingsProjectsRowCollapsed", [`name`]) }
     public static func `settingsProjectsRowExpanded`(`name`: String) -> String { PhoneWords.format("settingsProjectsRowExpanded", [`name`]) }
     public static func `settingsProjectsRowLinked`() -> String { PhoneWords.format("settingsProjectsRowLinked", []) }
+    public static func `settingsProjectsRowNoChecks`() -> String { PhoneWords.format("settingsProjectsRowNoChecks", []) }
     public static func `settingsProjectsRowPersonal`() -> String { PhoneWords.format("settingsProjectsRowPersonal", []) }
     public static func `settingsProjectsRowRuns`(`where`: String) -> String { PhoneWords.format("settingsProjectsRowRuns", [`where`]) }
     public static func `settingsProjectsSaveDetails`() -> String { PhoneWords.format("settingsProjectsSaveDetails", []) }
@@ -3911,6 +3919,8 @@ extension PhoneWords {
         "feedMergesOnItsOwn": [],
         "feedMoved": ["key"],
         "feedMovedOnTier": ["key", "tier"],
+        "feedNoChecksEnded": ["change", "check", "name"],
+        "feedNoChecksRecorded": ["name", "task"],
         "feedNoted": ["text"],
         "feedPersonalized": ["text"],
         "feedProblem": ["problem"],
@@ -5903,11 +5913,17 @@ extension PhoneWords {
         "settingsProjectsRemoveNamed": ["name"],
         "settingsProjectsRemoveTitle": [],
         "settingsProjectsRemoving": [],
+        "settingsProjectsRequireChecks": [],
+        "settingsProjectsRequireChecksFound": ["date", "task"],
+        "settingsProjectsRequireChecksOff": [],
+        "settingsProjectsRequireChecksOn": [],
+        "settingsProjectsRequireChecksSince": ["date"],
         "settingsProjectsRigorDescription": [],
         "settingsProjectsRowCare": ["care"],
         "settingsProjectsRowCollapsed": ["name"],
         "settingsProjectsRowExpanded": ["name"],
         "settingsProjectsRowLinked": [],
+        "settingsProjectsRowNoChecks": [],
         "settingsProjectsRowPersonal": [],
         "settingsProjectsRowRuns": ["where"],
         "settingsProjectsSaveDetails": [],

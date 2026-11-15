@@ -882,13 +882,16 @@ export class CrewSessions {
     error?: string,
   ): void {
     // An interruption withdraws the captain's kept merge approval (FI3-304:
-    // interrupt = revoke); resuming work needs a new click.
-    this.core.settling.approvals.revokeMergeAuthorization(
-      taskId,
-      source.actor === "captain"
-        ? "the captain interrupted the crewmate"
-        : "the first mate interrupted the crewmate",
-    );
+    // interrupt = revoke); resuming work needs a new click. A move back to
+    // the backlog keeps it (INF-2114, the captain's choice): a merge needs no
+    // turn, so it goes ahead while the task waits there.
+    if (!source.backlog)
+      this.core.settling.approvals.revokeMergeAuthorization(
+        taskId,
+        source.actor === "captain"
+          ? "the captain interrupted the crewmate"
+          : "the first mate interrupted the crewmate",
+      );
     try {
       this.core.options.tasks.turns.recordInterrupt(taskId, {
         actor: source.actor,

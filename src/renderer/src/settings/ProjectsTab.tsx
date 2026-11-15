@@ -7,6 +7,7 @@ import {
   ownsBatches,
   type RepoPolicyPatch,
   type RepoView,
+  readsPullRequestChecks,
 } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
 import type { DeviceSignIns } from "@shared/signIns";
@@ -741,6 +742,20 @@ function ProjectRow({
               )
             }
           />
+          {readsPullRequestChecks(repo) && (
+            <PolicyRow
+              title={PROJECT_POLICY_WORDS.checksTitle}
+              description={PROJECT_POLICY_WORDS.checks(repo.noChecks)}
+              wrapsBesideControl
+              control={
+                <Switch
+                  checked={!repo.noChecks}
+                  aria-label={PROJECT_POLICY_WORDS.checksTitle}
+                  onChange={(requireChecks) => onPatch({ requireChecks })}
+                />
+              }
+            />
+          )}
           {!personal && repo.costLimit !== undefined && (
             <PolicyRow
               title={PROJECT_COST_WORDS.title}
@@ -803,10 +818,17 @@ function PolicyRow({
   title,
   description,
   control,
+  wrapsBesideControl,
 }: {
   title: string;
   description: string;
   control: ReactNode;
+  /**
+   * Words that can run long wrap beside the control, which keeps its place at
+   * the row's end until the words would be narrower than the Keyboard tab's
+   * rows allow (INF-2114: Require pull request checks names when and by whom).
+   */
+  wrapsBesideControl?: boolean;
 }) {
   return (
     <div
@@ -820,7 +842,12 @@ function PolicyRow({
         flexWrap: "wrap",
       }}
     >
-      <div style={{ minWidth: 0 }}>
+      <div
+        style={{
+          minWidth: 0,
+          ...(wrapsBesideControl ? { flex: "1 1 calc(var(--space-9) * 2)" } : {}),
+        }}
+      >
         <div style={{ fontSize: "var(--text-sm)", fontWeight: 500, color: "var(--fg-1)" }}>
           {title}
         </div>

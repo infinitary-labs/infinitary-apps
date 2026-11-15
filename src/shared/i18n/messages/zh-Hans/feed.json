@@ -40,6 +40,8 @@
   "feedMergesOnItsOwn": "自动合并",
   "feedMoved": "已换用更强的模型：由 {key} 继续",
   "feedMovedOnTier": "已换用更强的模型：{tier}；由 {key} 继续",
+  "feedNoChecksEnded": "项目 {name} · 重新要求拉取请求检查：{check} 在 {change} 上运行了。",
+  "feedNoChecksRecorded": "项目 {name} · 不运行拉取请求检查，这是 {task} 的船员发现的。它的改动不等检查就会合并。",
   "feedNoted": "已记下：{text}",
   "feedPersonalized": "大副 · 已个性化：{text}",
   "feedProblem": "问题：{problem}",

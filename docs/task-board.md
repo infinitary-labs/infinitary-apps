@@ -138,7 +138,8 @@ A queued task that nothing holds starts on the ready sweep the move runs.
 
 Back to backlog on started work (INF-2062), from the board, the stall card (INF-3143, `docs/report-sort.md` "Parking an unchanged blocker") or the first mate's `update_task` `start_policy` on-request with a reason, runs `HostOps.moveToBacklog`, which also takes the task's stall card down.
 The task stays active: `TaskService.starts.setQueued` records when it went (`backlogSince`, on its running work's row) and who moved it with one sentence why, and its idle ladder starts over.
-Its running turn stops and a kept merge approval ends, as an interrupt does; its working copy, branch, conversation, pull request and background jobs stay.
+Its running turn stops, as an interrupt does; its working copy, branch, conversation, pull request and background jobs stay.
+A kept merge approval stays (INF-2114, the captain's choice): a merge needs no turn, so it goes ahead while the task waits there, once its checks allow.
 While it waits there, the host's own rows - a job's end, a check's result, a timed wait's end, a closed dependency - wait on its lane, and the first of them in each stay wakes the first mate once (`backlog-news`, `CrewSteer.tellBacklogNews`) to start it or leave it; no rung of the idle ladder nudges, wakes or raises a card for it, a report wakes the first mate only to act on it, to close it or to triage what it filed, and a reopen does not carry its turn on.
 Words the captain or the first mate send still reach it, with a line that it waits in the backlog and stays there; that turn carries whatever waited on its lane with it.
 Unless the captain moved it there, the first mate recorded that the captain asked for the wait, or the captain put off a card of it until a moment, it is begun work with no next move: the next-move check tells the first mate once and, if it still stands after that turn, shows the captain one card (`docs/report-sort.md`, "The next-move check").

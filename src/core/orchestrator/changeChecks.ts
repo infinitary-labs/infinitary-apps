@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import {
   checkSnapshotSummary,
+  checksThatRan,
   currentCheckStatus,
   type MainCheckEvidence,
   noCheckRan,
@@ -33,6 +34,7 @@ import {
   crewSignInText,
   numberLabel,
   placeWords,
+  projectOf,
   type SignInFact,
 } from "./changeContext";
 import { observeCheckRepair } from "./checkRepair";
@@ -148,6 +150,7 @@ export class ChangeChecks {
     const located = this.context.locate(taskId);
     if ("said" in located) return { kind: "failed", transient: false, problem: located.said };
     const { record, forge } = located;
+    const project = projectOf(located);
     const current = currentChange(record.delivery, located.branch);
     const branch = current.branch;
     try {
@@ -185,7 +188,7 @@ export class ChangeChecks {
       this.record(
         record.id,
         "pending",
-        { change, forge },
+        { change, forge, ...project },
         "watch",
         false,
         checks.items,
@@ -201,7 +204,7 @@ export class ChangeChecks {
           observationId,
           recorded: true,
         };
-      if (this.checksPending(record, { change, forge }, checks)) {
+      if (this.checksPending(record, { change, forge, ...project }, checks)) {
         const failing = named(checks.items.filter((check) => isRedCheckState(check.state)));
         const batch = this.batchWake(taskId, change.headSha);
         return {
@@ -428,6 +431,7 @@ export class ChangeChecks {
     const located = this.context.locate(taskId);
     if ("said" in located) return { text: located.said, recorded: false };
     const { record, forge } = located;
+    const project = projectOf(located);
     const current = currentChange(record.delivery, located.branch);
     const branch = current.branch;
     try {
@@ -479,11 +483,12 @@ export class ChangeChecks {
       this.assertCheckTarget(record);
       if (mergeability) this.observeContribution(record, forge, mergeability);
       this.observeChecks(taskId, change.headSha, checks, audience === "crewmate");
-      const stillRunning = this.checksPending(record, { change, forge }, checks);
+      const checked: CheckedChange = { change, forge, ...project };
+      const stillRunning = this.checksPending(record, checked, checks);
       this.record(
         record.id,
         "pending",
-        { change, forge },
+        checked,
         audience,
         stillRunning,
         checks.items,
@@ -537,11 +542,13 @@ export class ChangeChecks {
           })}`,
           ...(held ? [held] : []),
           ...(checks.items.length > 0 ? lines : ["- no checks reported on the head SHA"]),
-
+          ...(noCheckRan(checks.items) && this.projectRunsNoChecks(checked)
+            ? [PROJECT_NO_CHECKS_WORDS]
+            : []),
           ...(empty ? emptyWords(audience) : watchWords(forge, audience, watched, earlyOwed)),
         ].join("\n"),
         recorded: true,
-        checked: { change, forge },
+        checked,
       };
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
@@ -632,12 +639,19 @@ export class ChangeChecks {
     return this.absenceDeclared(record, {
       forge,
       change: { ...(number !== undefined ? { number } : {}), branch, headSha: head, url: null },
+      ...projectOf(located),
     });
   }
 
-  /** Positive, exact-version absence evidence, never inferred from an empty result or history. */
+  /**
+   * Positive absence evidence, never inferred from an empty result or
+   * history: a host with no checks, the change's project's record that it
+   * runs none (docs/forge.md, "A project with no checks"), or the crew's
+   * declaration for this exact version.
+   */
   absenceDeclared(record: TaskRecord, checked: CheckedChange): boolean {
     if (!checked.forge.hasChecks) return true;
+    if (this.projectRunsNoChecks(checked)) return true;
     const change = checked.change;
     // A pushed branch with no pull request of its own: the declaration is the task's own.
     if (change.number === undefined) {
@@ -669,6 +683,37 @@ export class ChangeChecks {
   }
 
   /**
+   * Whether the checked change's project keeps the record that it runs no
+   * checks (docs/forge.md, "A project with no checks"): Require pull request
+   * checks is off in Settings → Projects.
+   */
+  projectRunsNoChecks(checked: Pick<CheckedChange, "project">): boolean {
+    return (
+      checked.project !== undefined &&
+      this.options.repos.get(checked.project)?.noChecks !== undefined
+    );
+  }
+
+  /**
+   * A reading where a check ran on a change of a project recorded as running
+   * none ends that record (docs/forge.md, "A project with no checks"): its
+   * checks hold the merge again, and one Activity line names the check. Every
+   * reading of the change's checks calls it, a merge's own reading included.
+   */
+  endNoChecks(
+    checked: Pick<CheckedChange, "project" | "forge" | "change">,
+    checks: readonly ForgeCheck[],
+  ): void {
+    if (!checked.project || !this.projectRunsNoChecks(checked)) return;
+    const [ran] = checksThatRan(checks);
+    if (ran)
+      this.options.repos.endNoChecks(checked.project, {
+        check: ran.name,
+        change: checked.forge.label(checked.change),
+      });
+  }
+
+  /**
    * Store raw check facts. The merge offer carries the crew's judgment. Changed facts
    * create a ci event; an unchanged reading only refreshes its time. Raw
    * readings do not judge readiness or settle declared repairs.
@@ -689,7 +734,10 @@ export class ChangeChecks {
     if (!task) return;
     const change = checked?.change;
     const label = checked ? checked.forge.label(checked.change) : undefined;
-    if (checked) this.noteChange(taskId, checked);
+    if (checked) {
+      this.noteChange(taskId, checked);
+      this.endNoChecks(checked, checks);
+    }
     const round = change ? observeCheckRepair(task.delivery, change.headSha, checks, at) : {};
     // The reading names the pull request it is of: the change record binds
     // it by that number, never by its head alone (INF-1873).
@@ -870,11 +918,11 @@ function noneStarted(checks: { items: { state: ForgeCheckState }[]; complete?: b
 function emptyWords(audience: Audience): string[] {
   if (audience === "crewmate") {
     return [
-      "No check has started at this version, and nothing declares that it has none. If checks are still to start, end your turn: the app is watching and wakes you when they finish, or when its watch ends with none started. If this pull request runs no checks, declare that now with check_change absentChecks (its version, the evidence and the local gate run at it), and the reading then says no checks. If you have no such evidence, report that this pull request has no checks and nothing to declare instead of waiting; an empty reading alone stays pending.",
+      "No check has started at this version, and nothing declares that it has none. If checks are still to start, end your turn: the app is watching and wakes you when they finish, or when its watch ends with none started. If this pull request runs no checks, declare that now with check_change absentChecks (its version, the evidence and the local gate run at it), and the reading then says no checks; add project true when the evidence shows the project's default branch runs none, so its later changes need no declaration. If you have no such evidence, report that this pull request has no checks and nothing to declare instead of waiting; an empty reading alone stays pending.",
     ];
   }
   return [
-    "No check has started at this version, and nothing declares that it has none. The host is watching in case checks start, and wakes the crewmate when they finish or when its watch ends with none started. If this pull request runs no checks, the crewmate ends the wait by declaring that with check_change absentChecks, or by reporting that it has no evidence to declare; an empty reading alone stays pending.",
+    "No check has started at this version, and nothing declares that it has none. The host is watching in case checks start, and wakes the crewmate when they finish or when its watch ends with none started. If this pull request runs no checks, the crewmate ends the wait by declaring that with check_change absentChecks, for the whole project when its default branch runs none, or by reporting that it has no evidence to declare; an empty reading alone stays pending. On the captain's word, project-settings requireChecks false records the same for the project's later changes.",
   ];
 }
 
@@ -911,6 +959,13 @@ function watchAfter(
   }
   return audience === "crewmate" && existing ? { ciWatch: undefined } : {};
 }
+
+/**
+ * What a reading where no check ran says in a project recorded as running
+ * none (docs/forge.md, "A project with no checks").
+ */
+export const PROJECT_NO_CHECKS_WORDS =
+  "This project is recorded as running no checks (Require pull request checks is off in its settings), so this reading counts as no checks: nothing is watched and no wake will come. The first check that runs on any of its changes ends the record, and checks hold the merge again.";
 
 /**
  * What a reading says about the watch: the crewmate is told to end its turn

@@ -10,12 +10,14 @@ import { emptyTranscript } from "@shared/crewTranscript";
 import { isCustomApiProvider } from "@shared/customApi";
 import { deviceRunsWork } from "@shared/devices";
 import type { KnownForgeHost } from "@shared/forge";
+import { englishOf } from "@shared/i18n/said";
 import { speakChoice } from "@shared/i18n/start";
 import { INBOX_WORDS } from "@shared/integrations";
 import { modelNames } from "@shared/modelDisplayName";
 import { offeringKey, parseOfferingKey, providerLabel } from "@shared/modelSlots";
 import { desktopConventions } from "@shared/platform";
 import { catalogEntry } from "@shared/providers";
+import { noChecksSaid, repoConfiguredEvent } from "@shared/repos";
 import { runsForAnotherFirstmate } from "@shared/sshConnection";
 import { BUILTIN_SURFACES } from "@shared/surfaces";
 import type { TaskBrowserFact } from "@shared/taskBrowser";
@@ -854,6 +856,12 @@ export async function createServices(
   });
   // A project's batch changed (docs/forge.md, "Batches of your own"): Settings reads it again.
   repos.onBatch((repo) => broadcastEvent({ type: "repo_batch", repoId: repo.id }));
+  // The app started or ended a project's no-checks record (docs/forge.md, "A
+  // project with no checks"): one Activity line, and Settings reads it again.
+  repos.onNoChecks((repo, change) => {
+    const line = noChecksSaid(repo.name, change);
+    broadcastEvent({ ...repoConfiguredEvent(repo), description: englishOf(line), said: line });
+  });
   const githubGateway = new GithubGatewayService({
     tasks,
     repos,

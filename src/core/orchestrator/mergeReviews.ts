@@ -30,6 +30,7 @@ import {
   crewSignInText,
   type Located,
   numberLabel,
+  projectOf,
   reviewOf,
 } from "./changeContext";
 import {
@@ -148,7 +149,9 @@ export class MergeReviews {
       "This request grants no approval and does not itself merge anything. With autonomy off, only the captain's merge button authorizes execution.",
       absentChecks
         ? "Absence evidence stored for this version. A merge offer expresses the crew's judgment; this evidence grants no merge permission."
-        : "No absence declaration stored. An empty hosted reading alone does not establish that checks are absent.",
+        : this.checks.projectRunsNoChecks(projectOf(located))
+          ? "No absence declaration stored for this version; none is needed while the project is recorded as running no checks."
+          : "No absence declaration stored. An empty hosted reading alone does not establish that checks are absent.",
     ].join("\n");
   }
 
@@ -193,7 +196,7 @@ export class MergeReviews {
     );
     if ("said" in opened) return opened.said;
     const { pull, branch } = opened;
-    const read = await this.readSkipState(taskId, forge, pull);
+    const read = await this.readSkipState(taskId, forge, pull, projectOf(located));
     if (!read.ok) return `Merge review refused: ${read.text}`;
     const { rules, failedChecks } = read;
     if (pull.readiness === "clean" && failedChecks.length === 0) {
@@ -397,6 +400,7 @@ export class MergeReviews {
     taskId: string,
     forge: Forge,
     pull: ForgePull,
+    project: { project?: string },
   ): Promise<
     | { ok: true; rules: SkippedRule[]; failedChecks: string[] }
     | { ok: false; text: string; stop?: MergeStop }
@@ -439,11 +443,12 @@ export class MergeReviews {
         stop: isSignInForgeFailure(caught) ? "sign-in" : "checks",
       };
     }
+    this.checks.endNoChecks({ forge, change, ...project }, checks.items);
     // Captain F4: final results precede both bypass preparation and sending.
     if (checks.problem)
       return { ok: false, text: `The checks cannot be read. ${checks.problem}`, stop: "checks" };
     const record = this.options.tasks.get(taskId);
-    const absent = record && this.checks.absenceDeclared(record, { forge, change });
+    const absent = record && this.checks.absenceDeclared(record, { forge, change, ...project });
     const items = checks.items;
     if (
       checks.complete === false ||
@@ -512,7 +517,7 @@ export class MergeReviews {
     }));
     if (!reread.ok) return reread;
     const { pull } = reread;
-    const state = await this.readSkipState(taskId, forge, pull);
+    const state = await this.readSkipState(taskId, forge, pull, projectOf(located));
     if (!state.ok) return state;
     const named = new Set(
       (review.skips?.rules ?? []).map((rule) => `${rule.ruleset}\u0000${rule.rule}`),
@@ -779,6 +784,7 @@ export class MergeReviews {
       };
     }
     const items = checks.items;
+    this.checks.endNoChecks({ forge, change, ...projectOf(located) }, items);
     const held = readinessStop(forge, pull, { head: review.headSha });
     if (held) {
       const plain = held.plain ?? held.text;
@@ -794,7 +800,7 @@ export class MergeReviews {
     const record = this.options.tasks.get(taskId);
     if (
       items.length === 0 &&
-      (!record || !this.checks.absenceDeclared(record, { forge, change })) &&
+      (!record || !this.checks.absenceDeclared(record, { forge, change, ...projectOf(located) })) &&
       !overridePasses(record?.delivery, "checks", pull.headSha)
     )
       return {
@@ -807,7 +813,9 @@ export class MergeReviews {
       items,
       complete: checks.complete,
       problem: checks.problem,
-      absenceDeclared: Boolean(record && this.checks.absenceDeclared(record, { forge, change })),
+      absenceDeclared: Boolean(
+        record && this.checks.absenceDeclared(record, { forge, change, ...projectOf(located) }),
+      ),
     }).overall;
     if (
       status !== "green" &&

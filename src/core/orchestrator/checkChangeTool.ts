@@ -1,10 +1,18 @@
 import type { CheckChangeInput } from "@shared/checkRepair";
+import { checksThatRan } from "@shared/checkSnapshot";
 import { type Forge, type ForgeChange, isSignInForgeFailure } from "../forge";
 import type { TaskRecord } from "../storage/taskRecords";
 import { git } from "../workspace/git";
 import { readChangeReading } from "../workspace/workspaceService";
 import type { ChangeChecks } from "./changeChecks";
-import { type ChangeContext, type ChangeDeliveryOptions, crewSignInText } from "./changeContext";
+import {
+  type ChangeContext,
+  type ChangeDeliveryOptions,
+  type CheckedChange,
+  crewSignInText,
+  type Located,
+  projectOf,
+} from "./changeContext";
 import { declareCheckAction } from "./checkRepair";
 import {
   candidateHead,
@@ -31,6 +39,22 @@ export const BATCH_DECLARATION_WORDS = {
   fix: "Recorded: this task's change is the held batch's fix. Push it, confirm its story with open_change and show its merge card as usual: once approved, it joins the held batch behind the changes already there, the batch is combined again and its checks run again. Changes approved meanwhile keep waiting in line.",
   sentBack: (count: number) =>
     `Sent back ${count === 1 ? "one change" : `${count} changes`}: each lost its approval and its crewmate was told the reason. The rest of the batch is being combined again with the changes that waited in line, and its checks run again.`,
+} as const;
+
+/**
+ * What check_change answers the project part of an absence declaration
+ * (docs/forge.md, "A project with no checks").
+ */
+export const PROJECT_ABSENCE_WORDS = {
+  recorded:
+    "Recorded for the whole project: it runs no checks. Every later change in it reads no checks with nothing watched, and its merge card can go up at once. The captain sees this as Require pull request checks off in the project's settings and can turn it back on. The first check that runs on any of its changes ends the record.",
+  already: "The project was already recorded as running no checks; that record stays as it was.",
+  withPull:
+    "Absence declaration refused: project true goes with your own change's declaration only. Leave pull out, or leave project out to declare this pull request's version alone.",
+  elsewhere:
+    "Project not recorded: the app keeps no settings for the project this change is published to, so its checks stay its own.",
+  ran: (names: readonly string[]) =>
+    `Project not recorded: ${names.join(", ")} ran at this version, so the project runs checks.`,
 } as const;
 
 /** What check_change records beside a reading, each declared on its own terms. */
@@ -88,6 +112,7 @@ export class CheckChangeTool {
         const beside = DECLARATIONS.filter((field) => input[field] !== undefined);
         if (beside.length)
           return `check_change refused: change "${named.id}" is not the current change; read it first with change alone, then send ${beside.join(", ")}.`;
+        if (input.absentChecks?.project) return PROJECT_ABSENCE_WORDS.withPull;
         return this.reviews.prepareReview(taskId, named.handle.number, input.absentChecks, {
           repoId: named.repoId,
         });
@@ -111,6 +136,7 @@ export class CheckChangeTool {
         );
         if (!recorded.read) return recorded.text;
       }
+      if (input.absentChecks?.project) return PROJECT_ABSENCE_WORDS.withPull;
       return input.skipRules
         ? this.reviews.prepareSkipReview(taskId, input.pull, input.skipRules)
         : this.reviews.prepareReview(taskId, input.pull, input.absentChecks);
@@ -241,14 +267,62 @@ export class CheckChangeTool {
       const message = caught instanceof Error ? caught.message : String(caught);
       return `Absence declaration refused: could not read this task's pull request. ${message}`;
     }
-    if (!change && this.context.ownBatch(taskId))
-      return this.declareBranchAbsence(record, branch, forge, absent);
+    if (!change && this.context.ownBatch(taskId)) {
+      const answer = await this.declareBranchAbsence(record, branch, forge, absent);
+      const checked = { forge, change: { branch, headSha: absent.headSha, url: null } };
+      return this.declareProjectAbsence(located, checked, absent, answer);
+    }
     if (!change || change.number === undefined)
       return "Absence declaration refused: this task has no open pull request for its branch yet. Open it with open_change first, or name the pull request with pull.";
     if (absent.headSha !== change.headSha)
       return `Absence declaration refused: it names ${absent.headSha}, but this task's pull request ${forge.label(change)} is at ${change.headSha}. Declare that version, with the evidence and the local gate run at it.`;
     const answer = await this.reviews.prepareReview(taskId, change.number, absent, {});
-    return answer.replace(/^Merge review refused:/, "Absence declaration refused:");
+    return this.declareProjectAbsence(
+      located,
+      { forge, change },
+      absent,
+      answer.replace(/^Merge review refused:/, "Absence declaration refused:"),
+    );
+  }
+
+  /**
+   * The project part of the crew's own absence declaration (docs/forge.md,
+   * "A project with no checks"): once this version's declaration is stored
+   * and no check ran at it, the task's project keeps the record that it runs
+   * no checks, naming this task, the version and the evidence. The host
+   * carries what the crew declared; it never infers it from missing
+   * workflows.
+   */
+  private declareProjectAbsence(
+    located: Located,
+    checked: CheckedChange,
+    absent: NonNullable<CheckChangeInput["absentChecks"]>,
+    answer: string,
+  ): string {
+    if (!absent.project) return answer;
+    const record = this.options.tasks.get(located.record.id);
+    // The version's own declaration, without the project's record: a refusal already said why.
+    if (!record || !this.checks.absenceDeclared(record, checked)) return answer;
+    const { project } = projectOf(located);
+    if (!project) return [answer, PROJECT_ABSENCE_WORDS.elsewhere].join("\n");
+    const reading = record.delivery?.checks;
+    const ran =
+      reading?.headSha === absent.headSha
+        ? checksThatRan(reading.items).map((check) => check.name)
+        : [];
+    if (ran.length > 0) return [answer, PROJECT_ABSENCE_WORDS.ran(ran)].join("\n");
+    const before = this.options.repos.get(project)?.noChecks;
+    const after = this.options.repos.recordNoChecks(project, {
+      at: this.context.now(),
+      task: record.key || record.id,
+      head: absent.headSha,
+      evidence: absent.evidence.trim(),
+    });
+    // The personal workspace takes no project settings.
+    if (!after?.noChecks) return [answer, PROJECT_ABSENCE_WORDS.elsewhere].join("\n");
+    return [answer, before ? PROJECT_ABSENCE_WORDS.already : PROJECT_ABSENCE_WORDS.recorded].join(
+      "\n",
+    );
   }
 
   /**

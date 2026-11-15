@@ -3,10 +3,12 @@ import { join } from "node:path";
 import { ACTION_NAMES, ACTIONS } from "@shared/actions";
 import type { Card } from "@shared/cards";
 import type { FmEvent } from "@shared/events";
+import { englishOf } from "@shared/i18n/said";
 import { defaultArrangement, knownPanels, movePanel, panelSlot } from "@shared/panelArrangement";
 import type { Layout } from "@shared/preferences";
 import { SETUP_CARD_WORDS } from "@shared/projectSetup";
 import type { QuotaSnapshotView } from "@shared/quota";
+import { noChecksSaid } from "@shared/repos";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { fakeHost, quotaFixture, waitFor } from "../../tests/helpers/bootedCore";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
@@ -1091,6 +1093,58 @@ describe("the core, driven with no Electron in the process", () => {
       );
     } finally {
       watchNotes();
+      core.services.repos.unregister(created.repo.id);
+    }
+  });
+
+  // INF-2114, the captain's choice ("Also in Settings → Projects, as a switch
+  // beside Care"): Require pull request checks writes the project's
+  // no-checks record through the dispatcher with its Activity line, and the
+  // record a crewmate makes, or a check that ends it, reaches Activity too.
+  it("turns Require pull request checks off and on, and says the crew's record and its end in Activity", async () => {
+    const created = await core.services.repos.setup({ kind: "init", name: "no-checks" });
+    // A project whose changes go through pull requests on GitHub, where the switch applies.
+    core.services.repos.configure(created.repo.id, {
+      origin: "https://github.com/o/no-checks.git",
+      delivery: "direct-pr",
+    });
+    const configured: Extract<FmEvent, { type: "repo_configured" }>[] = [];
+    const detach = core.events.subscribe((channel, payload) => {
+      const event = payload as FmEvent;
+      if (channel === "inf:event" && event.type === "repo_configured") configured.push(event);
+    });
+    try {
+      const off = await core.dispatch("inf:repos:configure", [
+        created.repo.id,
+        { requireChecks: false },
+      ]);
+      expect(off.noChecks).toEqual({ at: expect.any(Number) });
+      expect(configured.at(-1)?.description).toBe(
+        "Changed no-checks: runs no pull request checks.",
+      );
+      const on = await core.dispatch("inf:repos:configure", [
+        created.repo.id,
+        { requireChecks: true },
+      ]);
+      expect(on.noChecks).toBeUndefined();
+      expect(configured.at(-1)?.description).toBe(
+        "Changed no-checks: requires pull request checks.",
+      );
+
+      const record = { at: 1, task: "INF-7", head: "feedbeef", evidence: "No workflows." };
+      core.services.repos.recordNoChecks(created.repo.id, record);
+      const recorded = noChecksSaid("no-checks", { kind: "recorded", record });
+      expect(configured.at(-1)).toMatchObject({
+        repoId: created.repo.id,
+        description: englishOf(recorded),
+        said: recorded,
+      });
+      core.services.repos.endNoChecks(created.repo.id, { check: "build", change: "#23" });
+      const ended = noChecksSaid("no-checks", { kind: "ended", check: "build", change: "#23" });
+      expect(configured.at(-1)).toMatchObject({ description: englishOf(ended), said: ended });
+      expect(core.services.repos.get(created.repo.id)?.noChecks).toBeUndefined();
+    } finally {
+      detach();
       core.services.repos.unregister(created.repo.id);
     }
   });

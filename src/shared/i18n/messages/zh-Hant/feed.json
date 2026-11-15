@@ -40,6 +40,8 @@
   "feedMergesOnItsOwn": "自行合併",
   "feedMoved": "已改用更強的模型：由 {key} 接續",
   "feedMovedOnTier": "已改用更強的模型：{tier}；由 {key} 接續",
+  "feedNoChecksEnded": "專案 {name} · 重新要求 pull request 檢查：{check} 在 {change} 上執行了。",
+  "feedNoChecksRecorded": "專案 {name} · 不執行 pull request 檢查，這是 {task} 的船員發現的。它的變更不等檢查就會合併。",
   "feedNoted": "已記下：{text}",
   "feedPersonalized": "大副 · 已個人化：{text}",
   "feedProblem": "問題：{problem}",

@@ -636,6 +636,8 @@
 "feedMergesOnItsOwn" = "mescla por conta própria";
 "feedMoved" = "Passou para um modelo mais forte: continua como %1$@";
 "feedMovedOnTier" = "Passou para um modelo mais forte: %2$@; continua como %1$@";
+"feedNoChecksEnded" = "Projeto %3$@ · volta a exigir verificações: %2$@ rodou em %1$@.";
+"feedNoChecksRecorded" = "Projeto %1$@ · não roda verificações nas solicitações de pull, como o tripulante de %2$@ constatou. Suas alterações são mescladas sem esperar verificações.";
 "feedNoted" = "Anotado: %1$@";
 "feedPersonalized" = "Imediato · personalizou: %1$@";
 "feedProblem" = "Problema: %1$@";
@@ -2554,11 +2556,17 @@
 "settingsProjectsRemoveNamed" = "Remover %1$@";
 "settingsProjectsRemoveTitle" = "Remover projeto";
 "settingsProjectsRemoving" = "Removendo...";
+"settingsProjectsRequireChecks" = "Exigir verificações nas solicitações de pull";
+"settingsProjectsRequireChecksFound" = "Desativado desde %1$@, quando o tripulante de %2$@ não encontrou verificações.";
+"settingsProjectsRequireChecksOff" = "Este projeto não roda verificações, então suas alterações são mescladas sem esperar. A primeira verificação que rodar volta a ativar isto.";
+"settingsProjectsRequireChecksOn" = "Uma alteração só é mesclada depois que suas verificações passam.";
+"settingsProjectsRequireChecksSince" = "Desativado desde %1$@.";
 "settingsProjectsRigorDescription" = "Com que rigor o trabalho daqui é verificado.";
 "settingsProjectsRowCare" = "Cuidado %1$@";
 "settingsProjectsRowCollapsed" = "%1$@, recolhido";
 "settingsProjectsRowExpanded" = "%1$@, expandido";
 "settingsProjectsRowLinked" = "vinculado";
+"settingsProjectsRowNoChecks" = "sem verificações";
 "settingsProjectsRowPersonal" = "feito no local";
 "settingsProjectsRowRuns" = "roda %1$@";
 "settingsProjectsSaveDetails" = "Salvar detalhes";

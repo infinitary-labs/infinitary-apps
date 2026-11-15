@@ -636,6 +636,8 @@
 "feedMergesOnItsOwn" = "merges on its own";
 "feedMoved" = "Moved to a stronger model: continues as %1$@";
 "feedMovedOnTier" = "Moved to a stronger model: %2$@; continues as %1$@";
+"feedNoChecksEnded" = "Project %3$@ · requires pull request checks again: %2$@ ran on %1$@.";
+"feedNoChecksRecorded" = "Project %1$@ · runs no pull request checks, as the crewmate of %2$@ found. Its changes merge without waiting for checks.";
 "feedNoted" = "Noted: %1$@";
 "feedPersonalized" = "First mate · personalized: %1$@";
 "feedProblem" = "Problem: %1$@";
@@ -2554,11 +2556,17 @@
 "settingsProjectsRemoveNamed" = "Remove %1$@";
 "settingsProjectsRemoveTitle" = "Remove project";
 "settingsProjectsRemoving" = "Removing...";
+"settingsProjectsRequireChecks" = "Require pull request checks";
+"settingsProjectsRequireChecksFound" = "Off since %1$@, when the crewmate of %2$@ found no checks.";
+"settingsProjectsRequireChecksOff" = "This project runs no checks, so its changes merge without waiting for any. The first check that runs turns this back on.";
+"settingsProjectsRequireChecksOn" = "A change merges only once its checks pass.";
+"settingsProjectsRequireChecksSince" = "Off since %1$@.";
 "settingsProjectsRigorDescription" = "How thoroughly work here is checked.";
 "settingsProjectsRowCare" = "%1$@ rigor";
 "settingsProjectsRowCollapsed" = "%1$@, collapsed";
 "settingsProjectsRowExpanded" = "%1$@, expanded";
 "settingsProjectsRowLinked" = "linked";
+"settingsProjectsRowNoChecks" = "no checks";
 "settingsProjectsRowPersonal" = "builds in place";
 "settingsProjectsRowRuns" = "runs %1$@";
 "settingsProjectsSaveDetails" = "Save details";

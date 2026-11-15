@@ -1249,16 +1249,20 @@ describe("CrewSupervisor", () => {
       expect(again.forge.merges).toEqual([]);
     });
 
-    // INF-2062: moving a started task back to the backlog ends a kept approval, as an interrupt does.
-    it("a move back to the backlog revokes it with a hold", async () => {
+    // INF-2114, the captain's choice ("Keep it, and merge while the task waits
+    // in the backlog"): moving a started task back to the backlog stops its
+    // turn but keeps the approval, which merges the approved version there.
+    it("a move back to the backlog keeps it, and the approved version merges there", async () => {
       const harness = await kept();
       await harness.supervisor.steer.steerCrewmate(harness.taskId, "bring it up to date");
       expect(harness.supervisor.hostOps.runTaskOp(harness.taskId, "unqueue-task")).toBeUndefined();
-      await vi.waitFor(() =>
-        expect(harness.authorization()).toMatchObject({ status: "revoked", holds: true }),
-      );
       expect(harness.tasks.get(harness.taskId)?.backlogSince).not.toBeNull();
-      expect(harness.forge.merges).toEqual([]);
+      // The stand-in's abort only asks, as a provider's does; the stopped turn ends here.
+      await vi.waitFor(() => expect(harness.crewmate.aborts).toHaveLength(1));
+      expect(harness.authorization()).toMatchObject({ status: "standing" });
+      harness.crewmate.finishPrompt();
+      await vi.waitFor(() => expect(harness.forge.merges).toHaveLength(1));
+      expect(harness.authorization()).toMatchObject({ status: "consumed" });
     });
 
     it("the captain's withdrawal takes it back with a hold, and only his new click merges", async () => {

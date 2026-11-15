@@ -247,6 +247,29 @@ export function hostTakesBatches(host: RepoHost | undefined): boolean {
 }
 
 /**
+ * Whether a project's pull requests can carry checks where it lives: GitHub
+ * and GitLab run them, as their forges' `hasChecks` says, while a plain Git
+ * host or a project kept on this Mac runs none, so its changes already read
+ * no checks (docs/forge.md, "A project with no checks"). Settings → Projects
+ * offers Require pull request checks only where this holds and the project
+ * ships through pull requests, and a project may turn it off only there.
+ */
+export function readsPullRequestChecks(
+  repo: Pick<RepoView, "kind" | "delivery" | "origin" | "host">,
+): boolean {
+  return (
+    repo.kind !== "personal" &&
+    opensPullRequest(repo.delivery) &&
+    !!repo.origin &&
+    (repo.host?.kind === "github" || repo.host?.kind === "gitlab")
+  );
+}
+
+/** Why a project that reads no pull request checks cannot turn Require pull request checks off. */
+export const NO_CHECKS_REFUSAL =
+  "Require pull request checks can be turned off only for a project whose changes go through pull requests on GitHub or GitLab. This project's changes do not, so no check holds its merge.";
+
+/**
  * The deliveries a project may choose where it lives: a project kept only on
  * this Mac lands locally; one with a host also opens pull requests; and one
  * whose host takes a batch pull request can combine approved changes. Settings
@@ -276,12 +299,46 @@ export const repoPolicyPatchSchema = z
     name: z.string().trim().min(1).max(120).optional(),
     path: z.string().trim().min(1).max(4096).optional(),
     origin: z.string().trim().min(1).max(4096).nullable().optional(),
+    /**
+     * Settings → Projects' Require pull request checks (docs/forge.md, "A
+     * project with no checks"): false records that the project runs no
+     * checks, true ends that record.
+     */
+    requireChecks: z.boolean().optional(),
   })
   .strict()
   .refine((patch) => Object.values(patch).some((value) => value !== undefined), {
-    message: "pass delivery, autonomy, rigor, costLimit, scope, name, path, origin, or several",
+    message:
+      "pass delivery, autonomy, rigor, costLimit, scope, name, path, origin, requireChecks, or several",
   });
 export type RepoPolicyPatch = z.infer<typeof repoPolicyPatchSchema>;
+
+/**
+ * The record that a project runs no pull request checks (docs/forge.md, "A
+ * project with no checks"), shown as Require pull request checks off in
+ * Settings → Projects. A crewmate's declaration names its task (by key), the
+ * version it read and its evidence; a change in Settings or by the first
+ * mate names none.
+ */
+export const noChecksRecordSchema = z.object({
+  at: z.number(),
+  task: z.string().optional(),
+  head: z.string().optional(),
+  evidence: z.string().optional(),
+});
+export type NoChecksRecord = z.infer<typeof noChecksRecordSchema>;
+
+/** What the app did to a project's no-checks record on its own, from a reading or a declaration. */
+export type NoChecksChange =
+  | { kind: "recorded"; record: NoChecksRecord }
+  | { kind: "ended"; check: string; change: string };
+
+/** The Activity line when the app starts or ends a project's no-checks record, as a saved fact. */
+export function noChecksSaid(name: string, change: NoChecksChange): Said {
+  return change.kind === "recorded"
+    ? said("feedNoChecksRecorded", { name, task: change.record.task ?? "" })
+    : said("feedNoChecksEnded", { name, check: change.check, change: change.change });
+}
 
 export const repoViewSchema = z.object({
   id: z.string(),
@@ -328,6 +385,12 @@ export const repoViewSchema = z.object({
    * while there is either (docs/forge.md, "Batches of your own").
    */
   batch: batchRecordSchema.optional(),
+  /**
+   * The record that the project runs no pull request checks, while it has
+   * one; absent, its changes' checks hold their merge (docs/forge.md, "A
+   * project with no checks").
+   */
+  noChecks: noChecksRecordSchema.optional(),
 });
 export type RepoView = z.infer<typeof repoViewSchema>;
 

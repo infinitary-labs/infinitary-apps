@@ -241,7 +241,12 @@ function changeRows(offer: Offer, devices: readonly DeviceView[]): string {
     costLimit: "Cost limit",
     runsOn: "Runs on",
     placementRequirements: "Computer requirements",
+    requireChecks: "Require pull request checks",
   };
+  // Each detail as the project has it now; the project keeps Require pull
+  // request checks as its record that it runs none.
+  const now = (key: string): unknown =>
+    key === "requireChecks" ? !previous.noChecks : previous[key as keyof typeof previous];
   const words = (key: string, value: unknown): string => {
     if (key === "costLimit") {
       const limit = value as CostLimit | null | undefined;
@@ -253,6 +258,7 @@ function changeRows(offer: Offer, devices: readonly DeviceView[]): string {
     if (key === "rigor")
       return RIGOR_WORDS[(value ?? "standard") as NonNullable<RepoView["rigor"]>];
     if (key === "origin" && value === null) return "Kept on this computer";
+    if (key === "requireChecks") return value ? "On" : "Off";
     if (key === "runsOn")
       return value === AUTOMATIC_COMPUTER
         ? AUTOMATIC_WORD
@@ -284,7 +290,7 @@ function changeRows(offer: Offer, devices: readonly DeviceView[]): string {
   )
     .map(
       ([key, value]) =>
-        `<tr><th>${escapeCardText(labels[key] ?? key)}</th><td class="inf-mono">${escapeCardText(words(key, previous[key as keyof typeof previous]))}</td><td class="inf-mono">${escapeCardText(words(key, value))}</td></tr>`,
+        `<tr><th>${escapeCardText(labels[key] ?? key)}</th><td class="inf-mono">${escapeCardText(words(key, now(key)))}</td><td class="inf-mono">${escapeCardText(words(key, value))}</td></tr>`,
     )
     .join("")}</tbody></table>`;
 }

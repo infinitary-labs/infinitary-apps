@@ -636,6 +636,8 @@
 "feedMergesOnItsOwn" = "fusiona por su cuenta";
 "feedMoved" = "Pasó a un modelo más potente: continúa como %1$@";
 "feedMovedOnTier" = "Pasó a un modelo más potente: %2$@; continúa como %1$@";
+"feedNoChecksEnded" = "Proyecto %3$@ · vuelve a exigir comprobaciones: %2$@ se ejecutó en %1$@.";
+"feedNoChecksRecorded" = "Proyecto %1$@ · no ejecuta comprobaciones en las solicitudes de incorporación de cambios, según encontró el tripulante de %2$@. Sus cambios se fusionan sin esperar comprobaciones.";
 "feedNoted" = "Anotado: %1$@";
 "feedPersonalized" = "Primer oficial · personalizó: %1$@";
 "feedProblem" = "Problema: %1$@";
@@ -2554,11 +2556,17 @@
 "settingsProjectsRemoveNamed" = "Quitar %1$@";
 "settingsProjectsRemoveTitle" = "Quitar proyecto";
 "settingsProjectsRemoving" = "Quitando...";
+"settingsProjectsRequireChecks" = "Exigir comprobaciones en las solicitudes de incorporación de cambios";
+"settingsProjectsRequireChecksFound" = "Desactivado desde %1$@, cuando el tripulante de %2$@ no encontró comprobaciones.";
+"settingsProjectsRequireChecksOff" = "Este proyecto no ejecuta comprobaciones, así que sus cambios se fusionan sin esperar ninguna. La primera comprobación que se ejecute vuelve a activarlo.";
+"settingsProjectsRequireChecksOn" = "Un cambio se fusiona solo cuando superan sus comprobaciones.";
+"settingsProjectsRequireChecksSince" = "Desactivado desde %1$@.";
 "settingsProjectsRigorDescription" = "Qué tan a fondo se revisa el trabajo aquí.";
 "settingsProjectsRowCare" = "cuidado %1$@";
 "settingsProjectsRowCollapsed" = "%1$@, contraído";
 "settingsProjectsRowExpanded" = "%1$@, expandido";
 "settingsProjectsRowLinked" = "vinculado";
+"settingsProjectsRowNoChecks" = "sin comprobaciones";
 "settingsProjectsRowPersonal" = "construido en el lugar";
 "settingsProjectsRowRuns" = "se ejecuta %1$@";
 "settingsProjectsSaveDetails" = "Guardar detalles";

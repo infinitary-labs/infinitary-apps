@@ -159,10 +159,11 @@ export const REVERSE_MIGRATION_66 = `
 `;
 /** Migration 65's live attachment, undone: the `cards` column. */
 export const REVERSE_MIGRATION_65 = "ALTER TABLE cards DROP COLUMN attachment_json;\n";
-/** A project's batch of its own, undone: the newest project column. */
-/** Which project each repository belongs to (INF-4220), undone before any older project column. */
-export const REVERSE_PROJECT_MEMBERSHIP =
-  "DROP INDEX repos_project; ALTER TABLE repos DROP COLUMN project_id;\n";
+/** A project's record that it runs no checks, undone: the newest project column. */
+export const REVERSE_PROJECT_NO_CHECKS = "ALTER TABLE repos DROP COLUMN no_checks_json;\n";
+/** Which project each repository belongs to (INF-4220), undone after the later no-checks column and before any older project column. */
+export const REVERSE_PROJECT_MEMBERSHIP = `${REVERSE_PROJECT_NO_CHECKS}DROP INDEX repos_project; ALTER TABLE repos DROP COLUMN project_id;\n`;
+/** A project's batch of its own, undone, after the later project columns. */
 export const REVERSE_PROJECT_BATCH = `${REVERSE_PROJECT_MEMBERSHIP}ALTER TABLE repos DROP COLUMN batch_json;\n`;
 /** The contribution route, undone before reconstructing an older project record, after the later batch column. */
 export const REVERSE_PROJECT_CONTRIBUTIONS = `${REVERSE_PROJECT_BATCH}ALTER TABLE repos DROP COLUMN contribution_json;\n`;

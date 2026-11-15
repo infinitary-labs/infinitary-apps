@@ -636,6 +636,8 @@
 "feedMergesOnItsOwn" = "führt selbst zusammen";
 "feedMoved" = "Zu einem stärkeren Modell gewechselt: geht weiter als %1$@";
 "feedMovedOnTier" = "Zu einem stärkeren Modell gewechselt: %2$@; geht weiter als %1$@";
+"feedNoChecksEnded" = "Projekt %3$@ · verlangt wieder Überprüfungen für Pull Requests: %2$@ lief auf %1$@.";
+"feedNoChecksRecorded" = "Projekt %1$@ · führt keine Überprüfungen für Pull Requests aus, wie das Crewmitglied von %2$@ feststellte. Seine Änderungen werden ohne Warten auf Überprüfungen zusammengeführt.";
 "feedNoted" = "Notiert: %1$@";
 "feedPersonalized" = "Erster Offizier · personalisiert: %1$@";
 "feedProblem" = "Problem: %1$@";
@@ -2554,11 +2556,17 @@
 "settingsProjectsRemoveNamed" = "%1$@ entfernen";
 "settingsProjectsRemoveTitle" = "Projekt entfernen";
 "settingsProjectsRemoving" = "Wird entfernt ...";
+"settingsProjectsRequireChecks" = "Überprüfungen für Pull Requests verlangen";
+"settingsProjectsRequireChecksFound" = "Aus seit %1$@, als das Crewmitglied von %2$@ keine Überprüfungen fand.";
+"settingsProjectsRequireChecksOff" = "Dieses Projekt führt keine Überprüfungen aus, daher werden seine Änderungen ohne Warten zusammengeführt. Die erste Überprüfung, die läuft, schaltet dies wieder ein.";
+"settingsProjectsRequireChecksOn" = "Eine Änderung wird erst zusammengeführt, wenn ihre Überprüfungen bestanden sind.";
+"settingsProjectsRequireChecksSince" = "Aus seit %1$@.";
 "settingsProjectsRigorDescription" = "Wie gründlich die Arbeit hier geprüft wird.";
 "settingsProjectsRowCare" = "Sorgfalt: %1$@";
 "settingsProjectsRowCollapsed" = "%1$@, zugeklappt";
 "settingsProjectsRowExpanded" = "%1$@, aufgeklappt";
 "settingsProjectsRowLinked" = "verknüpft";
+"settingsProjectsRowNoChecks" = "keine Überprüfungen";
 "settingsProjectsRowPersonal" = "baut direkt im Ordner";
 "settingsProjectsRowRuns" = "läuft %1$@";
 "settingsProjectsSaveDetails" = "Angaben speichern";

@@ -96,6 +96,23 @@ export function noCheckRan(items: readonly { state: ForgeCheckState }[]): boolea
   return items.every((item) => item.state === "skipped");
 }
 
+/**
+ * The checks of a reading that ran where the project lives, any one of which
+ * ends the project's record that it runs no pull request checks
+ * (docs/forge.md, "A project with no checks"): a skipped check did not run,
+ * and the batch check is the app's own, by its name or an earlier queue's.
+ */
+export function checksThatRan<T extends { name: string; state: ForgeCheckState }>(
+  items: readonly T[],
+): T[] {
+  return items.filter(
+    (item) =>
+      item.state !== "skipped" &&
+      item.name !== BATCH_CHECK &&
+      !item.name.startsWith(`${BATCH_CHECK} [`),
+  );
+}
+
 /** Display-only tally of reported facts; never a readiness or merge decision. */
 export function checkSnapshotSummary(reading: CheckSnapshot): {
   overall: "green" | "red" | "pending" | "none";

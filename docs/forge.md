@@ -588,6 +588,7 @@ The reading identifies incomplete lists rather than inventing a check for a phys
 An empty hosted reading, or one where every check skipped, stays pending and watched until checks run or the crew records positive, exact-version absence evidence through `absentChecks`, with `pull` or, for the task's own pull request, alone (INF-1955: `CheckChangeTool.declareOwnAbsence` matches it to the pull request the task's branch holds, by number, branch and version, and stores it on an owned merge review).
 A declaration the record cannot match - no open pull request yet, another version, a host that runs no checks - is refused in words, never dropped; the merge card's checks hold names the declaration when an empty or all-skipped reading holds the card.
 While such a reading is watched, `check_change` does not tell the crewmate to end its turn and wait: it names both ways out, waiting if checks are still to start, or else declaring `absentChecks` or reporting that there is no evidence to declare, and the first mate's reading carries the same fact (INF-4215).
+A project recorded as running no checks needs no declaration for each version ("A project with no checks" below).
 That evidence names an explicit no-CI policy from the trusted default branch and the applicable local gate; elapsed time, history and missing workflow files are not evidence of that policy.
 A host that runs no checks, such as a plain Git host, needs no invented hosted check.
 An absence declaration never removes registered checks from the reading or marks them passed.
@@ -608,6 +609,35 @@ The delivery judgment is the delivery runbook's (`resources/runbooks/delivery`) 
 
 The merge boundary still checks the captain's authorization or standing autonomy, the exact approved change and version, GitHub's rules and mergeability, and the send-once result.
 The sign-in, consent and unknown-outcome boundaries are unchanged.
+
+## A project with no checks
+
+A project whose pull requests run no checks is a recorded fact on the project, not something each change declares again (INF-2114).
+The record is the project's `noChecks` (`RepoView`, the `no_checks_json` column), and `RepoRegistry` is its only writer.
+Settings → Projects shows it as Require pull request checks, on for every project; off is the record.
+The switch is offered only where checks can run: a project that ships through pull requests on GitHub or GitLab (`readsPullRequestChecks` in `src/shared/repos.ts`).
+A plain Git host, a project kept on this Mac or one that merges locally reads no pull request checks already, so it needs no record.
+`RepoRegistry.checkConfigure` refuses to turn the switch off for such a project, as the patch leaves it, whoever asks (`NO_CHECKS_REFUSAL`); turning it on is always accepted.
+
+Three ways start the record, and the same three end it by hand:
+
+- The crewmate's own absence declaration with `project: true` (`check_change`'s `absentChecks`, for its own change only, never beside `pull`).
+  It is kept only once that version's own declaration is stored and no check ran at that version, and it names the task, the version and the evidence (`CheckChangeTool.declareProjectAbsence`).
+  A record already there is kept as it was.
+- The captain's switch in Settings → Projects (`inf:repos:configure` with `requireChecks`).
+- The first mate's `app_change project-settings` with `requireChecks`, on the captain's words, as any project setting; without them, the app's exact-change card shows the switch's state now and after the click.
+
+While the record stands, `ChangeChecks.absenceDeclared` answers true for every change in the project, its own or one a crewmate reviews there, so everything that already reads a declaration follows with no path of its own.
+A reading where no check ran is no checks: nothing is watched, so no two-hour wake comes, and `check_change` tells the crewmate so (`PROJECT_NO_CHECKS_WORDS`).
+The merge card goes up at once with its usual Merge the pull request, and a click merges with no checks override.
+A batch of the captain's own reads each of the project's changes as declared (`declaredAbsent`).
+An empty list alone never starts the record, and the app never infers it from missing workflow files.
+An empty, undeclared reading names this way to the crewmate, and its two-hour wake does too ("Check facts and crew judgment" above, `emptyWords` in `src/core/orchestrator/changeChecks.ts`).
+
+The first reading where a check ran on any of the project's changes ends the record: a check that is queued, running or finished counts, while a skipped check and the app's own batch check do not (`checksThatRan` in `src/shared/checkSnapshot.ts`).
+Every reading of a change's checks ends it: a task's reading and the merge's own (`ChangeChecks.endNoChecks`), and the batch pull request's (`Batches.follow`), where a project whose workflows run only on pull requests runs them.
+Its checks then hold the merge again, and one Activity line names the check and the change it ran on (`noChecksSaid`, `RepoRegistry.onNoChecks`).
+A pull request that adds a recorded project's first check can merge before that check registers; the record ends at the first reading that sees it.
 
 ## A requested merge
 
@@ -787,7 +817,7 @@ The change's page is its branch's compare page against the default branch where 
 A change read before its page was kept gains it at its next checks reading (`ChangeChecks.noteChange`); a plain Git host has no such page, and its branch stays unlinked.
 The words served to a crewmate that name a pull request's page read it only where the change has a number, so a compare page is never called a pull request.
 The merge reads Merge in the next batch, since its click puts the change in line.
-A branch whose project runs no checks on it is declared with `check_change`'s `absentChecks`, as for a pull request.
+A branch whose project runs no checks on it is declared with `check_change`'s `absentChecks`, as for a pull request, and a project recorded as running none needs no declaration ("A project with no checks").
 The merge click keeps the captain's approval at that version and puts the change in line (`ChangeMerge.mergeInBatch`): it reads the branch's checks, range, title, review and story as any merge does, and sends nothing to merge.
 A change that still has a pull request of its own joins the same way, and that pull request is closed with a note linking the batch once the batch merges (`Forge.closeWithNote`); one stacked on another branch joins only once that branch's work is already in.
 The kept approval then waits on `queue`, and each later run reads the change's place from the app's own record: in line, in a batch, left out, the only change of a failed batch, or merged.
@@ -896,6 +926,7 @@ The design follows the firstmate repo's PR poll: a watcher that is not a model, 
 - **Armed** by a reading that finds a check still queued or running (`ChangeChecks.record`), on a forge whose `hasChecks` is true: the crewmate's `check_change` or the merge card's CI gate.
   A reading that is only held back by a neutral check arms nothing: nothing is left to finish.
   A plain Git host or a project kept on this Mac has no checks, so nothing is watched and `check_change` says no wake will come; a new forge kind with checks implements `checks()`, sets `hasChecks`, and is watched with no change here.
+  A project recorded as running no checks arms nothing for a reading where no check ran, and `check_change` says no wake will come ("A project with no checks").
 - **Durable**: the watch is a delivery fact on the task, `ciWatch { head, since, nextAt, tries, failureSeen }`, so it outlives a restart and ends with the task.
   A reading at the head already watched keeps its start.
   `failureSeen` means the early wake for that head already went, or the crewmate already read a red check, so that wake is not sent again.

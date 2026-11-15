@@ -1703,8 +1703,9 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     expect(prompt).toContain(
       "A failed run that is not one of the pull request's own checks is yours to handle like a failed command, never a merge input; if it stays failed, your merge card names the run, what failed and why it lies outside this change.",
     );
+    // INF-2114: a project recorded as running no checks needs no declaration per version.
     expect(prompt).toContain(
-      "A reading where no check ran, none registered or every one skipped, is pending, not no checks, until you declare their absence with check_change's absentChecks from positive evidence.",
+      "A reading where no check ran, none registered or every one skipped, is pending, not no checks, until you declare their absence with check_change's absentChecks from positive evidence, adding project true when the project's default branch runs none; once a project is recorded as running none, its readings say so and need no declaration.",
     );
     // The freshness rule is the host's: a completion card is refused unless
     // the checks it reads at that moment passed (INF-490).

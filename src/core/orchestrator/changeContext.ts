@@ -88,8 +88,20 @@ export type ChangeDeliveryOptions = {
 /** Where a sign-in was missing, and the project it was for. */
 export type SignInFact = { host: string; name: string; repoId?: string };
 
-/** The checked change, and the forge that answered, for the put-in that follows. */
-export type CheckedChange = { change: ForgeChange; forge: Forge };
+/**
+ * The checked change, and the forge that answered, for the put-in that
+ * follows. `project` is the managed project the change is in, whose saved
+ * record may say it runs no checks (docs/forge.md, "A project with no
+ * checks"); absent where the change lives in a project the app does not
+ * manage, such as an upstream contribution's.
+ */
+export type CheckedChange = { change: ForgeChange; forge: Forge; project?: string };
+
+/** The managed project a located change is in, as `CheckedChange.project` names it. */
+export function projectOf(located: Located): { project?: string } {
+  const own = located.elsewhere || !located.record.delivery?.publicationOrigin;
+  return own && located.repo ? { project: located.repo.id } : {};
+}
 
 /** The task as `ChangeContext.locate` found it: its project, branch and forge. */
 export type Located = {

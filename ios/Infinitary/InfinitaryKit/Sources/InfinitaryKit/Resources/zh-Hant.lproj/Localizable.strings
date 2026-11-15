@@ -636,6 +636,8 @@
 "feedMergesOnItsOwn" = "自行合併";
 "feedMoved" = "已改用更強的模型：由 %1$@ 接續";
 "feedMovedOnTier" = "已改用更強的模型：%2$@；由 %1$@ 接續";
+"feedNoChecksEnded" = "專案 %3$@ · 重新要求 pull request 檢查：%2$@ 在 %1$@ 上執行了。";
+"feedNoChecksRecorded" = "專案 %1$@ · 不執行 pull request 檢查，這是 %2$@ 的船員發現的。它的變更不等檢查就會合併。";
 "feedNoted" = "已記下：%1$@";
 "feedPersonalized" = "大副 · 已個人化：%1$@";
 "feedProblem" = "問題：%1$@";
@@ -2554,11 +2556,17 @@
 "settingsProjectsRemoveNamed" = "移除 %1$@";
 "settingsProjectsRemoveTitle" = "移除專案";
 "settingsProjectsRemoving" = "正在移除…";
+"settingsProjectsRequireChecks" = "要求 pull request 檢查";
+"settingsProjectsRequireChecksFound" = "自 %1$@ 起關閉：%2$@ 的船員發現沒有檢查。";
+"settingsProjectsRequireChecksOff" = "這個專案不執行檢查，所以變更不用等待就會合併。第一次有檢查執行時，這一項會重新開啟。";
+"settingsProjectsRequireChecksOn" = "變更要等檢查通過後才會合併。";
+"settingsProjectsRequireChecksSince" = "自 %1$@ 起關閉。";
 "settingsProjectsRigorDescription" = "這裡的工作要檢查得多仔細。";
 "settingsProjectsRowCare" = "謹慎度：%1$@";
 "settingsProjectsRowCollapsed" = "%1$@，已收合";
 "settingsProjectsRowExpanded" = "%1$@，已展開";
 "settingsProjectsRowLinked" = "已連結";
+"settingsProjectsRowNoChecks" = "無檢查";
 "settingsProjectsRowPersonal" = "就地建置";
 "settingsProjectsRowRuns" = "%1$@ 執行";
 "settingsProjectsSaveDetails" = "儲存詳細資料";

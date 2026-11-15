@@ -470,9 +470,10 @@ export class HostOps {
   /**
    * A started task goes back to the backlog (INF-2062; docs/task-board.md,
    * "Moves"): the task board's Back to backlog, and update_task
-   * start_policy on-request on started work. Its running turn stops and a
-   * kept merge approval ends, as an interrupt does; its working copy,
-   * branch, conversation, change and jobs stay. Nothing the host sends
+   * start_policy on-request on started work. Its running turn stops, as an
+   * interrupt does, but a kept merge approval stays and its merge goes ahead
+   * there (INF-2114); its working copy, branch, conversation, change and
+   * jobs stay. Nothing the host sends
    * wakes it there, and Start picks it up in the same conversation
    * (`startFromBacklog`). Its stuck card comes down with the move, since
    * the backlog is now where its wait shows (INF-3143, direction A), and

@@ -1412,6 +1412,13 @@ export const MIGRATIONS: readonly Migration[] = [
       CREATE INDEX repos_project ON repos (project_id);
     `);
   },
+  // INF-2114 (docs/forge.md, "A project with no checks"): the record that a
+  // project runs no pull request checks, as JSON (`noChecksRecordSchema`),
+  // shown as Require pull request checks off in Settings → Projects. Null on
+  // every existing project, whose checks hold its merges as before.
+  // `RepoRegistry` is the only writer; no published view reads it. Dropping
+  // the column reverses it.
+  (db) => addColumn(db, "repos", "no_checks_json", "TEXT"),
 ];
 
 /**

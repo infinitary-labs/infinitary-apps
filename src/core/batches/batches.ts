@@ -13,7 +13,7 @@ import {
   type OpenBatch,
   SQUASH_ONLY_WORDS,
 } from "@shared/batches";
-import { checkSnapshotSummary, isRedCheckState } from "@shared/checkSnapshot";
+import { checkSnapshotSummary, checksThatRan, isRedCheckState } from "@shared/checkSnapshot";
 import type { RepoView } from "@shared/repos";
 import type { NamingRule } from "@shared/runbooks";
 import {
@@ -112,7 +112,7 @@ export type BatchHeld = {
 };
 
 export type BatchesOptions = {
-  repos: Pick<RepoRegistry, "get" | "list" | "recordBatch">;
+  repos: Pick<RepoRegistry, "get" | "list" | "recordBatch" | "endNoChecks">;
   forgeFor: (repo: RepoView) => Forge;
   now: () => number;
   /** The active naming runbook's rule, read at each use; null when no naming runbook is on. */
@@ -423,6 +423,11 @@ export class Batches {
       title: pull.title ?? this.title(open.members),
     };
     const checks = await forge.checks(change);
+    // A check that ran on the batch pull request ends the project's record
+    // that it runs none, as on a change's own pull request.
+    const [ran] = repo.noChecks ? checksThatRan(checks.items) : [];
+    if (ran)
+      this.options.repos.endNoChecks(repo.id, { check: ran.name, change: forge.label(change) });
     // The same reading a change's own pull request takes: every check passed
     // or skipped is green, and a reading where no check ran - none at all, or
     // only skipped ones - is green only where every member's own version was

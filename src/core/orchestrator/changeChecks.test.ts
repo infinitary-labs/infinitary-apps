@@ -2,6 +2,7 @@ import { rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { MergeReview } from "@shared/mergeReview";
+import type { NoChecksChange } from "@shared/repos";
 import { describe, expect, it, vi } from "vitest";
 import {
   FakeForge,
@@ -22,6 +23,8 @@ import {
 import { InboxStore } from "../storage/inboxStore";
 import { TaskStore } from "../storage/taskRecords";
 import { git } from "../workspace/git";
+import { PROJECT_NO_CHECKS_WORDS } from "./changeChecks";
+import { PROJECT_ABSENCE_WORDS } from "./checkChangeTool";
 import { CheckWatcher } from "./checkWatch";
 import { renderWake, type TypedWake } from "./wakes";
 
@@ -502,6 +505,8 @@ describe('the check watch\'s side of a reading (docs/forge.md, "The check watch"
     const said = await service.checkTool.checkForCrew("ab12cd34");
     expect(said).toContain("- no checks reported on the head SHA");
     expect(said).toContain("check_change absentChecks");
+    // INF-2114: the crewmate records it once for the project, not per version.
+    expect(said).toContain("project true");
     expect(said).not.toContain("End your turn now and wait");
     const told = (await service.checks.run("ab12cd34")).text;
     expect(told).toContain("absentChecks");
@@ -531,6 +536,7 @@ describe('the check watch\'s side of a reading (docs/forge.md, "The check watch"
     const wake = renderWake(steers[0] as TypedWake);
     expect(wake).toContain("No check started");
     expect(wake).toContain("check_change absentChecks");
+    expect(wake).toContain("project true");
     expect(wake).not.toContain("still running");
   });
 
@@ -1573,5 +1579,154 @@ describe("the slot's head moves with the change it names (INF-1884 R2)", () => {
       prNumber: 94,
       checkTarget: { number: 94, branch: RELEASE_BRANCH },
     });
+  });
+});
+
+// INF-2114, the captain's checked improvement: "A project with no checks is a
+// recorded fact: its card offers Merge now, nothing watches for two hours".
+// The crewmate records it once with its evidence; a later change in the
+// project reads no checks unwatched, and the first check that runs ends it.
+describe('a project with no checks (docs/forge.md, "A project with no checks")', () => {
+  async function noCiProject() {
+    const harness = setup();
+    const { tasks, repos, forge } = harness;
+    await insertDirectPrTask(tasks, repos);
+    const task = tasks.get("ab12cd34")!;
+    repos.configure(task.repoId!, { origin: "https://github.com/x/y.git" });
+    const headSha = await git(task.repoDir, ["rev-parse", "HEAD"]);
+    forge.change = { ...forge.change!, headSha };
+    forge.states = [];
+    Object.assign(forge, {
+      pull: async () => ({
+        number: 23,
+        state: "open",
+        merged: false,
+        headSha,
+        base: "main",
+        branch: task.branch,
+        headRepo: "x/y",
+        title: "fix: ship the meter",
+      }),
+    });
+    const heard: NoChecksChange[] = [];
+    repos.onNoChecks((_repo, change) => heard.push(change));
+    const absence = {
+      headSha,
+      evidence: "The default branch has no workflow files and its rules require no checks.",
+      localGate: "The project's own tests passed at this version.",
+      project: true,
+    };
+    return { ...harness, task, repoId: task.repoId!, headSha, heard, absence };
+  }
+
+  it("records the crewmate's declaration for the project, reads its later changes as no checks with nothing watched, and ends the record when a check runs", async () => {
+    const { tasks, repos, service, forge, task, repoId, headSha, heard, absence } =
+      await noCiProject();
+    await service.checkTool.checkForCrew(task.id);
+    expect(tasks.get(task.id)?.delivery?.ciWatch).toMatchObject({ head: headSha });
+
+    const answer = await service.checkTool.checkForCrew(task.id, { absentChecks: absence });
+    expect(answer).toContain("Absence evidence stored for this version");
+    expect(answer).toContain(PROJECT_ABSENCE_WORDS.recorded);
+    expect(repos.get(repoId)?.noChecks).toMatchObject({
+      task: task.key || task.id,
+      head: headSha,
+      evidence: absence.evidence,
+    });
+    expect(heard).toMatchObject([{ kind: "recorded" }]);
+    // Declaring again keeps the first record, with its task and evidence.
+    expect(await service.checkTool.checkForCrew(task.id, { absentChecks: absence })).toContain(
+      PROJECT_ABSENCE_WORDS.already,
+    );
+    expect(heard).toHaveLength(1);
+
+    // A later change in the same project needs no declaration of its own.
+    insertTask(tasks, {
+      id: "ef56ab78",
+      repoId,
+      repoDir: task.repoDir,
+      branch: "fm/task-ef56ab78",
+    });
+    const reading = await service.checkTool.checkForCrew("ef56ab78");
+    expect(reading).toContain(PROJECT_NO_CHECKS_WORDS);
+    expect(tasks.get("ef56ab78")?.delivery).toMatchObject({
+      checks: { items: [], absenceDeclared: true },
+    });
+    expect(tasks.get("ef56ab78")?.delivery?.ciWatch).toBeUndefined();
+    expect(service.checks.reading("ef56ab78")?.overall).toBe("green");
+
+    // A job that skipped did not run: the record stands.
+    forge.states = ["skipped"];
+    await service.checkTool.checkForCrew("ef56ab78");
+    expect(repos.get(repoId)?.noChecks).toBeDefined();
+    expect(tasks.get("ef56ab78")?.delivery?.ciWatch).toBeUndefined();
+
+    // A check that runs ends the record, and checks hold the merge again.
+    forge.states = ["pending"];
+    await service.checkTool.checkForCrew("ef56ab78");
+    expect(repos.get(repoId)?.noChecks).toBeUndefined();
+    expect(heard.at(-1)).toEqual({ kind: "ended", check: "linux-checks", change: "#23" });
+    expect(tasks.get("ef56ab78")?.delivery).toMatchObject({ ci: "pending" });
+    expect((await service.merges.merge("ef56ab78")).ok).toBe(false);
+    forge.states = [];
+    await service.checkTool.checkForCrew("ef56ab78");
+    expect(service.checks.reading("ef56ab78")?.overall).toBe("pending");
+    expect(tasks.get("ef56ab78")?.delivery?.ciWatch).toMatchObject({ head: headSha });
+  });
+
+  it("merges a later change on the captain's kept click while the record stands, with nothing watched", async () => {
+    const { tasks, service, forge, task, repoId, headSha, absence } = await noCiProject();
+    await service.checkTool.checkForCrew(task.id, { absentChecks: absence });
+    insertTask(tasks, {
+      id: "ef56ab78",
+      repoId,
+      repoDir: task.repoDir,
+      branch: "fm/task-ef56ab78",
+    });
+    await service.checkTool.checkForCrew("ef56ab78");
+    expect(tasks.get("ef56ab78")?.delivery?.ciWatch).toBeUndefined();
+    const click = {
+      head: headSha,
+      prNumber: 23,
+      unattended: false,
+      beforeDispatch: () => undefined,
+    };
+    expect((await service.merges.merge("ef56ab78", click)).ok).toBe(true);
+    expect(forge.calls.filter((call) => call.startsWith("putIn"))).toEqual([
+      `putIn fm/task-ef56ab78 ${headSha}`,
+    ]);
+  });
+
+  it("refuses the project record beside a named pull request, and where a check ran at the version", async () => {
+    const { repos, service, forge, task, repoId, absence } = await noCiProject();
+    expect(await service.checkTool.checkForCrew(task.id, { pull: 23, absentChecks: absence })).toBe(
+      PROJECT_ABSENCE_WORDS.withPull,
+    );
+    expect(repos.get(repoId)?.noChecks).toBeUndefined();
+
+    forge.states = ["success"];
+    await service.checkTool.checkForCrew(task.id);
+    const answer = await service.checkTool.checkForCrew(task.id, { absentChecks: absence });
+    expect(answer).toContain(PROJECT_ABSENCE_WORDS.ran(["linux-checks"]));
+    expect(answer).not.toContain(PROJECT_ABSENCE_WORDS.recorded);
+    expect(repos.get(repoId)?.noChecks).toBeUndefined();
+  });
+
+  it("keeps the record the captain sets in the project's settings, and ends it there", async () => {
+    const { tasks, repos, service, task, repoId } = await noCiProject();
+    expect(repos.configure(repoId, { requireChecks: false }).noChecks).toMatchObject({
+      at: expect.any(Number),
+    });
+    await service.checkTool.checkForCrew(task.id);
+    expect(service.checks.reading(task.id)?.overall).toBe("green");
+    expect(tasks.get(task.id)?.delivery?.ciWatch).toBeUndefined();
+    // A pull request it reviews in the project reads the same way.
+    const review = await service.checkTool.checkForCrew(task.id, { pull: 23 });
+    expect(review).toContain(PROJECT_NO_CHECKS_WORDS);
+    expect(review).not.toContain("An empty hosted reading alone does not establish");
+    expect(service.checks.reading(task.id)?.overall).toBe("green");
+    expect(repos.configure(repoId, { requireChecks: true }).noChecks).toBeUndefined();
+    await service.checkTool.checkForCrew(task.id);
+    expect(service.checks.reading(task.id)?.overall).toBe("pending");
   });
 });

@@ -2147,6 +2147,26 @@
                 "receipts",
                 "leftOut"
               ]
+            },
+            "noChecks": {
+              "type": "object",
+              "properties": {
+                "at": {
+                  "type": "number"
+                },
+                "task": {
+                  "type": "string"
+                },
+                "head": {
+                  "type": "string"
+                },
+                "evidence": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "at"
+              ]
             }
           },
           "required": [
@@ -2815,6 +2835,26 @@
                   "receipts",
                   "leftOut"
                 ]
+              },
+              "noChecks": {
+                "type": "object",
+                "properties": {
+                  "at": {
+                    "type": "number"
+                  },
+                  "task": {
+                    "type": "string"
+                  },
+                  "head": {
+                    "type": "string"
+                  },
+                  "evidence": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "at"
+                ]
               }
             },
             "required": [
@@ -3093,6 +3133,9 @@
                     "type": "null"
                   }
                 ]
+              },
+              "requireChecks": {
+                "type": "boolean"
               }
             },
             "additionalProperties": false
@@ -3658,6 +3701,26 @@
               "line",
               "receipts",
               "leftOut"
+            ]
+          },
+          "noChecks": {
+            "type": "object",
+            "properties": {
+              "at": {
+                "type": "number"
+              },
+              "task": {
+                "type": "string"
+              },
+              "head": {
+                "type": "string"
+              },
+              "evidence": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "at"
             ]
           }
         },
@@ -6863,6 +6926,26 @@
               "line",
               "receipts",
               "leftOut"
+            ]
+          },
+          "noChecks": {
+            "type": "object",
+            "properties": {
+              "at": {
+                "type": "number"
+              },
+              "task": {
+                "type": "string"
+              },
+              "head": {
+                "type": "string"
+              },
+              "evidence": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "at"
             ]
           }
         },
@@ -63267,6 +63350,9 @@
                       },
                       "localGate": {
                         "type": "string"
+                      },
+                      "project": {
+                        "type": "boolean"
                       }
                     },
                     "required": [
@@ -65933,6 +66019,90 @@
                                 },
                                 "description": {
                                   "type": "string"
+                                },
+                                "said": {
+                                  "type": "object",
+                                  "properties": {
+                                    "m": {
+                                      "type": "string"
+                                    },
+                                    "a": {
+                                      "type": "object",
+                                      "propertyNames": {
+                                        "type": "string"
+                                      },
+                                      "additionalProperties": {
+                                        "anyOf": [
+                                          {
+                                            "anyOf": [
+                                              {
+                                                "type": "string"
+                                              },
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "type": "object",
+                                                "properties": {
+                                                  "time": {
+                                                    "type": "number"
+                                                  }
+                                                },
+                                                "required": [
+                                                  "time"
+                                                ],
+                                                "additionalProperties": false
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "m": {
+                                                "type": "string"
+                                              },
+                                              "a": {
+                                                "type": "object",
+                                                "propertyNames": {
+                                                  "type": "string"
+                                                },
+                                                "additionalProperties": {
+                                                  "anyOf": [
+                                                    {
+                                                      "type": "string"
+                                                    },
+                                                    {
+                                                      "type": "number"
+                                                    },
+                                                    {
+                                                      "type": "object",
+                                                      "properties": {
+                                                        "time": {
+                                                          "type": "number"
+                                                        }
+                                                      },
+                                                      "required": [
+                                                        "time"
+                                                      ],
+                                                      "additionalProperties": false
+                                                    }
+                                                  ]
+                                                }
+                                              }
+                                            },
+                                            "required": [
+                                              "m"
+                                            ],
+                                            "additionalProperties": false
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "m"
+                                  ],
+                                  "additionalProperties": false
                                 },
                                 "actor": {
                                   "type": "string",
@@ -69908,6 +70078,86 @@
               },
               "description": {
                 "type": "string"
+              },
+              "said": {
+                "type": "object",
+                "properties": {
+                  "m": {
+                    "type": "string"
+                  },
+                  "a": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "time": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "time"
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "m": {
+                              "type": "string"
+                            },
+                            "a": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {
+                                "anyOf": [
+                                  {
+                                    "type": "string"
+                                  },
+                                  {
+                                    "type": "number"
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "time": {
+                                        "type": "number"
+                                      }
+                                    },
+                                    "required": [
+                                      "time"
+                                    ]
+                                  }
+                                ]
+                              }
+                            }
+                          },
+                          "required": [
+                            "m"
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "m"
+                ]
               },
               "actor": {
                 "type": "string",

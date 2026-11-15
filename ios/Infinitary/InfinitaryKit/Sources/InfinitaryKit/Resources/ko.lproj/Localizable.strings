@@ -636,6 +636,8 @@
 "feedMergesOnItsOwn" = "알아서 병합";
 "feedMoved" = "더 강력한 모델로 옮김: %1$@에서 이어서 진행";
 "feedMovedOnTier" = "더 강력한 모델로 옮김: %2$@. %1$@에서 이어서 진행";
+"feedNoChecksEnded" = "프로젝트 %3$@ · 끌어오기 요청 검사를 다시 요구해요: %1$@에서 %2$@가 실행됐어요.";
+"feedNoChecksRecorded" = "프로젝트 %1$@ · %2$@의 선원이 확인한 대로 끌어오기 요청 검사를 실행하지 않아요. 변경은 검사를 기다리지 않고 병합돼요.";
 "feedNoted" = "기록함: %1$@";
 "feedPersonalized" = "일등항해사 · 맞춤 설정: %1$@";
 "feedProblem" = "문제: %1$@";
@@ -2554,11 +2556,17 @@
 "settingsProjectsRemoveNamed" = "%1$@ 제거";
 "settingsProjectsRemoveTitle" = "프로젝트 제거";
 "settingsProjectsRemoving" = "제거 중...";
+"settingsProjectsRequireChecks" = "끌어오기 요청 검사 요구";
+"settingsProjectsRequireChecksFound" = "%1$@부터 꺼짐. %2$@의 선원이 검사가 없음을 확인했어요.";
+"settingsProjectsRequireChecksOff" = "이 프로젝트는 검사를 실행하지 않아서 변경이 기다리지 않고 병합돼요. 검사가 처음 실행되면 이 설정이 다시 켜져요.";
+"settingsProjectsRequireChecksOn" = "변경은 검사를 통과한 뒤에만 병합돼요.";
+"settingsProjectsRequireChecksSince" = "%1$@부터 꺼짐.";
 "settingsProjectsRigorDescription" = "여기서 하는 작업을 얼마나 꼼꼼하게 확인할지 정해요.";
 "settingsProjectsRowCare" = "주의 수준: %1$@";
 "settingsProjectsRowCollapsed" = "%1$@, 접힘";
 "settingsProjectsRowExpanded" = "%1$@, 펼쳐짐";
 "settingsProjectsRowLinked" = "연결됨";
+"settingsProjectsRowNoChecks" = "검사 없음";
 "settingsProjectsRowPersonal" = "그 자리에서 만듦";
 "settingsProjectsRowRuns" = "실행 위치: %1$@";
 "settingsProjectsSaveDetails" = "세부 정보 저장";

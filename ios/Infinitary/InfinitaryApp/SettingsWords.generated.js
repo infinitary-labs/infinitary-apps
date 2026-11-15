@@ -4905,6 +4905,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function formatNumber(value, options) {
     return value.toLocaleString(languageLocale(), options);
   }
+  function formatDate(at, options) {
+    return new Date(at).toLocaleDateString(regionalLocale(), options);
+  }
   function formatTime(at, options) {
     return new Date(at).toLocaleTimeString(regionalLocale(), options);
   }
@@ -8716,6 +8719,144 @@ ${events}` : prompt;
     }
     return `No projects yet`;
   }
+  function settingsProjectsRequireChecks() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `طلب فحوصات طلبات السحب`;
+      case "de":
+        return `Überprüfungen für Pull Requests verlangen`;
+      case "es":
+        return `Exigir comprobaciones en las solicitudes de incorporación de cambios`;
+      case "fr":
+        return `Exiger les vérifications des demandes de tirage`;
+      case "ja":
+        return `プルリクエストのチェックを必須にする`;
+      case "ko":
+        return `끌어오기 요청 검사 요구`;
+      case "pt-BR":
+        return `Exigir verificações nas solicitações de pull`;
+      case "zh-Hans":
+        return `要求拉取请求检查`;
+      case "zh-Hant":
+        return `要求 pull request 檢查`;
+      case "en-XA":
+        return `[Ŕéǫûîŕé þûļļ ŕéǫûéšţ çĥéçķš ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Require pull request checks‬`;
+    }
+    return `Require pull request checks`;
+  }
+  function settingsProjectsRequireChecksFound(input) {
+    const date2 = input.date;
+    const task = input.task;
+    switch (currentLanguage()) {
+      case "ar":
+        return `متوقف منذ ${date2}، حين لم يجد فرد طاقم ${task} أي فحوصات.`;
+      case "de":
+        return `Aus seit ${date2}, als das Crewmitglied von ${task} keine Überprüfungen fand.`;
+      case "es":
+        return `Desactivado desde ${date2}, cuando el tripulante de ${task} no encontró comprobaciones.`;
+      case "fr":
+        return `Désactivé depuis le ${date2}, quand l’équipier de ${task} n’a trouvé aucune vérification.`;
+      case "ja":
+        return `${date2}からオフ。${task}の乗組員がチェックがないことを確認しました。`;
+      case "ko":
+        return `${date2}부터 꺼짐. ${task}의 선원이 검사가 없음을 확인했어요.`;
+      case "pt-BR":
+        return `Desativado desde ${date2}, quando o tripulante de ${task} não encontrou verificações.`;
+      case "zh-Hans":
+        return `自 ${date2} 起关闭：${task} 的船员发现没有检查。`;
+      case "zh-Hant":
+        return `自 ${date2} 起關閉：${task} 的船員發現沒有檢查。`;
+      case "en-XA":
+        return `[Öƒƒ šîñçé ${date2}, ŵĥéñ ţĥé çŕéŵɱáţé öƒ ${task} ƒöûñð ñö çĥéçķš. ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Off since ‬${date2}‮, when the crewmate of ‬${task}‮ found no checks.‬`;
+    }
+    return `Off since ${date2}, when the crewmate of ${task} found no checks.`;
+  }
+  function settingsProjectsRequireChecksOff() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `هذا المشروع لا يشغّل أي فحوصات، لذا تُدمج تغييراته دون انتظار. أول فحص يعمل يعيد تشغيل هذا الخيار.`;
+      case "de":
+        return `Dieses Projekt führt keine Überprüfungen aus, daher werden seine Änderungen ohne Warten zusammengeführt. Die erste Überprüfung, die läuft, schaltet dies wieder ein.`;
+      case "es":
+        return `Este proyecto no ejecuta comprobaciones, así que sus cambios se fusionan sin esperar ninguna. La primera comprobación que se ejecute vuelve a activarlo.`;
+      case "fr":
+        return `Ce projet n’exécute aucune vérification, donc ses modifications sont fusionnées sans attendre. La première vérification qui s’exécute le réactive.`;
+      case "ja":
+        return `このプロジェクトはチェックを実行しないため、変更は待たずにマージされます。チェックが1つでも実行されると、この設定はオンに戻ります。`;
+      case "ko":
+        return `이 프로젝트는 검사를 실행하지 않아서 변경이 기다리지 않고 병합돼요. 검사가 처음 실행되면 이 설정이 다시 켜져요.`;
+      case "pt-BR":
+        return `Este projeto não roda verificações, então suas alterações são mescladas sem esperar. A primeira verificação que rodar volta a ativar isto.`;
+      case "zh-Hans":
+        return `这个项目不运行检查，所以改动不用等待就会合并。第一次有检查运行时，这一项会重新打开。`;
+      case "zh-Hant":
+        return `這個專案不執行檢查，所以變更不用等待就會合併。第一次有檢查執行時，這一項會重新開啟。`;
+      case "en-XA":
+        return `[Ţĥîš þŕöĵéçţ ŕûñš ñö çĥéçķš, šö îţš çĥáñĝéš ɱéŕĝé ŵîţĥöûţ ŵáîţîñĝ ƒöŕ áñý. Ţĥé ƒîŕšţ çĥéçķ ţĥáţ ŕûñš ţûŕñš ţĥîš ƀáçķ öñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This project runs no checks, so its changes merge without waiting for any. The first check that runs turns this back on.‬`;
+    }
+    return `This project runs no checks, so its changes merge without waiting for any. The first check that runs turns this back on.`;
+  }
+  function settingsProjectsRequireChecksOn() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يُدمج التغيير إلا بعد أن تجتاز فحوصاته.`;
+      case "de":
+        return `Eine Änderung wird erst zusammengeführt, wenn ihre Überprüfungen bestanden sind.`;
+      case "es":
+        return `Un cambio se fusiona solo cuando superan sus comprobaciones.`;
+      case "fr":
+        return `Une modification n’est fusionnée qu’une fois ses vérifications passées.`;
+      case "ja":
+        return `変更はチェックに合格してからマージされます。`;
+      case "ko":
+        return `변경은 검사를 통과한 뒤에만 병합돼요.`;
+      case "pt-BR":
+        return `Uma alteração só é mesclada depois que suas verificações passam.`;
+      case "zh-Hans":
+        return `改动要等检查通过后才会合并。`;
+      case "zh-Hant":
+        return `變更要等檢查通過後才會合併。`;
+      case "en-XA":
+        return `[Å çĥáñĝé ɱéŕĝéš öñļý öñçé îţš çĥéçķš þášš. ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A change merges only once its checks pass.‬`;
+    }
+    return `A change merges only once its checks pass.`;
+  }
+  function settingsProjectsRequireChecksSince(input) {
+    const date2 = input.date;
+    switch (currentLanguage()) {
+      case "ar":
+        return `متوقف منذ ${date2}.`;
+      case "de":
+        return `Aus seit ${date2}.`;
+      case "es":
+        return `Desactivado desde ${date2}.`;
+      case "fr":
+        return `Désactivé depuis le ${date2}.`;
+      case "ja":
+        return `${date2}からオフ。`;
+      case "ko":
+        return `${date2}부터 꺼짐.`;
+      case "pt-BR":
+        return `Desativado desde ${date2}.`;
+      case "zh-Hans":
+        return `自 ${date2} 起关闭。`;
+      case "zh-Hant":
+        return `自 ${date2} 起關閉。`;
+      case "en-XA":
+        return `[Öƒƒ šîñçé ${date2}. ~~~~]`;
+      case "ar-XB":
+        return `‮Off since ‬${date2}‮.‬`;
+    }
+    return `Off since ${date2}.`;
+  }
   function settingsProjectsRigorDescription() {
     switch (currentLanguage()) {
       case "ar":
@@ -8797,6 +8938,33 @@ ${events}` : prompt;
         return `‮linked‬`;
     }
     return `linked`;
+  }
+  function settingsProjectsRowNoChecks() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `بلا فحوصات`;
+      case "de":
+        return `keine Überprüfungen`;
+      case "es":
+        return `sin comprobaciones`;
+      case "fr":
+        return `aucune vérification`;
+      case "ja":
+        return `チェックなし`;
+      case "ko":
+        return `검사 없음`;
+      case "pt-BR":
+        return `sem verificações`;
+      case "zh-Hans":
+        return `无检查`;
+      case "zh-Hant":
+        return `無檢查`;
+      case "en-XA":
+        return `[ñö çĥéçķš ~~~]`;
+      case "ar-XB":
+        return `‮no checks‬`;
+    }
+    return `no checks`;
   }
   function settingsProjectsRowPersonal() {
     switch (currentLanguage()) {
@@ -13851,6 +14019,9 @@ ${events}` : prompt;
   ]);
   const repoKindSchema = _enum(["project", "personal"]);
   const repoDeliverySchema = _enum(["direct-pr", "queue-pr", "local-only"]);
+  function opensPullRequest(delivery) {
+    return delivery === "direct-pr" || delivery === "queue-pr";
+  }
   const repoHostSchema = object({
     kind: _enum(["github", "gitlab", "bitbucket", "git"]),
     name: string().nullable()
@@ -13858,6 +14029,9 @@ ${events}` : prompt;
   const BATCH_HOSTS = /* @__PURE__ */ new Set(["github", "gitlab"]);
   function hostTakesBatches(host) {
     return host ? BATCH_HOSTS.has(host.kind) : false;
+  }
+  function readsPullRequestChecks(repo) {
+    return repo.kind !== "personal" && opensPullRequest(repo.delivery) && !!repo.origin && (repo.host?.kind === "github" || repo.host?.kind === "gitlab");
   }
   function deliveryChoices(host) {
     if (!host) return ["local-only"];
@@ -13873,9 +14047,21 @@ ${events}` : prompt;
     scope: string().nullable().optional(),
     name: string().trim().min(1).max(120).optional(),
     path: string().trim().min(1).max(4096).optional(),
-    origin: string().trim().min(1).max(4096).nullable().optional()
+    origin: string().trim().min(1).max(4096).nullable().optional(),
+    /**
+     * Settings → Projects' Require pull request checks (docs/forge.md, "A
+     * project with no checks"): false records that the project runs no
+     * checks, true ends that record.
+     */
+    requireChecks: boolean().optional()
   }).strict().refine((patch) => Object.values(patch).some((value) => value !== void 0), {
-    message: "pass delivery, autonomy, rigor, costLimit, scope, name, path, origin, or several"
+    message: "pass delivery, autonomy, rigor, costLimit, scope, name, path, origin, requireChecks, or several"
+  });
+  const noChecksRecordSchema = object({
+    at: number(),
+    task: string().optional(),
+    head: string().optional(),
+    evidence: string().optional()
   });
   const repoViewSchema = object({
     id: string(),
@@ -13921,7 +14107,13 @@ ${events}` : prompt;
      * This person's line of approved changes and open batch in the project,
      * while there is either (docs/forge.md, "Batches of your own").
      */
-    batch: batchRecordSchema.optional()
+    batch: batchRecordSchema.optional(),
+    /**
+     * The record that the project runs no pull request checks, while it has
+     * one; absent, its changes' checks hold their merge (docs/forge.md, "A
+     * project with no checks").
+     */
+    noChecks: noChecksRecordSchema.optional()
   });
   object({
     repo: repoViewSchema,
@@ -14321,6 +14513,12 @@ ${events}` : prompt;
       type: literal("repo_configured"),
       /** Exact name, folder or approved address change, when one changed. */
       description: string().optional(),
+      /**
+       * The line as a fact, worded where it is shown, when the app itself
+       * started or ended the project's no-checks record; `description` is its
+       * English (docs/i18n.md, "Saved facts").
+       */
+      said: saidSchema.optional(),
       actor: _enum(["captain", "firstmate"]).optional(),
       repoId: string(),
       name: string(),
@@ -15517,6 +15715,29 @@ ${events}` : prompt;
     get rigorNone() {
       return settingsProjectsCareNone();
     },
+    /** The Require pull request checks row's name and its switch's (docs/forge.md, "A project with no checks"). */
+    get checksTitle() {
+      return settingsProjectsRequireChecks();
+    },
+    /**
+     * What the Require pull request checks row says under its name: on, that
+     * checks hold the merge; off, that the project runs none, since when, and
+     * the task whose crewmate found it.
+     */
+    checks: (noChecks) => {
+      if (!noChecks) return PROJECT_POLICY_WORDS.checksOn;
+      const date2 = formatDate(noChecks.at, { month: "short", day: "numeric" });
+      const since = noChecks.task ? settingsProjectsRequireChecksFound({ date: date2, task: noChecks.task }) : settingsProjectsRequireChecksSince({ date: date2 });
+      return `${PROJECT_POLICY_WORDS.checksOff} ${since}`;
+    },
+    /** Under Require pull request checks while it is on. */
+    get checksOn() {
+      return settingsProjectsRequireChecksOn();
+    },
+    /** Under Require pull request checks while it is off, before when and by whom. */
+    get checksOff() {
+      return settingsProjectsRequireChecksOff();
+    },
     /** Under the rows of a project that merges locally and asks for Careful. */
     get carefulLocal() {
       return settingsProjectsLocalCareful();
@@ -15540,7 +15761,10 @@ ${events}` : prompt;
     get careful() {
       return settingsProjectsRowCare({ care: RIGOR_WORDS.reviewed });
     },
-    runs: (where) => settingsProjectsRowRuns({ where })
+    runs: (where) => settingsProjectsRowRuns({ where }),
+    get noChecks() {
+      return settingsProjectsRowNoChecks();
+    }
   };
   function inProjectsFolder(path, folder) {
     const root = folder.replace(/\/+$/, "");
@@ -15554,6 +15778,7 @@ ${events}` : prompt;
     if (repo.autonomy) words.push(PROJECT_ROW_WORDS.mergesOnItsOwn);
     if (repo.rigor === "quick") words.push(PROJECT_ROW_WORDS.quick);
     if (repo.rigor === "reviewed") words.push(PROJECT_ROW_WORDS.careful);
+    if (repo.noChecks && readsPullRequestChecks(repo)) words.push(PROJECT_ROW_WORDS.noChecks);
     if (runsWhere && repo.runsOn && repo.runsOn !== AUTOMATIC_COMPUTER)
       words.push(PROJECT_ROW_WORDS.runs(runsWhere));
     return words;

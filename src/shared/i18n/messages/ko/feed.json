@@ -40,6 +40,8 @@
   "feedMergesOnItsOwn": "알아서 병합",
   "feedMoved": "더 강력한 모델로 옮김: {key}에서 이어서 진행",
   "feedMovedOnTier": "더 강력한 모델로 옮김: {tier}. {key}에서 이어서 진행",
+  "feedNoChecksEnded": "프로젝트 {name} · 끌어오기 요청 검사를 다시 요구해요: {change}에서 {check}가 실행됐어요.",
+  "feedNoChecksRecorded": "프로젝트 {name} · {task}의 선원이 확인한 대로 끌어오기 요청 검사를 실행하지 않아요. 변경은 검사를 기다리지 않고 병합돼요.",
   "feedNoted": "기록함: {text}",
   "feedPersonalized": "일등항해사 · 맞춤 설정: {text}",
   "feedProblem": "문제: {problem}",

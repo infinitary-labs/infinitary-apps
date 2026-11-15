@@ -250,7 +250,8 @@ describe("migration 64 (where a project's tasks run, multi-machine piece 11)", (
 describe("project membership (a project can hold several repositories)", () => {
   it("fills each repository's project from a record with several projects, reads the same projects, and reverses", () => {
     const dir = tmpUserData();
-    const before = openDatabase(dir, DATABASE_VERSION - 1);
+    // The version before membership: INF-2114's no-checks column follows it.
+    const before = openDatabase(dir, DATABASE_VERSION - 2);
     const columnsBefore = columnNames(before, "repos");
     const repo = before.prepare(
       "INSERT INTO repos (id, path, name, setup_kind, origin, delivery, autonomy, added_at) VALUES (?, ?, ?, 'clone', ?, 'direct-pr', 0, ?)",

@@ -14,7 +14,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { AUTOMATIC_COMPUTER } from "@shared/placement";
-import { BATCH_HOST_REFUSAL } from "@shared/repos";
+import { BATCH_HOST_REFUSAL, NO_CHECKS_REFUSAL } from "@shared/repos";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { PERSONAL_WORKSPACE_NAME } from "../paths";
@@ -287,6 +287,46 @@ describe("RepoRegistry delivery through batched pull requests", () => {
         host: { kind: "bitbucket" },
       },
     );
+  });
+});
+
+/**
+ * Require pull request checks (INF-2114): the captain's question under its
+ * merge card, "this probably doesn't make sense when the repo chose to
+ * deliver through local merges only", answered by refusing the record on a
+ * project that, as the patch leaves it, reads no pull request checks.
+ */
+describe("RepoRegistry's record that a project runs no pull request checks", () => {
+  it("turns Require pull request checks off only where the project's changes go through pull requests on GitHub or GitLab", async () => {
+    const { registry } = setup();
+    const { repo } = await registry.setup({ kind: "init", name: "meter" });
+    // Kept on this computer, merged locally.
+    expect(() => registry.configure(repo.id, { requireChecks: false })).toThrow(NO_CHECKS_REFUSAL);
+    // A pull request on a plain Git host carries no checks.
+    registry.configure(repo.id, {
+      origin: "https://git.example.org/o/meter.git",
+      delivery: "direct-pr",
+    });
+    expect(() => registry.configure(repo.id, { requireChecks: false })).toThrow(NO_CHECKS_REFUSAL);
+    // The patch that moves the project to pull requests on GitHub may turn it off.
+    expect(
+      registry.configure(repo.id, {
+        origin: "https://github.com/o/meter.git",
+        requireChecks: false,
+      }).noChecks,
+    ).toEqual({ at: expect.any(Number) });
+    // A local merge reads no checks, so it cannot turn it off; turning it on still ends the record.
+    registry.configure(repo.id, { delivery: "local-only" });
+    expect(() => registry.configure(repo.id, { requireChecks: false })).toThrow(NO_CHECKS_REFUSAL);
+    expect(
+      registry.configure(repo.id, { requireChecks: true, delivery: "direct-pr" }).noChecks,
+    ).toBeUndefined();
+    expect(() =>
+      registry.configure(repo.id, { requireChecks: false, delivery: "local-only" }),
+    ).toThrow(NO_CHECKS_REFUSAL);
+    // The refused patch changed nothing: still pull requests, with no record.
+    expect(registry.get(repo.id)?.delivery).toBe("direct-pr");
+    expect(registry.get(repo.id)?.noChecks).toBeUndefined();
   });
 });
 

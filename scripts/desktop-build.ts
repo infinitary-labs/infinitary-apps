@@ -39,6 +39,7 @@ export const DESKTOP_BUILD: readonly string[] = [
   "scripts/mark-mac-installation.mjs",
   "scripts/linux-recipes.ts",
   "scripts/generate-messages.ts",
+  "scripts/github-errors.ts",
 ];
 
 /**

@@ -56,6 +56,7 @@ import { PlacedTasks } from "./placedTasks";
 import { homeDialOptions } from "./route";
 import type { HeldSignIns } from "./signIns";
 import { type DownloadedHere, downloadHere, type UpdatedHere, updateHere } from "./update";
+import { endTrial, forgetWentBack, readWentBack } from "./updateTrial";
 import { helperWords, homeLabel } from "./words";
 
 /**
@@ -202,6 +203,8 @@ export type StartHelperOptions = {
   verifier?: string;
   /** No byte moving this long stops a download here; two minutes unless a test says. */
   downloadIdleSeconds?: number;
+  /** How long a copy an update kept has to reach the home before it goes back; the update's wait unless a test says. */
+  trialSeconds?: number;
   /**
    * How the one-time move runs here when the home sends an app that keeps
    * its work in another folder (`updateHere`); this computer's own unless a
@@ -473,6 +476,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
           ...(options.moveDeps ? { moveDeps: options.moveDeps } : {}),
           log,
           signal: stopUpdating.signal,
+          ...(options.trialSeconds ? { trialSeconds: options.trialSeconds } : {}),
         }))
     )(joined.grant, stopUpdating.signal);
     let answer: WorkUpdateAnswer;
@@ -526,6 +530,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
         },
         ...(options.verifier ? { verifier: options.verifier } : {}),
         ...(options.downloadIdleSeconds ? { idleSeconds: options.downloadIdleSeconds } : {}),
+        ...(options.trialSeconds ? { trialSeconds: options.trialSeconds } : {}),
       });
       fetching = getting.catch(() => undefined);
       got = await getting;
@@ -562,6 +567,9 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
     ...(options.protocolVersion ? { protocolVersion: options.protocolVersion } : {}),
     ...(options.changes ? { changes: options.changes } : {}),
     ...(options.appVersion ? { appVersion: options.appVersion } : {}),
+    // A copy an update brought that did not reach the home, which this one
+    // went back from, said until the home has heard it.
+    failedUpdate: () => readWentBack(dataDir),
     // A home that reaches this computer through its own SSH connection is
     // dialed at the route its connection keeps now, never at the grant's
     // address; with no route the dial fails, and the link keeps trying.
@@ -647,6 +655,24 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
       if (state.contact !== "in-reach" && before?.contact === "in-reach") {
         void signIns?.then((held) => held.host.dropped());
         void conversations?.then((held) => held.browsers?.dropped()).catch(() => undefined);
+      }
+      // The copy an update kept reached the home: the one it replaced goes
+      // (docs/helper.md, "A copy that does not start"). A run that kept a
+      // copy for the next, or is stopping, is not that copy: its trial stays.
+      if (
+        state.contact === "in-reach" &&
+        before?.contact !== "in-reach" &&
+        !updating &&
+        !downloading &&
+        !stopped
+      ) {
+        try {
+          if (endTrial(dataDir)) log("this copy reached the home, so the previous copy went");
+          // The home heard, at this hello, any copy this one went back from.
+          forgetWentBack(dataDir);
+        } catch (error) {
+          log(`could not end the update's trial: ${String(error)}`);
+        }
       }
       if (state.contact !== before?.contact) {
         if (state.contact === "in-reach") say(helperWords.inReach(place, name));

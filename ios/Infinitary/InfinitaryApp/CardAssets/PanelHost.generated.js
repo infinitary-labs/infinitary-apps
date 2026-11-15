@@ -80903,6 +80903,13 @@ ${FRAME_QUESTION_SCRIPT}
          * to say it.
          */
         appVersion: string().min(1).max(64).optional(),
+        /**
+         * A computer that runs work went back to the copy it kept, because the
+         * one an update brought did not reach the home (docs/helper.md, "A copy
+         * that does not start"), which is the home's own version, the one it
+         * sent. Said until the home has heard it.
+         */
+        failedUpdate: literal(true).optional(),
         /** The last push it saw on an earlier connection; absent on a first one. */
         cursor: connectionCursorSchema.optional(),
         /**

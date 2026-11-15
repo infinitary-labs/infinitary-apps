@@ -36,6 +36,7 @@ import {
 } from "./background";
 import { fetchedLauncher, keepApp } from "./join";
 import { homeDialOptions } from "./route";
+import { beginTrial, previousOf, trialWatchOf, watchTrial } from "./updateTrial";
 
 /**
  * Updated by its home over the connection (docs/helper.md, "Updated by its
@@ -92,6 +93,8 @@ export type UpdateHereOptions = {
   log?: (line: string) => void;
   /** Lets the copy go part way, as when the run stops (`fetchFirstmate`). */
   signal?: AbortSignal;
+  /** How long a new copy has to reach the home before its watcher goes back; the update's wait unless a test says. */
+  trialSeconds?: number;
 };
 
 /**
@@ -215,13 +218,46 @@ async function keepHere(
   bundle: string,
 ): Promise<(() => Promise<void>) | undefined> {
   const kept = installed.app as string;
-  if (basename(bundle) === basename(kept)) {
-    keepApp(bundle, options.dataDir);
-    return undefined;
-  }
+  if (basename(bundle) === basename(kept)) return await keepOnTrial(options, installed, bundle);
   if (otherSpelling(basename(kept), basename(bundle)))
     return keepRenamed(options, installed, bundle);
   throw new Error("The home sent another app than the one kept here, so nothing changed.");
+}
+
+/**
+ * Keeps an app got for this computer in place of the one here, of the same
+ * name. With a background that starts the run again and can be started
+ * again from outside its run, the one here stays beside it on trial until the new one reaches the home,
+ * and what follows once the run let the folder go is the watcher that goes
+ * back otherwise (docs/helper.md, "A copy that does not start"). Without
+ * one, nothing would start the previous copy again, so it goes at once.
+ */
+async function keepOnTrial(
+  options: UpdateHereOptions,
+  installed: ReturnType<typeof readInstalled>,
+  bundle: string,
+): Promise<(() => Promise<void>) | undefined> {
+  const { dataDir, background } = options;
+  const kept = installed.app as string;
+  // A copy nobody is asked to start now is not on trial: it is kept.
+  const watch =
+    installed.service && background && (await canRestart(options, installed.service))
+      ? trialWatchOf(background.context, installed.service)
+      : null;
+  if (!watch) {
+    keepApp(bundle, dataDir);
+    return undefined;
+  }
+  keepApp(bundle, dataDir, { previous: previousOf(kept) });
+  try {
+    beginTrial(dataDir, kept);
+  } catch (error) {
+    // With no trial written, nothing could go back: the previous copy goes.
+    rmSync(previousOf(kept), { recursive: true, force: true });
+    options.log?.(`could not keep the previous copy on trial: ${String(error)}`);
+    return undefined;
+  }
+  return async () => watchTrial(dataDir, watch, { seconds: options.trialSeconds });
 }
 
 export type DownloadHereOptions = UpdateHereOptions & {

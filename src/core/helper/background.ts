@@ -885,7 +885,7 @@ export function launchctlAt(program: string): Launchctl {
 
 /** This Linux computer's own systemctl, where its search path finds it. */
 export function systemSystemctl(program: string): Systemctl {
-  return (args) => runManager(program, args);
+  return Object.assign((args: readonly string[]) => runManager(program, args), { program });
 }
 
 function runManager(program: string, args: readonly string[]): Promise<LaunchctlResult> {

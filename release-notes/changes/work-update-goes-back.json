@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "work-update-goes-back",
+      "kind": "feature",
+      "area": "devices",
+      "title": "A computer that runs work goes back by itself when an update does not start",
+      "body": "When you update another computer that runs work, it now keeps the version it ran until the new one connects. If the new version does not start or never connects, that computer goes back to the version it ran before, the feed names the version that did not start, and your first mate does not send it there again.",
+      "noPicture": "Nothing on screen changes until an update fails; then the feed says two lines, and no view or control changes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

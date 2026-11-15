@@ -88,6 +88,16 @@ const seenFileSchema = z.strictObject({
   version: z.literal(1),
   seen: z.record(z.string(), z.number().int().nonnegative()),
 });
+/**
+ * The version of Firstmate that did not start on each computer that runs
+ * work, which went back to the copy it kept (docs/helper.md, "A copy that
+ * does not start"): never sent there again.
+ */
+const FAILED_UPDATES_FILE = "failed-updates.json";
+const failedUpdatesFileSchema = z.strictObject({
+  version: z.literal(1),
+  devices: z.record(z.string(), z.string().min(1).max(64)),
+});
 const WHEN_BACK_FILE = "removing.json";
 const whenBackFileSchema = z.strictObject({
   version: z.literal(1),
@@ -325,6 +335,7 @@ export class DevicePairing implements PairedDevices {
   private entries: Entry[] = [];
   /** When each device was last in reach. */
   private seenAt = new Map<string, number>();
+  private failedUpdates = new Map<string, string>();
   /** That could not be read this run: then no device reads as never in reach. */
   private seenUnreadable = false;
   /** The computers to remove once they are back. */
@@ -698,6 +709,7 @@ export class DevicePairing implements PairedDevices {
     }
     const view = this.viewOf(gone);
     if (this.seenAt.delete(deviceId)) this.saveSeen();
+    if (this.failedUpdates.delete(deviceId)) this.saveFailedUpdates();
     if (this.whenBack.delete(deviceId)) this.saveWhenBack();
     const ssh = this.sshRecords.get(deviceId);
     if (ssh) {
@@ -740,6 +752,29 @@ export class DevicePairing implements PairedDevices {
     },
   ): void {
     if (this.keepSystem(deviceId, said)) this.changed();
+  }
+
+  /** The version of Firstmate that did not start on a computer that runs work, if one did not. */
+  failedUpdate(deviceId: string): string | undefined {
+    return this.failedUpdates.get(deviceId);
+  }
+
+  /**
+   * Keeps the version that did not start on a computer that runs work, or
+   * forgets it with null; true when that changed what is kept.
+   */
+  noteFailedUpdate(deviceId: string, version: string | null): boolean {
+    if (this.unreadable) return false;
+    if (version !== null && !this.entries.some((entry) => entry.id === deviceId)) return false;
+    if ((this.failedUpdates.get(deviceId) ?? null) === version) return false;
+    if (version === null) this.failedUpdates.delete(deviceId);
+    else this.failedUpdates.set(deviceId, version);
+    try {
+      this.saveFailedUpdates();
+    } catch (error) {
+      this.onProblem(`could not keep which version did not start: ${(error as Error).message}`);
+    }
+    return true;
   }
 
   /** Keeps what a device said it is; true when that changed what is kept. */
@@ -1261,6 +1296,17 @@ export class DevicePairing implements PairedDevices {
   /** When devices were last seen, and which wait to be removed; what cannot be read is nothing. */
   private loadSeen(): void {
     try {
+      const path = join(this.dir, FAILED_UPDATES_FILE);
+      if (existsSync(path))
+        this.failedUpdates = new Map(
+          Object.entries(
+            failedUpdatesFileSchema.parse(JSON.parse(readFileSync(path, "utf8"))).devices,
+          ),
+        );
+    } catch {
+      this.onProblem("Which versions did not start on each computer cannot be read.");
+    }
+    try {
       const path = join(this.dir, SEEN_FILE);
       if (existsSync(path))
         this.seenAt = new Map(
@@ -1439,6 +1485,13 @@ export class DevicePairing implements PairedDevices {
         `could not keep where a device reached ${HERE.this}: ${(error as Error).message}`,
       );
     }
+  }
+
+  private saveFailedUpdates(): void {
+    this.writeFile(FAILED_UPDATES_FILE, {
+      version: 1,
+      devices: Object.fromEntries(this.failedUpdates),
+    });
   }
 
   private saveSystems(): void {

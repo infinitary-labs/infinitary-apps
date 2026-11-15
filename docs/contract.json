@@ -92,6 +92,10 @@
                   "minLength": 1,
                   "maxLength": 64
                 },
+                "failedUpdate": {
+                  "type": "boolean",
+                  "const": true
+                },
                 "cursor": {
                   "type": "object",
                   "properties": {

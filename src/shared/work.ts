@@ -1874,6 +1874,14 @@ export const UPDATE_ORDER_CHANNELS = Object.keys(updateOrders) as UpdateOrderCha
 export const WORK_UPDATE_ORDER: UpdateOrderChannel = "fm:firstmate:update";
 export type WorkUpdateAnswer = z.infer<(typeof updateOrders)[typeof WORK_UPDATE_ORDER]["response"]>;
 
+/**
+ * How long an update has to come back connected (docs/devices.md, "Updating
+ * over the connection"; docs/helper.md, "A copy that does not start"): the
+ * home waits this long for the computer on its version, and the computer
+ * goes back to the copy it kept when the new one has not connected by then.
+ */
+export const UPDATE_RETURN_MS = 3 * 60_000;
+
 /** Where the home's version is published for a Mac, and the SHA-256 it is checked against. */
 export const updateDownloadSchema = z.object({
   url: z

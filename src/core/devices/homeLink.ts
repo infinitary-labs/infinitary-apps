@@ -134,6 +134,12 @@ export type HomeLinkOptions = {
    * Unsaid when absent.
    */
   appVersion?: string;
+  /**
+   * A computer that went back from a copy that did not start (docs/helper.md,
+   * "A copy that does not start"): read at each hello, which then says it.
+   * Unsaid when it answers false.
+   */
+  failedUpdate?: () => boolean;
   /** Opens the WebSocket; `dialHome` unless a test stands in its own. */
   dial?: (grant: DeviceGrant) => Promise<WebSocket>;
   /**
@@ -436,6 +442,7 @@ export class HomeLink {
             t: "hello",
             protocolVersion: this.protocolVersion,
             ...(this.options.appVersion ? { appVersion: this.options.appVersion } : {}),
+            ...failedUpdateOf(this.options.failedUpdate),
             ...(this.cursor ? { cursor: this.cursor } : {}),
             ...(this.options.nameOnly ? { nameOnly: true } : {}),
             ...(this.options.automaticStartup
@@ -769,5 +776,14 @@ export class WorkRequestAbortedError extends Error {
     reason: unknown,
   ) {
     super("Work request withdrawn.", { cause: reason });
+  }
+}
+
+/** What a hello says of a copy that did not start: nothing when none went back, or it cannot be read. */
+function failedUpdateOf(read: HomeLinkOptions["failedUpdate"]): { failedUpdate?: true } {
+  try {
+    return read?.() ? { failedUpdate: true } : {};
+  } catch {
+    return {};
   }
 }

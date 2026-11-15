@@ -307,6 +307,12 @@ export type WorkDeviceVersion = {
    * src/core/connection/contractChanges.ts); absent when it listed none.
    */
   changes?: readonly string[];
+  /**
+   * It went back to the copy it kept, because one an update brought did not
+   * reach this home, which is this home's own version, the one it sent
+   * (docs/helper.md, "A copy that does not start").
+   */
+  failedUpdate?: true;
 };
 
 export type ConnectionOptions = {
@@ -1150,6 +1156,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           ...(hello.appVersion ? { app: hello.appVersion } : {}),
           takesWork: client.takesWork,
           ...(hello.changes?.length ? { changes: hello.changes } : {}),
+          ...(hello.failedUpdate ? { failedUpdate: hello.failedUpdate } : {}),
         });
       if (client.takesWork) tellWork({ deviceId: client.device.id, contact: "in-reach" });
       if (role === "view") tellView({ deviceId: client.device.id, contact: "in-reach" });

@@ -1,4 +1,4 @@
-import { constants, cpSync, mkdirSync, renameSync, rmSync } from "node:fs";
+import { constants, cpSync, existsSync, mkdirSync, renameSync, rmSync } from "node:fs";
 import type { NetworkInterfaceInfo } from "node:os";
 import { basename, join } from "node:path";
 import type { FoundTools } from "@shared/connection";
@@ -661,9 +661,15 @@ function refuser(io: HelperIO) {
 /**
  * Keeps the copy of Firstmate a command fetched in the data folder's
  * `app/` - a Mac's bundle, or a Linux AppImage file - cloned where the disk
- * can (APFS), in place of one kept before. Answers where it is now.
+ * can (APFS), in place of one kept before. With `previous`, the one kept
+ * before stays beside it, at `previousOf`, for an update's trial
+ * (`./updateTrial.ts`). Answers where it is now.
  */
-export function keepApp(bundle: string, dataDir: string): string {
+export function keepApp(
+  bundle: string,
+  dataDir: string,
+  options: { previous?: string } = {},
+): string {
   const dir = join(dataDir, "app");
   mkdirSync(dir, { recursive: true, mode: 0o700 });
   const target = join(dir, basename(bundle));
@@ -675,7 +681,10 @@ export function keepApp(bundle: string, dataDir: string): string {
     preserveTimestamps: true,
     mode: constants.COPYFILE_FICLONE,
   });
-  rmSync(target, { recursive: true, force: true });
+  if (options.previous && existsSync(target)) {
+    rmSync(options.previous, { recursive: true, force: true });
+    renameSync(target, options.previous);
+  } else rmSync(target, { recursive: true, force: true });
   renameSync(next, target);
   return target;
 }

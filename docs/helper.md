@@ -386,6 +386,23 @@ From `WORK_DOWNLOAD_SINCE` on, on any major, a Mac's run also answers the downlo
 One update runs at a time: the download order asked while either runs answers `{ updating }` and changes nothing, and the update order asked while a download runs waits for it, as a home that could not look its version up asks it: a download that kept its copy answers that update's `{ restarts }`, and one that ended with nothing changed lets the update go on.
 A development run may stand in the publisher check with `INFINITARY_CODESIGN`; an installed app never reads it.
 
+### A copy that does not start
+
+An update over the connection keeps the copy it replaces until the new one has reached the home once, and goes back to it by itself otherwise (`src/core/helper/updateTrial.ts`).
+It applies where the update keeps the home's copy in place of one of the same name, the answer says the background starts the run again (`restarts`), and that background can be started again from outside its run: a Mac's agent, through launchd's own `launchctl`, or a Linux service, through the `systemd-run` beside the user's own `systemctl`.
+Anywhere else the replaced copy goes at once, as before.
+
+1. Keeping the new copy, the update moves the one it replaces beside it (`<app>.previous`) and writes a trial (`app/trial.json`) naming both.
+2. Once the run let the folder go, it leaves a watcher behind in the system's own shell, outside the run: in a session of its own on a Mac, and as a transient service of the user's own systemd on Linux, since the service's stop takes every process it started with it; the run waits until `systemd-run` started that service.
+3. The new copy's run ends the trial the first time it reaches the home, on any major; the old run, which kept the copy or is stopping, never does: the previous copy goes, and so does any note of an earlier one that went back.
+4. A trial still open after the update's wait (`UPDATE_RETURN_MS`, the three minutes the home waits for it) means the new copy exited at start, or started and never reached the home.
+   The watcher then puts the previous copy back at its path, keeps the trial as `app/went-back.json`, and has the service manager start the background again (`launchctl kickstart -k`, or `systemctl --user restart`), now from the previous copy.
+5. That run's hello says `failedUpdate`, until it first reaches the home, which then has heard it (`docs/devices.md`, "A copy that does not start").
+   The hello names no version: a release bundle says only the numeric core of its version, so an alpha's would not match, and the copy that did not start is the one the home sent, at the home's own version.
+
+Whoever renames the trial file first decides, the new run to keep its copy or the watcher to go back, so the two never both act.
+An update over Remote Login, a Mac's first copy and a copy under the other name of the rename keep no trial.
+
 ## Resource observations
 
 The home can ask a work-enabled computer for current CPU and memory facts through the read-only `inf:computer:resources` order (`src/shared/resources.ts`), from protocol 6.3 on.
@@ -1255,7 +1272,7 @@ A new join clears the note, and nothing tries again on its own; a join that find
 - `tests/e2e/run-work.spec.ts`, "a Mac a command joined, stranded when the home's address changes": the built app, joined by the command for another Mac and stranded once the home moved, is found by the home's Add it at its address as the same computer with its sign-in kept, its stranded run stopped, and from then on reaches the home only through the home's SSH connection, which connects, and comes back by itself when the home moves again.
 - `tests/e2e/run-work.spec.ts`, "a Mac added by its address over Remote Login": the built app on the other side of a throwaway SSH server on loopback joins with the link on its input, keeps the copy, sets up its background and runs in reach of the home, then is updated while the home holds its connection, its grant kept as before the home said where it runs, and keeps the home's word from the update's arguments; once the home's address changes, it comes back by itself over the home's new connection with nothing run there; then it is removed over SSH.
 - `tests/e2e/run-work.spec.ts`, "on Linux with no screen, the command joins with the Infinitary installed there": the built app as the installed program, with no display, joins by the command with its own yes, downloading nothing, and the command names the line that keeps the work on after logout; "on Linux with no screen, the window says to use Run a command there": the window's two lines and exit 1.
-- `src/core/devices/computerUpdate.test.ts`: updated by its home over the connection - the home's copy got with its own key and kept, nothing got as another user on the home's Mac, the run ending for its background, and a copy that could not be got changing nothing; `tests/e2e/run-work.spec.ts`, "updated over the connection": the same with the built app.
+- `src/core/devices/computerUpdate.test.ts`: updated by its home over the connection - the home's copy got with its own key and kept, nothing got as another user on the home's Mac, the run ending for its background, a copy that could not be got changing nothing, and a copy that exits at start put back by the watcher, which has launchd start the previous copy again; `tests/e2e/run-work.spec.ts`, "updated over the connection": the same with the built app.
 
 ## Not yet
 

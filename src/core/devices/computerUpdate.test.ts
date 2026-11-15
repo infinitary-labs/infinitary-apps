@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -16,6 +17,7 @@ import {
   WORK_UPDATE_SINCE,
 } from "@shared/contractFeatures";
 import { type DeviceView, deviceLabel } from "@shared/devices";
+import { deviceUpdateCardId } from "@shared/deviceUpdateNudge";
 import { PROTOCOL_VERSION } from "@shared/ipc";
 import { remoteLoginWords } from "@shared/remoteLogin";
 import type { UpdateDownload } from "@shared/work";
@@ -29,6 +31,7 @@ import type { CoreDispatch } from "../dispatcher";
 import { CoreEventBus } from "../events";
 import {
   type BackgroundContext,
+  launchctlAt,
   readInstalled,
   startInBackground,
   writeInstalled,
@@ -43,6 +46,7 @@ import { openDatabase } from "../storage/db";
 import { TaskService } from "../tasks/taskService";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import { Computers, type DeviceUpdateEvent } from "./computers";
+import { DeviceUpdateNudge } from "./deviceUpdateNudge";
 import { claimLink, HomeRouteMissingError } from "./dial";
 import { JoinedHome } from "./joinedHome";
 import { DevicePairing } from "./pairing";
@@ -71,12 +75,15 @@ vi.setConfig({ testTimeout: 10_000 });
 const HOME_APP = "0.1.29";
 const BUILDER = { name: "builder", uid: 502 };
 
-/** A stand-in bundle whose marker says whose copy it is, named as the app it stands in for. */
+/**
+ * A stand-in bundle whose marker says whose copy it is, named as the app it
+ * stands in for, whose program exits at once, as a copy that does not start does.
+ */
 function bundle(marker: string, name = "Firstmate 3000"): string {
   const app = join(scratchDir("infinitary-update-bundle-"), `${name}.app`);
   mkdirSync(join(app, "Contents", "MacOS"), { recursive: true });
   mkdirSync(join(app, "Contents", "Resources"), { recursive: true });
-  writeFileSync(join(app, "Contents", "MacOS", name), "#!/bin/sh\n", { mode: 0o755 });
+  writeFileSync(join(app, "Contents", "MacOS", name), "#!/bin/sh\nexit 1\n", { mode: 0o755 });
   writeFileSync(join(app, "Contents", "Resources", "marker"), `${marker}\n`);
   return app;
 }
@@ -241,7 +248,12 @@ async function world(
   const start = (
     versions: Pick<
       StartHelperOptions,
-      "protocolVersion" | "appVersion" | "verifier" | "downloadIdleSeconds" | "update"
+      | "protocolVersion"
+      | "appVersion"
+      | "verifier"
+      | "downloadIdleSeconds"
+      | "update"
+      | "trialSeconds"
     >,
     background?: BackgroundContext,
     from: string = dataDir,
@@ -1162,5 +1174,132 @@ describe("a computer that reaches its home through the home's SSH connection", (
     await expect(updateHere({ dataDir, grant })).resolves.toEqual({ restarts: false });
     expect(kept()).toBe("the home's own copy");
     expect(forward.carried()).toBe(2);
+  });
+});
+
+/**
+ * A copy that does not start (INF-4207's plan, piece 3; docs/helper.md, "A
+ * copy that does not start"): an update over the connection keeps the copy
+ * it replaces until the new one has reached this Mac once, and goes back to
+ * it by itself otherwise; this Mac then names the version that did not start
+ * and does not send it there again. The background answers through a
+ * stand-in launchctl that is a program of its own, as the watcher the old
+ * run leaves behind runs it, writing down what it was asked; the test plays
+ * launchd, starting each copy the agent names.
+ */
+describe("a computer whose update brought a copy that does not start", () => {
+  /** A background whose launchctl is a stand-in program of the test's, writing down each ask. */
+  function standInBackground(dataDir: string) {
+    const dir = scratchDir("infinitary-update-launchctl-");
+    const log = join(dir, "asked.log");
+    const program = join(dir, "launchctl");
+    writeFileSync(program, `#!/bin/sh\necho "$*" >> "${log}"\n`, { mode: 0o755 });
+    const context: BackgroundContext = {
+      flavor: "release",
+      dataDir,
+      homeDir: scratchDir("infinitary-update-agents-"),
+      uid: 502,
+      launchctl: launchctlAt(program),
+    };
+    const asked = () => (existsSync(log) ? readFileSync(log, "utf8").trim().split("\n") : []);
+    return { context, asked };
+  }
+
+  it("goes back to the copy it kept when the new one exits at start, and this Mac names that version and does not send it again", async () => {
+    const at = await world({
+      kept: true,
+      app: bundle("the home's own copy"),
+      waitMs: 200,
+    });
+    const { context, asked } = standInBackground(at.dataDir);
+    const service = readInstalled(at.dataDir).service;
+    if (!service) throw new Error("no agent");
+    const appDir = join(at.dataDir, "app");
+    const kept = join(appDir, "Firstmate 3000.app");
+
+    const before = at.start({ appVersion: "0.1.20", trialSeconds: 2 }, context);
+    await expect.poll(() => at.view()?.otherVersion?.updateBy).toBe("connection");
+    const updating = at.computers.update(at.deviceId);
+    expect(await before.ended).toBe("updated");
+    // The new copy is in place, and the one it replaced is kept beside it.
+    expect(at.kept()).toBe("the home's own copy");
+    expect(
+      readFileSync(join(`${kept}.previous`, "Contents", "Resources", "marker"), "utf8").trim(),
+    ).toBe("the copy it kept");
+
+    // As launchd would, the new copy starts, and exits at once: it never reaches this Mac.
+    const program = join(kept, "Contents", "MacOS", "Firstmate 3000");
+    expect(spawnSync(program, ["work", "run"]).status).toBe(1);
+    const updated = await updating;
+    if ("asks" in updated) throw new Error("Update asked for a password.");
+
+    // The watcher put the previous copy back and had launchd start the agent again.
+    await expect.poll(() => at.kept(), { timeout: 8_000 }).toBe("the copy it kept");
+    await expect.poll(asked, { timeout: 8_000 }).toEqual([`kickstart -k gui/502/${service.label}`]);
+    expect(readdirSync(appDir).sort()).toEqual(["Firstmate 3000.app", "went-back.json"]);
+
+    // That copy's run tells this Mac, which says once which version did not
+    // start there: its own, the one it sent. Once heard, it is not said again.
+    const builder = { name: "Mac mini", user: "builder", onThisMac: true };
+    at.start({ appVersion: "0.1.20" }, context);
+    await expect
+      .poll(() => at.feed().slice(-2))
+      .toEqual(remoteLoginWords.wentBack(builder, HOME_APP));
+    expect(at.computers.failedHere(at.deviceId)).toBe(true);
+    await expect.poll(() => readdirSync(appDir)).toEqual(["Firstmate 3000.app"]);
+
+    // No update card asks for that version, where one asks for any other gap.
+    const raised = (failedHere: (deviceId: string) => boolean) => {
+      const cards: string[] = [];
+      new DeviceUpdateNudge({
+        devices: () => at.computers.list(),
+        homeApp: () => HOME_APP,
+        failedHere,
+        cards: {
+          raise: (card) => void cards.push(card.id),
+          withdraw: () => undefined,
+          has: () => false,
+          chosenAction: () => undefined,
+        },
+        broadcastEvent: () => undefined,
+      }).refresh(at.deviceId);
+      return cards;
+    };
+    expect(raised((deviceId) => at.computers.failedHere(deviceId))).toEqual([]);
+    expect(raised(() => false)).toEqual([deviceUpdateCardId(at.deviceId)]);
+    const said = at.said.length;
+    // Update does not send that version there again, and asks nothing of it.
+    await expect(at.computers.update(at.deviceId)).rejects.toThrow(
+      remoteLoginWords.failedHere(builder, HOME_APP).join(" "),
+    );
+    expect(at.said.length).toBe(said);
+    expect(at.kept()).toBe("the copy it kept");
+  });
+
+  it("keeps the new copy and lets the previous one go once the new one reaches this Mac", async () => {
+    const at = await world({
+      kept: true,
+      app: bundle("the home's own copy"),
+    });
+    const { context, asked } = standInBackground(at.dataDir);
+    const appDir = join(at.dataDir, "app");
+
+    // Its wait outlasts any start here; the watcher ends as soon as the trial does.
+    const before = at.start({ appVersion: "0.1.20", trialSeconds: 60 }, context);
+    await expect.poll(() => at.view()?.otherVersion?.updateBy).toBe("connection");
+    const updating = at.computers.update(at.deviceId);
+    expect(await before.ended).toBe("updated");
+    expect(readdirSync(appDir)).toContain("Firstmate 3000.app.previous");
+
+    // The new copy's run reaches this Mac: the trial ends, and the previous copy goes.
+    at.start({ appVersion: HOME_APP }, context);
+    const updated = await updating;
+    if ("asks" in updated) throw new Error("Update asked for a password.");
+    expect(updated.otherVersion).toBeUndefined();
+    await expect.poll(() => readdirSync(appDir)).toEqual(["Firstmate 3000.app"]);
+    expect(at.kept()).toBe("the home's own copy");
+    expect(at.computers.failedHere(at.deviceId)).toBe(false);
+    // The watcher found the trial ended, so it went back on nothing.
+    expect(asked()).toEqual([]);
   });
 });

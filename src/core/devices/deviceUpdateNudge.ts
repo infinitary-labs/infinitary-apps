@@ -40,6 +40,11 @@ export type DeviceUpdateNudgeOptions = {
     chosenAction(id: string): string | undefined;
   };
   broadcastEvent: (event: FmEvent) => void;
+  /**
+   * Whether this computer's version is the one that did not start on that
+   * computer (`Computers.failedHere`): no card asks to send it again.
+   */
+  failedHere?: (deviceId: string) => boolean;
 };
 
 export class DeviceUpdateNudge {
@@ -78,6 +83,10 @@ export class DeviceUpdateNudge {
     // A computer on a newer Firstmate is this computer's to update.
     if (other.than !== "older") {
       this.forget(deviceId, "the computer is not behind");
+      return;
+    }
+    if (this.options.failedHere?.(deviceId)) {
+      this.forget(deviceId, "this version did not start there");
       return;
     }
     const facts: DeviceUpdateNudgeFacts = {

@@ -658,6 +658,7 @@ export async function startHomeDevices(options: {
       const nudge = new DeviceUpdateNudge({
         devices: () => list.list(),
         homeApp: () => host.app.version,
+        failedHere: (deviceId) => list.failedHere(deviceId),
         cards: {
           raise: (card) => supervisor.cards.hostCards.raiseHostCard(card),
           withdraw: (id, reason) => supervisor.cards.hostCards.withdrawHostCard(id, reason),

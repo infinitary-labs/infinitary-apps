@@ -622,6 +622,22 @@ export const remoteLoginWords = {
   updatedByHand: (device: Named) =>
     `${deviceLabel(device)} has ${HERE.this}'s version of Infinitary now, and runs it once it is started there again.`,
 
+  /**
+   * The copy an update brought did not reach this computer, so that
+   * computer went back to the copy it kept (docs/helper.md, "A copy that
+   * does not start"); said once.
+   */
+  wentBack: (device: Named, version: string): [string, string] => [
+    `${deviceLabel(device)} could not start Infinitary ${version}, so it went back to the version it ran before.`,
+    `${HERE.This} does not send Infinitary ${version} there again.`,
+  ],
+
+  /** Update asked for the version that did not start there before. */
+  failedHere: (device: Named, version: string): [string, string] => [
+    `${deviceLabel(device)} could not start Infinitary ${version} before, so ${HERE.this} does not send it there again.`,
+    "It can be updated once a newer version is here.",
+  ],
+
   /** Updated over the connection, it has not come back within the wait. */
   notBack: (device: Named): [string, string] => [
     `${deviceLabel(device)} has ${HERE.this}'s version of Infinitary now, and has not started again yet.`,

@@ -22,6 +22,7 @@ import {
 import { devicePlace } from "@shared/signIns";
 import {
   downloadOrders,
+  UPDATE_RETURN_MS,
   type UpdateDownload,
   updateOrders,
   WORK_DOWNLOAD_ORDER,
@@ -160,8 +161,6 @@ export type ComputersOptions = {
 
 type Removing = { stage: DeviceRemovalStage; runs: string[] };
 
-/** How long an update waits for the computer to start again on this Mac's version. */
-const UPDATE_WAIT_MS = 3 * 60_000;
 /** A count is said at most this often (docs/devices.md, "How far the copy has gone"). */
 const COUNT_EVERY_MS = 1_000;
 
@@ -180,6 +179,7 @@ export class Computers {
     options.work.onViewDevice((contact) => this.viewContact(contact));
     // Connected on any version, it is seen; its version is on the list.
     options.work.onVersion((deviceId, version) => {
+      if (version) this.heardVersion(deviceId, version);
       if (version) this.noteConnected(deviceId);
       else this.connectedSince.delete(deviceId);
       options.pairing.seen(deviceId, options.now());
@@ -297,6 +297,8 @@ export class Computers {
     if (!deviceRunsWork(device.kind))
       throw new Error(`${device.name} controls your first mate, and runs no work to update.`);
     if (this.removing.has(deviceId)) throw new Error(`${deviceLabel(device)} is being removed.`);
+    if (this.failedHere(deviceId))
+      throw new Error(remoteLoginWords.failedHere(device, this.options.home?.app ?? "").join(" "));
     if (device.remoteLogin) {
       const update = this.options.updateOverRemoteLogin;
       if (!update) throw new Error(`${deviceLabel(device)} cannot be reached over Remote Login.`);
@@ -316,6 +318,16 @@ export class Computers {
       }
     }
     return this.updateOverConnection(device);
+  }
+
+  /**
+   * Whether this Mac's version is the one that did not start on that
+   * computer, which went back to the copy it kept (docs/helper.md, "A copy
+   * that does not start"): it is not sent there again.
+   */
+  failedHere(deviceId: string): boolean {
+    const failed = this.options.pairing.failedUpdate(deviceId);
+    return failed !== undefined && failed === this.options.home?.app;
   }
 
   /** Something the list reads changed outside it, such as an SSH connection's state: pushed when it shows. */
@@ -587,7 +599,7 @@ export class Computers {
       const missing = () => {
         away ??= setTimeout(
           () => settle({ lost: true }),
-          this.options.updateWaitMs ?? UPDATE_WAIT_MS,
+          this.options.updateWaitMs ?? UPDATE_RETURN_MS,
         );
       };
       const ask = async () => {
@@ -663,7 +675,7 @@ export class Computers {
     };
     return {
       came: () => {
-        timer ??= setTimeout(() => done(false), this.options.updateWaitMs ?? UPDATE_WAIT_MS);
+        timer ??= setTimeout(() => done(false), this.options.updateWaitMs ?? UPDATE_RETURN_MS);
         timer.unref?.();
         return came;
       },
@@ -713,6 +725,34 @@ export class Computers {
         ? { downloads: true as const }
         : {}),
     };
+  }
+
+  /**
+   * What a computer said of its version at a welcome, about an update that
+   * did not start there (docs/helper.md, "A copy that does not start"): the
+   * copy it went back from is the one this Mac sent, so this Mac's version is
+   * kept and said once in the feed; a version it runs now, or one older than
+   * it, is forgotten, since it started there.
+   */
+  private heardVersion(deviceId: string, version: WorkDeviceVersion): void {
+    const { pairing } = this.options;
+    const kept = pairing.failedUpdate(deviceId);
+    if (kept && version.app && (compareSemver(version.app, kept) ?? -1) >= 0)
+      pairing.noteFailedUpdate(deviceId, null);
+    const failed = version.failedUpdate ? this.options.home?.app : undefined;
+    if (!failed || (version.app && (compareSemver(version.app, failed) ?? -1) >= 0)) return;
+    if (!pairing.noteFailedUpdate(deviceId, failed)) return;
+    const device = pairing.list().find((entry) => entry.id === deviceId);
+    if (!device) return;
+    for (const line of remoteLoginWords.wentBack(device, failed))
+      this.options.emitUpdate?.({
+        type: "device_update",
+        deviceId,
+        name: deviceLabel(device),
+        stage: "done",
+        text: line,
+        tone: "warn",
+      });
   }
 
   /** Every project that runs on the computer runs on this Mac from now; answers their names. */

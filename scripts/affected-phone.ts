@@ -4,7 +4,9 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { PART_OWNERS, phoneFileOwners } from "./phone-part-owners.ts";
-import { PHONE_JOURNEY, PHONE_PARTS, partIdentifier } from "./phone-test-plan.ts";
+import { PHONE_JOURNEY, PHONE_PARTS, partIdentifier, partTimes } from "./phone-test-plan.ts";
+
+export { partTimes };
 
 // INF-79 / INF-136: the captain requested the native gate on phone/shared-contract PRs.
 // Include the captain's approved gate setup inputs, not broad shared/core/package changes.
@@ -24,6 +26,8 @@ const INPUTS = [
   "tests/helpers/phoneLauncherLog.ts", "tests/helpers/phoneLookupWait.ts", "tests/helpers/phoneProxyLaunches.ts",
   // INF-662: each device's own test home in the one build's test plan.
   "scripts/phone-test-plan.ts",
+  // INF-4241 piece 3: the recorded part times the gate shares a device's parts out by.
+  "scripts/phone-part-times.json",
   // INF-2625: the phone check's test home answers the phone's crewmates and first mate through the journey stand-in,
   // its crew scripts, its models.json and the request readers it answers by.
   "tests/e2e/mockProvider.ts", "tests/e2e/crewScripts.ts", "tests/e2e/mockModels.ts", "tests/e2e/providerRequest.ts",
@@ -635,22 +639,6 @@ export function partReach(
 // INF-827: the captain chose six minutes, the same as the Mac journeys' (scripts/journey-budget.ts).
 export const PHONE_BUDGET_MS = 6 * 60 * 1000;
 export const LEFT_FOR = "the nightly check of main";
-
-/** Each part's longer device time, in milliseconds, from a full gate's part-times.json. */
-export function partTimes(text: string | undefined, parts: PartTable = PHONE_PARTS): Map<string, number> | undefined {
-  if (text === undefined) return undefined;
-  try {
-    const read = JSON.parse(text) as Record<string, Record<string, number>>;
-    const times = new Map<string, number>();
-    for (const part of names(parts)) {
-      const devices = Object.values(read[part] ?? {}).filter((ms) => typeof ms === "number" && ms > 0);
-      if (devices.length) times.set(part, Math.max(...devices));
-    }
-    return times.size ? times : undefined;
-  } catch {
-    return undefined;
-  }
-}
 
 export type Placement = PartReach & { minutes?: number; kept: boolean; reason: string };
 

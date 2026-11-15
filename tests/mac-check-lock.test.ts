@@ -177,9 +177,8 @@ describe.skipIf(process.platform === "win32")("Mac check commands without admiss
           // INF-2202: ordinary and release calls check their device in the guest, even with a
           // stale clone switch or a host-looking sysctl reading (one job per device, INF-2970's fix 1).
           expect(args.at(-1)).toMatch(/\/phone\/iphone$/);
-          expect(
-            args.slice(args.indexOf("--simulators"), args.indexOf("--simulators") + 2),
-          ).toEqual(["--simulators", "1"]);
+          // INF-4241 piece 3: the gate sizes its simulators to the phone Mac itself (phoneLanes).
+          expect(args).not.toContain("--simulators");
           expect(args).not.toContain("--part");
           console.info(
             "Phone workflow invocation (stand-in workload):",

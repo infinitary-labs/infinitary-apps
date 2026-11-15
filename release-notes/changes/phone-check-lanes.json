@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-check-lanes",
+      "reason": "Test infrastructure: the phone check runs as many simulated devices at once as its Mac holds and shares the parts among them by their recorded times, with no change to the app."
+    }
+  ]
+}

@@ -307,8 +307,6 @@ it.each(
       "scripts/test-phone.ts",
       ...args,
       ...selected,
-      "--simulators",
-      "1",
       "--evidence",
     ]);
     expect(call.at(-1)).toMatch(new RegExp(`/phone/${device}$`));
@@ -332,14 +330,7 @@ it.each([
     PHONE_IPHONE_PARTS: "",
     PHONE_REPEAT_PARTS: "",
   });
-  expect(call.slice(0, -1)).toEqual([
-    "node",
-    "scripts/test-phone.ts",
-    ...args,
-    "--simulators",
-    "1",
-    "--evidence",
-  ]);
+  expect(call.slice(0, -1)).toEqual(["node", "scripts/test-phone.ts", ...args, "--evidence"]);
   expect(call.at(-1)).toMatch(new RegExp(`/phone/${device}$`));
 });
 

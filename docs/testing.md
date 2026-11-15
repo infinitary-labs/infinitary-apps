@@ -725,8 +725,8 @@ The same command logs also live in the smaller `phone-logs` artifact, independen
 Each part's live simulator log lives in `phone-simulator-logs`, never in `phone-logs`, which keeps `phone-logs` within the app's 64 MiB artifact download.
 The pictures the journeys took live in the small `phone-pictures` artifact, exported from the result bundles by device and part.
 A failure on either device fails that device's job and the run, and a complete branch selection or a request with edited-part passes stops at the first failed part ("The phone check on request").
-That gate checks and builds once, starts its device's simulator, and runs the phone journey's parts on it, one after the other, the parts that choose a photo last, each part with its own test home and a clean app (`docs/ios.md`, "Disposable verification").
-Each placed guest runs one simulator, its job's device's.
+That gate checks and builds once, starts as many simulators of its device as the phone Mac holds, and runs the phone journey's parts on them, each part with its own test home and a clean app (`docs/ios.md`, "Disposable verification").
+Each placed guest runs simulators of its job's one device only.
 
 ### The phone parts a request runs
 
@@ -764,7 +764,7 @@ The native job's limit is 165 minutes for setup, the ordinary pass, cleanup and 
 `pnpm test:phone` checks the configured execution mode, then runs `scripts/test-phone.ts` directly.
 `tests/mac-check-lock.test.ts` executes the workflow and package command strings with held workloads to verify overlap, failure status and cancellation.
 `tests/phone-ci.test.ts` evaluates the required queue, rejects missing configuration and proves former overrides cannot change routing or suppress guest setup.
-The device gate always uses `--simulators 1`, one simulator at a time (INF-2101).
+The device gate runs as many simulators of its one device as the phone Mac's processors and memory hold, two on today's compute Mac VMs, and shares the device's parts among them by their recorded times (INF-4241 piece 3; `docs/ios.md`, "Disposable verification").
 This applies to requested checks and unsigned TestFlight checks, with the same tests, failure propagation and allowances; a request runs each device in its own job and the TestFlight call gives each device its own call, so each device takes its own phone Mac.
 The fixture, simulator identity and unsigned Xcode configuration are described in `docs/ios.md`, "Disposable verification".
 

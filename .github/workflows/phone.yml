@@ -289,8 +289,11 @@ jobs:
       # It checks Swift trust, native recovery and the published client; pnpm check checks generated files.
       # INF-662: one gate checks and builds once, its device on one simulator it starts
       # once (INF-1438) and each part on its own test home; any failing part fails it.
-      # INF-2101 and INF-2970's fix 1: each vBoxx guest runs its job's one device. Release calls
-      # run every part; affected requests use reached parts.
+      # INF-2970's fix 1: each phone Mac runs its job's one device. Release calls run every part;
+      # affected requests use reached parts. INF-4241 piece 3 (INF-4308, the captain's "Build on two
+      # at once"): the gate runs as many simulated devices of that device as the Mac's processors and
+      # memory hold, two on a 10-core, 9 GB compute VM, and shares the parts among them by their
+      # recorded times (scripts/phone-part-times.json); INF-2101's one at a time came from 4-core VMs.
       # INF-2582 direction A: on an affected request a part the change only reaches runs on
       # the iPhone alone, and a part whose test code changed runs on both devices, then twice
       # more in the iPhone job's same step (INF-2732), on the build and simulator it started,
@@ -328,7 +331,7 @@ jobs:
             iphone) device=(); evidence="$evidence/iphone" ;;
             *) echo "Unknown phone device: $PHONE_DEVICE" >&2; exit 1 ;;
           esac
-          node scripts/test-phone.ts "${device[@]}" "${parts[@]}" --simulators 1 --evidence "$evidence"
+          node scripts/test-phone.ts "${device[@]}" "${parts[@]}" --evidence "$evidence"
         env:
           PHONE_DEVICE: ${{ matrix.device }}
           PHONE_FULL: ${{ steps.request-select.outputs.full }}

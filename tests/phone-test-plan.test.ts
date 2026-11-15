@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   devicePhotos,
   endPhoneGate,
+  PHONE_PART_TIMES,
   PHONE_PARTS,
   type PhoneDevice,
   type PhoneJob,
@@ -12,9 +13,12 @@ import {
   partRunsJourney,
   partSelection,
   partTestStarted,
+  partTimes,
   phoneAnimationWaits,
   phoneExecutionArguments,
   phoneJobs,
+  phoneLanePlan,
+  phoneLanes,
   phonePasses,
   phonePassName,
   phoneSelectionRunsJourney,
@@ -316,6 +320,115 @@ describe("running each device's parts on one started device", () => {
     await expect(outcome).rejects.toThrow(/ipad: its simulator could not start/);
     expect(ran).toEqual(["iphone cards-form", "iphone rest"]);
     expect(ended).toEqual(["iphone"]);
+  });
+});
+
+// INF-4241 piece 3 (INF-4308, the captain's "Build on two at once"): a Mac with room runs several simulated devices
+// of one device from one build, each started once, sharing the device's parts by their recorded times.
+describe("several simulated devices of one device", () => {
+  const GiB = 1024 ** 3;
+  const recorded = partTimes(readFileSync(PHONE_PART_TIMES, "utf8"))!;
+  it("runs as many as the Mac's processors and memory hold, and always one", () => {
+    // INF-4308's reading of a compute Mac VM (sysctl hw.ncpu and hw.memsize), where two passed and three swapped.
+    expect(phoneLanes({ processors: 10, memoryBytes: 9_663_676_416 })).toBe(2);
+    // The rented Mac's VM gives a job 5 cores and 10,240 MB; INF-2101's 4-core VMs could not hold two.
+    expect(phoneLanes({ processors: 5, memoryBytes: 10_240 * 1024 ** 2 })).toBe(1);
+    expect(phoneLanes({ processors: 4, memoryBytes: 16 * GiB })).toBe(1);
+    expect(phoneLanes({ processors: 2, memoryBytes: 2 * GiB })).toBe(1);
+  });
+  it("has a recorded time for every part", () => {
+    expect([...recorded.keys()].sort()).toEqual(PHONE_PARTS.map(({ name }) => name).sort());
+  });
+  it("shares one device's parts longest first, a later round after every earlier one, over two lanes", () => {
+    const jobs = phonePasses(["iphone"], {
+      parts: PHONE_PARTS.map(({ name }) => name),
+      repeats: ["cards-form"],
+    });
+    const plan = phoneLanePlan(jobs, 2, recorded);
+    expect(plan.lanes).toEqual([
+      { device: "iphone", number: 1 },
+      { device: "iphone", number: 2 },
+    ]);
+    const order = plan.queues.get("iphone")!.map((index) => jobs[index]!);
+    expect(order.filter((job) => job.round === 1).map((job) => recorded.get(job.part))).toEqual(
+      [...recorded.values()].sort((a, b) => b - a),
+    );
+    expect(order.slice(-2)).toEqual([
+      { device: "iphone", part: "cards-form", round: 2 },
+      { device: "iphone", part: "cards-form", round: 3 },
+    ]);
+  });
+  it("starts a part with no recorded time first, and keeps plan order on a device with one lane", () => {
+    const jobs = phonePasses(["ipad", "iphone"], { parts: ["join-read", "rest", "weak-link"] });
+    const unknown = new Map([...recorded].filter(([part]) => part !== "join-read"));
+    const plan = phoneLanePlan(jobs, 3, unknown);
+    expect(plan.lanes.filter((lane) => lane.device === "ipad")).toHaveLength(2);
+    expect(plan.queues.get("ipad")!.map((index) => jobs[index]!.part)).toEqual([
+      "join-read",
+      "rest",
+      "weak-link",
+    ]);
+    expect(plan.queues.get("iphone")!.map((index) => jobs[index]!.part)).toEqual([
+      "join-read",
+      "weak-link",
+      "rest",
+    ]);
+    expect(plan.lanes).toHaveLength(3);
+  });
+  it("gives a further lane to the device with more recorded work, and no device more lanes than parts", () => {
+    const jobs = phonePasses(["ipad", "iphone"], {
+      parts: ["join-read"],
+      iphoneOnly: ["rest", "weak-link"],
+    });
+    const plan = phoneLanePlan(jobs, 6, recorded);
+    expect(plan.lanes).toEqual([
+      { device: "ipad", number: 1 },
+      { device: "iphone", number: 1 },
+      { device: "iphone", number: 2 },
+      { device: "iphone", number: 3 },
+    ]);
+  });
+  it("starts each lane once, runs every part once on two at a time, and leaves a failed lane's parts to the other", async () => {
+    const jobs = phonePasses(["iphone"], { parts: PHONE_PARTS.map(({ name }) => name) });
+    const plan = phoneLanePlan(jobs, 2, recorded);
+    for (const failing of [undefined, 2]) {
+      let running = 0;
+      let most = 0;
+      const opened: number[] = [];
+      const ended: string[] = [];
+      const ran: string[] = [];
+      const outcome = runDeviceLanes(
+        jobs,
+        2,
+        {
+          open: async (device, _stopping, lane) => {
+            opened.push(lane);
+            if (lane === failing)
+              throw new Error(`${device}: the simulator of its lane ${lane} could not start`);
+            return `${device}-${lane}`;
+          },
+          run: async (job) => {
+            running += 1;
+            most = Math.max(most, running);
+            await new Promise((resolve) => setImmediate(resolve));
+            running -= 1;
+            ran.push(job.part);
+            return job.part;
+          },
+          close: async (simulator) => {
+            ended.push(simulator);
+          },
+        },
+        undefined,
+        plan,
+      );
+      if (failing) await expect(outcome).rejects.toThrow("lane 2 could not start");
+      else expect(await outcome).toEqual(jobs.map((job) => job.part));
+      expect(opened.sort()).toEqual([1, 2]);
+      expect(ran.sort()).toEqual(jobs.map((job) => job.part).sort());
+      expect(most).toBe(failing ? 1 : 2);
+      expect(ended.sort()).toEqual(failing ? ["iphone-1"] : ["iphone-1", "iphone-2"]);
+    }
   });
 });
 

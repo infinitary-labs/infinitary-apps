@@ -4,6 +4,7 @@ import type { Socket } from "node:net";
 import { delimiter, join } from "node:path";
 import { createInterface } from "node:readline";
 import { LOAD_COMMAND } from "../src/shared/load.ts";
+import { PHONE_LANE_NEEDS } from "./phone-test-plan.ts";
 
 /** INF-1621 piece 3 (INF-1664): a local heavy run declares its needs in the
  * load line of the computer it runs on (docs/heavy-runs.md) and holds them
@@ -23,9 +24,16 @@ export function journeyRunNeeds(workers: number) {
   return { processors: workers, memoryMib: workers * 1536 + 512 };
 }
 
-/** The phone declaration is unchanged; journeys follow their resolved worker count. */
+/** INF-4241 piece 3: a phone gate holds 4 processors and 8 GiB with one simulated device, and 4 processors and
+ * 4 GiB more for each further one it runs at once (`PHONE_LANE_NEEDS`), so one simulated device asks what it did. */
+export function phoneRunNeeds(simulators: number) {
+  const { processors, memoryMib } = PHONE_LANE_NEEDS;
+  return { processors: processors * simulators, memoryMib: memoryMib * simulators + 4096 };
+}
+
+/** A phone gate of one simulated device; journeys follow their resolved worker count. */
 export const HEAVY_RUN_NEEDS: Record<HeavyRunKind, { processors: number; memoryMib: number }> = {
-  phone: { processors: 4, memoryMib: 8192 },
+  phone: phoneRunNeeds(1),
   journeys: journeyRunNeeds(LOCAL_JOURNEY_WORKERS),
 };
 
@@ -134,7 +142,7 @@ function takeLine(
  */
 export async function takeHeavyRunPlace(
   kind: HeavyRunKind,
-  options: { env?: NodeJS.ProcessEnv; log?: (line: string) => void; workers?: number } = {},
+  options: { env?: NodeJS.ProcessEnv; log?: (line: string) => void; workers?: number; simulators?: number } = {},
 ): Promise<HeavyRunPlace> {
   const env = options.env ?? process.env;
   const log = options.log ?? ((line: string) => console.error(line));
@@ -149,7 +157,9 @@ export async function takeHeavyRunPlace(
     kind,
     kind === "journeys" && options.workers !== undefined
       ? journeyRunNeeds(options.workers)
-      : HEAVY_RUN_NEEDS[kind],
+      : kind === "phone" && options.simulators !== undefined
+        ? phoneRunNeeds(options.simulators)
+        : HEAVY_RUN_NEEDS[kind],
     env,
     log,
   );

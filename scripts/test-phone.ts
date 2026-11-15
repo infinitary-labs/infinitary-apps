@@ -1,7 +1,7 @@
-/** INF-64 piece 2's native gate: disposable real home, one simulator per device, no signing. */
+/** INF-64 piece 2's native gate: disposable real home, simulators sized to the Mac, no signing. */
 import { type ChildProcess, spawn } from "node:child_process";
 import { copyFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { userInfo } from "node:os";
+import { availableParallelism, totalmem, userInfo } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { parseArgs } from "node:util";
@@ -24,7 +24,7 @@ import { GATE_SIMULATOR, removePhoneLeftovers, SCRATCH_PREFIX } from "./phone-le
 import { phoneRecording } from "./phone-recording.ts";
 import { startPhoneGuestObserver } from "./phone-guest-observer.ts";
 import { phoneSharedCacheFolder, phoneSimulator, phoneSimulatorBooted, phoneXcode, removeEmptyPhoneSharedCache } from "./phone-simulator.ts";
-import { devicePhotos, endPhoneGate, PHONE_PARTS, type PhoneDevice, type PhoneJob, type PhonePassEnd, phonePassName, phoneSelectionRunsJourney, phoneTestSelection, phoneTestsStarted, phoneAnimationWaits, phoneExecutionArguments, phonePasses, phoneStopsEarly, relaunchPairs, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
+import { devicePhotos, endPhoneGate, PHONE_PARTS, type PhoneDevice, type PhoneJob, type PhonePassEnd, phonePassName, phoneSelectionRunsJourney, phoneTestSelection, phoneTestsStarted, phoneAnimationWaits, phoneExecutionArguments, phoneLanePlan, phoneLanes, phonePasses, phoneStopsEarly, PHONE_PART_TIMES, partTimes, relaunchPairs, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
 
 // INF-800: with CI mode on, the phone check runs only through CI (docs/testing.md).
 const refusal = ciModeRefusal("phone");
@@ -55,7 +55,9 @@ const { values } = parseArgs({ options: {
   "relaunch-pairs": { type: "string", default: process.env.INFINITARY_PHONE_RELAUNCH_PAIRS },
   // Local repeats stop at their first failed part; CI chooses fail-fast or full discovery explicitly.
   "stop-early": { type: "boolean", default: phoneStopsEarly(process.env) },
-  simulators: { type: "string", default: "6" },
+  // INF-4241 piece 3: how many simulated devices run at once, as many as this Mac's processors and memory hold
+  // (`phoneLanes`); the devices share them, and a device with several shares its parts among them.
+  simulators: { type: "string", default: String(phoneLanes({ processors: availableParallelism(), memoryBytes: totalmem() })) },
   // One part on one device: its test plan from the gate's build, and the simulator the gate started for it.
   xctestrun: { type: "string" },
   simulator: { type: "string" },
@@ -84,10 +86,11 @@ const jobs: PhoneJob[] = phonePasses(devices, values.waits ? { parts: ["rest"] }
   parts: named ? values.part ?? [] : PHONE_PARTS.map((part) => part.name),
   iphoneOnly: values["iphone-part"], repeats: values["repeat-part"], repeatTests });
 const simulators = Number(values.simulators);
+const lanePlan = phoneLanePlan(jobs, simulators, partTimes(readFileSync(join(REPO_ROOT, PHONE_PART_TIMES), "utf8")));
 mkdirSync(evidence, { recursive: true });
 // INF-1541 piece 4 and INF-1664: a local gate waits in its computer's load line, never for a quieter
 // Mac; its parts ride the gate's place. CI's job, and a shell with no line, start at once (INF-2137).
-const runPlace = values.xctestrun ? { close() {} } : await takeHeavyRunPlace("phone");
+const runPlace = values.xctestrun ? { close() {} } : await takeHeavyRunPlace("phone", { simulators: Math.min(simulators, lanePlan.lanes.length) });
 // Capture the account home before the disposable app/test HOME replaces it.
 const invokingHome = userInfo().homedir;
 const root = scratchDir(SCRATCH_PREFIX);
@@ -298,9 +301,9 @@ const project = ["-project", "ios/Infinitary/Infinitary.xcodeproj", "-scheme", "
 // them outside the gate's scratch folder, restored from the nightly check of main; otherwise they stay in it.
 const packageCache = process.env.INFINITARY_PHONE_PACKAGE_CACHE || join(root, "swift-packages");
 // INF-1438 (the captain's "Start each simulated device once per phone check, not once per part"): the gate
-// owns one simulator per device, from create to delete, and runs the device's parts on it one after the
-// other, each as its own gate with its own test home and a clean app. Do not borrow or erase a developer's
-// simulator.
+// owns one simulator per lane, from create to delete, and runs the lane's parts on it one after the other, each as
+// its own gate with its own test home and a clean app; INF-4241 piece 3 gives a device several lanes on a Mac
+// with room for them. Do not borrow or erase a developer's simulator.
 const ownedSimulators = new Set<string>();
 type Lane = { device: PhoneDevice; owned: string; booted: Date; photos?: ReturnType<typeof devicePhotos> };
 // INF-2445: once per gate, before its first simulator starts, an empty cache folder of the pinned runtime goes, so the
@@ -376,25 +379,27 @@ const LIBRARY_PHOTO = "release-notes/pictures/activity-settles-setting-runs-ligh
 // `devicePhotos`). INF-1170: the photo goes in once Photos is ready, so a restart of Photos never cuts its import
 // short; INF-1438: and again after the restart that frees a photo Photos' background migration held. A part that
 // chooses a photo waits for both.
-const lanePhotos = (lane: Lane, stopping: AbortSignal) => devicePhotos(
-  () => photosOpened({ device: lane.owned, booting: lane.booted, stopping, env,
-    evidence: values.both ? join(evidence, lane.device) : evidence, children, run, failureLog: SIMULATOR_LOG }),
+// INF-4241 piece 3: a device with several lanes keeps each lane's Photos wait in a folder of its own.
+const lanePhotos = (lane: Lane, stopping: AbortSignal, number: number) => devicePhotos(
+  () => photosOpened({ device: lane.owned, booting: lane.booted, stopping, env, children, run, failureLog: SIMULATOR_LOG,
+    evidence: ((folder) => lanePlan.lanes.filter((each) => each.device === lane.device).length > 1
+      ? (mkdirSync(join(folder, `lane-${number}`), { recursive: true }), join(folder, `lane-${number}`)) : folder)(values.both ? join(evidence, lane.device) : evidence) }),
   () => libraryPhotoAdded({ device: lane.owned, picture: join(REPO_ROOT, LIBRARY_PHOTO), run }));
-// Builds once for any simulator, then runs each device's parts in order on the one simulator it starts
-// for that device, each part as its own gate from that build with its own test home, the devices side
-// by side, at most --simulators of them at once.
+// Builds once for any simulator, then runs each device's parts on the lanes `lanePlan` gives it, each lane one
+// simulator it starts once and each part as its own gate from that build with its own test home, at most
+// --simulators lanes at once (INF-4241 piece 3).
 const everyPart = async () => {
   phoneXcode(await run("xcodebuild", ["-version"]));
   // INF-2125 piece 3: the simulators the first lanes use start while Xcode builds, so their first parts
   // begin as the build ends; a lane past --simulators starts its own when a place frees.
-  const starting = new Map([...new Set(jobs.map((job) => job.device))].slice(0, simulators)
-    .map((device) => [device, startSimulator(device)] as const));
+  const starting = new Map(lanePlan.lanes.slice(0, simulators)
+    .map(({ device, number }) => [`${device} ${number}`, startSimulator(device)] as const));
   // A start that fails is heard by its lane's open, and every start settles before the gate's cleanup.
   for (const started of starting.values()) started.catch(() => {});
   try { await everyPartOn(starting); }
   finally { await Promise.allSettled(starting.values()); }
 };
-const everyPartOn = async (starting: Map<PhoneDevice, Promise<Lane>>) => {
+const everyPartOn = async (starting: Map<string, Promise<Lane>>) => {
   const building = Date.now();
   await run("xcodebuild", [...project, "-destination", "generic/platform=iOS Simulator", "-derivedDataPath", join(root, "DerivedData"),
     "-packageCachePath", packageCache, `ARCHS=${process.arch === "x64" ? "x86_64" : "arm64"}`, "build-for-testing"]);
@@ -446,14 +451,15 @@ const everyPartOn = async (starting: Map<PhoneDevice, Promise<Lane>>) => {
   };
   // Any part failing fails the gate; with --stop-early the first failure stops the rest.
   const outcomes = await runDeviceLanes(jobs, simulators, {
-    open: async (device, stopping) => {
-      const lane = await (starting.get(device) ?? startSimulator(device)).catch((error: Error) => {
-        throw new Error(`${device}: its simulator could not start, so none of its parts ran: ${error.message}`);
+    open: async (device, stopping, number) => {
+      const lane = await (starting.get(`${device} ${number}`) ?? startSimulator(device)).catch((error: Error) => {
+        throw new Error(`${device}: the simulator of its lane ${number} could not start, so that lane ran none of its parts: ${error.message}`);
       });
+      console.log(`${device}: lane ${number} runs on simulator ${lane.owned}`);
       // The wait for Photos begins beside the device's first part; the device's first part that chooses a photo hears
       // how it went, and adds the photo.
       if (!values.waits && jobs.some((job) => job.device === device && PHONE_PARTS.find((each) => each.name === job.part)?.photos)) {
-        lane.photos = lanePhotos(lane, stopping);
+        lane.photos = lanePhotos(lane, stopping, number);
         lane.photos.watched().catch(() => {});
       }
       return lane;
@@ -463,7 +469,7 @@ const everyPartOn = async (starting: Map<PhoneDevice, Promise<Lane>>) => {
       console.log(`${device}: deleting simulator ${owned}`);
       await deleteSimulator(owned);
     },
-  }, values["stop-early"] ? (({ outcome }) => outcome === "failed") : undefined);
+  }, values["stop-early"] ? (({ outcome }) => outcome === "failed") : undefined, lanePlan);
   // A full gate keeps its part times; any failed part fails it.
   endPhoneGate(jobs, outcomes, evidence);
 };
@@ -616,7 +622,7 @@ try {
   if (failures.length > 0) throw new Error(`The simulator tests passed, but ${failures.length} earlier check(s) failed: ${failures.join("; ")}`);
   console.log(values.waits ? `Native wait-clock tests passed on ${devices.join(" and ")}, with disposable simulators and homes.`
     : values.xctestrun ? `The ${values.part![0]} part passed on the gate's simulator and its own disposable Mac.`
-    : `Every part passed on ${devices.join(" and ")}, each device started once and every part on its own disposable Mac.`);
+    : `Every part passed on ${devices.join(" and ")}, each simulator started once and every part on its own disposable Mac.`);
 } finally {
   cleaningUp = true;
   try {

@@ -181,7 +181,7 @@ export function phoneTestsStarted(part: string, output: string, tests: readonly 
 }
 
 /** Every device's parts in start order: each part on the slower iPad first, then on the iPhone.
- * INF-1438: the gate runs each device's parts in this order on the one simulator it starts for that device. */
+ * INF-1438: a device with one lane runs its parts in this order on the one simulator it starts (`phoneLanePlan`). */
 export function phoneJobs(devices: PhoneDevice[], parts: readonly string[] = PHONE_PARTS.map((part) => part.name)) {
   for (const part of parts) partSelection(part);
   const order: PhoneDevice[] = ["ipad", "iphone"];
@@ -308,10 +308,80 @@ export async function runSideBySide<Job, Result>(jobs: Job[], slots: number, run
   return results;
 }
 
+/** Each part's longer device time, in milliseconds, from a full gate's part-times.json. */
+export function partTimes(text: string | undefined, parts: readonly { name: string }[] = PHONE_PARTS): Map<string, number> | undefined {
+  if (text === undefined) return undefined;
+  try {
+    const read = JSON.parse(text) as Record<string, Record<string, number>>;
+    const times = new Map<string, number>();
+    for (const { name } of parts) {
+      const devices = Object.values(read[name] ?? {}).filter((ms) => typeof ms === "number" && ms > 0);
+      if (devices.length) times.set(name, Math.max(...devices));
+    }
+    return times.size ? times : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** INF-4241 piece 3: the recorded part times the gate shares a device's parts out by, a full gate's part-times.json
+ * copied whole (INF-4308's one-at-a-time run of every iPhone part). A part it lacks starts first, so a new part never
+ * ends a lane late; replace the file with a newer full gate's part-times.json when the parts' times move. */
+export const PHONE_PART_TIMES = "scripts/phone-part-times.json";
+
+/** INF-4308 (the captain's "Build on two at once"): what one simulated device and its share of the gate need of the
+ * Mac. On a compute Mac VM of 10 processor cores and 9 GiB, two simulated devices at once passed every part with each
+ * part 1.3 times slower and 0.4 GB of swap at most; three swapped 1.5 GB, kept the processors 87% busy and failed a
+ * test from the load. INF-2101's 4-core VMs could not hold two. */
+export const PHONE_LANE_NEEDS = { processors: 4, memoryMib: 4096 } as const;
+
+/** How many simulated devices a Mac runs at once: one for each 4 processor cores and each 4 GiB of memory, whichever
+ * gives fewer, and always one. Today's 10-core, 9 GiB compute VMs run two. */
+export function phoneLanes({ processors, memoryBytes }: { processors: number; memoryBytes: number }): number {
+  return Math.max(1, Math.min(Math.floor(processors / PHONE_LANE_NEEDS.processors),
+    Math.floor(memoryBytes / (PHONE_LANE_NEEDS.memoryMib * 1024 ** 2))));
+}
+
+/** One lane: a simulated device of `device`, the `number`th of that device's lanes, counted from one. */
+export type PhoneLane<Device extends string = PhoneDevice> = { device: Device; number: number };
+/** Which lanes a gate runs, in start order, and each device's jobs (by their index in the plan) in the order its
+ * lanes take them: a free lane of the device takes the next one. */
+export type PhoneLanePlan<Device extends string = PhoneDevice> = { lanes: PhoneLane<Device>[]; queues: Map<Device, number[]> };
+
+/** INF-4241 piece 3: shares `simulators` simulated devices among the devices of a gate's jobs, then each device's
+ * jobs among its lanes. Every device gets one lane, as before, and each further lane goes to the device with the most
+ * recorded work per lane, never more lanes than it has jobs; with fewer simulators than devices the devices run one
+ * after another. A device with one lane keeps its jobs in plan order. A device with several shares them longest
+ * first by the recorded times, a part with no time first, a later round only after every earlier one, so the lanes
+ * end close together. */
+export function phoneLanePlan<Job extends { device: string; part: string; round?: number }>(jobs: readonly Job[], simulators: number,
+  times: ReadonlyMap<string, number> = new Map()): PhoneLanePlan<Job["device"]> {
+  if (!Number.isInteger(simulators) || simulators < 1) throw new Error("Run at least one simulator at a time");
+  const devices = [...new Set(jobs.map((job) => job.device))] as Job["device"][];
+  const indices = (device: Job["device"]) => jobs.flatMap((job, index) => job.device === device ? [index] : []);
+  const longest = Math.max(0, ...times.values());
+  const work = new Map(devices.map((device) => [device,
+    indices(device).reduce((sum, index) => sum + (times.get(jobs[index]!.part) ?? longest), 0)]));
+  const counts = new Map(devices.map((device) => [device, 1]));
+  for (let extra = simulators - devices.length; extra > 0; extra--) {
+    const open = devices.filter((device) => counts.get(device)! < indices(device).length);
+    if (!open.length) break;
+    const next = open.reduce((best, device) => work.get(device)! / counts.get(device)! > work.get(best)! / counts.get(best)! ? device : best);
+    counts.set(next, counts.get(next)! + 1);
+  }
+  const recorded = (index: number) => times.get(jobs[index]!.part) ?? Number.POSITIVE_INFINITY;
+  return {
+    lanes: devices.flatMap((device) => Array.from({ length: counts.get(device)! }, (_, at) => ({ device, number: at + 1 }))),
+    queues: new Map(devices.map((device) => [device, counts.get(device) === 1 ? indices(device)
+      : indices(device).sort((a, b) => (jobs[a]!.round ?? 1) - (jobs[b]!.round ?? 1) || recorded(b) - recorded(a))])),
+  };
+}
+
 /** What a device's lane needs from the gate: the device it starts once, each of its jobs on that device, and its end. */
 export type DeviceLane<Job extends { device: string }, Device, Result> = {
-  /** Starts the device once, before its first job; a failure here leaves every job of the lane unstarted. */
-  open: (device: Job["device"], stopping: AbortSignal) => Promise<Device>;
+  /** Starts the lane's device once, before its first job; a failure here leaves the lane's jobs to the device's other
+   * lanes, or unstarted when it has none. `lane` counts the device's lanes from one. */
+  open: (device: Job["device"], stopping: AbortSignal, lane: number) => Promise<Device>;
   /** Runs one job on the opened device; the signal aborts when the lanes stop. */
   run: (job: Job, opened: Device, stopping: AbortSignal) => Promise<Result>;
   /** Ends the device after the lane's last job, whether it ran, failed or stopped. */
@@ -319,14 +389,16 @@ export type DeviceLane<Job extends { device: string }, Device, Result> = {
 };
 
 /** INF-1438 (the captain's "Start each simulated device once per phone check, not once per part"): runs
- * the jobs of each device in order on one device the lane opens once and closes at its end, the devices'
- * lanes side by side, at most `slots` at a time. One job's failure stops none of the others, unless
- * `stopAfter` holds for a job's result or a job throws: then no lane starts another job and the signal each
- * running job holds aborts, while every opened device still closes. A job that never started leaves its
- * result undefined, and the first error is thrown once every lane has ended. */
+ * the jobs of each device on the lanes `plan` gives it, one lane a device unless it says more, each lane on one
+ * device it opens once and closes at its end, at most `slots` lanes at a time. A lane takes its device's next job
+ * when it is free (INF-4241 piece 3). One job's failure stops none of the others, unless `stopAfter` holds for a
+ * job's result or a job throws: then no lane starts another job and the signal each running job holds aborts, while
+ * every opened device still closes. A job that never started leaves its result undefined, and the first error is
+ * thrown once every lane has ended. */
 export async function runDeviceLanes<Job extends { device: string }, Device, Result>(jobs: Job[], slots: number,
-  lane: DeviceLane<Job, Device, Result>, stopAfter?: (result: Result) => boolean): Promise<(Result | undefined)[]> {
-  const devices = [...new Set(jobs.map((job) => job.device))] as Job["device"][];
+  lane: DeviceLane<Job, Device, Result>, stopAfter?: (result: Result) => boolean,
+  plan: PhoneLanePlan<Job["device"]> = phoneLanePlan(jobs.map((job) => ({ ...job, part: "" })), 1)): Promise<(Result | undefined)[]> {
+  const queues = new Map([...plan.queues].map(([device, queue]) => [device, [...queue]]));
   const results: (Result | undefined)[] = jobs.map(() => undefined);
   const errors: unknown[] = [];
   const stopping = new AbortController();
@@ -334,16 +406,18 @@ export async function runDeviceLanes<Job extends { device: string }, Device, Res
     errors.push(error);
     if (stopAfter) stopping.abort();
   };
-  await runSideBySide(devices, slots, async (device) => {
-    if (stopping.signal.aborted) return;
+  await runSideBySide(plan.lanes, slots, async ({ device, number }) => {
+    const queue = queues.get(device) ?? [];
+    if (stopping.signal.aborted || !queue.length) return;
     let opened: Device;
-    try { opened = await lane.open(device, stopping.signal); }
+    try { opened = await lane.open(device, stopping.signal, number); }
     catch (error) { return failed(error); }
     try {
-      for (const [index, job] of jobs.entries()) {
-        if (job.device !== device || stopping.signal.aborted) continue;
+      while (!stopping.signal.aborted) {
+        const index = queue.shift();
+        if (index === undefined) break;
         try {
-          results[index] = await lane.run(job, opened, stopping.signal);
+          results[index] = await lane.run(jobs[index]!, opened, stopping.signal);
           if (stopAfter?.(results[index]!)) stopping.abort();
         } catch (error) { failed(error); }
       }

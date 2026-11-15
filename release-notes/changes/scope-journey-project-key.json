@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "scope-journey-project-key",
+      "reason": "Test only: the scope journey now expects the project key the first mate's context names beside each scope; nothing a person sees changes."
+    }
+  ]
+}

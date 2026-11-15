@@ -425,6 +425,19 @@ test("Scope is saved by keys and shown once in the first mate's next context", a
     )
     .toEqual({ scope });
   await pressKey(field, "Escape");
+  // The project the repository belongs to, by its key, as the record keeps it:
+  // the context names it beside the scope (INF-4220).
+  const record = readSavedData(
+    userDataDir,
+    (db) =>
+      db
+        .prepare(
+          "SELECT projects.key AS project FROM repos JOIN projects ON projects.id = repos.project_id WHERE repos.id = ?",
+        )
+        .get(alpha.id) as { project: string } | undefined,
+  );
+  if (!record) throw new Error("The scope fixture's repository must name its project");
+  const { project } = record;
   const contexts = () =>
     mockProvider
       .requestBodies()
@@ -442,7 +455,9 @@ test("Scope is saved by keys and shown once in the first mate's next context", a
     expect.arrayContaining([
       expect.objectContaining({
         project_scopes: expect.objectContaining({
-          projects: expect.arrayContaining([{ repo_id: alpha.id, name: alpha.name, scope }]),
+          projects: expect.arrayContaining([
+            { repo_id: alpha.id, name: alpha.name, project, scope },
+          ]),
         }),
       }),
     ]),

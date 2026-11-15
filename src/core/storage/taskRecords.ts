@@ -1082,6 +1082,42 @@ export class TaskStore {
     return this.getMany(ids);
   }
 
+  /**
+   * The rows, open or closed and oldest first, whose required-action record
+   * holds a requirement from this source task or for one of these shared
+   * actions: what a merged close's required-action step matches against
+   * (`activateRequiredActions`). It walks only the partial
+   * `task_permissions_captain_action` index, the rows that hold such a
+   * record, and composes only the matching ones, never every task (INF-4224
+   * timed that read at 308-426 ms on a 7,847-task record).
+   */
+  listWithRequirementFrom(source: string, sharedIds: readonly string[]): TaskRecord[] {
+    if (!this.delivery.exists())
+      return this.list().filter((record) =>
+        record.delivery?.captainAction?.requirements.some(
+          (requirement) =>
+            requirement.source === source ||
+            (requirement.action.sharedId !== undefined &&
+              sharedIds.includes(requirement.action.sharedId)),
+        ),
+      );
+    const ids = prepared(
+      this.db,
+      `SELECT p.task_id FROM task_permissions p
+       WHERE p.captain_action_json IS NOT NULL AND EXISTS (
+         SELECT 1 FROM json_each(
+           CASE WHEN json_valid(p.captain_action_json) THEN p.captain_action_json ELSE '{}' END,
+           '$.requirements'
+         ) r
+         WHERE json_extract(r.value, '$.source') = ?
+           OR json_extract(r.value, '$.action.sharedId') IN (SELECT value FROM json_each(?))
+       )`,
+    )
+      .pluck()
+      .all(source, JSON.stringify(sharedIds)) as string[];
+    return this.getMany(ids);
+  }
+
   /** Recorded overrides on this computer, without composing task records or their history.
    * Closed tasks remain eligible: their declared process groups can still be alive.
    * CROSS JOIN keeps the sparse override index first, not a walk of execution history.

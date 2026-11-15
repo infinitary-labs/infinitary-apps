@@ -146,6 +146,12 @@ export const WALKS: Record<string, { walks: string[]; reason: string }> = {
       reason:
         "walks only the partial task_execution_pending_placement index, which holds the pending placements",
     },
+  "SELECT p.task_id FROM task_permissions p WHERE p.captain_action_json IS NOT NULL AND EXISTS ( SELECT 1 FROM json_each( CASE WHEN json_valid(p.captain_action_json) THEN p.captain_action_json ELSE '{}' END, '$.requirements' ) r WHERE json_extract(r.value, '$.source') = ? OR json_extract(r.value, '$.action.sharedId') IN (SELECT value FROM json_each(?)) )":
+    {
+      walks: ["SCAN p USING INDEX task_permissions_captain_action"],
+      reason:
+        "walks only the partial task_permissions_captain_action index, which holds the tasks filed for a required action (67 of 7,847 on the captain's record), and returns only those naming this source or shared action; read when a merged close or a card activates its required actions (TaskDeliveries.activateRequiredActions, INF-4224)",
+    },
   "SELECT * FROM task_links ORDER BY created_at, from_id, to_id": {
     walks: ["SCAN task_links", "USE TEMP B-TREE FOR ORDER BY"],
     reason:

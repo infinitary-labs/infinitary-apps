@@ -18,6 +18,9 @@ import { COMPACTION_CANDIDATE } from "./taskEventCompaction";
  * instead of reading every task (docs/testing.md, "The scale check").
  * The permission index seeks only recorded overrides for each load round,
  * never the permission-bearing history that has no override.
+ * The required-action index seeks the rows holding a required-action
+ * record, which a merged close matches its own requirements against
+ * instead of composing every task (INF-4224).
  * Captain-click context seeks that actor's recent events, not every
  * crewmate's progress in the same time window (INF-2284).
  * The first launch's crew facts seek a task by kind and status instead of
@@ -43,6 +46,8 @@ export function createQueryIndexes(db: AppDatabase): void {
     CREATE INDEX IF NOT EXISTS tasks_kind_status ON tasks (kind, status);
     CREATE INDEX IF NOT EXISTS task_permissions_override
       ON task_permissions (override_json) WHERE override_json IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS task_permissions_captain_action
+      ON task_permissions (task_id) WHERE captain_action_json IS NOT NULL;
     CREATE INDEX IF NOT EXISTS tasks_parent_status ON tasks (parent_id, status);
     CREATE INDEX IF NOT EXISTS tasks_closed_at ON tasks (closed_at);
     CREATE INDEX IF NOT EXISTS tasks_workspace_present ON tasks (closed_at)

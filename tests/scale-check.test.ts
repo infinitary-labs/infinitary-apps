@@ -34,7 +34,8 @@ import { outsideCensus } from "./helpers/statementCheck";
 // app repeats on its main thread - a first mate turn's context build, the
 // answer-delivery sweep, one minute pass, a task board update, the first
 // launch's crew facts, a task's close with the closed-task file passes
-// watching and a work computer's contact - must not grow with closed history. Five main thread freezes (INF-703, INF-940,
+// watching, a merged close that files a required action (INF-4224) and a
+// work computer's contact - must not grow with closed history. Five main thread freezes (INF-703, INF-940,
 // INF-1348, INF-1956, INF-2059) were synchronous SQLite whose cost grew
 // with the saved record while the tests used a few rows. This seeds a
 // record sized from the captain's real readings, counts each read's
@@ -480,6 +481,35 @@ async function buildRecord() {
         tasks.close(closing, { status: "done", reason: "merged", actor: "host" });
         for (const sweeps of fileSweeps) await sweeps.settled();
       });
+      // A merged close whose change declared a required action: the step
+      // that files the captain's action task (INF-4224, where it read every
+      // task inside the close). The captain then does the action, so the
+      // live set is the same size at the next measure.
+      const declaring = `declaring-${closes}`;
+      seedTask(tasks, { id: declaring, title: `Declaring work ${declaring}`, status: "idle" });
+      tasks.delivery.declareRequiredActions(declaring, {
+        cardId: `card-${declaring}`,
+        offerId: `offer-${declaring}`,
+        actions: [REQUIRED_ACTION],
+      });
+      counts["merged close with a required action"] = await counted(
+        "merged close with a required action",
+        async () => {
+          tasks.close(declaring, { status: "done", reason: "merged", actor: "host" });
+          for (const sweeps of fileSweeps) await sweeps.settled();
+        },
+      );
+      // The captain's card shows the action and its button confirms it.
+      for (const filed of tasks.listWithRequirementFrom(declaring, [])) {
+        const shown = tasks.delivery.presentCaptainAction(filed.id);
+        if (
+          !shown ||
+          !tasks.delivery.completeCaptainAction(filed.id, shown.generation, "confirmed")
+        )
+          throw new Error("The filed required action could not be confirmed");
+      }
+      for (const sweeps of fileSweeps) await sweeps.settled();
+      await settle();
       // A work computer coming back in reach: its roster read against the record.
       counts["work computer contact"] = await counted("work computer contact", async () => {
         contact({ deviceId: WORK_COMPUTER, contact: "gone" });
@@ -501,6 +531,18 @@ async function buildRecord() {
     },
   };
 }
+
+/** One action the captain takes after several merges: installing the new version on another computer. */
+const REQUIRED_ACTION = {
+  id: "install-on-the-work-computer",
+  target: "the work computer",
+  title: "Install the new version on the work computer",
+  consequence: "Until then the work computer runs the old version.",
+  instructions: ["Open Infinitary on the work computer.", "Choose Update now."],
+  criterion: "The work computer reports the new version.",
+  prerequisites: [],
+  completion: { kind: "manual" as const, label: "I installed it" },
+};
 
 function card(id: string, taskId: string, title: string): Card {
   return {

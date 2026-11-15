@@ -801,35 +801,37 @@ export class TaskDeliveries {
     if (!offer) return; // Historical offers are unknown, not an empty declaration.
     for (const action of offer.actions) {
       const receipt = `${sourceId}:${offer.offerId}:${action.id}`;
-      const existing = this.tasks
-        .list()
-        .find((row) =>
-          row.delivery?.captainAction?.requirements.some(
-            (requirement) =>
-              `${requirement.source}:${requirement.offer}:${requirement.action.id}` === receipt,
-          ),
-        );
+      // Only the rows that hold a requirement from this source or for this
+      // shared action, never every task (INF-4224); read again per action,
+      // since an earlier action of the same offer may have filed one.
+      const holding = this.tasks.listWithRequirementFrom(
+        sourceId,
+        action.sharedId ? [action.sharedId] : [],
+      );
+      const existing = holding.find((row) =>
+        row.delivery?.captainAction?.requirements.some(
+          (requirement) =>
+            `${requirement.source}:${requirement.offer}:${requirement.action.id}` === receipt,
+        ),
+      );
       if (existing) continue;
-      const outstanding = this.tasks
-        .listOpen()
-        .find((row) =>
+      const outstanding = holding.find(
+        (row) =>
+          row.status === "open" &&
           row.delivery?.captainAction?.requirements.some(
             (requirement) => requirement.source === sourceId && requirement.action.id === action.id,
           ),
-        );
+      );
       const shared =
         outstanding ??
         (action.sharedId
-          ? this.tasks.list().find((row) => {
-              const state = row.delivery?.captainAction;
-              return (
+          ? holding.find(
+              (row) =>
                 row.status === "open" &&
-                state &&
-                state.requirements.some(
+                row.delivery?.captainAction?.requirements.some(
                   (requirement) => requirement.action.sharedId === action.sharedId,
-                )
-              );
-            })
+                ),
+            )
           : undefined);
       const id = shared?.id ?? randomUUID().slice(0, 8);
       if (!shared)

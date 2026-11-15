@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "merge-with-a-step-after",
+      "kind": "fix",
+      "title": "Merging a change with a step for you after no longer pauses the window",
+      "body": "When a merged change leaves you a step to take afterwards, such as installing it on another computer, Infinitary now finds that step's task directly instead of reading every task you have. On a long history the window no longer stops responding for a moment after the merge click.",
+      "area": "tasks",
+      "noPicture": "Nothing on screen changes: the merge finishes the same way, without the pause.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

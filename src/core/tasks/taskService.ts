@@ -625,6 +625,11 @@ export class TaskService {
     return this.writer.store.listWithComputerMove();
   }
 
+  /** The rows holding a requirement from this source task or for one of these shared actions. */
+  listWithRequirementFrom(source: string, sharedIds: readonly string[]): TaskRecord[] {
+    return this.writer.store.listWithRequirementFrom(source, sharedIds);
+  }
+
   /** The live set and every row closed at or after `since`, oldest first. */
   listLiveOrClosedSince(since: number): TaskRecord[] {
     return this.writer.store.listLiveOrClosedSince(since);

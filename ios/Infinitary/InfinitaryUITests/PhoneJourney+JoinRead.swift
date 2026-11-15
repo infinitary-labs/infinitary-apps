@@ -135,9 +135,10 @@ extension PhoneJourney {
         tapOnPhone(app.buttons["close-computer-details"])
         _ = try await home("display-light", budget: displayBudget)
         _ = waitForRedraw(heading, from: largest)
-        if UIDevice.current.userInterfaceIdiom == .pad {
+        if phoneTurnedLayout(app) == .wide {
             // INF-1541 piece 1: turned, the card's heading moves onto the stage beside the sidebar, and back upright.
             turnPhone(to: .landscapeLeft, in: app, moving: heading)
+            XCTAssertEqual(phoneShownLayout(app), .wide, "Turned, the app shows the layout read before the turn")
             let sidebar = phoneSidebar(app)
             XCTAssertTrue(sidebar.waitForPresence(timeout: 10), app.debugDescription)
             XCTAssertTrue(app.staticTexts["Your phone is reading your Mac"].exists)

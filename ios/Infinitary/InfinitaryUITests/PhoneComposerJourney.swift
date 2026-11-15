@@ -45,7 +45,9 @@ import XCTest
     // INF-1541 piece 1: the message box moves to the foot of the turned screen, so the turn waits for it to settle there.
     turnPhone(to: .landscapeLeft, in: app, moving: input)
     XCTAssertTrue(input.waitForPresence(timeout: 10))
-    if UIDevice.current.userInterfaceIdiom == .pad {
+    // INF-4241: the layout the turned app shows decides, never the kind of device.
+    let wide = phoneShownLayout(app) == .wide
+    if wide {
         let sidebar = phoneSidebar(app)
         XCTAssertTrue(sidebar.waitForPresence(timeout: 10))
         // INF-1062: the landscape iPad shows the stage and its sidebar, so the bar carries no strip.
@@ -67,7 +69,7 @@ import XCTest
     verifyPhoneComposerBounds(app: app)
     // INF-82: draft retention alone missed a card reduced to a thin attribution strip.
     // Read the complete native heading, then scroll actual body text and an action into view.
-    if UIDevice.current.userInterfaceIdiom == .phone {
+    if !wide {
         // INF-944 items 1 and 2: the card's frame holds its head and choices; its body scrolls inside it.
         // A short card scrolls whole, its frame then being its scroller.
         let card = app.descendants(matching: .any)
@@ -92,7 +94,7 @@ import XCTest
         XCTAssertEqual(input.value as? String, words, "Reading the card leaves the draft alone")
         XCTAssertEqual(app.buttons.matching(identifier: "photo-chip").count, 1)
     } else { picture("draft-landscape") }
-    if UIDevice.current.userInterfaceIdiom == .pad {
+    if wide {
         let sidebar = phoneSidebar(app)
         tapOnPhone(phoneSidebarRail("Activity", in: sidebar))
         XCTAssertTrue(sidebar.staticTexts.matching(identifier: "activity-text").firstMatch.waitForPresence(timeout: 10))

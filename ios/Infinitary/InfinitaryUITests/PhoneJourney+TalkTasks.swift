@@ -214,9 +214,11 @@ extension PhoneJourney {
         picture("foreground-notice")
         // INF-1541 piece 1: turned, an iPhone's strip moves into the bar; an iPad brings Home's stage beside the sidebar,
         // where INF-1524 counts the new card beside the pager, so its count is what the turn carries into view.
-        turnPhone(to: .landscapeLeft, in: app,
-                  moving: UIDevice.current.userInterfaceIdiom == .pad ? app.buttons["card-new"] : app.buttons["tab-home"])
-        if UIDevice.current.userInterfaceIdiom == .pad {
+        // INF-4241: the layout the turn shows decides, never the kind of device.
+        let turned = phoneTurnedLayout(app)
+        turnPhone(to: .landscapeLeft, in: app, moving: turned == .wide ? app.buttons["card-new"] : app.buttons["tab-home"])
+        XCTAssertEqual(phoneShownLayout(app), turned, "Turned, the app shows the layout read before the turn")
+        if turned == .wide {
             // INF-589 item 16: in landscape the stage is Home, beside the sidebar rather than across it.
             // INF-1524, the captain's pick: Home counts the new card beside the pager instead of a pill over the stage.
             let sidebar = phoneSidebar(app)

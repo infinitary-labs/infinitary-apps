@@ -25,7 +25,7 @@ extension PhoneJourney {
 
         showCard(chart)
         // INF-1062: with no bar under it, scrolling a long card leaves the message box where it is, in the column's width.
-        if UIDevice.current.userInterfaceIdiom == .phone {
+        if phoneShownLayout(app) == .column {
             let composer = app.otherElements["phone-composer"].firstMatch
             let before = composer.frame
             app.scrollViews["card-scroll"].swipeUp()
@@ -203,7 +203,7 @@ extension PhoneJourney {
         picture("card-close-refused")
         tapOnPhone(notice)
         XCTAssertTrue(notice.waitForAbsence(timeout: 10))
-        if UIDevice.current.userInterfaceIdiom == .phone {
+        if phoneTurnedLayout(app) == .onItsSide {
             // INF-2553, the captain's pick for an iPhone on its side, where the pill has no room: the words stay on
             // the place's own line until its next change, so they are never cleared unseen. In a stack of two, the
             // card that came back keeps them while the other card is up.
@@ -211,6 +211,7 @@ extension PhoneJourney {
             let second = try XCTUnwrap(asked["title"] as? String)
             showCard(second)
             turnPhone(to: .landscapeLeft, in: app, moving: cardHeading(second))
+            XCTAssertEqual(phoneShownLayout(app), .onItsSide, "Turned, the app shows the layout read before the turn")
             _ = try await home("refuse-next-change", body: #"{"channel":"inf:cards:close","words":"\#(refusal)"}"#)
             tapOnPhone(app.buttons["put-aside-card"])
             showCard(note)
@@ -323,10 +324,11 @@ extension PhoneJourney {
         // INF-2928 piece 1: Waiting on you always shows its rows, so its header is a label, not a button, as on the Mac.
         XCTAssertLessThan(app.staticTexts["group-waiting"].frame.minY, restore.frame.minY, "It is listed under Waiting on you")
         picture("tasks-minimized")
-        if UIDevice.current.userInterfaceIdiom == .phone {
+        if phoneTurnedLayout(app) == .onItsSide {
             // INF-2553: on an iPhone on its side, a bring-back the computer refuses puts the card aside again and says
             // why on the Tasks list's own line, as a refused bring-back did before.
             turnPhone(to: .landscapeLeft, in: app, moving: restore)
+            XCTAssertEqual(phoneShownLayout(app), .onItsSide, "Turned, the app shows the layout read before the turn")
             _ = try await home("refuse-next-change", body: #"{"channel":"inf:cards:minimize","words":"\#(refusal)"}"#)
             tapOnPhone(restore)
             tab("Tasks")

@@ -80,10 +80,11 @@ extension PhoneJourney {
         waitForStill(cover)
         picture("4-cover-inside")
 
-        // Turning the phone refits the map inside the cover.
-        if UIDevice.current.userInterfaceIdiom == .phone {
+        // Turning the phone onto its side refits the map inside the cover.
+        if phoneTurnedLayout(app) == .onItsSide {
             let anyBox = cover.staticTexts.element(boundBy: 0)
             turnPhone(to: .landscapeLeft, in: app, moving: anyBox)
+            XCTAssertEqual(phoneShownLayout(app), .onItsSide, "Turned, the app shows the layout read before the turn")
             XCTAssertTrue(framed(anyBox) { cover.frame.contains($0) }, "Turning refits the map: \(anyBox.frame) in \(cover.frame)")
             // The same view in both themes supplies the release note's hero pair.
             waitForStill(cover)

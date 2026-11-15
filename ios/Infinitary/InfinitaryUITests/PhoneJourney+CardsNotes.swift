@@ -71,8 +71,9 @@ extension PhoneJourney {
         XCTAssertEqual(waitForPhonePredicate(two, object: nil, timeout: 10), .completed, app.debugDescription)
         XCTAssertEqual(app.descendants(matching: .any).matching(identifier: "queued-note").count, 2)
         // On an iPhone on its side the editor takes the card's foot, and its comment stays in view above the keyboard.
-        if UIDevice.current.userInterfaceIdiom == .phone {
+        if phoneTurnedLayout(app) == .onItsSide {
             turnForProbe(.landscapeLeft)
+            XCTAssertEqual(phoneShownLayout(app), .onItsSide, "Turned, the app shows the layout read before the turn")
             reveal(point); tapOnPhone(point)
             reveal(first); tapOnPhone(first)
             XCTAssertTrue(editor.waitForPresence(timeout: 10), "Point at did not open the note editor on its side\n\(app.debugDescription)")

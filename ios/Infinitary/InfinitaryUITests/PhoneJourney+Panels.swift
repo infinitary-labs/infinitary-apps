@@ -69,8 +69,8 @@ extension PhoneJourney {
         tapOnPhone(header, repeatDiscarded: false)
         XCTAssertTrue(tally(42).waitForPresence(timeout: 60), app.debugDescription)
 
-        // On a wide iPad, Panels is the sidebar's third choice beside the stage.
-        if UIDevice.current.userInterfaceIdiom == .pad {
+        // In the wide layout (an iPad on its side), Panels is the sidebar's third choice beside the stage.
+        if phoneTurnedLayout(app) == .wide {
             XCUIDevice.shared.orientation = .landscapeLeft
             let choice = app.otherElements["phone-sidebar"].buttons["Panels"]
             XCTAssertTrue(choice.waitForPresence(timeout: 20), app.debugDescription)

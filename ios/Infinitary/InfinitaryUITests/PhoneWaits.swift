@@ -104,6 +104,44 @@ struct PhoneTargetReading: Equatable {
     _ = waitForTarget(moved, timeout: 10) { $0.frame != before }
 }
 
+/// INF-4241: the layouts the app shows, each by the app's own rule, which follows the window's room and never the kind
+/// of device (`PhoneLayout.wide`, `phoneOnItsSide`), so an open iPhone Duo takes the sidebar's steps as an iPad does.
+enum PhoneShownLayout: Equatable {
+    /// One reading column under the tab strip: any device upright.
+    case column
+    /// Compact in height, the tab strip in the bar and the card given the height: an iPhone on its side.
+    case onItsSide
+    /// Regular both ways and wider than tall, the sidebar beside the stage: an iPad on its side, an open Duo like a book.
+    case wide
+
+    static func of(horizontal: XCUIElement.SizeClass, vertical: XCUIElement.SizeClass, widerThanTall: Bool) -> Self {
+        if vertical == .compact { return .onItsSide }
+        return horizontal == .regular && vertical == .regular && widerThanTall ? .wide : .column
+    }
+}
+
+/// INF-4241: the layout the app shows now, read from its window's size classes and shape as the app reads them. A step
+/// that differs by layout branches on this, never on `userInterfaceIdiom`, which stays for what only the iPad itself
+/// has: its words, its keyboard's suggestion row and its number-pad popover.
+@MainActor func phoneShownLayout(_ app: XCUIApplication) -> PhoneShownLayout {
+    let window = app.windows.firstMatch
+    let horizontal = window.horizontalSizeClass, vertical = window.verticalSizeClass
+    XCTAssertNotEqual(horizontal, .unspecified, "The app's window reports no width class\n\(app.debugDescription)")
+    XCTAssertNotEqual(vertical, .unspecified, "The app's window reports no height class\n\(app.debugDescription)")
+    return .of(horizontal: horizontal, vertical: vertical, widerThanTall: window.frame.width > window.frame.height)
+}
+
+/// INF-4241: the layout a quarter turn will show, read before the turn: turning swaps the window's sides, so its height
+/// takes the width's class and its width the height's. A step that turns reads this first and, once turned, checks the
+/// app shows it (`phoneShownLayout`), so a device whose classes do not swap fails here instead of skipping its steps.
+@MainActor func phoneTurnedLayout(_ app: XCUIApplication) -> PhoneShownLayout {
+    let window = app.windows.firstMatch
+    let horizontal = window.horizontalSizeClass, vertical = window.verticalSizeClass
+    XCTAssertNotEqual(horizontal, .unspecified, "The app's window reports no width class\n\(app.debugDescription)")
+    XCTAssertNotEqual(vertical, .unspecified, "The app's window reports no height class\n\(app.debugDescription)")
+    return .of(horizontal: vertical, vertical: horizontal, widerThanTall: window.frame.height > window.frame.width)
+}
+
 /// One sampler owns native target frames and their on-screen pixels, including the photo recovery observation.
 @MainActor func readPhoneTarget(_ element: XCUIElement) -> PhoneTargetReading? {
     // The screen's bounds are read again because a turn moves them.

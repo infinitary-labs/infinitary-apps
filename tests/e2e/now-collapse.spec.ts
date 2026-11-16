@@ -7,7 +7,15 @@ import { panelCommandId } from "../../src/shared/keyboard";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
 import { promptInput } from "./prompt";
-import { expandDock, nowFrame, openGroup, openRowSummary, pressRow, recordCard } from "./rails";
+import {
+  expandDock,
+  nowFrame,
+  openGroup,
+  openRowSummary,
+  pressRow,
+  recordCard,
+  slideOnStill,
+} from "./rails";
 import { focusedRegion, regionAfter, runFromSearch } from "./windowKeys";
 
 /**
@@ -25,6 +33,14 @@ import { focusedRegion, regionAfter, runFromSearch } from "./windowKeys";
  * click on a segment the pointer rests on opens the part it names, as a
  * click on that part's own row does (INF-4172), an open part and a finished
  * one, and a click on the row's title still opens the task.
+ *
+ * The pointer is Chromium's routed pointer, and it lands only once its
+ * target is still (`slideOnStill`): the search before the clicks leaves the
+ * keyboard in the panel's search field, and Playwright's mouse would take
+ * the window's focus out of that frame and back, which lets the summary go;
+ * the panel's frame also takes its new height a moment after the search
+ * clears, which can carry the row out from under a pointer that landed
+ * early (alpha run 43754442108).
  *
  * Data: a plan with three parts - one finished, two on request - so its
  * tree lists under Backlog and its row reads 1/3. Every task is queued on
@@ -62,6 +78,11 @@ function seeded(): string {
   return userDataDir;
 }
 
+/** A rest on a bar segment lands below the drawn segment, inside its taller target. */
+function belowBar(box: { width: number; height: number }): { x: number; y: number } {
+  return { x: box.width / 2, y: box.height - 2 };
+}
+
 /** Puts the keyboard in the Tasks list with F6, as a person does. */
 async function intoTasks(app: Parameters<typeof regionAfter>[0], page: Page): Promise<void> {
   await promptInput(page).click();
@@ -71,8 +92,8 @@ async function intoTasks(app: Parameters<typeof regionAfter>[0], page: Page): Pr
 
 test("a task with parts collapses and expands by keys and by command, and stays collapsed after a restart", async () => {
   test.setTimeout(240_000);
-  const userDataDir = seeded();
-  let launched = await launchApp({ userDataDir, withMockProvider: true });
+  const options = { userDataDir: seeded(), withMockProvider: true, gpuBenchmarking: true };
+  let launched = await launchApp(options);
   try {
     let { app, page } = launched;
     const list = () => nowFrame(page);
@@ -124,7 +145,7 @@ test("a task with parts collapses and expands by keys and by command, and stays 
 
     await test.step("a restart finds it still collapsed", async () => {
       await launched.close();
-      launched = await launchApp({ userDataDir, withMockProvider: true });
+      launched = await launchApp(options);
       ({ app, page } = launched);
       await expandDock(page, "now");
       const backlog = list().locator('[data-now-group-header="backlog"]');
@@ -139,22 +160,17 @@ test("a task with parts collapses and expands by keys and by command, and stays 
       const segment = (index: number) => row("cl-plan").locator("[data-now-bar] i").nth(index);
       const summary = openRowSummary(page);
       // The finished part first, then the open ones as the board lists them.
-      // Each rest lands below the drawn segment, inside its taller target.
       for (const [index, part] of [
         [0, "cl-words"],
         [1, "cl-ship"],
         [2, "cl-phone"],
       ] as const) {
-        const box = await segment(index).boundingBox();
-        if (!box) throw new Error(`segment ${index} is not drawn`);
-        // e2e-frame-actions: native -- This journey proves a real pointer on a bar segment rests on its part.
-        await segment(index).hover({ position: { x: box.width / 2, y: box.height - 2 } });
+        await slideOnStill(page, segment(index), belowBar);
         await expect(summary).toHaveAttribute("data-point-summary", part);
         await expect(segment(index)).toHaveAttribute("data-now-part-rested", "");
       }
       // The rest of the row (its status mark here) brings back the task's own summary.
-      // e2e-frame-actions: native -- This journey proves the pointer moving off the bar rests on the task again.
-      await row("cl-plan").locator("[data-now-dot]").hover();
+      await slideOnStill(page, row("cl-plan").locator("[data-now-dot]"));
       await expect(summary).toHaveAttribute("data-point-summary", "cl-plan");
       await expect(row("cl-plan").locator("[data-now-part-rested]")).toHaveCount(0);
     });
@@ -185,10 +201,7 @@ test("a task with parts collapses and expands by keys and by command, and stays 
         [1, "cl-ship"],
         [0, "cl-words"],
       ] as const) {
-        const box = await segment(index).boundingBox();
-        if (!box) throw new Error(`segment ${index} is not drawn`);
-        // e2e-frame-actions: native -- This journey proves the press lands on the segment a real pointer rests on.
-        await segment(index).hover({ position: { x: box.width / 2, y: box.height - 2 } });
+        await slideOnStill(page, segment(index), belowBar);
         await expect(openRowSummary(page)).toHaveAttribute("data-point-summary", part);
         await pressRow(page, planKey, `[data-now-part-index="${index}"]`);
         await expect(recordCard(page)).toHaveAttribute("data-task-record", part);

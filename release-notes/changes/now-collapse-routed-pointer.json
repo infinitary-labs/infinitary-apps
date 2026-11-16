@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "now-collapse-routed-pointer",
+      "reason": "Internal test tooling: the Tasks collapse journey rests Chromium's routed pointer on a bar segment once it is still, so the search field's focus and the panel settling after a search no longer let the summary go before its check."
+    }
+  ]
+}

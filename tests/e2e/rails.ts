@@ -282,6 +282,29 @@ export async function restOnStill(
 }
 
 /**
+ * Rests Chromium's routed pointer (`slidePointer`, `launchApp({
+ * gpuBenchmarking: true })`) on `target` once it has stopped moving: on its
+ * middle, or where `at` places it within the target's box. The routed
+ * pointer moves no focus, as a real mouse moves none. Playwright's mouse
+ * takes the window's focus out of a frame the keyboard is in, such as the
+ * Tasks panel's search field, onto the window's own page; the app gives it
+ * back to that frame, and the window losing focus to the frame lets a
+ * summary the pointer opened go.
+ */
+export async function slideOnStill(
+  page: Page,
+  target: Locator,
+  at?: (box: { width: number; height: number }) => { x: number; y: number },
+): Promise<void> {
+  await atRest(page, target);
+  const box = await target.boundingBox();
+  if (!box) throw new Error("The pointer's target is not on screen");
+  const within = at ? at(box) : { x: box.width / 2, y: box.height / 2 };
+  const to = { x: box.x + within.x, y: box.y + within.y };
+  await slidePointer(page, to, to, 1);
+}
+
+/**
  * Brings a task key into view as it is drawn now. A record draws every key
  * it linked anew with each push (FI3-1279), and an opening record's reads
  * arrive one after another; a scroll holds the key it found until that key

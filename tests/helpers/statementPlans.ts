@@ -1,5 +1,6 @@
 import { type AppDatabase, openInMemoryDatabase } from "@core/storage/db";
 import { KnowledgeStore } from "@core/storage/knowledgeStore";
+import { createUsageDays } from "@core/storage/usageDays";
 import { BOUNDED_TABLES, WALKS } from "./statementWalks";
 
 /** A statement the app prepared, and the steps of its plan that read a growing table whole. */
@@ -30,7 +31,11 @@ let cached: Planner[] | undefined;
 export function planners(): Planner[] {
   if (cached) return cached;
   const knowledge = KnowledgeStore.inMemory() as unknown as { db: AppDatabase };
-  cached = [plannerFor(openInMemoryDatabase()), plannerFor(knowledge.db)];
+  const record = openInMemoryDatabase();
+  // The usage ledger's daily totals are made by their first read, not a
+  // migration (usageDays.ts), so the planner makes them to plan their reads.
+  createUsageDays(record);
+  cached = [plannerFor(record), plannerFor(knowledge.db)];
   return cached;
 }
 

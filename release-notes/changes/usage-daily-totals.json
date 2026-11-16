@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "usage-daily-totals",
+      "kind": "fix",
+      "title": "Usage opens and refreshes without pausing the app",
+      "body": "Settings → Usage used to add up every model response ever recorded each time it opened or refreshed, which on a long-used record could pause the whole app for a fraction of a second. It now keeps a running total for each day and adds up those instead, so the same figures come back several times faster.",
+      "area": "settings",
+      "noPicture": "Usage shows the same figures as before; only how quickly they are read changes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -21,6 +21,7 @@ import {
 } from "@shared/usage";
 import type { AppDatabase } from "./db";
 import { taskReadTable } from "./taskRecordFields";
+import { foldUsageDays, USAGE_DAY_SUMS } from "./usageDays";
 
 /**
  * The per-account usage ledger (broker phase 2, D-18): one `usage_events`
@@ -28,8 +29,9 @@ import { taskReadTable } from "./taskRecordFields";
  * served it. Cost comes from the session's own usage (Pi's listed
  * prices, Claude's own estimate) - never a proxy, and never a zero the
  * session could not price. The one writer of the table; the published
- * views read it through `views.ts`, Observe through `byTask`, the Usage
- * tab through `summary` (docs/usage.md).
+ * views read it through `views.ts`. Observe's `byTask` and the Usage tab's
+ * `summary` and `tasks` add up its daily totals (`usageDays.ts`), never
+ * every row (docs/usage.md, "Daily totals").
  */
 
 export type UsageInput = {
@@ -75,29 +77,7 @@ type TaskFacts = NonNullable<UsagePlace["task"]> & {
   kind: UsageWorkKind | null;
 };
 
-/** The SQL that sums ledger records into one amount's columns. */
-const AMOUNT_COLUMNS = `COUNT(*) AS records,
-                SUM(input IS NOT NULL OR output IS NOT NULL
-                    OR cache_read IS NOT NULL OR cache_write IS NOT NULL) AS counted,
-                COUNT(input) AS reported_input,
-                COUNT(output) AS reported_output,
-                COUNT(cache_read) AS reported_cache_read,
-                COUNT(cache_write) AS reported_cache_write,
-                COALESCE(SUM(input), 0) AS input,
-                COALESCE(SUM(output), 0) AS output,
-                COALESCE(SUM(cache_read), 0) AS cache_read,
-                COALESCE(SUM(cache_write), 0) AS cache_write,
-                SUM(CASE WHEN cost > 0 THEN cost END) AS cost,
-                SUM(CASE WHEN cost > 0 THEN 1 ELSE 0 END) AS priced,
-                SUM(CASE WHEN cost > 0 THEN cost_input END) AS cost_input,
-                SUM(CASE WHEN cost > 0 THEN cost_output END) AS cost_output,
-                SUM(CASE WHEN cost > 0 THEN cost_cache_read END) AS cost_cache_read,
-                SUM(CASE WHEN cost > 0 THEN cost_cache_write END) AS cost_cache_write,
-                SUM(CASE WHEN cost > 0 AND (cost_input IS NOT NULL OR cost_output IS NOT NULL
-                    OR cost_cache_read IS NOT NULL OR cost_cache_write IS NOT NULL)
-                    THEN 1 ELSE 0 END) AS split`;
-
-/** Ledger records summed by `AMOUNT_COLUMNS`. */
+/** Ledger records summed into one amount's columns (`USAGE_DAY_SUMS`). */
 type AmountRow = {
   records: number;
   counted: number;
@@ -189,7 +169,9 @@ function sumBy<K>(
   const parts = new Map<K, UsageAmount[]>();
   for (const group of groups) {
     const at = key(group);
-    parts.set(at, [...(parts.get(at) ?? []), amountOf(group)]);
+    const held = parts.get(at);
+    if (held) held.push(amountOf(group));
+    else parts.set(at, [amountOf(group)]);
   }
   return new Map([...parts].map(([at, amounts]) => [at, addUsageAmounts(amounts)]));
 }
@@ -273,28 +255,28 @@ export class UsageStore {
   summary(query: UsageQuery, options: { now: number; names: UsageNames }): UsageSummary {
     const { now, names } = options;
     const periodSince = periodStart(query.period, now);
+    foldUsageDays(this.db);
     const groups = this.db
       .prepare(
         `WITH placed AS (
-           SELECT u.*,
-                  CASE WHEN u.task_id = @firstmate THEN 'firstmate'
+           SELECT d.*,
+                  CASE WHEN d.task_id = @firstmate THEN 'firstmate'
                        WHEN t.id IS NOT NULL THEN 'task'
                        ELSE 'other' END AS kind,
                   t.id AS known_task
-           FROM usage_events u
-           LEFT JOIN tasks t ON t.id = u.task_id
-           WHERE @since IS NULL OR u.at >= @since
+           FROM usage_days d
+           LEFT JOIN tasks t ON t.id = d.task_id
+           WHERE @since IS NULL OR d.day >= @since
          )
-         SELECT date(at / 1000, 'unixepoch', 'localtime') AS day,
-                provider, model, model_source, cost_source, kind, known_task AS task_id,
-                ${AMOUNT_COLUMNS}
+         SELECT day, provider, model, model_source, cost_source, kind, known_task AS task_id,
+                ${USAGE_DAY_SUMS}
          FROM placed
          WHERE @scope = 'all' OR kind = @scope
          GROUP BY day, provider, model, model_source, cost_source, kind, known_task`,
       )
       .all({
         firstmate: FIRSTMATE_USAGE_TASK_ID,
-        since: periodSince,
+        since: periodSince === null ? null : localDate(periodSince),
         scope: query.scope,
       }) as LedgerGroup[];
 
@@ -434,32 +416,28 @@ export class UsageStore {
    */
   tasks(query: UsageTasksQuery, options: { now: number }): UsageTasks {
     if (query.scope !== "all" && query.scope !== "task") return { query, tasks: [], matching: 0 };
+    const since = periodStart(query.period, options.now);
     const params = {
       firstmate: FIRSTMATE_USAGE_TASK_ID,
-      since: periodStart(query.period, options.now),
+      since: since === null ? null : localDate(since),
       limit: query.limit,
     };
-    // The task records in the period and work, summed over the ledger's own
+    foldUsageDays(this.db);
+    // The task's daily totals in the period and work, summed over their own
     // columns before any task column joins them.
     const recorded = `recorded AS (
-           SELECT u.* FROM usage_events u JOIN tasks t ON t.id = u.task_id
-           WHERE u.task_id <> @firstmate AND (@since IS NULL OR u.at >= @since)
+           SELECT d.* FROM usage_days d JOIN tasks t ON t.id = d.task_id
+           WHERE d.task_id <> @firstmate AND (@since IS NULL OR d.day >= @since)
          )`;
     const { matching } = this.db
       .prepare(`WITH ${recorded} SELECT COUNT(DISTINCT task_id) AS matching FROM recorded`)
       .get(params) as { matching: number };
-    const costReported = (column: string) =>
-      `SUM(CASE WHEN cost > 0 AND ${column} IS NOT NULL THEN 1 ELSE 0 END)`;
     const rows = this.db
       .prepare(
         `WITH ${recorded},
          summed AS (
            SELECT task_id,
-                  ${AMOUNT_COLUMNS},
-                  ${costReported("cost_input")} AS cost_reported_input,
-                  ${costReported("cost_output")} AS cost_reported_output,
-                  ${costReported("cost_cache_read")} AS cost_reported_cache_read,
-                  ${costReported("cost_cache_write")} AS cost_reported_cache_write
+                  ${USAGE_DAY_SUMS}
            FROM recorded
            GROUP BY task_id
          )
@@ -475,10 +453,6 @@ export class UsageStore {
       title: string;
       created_at: number;
       project: string | null;
-      reported_input: number;
-      reported_output: number;
-      reported_cache_read: number;
-      reported_cache_write: number;
       cost_reported_input: number;
       cost_reported_output: number;
       cost_reported_cache_read: number;
@@ -531,19 +505,16 @@ export class UsageStore {
    * polls a whole list never pays a query per task.
    */
   byTask(taskId?: string): UsageRollup[] {
+    foldUsageDays(this.db);
     const rows = this.db
       .prepare(
         `SELECT task_id, provider, model,
-              ${AMOUNT_COLUMNS},
-              SUM(input IS NOT NULL) AS reported_input,
-              SUM(output IS NOT NULL) AS reported_output,
-              SUM(cache_read IS NOT NULL) AS reported_cache_read,
-              SUM(cache_write IS NOT NULL) AS reported_cache_write,
-              MAX(at) AS last_at, MIN(at) AS first_at,
+              ${USAGE_DAY_SUMS},
+              MAX(last_at) AS last_at, MIN(first_at) AS first_at,
               CASE WHEN SUM(model_source IS NULL) > 0 THEN 'historical'
                    WHEN SUM(model_source = 'requested') > 0 THEN 'requested'
                    ELSE 'served' END AS attribution
-       FROM usage_events
+       FROM usage_days
        ${taskId === undefined ? "" : "WHERE task_id = ?"}
        GROUP BY task_id, provider, model
        ORDER BY task_id, provider, model`,
@@ -553,10 +524,6 @@ export class UsageStore {
         task_id: string;
         provider: string | null;
         model: string | null;
-        reported_input: number;
-        reported_output: number;
-        reported_cache_read: number;
-        reported_cache_write: number;
         last_at: number;
         first_at: number;
         attribution: ObserveUsageModel["attribution"];
@@ -648,7 +615,9 @@ function whereOf(
       projects.set(id ?? "", project);
     }
     const kind = facts?.kind ?? null;
-    project.kinds.set(kind, [...(project.kinds.get(kind) ?? []), group]);
+    const held = project.kinds.get(kind);
+    if (held) held.push(group);
+    else project.kinds.set(kind, [group]);
   }
   const sum = (slice: readonly LedgerGroup[]) => addUsageAmounts(slice.map(amountOf));
   return {

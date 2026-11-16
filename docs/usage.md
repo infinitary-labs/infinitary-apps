@@ -8,6 +8,7 @@ How it looks and reads is the design skill's `components/usage/UsageTab.prompt.m
 | Piece | Where |
 | --- | --- |
 | The ledger and its one writer | `usage_events`, `UsageStore.record` (`src/core/storage/usageStore.ts`) |
+| Its daily totals, which the reads add up | `usage_days` and `usage_days_state`, `foldUsageDays` (`src/core/storage/usageDays.ts`) |
 | The summary the tab reads | `UsageStore.summary`, served as `services.usage.summary` on `inf:usage:summary` |
 | The read the tab subscribes to | `usage.summary` in the read catalog (`src/shared/reads.ts`) |
 | Its recent tasks | `UsageStore.tasks`, served as `services.usage.tasks` on `inf:usage:tasks`, read as `usage.tasks` |
@@ -70,6 +71,17 @@ A failed or interrupted turn still records the measured calls and its final unre
 A delivered report can trigger the existing cost-limit owner before the turn ends, but this is not a hard time or dollar ceiling.
 Batching, a missing report and the next safe stopping point can delay the hold.
 If live reporting is unavailable, the existing terminal report still records spend; if the client crashes without that report, it cannot supply the missing usage either.
+
+## Daily totals
+
+The summary, the recent tasks and Observe's `byTask` add up daily totals, never every ledger record (INF-4393 measured 100 to 380 ms of main-thread time per read over 226,027 records).
+`usage_days` holds one row per local day, task, provider, recorded model, model source and price source, with each amount column already summed: records, reporting counts, tokens, the priced estimate and its parts, and the first and last moment.
+An estimate nothing on the row priced stays null, so adding rows up again answers exactly what adding the records would.
+`usage_days_state` says through which ledger row the totals are folded and in which time zone their days were counted.
+Before each read, `foldUsageDays` adds the records written since its last fold to their days' rows, whoever wrote them, an older build included.
+When there is no fold yet, or the time zone differs from the one recorded, it counts every day again from the ledger, once.
+The totals are derived, never a second ledger: they add no migration or saved-data format, the first read on a connection makes their tables, and an older build ignores them.
+Nothing deletes or rewrites ledger rows; a writer that did would have to count the days again.
 
 ## The summary
 
@@ -178,6 +190,7 @@ Tab reaches See more under the recent tasks, past their keys; Enter or Space add
 
 - `src/core/claude/claudeEvents.test.ts` ("a turn's usage, model by model"): each model's share, running totals, a result reported twice, a client that starts over, a turn that names no model.
 - `src/core/pi/piEvents.test.ts`: the listed-prices estimate and its split, and no cost for a model with no listed prices.
+- `src/core/storage/usageDays.test.ts`: one daily row per day, task and model; records written after a fold, by this writer or straight into the ledger, answer as a full recount does for every period; a changed time zone counts the days again.
 - `src/core/storage/usageStore.test.ts`: one row per served model; the summary reconciles days, models and where it went to one total, names models and places, groups by project and saved kind, counts finished work, filters, and answers an empty ledger; recent tasks in order, ties, limits, the period and each category's reporting.
 - `src/core/storage/settingsMigrations.test.ts` ("migration 66").
 - `src/renderer/src/settings/usageWords.test.ts`: every printed word and number.

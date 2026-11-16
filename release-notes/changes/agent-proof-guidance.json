@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "agent-proof-guidance",
+      "reason": "Internal documentation clarifies when to rerun the project gate and photograph conditional views; product behavior is unchanged."
+    }
+  ]
+}

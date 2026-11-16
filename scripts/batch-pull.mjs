@@ -21,6 +21,18 @@ export const BATCH_PULL_CHECKS = "Merge batch · Batch checks / ";
 /** What each confirm job's own name starts with, under the checks. */
 export const BATCH_PULL_CONFIRM = "Merge batch · Confirm failed tests (";
 
+/**
+ * What each Linux test group's own confirm starts with, under the checks: it
+ * runs in the sweep beside its group (verify.yml's linux-tests-confirm), as
+ * `Confirm failed <the group's own name>`.
+ */
+export const BATCH_PULL_GROUP_CONFIRM = "Merge batch · Desktop checks / Merge batch · Confirm failed ";
+
+/** Whether a job of the run, by its full name, is a confirm: the checks' own or a test group's. */
+export const isConfirmJob = (name) =>
+  name.startsWith(`${BATCH_PULL_CHECKS}${BATCH_PULL_CONFIRM}`) ||
+  name.startsWith(`${BATCH_PULL_CHECKS}${BATCH_PULL_GROUP_CONFIRM}`);
+
 /** Whether `pull` is a batch pull request of `repository` itself, never a fork's branch of that name. */
 export const isBatchPull = (pull, repository) =>
   (pull.head?.ref ?? "").startsWith(BATCH_BRANCH) &&

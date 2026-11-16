@@ -557,9 +557,13 @@ describe("explicit manual verification scope (INF-2374)", () => {
       expect(refused.summary).toBe("");
     }
 
+    // A request runs no batch confirm, even after a test group failed.
     const runs = (id: string, inputs: Record<string, unknown>) =>
       verify.jobs[id]?.if === undefined ||
-      workflowValue(verify.jobs[id]?.if ?? "", { inputs }) === true;
+      workflowValue(verify.jobs[id]?.if ?? "", {
+        inputs,
+        needs: { "linux-tests": { result: "failure" } },
+      }) === true;
     const lanes = (inputs: Record<string, unknown>) =>
       workflowValue(verify.jobs.lane?.strategy?.matrix.lane ?? "", { inputs });
     expect(Object.keys(verify.jobs).filter((id) => runs(id, full))).toEqual([

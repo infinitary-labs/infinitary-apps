@@ -76,6 +76,12 @@ on:
         required: false
         type: boolean
         default: true
+      # Only the swept batch's call takes it (batch-checks.yml).
+      confirm:
+        description: Confirm each failed Linux test group's failed test files, three rounds, once the test groups end
+        required: false
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       full_system:
@@ -811,3 +817,90 @@ jobs:
           path: Application Support/firstmate/vitest-timing.json
           if-no-files-found: ignore
           retention-days: 14
+
+  # A merge batch's confirm of each Linux test group (docs/testing.md, "The
+  # swept batch"; INF-4382): once the test groups ended and one failed, each
+  # group's own confirm reads that group's failed job's log for the test files
+  # it names as failed (scripts/batch-failures.mjs) and runs them three rounds
+  # on the same version on hosted Linux (.github/actions/batch-confirm), while
+  # the journeys and the Mac lanes run on. A group that did not fail passes
+  # it; a failed group whose log names no test file fails it. Only the swept
+  # batch's call asks for it, and its failures job leaves the jobs these took
+  # out of the later confirm. Each group is named as linux-tests names it.
+  linux-tests-confirm:
+    needs: linux-tests
+    if: ${{ !cancelled() && inputs.confirm && needs.linux-tests.result == 'failure' }}
+    name: ${{ format('{0} · Confirm failed {1}', inputs.trigger || 'Manual request', matrix.group) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        group:
+          - Unit tests (Linux; group 1/3)
+          - Unit tests (Linux; group 2/3)
+          - Unit tests (Linux; group 3/3)
+          - Integration tests (Linux; group 1/2)
+          - Integration tests (Linux; group 2/2)
+          - Environment checks (Linux; group 1/2)
+          - Environment checks (Linux; group 2/2)
+          - Browser tests (Linux)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      # A refused checkout waits until GitHub takes the job's token again,
+      # then runs once more (docs/testing.md, "GitHub refusing a job's token").
+      - id: reader-checkout
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with: &confirm-reader-checkout
+          ref: ${{ inputs.ref || github.ref }}
+          # The failure reader and the job names it reads the run by.
+          sparse-checkout: |
+            scripts/batch-failures.mjs
+            scripts/batch-pull.mjs
+          sparse-checkout-cone-mode: false
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.reader-checkout.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Check out again
+        if: ${{ !cancelled() && steps.reader-checkout.outcome == 'failure' }}
+        uses: actions/checkout@v4
+        with: *confirm-reader-checkout
+      - id: read
+        uses: actions/github-script@v7
+        env:
+          GROUP: ${{ matrix.group }}
+        with:
+          script: |
+            const {pathToFileURL} = require('node:url');
+            const {groupFailure} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/batch-failures.mjs`).href);
+            await groupFailure({github, context, core, group: process.env.GROUP});
+      - if: steps.read.outputs.found == 'unanswerable'
+        env:
+          GROUP: ${{ matrix.group }}
+        run: |
+          echo "::error title=No failed test file::The $GROUP job's log named no failed test file, so nothing runs again and the batch's check stays failed."
+          exit 1
+      - id: checkout
+        if: steps.read.outputs.found == 'confirm'
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with: &confirm-checkout
+          ref: ${{ inputs.ref || github.ref }}
+          path: Application Support/firstmate
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Check out again
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        uses: actions/checkout@v4
+        with: *confirm-checkout
+      - if: steps.read.outputs.found == 'confirm'
+        uses: ./Application Support/firstmate/.github/actions/batch-confirm
+        with:
+          files: ${{ steps.read.outputs.files }}
+          platform: linux
+          artifact: ${{ format('confirm-failures-linux-{0}', strategy.job-index) }}

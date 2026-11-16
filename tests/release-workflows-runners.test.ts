@@ -389,15 +389,14 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     "main.yml:alpha",
     // A batch pull request's run of the swept batch (INF-3759's plan, piece
     // 2): its reading of the batch and of the failures, its last job, and
-    // its confirm, which reruns failed files on the machines the sweep took,
-    // hosted on Linux (INF-3012's direction A), from the first failure
-    // (INF-4382) and for the jobs that failed after it.
+    // its confirms, which rerun failed files on the machines the sweep took,
+    // hosted on Linux (INF-3012's direction A), beside each Linux test group
+    // (INF-4382) and for the other failed jobs once the checks ended.
     "batch-checks.yml:batch",
-    "batch-checks.yml:first-failure",
     "batch-checks.yml:failures",
-    "batch-checks.yml:confirm",
     "batch-checks.yml:confirm-later",
     "batch-checks.yml:passed",
+    "verify.yml:linux-tests-confirm",
     // The batch's watch of its code checks, its stops after a failed one and
     // the one job that then names the failure: a reading and echoes, each
     // on a hosted machine.

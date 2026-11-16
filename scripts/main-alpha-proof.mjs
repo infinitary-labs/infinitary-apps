@@ -2,7 +2,7 @@
  * source. This grants no substitute for release-specific package/update gates.
  * The caller reads the run and its latest job executions from GitHub, not artifacts.
  */
-import { BATCH_PULL_CHECKS, BATCH_PULL_CONFIRM, isBatchPullRun } from "./batch-pull.mjs";
+import { BATCH_PULL_CHECKS, isBatchPullRun, isConfirmJob } from "./batch-pull.mjs";
 import { legacyJobName } from "./ci-job-names.mjs";
 
 // Main runs no phone check (INF-2492), so every job of the run is the
@@ -190,7 +190,7 @@ const passedOn = (jobs, tree) => jobs.some((job) => green(job) &&
 
 /** A batch pull request's run passed its full check on exactly `tree`. */
 function verifyBatchPullEvidence(run, named, tree) {
-  const confirms = named.filter((job) => job.name.startsWith(`${BATCH_PULL_CHECKS}${BATCH_PULL_CONFIRM}`));
+  const confirms = named.filter((job) => isConfirmJob(job.name));
   const confirmed = run.conclusion !== "success" && confirms.length > 0 && confirms.every(green);
   if (run.conclusion !== "success" && !confirmed)
     throw new Error("A covered main push needs a successful batch run.");

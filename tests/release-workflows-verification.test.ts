@@ -96,6 +96,7 @@ describe("the signed channel workflow", () => {
       "installer",
       "lane",
       "linux-tests",
+      "linux-tests-confirm",
     ]);
     expect(verify.jobs["linux-e2e"]).toMatchObject({
       uses: "./.github/workflows/source-journeys.yml",

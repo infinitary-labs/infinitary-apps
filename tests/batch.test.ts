@@ -110,18 +110,19 @@ describe("batch-checks.yml", () => {
 // sweeps failed.
 describe("the batch's confirm", () => {
   const batch = workflow(".github/workflows/batch-checks.yml");
+  const groupConfirm = workflow(".github/workflows/verify.yml").jobs["linux-tests-confirm"]!;
+  const groups = (groupConfirm as { strategy: { matrix: { group: string[] } } }).strategy.matrix
+    .group;
 
-  it("confirms on the machines the sweep took, from the first failure and after it", () => {
+  it("confirms on the machines the sweep took, beside each Linux test group and after the checks", () => {
     const vars = { MAC_QUEUES };
-    for (const id of ["confirm", "confirm-later"]) {
-      const runsOn = String(batch.jobs[id]!["runs-on"]);
-      expect(workflowString(runsOn, { matrix: { platform: "mac" }, vars }), id).toBe(
-        "mini-mac-release-split",
-      );
-      expect(workflowString(runsOn, { matrix: { platform: "linux" }, vars }), id).toBe(
-        "ubuntu-24.04",
-      );
-    }
+    const runsOn = String(batch.jobs["confirm-later"]!["runs-on"]);
+    expect(workflowString(runsOn, { matrix: { platform: "mac" }, vars })).toBe(
+      "mini-mac-release-split",
+    );
+    expect(workflowString(runsOn, { matrix: { platform: "linux" }, vars })).toBe("ubuntu-24.04");
+    // A Linux test group's own confirm, on the hosted Linux the batch's test groups take.
+    expect(groupConfirm["runs-on"]).toBe("ubuntu-24.04");
   });
 
   // INF-3937: a failure that shows only in the confirm (a batch run's Mac
@@ -152,19 +153,24 @@ describe("the batch's confirm", () => {
     // picture and error context land, sits inside the kept folder.
     const runs = `${rounds["working-directory"]}/${RUNS_DIR}/`;
     expect(runs.startsWith(String(kept.with!.path)), runs).toBe(true);
-    for (const id of ["confirm", "confirm-later"]) {
-      const checkout = batch.jobs[id]!.steps!.find((step) => step.with?.path)!;
-      expect(checkout.with!.path, id).toBe(rounds["working-directory"]);
+    for (const job of [batch.jobs["confirm-later"]!, groupConfirm]) {
+      const checkout = job.steps!.find((step) => step.with?.path)!;
+      expect(checkout.with!.path).toBe(rounds["working-directory"]);
     }
     // The confirms run in the batch's own run beside the sweep, whose Mac
     // lanes keep their own failures, and an artifact's name is the run's
     // once.
-    const names = ["confirm", "confirm-later"].flatMap((id) => {
-      const call = batch.jobs[id]!.steps!.at(-1)!;
-      return ["linux", "mac"].map((platform) =>
-        workflowString(String(call.with!.artifact), { matrix: { platform } }),
-      );
-    });
+    const later = batch.jobs["confirm-later"]!.steps!.at(-1)!;
+    const names = [
+      ...["linux", "mac"].map((platform) =>
+        workflowString(String(later.with!.artifact), { matrix: { platform } }),
+      ),
+      ...groups.map((_, index) =>
+        workflowString(String(groupConfirm.steps!.at(-1)!.with!.artifact), {
+          strategy: { "job-index": index },
+        }),
+      ),
+    ];
     const lanes = workflow(".github/workflows/verify.yml").jobs.lane!.steps!.filter((step) =>
       step.uses?.startsWith("actions/upload-artifact@"),
     );
@@ -177,7 +183,7 @@ describe("the batch's confirm", () => {
       ),
     );
     expect(sweepNames).toContain("e2e-failures-mac");
-    expect(names).toContain("confirm-failures-mac");
+    expect(names).toContain("confirm-later-failures-mac");
     expect(new Set([...names, ...sweepNames]).size).toBe(names.length + new Set(sweepNames).size);
   });
 

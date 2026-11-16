@@ -24,6 +24,10 @@ export const BATCH_PULL_RUN: string;
 export const BATCH_PULL_CHECKS: string;
 /** What each confirm job's own name starts with, under the checks. */
 export const BATCH_PULL_CONFIRM: string;
+/** What each Linux test group's own confirm starts with, under the checks. */
+export const BATCH_PULL_GROUP_CONFIRM: string;
+/** Whether a job of the run, by its full name, is a confirm: the checks' own or a test group's. */
+export function isConfirmJob(name: string): boolean;
 /** Whether `pull` is a batch pull request of `repository` itself, never a fork's branch of that name. */
 export function isBatchPull(pull: BatchPull, repository: string): boolean;
 /** Whether `run` is a batch pull request's own run in `repository`. */

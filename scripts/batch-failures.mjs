@@ -2,17 +2,17 @@
  * "The swept batch"; the captain's pick on INF-3012, "A only: the confirm
  * step").
  *
- * batch-checks.yml's first-failure job reads the run until a check's job
- * fails, then reads each failed job's log for the test files it names as
- * failed, and its confirm job runs those files three rounds on the same
- * version (scripts/batch-confirm.ts) while the other checks run on
- * (INF-4382: the confirm no longer waits for the sweep to end). Once every
- * check ended, its failures job reads the jobs that failed after that, and
- * its later confirm runs their files. A failed job whose log names no test
- * file failed for something no rerun of a test answers, so nothing runs
- * again and the batch's check stays failed.
+ * Each Linux test group of the sweep has a confirm of its own in the sweep
+ * (verify.yml's linux-tests-confirm): once the test groups ended, it reads
+ * its own group's failed job's log for the test files it names as failed,
+ * and runs those files three rounds on the same version
+ * (scripts/batch-confirm.ts) while the other checks run on. Once every
+ * check ended, batch-checks.yml's failures job reads the other failed jobs,
+ * and its later confirm runs their files. A failed job whose log names no
+ * test file failed for something no rerun of a test answers, so nothing
+ * runs again and the batch's check stays failed.
  */
-import { BATCH_PULL_CHECKS, BATCH_PULL_CONFIRM } from "./batch-pull.mjs";
+import { BATCH_PULL_CHECKS, BATCH_PULL_GROUP_CONFIRM, isConfirmJob } from "./batch-pull.mjs";
 
 // A test file's path as the runners print it, from the project's root. The
 // files go to the confirm as one list separated by spaces, so a path with
@@ -62,22 +62,6 @@ export const isCheckJob = (job) =>
   job.name.startsWith(BATCH_PULL_CHECKS) && job.name.slice(BATCH_PULL_CHECKS.length).includes(" / ");
 
 /**
- * What one reading of the run's jobs says of the checks: `failed` once a
- * check's job ended failed, `passed` once every check's job ended and none
- * failed, and `running` otherwise, before the called workflows have
- * listed a job. A called workflow lists a job once the jobs it needs
- * ended, so a reading in that moment could find every listed job ended:
- * the first-failure job then ends early, and the failures job confirms
- * every failed job once the checks end, as it did before INF-4382.
- */
-export function checksState(jobs) {
-  const checks = jobs.filter(isCheckJob);
-  if (checks.some((job) => job.status === "completed" && FAILED.includes(job.conclusion))) return "failed";
-  if (checks.length && checks.every((job) => job.status === "completed")) return "passed";
-  return "running";
-}
-
-/**
  * The confirm's plan from each failed job of the checks with the test files
  * its log named: the failed jobs' names without the checks' lead, one a
  * line, and the failed files, separated by spaces; or null when there is
@@ -92,8 +76,11 @@ export function confirmPlan(failedJobs) {
   };
 }
 
-/** The run's failed jobs outside the confirm, each with the test files its log names. */
-export async function readFailedJobs(github, repo, run) {
+/**
+ * The run's failed jobs outside the confirms, each with the test files its
+ * log names; `only` picks the jobs read, by default every one.
+ */
+export async function readFailedJobs(github, repo, run, only = () => true) {
   const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
     ...repo,
     run_id: run,
@@ -101,8 +88,7 @@ export async function readFailedJobs(github, repo, run) {
   });
   const failed = [];
   for (const job of jobs) {
-    if (!FAILED.includes(job.conclusion) || job.name.startsWith(`${BATCH_PULL_CHECKS}${BATCH_PULL_CONFIRM}`))
-      continue;
+    if (!FAILED.includes(job.conclusion) || isConfirmJob(job.name) || !only(job)) continue;
     let files = [];
     try {
       const { data: log } = await github.rest.actions.downloadJobLogsForWorkflowRun({ ...repo, job_id: job.id });
@@ -117,11 +103,11 @@ export async function readFailedJobs(github, repo, run) {
 
 /**
  * What is left to confirm once every check ended, from the run's failed
- * jobs and the jobs the first confirm already took (`confirmed`, names
- * without the checks' lead): `nothing` when the first confirm took every
- * failed job, `confirm` with the plan for the jobs that failed after it,
- * and `unanswerable` when one of those named no test file, or when no
- * failed job could be read at all.
+ * jobs and the jobs a test group's confirm already took (`confirmed`, names
+ * without the checks' lead): `nothing` when those took every failed job,
+ * `confirm` with the plan for the other failed jobs, and `unanswerable`
+ * when one of those named no test file, or when no failed job could be read
+ * at all.
  */
 export function laterPlan(failedJobs, confirmed) {
   const taken = new Set(confirmed);
@@ -136,61 +122,74 @@ const say = (plan) =>
 const UNANSWERABLE =
   "A failed job's log named no failed test file, so nothing runs again and the batch's check stays failed.";
 
-const wait = (seconds) => new Promise((resolve) => setTimeout(resolve, seconds * 1000));
+/** The name of the confirm a test group's job of the checks has beside it, by full names. */
+const groupConfirmName = (name) => {
+  const at = name.lastIndexOf(" · ");
+  return `${name.slice(0, at)} · Confirm failed ${name.slice(at + " · ".length)}`;
+};
 
 /**
- * The first-failure job: reads the run's latest jobs every half minute
- * until a check's job fails or every check's job ended, and writes the
- * output `found`: `confirm` with `jobs` and `files` (confirmPlan's, from
- * the jobs failed at that reading), `unanswerable` when one of them named
- * no test file, or `none` when every check ended without a failure. A
- * reading GitHub refuses is read again.
+ * What the test groups' own confirms answered, from the run's failed jobs
+ * and every job of the run: `confirmed`, the failed jobs (names without the
+ * checks' lead) a group's confirm ran beside, and `grouped`, `passed` when
+ * every group confirm that ran passed (or none ran) and `failed` otherwise.
  */
-export async function firstFailure({ github, context, core, everySeconds = 30 }) {
-  for (;;) {
-    let state = "running";
-    try {
-      state = checksState(
-        await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
-          ...context.repo,
-          run_id: context.runId,
-          filter: "latest",
-          per_page: 100,
-        }),
-      );
-    } catch (error) {
-      core.warning(`The run's jobs could not be read, so this job reads them again: ${error.message}`);
-    }
-    if (state === "passed") {
-      core.notice("Every check ended without a failure, so nothing is confirmed.");
-      core.setOutput("found", "none");
-      core.setOutput("jobs", "");
-      core.setOutput("files", "");
-      return;
-    }
-    if (state === "failed") {
-      const plan = confirmPlan(await readFailedJobs(github, context.repo, context.runId));
-      core.notice(plan ? `${say(plan)} The other checks run on.` : UNANSWERABLE);
-      core.setOutput("found", plan ? "confirm" : "unanswerable");
-      core.setOutput("jobs", plan?.jobs ?? "");
-      core.setOutput("files", plan?.files ?? "");
-      return;
-    }
-    await wait(everySeconds);
-  }
+export function groupConfirms(failedJobs, jobs) {
+  const ran = jobs.filter(
+    (job) =>
+      job.name.startsWith(`${BATCH_PULL_CHECKS}${BATCH_PULL_GROUP_CONFIRM}`) &&
+      job.status === "completed" &&
+      job.conclusion !== "skipped",
+  );
+  const names = new Set(ran.map((job) => job.name));
+  return {
+    confirmed: failedJobs
+      .filter((job) => names.has(groupConfirmName(job.name)))
+      .map((job) => job.name.slice(BATCH_PULL_CHECKS.length)),
+    grouped: ran.every((job) => job.conclusion === "success") ? "passed" : "failed",
+  };
 }
 
 /**
- * The failures job, once every check ended: the output `left` (laterPlan's),
- * with `jobs` (the failed jobs' names, one a line) and `files` (the failed
- * test files, separated by spaces) for the later confirm, both empty when
- * nothing more runs. `confirmed` is the first-failure job's `jobs` output.
+ * A Linux test group's confirm, once the test groups ended: reads the failed
+ * job of the checks named `group` (its own name without the trigger, such as
+ * `Unit tests (Linux; group 1/3)`) and writes the output `found`: `confirm`
+ * with `files` (confirmPlan's), `unanswerable` when its log named no test
+ * file, or `none` when the group did not fail.
  */
-export async function failures({ github, context, core, confirmed = "" }) {
-  const plan = laterPlan(
-    await readFailedJobs(github, context.repo, context.runId),
-    confirmed.split("\n").filter(Boolean),
+export async function groupFailure({ github, context, core, group }) {
+  const own = (job) => isCheckJob(job) && job.name.endsWith(` · ${group}`);
+  const failed = await readFailedJobs(github, context.repo, context.runId, own);
+  const plan = confirmPlan(failed);
+  const found = !failed.length ? "none" : plan ? "confirm" : "unanswerable";
+  core.notice(
+    found === "none"
+      ? `${group} did not fail, so nothing of it is confirmed.`
+      : plan
+        ? `${say(plan)} The other checks run on.`
+        : UNANSWERABLE,
   );
+  core.setOutput("found", found);
+  core.setOutput("files", plan?.files ?? "");
+}
+
+/**
+ * The failures job, once every check ended: the output `left` (laterPlan's
+ * for the failed jobs no test group's confirm took), with `jobs` (the
+ * failed jobs' names, one a line) and `files` (the failed test files,
+ * separated by spaces) for the later confirm, both empty when nothing more
+ * runs, and `grouped` (groupConfirms').
+ */
+export async function failures({ github, context, core }) {
+  const failed = await readFailedJobs(github, context.repo, context.runId);
+  const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+    ...context.repo,
+    run_id: context.runId,
+    filter: "latest",
+    per_page: 100,
+  });
+  const { confirmed, grouped } = groupConfirms(failed, jobs);
+  const plan = laterPlan(failed, confirmed);
   core.notice(
     plan.left === "confirm"
       ? say(plan)
@@ -198,7 +197,9 @@ export async function failures({ github, context, core, confirmed = "" }) {
         ? "Every failed job's test files are already being confirmed, so nothing more runs."
         : UNANSWERABLE,
   );
+  if (grouped === "failed") core.notice("A test group's confirm failed, so the batch's check stays failed.");
   core.setOutput("left", plan.left);
   core.setOutput("jobs", plan.jobs ?? "");
   core.setOutput("files", plan.files ?? "");
+  core.setOutput("grouped", grouped);
 }

@@ -126,7 +126,7 @@ describe("the statement census", () => {
   });
 
   it("names the line of the app's source that prepared a statement", () => {
-    const sql = "SELECT DISTINCT task_id FROM task_events WHERE kind = ? AND ref = ?";
+    const sql = "SELECT COUNT(*) AS n FROM task_events WHERE kind = ? AND at > ?";
     const file = "src/core/storage/taskEventStore.ts";
     const line =
       readFileSync(file, "utf8")
@@ -135,7 +135,7 @@ describe("the statement census", () => {
     expect(line, `${file} prepares the lookup`).toBeGreaterThan(0);
     const db = freshDatabase();
     try {
-      new TaskEventStore(db).taskIdsWithRef("ask", "m1");
+      new TaskEventStore(db).countByKindSince("ask", 0);
     } finally {
       db.close();
     }

@@ -377,19 +377,20 @@ export class TaskEventStore {
 
   /** The task whose newest event of `kind` carries `ref` (a card id → its task). */
   latestTaskForRef(kind: TaskEventKind, ref: string): string | undefined {
-    const row = this.db
-      .prepare(
-        "SELECT task_id FROM task_events WHERE kind = ? AND ref = ? ORDER BY id DESC LIMIT 1",
-      )
-      .get(kind, ref) as { task_id: string } | undefined;
+    const row = prepared(
+      this.db,
+      "SELECT task_id FROM task_events WHERE kind = ? AND ref = ? ORDER BY id DESC LIMIT 1",
+    ).get(kind, ref) as { task_id: string } | undefined;
     return row?.task_id;
   }
 
   /** Every task with an event of `kind` carrying `ref` (a message id → the tasks it attached to). */
   taskIdsWithRef(kind: TaskEventKind, ref: string): string[] {
-    const rows = this.db
-      .prepare("SELECT DISTINCT task_id FROM task_events WHERE kind = ? AND ref = ?")
-      .all(kind, ref) as { task_id: string }[];
+    // Every card in a snapshot reads its message's reach here (INF-4464).
+    const rows = prepared(
+      this.db,
+      "SELECT DISTINCT task_id FROM task_events WHERE kind = ? AND ref = ?",
+    ).all(kind, ref) as { task_id: string }[];
     return rows.map((row) => row.task_id);
   }
 

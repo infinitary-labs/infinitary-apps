@@ -1605,7 +1605,8 @@ export class CardStore {
 
   /** One observation by its id; undefined when it is gone or its payload no longer reads. */
   observationById(id: string): CardObservation | undefined {
-    const row = this.db.prepare("SELECT * FROM card_observations WHERE id = ?").get(id) as
+    // Each card in a snapshot reads its seen facts here (INF-4464).
+    const row = prepared(this.db, "SELECT * FROM card_observations WHERE id = ?").get(id) as
       | ObservationRow
       | undefined;
     return row ? observationOf(row) : undefined;
@@ -1633,12 +1634,13 @@ export class CardStore {
 
   /** The exact released update of this offer; status pushes and redraws create none. */
   currentUpdate(cardId: string, lifecycleId: string, offerId: string): string | undefined {
-    const row = this.db
-      .prepare(`SELECT id FROM card_observations
+    const row = prepared(
+      this.db,
+      `SELECT id FROM card_observations
       WHERE card_id = ? AND lifecycle_id = ? AND offer_id = ? AND kind = 'availability'
         AND json_extract(payload_json, '$.state') = 'available'
-      ORDER BY seq DESC LIMIT 1`)
-      .get(cardId, lifecycleId, offerId) as { id: string } | undefined;
+      ORDER BY seq DESC LIMIT 1`,
+    ).get(cardId, lifecycleId, offerId) as { id: string } | undefined;
     return row?.id;
   }
 
@@ -1688,13 +1690,12 @@ export class CardStore {
    * seen before it.
    */
   lastSeenOffer(cardId: string, lifecycleId: string, except?: string): string | undefined {
-    const row = this.db
-      .prepare(
-        `SELECT offer_id FROM card_observations
+    const row = prepared(
+      this.db,
+      `SELECT offer_id FROM card_observations
          WHERE card_id = ? AND lifecycle_id = ? AND kind = 'seen' AND offer_id IS NOT ?
          ORDER BY seq DESC LIMIT 1`,
-      )
-      .get(cardId, lifecycleId, except ?? null) as { offer_id: string | null } | undefined;
+    ).get(cardId, lifecycleId, except ?? null) as { offer_id: string | null } | undefined;
     return row?.offer_id ?? undefined;
   }
 

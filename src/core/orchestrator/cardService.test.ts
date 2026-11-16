@@ -11,6 +11,7 @@ import { currentCheckSummary } from "@shared/checkSnapshot";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setup } from "../../../tests/helpers/cardServiceHarness";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
+import { TaskExecutionStore } from "../storage/taskExecutionStore";
 import { seedTask } from "../tasks/seedTask";
 import type { CardService } from "./cardService";
 import { hasMergeLine, MERGES_NEXT_WORDS, mergedLine, pendingMergeLine } from "./settleWords";
@@ -281,6 +282,65 @@ describe("CardService", () => {
     expect(shown.get(unasked)).not.toHaveProperty("asked");
     // The line is the host's reading, never saved on the card.
     expect(cards.stored(crewCard)).not.toHaveProperty("asked");
+    cards.dispose();
+  });
+
+  // INF-4464: the freeze journey caught the stage's snapshot compiling a
+  // fresh statement for every card's message and recomposing a task on
+  // every step of every card's walk to its message. The snapshot runs on
+  // each broadcast, so one snapshot reads each task once and a later one
+  // compiles nothing, while the message lines stay current. The child
+  // names its basis by key, as the host saves it, so the walk resolves a
+  // key too.
+  it("reads each task once per snapshot and compiles no statement for a later one", () => {
+    const { db, tasks, make } = setup();
+    const cards = make();
+    const footer = seedTask(tasks, { id: "footer", title: "Fix the footer", status: "running" });
+    seedTask(tasks, {
+      id: "footer-check",
+      title: "Check the footer on small windows",
+      status: "running",
+      parentId: "footer",
+      shape: { kind: "implement", basis: footer.key },
+    });
+    expect(tasks.graph.reference("footer-check", "basis")?.ref).toBe(footer.key);
+    expect(footer.key).not.toBe(footer.id);
+    tasks.capture.openAsk({ id: "ask-footer", text: "the footer overlaps the composer" });
+    tasks.capture.attachAsk("ask-footer", "footer", "tool:spawn_crewmate");
+    const parentCard = cards.emitCrewmateCard("footer", { ...decision, id: "footer-way" }, "m");
+    const childCard = cards.emitCrewmateCard(
+      "footer-check",
+      { ...decision, id: "footer-check-way" },
+      "m",
+    );
+    const closing = cards.addFirstmateCard({
+      title: "Fix the footer is done",
+      body: "<p>The footer clears the composer.</p>",
+      actions: [],
+      taskId: "footer",
+      aboutTask: true,
+    });
+    const composed = vi.spyOn(TaskExecutionStore.prototype, "get");
+    const first = new Map(cards.snapshot().map((card) => [card.id, card]));
+    const composedTasks = composed.mock.calls.map(([taskId]) => taskId);
+    expect([...new Set(composedTasks)].sort()).toEqual(["footer", "footer-check"]);
+    expect(composedTasks).toHaveLength(2);
+    expect(first.get(childCard)?.asked).toMatchObject({ text: "the footer overlaps the composer" });
+    expect(first.get(closing)?.asked).toEqual(first.get(parentCard)?.asked);
+
+    // A new message about the child reaches its card on the next snapshot,
+    // read through statements the first snapshot already compiled.
+    tasks.capture.openAsk({ id: "ask-check", text: "does it fit a phone-sized window?" });
+    tasks.capture.attachAsk("ask-check", "footer-check", "tool:spawn_crewmate");
+    const compiled = vi.spyOn(db, "prepare");
+    const later = new Map(cards.snapshot().map((card) => [card.id, card]));
+    expect(compiled).not.toHaveBeenCalled();
+    expect(later.get(childCard)?.asked).toMatchObject({
+      text: "does it fit a phone-sized window?",
+    });
+    expect(later.get(parentCard)?.asked).toEqual(first.get(parentCard)?.asked);
+    composed.mockRestore();
+    compiled.mockRestore();
     cards.dispose();
   });
 

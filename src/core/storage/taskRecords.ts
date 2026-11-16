@@ -956,10 +956,11 @@ export class TaskStore {
       .map((row) => row.id);
   }
 
+  /** A card's walk resolves every reference saved by key here, on each snapshot (INF-4464). */
   byKey(key: string): TaskRecord | undefined {
-    const row = this.db
-      .prepare(`SELECT * FROM ${this.readTable()} WHERE key = ?`)
-      .get(key.toUpperCase()) as Row | undefined;
+    const row = prepared(this.db, `SELECT * FROM ${this.readTable()} WHERE key = ?`).get(
+      key.toUpperCase(),
+    ) as Row | undefined;
     return row ? this.record(row) : undefined;
   }
 

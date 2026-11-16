@@ -276,7 +276,7 @@ export class AskStore {
   }
 
   get(id: string): AskRecord | undefined {
-    const row = this.db.prepare("SELECT * FROM captain_asks WHERE id = ?").get(id) as
+    const row = prepared(this.db, "SELECT * FROM captain_asks WHERE id = ?").get(id) as
       | Row
       | undefined;
     return row ? fromRow(row) : undefined;

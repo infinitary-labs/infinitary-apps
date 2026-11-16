@@ -575,8 +575,17 @@ export class CardService {
     return [...this.cards.values()].map((card) => this.stageVersion(card)).sort(compareStack);
   }
 
-  /** The stage's full presentation, including task, message and seen facts. */
+  /**
+   * The stage's full presentation, including task, message and seen facts.
+   * One task read projection holds it (INF-4464): each card's origin walk
+   * reads a task several times, and cards share tasks, so a record is
+   * composed once per snapshot rather than on every read.
+   */
   snapshot(): Card[] {
+    return this.host.tasks.readProjection(() => this.snapshotInProjection());
+  }
+
+  private snapshotInProjection(): Card[] {
     const asked = new Map<string, CardAsked | undefined>();
     this.evidence.pruneChanges();
     return this.stagedVersions().map((staged) => {

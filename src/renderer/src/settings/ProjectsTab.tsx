@@ -118,7 +118,12 @@ export function ProjectsTab() {
   const [openProject, setOpenProject] = useState<string | null>(null);
   // A confirmation for the group a repository just joined, and the row to focus after.
   const [notice, setNotice] = useState<{ project: string; text: string } | null>(null);
-  const focusRow = useRef<string | null>(null);
+  // State, not a ref, so the request commits with the grouping it waits for.
+  // An earlier commit's effects can run after the project read asks for focus,
+  // while that commit still draws the new repository as its own row outside
+  // the group; a ref would focus that row just before the group replaces it
+  // (INF-4378).
+  const [focusRow, setFocusRow] = useState<string | null>(null);
   const list = useRef<HTMLDivElement>(null);
   const pending = useRef(new Map<string, RepoPolicyPatch>());
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
@@ -211,7 +216,7 @@ export function ProjectsTab() {
           setOpenId(null);
           setOpenProject(joined.id);
           setNotice({ project: joined.id, text: said });
-          focusRow.current = repo.id;
+          setFocusRow(repo.id);
         } else if (!intoProject) {
           setOpenId(repo.id);
         }
@@ -228,13 +233,12 @@ export function ProjectsTab() {
     if (notice) setNotice(null);
   }, [notice]);
   useEffect(() => {
-    const id = focusRow.current;
-    if (!id) return;
+    if (!focusRow) return;
     const button = list.current?.querySelector<HTMLButtonElement>(
-      `[data-project="${CSS.escape(id)}"] > button`,
+      `[data-project="${CSS.escape(focusRow)}"] > button`,
     );
     if (!button) return;
-    focusRow.current = null;
+    setFocusRow(null);
     button.focus();
   });
 

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "project-added-repository-focus",
+      "reason": "Keeps focus on a repository's row after it is added to a project of one in Settings > Projects, however the app's lists answer. This is part of the unreleased several-repositories-in-one-project change, whose own note covers what a person sees."
+    }
+  ]
+}

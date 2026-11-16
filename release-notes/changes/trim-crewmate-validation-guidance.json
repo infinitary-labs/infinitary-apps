@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "trim-crewmate-validation-guidance",
+      "reason": "Shorten existing crewmate guidance without changing the interface."
+    }
+  ]
+}

@@ -281,7 +281,7 @@ export const REPORT_TOOL = crewmateTool({
     validation: Type.Optional(
       zodParameter<LiveValidationInput>(liveValidationInputSchema, {
         description:
-          "Typed validation facts, kept at every care; only a Careful merge waits on them, and its brief carries the rules. A request grants nothing; only the captain's click on its emit_card.validation_request card does, or a yes on the Already allowed list a check request names as allowance: its card, or standing for the standing override.",
+          "Typed validation facts, kept at every care; only a Careful merge waits on them; its brief gives the rules. Requests grant nothing; approval needs the captain's click on the emit_card.validation_request card, or a check request's allowance naming an Already allowed yes: its card id, or standing for an override.",
       }),
     ),
     text: Type.String({

@@ -76,10 +76,21 @@ describe("the signed channel workflow", () => {
       expect(workflowValue(job.if ?? "", ready("alpha", "skipped"))).toBe(false);
       expect(workflowValue(job.if ?? "", ready("stable", "skipped"))).toBe(true);
     }
-    expect(workflowValue(jobOf(release, "windows").if ?? "", ready("stable", "skipped"))).toBe(
-      false,
-    );
-    expect(workflowValue(jobOf(release, "windows").if ?? "", ready("alpha", "skipped"))).toBe(true);
+    // The Windows check runs on an alpha after its signing job signed the
+    // installer, or skipped because the run is not from main; never after
+    // a failed signing, and never on a stable.
+    const afterSigning = (channel: string, sign: string) => {
+      const context = ready(channel, "skipped");
+      return { needs: { ...context.needs, "windows-sign": { result: sign } } };
+    };
+    const windows = jobOf(release, "windows");
+    expect(workflowValue(windows.if ?? "", afterSigning("stable", "skipped"))).toBe(false);
+    expect(workflowValue(windows.if ?? "", afterSigning("alpha", "success"))).toBe(true);
+    expect(workflowValue(windows.if ?? "", afterSigning("alpha", "skipped"))).toBe(true);
+    expect(workflowValue(windows.if ?? "", afterSigning("alpha", "failure"))).toBe(false);
+    const signed = (windows as { with?: Record<string, string> }).with?.signed ?? "";
+    expect(workflowValue(signed, afterSigning("alpha", "success"))).toBe(true);
+    expect(workflowValue(signed, afterSigning("alpha", "skipped"))).toBe(false);
     for (const dryRun of ["false", "true"]) {
       const contexts = { needs: { resolve: { outputs: { dry_run: dryRun } } }, vars: {} };
       expect(workflowString(upload["runs-on"] ?? "", contexts)).toBe("ubuntu-24.04");

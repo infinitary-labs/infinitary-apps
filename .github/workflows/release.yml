@@ -649,21 +649,104 @@ jobs:
       hosted: true
       release_runner: ${{ needs.resolve.outputs.dry_run == 'false' && vars.RELEASE_LINUX_PACKAGES_RUNNER || '' }}
 
-  # The Windows installer of every alpha (docs/windows.md; the captain's pick
-  # on INF-4243, "on every alpha"): built at the release's version from its
-  # one source commit and checked on a fresh Windows 11 virtual machine
-  # before anything publishes. It publishes nothing itself: the installer is
-  # an unsigned internal check build until Windows signing and publication
-  # join the release.
-  windows:
+  # The signed Windows installer of an alpha run from main (docs/windows.md,
+  # "Signing"): built at the release's version from its one source commit on
+  # the PC's Windows places, its app, installer and uninstaller signed and
+  # timestamped with Microsoft Artifact Signing as the publisher
+  # electron-builder.win-signed.yml names. This is the one job that enters
+  # the windows-signing environment, which GitHub opens to runs from main
+  # alone; its GitHub token is the only one the signing sign-in in Azure
+  # takes, and no secret is kept anywhere. A rehearsal from another branch
+  # skips it, and the windows job builds that one unsigned.
+  windows-sign:
     needs: [resolve, notes]
-    if: ${{ needs.resolve.outputs.channel == 'alpha' }}
+    if: ${{ needs.resolve.outputs.channel == 'alpha' && github.ref == 'refs/heads/main' }}
+    name: ${{ format('{0} · Sign the Windows installer', needs.resolve.outputs.trigger) }}
+    runs-on: ${{ vars.WINDOWS_RUNNER || 'shell-pc-windows' }}
+    timeout-minutes: 60
+    environment: windows-signing
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        shell: bash
+    # The same pinned Git for Windows windows.yml's jobs take, for the same
+    # reason (tests/workflow-hygiene.test.ts holds the two together).
+    env:
+      PORTABLE_GIT: https://github.com/git-for-windows/git/releases/download/v2.56.1.windows.1/PortableGit-2.56.1-64-bit.7z.exe
+      PORTABLE_GIT_SHA256: 9dd04a608ceb5f6ab32a73709e0ecb159d211da71b697c45ff81f6dd0c6b49c7
+    steps:
+      - name: Git Bash for the job's own steps
+        shell: pwsh
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP 'PortableGit.7z.exe'
+          Invoke-WebRequest -Uri $env:PORTABLE_GIT -OutFile $archive
+          if ((Get-FileHash -Algorithm SHA256 $archive).Hash.ToLower() -ne $env:PORTABLE_GIT_SHA256) { throw 'the portable Git download differs from its release' }
+          $dir = Join-Path $env:RUNNER_TEMP 'job-git'
+          $p = Start-Process $archive -ArgumentList '-y', "-o$dir" -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "the portable Git unpacked with $($p.ExitCode)" }
+          Add-Content $env:GITHUB_PATH (Join-Path $dir 'cmd')
+          Add-Content $env:GITHUB_PATH (Join-Path $dir 'bin')
+      - id: checkout
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with: &windows-sign-checkout
+          ref: ${{ needs.resolve.outputs.source_commit }}
+          persist-credentials: false
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Check out again
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        uses: actions/checkout@v4
+        with: *windows-sign-checkout
+      - uses: ./.github/actions/pnpm
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: ./.github/actions/electron-download
+      - run: pnpm install --frozen-lockfile
+        timeout-minutes: 20
+      - run: pnpm build
+        env:
+          INFINITARY_RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
+      # The signing account's names and the signing sign-in's IDs are the
+      # environment's variables; none of them is a secret.
+      - uses: ./.github/actions/windows-installer
+        with:
+          version: ${{ needs.resolve.outputs.version }}
+          sign: 'true'
+          tenant: ${{ vars.WINDOWS_SIGNING_TENANT }}
+          client: ${{ vars.WINDOWS_SIGNING_CLIENT }}
+          endpoint: ${{ vars.WINDOWS_SIGNING_ENDPOINT }}
+          account: ${{ vars.WINDOWS_SIGNING_ACCOUNT }}
+          profile: ${{ vars.WINDOWS_SIGNING_PROFILE }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: windows-installer/
+          if-no-files-found: error
+          retention-days: 3
+
+  # The Windows installer of every alpha (docs/windows.md; the captain's pick
+  # on INF-4243, "on every alpha"): installed and run on a fresh Windows 11
+  # virtual machine before anything publishes. From main it checks the
+  # windows-sign job's signed installer and its signatures; a rehearsal from
+  # another branch builds and checks an unsigned one. It publishes nothing
+  # itself until Windows publication joins the release.
+  windows:
+    needs: [resolve, notes, windows-sign]
+    if: ${{ !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.resolve.outputs.channel == 'alpha' && (needs.windows-sign.result == 'success' || needs.windows-sign.result == 'skipped') }}
     name: ${{ format('{0} · Windows installer', needs.resolve.outputs.trigger) }}
     uses: ./.github/workflows/windows.yml
     with:
       trigger: ${{ needs.resolve.outputs.trigger }}
       ref: ${{ needs.resolve.outputs.source_commit }}
       version: ${{ needs.resolve.outputs.version }}
+      signed: ${{ needs.windows-sign.result == 'success' }}
 
   # The phone goes first (INF-1649; docs/alpha.md, "The phone goes first"): an
   # alpha waits for a phone build on TestFlight that keeps changing things on

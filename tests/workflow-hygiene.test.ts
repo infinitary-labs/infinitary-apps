@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -279,36 +279,45 @@ describe("every workflow", () => {
   // (.github/actions/electron-builder-tools).
   it("restores electron-builder's tools around every step that packages beyond a folder", () => {
     const packaging: string[] = [];
-    for (const file of workflows) {
-      for (const [id, job] of Object.entries(load(file).jobs)) {
-        const steps = job.steps ?? [];
-        const where = `${file}:${id}`;
-        steps.forEach((step, index) => {
-          if (!packagesBeyondFolder(step.run ?? "")) return;
-          packaging.push(where);
-          // The signing job's own Mac keeps electron-builder's cache in its home.
-          if (where === "release.yml:release") return;
-          const tools = (from: number, to: number) =>
-            steps
-              .slice(from, to)
-              .filter((other) => other.uses?.endsWith("/.github/actions/electron-builder-tools"));
-          const before = tools(0, index);
-          expect(before.length, `${where} restores the tools before "${step.name}"`).toBe(1);
-          expect(before[0]?.with?.save, `${where} restores, never saves, before`).toBeUndefined();
-          const after = tools(index + 1, steps.length);
-          expect(after.length, `${where} keeps the tools after "${step.name}"`).toBe(1);
-          expect(after[0]?.with?.save).toBe("true");
-          expect(after[0]?.if, `${where} keeps them whatever the step did`).toContain(
-            "!cancelled()",
-          );
-        });
-      }
+    // Each job's steps, and each composite action's: the Windows installer
+    // packages inside .github/actions/windows-installer.
+    const stepLists: [string, Step[]][] = [
+      ...workflows.flatMap((file) =>
+        Object.entries(load(file).jobs).map(
+          ([id, job]) => [`${file}:${id}`, job.steps ?? []] as [string, Step[]],
+        ),
+      ),
+      ...actions.flatMap((name) => {
+        const path = `.github/actions/${name}/action.yml`;
+        if (!existsSync(join(root, path))) return [];
+        const action = loadYamlFile(path) as { runs?: { steps?: Step[] } };
+        return [[`${name} action`, action.runs?.steps ?? []] as [string, Step[]]];
+      }),
+    ];
+    for (const [where, steps] of stepLists) {
+      steps.forEach((step, index) => {
+        if (!packagesBeyondFolder(step.run ?? "")) return;
+        packaging.push(where);
+        // The signing job's own Mac keeps electron-builder's cache in its home.
+        if (where === "release.yml:release") return;
+        const tools = (from: number, to: number) =>
+          steps
+            .slice(from, to)
+            .filter((other) => other.uses?.endsWith("/.github/actions/electron-builder-tools"));
+        const before = tools(0, index);
+        expect(before.length, `${where} restores the tools before "${step.name}"`).toBe(1);
+        expect(before[0]?.with?.save, `${where} restores, never saves, before`).toBeUndefined();
+        const after = tools(index + 1, steps.length);
+        expect(after.length, `${where} keeps the tools after "${step.name}"`).toBe(1);
+        expect(after[0]?.with?.save).toBe("true");
+        expect(after[0]?.if, `${where} keeps them whatever the step did`).toContain("!cancelled()");
+      });
     }
     expect(packaging.sort()).toEqual([
       "linux-packages.yml:build",
       "mac-installer.yml:build",
       "release.yml:release",
-      "windows.yml:build",
+      "windows-installer action",
     ]);
   });
 
@@ -475,6 +484,59 @@ describe("every workflow", () => {
       runs("skipped", { failure: false, cancelled: false }),
       runs("failure", { failure: false, cancelled: true }),
     ]).toEqual([true, true, false, false, false]);
+  });
+
+  // Piece 6 of the Windows plan: ordinary changes never reach the signing
+  // access. Azure's signing sign-in takes only a GitHub token naming the
+  // windows-signing environment, so one job alone may enter it and ask for a
+  // token: an alpha's signing job, and only on a run from main.
+  it("lets only an alpha's signing job from main reach the Windows signing", () => {
+    type Gated = { environment?: unknown; if?: string; permissions?: Permissions };
+    const entering: string[] = [];
+    const asking: string[] = [];
+    for (const file of workflows) {
+      const workflow = load(file);
+      if (level(workflow.permissions, "id-token") > 0) asking.push(file);
+      for (const [id, job] of Object.entries(workflow.jobs) as [string, Gated][]) {
+        if (JSON.stringify(job.environment ?? "").includes("windows-signing"))
+          entering.push(`${file}:${id}`);
+        if (level(job.permissions, "id-token") > 0) asking.push(`${file}:${id}`);
+      }
+    }
+    expect(entering).toEqual(["release.yml:windows-sign"]);
+    expect(asking).toEqual(["release.yml:windows-sign"]);
+    const sign = load("release.yml").jobs["windows-sign"] as Gated;
+    const runs = (channel: string, ref: string) =>
+      workflowValue(sign.if ?? "", {
+        needs: { resolve: { outputs: { channel } } },
+        github: { ref },
+      });
+    expect(runs("alpha", "refs/heads/main")).toBe(true);
+    expect(runs("alpha", "refs/heads/inf/some-change")).toBe(false);
+    expect(runs("stable", "refs/heads/main")).toBe(false);
+  });
+
+  // Every Windows job puts Git for Windows' portable build first on its
+  // search path before its checkout, so the pin lives in each workflow that
+  // runs one (windows.yml, release.yml's windows-sign); moving to a newer
+  // Git moves every copy (docs/windows.md, "Git for Windows").
+  it("takes one pinned portable Git in every Windows job", () => {
+    type Pinned = {
+      env?: Record<string, string>;
+      jobs: Record<string, { env?: Record<string, string> }>;
+    };
+    const pins = new Map<string, string>();
+    for (const file of workflows) {
+      const workflow = load(file) as unknown as Pinned;
+      for (const [where, env] of [
+        [file, workflow.env],
+        ...Object.entries(workflow.jobs).map(([id, job]) => [`${file}:${id}`, job.env] as const),
+      ] as const) {
+        if (env?.PORTABLE_GIT) pins.set(where, `${env.PORTABLE_GIT} ${env.PORTABLE_GIT_SHA256}`);
+      }
+    }
+    expect([...pins.keys()].sort()).toEqual(["release.yml:windows-sign", "windows.yml"]);
+    expect(new Set(pins.values()).size).toBe(1);
   });
 
   // A value a shell step reads comes through its environment, never pasted

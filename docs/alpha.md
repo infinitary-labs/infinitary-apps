@@ -209,8 +209,9 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   The gate starts the app in a process group of its own; afterwards it asks the app to quit and waits for it, stops outright whatever of that group, or whatever names the profile, is still running, reaps the app, and removes the profile only once nothing can write into it.
   Every launch runs the workflow's own copy of the gate and its probe: the signing job puts them in place of the source's once the app is packaged, and the publication job and the old-cask check before they launch anything, so a stable promoting an older alpha launches through the current gate while its app stays the alpha's.
 - **The Windows check on every alpha.**
-  The `windows` job calls `windows.yml` at the alpha's version on its one source commit: it builds the unsigned internal Windows installer and installs and runs it on a fresh Windows 11 virtual machine (`docs/windows.md`, "The checks").
-  An alpha's upload and publication wait for it to succeed; a stable promotion skips it, and nothing uploads or publishes the installer.
+  From main, the `windows-sign` job first builds the Windows installer at the alpha's version on its one source commit and signs it with Microsoft Artifact Signing (`docs/windows.md`, "Signing"); a rehearsal from another branch skips it.
+  The `windows` job calls `windows.yml`, which installs and runs that signed installer, or an unsigned one it builds when nothing signed, on a fresh Windows 11 virtual machine (`docs/windows.md`, "The checks").
+  An alpha's upload and publication wait for it to succeed; a stable promotion skips both, and nothing uploads or publishes the installer.
 - **Linux in every release.**
   The `linux` job calls `linux-packages.yml` at the release's version on its one source commit, with the notes job's catalog, for both channels, a stable promotion included: it builds the Linux packages and installs and opens each on a clean copy of its system (`docs/linux-packages.md`) while verify runs.
   The upload job waits for it and checks its own copy of the artifact against the linux job's `SHA256SUMS` before anything renders or uploads (`docs/linux-packages.md`, "The checks").

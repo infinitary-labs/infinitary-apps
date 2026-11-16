@@ -1,9 +1,10 @@
 # Windows
 
-Infinitary on Windows is one unsigned internal installer for x64 PCs, built and checked by `.github/workflows/windows.yml`.
-It is not published: no release carries it, nothing signs it, and no update reaches it.
+Infinitary on Windows is one installer for x64 PCs, built and checked by `.github/workflows/windows.yml`.
+An alpha run from main signs it ("Signing", below); every other build is unsigned.
+It is not published: no release carries it, and no update reaches it.
 The installed app offers no update either: it never reads the release source, and the Version row says Infinitary does not update itself on Windows yet (`createInstalledUpdateChecker` in `src/core/update/updateChecker.ts`).
-Windows on Arm, signing, updates and a published download are later pieces of the Windows plan.
+Windows on Arm, updates and a published download are later pieces of the Windows plan.
 The earlier hosted investigation and what it observed are `docs/windows-feasibility.md`.
 
 ## What is built
@@ -41,6 +42,31 @@ A failed step says what failed, installs nothing further, and offers to try agai
 A run of the app with no window (`docs/run.md`) has nobody to ask, so it ends with the reason, and a run from source keeps Pi's own lookup.
 Moving to a newer Git for Windows changes the version, file, address, SHA-256 and size together, each read from the release's own page.
 
+## Signing
+
+Windows warns people away from an installer whose publisher it cannot name, so a release signs the app, the installer and its uninstaller with Microsoft Artifact Signing, Microsoft's signing service, which it sells through Azure.
+The publisher is the person the Mac app is signed as, Kun Chen, the captain's pick on the Windows plan: `publisherName` in `electron-builder.win-signed.yml` and `mac.identity` in `electron-builder.yml` move together (`tests/release-contract.test.ts` holds them).
+The certificate also names the publisher's city, state and country from Microsoft's identity check.
+Artifact Signing's certificates last a few days, so every signature carries a timestamp from Microsoft's timestamp service and stays valid after its certificate expires.
+
+`electron-builder.win-signed.yml` extends the unsigned `electron-builder.win.yml` with `win.azureSignOptions`.
+With it, electron-builder installs Artifact Signing's PowerShell module and calls it for each file it signs: `Infinitary.exe`, the uninstaller it makes before packing it, and the installer.
+The composite action `.github/actions/windows-installer` packages the installer either way; only its `sign` input chooses the signed config.
+
+Only `release.yml`'s `windows-sign` job signs, and only for an alpha run from main.
+It is the one job that enters the `windows-signing` GitHub environment and the one job that may ask GitHub for a token (`id-token: write`); `tests/workflow-hygiene.test.ts` holds both.
+The environment's deployment rule lets only runs from main enter it.
+In Azure, a signing sign-in (an app registration with the Artifact Signing Certificate Profile Signer role on the one certificate profile) trusts a GitHub token only when it names this repository's `windows-signing` environment.
+So no secret is kept anywhere: the job trades GitHub's token for an Azure one through the file `AZURE_FEDERATED_TOKEN_FILE` names, writing a fresh token every minute while it packages, since a GitHub token lasts about five minutes.
+A batch, a task branch and a rehearsal from another branch build unsigned and never reach it.
+
+The environment holds five variables, none of them secret: `WINDOWS_SIGNING_TENANT` and `WINDOWS_SIGNING_CLIENT`, the signing sign-in's directory and client IDs; `WINDOWS_SIGNING_ENDPOINT`, the signing account's regional address; `WINDOWS_SIGNING_ACCOUNT` and `WINDOWS_SIGNING_PROFILE`, the signing account's and certificate profile's names.
+The signing account is the Basic tier, billed monthly to the publisher's own Azure subscription, with 5,000 signatures a month included.
+
+`scripts/windows-signatures.ps1` checks signatures as Windows reads them: each file's signature must be valid, which means its hash matches and its chain reaches a root Windows trusts, name the expected publisher and carry a timestamp.
+The signing job checks the app and the installer it built.
+The fresh Windows 11 check then installs that signed installer, checks the installer, the installed app and its uninstaller the same way, and checks that a copy of the installer with one byte changed fails as altered; the result goes to the `windows-evidence` artifact as `signatures.txt`.
+
 ## The checks
 
 `windows.yml` has two jobs.
@@ -68,7 +94,7 @@ That journey checks, in order:
 5. The removal entry's own command removes the app silently, as Settings does: the program, its removal entry and its Start menu entry are gone, and `%APPDATA%\infinitary` still holds the saved data.
 
 Its pictures and readings go to the `windows-evidence` artifact.
-The check runs on every alpha (`release.yml`'s `windows` job, which an alpha's upload and publish wait on) and on each combined batch that touches Windows-relevant files (`batch-checks.yml`'s `windows` job, which the batch's last job waits on).
+The check runs on every alpha (`release.yml`'s `windows` job, which an alpha's upload and publish wait on; from main it takes `windows-sign`'s signed installer with `signed` and skips its own build) and on each combined batch that touches Windows-relevant files (`batch-checks.yml`'s `windows` job, which the batch's last job waits on).
 `scripts/windows-paths.ts` decides the batch's run from its changed files: the Windows check's own files always count - its workflow and the composite actions it uses, its installer config, the script itself, and its journey's config and every test file the journey reaches by its imports, all read from the checkout - and otherwise any file the build reads counts unless it only makes the Mac or Linux packages, is under `.github/`, or is one of the pull request check's light paths (tests, docs, release notes, the phone app).
 An unreadable change runs the check.
 It also runs on request (`workflow_dispatch`).

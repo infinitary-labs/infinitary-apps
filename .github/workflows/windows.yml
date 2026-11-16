@@ -8,7 +8,13 @@ name: windows
 # way the Start menu opens it, Git for Windows offered and installed on the
 # person's yes, a crew turn whose commands run in that Git's Git Bash with
 # its job stopped, and removal that keeps the saved work. The installer
-# stays on the run; nothing here signs or uploads it anywhere else.
+# stays on the run; nothing here signs it or uploads it anywhere else.
+#
+# A release from main signs its installer in a job of its own, release.yml's
+# windows-sign, the one job that enters the windows-signing environment, and
+# calls this workflow with `signed`: the check then installs that signed
+# installer instead of building one, and checks its signatures too
+# (docs/windows.md, "Signing"). Nothing here can reach the signing access.
 #
 # The captain's pick on INF-4243: it runs on each combined batch that
 # touches Windows-relevant files (batch-checks.yml, scripts/windows-paths.ts)
@@ -36,6 +42,11 @@ on:
         required: false
         type: string
         default: ''
+      signed:
+        description: Check the signed installer the caller's windows-sign job kept as this run's windows-installer artifact, instead of building one; only a release from main sets it
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: windows-${{ github.workflow == 'windows' && (inputs.ref || github.ref) || github.run_id }}
@@ -57,6 +68,7 @@ env:
 jobs:
   build:
     name: ${{ format('{0} · Build the Windows installer', (inputs.trigger || 'Manual request')) }}
+    if: ${{ !inputs.signed }}
     # A fresh standard account on the PC's Windows (runner-up's account
     # places), removed when the job ends.
     runs-on: ${{ vars.WINDOWS_RUNNER || 'shell-pc-windows' }}
@@ -141,26 +153,10 @@ jobs:
         env:
           RELEASE_VERSION: ${{ inputs.version }}
         run: echo "version=${RELEASE_VERSION:-$(node -p 'require("./package.json").version')}" >> "$GITHUB_OUTPUT"
-      - uses: ./.github/actions/electron-builder-tools
-      # electron-builder reads Electron's zip from the cache the install's
-      # download step restored, checked first against Electron's own sums
-      # (.github/actions/electron-download/zips.mjs), as the Linux packages do.
-      - name: Build the installer
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          node .github/actions/electron-download/zips.mjs win32 x64
-          pnpm exec electron-builder --win --config electron-builder.win.yml --publish never \
-            -c.extraMetadata.version="$VERSION" \
-            -c.electronDownload.cache="$electron_config_cache" -c.electronDownload.isVerifyChecksum=false
-          mkdir -p windows-installer
-          cp dist/*-setup.exe windows-installer/
-          (cd windows-installer && sha256sum *.exe | tee SHA256SUMS)
-      - name: Keep electron-builder's tools
-        if: ${{ !cancelled() }}
-        uses: ./.github/actions/electron-builder-tools
+      # Unsigned: this job never enters the windows-signing environment.
+      - uses: ./.github/actions/windows-installer
         with:
-          save: 'true'
+          version: ${{ steps.version.outputs.version }}
       - uses: actions/upload-artifact@v4
         with:
           name: windows-installer
@@ -171,6 +167,8 @@ jobs:
   check:
     name: ${{ format('{0} · Install and run the Windows app (fresh Windows 11)', (inputs.trigger || 'Manual request')) }}
     needs: build
+    # The build's installer, or a release's signed one when it skipped.
+    if: ${{ !cancelled() && (needs.build.result == 'success' || (inputs.signed && needs.build.result == 'skipped')) }}
     # A fresh Windows 11 virtual machine on the PC for each check (the
     # captain's pick on INF-4243): a standard person signed in at its
     # desktop, no Git installed, removed when the job ends (docs/windows.md,
@@ -263,10 +261,31 @@ jobs:
           $setup = Get-ChildItem *-setup.exe | Select-Object -First 1
           $p = Start-Process $setup.FullName -ArgumentList '/S', '--force-run' -PassThru -Wait
           if ($p.ExitCode -ne 0) { throw "the installer ended with $($p.ExitCode)" }
+      # A signed installer's files as Windows reads them on a machine that
+      # never saw the signing: the installer, then the app and the
+      # uninstaller it installed, each valid, naming the publisher and
+      # timestamped, and an altered copy of the installer failing as altered
+      # (docs/windows.md, "Signing").
+      - name: Check the signatures
+        if: ${{ inputs.signed }}
+        working-directory: ${{ runner.temp }}/windows-installer
+        env:
+          EVIDENCE: ${{ runner.temp }}/windows-evidence
+        run: |
+          $publisher = (Select-String -Path "$env:GITHUB_WORKSPACE\electron-builder.win-signed.yml" -Pattern '^\s*publisherName:\s*(.+)$').Matches[0].Groups[1].Value.Trim()
+          $setup = (Get-ChildItem *-setup.exe | Select-Object -First 1).FullName
+          $entry = Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' |
+            Where-Object { $_.DisplayName -like 'Infinitary*' } | Select-Object -First 1
+          if (-not $entry) { throw 'the installer registered no removal entry' }
+          $uninstaller = $entry.UninstallString -replace '^"([^"]+)".*$', '$1'
+          $app = Join-Path (Split-Path $uninstaller) 'Infinitary.exe'
+          New-Item -ItemType Directory -Force $env:EVIDENCE | Out-Null
+          & "$env:GITHUB_WORKSPACE\scripts\windows-signatures.ps1" -Publisher $publisher -Path $setup, $app, $uninstaller -Altered $setup |
+            Tee-Object -FilePath (Join-Path $env:EVIDENCE 'signatures.txt')
       - name: Check the installed app
         env:
           INFINITARY_INSTALLED_EVIDENCE: ${{ runner.temp }}/windows-evidence
-          INFINITARY_INSTALLED_VERSION: ${{ needs.build.outputs.version }}
+          INFINITARY_INSTALLED_VERSION: ${{ needs.build.outputs.version || inputs.version }}
         run: pnpm exec playwright test --config playwright.windows.config.ts
       # Kept even when the job's timeout cancels it, so a hang leaves its
       # pictures and trace.

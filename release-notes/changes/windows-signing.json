@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "windows-signing",
+      "reason": "Internal: an alpha's Windows installer is signed in the release's own run and checked there; no Windows build is published yet, so nothing a person downloads changes."
+    }
+  ]
+}

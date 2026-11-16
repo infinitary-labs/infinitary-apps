@@ -1,0 +1,104 @@
+name: The Windows installer
+description: Package the built app as the per-user Windows installer in windows-installer/ with its SHA256SUMS, unsigned, or signed and timestamped with Microsoft Artifact Signing when a release's windows-sign job asks (docs/windows.md, "Signing").
+inputs:
+  version:
+    description: The logical version the installer carries.
+    required: true
+  sign:
+    description: "'true' signs the app, the installer and its uninstaller; only a release's windows-sign job, inside the windows-signing environment, passes it."
+    default: 'false'
+  tenant:
+    description: The signing sign-in's Microsoft Entra tenant.
+    default: ''
+  client:
+    description: The signing sign-in's client ID, which trusts only a GitHub token naming the windows-signing environment.
+    default: ''
+  endpoint:
+    description: The signing account's regional endpoint.
+    default: ''
+  account:
+    description: The signing account's name.
+    default: ''
+  profile:
+    description: The certificate profile's name.
+    default: ''
+outputs:
+  publisher:
+    description: The publisher a signed installer names; empty when unsigned.
+    value: ${{ steps.installer.outputs.publisher }}
+runs:
+  using: composite
+  steps:
+    - uses: ./.github/actions/electron-builder-tools
+    # electron-builder reads Electron's zip from the cache the install's
+    # download step restored, checked first against Electron's own sums
+    # (.github/actions/electron-download/zips.mjs), as the Linux packages do.
+    #
+    # A signed build signs through Artifact Signing's own PowerShell module,
+    # which electron-builder installs and calls for each file it signs
+    # (electron-builder.win-signed.yml): the app, the uninstaller it makes,
+    # then the installer. Each call trades a GitHub token for an Azure one
+    # through the file AZURE_FEDERATED_TOKEN_FILE names. A GitHub token lasts
+    # about five minutes, so a loop beside the build writes a fresh one every
+    # minute until the build ends, and the file goes with it.
+    - id: installer
+      name: Build the installer
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+        SIGN: ${{ inputs.sign }}
+        AZURE_TENANT_ID: ${{ inputs.tenant }}
+        AZURE_CLIENT_ID: ${{ inputs.client }}
+        SIGNING_ENDPOINT: ${{ inputs.endpoint }}
+        SIGNING_ACCOUNT: ${{ inputs.account }}
+        SIGNING_PROFILE: ${{ inputs.profile }}
+      run: |
+        node .github/actions/electron-download/zips.mjs win32 x64
+        config=(--config electron-builder.win.yml)
+        if [[ "$SIGN" == true ]]; then
+          for name in AZURE_TENANT_ID AZURE_CLIENT_ID SIGNING_ENDPOINT SIGNING_ACCOUNT SIGNING_PROFILE; do
+            [[ -n "${!name}" ]] || { echo "::error::the signing job passed no ${name}"; exit 1; }
+          done
+          publisher="$(sed -n 's/^ *publisherName: *//p' electron-builder.win-signed.yml)"
+          [[ -n "$publisher" ]] || { echo "::error::electron-builder.win-signed.yml names no publisher"; exit 1; }
+          [[ -n "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ]] || { echo "::error::this job may not ask GitHub for a token (id-token: write)"; exit 1; }
+          export AZURE_FEDERATED_TOKEN_FILE="$RUNNER_TEMP/github-token"
+          fetch_token() {
+            # The request token reaches curl on its input, never on its
+            # command line, and the answer goes straight to the file.
+            printf 'header = "Authorization: bearer %s"\n' "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" |
+              curl --silent --fail --config - \
+                --url "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=api://AzureADTokenExchange" |
+              node -e 'let s="";process.stdin.on("data",(d)=>(s+=d)).on("end",()=>process.stdout.write(JSON.parse(s).value))' \
+                > "$AZURE_FEDERATED_TOKEN_FILE.next" &&
+              mv -f "$AZURE_FEDERATED_TOKEN_FILE.next" "$AZURE_FEDERATED_TOKEN_FILE"
+          }
+          fetch_token || { echo "::error::GitHub gave this job no token for Azure"; exit 1; }
+          ( while sleep 60; do fetch_token || true; done ) &
+          refresher=$!
+          trap 'kill "$refresher" 2>/dev/null; rm -f "$AZURE_FEDERATED_TOKEN_FILE" "$AZURE_FEDERATED_TOKEN_FILE.next"' EXIT
+          config=(--config electron-builder.win-signed.yml
+            -c.win.azureSignOptions.endpoint="$SIGNING_ENDPOINT"
+            -c.win.azureSignOptions.codeSigningAccountName="$SIGNING_ACCOUNT"
+            -c.win.azureSignOptions.certificateProfileName="$SIGNING_PROFILE")
+          echo "publisher=$publisher" >> "$GITHUB_OUTPUT"
+        fi
+        pnpm exec electron-builder --win "${config[@]}" --publish never \
+          -c.extraMetadata.version="$VERSION" \
+          -c.electronDownload.cache="$electron_config_cache" -c.electronDownload.isVerifyChecksum=false
+        mkdir -p windows-installer
+        cp dist/*-setup.exe windows-installer/
+        (cd windows-installer && sha256sum *.exe | tee SHA256SUMS)
+    - name: Keep electron-builder's tools
+      if: ${{ !cancelled() }}
+      uses: ./.github/actions/electron-builder-tools
+      with:
+        save: 'true'
+    # The app and the installer as built; the uninstaller sits inside the
+    # installer, so windows.yml's check reads it once installed.
+    - name: Check the signatures
+      if: ${{ inputs.sign == 'true' }}
+      shell: pwsh
+      env:
+        PUBLISHER: ${{ steps.installer.outputs.publisher }}
+      run: ./scripts/windows-signatures.ps1 -Publisher $env:PUBLISHER -Path (Get-ChildItem dist/win-unpacked/Infinitary.exe, dist/*-setup.exe).FullName

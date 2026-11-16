@@ -1,0 +1,16 @@
+# The signed Windows installer (docs/windows.md, "Signing"): the same
+# installer electron-builder.win.yml builds, with the app, the installer and
+# its uninstaller signed and timestamped by Microsoft Artifact Signing. Only
+# a release's windows job builds it, inside the windows-signing environment
+# (.github/workflows/windows.yml); every other build stays unsigned.
+#
+# The signing account's endpoint, account and certificate profile come from
+# that environment as -c.win.azureSignOptions.* flags, never from here.
+extends: ./electron-builder.win.yml
+
+win:
+  azureSignOptions:
+    # The publisher Windows names, exactly as on the certificate: the same
+    # person the Mac app is signed as (electron-builder.yml mac.identity),
+    # the captain's pick on the Windows plan. The two move together.
+    publisherName: Kun Chen

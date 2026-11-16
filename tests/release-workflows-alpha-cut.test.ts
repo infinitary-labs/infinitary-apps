@@ -497,7 +497,9 @@ describe("an alpha with nothing new to build", () => {
     }
     for (const [id, job] of ordered) {
       const needs = needsOf(job);
+      // A rolling alpha runs from main (main.yml's last job dispatches it there).
       const context = {
+        github: { ref: "refs/heads/main" },
         needs: Object.fromEntries(
           needs.map((need) => [
             need,

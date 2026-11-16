@@ -1187,6 +1187,7 @@ export async function createServices(
     readRunWatch: (taskId, runId) => workflowEvidence.readWatched(taskId, runId),
     killJobs: (taskId) => jobs.killForOwner(taskId),
     leftovers: leftoverPrograms,
+    step,
     personal: homePersonal.live,
     ...(host.mediaProbe ? { probeMedia: host.mediaProbe } : {}),
     ...(host.typefaceProbe ? { probeTypeface: host.typefaceProbe } : {}),

@@ -336,6 +336,11 @@ export type CrewSupervisorOptions = {
     settled(taskId: string): Promise<void>;
   };
   /**
+   * Runs each part of a task's close as a named step for the freeze recorder
+   * (docs/freeze-recorder.md, "A task's close"); absent, the parts only run.
+   */
+  step?: <T>(name: string, run: () => T) => T;
+  /**
    * Put the change in where the project lives (the forge seam), injected
    * beside check_pr_ci; a merge under the captain's kept approval passes
    * its guard (FI3-304).

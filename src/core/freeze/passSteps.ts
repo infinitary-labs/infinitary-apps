@@ -6,7 +6,8 @@
  *
  * The ticker runs each pass through `run`, and so do the work the passes set
  * off that runs in its own turn: the sweep's release, the board's push and
- * the presentation refresh. With a listener attached, which the recorder does
+ * the presentation refresh. A task's close runs its parts through it too
+ * (docs/freeze-recorder.md, "A task's close"). With a listener attached, which the recorder does
  * in an alpha build, `run` tells the watchdog which step is running and which
  * steps' promised work has not settled yet, so a stall is tagged with them,
  * and keeps each run's timing: when it started after the pass began, its

@@ -3,7 +3,8 @@ import { pbkdf2Sync } from "node:crypto";
 import { once } from "node:events";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { runInThisContext } from "node:vm";
+import { setFlagsFromString } from "node:v8";
+import { runInNewContext, runInThisContext } from "node:vm";
 import { Worker } from "node:worker_threads";
 import { build } from "vite";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -173,6 +174,30 @@ describe("the freeze recorder", () => {
     expect(seen.sleep).toBeUndefined();
     const [written] = readFreezes(recordPath).filter((line) => line.incidentId === seen.incidentId);
     expect(written).toMatchObject({ paging });
+  });
+
+  // INF-4506's diagnosis: the record named where a 500 to 735 ms stall began
+  // but could not say whether the main thread spent it collecting garbage,
+  // so each completed stall notes the collections the main thread ran in it.
+  it("notes the garbage collections the main thread ran during a stall", async () => {
+    const recordPath = join(scratchDir("infinitary-freeze-gc-"), "freezes.jsonl");
+    setFlagsFromString("--expose-gc");
+    const collect = runInNewContext("gc") as () => void;
+    let live: { at: number }[] = [];
+    const seen = await recordStall(recordPath, () => {
+      live = Array.from({ length: 200_000 }, (_, at) => ({ at }));
+      collect();
+      collect();
+      walkEveryRow(FREEZE_THRESHOLD_MS * 4);
+    });
+
+    expect(live).toHaveLength(200_000);
+    const gc = seen.gc;
+    expect(gc?.count).toBeGreaterThanOrEqual(2);
+    expect(gc?.fullMs).toBeGreaterThan(0);
+    expect(gc?.ms).toBeGreaterThanOrEqual(gc?.fullMs ?? Number.POSITIVE_INFINITY);
+    const [written] = readFreezes(recordPath).filter((line) => line.incidentId === seen.incidentId);
+    expect(written).toMatchObject({ gc });
   });
 
   // The captain's pick on INF-4076: "Start timing each minute-pass step",

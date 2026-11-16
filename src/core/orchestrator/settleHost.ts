@@ -172,6 +172,11 @@ export type SettleServiceHost = {
   };
   /** The personal workspace's running dot ends with the task. */
   endLiveTask(taskId: string): void;
+  /**
+   * Runs one part of a task's close as a named step, timed and marked for
+   * the freeze recorder (`PassSteps.run`); absent, the part only runs.
+   */
+  step?: <T>(name: string, run: () => T) => T;
   validateLocalStory?: (taskId: string) => Promise<string>;
   mergePullRequest?: (
     taskId: string,

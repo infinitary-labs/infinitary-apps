@@ -1,3 +1,4 @@
+import { GCProfiler } from "node:v8";
 import type { Worker } from "node:worker_threads";
 import { forgeOf } from "@shared/forge";
 import { type SourceIdentity, sourceIdentitySchema } from "@shared/selfSource";
@@ -94,6 +95,20 @@ const pagingSchema = z.object({
   rssAfterBytes: z.number().int().nonnegative(),
 });
 
+/**
+ * The main thread's garbage collections between the heartbeat before a stall
+ * and the one that ended it, as V8's collection profiler timed them on the
+ * main thread: `ms`, every collection's pause in all, `fullMs`, the part spent
+ * in full collections (mark-sweep-compact), and `count`, how many there were.
+ * Their time is part of the stall's `wallMs` and `cpuMs`.
+ */
+const gcSchema = z.object({
+  ms: z.number().int().nonnegative(),
+  fullMs: z.number().int().nonnegative(),
+  count: z.number().int().positive(),
+});
+export type GcReading = z.infer<typeof gcSchema>;
+
 const frameSchema = z.object({
   name: z.string(),
   file: z.string(),
@@ -130,6 +145,8 @@ export const freezeLineSchema = z.object({
   sleep: sleepSchema.optional(),
   // Optional for old records.
   paging: pagingSchema.optional(),
+  // Optional for old records and stalls with no collection in them.
+  gc: gcSchema.optional(),
 });
 export type FreezeLine = z.infer<typeof freezeLineSchema>;
 
@@ -228,6 +245,8 @@ export const TALLY_WRITE_MS = 60_000;
 export class FreezeRecorder {
   private worker: Worker | undefined;
   private beat: ReturnType<typeof setInterval> | undefined;
+  /** V8's collection profiler on the main thread, read and started again at each heartbeat. */
+  private collections: GCProfiler | undefined;
   private write: ReturnType<typeof setInterval> | undefined;
   private stopSteps: (() => void) | undefined;
   /** When the run's awake time was last added to the tally, on the monotonic clock. */
@@ -319,14 +338,17 @@ export class FreezeRecorder {
       mark: (steps) => worker.postMessage({ steps }),
       pass: (pass) => worker.postMessage({ pass }),
     });
-    // Each heartbeat carries the speed probe's time and, when it changed, the
-    // windows' state, read every WINDOW_READ_BEATS; the watchdog notes both
-    // at a pause.
+    // Each heartbeat carries the speed probe's time, the main thread's
+    // collections since the last heartbeat and, when it changed, the windows'
+    // state, read every WINDOW_READ_BEATS; the watchdog notes them at a pause.
     const windowState = this.options.windowState;
     let beats = 0;
     let shown: WindowState | undefined;
+    this.collections = new GCProfiler();
+    this.collections.start();
     const beat = () => {
       const probeNs = this.speedProbe();
+      const gc = this.collected();
       let window: WindowState | undefined;
       if (windowState && beats++ % WINDOW_READ_BEATS === 0) {
         const now = windowState();
@@ -335,6 +357,7 @@ export class FreezeRecorder {
       worker.postMessage({
         probeNs,
         ...(window ? { window } : {}),
+        ...(gc ? { gc } : {}),
         cpu: process.threadCpuUsage(),
       });
     };
@@ -360,6 +383,34 @@ export class FreezeRecorder {
     return Number(process.hrtime.bigint() - start);
   }
 
+  /**
+   * The main thread's collections since the last heartbeat. V8's collection
+   * profiler times each one on the main thread as it happens, so the
+   * heartbeat that ends a stall carries the collections inside it; stopping
+   * and starting it again costs about a microsecond in Electron.
+   */
+  private collected(): GcReading | undefined {
+    const profiler = this.collections;
+    if (!profiler) return undefined;
+    const read = profiler.stop();
+    const next = new GCProfiler();
+    next.start();
+    this.collections = next;
+    const statistics = read?.statistics ?? [];
+    if (!statistics.length) return undefined;
+    let micros = 0;
+    let fullMicros = 0;
+    for (const each of statistics) {
+      micros += each.cost;
+      if (each.gcType === "MarkSweepCompact") fullMicros += each.cost;
+    }
+    return {
+      ms: Math.round(micros / 1000),
+      fullMs: Math.round(fullMicros / 1000),
+      count: statistics.length,
+    };
+  }
+
   private addRunning(): void {
     const now = performance.now();
     this.options.tally?.ran(now - this.ranUntil);
@@ -372,6 +423,8 @@ export class FreezeRecorder {
     this.stopSteps = undefined;
     if (this.beat) clearInterval(this.beat);
     this.beat = undefined;
+    this.collections?.stop();
+    this.collections = undefined;
     if (this.write) {
       clearInterval(this.write);
       this.addRunning();

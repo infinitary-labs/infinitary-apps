@@ -62,6 +62,10 @@ Each line also notes sleep and paging, so a stall right after the computer wakes
 It is the newest sleep up to the line's writing, however long ago, so a reader compares `wokeAt` with `at`; a clock set by hand reads the same way.
 `paging` holds the whole process's page faults between the heartbeat before the stall and the one that ended it, `majorFaults` for pages it waited on the disk for, from a file or swap, and `minorFaults` for the rest, with its resident memory at each (`rssBeforeBytes`, `rssAfterBytes`); resident memory growing across a stall is memory paged back in.
 The watchdog reads both on its own thread, since both are the process's, at each heartbeat; only a completion has `paging`.
+A completion also notes `gc` when the main thread collected garbage between the heartbeat before the stall and the one that ended it (INF-4506, which found task closes of 589 to 735 ms in the record that took under 100 ms on a copy of the same saved record, and could not tell whether collections filled the rest).
+`ms` is the collections' whole time, `fullMs` the part in full collections (V8's mark-compact), and `count` how many ran.
+The main thread reads them from V8's collection profile at each heartbeat and sends them with it; their time is part of the stall's `wallMs` and `cpuMs`, never added to it.
+A stall with no collection in it, and an old line, leave `gc` absent.
 `build` preserves the recording computer's existing source identity (version, source commit or unknown, and whether its source is mutable), not the investigating checkout's identity.
 It records no arguments, values or text, and nothing sends it anywhere: Diagnostics sends nothing new.
 
@@ -97,6 +101,22 @@ It keeps the newest day of passes (`PASS_RECORD_MAX_LINES`) and drops older ones
 Each line is one pass: when it began, the build identity, and every step run from its start to the next pass's start, board pushes and refreshes the crew set off included, each with when it started after the pass began (`startMs`), its synchronous time (`syncMs`), the main thread's own processor time in that (`cpuMs`) and, for a step that returned a promise, when it settled after the step started (`workMs`), or `unsettled` when it had not by the next pass.
 A pass's line is written when the next pass starts, so a run's last pass is never written.
 Joining the two records by time shows which step was running at each stall and how long the same step took in minutes without one.
+
+## A task's close
+
+Three recorded stalls of 589 to 735 ms were task closes, and each capture landed under 100 ms into the stall, so the record named none of the slow part (INF-4506).
+A task's close (`TaskClosing.closeTask`) runs each of its synchronous parts as a step through the same runner, so a stall in one is tagged with it and each part's time lands in the pass record beside the minute pass's steps:
+
+- `close-stop`: announcing the task's reach, ending its jobs and live state, and starting the crewmate's stop.
+- `close-approvals`: removing the task's place in the merge line.
+- `close-record`: closing the record and purging its lane and queued wakes in one transaction.
+- `close-cards`: retiring its cards, placing the outcome and releasing its kept notes.
+- `close-asks`: letting the first mate's answer check read how each of the captain's messages now stands.
+- `close-broadcast`: scheduling the cards' broadcast and sending the crew counts.
+- `close-worktree` and `close-children`: starting the working copy's retirement and the delivery tasks' closes.
+- `close-gates`: the sweep of the rows that waited on the task.
+
+A part the close awaits is timed only to its synchronous start, so the waits between parts, such as for the crewmate's stop, are in no step.
 
 ## The memory reading
 

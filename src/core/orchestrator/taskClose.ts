@@ -346,40 +346,56 @@ export class TaskClosing {
    * session JSONL altogether"). The worktree vanishing is the externally
    * observable "settled" signal (the phase3 e2e polls for it), so the
    * record closes before it goes.
+   *
+   * Each synchronous part runs as a named step (`host.step`), so the freeze
+   * recorder tags a stall with the part running and times each part
+   * (docs/freeze-recorder.md, "A task's close").
    */
   async closeTask(
     taskId: string,
     close: TaskClose,
     options: { recordBeforeStop?: boolean } = {},
   ): Promise<void> {
-    // This task settlement announces its reach before stopping the runtime;
-    // the crewmate leaves after that spark. A superseded one instead hands
-    // over to its successor, whose start is its spark.
-    // Work carried on closes done and goes home like any done task.
-    if (close.reason !== "superseded" || close.status === "done") this.host.announceReach?.(taskId);
-    this.host.killJobs?.(taskId);
-    this.host.endLiveTask(taskId);
-    const stopping = this.host.stopRuntime(taskId);
+    const step = this.host.step ?? (<T>(_name: string, run: () => T): T => run());
+    // A promise this close awaits comes back wrapped, so its step times only
+    // the synchronous start and leaves a rejection to this close.
+    const { stopping } = step("close-stop", () => {
+      // This task settlement announces its reach before stopping the runtime;
+      // the crewmate leaves after that spark. A superseded one instead hands
+      // over to its successor, whose start is its spark.
+      // Work carried on closes done and goes home like any done task.
+      if (close.reason !== "superseded" || close.status === "done") {
+        this.host.announceReach?.(taskId);
+      }
+      this.host.killJobs?.(taskId);
+      this.host.endLiveTask(taskId);
+      return { stopping: this.host.stopRuntime(taskId) };
+    });
     if (stopping && !options.recordBeforeStop) {
       await stopping;
       this.locks.turnEnded(taskId);
     }
     let record = this.host.tasks.get(taskId);
-    if (record && !TaskService.isClosed(record)) {
+    record = step("close-approvals", () => {
+      if (!record || TaskService.isClosed(record)) return record;
       const approval = record.delivery?.mergeAuthorization;
-      if (approval) {
-        if (close.reason !== "merged") this.approvals.removeQueueMark(taskId, approval);
-        for (const item of approval.queued ?? []) this.approvals.removeQueueMark(taskId, item);
-        record = this.host.tasks.get(taskId) ?? record;
-      }
-    }
+      if (!approval) return record;
+      if (close.reason !== "merged") this.approvals.removeQueueMark(taskId, approval);
+      for (const item of approval.queued ?? []) this.approvals.removeQueueMark(taskId, item);
+      return this.host.tasks.get(taskId) ?? record;
+    });
     // The lane and every queued wake retire with the task, in the close's
     // own transaction: a settled task makes still-recorded guidance moot.
     // A row already done or dropped keeps its close; a discard there only
     // clears the worktree it kept (WI-7).
     let answerHandoffQueued = false;
     let sentence: string | undefined;
-    if (record && record.status !== "done" && record.status !== "dropped") {
+    step("close-record", () => {
+      if (!record || record.status === "done" || record.status === "dropped") {
+        this.host.inbox.purgeTask(taskId);
+        return;
+      }
+      const open = record;
       sentence = this.takeClosingSentence(taskId, close.actor);
       const data =
         close.data || close.answerHandoff || sentence
@@ -395,8 +411,8 @@ export class TaskClosing {
           // A standing approval ends with its task: spent by a merge, revoked
           // by any other close (FI3-304), in the close's own transaction.
           // Approvals of its other pull requests waiting behind it end too (INF-2746).
-          const standing = standingAuthorization(record.delivery);
-          const ended = record.delivery?.mergeAuthorization;
+          const standing = standingAuthorization(open.delivery);
+          const ended = open.delivery?.mergeAuthorization;
           if (standing) {
             this.host.tasks.delivery.recordPermissionRecords(taskId, {
               mergeAuthorization: {
@@ -438,9 +454,7 @@ export class TaskClosing {
         },
         stopping,
       );
-    } else {
-      this.host.inbox.purgeTask(taskId);
-    }
+    });
     // External observation closes at the synchronous idle boundary, before
     // stopping can yield: new guidance must see a closed record, not be purged
     // later after it was accepted on a task that still appeared open.
@@ -451,30 +465,43 @@ export class TaskClosing {
     // The durable handoff becomes visible only after its close transaction;
     // poking here cannot race the lane purge that precedes its insertion.
     if (answerHandoffQueued) this.host.pokeInbox();
-    this.host.cards.retireTaskCards(taskId, close.reason, { keepNotes: close.status === "done" });
-    if (record && record.status !== "done" && record.status !== "dropped") {
-      this.placeOutcome(record, close.reason, close.actor, sentence);
-    }
-    // A kept note still waiting on the crewmate shows now, once the close
-    // is recorded: a story note's merged line is already drawn from the
-    // change's receipt (INF-2533, INF-2678).
-    this.host.cards.releaseNotes(taskId);
-    this.host.asksMoved?.();
-    this.host.cards.scheduleBroadcast();
-    this.host.broadcastCrewCounts();
+    step("close-cards", () => {
+      this.host.cards.retireTaskCards(taskId, close.reason, {
+        keepNotes: close.status === "done",
+      });
+      if (record && record.status !== "done" && record.status !== "dropped") {
+        this.placeOutcome(record, close.reason, close.actor, sentence);
+      }
+      // A kept note still waiting on the crewmate shows now, once the close
+      // is recorded: a story note's merged line is already drawn from the
+      // change's receipt (INF-2533, INF-2678).
+      this.host.cards.releaseNotes(taskId);
+    });
+    step("close-asks", () => this.host.asksMoved?.());
+    step("close-broadcast", () => {
+      this.host.cards.scheduleBroadcast();
+      this.host.broadcastCrewCounts();
+    });
     // Its stops run and the programs holding its folders end before they go.
     await this.host.leftovers?.settled(taskId);
-    if (record?.worktreeDir && record.workspaceState !== "removed") {
+    const closed = record;
+    if (closed?.worktreeDir && closed.workspaceState !== "removed") {
       // Every close keeps a copy whose work cannot be saved (INF-3169's one
       // drop); only dropping the closed task again removes it.
-      await this.retireWorktreeOf(record, { force: close.removeKept === true });
+      const { retiring } = step("close-worktree", () => ({
+        retiring: this.retireWorktreeOf(closed, { force: close.removeKept === true }),
+      }));
+      await retiring;
     }
     // Delivery machinery follows its parent out, whatever the direction
     // the parent closed in - a review must never outlive its builder.
-    await this.retireDeliveryChildren(taskId, record?.title);
+    const { children } = step("close-children", () => ({
+      children: this.retireDeliveryChildren(taskId, closed?.title),
+    }));
+    await children;
     // Any close may release a row waiting on this task, or leave one
     // waiting forever (the ready query and the dead-blocker card, P2).
-    void this.host.sweepGates(this.host.now());
+    void step("close-gates", () => this.host.sweepGates(this.host.now()));
   }
 
   /**

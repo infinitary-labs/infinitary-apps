@@ -48,8 +48,9 @@ export function isFreezeRecorderEnabled(build: {
  * Enabled only after the stall, a wait's pause landed in code that ran after
  * the wait (INF-2061's lab). Once it has handed over a previous run's
  * unfinished stalls it says `{ recovered: true }`. The incident start is written before asking for names; completion adds the
- * processor time when the next heartbeat arrives, and the process's page
- * faults and resident memory across the stall. Each line notes the newest
+ * processor time when the next heartbeat arrives, the main thread's garbage
+ * collections that heartbeat says ran since the one before, and the
+ * process's page faults and resident memory across the stall. Each line notes the newest
  * time the computer slept, seen as its wall clock running on past the
  * monotonic one, which stops in sleep. A gap the watchdog's
  * own timer also slept through is the whole computer pausing, such as
@@ -121,6 +122,7 @@ function noteContext(line, target) {
   if (target.window) line.window = target.window;
   if (target.step) line.step = target.step;
   if (lastSleep) line.sleep = { ...lastSleep };
+  if (target.gc) line.gc = { ...target.gc };
   if (target.memoryBefore && target.memoryAfter) {
     line.paging = {
       majorFaults: Math.max(0, target.memoryAfter.major - target.memoryBefore.major),
@@ -266,6 +268,8 @@ parentPort.on("message", (message) => {
     stall = null;
     done.endedAt = now;
     done.cpuAfter = message.cpu;
+    // The collections the main thread ran since its heartbeat before the stall.
+    if (message.gc) done.gc = message.gc;
     done.memoryAfter = memoryNow();
     if (probe !== null) done.probeAfter = probe;
     done.completedAt = new Date().toISOString();

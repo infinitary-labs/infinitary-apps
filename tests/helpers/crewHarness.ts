@@ -274,6 +274,8 @@ export type SetupExtras = {
   killJobs?: (taskId: string) => void;
   /** The close's sweep of what a task left running (docs/leftover-programs.md). */
   leftovers?: CrewSupervisorOptions["leftovers"];
+  /** The runner that times each part of a task's close (docs/freeze-recorder.md). */
+  step?: CrewSupervisorOptions["step"];
   mergePullRequest?: CrewSupervisorOptions["mergePullRequest"];
   mergeReview?: CrewSupervisorOptions["mergeReview"];
   reviewGate?: CrewSupervisorOptions["reviewGate"];
@@ -588,6 +590,7 @@ export function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     ...(extras.oldestRunningJob ? { oldestRunningJob: extras.oldestRunningJob } : {}),
     ...(extras.killJobs ? { killJobs: extras.killJobs } : {}),
     ...(extras.leftovers ? { leftovers: extras.leftovers } : {}),
+    ...(extras.step ? { step: extras.step } : {}),
     ...(extras.mergePullRequest ? { mergePullRequest: extras.mergePullRequest } : {}),
     ...(extras.mergeReview ? { mergeReview: extras.mergeReview } : {}),
     ...(extras.reviewGate ? { reviewGate: extras.reviewGate } : {}),

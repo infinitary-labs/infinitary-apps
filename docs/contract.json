@@ -65755,6 +65755,210 @@
         ]
       }
     },
+    "inf:work:secret-ask": {
+      "effect": "change",
+      "reach": "work",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "task": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,64}$"
+              },
+              "callId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "input": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "op": {
+                        "type": "string",
+                        "const": "ask"
+                      },
+                      "id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "reason": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "secrets": {
+                        "minItems": 1,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "place": {
+                              "type": "string"
+                            },
+                            "replace": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "op",
+                      "id",
+                      "reason",
+                      "secrets"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "op": {
+                        "type": "string",
+                        "const": "cancel"
+                      },
+                      "id": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "op",
+                      "id"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            },
+            "required": [
+              "task",
+              "callId",
+              "input"
+            ]
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "ask": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "ask": {
+                        "type": "string"
+                      },
+                      "state": {
+                        "type": "string",
+                        "const": "waiting"
+                      }
+                    },
+                    "required": [
+                      "ask",
+                      "state"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "ask": {
+                        "type": "string"
+                      },
+                      "state": {
+                        "type": "string",
+                        "const": "kept"
+                      },
+                      "secrets": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "ref": {
+                              "type": "string",
+                              "minLength": 1
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "place": {
+                              "type": "string"
+                            },
+                            "version": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "ref",
+                            "name",
+                            "place",
+                            "version"
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "ask",
+                      "state",
+                      "secrets"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "ask": {
+                        "type": "string"
+                      },
+                      "state": {
+                        "type": "string",
+                        "const": "unavailable"
+                      },
+                      "help": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "ask",
+                      "state",
+                      "help"
+                    ]
+                  }
+                ]
+              }
+            },
+            "required": [
+              "ask"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "withdrawn": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "withdrawn"
+            ]
+          }
+        ]
+      }
+    },
     "inf:work:picture": {
       "effect": "change",
       "reach": "work",
@@ -84057,6 +84261,9 @@
                       "type": "boolean"
                     },
                     "secretUses": {
+                      "type": "boolean"
+                    },
+                    "secretAsks": {
                       "type": "boolean"
                     }
                   },

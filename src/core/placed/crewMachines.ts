@@ -179,6 +179,11 @@ export type CrewMachines = {
    */
   takesSecretUses?(machine: string): boolean;
   /**
+   * Whether the computer's Secrets command asks the home to keep a secret,
+   * raised on the home's own card (docs/secrets.md, "Asking to keep a secret").
+   */
+  takesSecretAsks?(machine: string): boolean;
+  /**
    * Whether the computer gives its crewmates `infinitary-files-axi`, each
    * list and copy asked of the home (docs/files.md); false while the home
    * cannot tell.

@@ -330,6 +330,12 @@ export async function world(
      */
     taskChannel?: string;
     /**
+     * The computer's own folder for a Secrets use's private copies, as
+     * `startConversations` gives it, so its Secrets command takes uses and
+     * asks the home lets it take; otherwise it lists the catalog alone.
+     */
+    secretRuns?: boolean;
+    /**
      * The computer gives its crewmates the stops command over that task
      * channel and runs a closed task's stops and keeps at its close order,
      * as the work mode does (docs/leftover-programs.md, "On a computer that
@@ -469,6 +475,7 @@ export async function world(
           copies,
           ask,
           ...(homeChanges ? { homeChanges } : {}),
+          ...(options.secretRuns ? { secretRunsDir: join(dir, "secret-runs") } : {}),
           // Work compatibility reads the real welcome, as startConversations does;
           // omitting it incorrectly refuses supported artifact and branch operations.
           ...(homeVersion ? { homeVersion } : {}),

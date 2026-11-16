@@ -2,10 +2,13 @@ import { randomUUID } from "node:crypto";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import type {
+  PlacedSecretAskAnswer,
+  PlacedSecretAskInput,
   PlacedSecretTakeAnswer,
   PlacedSecretUseAnswer,
   PlacedSecretUseInput,
 } from "@shared/workSecrets";
+import { type SecretAskAnswer, type SecretAskInput, validSecretAsk } from "../secrets/asks";
 import { type LaunchResult, type PreparedRecipient, prepareRecipient } from "../secrets/recipient";
 import {
   type Injection,
@@ -24,6 +27,9 @@ export type SecretUsesHome = {
   use(input: PlacedSecretUseInput): Promise<PlacedSecretUseAnswer>;
   take(request: string): Promise<PlacedSecretTakeAnswer>;
 };
+
+/** How this computer asks the home to keep a secret for one task: the work request, nothing else. */
+export type SecretAsksHome = (input: PlacedSecretAskInput) => Promise<PlacedSecretAskAnswer>;
 
 export type SecretUsesThereOptions = {
   home: SecretUsesHome;
@@ -52,7 +58,37 @@ export class SecretUsesThere implements SecretsCommand {
   /** The recipient each use bound here, until the use ends. */
   private readonly running = new Map<string, PreparedRecipient>();
 
+  /**
+   * Asks the home to keep a secret for this task (docs/secrets.md, "Asking to
+   * keep a secret"), present only while the home says it takes asks from here:
+   * the home raises its own card, and whether it was kept reaches the task's
+   * inbox there once. No value crosses either way.
+   */
+  ask?: (input: SecretAskInput) => Promise<SecretAskAnswer>;
+  /** Withdraws this task's waiting ask by its id; false when none waits. */
+  cancelAsk?: (id: string) => Promise<boolean>;
+
   constructor(private readonly options: SecretUsesThereOptions) {}
+
+  /** The home takes asks from here, or no longer does (a conversation opened again without them). */
+  offerAsks(home: SecretAsksHome | undefined): void {
+    if (!home) {
+      this.ask = undefined;
+      this.cancelAsk = undefined;
+      return;
+    }
+    this.ask = async (input) => {
+      const copied: SecretAskInput = structuredClone(input);
+      if (!validSecretAsk(copied)) throw new Error("Invalid ask.");
+      const answer = await home({ op: "ask", ...copied });
+      if (!("ask" in answer)) throw new Error("The home answered an ask with something else.");
+      return answer.ask;
+    };
+    this.cancelAsk = async (id) => {
+      const answer = await home({ op: "cancel", id });
+      return "withdrawn" in answer && answer.withdrawn;
+    };
+  }
 
   list(): Promise<SecretReference[]> {
     return this.options.home.list();

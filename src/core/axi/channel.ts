@@ -950,7 +950,8 @@ export class AxiChannel {
         case "secrets.cancel": {
           const request = (message.input as { request: string }).request;
           // An ask this task is waiting on is withdrawn by the same id it asked with.
-          if (secrets.cancelAsk?.(request)) return { ask: { ask: request, state: "withdrawn" } };
+          if (await secrets.cancelAsk?.(request))
+            return { ask: { ask: request, state: "withdrawn" } };
           const receipt = await secrets.cancel(request);
           return receipt ? { receipt } : { unavailable: true };
         }

@@ -615,7 +615,7 @@ export type SecretsCommand = Pick<
    */
   ask?: (input: SecretAskInput) => Promise<SecretAskAnswer>;
   /** Withdraws this task's waiting ask by its id; false when none waits. */
-  cancelAsk?: (id: string) => boolean;
+  cancelAsk?: (id: string) => boolean | Promise<boolean>;
 };
 /**
  * Discovery alone, for a task on another computer (docs/secrets.md, "Current

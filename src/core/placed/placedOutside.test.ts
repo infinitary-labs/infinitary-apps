@@ -12,10 +12,12 @@ import {
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { dirname, join, relative } from "node:path";
+import type { Card } from "@shared/cards";
 import { FILES_COMMAND } from "@shared/files";
 import { GOOGLE_DATA_KEPT, NOTICE_ACCEPTED } from "@shared/integrations";
 import { PROTOCOL_VERSION } from "@shared/ipc";
 import { outsideDataDeletedNote } from "@shared/savedOutsideData";
+import { secretKeepFields } from "@shared/secrets";
 import Database from "better-sqlite3";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { StubRequest } from "../../../tests/helpers/anthropicDialect";
@@ -34,6 +36,7 @@ import {
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { renderIntegrationReply } from "../axi/integrationCommands";
 import type { IntegrationReply } from "../axi/protocol";
+import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { CardFileReads } from "../files/cardFileReads";
 import { saveIntoDownloads } from "../files/downloadsSave";
 import * as hostEnvironment from "../hostEnv";
@@ -42,7 +45,13 @@ import { READ_HOUR_MS } from "../integrations/outsideReads";
 import { crewmatePlacedDir, crewmateSessionsDir, crewmateTempDir } from "../paths";
 import { backgroundJobReceipt } from "../pi/bashWords";
 import { CREWMATE_STOPS_LINE } from "../pi/piResources";
-import { CREWMATE_SECRETS_CATALOG_LINE, CREWMATE_SECRETS_LINE } from "../secrets/commandWords";
+import type { SecretAskEnded } from "../secrets/asks";
+import {
+  CREWMATE_SECRETS_CATALOG_LINE,
+  CREWMATE_SECRETS_LINE,
+  CREWMATE_SECRETS_THERE_LINE,
+  SECRET_ASK_WORDS,
+} from "../secrets/commandWords";
 import { ProtectedSecrets } from "../secrets/protected";
 import { SecretsSettings } from "../secrets/settings";
 import { seedTask } from "../tasks/seedTask";
@@ -703,6 +712,125 @@ describe("the Secrets command on a computer that runs work", () => {
     expect(filesHolding(at.dataDir, value)).toEqual([]);
     expect(custody.slots.size).toBeGreaterThan(0);
     for (const bytes of custody.slots.values()) expect(filesHolding(at.dataDir, bytes)).toEqual([]);
+  });
+});
+
+// INF-4239's piece 2: "a crewmate on a computer that runs work can ask for a
+// secret, carried by one metadata-only work request to the home's ask." The
+// ask runs in the crewmate's shell there through the real launcher, command
+// process and task channel, and crosses the real connection to this Mac's
+// Secrets, whose custody is a disposable stand-in. The plan: "A work computer
+// without the change keeps today's line saying it cannot ask."
+describe("asking to keep a secret from a computer that runs work", () => {
+  let entry: string;
+  beforeAll(async () => {
+    entry = await bundleAxiProcess();
+  }, 60_000);
+
+  beforeEach(onlyFixtureTools);
+
+  const ASK = `infinitary-secrets-axi ask --name 'Stripe test key' --place 'Test' --reason 'Charge the test card in the checkout tests' --id checkout`;
+
+  /** This Mac's Secrets, a computer joined to it that lists `changes`, and a crewmate there that asks once. */
+  async function askThere(changes?: readonly string[]) {
+    const raised: Omit<Card, "author" | "priority" | "status" | "createdAt">[] = [];
+    const heard: { task: string | null; ended: SecretAskEnded }[] = [];
+    const settings = new SecretsSettings({
+      open: (initialize) =>
+        ProtectedSecrets.open({
+          dir: scratchDir("infinitary-placed-secret-asks-"),
+          custody: disposableCustody(),
+          initialize,
+          environment: () => ({}),
+          now,
+          authentication: { available: async () => true, confirm: async () => true },
+        }),
+      raise: (card) => {
+        raised.push(card);
+      },
+      withdraw: () => {},
+      settled: () => {},
+      changed: () => {},
+      asked: (task, ended) => {
+        heard.push({ task, ended });
+      },
+      now,
+    });
+    const at = await world(undefined, {
+      jobs: true,
+      taskChannel: entry,
+      secretRuns: true,
+      ...(changes ? { changes } : {}),
+      secrets: {
+        forTask: (task) => settings.commandFor({ task }),
+        elsewhere: (task) => ({
+          use: (computer, input) => settings.elsewhere({ task, computer }, input),
+          take: (computer, request, call) => settings.take({ task, computer }, request, call),
+          gone: (computer) => settings.elsewhereGone({ task, computer: computer.id }),
+          ask: (_computer, input) => settings.askElsewhere(task, input),
+        }),
+      },
+    });
+    model([{ tools: [shellCommand(ASK)] }, { text: "Asked for the Stripe test key." }]);
+    const requests = api.requests.length;
+    await at.start("t-ask");
+    const home = at.home();
+    await expect
+      .poll(() => home.tasks.get("t-ask")?.outcome)
+      .toBe("Asked for the Stripe test key.");
+    return {
+      at,
+      settings,
+      raised,
+      heard,
+      system: systemOf(api.requests[requests]),
+      asked: shellAnswer(api.requests[requests + 1]),
+    };
+  }
+
+  it("raises this Mac's own card for the task there, and the task hears the kept reference once, never the value", async () => {
+    const value = "sk_test_invented_placed_ask_value";
+    const { at, settings, raised, heard, system, asked } = await askThere();
+    // Its instructions there say to ask, as a crewmate's here do.
+    expect(system).toContain(CREWMATE_SECRETS_LINE);
+    expect(system).not.toContain(CREWMATE_SECRETS_THERE_LINE);
+    expect(asked.exit).toBe(0);
+    expect(asked.output).toContain("waiting");
+    expect(asked.output).toContain(SECRET_ASK_WORDS.waiting);
+    // The card is this Mac's, for the task there, with one masked field.
+    expect(raised.at(-1)?.taskId).toBe("t-ask");
+    const card = raised.at(-1);
+    const keep = card && secretKeepFields({ ...card, author: "host" });
+    expect(keep?.fields.map((field) => [field.name, field.place])).toEqual([
+      ["Stripe test key", "Test"],
+    ]);
+    expect(
+      await settings.keep({ pass: keep?.pass ?? "", values: [{ field: "s1", value }] }),
+    ).toEqual({ kept: true });
+    expect(heard).toEqual([
+      {
+        task: "t-ask",
+        ended: {
+          ask: "checkout",
+          state: "kept",
+          secrets: [
+            expect.objectContaining({ name: "Stripe test key", place: "Test", version: 1 }),
+          ],
+        },
+      },
+    ]);
+    // Nothing on that computer holds the value.
+    expect(filesHolding(at.dataDir, value)).toEqual([]);
+  });
+
+  it("a computer without the change keeps its line saying it cannot ask, and nothing is asked here", async () => {
+    const older = CONTRACT_CHANGES.names.filter((name) => name !== "secret-asks-elsewhere");
+    const { raised, heard, system, asked } = await askThere(older);
+    expect(system).toContain(CREWMATE_SECRETS_THERE_LINE);
+    expect(system).not.toContain(CREWMATE_SECRETS_LINE);
+    expect(asked.output).toContain(SECRET_ASK_WORDS.notHere);
+    expect(raised).toEqual([]);
+    expect(heard).toEqual([]);
   });
 });
 

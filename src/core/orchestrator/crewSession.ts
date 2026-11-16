@@ -258,7 +258,9 @@ export function crewmateSessionSpec(
       // Secrets uses run here, or there when the home decides them for that
       // computer (docs/secrets.md, "On a computer that runs work"); a computer
       // without them lists the catalog alone.
-      spec.secrets === true && spec.shell !== undefined && spec.machineId === LOCAL_MACHINE_ID
+      // A computer whose command asks the home to keep a secret reads the same line as here.
+      (spec.secrets === true && spec.shell !== undefined && spec.machineId === LOCAL_MACHINE_ID) ||
+        (spec.secretUses?.ask !== undefined && spec.machineId !== LOCAL_MACHINE_ID)
         ? "use"
         : spec.secretUses !== undefined && spec.machineId !== LOCAL_MACHINE_ID
           ? "use-there"

@@ -1210,6 +1210,8 @@ export async function createServices(
               take: (computer, request, call) =>
                 secrets.take({ task: taskId, computer }, request, call),
               gone: (computer) => secrets.elsewhereGone({ task: taskId, computer: computer.id }),
+              // An ask there is the same ask as one here: the task's own, raised on this Mac's card.
+              ask: (_computer, input) => secrets.askElsewhere(taskId, input),
             }),
           },
         }

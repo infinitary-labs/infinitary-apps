@@ -100,6 +100,8 @@ import type { WorkDevices } from "./workDevices";
 
 /** Uses of this Mac's Secrets whose programs run on that computer (`secret-uses-elsewhere.md`). */
 const SECRET_USES_ELSEWHERE = contractChange("secret-uses-elsewhere");
+/** Asks to keep a secret raised on this Mac for a task there (`secret-asks-elsewhere.md`). */
+const SECRET_ASKS_ELSEWHERE = contractChange("secret-asks-elsewhere");
 
 /** Jobs the captain asked to keep running past a close (`kept-jobs.md`). */
 const KEPT_JOBS = contractChange("kept-jobs");
@@ -471,6 +473,19 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     );
   }
 
+  /**
+   * Whether the computer's Secrets command asks this Mac to keep a secret,
+   * raised on this Mac's own card (`secret-asks-elsewhere.md`, docs/secrets.md
+   * "Asking to keep a secret"); one without the change says an ask is not
+   * offered there.
+   */
+  takesSecretAsks(machine: string): boolean {
+    return (
+      this.takesSecretUses(machine) &&
+      listsChange(this.options.devices.version(machine)?.changes, SECRET_ASKS_ELSEWHERE)
+    );
+  }
+
   prepare(
     machine: string,
     taskId: string,
@@ -685,6 +700,16 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       const { input } = request as InvokeRequest<"inf:work:secret-use">[0];
       return (await uses.use(computer, input)) as InvokeResponse<C>;
     }
+    // An ask to keep a secret there is raised on this Mac's own card; it carries no value.
+    if (channel === "inf:work:secret-ask") {
+      const uses = (await this.live(this.load(asked.task, deviceId))).callbacks?.secretUses;
+      if (!uses?.ask) throw new Error("That tool is not this task's.");
+      const { input } = request as InvokeRequest<"inf:work:secret-ask">[0];
+      return (await uses.ask(
+        { id: deviceId, label: this.nameOf(deviceId) },
+        input,
+      )) as InvokeResponse<C>;
+    }
     if (channel === "inf:work:private-sites") {
       return {
         sites: this.options.browsers?.()?.privateSiteList?.() ?? [],
@@ -867,6 +892,10 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       ...(spec.callbacks?.secretsCatalog && this.takesSecrets(deviceId) ? { secrets: true } : {}),
       // Its uses, decided here and run there (docs/secrets.md, "On a computer that runs work").
       ...(spec.callbacks?.secretUses && this.takesSecretUses(deviceId) ? { secretUses: true } : {}),
+      // Its asks to keep a secret, raised on this Mac's own card (docs/secrets.md, "Asking to keep a secret").
+      ...(spec.callbacks?.secretUses?.ask && this.takesSecretAsks(deviceId)
+        ? { secretAsks: true }
+        : {}),
       ...(resume ? { resume } : {}),
       ...(spec.bounds?.request?.retries !== undefined
         ? { retries: spec.bounds.request.retries }

@@ -173,6 +173,7 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
   "inf:work:browser-event": WORK_REQUEST,
   "inf:work:secret-use": WORK_REQUEST,
   "inf:work:secret-take": WORK_REQUEST,
+  "inf:work:secret-ask": WORK_REQUEST,
   "inf:work:sign-in": "A computer's own sign-in, told to its home; not an app setting",
   "inf:work:sign-ins": "A computer's own sign-ins, told to its home; not an app setting",
 };

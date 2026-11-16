@@ -11,8 +11,9 @@ export const CREWMATE_SECRETS_LINE = `${SECRETS_USE_START}When the work needs a 
 
 /**
  * Served instead to a task on a computer that runs work whose app takes uses
- * (docs/secrets.md, "On a computer that runs work"): the same uses, and no
- * ask to keep a secret, which that computer's command does not offer.
+ * but not asks (docs/secrets.md, "On a computer that runs work"): the same
+ * uses, and no ask to keep a secret, which that computer's command does not
+ * offer. One whose app takes asks too reads `CREWMATE_SECRETS_LINE`.
  */
 export const CREWMATE_SECRETS_THERE_LINE = `${SECRETS_USE_START}This task runs on another computer, where asking the captain to keep a new secret is not offered: when the work needs one the captain has not kept, name it and its place in your report so the first mate can ask for it. ${SECRETS_USE_END}`;
 
@@ -72,7 +73,7 @@ export const SECRET_ASK_WORDS = {
   kept: "Already kept under that name and place: use its reference. Nothing was asked.",
   notOffered:
     "Secrets is not offered on this computer, so nothing was asked. Say so in your report.",
-  /** A task on a computer that runs work, whose command takes uses but no ask. */
+  /** A task on a computer that runs work whose command takes uses but no ask (no `secret-asks-elsewhere`). */
   notHere:
     "Asking to keep a secret is not offered on this computer, so nothing was asked. Name the secret and its place in your report so the first mate can ask for it.",
   cannotRead:

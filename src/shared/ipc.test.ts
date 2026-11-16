@@ -609,6 +609,7 @@ describe("ipc contract", () => {
       "inf:work:reply",
       "inf:work:report",
       "inf:work:revise-required-action",
+      "inf:work:secret-ask",
       "inf:work:secret-take",
       "inf:work:secret-use",
       "inf:work:secrets",

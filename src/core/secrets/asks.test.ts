@@ -2,9 +2,11 @@ import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Card } from "@shared/cards";
 import { SECRET_ASK_CARD_WORDS, secretKeepFields } from "@shared/secrets";
+import { placedSecretAskAnswerSchema, placedSecretAskInputSchema } from "@shared/workSecrets";
 import { describe, expect, it } from "vitest";
 import { disposableCustody } from "../../../tests/helpers/disposableCustody";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { SecretUsesThere } from "../helper/secretUses";
 import type { SecretAskEnded } from "./asks";
 import { SECRET_ASK_WORDS } from "./commandWords";
 import { ProtectedSecrets } from "./protected";
@@ -346,5 +348,75 @@ describe("asking to keep a secret", () => {
     expect(f.withdrawn).toContain(card?.id);
     expect(f.heard).toEqual([]);
     expect(f.settings.cancelAsk(null, "a")).toBe(false);
+  });
+
+  // Intent: INF-4239's piece 2: "a crewmate on a computer that runs work can
+  // ask for a secret, carried by one metadata-only work request to the
+  // home's ask." That computer's command is the real owner, and every ask
+  // and answer crosses as the work request's published shapes would.
+  it("an ask from a computer that runs work raises the task's own card here and carries no value", async () => {
+    const f = fixture();
+    const sent: unknown[] = [];
+    const there = new SecretUsesThere({
+      home: {
+        list: async () => [],
+        use: async () => ({ receipt: null }),
+        take: async () => ({ state: "unavailable" }),
+      },
+      runsDir: scratchDir("secret-asks-there-"),
+      environment: () => ({}),
+    });
+    // Without the home's word that it takes asks, that computer's command offers none.
+    expect(there.ask).toBeUndefined();
+    there.offerAsks(async (input) => {
+      sent.push(input);
+      const request = placedSecretAskInputSchema.parse(structuredClone(input));
+      return placedSecretAskAnswerSchema.parse(await f.settings.askElsewhere("task-a", request));
+    });
+    const answer = await there.ask?.({
+      id: "checkout",
+      reason: "Charge the test card in the checkout tests",
+      secrets: [STRIPE],
+    });
+    expect(answer).toEqual({ ask: "checkout", state: "waiting" });
+    expect(sent).toEqual([
+      {
+        op: "ask",
+        id: "checkout",
+        reason: "Charge the test card in the checkout tests",
+        secrets: [STRIPE],
+      },
+    ]);
+    // The work request refuses a value, so none can ride an ask.
+    expect(
+      placedSecretAskInputSchema.safeParse({
+        op: "ask",
+        id: "checkout",
+        reason: "Tests",
+        secrets: [{ ...STRIPE, value: VALUE }],
+      }).success,
+    ).toBe(false);
+    // The card is the asking task's, and the value typed into it reaches that task as its reference.
+    expect(f.cards.at(-1)?.taskId).toBe("task-a");
+    const keep = f.keepOf();
+    expect(
+      await f.settings.keep({ pass: keep.pass, values: [{ field: "s1", value: VALUE }] }),
+    ).toEqual({ kept: true });
+    expect(f.heard).toHaveLength(1);
+    expect(f.heard[0]).toMatchObject({
+      task: "task-a",
+      ended: { ask: "checkout", state: "kept", secrets: [{ ...STRIPE, version: 1 }] },
+    });
+    expect(JSON.stringify(f.heard)).not.toContain(VALUE);
+    // Asked for again once kept, it answers kept at once; a waiting ask is withdrawn by its id.
+    expect(await there.ask?.({ id: "again", reason: "Tests", secrets: [STRIPE] })).toMatchObject({
+      state: "kept",
+    });
+    await there.ask?.({ id: "webhook", reason: "Tests", secrets: [{ name: "Webhook secret" }] });
+    const card = f.cards.at(-1);
+    expect(await there.cancelAsk?.("webhook")).toBe(true);
+    expect(f.withdrawn).toContain(card?.id);
+    expect(await there.cancelAsk?.("webhook")).toBe(false);
+    expect(JSON.stringify(sent)).not.toContain(VALUE);
   });
 });

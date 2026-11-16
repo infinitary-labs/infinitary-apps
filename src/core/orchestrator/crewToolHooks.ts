@@ -32,6 +32,7 @@ import {
   type ModelSession,
   type SessionEvent,
 } from "../session/session";
+import type { SecretUsesElsewhere } from "../session/tools";
 import {
   queryTasksAsync,
   type TaskQueryInput,
@@ -184,7 +185,7 @@ export class CrewToolHooks {
         ...(command ? { secretsCatalog: { list: () => command.list() } } : {}),
         // Its uses are decided here and run there (docs/secrets.md, "On a computer that runs work").
         ...(command && secrets?.elsewhere && machines?.takesSecretUses?.(machine)
-          ? { secretUses: secrets.elsewhere(task.id) }
+          ? { secretUses: this.secretUsesThere(secrets.elsewhere(task.id), machine) }
           : {}),
       };
     }
@@ -214,6 +215,18 @@ export class CrewToolHooks {
         ...(taskStops ? { stops: taskStops } : {}),
       }),
     };
+  }
+
+  /**
+   * A task's Secrets on a computer that runs work: its uses always, and its
+   * asks to keep a secret only where that computer's command offers them
+   * (docs/secrets.md, "Asking to keep a secret"), so its crewmate is never
+   * told to ask what its command there cannot ask.
+   */
+  private secretUsesThere(uses: SecretUsesElsewhere, machine: string): SecretUsesElsewhere {
+    if (uses.ask && this.core.options.machines?.takesSecretAsks?.(machine)) return uses;
+    const { ask: _ask, ...withoutAsk } = uses;
+    return withoutAsk;
   }
 
   /**

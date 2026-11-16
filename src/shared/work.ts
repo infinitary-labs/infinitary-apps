@@ -37,6 +37,8 @@ import { firstReleaseReportSchema } from "./taskRelease";
 import { toolObservationSchema } from "./toolCompletion";
 import { commitSchema, placedTaskIdSchema, workingCopyBaseSchema } from "./workIdentity";
 import {
+  placedSecretAskAnswerSchema,
+  placedSecretAskInputSchema,
   placedSecretTakeAnswerSchema,
   placedSecretUseAnswerSchema,
   placedSecretUseInputSchema,
@@ -263,6 +265,8 @@ export const placedSpecSchema = z.object({
   secrets: z.boolean().optional(),
   /** With `secrets`, uses decided on the home and run there (`secret-uses-elsewhere.md`). */
   secretUses: z.boolean().optional(),
+  /** With `secretUses`, asks to keep a secret raised on the home (`secret-asks-elsewhere.md`). */
+  secretAsks: z.boolean().optional(),
 });
 export type PlacedSpec = z.infer<typeof placedSpecSchema>;
 
@@ -899,6 +903,18 @@ export const workRequests = {
     repeats: "safe",
     request: asked({ request: z.string().min(1) }),
     response: placedSecretTakeAnswerSchema,
+  },
+  /**
+   * The Secrets command's ask to keep a secret there, raised on the home's
+   * own card (`secret-asks-elsewhere.md`; docs/secrets.md, "Asking to keep a
+   * secret"): names, places, a reason and the asker's id, or a withdrawal,
+   * never a value. Asked again with a waiting ask's id, it raises nothing new.
+   */
+  "inf:work:secret-ask": {
+    effect: "change",
+    repeats: "safe",
+    request: asked({ input: placedSecretAskInputSchema }),
+    response: placedSecretAskAnswerSchema,
   },
   /** One card picture's verified copy, asked before the card that names it. */
   "inf:work:picture": {

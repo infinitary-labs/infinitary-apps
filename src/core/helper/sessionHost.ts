@@ -36,7 +36,11 @@ import {
   workOrders,
   workRequests,
 } from "@shared/work";
-import { placedSecretTakeAnswerSchema, placedSecretUseAnswerSchema } from "@shared/workSecrets";
+import {
+  placedSecretAskAnswerSchema,
+  placedSecretTakeAnswerSchema,
+  placedSecretUseAnswerSchema,
+} from "@shared/workSecrets";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
 import { WorkRequestAbortedError } from "../devices/homeLink";
 import { filesAskedOfHome, type TaskFiles } from "../files/taskFiles";
@@ -937,7 +941,7 @@ export class SessionHost {
               ...(spec.secrets ? { secretsCatalog: this.secretsOf(held) } : {}),
               // Its uses, decided by the home and run here (docs/secrets.md, "On a computer that runs work").
               ...(spec.secrets && spec.secretUses && this.options.secretRunsDir
-                ? { secrets: this.secretUsesOf(held, this.options.secretRunsDir) }
+                ? { secrets: this.secretUsesOf(held, this.options.secretRunsDir, spec) }
                 : {}),
             })
           : undefined;
@@ -1679,26 +1683,35 @@ export class SessionHost {
    * The task's Secrets uses here: each asked of the home, which decides it and
    * hands an approved use's values once; never kept in a call's record.
    */
-  private secretUsesOf(held: Held, runsDir: string): SecretUsesThere {
-    const kept = this.secretUses.get(held.task);
-    if (kept) return kept;
+  private secretUsesOf(held: Held, runsDir: string, spec: PlacedSpec): SecretUsesThere {
     const catalog = this.secretsOf(held);
-    const uses = new SecretUsesThere({
-      runsDir,
-      environment: () => hostEnv(),
-      home: {
-        list: () => catalog.list(),
-        use: async (input) =>
-          placedSecretUseAnswerSchema.parse(
-            await this.call(held, "inf:work:secret-use", { callId: randomUUID(), input }),
-          ),
-        take: async (request) =>
-          placedSecretTakeAnswerSchema.parse(
-            await this.call(held, "inf:work:secret-take", { callId: randomUUID(), request }),
-          ),
-      },
-    });
+    const uses =
+      this.secretUses.get(held.task) ??
+      new SecretUsesThere({
+        runsDir,
+        environment: () => hostEnv(),
+        home: {
+          list: () => catalog.list(),
+          use: async (input) =>
+            placedSecretUseAnswerSchema.parse(
+              await this.call(held, "inf:work:secret-use", { callId: randomUUID(), input }),
+            ),
+          take: async (request) =>
+            placedSecretTakeAnswerSchema.parse(
+              await this.call(held, "inf:work:secret-take", { callId: randomUUID(), request }),
+            ),
+        },
+      });
     this.secretUses.set(held.task, uses);
+    // Its asks to keep a secret, raised on the home's own card, while the home takes them.
+    uses.offerAsks(
+      spec.secretAsks
+        ? async (input) =>
+            placedSecretAskAnswerSchema.parse(
+              await this.call(held, "inf:work:secret-ask", { callId: randomUUID(), input }),
+            )
+        : undefined,
+    );
     return uses;
   }
 

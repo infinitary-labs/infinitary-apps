@@ -26,6 +26,8 @@ import {
   secretsNamed,
 } from "@shared/secrets";
 import type {
+  PlacedSecretAskAnswer,
+  PlacedSecretAskInput,
   PlacedSecretTakeAnswer,
   PlacedSecretUseAnswer,
   PlacedSecretUseInput,
@@ -1408,6 +1410,19 @@ export class SecretsSettings {
     this.raiseAsk(ask);
     this.options.changed();
     return { ask: copied.id, state: "waiting" };
+  }
+
+  /**
+   * A task's ask to keep a secret from a computer that runs work, or its
+   * withdrawal (docs/secrets.md, "Asking to keep a secret"): the same ask as
+   * one from here, keyed by the task, raised on this computer's own card. The
+   * task is the work route's own, never the request's words, and whether the
+   * captain kept it reaches that task's inbox once.
+   */
+  async askElsewhere(task: string, input: PlacedSecretAskInput): Promise<PlacedSecretAskAnswer> {
+    if (input.op === "cancel") return { withdrawn: this.cancelAsk(task, input.id) };
+    const { op: _op, ...ask } = input;
+    return { ask: await this.askToKeep(task, ask) };
   }
 
   /** The first mate's own asks, which no task owns. */

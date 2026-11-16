@@ -32,7 +32,7 @@ The channel organizes replies, not security principals.
 ## Operations and lifecycle
 
 Discovery is global: it returns the metadata of every secret the captain added and made visible, never a value, and listing grants no use; system credentials are not general-purpose agent secrets.
-A task on another computer discovers the same catalog through the home's metadata-only work request and has no use there.
+A task on another computer discovers the same catalog through the home's metadata-only work request; where that computer's app takes them, its command also asks the home for uses and asks it to keep a secret, both decided and raised on the home, and an ask never carries a value ([`../docs/secrets.md`](../docs/secrets.md), "On a computer that runs work" and "Asking to keep a secret").
 An injection request contains references, recipient variable names, a reason, an intent ID and an explicit argument vector, never secret values.
 The backend must resolve and snapshot the exact code, interpreter, dependencies, configuration and inputs before evaluating policy.
 Its operation digest includes those facts, exact sealed-record revisions, policy revision, destination, delivery and permitted result.

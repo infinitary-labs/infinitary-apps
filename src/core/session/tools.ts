@@ -10,6 +10,8 @@ import type { RequiredAction, RequiredActionRevisionInput } from "@shared/requir
 import type { Rigor } from "@shared/rigor";
 import type { RiskAssessment, RiskDeclaration } from "@shared/risk";
 import type {
+  PlacedSecretAskAnswer,
+  PlacedSecretAskInput,
   PlacedSecretTakeAnswer,
   PlacedSecretUseAnswer,
   PlacedSecretUseInput,
@@ -546,6 +548,12 @@ export type SecretUsesElsewhere = {
   take(computer: UseComputer, request: string, call: string): Promise<PlacedSecretTakeAnswer>;
   /** Its conversation there closed for good or restarted: programs it started tell nothing more. */
   gone(computer: UseComputer): void;
+  /**
+   * An ask to keep a secret, or its withdrawal, raised on the home's own
+   * card (docs/secrets.md, "Asking to keep a secret"); absent where that
+   * computer's command offers no ask.
+   */
+  ask?(computer: UseComputer, input: PlacedSecretAskInput): Promise<PlacedSecretAskAnswer>;
 };
 
 /** A tool's answer, whichever runtime carries it: the text, then any pictures. */

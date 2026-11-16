@@ -284,8 +284,9 @@ export function buildCrewmateSystemPrompt(
   load?: boolean,
   runbookText?: string,
   /**
-   * The Secrets command it was granted: requests and asks here, requests
-   * decided by the home on a computer that runs work, or the catalog alone.
+   * The Secrets command it was granted: requests and asks, here or on a
+   * computer whose command asks the home; requests decided by the home on a
+   * computer that runs work and offers no ask; or the catalog alone.
    */
   secrets?: "use" | "use-there" | "list",
   /** Its shell has `infinitary-stops-axi` (docs/leftover-programs.md). */

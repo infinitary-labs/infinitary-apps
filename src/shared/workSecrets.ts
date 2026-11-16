@@ -90,3 +90,59 @@ export const placedSecretTakeAnswerSchema = z.union([
   z.strictObject({ state: z.union([secretStateSchema, z.literal("taken")]) }),
 ]);
 export type PlacedSecretTakeAnswer = z.infer<typeof placedSecretTakeAnswerSchema>;
+
+/** A kept secret as an ask's asker hears it: its reference, name, place and version, never a value. */
+const placedKeptSecretSchema = z.strictObject({
+  ref: z.string().min(1),
+  name: z.string(),
+  place: z.string(),
+  version: z.number().int(),
+});
+
+/**
+ * What a computer that runs work asks of the home's Secrets to keep a secret
+ * for its task (docs/secrets.md, "Asking to keep a secret"): an ask by its
+ * names, places, the references it replaces, a reason and the asker's own id,
+ * or the withdrawal of a waiting ask by that id. It never carries a value:
+ * the captain types it into the home's own card. Each repeats safely: asking
+ * again with a waiting ask's id raises nothing new.
+ */
+export const placedSecretAskInputSchema = z.discriminatedUnion("op", [
+  z.strictObject({
+    op: z.literal("ask"),
+    id: z.string().min(1),
+    reason: z.string().min(1),
+    secrets: z
+      .array(
+        z.strictObject({
+          name: z.string().optional(),
+          place: z.string().optional(),
+          replace: z.string().optional(),
+        }),
+      )
+      .min(1),
+  }),
+  z.strictObject({ op: z.literal("cancel"), id: z.string().min(1) }),
+]);
+export type PlacedSecretAskInput = z.infer<typeof placedSecretAskInputSchema>;
+/**
+ * What the home answers at once: the ask waiting for the captain, already
+ * kept with its references, or unavailable with the home's words; or whether
+ * a withdrawal found a waiting ask. Whether the captain kept it reaches the
+ * task once, through its inbox.
+ */
+export const placedSecretAskAnswerSchema = z.union([
+  z.strictObject({
+    ask: z.union([
+      z.strictObject({ ask: z.string(), state: z.literal("waiting") }),
+      z.strictObject({
+        ask: z.string(),
+        state: z.literal("kept"),
+        secrets: z.array(placedKeptSecretSchema),
+      }),
+      z.strictObject({ ask: z.string(), state: z.literal("unavailable"), help: z.string() }),
+    ]),
+  }),
+  z.strictObject({ withdrawn: z.boolean() }),
+]);
+export type PlacedSecretAskAnswer = z.infer<typeof placedSecretAskAnswerSchema>;

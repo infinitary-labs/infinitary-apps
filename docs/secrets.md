@@ -34,7 +34,8 @@ Bare invocation and `list` return that metadata and current receipts; `show <ref
 A listed secret carries its environment label when it has one, as context beside its name, never as a filter.
 Listing or naming a reference grants no access: each use still needs that entry to be agent-visible and an exact approval or Allow rule.
 A task on another computer lists and shows the same catalog: its command there asks the home over the authenticated work route (`inf:work:secrets`), whose answer holds each secret's reference, name, version and environment label and nothing else.
-On a computer whose app lists the contract change `secret-uses-elsewhere`, the same command also checks and asks for uses ("On a computer that runs work"), and its crewmate reads `CREWMATE_SECRETS_THERE_LINE`: the same words without the ask to keep a secret, which that command does not offer.
+On a computer whose app lists the contract change `secret-uses-elsewhere`, the same command also checks and asks for uses ("On a computer that runs work").
+One that also lists `secret-asks-elsewhere` asks the home to keep a secret too, and its crewmate reads the same line as one here; one without it reads `CREWMATE_SECRETS_THERE_LINE`: the same words without the ask to keep a secret, which that command does not offer.
 On an older one, `inject`, `status` and `cancel` answer `unavailable` with a fixed explanation, no value, receipt, approval or custody reaches it, and its crewmate reads `CREWMATE_SECRETS_CATALOG_LINE`.
 `inject --env '{"SERVICE_TOKEN":"s1"}' --reason 'Check staging' --id staging-check -- /bin/sh ./scripts/check-staging.sh` submits references and an explicit argument vector.
 The example neither approves that script nor reads a secret.
@@ -211,7 +212,9 @@ A paired phone never sees these questions: only this computer's window reads the
 
 An agent that needs a secret the captain has not kept asks for it by name, place and reason, never a value, and Infinitary draws its own masked field for the captain to type it (INF-4239, the captain's direction A).
 A crewmate runs `infinitary-secrets-axi ask --name '<name>' [--place '<place>'] --reason '<why>' --id <ask>`; `--replace <reference>` names a kept secret that stopped working, and `--secrets '<JSON list>'` asks for several on one card.
-A crewmate on a computer that runs work cannot ask yet: its `ask` answers `unavailable` with words telling it to name the secret and its place in its report, so the first mate can ask with `ask_secret`.
+A crewmate on a computer that runs work asks the same way (INF-4239's piece 2): its command sends the ask, or the withdrawal of a waiting one, to the home with one work request, `inf:work:secret-ask`, which carries names, places, references, a reason and the ask's id, and never a value (`placedSecretAskInputSchema`, `workSecrets.ts`).
+The home must take such asks (`takesSecretAsks`: the computer takes uses and lists `secret-asks-elsewhere`), and the task's spec then carries `secretAsks`; `SecretsSettings.askElsewhere` answers it as the same ask as one here, for the task the work route names, never the request's words, so the card goes up on the home, the captain types the value there or wherever the card is answered, and the task hears the outcome once through its inbox.
+A computer without the change keeps its `ask` answering `unavailable` with words telling it to name the secret and its place in its report, so the first mate can ask with `ask_secret`.
 The first mate asks the same way with its `ask_secret` tool.
 `SecretsSettings.askToKeep` answers at once: `waiting` while the card asks, `kept` with each reference when every secret it names is already kept under that name and place, so no card goes up, or `unavailable` with words where Secrets is not offered or the secret it replaces cannot be read.
 Asking again with a waiting ask's id raises nothing new, and `cancel <ask>` (or `ask_secret` with `cancel`) withdraws it.

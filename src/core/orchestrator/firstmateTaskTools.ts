@@ -136,12 +136,18 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
             input.startPolicy === "on-request";
           // A typed hand-off is checked as a new task's is (INF-799); empty clears it.
           const handOff = (() => {
-            if (input.resultSchema === undefined && input.branchFrom === undefined) return {};
+            if (
+              input.resultSchema === undefined &&
+              input.branchFrom === undefined &&
+              input.branch === undefined
+            )
+              return {};
             const checked = handOffShape(
               tasks,
               {
                 ...(input.resultSchema ? { result_schema: input.resultSchema } : {}),
                 ...(input.branchFrom?.trim() ? { branch_from: input.branchFrom } : {}),
+                ...(input.branch?.trim() ? { branch: input.branch } : {}),
               },
               record.repoId,
               record.id,
@@ -152,6 +158,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
                 ? { resultSchema: checked.result_schema ?? null }
                 : {}),
               ...(input.branchFrom !== undefined ? { branchFrom: checked.branch_from ?? "" } : {}),
+              ...(input.branch !== undefined ? { branch: checked.branch ?? "" } : {}),
             };
           })();
           // What updateFields applies first - a reopening, a move to another

@@ -1,7 +1,7 @@
 {
   "id": "naming",
   "name": "Commit and PR naming",
-  "description": "Conventional names for commits and pull requests.",
+  "description": "Conventional names for commits, pull requests and work branches.",
   "firstmate": "guide.md",
   "crew": {
     "file": "guide.md"

@@ -162,7 +162,9 @@ test("a project on a plain Git host: the work is sent up, the card names it ther
   const board = await page.evaluate(() => window.infinitary.tasks.board());
   const task = board.tasks.find((row) => row.title === title);
   expect(task).toBeDefined();
-  const branch = `fm/task-${task?.id}`;
+  // The change goes by the branch the app named, which the task's record keeps.
+  const branch = task?.repo?.branch ?? "";
+  expect(branch).not.toBe("");
   const sentUp = git("-C", bare, "rev-parse", `refs/heads/${branch}`);
 
   // The host's facts: the task's effective care (the mock asks for Quick),

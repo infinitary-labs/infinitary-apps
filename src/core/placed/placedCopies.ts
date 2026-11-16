@@ -117,6 +117,7 @@ export class PlacedCopies {
     taskId: string,
     repoId: string | null,
     base?: WorkingCopyBase,
+    named?: string,
   ): Promise<PlacedCopy> {
     const name = this.options.deviceName(deviceId);
     const committed = this.options.tasks.get(taskId)?.placement?.snapshot;
@@ -144,9 +145,10 @@ export class PlacedCopies {
     // A projectless builder starts from the home's workspace. Its reviewer
     // already has the builder's repository there, so sends no seed.
     const seed = repoId || base ? undefined : await this.seed(deviceId, taskId);
-    // The name the task's record holds; a computer without the change makes
-    // `fm/task-<id>` and the answer's branch is saved (`task-branch-names.md`).
-    const branch = this.options.tasks.get(taskId)?.branch || undefined;
+    // The name the task's record holds, else the one this start chose; a
+    // computer from before names were sent makes `fm/task-<id>`, and the
+    // answer's branch is saved (docs/architecture.md, "A task's branch").
+    const branch = this.options.tasks.get(taskId)?.branch || named || undefined;
     let answer: WorkOrderResponse<"inf:working-copy:prepare">;
     try {
       answer = await this.ask(deviceId, "inf:working-copy:prepare", [
@@ -500,7 +502,15 @@ export class PlacedCopies {
       try {
         await this.options.closeThere(deviceId, taskId);
         const status = await this.ask(deviceId, "inf:working-copy:status", [{ task: taskId }]);
-        if (status.present && !(await this.retireLeftoverCopy(deviceId, taskId, status.origin)))
+        if (
+          status.present &&
+          !(await this.retireLeftoverCopy(
+            deviceId,
+            taskId,
+            status.origin,
+            status.checkedOut?.branch,
+          ))
+        )
           return;
         await this.ask(deviceId, "inf:session:remove", [
           { orderId: `remove:${taskId}`, task: taskId },
@@ -881,6 +891,7 @@ export class PlacedCopies {
     deviceId: string,
     taskId: string,
     origin: string | null | undefined,
+    branch: string | null | undefined,
   ): Promise<boolean> {
     const { kept } = await this.ask(deviceId, "inf:working-copy:keep", [
       { orderId: `keep:${taskId}`, task: taskId },
@@ -891,7 +902,7 @@ export class PlacedCopies {
       const here = repoDir ? await commitOf(repoDir, ref) : null;
       // A kept ref here that holds other work is never written over.
       if (!repoDir || (here !== null && here !== kept.sha)) {
-        this.sayLeftover(deviceId, taskId);
+        this.sayLeftover(deviceId, taskId, branch);
         return false;
       }
       const sha = await this.take(deviceId, taskId, repoDir, "kept", ref);
@@ -928,13 +939,17 @@ export class PlacedCopies {
     return undefined;
   }
 
-  private sayLeftover(deviceId: string, taskId: string): void {
+  /**
+   * Names the copy by its task's saved branch, else the branch it has
+   * checked out there, as one with no record here has (`branch`).
+   */
+  private sayLeftover(deviceId: string, taskId: string, branch: string | null | undefined): void {
     const key = `${deviceId}:${taskId}`;
     if (this.saidLeftover.has(key)) return;
     this.saidLeftover.add(key);
     this.options.broadcastEvent({
       type: "firstmate_note",
-      text: `${this.options.deviceName(deviceId)} keeps a leftover working copy, because its work could not be saved on ${HERE.this} first: ${this.options.tasks.get(taskId)?.branch || defaultTaskBranch(taskId)}.`,
+      text: `${this.options.deviceName(deviceId)} keeps a leftover working copy, because its work could not be saved on ${HERE.this} first: ${this.options.tasks.get(taskId)?.branch || branch || defaultTaskBranch(taskId)}.`,
       taskId,
     });
   }

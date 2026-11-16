@@ -14,8 +14,9 @@ name: ci
 # a changed file. Full unit, integration and probe sweeps run here only on
 # request, never on PRs.
 # A change here is a pushed task branch with no pull request of its own
-# (docs/forge.md, "Batches of your own"), so each push of a branch named
-# fm/task-* starts this job, measured from the commit the branch left main at
+# (docs/forge.md, "Batches of your own"), so each push of a task's branch,
+# named inf/* by the naming runbook's words or fm/task-* from before, starts
+# this job, measured from the commit the branch left main at
 # (docs/testing.md, "A pushed branch"). A pull request runs the same job on
 # its merge commit: another person's, or a task's own from before it. A batch
 # pull request skips it, since batch-pull-request.yml runs the swept batch on
@@ -47,6 +48,7 @@ on:
   # (infinitary-batch/*) and main start nothing here.
   push:
     branches:
+      - "inf/**"
       - "fm/task-*"
   pull_request:
 

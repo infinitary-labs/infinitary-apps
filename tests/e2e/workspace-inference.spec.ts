@@ -15,7 +15,14 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import { type LaunchedApp, launchApp } from "./launch";
 import { LAND_PROMPT_MARKER, MOCK_FM_CHAT_TEXT, SPAWN_PROMPT_MARKER } from "./mockProvider";
-import { addedProjects, addFromSetupCard, projectRow, projectRowWords } from "./projects";
+import {
+  addedProjects,
+  addFromSetupCard,
+  projectRow,
+  projectRowWords,
+  taskBranch,
+  taskWorktrees,
+} from "./projects";
 import { promptInput } from "./prompt";
 import { latestContext, servedContext } from "./providerRequest";
 import { putInLine, reportLine, startedLine, taskKey } from "./rails";
@@ -145,6 +152,8 @@ test("a request naming repo B lands in repo B with no picker anywhere, and landi
   const { page } = launched;
   const alphaName = repoAlpha.split("/").at(-1) as string;
   const betaName = repoBeta.split("/").at(-1) as string;
+  /** The branch the started task's working copy is on, which the land removes. */
+  let betaBranch = "";
   await test.step("a request naming repo B lands in repo B with no picker anywhere", async () => {
     await expectNoProjectPicker(page, [alphaName, betaName]);
 
@@ -161,11 +170,14 @@ test("a request naming repo B lands in repo B with no picker anywhere, and landi
     // project as a choice, the way the which-project card above does.
     await expectNoProjectPicker(page, [alphaName, betaName]);
 
-    // The worktree landed on repo B; repo A stayed untouched.
-    const betaTrees = execFileSync("git", ["-C", repoBeta, "worktree", "list"]).toString();
-    expect(betaTrees.split("\n").filter((line) => line.includes("fm/task-"))).toHaveLength(1);
-    const alphaTrees = execFileSync("git", ["-C", repoAlpha, "worktree", "list"]).toString();
-    expect(alphaTrees.split("\n").filter((line) => line.includes("fm/task-"))).toHaveLength(0);
+    // The worktree landed on repo B, on the task's branch; repo A stayed untouched.
+    const board = await page.evaluate(() => window.infinitary.tasks.board());
+    betaBranch = await taskBranch(page, board.tasks.find((row) => row.key === key)?.id ?? "");
+    expect(betaBranch).not.toBe("");
+    const betaTrees = taskWorktrees(repoBeta);
+    expect(betaTrees).toHaveLength(1);
+    expect(betaTrees[0]).toContain(`[${betaBranch}]`);
+    expect(taskWorktrees(repoAlpha)).toHaveLength(0);
   });
 
   await test.step("landing a finished task merges locally and cleans everything up (Q5)", async () => {
@@ -192,17 +204,12 @@ test("a request naming repo B lands in repo B with no picker anywhere, and landi
     // Worktree removal is the first half of deleteTask; the branch goes
     // immediately after. Poll both so we do not read the branch list in the
     // gap (and so we are not looking for a Land/Done card that no longer exists).
+    await expect.poll(() => taskWorktrees(repoBeta)).toHaveLength(0);
     await expect
       .poll(() =>
-        execFileSync("git", ["-C", repoBeta, "worktree", "list"])
-          .toString()
-          .split("\n")
-          .filter((line) => line.includes("fm/task-")),
+        execFileSync("git", ["-C", repoBeta, "branch", "--list", betaBranch]).toString().trim(),
       )
-      .toHaveLength(0);
-    await expect
-      .poll(() => execFileSync("git", ["-C", repoBeta, "branch", "--list"]).toString())
-      .not.toContain("fm/task-");
+      .toBe("");
     await setBetaAutonomy(page, false);
   });
 });

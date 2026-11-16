@@ -12,7 +12,7 @@ import { writeMockClaudeClient } from "./mockClaudeClient";
 import { mockProviderOverrideModelsJson } from "./mockModels";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { windowShot } from "./pictures";
-import { projectRow } from "./projects";
+import { projectRow, taskWorktrees } from "./projects";
 import { promptInput } from "./prompt";
 import { putInLine, startedLine, taskKey } from "./rails";
 import { MOCK_GITHUB_STORY } from "./scenarios/changeStory";
@@ -61,12 +61,6 @@ const git = (dir: string, ...args: string[]) =>
   execFileSync("git", ["-C", dir, ...args], { stdio: "pipe" })
     .toString()
     .trim();
-
-/** The task branches git lists for a project: one per crewmate working copy. */
-const taskWorktrees = (dir: string) =>
-  git(dir, "worktree", "list")
-    .split("\n")
-    .filter((line) => line.includes("fm/task-"));
 
 /** Where each section stood, kept with the run's results. */
 const picture = (name: string) => test.info().outputPath(`${name}.png`);

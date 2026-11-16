@@ -382,6 +382,8 @@ export function setup(
         branch: `fm/task-${taskId}`,
         repoDir: repoDir ?? paths.defaultWorkspaceDir,
       })),
+      // The branch a computer that runs work is sent, as the stand-in above names it.
+      taskBranchName: vi.fn(async (taskId: string) => `fm/task-${taskId}`),
       removeTaskWorktree: vi.fn(async () => {}),
       retireTaskWorktree: vi.fn(async () => ({ outcome: "removed" as const, kept: null })),
       installDependencies: vi.fn(async () => ({ outcome: "skipped" as const })),

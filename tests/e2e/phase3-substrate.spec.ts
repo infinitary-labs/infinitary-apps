@@ -8,7 +8,13 @@ import { waitForFirstmateIdle } from "./crew";
 import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
 import { DISCARD_PROMPT_MARKER, LAND_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
-import { addedProjects, addFromSetupCard, projectRow, projectRowWords } from "./projects";
+import {
+  addedProjects,
+  addFromSetupCard,
+  projectRow,
+  projectRowWords,
+  taskWorktrees,
+} from "./projects";
 import { promptInput } from "./prompt";
 import { putInLine, startedLine, taskKey } from "./rails";
 import { readSavedData } from "./savedData";
@@ -39,7 +45,14 @@ type TaskRow = {
   closed_reason: string | null;
   workspace_state: string;
   closed_at: number | null;
+  /** The branch its start made, which a close removes from the project. */
+  branch: string;
 };
+
+/** Whether the project still has the named branch. */
+function branchListed(repo: string, branch: string): boolean {
+  return execFileSync("git", ["-C", repo, "branch", "--list", branch]).toString().trim() !== "";
+}
 
 /** The record as the app's own database holds it, read read-only. */
 function taskRow(userDataDir: string, taskId: string): TaskRow | undefined {
@@ -48,7 +61,7 @@ function taskRow(userDataDir: string, taskId: string): TaskRow | undefined {
     (db) =>
       db
         .prepare(
-          "SELECT id, key, project_id, status, closed_reason, workspace_state, closed_at FROM tasks WHERE id = ?",
+          "SELECT id, key, project_id, status, closed_reason, workspace_state, closed_at, branch FROM tasks WHERE id = ?",
         )
         .get(taskId) as TaskRow | undefined,
   );
@@ -192,11 +205,16 @@ test("two commissioned tasks get separate worktrees; discarding one and landing 
 
     // Each task got its own worktree on its own branch, both on the
     // project.
-    const worktrees = execFileSync("git", ["-C", repo, "worktree", "list"]).toString();
-    const taskLines = worktrees.split("\n").filter((line) => line.includes("fm/task-"));
+    const taskLines = taskWorktrees(repo);
     expect(taskLines).toHaveLength(2);
     const worktreeDirs = readdirSync(join(userDataDir, "worktrees"));
     expect(worktreeDirs).toHaveLength(2);
+    // Each working copy is on the branch its task's record names.
+    for (const id of worktreeDirs) {
+      const branch = taskRow(userDataDir, id)?.branch ?? "";
+      expect(branch).not.toBe("");
+      expect(taskLines.filter((line) => line.endsWith(`[${branch}]`))).toHaveLength(1);
+    }
   });
 
   await test.step("discarding a task removes its worktree but keeps its record and session jsonl (D2)", async () => {
@@ -215,13 +233,11 @@ test("two commissioned tasks get separate worktrees; discarding one and landing 
       .toBe(1);
     const after = readdirSync(join(userDataDir, "worktrees"));
     const removed = before.find((dir) => !after.includes(dir)) as string;
+    const removedBranch = taskRow(userDataDir, removed)?.branch ?? "";
+    expect(removedBranch).not.toBe("");
     // Settling removes the worktree and branch before it marks the record's
     // workspace removed. Wait for both the branch and the final record write.
-    await expect
-      .poll(() => execFileSync("git", ["-C", repo, "branch", "--list"]).toString(), {
-        timeout: 15_000,
-      })
-      .not.toContain(`fm/task-${removed}`);
+    await expect.poll(() => branchListed(repo, removedBranch), { timeout: 15_000 }).toBe(false);
     expect(existsSync(join(userDataDir, "worktrees", removed))).toBe(false);
     // The session JSONL survives the discard (captain decision D2), and so
     // does the record: closed as discarded, its worktree noted as removed.
@@ -243,6 +259,8 @@ test("two commissioned tasks get separate worktrees; discarding one and landing 
 
   await test.step("landing a task closes its record as done and keeps the row and session (D2)", async () => {
     const [survivor] = readdirSync(join(userDataDir, "worktrees")) as [string];
+    const survivorBranch = taskRow(userDataDir, survivor)?.branch ?? "";
+    expect(survivorBranch).not.toBe("");
     await waitForFirstmateIdle(page, 20_000);
     // A Firstmate land is held where autonomy is off (contract v3.8), and a
     // repository is set up ask-first. This test is about the RECORD a land
@@ -267,11 +285,7 @@ test("two commissioned tasks get separate worktrees; discarding one and landing 
     await expect(
       putInLine(page, await taskKey(page, `second parallel task in ${repoName}`)),
     ).toBeVisible({ timeout: 30_000 });
-    await expect
-      .poll(() => execFileSync("git", ["-C", repo, "branch", "--list"]).toString(), {
-        timeout: 15_000,
-      })
-      .not.toContain(`fm/task-${survivor}`);
+    await expect.poll(() => branchListed(repo, survivorBranch), { timeout: 15_000 }).toBe(false);
     expect(existsSync(join(userDataDir, "worktrees", survivor))).toBe(false);
     // The row survives landing: done/landed, keyed under the repo's project,
     // with its session JSONL still on disk for Observe and the corpus export.

@@ -1217,6 +1217,19 @@ export class TaskStore {
     );
   }
 
+  /**
+   * Whether a task of the project other than `exceptId` has saved this
+   * branch, closed ones included, answered without composing a row.
+   */
+  holdsBranch(repoId: string | null, branch: string, exceptId: string): boolean {
+    return (
+      prepared(
+        this.db,
+        "SELECT 1 FROM tasks WHERE branch = ? AND repo_id IS ? AND id <> ? LIMIT 1",
+      ).get(branch, repoId, exceptId) !== undefined
+    );
+  }
+
   /** Whether any row is of this kind, answered without reading or composing one. */
   hasKind(kind: TaskKind): boolean {
     return prepared(this.db, "SELECT 1 FROM tasks WHERE kind = ? LIMIT 1").get(kind) !== undefined;

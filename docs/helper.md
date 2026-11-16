@@ -41,7 +41,7 @@ Until it is made, Infinitary's work is read where it is, in Firstmate 3000's fol
 | `running.lock` | The process that works from the folder now |
 | `tasks/<task>/` | One crewmate conversation the home opened here (below), written by `PlacedTasks` (`src/core/helper/placedTasks.ts`), the one writer of `tasks/` |
 | `repos/` | One bare clone per project the home gave it work in, from where the project lives (below, "Its working copies") |
-| `worktrees/<task>/` | One task's working copy, on the branch the home names, `fm/task-<task>` when it names none |
+| `worktrees/<task>/` | One task's working copy, on the task's branch (below, "Its working copies") |
 | `worktree-pool/`, `worktree-trash/` | Warm working copies between tasks, and retired ones being deleted, as the home keeps its own |
 | `default-workspace/` | This computer's own local workspace, for a task with no project |
 | `bundles/`, `artifacts/` | A task's branch or kept work waiting for the home to read it, and the pieces of an artifact the home is writing here |
@@ -711,7 +711,7 @@ A task runs in a working copy of its own on the computer that runs it, made from
   It is made under a temporary name and takes its own only once whole, so a failed clone leaves nothing behind.
   Its git answers GitHub with this computer's own sign-in in `forges/` when it has one (above, "Running"); a GitHub refusal reads as GitHub's sign-in being needed (`forgeAuthRequired`), and git never waits on a terminal.
 - **The working copy.**
-  `inf:working-copy:prepare` makes the task's working copy exactly as the home makes one (`WorkspaceService`): on the branch the request names (`branch`, the task record's), `fm/task-<task>` without one, marked as the task's, from `origin`'s default branch fetched first, or from a warm working copy in the pool.
+  `inf:working-copy:prepare` makes the task's working copy exactly as the home makes one (`WorkspaceService`): on the branch this computer already marks as the task's, else the branch the request names (`branch`, the task record's, or the name the home chose for a new task, `docs/architecture.md`, "A task's branch"), `fm/task-<task>` without one, marked as the task's, from `origin`'s default branch fetched first, or from a warm working copy in the pool.
   Asked again it answers the working copy that is there.
   A task with no project gets one of this computer's own default workspace, started at the commit of the home's that it was sent first (below, "Seeding").
   `inf:working-copy:install` installs its dependencies as the home installs a new one's.
@@ -786,9 +786,9 @@ What it left goes by the rule this Mac's own leftover working copies follow (`do
   Only then is the working copy deleted there, and then the task's folder under `tasks/` (`inf:session:remove`), which the computer removes only once the conversation is closed and the working copy is gone.
   A working copy with nothing unmerged goes at once.
 - **When its work has nowhere to go here,** it stays there: no project here was cloned from where it came from, the task is one this Mac records elsewhere, whose own work owns its kept ref here, or the kept ref here already holds other work, which is never written over.
-  The feed says so once each time this Mac starts: "Mac mini keeps a leftover working copy, because its work could not be saved on this computer first: fm/task-a1b2c3d4."
+  The feed says so once each time this Mac starts, naming the copy by its task's saved branch, or by the branch it has checked out there when this Mac no longer records the task: "Mac mini keeps a leftover working copy, because its work could not be saved on this computer first: inf/blue-footer-a1b2."
   The next time that computer is back the rule runs again, so a project added here again takes its work.
-- **This Mac's copy of the branch** stays: boot hygiene reports a `fm/task-*` branch no record explains and never deletes one.
+- **This Mac's copy of the branch** goes by boot hygiene's rule: a task branch here no live task explains, marked as a task's or named `fm/task-*`, is deleted with its work saved on its kept ref first (`docs/task-record.md`, fleet hygiene).
 
 ### Workflow recordings in task evidence
 

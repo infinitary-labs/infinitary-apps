@@ -9,9 +9,9 @@ export type TurnEndWait = { ended: true } | { ended: false; cancelled: string };
 /**
  * Who holds a task's settle right now (docs/task-record.md): one settle at
  * a time across cards, the shell and the Firstmate's tools. Each is one
- * `SettleLease`, claimed before its first await and released in its
- * `finally`; every way the settle stands is a phase of that lease, so its
- * one release ends them all.
+ * `SettleLease`, claimed with no await after reading that nothing holds it,
+ * and released in its `finally`; every way the settle stands is a phase of
+ * that lease, so its one release ends them all.
  */
 export class SettleLocks {
   constructor(private readonly host: LocksHost) {}

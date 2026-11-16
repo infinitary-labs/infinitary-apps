@@ -81800,6 +81800,14 @@ ${FRAME_QUESTION_SCRIPT}
      */
     branch_from: string().optional(),
     /**
+     * The name the first mate wrote for this task's branch from the naming
+     * runbook's words, before its code (docs/architecture.md, "A task's
+     * branch"). The host checks git would take it when it is written, and
+     * appends a short code from the task's id when the working copy is
+     * first made; with none, the branch is named from the title.
+     */
+    branch: string().optional(),
+    /**
      * The program this task runs (INF-799 piece 2, docs/programs.md): a plain
      * JavaScript script the first mate declared, the args it reads, and the
      * upper bound it proposed on the script's task() calls. A task with a
@@ -81939,6 +81947,7 @@ ${FRAME_QUESTION_SCRIPT}
     skipped_plan_because: true,
     result_schema: true,
     branch_from: true,
+    branch: true,
     program: true
   }).extend({
     kind: workKindSchema.exclude(["review"]).optional(),

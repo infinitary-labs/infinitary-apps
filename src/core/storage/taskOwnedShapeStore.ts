@@ -14,7 +14,10 @@ export const PROGRAM_FIELDS = [
   "program",
   "program_part",
 ] as const satisfies readonly (keyof WorkShape)[];
-export const WORKSPACE_FIELDS = ["in_place"] as const satisfies readonly (keyof WorkShape)[];
+export const WORKSPACE_FIELDS = [
+  "in_place",
+  "branch",
+] as const satisfies readonly (keyof WorkShape)[];
 export const PLACEMENT_FIELDS = [
   "runs_on_ask",
   "placement_requirements",

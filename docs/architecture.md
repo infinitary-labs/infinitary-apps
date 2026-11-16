@@ -317,11 +317,22 @@ Two kinds:
 - **The default repo** - an app-managed, local-only git repo (e.g. `userData/default-workspace/`, `git init`-ed on first use) that hosts any task not tied to an explicit repo - "e.g. if the user just asks to summarize some emails" (captain).
   Same worktree-per-task mechanics, so every crewmate has a real, versioned cwd.
 
-A task's worktree lives at `userData/worktrees/<task-id>` on the branch its record names, `fm/task-<id>` when it names none, cut from the repository's default branch fetched from `origin` at dispatch (captain's board answer 2026-09-23; the last fetched commit when the fetch fails, the repository's own commit without an `origin`).
+A task's worktree lives at `userData/worktrees/<task-id>` on the task's branch (below, "A task's branch"), cut from the repository's default branch fetched from `origin` at dispatch (captain's board answer 2026-09-23; the last fetched commit when the fetch fails, the repository's own commit without an `origin`).
 Each task branch carries the git setting `branch.<name>.infinitaryTask=<task id>`, which git moves with a renamed branch and removes with a deleted one, so cleanup tells the app's branches from the person's own whatever their names; a `fm/task-<id>` branch from before the setting is the task's by its name (`src/core/workspace/taskBranches.ts`).
 It is **pooled, not rebuilt** (scout `fm3000-warm-worktree-pool-s1`: Infinitary's own code on treehouse's design, no bundled binary): a closed task's tree, once its work is saved on the kept ref, is detached and moved into `userData/worktree-pool/<repo key>/`, reset clean in the background with only `node_modules` kept, and handed to the next task on the same repository - moved back to that task's path and switched to its branch - so its install is incremental (the scout measured 6.1 s cold against 1.0 s warm on this repository).
 A slot is handed out only when git proves it a detached, pristine checkout of that repository; anything else is retired, never reused.
 Idle slots are bounded per repository, in total and by age, and boot finishes any return a quit interrupted.
+
+### A task's branch
+
+A task's branch is named once, when its working copy is first made, and its record keeps that name from then on (`src/core/workspace/taskBranches.ts`).
+The name starts with the words the first mate wrote as the task's `branch` when it filed or started it (`create_task`, `spawn_crewmate`, or `update_task` before the start), which the naming runbook's guide tells it how to write: the built-in says `inf/` and a few lowercase words saying what the work does, and a person's own turned-on copy of the runbook says what its words say (`docs/runbooks.md`, "Built-ins").
+A task with no written name starts with `inf/` and a slug of its title: Latin letters, accents dropped, and digits, lowercased and joined by hyphens, at most 48 characters cut at a hyphen, and the task's key when the title has none.
+The app adds a hyphen and a code from the task's id, its first four characters, and one more for as long as that name is taken: by a branch or a remote-tracking branch of the repository, or as the saved branch of another task of the same project, closed ones included.
+A branch the repository already marks as the task's, left by a start that did not finish or whose answer was lost, is the name chosen then, whatever name a later attempt sends.
+A written name git would refuse, or one under the app's batch branches (`infinitary-batch/`), is refused at the tool call in words and never rewritten to fit; a branch git cannot keep beside the new name, such as one named `inf`, fails the start in words naming it.
+A computer that runs work makes the branch the home names, or answers the copy it already made on the branch it marks as the task's, and one from before names were sent makes `fm/task-<id>`; the home saves the branch the computer answers as the task's branch (`docs/helper.md`, "Its working copies").
+A task started before names came from the task keeps its `fm/task-<id>` branch.
 
 Persistence:
 

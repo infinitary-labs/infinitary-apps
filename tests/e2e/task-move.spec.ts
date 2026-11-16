@@ -215,11 +215,15 @@ test("a started task moves to another computer and back from its record, by keys
   const { key, id } = await started(page, "Fix the footer");
   const here = join(app.userDataDir, "worktrees", id);
   const there = join(dataDir, "worktrees", id);
+  /** The branch its start made here, which every move keeps. */
+  let branch = "";
 
   await test.step("its crewmate's turn ends here, and it leaves work git does not hold yet", async () => {
     await expect
       .poll(async () => (await view(page, id))?.activity, { timeout: 60_000 })
       .toBe("idle");
+    branch = (await view(page, id))?.repo?.branch ?? "";
+    expect(branch).not.toBe("");
     expect((await view(page, id))?.executionDeviceId ?? null).toBeNull();
     writeFileSync(join(here, "notes.md"), "the footer's colours\n");
     writeFileSync(join(here, "README.md"), "# website\n\nFooter.\n");
@@ -256,7 +260,7 @@ test("a started task moves to another computer and back from its record, by keys
     expect(task).toMatchObject({ key, status: "active" });
     expect(
       execFileSync("git", ["symbolic-ref", "--short", "HEAD"], { cwd: there }).toString().trim(),
-    ).toBe(`fm/task-${id}`);
+    ).toBe(branch);
     expect(readFileSync(join(there, "notes.md"), "utf8")).toBe("the footer's colours\n");
     expect(readFileSync(join(there, "README.md"), "utf8")).toBe("# website\n\nFooter.\n");
     await expect.poll(() => existsSync(here), { timeout: 30_000 }).toBe(false);
@@ -291,7 +295,7 @@ test("a started task moves to another computer and back from its record, by keys
     expect(await view(page, id)).toMatchObject({ key, status: "active" });
     expect(
       execFileSync("git", ["symbolic-ref", "--short", "HEAD"], { cwd: here }).toString().trim(),
-    ).toBe(`fm/task-${id}`);
+    ).toBe(branch);
     expect(readFileSync(join(here, "notes.md"), "utf8")).toBe("the footer's colours\n");
     expect(readFileSync(join(here, "README.md"), "utf8")).toBe("# website\n\nFooter.\n");
     await expect.poll(() => existsSync(there), { timeout: 30_000 }).toBe(false);

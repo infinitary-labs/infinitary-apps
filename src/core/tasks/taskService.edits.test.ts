@@ -173,11 +173,11 @@ describe("editing a started task's shape", () => {
     ],
     [
       { resultSchema },
-      "A result shape or branch_from can only change on open work that has not started.",
+      "A result shape, branch_from or branch can only change on open work that has not started.",
     ],
     [
       { branchFrom: "base" },
-      "A result shape or branch_from can only change on open work that has not started.",
+      "A result shape, branch_from or branch can only change on open work that has not started.",
     ],
     [{ internalStep: true }, "internal_step can only change on open work that has not started."],
     [

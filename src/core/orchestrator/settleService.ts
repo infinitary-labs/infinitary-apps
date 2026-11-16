@@ -460,6 +460,10 @@ export class SettleService {
    * a plain-reply "I'll merge it" choice or while its computer is unreachable.
    * A merge is a forge fact; completion is the crewmate's declaration.
    * Never infer completion from PR ownership, a button label or a missing branch.
+   * The pull request is read before the task's settle is taken: a settle
+   * started while the read is out goes ahead instead of being refused as
+   * one already in progress. A merge read while a settle holds the task
+   * closes nothing on this pass; a later pass of the watch reads it again.
    */
   async reconcileExternalMerge(taskId: string): Promise<boolean> {
     const record = this.host.tasks.get(taskId);
@@ -470,13 +474,13 @@ export class SettleService {
       this.locks.holder(taskId)
     )
       return false;
+    const pull = await this.mergedOutside(record);
+    if (!pull || this.locks.holder(taskId)) return false;
     const lease = this.locks.claim(taskId, "merge-pr");
     try {
-      const pull = await this.mergedOutside(record);
       const current = this.host.tasks.get(taskId);
       // A close or a different project/change took over while the read was out.
       if (
-        !pull ||
         !current ||
         TaskService.isClosed(current) ||
         current.repoId !== record.repoId ||

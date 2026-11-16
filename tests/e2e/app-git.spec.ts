@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { writeLoginShellStub } from "../../src/core/loginShellStub";
 import { openDatabase } from "../../src/core/storage/db";
+import { TITLE_BRANCH_PREFIX } from "../../src/core/workspace/taskBranches";
 import { scratchDir } from "../helpers/scratchDirs";
 import { builtAppDir, type LaunchedApp, launchApp } from "./launch";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
@@ -85,7 +86,9 @@ test("a crewmate's git works on a Mac whose search path holds no git", {
 
   await expect(
     reportLine(page, await taskKey(page, title)).filter({
-      hasText: new RegExp(`${MOCK_GIT_REPORT_PREFIX} ${vendoredVersion} on ## fm/`),
+      hasText: new RegExp(
+        `${MOCK_GIT_REPORT_PREFIX} ${vendoredVersion} on ## ${TITLE_BRANCH_PREFIX}`,
+      ),
     }),
   ).toBeVisible({ timeout: 45_000 });
 });

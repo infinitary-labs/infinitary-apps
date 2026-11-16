@@ -146,6 +146,8 @@ export type UpdateTaskPatch = {
   resultSchema?: Record<string, unknown> | null;
   /** The task, by key, unstarted work starts from (INF-799), already checked; empty clears it. */
   branchFrom?: string;
+  /** The branch name unstarted work's branch starts with, already checked; empty clears it. */
+  branch?: string;
   /**
    * Whether open work that has not started is the first mate's own, not the
    * captain's ask (`shape.internal_step`, INF-1467): set when it starts a
@@ -1124,9 +1126,10 @@ export class TaskService {
           "internal_step can only change on open work that has not started.",
         );
       }
-      if ((patch.resultSchema !== undefined || patch.branchFrom !== undefined) && !unstarted) {
+      const handOff = [patch.resultSchema, patch.branchFrom, patch.branch];
+      if (handOff.some((field) => field !== undefined) && !unstarted) {
         throw new TaskGraphRefusal(
-          "A result shape or branch_from can only change on open work that has not started.",
+          "A result shape, branch_from or branch can only change on open work that has not started.",
         );
       }
 
@@ -1229,6 +1232,11 @@ export class TaskService {
           ]);
           changes.push(branchFrom ? `branches from ${branchFrom}` : "branch_from cleared");
         }
+      }
+      const branch = patch.branch?.trim() || undefined;
+      if (patch.branch !== undefined && branch !== record.shape?.branch) {
+        update.shape = withShapeKey(update.shape ?? record.shape, "branch", branch);
+        changes.push(branch ? `branch ${branch}` : "branch name cleared");
       }
       if (patch.programBound !== undefined) {
         const current = update.shape ?? record.shape;

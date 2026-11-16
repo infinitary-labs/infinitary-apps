@@ -21,6 +21,7 @@ import { escalationFloor } from "../routing/policy";
 import type { TaskRecord } from "../storage/taskRecords";
 import { resultSchemaRefusal } from "../tasks/taskResult";
 import type { TaskService } from "../tasks/taskService";
+import { branchNameRefusal } from "../workspace/taskBranches";
 import { keptRefFor } from "../workspace/workspaceService";
 import type { CardService } from "./cardService";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
@@ -540,12 +541,17 @@ export function branchFromSource(
  */
 export function handOffShape(
   tasks: TaskService,
-  ask: Pick<WorkShapeAsk, "result_schema" | "branch_from"> | undefined,
+  ask: Pick<WorkShapeAsk, "result_schema" | "branch_from" | "branch"> | undefined,
   repoId: string | null,
   selfId?: string,
-): Pick<WorkShape, "result_schema" | "branch_from"> | { refused: string } {
+): Pick<WorkShape, "result_schema" | "branch_from" | "branch"> | { refused: string } {
   const refused = ask?.result_schema ? resultSchemaRefusal(ask.result_schema) : undefined;
   if (refused) return { refused };
+  // The first mate's branch name is taken as written or refused in words,
+  // never rewritten to fit (docs/architecture.md, "A task's branch").
+  const branch = ask?.branch?.trim();
+  const branchRefused = branch ? branchNameRefusal(branch) : undefined;
+  if (branchRefused) return { refused: branchRefused };
   const ref = ask?.branch_from?.trim();
   const source = ref ? branchFromSource(tasks, ref, repoId, selfId) : undefined;
   // A step filed behind the step it continues names work that has not
@@ -561,6 +567,7 @@ export function handOffShape(
   return {
     ...(ask?.result_schema ? { result_schema: ask.result_schema } : {}),
     ...(named ? { branch_from: named.key || named.id } : {}),
+    ...(branch ? { branch } : {}),
   };
 }
 

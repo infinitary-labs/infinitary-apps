@@ -291,7 +291,9 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
       .toMatchObject({ delivery: expect.objectContaining({ reviewVerdict: "findings" }) });
 
     // Two re-reviews at two new versions, each answered with findings again.
-    const branch = `fm/task-${builder.id}`;
+    // The branch the app named at the builder's start, which its record keeps.
+    const branch = (await detail(builder.id)).repo?.branch;
+    if (!branch) throw new Error("The started builder has no branch.");
     let reviewed = "";
     for (const [round, subject] of [
       [2, "fix: await the meter snapshot"],
@@ -446,10 +448,12 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
     await send(`${SPAWN_PROMPT_MARKER} ${RULE_TITLE}`);
     const task = await boardRow((row) => row.title === RULE_TITLE);
     await cardTitled(REACH_RULE_DONE_TITLE);
+    const branch = (await detail(task.id)).repo?.branch;
+    if (!branch) throw new Error("The started task has no branch.");
     await expect
       .poll(async () => (await detail(task.id)).delivery?.headSha, { timeout: 30_000 })
-      .toBe(branchHead(`fm/task-${task.id}`));
-    const head = branchHead(`fm/task-${task.id}`);
+      .toBe(branchHead(branch));
+    const head = branchHead(branch);
 
     // The captain's words: his merge (asking first, a soft hold) and
     // skipping GitHub's required review (a fixed limit).

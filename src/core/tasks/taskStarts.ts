@@ -88,6 +88,11 @@ export class TaskStarts {
     this.releaseUnstartedDispatches();
   }
 
+  /** Whether another task of the project saved this branch, closed ones too (`nameTaskBranch`). */
+  branchSavedByAnother(repoId: string | null, branch: string, taskId: string): boolean {
+    return this.writer.store.holdsBranch(repoId, branch, taskId);
+  }
+
   startAgainRefusal(id: string): string | undefined {
     const record = this.tasks.get(id);
     if (!record) return "This task could not be found.";

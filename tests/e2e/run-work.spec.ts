@@ -1774,12 +1774,14 @@ test("a closed task with unreadable work history stays present and brings its wo
     await home.supervisor.starts.dispatchQueuedTask("t-tidy");
     expect(home.tasks.get("t-tidy")).toMatchObject({
       status: "active",
-      branch: "fm/task-t-tidy",
       worktreeDir: "",
       workspaceState: "present",
     });
+    // The copy there is on the branch this Mac named, which the record keeps.
+    const branch = home.tasks.get("t-tidy")?.branch ?? "";
+    expect(branch).not.toBe("");
     expect(await git(copy, ["rev-parse", "HEAD"])).toBe(main);
-    expect(await git(copy, ["symbolic-ref", "--short", "HEAD"])).toBe("fm/task-t-tidy");
+    expect(await git(copy, ["symbolic-ref", "--short", "HEAD"])).toBe(branch);
     await expect.poll(() => home.tasks.get("t-tidy")?.activity, { timeout: 30_000 }).toBe("idle");
   });
 
@@ -1866,12 +1868,14 @@ test("a task in a project works in a working copy the app that runs work cloned,
     await home.supervisor.starts.dispatchQueuedTask("t-tidy");
     expect(home.tasks.get("t-tidy")).toMatchObject({
       status: "active",
-      branch: "fm/task-t-tidy",
       worktreeDir: "",
       workspaceState: "present",
     });
+    // The copy there is on the branch this Mac named, which the record keeps.
+    const branch = home.tasks.get("t-tidy")?.branch ?? "";
+    expect(branch).not.toBe("");
     expect(await git(copy, ["rev-parse", "HEAD"])).toBe(main);
-    expect(await git(copy, ["symbolic-ref", "--short", "HEAD"])).toBe("fm/task-t-tidy");
+    expect(await git(copy, ["symbolic-ref", "--short", "HEAD"])).toBe(branch);
     await expect.poll(() => home.tasks.get("t-tidy")?.activity, { timeout: 30_000 }).toBe("idle");
   });
 
@@ -1969,12 +1973,15 @@ test("a Mac with no git of its own runs a project's work with the app's own git,
       deviceId,
     });
     await home.supervisor.starts.dispatchQueuedTask("t-git");
-    expect(home.tasks.get("t-git")).toMatchObject({ status: "active", branch: "fm/task-t-git" });
+    expect(home.tasks.get("t-git")).toMatchObject({ status: "active" });
+    // The copy there is on the branch this Mac named, which the record keeps.
+    const branch = home.tasks.get("t-git")?.branch ?? "";
+    expect(branch).not.toBe("");
     const copy = join(me.dataDir, "worktrees", "t-git");
     expect(await git(copy, ["rev-parse", "HEAD"])).toBe(main);
     await expect
       .poll(() => home.tasks.get("t-git")?.outcome, { timeout: 45_000 })
-      .toMatch(new RegExp(`^${MOCK_GIT_REPORT_PREFIX} ${vendoredVersion} on ## fm/task-t-git`));
+      .toMatch(new RegExp(`^${MOCK_GIT_REPORT_PREFIX} ${vendoredVersion} on ## ${branch}`));
   });
 
   await test.step("closed, its unmerged work comes home through its own git", async () => {

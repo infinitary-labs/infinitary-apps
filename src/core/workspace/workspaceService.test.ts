@@ -10,6 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
+import { BATCH_BRANCH_PREFIX } from "@shared/batches";
 import { describe, expect, it, vi } from "vitest";
 import { BUNDLED_NAMING } from "../../../tests/helpers/namingRunbook";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -17,6 +18,7 @@ import { captureLoginPath, resetLoginPathForTests } from "../hostEnv";
 import { writeLoginShellStub } from "../loginShellStub";
 import { appPathsFor } from "../paths";
 import { git } from "./git";
+import { branchNameRefusal, nameTaskBranch, taskBranchStem } from "./taskBranches";
 import { keptRefFor, WorkspaceService } from "./workspaceService";
 
 // Integration budget (docs/test-cohorts.md): real git, the slowest test
@@ -203,6 +205,132 @@ describe("dependency install at commission (interaction P0, WI-7)", () => {
     await workspace.removeTaskWorktree({ ...made, branch: "inf/tidy-docs-renamed" });
     expect(await workspace.listTaskBranches(repo)).toEqual([]);
     expect(await git(repo, ["config", "--get-regexp", "infinitarytask"]).catch(() => "")).toBe("");
+  });
+});
+
+describe("a new task's branch name (INF-4195's plan, piece 2)", () => {
+  const ID = "4ab0c9d1";
+  /** Names as the start does, reading the repository's branches and the other tasks' saved ones. */
+  const named = (repoDir: string, stem: string, saved: string[] = []) =>
+    nameTaskBranch({
+      taskId: ID,
+      stem,
+      repoDir,
+      savedByAnother: (branch) => saved.includes(branch),
+    });
+
+  it("takes the first mate's name, or inf/ and the title's words, with the task's code", async () => {
+    const { paths } = await service();
+    const repo = paths.defaultWorkspaceDir;
+    const task = {
+      id: ID,
+      key: "INF-4200",
+      title: "Build branch names from the naming runbook's words",
+    };
+    expect(
+      await named(repo, taskBranchStem({ ...task, written: "inf/branch-names-runbook" })),
+    ).toBe("inf/branch-names-runbook-4ab0");
+    // The title's slug stops at a hyphen before it passes 48 characters.
+    expect(await named(repo, taskBranchStem(task))).toBe(
+      "inf/build-branch-names-from-the-naming-runbooks-4ab0",
+    );
+    expect(await named(repo, taskBranchStem({ ...task, title: "Réparer l'écran d'accueil" }))).toBe(
+      "inf/reparer-lecran-daccueil-4ab0",
+    );
+    // A title with no Latin letters or digits takes the task's key.
+    expect(await named(repo, taskBranchStem({ ...task, title: "修复登录超时" }))).toBe(
+      "inf/inf-4200-4ab0",
+    );
+  });
+
+  it("grows the code while the name is a branch, a remote-tracking branch or another task's saved branch", async () => {
+    const { paths } = await service();
+    const repo = paths.defaultWorkspaceDir;
+    const stem = "inf/branch-names-runbook";
+    await git(repo, ["branch", `${stem}-4ab0`]);
+    await git(repo, ["update-ref", `refs/remotes/origin/${stem}-4ab0c`, "HEAD"]);
+    // A branch under a folder of the name holds it as well.
+    await git(repo, ["branch", `${stem}-4ab0c9/older`]);
+    expect(await named(repo, stem, [`${stem}-4ab0c9d`])).toBe(`${stem}-4ab0c9d1`);
+    await git(repo, ["branch", `${stem}-4ab0c9d1`]);
+    await expect(named(repo, stem, [`${stem}-4ab0c9d`])).rejects.toThrow(
+      `Every branch name from ${stem} for this task is taken in this project.`,
+    );
+    await expect(named(repo, "inf/branch-names-runbook-4ab0/deeper")).rejects.toThrow(
+      `The branch ${stem}-4ab0 blocks inf/branch-names-runbook-4ab0/deeper-4ab0`,
+    );
+  });
+
+  it("keeps the name a start that did not finish chose, by the repository's mark", async () => {
+    const { workspace } = await service();
+    const made = await workspace.createTaskWorktree(
+      ID,
+      undefined,
+      undefined,
+      undefined,
+      "inf/first-try-4ab0",
+    );
+    expect(await named(made.repoDir, "inf/second-try")).toBe("inf/first-try-4ab0");
+    // Sent a name worked out anew, as a computer that runs work is asked
+    // again after a lost answer or a changed title, it answers that copy.
+    const again = await workspace.createTaskWorktree(
+      ID,
+      undefined,
+      undefined,
+      undefined,
+      "inf/second-try-4ab0",
+    );
+    expect(again).toMatchObject({ cwd: made.cwd, branch: "inf/first-try-4ab0" });
+  });
+
+  it("refuses in words exactly the names git refuses, and the app's batch branches", async () => {
+    const { paths } = await service();
+    const repo = paths.defaultWorkspaceDir;
+    const names = [
+      "inf/ok-name",
+      "été",
+      "a/@",
+      "@",
+      "x/HEAD",
+      "a{b",
+      "a@b",
+      "HEAD",
+      "-x",
+      "a b",
+      "a..b",
+      "a@{b",
+      "a/",
+      "/a",
+      "a//b",
+      "a.",
+      "a/.b",
+      "a.lock",
+      "a/b.lock/c",
+      "a~b",
+      "a^b",
+      "a:b",
+      "a?b",
+      "a*b",
+      "a[b",
+      "a\\b",
+      "tab\there",
+    ];
+    for (const name of names) {
+      const gitTakes = await git(repo, ["check-ref-format", "--branch", name]).then(
+        () => true,
+        () => false,
+      );
+      expect({ name, refused: branchNameRefusal(name) !== undefined }).toEqual({
+        name,
+        refused: !gitTakes,
+      });
+    }
+    expect(branchNameRefusal("a b")).toBe(
+      'The branch name "a b" has a space or a control character; git takes no such branch name.',
+    );
+    expect(branchNameRefusal(`${BATCH_BRANCH_PREFIX}mine`)).toBe(
+      `The branch name "${BATCH_BRANCH_PREFIX}mine" starts with ${BATCH_BRANCH_PREFIX}, which the app keeps for its batches.`,
+    );
   });
 });
 
@@ -855,6 +983,31 @@ describe("retireTaskBranch (a leftover branch, work saved first)", () => {
     expect(await workspace.branchHead(repo, task.branch)).toBeNull();
     expect(await git(repo, ["show", `${keptRefFor("left1111")}:draft.txt`])).toBe("draft");
     expect(await git(repo, ["merge-base", "--is-ancestor", tip, keptRefFor("left1111")])).toBe("");
+  });
+
+  // INF-4195's plan: start-up cleanup finds a leftover branch named from a
+  // task by its mark, as it finds an fm/task-* one by its name.
+  it("finds and retires a leftover inf/ branch by its mark, its work saved first", async () => {
+    const { workspace, paths } = await service();
+    const repo = paths.defaultWorkspaceDir;
+    const task = await workspace.createTaskWorktree("left3333", undefined, undefined, undefined, {
+      stem: "inf/draft-notes",
+      savedByAnother: () => false,
+    });
+    expect(task.branch).toBe("inf/draft-notes-left");
+    writeFileSync(join(task.cwd, "draft.txt"), "draft\n");
+    await git(task.cwd, ["add", "-A"]);
+    await git(task.cwd, ["commit", "-m", "feat: draft"]);
+    await git(repo, ["worktree", "remove", "--force", task.cwd]);
+    expect(await workspace.listTaskBranches(repo)).toEqual([
+      { branch: "inf/draft-notes-left", taskId: "left3333" },
+    ]);
+
+    expect(await workspace.retireTaskBranch(repo, task.branch, "left3333")).toEqual({
+      outcome: "removed",
+    });
+    expect(await workspace.listTaskBranches(repo)).toEqual([]);
+    expect(await git(repo, ["show", `${keptRefFor("left3333")}:draft.txt`])).toBe("draft");
   });
 
   it("keeps a branch still checked out in a working copy and says why", async () => {

@@ -35,6 +35,7 @@ import { SettingsStore } from "../storage/settingsStore";
 import { keepHandoverFiles } from "../tasks/handoverFiles";
 import { seedTask } from "../tasks/seedTask";
 import { RESULT_WORDS } from "../tasks/taskResult";
+import { branchNameRefusal } from "../workspace/taskBranches";
 import type { CrewmateSpec } from "./crewSession";
 import { FirstmateAgent } from "./firstmateAgent";
 
@@ -880,9 +881,86 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
       ).rejects.toThrow(`${NOTHING_SPAWNED} Unknown branch_from "INF-404"`);
       // A started task's shape is the one its crewmate was briefed with.
       expect(() => tasks.updateFields(first.id, { resultSchema: FINDINGS }, "firstmate")).toThrow(
-        "A result shape or branch_from can only change on open work that has not started.",
+        "A result shape, branch_from or branch can only change on open work that has not started.",
       );
       expect(tasks.list()).toHaveLength(count);
     });
   });
 });
+
+// INF-4195's plan, piece 2: the first mate names a task's branch by the naming
+// runbook's words; the app adds the task's code, and names one left unnamed
+// from its title.
+describe("a task's branch name", { timeout: 60_000 }, () => {
+  const REAL_GIT_WAIT = { timeout: 20_000, interval: 25 };
+
+  it("puts the first mate's name, with the task's code, on the started task's branch, names an unnamed one from its title, and refuses one git would not take", async () => {
+    const crewmate = fakeCrewmate();
+    const h = setup(crewmate, { realWorkspace: true });
+    const { repo } = await h.repos.setup({ kind: "adopt", path: gitRepo().dir, name: "meterlab" });
+    const seat = fakeSessionFactory("pi");
+    const firstmate = new FirstmateAgent({
+      paths: h.paths,
+      inbox: h.inbox,
+      settings: new SettingsStore(h.db),
+      modelRuntime: {} as ModelRuntime,
+      availableModels: () => [{ provider: "fm-mock", id: "mock-1" }],
+      quotaModels: () => undefined,
+      quotaLine: () => "",
+      repos: h.repos,
+      supervisor: h.supervisor,
+      tasks: h.tasks,
+      broadcastEvent: () => {},
+      selfSourceDir: join(h.paths.userData, "self-source"),
+      seats: { pi: seat },
+    });
+    try {
+      await firstmate.rebind("branch-names");
+      const run = async (name: string, args: Record<string, unknown>) => {
+        const tool = seat.specs[0]?.tools?.find((entry) => entry.name === name);
+        if (!tool) throw new Error(`the production first mate did not serve ${name}`);
+        return tool.run(args);
+      };
+      const started = (title: string) =>
+        vi.waitFor(() => {
+          const task = h.tasks.list().find((entry) => entry.title === title);
+          if (!task?.branch || !task.worktreeDir || !existsSync(task.worktreeDir))
+            throw new Error("not started");
+          return task;
+        }, REAL_GIT_WAIT);
+      const ask = (title: string) => ({
+        title,
+        goal: "Name each task's branch from the naming runbook's words.",
+        user_words: "name work branches inf/<semantic-desc-slug>",
+        constraints: [],
+        repo_id: repo.id,
+      });
+
+      const bad = "inf/branch names";
+      const refusal = branchNameRefusal(bad);
+      if (!refusal) throw new Error("git takes a branch name with a space");
+      const filed = await run("create_task", { ...ask("Plan the branch names"), branch: bad });
+      expect(filed.text).toBe(`Nothing was filed. ${refusal}`);
+      expect(h.tasks.list()).toEqual([]);
+
+      await run("spawn_crewmate", {
+        ...ask("Name branches from the naming runbook"),
+        branch: "inf/branch-names-runbook",
+      });
+      const named = await started("Name branches from the naming runbook");
+      expect(named.branch).toBe(`inf/branch-names-runbook-${named.id.slice(0, 4)}`);
+      expect(gitIn(named.worktreeDir, "symbolic-ref", "--short", "HEAD")).toBe(named.branch);
+
+      await run("spawn_crewmate", ask("Count every press of the meter"));
+      const unnamed = await started("Count every press of the meter");
+      expect(unnamed.branch).toBe(`inf/count-every-press-of-the-meter-${unnamed.id.slice(0, 4)}`);
+      expect(gitIn(unnamed.worktreeDir, "symbolic-ref", "--short", "HEAD")).toBe(unnamed.branch);
+    } finally {
+      firstmate.dispose();
+    }
+  });
+});
+
+function gitIn(dir: string, ...args: string[]) {
+  return execFileSync("git", ["-C", dir, ...args], { encoding: "utf8" }).trim();
+}

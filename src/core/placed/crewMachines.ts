@@ -107,14 +107,16 @@ export type CrewMachines = {
   reportsFolds?(machine: string): boolean;
   /**
    * The task's working copy there, made now or found as it was: its
-   * project cloned there once, then a working copy on the task's branch
-   * (docs/helper.md, "Its working copies").
+   * project cloned there once, then a working copy on the task's branch,
+   * `branch` when its record saved none yet (docs/helper.md, "Its working
+   * copies").
    */
   prepare(
     machine: string,
     taskId: string,
     repoId: string | null,
     base?: WorkingCopyBase,
+    branch?: string,
   ): Promise<PlacedCopy>;
   /**
    * Copy a source file to the task folder, returning its verified path

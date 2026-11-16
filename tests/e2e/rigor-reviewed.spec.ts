@@ -232,7 +232,10 @@ test("a reviewed task's review passes before its completion card, which merges w
   await expect(greenReport).toBeVisible({ timeout: 30_000 });
   await expect(greenReport).toContainText(reportSummary(MOCK_REVIEWED_BUILDER_REPORT));
   // The builder saved its work before reporting: its branch's commit is the head.
-  const builderBranch = `fm/task-${builder.id}`;
+  const builderBranch = (
+    await page.evaluate((id) => window.infinitary.tasks.detail(id), builder.id)
+  ).repo?.branch;
+  if (!builderBranch) throw new Error("The started builder has no branch.");
   const HEAD_SHA = branchHead(builderBranch);
   const initialProofRevision = (
     await page.evaluate((id) => window.infinitary.tasks.detail(id), builder.id)

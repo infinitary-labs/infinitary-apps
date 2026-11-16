@@ -137,6 +137,7 @@ describe("leftovers on a computer that runs work", () => {
     await at.start("t-stays", "Make the footer blue.", repo.id);
     await expect.poll(() => home.tasks.get("t-stays")?.activity).toBe("idle");
     const work = at.folders("t-stays").work;
+    const branch = home.tasks.get("t-stays")?.branch;
     writeFileSync(join(work, "footer.html"), "<footer>blue</footer>\n");
     const tip = await commit(work, "feat: a blue footer");
 
@@ -146,14 +147,17 @@ describe("leftovers on a computer that runs work", () => {
     await home.supervisor.purgeAllTasks();
     home.repos.unregister(repo.id);
 
-    // Back: its work has nowhere to go here, so it stays there, said once.
+    // Back: its work has nowhere to go here, so it stays there, said once,
+    // named by the branch it has checked out there now that no record
+    // here names it.
     const said = () => feed(home).filter((line) => line.includes("leftover"));
     await home.listen();
     await expect
       .poll(said)
       .toEqual([
-        "Mac mini keeps a leftover working copy, because its work could not be saved on this computer first: fm/task-t-stays.",
+        `Mac mini keeps a leftover working copy, because its work could not be saved on this computer first: ${branch}.`,
       ]);
+    expect(branch).toMatch(/^inf\//);
     expect(at.holds()).toEqual({ tasks: ["t-stays"], workingCopies: ["t-stays"] });
     expect(await git(work, ["rev-parse", "HEAD"])).toBe(tip);
 

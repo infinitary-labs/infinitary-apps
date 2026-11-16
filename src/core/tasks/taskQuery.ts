@@ -197,6 +197,8 @@ export type TaskQueryRow = {
   built_on_by?: TaskQueryBuiltOn[];
   /** The task whose last commit its working copy starts at (INF-799). */
   branch_from?: string;
+  /** The branch name the first mate wrote, which the app adds a code to when it starts. */
+  branch?: string;
   /** The JSON Schema its report's result must fit (INF-799). By-key only. */
   result_schema?: Record<string, unknown>;
   /** Its latest typed result, as the host checked it (INF-799). By-key only. */
@@ -546,6 +548,7 @@ function toRow(
     ...(record.shape?.basis ? { basis: record.shape.basis } : {}),
     ...(builtOnBy.length > 0 ? { built_on_by: builtOnBy } : {}),
     ...(record.shape?.branch_from ? { branch_from: record.shape.branch_from } : {}),
+    ...(record.shape?.branch ? { branch: record.shape.branch } : {}),
     ...(cardBody && record.shape?.result_schema
       ? { result_schema: record.shape.result_schema }
       : {}),

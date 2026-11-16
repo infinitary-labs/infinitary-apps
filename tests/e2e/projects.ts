@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { expect, type Locator, type Page } from "@playwright/test";
 import { SETUP_CARD_WORDS } from "../../src/shared/projectSetup";
 import { showCard, shownCard } from "./stack";
@@ -61,4 +62,27 @@ export async function addFromSetupCard(page: Page, name: string): Promise<void> 
     .getByRole("button", { name: SETUP_CARD_WORDS.add, exact: true })
     .click();
   await expect(setupCard(page, name)).toHaveCount(0, { timeout: 10_000 });
+}
+
+/**
+ * The task working copies git lists for a project: every working copy on a
+ * branch but the project's own folder, which git lists first. The warm
+ * pool's spare copies are detached (`worktreePool.ts`), so they are none. A
+ * task's branch is named from the first mate's words or the task's title
+ * (docs/architecture.md, "A task's branch"), so a task's working copy is
+ * never told by its branch's name.
+ */
+export function taskWorktrees(repoDir: string): string[] {
+  return execFileSync("git", ["-C", repoDir, "worktree", "list"])
+    .toString()
+    .trim()
+    .split("\n")
+    .slice(1)
+    .filter((line) => !line.includes("(detached HEAD)"));
+}
+
+/** The branch a task's record names, the one its start made: empty before it starts. */
+export async function taskBranch(page: Page, taskId: string): Promise<string> {
+  const detail = await page.evaluate((id) => window.infinitary.tasks.detail(id), taskId);
+  return detail?.repo?.branch ?? "";
 }

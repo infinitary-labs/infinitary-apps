@@ -417,6 +417,8 @@ export function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
       branch: `fm/task-${taskId}`,
       repoDir: paths.defaultWorkspaceDir,
     })),
+    // The branch a computer that runs work is sent, as the stand-in above names it.
+    taskBranchName: vi.fn(async (taskId: string) => `fm/task-${taskId}`),
     removeTaskWorktree: vi.fn(async () => {}),
     // The real save-then-remove: nothing to save by default, then the
     // removal the assertions below watch.

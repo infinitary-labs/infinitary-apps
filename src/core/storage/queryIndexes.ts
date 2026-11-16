@@ -37,6 +37,8 @@ import { COMPACTION_CANDIDATE } from "./taskEventCompaction";
  * contacts instead of composing every task (INF-3040).
  * The routing-model index seeks each model's newest chosen routing row,
  * which a start reads for the models that take turns (INF-3782).
+ * The branch index seeks the task that saved a branch name, which a start
+ * reads for each name it tries for a new task's branch.
  * `migrate` (db.ts) creates them once a database reaches the newest migration.
  */
 export function createQueryIndexes(db: AppDatabase): void {
@@ -73,6 +75,7 @@ export function createQueryIndexes(db: AppDatabase): void {
     ) WHERE kind = 'note'
       AND CASE WHEN json_valid(data_json) THEN json_extract(data_json, '$.leftoversUnresolved') END = 1;
     CREATE INDEX IF NOT EXISTS tasks_specification ON tasks (specification_id);
+    CREATE INDEX IF NOT EXISTS tasks_branch ON tasks (branch);
     CREATE INDEX IF NOT EXISTS captain_asks_at ON captain_asks (at);
     CREATE INDEX IF NOT EXISTS captain_asks_turn ON captain_asks (turn_state, at);
     CREATE INDEX IF NOT EXISTS captain_asks_delivery ON captain_asks (delivery, at);

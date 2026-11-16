@@ -449,6 +449,8 @@ describe("finding context is not starting code (INF-1964)", () => {
           filing.id,
           moved ? ssh.id : inf.id,
           undefined,
+          // The task's branch name, which this test does not judge.
+          expect.any(String),
         );
       expect(bringBranchHome).not.toHaveBeenCalled();
       if (recovery === "basis" && moved) {

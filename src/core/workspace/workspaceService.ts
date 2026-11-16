@@ -26,7 +26,15 @@ import {
   taskRemoteName,
 } from "./git";
 import { composedName, requireNamedRange } from "./naming";
-import { defaultTaskBranch, markTaskBranch, taskBranches, taskOfBranch } from "./taskBranches";
+import {
+  defaultTaskBranch,
+  markedTaskBranch,
+  markTaskBranch,
+  nameTaskBranch,
+  type TaskBranchStem,
+  taskBranches,
+  taskOfBranch,
+} from "./taskBranches";
 import { WorktreePool, type WorktreePoolOptions } from "./worktreePool";
 
 const execFileAsync = promisify(execFile);
@@ -459,8 +467,24 @@ export class WorkspaceService {
   }
 
   /**
-   * Creates the task's worktree on `branch` - the name its record holds,
-   * `fm/task-<id>` when none - marked as the task's, starting at the
+   * A new task's branch name, from `stem` and the task's code, read among
+   * the branches of its project or, with none, of the default workspace
+   * (`nameTaskBranch`, docs/architecture.md "A task's branch").
+   */
+  async taskBranchName(
+    taskId: string,
+    repoDir: string | undefined,
+    stem: TaskBranchStem,
+  ): Promise<string> {
+    const repo = repoDir ?? (await this.ensureDefaultRepo());
+    return nameTaskBranch({ taskId, repoDir: repo, ...stem });
+  }
+
+  /**
+   * Creates the task's worktree on the branch the repository already marks
+   * as the task's, else on `named` - the name its record holds, or one made
+   * now from a stem (`taskBranchName`), `fm/task-<id>` when none - marked
+   * as the task's, starting at the
    * dispatch base (`dispatchBase`). A warm tree from the pool is taken when
    * one is idle for the repository - moved to the task's path and switched
    * to the new branch, its dependency tree intact - and a new one is added
@@ -476,13 +500,20 @@ export class WorkspaceService {
     repoDir?: string,
     startAt?: DispatchBase | { headSha: string; previousHead?: string },
     remote?: { origin: string; pushOrigin?: string },
-    named?: string,
+    named?: string | TaskBranchStem,
   ): Promise<TaskWorkspace> {
     const started = Date.now();
     const at = startAt && "headSha" in startAt ? startAt : undefined;
     const repo = repoDir ?? (await this.ensureDefaultRepo());
     const cwd = join(this.paths.worktreesDir, taskId);
-    const branch = named || defaultTaskBranch(taskId);
+    // A branch the repository already marks as the task's is its name,
+    // whatever this attempt sends: a computer that runs work, asked again
+    // after a lost answer or a changed title, answers the copy it made.
+    const branch =
+      (await markedTaskBranch(repo, taskId)) ??
+      (typeof named === "object"
+        ? await nameTaskBranch({ taskId, repoDir: repo, ...named })
+        : named || defaultTaskBranch(taskId));
     await mkdir(this.paths.worktreesDir, { recursive: true });
     await git(repo, ["worktree", "prune"]);
     if (at && (await resolveCommit(repo, at.headSha)) !== at.headSha)

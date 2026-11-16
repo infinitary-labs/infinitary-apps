@@ -21,7 +21,12 @@ import {
 import type { TaskLinkType } from "../storage/taskLinkStore";
 import type { TaskStartPolicy, TaskStatus } from "../storage/taskRecords";
 import type { TaskQueryInput, TaskQueryProject, TaskQueryRow } from "../tasks/taskQuery";
-import { CONSTRAINTS_PARAM, PLACEMENT_REQUIREMENTS_PARAM, RESULT_SCHEMA_PARAM } from "./crewTools";
+import {
+  BRANCH_PARAM,
+  CONSTRAINTS_PARAM,
+  PLACEMENT_REQUIREMENTS_PARAM,
+  RESULT_SCHEMA_PARAM,
+} from "./crewTools";
 
 /**
  * The Firstmate agent's graph tools (task-system P2, design section 7):
@@ -74,6 +79,8 @@ export type TaskToolsDelegate = {
     resultSchema?: Record<string, unknown> | null;
     /** The task whose last commit it starts at (INF-799); empty clears it. */
     branchFrom?: string;
+    /** The branch name the first mate wrote, before it starts; empty clears it. */
+    branch?: string;
     /** Whether the work is the first mate's own, not the captain's ask (INF-1467). */
     internalStep?: boolean;
     /** A program's new bound on its task() calls (INF-799), on the captain's words. */
@@ -215,6 +222,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       // Their rule is said once, in the served sequences guide (INF-799).
       result_schema: Type.Optional(RESULT_SCHEMA_PARAM),
       branch_from: Type.Optional(Type.String()),
+      branch: Type.Optional(BRANCH_PARAM),
     }),
     run: async (params) => {
       // Automatic creation must not turn an undeclared graph into independent work (INF-143).
@@ -234,6 +242,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
           ? { result_schema: params.result_schema as Record<string, unknown> }
           : {}),
         ...(params.branch_from?.trim() ? { branch_from: params.branch_from.trim() } : {}),
+        ...(params.branch?.trim() ? { branch: params.branch.trim() } : {}),
       };
       const intent = parseSpawnIntent({
         goal: params.goal,
@@ -326,6 +335,9 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       ),
       result_schema: Type.Optional(RESULT_SCHEMA_PARAM),
       branch_from: Type.Optional(Type.String()),
+      branch: Type.Optional(
+        Type.String({ description: "As create_task's branch, before it starts; empty clears it." }),
+      ),
       program_bound: Type.Optional(Type.Integer()),
       crew_speed: Type.Optional(
         Type.Union([stringEnum(["standard", "fast", "ultrafast"]), Type.Null()], {
@@ -608,6 +620,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
             }
           : {}),
         ...(params.branch_from !== undefined ? { branchFrom: params.branch_from } : {}),
+        ...(params.branch !== undefined ? { branch: params.branch } : {}),
         ...(params.internal_step !== undefined ? { internalStep: params.internal_step } : {}),
         ...(params.program_bound !== undefined ? { programBound: params.program_bound } : {}),
         ...(params.crew_speed !== undefined ? { speed: params.crew_speed } : {}),

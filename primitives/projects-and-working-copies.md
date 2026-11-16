@@ -9,6 +9,7 @@ Each repository belongs to one project, named by its `repos.project_id`, which o
 A new repository gets a project of its own unless it joins an existing one (`NewRepoRow.project`), and a project is archived, never deleted, when its last repository leaves.
 Read a project's repositories through `ProjectStore.repositoriesOf` and a repository's project through `ProjectStore.forRepo`; `projects.repo_id` only records the repository a project was made with.
 Give each task that changes code its own git worktree and branch, started from the default branch fetched at dispatch, so tasks never share a checkout.
+Name the branch once, when the working copy is first made, from the first mate's written name or the task's title with a short code from its id, and read it from the task's record from then on, never rebuilt from the id ([architecture](../docs/architecture.md), "A task's branch").
 The personal workspace builds in place, with no worktree and no delivery; ordinary work explicitly declared `in_folder` also runs in its project's folder without a task working copy (`docs/task-record.md`).
 Ship a change through the project's posture: a pull or merge request through the forge seam, or a local land, and retire the working copy when the task closes.
 
@@ -56,7 +57,7 @@ A done/dropped close always retires the task's worktree and branch (captain: "cl
 Git ancestry decides only whether a save is needed, never whether the tree goes, because a squash-merged change reads as unlanded forever.
 The one exception is a save that fails, which keeps the tree exactly as it was and says so in the feed.
 Retiring a worktree never happens on the settle path: `removeTaskWorktree` moves the tree aside by rename (into the warm pool, or the trash) and returns, and deleting its files runs in the background and at boot (`sweepPool`, `sweepTrash`).
-Boot hygiene applies the same rule to closed rows still holding a tree and to record-less directories under `userData/worktrees`, and reports leftover `fm/task-*` branches as one feed line without deleting them.
+Boot hygiene applies the same rule to closed rows still holding a tree and to record-less directories under `userData/worktrees`, and deletes each leftover task branch no live task explains, marked as a task's or named `fm/task-*`, its work saved on the kept ref first.
 A task on a computer that runs work keeps its working copy there; its close saves the same commit there and brings it home as a bundle before deleting the copy ([running work for another Mac](../docs/helper.md), "Its working copies").
 
 ## Authority

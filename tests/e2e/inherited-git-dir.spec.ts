@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { REPOSITORY_GIT_VARIABLES } from "../../src/core/hostEnv";
 import { appPathsFor } from "../../src/core/paths";
+import { TITLE_BRANCH_PREFIX } from "../../src/core/workspace/taskBranches";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
@@ -106,7 +107,9 @@ test("an app started inside a git bisect run step commits only in its own folder
     const key = await taskKey(app.page, GIT_STATUS_PROMPT_MARKER);
     await expect(
       reportLine(app.page, key).filter({
-        hasText: new RegExp(`${MOCK_GIT_REPORT_PREFIX} git version \\S+ on ## fm/`),
+        hasText: new RegExp(
+          `${MOCK_GIT_REPORT_PREFIX} git version \\S+ on ## ${TITLE_BRANCH_PREFIX}`,
+        ),
       }),
     ).toBeVisible({ timeout: 60_000 });
   } finally {

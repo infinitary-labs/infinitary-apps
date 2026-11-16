@@ -212,7 +212,10 @@ for (const host of HOSTS) {
         (row) => row.title === title,
       );
       if (!task) throw new Error("The crewmate's task is missing");
-      const sentUp = headIn(bare)(`fm/task-${task.id}`);
+      // The branch the app named, which the task's record keeps.
+      const branch = task.repo?.branch ?? "";
+      expect(branch).not.toBe("");
+      const sentUp = headIn(bare)(branch);
       const project = encodeURIComponent(GITLAB_STUB_PROJECT);
       expect(gitlab.requests()).toContain(`POST /api/v4/projects/${project}/merge_requests`);
       // Approved contribution routing reads jobs under the pipeline's reported project identity.

@@ -463,8 +463,9 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     taskId: string,
     repoId: string | null,
     base?: WorkingCopyBase,
+    branch?: string,
   ): Promise<PlacedCopy> {
-    return this.copies.prepare(machine, taskId, repoId, base);
+    return this.copies.prepare(machine, taskId, repoId, base, branch);
   }
 
   sourceFile(

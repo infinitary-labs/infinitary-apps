@@ -167,12 +167,14 @@ describe("batch-pull-request.yml", () => {
         `${pull.head_ref} from ${pull.event.pull_request.head.repo.full_name}`,
       ).toBe(!starts(pull));
     expect(change(pullRequest(rehearsal.branch))).toBe(false);
-    // A task's branch starts the change's check at each push. The push of
+    // A task's branch starts the change's check at each push, named by the
+    // naming runbook's words or fm/task-<id> from before. The push of
     // the batch's own branch starts nothing, so the batch's checks are the
     // one run its pull request started.
     const pushStarts = (branch: string) =>
       ci.on.push!.branches!.some((pattern) => posix.matchesGlob(branch, pattern));
     expect(pushStarts("fm/task-573def9c")).toBe(true);
+    expect(pushStarts("inf/branch-names-runbook-573d")).toBe(true);
     expect(pushStarts(rehearsal.branch)).toBe(false);
     expect(pushStarts("main")).toBe(false);
     expect(

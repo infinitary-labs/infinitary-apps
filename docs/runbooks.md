@@ -146,6 +146,8 @@ Commit and PR naming supplies guidance and the one naming rule the app holds (`n
 The rule's `pattern` and `message` are what the commit-range, story-title and forge title checks test and say; its `compose` names each commit the app writes itself, `{summary}` standing for that commit's plain summary; its `footer` picks the lines of a pull request's own text that its squash commit message carries.
 The app keeps no naming convention of its own (`src/core/workspace/naming.ts`): with the built-in off and a copy or another runbook on, every name follows that runbook's rule, and with no naming runbook on nothing is checked and the app's own commits carry their plain summary.
 A project's own instructions and release tooling are unchanged either way.
+Its guide, served to the first mate and to code crewmates, also says in words how a task's branch is named: the built-in says `inf/` and a few lowercase words saying what the work does, and a turned-on copy says what its own guide says, with no pattern for the app to read.
+The first mate writes the name as the task's `branch` when it files or starts the task; the app adds a short code from the task's id, names a task left unnamed `inf/` and its title's slug, and refuses only a name git would refuse or one under its batch branches (`docs/architecture.md`, "A task's branch").
 
 Runbook guidance may decide author choices on the cards it describes, such as voice, length, layout, opening and button names.
 The fixed card shape, merge authorization, consent, delivery and care facts remain core.

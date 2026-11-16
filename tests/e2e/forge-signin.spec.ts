@@ -592,7 +592,9 @@ test("a crewmate opens its change on GitHub with its own tools, and the captain'
   const board = await page.evaluate(() => window.infinitary.tasks.board());
   const task = board.tasks.find((row) => row.title === title);
   expect(task).toBeDefined();
-  const branch = `fm/task-${task?.id}`;
+  // The branch the app named, which the task's record keeps.
+  const branch = task?.repo?.branch ?? "";
+  expect(branch).not.toBe("");
   // The branch went up through git with the app's helper answering, and
   // the change opened on GitHub carries exactly that version.
   const sentUp = git("-C", bare, "rev-parse", `refs/heads/${branch}`);
@@ -745,7 +747,7 @@ test("an organization that blocks the app: GitHub CLI's sign-in, chosen under th
   const board = await page.evaluate(() => window.infinitary.tasks.board());
   const task = board.tasks.find((entry) => entry.title === title);
   expect(
-    git("-C", bare, "rev-list", "--count", `refs/heads/main..refs/heads/fm/task-${task?.id}`),
+    git("-C", bare, "rev-list", "--count", `refs/heads/main..refs/heads/${task?.repo?.branch}`),
   ).toBe("1");
 });
 
@@ -1132,7 +1134,7 @@ test("the first change goes in and its continuation starts from the landed proje
     .toMatchObject({ status: "done", closedReason: "merged" });
   await expect.poll(continuation, { timeout: 30_000 }).toMatchObject({ status: "active" });
   const landedHead = git("-C", bare, "rev-parse", "refs/heads/main");
-  expect(git("-C", bare, "rev-parse", `refs/heads/fm/task-${origin?.id}`)).toBe(landedHead);
+  expect(git("-C", bare, "rev-parse", `refs/heads/${origin?.repo?.branch}`)).toBe(landedHead);
   const nextDir = join(userDataDir, "worktrees", next?.id as string);
   // The row becomes active at "starting"; the pooled checkout follows it.
   await expect
@@ -1470,7 +1472,7 @@ test("a GitHub Enterprise host: signed in with a key made there, its projects ar
   const board = await page.evaluate(() => window.infinitary.tasks.board());
   const task = board.tasks.find((row) => row.title === title);
   expect(task).toBeDefined();
-  const sentUp = git("-C", bare, "rev-parse", `refs/heads/fm/task-${task?.id}`);
+  const sentUp = git("-C", bare, "rev-parse", `refs/heads/${task?.repo?.branch}`);
   expect(github.requests()).toContain("POST /api/v3/repos/octo/meterlab/pulls");
   const facts = factsStrip(cardBody(page, MOCK_GITHUB_CHANGE_CARD_TITLE));
   await expect(

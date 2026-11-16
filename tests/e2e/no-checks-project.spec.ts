@@ -17,7 +17,7 @@ import { seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { launchApp } from "./launch";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { seedProject } from "./projectSeed";
-import { projectRow } from "./projects";
+import { projectRow, taskBranch } from "./projects";
 import { promptInput } from "./prompt";
 import { readSavedData } from "./savedData";
 import {
@@ -135,7 +135,9 @@ test("a project recorded by keys as running no checks shows its merge card at on
     const taskId =
       board.tasks.find((task) => task.title.includes(GITHUB_CHANGE_PROMPT_MARKER))?.id ?? "";
     expect(taskId).not.toBe("");
-    const pushed = git("-C", bare, "rev-parse", `refs/heads/fm/task-${taskId}`);
+    const branch = await taskBranch(page, taskId);
+    expect(branch).not.toBe("");
+    const pushed = git("-C", bare, "rev-parse", `refs/heads/${branch}`);
 
     // The card offers the merge at once: no checks, and Merge the pull request.
     const facts = factsStrip(cardBody(page, MOCK_GITHUB_CHANGE_CARD_TITLE));

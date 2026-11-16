@@ -837,7 +837,8 @@ The same job runs for a pushed branch as for its pull request, named `Branch pus
 A pull request's change starts at the base parent of its merge commit; a pushed branch has no merge commit, so its change starts at the commit the branch left `main` at.
 The job's `Find the change's base` step finds that commit, and the release notes check, the paths step, the reader of changed files and the critical path all measure the change from it, so commits `main` gained since are never read as the branch's own.
 A pushed branch fetches every commit to find it, where a pull request fetches two.
-Each push of a branch named `fm/task-*` starts `ci.yml`, so a task's change is checked with no pull request of its own, which is how a change reaches a batch (INF-3759's plan, piece 3; "The swept batch").
+Each push of a task's branch starts `ci.yml`: one named `inf/...`, as the built-in naming runbook names a task's branch, or `fm/task-*`, as every task branch was named before (`docs/architecture.md`, "A task's branch").
+So a task's change is checked with no pull request of its own, which is how a change reaches a batch (INF-3759's plan, piece 3; "The swept batch").
 A branch under another name is checked by its pull request, or by a request by hand.
 A task branch that still has a pull request runs the job for each, the push and the pull request.
 A push of `main` or of a batch's own branch, `infinitary-batch/<id>`, starts nothing here, and the job skips itself on a batch pull request, whose changes each ran it already ("A batch pull request").

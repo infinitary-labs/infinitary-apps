@@ -382,6 +382,13 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/core/workspace/projectLocator.ts": {
     MAX_RESULTS: physical("the rest drop unnamed; a fuller name narrows the search"),
   },
+  "src/core/workspace/taskBranches.ts": {
+    // The captain's approved branch-naming plan chose 48 for a title's slug.
+    SLUG_MAX: {
+      rests: "consent",
+      way: "the slug is cut at a hyphen; the first mate writes the task's branch name instead",
+    },
+  },
   "src/core/workspace/worktreePool.ts": {
     MAX_IDLE_AGE_MS: physical("the idle slot is retired; the next task builds a fresh copy"),
   },

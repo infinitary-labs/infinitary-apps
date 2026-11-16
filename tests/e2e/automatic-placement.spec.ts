@@ -5,6 +5,7 @@ import { captainTurn, renderWake } from "../../src/core/orchestrator/wakes";
 import { openDatabase } from "../../src/core/storage/db";
 import { SettingsStore } from "../../src/core/storage/settingsStore";
 import { TaskStore } from "../../src/core/storage/taskRecords";
+import { TITLE_BRANCH_PREFIX } from "../../src/core/workspace/taskBranches";
 import { HERE } from "../../src/shared/deviceNames";
 import {
   AUTOMATIC_COMPUTER,
@@ -240,10 +241,13 @@ async function askForTask(app: LaunchedApp): Promise<{ key: string; id: string |
   return { key, id };
 }
 
-/** The crewmate ran in a working copy of its own branch. */
+/**
+ * The crewmate ran in a working copy of its own branch: the first mate named
+ * none, so the app named it from the task's title.
+ */
 function ranOnItsBranch(app: LaunchedApp, key: string) {
   return reportLine(app.page, key).filter({
-    hasText: new RegExp(`${MOCK_GIT_REPORT_PREFIX} git version \\S+ on ## fm/`),
+    hasText: new RegExp(`${MOCK_GIT_REPORT_PREFIX} git version \\S+ on ## ${TITLE_BRANCH_PREFIX}`),
   });
 }
 

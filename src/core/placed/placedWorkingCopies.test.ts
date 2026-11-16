@@ -250,9 +250,11 @@ describe("a task that runs on a computer that runs work", () => {
     const work = at.folders("t-copy").work;
     await expect.poll(() => home.tasks.get("t-copy")?.activity).toBe("idle");
     expect(await git(work, ["rev-parse", "HEAD"])).toBe(project.main);
-    expect(await git(work, ["symbolic-ref", "--short", "HEAD"])).toBe("fm/task-t-copy");
+    // On the branch the home named from the task's title and code.
+    const branch = "inf/website-t-co";
+    expect(await git(work, ["symbolic-ref", "--short", "HEAD"])).toBe(branch);
     expect(home.tasks.get("t-copy")).toMatchObject({
-      branch: "fm/task-t-copy",
+      branch,
       worktreeDir: "",
       workspaceState: "present",
     });
@@ -288,9 +290,9 @@ describe("a task that runs on a computer that runs work", () => {
 
     // open_change ran here: the branch came home over the connection, and
     // this Mac sent it up to where the project lives.
-    expect(await git(project.home, ["rev-parse", "refs/heads/fm/task-t-copy"])).toBe(tip);
-    expect(await git(project.origin, ["rev-parse", "refs/heads/fm/task-t-copy"])).toBe(tip);
-    expect(said(api.requests.at(-2))).toContain("Opened the pushed branch fm/task-t-copy");
+    expect(await git(project.home, ["rev-parse", `refs/heads/${branch}`])).toBe(tip);
+    expect(await git(project.origin, ["rev-parse", `refs/heads/${branch}`])).toBe(tip);
+    expect(said(api.requests.at(-2))).toContain(`Opened the pushed branch ${branch}`);
     expect(home.tasks.delivery.changePresentation("t-copy")?.completion).toMatchObject({
       revision: 1,
       head: tip,
@@ -325,7 +327,7 @@ describe("a task that runs on a computer that runs work", () => {
     expect(
       await git(project.home, ["merge-base", "--is-ancestor", tip, kept]).then(() => true),
     ).toBe(true);
-    expect(await git(project.home, ["branch", "--list", "fm/task-t-copy"])).toBe("");
+    expect(await git(project.home, ["branch", "--list", branch])).toBe("");
     expect(home.tasks.timeline("t-copy").at(-1)?.text).toBe(
       "working copy on Mac mini removed - its 1 commit not in yet and uncommitted edits saved here first",
     );
@@ -765,6 +767,8 @@ describe("a task that runs on a computer that runs work", () => {
     await at.start("t-moved", "Make the footer blue.", repo.id);
     await expect.poll(() => at.home().tasks.get("t-moved")?.activity).toBe("idle");
     const work = at.folders("t-moved").work;
+    const branch = at.home().tasks.get("t-moved")?.branch ?? "";
+    expect(branch).not.toBe("");
     writeFileSync(join(work, "footer.html"), "<footer>blue</footer>\n");
     const tip = await commit(work, "feat: a blue footer");
     // INF-125 adds an explicit proof prerequisite; INF-97 still owns the real moved-folder/git boundary below.
@@ -796,16 +800,16 @@ describe("a task that runs on a computer that runs work", () => {
     await expect.poll(() => api.requests.length - requests).toBe(publication.length);
     await expect.poll(() => home.tasks.get("t-moved")?.activity).toBe("idle");
 
-    expect(said(api.requests.at(-1))).toContain("Opened the pushed branch fm/task-t-moved");
+    expect(said(api.requests.at(-1))).toContain(`Opened the pushed branch ${branch}`);
     expect(home.tasks.delivery.changePresentation("t-moved")?.completion).toMatchObject({
       revision: 1,
       head: tip,
     });
     // The branch came home into the project's folder and went up from there.
-    expect(await git(moved, ["rev-parse", "refs/heads/fm/task-t-moved"])).toBe(tip);
-    expect(await git(project.origin, ["rev-parse", "refs/heads/fm/task-t-moved"])).toBe(tip);
+    expect(await git(moved, ["rev-parse", `refs/heads/${branch}`])).toBe(tip);
+    expect(await git(project.origin, ["rev-parse", `refs/heads/${branch}`])).toBe(tip);
     // The older copy stays as the move left it.
-    expect(await git(repo.path, ["branch", "--list", "fm/task-t-moved"])).toBe("");
+    expect(await git(repo.path, ["branch", "--list", branch])).toBe("");
   });
 
   it("merges a task's branch from that computer into the project's folder once the home's folder has moved (INF-97)", async () => {
@@ -1006,6 +1010,8 @@ describe("a task that runs on a computer that runs work", () => {
     await at.start("t-review", "Review the footer.", repo.id);
     await expect.poll(() => home.tasks.get("t-review")?.activity).toBe("idle");
     const work = at.folders("t-review").work;
+    const branch = home.tasks.get("t-review")?.branch ?? "";
+    expect(await git(work, ["rev-parse", "--verify", `refs/heads/${branch}`])).not.toBe("");
     // A commit on its branch, then the version it reviews checked out, with a note of its own.
     writeFileSync(join(work, "footer.html"), "<footer></footer>\n");
     const onBranch = await commit(work, "feat: add the footer");
@@ -1044,7 +1050,7 @@ describe("a task that runs on a computer that runs work", () => {
     for (const commit of [onBranch, checkedOut, older.sha])
       await git(project.home, ["merge-base", "--is-ancestor", commit, kept]);
     await expect(
-      git(clone, ["rev-parse", "--verify", "--quiet", "refs/heads/fm/task-t-review"]),
+      git(clone, ["rev-parse", "--verify", "--quiet", `refs/heads/${branch}`]),
     ).rejects.toThrow();
   });
 

@@ -486,6 +486,15 @@ export function groupSpawnArgs(args: Record<string, unknown>): Record<string, un
  */
 export const RESULT_SCHEMA_PARAM = Type.Unsafe<Record<string, unknown>>({ type: "object" });
 
+/**
+ * The task's branch name the first mate writes from the naming runbook's
+ * words (docs/architecture.md, "A task's branch"); the app adds the code.
+ */
+export const BRANCH_PARAM = Type.String({
+  description:
+    "The task's branch, as the naming runbook says; the app adds a short code. Omit to name it from the title.",
+});
+
 export const NOTHING_SPAWNED = "Nothing was spawned.";
 
 /**
@@ -617,6 +626,7 @@ export function createCrewTools(delegate: CrewDelegate) {
             "Start from this task’s last commit, held on this computer; for work on another computer, name its pushed version in the brief.",
         }),
       ),
+      branch: Type.Optional(BRANCH_PARAM),
       start_after: Type.Optional(
         Type.Object(
           {
@@ -668,6 +678,7 @@ export function createCrewTools(delegate: CrewDelegate) {
           ? { result_schema: params.result_schema as Record<string, unknown> }
           : {}),
         ...(params.branch_from ? { branch_from: params.branch_from } : {}),
+        ...(params.branch ? { branch: params.branch } : {}),
       });
       const intent = parseSpawnIntent({
         goal: params.goal,
@@ -990,6 +1001,7 @@ function shapeAskFrom(params: {
   skipped_plan_because?: string;
   result_schema?: Record<string, unknown>;
   branch_from?: string;
+  branch?: string;
 }): WorkShapeAsk | undefined {
   const basis = params.basis?.trim();
   const override = params.override_model_id?.trim();
@@ -1024,6 +1036,7 @@ function shapeAskFrom(params: {
       : {}),
     ...(params.result_schema ? { result_schema: params.result_schema } : {}),
     ...(params.branch_from?.trim() ? { branch_from: params.branch_from.trim() } : {}),
+    ...(params.branch?.trim() ? { branch: params.branch.trim() } : {}),
   };
   return Object.keys(ask).length > 0 ? ask : undefined;
 }

@@ -33,6 +33,7 @@ import { TaskService } from "../tasks/taskService";
 import { UNCONFIRMED_START_RETURNED } from "../tasks/taskStarts";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import { taskRemoteName } from "../workspace/git";
+import { type TaskBranchStem, taskBranchStem } from "../workspace/taskBranches";
 import type { DispatchBase, WorktreeAcquisition } from "../workspace/workspaceService";
 import type { CrewBrief } from "./crewBrief";
 import type { CrewCore } from "./crewCore";
@@ -254,6 +255,28 @@ export class CrewStarts {
   }
 
   /**
+   * What a new task's branch is named from (docs/architecture.md, "A
+   * task's branch"): the first mate's written name or `inf/` and its
+   * title's slug, and the names its project's other tasks saved.
+   */
+  private branchStem(
+    taskId: string,
+    record: TaskRecord | undefined,
+    title: string,
+  ): TaskBranchStem {
+    return {
+      stem: taskBranchStem({
+        id: taskId,
+        key: record?.key || taskId,
+        title: record?.title ?? title,
+        written: record?.shape?.branch,
+      }),
+      savedByAnother: (branch) =>
+        this.core.options.tasks.starts.branchSavedByAnother(record?.repoId ?? null, branch, taskId),
+    };
+  }
+
+  /**
    * Start (or dispatch) one task: worktree, routing, account, session,
    * first turn. Shared by immediate commissions and the ready sweep.
    */
@@ -389,12 +412,23 @@ export class CrewStarts {
           );
         const builder = this.core.reviewBuilderOf(record);
         const headSha = builder ? record?.delivery?.headSha : undefined;
+        // Named before anything is reserved, so a name the project cannot
+        // take leaves no preparation behind; the computer answers a copy it
+        // already made on its own name, which the start saves.
+        const branch =
+          record?.branch ||
+          (await this.core.options.workspace.taskBranchName(
+            taskId,
+            repoDir,
+            this.branchStem(taskId, record, title),
+          ));
         this.core.options.tasks.placement.beginPlacementPreparation(taskId);
         elsewhere = await machines.prepare(
           machine,
           taskId,
           spec.repoId,
           builder && headSha ? { task: builder.id, headSha } : undefined,
+          branch,
         );
         cwd = elsewhere.cwd;
       } else if ((live || inPlace) && repoDir) {
@@ -441,7 +475,7 @@ export class CrewStarts {
           repoDir,
           headSha ? { headSha } : branchFrom,
           preparedPublicationRemote(this.core.options.tasks.get(taskId)),
-          record?.branch || undefined,
+          record?.branch || this.branchStem(taskId, record, title),
         );
       }
       cwd ??= task.workspace?.cwd ?? "";

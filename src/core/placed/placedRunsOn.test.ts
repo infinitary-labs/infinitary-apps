@@ -142,11 +142,12 @@ describe("a project that runs on a computer that runs work", () => {
     await at.inReach("t-next");
     // Its coming back runs the ready sweep, which starts the task.
     await home.supervisor.starts.dispatchQueuedTask("t-next");
-    await expect.poll(() => home.tasks.get("t-next")?.branch).toBe("fm/task-t-next");
+    // The home names its branch from the title and the task's code, and the
+    // computer makes that branch (INF-4195's plan, piece 2).
+    await expect.poll(() => home.tasks.get("t-next")?.branch).toBe("inf/footer-t-ne");
     expect(home.tasks.get("t-next")).toMatchObject({
       status: "active",
       deviceId: at.deviceId,
-      branch: "fm/task-t-next",
       worktreeDir: "",
     });
     expect(waits().at(-1)).toBe("home's next task started as Builder.");
@@ -156,7 +157,7 @@ describe("a project that runs on a computer that runs work", () => {
       .poll(() => home.cards().find((card) => card.title === "Footer started"))
       .toMatchObject({ meta: "footer", place: "as Builder" });
     expect(await git(at.folders("t-next").work, ["symbolic-ref", "--short", "HEAD"])).toBe(
-      "fm/task-t-next",
+      "inf/footer-t-ne",
     );
 
     // Moved back here: the started task stays there, and the next one starts here.
@@ -279,7 +280,7 @@ describe("a task's own Runs on", () => {
       shape: { runs_on_ask: "Mac mini" },
     });
     expect(crewmate).not.toBe("queued");
-    await expect.poll(() => home.tasks.get(taskId)?.branch).toBe(`fm/task-${taskId}`);
+    await expect.poll(() => home.tasks.get(taskId)?.branch).toMatch(/^inf\//);
     expect(home.tasks.get(taskId)).toMatchObject({
       status: "active",
       deviceId: at.deviceId,
@@ -316,7 +317,7 @@ describe("a task's own Runs on", () => {
       shape: { runs_on_ask: at.deviceId },
     });
     expect(crewmate).not.toBe("queued");
-    await expect.poll(() => home.tasks.get(taskId)?.branch).toBe(`fm/task-${taskId}`);
+    await expect.poll(() => home.tasks.get(taskId)?.branch).toMatch(/^inf\//);
     expect(home.tasks.get(taskId)).toMatchObject({
       status: "active",
       deviceId: at.deviceId,

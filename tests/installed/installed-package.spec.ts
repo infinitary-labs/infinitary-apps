@@ -5,6 +5,7 @@ import { expect, test } from "@playwright/test";
 import { reportSummary } from "@shared/feed";
 import { POLKIT_ACTION } from "../../src/main/host/linuxFreshAuthentication";
 import { MOCK_COMPLETION_TEXT } from "../e2e/mockProvider";
+import { taskBranch } from "../e2e/projects";
 import { promptInput } from "../e2e/prompt";
 import { reportLine, startedLine, taskKey } from "../e2e/rails";
 import { withoutRunnerSession } from "../helpers/runnerSession";
@@ -176,9 +177,18 @@ test("the installed package opens sandboxed, reports its version and runs a crew
     await input.press("Enter");
     const key = await taskKey(page, title);
     await expect(startedLine(page, key)).toBeVisible({ timeout: 60_000 });
-    // The task's working copy is a worktree the system's git made.
+    // The task's working copy is a worktree the system's git made, on the
+    // branch its record names.
+    const id = await page.evaluate(
+      async (wanted) =>
+        (await window.infinitary.tasks.board()).tasks.find((task) => task.title === wanted)?.id ??
+        "",
+      title,
+    );
+    const branch = await taskBranch(page, id);
+    expect(branch).not.toBe("");
     const worktrees = execFileSync("git", ["-C", repo, "worktree", "list"]).toString();
-    expect(worktrees).toContain("fm/task-");
+    expect(worktrees).toContain(`[${branch}]`);
     await expect(
       reportLine(page, key).filter({ hasText: reportSummary(MOCK_COMPLETION_TEXT) }),
     ).toBeVisible({ timeout: 60_000 });

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
+import { softHoldWords } from "../../shared/holds";
 import type { Forge, ForgePull } from "../forge";
 import { appPathsFor } from "../paths";
 import { PI_CONTROL_PROFILE } from "../pi/controlProfile";
@@ -129,7 +130,7 @@ function fixture() {
     broadcastCrewCounts: () => {},
     broadcastEvent: () => {},
   };
-  const { settle } = createSettleOwners(host);
+  const { settle, locks } = createSettleOwners(host);
   let blocked = false;
   const readChecks = vi.fn(async () => ({ kind: "gone" as const }));
   const steer = vi.fn();
@@ -156,6 +157,7 @@ function fixture() {
     readChecks,
     steer,
     settle,
+    locks,
     watcher,
     sweep: async () => {
       const supervisor = new CrewSupervisor({
@@ -653,5 +655,35 @@ describe("external merge reconciliation", () => {
     expect(h.tasks.get("meter")?.delivery?.ciWatch).toBeUndefined();
     expect(h.tasks.get("meter")?.closedReason).toBe("merged");
     expect(h.steer).not.toHaveBeenCalled();
+  });
+  it("answers a merge asked while the watch reads its pull request, and leaves a merge read then to the settle holding it", async () => {
+    const h = fixture();
+    let answer!: (value: ForgePull) => void;
+    h.readPull.mockImplementationOnce(
+      () =>
+        new Promise<ForgePull>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const reading = h.watcher().poll(h.now());
+    // The first mate's merge, asked while the read is out, hears its own
+    // answer: on this project the merge is the captain's click.
+    const asked = await h.settle.settleTaskGuarded("meter", "merge-pr", undefined, "firstmate");
+    expect(asked.contention).toBeUndefined();
+    expect(asked).toMatchObject({
+      ok: false,
+      text: expect.stringContaining(softHoldWords("asks-first", "firstmate")),
+    });
+    // A settle holding the task when the read answers merged keeps it.
+    const settling = h.locks.claim("meter", "merge-pr");
+    answer({ ...h.pull(), merged: true, state: "closed" });
+    await reading;
+    expect(h.tasks.get("meter")?.status).toBe("active");
+    expect(h.retire).not.toHaveBeenCalled();
+    settling.release();
+    h.merged();
+    h.advance();
+    await h.watcher().poll(h.now());
+    expect(h.tasks.get("meter")).toMatchObject({ status: "done", closedReason: "merged" });
   });
 });

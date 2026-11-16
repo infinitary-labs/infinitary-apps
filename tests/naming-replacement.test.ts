@@ -43,7 +43,8 @@ const TEAM: NamingRule = {
   compose: "[APP] {summary}",
   footer: "^Refs: [^\\r\\n]+",
 };
-const TEAM_GUIDE = "Name every commit and pull request [AREA] Summary, the area in capitals.";
+const TEAM_GUIDE =
+  "Name every commit and pull request [AREA] Summary, the area in capitals. Name a task's branch team/ and its ticket, such as team/web-1234.";
 
 /** The runbooks the app reads, with the captain's own naming copy on in place of the built-in. */
 function teamRunbooks(): Runbooks {
@@ -74,6 +75,11 @@ describe("a replacement naming runbook decides every name", () => {
     const served = books.crew(CODE).text;
     expect(served).toContain(TEAM_GUIDE);
     expect(served).not.toContain("Name every commit subject");
+    // The first mate names each task's branch by the replacement's words (INF-4195's plan, piece 2).
+    const builtIn = readFileSync(join(BUNDLE, "naming/guide.md"), "utf8");
+    const branchWords = builtIn.slice(builtIn.indexOf("Name a task's branch")).trim();
+    expect(books.firstmate().text).toContain(TEAM_GUIDE);
+    expect(books.firstmate().text).not.toContain(branchWords);
   });
 
   it("checks pull request titles and the branch's commits by its rule", async () => {

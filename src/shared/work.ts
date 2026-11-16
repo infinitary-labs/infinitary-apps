@@ -1441,7 +1441,7 @@ export const workOrders = {
        */
       seed: commitSchema.optional(),
       /**
-       * The task's branch as the home names it (`task-branch-names.md`);
+       * The task's branch as the home names it (docs/architecture.md, "A task's branch");
        * `fm/task-<task>` without one. The answer's `branch` is the one made.
        */
       branch: taskBranchSchema.optional(),

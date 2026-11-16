@@ -294,7 +294,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
       async (machine: string, _taskId: string, _attempt: string, pack: string) => {
         const { manifest } = await packWork(
           join(thereOf(machine), "work"),
-          `fm/task-${h.taskId}`,
+          h.branch,
           { evidence: join(thereOf(machine), "evidence") },
           pack,
         );
@@ -380,6 +380,8 @@ describe("a started task moves to another computer (INF-1713, real git)", {
       thereOf,
       reach,
       taskId: "",
+      /** The branch its start named, which every move keeps. */
+      branch: "",
     };
     const { taskId } = await h.supervisor.intake.commission({
       title: "Fix the meter",
@@ -389,6 +391,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     h.taskId = taskId;
     await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1), REAL_GIT_WAIT);
     const cwd = h.tasks.get(taskId)?.worktreeDir ?? "";
+    h.branch = h.tasks.get(taskId)?.branch ?? "";
     // Mid-turn work of every kind: a commit, a staged file, an edit, an untracked file, evidence.
     writeFileSync(join(cwd, "meter.ts"), "export const unit = 'Wh';\n");
     await git(cwd, [...author, "commit", "--quiet", "-am", "fix: meter unit"]);
@@ -458,7 +461,7 @@ describe("a started task moves to another computer (INF-1713, real git)", {
     expect(h.tasks.get(h.taskId)).toMatchObject({
       status: "active",
       worktreeDir: "",
-      branch: `fm/task-${h.taskId}`,
+      branch: h.branch,
     });
     expect(existsSync(h.cwd)).toBe(false);
     // A new conversation there, told it moved, with the steer that waited.

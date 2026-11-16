@@ -131,9 +131,14 @@ test("a Default pull request's merge card is made Careful by ⌘2, reviewed, and
   // "review carefully", and a short question's bubble is a button too.
   const reviewChoice = { name: REVIEW_CAREFULLY_WORDS, exact: true };
   await expect(card.getByRole("button", reviewChoice)).toContainText("2");
+  // The branch the app named at the builder's start, which its record keeps.
+  const builderBranch = (
+    await page.evaluate((id) => window.infinitary.tasks.detail(id), builder.id)
+  ).repo?.branch;
+  if (!builderBranch) throw new Error("The started builder has no branch.");
   const builderHead = execFileSync(
     "git",
-    ["-C", repoDir, "rev-parse", `refs/heads/fm/task-${builder.id}`],
+    ["-C", repoDir, "rev-parse", `refs/heads/${builderBranch}`],
     { encoding: "utf8" },
   ).trim();
   await card.screenshot({ path: test.info().outputPath("merge-card-review-carefully.png") });
@@ -214,7 +219,7 @@ test("a Default pull request's merge card is made Careful by ⌘2, reviewed, and
 
   // The pull request was never touched: the same version, nothing merged.
   expect(
-    execFileSync("git", ["-C", repoDir, "rev-parse", `refs/heads/fm/task-${builder.id}`], {
+    execFileSync("git", ["-C", repoDir, "rev-parse", `refs/heads/${builderBranch}`], {
       encoding: "utf8",
     }).trim(),
   ).toBe(builderHead);

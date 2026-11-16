@@ -120,8 +120,9 @@ const frameSchema = z.object({
  * One recorded stall. `frames` is the call path, innermost first. `uncertain`
  * says the names may not be where the time went: `waited`, the main thread
  * spent under half the stall on its own processor, so it was waiting on
- * something outside JavaScript and the pause landed after; `late`, the names
- * were read only after the stall had ended, from code that ran later.
+ * something outside JavaScript and the names were read after the wait;
+ * `late`, the names were read only after the stall had ended, from code that
+ * ran later.
  */
 export const freezeLineSchema = z.object({
   incidentId: z.string().optional(),

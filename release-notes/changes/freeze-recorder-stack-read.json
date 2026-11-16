@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "freeze-recorder-stack-read",
+      "reason": "The freeze recorder, on only in alpha builds and the freeze journey, reads a stall's call path from the stack instead of pausing the main thread in the debugger, so the read no longer adds its own time to the stall it records; what a person sees is unchanged."
+    }
+  ]
+}

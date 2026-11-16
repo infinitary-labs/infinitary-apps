@@ -14,11 +14,10 @@ const WATCH_MS = 20;
 /** How long the watchdog waits for a call path after the stall ended before writing the line without one. */
 const LATE_NAMES_MS = 1_000;
 /**
- * How long arming waits for the watchdog's debugger. A physical bound, not a
- * judgment: armed before the app's code loads, a watchdog thread starts and
- * enables its debugger in tens of milliseconds, and one that cannot never
- * holds the app's start longer than this; its recorder then records without
- * names until the debugger is on.
+ * How long arming waits for the watchdog to start and connect to the main
+ * thread. A physical bound, not a judgment: armed before the app's code
+ * loads, a watchdog thread starts in tens of milliseconds, and one that
+ * cannot never holds the app's start longer than this.
  */
 const ARMING_WAIT_MS = 2_000;
 
@@ -39,14 +38,16 @@ export function isFreezeRecorderEnabled(build: {
 
 /**
  * The watchdog, run as a worker thread from source so no build step or
- * packaged archive stands between the app and it. It enables the
- * inspector's debugger on the main thread as it starts and says so through
- * `armed`, which the main thread waits on (`armWatchdog`). It watches only
- * once the recorder hands it its record (`{ record }`), then reads the main
- * thread's heartbeats, each carrying `process.threadCpuUsage()`, and on a
- * missed one pauses the main thread once for its call frames and resumes it.
- * Enabled only after the stall, a wait's pause landed in code that ran after
- * the wait (INF-2061's lab). Once it has handed over a previous run's
+ * packaged archive stands between the app and it. It connects an inspector
+ * session to the main thread as it starts and says so through `armed`,
+ * which the main thread waits on (`armWatchdog`). It watches only once the
+ * recorder hands it its record (`{ record }`), then reads the main thread's
+ * heartbeats, each carrying `process.threadCpuUsage()`, and on a missed one
+ * asks the main thread once for its call path. The main thread answers
+ * where it is running, reading its stack frames and nothing else: a
+ * debugger pause, which this used, read every frame's scopes on the main
+ * thread and added tens of milliseconds to the stall it named (INF-4535).
+ * Once it has handed over a previous run's
  * unfinished stalls it says `{ recovered: true }`. The incident start is written before asking for names; completion adds the
  * processor time when the next heartbeat arrives, the main thread's garbage
  * collections that heartbeat says ran since the one before, and the
@@ -70,20 +71,37 @@ function sayArmed(state) {
 }
 
 let enabled = false;
-const scripts = new Map();
 const session = new inspector.Session();
 try {
   session.connectToMainThread();
-  session.on("Debugger.scriptParsed", (message) => {
-    if (message.params.url) scripts.set(message.params.scriptId, message.params.url);
-  });
-  session.post("Debugger.enable", (error) => {
-    enabled = !error;
-    sayArmed(error ? 2 : 1);
-  });
+  enabled = true;
+  sayArmed(1);
 } catch {
   sayArmed(2);
 }
+
+// The call path, innermost first, read on the main thread where it is
+// running when V8 next lets the inspector in. Node's getCallSites asks V8
+// for the stack's frames alone: it reads no scope, formats no error and
+// leaves the app's own stack settings untouched, so it names a stall held
+// inside the app's own error formatting too. It reads the innermost 200
+// frames, the most it gives, and leaves out this script's own.
+function readCallPath() {
+  const sites = process.getBuiltinModule("node:util").getCallSites(200);
+  const own = sites.find((site) => site.functionName === "readCallPath")?.scriptId;
+  const frames = [];
+  for (const site of sites) {
+    if (site.scriptId === own) continue;
+    frames.push({
+      name: site.functionName || "(anonymous)",
+      file: String(site.scriptName || "").split("/").pop() || "(unknown)",
+      line: site.lineNumber,
+      column: site.columnNumber ?? site.column,
+    });
+  }
+  return frames;
+}
+const READ_CALL_PATH = "(" + readCallPath.toString() + ")()\n//# sourceURL=infinitary-freeze-capture";
 
 let record = null;
 let lines = [];
@@ -193,27 +211,6 @@ function write(done) {
   parentPort.postMessage(line);
 }
 
-session.on("Debugger.paused", (message) => {
-  const capturedAt = Date.now();
-  const target = capturing;
-  capturing = null;
-  const frames = message.params.callFrames.map((frame) => ({
-    name: frame.functionName || "(anonymous)",
-    file: (frame.url || scripts.get(frame.location.scriptId) || "").split("/").pop() || "(unknown)",
-    line: frame.location.lineNumber + 1,
-    column: frame.location.columnNumber + 1,
-  }));
-  session.post("Debugger.resume");
-  if (!target) return;
-  target.capturedAt = capturedAt;
-  target.frames = frames;
-  if (target.endedAt === undefined) persistStarted(target);
-  if (target.endedAt !== undefined) {
-    target.late = true;
-    write(target);
-  }
-});
-
 function persistStarted(target) {
   const line = { incidentId: target.incidentId, status: "started", at: target.at };
   if (record.build) line.build = record.build;
@@ -228,7 +225,23 @@ function capture(target) {
   capturing = target;
   target.captureRequestedAt = Date.now();
   persistStarted(target);
-  session.post("Debugger.pause");
+  session.post("Runtime.evaluate", { expression: READ_CALL_PATH, returnByValue: true, silent: true }, (error, answer) => {
+    // An answer after the line was written without names is not this one's.
+    if (capturing !== target) return;
+    capturing = null;
+    const frames = !error && answer && !answer.exceptionDetails && answer.result ? answer.result.value : undefined;
+    if (!Array.isArray(frames)) {
+      if (target.endedAt !== undefined) write(target);
+      return;
+    }
+    target.capturedAt = Date.now();
+    target.frames = frames;
+    if (target.endedAt === undefined) persistStarted(target);
+    if (target.endedAt !== undefined) {
+      target.late = true;
+      write(target);
+    }
+  });
 }
 
 parentPort.on("message", (message) => {
@@ -319,9 +332,8 @@ setInterval(() => {
 let armed: Worker | undefined;
 
 /**
- * Starts the watchdog. `wait` waits until its debugger is on, which the
- * main thread answers while it waits; otherwise the debugger comes on while
- * the main thread goes on.
+ * Starts the watchdog. `wait` waits until it has connected to the main
+ * thread; otherwise it connects while the main thread goes on.
  */
 function startWatchdog(wait: boolean): Worker | undefined {
   const state = new Int32Array(new SharedArrayBuffer(4));
@@ -345,13 +357,10 @@ function startWatchdog(wait: boolean): Worker | undefined {
 
 /**
  * Arms the watchdog for the recorder this process will start, before the
- * app's own code loads (src/main/index.ts). Enabling the debugger reads
- * every script the main thread has loaded so far at once - in the app's
- * main process, 33 MB of source in 2,880 scripts, 386 to 638 ms of the
- * main thread's own processor time (INF-2071) - and each script loaded
- * after it as that script loads. Armed first, it reads almost nothing at
- * once, and the recorder that takes it names a stall from its first moment.
- * It watches nothing until the recorder starts.
+ * app's own code loads (src/main/index.ts), so the recorder that takes it
+ * names a stall from its first moment. Reading a call path reads no
+ * script, so the code loaded after arming costs it nothing. It watches
+ * nothing until the recorder starts.
  */
 export function armWatchdog(): void {
   armed ??= startWatchdog(true);
@@ -360,9 +369,8 @@ export function armWatchdog(): void {
 /**
  * The watchdog for a recorder that starts now: the one armed before the
  * app's code loaded, handed over once, or, where nothing armed one, such as
- * a core run in plain Node, one started here whose debugger comes on while
- * the recorder already watches, so the cost of enabling it is recorded as
- * a stall rather than hidden before the record starts.
+ * a core run in plain Node, one started here that connects while the
+ * recorder already watches.
  */
 export function takeWatchdog(): Worker | undefined {
   const worker = armed ?? startWatchdog(false);

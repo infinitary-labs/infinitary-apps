@@ -44,11 +44,9 @@ afterEach(() => {
 
 /**
  * Starts a recorder on a scratch record, on a watchdog armed first, as the
- * app's entry arms it (src/main/index.ts): arming returns once the watchdog's
- * debugger is on, so the recorder names a stall from its first heartbeat.
- * Left unarmed, the recorder starts its own watchdog, whose debugger comes on
- * only after the watchdog thread has started; on a busy computer that came
- * after the stall had begun, which was then recorded with no names (INF-2515).
+ * app's entry arms it (src/main/index.ts): arming returns once the watchdog
+ * has started and connected to the main thread, so the recorder names a
+ * stall from its first heartbeat (INF-2515).
  * `arm: false` leaves the arming to the test, for one that arms before it
  * loads code. `hold` then holds the main thread at once, and the answer is the
  * line recorded for it: the first completed one. The recorder beats as it
@@ -111,6 +109,14 @@ function renderOpenMessages(ms: number): number {
   return walkEveryRow(ms);
 }
 
+/** How deep `renderNested` nests, far past the stack limit a case sets for its own errors. */
+const NESTED_DEPTH = 40;
+
+/** Nested renders, as a deep component tree or a recursive walk nests its calls. */
+function renderNested(depth: number, ms: number): number {
+  return depth === 0 ? renderOpenMessages(ms) : renderNested(depth - 1, ms) + 1;
+}
+
 /** The code `loadAppSizedCode` loaded, kept loaded as the app's modules stay. */
 let appCode: unknown[] = [];
 afterEach(() => {
@@ -120,7 +126,7 @@ afterEach(() => {
 /**
  * Loads as much source as the app's main process holds - 30 MB in 2,000
  * scripts, beside its 33 MB in 2,880 (INF-2071) - each a script of its own
- * named functions. Enabling the debugger after this reads all of it at once.
+ * named functions.
  */
 function loadAppSizedCode(): void {
   for (let script = 0; script < 2_000; script += 1) {
@@ -270,12 +276,81 @@ describe("the freeze recorder", () => {
     expect(readFreezes(recordPath)).toContainEqual(seen);
   });
 
+  // INF-4535: the watchdog reads the call path from the stack where the main
+  // thread runs. The debugger pause it used read every frame's scopes there,
+  // and that time joined the stall it named. The read takes the whole path,
+  // whatever stack limit and format the app set for its own errors, leaves
+  // its own frames out, and leaves both settings as they were.
+  it("names a deep call path whole and leaves the app's own stack settings as they were", async () => {
+    const recordPath = join(scratchDir("infinitary-freeze-deep-"), "freezes.jsonl");
+    const appFormat = (error: Error) => `app format: ${error.message}`;
+    const limit = Error.stackTraceLimit;
+    const format = Error.prepareStackTrace;
+    let after: { limit: number; format: unknown; stack: unknown } | undefined;
+    const seen = await recordStall(recordPath, () => {
+      Error.stackTraceLimit = 3;
+      Error.prepareStackTrace = appFormat;
+      try {
+        renderNested(NESTED_DEPTH, FREEZE_THRESHOLD_MS * 8);
+        after = {
+          limit: Error.stackTraceLimit,
+          format: Error.prepareStackTrace,
+          stack: new Error("after the stall").stack,
+        };
+      } finally {
+        Error.stackTraceLimit = limit;
+        Error.prepareStackTrace = format;
+      }
+    });
+
+    const names = seen.frames.map((frame) => frame.name);
+    expect(names.filter((name) => name === "renderNested")).toHaveLength(NESTED_DEPTH + 1);
+    expect(names.indexOf("walkEveryRow")).toBeGreaterThanOrEqual(0);
+    expect(names.indexOf("walkEveryRow")).toBeLessThan(names.indexOf("renderOpenMessages"));
+    expect(names.indexOf("renderOpenMessages")).toBeLessThan(names.indexOf("renderNested"));
+    expect(names.indexOf("recordStall")).toBeGreaterThan(names.lastIndexOf("renderNested"));
+    expect(seen.frames.every((frame) => frame.line > 0 && frame.column > 0)).toBe(true);
+    expect(names).not.toContain("readCallPath");
+    expect(seen.frames.map((frame) => frame.file)).not.toContain("infinitary-freeze-capture");
+    expect(after?.limit).toBe(3);
+    expect(after?.format).toBe(appFormat);
+    expect(after?.stack).toBe("app format: after the stall");
+    expect(readFreezes(recordPath)).toContainEqual(seen);
+  });
+
+  // A stall can run inside the app's own error formatting, where V8 formats
+  // any stack read there as plain text, whatever formatter is set. The read
+  // asks for the frames alone, so it names that stall as it names any other.
+  it("names a stall held inside the app's own error formatting", async () => {
+    const recordPath = join(scratchDir("infinitary-freeze-formatting-"), "freezes.jsonl");
+    const format = Error.prepareStackTrace;
+    let formatted: unknown;
+    const seen = await recordStall(recordPath, () => {
+      Error.prepareStackTrace = function formatSlowly(error: Error) {
+        renderOpenMessages(FREEZE_THRESHOLD_MS * 8);
+        return `formatted slowly: ${error.message}`;
+      };
+      try {
+        formatted = new Error("held").stack;
+      } finally {
+        Error.prepareStackTrace = format;
+      }
+    });
+
+    const names = seen.frames.map((frame) => frame.name);
+    expect(names.indexOf("walkEveryRow")).toBeGreaterThanOrEqual(0);
+    expect(names.indexOf("walkEveryRow")).toBeLessThan(names.indexOf("renderOpenMessages"));
+    expect(names.indexOf("renderOpenMessages")).toBeLessThan(names.indexOf("formatSlowly"));
+    expect(names).not.toContain("readCallPath");
+    expect(formatted).toBe("formatted slowly: held");
+    expect(readFreezes(recordPath)).toContainEqual(seen);
+  });
+
   it("names a stall as the recorder starts, armed before the app's own code loaded", async () => {
     // INF-2071: the app's entry arms the watchdog before the app's code
-    // loads, and the core starts the recorder on it later. Its debugger is
-    // on by then, so a stall from the recorder's first heartbeat is named.
-    // Enabled only as the recorder started, it read all that code then and
-    // left the stall that began with it unnamed.
+    // loads, and the core starts the recorder on it later, so a stall from
+    // the recorder's first heartbeat is named however much code loaded in
+    // between.
     armWatchdog();
     loadAppSizedCode();
     const recordPath = join(scratchDir("infinitary-freeze-armed-"), "freezes.jsonl");

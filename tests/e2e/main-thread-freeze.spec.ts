@@ -80,8 +80,8 @@ async function say(page: Page, text: string): Promise<void> {
 type Step = { at: number; doing: string };
 
 /**
- * One stall in words: its processor time, what the journey was doing, and
- * its call path, innermost first.
+ * One stall in words: its processor time, what the journey was doing, its
+ * call path, innermost first, and when the watchdog read that path.
  */
 const described = (line: FreezeLine, steps: readonly Step[]) =>
   `${line.cpuMs} ms of processor time in ${line.wallMs} ms, ${
@@ -91,7 +91,20 @@ const described = (line: FreezeLine, steps: readonly Step[]) =>
       .slice(0, 8)
       .map((frame) => `${frame.name} (${frame.file}:${frame.line})`)
       .join(" <- ") || "no call path"
-  }`;
+  }${readAt(line)}`;
+
+/**
+ * When the watchdog asked for the stall's call path after the stall began,
+ * and how long the main thread took to answer, counting its wait to run
+ * JavaScript again, so a reader sees whether the path is where the stall was
+ * (docs/freeze-recorder.md, "The record").
+ */
+const readAt = (line: FreezeLine) =>
+  line.captureRequestedAt && line.capturedAt
+    ? `, call path asked for ${Date.parse(line.captureRequestedAt) - Date.parse(line.at)} ms after it began and read ${
+        Date.parse(line.capturedAt) - Date.parse(line.captureRequestedAt)
+      } ms later${line.uncertain ? ` (${line.uncertain})` : ""}`
+    : "";
 
 /** The minute pass's step the stall fell in, as the recorder tagged it (docs/freeze-recorder.md). */
 const passStep = (line: FreezeLine) => {
@@ -331,6 +344,24 @@ test("the main thread never spends 250 ms of its own processor time at once on a
     });
     console.log(
       `[freeze journey] ${record.length} stall(s); busiest: ${busiest ? described(busiest, steps) : "none"}`,
+    );
+    // How many stalls have a call path, and how long each took to arrive once
+    // asked for: the wait until the main thread next ran JavaScript, as well
+    // as the read itself.
+    const reads = record
+      .flatMap((line) =>
+        line.captureRequestedAt && line.capturedAt
+          ? [Date.parse(line.capturedAt) - Date.parse(line.captureRequestedAt)]
+          : [],
+      )
+      .sort((a, b) => a - b);
+    const named = record.filter((line) => line.frames.length > 0).length;
+    console.log(
+      `[freeze journey] ${named} of ${record.length} stall(s) named; call paths read for ${reads.length}${
+        reads.length
+          ? `, ${reads[reads.length >> 1]} ms after being asked for at the median and ${reads.at(-1)} ms at the longest`
+          : ""
+      }`,
     );
     // The minute's passes name themselves, which a stall the recorder could
     // not name needs (docs/architecture.md, "[ticker] <name>").

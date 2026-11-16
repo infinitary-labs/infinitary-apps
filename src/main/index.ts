@@ -64,8 +64,8 @@ async function commandDataDir(): Promise<string> {
 
 /**
  * Arms the freeze recorder's watchdog where this build runs the recorder,
- * before the app's own code loads, so enabling its debugger reads only the
- * few scripts loaded so far (docs/freeze-recorder.md, "At startup").
+ * before the app's own code loads, so the recorder that takes it names a
+ * stall from its first heartbeat (docs/freeze-recorder.md, "At startup").
  */
 async function armFreezeRecorder(): Promise<void> {
   const { app } = await import("electron");

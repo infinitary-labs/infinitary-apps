@@ -554,6 +554,8 @@ export class CardActions {
         ? { rowId: associated.id, ask: effect.ask, choice: effect.integration }
         : undefined;
     let takenFirstmateAsk: IntegrationAskTaken | undefined;
+    // INF-4446: the captain's yes to a check, kept with their other yeses.
+    let checkYes = false;
     let closedAnswer: ReturnType<CardService["resolve"]>;
     try {
       closedAnswer = this.core.cards.resolve(
@@ -571,11 +573,12 @@ export class CardActions {
               firstmateAsk.ask,
             );
           if (validationDecision && card.taskId && card.offerId)
-            this.core.options.tasks.delivery.decideLiveValidation(card.taskId, {
+            checkYes = this.core.options.tasks.delivery.decideLiveValidation(card.taskId, {
               card: card.id,
               offer: card.offerId,
               action: actionId,
               label: chosen.label,
+              words: choiceWords(chosen.label, card.title, anythingElseOf(answers)),
               head: associated?.delivery?.validationHead ?? "",
               ticked:
                 answers?.find((answer) => answer.name === VALIDATION_GAPS_FIELD)?.values ?? [],
@@ -638,8 +641,9 @@ export class CardActions {
       throw new CardChoiceUnavailableError("action-changed");
     }
     // The yes waits on the crewmate's lane ahead of the choice, as the
-    // whole list it now reads.
-    if (allowanceOffer && card.taskId) this.core.overrides.allowedNoticed(card.taskId);
+    // whole list it now reads; a yes to a check joins that list (INF-4446).
+    if ((allowanceOffer || checkYes) && card.taskId)
+      this.core.overrides.allowedNoticed(card.taskId);
     const choice: WakeChoice = {
       id: actionId,
       label: chosen.label,

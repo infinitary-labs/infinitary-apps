@@ -1654,8 +1654,9 @@ function cardRefusedMutation(
 
 /**
  * A crewmate's marked yes (`allows`, INF-3170 piece 2) names one ordinary
- * action of the card - no effect, and not the validation approval, which
- * keeps its own record - and says what the yes covers.
+ * action of the card - no effect, and not the validation approval, whose
+ * click the app keeps on its own (a check's yes among the captain's other
+ * yeses, INF-4446) - and says what the yes covers.
  */
 function allowsRefusal(input: DeclaredCardInput): void {
   const allows = input.allows;
@@ -1667,7 +1668,7 @@ function allowsRefusal(input: DeclaredCardInput): void {
     );
   if (input.validationDecision?.action === allows.action)
     throw new Error(
-      "Card refused: allows and validation_request name the same action. A check approval keeps its own record; mark a different yes, or leave allows out.",
+      "Card refused: allows and validation_request name the same action. The app keeps that approval itself, a check's as the captain's yes; mark a different yes, or leave allows out.",
     );
   if (!allows.covers.trim())
     throw new Error(

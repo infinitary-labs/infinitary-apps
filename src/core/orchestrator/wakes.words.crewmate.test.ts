@@ -243,7 +243,7 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         },
       },
       words:
-        "The captain's standing override on this task, recorded by the first mate: their words pass asking first for the rest of this task: \"merge it once it is green\". Where their words reach a consent ask of your own, such as their plan's allowance, they are that consent and you do not ask again; keychain or signing access, writes outside the project and browser handoffs still ask. Only their words take it back.",
+        "The captain's standing override on this task, recorded by the first mate: their words pass asking first for the rest of this task: \"merge it once it is green\". Where their words reach a consent ask of your own, such as their plan's allowance, they are that consent and you do not ask again; for a check that declares what it uses, name standing as the check request's allowance. Keychain or signing access, writes outside the project and browser handoffs still ask. Only their words take it back.",
     },
     {
       name: "taken back",
@@ -283,8 +283,8 @@ const CASES: WordsCases<CrewmateWakeKind> = {
       },
       words: [
         "Already allowed, as the app recorded it from the captain's own words and clicks on this task:",
-        "- The captain's standing override on this task, recorded by the first mate: their words pass asking first for the rest of this task: \"merge it once it is green\". Where their words reach a consent ask of your own, such as their plan's allowance, they are that consent and you do not ask again; keychain or signing access, writes outside the project and browser handoffs still ask. Only their words take it back.",
-        '- The captain\'s yes on INF-2695 "Fix the sign-in check", whose work this is: "Use my account, on the card "Run the sign-in check on your account"". What it covers, as the crewmate that asked wrote it: "Signing in with the captain\'s own account for the sign-in check".',
+        "- The captain's standing override on this task, recorded by the first mate: their words pass asking first for the rest of this task: \"merge it once it is green\". Where their words reach a consent ask of your own, such as their plan's allowance, they are that consent and you do not ask again; for a check that declares what it uses, name standing as the check request's allowance. Keychain or signing access, writes outside the project and browser handoffs still ask. Only their words take it back.",
+        '- The captain\'s yes on INF-2695 "Fix the sign-in check", whose work this is (card-1): "Use my account, on the card "Run the sign-in check on your account"". What it covers, as its card said it: "Signing in with the captain\'s own account for the sign-in check".',
         "Where an ask of yours falls inside an entry, it is that consent: do not ask again. A write kept for their click, a browser handoff and anything no entry names still ask. Only the captain's words take an entry back.",
       ].join("\n"),
     },

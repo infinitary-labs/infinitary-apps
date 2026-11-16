@@ -5,8 +5,12 @@ import {
   crewResponseSchema,
   type ResponseCard,
 } from "@shared/crewResponses";
+import { STANDING_WORDS_FROM } from "@shared/holds";
 import {
+  checkApproval,
+  type KeptValidationInput,
   keptValidationInputSchema,
+  type LiveValidation,
   type ValidationForgeWrite,
   validationRevision,
 } from "@shared/liveValidation";
@@ -24,6 +28,7 @@ import {
 import { ORDINARY_NOTE_READ_ACK } from "../prompts/cardContract";
 import type { FollowupInput } from "../session/tools";
 import type { TaskRecord } from "../storage/taskRecords";
+import { keptYeses } from "../tasks/alreadyAllowed";
 import { TaskGraphRefusal } from "../tasks/taskGraph";
 import { resultRefusal } from "../tasks/taskResult";
 import { TaskService } from "../tasks/taskService";
@@ -308,9 +313,13 @@ export class ReportIntake {
         }`,
       );
     }
+    const kept = keptYeses(this.options.tasks, owner, head);
     this.options.tasks.delivery.recordLiveValidation(owner.id, input, {
       head,
-      ...(builder ? { reviewer: task.id, assignment: record.delivery?.validationAssignment } : {}),
+      ...(builder
+        ? { reviewer: task.id, assignment: record.delivery?.validationAssignment }
+        : // INF-4446: a yes the captain already gave on this work may approve a check.
+          { allowances: kept }),
     });
     if (currentHead !== undefined)
       this.options.tasks.delivery.recordChangeEvidence(owner.id, { validationHead: currentHead });
@@ -318,7 +327,9 @@ export class ReportIntake {
     // turn's end records it on the builder.
     if (input.kind === "review") task.turnReview = input;
     const { validation: _validation, ...declaration } = declared;
-    const revision = validationRevision(this.options.tasks.get(owner.id)?.delivery?.liveValidation);
+    const recorded = this.options.tasks.get(owner.id)?.delivery?.liveValidation;
+    const revision = validationRevision(recorded);
+    const approvedFrom = approvedFromYes(input, recorded, kept);
     if (
       input.kind !== "run" &&
       input.kind !== "review" &&
@@ -327,8 +338,8 @@ export class ReportIntake {
       !declaration.wait &&
       !declaration.finished
     )
-      return `Validation ${input.kind} recorded at evidence revision ${revision}. This records facts, not a finished-work report or permission. Continue the task; report when the first mate must act.`;
-    return `${this.recordExplicitReport(task, text, summary, declaration, responseText)} Validation recorded at evidence revision ${revision}.`;
+      return `Validation ${input.kind} recorded at evidence revision ${revision}.${approvedFrom || " This records facts, not a finished-work report or permission."} Continue the task; report when the first mate must act.`;
+    return `${this.recordExplicitReport(task, text, summary, declaration, responseText)} Validation recorded at evidence revision ${revision}.${approvedFrom}`;
   }
 
   /**
@@ -809,4 +820,24 @@ function checkBackOf(
     );
   }
   return { minutes: back.minutes, waitingFor: cutText(waitingFor, 300) };
+}
+
+/**
+ * INF-4446: the receipt's words when a check request named a kept yes and
+ * the approval it rests on counts now, so the crewmate runs the check
+ * rather than asking the captain again; empty otherwise.
+ */
+function approvedFromYes(
+  input: KeptValidationInput,
+  recorded: LiveValidation | undefined,
+  kept: readonly { card: string; at: number }[],
+): string {
+  if (input.kind !== "request" || input.request.kind !== "check" || !input.request.allowance)
+    return "";
+  const { id, scenario: scenarioId, allowance } = input.request;
+  const scenario = recorded?.scenarios.find((item) => item.id === scenarioId);
+  if (!recorded || !scenario || checkApproval(recorded, scenario, kept)?.request.id !== id)
+    return "";
+  const yes = allowance === STANDING_WORDS_FROM ? "standing override" : `kept yes on ${allowance}`;
+  return ` The check ${scenarioId} is approved from the captain's ${yes}; run it now with no card, while that yes stands.`;
 }

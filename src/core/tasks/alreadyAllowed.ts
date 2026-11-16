@@ -1,5 +1,5 @@
-import type { AlreadyAllowed, ServedAllowance } from "@shared/captainAllowances";
-import { standingOverride } from "@shared/holds";
+import type { AlreadyAllowed, CaptainAllowance, ServedAllowance } from "@shared/captainAllowances";
+import { STANDING_WORDS_FROM, standingOverride } from "@shared/holds";
 import type { TaskRecord } from "../storage/taskRecords";
 import type { TaskService } from "./taskService";
 
@@ -63,4 +63,22 @@ export function alreadyAllowed(
       : {}),
     allowances,
   };
+}
+
+/**
+ * Every yes on a task's Already allowed list that a check approval may rest
+ * on (INF-4446): each kept yes by its card, and the captain's standing
+ * override by `standing` while it stands at `head`, the version under
+ * validation, given when it was recorded.
+ */
+export function keptYeses(
+  tasks: AllowedReaderTasks,
+  record: TaskRecord,
+  head = record.delivery?.headSha,
+): Pick<CaptainAllowance, "card" | "words" | "at">[] {
+  const override = standingOverride(record.delivery, head);
+  return [
+    ...alreadyAllowed(tasks, record, head).allowances,
+    ...(override ? [{ card: STANDING_WORDS_FROM, words: override.words, at: override.at }] : []),
+  ];
 }

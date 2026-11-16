@@ -82346,7 +82346,14 @@ ${FRAME_QUESTION_SCRIPT}
     kind: literal("check"),
     id,
     head,
-    scenario: id
+    scenario: id,
+    /**
+     * INF-4446: the yes on the task's Already allowed list that the crewmate
+     * judged covers the check's declared resources and cost per run: a kept
+     * yes's card, or `standing` for the captain's standing override. The
+     * approval rests on that yes, with no new card, while it stands.
+     */
+    allowance: string().min(1).max(200).optional()
   });
   const validationRequestSchema = discriminatedUnion("kind", [
     validationEffectSchema,
@@ -82409,7 +82416,15 @@ ${FRAME_QUESTION_SCRIPT}
       lifecycle: string().optional()
     }).optional(),
     answer: object({ at: number(), action: string(), label: string() }).optional(),
-    outcome: words$1.optional()
+    outcome: words$1.optional(),
+    /**
+     * INF-4446: the captain's kept yes a check approval rests on, by its card
+     * in the one record of their yeses (`delivery.captainAllowances`) - a yes
+     * on the check's own card, or one the check request named - or `standing`
+     * for their standing override. The approval counts while that very yes,
+     * given when `answer.at` says, is kept. An approval kept before it has none.
+     */
+    yes: string().min(1).max(200).optional()
   });
   object({
     /** Changes to facts a reviewer reads, excluding judgments themselves. Older records start at zero. */

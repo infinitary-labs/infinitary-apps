@@ -168,6 +168,13 @@ export const validationCheckSchema = z.object({
   id,
   head,
   scenario: id,
+  /**
+   * INF-4446: the yes on the task's Already allowed list that the crewmate
+   * judged covers the check's declared resources and cost per run: a kept
+   * yes's card, or `standing` for the captain's standing override. The
+   * approval rests on that yes, with no new card, while it stands.
+   */
+  allowance: z.string().min(1).max(200).optional(),
 });
 export const validationRequestSchema = z.discriminatedUnion("kind", [
   validationEffectSchema,
@@ -237,6 +244,14 @@ export const validationPermissionSchema = z.object({
     .optional(),
   answer: z.object({ at: z.number(), action: z.string(), label: z.string() }).optional(),
   outcome: words.optional(),
+  /**
+   * INF-4446: the captain's kept yes a check approval rests on, by its card
+   * in the one record of their yeses (`delivery.captainAllowances`) - a yes
+   * on the check's own card, or one the check request named - or `standing`
+   * for their standing override. The approval counts while that very yes,
+   * given when `answer.at` says, is kept. An approval kept before it has none.
+   */
+  yes: z.string().min(1).max(200).optional(),
 });
 export type ValidationPermission = z.infer<typeof validationPermissionSchema>;
 export const liveValidationSchema = z.object({
@@ -333,18 +348,34 @@ export function gapPermission(
 export function sameCheckReach(a: ValidationScenario, b: ValidationScenario): boolean {
   return a.resources === b.resources && a.cost === b.cost;
 }
-/** INF-1824: the approval kept on a check, current while it declares the same reach and cost. */
+/**
+ * INF-1824: the approval kept on a check, current while it declares the same
+ * reach and cost. INF-4446: and while the yes it rests on is still on the
+ * task's Already allowed list (`kept`, the captain's yeses by card and when
+ * each was given), so taking that yes back, or replacing it, ends it.
+ */
 export function checkApproval(
   state: LiveValidation,
   scenario: ValidationScenario,
+  kept: readonly { card: string; at: number }[] = [],
 ): ValidationPermission | undefined {
   return state.permissions.find(
     (permission) =>
       permission.state === "approved" &&
       permission.request.kind === "check" &&
       permission.request.scenario === scenario.id &&
-      sameCheckReach(permission.scenario, scenario),
+      sameCheckReach(permission.scenario, scenario) &&
+      (permission.yes === undefined ||
+        kept.some((entry) => entry.card === permission.yes && entry.at === permission.answer?.at)),
   );
+}
+/**
+ * INF-4446: what a yes on a check's own approval card covers, as the one
+ * record of the captain's yeses keeps it: the check's declared resources and
+ * the cost of one run, the words its card showed.
+ */
+export function checkYesCovers(scenario: ValidationScenario): string {
+  return `Runs of the check "${scenario.action}" that use only "${scenario.resources ?? ""}" and cost no more than "${scenario.cost ?? ""}" each`;
 }
 /** Closed contradictions, not a judgment of whether the evidence proves the claim. */
 export function checkValidationRun(

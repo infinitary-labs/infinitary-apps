@@ -1,3 +1,5 @@
+import type { CaptainAllowance } from "@shared/captainAllowances";
+import { STANDING_WORDS_FROM } from "@shared/holds";
 import {
   acceptedGap,
   checkApproval,
@@ -45,7 +47,11 @@ function reviewVerdictProblem(
   return `${ruled} The captain's accepted gap for ${accepted.join(", ")} leaves that proof missing, so the run and its review stay inconclusive; the host shows the gap as ${LIVE_VALIDATION_WORDS.exception}.`;
 }
 
-/** Pure transitions; TaskService is the only writer. No reported fact can mint consent. */
+/**
+ * Pure transitions; TaskService is the only writer. No reported fact mints
+ * consent: a check request's allowance approves only from a yes the
+ * captain still keeps (`allowances`), and the approval rests on that yes.
+ */
 export function recordValidation(
   previous: LiveValidation | undefined,
   input: KeptValidationInput,
@@ -62,6 +68,8 @@ export function recordValidation(
       effects: string[];
     };
     decision?: { offer: string; lifecycle?: string };
+    /** INF-4446: the yeses on the task's Already allowed list now, which a check request may name. */
+    allowances?: readonly Pick<CaptainAllowance, "card" | "words" | "at">[];
   },
 ): LiveValidation {
   const state = structuredClone(previous ?? emptyValidation());
@@ -125,10 +133,10 @@ export function recordValidation(
         if (
           scenario.resources &&
           observation?.result !== "untested" &&
-          !checkApproval(state, scenario)
+          !checkApproval(state, scenario, context.allowances)
         )
           fail(
-            `The check ${scenario.id} declares what it uses, and its run needs your approval of those resources and their cost per run first.`,
+            `The check ${scenario.id} declares what it uses, and its run needs your approval of those resources and their cost per run first, resting on a yes the captain still keeps. Where a yes on the Already allowed list covers them, name its card, or ${STANDING_WORDS_FROM} for the captain's standing override, as a new check request's allowance; otherwise ask through emit_card.validation_request.`,
           );
       }
       // INF-1824: an accepted gap ends only when its check runs and fails.
@@ -201,10 +209,36 @@ export function recordValidation(
       if (request.kind === "check") {
         if (!scenario.resources || !scenario.cost)
           fail("A check approval names the check's declared resources and the cost of one run.");
-        if (checkApproval(state, scenario))
+        if (checkApproval(state, scenario, context.allowances))
           fail(
             "Your approval of this check already covers its runs while it declares the same resources and cost; run it without asking again.",
           );
+        // INF-4446: a yes the captain already gave approves the check with no
+        // new card; the crewmate judged it covers these resources and cost,
+        // and the approval rests on that yes while it is kept.
+        if (request.allowance !== undefined) {
+          const yes = context.allowances?.find((entry) => entry.card === request.allowance);
+          if (!yes)
+            fail(
+              request.allowance === STANDING_WORDS_FROM
+                ? "No standing override of the captain's stands on this task now. Name the card of a kept yes that covers this check's resources and cost, or ask through emit_card.validation_request."
+                : `No yes on this task's Already allowed list was given on ${request.allowance}. Name the card of a kept yes, or ${STANDING_WORDS_FROM} for the captain's standing override, that covers this check's resources and cost, or ask through emit_card.validation_request.`,
+            );
+          const approval: ValidationPermission = {
+            request,
+            scenario,
+            state: "approved",
+            at: context.at,
+            answer: { at: yes.at, action: "kept-yes", label: yes.words },
+            yes: yes.card,
+          };
+          if (newerNo(state, approval, yes.at))
+            fail(
+              "The captain declined this check after that yes; ask again through emit_card.validation_request.",
+            );
+          state.permissions.push(approval);
+          break;
+        }
       }
       if (request.kind === "gap") {
         if (acceptedGap(state, scenario.id))
@@ -344,6 +378,9 @@ export function decideValidation(
     }
     permission.state = accepting ? "approved" : "declined";
     permission.answer = { at: input.at, action: input.action, label: input.label };
+    // INF-4446: the captain's yes to a check is kept with their other yeses
+    // (`TaskDeliveries.decideLiveValidation`), and the approval rests on it.
+    if (accepting && permission.request.kind === "check") permission.yes = input.card;
     next.stateRevision = validationStateRevision(next) + 1;
   }
   return next;

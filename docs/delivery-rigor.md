@@ -649,6 +649,8 @@ Each new yes, one taken back, or a `replaced-by` link that brings earlier work's
 The reviewer's brief carries the builder's list, so access or a step it covers is not a finding.
 `RIGOR_SAFETY` points at the list: a yes on it is that consent, and the crewmate judges whether an ask falls inside it.
 A write kept for the captain's click, a browser handoff and anything no entry names still ask; the app adds no stop, refuses nothing new and reads none of the words.
+Each entry names the card its yes was given on, so a check request can take its approval from that yes ("Check approval" below).
+The captain's yes on a check's own approval card is kept in the same record, covering what the check declares it uses and the cost of one run (`checkYesCovers`), so it is served, carried and taken back like any other yes (INF-4446); its timeline row is the validation answer's.
 
 A yes carries to the same work, the captain's pick on INF-3170: the task itself, its reviewer, a stronger-model retry (`escalate_from`, or an older `escalated` row) and a takeover of its work (`replaced-by`, or a task that continues its branch with `branch_from`, the captain's "Count branch takeovers"), read through the handed-over relation (`TaskCapture.handedOver`) and any number of earlier tasks (`sameWorkLineage`).
 A follow-up a merge files is new work and asks again.
@@ -762,6 +764,11 @@ The approval is generic: it names no sign-in or provider, only what the check it
 The builder records a `request` of kind `check` naming the check and binds it to an ordinary decision through `emit_card.validation_request`.
 The host appends a Check approval panel naming the check, what it uses and the cost of one run, and saying the approval covers every later run while each run stays inside those.
 A card that already asks the captain which account, model or option to use carries the check request on its default action, so the captain's pick or written-in answer with that click approves it, with no separate approval card.
+Every check approval rests on one of the captain's kept yeses, the one record of their yeses ("What the captain already allowed" above; INF-4446): the yes given on that card, kept on the task's Already allowed list.
+A yes the captain already gave on the work approves a check with no card at all: when the crewmate judges a yes on its Already allowed list covers everything the check declares it uses and the cost of one run, the check request names that yes's card as its `allowance`, or `standing` for the captain's standing override ("The holds" above), whose words are on the same list.
+The host counts an approval only while the very yes it rests on stays on the task's Already allowed list, so taking that yes back, or replacing the standing override, ends it, and refuses an `allowance` that names no kept yes, `standing` when no override stands, or a yes the captain declined the same check after.
+An approval an earlier build kept rests on no yes and counts as before.
+The reviewer judges whether a named yes's words cover what the check declares; one that does not is a finding.
 `TaskService` keeps the approval on the check by its id for every later run and version of the task, including script fixes and reruns, with no limit on runs.
 A plan revision that changes the check's declared resources or cost, or removes the check, expires the approval.
 A later plan revision that declares exactly the resources and cost the captain approved restores it with no new question, since the captain's answer covers those words; it never restores an ask whose card ended unanswered, or one the captain's newer no to the same words declined (INF-3751).

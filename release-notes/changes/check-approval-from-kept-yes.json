@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "check-approval-from-kept-yes",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate no longer asks again for a check you already allowed",
+      "body": "When you have already said yes to what a check uses, such as some of your plan's allowance for a few trial runs, on a card or in words you gave the first mate for the task, the crewmate runs that check without a second card that records the same yes. A yes you give on a check's own card is now kept with your other yeses, so taking it back makes that check ask again, and a check no yes covers still asks you first.",
+      "noPicture": "Nothing new appears on screen; the second card that repeated your yes no longer goes up.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

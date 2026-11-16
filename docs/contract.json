@@ -60999,6 +60999,11 @@
                                   "scenario": {
                                     "type": "string",
                                     "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$"
+                                  },
+                                  "allowance": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
                                   }
                                 },
                                 "required": [

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import {
   acceptedValidation,
+  checkApproval,
   type KeptValidationInput,
   type LiveValidation,
   type ValidationScenario,
@@ -695,6 +696,14 @@ describe("INF-1824: one approval per check and one card for a version's gaps", (
       },
       { ...ctx, head: at },
     );
+  // The yeses the task keeps, as TaskDeliveries.decideLiveValidation keeps
+  // each yes to a check (INF-4446), none taken back.
+  const kept = (state: LiveValidation) =>
+    state.permissions.flatMap((item) =>
+      item.yes
+        ? [{ card: item.yes, words: item.answer?.label ?? "", at: item.answer?.at ?? 0 }]
+        : [],
+    );
   const observed = (state: LiveValidation, at: string, id: string, untested: string[] = []) =>
     recordValidation(
       state,
@@ -741,10 +750,10 @@ describe("INF-1824: one approval per check and one card for a version's gaps", (
           },
         ],
       },
-      { ...ctx, head: at },
+      { ...ctx, head: at, allowances: kept(state) },
     );
   const ask = (state: LiveValidation, request: KeptValidationInput, at = head) =>
-    recordValidation(state, request, { ...ctx, head: at });
+    recordValidation(state, request, { ...ctx, head: at, allowances: kept(state) });
   function decide(
     state: LiveValidation,
     card: string,
@@ -1083,6 +1092,45 @@ describe("INF-1824: one approval per check and one card for a version's gaps", (
     const restored = planned([forkCheck, storyCheck], planned(paraphrased, state));
     expect(approvalStates(restored)).toEqual(["expired", "declined", "expired"]);
     expect(() => observed(restored, head, "unapproved")).toThrow(forkCheck.id);
+  });
+
+  // INF-4446: a yes the captain already gave approves the check a crewmate
+  // names it for, never past what the captain said since or a costlier run.
+  it("INF-4446: a kept yes approves its named check only for the declared cost, and never over the captain's newer no", () => {
+    const yes = { card: "card-yes", words: "Use my plan for real turns", at: 2 };
+    const named = (state: LiveValidation, id: string) =>
+      recordValidation(
+        state,
+        {
+          kind: "request",
+          request: { kind: "check", id, head, scenario: claudeCheck.id, allowance: yes.card },
+        },
+        { ...ctx, allowances: [yes] },
+      );
+    const approved = named(planned([claudeCheck]), "claude-yes");
+    expect(checkApproval(approved, claudeCheck, [yes])?.answer?.label).toBe(yes.words);
+    // A run that costs more than the check declared is not what the yes was named for.
+    const costlierCheck = { ...claudeCheck, cost: "Ten turns of your plan" };
+    const costlier = planned([costlierCheck], approved);
+    expect(checkApproval(costlier, costlierCheck, [yes])).toBeUndefined();
+    // The captain declined this check on a card after the yes.
+    const asked = recordValidation(
+      ask(planned([claudeCheck]), {
+        kind: "request",
+        request: { kind: "check", id: "claude-asked", head, scenario: claudeCheck.id },
+      }),
+      { kind: "decision", request: "claude-asked", card: "ask", action: "accept" },
+      { ...ctx, decision: { offer: "ask-offer" } },
+    );
+    const declined = decideValidation(asked, {
+      card: "ask",
+      offer: "ask-offer",
+      action: "keep-held",
+      label: "Not now",
+      head,
+      at: yes.at + 1,
+    });
+    expect(() => named(declined, "claude-yes")).toThrow("declined this check after that yes");
   });
 });
 

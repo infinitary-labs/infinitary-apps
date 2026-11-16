@@ -13,7 +13,7 @@ import {
   type CaptainAllowance,
 } from "@shared/captainAllowances";
 import type { ChangePresentationRecord } from "@shared/changePresentation";
-import type { KeptValidationInput } from "@shared/liveValidation";
+import { checkYesCovers, type KeptValidationInput } from "@shared/liveValidation";
 import { isForkReview } from "@shared/mergeReview";
 import {
   type CaptainAction,
@@ -231,27 +231,55 @@ export class TaskDeliveries {
     })();
   }
 
+  /**
+   * The captain's answer on a validation card. INF-4446: a yes to a check is
+   * kept in the one record of their yeses, as the check's card showed what
+   * it covers, so it is served on the Already allowed list and taken back
+   * like any other yes; the check's approval rests on it. True when it kept one.
+   */
   decideLiveValidation(
     id: string,
-    input: Omit<Parameters<typeof decideValidation>[1], "at">,
-  ): void {
-    this.writer.write(() => {
+    input: Omit<Parameters<typeof decideValidation>[1], "at"> & {
+      /** The captain's click as words (`choiceWords`), which a kept yes quotes; the label otherwise. */
+      words?: string;
+    },
+  ): boolean {
+    return this.writer.write(() => {
       const task = this.writer.mustGet(id);
-      if (!task.delivery?.liveValidation) return;
-      const liveValidation = decideValidation(task.delivery.liveValidation, {
-        ...input,
-        at: this.writer.now(),
-      });
+      if (!task.delivery?.liveValidation) return false;
+      const at = this.writer.now();
+      const { words, ...decision } = input;
+      const liveValidation = decideValidation(task.delivery.liveValidation, { ...decision, at });
+      const approved = liveValidation.permissions.find(
+        (permission) =>
+          permission.request.kind === "check" &&
+          permission.state === "approved" &&
+          permission.yes === input.card &&
+          permission.answer?.at === at,
+      );
+      const kept = task.delivery.captainAllowances ?? [];
+      const captainAllowances = approved
+        ? [
+            ...kept.filter((entry) => entry.card !== input.card),
+            {
+              words: words ?? decision.label,
+              covers: checkYesCovers(approved.scenario),
+              card: input.card,
+              at,
+            },
+          ]
+        : kept;
       this.writer.writeDeliveryRecords(
         id,
-        { liveValidation },
+        { liveValidation, ...(approved ? { captainAllowances } : {}) },
         {
           kind: "note",
           text: "The captain answered a live-validation request",
           feed: false,
-          data: { validationDecision: input },
+          data: { validationDecision: decision },
         },
       );
+      return approved !== undefined;
     })();
   }
 

@@ -2,16 +2,17 @@ import { type HoldOverride, reviewerOverrideWords, standingOverrideWords } from 
 
 /**
  * A yes the captain gave on a crewmate's own card (INF-3170 piece 2,
- * `docs/delivery-rigor.md` "What the captain already allowed"): the
- * crewmate marked one ordinary action of its card with what a yes covers
- * (`emit_card.allows`), and the captain's own click on that action is
- * kept here. The app keeps the words and never reads them: the agent that
- * reads the record judges whether a later ask falls inside it.
+ * `docs/delivery-rigor.md` "What the captain already allowed"): their own
+ * click on the action the crewmate marked with what a yes covers
+ * (`emit_card.allows`), or, INF-4446, on the approval of a check's own card
+ * (`emit_card.validation_request`). The app keeps the words and never reads
+ * them: the agent that reads the record judges whether a later ask falls
+ * inside it.
  */
 export type CaptainAllowance = {
   /** The captain's click as words: the button, its card, and anything they wrote beside it (`choiceWords`). */
   words: string;
-  /** What the yes covers, in the words of the crewmate that asked. */
+  /** What the yes covers, as its card said it: the crewmate's words, or a check's declared resources and cost (`checkYesCovers`). */
   covers: string;
   /** The card the click was on. */
   card: string;
@@ -42,9 +43,10 @@ export type AllowedReader = "crewmate" | "reviewer";
 /** The heading every list opens with, so the rule that points at it can name it. */
 export const ALREADY_ALLOWED_HEADING = "Already allowed";
 
+/** One yes, with its card, which a check request names to take its approval from it (INF-4446). */
 function allowanceLine(entry: ServedAllowance): string {
   const where = entry.from ? ` on ${entry.from.key} "${entry.from.title}", whose work this is` : "";
-  return `- The captain's yes${where}: "${entry.words}". What it covers, as the crewmate that asked wrote it: "${entry.covers}".`;
+  return `- The captain's yes${where} (${entry.card}): "${entry.words}". What it covers, as its card said it: "${entry.covers}".`;
 }
 
 /**

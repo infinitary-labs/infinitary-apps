@@ -245,8 +245,8 @@ export function standingOverrideWords(
   override: Pick<HoldOverride, "words" | "holds" | "until">,
 ): string {
   if (!holdNames(override.holds))
-    return `The captain's earlier count holds are retired, but their standing words still apply ${overrideSpan(override)}: "${override.words}". Judge which consent asks their words reach; keychain or signing access, writes outside the project and browser handoffs still ask. Only their words take it back.`;
-  return `The captain's standing override on this task, recorded by the first mate: their words pass ${holdNames(override.holds)} ${overrideSpan(override)}: "${override.words}". Where their words reach a consent ask of your own, such as their plan's allowance, they are that consent and you do not ask again; keychain or signing access, writes outside the project and browser handoffs still ask. Only their words take it back.`;
+    return `The captain's earlier count holds are retired, but their standing words still apply ${overrideSpan(override)}: "${override.words}". Judge which consent asks their words reach; for a check that declares what it uses, name ${STANDING_WORDS_FROM} as the check request's allowance. Keychain or signing access, writes outside the project and browser handoffs still ask. Only their words take it back.`;
+  return `The captain's standing override on this task, recorded by the first mate: their words pass ${holdNames(override.holds)} ${overrideSpan(override)}: "${override.words}". Where their words reach a consent ask of your own, such as their plan's allowance, they are that consent and you do not ask again; for a check that declares what it uses, name ${STANDING_WORDS_FROM} as the check request's allowance. Keychain or signing access, writes outside the project and browser handoffs still ask. Only their words take it back.`;
 }
 
 /** What the reviewer of a change is served while the captain's override stands on it (INF-1216). */

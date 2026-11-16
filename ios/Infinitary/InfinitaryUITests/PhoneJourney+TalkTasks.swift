@@ -155,6 +155,14 @@ extension PhoneJourney {
         let started = try await home("talk-started")
         XCTAssertNotNil(started["startedAt"] as? Double)
         XCTAssertTrue(started["executionDeviceId"] is NSNull, "The phone starts work on its Mac, never on the phone")
+        // INF-4463: talk-started answers once the Mac holds the crewmate's first card, before the record's next read
+        // brings that card to the phone, and that read puts the Cards tab ahead of Activity and Crewmate. A press made
+        // in between found Crewmate where the strip was about to draw Activity, the strip moved under it, and the record
+        // stayed on Info. So the press waits for the strip to show the card the Mac answered with: all four of the
+        // record's tabs are then in place, and a later card only changes the count beside Cards.
+        let cards = try XCTUnwrap(started["cards"] as? [[String: Any]])
+        XCTAssertFalse(cards.isEmpty, "talk-started answers once the crewmate's card is on the Mac's record")
+        XCTAssertTrue(app.buttons["record-tab-cards"].waitForPresence(timeout: 10), app.debugDescription)
         // INF-2935: the Mac's tabs; the Crewmate tab's status line carries Stop, the Mac's word for Interrupt.
         let crewmateTab = app.buttons["record-tab-crewmate"]
         XCTAssertTrue(crewmateTab.waitForPresence(timeout: 10)); tapOnPhone(crewmateTab)

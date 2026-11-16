@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-talk-tasks-crewmate-tab-press",
+      "reason": "Test only: the talk-tasks phone journey presses the record's Crewmate tab once the tab strip shows the started task's first card, so the strip no longer moves under the press; nothing a person sees changes."
+    }
+  ]
+}

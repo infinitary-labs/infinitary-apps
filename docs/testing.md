@@ -310,7 +310,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   Every other workflow's requested Linux jobs read the same variable the same way (INF-1720's plan): the journeys' chooser and overflow, `verify.yml`'s Linux lanes, the replay gate and the Linux packages; the package check's Ubuntu 26.04 leg takes the variable's label with `-2604`, the PC's 26.04 job image.
   The gate job a request starts takes the variable's label with `-gate` (DOP-157's plan): `journeys.yml`'s `choose-journeys`.
   The placement service's runners on that label take only this job and go first in the PC's line, so the Mac job waiting on it starts within minutes; hosted, it runs on `ubuntu-24.04`.
-  Every Linux job that `main.yml` or a release starts runs on GitHub's hosted Ubuntu instead ("A release's hosted machines").
+  Main and release Linux jobs run on GitHub's hosted Ubuntu instead, except a publishing release's packages when its release queue is configured ("A release's hosted machines").
   Linux dependency installs use `.github/actions/node-headers`, which finds the running Node archive's `include/node` headers and refuses an image missing them; only the install receives that root as `NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR`.
   Uppercase preserves the setting through pnpm's lifecycle environment filter.
   That setting belongs only to the install, so later Electron rebuilds keep their own headers.
@@ -716,8 +716,8 @@ It also holds every caller of one of the project's workflows to granting at leas
 
 ## A release's hosted machines
 
-Every Linux job that decides or builds a release, and every Linux job of main's desktop release check, runs on GitHub's hosted `ubuntu-24.04`, whatever `LINUX_RUNNER` says (INF-2430's plan, piece 1).
-A hosted machine starts at once, so a release never waits in the PC's line behind pull requests and requested runs.
+Main's desktop release check and a release's Linux jobs run on GitHub's hosted Ubuntu, except publishing release packages when `RELEASE_LINUX_PACKAGES_RUNNER` names their queue.
+That queue takes the next free PC place ahead of pull request checks; an unavailable PC holds those package jobs.
 It is not faster: GitHub's hosted two-processor machine ran the whole Linux test suite in over an hour, where the PC's two-processor machine took 29 to 34 minutes, so `verify.yml` splits the tests across hosted machines ("Main's desktop release check").
 The cost is GitHub's per-minute bill for those jobs.
 
@@ -725,7 +725,8 @@ The cost is GitHub's per-minute bill for those jobs.
 `release.yml` and `main.yml` pass `hosted: true` to the workflows they call:
 
 - `verify.yml`, whose `request` job, `linux-checks` lane, every Linux test group and every `linux-e2e` journey job (`source-journeys.yml`, through the same input) take it;
-- `linux-packages.yml`, whose build and every package check take it, the Ubuntu 26.04 machine check on `ubuntu-26.04`.
+- `linux-packages.yml`, whose build and checks use hosted Ubuntu unless a publishing release passes `RELEASE_LINUX_PACKAGES_RUNNER`; the Ubuntu 26.04 host check appends `-2604` to that label.
+  Rehearsals and an unset variable stay hosted.
 
 `linux-startup.yml`'s job and `alpha-wait.yml`'s jobs name `ubuntu-24.04`, since `main.yml` and, for the startup fixtures, `batch-checks.yml` are their only callers; the alpha wait bills no minutes while its `wait` job is pending in an alpha's group ("Main's desktop release check").
 `batch-checks.yml` passes `hosted: true` to its sweep and its critical path, its startup fixtures name hosted Ubuntu themselves, and its own jobs but the Mac side of its confirm, and `main.yml`'s `sort` and `covered` jobs, name `ubuntu-24.04` ("The swept batch").
@@ -1485,7 +1486,7 @@ DOP-251's plan moves Linux jobs to the Mac mini's Linux guests one stage at a ti
 Each such job reads `fromJSON(vars.LINUX_QUEUES || '{}').<kind>` after the hosted machine a call from `main.yml` or a release asks for, and before `LINUX_RUNNER` ("A release's hosted machines").
 A kind the variable leaves out, and an unset or empty variable, keep the label the job asked for before, so the variable changes nothing until it names a kind.
 Name a kind only once runner-up serves its queue, so no job waits on a label nothing serves.
-A Linux job with no kind, such as main's startup fixtures, the Linux packages and every release job, never reads the variable.
+A Linux job with no kind, such as main's startup fixtures and the Linux packages, never reads `LINUX_QUEUES`; release packages use their separate variable.
 `tests/release-workflows-runners.test.ts` moves each kind alone and holds every other job where it was.
 
 | Kind | Jobs | Its old label |

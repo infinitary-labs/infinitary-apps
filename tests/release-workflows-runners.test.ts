@@ -578,12 +578,13 @@ describe("a release's hosted machines", () => {
   const placedRelease = (dryRun: "true" | "false", vars: Record<string, string>) => {
     const needs = { resolve: { outputs: { dry_run: dryRun } } };
     const hosted = passed(release.linux, "hosted", { needs, vars });
+    const release_runner = passed(release.linux, "release_runner", { needs, vars });
     return {
       ...verified(passed(release.verify, "hosted", { needs, vars }), vars),
-      build: runsOn(packages.build, { inputs: { hosted }, vars }),
+      build: runsOn(packages.build, { inputs: { hosted, release_runner }, vars }),
       packages: (packages.check?.strategy?.matrix?.include ?? []).map(
         (matrix) =>
-          `${matrix.system} ${matrix.image ?? matrix.runner}: ${runsOn(packages.check, { matrix, inputs: { hosted }, vars })}`,
+          `${matrix.system} ${matrix.image ?? matrix.runner}: ${runsOn(packages.check, { matrix, inputs: { hosted, release_runner }, vars })}`,
       ),
       own: ["resolve", "notes", "phone", "upload"].map((id) => literal(release[id])),
     };
@@ -609,6 +610,21 @@ describe("a release's hosted machines", () => {
     // phone check has no Linux job (INF-2539).
     for (const id of ["resolve", "availability"]) expect(literal(ios[id]), id).toBe("ubuntu-24.04");
     expect(ios.phone?.with).not.toHaveProperty("hosted");
+  });
+
+  it("routes only publishing release packages to the configured release queue", () => {
+    const vars = { ...pc, RELEASE_LINUX_PACKAGES_RUNNER: "shell-pc-linux-release" };
+    expect(placedRelease("false", vars)).toEqual({
+      ...hostedRelease,
+      build: vars.RELEASE_LINUX_PACKAGES_RUNNER,
+      packages: everyCheck((runner) =>
+        runner === "ubuntu-26.04"
+          ? `${vars.RELEASE_LINUX_PACKAGES_RUNNER}-2604`
+          : vars.RELEASE_LINUX_PACKAGES_RUNNER,
+      ),
+    });
+    expect(placedRelease("true", vars)).toEqual(hostedRelease);
+    expect(placedRelease("false", pc)).toEqual(hostedRelease);
   });
 
   it("runs every Linux job of the continuous run on main on GitHub's hosted Ubuntu", () => {

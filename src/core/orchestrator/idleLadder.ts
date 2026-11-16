@@ -25,12 +25,15 @@ import type { CrewTurn } from "./crewTurn";
 import {
   dependencyClosedOnce,
   dependencyClosedWake,
+  mergeLineOnce,
+  mergeLineWake,
   waitMovedOnce,
   waitMovedWake,
 } from "./deliveryWakes";
 import { crewHoldWays, idleStallWays } from "./holds";
 import { finishedOpenOnce, finishedOpenWake, idleNudge, type WakeNote } from "./idleWakes";
 import { jobBoundOnce, jobBoundWake } from "./jobWakes";
+import { candidateHead, waitingInLine } from "./mergeAuthorization";
 import { NextMove } from "./nextMove";
 import {
   CUT_OFF_ONCE_PREFIX,
@@ -360,6 +363,7 @@ export class IdleLadder {
       // check-back with no job behind it holds nothing (`unownedTimer`).
       timedWait: gate?.kind === "at-time" && !(record && this.unownedTimer(record)),
       checksWatched: record ? this.host.checksWatched?.(record) === true : false,
+      mergeInLine: waitingInLine(record?.delivery) !== undefined,
       accountHeld: record ? this.cutOffHolds(record) : false,
       outOfReach: this.host.outOfReach?.(taskId) === true,
       ...(record ? this.waitWitnesses(record) : { waitsOnUnstarted: false }),
@@ -713,6 +717,14 @@ export class IdleLadder {
     // A check-back later than the job's bound never silences the bound,
     // which stays the backstop (INF-1244).
     if (turn === "moving" && witnesses.timedWait) this.checkJobBound(record, now);
+    // Told when the nudge would have come: a quick line costs its crewmate no turn.
+    if (
+      turn === "moving" &&
+      witnesses.mergeInLine &&
+      record.idleSince != null &&
+      now - record.idleSince >= STALL_WAKE_MS
+    )
+      this.tellMergeLine(record);
     if (turn === "captain" || turn === "moving") return;
     if (turn !== "thread") this.checkJobBound(record, now);
     this.climb(record, runtime, now, turn);
@@ -767,6 +779,8 @@ export class IdleLadder {
       idleTurn(witnesses) === "asked"
         ? (record.recoveryCount ?? 0) < 2
         : witnesses.decisionCardOpen ||
+          // An approved change waiting in a line is not stalled (INF-4497 finding 2).
+          witnesses.mergeInLine === true ||
           (witnesses.putOff !== undefined && !witnesses.waitsOnUnstarted) ||
           witnesses.finishedCardUp === true ||
           witnesses.finishedNoCard === true;
@@ -1765,6 +1779,32 @@ export class IdleLadder {
         .filter((old) => moved.has(old.id))
         .map((replaced) => ({ replaced, carrier: task }));
     });
+  }
+
+  /**
+   * The captain's kept merge approval waits in the batch line or the
+   * host's merge queue (INF-4497 finding 2), and its crewmate has been idle
+   * as long as the ladder's nudge waits: it hears once, named
+   * by the approval and its line so the inbox queues it once even across a
+   * restart, that the quiet is the line's and nothing is needed from it.
+   */
+  private tellMergeLine(record: TaskRecord): void {
+    const waiting = waitingInLine(record.delivery);
+    if (!waiting) return;
+    const once = mergeLineOnce(waiting.approval, waiting.line);
+    const tried = `${record.id}\n${once}`;
+    if (this.resumesTried.has(tried) || this.host.inbox.woken(record.id, once)) return;
+    this.resumesTried.add(tried);
+    this.host.tasks.turns.endIdle(record.id);
+    void this.host
+      .steer(
+        record.id,
+        mergeLineWake(waiting.approval, waiting.line, candidateHead(waiting.approval)),
+      )
+      .catch((caught: unknown) => {
+        // No conversation to resume: the line still holds the ladder quiet.
+        console.warn("[crew] a kept merge's line steer not delivered:", caught);
+      });
   }
 
   /** One steer naming the task that carries the work a dropped wait was on (INF-1826). */

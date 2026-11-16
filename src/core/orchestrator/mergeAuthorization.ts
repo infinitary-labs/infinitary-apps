@@ -193,6 +193,30 @@ export function standingApprovals(delivery: TaskDelivery | null | undefined): Me
 }
 
 /**
+ * The line a kept merge waits in, when every standing approval on the task
+ * waits in one at its current version: this person's batch line (`queue`)
+ * or the merge queue where the project lives (`host-queue`). The host or
+ * the batch merges it from there, and only a send-back, a failed batch or
+ * a removal from the queue needs the crewmate again, each with its own
+ * wake. The front approval names the line; undefined when none stands or
+ * any waits on something else.
+ */
+export function waitingInLine(
+  delivery: TaskDelivery | null | undefined,
+): { approval: MergeAuthorization; line: "queue" | "host-queue" } | undefined {
+  const all = standingApprovals(delivery);
+  const inLine = all.every(
+    (kept) =>
+      (kept.waiting?.on === "queue" || kept.waiting?.on === "host-queue") &&
+      kept.waiting.head === candidateHead(kept),
+  );
+  const front = all[0];
+  const line = front?.waiting?.on;
+  if (!front || !inLine || (line !== "queue" && line !== "host-queue")) return undefined;
+  return { approval: front, line };
+}
+
+/**
  * The standing approval that covers `head` of one of the task's pull
  * requests (INF-4018), in front or waiting its turn: the stored review a
  * merge card names, or the task's own change when `review` is undefined,

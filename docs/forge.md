@@ -836,6 +836,7 @@ The words served to a crewmate that name a pull request's page read it only wher
 The merge reads Merge in the next batch, since its click puts the change in line.
 A branch whose project runs no checks on it is declared with `check_change`'s `absentChecks`, as for a pull request, and a project recorded as running none needs no declaration ("A project with no checks").
 The merge click keeps the captain's approval at that version and puts the change in line (`ChangeMerge.mergeInBatch`): it reads the branch's checks, range, title, review and story as any merge does, and sends nothing to merge.
+While the approval waits in line or in a batch, its task is not stalled: the idle ladder raises no nudge, wake or stuck card for it, and tells its crewmate once, when the nudge would have come, that nothing is needed (`mergeInLine`, `docs/report-sort.md`); a change waiting in the host's own merge queue reads the same way.
 A change that still has a pull request of its own joins the same way, and that pull request is closed with a note linking the batch once the batch merges (`Forge.closeWithNote`); one stacked on another branch joins only once that branch's work is already in.
 The kept approval then waits on `queue`, and each later run reads the change's place from the app's own record: in line, in a batch, left out, the only change of a failed batch, or merged.
 The merge card's Batch check state and the check reading say that place in words (`BatchStatus`, `BATCH_STATUS_WORDS`); no status where the project lives carries it.

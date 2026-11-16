@@ -89,6 +89,17 @@ export type DeliveryFacts =
     }
   | {
       /**
+       * The captain's kept merge approval waits in a line (INF-4497 finding
+       * 2): this person's batch line or the merge queue where the project
+       * lives. Its crewmate hears once that the quiet is the line's.
+       */
+      kind: "merge-line";
+      line: "queue" | "host-queue";
+      /** The approved version that waits. */
+      head: string;
+    }
+  | {
+      /**
        * A requested merge finished and the task is still open (FI3-1543):
        * a referenced pull request merged, or the merge was refused. One
        * confirmed merge wakes once.
@@ -442,6 +453,20 @@ export function waitMovedWake(
   };
 }
 
+/** The name a kept merge's line is told once for: the approval and its line. */
+export function mergeLineOnce(approval: { id: string }, line: "queue" | "host-queue"): string {
+  return `merge-line:${approval.id}:${line}`;
+}
+
+/** The one steer telling a crewmate its approved change waits in a line (INF-4497 finding 2). */
+export function mergeLineWake(
+  approval: { id: string },
+  line: "queue" | "host-queue",
+  head: string,
+): TypedWake {
+  return { facts: { kind: "merge-line", line, head }, once: mergeLineOnce(approval, line) };
+}
+
 /**
  * The reason a host wrote, as the clause that ends a sentence: a colon and the
  * reason ended as one sentence, or only the full stop when it gave none.
@@ -593,6 +618,10 @@ export const DELIVERY_WORDS: KindWords<DeliveryFacts> = {
   "dependency-closed": (facts) => renderDependencyClosed(facts),
   "wait-moved": (facts) =>
     `${facts.replaced.key} "${facts.replaced.title}", which you heard was dropped, goes on in ${facts.dependency.key} "${facts.dependency.title}", so your task waits on ${facts.dependency.key} now and its close steers you. If you carried on without that work, check what your task still needs from it.`,
+  "merge-line": (facts) =>
+    facts.line === "queue"
+      ? `Your change at ${facts.head} is approved and waits in line for this project's next batch of approved changes. The app merges it with that batch once the batch's checks pass, so this wait is not a stall and nothing is needed from you for it: do not put up another merge card or ask the captain to merge again. If the batch leaves your change out, sends it back, or fails its checks with your change alone in it, you are woken with what to do. Finish any other remaining work, then end your turn.`
+      : `The project's host took your change at ${facts.head} into the merge queue of its branch. It merges it once the queue's checks pass, and the task closes then, so this wait is not a stall and nothing is needed from you for it: do not put up another merge card or ask the captain to merge again. If the host removes it from the queue without merging it, you are woken with what to do. Finish any other remaining work, then end your turn.`,
   "repair-assessed": (facts) => renderRepairAssessed(facts),
 };
 

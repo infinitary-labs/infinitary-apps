@@ -87,8 +87,12 @@ export type CorrectionWakeKind =
   | "correction-review"
   | "kept-project-direction";
 
-/** Batches of your own have their own byte-exact cases: the hold the first mate hears and a crewmate's send-back. */
-export type OwnBatchWakeKind = "batch-held" | "batch-sent-back";
+/**
+ * Batches of your own have their own byte-exact cases: the hold the first
+ * mate hears, a crewmate's send-back, and the steer that its approved change
+ * waits in a line (the batch line or the host's merge queue).
+ */
+export type OwnBatchWakeKind = "batch-held" | "batch-sent-back" | "merge-line";
 
 /** A card button the app could not carry out has its own byte-exact cases (INF-4072). */
 export type CardActionWakeKind = "card-action-undone";

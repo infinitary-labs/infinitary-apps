@@ -357,6 +357,7 @@
         "!src/core/orchestrator/crewTurns.workspace.test.ts",
         "!src/core/orchestrator/crewWatch.git.test.ts",
         "!src/core/orchestrator/idleLadder.waits.test.ts",
+        "!src/core/orchestrator/idleLadder.mergeLine.test.ts",
         "!src/core/orchestrator/inPlaceWork.folders.test.ts",
         "!src/core/orchestrator/intake.git.test.ts",
         "!src/core/orchestrator/reviews.tier.test.ts",

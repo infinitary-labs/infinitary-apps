@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "no-stall-for-merge-in-line",
+      "kind": "fix",
+      "title": "An approved change waiting to merge with others is no longer called stuck",
+      "body": "When you approve a change in a project that merges approved changes together, or whose main branch has a merge queue, it waits in line until the merge runs. That wait no longer marks the task as stalled, wakes your first mate about it, or raises a card saying it is stuck; its crewmate is told once that nothing is needed while it waits.",
+      "area": "tasks",
+      "noPicture": "Nothing new is drawn; the stalled line and the stuck card no longer appear for a change waiting in line.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

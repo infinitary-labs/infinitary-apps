@@ -1,7 +1,8 @@
 /**
  * The words of the wakes batches of your own queue, byte for byte
  * (`tests/helpers/wakeWords.ts` says why): the hold the first mate hears and
- * the send-back a change's own crewmate hears (docs/forge.md, "Batches of your own").
+ * the send-back a change's own crewmate hears (docs/forge.md, "Batches of your own"),
+ * and the one steer telling a crewmate its approved change waits in a line.
  */
 import {
   type OwnBatchWakeKind,
@@ -45,6 +46,34 @@ const CASES: WordsCases<OwnBatchWakeKind> = {
       },
       words:
         "Your change at 5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0 was sent back from its batch of approved changes and is no longer approved: Its new parser fails the date tests the batch ran. The other changes of that batch go on without it. Repair it on your branch, validate, push and confirm its story, then put up a new merge card for the new version: once approved it joins the project's next batch.",
+    },
+  ],
+  "merge-line": [
+    {
+      // INF-4497 finding 2: the quiet while a change waits in the batch line is told once, never flagged.
+      name: "an approved change in line for the next batch",
+      wake: {
+        facts: {
+          kind: "merge-line",
+          line: "queue",
+          head: "5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0",
+        },
+      },
+      words:
+        "Your change at 5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0 is approved and waits in line for this project's next batch of approved changes. The app merges it with that batch once the batch's checks pass, so this wait is not a stall and nothing is needed from you for it: do not put up another merge card or ask the captain to merge again. If the batch leaves your change out, sends it back, or fails its checks with your change alone in it, you are woken with what to do. Finish any other remaining work, then end your turn.",
+    },
+    {
+      // INF-4497 finding 2: the host's own merge queue is the same kind of line.
+      name: "an approved change in the host's merge queue",
+      wake: {
+        facts: {
+          kind: "merge-line",
+          line: "host-queue",
+          head: "5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0",
+        },
+      },
+      words:
+        "The project's host took your change at 5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0 into the merge queue of its branch. It merges it once the queue's checks pass, and the task closes then, so this wait is not a stall and nothing is needed from you for it: do not put up another merge card or ask the captain to merge again. If the host removes it from the queue without merging it, you are woken with what to do. Finish any other remaining work, then end your turn.",
     },
   ],
 };

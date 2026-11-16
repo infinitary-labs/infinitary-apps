@@ -230,6 +230,15 @@ export type Witnesses = {
    */
   checksWatched: boolean;
   /**
+   * Every standing merge approval on the task waits in a line at its
+   * current version: this person's batch line or the merge queue where the
+   * project lives (`waitingInLine`, INF-4497 finding 2). The batch or the
+   * host merges it from there, and a send-back, a failed batch or a
+   * removal from the queue wakes its crewmate, so the quiet is the line's.
+   * An ordinary pull request's checks are `checksWatched`, not this.
+   */
+  mergeInLine?: boolean;
+  /**
    * A typed cut-off stands on the task's account (the cut-off contract):
    * its lane waits on the account, which speaks for it, and goes on when
    * the cut-off ends (`IdleLadder.cutOffHolds`).
@@ -449,9 +458,11 @@ export function sortReport(facts: ReportSortFacts): ReportSortResult {
             ? "a settle holds this boundary; the crewmate's turn continues."
             : facts.checksWatched
               ? "the host is watching its change's checks; the crewmate's turn continues when they finish."
-              : facts.waitsOnUnderway
-                ? "it waits on work underway; the crewmate's turn continues when that work closes."
-                : "a timed wait holds this task; the crewmate's turn continues when it ends.",
+              : facts.mergeInLine
+                ? "its approved change waits in the batch line or the host's merge queue; it merges from there, and its crewmate is woken if it is left out or removed."
+                : facts.waitsOnUnderway
+                  ? "it waits on work underway; the crewmate's turn continues when that work closes."
+                  : "a timed wait holds this task; the crewmate's turn continues when it ends.",
     };
   }
   if (facts.captainGateOwed) {
@@ -522,6 +533,7 @@ function stillMoving(witnesses: Witnesses): boolean {
     witnesses.pendingSettle ||
     witnesses.timedWait ||
     witnesses.checksWatched ||
+    witnesses.mergeInLine === true ||
     witnesses.waitsOnUnderway === true
   );
 }

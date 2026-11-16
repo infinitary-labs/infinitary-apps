@@ -2,6 +2,7 @@ import type { AttachmentRef } from "@shared/attachments";
 import { repairImpact, wireRepairImpact } from "@shared/checkRepair";
 import { describe, expect, it } from "vitest";
 import { standingApproval } from "../../../tests/helpers/settleHarness";
+import type { MergeAuthorization, MergeWait } from "../storage/taskRecords";
 import {
   FAILED_BATCH_NOTE,
   isCaptainGuidance,
@@ -9,6 +10,7 @@ import {
   keptNote,
   parseRepairAssessment,
   putInFront,
+  waitingInLine,
 } from "./mergeAuthorization";
 import {
   GUIDANCE_MARK_WORDS,
@@ -95,6 +97,44 @@ describe("the captain's guidance on a kept merge (FI3-662)", () => {
     expect(renderWake(withGuidanceMark("Keep it.", 1))).toMatch(
       new RegExp(`^Keep it\\.\\n\\n.*${GUIDANCE_MARK_WORDS} 1 `),
     );
+  });
+});
+
+// INF-4497 finding 2: only a change waiting in the batch line or the host's
+// merge queue is quiet on the line's account; any other wait stays the crew's.
+describe("the line a kept merge waits in", () => {
+  const head = "a".repeat(40);
+  const waitingOn = (on: MergeWait, at = head) => ({ on, head: at, at: 1 });
+  const kept = (mergeAuthorization: MergeAuthorization) => ({
+    mode: "queue-pr" as const,
+    mergeAuthorization,
+  });
+
+  it("names the batch line or the host's merge queue the approval waits in at its version", () => {
+    for (const line of ["queue", "host-queue"] as const) {
+      const approval = standingApproval({ waiting: waitingOn(line) });
+      expect(waitingInLine(kept(approval))).toEqual({ approval, line });
+    }
+  });
+
+  it("reads no line for any other wait, a reading of an older version, or an approval that ended", () => {
+    expect(waitingInLine(undefined)).toBeUndefined();
+    expect(waitingInLine(kept(standingApproval()))).toBeUndefined();
+    for (const on of ["checks", "conflict", "protected", "host-removed", "refused"] as const)
+      expect(waitingInLine(kept(standingApproval({ waiting: waitingOn(on) }))), on).toBeUndefined();
+    expect(
+      waitingInLine(kept(standingApproval({ waiting: waitingOn("queue", "b".repeat(40)) }))),
+    ).toBeUndefined();
+    expect(
+      waitingInLine(kept(standingApproval({ status: "consumed", waiting: waitingOn("queue") }))),
+    ).toBeUndefined();
+  });
+
+  it("reads no line while another approval on the task waits on something else", () => {
+    const behind = standingApproval({ id: "approval-2", waiting: waitingOn("conflict") });
+    expect(
+      waitingInLine(kept(standingApproval({ waiting: waitingOn("queue"), queued: [behind] }))),
+    ).toBeUndefined();
   });
 });
 

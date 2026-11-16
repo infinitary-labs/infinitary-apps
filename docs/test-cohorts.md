@@ -197,6 +197,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/orchestrator/crewTurns.workspace.test.ts` | real git in the personal workspace's folder, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
 | `src/core/orchestrator/crewWatch.git.test.ts` | real git and `chmod` for closed tasks' working copies and the check watch, at the run's own priority | 60 s on the working copies describe, kept; 5 s default elsewhere (Mac slowest case 0.6 s) |
 | `src/core/orchestrator/idleLadder.waits.test.ts` | real git for one wait case, at the run's own priority | 5 s default (Mac slowest case 0.7 s) |
+| `src/core/orchestrator/idleLadder.mergeLine.test.ts` | real git in the kept merge fixture's project folder, at the run's own priority | 5 s default (Mac slowest case 1.0 s) |
 | `src/core/orchestrator/inPlaceWork.folders.test.ts` | real git in a project's folder, at the run's own priority | 60 s on each real-git describe, kept above the rule's 10 s (Mac slowest case 1.2 s) |
 | `src/core/orchestrator/intake.git.test.ts` | real git for settle facts, delivery overrides, typed results and branch_from, at the run's own priority | 5 s default; 60 s on branch_from, kept (Mac slowest case 0.6 s) |
 | `src/core/orchestrator/reviews.tier.test.ts` | real git in scratch projects for the reviewed tier, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |

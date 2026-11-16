@@ -123,6 +123,7 @@ describe("the signed channel workflow", () => {
       "notes",
       "verify",
       "linux",
+      "windows",
       "phone",
       "release",
       "update",

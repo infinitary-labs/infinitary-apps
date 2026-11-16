@@ -1,0 +1,281 @@
+name: windows
+
+# The Windows installer, built and checked (docs/windows.md): one unsigned
+# per-user installer for x64 PCs, built on the PC's Windows places, then
+# installed on a fresh Windows 11 virtual machine and checked there
+# (tests/windows/installed-windows.spec.ts): installed for one person, its
+# Start menu entry carrying the app's identity, opened after install the
+# way the Start menu opens it, Git for Windows offered and installed on the
+# person's yes, a crew turn whose commands run in that Git's Git Bash with
+# its job stopped, and removal that keeps the saved work. The installer
+# stays on the run; nothing here signs or uploads it anywhere else.
+#
+# The captain's pick on INF-4243: it runs on each combined batch that
+# touches Windows-relevant files (batch-checks.yml, scripts/windows-paths.ts)
+# and on every alpha (release.yml), and on request.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag or SHA to package (default - the selected ref)
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      trigger:
+        description: What started the caller's run, which every job name here leads with (scripts/ci-job-names.mjs)
+        type: string
+        default: ''
+      ref:
+        description: The commit to package
+        required: true
+        type: string
+      version:
+        description: A release's logical version, which the installer carries and the app reports; empty for a batch's check
+        required: false
+        type: string
+        default: ''
+
+concurrency:
+  group: windows-${{ github.workflow == 'windows' && (inputs.ref || github.ref) || github.run_id }}
+  cancel-in-progress: ${{ github.workflow == 'windows' }}
+
+permissions:
+  contents: read
+
+# Git for Windows' portable build, which both jobs put first on their own
+# steps' search path, checked by its SHA-256 (the release's own list): the
+# job's bash, git and curl are then this one, never whatever the machine
+# carries. The PC's Windows places carry Git 2.45.2, whose curl stops a
+# plain download with "A libcurl function was given a bad argument" (exit
+# 43), and the fresh Windows 11 machine carries no Git at all.
+env:
+  PORTABLE_GIT: https://github.com/git-for-windows/git/releases/download/v2.56.1.windows.1/PortableGit-2.56.1-64-bit.7z.exe
+  PORTABLE_GIT_SHA256: 9dd04a608ceb5f6ab32a73709e0ecb159d211da71b697c45ff81f6dd0c6b49c7
+
+jobs:
+  build:
+    name: ${{ format('{0} · Build the Windows installer', (inputs.trigger || 'Manual request')) }}
+    # A fresh standard account on the PC's Windows (runner-up's account
+    # places), removed when the job ends.
+    runs-on: ${{ vars.WINDOWS_RUNNER || 'shell-pc-windows' }}
+    timeout-minutes: 45
+    # Each job's own group, which a merge batch's stop enters to cancel it
+    # once the code checks failed (scripts/batch-stop.mjs); nothing else
+    # enters it.
+    concurrency:
+      group: ${{ format('batch-stop-{0}-{1}-windows-build', github.run_id, github.run_attempt) }}
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Git Bash for the job's own steps
+        shell: pwsh
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP 'PortableGit.7z.exe'
+          Invoke-WebRequest -Uri $env:PORTABLE_GIT -OutFile $archive
+          if ((Get-FileHash -Algorithm SHA256 $archive).Hash.ToLower() -ne $env:PORTABLE_GIT_SHA256) { throw 'the portable Git download differs from its release' }
+          $dir = Join-Path $env:RUNNER_TEMP 'job-git'
+          $p = Start-Process $archive -ArgumentList '-y', "-o$dir" -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "the portable Git unpacked with $($p.ExitCode)" }
+          Add-Content $env:GITHUB_PATH (Join-Path $dir 'cmd')
+          Add-Content $env:GITHUB_PATH (Join-Path $dir 'bin')
+      # A refused checkout waits until GitHub takes the job's token again,
+      # then runs once more (docs/testing.md, "GitHub refusing a job's
+      # token"); the wait runs in the portable Git's bash with its curl.
+      - id: checkout
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with: &build-checkout
+          ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: &wait-for-token |
+          # Asks the address the checkout's fetch reads, with the job's token
+          # as the checkout sends it, every 15 seconds for up to 10 minutes,
+          # then lets the checkout try once more. A failure GitHub's token
+          # did not cause, such as a missing commit, is tried again at once.
+          url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/info/refs?service=git-upload-pack"
+          patience="${CHECKOUT_PATIENCE_SECONDS:-600}"
+          pause="${CHECKOUT_PAUSE_SECONDS:-15}"
+          started=$SECONDS
+          while :; do
+            # The token reaches curl on its input, never on its command line.
+            answer="$(printf 'user = "x-access-token:%s"\n' "$TOKEN" |
+              curl --silent --location --output /dev/null --write-out '%{http_code}' \
+                --connect-timeout 30 --max-time 60 --config - --url "$url")" || true
+            if [[ "$answer" == 2?? ]]; then exit 0; fi
+            waited=$((SECONDS - started))
+            if ((waited >= patience)); then
+              echo "::warning title=GitHub still refuses the job's token::It answered $answer after ${waited}s; the checkout tries once more."
+              exit 0
+            fi
+            echo "GitHub answered $answer to the job's token after ${waited}s; asking again in ${pause}s"
+            sleep "$pause"
+          done
+      - name: Check out again
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        uses: actions/checkout@v4
+        with: *build-checkout
+      # pnpm, Electron and electron-builder's tools from the Actions cache, as
+      # every other job takes them (docs/testing.md, "pnpm's own download",
+      # "Downloads from GitHub's release server"); the portable Git's bash
+      # runs their shell steps.
+      - uses: ./.github/actions/pnpm
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: ./.github/actions/electron-download
+      - run: pnpm install --frozen-lockfile
+        timeout-minutes: 20
+      - run: pnpm build
+        env:
+          INFINITARY_RELEASE_VERSION: ${{ inputs.version }}
+      - id: version
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: echo "version=${RELEASE_VERSION:-$(node -p 'require("./package.json").version')}" >> "$GITHUB_OUTPUT"
+      - uses: ./.github/actions/electron-builder-tools
+      # electron-builder reads Electron's zip from the cache the install's
+      # download step restored, checked first against Electron's own sums
+      # (.github/actions/electron-download/zips.mjs), as the Linux packages do.
+      - name: Build the installer
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          node .github/actions/electron-download/zips.mjs win32 x64
+          pnpm exec electron-builder --win --config electron-builder.win.yml --publish never \
+            -c.extraMetadata.version="$VERSION" \
+            -c.electronDownload.cache="$electron_config_cache" -c.electronDownload.isVerifyChecksum=false
+          mkdir -p windows-installer
+          cp dist/*-setup.exe windows-installer/
+          (cd windows-installer && sha256sum *.exe | tee SHA256SUMS)
+      - name: Keep electron-builder's tools
+        if: ${{ !cancelled() }}
+        uses: ./.github/actions/electron-builder-tools
+        with:
+          save: 'true'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: windows-installer/
+          if-no-files-found: error
+          retention-days: ${{ inputs.version && 3 || 1 }}
+
+  check:
+    name: ${{ format('{0} · Install and run the Windows app (fresh Windows 11)', (inputs.trigger || 'Manual request')) }}
+    needs: build
+    # A fresh Windows 11 virtual machine on the PC for each check (the
+    # captain's pick on INF-4243): a standard person signed in at its
+    # desktop, no Git installed, removed when the job ends (docs/windows.md,
+    # "The checks").
+    runs-on: ${{ vars.WINDOWS_CLEAN_RUNNER || 'shell-pc-win11' }}
+    timeout-minutes: 60
+    # The batch stop's group for this job, as the build's.
+    concurrency:
+      group: ${{ format('batch-stop-{0}-{1}-windows-check', github.run_id, github.run_attempt) }}
+    # Windows PowerShell 5.1, the one Windows ships: a fresh Windows 11
+    # machine has no PowerShell 7 (pwsh).
+    defaults:
+      run:
+        shell: powershell
+    # The job's own git never asks for a sign-in: its checkout keeps no
+    # credentials, and a prompt on the machine's desktop (Git for Windows'
+    # helper chooser) waits for a press nobody makes. A git step that needs
+    # a sign-in fails at once instead of holding the job to its timeout.
+    env:
+      GIT_TERMINAL_PROMPT: '0'
+      GCM_INTERACTIVE: never
+      GIT_CONFIG_COUNT: '1'
+      GIT_CONFIG_KEY_0: credential.helper
+      GIT_CONFIG_VALUE_0: ''
+    steps:
+      # The guest has no Git for its person, so the app's first launch offers
+      # it. The check's own tools need Git Bash, so the job takes Git for
+      # Windows' portable build, checked by its SHA-256, into its own temporary
+      # folder and onto its own steps' search path only: the app, opened
+      # through Explorer, never sees it, and finds no Git in any place it
+      # looks (src/core/windowsGit.ts).
+      - name: Git Bash for the job's own steps
+        run: |
+          $ProgressPreference = 'SilentlyContinue'
+          $archive = Join-Path $env:RUNNER_TEMP 'PortableGit.7z.exe'
+          Invoke-WebRequest -UseBasicParsing -Uri $env:PORTABLE_GIT -OutFile $archive
+          if ((Get-FileHash -Algorithm SHA256 $archive).Hash.ToLower() -ne $env:PORTABLE_GIT_SHA256) { throw 'the portable Git download differs from its release' }
+          $dir = Join-Path $env:RUNNER_TEMP 'job-git'
+          $p = Start-Process $archive -ArgumentList '-y', "-o$dir" -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "the portable Git unpacked with $($p.ExitCode)" }
+          Add-Content $env:GITHUB_PATH (Join-Path $dir 'cmd')
+          Add-Content $env:GITHUB_PATH (Join-Path $dir 'bin')
+      # A refused checkout waits as the build's does, in the portable Git's
+      # bash rather than the job's PowerShell.
+      - id: checkout
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with: &check-checkout
+          ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        shell: bash
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Check out again
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        uses: actions/checkout@v4
+        with: *check-checkout
+      - uses: ./.github/actions/pnpm
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: ./.github/actions/electron-download
+      # The journey runs the installed app, so the check's own install builds
+      # nothing: the machine has no Python or compiler for native modules. It
+      # only compiles the message catalogs the journey's imports read.
+      - run: |
+          pnpm install --frozen-lockfile --ignore-scripts
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/generate-messages.ts --compiled
+        timeout-minutes: 20
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
+          path: ${{ runner.temp }}/windows-installer
+      - name: Check the installer against the build's list
+        working-directory: ${{ runner.temp }}/windows-installer
+        run: |
+          foreach ($line in Get-Content SHA256SUMS) {
+            $sum, $file = $line -split '\s+\*?', 2
+            if ((Get-FileHash -Algorithm SHA256 $file).Hash.ToLower() -ne $sum) { throw "$file differs from the build's" }
+          }
+      # As a person's double-click runs it, silently: one click installs for
+      # this person and opens the app through its Start menu entry.
+      - name: Install
+        working-directory: ${{ runner.temp }}/windows-installer
+        run: |
+          $setup = Get-ChildItem *-setup.exe | Select-Object -First 1
+          $p = Start-Process $setup.FullName -ArgumentList '/S', '--force-run' -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "the installer ended with $($p.ExitCode)" }
+      - name: Check the installed app
+        env:
+          INFINITARY_INSTALLED_EVIDENCE: ${{ runner.temp }}/windows-evidence
+          INFINITARY_INSTALLED_VERSION: ${{ needs.build.outputs.version }}
+        run: pnpm exec playwright test --config playwright.windows.config.ts
+      # Kept even when the job's timeout cancels it, so a hang leaves its
+      # pictures and trace.
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: windows-evidence
+          path: |
+            ${{ runner.temp }}/windows-evidence
+            test-results/windows
+          if-no-files-found: ignore
+          retention-days: 7

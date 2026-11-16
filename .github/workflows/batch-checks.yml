@@ -21,8 +21,8 @@ name: Batch checks
 #
 # The batch stops at its first code-check failure (the captain's pick on
 # INF-3925): the watch job reads this run until the sweep's code checks end,
-# and when they failed, a stop job per sweep job enters that job's own
-# concurrency group with cancel-in-progress and cancels it, and the stopped
+# and when they failed, a stop job per sweep job and per Windows job
+# enters that job's own concurrency group with cancel-in-progress and cancels it, and the stopped
 # job then fails naming the code checks' failed step, so the batch ends
 # failed minutes in with one red line of its own that points at the real
 # failure (scripts/batch-stop.mjs). The critical path and the startup
@@ -113,6 +113,40 @@ jobs:
       trigger: ${{ inputs.trigger }}
       ref: ${{ inputs.head }}
 
+  # Whether the batch touches Windows-relevant files (scripts/windows-paths.ts),
+  # since the main version it left: the captain's pick on INF-4243, "On each
+  # combined batch that touches Windows-relevant files".
+  windows-paths:
+    needs: batch
+    name: ${{ format('{0} · Read the Windows-relevant files', inputs.trigger) }}
+    runs-on: ubuntu-24.04
+    outputs:
+      windows: ${{ steps.read.outputs.windows }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.head }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - id: read
+        env:
+          BASE: ${{ needs.batch.outputs.base }}
+        run: node scripts/windows-paths.ts --base "$BASE"
+
+  # The Windows installer, built and checked on a fresh Windows 11 virtual
+  # machine (windows.yml, docs/windows.md), when the batch reaches it.
+  windows:
+    needs: windows-paths
+    if: ${{ needs.windows-paths.outputs.windows == 'true' }}
+    name: ${{ format('{0} · Windows installer', inputs.trigger) }}
+    uses: ./.github/workflows/windows.yml
+    with:
+      trigger: ${{ inputs.trigger }}
+      ref: ${{ inputs.head }}
+
   # Reads this run until the sweep's code checks end, and names their
   # outcome. It never fails the batch itself: a watch that cannot read the
   # run leaves the batch to run on.
@@ -140,7 +174,7 @@ jobs:
 
   # After failed code checks: each sweep job's own concurrency group
   # (verify.yml's lanes and test groups, source-journeys.yml's journey
-  # groups), entered with cancel-in-progress, which cancels that job, queued
+  # groups) and each Windows job's (windows.yml's build and check), entered with cancel-in-progress, which cancels that job, queued
   # or running. Each stop passes, so the stops add no red line of their own
   # beside the real failure; the stopped job below holds the batch failed.
   stop:
@@ -171,6 +205,8 @@ jobs:
           - journeys-full-source-desktop-1
           - journeys-full-source-desktop-2
           - journeys-full-source-desktop-3
+          - windows-build
+          - windows-check
     concurrency:
       group: ${{ format('batch-stop-{0}-{1}-{2}', github.run_id, github.run_attempt, matrix.job) }}
       cancel-in-progress: true
@@ -269,10 +305,12 @@ jobs:
   # passed, or once every failed job's files passed their confirm: each
   # test group's own confirm that ran, and the later one unless those took
   # every failed job. It names the tree they built and the main version the
-  # batch left main at, which main's sort and the alpha's proof read.
+  # batch left main at, which main's sort and the alpha's proof read. The
+  # Windows installer check must pass whenever it ran: the confirm reruns
+  # test files, never an installer.
   passed:
-    needs: [batch, sweep, critical-path, startup, failures, confirm-later]
-    if: ${{ !cancelled() && (needs.sweep.result == 'success' && needs.critical-path.result == 'success' && needs.startup.result == 'success' || needs.failures.outputs.grouped == 'passed' && (needs.failures.outputs.left == 'nothing' || needs.confirm-later.result == 'success')) }}
+    needs: [batch, sweep, critical-path, startup, failures, confirm-later, windows-paths, windows]
+    if: ${{ !cancelled() && needs.windows-paths.result == 'success' && (needs.windows.result == 'success' || needs.windows.result == 'skipped') && (needs.sweep.result == 'success' && needs.critical-path.result == 'success' && needs.startup.result == 'success' || needs.failures.outputs.grouped == 'passed' && (needs.failures.outputs.left == 'nothing' || needs.confirm-later.result == 'success')) }}
     name: ${{ format('{0} · Batch passed (tree {1}; base {2})', inputs.trigger, needs.batch.outputs.tree, needs.batch.outputs.base) }}
     runs-on: ubuntu-24.04
     steps:

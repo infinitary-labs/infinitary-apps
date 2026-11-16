@@ -54,9 +54,32 @@ describe("the signed channel workflow", () => {
   it("uploads only after the signing job succeeded, on a hosted machine, then checks and switches in one virtual Mac", () => {
     const upload = jobOf(release, "upload");
     const publish = jobOf(release, "publish");
-    const before = ["resolve", "notes", "verify", "linux", "phone", "release", "update"];
+    const before = ["resolve", "notes", "verify", "linux", "windows", "phone", "release", "update"];
     expect(upload.needs).toEqual(before);
     expect(publish.needs).toEqual([...before, "upload"]);
+    // INF-4243's pick, "on every alpha": an alpha's Windows installer check
+    // must pass before anything uploads or publishes; a stable runs none.
+    const passed = { result: "success" };
+    const ready = (channel: string, windows: string) => ({
+      needs: {
+        resolve: { result: "success", outputs: { channel, verify_required: "false" } },
+        ...Object.fromEntries(["notes", "linux", "phone", "release"].map((name) => [name, passed])),
+        verify: { result: "skipped" },
+        update: { result: "skipped" },
+        upload: passed,
+        windows: { result: windows },
+      },
+    });
+    for (const job of [upload, publish]) {
+      expect(workflowValue(job.if ?? "", ready("alpha", "success"))).toBe(true);
+      expect(workflowValue(job.if ?? "", ready("alpha", "failure"))).toBe(false);
+      expect(workflowValue(job.if ?? "", ready("alpha", "skipped"))).toBe(false);
+      expect(workflowValue(job.if ?? "", ready("stable", "skipped"))).toBe(true);
+    }
+    expect(workflowValue(jobOf(release, "windows").if ?? "", ready("stable", "skipped"))).toBe(
+      false,
+    );
+    expect(workflowValue(jobOf(release, "windows").if ?? "", ready("alpha", "skipped"))).toBe(true);
     for (const dryRun of ["false", "true"]) {
       const contexts = { needs: { resolve: { outputs: { dry_run: dryRun } } }, vars: {} };
       expect(workflowString(upload["runs-on"] ?? "", contexts)).toBe("ubuntu-24.04");

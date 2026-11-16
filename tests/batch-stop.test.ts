@@ -184,21 +184,28 @@ describe("batch-checks.yml stops at a failed code check", () => {
         ...journeys.with,
       }),
     ];
+    // The Windows check, when the batch reaches it, stops with the sweep.
+    expect(jobs.windows!.uses).toBe("./.github/workflows/windows.yml");
+    const windows = jobsOf("windows.yml");
+    const windowsGroups = ["build", "check"].map((id) =>
+      workflowString(windows[id]!.concurrency!.group, { github, inputs }),
+    );
     // Each group is this run attempt's own, so no other run is stopped, and
     // no two jobs share one.
-    for (const group of sweepGroups) expect(group.startsWith(lead), group).toBe(true);
-    expect(new Set(sweepGroups).size).toBe(sweepGroups.length);
+    const stoppable = [...sweepGroups, ...windowsGroups];
+    for (const group of stoppable) expect(group.startsWith(lead), group).toBe(true);
+    expect(new Set(stoppable).size).toBe(stoppable.length);
     const stop = jobs.stop!;
     expect(stop.concurrency!["cancel-in-progress"]).toBe(true);
     const stopped = (stop.strategy!.matrix.job as string[]).map((job) =>
       workflowString(stop.concurrency!.group, { github, inputs, matrix: { job } }),
     );
     expect(stopped.sort()).toEqual(
-      sweepGroups.filter((group) => group !== `${lead}verify-lane-linux-checks`).sort(),
+      stoppable.filter((group) => group !== `${lead}verify-lane-linux-checks`).sort(),
     );
     // A stop never cancels a whole called check: GitHub then ends the batch
     // cancelled, which is no verdict on it.
-    for (const id of ["sweep", "critical-path", "startup"])
+    for (const id of ["sweep", "critical-path", "startup", "windows"])
       expect(jobs[id]!.concurrency, id).toBeUndefined();
   });
 

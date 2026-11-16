@@ -1,0 +1,59 @@
+# The Windows installer (docs/windows.md): one per-user installer for x64
+# PCs, from the same app the Mac and Linux packages ship. Nothing here
+# signs or publishes: `publish` stays null, and windows.yml keeps the
+# installer on its run as an unsigned internal check build.
+extends: ./electron-builder.yml
+artifactName: Infinitary-${version}-windows-${arch}-setup.${ext}
+# No rebuild of native modules for Electron, as on Linux: better-sqlite3
+# carries a Node-API build for Windows x64 that Electron loads as it is
+# (electron-builder.linux.yml says why a rebuild only risks a download).
+npmRebuild: false
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  executableName: Infinitary
+  # The app asks Windows for no administrator rights, ever: it installs and
+  # runs as the person who opened the installer.
+  requestedExecutionLevel: asInvoker
+  # The installer's and the program's icon, rendered from the 1024px picture
+  # with PNG data at each size Windows asks for (scripts/render-app-ico.mjs).
+  # electron-builder ships an .ico unchanged; given the png, it converts it
+  # with a downloaded icon tool on the build machine.
+  icon: packaging/build/icon.ico
+  # koffi's Windows addon, beside the shared list's (a system's own list
+  # adds to it; a top-level list here would replace it).
+  asarUnpack:
+    - node_modules/@koromix/koffi-win32-x64/**
+  files:
+    # Only Windows x64's own native code: the speech library, koffi's addon,
+    # the SQLite build and the terminal helper. pnpm installs the Mac's and Arm's too
+    # (pnpm-workspace.yaml's supportedArchitectures).
+    - "!node_modules/onnxruntime-node/bin/napi-v6/{darwin,linux}/**"
+    - "!node_modules/onnxruntime-node/bin/napi-v6/win32/arm64/**"
+    - "!node_modules/@koromix/koffi-{darwin,linux,freebsd,openbsd}-*/**"
+    - "!node_modules/@koromix/koffi-win32-arm64/**"
+    - "!node_modules/better-sqlite3/prebuilds/{darwin-*,linux-*,linuxmusl-*,win32-arm64}.node"
+    - "!node_modules/@earendil-works/pi-tui/native/{darwin,linux}/**"
+    - "!node_modules/@earendil-works/pi-tui/native/win32/prebuilds/win32-arm64/**"
+
+# One click, for this person only: the installer asks no question and never
+# asks for administrator rights. It shows Infinitary's name, icon and
+# progress, puts Infinitary in the Start menu, registers its removal in
+# Windows Settings, then opens the app through that Start menu entry
+# (electron-builder's StartApp, a shell open of the shortcut), so the app
+# starts as the Start menu starts it and never as the installer's child.
+nsis:
+  oneClick: true
+  perMachine: false
+  # Windows takes the app's identity from the Start menu entry; notifications
+  # need it to match the one the app sets (src/main/windowsStartup.ts).
+  createStartMenuShortcut: true
+  createDesktopShortcut: false
+  shortcutName: Infinitary
+  runAfterFinish: true
+  # Removing Infinitary keeps the saved work: tasks, settings and sign-ins
+  # stay in the profile folder for a later install.
+  deleteAppDataOnUninstall: false

@@ -43,6 +43,7 @@ import {
 import type { Rigor } from "@shared/rigor";
 import type { NamingRule } from "@shared/runbooks";
 import { PERSONAL_WORKSPACE_NAME } from "../paths";
+import { hostPlatformProfile } from "../platform";
 import { CostLimitStore } from "../storage/costLimitStore";
 import type { AppDatabase } from "../storage/db";
 import {
@@ -55,6 +56,15 @@ import type { SettingsStore } from "../storage/settingsStore";
 import { prepared } from "../storage/statements";
 import { APP_GIT_IDENTITY, git, isGitRepo } from "./git";
 import { composedName } from "./naming";
+
+/**
+ * A fleet-root link to a project folder. On Windows it is a junction, which
+ * a standard account may make: a folder symlink there needs Developer Mode
+ * or an administrator. Node reads either back as a symbolic link.
+ */
+function linkFolder(target: string, path: string): void {
+  symlinkSync(target, path, hostPlatformProfile().windows ? "junction" : "dir");
+}
 
 /**
  * The managed-repo registry (decision D-8, fleet-root revision): local git
@@ -615,10 +625,10 @@ export class RepoRegistry {
       if (join(realpathSync(this.fleetRoot), name) !== path) {
         if (nextLink === oldLink && oldTarget !== undefined) unlinkSync(oldLink);
         try {
-          symlinkSync(path, nextLink);
+          linkFolder(path, nextLink);
           created = true;
         } catch (error) {
-          if (nextLink === oldLink && oldTarget !== undefined) symlinkSync(oldTarget, oldLink);
+          if (nextLink === oldLink && oldTarget !== undefined) linkFolder(oldTarget, oldLink);
           throw error;
         }
       }
@@ -675,7 +685,7 @@ export class RepoRegistry {
       })();
     } catch (error) {
       if (created) unlinkSync(nextLink);
-      if (nextLink === oldLink && oldTarget !== undefined) symlinkSync(oldTarget, oldLink);
+      if (nextLink === oldLink && oldTarget !== undefined) linkFolder(oldTarget, oldLink);
       throw error;
     }
     this.projection?.delete(id);
@@ -1066,7 +1076,7 @@ export class RepoRegistry {
     const repoName = this.uniqueName(name ?? basename(abs));
     // The linked reference (captain's call): the fleet root indexes the
     // repo, the data stays put.
-    symlinkSync(abs, join(this.fleetRoot, repoName));
+    linkFolder(abs, join(this.fleetRoot, repoName));
     const repo = this.insert({
       name: repoName,
       path: abs,
@@ -1149,7 +1159,7 @@ export class RepoRegistry {
   /** A new project outside the fleet root is indexed there by a link, like an adopted one. */
   private linkFromFleetRoot(parent: string, name: string): void {
     if (parent === this.fleetRoot) return;
-    symlinkSync(join(parent, name), join(this.fleetRoot, name));
+    linkFolder(join(parent, name), join(this.fleetRoot, name));
   }
 
   /**

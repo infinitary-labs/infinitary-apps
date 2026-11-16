@@ -502,7 +502,16 @@ export function createInstalledUpdateChecker(
       };
   const currentVersion = overrides.currentVersion ?? app.version;
   const installation = options.macDriver?.installation;
-  if (installation?.kind === "unknown") {
+  // A copy this checker cannot update offers nothing: one whose installation
+  // the app could not confirm, and every Windows copy, whose installer no
+  // release carries yet (docs/windows.md).
+  const cannotUpdate =
+    installation?.kind === "unknown"
+      ? UPDATE_PROBLEMS.unknownInstallation
+      : app.platform === "win32"
+        ? UPDATE_PROBLEMS.windows
+        : null;
+  if (cannotUpdate) {
     const status: UpdateStatus = {
       currentVersion,
       channel: resolveUpdateChannel(app.userDataDir, currentVersion),
@@ -510,7 +519,7 @@ export function createInstalledUpdateChecker(
       updateAvailable: false,
       releaseUrl: releaseSource.releasesUrl,
       upgradeCommand: "",
-      problem: UPDATE_PROBLEMS.unknownInstallation,
+      problem: cannotUpdate,
     };
     return {
       getStatus: async () => status,
@@ -518,7 +527,7 @@ export function createInstalledUpdateChecker(
       openReleasePage: async () => {
         await options.openExternal(releaseSource.releasesUrl);
       },
-      install: async () => ({ ok: false, problem: UPDATE_PROBLEMS.unknownInstallation }),
+      install: async () => ({ ok: false, problem: cannotUpdate }),
     };
   }
   const saving = createUpdateSaving(options.work);

@@ -649,6 +649,22 @@ jobs:
       hosted: true
       release_runner: ${{ needs.resolve.outputs.dry_run == 'false' && vars.RELEASE_LINUX_PACKAGES_RUNNER || '' }}
 
+  # The Windows installer of every alpha (docs/windows.md; the captain's pick
+  # on INF-4243, "on every alpha"): built at the release's version from its
+  # one source commit and checked on a fresh Windows 11 virtual machine
+  # before anything publishes. It publishes nothing itself: the installer is
+  # an unsigned internal check build until Windows signing and publication
+  # join the release.
+  windows:
+    needs: [resolve, notes]
+    if: ${{ needs.resolve.outputs.channel == 'alpha' }}
+    name: ${{ format('{0} · Windows installer', needs.resolve.outputs.trigger) }}
+    uses: ./.github/workflows/windows.yml
+    with:
+      trigger: ${{ needs.resolve.outputs.trigger }}
+      ref: ${{ needs.resolve.outputs.source_commit }}
+      version: ${{ needs.resolve.outputs.version }}
+
   # The phone goes first (INF-1649; docs/alpha.md, "The phone goes first"): an
   # alpha waits for a phone build on TestFlight that keeps changing things on
   # it, and a stable for such a build live in the App Store once any version
@@ -1340,8 +1356,8 @@ jobs:
   # job reuses the signing job's handoff, from whichever attempt produced it.
   upload:
     name: ${{ format(inputs.dry_run && '{0} · Preview uploads; upload nothing' || '{0} · Upload every download', needs.resolve.outputs.trigger) }}
-    needs: [resolve, notes, verify, linux, phone, release, update]
-    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_journeys == 'true' && needs.verify.result == 'skipped')) && needs.update.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.update.result == 'skipped')) }}
+    needs: [resolve, notes, verify, linux, windows, phone, release, update]
+    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && (needs.resolve.outputs.channel != 'alpha' || needs.windows.result == 'success') && needs.phone.result == 'success' && needs.release.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_journeys == 'true' && needs.verify.result == 'skipped')) && needs.update.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.update.result == 'skipped')) }}
     # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -1840,8 +1856,8 @@ jobs:
   # from the same uploads.
   publish:
     name: ${{ format(inputs.dry_run && '{0} · Check every copy; switch nothing' || '{0} · Check every copy and switch downloads', needs.resolve.outputs.trigger) }}
-    needs: [resolve, notes, verify, linux, phone, release, update, upload]
-    if: ${{ always() && !cancelled() && needs.upload.result == 'success' && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && needs.phone.result == 'success' && needs.release.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_journeys == 'true' && needs.verify.result == 'skipped')) && needs.update.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.update.result == 'skipped')) }}
+    needs: [resolve, notes, verify, linux, windows, phone, release, update, upload]
+    if: ${{ always() && !cancelled() && needs.upload.result == 'success' && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && (needs.resolve.outputs.channel != 'alpha' || needs.windows.result == 'success') && needs.phone.result == 'success' && needs.release.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && (needs.verify.result == 'success' || (needs.resolve.outputs.main_journeys == 'true' && needs.verify.result == 'skipped')) && needs.update.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.update.result == 'skipped')) }}
     # The light kind's virtual-only queue once MAC_QUEUES names it, and
     # release_light for a publishing run (docs/testing.md, "Each Mac job's kind and size").
     runs-on: ${{ needs.resolve.outputs.dry_run == 'false' && fromJSON(vars.MAC_QUEUES || '{}').release_light || fromJSON(vars.MAC_QUEUES || '{}').light || 'mini-mac-virtual' }}

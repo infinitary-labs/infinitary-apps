@@ -1,6 +1,7 @@
-import { delimiter } from "node:path";
+import { delimiter, win32 } from "node:path";
 import { hostPlatform } from "./platform";
 import { installerDirs, type LoginShellMiss, readLoginShellPath } from "./userBin";
+import { windowsGit } from "./windowsGit";
 
 /**
  * The environment every child the core starts runs with.
@@ -255,16 +256,28 @@ export function bundledGit(): BundledGit | undefined {
  * `settingsSearchPath` when a settings file named the folders), with the
  * app's git directory ahead of everything when there is one: `git` in a
  * crewmate's shell is the app's, and every other program the Mac has stays
- * visible behind it.
+ * visible behind it. On Windows the Git for Windows the app chose
+ * (`windowsGit.ts`) adds its `cmd` folder after the rest when the path
+ * lacks it, as an install made since the app started does.
  */
 export function hostPath(): string {
-  const merged =
+  const merged = withWindowsGit(
     captured?.source === "settings"
       ? settingsSearchPath(captured.entries, process.env.PATH)
-      : mergeSearchPath(captured?.entries ?? [], process.env.PATH, installerDirs(process.env));
+      : mergeSearchPath(captured?.entries ?? [], process.env.PATH, installerDirs(process.env)),
+  );
   if (!bundled) return merged;
   const rest = merged.split(delimiter).filter((entry) => entry !== bundled?.shimDir);
   return [bundled.shimDir, ...rest].join(delimiter);
+}
+
+function withWindowsGit(path: string): string {
+  const git = windowsGit();
+  if (!git) return path;
+  const cmd = win32.join(git.root, "cmd");
+  const entries = path.split(delimiter).filter((entry) => entry.length > 0);
+  const has = entries.some((entry) => win32.normalize(entry).toLowerCase() === cmd.toLowerCase());
+  return has ? path : [...entries, cmd].join(delimiter);
 }
 
 /**

@@ -158,6 +158,11 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
     scenario: { github: { event_name: "workflow_dispatch" } },
   },
   {
+    file: "windows.yml",
+    trigger: "Manual request",
+    scenario: { github: { event_name: "workflow_dispatch" } },
+  },
+  {
     file: "replay.yml",
     trigger: "Manual request",
     scenario: { github: { event_name: "workflow_dispatch" } },

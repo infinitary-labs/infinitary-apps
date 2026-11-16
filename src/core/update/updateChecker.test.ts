@@ -448,6 +448,31 @@ describe("the installed app's checker", () => {
     expect(requests).toEqual([TARGETS_URL]);
   });
 
+  // The captain's choice for the first Windows installer: "Offer no update on
+  // Windows, and add a test". Its installer is in no release, so a Windows
+  // copy never reads the release source or offers the Mac's command.
+  it("offers a Windows copy no update and reads no release source", async () => {
+    const requests: string[] = [];
+    const updates = createInstalledUpdateChecker({
+      app: { version: "0.1.24", packaged: true, userDataDir: alphaRoot(), platform: "win32" },
+      openExternal: () => {},
+      env: {},
+      fetchImpl: (async (url: string | URL | Request) => {
+        requests.push(String(url));
+        return new Response(JSON.stringify(targets({ alpha: target("0.1.25-alpha.10") }).body));
+      }) as typeof fetch,
+    });
+    const status = await updates.checkNow();
+    expect(status).toMatchObject({
+      updateAvailable: false,
+      latestVersion: null,
+      upgradeCommand: "",
+      problem: UPDATE_PROBLEMS.windows,
+    });
+    expect(await updates.install()).toEqual({ ok: false, problem: UPDATE_PROBLEMS.windows });
+    expect(requests).toEqual([]);
+  });
+
   // The old-cask switch (FI3-1780's rename, step 10; FI3-1729: "Infinitary
   // must record that it came in through the old cask, so its own update
   // notice keeps showing the same command"): an installation whose marker

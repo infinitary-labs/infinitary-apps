@@ -23,6 +23,7 @@ import {
 } from "@core/storage/savedDataCompatibility";
 import { createInstalledUpdateChecker } from "@core/update/updateChecker";
 import { crewWorkHeldThere } from "@core/update/updateHold";
+import { configureWindowsGit } from "@core/windowsGit";
 import { APP_IDENTITIES, OWN_IDENTITY, readSpellings, runLabelOf } from "@shared/codeNames";
 import { settingFrom } from "@shared/envSettings";
 import { computerLanguagesArgument } from "@shared/fonts";
@@ -121,6 +122,8 @@ import { followWindowState } from "./windowControls";
 import { mainWindowMaterial, windowMaterialOptions } from "./windowMaterial";
 import { followWindowSize } from "./windowSize";
 import { appWindows } from "./windows";
+import { ensureWindowsGit, GIT_SETUP_WORDS, windowsGitDeps } from "./windowsGitSetup";
+import { windowsAppUserModelId } from "./windowsStartup";
 import { workContext } from "./workContext";
 
 /**
@@ -135,6 +138,9 @@ import { workContext } from "./workContext";
 
 const isDev = !app.isPackaged;
 const isRelease = !isDev && packagedFlavor(readPackageJsonAt(app.getAppPath())) === "release";
+// Windows files the app's windows and notifications under the identity its
+// Start menu entry carries (./windowsStartup.ts).
+if (hostPlatform() === "win32") app.setAppUserModelId(windowsAppUserModelId(isRelease));
 
 /** The app a data folder belongs to, by the name a person knows it (`@shared/codeNames`). */
 function appNameOfFolder(dir: string): string {
@@ -668,6 +674,45 @@ export async function startApp(
         if (windowless) runExitCode = 1;
         app.quit();
         return;
+      }
+      // A Windows PC needs Git for Windows: the app uses a suitable one it
+      // finds, and an installed app with none offers to install it before
+      // it opens (./windowsGitSetup.ts). A run has nobody to ask, and a run
+      // from source keeps Pi's own lookup.
+      if (hostPlatform() === "win32") {
+        const setup = await ensureWindowsGit(
+          windowsGitDeps(process.env, app.getPath("temp"), async (words) => {
+            if (windowless || !app.isPackaged) {
+              process.stderr.write(`${words.message}\n${words.detail}\n`);
+              return words.buttons.length - 1;
+            }
+            const { response } = await dialog.showMessageBox({
+              type: "question",
+              title: "Infinitary",
+              message: words.message,
+              detail: words.detail,
+              buttons: [...words.buttons],
+              defaultId: 0,
+              cancelId: words.buttons.length - 1,
+              noLink: true,
+              ...(words.signal ? { signal: words.signal } : {}),
+            });
+            return response;
+          }),
+        );
+        if ("git" in setup) configureWindowsGit(setup.git);
+        else if (app.isPackaged) {
+          if (windowless) {
+            runExitCode = 1;
+            runEnd = {
+              reason: "start-failed",
+              exitCode: 1,
+              lines: [GIT_SETUP_WORDS.ask.message],
+            };
+          }
+          app.quit();
+          return;
+        }
       }
       if (move) {
         await runHandOver(move, {

@@ -1,6 +1,7 @@
 // Renders the design skill's app-icon.svg to packaging/build/icon.png
 // (1024x1024), the Linux icon, and on macOS rebuilds packaging/build/icon.icns,
-// the Mac icon, from it (render-app-icns.mjs).
+// the Mac icon, and packaging/build/icon.ico, the Windows icon, from it
+// (render-app-icns.mjs, render-app-ico.mjs).
 // macOS 12–15 draw that icns as supplied: bake in the rounded body and
 // 100px transparent margin instead of depending on macOS 26's system mask.
 // Regenerate after any change to the skill's icon:
@@ -9,6 +10,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { app, BrowserWindow } from "electron";
+import { renderAppIco } from "./render-app-ico.mjs";
 import { renderAppIcns } from "./render-app-icns.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -36,6 +38,9 @@ app.whenReady().then(async () => {
   mkdirSync(dirname(outPath), { recursive: true });
   writeFileSync(outPath, image.toPNG());
   console.log(`wrote ${outPath} (${image.getSize().width}x${image.getSize().height})`);
-  if (process.platform === "darwin") renderAppIcns();
+  if (process.platform === "darwin") {
+    renderAppIcns();
+    renderAppIco();
+  }
   app.exit(0);
 });

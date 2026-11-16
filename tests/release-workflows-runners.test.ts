@@ -403,6 +403,9 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     "batch-checks.yml:watch",
     "batch-checks.yml:stop",
     "batch-checks.yml:stopped",
+    // The batch's reading of its Windows-relevant files (INF-4243's pick:
+    // "On each combined batch that touches Windows-relevant files").
+    "batch-checks.yml:windows-paths",
   ];
   // DOP-251's plan: each kind is one stage of moving Linux jobs to the Mac
   // mini's Linux guests (docs/testing.md, "Each Linux job's kind").

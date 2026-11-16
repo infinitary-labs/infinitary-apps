@@ -385,6 +385,7 @@ describe("the signed channel workflow", () => {
       notes: { result: "success" },
       verify: { result: "success" },
       linux: { result: "success" },
+      windows: { result: "success" },
       phone: { result: "success" },
       // The signing job hands on what its visibility step chose.
       release: { result: "success", outputs: { direct: String(dryRun ? false : direct) } },

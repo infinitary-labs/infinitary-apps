@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "windows-installer-internal",
+      "reason": "Internal: an unsigned per-user Windows installer, its first-launch Git for Windows offer and its check build only on the project's own Windows machine; no Windows build is published, so nothing a person downloads changes."
+    }
+  ]
+}

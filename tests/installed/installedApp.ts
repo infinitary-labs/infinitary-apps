@@ -3,13 +3,14 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { join } from "node:path";
 import { type Browser, chromium, expect, type Page } from "@playwright/test";
 import { mockModelsJson } from "../e2e/mockModels";
-import { type MockProviderServer, startMockProvider } from "../e2e/mockProvider";
+import { type MockProviderServer, type Scenario, startMockProvider } from "../e2e/mockProvider";
 import { withoutRunnerSession } from "../helpers/runnerSession";
 import { scratchDir } from "../helpers/scratchDirs";
 
 /**
  * An installed Linux package, opened the way its desktop entry opens it
- * (docs/linux-packages.md, "The checks"): its own executable, its own
+ * (docs/linux-packages.md, "The checks"), or the app a Windows installer
+ * put in place (docs/windows.md, "The checks"): its own executable, its own
  * sandbox, no development entry. The release's fuses turn off the Node
  * inspector Playwright's Electron launcher needs, so the journey reaches
  * the window through Chromium's own debugging port and acts only as a
@@ -30,7 +31,7 @@ export function installedExecutable(): string {
   const executable = process.env.INFINITARY_INSTALLED_APP?.trim();
   if (!executable) {
     throw new Error(
-      "INFINITARY_INSTALLED_APP names the installed package's executable (docs/linux-packages.md).",
+      "INFINITARY_INSTALLED_APP names the installed package's executable (docs/linux-packages.md, docs/windows.md).",
     );
   }
   return executable;
@@ -77,10 +78,33 @@ async function appWindow(browser: Browser): Promise<Page> {
   return found as Page;
 }
 
-export async function launchInstalled(): Promise<InstalledApp> {
+/** The home folder a run gives the app: its own on Linux; on Windows the profile's too. */
+function homeEnv(homeDir: string): Record<string, string> {
+  if (process.platform === "win32") {
+    // %APPDATA% and %LOCALAPPDATA% stay the person's: the per-user Git for
+    // Windows the app found or installed lives under the latter. Windows
+    // still expands its own folders (Electron's appData among them) from
+    // %USERPROFILE%, and answers none that is missing, so the throwaway
+    // profile carries them.
+    for (const folder of [["Roaming"], ["Local"], ["Local", "Temp"]])
+      mkdirSync(join(homeDir, "AppData", ...folder), { recursive: true });
+    return { HOME: homeDir, USERPROFILE: homeDir };
+  }
+  return {
+    HOME: homeDir,
+    TMPDIR: scratchDir("infinitary-installed-tmp-"),
+    XDG_CONFIG_HOME: join(homeDir, ".config"),
+    XDG_CACHE_HOME: join(homeDir, ".cache"),
+    XDG_DATA_HOME: join(homeDir, ".local", "share"),
+  };
+}
+
+export async function launchInstalled(
+  options: { scenarios?: readonly Scenario[] } = {},
+): Promise<InstalledApp> {
   const userDataDir = scratchDir("infinitary-installed-data-");
   const homeDir = scratchDir("infinitary-installed-home-");
-  const mockProvider = await startMockProvider();
+  const mockProvider = await startMockProvider({ scenarios: options.scenarios });
   mkdirSync(join(userDataDir, "auth"), { recursive: true });
   writeFileSync(join(userDataDir, "auth", "models.json"), mockModelsJson(mockProvider.port));
   const log: string[] = [];
@@ -95,11 +119,7 @@ export async function launchInstalled(): Promise<InstalledApp> {
     {
       env: {
         ...(withoutRunnerSession(process.env) as Record<string, string>),
-        HOME: homeDir,
-        TMPDIR: scratchDir("infinitary-installed-tmp-"),
-        XDG_CONFIG_HOME: join(homeDir, ".config"),
-        XDG_CACHE_HOME: join(homeDir, ".cache"),
-        XDG_DATA_HOME: join(homeDir, ".local", "share"),
+        ...homeEnv(homeDir),
         // Pi's own switch for startup network operations (tests/e2e/launch.ts).
         PI_OFFLINE: "1",
       },

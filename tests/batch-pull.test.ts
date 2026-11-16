@@ -89,6 +89,8 @@ const passedRun: Scenario = {
     "linux-tests": { result: "success" },
     failures: { result: "skipped" },
     "confirm-later": { result: "skipped" },
+    "windows-paths": { result: "success", outputs: { windows: "false" } },
+    windows: { result: "skipped" },
   },
 };
 const FAILED_JOB =
@@ -113,6 +115,8 @@ const confirmedRun: Scenario = {
       outputs: { left: "nothing", jobs: "", files: "", grouped: "passed" },
     },
     "confirm-later": { result: "skipped" },
+    "windows-paths": { result: "success", outputs: { windows: "false" } },
+    windows: { result: "skipped" },
   },
 };
 /** The full name of the confirm a Linux test group's job of the checks has beside it. */
@@ -301,6 +305,18 @@ describe("batch-checks.yml", () => {
       false,
     );
     expect(ends(passedRun.needs, true)).toBe(false);
+    // INF-4243's pick: a batch that reaches the Windows installer passes only
+    // with its Windows check, which no confirm of test files stands in for.
+    const windows = { result: "success", outputs: { windows: "true" } };
+    expect(
+      ends({ ...passedRun.needs, "windows-paths": windows, windows: { result: "success" } }),
+    ).toBe(true);
+    expect(
+      ends({ ...passedRun.needs, "windows-paths": windows, windows: { result: "failure" } }),
+    ).toBe(false);
+    expect(
+      ends({ ...confirmedRun.needs, "windows-paths": windows, windows: { result: "failure" } }),
+    ).toBe(false);
     expect(runJobNames("batch-pull-request.yml", passedRun).at(-1)).toBe(PASSED);
     expect(runJobNames("batch-pull-request.yml", confirmedRun)).toEqual(
       expect.arrayContaining([
@@ -940,6 +956,9 @@ describe("the batch's verdict and the alpha's proof, as they stood with the firs
             : "success",
       },
       "confirm-later": { result: "skipped" },
+      // A batch that touches no Windows-relevant file, so its Windows check skips.
+      "windows-paths": { result: "success", outputs: { windows: "false" } },
+      windows: { result: "skipped" },
     };
     const scenario = (): Scenario => ({
       github: pullRequest(rehearsal.branch),

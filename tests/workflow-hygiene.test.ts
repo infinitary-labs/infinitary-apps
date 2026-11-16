@@ -308,6 +308,7 @@ describe("every workflow", () => {
       "linux-packages.yml:build",
       "mac-installer.yml:build",
       "release.yml:release",
+      "windows.yml:build",
     ]);
   });
 

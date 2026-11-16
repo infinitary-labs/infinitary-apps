@@ -57,11 +57,14 @@ runs:
         REGISTRY: ${{ inputs.registry }}
         FETCH_PATIENCE_SECONDS: "600"
       run: |
-        tarball="$RUNNER_TEMP/pnpm-$VERSION.tgz"
+        tarball="$DIR.tgz"
+        mkdir -p "$(dirname "$DIR")"
         bash "$GITHUB_ACTION_PATH/../../../scripts/fetch-without-credential.sh" "${REGISTRY%/}/pnpm/-/pnpm-$VERSION.tgz" "$tarball"
         rm -rf "$DIR"
         mkdir -p "$DIR"
-        tar -xzf "$tarball" -C "$DIR"
+        # tar is handed names relative to the folder: Git Bash's GNU tar
+        # reads a Windows path's drive, such as C:, as another host's name.
+        (cd "$(dirname "$DIR")" && tar -xzf "$VERSION.tgz" -C "$VERSION")
         rm -f "$tarball"
         # The package is the version it was asked for.
         grep -Eq "\"version\"[[:space:]]*:[[:space:]]*\"${VERSION//./\\.}\"" "$DIR/package/package.json"
@@ -95,6 +98,11 @@ runs:
           fi
           printf '#!/bin/sh\nexec node "%s" "$@"\n' "$entry" > "$PNPM_HOME/$name"
           chmod +x "$PNPM_HOME/$name"
+          # Windows' own shells run a command file, never a script without
+          # an extension (windows.yml's PowerShell steps).
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            printf '@node "%s" %%*\r\n' "$entry" > "$PNPM_HOME/$name.cmd"
+          fi
         done
         printf '%s\n' "$PNPM_HOME" >> "$GITHUB_PATH"
         printf 'PNPM_HOME=%s\n' "$PNPM_HOME" >> "$GITHUB_ENV"

@@ -1,6 +1,6 @@
 # Windows feasibility observations
 
-Windows is not a supported release target.
+Windows is not a supported release target; the internal Windows installer and its checks are `docs/windows.md`.
 The manually requested `windows-feasibility.yml` investigation collects observations on a disposable `windows-2025` x64 runner, not an ordinary-user Windows 11 desktop.
 It publishes no installer and changes no product behavior, accounts, signing setup or system permissions.
 Its successful job means observation collection finished, never that Windows parity passed.

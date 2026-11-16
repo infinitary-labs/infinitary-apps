@@ -10,7 +10,7 @@
  */
 
 import { HERE } from "@shared/deviceNames";
-import { updateWaitLine } from "@shared/deviceSetup";
+import { deviceForgeGateRef, updateWaitLine } from "@shared/deviceSetup";
 import { noNewWorkDayLine, noNewWorkWaitLine } from "@shared/deviceUpdateNudge";
 import type { FmEvent } from "@shared/events";
 import { AUTOMATIC_COMPUTER, AUTOMATIC_WORD, UNCOMPARED_WAIT } from "@shared/placement";
@@ -24,10 +24,12 @@ import {
   setup,
   tick,
 } from "../../../tests/helpers/crewHarness";
+import { deferred } from "../../../tests/helpers/deferred";
 import type { CrewMachines } from "../placed/crewMachines";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import { seedTask } from "../tasks/seedTask";
 import { UNCONFIRMED_START_RETURNED } from "../tasks/taskStarts";
+import { QUIT_SETTLE_MS } from "./crewRuntime";
 import { PLACED_WAIT_DAY_MS } from "./taskPlacement";
 
 fakeCrewTimersEachTest();
@@ -301,5 +303,40 @@ describe("where a task runs", () => {
     takes.now = true;
     expect(supervisor.placement.computersFor(MINI).computers).not.toHaveProperty("cardFiles");
     expect(supervisor.placement.everyComputerTakesCardFiles()).toBe(true);
+  });
+
+  // Intent: INF-4461, main's failing check - docs/helper.md, "A quit lifts no
+  // more of these gates". A computer's new sign-in starts the tasks held for
+  // it one after another; a quit during one of those starts, after which the
+  // host closes its database, leaves the rest held for that computer's next
+  // report instead of lifting a hold in the closed database, which reached
+  // nobody and made an unheard rejection.
+  it("lifts no more holds for a computer's own sign-in once a quit came during one held task's start", async () => {
+    const reached = deferred<void>();
+    const held = deferred<void>();
+    const { supervisor, tasks, sessions, db } = setup(fakeCrewmate());
+    vi.mocked(sessions.open).mockImplementationOnce(async () => {
+      reached.resolve();
+      await held.promise;
+      throw new Error("This computer is stopping.");
+    });
+    const ref = deviceForgeGateRef("gitlab.com", MINI);
+    for (const id of ["t-first", "t-second"])
+      seedTask(tasks, {
+        id,
+        title: "website",
+        prompt: "Fix the footer.",
+        status: "queued",
+        gate: { kind: "captain", ref },
+      });
+    const resuming = supervisor.placement.resumeDeviceForgeSignInTasks(MINI, "gitlab.com");
+    await reached.promise;
+    const quitting = supervisor.disposeAll();
+    await vi.advanceTimersByTimeAsync(QUIT_SETTLE_MS);
+    await quitting;
+    expect(tasks.listOpen().filter((record) => record.gate?.ref === ref)).toHaveLength(1);
+    db.close();
+    held.resolve();
+    await expect(resuming).resolves.toBeUndefined();
   });
 });

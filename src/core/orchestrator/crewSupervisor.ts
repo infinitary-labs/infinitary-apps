@@ -386,6 +386,7 @@ export class CrewSupervisor {
       dispatchQueuedTask: async (taskId) => {
         await this.starts.dispatchQueuedTask(taskId);
       },
+      disposed: () => this.disposed,
     });
     this.moves = new TaskMoves(options, {
       now: this.now,

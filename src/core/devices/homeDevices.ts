@@ -658,7 +658,11 @@ export async function startHomeDevices(options: {
         forgeNeeded: (deviceId, forgeHost, repo) =>
           supervisor.placement.projectForgeSignInNeeded(deviceId, forgeHost, repo),
         forgeReady: (deviceId, forgeHost) =>
-          void supervisor.placement.resumeDeviceForgeSignInTasks(deviceId, forgeHost),
+          void supervisor.placement
+            .resumeDeviceForgeSignInTasks(deviceId, forgeHost)
+            .catch((caught: unknown) => {
+              console.warn("[crew] a held task's start after a computer's sign-in failed:", caught);
+            }),
       });
       deviceSetup = setup;
       repos.onRunsOn((repo) => setup.runsOnChanged(repo));

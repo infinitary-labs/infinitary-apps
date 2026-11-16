@@ -112,6 +112,8 @@ export type TaskPlacementHost = {
   reviewBuilderOf(record: PlacementRecord | undefined): TaskRecord | undefined;
   /** Start a queued task now, as the ready sweep does. */
   dispatchQueuedTask(taskId: string): Promise<void>;
+  /** The app is quitting: nothing more starts. */
+  disposed(): boolean;
 };
 
 /**
@@ -936,13 +938,17 @@ export class TaskPlacement {
   /**
    * A computer reported its own sign-in for a host where projects live: its
    * GitHub card comes down, and every task held for that sign-in starts.
+   * A quit, even one during a start here, lifts no more holds: each task
+   * left keeps its hold until that computer next says its sign-in.
    */
   async resumeDeviceForgeSignInTasks(deviceId: string, host: string): Promise<void> {
+    if (this.host.disposed()) return;
     this.host.cards.hostCards.clearAuthDecisionCard(deviceForgeSignInCardId(host, deviceId));
     const ref = deviceForgeGateRef(host, deviceId);
     for (const said of [...this.deviceForgeSaid])
       if (said.startsWith(`${ref}\n`)) this.deviceForgeSaid.delete(said);
     for (const record of this.options.tasks.listOpen()) {
+      if (this.host.disposed()) return;
       if (record.kind !== "work" || record.gate?.ref !== ref) continue;
       this.options.tasks.placement.setGate(
         record.id,

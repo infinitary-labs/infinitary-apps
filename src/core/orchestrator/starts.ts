@@ -1269,10 +1269,12 @@ export class CrewStarts {
         );
       }
     } catch (caught) {
-      // A quit stops a start behind the first mate's answer; it did not fail.
-      // The row stays as the quit left it, queued, for the next launch's
-      // sweep, and nobody is told.
-      if (options.requested?.behind && this.core.disposed()) return;
+      // A quit stops a start, whoever began it; it did not fail. The row
+      // stays as the quit left it for the next launch, which starts a queued
+      // row again and returns a claimed one that began nothing
+      // (`releaseUnstartedDispatches`), and nobody is told: the task store
+      // may already be closed.
+      if (this.core.disposed()) return;
       const message = caught instanceof Error ? caught.message : String(caught);
       this.settleOutsideStart(taskId, caught, asked, !options.requested);
       const current = this.core.options.tasks.get(taskId);

@@ -843,6 +843,7 @@ An explicit computer stays the captain's choice; Automatic chooses separately fo
   A task whose computer has no sign-in at all waits the same way, as queued work with no gate: "Mac mini has no sign-ins yet. api's next task waits until it has one." once, nothing tried there, Start now refusing with the same words, and the task started by itself the moment that computer reports a sign-in (`TaskPlacement.deviceSignInsChanged`), with "api's next task started on Mac mini."
   (`docs/devices.md`, "Finishing its setup").
   A task for a project that lives on GitHub, GitHub Enterprise or GitLab, whose computer offers that host's sign-in from here and holds none, waits behind that sign-in's gate (`forge-sign-in:<host>@<device>`), with "api's next task waits for Mac mini's own GitHub sign-in." once and the host's GitHub card for that computer unless its setup card already asks; the gate lifts, and the task starts, the moment that computer reports the sign-in (`docs/forge.md`, "A computer's own sign-in").
+  A quit lifts no more of these gates (`TaskPlacement.resumeDeviceForgeSignInTasks`), so a task it reaches before its gate lifts keeps waiting until that computer next reports the sign-in.
   A project whose computer was removed from the list keeps waiting, as "The other computer", until it is set to run elsewhere.
 - **A card from there.**
   A crewmate card's head names where its task runs right after its meta line, the task's title, as "Fix the footer · on Mac mini" (`Card.place`, migration 67).

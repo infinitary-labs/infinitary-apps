@@ -48,6 +48,7 @@ import type { TaskRecord } from "../storage/taskRecords";
 import { legacyStateOf, seedTask } from "../tasks/seedTask";
 import { taskFeedLine } from "../tasks/taskFeed";
 import { queryTasks } from "../tasks/taskQuery";
+import { QUIT_SETTLE_MS } from "./crewRuntime";
 import type { CrewmateSpec } from "./crewSession";
 import { FOLLOWUP_PROVENANCE_OPENING } from "./intentBrief";
 import { FOLLOWUP_WORDS } from "./settleCardFacts";
@@ -144,6 +145,48 @@ describe("the task graph (task-system P2)", () => {
     expect(tasks.get(first.id)?.status).toBe("open");
     expect(tasks.get(second.id)?.status).toBe("open");
   });
+
+  // Intent: INF-4461, main's failing check - docs/task-graph.md, "A start
+  // the quit stops part way, whoever began it ... did not fail". The queue's
+  // own start, as the ready sweep or a computer's new sign-in begins it, can
+  // fail only once the quit returned and the host closed its database, as a
+  // computer that is stopping does; it must not read that database for a
+  // failure, which reached nobody and made an unheard rejection.
+  it.each([
+    ["before its claim, while it is classified", "classify"],
+    ["after its claim, while its crewmate opens", "open"],
+  ] as const)(
+    "lets a queued task's own start a quit stopped %s end quietly once the database closed",
+    async (_when, where) => {
+      const reached = deferred<void>();
+      const held = deferred<void>();
+      const stopping = async (): Promise<never> => {
+        reached.resolve();
+        await held.promise;
+        throw new Error("This computer is stopping.");
+      };
+      const { supervisor, tasks, sessions, db } = setup(fakeCrewmate(), {
+        ...(where === "classify" ? { classifier: { classify: stopping } } : {}),
+      });
+      if (where === "open") vi.mocked(sessions.open).mockImplementationOnce(stopping);
+      const task = supervisor.intake.plan({
+        title: "Correct the queue guidance",
+        intent: intentOf("correct the queue guidance"),
+        startPolicy: "when-ready",
+      });
+      const starting = supervisor.starts.dispatchQueuedTask(task.id);
+      await reached.promise;
+      expect(tasks.get(task.id)?.status).toBe(where === "open" ? "active" : "open");
+      // The quit waits its bound for the sweep that waits on this start,
+      // then returns, and the host closes the database.
+      const quitting = supervisor.disposeAll();
+      await vi.advanceTimersByTimeAsync(QUIT_SETTLE_MS);
+      await quitting;
+      db.close();
+      held.resolve();
+      await expect(starting).resolves.toBeUndefined();
+    },
+  );
 
   it("spawns under a parent and behind blockers, resolving keys", async () => {
     const crewmate = fakeCrewmate();

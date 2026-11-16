@@ -9,7 +9,7 @@ import {
 } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
-import { loadYamlFile, root, workflowString } from "./helpers/releaseWorkflows";
+import { firstTry, loadYamlFile, root, workflowString } from "./helpers/releaseWorkflows";
 import { scratchDir } from "./helpers/scratchDirs";
 
 // release.yml's linux job calls linux-packages.yml with the release's source
@@ -21,6 +21,7 @@ import { scratchDir } from "./helpers/scratchDirs";
 // workflow's own commit and runs it against the release's source.
 
 type Step = {
+  id?: string;
   name?: string;
   if?: string;
   uses?: string;
@@ -66,12 +67,14 @@ function sparse(patterns: string[]): string[] {
  * Walks a job's steps as the runner does for a stable: each checkout writes
  * its commit's tree where it says, emptying that folder first, and each local
  * action's action.yml must be in the workspace when its step starts. Answers
- * the workspace and the folder each local action ran from.
+ * the workspace and the folder each local action ran from. Each checkout
+ * passes the first time: a refused one's second try writes the same tree
+ * (tests/workflow-hygiene.test.ts).
  */
 function runJob(job: Job): { workspace: string; actions: Array<{ step: Step; folder: string }> } {
   const workspace = scratchDir("linux-packages-workspace-");
   const actions: Array<{ step: Step; folder: string }> = [];
-  for (const step of job.steps) {
+  for (const step of firstTry(job.steps)) {
     if (step.uses?.startsWith("actions/checkout@")) {
       expect(step.if, "every checkout runs").toBeUndefined();
       const into = resolve(workspace, String(step.with?.path ?? "."));

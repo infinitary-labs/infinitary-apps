@@ -101,11 +101,47 @@ jobs:
       - name: Record the timing observation start
         working-directory: ${{ runner.temp }}
         run: echo "TIMING_JOB_START=$(date +%s)" >> "$GITHUB_ENV"
-      - uses: actions/checkout@v4
-        with:
+      # A refused checkout waits until GitHub takes the job's token again,
+      # then runs once more (docs/testing.md, "GitHub refusing a job's token").
+      - id: checkout
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with: &source-desktop-checkout
           ref: ${{ inputs.ref || github.ref }}
           path: Application Support/firstmate
           fetch-depth: 0
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        working-directory: ${{ runner.temp }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: &wait-for-token |
+          # Asks the address the checkout's fetch reads, with the job's token
+          # as the checkout sends it, every 15 seconds for up to 10 minutes,
+          # then lets the checkout try once more. A failure GitHub's token
+          # did not cause, such as a missing commit, is tried again at once.
+          url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/info/refs?service=git-upload-pack"
+          patience="${CHECKOUT_PATIENCE_SECONDS:-600}"
+          pause="${CHECKOUT_PAUSE_SECONDS:-15}"
+          started=$SECONDS
+          while :; do
+            # The token reaches curl on its input, never on its command line.
+            answer="$(printf 'user = "x-access-token:%s"\n' "$TOKEN" |
+              curl --silent --location --output /dev/null --write-out '%{http_code}' \
+                --connect-timeout 30 --max-time 60 --config - --url "$url")" || true
+            if [[ "$answer" == 2?? ]]; then exit 0; fi
+            waited=$((SECONDS - started))
+            if ((waited >= patience)); then
+              echo "::warning title=GitHub still refuses the job's token::It answered $answer after ${waited}s; the checkout tries once more."
+              exit 0
+            fi
+            echo "GitHub answered $answer to the job's token after ${waited}s; asking again in ${pause}s"
+            sleep "$pause"
+          done
+      - name: Check out again
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        uses: actions/checkout@v4
+        with: *source-desktop-checkout
       - name: Record the manual Linux request
         if: github.event_name == 'workflow_dispatch' && github.workflow == 'Source desktop journeys'
         env:
@@ -217,15 +253,27 @@ jobs:
       # at that immutable workflow revision, separate from inputs.ref: a reviewed
       # release candidate can predate this helper. Its cwd and report stay the
       # candidate's, so paths and TIMING_REVISION still describe the tested code.
-      - name: Checkout the workflow's timing exporter
+      - id: timing-checkout
+        name: Checkout the workflow's timing exporter
         if: always() && matrix.lane != 'alone'
         uses: actions/checkout@v4
-        with:
+        continue-on-error: true
+        with: &source-desktop-timing-checkout
           ref: ${{ github.workflow_sha }}
           path: workflow-timing
           sparse-checkout: scripts/journey-timing.ts
           sparse-checkout-cone-mode: false
           persist-credentials: false
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.timing-checkout.outcome == 'failure' }}
+        working-directory: ${{ runner.temp }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Checkout the workflow's timing exporter again
+        if: ${{ !cancelled() && steps.timing-checkout.outcome == 'failure' }}
+        uses: actions/checkout@v4
+        with: *source-desktop-timing-checkout
       - name: Export compact Linux timing
         if: always() && matrix.lane != 'alone'
         run: |

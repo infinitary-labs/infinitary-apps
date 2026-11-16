@@ -51,10 +51,45 @@ jobs:
     runs-on: ${{ inputs.runner || fromJSON(vars.MAC_QUEUES || '{}').light || 'mini-mac-virtual' }}
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
-        with:
+      # A refused checkout waits until GitHub takes the job's token again,
+      # then runs once more (docs/testing.md, "GitHub refusing a job's token").
+      - id: checkout
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with: &update-checkout
           ref: ${{ inputs.ref }}
           persist-credentials: false
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: &wait-for-token |
+          # Asks the address the checkout's fetch reads, with the job's token
+          # as the checkout sends it, every 15 seconds for up to 10 minutes,
+          # then lets the checkout try once more. A failure GitHub's token
+          # did not cause, such as a missing commit, is tried again at once.
+          url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/info/refs?service=git-upload-pack"
+          patience="${CHECKOUT_PATIENCE_SECONDS:-600}"
+          pause="${CHECKOUT_PAUSE_SECONDS:-15}"
+          started=$SECONDS
+          while :; do
+            # The token reaches curl on its input, never on its command line.
+            answer="$(printf 'user = "x-access-token:%s"\n' "$TOKEN" |
+              curl --silent --location --output /dev/null --write-out '%{http_code}' \
+                --connect-timeout 30 --max-time 60 --config - --url "$url")" || true
+            if [[ "$answer" == 2?? ]]; then exit 0; fi
+            waited=$((SECONDS - started))
+            if ((waited >= patience)); then
+              echo "::warning title=GitHub still refuses the job's token::It answered $answer after ${waited}s; the checkout tries once more."
+              exit 0
+            fi
+            echo "GitHub answered $answer to the job's token after ${waited}s; asking again in ${pause}s"
+            sleep "$pause"
+          done
+      - name: Check out again
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        uses: actions/checkout@v4
+        with: *update-checkout
       - uses: pnpm/action-setup@v4
         with:
           dest: ${{ runner.temp }}/setup-pnpm

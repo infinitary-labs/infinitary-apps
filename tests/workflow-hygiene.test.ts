@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { loadYamlFile } from "./helpers/releaseWorkflows";
+import { loadYamlFile, workflowValue } from "./helpers/releaseWorkflows";
 
 // INF-2539 (the captain: audit the workflows for "messy archiecture,
 // inefficiencies, inconsistencies, or code smell in general" and fix them):
@@ -19,12 +19,19 @@ type Step = {
   id?: string;
   if?: string;
   "continue-on-error"?: boolean | string;
+  "working-directory"?: string;
+  env?: Record<string, string>;
   run?: string;
   uses?: string;
   with?: Record<string, unknown>;
 };
 type Permissions = string | Record<string, string>;
-type Job = { steps?: Step[]; uses?: string; permissions?: Permissions };
+type Job = {
+  steps?: Step[];
+  uses?: string;
+  permissions?: Permissions;
+  defaults?: { run?: { "working-directory"?: string } };
+};
 type Workflow = { permissions?: Permissions; jobs: Record<string, Job> };
 
 const LEVELS = ["none", "read", "write"];
@@ -380,6 +387,93 @@ describe("every workflow", () => {
     expect(fetch).toBeGreaterThan(restore);
     expect(save).toBeGreaterThan(fetch);
     expect(runs.steps[save]?.if).toBe(`steps.${runs.steps[fetch]?.id}.outcome == 'success'`);
+  });
+
+  // Release run 43797927228 lost seven of its eight Linux package checks at
+  // actions/checkout: GitHub answered "Repository not found." to every job's
+  // token for about three minutes, past the action's own three tries in about
+  // 40 seconds, and a failed main check is never run again. So every checkout
+  // in a workflow that main's check or a release reaches may fail, the next
+  // step waits until GitHub takes the token again, and the same checkout runs
+  // once more (docs/testing.md, "GitHub refusing a job's token";
+  // tests/checkout-patience.test.ts runs the wait against a stand-in).
+  it("waits out GitHub refusing the job's token at every checkout of main's check and a release", () => {
+    const reached = new Set<string>();
+    const visit = (file: string) => {
+      if (reached.has(file)) return;
+      reached.add(file);
+      for (const job of Object.values(load(file).jobs))
+        if (job.uses?.startsWith(LOCAL)) visit(job.uses.slice(LOCAL.length));
+    };
+    visit("main.yml");
+    visit("release.yml");
+    const wait = load("main.yml").jobs.sort?.steps?.find(
+      (step) => step.name === "Wait until GitHub takes the job's token",
+    )?.run;
+    expect(wait).toContain("info/refs?service=git-upload-pack");
+    const patient: string[] = [];
+    for (const file of reached) {
+      for (const [id, job] of Object.entries(load(file).jobs)) {
+        const steps = job.steps ?? [];
+        for (let at = 0; at < steps.length; at++) {
+          const step = steps[at];
+          if (!step?.uses?.startsWith("actions/checkout@")) continue;
+          const where = `${file}:${id} step ${at + 1}`;
+          expect(step.id, `${where} names its checkout`).toMatch(/^[a-z-]+$/);
+          expect(step["continue-on-error"], `${where} may fail`).toBe(true);
+          const failed = `\${{ !cancelled() && steps.${step.id}.outcome == 'failure' }}`;
+          const [waits, again] = [steps[at + 1], steps[at + 2]];
+          expect(waits, `${where} waits for the token next`).toMatchObject({
+            if: failed,
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
+            env: { TOKEN: "${{ github.token }}" },
+            run: wait,
+          });
+          // A job's own folder may not exist until its checkout passed.
+          if (job.defaults?.run?.["working-directory"])
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
+            expect(waits?.["working-directory"], where).toBe("${{ runner.temp }}");
+          expect(again, `${where} checks out once more after the wait`).toMatchObject({
+            if: failed,
+            uses: step.uses,
+          });
+          expect(again?.with, `${where} checks out the same again`).toEqual(step.with);
+          expect(again?.["continue-on-error"], `${where} fails the job the second time`).toBe(
+            undefined,
+          );
+          patient.push(`${file}:${id}`);
+          at += 2;
+        }
+      }
+    }
+    // The jobs refused in that run, main's check, and the signing job.
+    expect(patient).toEqual(
+      expect.arrayContaining([
+        "linux-packages.yml:check",
+        "main.yml:sort",
+        "verify.yml:lane",
+        "linux-startup.yml:runtime-facts",
+        "release.yml:release",
+        "release.yml:publish",
+      ]),
+    );
+    // The wait and the second checkout run only once the first failed, also
+    // after an earlier step failed, and never in a cancelled run.
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
+    const failed = "${{ !cancelled() && steps.checkout.outcome == 'failure' }}";
+    const runs = (outcome: string, status: { failure: boolean; cancelled: boolean }) =>
+      workflowValue(
+        failed,
+        { steps: { checkout: { outcome } } },
+        { success: !status.failure && !status.cancelled, always: true, ...status },
+      );
+    expect([
+      runs("failure", { failure: false, cancelled: false }),
+      runs("failure", { failure: true, cancelled: false }),
+      runs("success", { failure: false, cancelled: false }),
+      runs("skipped", { failure: false, cancelled: false }),
+      runs("failure", { failure: false, cancelled: true }),
+    ]).toEqual([true, true, false, false, false]);
   });
 
   // A value a shell step reads comes through its environment, never pasted

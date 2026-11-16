@@ -264,20 +264,69 @@ jobs:
       # Fetch only that action, start the assertion, then check out the tree
       # the rest of the job runs in. The assertion is .github/actions/keep-mac-awake
       # (also used by the signing job); it is not copied here.
-      - name: Checkout the keep-awake action
+      # A refused checkout waits until GitHub takes the job's token again,
+      # then runs once more (docs/testing.md, "GitHub refusing a job's token"),
+      # from the runner's temporary folder, since the default one may not exist.
+      - id: awake-checkout
+        name: Checkout the keep-awake action
         if: matrix.lane != 'linux-checks'
         uses: actions/checkout@v4
-        with:
+        continue-on-error: true
+        with: &lane-awake-checkout
           ref: ${{ inputs.ref || github.ref }}
           sparse-checkout: .github/actions/keep-mac-awake
           fetch-depth: 1
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.awake-checkout.outcome == 'failure' }}
+        working-directory: ${{ runner.temp }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: &wait-for-token |
+          # Asks the address the checkout's fetch reads, with the job's token
+          # as the checkout sends it, every 15 seconds for up to 10 minutes,
+          # then lets the checkout try once more. A failure GitHub's token
+          # did not cause, such as a missing commit, is tried again at once.
+          url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/info/refs?service=git-upload-pack"
+          patience="${CHECKOUT_PATIENCE_SECONDS:-600}"
+          pause="${CHECKOUT_PAUSE_SECONDS:-15}"
+          started=$SECONDS
+          while :; do
+            # The token reaches curl on its input, never on its command line.
+            answer="$(printf 'user = "x-access-token:%s"\n' "$TOKEN" |
+              curl --silent --location --output /dev/null --write-out '%{http_code}' \
+                --connect-timeout 30 --max-time 60 --config - --url "$url")" || true
+            if [[ "$answer" == 2?? ]]; then exit 0; fi
+            waited=$((SECONDS - started))
+            if ((waited >= patience)); then
+              echo "::warning title=GitHub still refuses the job's token::It answered $answer after ${waited}s; the checkout tries once more."
+              exit 0
+            fi
+            echo "GitHub answered $answer to the job's token after ${waited}s; asking again in ${pause}s"
+            sleep "$pause"
+          done
+      - name: Checkout the keep-awake action again
+        if: ${{ !cancelled() && steps.awake-checkout.outcome == 'failure' }}
+        uses: actions/checkout@v4
+        with: *lane-awake-checkout
       - name: Keep the Mac awake
         if: matrix.lane != 'linux-checks'
         uses: ./.github/actions/keep-mac-awake
-      - uses: actions/checkout@v4
-        with:
+      - id: checkout
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with: &lane-checkout
           ref: ${{ inputs.ref || github.ref }}
           path: Application Support/firstmate
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        working-directory: ${{ runner.temp }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Check out again
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        uses: actions/checkout@v4
+        with: *lane-checkout
       - uses: ./Application Support/firstmate/.github/actions/pnpm
         with:
           working-directory: Application Support/firstmate
@@ -703,10 +752,22 @@ jobs:
       run:
         working-directory: Application Support/firstmate
     steps:
-      - uses: actions/checkout@v4
-        with:
+      - id: checkout
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with: &linux-tests-checkout
           ref: ${{ inputs.ref || github.ref }}
           path: Application Support/firstmate
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        working-directory: ${{ runner.temp }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Check out again
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        uses: actions/checkout@v4
+        with: *linux-tests-checkout
       - uses: ./Application Support/firstmate/.github/actions/pnpm
         with:
           working-directory: Application Support/firstmate

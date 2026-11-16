@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "checkout-waits-for-token",
+      "reason": "Build infrastructure: every checkout in main's check and a release now waits while GitHub refuses the job's token and checks out once more, so a few minutes of refusals no longer fail the run; nothing in the app changes."
+    }
+  ]
+}

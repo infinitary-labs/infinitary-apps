@@ -13,6 +13,7 @@ import type {
 import { describe, expect, it, vi } from "vitest";
 import { MAC_ONLY_TAG } from "./e2e/tags.ts";
 import {
+  firstTry,
   loadYamlFile,
   read,
   root,
@@ -245,10 +246,13 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     });
     expect(summarize?.run).toContain(result);
     // Every stage the job names is reported, by its own outcome, in the job's order.
+    // A checkout is named only for its second try (tests/workflow-hygiene.test.ts).
     const stages = summarize?.env?.STAGES ?? "";
     const reported = [...stages.matchAll(/([\w-]+)=\$\{\{ steps\.([\w-]+)\.outcome \}\}/g)];
     expect(reported.map(([, name, id]) => (name === id ? id : `${name}!=${id}`))).toEqual(
-      steps.flatMap((step) => (step.id ? [step.id] : [])),
+      steps.flatMap((step) =>
+        step.id && !step.uses?.startsWith("actions/checkout@") ? [step.id] : [],
+      ),
     );
 
     // A red suite: the failures listed by when they started, not by file order.
@@ -463,9 +467,13 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       expect(stepRuns(step, { install: "failure" }, "linux-checks"), step?.run).toBe(false);
     }
 
-    // A red stage still fails the job: only the summary, a report, may not.
+    // A red stage still fails the job: only the summary, a report, may not,
+    // beside a checkout, whose second try after the wait fails the job
+    // (tests/workflow-hygiene.test.ts).
     expect(
-      steps.filter((step) => step["continue-on-error"]).map((step) => step.name ?? step.id),
+      firstTry(steps)
+        .filter((step) => step["continue-on-error"] && !step.uses?.startsWith("actions/checkout@"))
+        .map((step) => step.name ?? step.id),
     ).toEqual(["Summarize"]);
   });
 
@@ -583,7 +591,8 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
         };
       };
     };
-    const mac = verify.jobs.lane;
+    // The steps as they run when GitHub takes the job's token at every checkout.
+    const mac = { ...verify.jobs.lane, steps: firstTry(verify.jobs.lane.steps) };
     expect(mac.defaults.run["working-directory"]).toBe("Application Support/firstmate");
     // The default working directory does not exist yet, so the action is
     // fetched on its own and the assertion starts before the real checkout -
@@ -605,7 +614,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     const release = loadYamlFile(".github/workflows/release.yml") as {
       jobs: { release: { steps: Step[] } };
     };
-    const signing = release.jobs.release.steps;
+    const signing = firstTry(release.jobs.release.steps);
     expect(signing[0]?.uses).toBe("actions/checkout@v4");
     expect(signing[1]?.uses).toBe(actionRef);
     expect(awakeAt(signing)).toBeLessThan(

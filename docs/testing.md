@@ -394,6 +394,29 @@ The release path (`release.yml`, `ios-release.yml`, `mac-update.yml`, `republish
 `pnpm install` still reaches the registry for a package the machine's store lacks.
 `tests/workflow-hygiene.test.ts` holds every other job to the action, and `tests/pnpm-action.test.ts` runs its steps against a stand-in registry that answers 504 first.
 
+## GitHub refusing a job's token
+
+Every checkout in main's check and in a release waits while GitHub refuses the job's token, then checks out once more.
+A release once lost seven of its eight Linux package checks at `actions/checkout`: GitHub answered "Repository not found." to every job's token for about three minutes, while its status page reported no incident.
+The action's own retry is three tries about 12 to 20 seconds apart, which cannot be changed, and a failed main check is never run again, so one such refusal there held the alpha until the next merge.
+A job's first checkout cannot use a local action, since nothing of the project is on disk yet, so each checkout carries its patience in three steps of its own:
+
+1. The checkout, with an `id` and `continue-on-error: true`.
+2. "Wait until GitHub takes the job's token", which runs only after the checkout failed.
+   It asks the address the checkout's fetch reads (`info/refs?service=git-upload-pack`) with the job's token, as the checkout sends it, every 15 seconds for up to 10 minutes, naming each answer in the log.
+   The token reaches curl on its input, never its command line.
+   A failure the token did not cause, such as a missing commit, gets an answer at once, so the checkout is tried again at once.
+   Once its patience is spent it leaves a warning and lets the checkout try anyway.
+   In a job whose default working directory is its checkout, it runs from the runner's temporary folder.
+3. The same checkout again, under the same condition and with the same inputs (a YAML alias of the first's `with`), without `continue-on-error`, so a second refusal still fails the job.
+
+Ten minutes is over three times the one refusal seen, and fits inside every job's time limit.
+The wait's script is a YAML anchor in each workflow file (`&wait-for-token`), the same text in every file.
+The rule covers `main.yml`, `release.yml` and every workflow they reach through a call, whatever else calls it: `verify.yml`, `source-journeys.yml`, `mac-installer.yml`, `linux-startup.yml`, `linux-packages.yml` and `mac-update.yml`.
+Workflows outside that reach, such as a branch's own check (`ci.yml`), the swept batch's own jobs (`batch-checks.yml`) and the phone release (`ios-release.yml`), still check out once.
+`tests/workflow-hygiene.test.ts` holds every checkout of those workflows to the three steps, and `tests/checkout-patience.test.ts` runs the wait against a stand-in for GitHub's git address that refuses first.
+A test that reads a job's steps in order reads them through `firstTry` (`tests/helpers/releaseWorkflows.ts`), the steps that run when every checkout passes the first time.
+
 ## Tests that need a Mac
 
 The captain's principle of 2026-10-28 (`docs/principles.md`): a test runs on the Mac only when it needs a Mac, and Linux runs every test it can.

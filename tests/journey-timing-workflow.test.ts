@@ -6,6 +6,7 @@ import { data, Evaluator, Lexer, Parser } from "@actions/expressions";
 import { expect, it } from "vitest";
 import type { journeyTiming } from "../scripts/journey-timing";
 import { hostEnv } from "../src/core/hostEnv";
+import { firstTry } from "./helpers/releaseWorkflows";
 import { scratchDir } from "./helpers/scratchDirs";
 
 // INF-2018: a pinned candidate predating the workflow's exporter still yields
@@ -115,7 +116,8 @@ it.each(["success", "failure", "missing"])(
     };
     // Model checkout's ref/path/sparse inputs with local git; no candidate files
     // are supplied from the workflow checkout or from the current working copy.
-    for (const step of job.steps.filter((step) => step.uses === "actions/checkout@v4")) {
+    // Each checkout as GitHub takes the job's token the first time.
+    for (const step of firstTry(job.steps).filter((step) => step.uses === "actions/checkout@v4")) {
       if (step.if && !value(step.if, contexts)) continue;
       const inputs = step.with ?? {};
       const destination = join(workspace, String(inputs.path ?? "."));

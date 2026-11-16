@@ -192,11 +192,46 @@ jobs:
       release_repository: ${{ steps.destination.outputs.repository }}
       download_base: ${{ steps.destination.outputs.download_base }}
     steps:
-      - name: Checkout every branch and tag
+      # A refused checkout waits until GitHub takes the job's token again,
+      # then runs once more (docs/testing.md, "GitHub refusing a job's token").
+      - id: checkout
+        name: Checkout every branch and tag
         uses: actions/checkout@v4
-        with:
+        continue-on-error: true
+        with: &resolve-checkout
           persist-credentials: false
           fetch-depth: 0
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: &wait-for-token |
+          # Asks the address the checkout's fetch reads, with the job's token
+          # as the checkout sends it, every 15 seconds for up to 10 minutes,
+          # then lets the checkout try once more. A failure GitHub's token
+          # did not cause, such as a missing commit, is tried again at once.
+          url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/info/refs?service=git-upload-pack"
+          patience="${CHECKOUT_PATIENCE_SECONDS:-600}"
+          pause="${CHECKOUT_PAUSE_SECONDS:-15}"
+          started=$SECONDS
+          while :; do
+            # The token reaches curl on its input, never on its command line.
+            answer="$(printf 'user = "x-access-token:%s"\n' "$TOKEN" |
+              curl --silent --location --output /dev/null --write-out '%{http_code}' \
+                --connect-timeout 30 --max-time 60 --config - --url "$url")" || true
+            if [[ "$answer" == 2?? ]]; then exit 0; fi
+            waited=$((SECONDS - started))
+            if ((waited >= patience)); then
+              echo "::warning title=GitHub still refuses the job's token::It answered $answer after ${waited}s; the checkout tries once more."
+              exit 0
+            fi
+            echo "GitHub answered $answer to the job's token after ${waited}s; asking again in ${pause}s"
+            sleep "$pause"
+          done
+      - name: Checkout every branch and tag again
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        uses: actions/checkout@v4
+        with: *resolve-checkout
 
       # Gate runners need Node on PATH for the resolver and destination reader.
       - uses: actions/setup-node@v4
@@ -459,12 +494,23 @@ jobs:
     # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
     runs-on: ubuntu-24.04
     steps:
-      - name: Checkout the source commit with its history
+      - id: checkout
+        name: Checkout the source commit with its history
         uses: actions/checkout@v4
-        with:
+        continue-on-error: true
+        with: &notes-checkout
           ref: ${{ needs.resolve.outputs.source_commit }}
           persist-credentials: false
           fetch-depth: 0
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Checkout the source commit with its history again
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        uses: actions/checkout@v4
+        with: *notes-checkout
 
       - uses: actions/setup-node@v4
         with:
@@ -475,16 +521,27 @@ jobs:
       # promoted alpha's commit may predate the pick, so it runs from the
       # workflow's own commit; the alpha's own verify-package then proves its
       # app reads the result.
-      - name: Check out the workflow's own notes tooling
+      - id: tooling
+        name: Check out the workflow's own notes tooling
         if: ${{ needs.resolve.outputs.highlights != '' || needs.resolve.outputs.main_run != '' || needs.resolve.outputs.promoted_from != '' }}
         uses: actions/checkout@v4
-        with:
+        continue-on-error: true
+        with: &notes-tooling
           ref: ${{ github.sha }}
           path: .release-tooling
           persist-credentials: false
           sparse-checkout: |
             scripts
             src/core
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.tooling.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Check out the workflow's own notes tooling again
+        if: ${{ !cancelled() && steps.tooling.outcome == 'failure' }}
+        uses: actions/checkout@v4
+        with: *notes-tooling
 
       - name: Check the notes cover this release
         if: ${{ matrix.part == 'check' }}
@@ -607,11 +664,22 @@ jobs:
     # release; the limit leaves room for one such wait.
     timeout-minutes: 45
     steps:
-      - name: Checkout every branch and tag
+      - id: checkout
+        name: Checkout every branch and tag
         uses: actions/checkout@v4
-        with:
+        continue-on-error: true
+        with: &phone-checkout
           persist-credentials: false
           fetch-depth: 0
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Checkout every branch and tag again
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        uses: actions/checkout@v4
+        with: *phone-checkout
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -679,10 +747,21 @@ jobs:
       ALPHA_RUN: ${{ needs.resolve.outputs.alpha_run }}
 
     steps:
-      - name: Checkout the source commit
+      - id: checkout
+        name: Checkout the source commit
         uses: actions/checkout@v4
-        with:
+        continue-on-error: true
+        with: &release-checkout
           ref: ${{ needs.resolve.outputs.source_commit }}
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Checkout the source commit again
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        uses: actions/checkout@v4
+        with: *release-checkout
 
       # Same job-lifetime assertion as verify's mac lane. The definition lives
       # in .github/actions/keep-mac-awake; this step only runs it.
@@ -839,9 +918,11 @@ jobs:
       # reader the package step runs is the workflow's own too, since that
       # older commit may predate it, and so is the notarization both the app
       # and the disk image go through.
-      - name: Check out the workflow's own launch gate, Electron zips reader and notarization
+      - id: tooling
+        name: Check out the workflow's own launch gate, Electron zips reader and notarization
         uses: actions/checkout@v4
-        with:
+        continue-on-error: true
+        with: &release-tooling
           ref: ${{ github.sha }}
           path: .release-tooling
           persist-credentials: false
@@ -851,6 +932,15 @@ jobs:
             scripts/app-runtime-version.mjs
             scripts/notarize.ts
             .github/actions/electron-download/zips.mjs
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.tooling.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Check out the workflow's own launch gate, Electron zips reader and notarization again
+        if: ${{ !cancelled() && steps.tooling.outcome == 'failure' }}
+        uses: actions/checkout@v4
+        with: *release-tooling
 
       - name: Package and sign the universal app
         id: package
@@ -1279,11 +1369,22 @@ jobs:
       HIGHLIGHTS: ${{ needs.resolve.outputs.highlights }}
 
     steps:
-      - name: Checkout the source commit
+      - id: checkout
+        name: Checkout the source commit
         uses: actions/checkout@v4
-        with:
+        continue-on-error: true
+        with: &upload-checkout
           ref: ${{ needs.resolve.outputs.source_commit }}
           persist-credentials: false
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Checkout the source commit again
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        uses: actions/checkout@v4
+        with: *upload-checkout
 
       - uses: actions/setup-node@v4
         with:
@@ -1377,9 +1478,11 @@ jobs:
       # The package check is the workflow's own, as the launch gate is
       # (INF-1768): a stable checks out an older alpha's commit, which may
       # predate it.
-      - name: Check out the workflow's own package check
+      - id: tooling
+        name: Check out the workflow's own package check
         uses: actions/checkout@v4
-        with:
+        continue-on-error: true
+        with: &upload-tooling
           ref: ${{ github.sha }}
           path: .release-tooling
           persist-credentials: false
@@ -1387,6 +1490,15 @@ jobs:
           sparse-checkout: |
             .github/actions/linux-packages/
             scripts/linux-package-sums.ts
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.tooling.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Check out the workflow's own package check again
+        if: ${{ !cancelled() && steps.tooling.outcome == 'failure' }}
+        uses: actions/checkout@v4
+        with: *upload-tooling
 
       # The Linux packages the linux job built and checked, from this run;
       # every check passed before this job started. This job's own copy is
@@ -1755,20 +1867,33 @@ jobs:
       ALPHA_RUN: ${{ needs.resolve.outputs.alpha_run }}
 
     steps:
-      - name: Checkout the source commit
+      - id: checkout
+        name: Checkout the source commit
         uses: actions/checkout@v4
-        with:
+        continue-on-error: true
+        with: &publish-checkout
           ref: ${{ needs.resolve.outputs.source_commit }}
           persist-credentials: false
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Checkout the source commit again
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        uses: actions/checkout@v4
+        with: *publish-checkout
 
       # The workflow's own launch gate, as in the signing job (INF-1768):
       # every fetch-back launches the app through it. Nothing is packaged here.
       # A rehearsal's Linux fetch takes the workflow's own package check too,
       # as the upload job does, and every keyless fetch-back the workflow's own
       # fetcher, which waits out a host that is not answering (INF-3224).
-      - name: Check out the workflow's own launch gate and package check
+      - id: tooling
+        name: Check out the workflow's own launch gate and package check
         uses: actions/checkout@v4
-        with:
+        continue-on-error: true
+        with: &publish-tooling
           ref: ${{ github.sha }}
           path: .release-tooling
           persist-credentials: false
@@ -1781,6 +1906,15 @@ jobs:
             .github/actions/electron-download/
             scripts/fetch-without-credential.sh
             scripts/fetch-back-copies.sh
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.tooling.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Check out the workflow's own launch gate and package check again
+        if: ${{ !cancelled() && steps.tooling.outcome == 'failure' }}
+        uses: actions/checkout@v4
+        with: *publish-tooling
 
       - name: Use the workflow's own launch gate
         id: publish-launch-gate

@@ -74,18 +74,55 @@ jobs:
       # here so that comparison never trusts a list from the same download.
       sums: ${{ steps.files.outputs.sums }}
     steps:
-      - uses: actions/checkout@v4
-        with:
+      # A refused checkout waits until GitHub takes the job's token again,
+      # then runs once more (docs/testing.md, "GitHub refusing a job's token").
+      - id: checkout
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with: &build-checkout
           ref: ${{ inputs.ref || github.ref }}
           fetch-depth: 0
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: &wait-for-token |
+          # Asks the address the checkout's fetch reads, with the job's token
+          # as the checkout sends it, every 15 seconds for up to 10 minutes,
+          # then lets the checkout try once more. A failure GitHub's token
+          # did not cause, such as a missing commit, is tried again at once.
+          url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/info/refs?service=git-upload-pack"
+          patience="${CHECKOUT_PATIENCE_SECONDS:-600}"
+          pause="${CHECKOUT_PAUSE_SECONDS:-15}"
+          started=$SECONDS
+          while :; do
+            # The token reaches curl on its input, never on its command line.
+            answer="$(printf 'user = "x-access-token:%s"\n' "$TOKEN" |
+              curl --silent --location --output /dev/null --write-out '%{http_code}' \
+                --connect-timeout 30 --max-time 60 --config - --url "$url")" || true
+            if [[ "$answer" == 2?? ]]; then exit 0; fi
+            waited=$((SECONDS - started))
+            if ((waited >= patience)); then
+              echo "::warning title=GitHub still refuses the job's token::It answered $answer after ${waited}s; the checkout tries once more."
+              exit 0
+            fi
+            echo "GitHub answered $answer to the job's token after ${waited}s; asking again in ${pause}s"
+            sleep "$pause"
+          done
+      - name: Check out again
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        uses: actions/checkout@v4
+        with: *build-checkout
       # Every local action here comes from the workflow's own commit and runs
       # against the source above: a stable builds its alpha's commit, which
       # may predate an action this workflow uses (docs/linux-packages.md,
       # "The checks"), with the fetch script the pnpm download runs beside
       # them. It goes after the source, whose checkout would clear it.
-      - name: Check out the workflow's own actions
+      - id: tooling
+        name: Check out the workflow's own actions
         uses: actions/checkout@v4
-        with:
+        continue-on-error: true
+        with: &build-tooling
           ref: ${{ github.sha }}
           path: .release-tooling
           persist-credentials: false
@@ -93,6 +130,15 @@ jobs:
           sparse-checkout: |
             .github/actions/
             scripts/fetch-without-credential.sh
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.tooling.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Check out the workflow's own actions again
+        if: ${{ !cancelled() && steps.tooling.outcome == 'failure' }}
+        uses: actions/checkout@v4
+        with: *build-tooling
       - uses: ./.release-tooling/.github/actions/pnpm
       - uses: actions/setup-node@v4
         with:
@@ -217,14 +263,27 @@ jobs:
     # every leg runs on the hosted machine its entry names.
     runs-on: ${{ !inputs.hosted && vars.LINUX_RUNNER && (matrix.runner == 'ubuntu-26.04' && format('{0}-2604', vars.LINUX_RUNNER) || vars.LINUX_RUNNER) || matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
-        with:
+      - id: checkout
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with: &check-checkout
           ref: ${{ inputs.ref || github.ref }}
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Check out again
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        uses: actions/checkout@v4
+        with: *check-checkout
       # The workflow's own actions, as in the build job, with the scripts the
       # pnpm download and the package check run beside them.
-      - name: Check out the workflow's own actions
+      - id: tooling
+        name: Check out the workflow's own actions
         uses: actions/checkout@v4
-        with:
+        continue-on-error: true
+        with: &check-tooling
           ref: ${{ github.sha }}
           path: .release-tooling
           persist-credentials: false
@@ -233,6 +292,15 @@ jobs:
             .github/actions/
             scripts/fetch-without-credential.sh
             scripts/linux-package-sums.ts
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.tooling.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Check out the workflow's own actions again
+        if: ${{ !cancelled() && steps.tooling.outcome == 'failure' }}
+        uses: actions/checkout@v4
+        with: *check-tooling
       - uses: ./.release-tooling/.github/actions/pnpm
       - uses: actions/setup-node@v4
         with:

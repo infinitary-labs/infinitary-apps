@@ -237,6 +237,27 @@ export function ciJobs(
   });
 }
 
+/**
+ * A job's steps when GitHub takes its token at every checkout: a checkout's
+ * wait and its second try run only once it failed, so they are left out
+ * (docs/testing.md, "GitHub refusing a job's token";
+ * tests/workflow-hygiene.test.ts holds every checkout of main's check and a
+ * release to them).
+ */
+export function firstTry<S extends { id?: string; if?: string; uses?: string }>(steps: S[]): S[] {
+  const checkouts = new Set(
+    steps.flatMap((step) =>
+      step.uses?.startsWith("actions/checkout@") && step.id ? [step.id] : [],
+    ),
+  );
+  return steps.filter((step) => {
+    const after = /^\$\{\{ !cancelled\(\) && steps\.([\w-]+)\.outcome == 'failure' \}\}$/.exec(
+      step.if ?? "",
+    )?.[1];
+    return after === undefined || !checkouts.has(after);
+  });
+}
+
 /** A step's run line with the step's environment read in, as its shell reads it (INF-2539: the matrix values reach a script only through its environment). */
 export function interpolated(
   step: CiJob["steps"][number],
@@ -278,7 +299,7 @@ export function verifyLinuxTests(given: Record<string, unknown>): {
   const entries = (job.strategy?.matrix.include ?? []) as Record<string, unknown>[];
   return entries.map((matrix) => {
     const contexts = { inputs, matrix };
-    const steps = job.steps
+    const steps = firstTry(job.steps)
       .filter((step) => step.if === undefined || workflowValue(step.if, contexts) === true)
       .map((step) => (step.run ? { run: interpolated(step, contexts) } : { uses: step.uses }));
     return {

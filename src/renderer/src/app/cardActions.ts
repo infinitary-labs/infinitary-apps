@@ -370,6 +370,12 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         return;
       }
       const card = get().cards.find((entry) => entry.id === cardId);
+      // An ended card's minus is Close, like its button: words in the field go
+      // with it, through the same press, rather than be lost.
+      if (card?.ended && withAnythingElse([], get().replyDrafts[cardId] ?? "").length > 0) {
+        void get().pressNote(cardId, mounted);
+        return;
+      }
       void leaveCard(card, cardId, mounted).catch(() => {});
     },
     pressNote: async (cardId, mounted, input) => {
@@ -386,7 +392,15 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         cardActionErrors: withoutKey(s.cardActionErrors, cardId),
       }));
       try {
-        await window.infinitary.cards.noteDone(cardId, submissionFor(mounted, input));
+        // The words in the card's one field ride the note's own button as they
+        // ride any choice (INF-924), and leave the field once the press went.
+        const answers = withAnythingElse([], get().replyDrafts[cardId] ?? "");
+        if (cardAnswersBytes(answers) > CARD_ANSWERS_MAX_BYTES) {
+          throw new Error(CARD_ANSWERS_TOO_LONG);
+        }
+        const words = answers.length > 0 ? { answers } : undefined;
+        await window.infinitary.cards.noteDone(cardId, submissionFor(mounted, input), words);
+        if (words) set((s) => ({ replyDrafts: withoutKey(s.replyDrafts, cardId) }));
       } catch (caught) {
         const message = caught instanceof Error ? caught.message : String(caught);
         set((s) => ({ cardActionErrors: { ...s.cardActionErrors, [cardId]: message } }));

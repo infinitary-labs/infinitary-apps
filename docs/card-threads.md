@@ -30,7 +30,7 @@ The buttons stay pinned; explicit choices, task endings and author withdrawals r
 The captain’s minimize corner is presentation only (INF-1879): a decision or a note stays open, and a note is read only by its own Done or Got it (INF-2794).
 A minimized decision or pending note sends no close steer, and consent waits rather than becoming a refusal.
 Reading an ordinary completed note still notifies its live crewmate author through the existing durable turn path; that acknowledgement never completes its task.
-A crewmate that already declared its work finished is not given that turn, since nothing is left for it: once no card of its own is up, the idle ladder wakes the first mate for its close at once (`IdleLadder.finishedRead`, INF-2718; after an update, INF-2662's turn ran in a fresh conversation that raised the closed note again).
+A crewmate that already declared its work finished is not given that turn, since nothing is left for it, unless words rode the press, which it hears with the read in one turn: once no card of its own is up, the idle ladder wakes the first mate for its close at once (`IdleLadder.finishedRead`, INF-2718; after an update, INF-2662's turn ran in a fresh conversation that raised the closed note again).
 A marked saved answer keeps its receipt and ending for explicit Done.
 The host draws Done on a marked answer note and in its record; Done alone receipts that answer.
 Putting a decision away retains the card’s drafts and the task’s gate until an explicit choice, withdrawal or task ending.

@@ -72,13 +72,15 @@ export const cardChannels = {
     response: okSchema,
   },
   // A live note's own button (INF-2794, `Card.noteDone`): Done closes its
-  // answer task as answered, Got it reads the note. The last argument is the
-  // shell's submission metadata, as on close.
+  // answer task as answered, Got it reads the note. The second argument is
+  // the shell's submission metadata, as on close; the third, sent only when
+  // the card's field holds words, carries them as act's chrome value does
+  // (`{ answers }` with the `anything_else` answer, `note-done-words.md`).
   "inf:cards:note-done": {
     effect: "change",
     surface: "core",
     reach: "views",
-    request: z.tuple([z.string(), z.unknown().optional()]),
+    request: z.tuple([z.string(), z.unknown().optional(), z.unknown().optional()]),
     response: okSchema,
   },
   // The stage showed the captain this version of the card - shown, the

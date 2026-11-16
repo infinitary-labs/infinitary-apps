@@ -310,6 +310,7 @@ The action row ends with **Chat** at its right edge, after the default: the desi
 In a card too short for the body and the field, the field gives way first: the middle keeps `--space-4` of room, so the body stays in sight, and the field's row shrinks and scrolls.
 Enter or Chat sends its words as a reply; any other button carries them with the captain's choice, and the footer's picked count never counts them.
 While a file or picture is attached the choices are off, with `Send the file as a reply first` at the row's left in `--text-xs` `--fg-3`, until it goes as a reply.
+A note's own Done, Got it or Close stays lit and pressable, holding its press while a file, picture or queued note waits, so a press that closes an open note editor queues that note.
 The app's own cards, the welcome, a task's record and a panel card draw no field; a past card draws the words that went with its choice as one quiet `--text-sm` `--fg-3` line under its dimmed buttons, "Sent with your choice: …", and nothing when none went.
 
 ## Past card (FI3-579, direction A)

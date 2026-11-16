@@ -11,7 +11,12 @@
  */
 
 import { DECLINE_ACTION_ID } from "@shared/cardLeave";
-import { type Card, MERGE_CLOSES_WORDS, withMergeClosesLine } from "@shared/cards";
+import {
+  type Card,
+  MERGE_CLOSES_WORDS,
+  withAnythingElse,
+  withMergeClosesLine,
+} from "@shared/cards";
 import { ENDED_CLOSE_LABEL, endedLineWords } from "@shared/endedCard";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -109,6 +114,31 @@ describe("a card its author ends after the captain saw it (INF-3071)", () => {
     expect(pushed(h).some((entry) => entry.id === h.card.id)).toBe(false);
     expect(h.ledgerFacts.length).toBe(before);
     expect(h.supervisor.cards.past(h.card.id)?.ending.how).toBe("author-withdrawal");
+  });
+
+  // INF-4439's review: an ended card's Close is the note's own button, so the
+  // words left in its field ride it; they reach the author as the reply the
+  // field sends, and are never erased unsent.
+  it("sends the words left in its field as its reply when the captain presses Close", async () => {
+    const h = await planUp();
+    h.supervisor.cards.seen(h.card.id, h.card.offerId as string);
+    await h.spec.onCloseCard?.({ cardId: h.card.id, reason: REASON });
+    const words = "Start the planning crewmate after the release";
+
+    h.supervisor.pressNote(h.card.id, undefined, { answers: withAnythingElse([], words) });
+    await tick();
+
+    expect(pushed(h).some((entry) => entry.id === h.card.id)).toBe(false);
+    expect(
+      h.supervisor.cards
+        .thread(h.card.id)
+        .messages.filter((m) => m.who === "captain")
+        .map((m) => m.text),
+    ).toEqual([words]);
+    // A press whose card is already gone keeps the words rather than drop them.
+    expect(() =>
+      h.supervisor.pressNote(h.card.id, undefined, { answers: withAnythingElse([], words) }),
+    ).toThrow();
   });
 
   it("leaves at once when the captain never saw it", async () => {

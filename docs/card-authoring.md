@@ -812,7 +812,7 @@ The host side (`src/shared/plugins/bridge.ts`, `FrameController`, `StackedCard` 
   The same card returns with its current draft; no close-confirmation popover appears.
   Preview settings and written replies stay drafts until an explicit send or choice.
 - Reading an ordinary completed note acknowledges its message and gives a live crewmate author its next turn, without completing the task.
-  A crewmate that already declared its work finished gets no turn: the first mate is woken for its close instead (`IdleLadder.finishedRead`, INF-2718).
+  A crewmate that already declared its work finished gets no turn, unless words rode the press: the first mate is woken for its close instead (`IdleLadder.finishedRead`, INF-2718).
   A marked saved answer instead keeps its acknowledgement and task ending for explicit Done on the note or its record.
   An author's withdrawal or an explicit task ending can still retire a card and its draft.
 
@@ -874,10 +874,17 @@ INF-924 made that box and the reply row one field, on the captain's Approve and 
   Enter or Chat sends the field's words, files and pictures to the author as a reply (`docs/card-threads.md`); a reply carries the body's picks among its settings, never the words as an answer beside them.
   Any other button carries the trimmed words as one more answer, `{ name: "anything_else", values: [], changed: true, written }` (`withAnythingElse`), on the path every answer takes: the author's wake, the card row, the task's `card_resolved` event, the first mate's resolutions line and a basis brief.
   On a merge or discard the app runs the click and the first mate reads the words on the card's resolutions line, because the crewmate's task closes.
+  A note's own Done or Got it carries them the same way on `inf:cards:note-done`'s third argument, sent only when the field holds words; the core presses the note first and then sends the words as the captain's reply under it, to its author, or to the first mate when Done closed its task (`CardActions.replyWithNotePress`), because a reply waiting under the note would keep Done from closing the task.
+  An ended card's Close is the same button: its words go as the reply its field sends, then it closes.
+  Its corner minus, which also reads Close, goes through that press while the field holds words, on the Mac and the phone.
+  A press whose card is gone, or no longer a note, is refused when it carries words, so they stay in the field.
+  A read that carries words reaches a crewmate that already reported finished in the same turn as the words, and the first mate is asked to close once that turn ends.
+  A view refuses such a press itself, in plain words, while its home lacks the `note-done-words` change.
   The words never count in the footer's picks and never hold up the default; once the click is taken the field is empty.
   A frame's own answers stay at 500 written characters (`CARD_WRITTEN_MAX`); only the field writes more.
 - **A file waits for a reply.**
   A file or picture goes only as a reply: while one is attached the buttons are off, with "Send the file as a reply first" (`CARD_FILES_FIRST`) at the row's left and on each button, and a press does nothing.
+  A note's own button holds its press the same way while a file or a queued note waits, but stays pressable, so a press that closes an open note editor queues that note and takes nothing.
 - **The name.**
   `anything_else` is the app's: the shape lint refuses an author's control or staged setting of that name, and a crewmate's `CARD_AUTHORING` says the app draws the field.
   The first mate's fixed context has no room for that sentence, so it reads the words by the written-in rule it already has.
@@ -1262,6 +1269,7 @@ A decision or attention card stays open under Waiting on you and comes back when
 A note stays open too, and its task stays under Waiting on you until the captain presses the note's own footer button (INF-2794).
 That button is Done when the click will close the task, on the answer note of an active answer task, and Got it otherwise; `noteDoneOf` in the same file owns the label and rest words, and the core puts it on every live note as `noteDone`.
 Got it reads the note: the record keeps it, its past card says the captain chose Got it, and an open task's crewmate gets the read wake.
+Words left in the card's field go with either button ("The two sends").
 The footer button is the note's first choice, so ⌘1 presses it, and `cards.done` presses it by name.
 The phone sends `inf:cards:note-done`; an older phone still reads `answerDone` and its corner request now only puts the note aside.
 A note whose author still owes an answer stays open and put away until that answer arrives.

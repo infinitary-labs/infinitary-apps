@@ -3,8 +3,10 @@ import { expect, type FrameLocator, type Page, test } from "@playwright/test";
 import { CAPTAIN_WORDS } from "../../src/core/orchestrator/captainWakes";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
+import { seedTask } from "../../src/core/tasks/seedTask";
+import { TaskService } from "../../src/core/tasks/taskService";
 import { answersLine as answersWords } from "../../src/renderer/src/cards/answersLine";
-import { NOTE_GOT_IT_LABEL } from "../../src/shared/cardLeave";
+import { ANSWER_DONE_LABEL, NOTE_GOT_IT_LABEL } from "../../src/shared/cardLeave";
 import {
   ANYTHING_ELSE_ANSWER,
   CARD_CHAT_LABEL,
@@ -19,6 +21,7 @@ import * as m from "../../src/shared/i18n/messages.generated";
 import { AS_BUILT_WORDS } from "../../src/shared/plugins/bridge";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody, cardBodyElement } from "./frames";
+import { seedRepo } from "./githubStub";
 import { launchApp } from "./launch";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { pastePictures } from "./prompt";
@@ -35,6 +38,11 @@ import {
   writeInQuestionsBody,
 } from "./scenarios/cardQuestions";
 import {
+  EMIT_CARDS_PROMPT_MARKER,
+  everyCardKind,
+  MOCK_QUOTA_NOTE_TITLE,
+} from "./scenarios/everyCardKind";
+import {
   INLINE_QUESTIONS_LOCK_LABEL,
   INLINE_QUESTIONS_PROMPT_MARKER,
   INLINE_QUESTIONS_REVISE_REPLY,
@@ -48,6 +56,7 @@ import {
   cardReply,
   closeQuestion,
   expectNoCard,
+  noteDone,
   putAwayAndRestore,
   showCard,
   shownCard,
@@ -1164,6 +1173,138 @@ test("the card's one field replies on Chat and goes with whichever choice the ca
       `${PAST_CARD_WORDS_LEAD} ${COMMENT}`,
     );
     await expect(shownEntry(page).getByRole("textbox")).toHaveCount(0);
+  } finally {
+    await launched.close();
+  }
+});
+
+/** What the captain leaves in a note's field before pressing its own button. */
+const NOTE_WORDS = "Does this message go through";
+const ANSWER_WORDS = "Looks good, cut the next build now";
+const CREW_NOTE_WORDS = "Check the weekly reading again tomorrow";
+/** The seeded answer task's own note, the marked answer whose button is Done. */
+const ANSWER_NOTE_TITLE = "Recent changes and the next build";
+
+/**
+ * The captain's report (INF-4435): "why my words in the reply box didn't go
+ * through when i click done". A note's own button (Done on a marked answer,
+ * Got it on any other note, INF-2794) is a button other than Chat, so the
+ * words left in the card's one field go with it (INF-924): to the note's
+ * author as their reply, a crewmate's included, and to the first mate when
+ * Done closes the task. A picture in the field holds the button, as it holds
+ * any choice, until it goes as a reply.
+ */
+test("a note's Done and Got it take the words left in the card's field with them", async () => {
+  const userDataDir = scratchDir("infinitary-note-words-");
+  const { repoDir } = seedRepo(userDataDir);
+  const db = openDatabase(userDataDir);
+  const store = new CardStore(db);
+  seedTask(new TaskService({ db, strict: true }), {
+    id: "answer",
+    title: "Check what the next build holds",
+    status: "idle",
+    repoDir,
+    shape: { kind: "research", kind_source: "classifier:test", deliverable: "answer" },
+  });
+  store.upsert({
+    id: "card-answer-1",
+    taskId: "answer",
+    author: "crewmate",
+    title: ANSWER_NOTE_TITLE,
+    body: "<p>Two merged changes are not in the newest build.</p>",
+    meta: "crew",
+    status: "ready",
+    priority: 10,
+    createdAt: Date.now(),
+    answering: true,
+    actions: [],
+  });
+  store.upsert({
+    id: "card-fm-filed",
+    title: NOTE_TITLE,
+    author: "firstmate",
+    priority: 10,
+    meta: "firstmate",
+    body: "<p>Nothing is left to decide.</p>",
+    status: "ready",
+    createdAt: Date.now() - 1,
+    actions: [],
+  });
+  db.close();
+  const launched = await launchApp({
+    userDataDir,
+    withMockProvider: true,
+    scenarios: [everyCardKind],
+  });
+  const { app, page } = launched;
+  // A turn the first mate was served whose input carries the words.
+  const firstmateHeard = (words: string) =>
+    (launched.mockProvider?.requestBodies() ?? []).some(
+      (body) => body.includes(words) && !body.includes("You are a crewmate"),
+    );
+  const captainLines = async (cardId: string) =>
+    (await page.evaluate((id) => window.infinitary.cards.thread(id), cardId)).messages
+      .filter((message) => message.who === "captain")
+      .map((message) => message.text);
+  try {
+    // Got it on the first mate's note: the words reach the first mate as the
+    // captain's reply under it.
+    await showCard(page, NOTE_TITLE);
+    await expect(noteDone(page)).toHaveAttribute("data-note-done", "got-it");
+    // A picture goes only as a reply: the note's button waits, as any choice does.
+    await pastePictures(cardReply(page).field, [{ name: "chart.png" }]);
+    await expect(shownEntry(page).locator("[data-card-files-first]")).toHaveText(CARD_FILES_FIRST);
+    // It stays pressable, so a press that queues an open note lands, and its press is held.
+    await noteDone(page).click();
+    await expect(shownCard(page, NOTE_TITLE)).toBeVisible();
+    await cardReply(page).row.getByRole("button", { name: "Remove chart.png" }).click();
+    await expect(shownEntry(page).locator("[data-card-files-first]")).toHaveCount(0);
+    await cardReply(page).field.fill(NOTE_WORDS);
+    await focusOn(cardReply(page).field);
+    await pressWindowKey(app, "1", ["meta"]);
+    await expectNoCard(page, NOTE_TITLE);
+    expect(await captainLines("card-fm-filed")).toEqual([NOTE_WORDS]);
+    await expect.poll(() => firstmateHeard(NOTE_WORDS), { timeout: 30_000 }).toBe(true);
+
+    // Done on the answer task's note closes the task, and the words go to the
+    // first mate, who carries on after it.
+    await showCard(page, ANSWER_NOTE_TITLE);
+    await expect(noteDone(page)).toHaveAttribute("data-note-done", "done");
+    await expect(noteDone(page)).toContainText(ANSWER_DONE_LABEL);
+    await cardReply(page).field.fill(ANSWER_WORDS);
+    await noteDone(page).click();
+    await expectNoCard(page, ANSWER_NOTE_TITLE);
+    expect(await captainLines("card-answer-1")).toEqual([ANSWER_WORDS]);
+    await expect.poll(() => firstmateHeard(ANSWER_WORDS), { timeout: 30_000 }).toBe(true);
+    await expect
+      .poll(
+        async () =>
+          (await page.evaluate((id) => window.infinitary.tasks.detail(id), "answer")).status,
+      )
+      .toBe("done");
+
+    // Got it on a crewmate's note on a live task: the words reach that
+    // crewmate as the captain's reply under the note it just read.
+    const prompt = page.getByRole("textbox", { name: "Task prompt" });
+    await prompt.fill(`${SPAWN_PROMPT_MARKER} ${EMIT_CARDS_PROMPT_MARKER}`);
+    await prompt.press("Enter");
+    await expect(() => showCard(page, MOCK_QUOTA_NOTE_TITLE)).toPass({ timeout: 60_000 });
+    const crewNote = (await page.evaluate(() => window.infinitary.cards.list())).find(
+      (entry) => entry.title === MOCK_QUOTA_NOTE_TITLE,
+    );
+    const crewTask = crewNote?.taskId as string;
+    await expect(noteDone(page)).toHaveAttribute("data-note-done", "got-it");
+    await cardReply(page).field.fill(CREW_NOTE_WORDS);
+    await noteDone(page).click();
+    await expectNoCard(page, MOCK_QUOTA_NOTE_TITLE);
+    expect(await captainLines(crewNote?.id as string)).toEqual([CREW_NOTE_WORDS]);
+    await expect
+      .poll(async () =>
+        (await page.evaluate((id) => window.infinitary.tasks.detail(id), crewTask)).events.some(
+          (event) => event.kind === "steered" && (event.text ?? "").includes(CREW_NOTE_WORDS),
+        ),
+      )
+      .toBe(true);
   } finally {
     await launched.close();
   }

@@ -569,11 +569,22 @@ extension PhoneJourney {
     private func verifyPastMessageContext() async throws {
         let fixture = try await home("context-fixture")
         showCard(try XCTUnwrap(fixture["title"] as? String))
+        // The words left in the card's field go with its Got it to the note's author, as with any other choice.
+        let words = try XCTUnwrap(fixture["noteWords"] as? String)
+        let reply = app.textFields["card-reply"]
+        reveal(reply); focusForPhoneTyping(reply, in: app); reply.typeText(words)
+        if app.keyboards.firstMatch.exists {
+            let done = app.buttons["dismiss-phone-keyboard"]
+            XCTAssertTrue(done.waitForPresence(timeout: 10), app.debugDescription); tapOnPhone(done)
+            XCTAssertTrue(app.keyboards.firstMatch.waitForAbsence(timeout: 10), app.debugDescription)
+        }
         // INF-2794: the note's own Got it reads it into the past; the corner would only put it aside.
         let gotIt = app.buttons["note-done"]
         XCTAssertTrue(gotIt.waitForPresence(timeout: 10), app.debugDescription)
         reveal(gotIt)
         tapOnPhone(gotIt)
+        let read = try await home("context-read")
+        XCTAssertEqual(read["captainLines"] as? [String], [words], "Got it carried the field's words to the note's author")
         _ = try await home("show-context-past")
         XCTAssertTrue(app.staticTexts["Past"].waitForPresence(timeout: 10))
         let input = app.textFields["message-box"]

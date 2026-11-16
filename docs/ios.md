@@ -240,7 +240,7 @@ While a required question has no answer the default choice is drawn muted, and a
 Above the choices sit the host's fact strip, which the body's page splits off as the Mac does and a second read-only web view draws, then the reply field.
 The strip is the Mac's status line, drawn from the same markup and styles, with the line on whether the merge closes the task as its last line, above the phone's own buttons.
 What happens after the merge leads the body, as on the Mac: the captain's actions under their lead in the warning color, then the crew's steps with their goal, what they wait for and who does them, every one written out, scrolling away with the body.
-The reply field reads "anything to add?", takes photos from the library or the camera, and its words also go with a choice as the `anything_else` answer, as the Mac's field does.
+The reply field reads "anything to add?", takes photos from the library or the camera, and its words also go with a choice, the note's own Done or Got it included, as the `anything_else` answer, as the Mac's field does.
 A footer press collects a fresh form reading through the computer’s shared bridge, including question definitions and staged settings, and sends the mounted offer and lifecycle with its own interaction id.
 If the body has already failed, a later deliberate press may use its last observed draft, marked `fallback` with `no-fresh-reading` rather than fresh question evidence.
 A timeout on the current press still refuses it; a body that never supplied a reading keeps choices unavailable rather than inventing answers.

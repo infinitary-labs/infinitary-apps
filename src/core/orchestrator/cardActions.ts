@@ -160,11 +160,17 @@ export class CardActions {
     answers?: CardAnswer[],
     files?: { text: string; name?: string }[],
     notes?: CardNote[],
+    /**
+     * The note whose own button these words rode, which that press just
+     * closed (`replyWithNotePress`); the first mate takes them when the press
+     * closed its task.
+     */
+    pressed?: { card: Card; closesTask: boolean },
   ): CardThread {
     const id = cardId.trim();
     // An ended card keeps its reply field (INF-3071): the words reach its
     // author, or the first mate once its task has closed, as on an open card.
-    const card = this.core.cards.get(id) ?? this.core.cards.ended.get(id);
+    const card = pressed?.card ?? this.core.cards.get(id) ?? this.core.cards.ended.get(id);
     if (!card) {
       throw new Error(
         this.core.cards.stored(id)
@@ -209,6 +215,7 @@ export class CardActions {
     const closedTask = card.taskId ? this.core.options.tasks.get(card.taskId) : undefined;
     // The host's stuck alert names the first mate as its answerer (INF-1670).
     const toFirstmate =
+      pressed?.closesTask === true ||
       card.author === "firstmate" ||
       card.answeredBy === "firstmate" ||
       (closedTask !== undefined && TaskService.isClosed(closedTask));
@@ -1503,11 +1510,36 @@ export class CardActions {
   }
 
   /**
+   * The words left in a note's field when the captain presses its own button
+   * (Done or Got it) go to its author as their reply once the press has
+   * closed the note, as they ride any other button (INF-924): the first mate
+   * takes them when Done closed the note's task. They are read off the
+   * press's value as the `anything_else` answer, before the press, so a value
+   * that does not parse refuses the press rather than drop them.
+   */
+  notePressWords(value: unknown): string | undefined {
+    return anythingElseOf(chromeAnswers(value));
+  }
+
+  /** The words a note's press carried, sent after that press closed the note. */
+  replyWithNotePress(card: Card, words: string, closesTask: boolean): void {
+    this.replyToCard(card.id, words, undefined, undefined, undefined, undefined, undefined, {
+      card,
+      closesTask,
+    });
+  }
+
+  /**
    * An ordinary read or duplicate closure on a live task reaches its author
    * through the existing turn path. Only an ordinary read acknowledges its note;
    * `duplicateOf` names the earlier card a duplicate closure repeats.
    */
-  tellCardClosed(card: Card, duplicateOf?: { id: string; title: string }): void {
+  tellCardClosed(
+    card: Card,
+    duplicateOf?: { id: string; title: string },
+    /** Words rode the press: the crewmate hears the read with them, even once finished. */
+    withWords = false,
+  ): void {
     const cardId = card.id;
     const taskId = card.taskId;
     const record = taskId ? this.core.options.tasks.get(taskId) : undefined;
@@ -1517,8 +1549,10 @@ export class CardActions {
     // (INF-2718): its read is not restarted as a turn - after an update a
     // fresh conversation raised the closed note again (INF-2662) - and the
     // idle ladder hands its close to the first mate once no card of its is
-    // up (`IdleLadder.finishedRead`).
-    if (!duplicateOf && record.delivery?.finishedAt !== undefined) {
+    // up (`IdleLadder.finishedRead`). Words that rode the read wait for its
+    // answer: the read and the words reach it in one turn, and the close is
+    // asked once that turn ends.
+    if (!duplicateOf && !withWords && record.delivery?.finishedAt !== undefined) {
       this.core.ladder.finishedRead(taskId, this.core.now());
       return;
     }

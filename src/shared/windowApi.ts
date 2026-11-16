@@ -490,8 +490,15 @@ export type FirstmateApi = {
     ) => Promise<InvokeResponse<"inf:cards:act">>;
     minimize: (cardId: string, minimized: boolean) => Promise<{ ok: true }>;
     close: (cardId: string, submission?: CardSubmission) => Promise<{ ok: true }>;
-    /** A live note's own button: Done or Got it (INF-2794). */
-    noteDone: (cardId: string, submission?: CardSubmission) => Promise<{ ok: true }>;
+    /**
+     * A live note's own button: Done or Got it (INF-2794), with the words
+     * left in the card's field as act's chrome value carries them.
+     */
+    noteDone: (
+      cardId: string,
+      submission?: CardSubmission,
+      value?: { answers: CardAnswer[] },
+    ) => Promise<{ ok: true }>;
     onCards: (listener: (cards: Card[]) => void) => () => void;
     /** The stage showed the captain this version (offer) of the card. */
     seen: (cardId: string, offerId: string) => Promise<{ ok: true }>;

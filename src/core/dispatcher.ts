@@ -577,8 +577,8 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       services.supervisor.cards.flushBroadcast();
       return { ok: true as const };
     },
-    "inf:cards:note-done": (cardId, submission) => {
-      services.supervisor.pressNote(cardId, submission);
+    "inf:cards:note-done": (cardId, submission, value) => {
+      services.supervisor.pressNote(cardId, submission, value);
       services.supervisor.cards.flushBroadcast();
       return { ok: true as const };
     },

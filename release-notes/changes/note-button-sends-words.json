@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "note-button-sends-words",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Done and Got it send the words you typed in a card's reply box",
+      "body": "Words left in a note's reply box were dropped when you pressed its Done or Got it button. They now go with the press, as they already do with a card's other buttons: to the card's author, or to your first mate when Done closes the task. This works on the Mac and on iPhone and iPad.",
+      "noPicture": "The card looks the same before and after; the fix is that the typed words now arrive with the press.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

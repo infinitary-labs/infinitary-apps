@@ -36,7 +36,7 @@ import {
 import { personalSnapshotSchema } from "@shared/personal/manifest";
 import { type ShellPreferences, shellPreferencesSchema } from "@shared/preferences";
 import { BrowserWatches, isBrowserWatchChannel } from "./browserWatches";
-import { pressInputFor } from "./cardPressInput";
+import { noteWordsUnheard, pressInputFor } from "./cardPressInput";
 import { MacApprover, type MacApproverHost } from "./macApprover";
 import { namedCards, namedHere, namedHereError } from "./namedHere";
 import { ViewLook } from "./viewLook";
@@ -399,6 +399,10 @@ export class ViewBackend {
       !this.homeHas("custom-token-command")
     )
       throw new Error(`Update Infinitary on ${HOME.the} before saving a token command.`);
+    if (noteWordsUnheard(channel, rawArgs, this.link.state().homeChanges))
+      throw new Error(
+        `Update Infinitary on ${HOME.the} before words go with this button. Send them with Chat first.`,
+      );
     // The window's preload reads the answer against the contract, as it reads this Mac's own,
     // with the other Mac's own words naming it where they say this computer.
     const name = () => this.homeName();

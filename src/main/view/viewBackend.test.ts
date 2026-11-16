@@ -2,6 +2,7 @@ import { CONTRACT_CHANGES } from "@core/connection/contractChanges";
 import type { HomeLinkOptions, HomeLinkState } from "@core/devices/homeLink";
 import { JoinedHome } from "@core/devices/joinedHome";
 import type { UpdateChecker } from "@core/update/updateChecker";
+import { withAnythingElse } from "@shared/cards";
 import { customApiConnectInputSchema } from "@shared/customApi";
 import { PROTOCOL_VERSION } from "@shared/ipc";
 import { DEFAULT_SHELL_PREFERENCES, type ShellPreferences } from "@shared/preferences";
@@ -280,15 +281,14 @@ it("tells no waiting panels switch once the view is closed", async () => {
   expect(sent).toEqual([]);
 });
 
-// INF-4175: a choice's record names what pressed its button. An older home
-// reads the press's submission strictly and would take one naming its input
-// as unreadable, so a view leaves the input out there and sends it to a home
-// that lists the change.
-it("sends what pressed a card's button only to a home that reads it", async () => {
-  let changes: HomeLinkState["homeChanges"] = null;
-  const invoke = vi.fn(async () => ({}));
+/** A view whose home lists `changes()` and answers each request with `invoke`. */
+function pressView(
+  prefix: string,
+  changes: () => HomeLinkState["homeChanges"],
+  invoke: ReturnType<typeof vi.fn>,
+): ViewBackend {
   const view = new ViewBackend({
-    joined: new JoinedHome(scratchDir("view-press-input-")),
+    joined: new JoinedHome(scratchDir(prefix)),
     record: {
       version: 1,
       grant: {
@@ -314,7 +314,7 @@ it("sends what pressed a card's button only to a home that reads it", async () =
         contact: "in-reach",
         access: "full",
         homeVersion: null,
-        homeChanges: changes,
+        homeChanges: changes(),
         name: null,
         takesWork: null,
         onHomeMac: null,
@@ -327,6 +327,17 @@ it("sends what pressed a card's button only to a home that reads it", async () =
     }),
   });
   views.push(view);
+  return view;
+}
+
+// INF-4175: a choice's record names what pressed its button. An older home
+// reads the press's submission strictly and would take one naming its input
+// as unreadable, so a view leaves the input out there and sends it to a home
+// that lists the change.
+it("sends what pressed a card's button only to a home that reads it", async () => {
+  let changes: HomeLinkState["homeChanges"] = null;
+  const invoke = vi.fn(async () => ({}));
+  const view = pressView("view-press-input-", () => changes, invoke);
   const pressed = { id: "862e395c997ddf0c7f20cc8187ca2157", offerId: "offer-1" };
   const input = { kind: "pointer", pointer: "mouse" } as const;
   const act = (submission: object) => ["card-1", "start", "chrome", undefined, submission];
@@ -352,6 +363,30 @@ it("sends what pressed a card's button only to a home that reads it", async () =
     ["inf:cards:act", act({ ...pressed, input })],
     ["inf:cards:note-done", noteDone({ ...pressed, input })],
   ]);
+});
+
+// INF-4439: a note's press carries the words left in the card's field. An
+// older home refuses that whole request, so a view refuses it first in plain
+// words and the field keeps them; it never strips them, which would drop them.
+it("refuses a note's press with words before an older home, and sends it to one that reads them", async () => {
+  let changes: HomeLinkState["homeChanges"] = null;
+  const invoke = vi.fn(async () => ({}));
+  const view = pressView("view-note-words-", () => changes, invoke);
+  const pressed = { id: "862e395c997ddf0c7f20cc8187ca2157" };
+  const words = { answers: withAnythingElse([], "Keep the chart") };
+  for (const older of [null, CONTRACT_CHANGES.names.filter((name) => name !== "note-done-words")]) {
+    changes = older;
+    invoke.mockClear();
+    await expect(
+      view.dispatch("inf:cards:note-done", ["card-1", pressed, words] as never),
+    ).rejects.toThrow("Send them with Chat first");
+    await view.dispatch("inf:cards:note-done", ["card-1", pressed] as never);
+    expect(invoke.mock.calls).toEqual([["inf:cards:note-done", ["card-1", pressed]]]);
+  }
+  changes = [...CONTRACT_CHANGES.names];
+  invoke.mockClear();
+  await view.dispatch("inf:cards:note-done", ["card-1", pressed, words] as never);
+  expect(invoke.mock.calls).toEqual([["inf:cards:note-done", ["card-1", pressed, words]]]);
 });
 
 // INF-4207 piece 2: a window says it is catching up while a replay's missed pushes arrive, and live after.

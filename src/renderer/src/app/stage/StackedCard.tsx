@@ -373,7 +373,7 @@ export function StackedCard({
             {footerAnswers(answers, isPreviewBody(card.body))}
           </span>
         )}
-        {filesFirst && card.actions.length > 0 && (
+        {filesFirst && (card.actions.length > 0 || noteDone) && (
           <span
             data-card-files-first=""
             role="status"
@@ -482,16 +482,23 @@ export function StackedCard({
                   keys={choiceKeys[0]?.keys}
                   pending={pending?.actionId === NOTE_DONE_ACTION_ID}
                   disabled={Boolean(pending)}
+                  // A file, picture or queued note goes as a reply first: the press is held, and the
+                  // button stays pressable so a press that queues an open note lands (INF-3786).
                   off={offWords !== null}
-                  note={noticeCovers ? undefined : (offWords ?? noteDone.restWords)}
+                  note={
+                    noticeCovers
+                      ? undefined
+                      : (offWords ?? (filesFirst ? pendingReplyWords : noteDone.restWords))
+                  }
                   aria-description={offWords ?? undefined}
-                  onClick={(event) =>
+                  onClick={(event) => {
+                    if (useShellStore.getState().replyNotes[card.id]?.length || filesFirst) return;
                     void pressNote(
                       card.id,
                       card,
                       pressInputOf(event.nativeEvent, event.currentTarget),
-                    )
-                  }
+                    );
+                  }}
                 >
                   {noteDone.label}
                 </Button>

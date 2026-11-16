@@ -1,0 +1,4 @@
+Adds an optional third argument to `inf:cards:note-done`: the words left in the card's reply field when the note's own button is pressed, as `{ answers }` holding the `anything_else` answer, the shape `inf:cards:act` takes from the card's footer.
+The home sends those words to the note's author as the captain's reply once the press has closed the note, or to the first mate when the press closes the note's task; an ended card's words go as its reply before it closes.
+A view or phone sends the argument only when the field holds words, so a press with an empty field reads the same on a home without the change.
+A home without the change refuses a press that carries words, so the words stay in the field instead of being dropped; a view checks the home's changes and refuses such a press itself, in plain words.

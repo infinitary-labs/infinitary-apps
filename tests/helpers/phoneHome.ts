@@ -2728,8 +2728,21 @@ export async function startPhoneHome(
             id: cardIDs.context,
             title: "The harbour reference",
             text: `Keep this reference and ${ANSWER_PROMPT_MARKER}`,
+            noteWords: "Keep the chart for the morning tide",
           };
           break;
+        // The captain's lines under the note once its Got it has read it.
+        case "POST context-read": {
+          const context = cardIDs.context;
+          await until(() => core.services.supervisor.cards.get(context) === undefined);
+          result = {
+            captainLines: core.services.supervisor.cards
+              .thread(context)
+              .messages.filter((message) => message.who === "captain")
+              .map((message) => message.text),
+          };
+          break;
+        }
         case "POST show-context-past":
           result = await core.dispatch("inf:cards:show-past", [cardIDs.context]);
           break;

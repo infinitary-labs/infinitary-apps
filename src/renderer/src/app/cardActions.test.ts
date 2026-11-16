@@ -4,6 +4,7 @@ import {
   CARD_ANSWERS_TOO_LONG,
   type ShellEffect,
 } from "@shared/cards";
+import { ENDED_CLOSE, ENDED_CORNER, endedLineWords } from "@shared/endedCard";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useShellStore } from "./store";
 import { card, DECIDE, gesture, resetShell } from "./storeTestKit";
@@ -680,5 +681,50 @@ describe("card action receipts", () => {
     ipc.resolve({ effect: { kind: "open", target: "settings" } });
     await first;
     expect(useShellStore.getState().view).toBe("settings");
+  });
+});
+
+// INF-4439's review, from the captain's report that typed words must go
+// through: an ended card's corner minus is Close, as its button is, so the
+// words in its field go with it through the note's press rather than be lost.
+describe("an ended card's corner", () => {
+  const ended = card({
+    id: "ended",
+    status: "ready",
+    body: "Ended.",
+    noteDone: ENDED_CLOSE,
+    corner: ENDED_CORNER,
+    ended: { by: "crewmate", at: 1, line: endedLineWords("crewmate", undefined) },
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    resetShell();
+  });
+
+  it("presses Close with the field's words, and closes plainly with an empty field", async () => {
+    const noteDone = vi.fn(async () => undefined);
+    const close = vi.fn(async () => undefined);
+    vi.stubGlobal("window", { infinitary: { cards: { noteDone, close } } });
+    useShellStore.setState({ cards: [ended], cardIndex: 0, records: [] });
+    useShellStore.getState().setReplyDraft("ended", "Start it after the release");
+
+    useShellStore.getState().closeCard("ended");
+    await vi.waitFor(() => expect(noteDone).toHaveBeenCalledTimes(1));
+    expect((noteDone.mock.calls[0] as unknown[] | undefined)?.[2]).toEqual({
+      answers: [
+        {
+          name: ANYTHING_ELSE_ANSWER,
+          values: [],
+          changed: true,
+          written: "Start it after the release",
+        },
+      ],
+    });
+    expect(close).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(useShellStore.getState().replyDrafts.ended).toBeUndefined());
+
+    useShellStore.getState().closeCard("ended");
+    await vi.waitFor(() => expect(close).toHaveBeenCalledTimes(1));
+    expect(noteDone).toHaveBeenCalledTimes(1);
   });
 });

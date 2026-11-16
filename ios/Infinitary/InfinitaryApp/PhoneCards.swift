@@ -1591,8 +1591,17 @@ private struct PhoneCardPane: View {
         perform {
             pending = Self.noteDoneID
             defer { pending = nil }
-            let sent = await send(.close(card: card.id, lifecycle: card.lifecycleID, offer: card.offerID), .noteDone,
-                                  [.string(card.id), card.submission()])
+            // INF-924: the field's words go with Done or Got it as their anything-else answer, as with any other
+            // choice; an empty field sends the press as before.
+            let words = replyWords
+            var args: [PhoneJSON] = [.string(card.id), card.submission()]
+            if !words.isEmpty {
+                args.append(.object(["answers": .array([.object(["name": .string(PhoneCardWords.anythingElse),
+                    "values": .array([]), "changed": .bool(true), "written": .string(words)])])]))
+            }
+            if replyWords == words { reply = "" }
+            let sent = await send(.close(card: card.id, lifecycle: card.lifecycleID, offer: card.offerID), .noteDone, args,
+                restore: { [reply = $reply] in if reply.wrappedValue.isEmpty { reply.wrappedValue = words } })
             if sent { host.chosen = true; onSent() }
         }
     }
@@ -1601,6 +1610,8 @@ private struct PhoneCardPane: View {
     /// The session shows it at the tap and restores its place if the computer refuses it.
     private func putAside() {
         if card.isPast { onHide(); return }
+        // An ended card's minus is Close, like its button: words in the field go with it rather than be lost.
+        if card.value["ended"] != .null && !replyWords.isEmpty { pressNote(); return }
         perform {
             let sent: Bool
             if card.value["corner"] == .null {

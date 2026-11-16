@@ -7,7 +7,7 @@
  * One case drives real git, so the file is an integration test.
  */
 
-import type { Card } from "@shared/cards";
+import { type Card, withAnythingElse } from "@shared/cards";
 import { formatDurationShort } from "@shared/quotaSignals";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -913,6 +913,37 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         .filter((line) => line.includes("declared its work finished"));
       expect(closeAsks).toHaveLength(1);
       expect(closeAsks[0]).toContain("Close the task if the record bears that out");
+    });
+
+    // INF-4439's review, settled by the captain's report that typed words must
+    // reach their reader: words left in the field of a finished crewmate's
+    // note ride its Got it, so the read and the words reach the crewmate in one
+    // turn, and the first mate is asked to close only once that turn ends.
+    it("a finished crewmate's note read with words starts its turn first, then the close is asked (INF-4439)", async () => {
+      const { supervisor, crewmate, ops, specs, tasks, taskId, note } = await withOutcomeNote();
+      specs[0]?.onReport?.("Version 1.2 is released and the note says so.", undefined, {
+        finished: true,
+      });
+      await endTurn(crewmate, taskId);
+      const prompts = crewmate.promptCalls.length;
+      const opsBefore = ops.length;
+      const closeAsks = () =>
+        ops.slice(opsBefore).filter((line) => line.includes("declared its work finished"));
+      const words = "Also post the release page link in the changelog";
+
+      supervisor.pressNote(note.id, undefined, { answers: withAnythingElse([], words) });
+      await settle();
+      // The read starts the crewmate's turn, and the words are steered into it.
+      expect(crewmate.promptCalls).toHaveLength(prompts + 1);
+      expect(crewmate.steers.map((steer) => steer.text).join("\n")).toContain(words);
+      expect(closeAsks()).toEqual([]);
+
+      // Its answer to the words ends with its finished report again, which
+      // wakes the first mate for the close once the turn ends.
+      specs[0]?.onReport?.("I added the link to the changelog.", undefined, { finished: true });
+      await endTurn(crewmate, taskId);
+      await idleFor({ supervisor, tasks }, taskId, [minutes(10), minutes(20)]);
+      expect(closeAsks().length).toBeGreaterThan(0);
     });
 
     // INF-11, from the captain's words "make this missed escalation

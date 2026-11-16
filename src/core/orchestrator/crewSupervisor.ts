@@ -1416,12 +1416,29 @@ export class CrewSupervisor {
   }
 
   /** A live note's own button (INF-2794): only Got it tells the note's author. */
-  pressNote(cardId: string, submission?: unknown): void {
-    // An ended card's one button is Close, which tells nobody (INF-3071).
-    if (this.cards.ended.close(cardId)) return;
+  pressNote(cardId: string, submission?: unknown, value?: unknown): void {
+    // The words left in the card's field ride its one button; a press that
+    // cannot take them is refused, so they stay in the field.
+    const words = this.cardActions.notePressWords(value);
+    // An ended card's one button is Close, which tells nobody (INF-3071): its
+    // words go as the reply its field already sends, before it closes.
+    if (this.cards.ended.has(cardId)) {
+      if (words) this.cardActions.replyToCard(cardId, words);
+      this.cards.ended.close(cardId);
+      return;
+    }
     const card = this.cards.shown(cardId);
-    if (card && this.cards.pressNote(card, submission) === "got-it")
-      this.cardActions.tellCardClosed(card);
+    // A note's words go after its press: a reply waiting under the note
+    // would keep Done from closing its task.
+    const pressed = card ? this.cards.pressNote(card, submission) : undefined;
+    if (!card || !pressed) {
+      if (words)
+        throw new Error("This card changed before your press went; your words stay in its field.");
+      return;
+    }
+    // A read that carries words is told in the same turn as the words.
+    if (pressed === "got-it") this.cardActions.tellCardClosed(card, undefined, Boolean(words));
+    if (words) this.cardActions.replyWithNotePress(card, words, pressed === "done");
   }
 
   /**

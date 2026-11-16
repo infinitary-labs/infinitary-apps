@@ -357,7 +357,7 @@ export const CONSTRAINTS_PARAM = Type.Optional(
 export const DELIVERY_NOTE_PARAM = Type.Optional(
   Type.String({
     description:
-      'A delivery expectation refining the repository posture, e.g. "stack on top of PR 41". A posture override is delivery_ask, not this.',
+      'Delivery expectation refining the repository posture, e.g. "stack on top of PR 41". A posture override is delivery_ask, not this.',
   }),
 );
 
@@ -369,10 +369,10 @@ export const DELIVERY_NOTE_PARAM = Type.Optional(
  */
 const SHAPE_FIELD_RULES = {
   ongoing:
-    "True for work that continues across turns until explicitly finished; routine personal-workspace turns commit without waking the first mate.",
+    "True for work continuing across turns until explicitly finished; routine personal-workspace turns commit without waking the first mate.",
   intelligence:
-    "The intelligence requested for this work: low, medium or high. Premium still needs the captain's premium ask. To the captain a level is the task's difficulty: say high as Hard, medium as Normal, low as Simple; premium stays Premium.",
-  kind: "Declare the kind: read-only answers use plan/retrieval/research/reproduce; changes use implement/fix/chore. The classifier sorts only what you omit; review stays host-owned.",
+    "Requested intelligence: low, medium or high. Premium still needs the captain's premium ask. To the captain a level is the task's difficulty: say high as Hard, medium as Normal, low as Simple; premium stays Premium.",
+  kind: "Declare kind: read-only answers use plan/retrieval/research/reproduce; changes use implement/fix/chore. The classifier sorts only what you omit; review stays host-owned.",
   delivery_ask:
     "Only when the user asked in words for this task to ship as a pull request or to stay local. The repository's default is unchanged.",
   basis: BASIS_DESCRIPTION,
@@ -381,7 +381,7 @@ const SHAPE_FIELD_RULES = {
   override_speed: "As update_task.crew_speed.",
   override_reasoning: "As update_task.reasoning.",
   override_model_id:
-    "The model the user named: an exact model id, or a provider-qualified key when the provider matters. Only when the user named one; it wins when available, else normal routing.",
+    "The model the user named: exact model id or provider-qualified key when the provider matters. Only when the user named one; it wins when available, else normal routing.",
   escalate_from:
     "The task (id or key) whose result the user rejected: only under the escalation rule. The host stops that attempt, keeps its branch and report, and runs this one a tier up.",
   rigor_ask: "Only when the user said in words how careful to be.",
@@ -406,7 +406,7 @@ const START_AFTER_FIELD_RULES = {
 
 /** What spawn_crewmate's `shape` group holds (contract v4.12, primitives P7; its fields' rules since v4.13). */
 export const SHAPE_GROUP_DESCRIPTION = groupDescription(
-  "The facts the host routes and ships this work by. Set each only as its rule says and omit the rest.",
+  "Facts the host routes and ships work by. Set each only as its rule says and omit the rest.",
   SHAPE_FIELD_RULES,
 );
 
@@ -503,7 +503,7 @@ export const NOTHING_SPAWNED = "Nothing was spawned.";
  * writes a line there naming the task, ended cards included.
  */
 export const FROM_CARD_DESCRIPTION =
-  "The card id whose captain reply this work answers, yours or one a crewmate's report names; the app writes a line there naming the task.";
+  "Card id whose captain reply this work answers, yours or one a crewmate's report names; the app writes a line there naming the task.";
 
 /** A first mate with no way to hand files on refuses files_from in words. */
 function missingHandFiles(): Promise<string> {
@@ -546,17 +546,16 @@ export function createCrewTools(delegate: CrewDelegate) {
     name: "spawn_crewmate",
     label: "Spawn crewmate",
     description: [
-      "Commission a crewmate for project work or an evidence-gathering investigation.",
+      "Commission a crewmate for project work or evidence-gathering investigation.",
       "Pass a goal, the user's words verbatim, typed constraints and an optional delivery note;",
-      "the crewmate briefs itself from these",
-      "on its first turn. Do not author a brief.",
+      "the crewmate briefs itself from these on its first turn; do not author a brief.",
       "Pass repo_id to bind a project, or omit it for the default workspace.",
       "Lessons and the user's own panels on the rails use personal_ui true: the",
       "host binds the personal workspace itself (no repo_id) and the crewmate builds in place,",
       "so name an existing surface's id in the goal for a change.",
-      "Before security, codesign or any Keychain command against the real",
-      "keychains or a project's own signing material, ask for consent on a card; never put a secret in a command line;",
-      "prefer stand-ins under a scratch HOME. Returns the task id immediately;",
+      "Before security, codesign or any Keychain command against real keychains or a project's own signing material,",
+      "ask for consent on a card; never put a secret in a command line; prefer stand-ins under a scratch HOME.",
+      "Returns the task id immediately;",
       "the crewmate's results arrive later as [fm-op] messages, so end your turn.",
     ].join(" "),
     parameters: Type.Object({

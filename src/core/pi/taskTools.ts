@@ -189,13 +189,10 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       ),
       repo_id: Type.Optional(
         Type.String({
-          description:
-            "A registered repo id from the context block; a child inherits its parent's when omitted",
+          description: "Registered repo id from context; child inherits parent's when omitted",
         }),
       ),
-      parent: Type.Optional(
-        Type.String({ description: "The task this one belongs under (task id or key)" }),
-      ),
+      parent: Type.Optional(Type.String({ description: "Parent task (id or key)" })),
       blocked_by: Type.Optional(
         Type.Array(Type.String(), {
           description: "Prerequisite ids/keys. Required for when-ready; [] declares none.",
@@ -212,7 +209,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       placement_requirements: Type.Optional({
         ...PLACEMENT_REQUIREMENTS_PARAM,
         description:
-          "Declared systems, chips, exact program names and admission profile; omitted platforms inherit home. Never infer portability or tools from keywords. Tasks cannot relax project requirements.",
+          "Declared systems, chips, exact programs and admission profile; omitted platforms inherit home. Never infer portability or tools from keywords. Tasks cannot relax project requirements.",
       }),
       internal_step: Type.Optional(
         Type.Boolean({
@@ -295,7 +292,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       start_policy: Type.Optional(
         stringEnum(START_POLICY_VALUES, {
           description:
-            "As create_task's start_policy. on-request on started work moves it back to the backlog: its turn stops, its work stays, nothing wakes it until start_now, and you hear once if news reaches it. Give a reason when the captain asks to pause it, or a stall wake shows it stopped on a blocker no steer will change.",
+            "As create_task's start_policy. on-request on started work returns it to the backlog: its turn stops, work stays, nothing wakes it until start_now, and you hear once if news reaches it. Give a reason when the captain asks to pause it, or a stall wake shows a blocker no steer will change.",
         }),
       ),
       // What it records is said on start_policy, so it is served bare.
@@ -308,29 +305,28 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         }),
       ),
       parent: Type.Optional(
-        Type.String({ description: "New parent (task id or key); empty string clears it" }),
+        Type.String({ description: "New parent (task id or key); empty clears it" }),
       ),
       project: Type.Optional(
         Type.String({
-          description: "Move to this project (its key: backlog, or tasks with projects)",
+          description: "Move to project (key: backlog, or tasks with projects)",
         }),
       ),
       repository: Type.Optional(
         Type.String({
           description:
-            "With project: the repository it moves into, by name, when that project holds several",
+            "With project: the destination repository's name when the project holds several",
         }),
       ),
       basis: Type.Optional(
         Type.String({
-          description:
-            "Attach the plan/spec task (key or id) to open work that has not started; empty clears it.",
+          description: "Attach plan/spec task (key or id) to unstarted open work; empty clears it.",
         }),
       ),
       internal_step: Type.Optional(
         Type.Boolean({
           description:
-            "As spawn_crewmate's shape.internal_step, on open work before it starts, such as a filing you start unasked.",
+            "As spawn_crewmate's shape.internal_step, on open work before start, such as a filing you start unasked.",
         }),
       ),
       result_schema: Type.Optional(RESULT_SCHEMA_PARAM),
@@ -354,7 +350,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       unstick: Type.Optional(
         stringEnum(["restart", "move"], {
           description:
-            "Only for a task stuck at its provider: restart continues in a fresh conversation; move goes to the app's pick off that provider.",
+            "Only for a task stuck at its provider: restart continues in a fresh conversation; move uses the app's pick off that provider.",
         }),
       ),
       reasoning: Type.Optional(
@@ -390,8 +386,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       ),
       direction: Type.Optional(
         Type.String({
-          description:
-            "The id (d:...) of the standing direction behind this call's edit; the record names it.",
+          description: "The standing direction id (d:...) behind this edit; the record names it.",
         }),
       ),
       // What start_again and start_now do is said once, in the description above.
@@ -403,7 +398,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       correct_required_action: Type.Optional(
         Type.Boolean({
           description:
-            "On the captain's words that they confirmed a required action by mistake: reopen its durable operation, keeping the confirmation history. Cancel an unneeded action with drop and reason, never confirm it.",
+            "Captain says they confirmed a required action by mistake: reopen its durable operation, keeping confirmation history. Cancel unneeded actions with drop and reason, never confirm them.",
         }),
       ),
       revise_required_action: Type.Optional(
@@ -438,18 +433,17 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       pinned: Type.Optional(Type.Boolean()),
       withdraw_merge: Type.Optional(
         Type.Boolean({
-          description: "The captain takes back a merge they clicked; the work stays",
+          description: "The captain takes back a merge they clicked; work stays",
         }),
       ),
       raise_put_off: Type.Optional(
         Type.Boolean({
-          description:
-            "On the captain's words: raise again now the card they put off on this task.",
+          description: "Captain's words: raise this task's put-off card again now.",
         }),
       ),
       take_back_yes: Type.Optional(
         Type.String({
-          description: "On the captain's words: the card id of a yes in the task's allowed facts",
+          description: "Captain's words: card id of a yes in the task's allowed facts",
         }),
       ),
       override: Type.Optional(
@@ -470,7 +464,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       reason: Type.Optional(
         Type.String({
           description:
-            "Why it is dropped; for work another task did or holds, covered by its key. With start_policy on-request on started work, why it goes back to the backlog",
+            "Why it is dropped; for work another task did or holds, covered by its key. With start_policy on-request on started work, why it returns to the backlog",
         }),
       ),
       confirm: Type.Optional(
@@ -480,7 +474,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       ),
       replaced_by: Type.Optional(
         Type.String({
-          description: "With drop: the task (key or id) doing its work",
+          description: "With drop: task (key or id) doing its work",
         }),
       ),
       verdict: Type.Optional(
@@ -667,8 +661,8 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       "on `from`, and its own, move to `to`. remove true unlinks.",
     ].join(" "),
     parameters: Type.Object({
-      from: Type.String({ description: "The task the edge starts at (id or key)" }),
-      to: Type.String({ description: "The task the edge points at (id or key)" }),
+      from: Type.String({ description: "Edge's starting task (id or key)" }),
+      to: Type.String({ description: "Edge's target task (id or key)" }),
       type: stringEnum(["blocks", "related", "discovered-from", "replaced-by"]),
       remove: Type.Optional(Type.Boolean()),
     }),
@@ -934,14 +928,13 @@ const TASKS_QUERY_PARAMETERS = {
   field: Type.Optional(
     Type.String({
       description:
-        "On a by-key read, one field to page. A string is its text; any other field is JSON. Applies only with key.",
+        "By-key read: one field to page. A string is its text; other fields are JSON. Requires key.",
     }),
   ),
   offset: Type.Optional(
     Type.Integer({
       minimum: 1,
-      description:
-        "1-based character offset into that field. Applies only with field. nextOffset continues.",
+      description: "1-based character offset in that field; requires field. nextOffset continues.",
     }),
   ),
   text: Type.Optional(Type.String({ description: "Substring over title and goal" })),

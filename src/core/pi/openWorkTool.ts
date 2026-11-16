@@ -15,7 +15,7 @@ export function createOpenWorkTool(read: (input: OpenWorkInput) => OpenWorkAnswe
     name: "open_work",
     label: "Open work",
     description:
-      "Read from the app what is still open: every message of the captain's that has not ended, with its words, state and work, and every open card, with its revision, choices and who owes an answer. ask reads one message chain whole, its pictures included; card reads one card, open or closed, with its body and thread. A long read comes in parts: pass the next it names to read the rest. Read it after a fold before going on. Reading grants no permission and reopens nothing.",
+      "Read open work: unended captain messages (words, state, work); open cards (revision, choices, who owes an answer). ask reads a whole message chain and pictures; card reads an open or closed card's body and thread. For long reads pass the named next for remaining parts; read after a fold before going on. Reading grants no permission, reopens nothing.",
     parameters: Type.Object({
       ask: Type.Optional(Type.String({ description: "One message by its ask_id" })),
       card: Type.Optional(Type.String({ description: "One card by its card_id" })),

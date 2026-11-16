@@ -115,7 +115,7 @@ export function createAppTools(delegate: AppToolsDelegate) {
       name: "app_state",
       label: "App actions",
       description:
-        "Look at app actions, their permissions, value schemas and current values. captainAllowed and firstmateAllowed consistently flag who may act; asked means the captain asked in any form, own-words in their typed words, judgment on your own reason, each at any wake. No changes.",
+        "Read app actions, permissions, value schemas and current values. captainAllowed and firstmateAllowed flag who may act; asked means the captain asked in any form, own-words in their typed words, judgment on your own reason, each at any wake. No changes.",
       parameters: Type.Object({
         area: Type.Optional(
           stringEnum([
@@ -162,7 +162,7 @@ export function createAppTools(delegate: AppToolsDelegate) {
     boundTool({
       name: "app_change",
       label: "Change app setting",
-      description: `Apply a catalog action (schema: app_state). evidence quotes the captain's ask, whatever began the turn: their message, their choice on any card or a schedule they set, never your own, except a judgment action's, which gives your reason; ${OWN_WORDS_ACTIONS.join(", ")} need their typed words. For project-settings and project-runs-on, on_words true declares the exact patch their words named; omit it to propose with its source as evidence. The app’s exact-change card alone applies once, on Apply change; no other card permits a patch. Hands offer a card (project-setup at any wake); yours explain.`,
+      description: `Apply a catalog action (schema: app_state). evidence quotes the captain's ask, whatever began the turn: their message, card choice or a schedule they set, never your own, except a judgment action's, which gives your reason; ${OWN_WORDS_ACTIONS.join(", ")} need their typed words. For project-settings and project-runs-on, on_words true declares the exact patch their words named; omit it to propose with its source as evidence. Only the app’s exact-change card applies a patch, once, on Apply change. Hands offer a card (project-setup at any wake); yours explain.`,
       parameters: Type.Object({
         action: stringEnum(ACTION_NAMES),
         value: Type.Object({}, { additionalProperties: true }),

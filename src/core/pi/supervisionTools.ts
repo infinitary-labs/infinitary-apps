@@ -85,9 +85,9 @@ export function createFlagDuplicateTool(delegate: DuplicateDelegate) {
     label: "Flag duplicate card",
     description: [
       "Record and close a repeated card. Only when the user says it is a duplicate,",
-      "pass the duplicate's card id and the id of the earlier card it repeats from the context block or on-screen hint. Never call on your own initiative",
-      "or to tidy the stack - use close_card. It labels and closes it without a card;",
-      "a crewmate card's author is told.",
+      "pass the duplicate's card id and the id of the earlier card it repeats from context or the on-screen hint.",
+      "Never call on your own or to tidy the stack - use close_card. It labels and closes without a card,",
+      "and tells a crewmate card's author.",
     ].join(" "),
     parameters: Type.Object({
       // The description names both ids (the duplicate's card id and the earlier card it repeats).

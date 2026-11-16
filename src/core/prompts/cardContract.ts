@@ -286,7 +286,7 @@ export const CREWMATE_CARD_ADDENDUM = [
  */
 export const FIRSTMATE_CARD_ADDENDUM = [
   "Your cards are headed first mate. Pass task_id only when the buttons act on that task, as a merge or settle effect needs, or with review_task_id; a decision without it becomes its own decision task waiting on the captain.",
-  "A merge or settle effect is run by the host, which reports the outcome; a dismissed card is not a choice and does not wake you - your next context block lists it.",
+  "The host runs merge or settle effects and reports the outcome; a dismissed card is not a choice and does not wake you - the next context block lists it.",
 ].join(" ");
 
 /** The crewmate's emit_card description: the mechanics plus the outcome-card rule. */
@@ -337,7 +337,7 @@ const RISK_PARAM = [
  */
 /** The effects every role's actions may declare, up to the open effect. */
 const ACTIONS_EFFECTS =
-  "Action buttons: id (stable, kebab-case), label (sentence case), default true on exactly one, optional effect, danger and declines. declines true marks your own way to say no to every choice, such as Not now or Abandon; without one the app adds Decline, which reaches you as that no. effect is kind merge with after close (ends the task once nothing else is open) or continue, review (check_change pull's id; omit for your current change) and asks_first (why a standing direction leaves this merge to the captain); or kind settle with mode discard and confirm; proceed_with_open true settles a task with open children, keeping them planned, when a refusal names it;";
+  "Action buttons: id (stable, kebab-case), label (sentence case), default true on exactly one, optional effect, danger and declines. declines true marks your own way to say no to every choice, such as Not now or Abandon; without one the app adds Decline, reaching you as that no. effect is kind merge with after close (ends the task once nothing else is open) or continue, review (check_change pull's id; omit for your current change) and asks_first (why a standing direction leaves this merge to the captain); or kind settle with mode discard and confirm; proceed_with_open true settles a task with open children, keeping them planned, when a refusal names it;";
 const ACTIONS_OPEN =
   " or kind open with target settings|subscriptions|projects and sign_in naming the host whose sign-in the projects section starts, exactly as a not-signed-in refusal's way names it.";
 
@@ -346,12 +346,12 @@ const ACTIONS_OPEN =
  * and raises the same card again, so its author sets no reminder of its own.
  */
 const ACTIONS_UNTIL =
-  " until on an action with no effect offers Not until: kind close with task (a task key; back when that task closes, merged or not), date with at (an ISO time), event with integration, event and filter (any event an automation rule can wait for) or word (back when the captain asks). A rule raises the same card again then; set no reminder.";
+  " until on an action with no effect offers Not until: kind close with task (a task key; back when that task closes, merged or not), date with at (an ISO time), event with integration, event and filter (any event an automation rule can wait for) or word (back when the captain asks). A rule raises the same card then; set no reminder.";
 
 export const CARD_PARAMS = {
   title: "Short sentence-case title",
-  body: "The card body: a raw HTML fragment",
-  id: "Stable kebab-case id; reuse it to revise the open card in place",
+  body: "Raw HTML fragment",
+  id: "Stable kebab-case id",
   holds_place:
     "Leave unset unless the card needs continuous attention. True brings the card forward when it arrives. Choices close at once.",
   reply: "Your short answer in this card's thread, saying what changed where.",

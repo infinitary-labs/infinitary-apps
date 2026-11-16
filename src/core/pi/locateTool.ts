@@ -14,12 +14,11 @@ export function createLocateProjectTool(locate: (name: string) => string | Promi
     name: LOCATE_PROJECT_TOOL_NAME,
     label: "Locate project",
     description: [
-      "Find a project directory on disk by name when the user names a project that is",
-      "not yet managed. Case-insensitive match over the usual project locations; returns",
-      "up to 8 candidates with whether each is a git repo, its origin remote, and its",
-      "repo_id when already managed. With the captain's sign-in where projects live, it",
-      "also searches all of them (up to 1,000), exact owner/name or pasted address included; matches are listed first, else the newest, each with the",
-      "origin app_change project-setup kind clone takes. Not found, or only described: spawn a read-only investigation using github_read before asking for a link.",
+      "Find a named project directory on disk when not yet managed. Match usual locations case-insensitively;",
+      "return up to 8 candidates with git repo status, origin remote and repo_id when managed.",
+      "With the captain's sign-in, search up to 1,000 hosted projects too, including exact owner/name or pasted address;",
+      "matches first, else newest, each with the origin app_change project-setup kind clone takes.",
+      "Not found or only described: spawn a read-only investigation using github_read before asking for a link.",
     ].join(" "),
     parameters: Type.Object({
       name: Type.String(),

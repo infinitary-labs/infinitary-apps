@@ -64,9 +64,9 @@ Record the version, selection reasons, files or parts, required platforms or dev
   Declare the whole batch's processor and memory needs through the local load path, and bound Vitest workers to that declaration.
   `scripts/mac-unit-tests.ts` identifies native prerequisites, not an exclusion of portable files from local rounds.
   A developer without a Mac cannot count skipped native cases as proof.
-- Edited phone parts retain three runs on the iPhone and one on the iPad (INF-2732, the captain: "run each edited phone part three times on the iPhone and once on the iPad").
+- Edited phone parts retain three runs on the iPhone and one on the iPad (INF-2732, the captain: "run each edited phone part three times on the iPhone and once on the iPad"), the iPad's only for a part about the iPad (`docs/ios.md`, "Which parts run on which device").
   An affected request gives ordinary coverage once and only its distance-zero parts twice more, on the iPhone alone, in the same CI gate, whether it selects every part or a proper subset (INF-2811: a computer in CI mode cannot run a local phone check), so no local phone repeat or second request is needed.
-  Other affected parts run once, on the iPhone alone, and unreadable test changes keep conservative all-parts repetitions on the iPhone and one run of every part on the iPad.
+  Other affected parts run once, on the iPhone alone, and unreadable test changes keep conservative all-parts repetitions on the iPhone and one run of every iPad part on the iPad.
   See "The phone check on request" for its exact route and isolation.
 - Replay runs once in Linux CI when relevant; pictures and demos remain local.
 
@@ -581,7 +581,7 @@ Other docs breaks that only a unit test reads, such as `tests/served-boundary.te
 The full check is `verify.yml`'s checks part (`part: checks`, `all_journeys: false`): the Linux checks, and the three Mac lanes with only the journeys tagged `MAC_ONLY_TAG` beside the unit, client, replay and package stages.
 It runs no old journey set (INF-2480, the captain: "old set at the release check only, from the first piece on"): every alpha runs every journey on Linux and the Mac itself, or reuses the swept batch's (`docs/alpha.md`, "Full alpha checks, inherited stable checks").
 It replaces the nightly full check, which requested it and the phone check on `main` once a night.
-Main runs no phone check (INF-2492, the captain: "remove phone check from main altogether. we run all phone check parts at release"): `ios-release.yml` calls `phone.yml` at its resolved source before each TestFlight upload, which runs every part on iPhone and iPad.
+Main runs no phone check (INF-2492, the captain: "remove phone check from main altogether. we run all phone check parts at release"): `ios-release.yml` calls `phone.yml` at its resolved source before each TestFlight upload, which runs every part on the iPhone and the parts about the iPad on the iPad.
 The workflow's concurrency group never cancels a run in progress, so GitHub keeps the running run and at most one waiting run; a newer push replaces the waiting one, and a burst of merges is checked once at its newest version.
 No check starts while the previous check's alpha is being cut (INF-2465, the captain: "i want to make it so that the next main check keeps queueing all merges until the alpha is actually cut successfully, not while the alpha cut is still happening").
 The run's wait, `alpha-wait.yml`, lists the rolling alpha runs by the name `release.yml` gives them ("Alpha from main run N") and waits while any is still running, including one re-run after it ended.
@@ -785,19 +785,18 @@ Each file's edit is its removed and added lines without their positions, so main
 The `request` job fetches that version by its id when bringing the branch up to date left it on no branch; a version it cannot read leaves the whole change compared, as before, and the summary and `phone-placement` (`since`, `ownEdits`) name the version and the files counted.
 This selection reuses `PART_OWNERS` and the Swift declaration reach reader, without a timing budget.
 Shared production inputs select every declared consumer; unreadable comparisons or test changes retain conservative full coverage.
-An affected request with no reached parts skips both devices' gates, and one whose every kept part runs on the iPhone alone skips the iPad's (the chooser's `ipad_parts`); the Linux job's summary and `phone-placement` artifact record the selection before either device job starts.
+An affected request with no reached parts skips both devices' gates, and one whose every kept part runs on the iPhone alone, or is not a part about the iPad, skips the iPad's (the chooser's `ipad_parts`); the Linux job's summary and `phone-placement` artifact record the selection before either device job starts.
 Explicit `parts` still overrides automatic selection for diagnostic runs.
 The optional `device` input, `ipad` or `iphone`, starts that device's job alone, as the phone release's call does; empty, its default, starts both (INF-3205).
 That job runs with every other input as it would beside the other device's, so a replacement proof of one device sends the original request's inputs with `device`, at the branch's current version, which a rerun of the original run cannot reach since it keeps the original version.
-An iPad request whose every kept part runs on the iPhone alone checks nothing, as the iPad's job of a both-device request would.
+An iPad request whose every kept part runs on the iPhone alone checks nothing, as the iPad's job of a both-device request would; so does one that names only parts the iPad does not run.
 To reproduce a known failure, send its one named `parts` value and `device` (`iphone` or `ipad`); named diagnostic parts do not add repeat rounds.
 A retry after a failed request names only the failing part and its device this way, never the whole affected selection again, and the whole affected selection runs once more only at the final version ("A retry after a failed phone request").
-The ordinary weak-link suite runs on the iPhone alone on manual requests unless a device is explicitly named; its own edited test code still gets its three iPhone rounds.
-Release calls continue to run every part on both devices, weak-link included.
+The iPad runs only the parts whose row in `PHONE_PARTS` names it, on every route (`docs/ios.md`, "Which parts run on which device"); the screenless weak-link suite is not one of them, and its own edited test code still gets its three iPhone rounds.
 The `request` job refuses any other device, on every route, before a phone Mac is taken, and names the device in the request summary.
 The chooser compares ordinary coverage with the complete live part table, independent of order, and keeps `coverage`, `iphoneOnly` and `repeats` in `phone-placement`.
 INF-2582 direction A (the captain's choices "A: wait once and trim the soak" and "iPhone only; iPad waits for the release check") shapes the gate of an affected request in three ways.
-A part the change only reaches runs on the iPhone alone (the chooser's `iphone_parts`), and the iPad runs it in the next phone release; a part whose test code changed, or every part of a change the chooser could not read, runs on both devices.
+A part the change only reaches runs on the iPhone alone (the chooser's `iphone_parts`), and the iPad runs it in the next phone release when it is a part about the iPad; a part whose test code changed, or every part of a change the chooser could not read, runs on each device its row names.
 Its selection runs once, then only parts whose test's own code changed run twice more on the iPhone alone in the iPhone job's same gate step (the iPad runs each once, INF-2732), on the build and simulator it started, so each device's job waits for a phone Mac once (`phonePasses` in `scripts/phone-test-plan.ts`).
 This holds for a proper subset as for a complete selection (INF-2811), so a branch that edits one part's test code gets all three of that part's iPhone runs from its one affected request.
 A request on a branch runs one of each relaunch part's ten dark and light relaunch pairs (INF-1735), so 2 of the 20, through the gate's `--relaunch-pairs`; a request on `main` and the phone release run all 20.
@@ -815,7 +814,7 @@ Complete branch selections and requests with edited-part passes stop at the firs
 Inside the gate a failed Swift package test no longer skips the simulator tests (`scripts/phone-checks.ts`); every failure is reported and fails the job.
 Every request uses `MAC_QUEUES.phone`, currently `mini-mac-phone`; no `mac_runner` input, `PHONE_VIRTUAL_MAC` switch or generic-Mac variable can redirect it.
 Do not use local mini borrows for phone proof.
-The same-source unsigned call from `ios-release.yml` passes its resolved `source_commit` and runs every part without repeats, once per device through a matrix (`ipad`, `iphone`) with fail-fast off, so both phone Macs check one device each at once (INF-2582, reusing INF-2409's split); both calls must succeed before host signing starts.
+The same-source unsigned call from `ios-release.yml` passes its resolved `source_commit` and runs each device's parts without repeats, once per device through a matrix (`ipad`, `iphone`, the devices `PHONE_PARTS` names) with fail-fast off, so both phone Macs check one device each at once (INF-2582, reusing INF-2409's split); both calls must succeed before host signing starts.
 Each device's job, on request or in a call, names its device in its job name and in each artifact (`phone-logs-ipad`, `phone-results-iphone` and so on), keeps its evidence under its device's folder, and writes that device's `part-times.json` there.
 Two phone guests on the one rented computer reported memory pressure warnings in 5 of 29 readings while both ran (INF-2409).
 Status-only TestFlight requests start no phone or signing job.

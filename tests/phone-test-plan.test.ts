@@ -2,13 +2,16 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  devicePartNames,
   devicePhotos,
   endPhoneGate,
+  PHONE_DEVICES,
   PHONE_PART_TIMES,
   PHONE_PARTS,
   type PhoneDevice,
   type PhoneJob,
   type PhonePassEnd,
+  partDevices,
   partIdentifier,
   partRunsJourney,
   partSelection,
@@ -68,8 +71,8 @@ const chosen = (selection: string[], test: string) => {
   const only = names("-only-testing:");
   return (only.length === 0 || only.some(named)) && !names("-skip-testing:").some(named);
 };
-// The table's first two parts, which the side-by-side runs below fail and stop on.
-const [first, second] = PHONE_PARTS.map((part) => part.name);
+// The table's first part, which the side-by-side runs below fail and stop on.
+const [first] = PHONE_PARTS.map((part) => part.name);
 const partsRunning = (test: string) =>
   PHONE_PARTS.filter((part) => chosen(partSelection(part.name), test)).map((part) => part.name);
 
@@ -129,15 +132,32 @@ describe("the phone journey's parts", () => {
       /No phone journey part is named everything/,
     );
   });
+  // INF-4241 piece 6 (the captain's direction B, "a full iPhone pass, a short Duo pass at its four sizes and a short
+  // iPad pass"): every part runs on the iPhone, and the iPad runs only the parts whose row names it, each with the
+  // reason the iPad alone shows what it checks.
+  it("runs every part on the iPhone and only the parts about the iPad on the iPad", () => {
+    expect(devicePartNames("iphone")).toEqual(PHONE_PARTS.map(({ name }) => name));
+    const ipad = devicePartNames("ipad");
+    expect(ipad.length).toBeGreaterThan(0);
+    expect(ipad.length).toBeLessThan(PHONE_PARTS.length);
+    expect(phoneJobs(["ipad"]).map(({ part }) => part)).toEqual(ipad);
+    for (const part of PHONE_PARTS)
+      if ("devices" in part) expect(part.why.length, part.name).toBeGreaterThan(0);
+    expect(() => partDevices("everything")).toThrow(/No phone journey part is named everything/);
+  });
   it("still runs a test no part names, such as a new or renamed one", () => {
     expect(partsRunning("InfinitaryUITests/PhoneJourney/testSomethingNew")).toEqual(["rest"]);
     expect(partsRunning("InfinitaryUITests/PhoneSettingsJourney/testSettings")).toEqual(["rest"]);
   });
   // INF-1438: each part in the table's start order, on the slower iPad first.
   // INF-2052: the parts that choose a photo run last on each device, so a held library photo holds no part before them.
+  // INF-4241 piece 6: a part runs on the iPad only when its row names the iPad.
   it("starts each part on the iPad, then the iPhone, the parts that choose a photo last", () => {
     expect(phoneJobs(["iphone", "ipad"]).map(({ device, part }) => `${device} ${part}`)).toEqual(
-      PHONE_PARTS.flatMap((part) => [`ipad ${part.name}`, `iphone ${part.name}`]),
+      PHONE_PARTS.flatMap((part) => [
+        ...(partDevices(part.name).includes("ipad") ? [`ipad ${part.name}`] : []),
+        `iphone ${part.name}`,
+      ]),
     );
     const photos = (part: string) => PHONE_PARTS.find((each) => each.name === part)!.photos;
     const order = phoneJobs(["iphone"]).map(({ part }) => photos(part));
@@ -189,8 +209,11 @@ describe("running the parts side by side", () => {
       },
       ({ failed }) => failed,
     );
-    expect(started).toEqual([`ipad ${first}`, `iphone ${first}`, `ipad ${second}`]);
-    expect(stopped.sort()).toEqual([`ipad ${first}`, `ipad ${second}`].sort());
+    // The three slots start the plan's first three jobs; every one but the failed part is stopped.
+    const firstThree = jobs.slice(0, 3).map(({ device, part }) => `${device} ${part}`);
+    expect(firstThree).toContain(`iphone ${first}`);
+    expect(started).toEqual(firstThree);
+    expect(stopped.sort()).toEqual(firstThree.filter((name) => name !== `iphone ${first}`).sort());
     expect(outcomes.filter(Boolean).map((outcome) => outcome!.name)).toEqual(started);
     expect(outcomes.slice(started.length)).toEqual(jobs.slice(started.length).map(() => undefined));
   });
@@ -229,7 +252,7 @@ describe("running each device's parts on one started device", () => {
     for (const device of ["ipad", "iphone"])
       expect(lane(device)).toEqual([
         `start ${device}`,
-        ...PHONE_PARTS.map((part) => `run ${device} ${part.name}`),
+        ...devicePartNames(device as PhoneDevice).map((part) => `run ${device} ${part}`),
         `end ${device}-simulator`,
       ]);
     expect(events.filter((event) => event.startsWith("start"))).toHaveLength(2);
@@ -359,18 +382,18 @@ describe("several simulated devices of one device", () => {
     ]);
   });
   it("starts a part with no recorded time first, and keeps plan order on a device with one lane", () => {
-    const jobs = phonePasses(["ipad", "iphone"], { parts: ["join-read", "rest", "weak-link"] });
+    const jobs = phonePasses(["ipad", "iphone"], { parts: ["join-read", "rest", "address"] });
     const unknown = new Map([...recorded].filter(([part]) => part !== "join-read"));
     const plan = phoneLanePlan(jobs, 3, unknown);
     expect(plan.lanes.filter((lane) => lane.device === "ipad")).toHaveLength(2);
     expect(plan.queues.get("ipad")!.map((index) => jobs[index]!.part)).toEqual([
       "join-read",
       "rest",
-      "weak-link",
+      "address",
     ]);
     expect(plan.queues.get("iphone")!.map((index) => jobs[index]!.part)).toEqual([
       "join-read",
-      "weak-link",
+      "address",
       "rest",
     ]);
     expect(plan.lanes).toHaveLength(3);
@@ -593,7 +616,7 @@ describe("every pass in one gate", () => {
       "iphone talk-tasks 3",
     ]);
     // A gate of every part on both devices, as the release runs, has one pass and leaves no device out:
-    // each device's lane runs every part once, in the parts' own order.
+    // each device's lane runs every part its rows name once, in the parts' own order.
     const every = phonePasses(["iphone", "ipad"], { parts: PHONE_PARTS.map(({ name }) => name) });
     for (const device of ["ipad", "iphone"] as const)
       expect(every.filter((job) => job.device === device)).toEqual(
@@ -673,11 +696,16 @@ describe("a gate's end", () => {
       const evidence = scratchDir("infinitary-phone-gate-end-");
       endPhoneGate(jobs, ends, evidence);
       const times = JSON.parse(readFileSync(kept(evidence), "utf8"));
-      expect(Object.keys(times).sort()).toEqual([...everyPart].sort());
+      const parts = everyPart.filter((part) =>
+        devices.some((device) => partDevices(part).includes(device)),
+      );
+      expect(Object.keys(times).sort()).toEqual([...parts].sort());
       for (const [index, { device, part }] of jobs.entries())
         expect(times[part][device]).toBe(ends[index]?.ms);
-      for (const part of everyPart)
-        expect(Object.keys(times[part]).sort()).toEqual([...devices].sort());
+      for (const part of parts)
+        expect(Object.keys(times[part]).sort()).toEqual(
+          devices.filter((device) => partDevices(part).includes(device)).sort(),
+        );
     }
     // The release check keeps discovering after a failed part, so its gate ran every part to its end.
     const jobs = phonePasses(["ipad"], { parts: everyPart });
@@ -688,7 +716,7 @@ describe("a gate's end", () => {
       `The phone gate failed: ${failing}; see its results in ${evidence}`,
     );
     expect(Object.keys(JSON.parse(readFileSync(kept(evidence), "utf8"))).sort()).toEqual(
-      [...everyPart].sort(),
+      [...devicePartNames("ipad")].sort(),
     );
   });
 
@@ -737,9 +765,9 @@ it("repeats exact tests on iPhone and requires each selected test to have starte
     repeats: ["weak-link"],
     repeatTests: { "weak-link": tests },
   });
-  expect(jobs.filter(({ round }) => round === 1).map(({ tests }) => tests)).toEqual([
-    undefined,
-    undefined,
+  // The screenless weak-link suite runs on the iPhone alone (INF-4241 piece 6).
+  expect(jobs.filter(({ round }) => round === 1)).toEqual([
+    { part: "weak-link", device: "iphone", round: 1 },
   ]);
   expect(jobs.filter(({ round }) => round > 1)).toEqual(
     [2, 3].map((round) => ({ part: "weak-link", device: "iphone", round, tests })),

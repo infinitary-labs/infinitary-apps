@@ -24,7 +24,7 @@ import {
   UI_TESTS,
 } from "../scripts/affected-phone";
 import { phoneFileOwners, unownedPhoneFiles } from "../scripts/phone-part-owners";
-import { PHONE_PARTS, phonePasses } from "../scripts/phone-test-plan";
+import { devicePartNames, PHONE_PARTS, partDevices, phonePasses } from "../scripts/phone-test-plan";
 
 // INF-827 (the captain's approved INF-828 plan: "Run only the parts a change reaches; skip
 // changes to unused setup" and "A journeys-style budget, with the rest checked later on main",
@@ -226,7 +226,8 @@ describe("phone selection repeat accounting", () => {
 
   // INF-2582 (the captain's "iPhone only; iPad waits for the release check"): the gate the chooser's
   // outputs start, on the same real changes. An edited part runs three times on the iPhone and once on the iPad (INF-2732); a part
-  // the change only reaches runs once, on the iPhone.
+  // the change only reaches runs once, on the iPhone. INF-4241 piece 6: the iPad runs only the parts whose row names it.
+  const onIpad = (part: string) => partDevices(part).includes("ipad");
   const runs = (reach: ReturnType<typeof reached>) => {
     const iphoneOnly = iphoneOnlyParts(all, reach);
     const jobs = phonePasses(["iphone", "ipad"], {
@@ -242,7 +243,7 @@ describe("phone selection repeat accounting", () => {
     const count = runs(reach);
     for (const { part, distance } of reach) {
       expect(count(part, "iphone")).toBe(distance === 0 ? 3 : 1);
-      expect(count(part, "ipad")).toBe(distance === 0 ? 1 : 0);
+      expect(count(part, "ipad")).toBe(distance === 0 && onIpad(part) ? 1 : 0);
     }
     expect(reach.some(({ distance }) => distance > 0)).toBe(true);
   });
@@ -251,11 +252,16 @@ describe("phone selection repeat accounting", () => {
     const unreadable = runs(reached("2dbbedc52", true));
     for (const part of all) {
       expect([shared(part, "iphone"), shared(part, "ipad")]).toEqual([1, 0]);
-      expect([unreadable(part, "iphone"), unreadable(part, "ipad")]).toEqual([3, 1]);
+      expect([unreadable(part, "iphone"), unreadable(part, "ipad")]).toEqual([
+        3,
+        onIpad(part) ? 1 : 0,
+      ]);
     }
     // INF-2970's fix 1: phone.yml's iPad job reads these parts and ends before its gate with none.
     expect(ipadParts(all, iphoneOnlyParts(all, reached("e3be41f53")))).toEqual([]);
-    expect(ipadParts(all, iphoneOnlyParts(all, reached("2dbbedc52", true)))).toEqual(all);
+    expect(ipadParts(all, iphoneOnlyParts(all, reached("2dbbedc52", true)))).toEqual(
+      devicePartNames("ipad"),
+    );
   });
 });
 
@@ -286,9 +292,10 @@ describe("the short phone parts", () => {
     );
     expect(requestedParts(reasons, reach).map((part) => part.part)).toEqual(["talk-drafts"]);
   });
-  // INF-2811: the affected request for that edit runs the part three times on the iPhone and once
-  // on the iPad in its one gate, so no local phone check or second request is needed.
-  it("runs the edited short part three times on the iPhone and once on the iPad in one request", () => {
+  // INF-2811: the affected request for that edit runs the part three times on the iPhone in its one gate, so no
+  // local phone check or second request is needed. INF-4241 piece 6: talk-drafts shows the iPad nothing of its own,
+  // so its row names no iPad and the iPad runs none of it.
+  it("runs the edited short part three times on the iPhone, and not on the iPad its row leaves out", () => {
     const parts = requestedParts(reasons, reach).map(({ part }) => part);
     const plan = phoneRepeatPlan(parts, reach);
     expect(plan).toEqual({ full: false, repeatParts: ["talk-drafts"] });
@@ -299,8 +306,8 @@ describe("the short phone parts", () => {
       iphoneOnly,
       repeats: plan.repeatParts,
     });
+    expect(partDevices("talk-drafts")).toEqual(["iphone"]);
     expect(jobs.map(({ device, part, round }) => `${device} ${part} ${round}`)).toEqual([
-      "ipad talk-drafts 1",
       "iphone talk-drafts 1",
       "iphone talk-drafts 2",
       "iphone talk-drafts 3",
@@ -710,25 +717,30 @@ describe("the approved phone-check cuts", () => {
     expect(phoneRepeatPlan(["talk-drafts"], own).repeatParts).toEqual(["talk-drafts"]);
   });
   it("reproduces one named part on one device without adding repeat rounds", () => {
-    const part = PHONE_PARTS.find(({ name }) => name === "cards-form")!.name;
+    const part = devicePartNames("ipad")[0]!;
     for (const device of ["iphone", "ipad"] as const) {
       const plan = requestDevicePlan([part], [], { explicit: true, device });
       expect(plan.devices).toEqual([device]);
       expect(phonePasses([device], { parts: [part] })).toEqual([{ part, device, round: 1 }]);
     }
   });
-  it("runs weak-link on one device for requests, while the release still runs both", () => {
-    expect(requestDevicePlan(["weak-link"], [], { explicit: true })).toEqual({
-      iphoneOnly: ["weak-link"],
-      devices: ["iphone"],
-    });
-    expect(requestDevicePlan(["weak-link"], [], { explicit: true, device: "ipad" })).toEqual({
-      iphoneOnly: [],
-      devices: ["ipad"],
-    });
-    expect(
-      phonePasses(["iphone", "ipad"], { parts: ["weak-link"] }).map(({ device }) => device),
-    ).toEqual(["ipad", "iphone"]);
+  // INF-4241 piece 6: a part whose row names no iPad, such as the screenless weak-link suite, runs on the iPhone
+  // alone, for a request and the release alike, and a request for it on the iPad starts no job.
+  it("runs a part the iPad's list leaves out on the iPhone alone, for requests and the release", () => {
+    for (const part of ["weak-link", "cards-form"]) {
+      expect(partDevices(part)).toEqual(["iphone"]);
+      expect(requestDevicePlan([part], [], { explicit: true })).toEqual({
+        iphoneOnly: [],
+        devices: ["iphone"],
+      });
+      expect(requestDevicePlan([part], [], { explicit: true, device: "ipad" })).toEqual({
+        iphoneOnly: [],
+        devices: [],
+      });
+      expect(
+        phonePasses(["iphone", "ipad"], { parts: [part] }).map(({ device }) => device),
+      ).toEqual(["iphone"]);
+    }
     expect(requestDevicePlan([], [])).toEqual({ iphoneOnly: [], devices: [] });
   });
 });

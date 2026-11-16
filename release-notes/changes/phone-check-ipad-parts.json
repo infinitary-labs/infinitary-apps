@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-check-ipad-parts",
+      "reason": "Test infrastructure: the phone check's part table names the devices beyond the iPhone each part runs on, and the iPad runs only the parts about the iPad, with no change to the app."
+    }
+  ]
+}

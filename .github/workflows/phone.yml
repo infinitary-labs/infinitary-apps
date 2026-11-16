@@ -21,6 +21,10 @@ name: phone
 # device's job alone at the branch's current version with the same part selection.
 # INF-4071 (the captain's "Only the change's own edits"): a re-run after a pass names that version as
 # last_pass, and only the files the change's own edits since then reach choose its parts.
+# INF-4241 piece 6 (the captain's direction B): PHONE_PARTS in scripts/phone-test-plan.ts names the devices
+# beyond the iPhone each part runs on. The device list below, the device input and each device's artifacts
+# follow it (tests/phone-ci.test.ts holds them to it), and the gate runs a part only on the devices its
+# row names, so a call or a request for every part runs on the iPad only the parts about the iPad.
 on:
   workflow_call:
     inputs:
@@ -289,7 +293,8 @@ jobs:
       # It checks Swift trust, native recovery and the published client; pnpm check checks generated files.
       # INF-662: one gate checks and builds once, its device on one simulator it starts
       # once (INF-1438) and each part on its own test home; any failing part fails it.
-      # INF-2970's fix 1: each phone Mac runs its job's one device. Release calls run every part;
+      # INF-2970's fix 1: each phone Mac runs its job's one device. Release calls run every part the
+      # device's rows of PHONE_PARTS name (INF-4241 piece 6);
       # affected requests use reached parts. INF-4241 piece 3 (INF-4308, the captain's "Build on two
       # at once"): the gate runs as many simulated devices of that device as the Mac's processors and
       # memory hold, two on a 10-core, 9 GB compute VM, and shares the parts among them by their

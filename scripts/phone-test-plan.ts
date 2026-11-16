@@ -38,12 +38,23 @@ export function testHomeKeys(plan: Record<string, unknown>): string[] {
 // install on each device for 1 to 13 minutes in runs 41045215266, 41145496442 and 41146815994, and a
 // photo added last can still be held (536 seconds before the iPhone's talk in run 41247888712), but
 // it holds no part before it.
+// INF-4241 piece 6 (the captain's direction B, "a full iPhone pass, a short Duo pass at its four sizes and a short
+// iPad pass"): every part runs on the iPhone, and `devices` names the devices beyond it that the part runs on, each
+// only because the part checks something that device alone shows, said in `why`. The iPad runs only the parts that
+// name it, at a phone release and on a request alike; this one table is the device list phonePasses, phoneJobs,
+// scripts/affected-phone.ts, phone.yml and ios-release.yml follow (tests/phone-ci.test.ts holds the workflows
+// to it).
 export const PHONE_JOURNEY = "InfinitaryUITests/PhoneJourney";
+export type PhoneDevice = "iphone" | "ipad";
+/** A row of PHONE_PARTS: the part's name, the journey test or app-hosted class it runs, whether it chooses a library
+ * photo, and the devices beyond the iPhone it runs on with the reason each needs it. */
+export type PhonePartRow = { name: string; photos: boolean } & ({ test: string } | { suite: string }) &
+  ({ devices?: undefined } | { devices: readonly Exclude<PhoneDevice, "iphone">[]; why: string });
 export const PHONE_PARTS = [
-  { name: "join-read", test: "testJoinAndRead", photos: false },
+  { name: "join-read", test: "testJoinAndRead", photos: false, devices: ["ipad"], why: "its Settings and approvals name This iPad, and turned it shows the wide layout's sidebar beside the stage" },
   { name: "join-activity", test: "testActivityAndCatchUp", photos: false },
   { name: "join-away", test: "testAwayLeaveAndRemoved", photos: false },
-  { name: "talk-tasks", test: "testTasksAndSteer", photos: false },
+  { name: "talk-tasks", test: "testTasksAndSteer", photos: false, devices: ["ipad"], why: "turned, Home's stage and Tasks sit beside the wide layout's sidebar, and the strip comes back from nowhere upright" },
   { name: "talk-drafts", test: "testDraftsAcrossHomes", photos: false },
   { name: "relaunch-first", test: "testRelaunchPairsFirstTen", photos: false },
   { name: "relaunch-second", test: "testRelaunchPairsSecondTen", photos: false },
@@ -51,7 +62,7 @@ export const PHONE_PARTS = [
   { name: "cards-form", test: "testCardForm", photos: false },
   { name: "cards-media", test: "testCardMediaAndBody", photos: false },
   // INF-1183: joining a home by its address, against the Mac's own sshd beside the test home.
-  { name: "address", test: "testJoinByAddress", photos: false },
+  { name: "address", test: "testJoinByAddress", photos: false, devices: ["ipad"], why: "the iPad's number keyboard opens as a pop-up panel that takes the next field's tap" },
   // INF-2095: the pager pick journey launches fresh, so it needs a simulator no other journey joined first.
   { name: "pick", test: "testMenuPickSurvivesAWorkspaceRedraw", photos: false },
   // INF-2565: a revision while the thread shows keeps the card on its back.
@@ -63,8 +74,8 @@ export const PHONE_PARTS = [
   // INF-3881: a card's map opens live in a cover of its own; a finger on the map in the card scrolls the card.
   { name: "cards-diagram", test: "testCardDiagramCover", photos: false },
   // INF-2568: the message box and a card's reply with the keyboard up; each launches fresh and the merge fixture runs once a home.
-  { name: "keyboard-pinned", test: "testKeyboardOverPinnedCard", photos: false },
-  { name: "keyboard-scrolling", test: "testKeyboardOverScrollingCard", photos: false },
+  { name: "keyboard-pinned", test: "testKeyboardOverPinnedCard", photos: false, devices: ["ipad"], why: "the iPad's keyboard and its taller suggestion row, upright and turned, over the message box and a reply" },
+  { name: "keyboard-scrolling", test: "testKeyboardOverScrollingCard", photos: false, devices: ["ipad"], why: "a card that scrolls on the iPhone fits whole above the iPad's keyboard (INF-2737 held back a phone release)" },
   // INF-3106: each way out of a card's reply keyboard and the message box's, the keyboard-down button among them.
   { name: "keyboard-ways-out", test: "testKeyboardWaysOut", photos: false },
   // INF-3427: a text box inside a card body stays in view with the keyboard up.
@@ -75,30 +86,44 @@ export const PHONE_PARTS = [
   { name: "google", test: "testGoogleSignInAndOut", photos: false },
   // INF-3563: Settings' pages on a home that holds accounts, rules, usage, projects and runbooks: what each shows,
   // what the phone may change, and the keys that reach it.
-  { name: "settings-pages", test: "testSettingsPages", photos: false },
+  { name: "settings-pages", test: "testSettingsPages", photos: false, devices: ["ipad"], why: "the project amount field gets the iPad's numbers-and-punctuation keyboard in place of its pop-up number pad" },
   // INF-3675 piece 4: the phone in each catalog language, Arabic right to left, Apple's pseudo-languages on Settings →
   // Appearance and its Language row opening iOS Settings by keys.
   { name: "languages", test: "testLanguages", photos: false },
   // INF-3830 piece 2: the computer's panels on the Panels tab, from a fixture panel on the test home's real core.
-  { name: "panels", test: "testPanelsTab", photos: false },
+  { name: "panels", test: "testPanelsTab", photos: false, devices: ["ipad"], why: "turned, Panels is the wide layout sidebar's third choice beside the stage" },
   // INF-3830 piece 3: a panel's title-row buttons, its cards on Home and its taps that open a task.
   { name: "panels-cards", test: "testPanelCards", photos: false },
   // INF-2989: the weak link checks (INF-2668, INF-2669) wait out real links and silences, about five minutes a
   // device, which doubled the rest part they joined. An app-hosted class of their own, so a change to the other
   // app-hosted tests repeats only the rest part and a change to these repeats only them.
   { name: "weak-link", suite: "InfinitaryTests/PhoneWeakLinkTests", photos: false },
-  { name: "talk-compose", test: "testComposeAndSend", photos: true },
+  { name: "talk-compose", test: "testComposeAndSend", photos: true, devices: ["ipad"], why: "the composer turned beside the wide layout's sidebar, and the iPad's own photo picker" },
   // The last part runs every test no other part names: the app-hosted tests and any new one that
   // needs no fresh app, since its simulator already holds the character journey's join.
-  { name: "rest", test: "testCharacterAndPastChoices", photos: true },
-] as const;
+  { name: "rest", test: "testCharacterAndPastChoices", photos: true, devices: ["ipad"], why: "the iPad's own photo picker, an approval enrolled as iPad, and the computer's sheet and alert drawn over the scene" },
+] as const satisfies readonly PhonePartRow[];
 export type PhonePart = (typeof PHONE_PARTS)[number]["name"];
+
+/** The devices a part runs on, the iPhone first, from its row of PHONE_PARTS. */
+export function partDevices(name: string): PhoneDevice[] {
+  const part: PhonePartRow | undefined = PHONE_PARTS.find((each) => each.name === name);
+  if (!part) throw new Error(`No phone journey part is named ${name}`);
+  return ["iphone", ...(part.devices ?? [])];
+}
+
+/** Every device some part runs on, the iPhone first: the devices phone.yml and ios-release.yml check. */
+export const PHONE_DEVICES: readonly PhoneDevice[] = [...new Set(PHONE_PARTS.flatMap(({ name }) => partDevices(name)))];
+
+/** The parts that run on a device, in the table's order. */
+export function devicePartNames(device: PhoneDevice): string[] {
+  return PHONE_PARTS.filter(({ name }) => partDevices(name).includes(device)).map(({ name }) => name);
+}
 
 /** The XCTest identifier a part runs: its journey test, or the whole test class it names as its `suite`. */
 export function partIdentifier(part: { test: string } | { suite: string }): string {
   return "suite" in part ? part.suite : `${PHONE_JOURNEY}/${part.test}`;
 }
-export type PhoneDevice = "iphone" | "ipad";
 
 /** INF-1083: ordinary XCTest must still stop a stuck test, not wait for the job limit.
  * Twenty minutes bounds each ordinary test while the outer gate keeps its own ninety-minute cap.
@@ -180,13 +205,15 @@ export function phoneTestsStarted(part: string, output: string, tests: readonly 
   }) : partTestStarted(part, output);
 }
 
-/** Every device's parts in start order: each part on the slower iPad first, then on the iPhone.
+/** Every device's parts in start order: each part on the slower iPad first, then on the iPhone, and each only on the
+ * devices its row of PHONE_PARTS names (INF-4241 piece 6).
  * INF-1438: a device with one lane runs its parts in this order on the one simulator it starts (`phoneLanePlan`). */
 export function phoneJobs(devices: PhoneDevice[], parts: readonly string[] = PHONE_PARTS.map((part) => part.name)) {
   for (const part of parts) partSelection(part);
   const order: PhoneDevice[] = ["ipad", "iphone"];
-  return PHONE_PARTS.filter((part) => parts.includes(part.name))
-    .flatMap((part) => order.filter((device) => devices.includes(device)).map((device) => ({ device, part: part.name })));
+  return PHONE_PARTS.filter((part) => parts.includes(part.name)).flatMap((part) => order
+    .filter((device) => devices.includes(device) && partDevices(part.name).includes(device))
+    .map((device) => ({ device, part: part.name })));
 }
 
 /** INF-1735's soak: each relaunch part runs ten dark/light relaunch pairs, twenty across the two parts
@@ -214,6 +241,7 @@ export const PHONE_REPEAT_ROUNDS = [2, 3] as const;
  * Round one runs `parts` on every device and `iphoneOnly` on the iPhone alone; rounds two and three
  * then run `repeats` again on the iPhone alone, after its round one; the iPad runs a repeated part
  * once (INF-2732, the captain's "run each edited phone part three times on the iPhone and once on the iPad").
+ * A part runs only on the devices its row of PHONE_PARTS names, so the iPad runs only the parts about the iPad.
  * Each device's jobs are in the order its lane runs them (`runDeviceLanes`), and the iPad's lane starts
  * first, as `phoneJobs`. */
 export function phonePasses(devices: PhoneDevice[], { parts = [], iphoneOnly = [], repeats = [], repeatTests = {} }: {
@@ -242,8 +270,8 @@ export type PhonePassEnd = { outcome: "passed" | "stopped" | "failed"; ms: numbe
 
 /** The end of a gate, from its passes in plan order and how each ended (undefined for one that never started).
  * INF-827: a full gate keeps each part's minutes on each of its devices as part-times.json in its evidence folder,
- * a part's minutes being its ordinary pass's. A gate is full when every part has an ordinary pass on each of its
- * devices and every pass ran to its end, so a gate of one device keeps its own (INF-2582: the release check runs
+ * a part's minutes being its ordinary pass's. A gate is full when each of its devices has an ordinary pass of every
+ * part that runs on that device (INF-4241 piece 6) and every pass ran to its end, so a gate of one device keeps its own (INF-2582: the release check runs
  * each device on its own phone Mac). Any failed pass then fails the gate, naming the passes it stopped and the
  * ones it never started. */
 export function endPhoneGate(jobs: readonly PhoneJob[], ends: readonly (PhonePassEnd | undefined)[], evidence: string): void {
@@ -251,7 +279,7 @@ export function endPhoneGate(jobs: readonly PhoneJob[], ends: readonly (PhonePas
   const [failed, stopped] = [ended("failed"), ended("stopped")];
   const unstarted = jobs.filter((_, index) => !ends[index]).map(phonePassName);
   const devices = [...new Set(jobs.map((job) => job.device))];
-  const everyPart = devices.length > 0 && devices.every((device) => PHONE_PARTS.every(({ name }) =>
+  const everyPart = devices.length > 0 && devices.every((device) => devicePartNames(device).every((name) =>
     jobs.some((job) => job.device === device && job.part === name && job.round === 1)));
   if (everyPart && !stopped.length && !unstarted.length) {
     const times: Record<string, Partial<Record<PhoneDevice, number>>> = {};

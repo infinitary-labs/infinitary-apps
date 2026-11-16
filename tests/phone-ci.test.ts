@@ -5,7 +5,7 @@ import { data, Evaluator, Lexer, Parser } from "@actions/expressions";
 import { describe, expect, it } from "vitest";
 import { GENERATED_CONTRACT, phoneDecision } from "../scripts/affected-phone";
 import { legacyJobName } from "../scripts/ci-job-names.mjs";
-import { PHONE_PARTS, relaunchPairs } from "../scripts/phone-test-plan";
+import { PHONE_DEVICES, PHONE_PARTS, relaunchPairs } from "../scripts/phone-test-plan";
 import { workflowString, workflowValue } from "./helpers/releaseWorkflows";
 
 // INF-79 / INF-136: the captain requested a Mac mini lane for phone changes; since INF-2139 it
@@ -335,6 +335,21 @@ describe("the native gate on an affected request", () => {
     expect(new Set(groups).size).toBe(runs.length * 2);
     expect(native.queue).toBe("max");
     expect(native["cancel-in-progress"]).toBe(false);
+  });
+  // INF-4241 piece 6: PHONE_PARTS is the one list of devices; the phone check's device matrix, the device it accepts
+  // and the phone release's calls follow it, so a device the table adds or drops is checked or refused everywhere.
+  it("checks the devices PHONE_PARTS names, in the request, its matrix and the phone release", () => {
+    const devices = [...PHONE_DEVICES].sort();
+    const native = workflow.jobs[NATIVE_JOB];
+    const every = /'(\[[^']*\])'\)+\s*\}\}$/.exec(native.strategy.matrix.device)?.[1];
+    expect(JSON.parse(every ?? "[]").sort()).toEqual(devices);
+    const check = (workflow.jobs.request.steps as { run?: string }[]).find((step) =>
+      step.run?.includes("Unknown phone device"),
+    )!.run!;
+    expect(/''\|([\w|]+)\) ;;/.exec(check)?.[1]?.split("|").sort()).toEqual(devices);
+    const release = yaml.load(readFileSync(".github/workflows/ios-release.yml", "utf8"));
+    expect([...release.jobs.phone.strategy.matrix.device].sort()).toEqual(devices);
+    expect(release.jobs.phone.with.device).toBe("${{ matrix.device }}");
   });
   it("keeps TestFlight uploads in a line of their own, apart from the phone checks", () => {
     // INF-989 (captain: "keep TestFlight uploads in their own line").

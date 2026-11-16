@@ -60,9 +60,12 @@ jobs:
     if: needs.resolve.outputs.mode == 'release'
     # The reusable workflow and its checkout use this dispatch's resolved source.
     # No release environment or signing secrets cross into the disposable guest.
-    # INF-2582 direction A (the captain's "A: wait once and trim the soak"): every part
-    # on each device, one call per device, so the iPad and the iPhone each take one of
-    # the two phone Macs at once; one failing never cancels the other (INF-2409).
+    # INF-2582 direction A (the captain's "A: wait once and trim the soak"): one call per
+    # device, so the iPad and the iPhone each take one of the two phone Macs at once; one
+    # failing never cancels the other (INF-2409). INF-4241 piece 6: the devices are the ones
+    # PHONE_PARTS in scripts/phone-test-plan.ts names (tests/phone-ci.test.ts holds this
+    # list to it), and each call runs every part its row names for that device: every part on
+    # the iPhone, and on the iPad only the parts about the iPad.
     name: Requested TestFlight · Phone checks (${{ matrix.device == 'ipad' && 'iPad' || 'iPhone' }})
     strategy:
       fail-fast: false

@@ -4,7 +4,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { PART_OWNERS, phoneFileOwners } from "./phone-part-owners.ts";
-import { PHONE_JOURNEY, PHONE_PARTS, partIdentifier, partTimes } from "./phone-test-plan.ts";
+import { PHONE_DEVICES, PHONE_JOURNEY, PHONE_PARTS, partDevices, partIdentifier, partTimes } from "./phone-test-plan.ts";
 
 export { partTimes };
 
@@ -698,25 +698,24 @@ export function phoneRepeatPlan(parts: readonly string[], reach: readonly PartRe
 
 /** INF-2582 (the captain's "iPhone only; iPad waits for the release check"): on an affected request, a kept
  * part the change only reaches runs on the iPhone alone, and a part whose test code changed, or a change
- * that could not be read, runs on both devices. The release check runs every part on both. */
+ * that could not be read, runs on every device its row of PHONE_PARTS names (INF-4241 piece 6). The release
+ * check runs every part on each device it names. */
 export function iphoneOnlyParts(parts: readonly string[], reach: readonly PartReach[]): string[] {
   return parts.filter((part) => !reach.some((each) => each.part === part && each.distance === 0));
 }
 
-/** INF-2970's fix 1: the kept parts the iPad's own job runs, every one the iPhone does not run alone; with
- * none, phone.yml's iPad job ends before its gate. */
+/** INF-2970's fix 1: the kept parts the iPad's own job runs, every one the iPhone does not run alone that names the
+ * iPad in PHONE_PARTS (INF-4241 piece 6); with none, phone.yml's iPad job ends before its gate. */
 export function ipadParts(parts: readonly string[], iphoneOnly: readonly string[]): string[] {
-  return parts.filter((part) => !iphoneOnly.includes(part));
+  return parts.filter((part) => !iphoneOnly.includes(part) && partDevices(part).includes("ipad"));
 }
 
 /** A manual request's devices, chosen on Linux. Release calls never use this plan. */
 export function requestDevicePlan(parts: readonly string[], reach: readonly PartReach[], {
   explicit = false, device = "",
 }: { explicit?: boolean; device?: string } = {}): { iphoneOnly: string[]; devices: string[] } {
-  if (device && device !== "ipad" && device !== "iphone") throw new Error(`Unknown phone device: ${device}`);
+  if (device && !PHONE_DEVICES.includes(device as never)) throw new Error(`Unknown phone device: ${device}`);
   const iphoneOnly = explicit ? [] : iphoneOnlyParts(parts, reach);
-  // Screenless weak-link coverage needs one device, but its own test still repeats on iPhone.
-  if (!device && parts.includes("weak-link") && !iphoneOnly.includes("weak-link")) iphoneOnly.push("weak-link");
   const devices = ["ipad", "iphone"].filter((name) =>
     (!device || device === name) && (name === "ipad" ? ipadParts(parts, iphoneOnly).length > 0 : parts.length > 0));
   return { iphoneOnly, devices };
@@ -892,7 +891,8 @@ function main(): void {
       ...(decision.run ? decision.reasons.map((reason) => `- ${reason}`) : ["No phone input the gate uses changed beyond the contract version number."]),
       "", `Ordinary coverage: ${kept.join(" ") || "none"}; complete live selection: ${repeats.full}.`,
       `On the iPhone only (the iPad waits for the release check): ${iphoneOnly.join(" ") || "none"}.`,
-      `Two additional passes on the iPhone, in the same job (the iPad runs each once): ${repeats.repeatParts.join(" ") || "none"}.`,
+      `On the iPad (the parts PHONE_PARTS names it for): ${ipadParts(kept, iphoneOnly).join(" ") || "none"}.`,
+      `Two additional passes on the iPhone, in the same job (the iPad runs each of its own parts once): ${repeats.repeatParts.join(" ") || "none"}.`,
       "", ...(placement.length ? ["#### Parts", "", ...placement.map(row), ""] : [])].join("\n"));
 }
 

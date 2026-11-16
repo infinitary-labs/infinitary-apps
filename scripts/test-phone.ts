@@ -24,7 +24,7 @@ import { GATE_SIMULATOR, removePhoneLeftovers, SCRATCH_PREFIX } from "./phone-le
 import { phoneRecording } from "./phone-recording.ts";
 import { startPhoneGuestObserver } from "./phone-guest-observer.ts";
 import { phoneSharedCacheFolder, phoneSimulator, phoneSimulatorBooted, phoneXcode, removeEmptyPhoneSharedCache } from "./phone-simulator.ts";
-import { devicePhotos, endPhoneGate, PHONE_PARTS, type PhoneDevice, type PhoneJob, type PhonePassEnd, phonePassName, phoneSelectionRunsJourney, phoneTestSelection, phoneTestsStarted, phoneAnimationWaits, phoneExecutionArguments, phoneLanePlan, phoneLanes, phonePasses, phoneStopsEarly, PHONE_PART_TIMES, partTimes, relaunchPairs, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
+import { devicePartNames, devicePhotos, endPhoneGate, PHONE_PARTS, type PhoneDevice, type PhoneJob, type PhonePassEnd, phonePassName, phoneSelectionRunsJourney, phoneTestSelection, phoneTestsStarted, phoneAnimationWaits, phoneExecutionArguments, phoneLanePlan, phoneLanes, phonePasses, phoneStopsEarly, PHONE_PART_TIMES, partTimes, relaunchPairs, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
 
 // INF-800: with CI mode on, the phone check runs only through CI (docs/testing.md).
 const refusal = ciModeRefusal("phone");
@@ -85,6 +85,9 @@ const named = !!(values.part || values["iphone-part"]);
 const jobs: PhoneJob[] = phonePasses(devices, values.waits ? { parts: ["rest"] } : {
   parts: named ? values.part ?? [] : PHONE_PARTS.map((part) => part.name),
   iphoneOnly: values["iphone-part"], repeats: values["repeat-part"], repeatTests });
+// INF-4241 piece 6: a part runs only on the devices its row of PHONE_PARTS names, so a gate whose parts none of its
+// devices run would pass having checked nothing.
+if (!jobs.length) throw new Error(`None of the named parts runs on the ${devices[0]}; the parts that do: ${devicePartNames(devices[0]!).join(" ")}`);
 const simulators = Number(values.simulators);
 const lanePlan = phoneLanePlan(jobs, simulators, partTimes(readFileSync(join(REPO_ROOT, PHONE_PART_TIMES), "utf8")));
 mkdirSync(evidence, { recursive: true });

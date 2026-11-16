@@ -172,6 +172,19 @@ export type ForgeChecks = {
  */
 export type ForgeReadiness = "clean" | "conflict" | "behind" | "blocked" | "computing" | "draft";
 
+/**
+ * One comment on a pull request as the host lists it (docs/forge.md,
+ * "Comments on a pull request"): who wrote it and where, never its words.
+ * `story` marks the app's own story comment and `empty` a review with no
+ * words of its own, such as a bare approval; neither wakes anyone.
+ */
+export type ForgePullComment = import("@shared/pullComments").PullCommentFact & {
+  /** The review a line comment was sent in, when it was. */
+  reviewId?: number;
+  story?: true;
+  empty?: true;
+};
+
 /** One pull request (a merge request on GitLab) read by its number, whatever its state (FI3-304). */
 export type ForgePull = {
   /** The request's page, as the host returned it. */
@@ -473,6 +486,14 @@ export interface Forge {
    * with no pull requests.
    */
   pull?(number: number): Promise<ForgePull>;
+  /**
+   * The pull request's comments, line comments and reviews changed at or
+   * after `since` (the host's own time), or every one without it (docs/forge.md,
+   * "Comments on a pull request"). Absent on a host the app reads no comments on.
+   */
+  pullComments?(number: number, since?: string): Promise<ForgePullComment[]>;
+  /** The files one commit changes, for handing a batch's line comment to its change. */
+  commitFiles?(sha: string): Promise<string[]>;
   /**
    * The active rule sets that hold `branch`, each with whether this sign-in
    * may skip it. GitHub only (FI3-1571 piece 2); absent elsewhere.

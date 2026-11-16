@@ -30,6 +30,7 @@ import {
   type ForgeLocation,
   type ForgeProject,
   type ForgePull,
+  type ForgePullComment,
   type ForgeReadiness,
   type ForgeRuleset,
   type ForgeSkipMerge,
@@ -45,6 +46,7 @@ import { waysUnderRules } from "../../mergeWays";
 import { RELEASE_UPLOAD_TIMEOUT_MS } from "../../releaseFile";
 import type { ArchiveRanges } from "../../workflows";
 import { GitHubAttachments, githubStoryDestination } from "./attachments";
+import { readCommitFiles, readPullComments } from "./comments";
 import { GitHubContributions } from "./contributions";
 import { GitHubWorkflows } from "./workflows";
 
@@ -951,6 +953,25 @@ export class GitHubForge implements Forge {
       mergeable: pull.mergeable ?? null,
       ...(pull.mergeable_state ? { mergeableState: pull.mergeable_state } : {}),
     };
+  }
+
+  /** The signed-in account's name, read once for this forge. */
+  private viewer: Promise<string> | undefined;
+
+  async pullComments(number: number, since?: string): Promise<ForgePullComment[]> {
+    const get = (path: string) => this.request("GET", path);
+    this.viewer ??= (get("/user") as Promise<{ login?: string } | null>).then(
+      (user) => user?.login ?? "",
+    );
+    const viewer = await this.viewer.catch((caught: unknown) => {
+      this.viewer = undefined;
+      throw caught;
+    });
+    return readPullComments(get, this.repoPath(), number, viewer, since);
+  }
+
+  commitFiles(sha: string): Promise<string[]> {
+    return readCommitFiles((path) => this.request("GET", path), this.repoPath(), sha);
   }
 
   /**

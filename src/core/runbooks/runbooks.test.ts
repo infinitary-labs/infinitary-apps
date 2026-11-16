@@ -171,10 +171,10 @@ describe("runbooks over existing prompt and skill doors", () => {
         .builtins()
         .filter((book) => book.startsOff)
         .map((book) => book.id),
-    ).toEqual(["architecture"]);
+    ).toEqual(["pull-comments", "architecture"]);
     const switches = () => Object.fromEntries(books.list().map((book) => [book.id, book.enabled]));
     const allOn = Object.fromEntries(BUILTIN_RUNBOOK_ORDER.map((id) => [id, true]));
-    expect(switches()).toEqual({ ...allOn, architecture: false });
+    expect(switches()).toEqual({ ...allOn, "pull-comments": false, architecture: false });
     const off = { text: books.firstmate().text, crew: books.crew(code) };
     expect(off.text).not.toContain("# Advanced architecture");
     expect(off.crew.text).not.toContain("# Advanced architecture");
@@ -186,6 +186,7 @@ describe("runbooks over existing prompt and skill doors", () => {
     expect(Object.fromEntries(updated.list().map((book) => [book.id, book.enabled]))).toEqual({
       ...allOn,
       sequences: false,
+      "pull-comments": false,
       architecture: false,
     });
     const beforeOn = updated.firstmate().text;
@@ -215,6 +216,34 @@ describe("runbooks over existing prompt and skill doors", () => {
     expect(reopened.crew(code).skills.map((each) => each.name)).not.toContain(
       "advanced-architecture",
     );
+  });
+  // Intent: INF-4445's approved plan with the captain's answers - Pull request comments starts
+  // off, one switch for every project; while on it serves its guidance to pull request crew and
+  // the first mate and asks the host for the comment wake, which a personal copy keeps.
+  it("asks for the comment wake and serves its guidance only while Pull request comments is on", () => {
+    const { db, books } = fixture();
+    const crew = (delivery: string) => books.crew({ ...code, delivery }).text;
+    const section = readFileSync(join(root, "pull-comments/crew.md"), "utf8").trim();
+    expect(books.list().find((book) => book.id === "pull-comments")?.enabled).toBe(false);
+    expect(books.wakes()).toEqual(new Set());
+    expect(crew("queue-pr")).not.toContain(section);
+    expect(books.crew({ ...code, delivery: "queue-pr" }).wakes).toEqual([]);
+    books.set("pull-comments", true);
+    const reopened = new Runbooks(root, new SettingsStore(db));
+    expect(reopened.wakes()).toEqual(new Set(["pull-request-comments"]));
+    expect(reopened.crew({ ...code, delivery: "queue-pr" }).text).toContain(section);
+    expect(reopened.crew({ ...code, delivery: "direct-pr" }).text).toContain(section);
+    expect(reopened.crew({ ...code, delivery: "local-merge" }).text).not.toContain(section);
+    // The conversation told of the section is the one the host may wake about it.
+    expect(reopened.crew({ ...code, delivery: "queue-pr" }).wakes).toEqual([
+      "pull-request-comments",
+    ]);
+    expect(reopened.crew({ ...code, delivery: "local-merge" }).wakes).toEqual([]);
+    expect(reopened.firstmate().text).toContain(
+      readFileSync(join(root, "pull-comments/guide.md"), "utf8").trim(),
+    );
+    reopened.set("pull-comments", false);
+    expect(reopened.wakes()).toEqual(new Set());
   });
   it("serves the operation line, and Casual projects names where its skip rule lives rather than a place", () => {
     // Intent: INF-1865. The move into runbooks dropped the operation line docs/sequences.md

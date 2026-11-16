@@ -43,6 +43,7 @@ import type { DraftReadiness } from "./draftReadiness";
 import type { MainBranchReading } from "./mainCheckWake";
 import { approvalClosesOn } from "./mergeAuthorization";
 import { type MergedStory, mergedStoryOf } from "./mergedStory";
+import { told as toldOfComments } from "./pullComments";
 
 /**
  * `merged`: no open change for the branch, and the pull request the task
@@ -580,10 +581,16 @@ export class ChangeChecks {
     )
       return;
     this.options.tasks.delivery.recordChangeEvidence(record.id, { contributionState: next });
+    // While comments are read for this crewmate, the comment wake says what a
+    // comment changed: only a new state wakes here, so one comment never wakes twice.
+    const comments =
+      this.options.commentsWatched?.() === true &&
+      forge.pullComments !== undefined &&
+      toldOfComments(record);
     if (
       before &&
       (before.state !== next.state ||
-        (before.updatedAt && next.updatedAt && before.updatedAt !== next.updatedAt))
+        (!comments && before.updatedAt && next.updatedAt && before.updatedAt !== next.updatedAt))
     )
       this.options.steer?.(record.id, {
         facts: {

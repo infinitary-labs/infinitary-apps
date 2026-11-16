@@ -128,6 +128,13 @@ export class CrewSessions {
         runbookText: crewRunbookText(served),
       });
       runbookSkills = served.skills;
+      // The host's wakes follow what this conversation was told (docs/forge.md,
+      // "Comments on a pull request"); a task never told of one keeps no fact.
+      const before = this.core.options.tasks.get(task.id)?.delivery?.servedWakes ?? [];
+      if (before.join("\n") !== served.wakes.join("\n"))
+        this.core.options.tasks.delivery.recordChangeEvidence(task.id, {
+          servedWakes: served.wakes,
+        });
     }
     const spec = this.core.options.sessionSpec
       ? this.core.options.sessionSpec(briefed, binding)

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "pull-request-comments",
+      "kind": "feature",
+      "area": "crewmates",
+      "title": "A crewmate answers comments on its pull request until it merges",
+      "body": "Turn on Pull request comments in Settings → Runbooks, and when someone comments on a crewmate's pull request on GitHub, the crewmate reads it. A clear fix it makes and pushes itself, then replies to say what changed. A comment that needs your judgment comes to you as a choice on a card. It works for a pull request you point your first mate at, and for a batch of your own changes, where each comment goes to the crewmate whose change it is about. Your own comments on GitHub count as your words, never as approval to merge. It starts off.",
+      "picture": {
+        "dark": "pull-request-comments-dark.webp",
+        "light": "pull-request-comments-light.webp",
+        "alt": "Settings, Runbooks, with a new Pull request comments switch, off, between Batched pull requests and Computer cleanup"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

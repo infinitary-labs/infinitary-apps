@@ -20,6 +20,7 @@ import {
   type Forge,
   type ForgeChange,
   ForgeError,
+  type ForgePull,
   ForgeWriteError,
   isSignInForgeFailure,
   isTransientForgeFailure,
@@ -146,6 +147,17 @@ export type BatchesOptions = {
   landed?: typeof landedCommits;
   /** A new batch branch's name; injectable for a test. */
   branchName?: () => string;
+  /**
+   * Read new comments on the open batch's pull request and hand each to the
+   * changes it is about (docs/forge.md, "Comments on a pull request").
+   * Absent, or with no runbook asking for the comment wake, nothing is read.
+   */
+  comments?: (input: {
+    repo: RepoView;
+    open: OpenBatch;
+    pull: ForgePull;
+    forge: Forge;
+  }) => Promise<void>;
 };
 
 /**
@@ -393,6 +405,10 @@ export class Batches {
       await forge.deleteBranch?.(open.branch).catch(() => {});
       return this.save(repo.id, reopened(record));
     }
+    // A comment reading that fails is read again on a later pass; the batch goes on.
+    await this.options.comments?.({ repo, open, pull, forge }).catch((caught: unknown) => {
+      console.warn("[batches] could not read the batch's comments:", caught);
+    });
     if (open.stale) return this.recombine(repo, record, "none");
     if (pull.headSha !== open.head) {
       // A pull request can trail its branch for a moment after a push: the

@@ -60,6 +60,12 @@ export type ChangeDeliveryOptions = {
    * to act on. A wake with `once` goes out once per task and name.
    */
   steer?: (taskId: string, wake: TypedWake) => void;
+  /**
+   * Whether an enabled runbook asks for the comment wake (docs/forge.md,
+   * "Comments on a pull request"), read at each use. Absent or false, no
+   * comment is read and a contribution's activity wakes as before.
+   */
+  commentsWatched?: () => boolean;
   /** Test seam for disposable forge fixtures without real remote heads. */
   validateRange?: (dir: string, branch: string, forge: Forge, head?: string) => Promise<void>;
   /** Test seam for a repair declaration's git facts (`lineageFacts`). */

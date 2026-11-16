@@ -55,8 +55,11 @@ test("runbook switches persist and the first mate uses the same named switch", a
       feedLine(at.page, ACTIONS.runbook.done({ name: workflows.name, enabled: false })),
     ).toBeVisible();
     const off = await at.page.evaluate(() => window.infinitary.settings.getRunbooks());
-    const startsOff = books.filter((book) => book.startsOff).map((book) => book.id);
-    expect(startsOff).toEqual(["architecture"]);
+    const startsOff = books
+      .filter((book) => book.startsOff)
+      .map((book) => book.id)
+      .sort();
+    expect(startsOff).toEqual(["architecture", "pull-comments"]);
     expect(
       off
         .filter((book) => !book.enabled)

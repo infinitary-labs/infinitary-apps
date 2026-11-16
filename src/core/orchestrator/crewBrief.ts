@@ -501,4 +501,29 @@ export class CrewBrief {
     );
     return now.filter((section) => !earlier.has(section));
   }
+
+  /**
+   * Adds the host wakes the guidance a policy notice carries asks for to what
+   * the conversation was told (`servedWakes`, docs/forge.md, "Comments on a
+   * pull request"): only those the new policies select and the earlier ones
+   * did not, as `addedGuidance` works out its sections; its earlier guidance
+   * stays with it, so none is taken away.
+   */
+  noteAddedWakes(
+    taskId: string,
+    before: EffectiveTaskPolicies | null | undefined,
+    policies: EffectiveTaskPolicies,
+  ): void {
+    if (!this.options.runbooks || !before) return;
+    const backend = this.host.backendOf(taskId) ?? "";
+    const wakesFor = (chosen: EffectiveTaskPolicies) =>
+      this.options.runbooks?.crew(this.runbookFacts(taskId, crewmateProcedureFor(chosen), backend))
+        .wakes ?? [];
+    const earlier = new Set(wakesFor(before));
+    const added = wakesFor(policies).filter((wake) => !earlier.has(wake));
+    const told = this.options.tasks.get(taskId)?.delivery?.servedWakes ?? [];
+    const servedWakes = [...new Set([...told, ...added])];
+    if (servedWakes.length > told.length)
+      this.options.tasks.delivery.recordChangeEvidence(taskId, { servedWakes });
+  }
 }

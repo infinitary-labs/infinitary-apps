@@ -452,6 +452,12 @@ export type CrewSupervisorOptions = {
    */
   readCheckWatch?: (taskId: string) => Promise<WatchedReading>;
   /**
+   * The quiet refresh's comment reading (`PullComments.readTask`,
+   * docs/forge.md "Comments on a pull request"): new comments on the task's
+   * pull request wake its crewmate once. Absent means none are read.
+   */
+  readComments?: (taskId: string) => Promise<void>;
+  /**
    * The default branch's checks for projects with a standing baseline wait
    * (INF-833 Fix 4, `ChangeChecks.readDefaultBranchChecks`). Absent means a
    * main failure still resumes only when the named task closes.

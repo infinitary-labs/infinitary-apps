@@ -82,6 +82,10 @@ const SEAT_CALLS = "seat:firstmate";
  */
 const LOOK_CALLS = "look:automation";
 
+/** A GitHub write that sends a comment, a reply to a line comment or a review on a pull request. */
+const COMMENT_WRITE =
+  /^(?:issues\/\d+\/comments|pulls\/\d+\/comments(?:\/\d+\/replies)?|pulls\/\d+\/reviews)$/;
+
 /**
  * A panel's calls (docs/integrations.md, "Panels"): a panel is no task and
  * no seat, so its calls spend no allowance; the action's own rule and the
@@ -846,6 +850,26 @@ export class GithubGatewayService {
     return undefined;
   }
 
+  /**
+   * A comment, reply or review this task's crewmate sent, on whichever
+   * project it went to, is kept on the task, so the comment reading never
+   * wakes it about its own words, which appear under the same sign-in as the
+   * person's own (docs/forge.md, "Comments on a pull request").
+   */
+  private noteSentComment(taskId: string, rest: string, response: ForgeApiResponse): void {
+    if (!COMMENT_WRITE.test(rest.split("?")[0] ?? "")) return;
+    let id: unknown;
+    try {
+      id = responseObject(response).id;
+    } catch {
+      return;
+    }
+    if (typeof id !== "number") return;
+    const sent = this.options.tasks.get(taskId)?.delivery?.sentComments ?? [];
+    if (!sent.includes(id))
+      this.options.tasks.delivery.recordChangeEvidence(taskId, { sentComments: [...sent, id] });
+  }
+
   /** Watch only exact run identities from successful own-project writes, never guess by version. */
   private async afterWrite(
     taskId: string,
@@ -854,6 +878,12 @@ export class GithubGatewayService {
     response: ForgeApiResponse,
     dispatched?: DispatchBaseline,
   ): Promise<string> {
+    if (response.status < 300 && target.forge.kind === "github" && route.method === "POST")
+      this.noteSentComment(
+        taskId,
+        route.rest.split("/").map(decodeURIComponent).join("/"),
+        response,
+      );
     if (response.status >= 300 || !route.own || target.via !== "project") return "";
     const notes: string[] = [];
     const rest = route.rest.split("/").map(decodeURIComponent).join("/");

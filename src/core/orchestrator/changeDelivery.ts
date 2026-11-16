@@ -6,6 +6,7 @@ import { CheckChangeTool } from "./checkChangeTool";
 import { DraftReadiness } from "./draftReadiness";
 import { MergeCardSteps } from "./mergeCardSteps";
 import { MergeReviews } from "./mergeReviews";
+import { PullComments } from "./pullComments";
 import type { SettleServiceHost } from "./settleHost";
 
 /**
@@ -23,6 +24,8 @@ export type ChangeDelivery = {
   publication: ChangePublication;
   /** show_merge_card's steps up to the card: the story, the push, the proof and the publication. */
   mergeCard: MergeCardSteps;
+  /** New comments on a task's or a batch's pull request (docs/forge.md, "Comments on a pull request"). */
+  comments: PullComments;
 };
 
 export function createChangeDelivery(options: ChangeDeliveryOptions): ChangeDelivery {
@@ -44,5 +47,6 @@ export function createChangeDelivery(options: ChangeDeliveryOptions): ChangeDeli
     checkTool: new CheckChangeTool(context, checks, reviews),
     publication,
     mergeCard: new MergeCardSteps(context, publication),
+    comments: new PullComments(context, () => options.commentsWatched?.() === true),
   };
 }

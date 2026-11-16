@@ -10,6 +10,7 @@ import {
   waitingForMaintainers,
 } from "@shared/contributions";
 import type { FmEvent } from "@shared/events";
+import { PULL_REQUEST_COMMENTS_WAKE } from "@shared/pullComments";
 import type { RepoView } from "@shared/repos";
 import { MERGE_WORDS } from "@shared/vocabulary";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -861,16 +862,21 @@ describe("approved once-per-project contribution consent", () => {
         items: [{ name: "example check", state: "success" }],
       }),
       pull: async () => pull,
+      pullComments: async () => [],
       label: () => `#${change.number}`,
       url: () => change.url,
       putIn,
     } as unknown as Forge;
     const steer = vi.fn();
+    // Review INF-4479's N1: with Pull request comments on, a crewmate whose
+    // conversation opened without its guidance still hears maintainer activity,
+    // and one told of it hears comments through the comment wake instead.
     const delivery = createChangeDelivery({
       tasks,
       repos: world.repos,
       forgeFor: () => forge,
       steer,
+      commentsWatched: () => true,
     });
     await delivery.checks.readWatched(task.id);
     expect(waitingForMaintainers(tasks.get(task.id)?.delivery)).toBe(true);
@@ -883,6 +889,10 @@ describe("approved once-per-project contribution consent", () => {
       kind: "contribution-updated",
       state: "open",
     });
+    tasks.delivery.recordChangeEvidence(task.id, { servedWakes: [PULL_REQUEST_COMMENTS_WAKE] });
+    pull = { ...pull, updatedAt: "2026-11-10T20:02:00Z" };
+    await delivery.checks.readWatched(task.id);
+    expect(steer).toHaveBeenCalledTimes(1);
     pull = { ...pull, state: "closed", merged: true };
     await delivery.checks.readWatched(task.id);
     expect(tasks.get(task.id)?.delivery?.contributionState?.state).toBe("merged");

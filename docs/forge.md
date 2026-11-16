@@ -64,7 +64,7 @@ Branch-head and open-change reads retain that source identity rather than confus
 The contributor's published story is a note without merge actions, not a merge offer.
 Card bindings explicitly advertise support for contribution notes; the home still checks each task's saved route.
 The host refuses both direct and reviewed merges on that contribution.
-The existing change watcher keeps reading the upstream request, records its open, merged or closed state, and steers the crewmate when the host reports new activity.
+The existing change watcher keeps reading the upstream request, records its open, merged or closed state, and steers the crewmate when the host reports new activity; while a runbook asks for the comment wake and the crewmate's conversation holds that guidance, only a change of state steers it, and new comments reach it as that wake ("Comments on a pull request").
 The crewmate reads maintainer comments through the existing host reads and pushes requested fixes to the same fork branch.
 Its waiting state says Waiting for the maintainers, and its story note's existing status line follows the confirmed external outcome.
 A confirmed external merge can close a completed contribution whose saved-story note named that exact request and head, without sending another merge.
@@ -991,6 +991,29 @@ The design follows the firstmate repo's PR poll: a watcher that is not a model, 
   The early wake spends no repair round and does not change how a pull request goes green.
 - **The idle ladder** reads a standing watch as the task moving (`Witnesses.checksWatched`, `docs/report-sort.md`): the crewmate that ends its turn to wait is neither nudged nor reported stuck, and its report wakes nobody until the checks finish.
   The early wake does not clear the watch, so the task still reads Waiting for checks.
+
+## Comments on a pull request
+
+While an enabled runbook asks for the `pull-request-comments` wake (`docs/runbooks.md`, "Built-ins"; Pull request comments starts off), the host reads new comments on a followed pull request and wakes its crewmate, with plain forge calls and no model turn (`src/core/orchestrator/pullComments.ts`).
+
+- **Which pull requests**: each live task's current change, when its crewmate's conversation was served guidance that asks for the wake, read on the quiet refresh (`CheckWatcher`'s `readComments`, after the merge read): its own pull request, or one it was pointed at with `check_change` `pull` (`currentChange`).
+  The host records which wakes that guidance asks for when the conversation opens, and when a policy notice adds guidance (`servedWakes`, `Runbooks.crew`), so a crewmate whose conversation opened while the runbook was off is never woken about guidance it does not hold.
+  Each pass of a batch of your own reads the batch's pull request (`Batches.follow`), for the changes whose crewmates were served it.
+  A merged or closed pull request is not read.
+- **Only when it moved**: the reading is a delivery fact, `commentCursor { number, updatedAt, seen }`; while the pull request's last-changed time equals the cursor's, nothing is asked for, and otherwise GitHub's lists are asked only for what changed since it (`readPullComments`, `src/core/forge/providers/github/comments.ts`): conversation comments, line comments and submitted reviews.
+  The first reading of a pull request reads every comment already on it.
+  For a crewmate told of the wake, a pull request's last-changed time alone no longer sends the contribution-updated wake; a state change still does, and an untold crewmate still hears every activity.
+- **Whose comments**: the crewmate's own replies are left out by id, since they share the captain's sign-in: the gateway keeps the id of each comment, line comment or review a crewmate's `github_write` sent, on whichever project it went to (`sentComments`), and a line comment inside such a review is left out by its review.
+  The kept ids are read after GitHub answers the reading, so a reply sent during it is the crewmate's own too.
+  The app's story comment (its marker) and a review with no words are left out too.
+  Every other comment wakes, the captain's own included.
+- **The wake** names each new comment's id, kind, author, the author's relation and its file and line, never its words, which the crewmate reads itself with `github_read` as outside data.
+  The relation comes from GitHub's facts: `bot` for a bot account, `you` for the signed-in person, `can-write` for an owner, or for a member or collaborator whose permission on the project GitHub names as admin or write, which folds every role, a custom one included (`GET /collaborators/{login}/permission`, once per author per reading), `cannot-write` for anyone else.
+  When GitHub refuses that lookup, a member or collaborator counts as `can-write`.
+  One wake per reading, named by the comments it carries (`pull-comments:<number>:<digest>`), so a restart between the wake and the saved reading never sends it again (`InboxStore.enqueueSteerOnce`).
+- **A batch's comments** go to the changes they are about: a line comment to each change whose commit changes its file (`Forge.commitFiles`), any other comment, or one whose file no commit changed, to every change; the wake names the change's commit and how many changes the batch carries.
+  The batch's cursor is kept on each of its changes' tasks.
+- Every judgment about a comment - fix it, ask the captain, answer or let it be - is the runbook's crew section, never the host's.
 
 ## A main failure's wake
 

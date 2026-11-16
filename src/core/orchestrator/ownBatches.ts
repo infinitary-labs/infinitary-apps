@@ -7,6 +7,7 @@ import type { ChangePresentations } from "./changePresentations";
 import type { FirstmateAgent } from "./firstmateAgent";
 import type { KeptApproval } from "./keptApproval";
 import { candidateHead, standInFront, standingAuthorization } from "./mergeAuthorization";
+import type { PullComments } from "./pullComments";
 import { TICK_PERIOD_MS, type Ticker } from "./ticker";
 
 /**
@@ -26,6 +27,8 @@ export function createOwnBatches(owners: {
   /** Owners built after this one, read when a callback runs. */
   late: () => {
     checks: Pick<ChangeChecks, "declaredAbsent">;
+    /** Comments on the batch's pull request, handed to the changes they are about. */
+    comments?: Pick<PullComments, "readBatch">;
     settling: {
       /** Runs a task's kept merge again, so it reads its change's place now. */
       kept: { runMergeAuthorization: (taskId: string) => Promise<unknown> };
@@ -57,6 +60,7 @@ export function createOwnBatches(owners: {
     naming: () => owners.namingRule?.() ?? null,
     approved: (taskId, head) => approval(taskId, head) !== undefined,
     runsNoChecks: (taskId, head) => owners.late().checks.declaredAbsent(taskId, head),
+    comments: async (input) => owners.late().comments?.readBatch(input),
     live: (taskId) => {
       const record = tasks.get(taskId);
       return record !== undefined && !TaskService.isClosed(record);

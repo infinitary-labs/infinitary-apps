@@ -1252,6 +1252,30 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
     });
   });
 
+  // Intent: INF-4445's approved plan - the crewmate's replies appear under the same sign-in as
+  // the captain's own comments, so the task keeps their ids and the comment reading never wakes it
+  // about its own words.
+  it("keeps the id of a comment the crewmate sent, on any project, and none for one GitHub refused", async () => {
+    const { write, writeWithoutProject, service, tasks } = await fixture();
+    await write.run({
+      method: "POST",
+      path: "/repos/octo/meter/issues/1/comments",
+      body: '{"body":"hi"}',
+    });
+    await write.run({ method: "POST", path: "/repos/octo/meter/issues/2/comments", body: "{}" });
+    expect(tasks.get("task-1")?.delivery?.sentComments).toEqual([7]);
+    // A reply on a project that is not the task's own, such as a fork's pull request, is its
+    // crewmate's words too once the captain's click sends it.
+    await writeWithoutProject.run({
+      method: "POST",
+      path: "/repos/octo/meter/issues/1/comments",
+      body: '{"body":"hi"}',
+    });
+    const ask = tasks.get("task-2")?.delivery?.writeAsks?.at(-1) as ForgeWriteAsk | undefined;
+    await service.sendAsk("task-2", ask?.id ?? "");
+    expect(tasks.get("task-2")?.delivery?.sentComments).toEqual([7]);
+  });
+
   it("reads a private file without saving GitHub's temporary download token", async () => {
     // Intent: a crewmate's read of a private GitHub file no longer saves the
     // download token (INF-206). Tokens already saved are left alone.

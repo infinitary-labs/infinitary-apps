@@ -1160,6 +1160,7 @@ export class CrewSupervisor {
     const policies = this.options.tasks.policiesOf(record);
     if (!record || !policies) return "";
     const guidance = this.briefs.addedGuidance(taskId, before, policies);
+    if (guidance.length > 0) this.briefs.noteAddedWakes(taskId, before, policies);
     const wake: TypedWake = {
       facts: {
         kind: "task-policies-changed",

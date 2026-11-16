@@ -142,6 +142,11 @@ export type CheckWatcherHost = {
    * finished checks are not refreshed while it waits. Absent = never.
    */
   idleBehindOtherWork?(record: TaskRecord): boolean;
+  /**
+   * Read new comments on the task's pull request and wake its crewmate once
+   * about them (docs/forge.md, "Comments on a pull request"). Absent = none.
+   */
+  readComments?(taskId: string): Promise<void>;
   /** Read the task's named pull request and close it only on a confirmed external merge. */
   reconcileMerged?(taskId: string): Promise<boolean>;
   /** The supervisor's own steer on the task's durable lane. */
@@ -227,6 +232,11 @@ export class CheckWatcher {
       }
       const after = this.host.tasks.get(record.id);
       if (!after || TaskService.isClosed(after)) return;
+      // A comment reading that fails, a spent allowance included, waits for a later pass.
+      if (after.delivery?.prNumber !== undefined)
+        await this.host.readComments?.(record.id).catch((caught: unknown) => {
+          console.warn("[crew] could not read a pull request's comments:", caught);
+        });
       if (after.delivery?.ciWatch) await this.pollTask(record.id, now);
       else if (this.refreshesChecks(after)) await this.refreshTask(record.id, now);
     } finally {

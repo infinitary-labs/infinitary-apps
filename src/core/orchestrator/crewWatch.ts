@@ -89,6 +89,7 @@ export class CrewWatch {
           tasks: options.tasks,
           inbox: options.inbox,
           read: readCheckWatch,
+          ...(options.readComments ? { readComments: options.readComments } : {}),
           ...(options.readPull
             ? {
                 reconcileMerged: (taskId: string) =>

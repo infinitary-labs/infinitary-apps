@@ -47,6 +47,7 @@ export const BUILTIN_RUNBOOK_ORDER = [
   "casual-projects",
   "lessons",
   "batches",
+  "pull-comments",
   "computer-cleanup",
   "architecture",
 ] as const;
@@ -261,8 +262,19 @@ export class Runbooks {
         .map((section) => this.read(entry, section.file)),
     );
   }
-  crew(facts: RunbookFacts): { text: string; skills: RunbookSkillFiles[]; sha: string } {
+  crew(facts: RunbookFacts): {
+    text: string;
+    skills: RunbookSkillFiles[];
+    sha: string;
+    /** The host wakes asked for by the runbooks whose crew sections the facts select. */
+    wakes: string[];
+  } {
     const active = this.active(facts.project);
+    const wakes = active.flatMap((entry) =>
+      crewSectionsOf(entry.manifest).some((section) => runbookMatches(section.when, facts))
+        ? (entry.manifest.wakes ?? [])
+        : [],
+    );
     const text = this.crewSections(facts).join("\n\n");
     const roots = active.flatMap((entry) =>
       entry.manifest.skills ? [this.path(entry, entry.manifest.skills)] : [],
@@ -272,7 +284,15 @@ export class Runbooks {
       text,
       skills,
       sha: createHash("sha256").update(JSON.stringify({ text, skills })).digest("hex"),
+      wakes: [...new Set(wakes)],
     };
+  }
+  /**
+   * Every host wake an enabled runbook asks for (docs/runbooks.md,
+   * "Built-ins"): the host reads only what one asks, and never which one.
+   */
+  wakes(): Set<string> {
+    return new Set(this.active().flatMap((entry) => entry.manifest.wakes ?? []));
   }
   naming(): NamingRule | null {
     return this.active().find((entry) => entry.manifest.naming)?.manifest.naming ?? null;

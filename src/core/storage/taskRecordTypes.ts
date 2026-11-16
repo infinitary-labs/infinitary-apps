@@ -314,6 +314,20 @@ export type TaskDelivery = {
   contribution?: import("@shared/contributions").ContributionRoute;
   contributionState?: import("@shared/contributions").ContributionState;
   /**
+   * Where the comment reading of the task's pull request stands
+   * (docs/forge.md, "Comments on a pull request"): what it last read, so a
+   * restart never wakes the crewmate about a comment twice.
+   */
+  commentCursor?: import("@shared/pullComments").CommentCursor;
+  /** The comments and reviews this task's crewmate sent where the project lives: never woken about. */
+  sentComments?: number[];
+  /**
+   * The host wakes the guidance served when the crewmate's conversation last
+   * opened asks for (`Runbooks.crew`): the host sends only those, so a wake
+   * never points at guidance the crewmate does not hold.
+   */
+  servedWakes?: string[];
+  /**
    * The task's latest typed result as a release before INF-1296 piece 1
    * kept it: a copy of the newest report's. Nothing writes it now; the
    * report entries hold the result, and `TaskService.latestResult` still

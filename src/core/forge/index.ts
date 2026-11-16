@@ -61,6 +61,7 @@ export type {
   ForgeOverall,
   ForgeProject,
   ForgePull,
+  ForgePullComment,
   ForgeReadiness,
   ForgeRuleset,
   ForgeSkipMerge,

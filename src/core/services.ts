@@ -17,6 +17,7 @@ import { modelNames } from "@shared/modelDisplayName";
 import { offeringKey, parseOfferingKey, providerLabel } from "@shared/modelSlots";
 import { desktopConventions } from "@shared/platform";
 import { catalogEntry } from "@shared/providers";
+import { PULL_REQUEST_COMMENTS_WAKE } from "@shared/pullComments";
 import { noChecksSaid, repoConfiguredEvent } from "@shared/repos";
 import { runsForAnotherFirstmate } from "@shared/sshConnection";
 import { BUILTIN_SURFACES } from "@shared/surfaces";
@@ -833,7 +834,11 @@ export async function createServices(
     tasks,
     presentations,
     inbox,
-    late: () => ({ checks: changeDelivery.checks, settling: supervisor.settling }),
+    late: () => ({
+      checks: changeDelivery.checks,
+      comments: changeDelivery.comments,
+      settling: supervisor.settling,
+    }),
     firstmate: () => firstmateForSeat,
     note: (text) => broadcastEvent({ type: "firstmate_note", text }),
     namingRule,
@@ -855,6 +860,7 @@ export async function createServices(
       else if (!inbox.woken(taskId, wake.once))
         inbox.enqueueSteerOnce(taskId, { ...wake, once: wake.once });
     },
+    commentsWatched: () => runbooks.wakes().has(PULL_REQUEST_COMMENTS_WAKE),
     bringBranchHome: (taskId, strict, branch) => placed.bringBranchHome(taskId, strict, branch),
     checkedOut: (taskId) => placed.checkedOut(taskId),
     verifyValidationEvidence: (taskId): void =>
@@ -1175,6 +1181,7 @@ export async function createServices(
     githubRead: (taskId, input) => githubGateway.readForCrew(taskId, input),
     githubWrite: (taskId, input) => githubGateway.write(taskId, input),
     readCheckWatch: (taskId) => changeDelivery.checks.readWatched(taskId),
+    readComments: (taskId) => changeDelivery.comments.readTask(taskId),
     readMainChecks: (repoId) => changeDelivery.checks.readDefaultBranchChecks(repoId),
     readRunWatch: (taskId, runId) => workflowEvidence.readWatched(taskId, runId),
     killJobs: (taskId) => jobs.killForOwner(taskId),

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { RUNBOOK_WAKES } from "./pullComments";
 
 /** Only closed facts already carried by a task may select prompt guidance. */
 export const runbookMatchSchema = z.strictObject({
@@ -58,6 +59,11 @@ export const runbookManifestSchema = z.strictObject({
   naming: namingRuleSchema.optional(),
   /** Off until its switch is turned on, for a runbook that ships as an experiment. */
   startsOff: z.literal(true).optional(),
+  /**
+   * The host's wakes this runbook asks for while it is on, such as new
+   * comments on a pull request (`RUNBOOK_WAKES`, docs/runbooks.md "Built-ins").
+   */
+  wakes: z.array(z.enum(RUNBOOK_WAKES)).optional(),
 });
 export type RunbookManifest = z.infer<typeof runbookManifestSchema>;
 export const runbookViewSchema = z.strictObject({

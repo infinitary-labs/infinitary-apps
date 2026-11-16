@@ -35,12 +35,18 @@ test("a refreshed merge card keeps the repeated occurrence through selection, qu
     throw new Error("missing repeated real paragraphs");
   expect(start.start).toBeGreaterThan(renderedStart.start);
   const comment = page.getByRole("textbox", { name: NOTE_COMMENT_LABEL });
+  // The reveal's highlight is the one a reveal set last, which the frame keeps
+  // (below): the frame lights it for only a second of its own clock.
   const readHighlights = () =>
     inCardBody(ANNOTATION_TITLE, () =>
       Object.fromEntries(
         ["inf-point", "inf-point-queued", "inf-point-reveal"].map((name) => [
           name,
-          Array.from(CSS.highlights.get(name) ?? []).map((range) => ({
+          Array.from(
+            (name === "inf-point-reveal"
+              ? (window as { revealLit?: Highlight }).revealLit
+              : CSS.highlights.get(name)) ?? [],
+          ).map((range) => ({
             text: range.toString(),
             first: Number(
               range.startContainer.parentElement
@@ -97,6 +103,16 @@ test("a refreshed merge card keeps the repeated occurrence through selection, qu
     ".inf-queued-note .inf-note-anchor button",
   );
   if (!anchor) throw new Error("missing actual queued anchor");
+  // A read from outside the frame can miss that second on a busy computer, so
+  // the frame keeps each highlight a reveal sets, for the read to answer.
+  await inCardBody(ANNOTATION_TITLE, () => {
+    const registry = CSS.highlights;
+    const set = registry.set.bind(registry);
+    registry.set = (name: string, highlight: Highlight) => {
+      if (name === "inf-point-reveal") Object.assign(window, { revealLit: highlight });
+      return set(name, highlight);
+    };
+  });
   await userEvent.click(anchor);
   await expect.poll(async () => (await readHighlights())["inf-point-reveal"]).toEqual(exact);
 

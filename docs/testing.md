@@ -142,6 +142,7 @@ A browser test's limit and its waits count only the time the page and the Node p
 So a runner whose disk stalls that process, such as during a seeded home's boot, does not fail a test.
 
 Browser commands (`tests/helpers/browserCommands.ts`) reach the page itself, such as the media a person's Mac sets, and `evaluateInFrame` reads inside a sandboxed frame, found by its name or its title, such as a card body, that the page cannot script; `cdp()` from `vitest/browser` reads the browser's own counters.
+A command that finds a frame the page drew reads Playwright's list of frames only once a request on Playwright's connection has been answered: the test's word that the page drew the frame comes over the runner's connection and can arrive before the browser's word that the frame exists.
 A journey helper that takes a Playwright page, such as the layout invariant or the first mate idle wait, is checked here on a plain page of the browser's own, through a command in `tests/helpers/journeyHelperPages.ts`, never by launching the app only to replace its page.
 A frame program served as text, such as Observe's, draws in a same-origin frame the test builds from the program and the design tokens (`tests/browser/observe-frame.test.ts`).
 The project's Chromium runs with Web Share on, as the window's does, and draws scrollbars as the window does: over the content on a Mac by default, beside it on Linux, and beside it wherever a page styles them.
@@ -875,7 +876,8 @@ Status-only TestFlight requests start no phone or signing job.
 
 ## What a pull request runs
 
-A change's version runs one check, `ci.yml`'s `typecheck-lint-build`, on the PC's PR line (INF-2915's plan, the captain's direction B with the light profile): each push of a task's branch starts it, and so does a pull request ("A pushed branch").
+A change's version runs one check, `ci.yml`'s `typecheck-lint-build`, on the branch-check line (INF-2915's plan, the captain's direction B with the light profile): each push of a task's branch starts it, and so does a pull request ("A pushed branch").
+That line takes the PC's Linux places first and a compute Mac's arm64 Linux guest when none of them can, so a day with the PC down no longer holds every branch check ("Each Linux job's kind").
 Its steps keep what caught problems on pull requests and leave the rest to the swept batch, which runs everything on each approved change before it reaches `main` ("The swept batch").
 Every version runs the release notes check, the phone contract flag, the typecheck, `pnpm check`, each edited unit or integration test file and the unedited ones that read a changed file, once ("Notes").
 The phone contract flag, `scripts/phone-contract-flag.ts`, compares the contract's major and view floor in `src/shared/ipc.ts` with the change's base, and when either moved it names, as a warning that never fails the check, the phone build the next alpha waits for (`docs/alpha.md`, "The phone goes first"); `pnpm check:changed` prints the same before each push, and the change's story carries that build as an after-merge step (INF-4500).
@@ -1523,6 +1525,8 @@ A kind the variable leaves out, and an unset or empty variable, keep the label t
 Name a kind only once runner-up serves its queue, so no job waits on a label nothing serves.
 A Linux job with no kind, such as main's startup fixtures and the Linux packages, never reads `LINUX_QUEUES`; release packages use their separate variable.
 `tests/release-workflows-runners.test.ts` moves each kind alone and holds every other job where it was.
+A compute Mac's guest is an arm64 Ubuntu 24.04 container, so the branch check's whole run passes there as on the PC's x86-64 places: its build, its browser layer, and its critical path on Xvfb with an arm64 Electron.
+A test that passes on only one of them is a defect in the test, repaired at its owner.
 
 | Kind | Jobs | Its old label |
 | --- | --- | --- |
@@ -1530,7 +1534,7 @@ A Linux job with no kind, such as main's startup fixtures and the Linux packages
 | `ci` | `ci.yml`'s `unit-tests`, `integration-tests` and `probe-tests`, `replay.yml`'s `replay-gate`, and `prompt-budget.yml`'s `prompt-budget` | `LINUX_RUNNER` |
 | `gate` | `journeys.yml`'s `choose-journeys` | `LINUX_RUNNER` with `-gate` |
 | `checks` | `verify.yml`'s `linux-checks` lane and its Linux test groups (`linux-tests`) | `LINUX_RUNNER` |
-| `typecheck` | `ci.yml`'s `typecheck-lint-build`, which runs the critical path and so needs a PC queue with the desktop, such as the PC's PR line `shell-pc-linux-pr` | `LINUX_RUNNER` |
+| `typecheck` | `ci.yml`'s `typecheck-lint-build`, the branch check: `fleet-linux-pr`, whose places are the PC's six Linux places first and then each compute Mac's arm64 Linux guest, which takes the job only while no PC place can | `LINUX_RUNNER` |
 
 ### Each Mac job's kind and size
 

@@ -27,10 +27,19 @@ const emulateReducedMotion: BrowserCommand<[ReducedMotion]> = async (context, re
  * card body's frame carries its card's - and answers what it returns. A card
  * body draws in a sandboxed frame of its own origin, which the page that
  * holds it cannot script; the browser can, as the journeys' frame locators did.
+ *
+ * The test asks once its page shows the frame drawn, and that word reaches
+ * this process over the runner's own connection, while the browser's word
+ * that the frame exists comes over Playwright's: on a busy computer it may
+ * still be unread, and Playwright's list of the page's frames then lacks a
+ * frame the page already drew. A request on Playwright's connection is
+ * answered only after every word the browser sent before it, so the list is
+ * read once one has been answered.
  */
 const evaluateInFrame: BrowserCommand<
   [frame: string | { title: string }, source: string, argument?: unknown]
 > = async ({ page }, frame, source, argument) => {
+  await page.mainFrame().evaluate("0");
   let found = typeof frame === "string" ? page.frame({ name: frame }) : null;
   if (typeof frame !== "string") {
     // More than one element may carry the title - a card leaving the stage

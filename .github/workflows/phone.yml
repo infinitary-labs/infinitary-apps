@@ -25,6 +25,10 @@ name: phone
 # beyond the iPhone each part runs on. The device list below, the device input and each device's artifacts
 # follow it (tests/phone-ci.test.ts holds them to it), and the gate runs a part only on the devices its
 # row names, so a call or a request for every part runs on the iPad only the parts about the iPad.
+# INF-4241 piece 8: the iPhone Duo is a third device, checked in the four flat sizes its hinge gives
+# it. A call that names no device, as the phone release's does, and a request of every part on every
+# device run one job, matrix device "every", whose gate runs every device's lanes from one build on
+# one phone Mac and keeps one part-times.json; a narrower request keeps a job a device.
 on:
   workflow_call:
     inputs:
@@ -37,7 +41,7 @@ on:
         type: string
         default: ''
       device:
-        description: The one device this call checks, ipad or iphone; empty checks both
+        description: The one device this call checks, ipad, duo or iphone; empty checks every device in one job
         type: string
         default: ''
   workflow_dispatch:
@@ -58,7 +62,7 @@ on:
         description: Parts to run, separated by spaces (empty runs all)
         type: string
       device:
-        description: The one device this request checks, ipad or iphone; empty checks both
+        description: The one device this request checks, ipad, duo or iphone; empty checks every device
         type: string
         default: ''
       starve:
@@ -117,7 +121,7 @@ jobs:
   # request on a branch that would run every part names its task and reason, as a full Linux
   # sweep does, and is refused on a light Linux machine before it waits for a phone guest
   # (docs/testing.md, "What a task branch requests"). A call and every narrower request pass.
-  # INF-3205: every route refuses a device other than the two here, before a phone Mac is taken.
+  # INF-3205: every route refuses a device other than the ones here, before a phone Mac is taken.
   request:
     name: ${{ format('{0} · Check phone check request', inputs.trigger || 'Manual request') }}
     # The phone release's call, which passes its resolved source, runs it on GitHub's hosted Ubuntu.
@@ -126,6 +130,7 @@ jobs:
       devices: ${{ steps.request-select.outputs.devices }}
       parts: ${{ steps.request-select.outputs.parts }}
       ipad_parts: ${{ steps.request-select.outputs.ipad_parts }}
+      duo_parts: ${{ steps.request-select.outputs.duo_parts }}
       iphone_parts: ${{ steps.request-select.outputs.iphone_parts }}
       repeat_parts: ${{ steps.request-select.outputs.repeat_parts }}
       repeat_tests: ${{ steps.request-select.outputs.repeat_tests }}
@@ -144,8 +149,8 @@ jobs:
           REASON: ${{ inputs.reason }}
         run: |
           case "$DEVICE" in
-            ''|ipad|iphone) ;;
-            *) echo "Unknown phone device: $DEVICE; send ipad, iphone or nothing for both"; exit 1 ;;
+            ''|duo|ipad|iphone) ;;
+            *) echo "Unknown phone device: $DEVICE; send ipad, duo, iphone or nothing for every device"; exit 1 ;;
           esac
           if [ "$MANUAL" != true ]; then exit 0; fi
           if [ -n "$LAST_PASS" ]; then
@@ -157,7 +162,7 @@ jobs:
               echo 'A branch request for every phone part requires a task and reason; send affected "true" or name parts instead'; exit 1;
             }
           fi
-          printf 'Phone request: every_part=%s affected=%s parts=%s device=%s%s task=%s reason=%s\n' "$EVERY_PART" "$AFFECTED" "$PARTS" "${DEVICE:-both}" "${LAST_PASS:+ last_pass=$LAST_PASS}" "$TASK" "$REASON" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Phone request: every_part=%s affected=%s parts=%s device=%s%s task=%s reason=%s\n' "$EVERY_PART" "$AFFECTED" "$PARTS" "${DEVICE:-every}" "${LAST_PASS:+ last_pass=$LAST_PASS}" "$TASK" "$REASON" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/checkout@v4
         if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.waits && !inputs.tools && inputs.evidence_run == ''
         with:
@@ -202,15 +207,16 @@ jobs:
   # Each job's name leads with the caller's trigger (scripts/ci-job-names.mjs).
   native-phone:
     needs: request
-    name: ${{ inputs.evidence_run != '' && 'Manual request · Phone checks not requested' || format(inputs.waits && '{0} · Wait-clock tests ({1})' || inputs.tools && '{0} · Tool tests ({1})' || '{0} · Phone checks ({1})', inputs.trigger || 'Manual request', matrix.device == 'ipad' && 'iPad' || 'iPhone') }}
+    name: ${{ inputs.evidence_run != '' && 'Manual request · Phone checks not requested' || format(inputs.waits && '{0} · Wait-clock tests ({1})' || inputs.tools && '{0} · Tool tests ({1})' || '{0} · Phone checks ({1})', inputs.trigger || 'Manual request', matrix.device == 'ipad' && 'iPad' || matrix.device == 'duo' && 'iPhone Duo' || matrix.device == 'every' && 'every device' || 'iPhone') }}
     if: inputs.evidence_run == '' && needs.request.outputs.devices != '[]'
     # INF-2970's fix 1: one job per device, each on its own phone Mac; a call or a request may
-    # name its one device (INF-3205).
-    # One device failing never cancels the other, so each reports its own parts, as the release does.
+    # name its one device (INF-3205). INF-4241 piece 8: a call that names none, and a request of every
+    # part on every device, run one job of every device from one build.
+    # One device failing never cancels another, so each reports its own parts.
     strategy:
       fail-fast: false
       matrix:
-        device: ${{ fromJSON(needs.request.outputs.devices || (inputs.device && format('["{0}"]', inputs.device) || '["ipad","iphone"]')) }}
+        device: ${{ fromJSON(needs.request.outputs.devices || (inputs.device && format('["{0}"]', inputs.device) || '["every"]')) }}
     # Required: no override or local fallback. The fleet serves this label only
     # from the two vBoxx VMs; a missing mapping supplies no runnable destination.
     runs-on: ${{ fromJSON(vars.MAC_QUEUES).phone }}
@@ -250,10 +256,11 @@ jobs:
         name: Read the chosen parts
         if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.parts && !inputs.waits && !inputs.tools && inputs.evidence_run == ''
         run: |
-          printf 'parts=%s\nipad_parts=%s\niphone_parts=%s\nrepeat_parts=%s\nfull=%s\n' "$PARTS" "$IPAD_PARTS" "$IPHONE_PARTS" "$REPEAT_PARTS" "$FULL" >> "$GITHUB_OUTPUT"
+          printf 'parts=%s\nipad_parts=%s\nduo_parts=%s\niphone_parts=%s\nrepeat_parts=%s\nfull=%s\n' "$PARTS" "$IPAD_PARTS" "$DUO_PARTS" "$IPHONE_PARTS" "$REPEAT_PARTS" "$FULL" >> "$GITHUB_OUTPUT"
         env:
           PARTS: ${{ needs.request.outputs.parts }}
           IPAD_PARTS: ${{ needs.request.outputs.ipad_parts }}
+          DUO_PARTS: ${{ needs.request.outputs.duo_parts }}
           IPHONE_PARTS: ${{ needs.request.outputs.iphone_parts }}
           REPEAT_PARTS: ${{ needs.request.outputs.repeat_parts }}
           FULL: ${{ needs.request.outputs.full }}
@@ -261,7 +268,7 @@ jobs:
         name: Decide whether the device gate runs
         run: echo "gate=$GATE" >> "$GITHUB_OUTPUT"
         env:
-          GATE: ${{ !inputs.affected || inputs.parts != '' || (matrix.device == 'ipad' && steps.request-select.outputs.ipad_parts != '') || (matrix.device != 'ipad' && steps.request-select.outputs.parts != '') }}
+          GATE: ${{ !inputs.affected || inputs.parts != '' || (matrix.device == 'ipad' && steps.request-select.outputs.ipad_parts != '') || (matrix.device == 'duo' && steps.request-select.outputs.duo_parts != '') || (matrix.device != 'ipad' && matrix.device != 'duo' && steps.request-select.outputs.parts != '') }}
       # Install directly in the placed guest, never in a nested local clone.
       - uses: ./Application Support/firstmate/.github/actions/pnpm
         if: ${{ steps.scope.outputs.gate == 'true' }}
@@ -298,8 +305,9 @@ jobs:
       # It checks Swift trust, native recovery and the published client; pnpm check checks generated files.
       # INF-662: one gate checks and builds once, its device on one simulator it starts
       # once (INF-1438) and each part on its own test home; any failing part fails it.
-      # INF-2970's fix 1: each phone Mac runs its job's one device. Release calls run every part the
-      # device's rows of PHONE_PARTS name (INF-4241 piece 6);
+      # INF-2970's fix 1: each phone Mac runs its job's one device, or every device in the one job
+      # of a full check (INF-4241 piece 8). Release calls run every part each device's rows of
+      # PHONE_PARTS name (INF-4241 piece 6), the Duo's with the hinge its row names;
       # affected requests use reached parts. INF-4241 piece 3 (INF-4308, the captain's "Build on two
       # at once"): the gate runs as many simulated devices of that device as the Mac's processors and
       # memory hold, two on a 10-core, 9 GB compute VM, and shares the parts among them by their
@@ -318,8 +326,8 @@ jobs:
       # allowances, one of them past these 90 minutes too (runs 41236951239 and 41236954773).
       - id: both
         name: Read and recover on iPhone and iPad
-        # The iPad runs each part once; the iPhone also runs the edited parts' two more passes.
-        timeout-minutes: ${{ matrix.device != 'ipad' && steps.request-select.outputs.repeat_parts != '' && 270 || 90 }}
+        # The iPad and the Duo run each part once; the iPhone also runs the edited parts' two more passes.
+        timeout-minutes: ${{ matrix.device != 'ipad' && matrix.device != 'duo' && steps.request-select.outputs.repeat_parts != '' && 270 || 90 }}
         if: ${{ steps.scope.outputs.gate == 'true' }}
         run: |
           parts=()
@@ -336,8 +344,8 @@ jobs:
           if [ -n "$PHONE_REPEAT_TESTS" ]; then parts+=(--repeat-tests "$PHONE_REPEAT_TESTS"); fi
           evidence="$RUNNER_TEMP/phone"
           case "$PHONE_DEVICE" in
-            ipad) device=(--ipad); evidence="$evidence/ipad" ;;
-            iphone) device=(); evidence="$evidence/iphone" ;;
+            every) device=(--every-device) ;;
+            ipad|duo|iphone) device=(--device "$PHONE_DEVICE"); evidence="$evidence/$PHONE_DEVICE" ;;
             *) echo "Unknown phone device: $PHONE_DEVICE" >&2; exit 1 ;;
           esac
           node scripts/test-phone.ts "${device[@]}" "${parts[@]}" --evidence "$evidence"

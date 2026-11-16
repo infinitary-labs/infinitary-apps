@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import type { PhoneHinge } from "./phone-hinge.ts";
 
 // INF-662 piece 1: the phone check builds once and gives each device's tests their own
 // test home. Xcode writes the scheme's PHONE_TEST_HOME, empty, into each test target's
@@ -52,12 +53,17 @@ export function partPlanPath(built: string, device: PhoneDevice, part: string, s
 // name it, at a phone release and on a request alike; this one table is the device list phonePasses, phoneJobs,
 // scripts/affected-phone.ts, phone.yml and ios-release.yml follow (tests/phone-ci.test.ts holds the workflows
 // to it).
+// INF-4241 piece 8: a part the iPhone Duo runs names the hinge the gate opens or closes before it (`hinge`), so the Duo
+// pass checks INF-4210's promises in the Duo's flat poses: closed upright and on its side, and open like a book; turned
+// open, the simulated Duo keeps the app in the book's orientation, so that pose is not checked. The gate moves the hinge once through scripts/phone-hinge.ts and fails the part when the Duo does
+// not show it.
 export const PHONE_JOURNEY = "InfinitaryUITests/PhoneJourney";
-export type PhoneDevice = "iphone" | "ipad";
+export type PhoneDevice = "iphone" | "ipad" | "duo";
 /** A row of PHONE_PARTS: the part's name, the journey test or app-hosted class it runs, whether it chooses a library
- * photo, and the devices beyond the iPhone it runs on with the reason each needs it. */
+ * photo, the devices beyond the iPhone it runs on with the reason each needs it, and, where the Duo is one of them,
+ * the hinge the Duo starts the part with. */
 export type PhonePartRow = { name: string; photos: boolean } & ({ test: string } | { suite: string }) &
-  ({ devices?: undefined } | { devices: readonly Exclude<PhoneDevice, "iphone">[]; why: string });
+  ({ devices?: undefined } | { devices: readonly Exclude<PhoneDevice, "iphone">[]; why: string; hinge?: PhoneHinge });
 export const PHONE_PARTS = [
   { name: "join-read", test: "testJoinAndRead", photos: false, devices: ["ipad"], why: "its Settings and approvals name This iPad, and turned it shows the wide layout's sidebar beside the stage" },
   { name: "join-activity", test: "testActivityAndCatchUp", photos: false },
@@ -101,6 +107,9 @@ export const PHONE_PARTS = [
   // INF-3830 pieces 2 and 3: the computer's panels on the Panels tab, from a fixture panel on the test home's real core,
   // with a panel's title-row buttons, its cards on Home and its taps that open a task (one part since INF-4241).
   { name: "panels", test: "testPanelsTab", photos: false, devices: ["ipad"], why: "turned, Panels is the wide layout sidebar's third choice beside the stage" },
+  // INF-4241 piece 8: the layout in the Duo's flat poses, the hinge moved inside the part, and a device
+  // that never folds showing no Split at the fold.
+  { name: "fold", test: "testLayoutFollowsTheFold", photos: false, devices: ["duo"], hinge: "closed", why: "closed the one column, upright and on its side, open like a book the sidebar reaches the fold, Split at the fold shows by itself and turns the split off" },
   // INF-2989: the weak link checks (INF-2668, INF-2669) wait out real links and silences, about five minutes a
   // device, which doubled the rest part they joined. An app-hosted class of their own, so a change to the other
   // app-hosted tests repeats only the rest part and a change to these repeats only them.
@@ -117,6 +126,15 @@ export function partDevices(name: string): PhoneDevice[] {
   const part: PhonePartRow | undefined = PHONE_PARTS.find((each) => each.name === name);
   if (!part) throw new Error(`No phone journey part is named ${name}`);
   return ["iphone", ...(part.devices ?? [])];
+}
+
+/** The hinge the Duo starts a part with, from its row of PHONE_PARTS; a part the Duo runs always names one. */
+export function partHinge(name: string): PhoneHinge {
+  const part: PhonePartRow | undefined = PHONE_PARTS.find((each) => each.name === name);
+  if (!part) throw new Error(`No phone journey part is named ${name}`);
+  if (!part.devices?.includes("duo")) throw new Error(`The ${name} part does not run on the duo`);
+  if (!part.hinge) throw new Error(`The ${name} part runs on the duo but names no hinge to start it with`);
+  return part.hinge;
 }
 
 /** Every device some part runs on, the iPhone first: the devices phone.yml and ios-release.yml check. */
@@ -241,7 +259,7 @@ export function phoneTestsStarted(part: string, output: string, tests: readonly 
  * INF-1438: a device with one lane runs its parts in this order on the one simulator it starts (`phoneLanePlan`). */
 export function phoneJobs(devices: PhoneDevice[], parts: readonly string[] = PHONE_PARTS.map((part) => part.name)) {
   for (const part of parts) partSelection(part);
-  const order: PhoneDevice[] = ["ipad", "iphone"];
+  const order: PhoneDevice[] = ["ipad", "duo", "iphone"];
   return PHONE_PARTS.filter((part) => parts.includes(part.name)).flatMap((part) => order
     .filter((device) => devices.includes(device) && partDevices(part.name).includes(device))
     .map((device) => ({ device, part: part.name })));
@@ -268,7 +286,7 @@ export function phonePasses(devices: PhoneDevice[], { parts = [], iphoneOnly = [
   const first = phoneJobs(devices, [...parts, ...iphoneOnly])
     .filter(({ device, part }) => device === "iphone" || !iphoneOnly.includes(part) || parts.includes(part))
     .map((job) => ({ ...job, round: 1 }));
-  const order: PhoneDevice[] = ["ipad", "iphone"];
+  const order: PhoneDevice[] = ["ipad", "duo", "iphone"];
   return order.filter((device) => devices.includes(device)).flatMap((device) => [
     ...first.filter((job) => job.device === device),
     ...(device === "iphone"
@@ -370,7 +388,8 @@ export function partTimes(text: string | undefined, parts: readonly { name: stri
 }
 
 /** INF-4241 piece 3: the recorded part times the gate shares a device's parts out by, a full gate's part-times.json
- * copied whole (INF-4308's one-at-a-time run of every iPhone part). A part it lacks starts first, so a new part never
+ * copied whole (INF-4241 piece 8's run of every part on every device, two simulators at once, with a later part's
+ * time kept from the file before it). A part it lacks starts first, so a new part never
  * ends a lane late; replace the file with a newer full gate's part-times.json when the parts' times move. */
 export const PHONE_PART_TIMES = "scripts/phone-part-times.json";
 
@@ -396,7 +415,7 @@ export type PhoneLanePlan<Device extends string = PhoneDevice> = { lanes: PhoneL
 /** INF-4241 piece 3: shares `simulators` simulated devices among the devices of a gate's jobs, then each device's
  * jobs among its lanes. Every device gets one lane, as before, and each further lane goes to the device with the most
  * recorded work per lane, never more lanes than it has jobs; with fewer simulators than devices the devices run one
- * after another. A device with one lane keeps its jobs in plan order. A device with several shares them longest
+ * after another, the device with the most work per lane first. A device with one lane keeps its jobs in plan order. A device with several shares them longest
  * first by the recorded times, a part with no time first, a later round only after every earlier one, so the lanes
  * end close together. */
 export function phoneLanePlan<Job extends { device: string; part: string; round?: number }>(jobs: readonly Job[], simulators: number,
@@ -415,8 +434,12 @@ export function phoneLanePlan<Job extends { device: string; part: string; round?
     counts.set(next, counts.get(next)! + 1);
   }
   const recorded = (index: number) => times.get(jobs[index]!.part) ?? Number.POSITIVE_INFINITY;
+  // INF-4241 piece 8: the device with the most recorded work per lane starts first, so with fewer simulators than
+  // devices its long lane never waits behind a short one (the every-device gate on a two-lane Mac).
+  const perLane = (device: Job["device"]) => work.get(device)! / counts.get(device)!;
+  const starts = [...devices].sort((a, b) => perLane(b) - perLane(a));
   return {
-    lanes: devices.flatMap((device) => Array.from({ length: counts.get(device)! }, (_, at) => ({ device, number: at + 1 }))),
+    lanes: starts.flatMap((device) => Array.from({ length: counts.get(device)! }, (_, at) => ({ device, number: at + 1 }))),
     queues: new Map(devices.map((device) => [device, counts.get(device) === 1 ? indices(device)
       : indices(device).sort((a, b) => (jobs[a]!.round ?? 1) - (jobs[b]!.round ?? 1) || recorded(b) - recorded(a))])),
   };

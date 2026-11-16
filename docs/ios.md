@@ -812,18 +812,37 @@ Apple's internal-testing state means testers can install the build, not that a p
 
 `pnpm test:phone --evidence <absolute-folder-outside-the-project>` runs the foundation's native gate directly on a Mac with the pinned Xcode and its own iOS simulator.
 On a computer in CI mode (`infinitary.checks = ci`, `docs/testing.md` "Where the heavy checks run") it refuses before starting the gate and names `phone.yml` on request instead.
-Add `--ipad` for the iPad Pro 11-inch (M4); the default uses an iPhone 16.
-`scripts/phone-pin.json` names the one Xcode, the one iOS simulator runtime by version and build, and the iPhone and iPad every Mac's phone check uses (INF-1645): the same pair in the phone guests for ordinary checks and unsigned TestFlight checks.
-The gate refuses any other Xcode before it builds, and `scripts/phone-simulator.ts` refuses a Mac without that runtime, or one whose runtime does not support the device, naming the download that fixes it; it never takes a newer or older runtime in its place.
-Moving to a new pair is one pull request that edits the pin, after the virtual Mac image and every Mac that runs the check have the new pair.
-Add `--both` to run the checks and build once, then the iPhone and the iPad side by side; the evidence folder then holds the shared logs and an `iphone` and an `ipad` folder.
+The default uses an iPhone 16; `--device ipad` uses the iPad Pro 11-inch (M4) and `--device duo` the iPhone Duo, and `--ipad` is the same as `--device ipad`.
+`scripts/phone-pin.json` names the one Xcode every Mac's phone check uses and, for each device, its simulator device type and the iOS simulator runtime it runs on, by version and build (INF-1645): the same pin in the phone guests for ordinary checks and unsigned TestFlight checks.
+No one runtime serves every device: Apple's iOS 27.1 simulator runs only the iPhone Duo, and its iOS 27.0 runs every device but the Duo, so the iPhone 16 and the iPad stay on iOS 27.0 and the Duo takes iOS 27.1 (INF-4241 piece 8, the captain's "the iPhone 16 and iPad stay on iOS 27.0"), and a Mac that runs the check holds both runtimes.
+The gate refuses any other Xcode before it builds, and `scripts/phone-simulator.ts` refuses a Mac without a device's runtime, or one whose runtime does not support the device, naming the download that fixes it; it never takes a newer or older runtime in its place.
+Moving a device to a new runtime is one pull request that edits the pin, after the virtual Mac image and every Mac that runs the check hold it; the image's build and its provisioning download every runtime the pin names (`scripts/virtual-mac/image.sh`, `scripts/virtual-mac/provision.sh`).
+Name `--device` more than once, or add `--every-device` for every device `PHONE_PARTS` names, to run the checks and build once and then the devices side by side; `--both` names the iPhone and the iPad.
+The evidence folder then holds the shared logs and a folder for each device, such as `iphone`, `ipad` and `duo`.
 
 ### Which parts run on which device
 
-Every part runs on the iPhone, and the iPad runs only the parts about the iPad (INF-4241's direction B, the captain's "a full iPhone pass, a short Duo pass at its four sizes and a short iPad pass").
-`PHONE_PARTS` in `scripts/phone-test-plan.ts` is the one list: each part's `devices` names the devices beyond the iPhone it runs on, and its `why` names what that device alone shows.
+Every part runs on the iPhone, and the iPad and the iPhone Duo run only the parts about each (INF-4241's direction B, the captain's "a full iPhone pass, a short Duo pass at its four sizes and a short iPad pass").
+`PHONE_PARTS` in `scripts/phone-test-plan.ts` is the one list: each part's `devices` names the devices beyond the iPhone it runs on, its `why` names what that device alone shows, and a part the Duo runs names the hinge, `closed` or `open`, the Duo starts it with (`partHinge`).
 A part names the iPad only when it checks something no iPhone shows: the wide layout's sidebar when the iPad turns on its side, the iPad's own keyboard and pop-up number pad, its photo picker, or the words written for the iPad, such as This iPad.
-`phonePasses` and `phoneJobs` run a part only on the devices its row names, at a phone release and on a request alike, the chooser's `ipad_parts` keeps only the parts that name the iPad, and `phone.yml` and `ios-release.yml` check the devices the list names (`tests/phone-ci.test.ts` holds both workflows to it).
+A part names the Duo only when it checks something only a fold shows; the `fold` part checks the layout in the Duo's flat poses, below.
+`phonePasses` and `phoneJobs` run a part only on the devices its row names, at a phone release and on a request alike, the chooser's `ipad_parts` and `duo_parts` keep only the parts that name each, and `phone.yml` and `ios-release.yml` check the devices the list names (`tests/phone-ci.test.ts` holds both workflows to it).
+An edited part runs three times on the iPhone and once on each other device that lists it.
+
+### The Duo's hinge
+
+Apple gives no command that opens the simulated iPhone Duo's hinge, so the phone check keeps a small helper of its own, `scripts/phone-hinge.m` (INF-4241 piece 8, the captain's "Keep a small helper of our own in the project that opens the hinge through the undocumented interface; it can break when Xcode changes").
+The gate builds it once for the iOS simulator, signed ad hoc as any simulator program is, when a Duo part runs (`buildPhoneHinge` in `scripts/phone-hinge.ts`), and runs it inside the Duo with `simctl spawn`.
+`phone-hinge sweep` posts the vendor-defined HID event Xcode's own hinge slider posts, through the angles between, since the iOS 27.1 simulator stops switching screens after a jump straight from closed to open; `phone-hinge angle` reads the angle back from CoreMotion.
+Before each Duo part the gate moves the hinge to the one its row names, once, then reads the pose back until the angle and the lit screen, read from `devicectl device info displays`, show it within `PHONE_HINGE_SETTLE_MS` (`setPhoneHinge`).
+A Duo that does not show it fails the part before its tests, naming the hinge and what the Duo showed instead, and nothing moves the hinge a second time.
+Turning the phone stays the journey's own step.
+Inside a part the journey asks its test home to move the hinge (`POST hinge-open`, `POST hinge-closed`, `GET hinge`), which moves it the same way; a device with no hinge answers none.
+The `fold` part (`testLayoutFollowsTheFold`) checks INF-4210's promises: closed, the one column under the tab strip, upright and on its side alike, since the closed Duo's outer screen keeps the app upright as it turns, and open like a book the sidebar beside the stage reaching the fold with the card beside it.
+Open on its side is not checked: turned, the simulated Duo keeps the open app in the book's orientation, so its window never turns.
+Split at the fold shows in Settings → Appearance once the Duo has opened, turned off it narrows the sidebar to the iPad's share, and Settings stays Settings as the Duo closes under it.
+On the iPhone the same part checks the column and the strip and that Split at the fold never shows.
+Half-folded poses stay with pictures taken for a change.
 A gate whose named parts none of its devices runs refuses to start, rather than passing having checked nothing.
 A part added to the journey runs on the iPhone alone until its row names another device.
 The native journey is tests in `PhoneJourney`, one per part (`scripts/phone-test-plan.ts`): three join parts (`join-read`, `join-activity`, `join-away`), three talk parts (`talk-compose`, `talk-tasks`, `talk-drafts`), three cards parts (`cards-merge`, `cards-form`, `cards-media`), `address` (join by its address), `pick` (a card pager pick across a workspace redraw), `cards-revise` (a revision while the thread shows, then the thread's minus), `cards-notes` (notes on a card's parts and selected words, queued and sent as one reply, INF-3296), `cards-diagram` (a card's map opened live in its cover, and a finger on the map in the card scrolling the card, INF-3881), four keyboard parts (`keyboard-pinned`, `keyboard-scrolling`: the message box and a card's reply with the keyboard up, INF-2568; `keyboard-ways-out`: each way out of that keyboard, INF-3106; `body-field`: a text box inside a card's body with the keyboard up, INF-3427), `card-questions` (the answers line's stepper through a decision's questions, by tap and by key), `google` (Google's row in Settings, INF-3454), `settings-pages` (Settings' Projects, Intelligence, Runbooks, Usage and Automation, INF-3563), `panels` (the Panels tab from a fixture panel on the test home's real core, then that panel's title-row buttons, its cards on Home and its taps that open a task, INF-3830), `weak-link` (the app-hosted `PhoneWeakLinkTests` class alone), and `rest`, which runs the character and past choices with the other app-hosted tests and any test no other part names, except the tests of the phone check's own tools (`PHONE_TOOL_TESTS`).
@@ -835,7 +854,7 @@ A journey that launches the app fresh takes a part of its own, since the rest pa
 The gate runs each device's parts on lanes: a lane is one simulator the gate starts once and runs parts on one after the other, and each part is its own gate with its own test home and a clean app (INF-1438, the captain's "Start each simulated device once per phone check, not once per part").
 `--simulators` sets how many simulators run at once, and its default is as many as the Mac holds: one for each 4 processor cores and each 4 GiB of memory, whichever gives fewer, and always one (`phoneLanes` in `scripts/phone-test-plan.ts`, INF-4241 piece 3).
 That rule rests on INF-4308's measurement on a compute Mac VM of 10 cores and 9 GiB, where two simulated devices at once passed every part and three ran out of memory and processors; INF-2101's one at a time rested on 4-core VMs.
-Every device gets one lane, and each further lane goes to the device with the most recorded work per lane, never more lanes than it has parts; with fewer simulators than devices the devices run one after another (`phoneLanePlan`).
+Every device gets one lane, and each further lane goes to the device with the most recorded work per lane, never more lanes than it has parts; with fewer simulators than devices the devices run one after another, the device with the most work per lane first, so the iPhone's long pass never waits behind the short Duo and iPad passes (`phoneLanePlan`).
 A device with one lane runs its parts in the order `scripts/phone-test-plan.ts` lists them.
 A device with several shares them longest first by the recorded part times in `scripts/phone-part-times.json`, a full gate's `part-times.json` copied whole, so its lanes end close together: a free lane takes the device's next part, a part with no recorded time starts first, and a later pass of an edited part starts only after every ordinary one.
 Replace that file with a newer full gate's `part-times.json` when the parts' times move.
@@ -854,8 +873,8 @@ The kept log then writes `<compose failure [shared UUID]>` for every message who
 Without the folder the simulator uses the runtime's own cache and stores its words within a minute of starting.
 `xcrun simctl runtime dyld_shared_cache remove` takes the folder away without administrator rights; a folder that holds a cache stays, and a Mac with no such folder runs nothing.
 A removal that fails, or leaves the folder, is printed while the gate goes on, and the observers then have only their live logs and the unreadable-record rule below.
-A part's results are in its own folder, inside the device's folder with `--both`, and `--part` runs only the named parts; a device with several lanes keeps each lane's Photos wait in a `lane-<number>` folder beside them.
-A gate of every part, on one device or with `--both`, writes each part's minutes on each of its devices to `part-times.json` in the evidence folder once every part that runs on each device (its row of `PHONE_PARTS`) has run to its end (`endPhoneGate` in `scripts/phone-test-plan.ts`); no workflow reads it since INF-2539 removed the pull request's part budget, and a copy of one is the gate's own recorded part times.
+A part's results are in its own folder, inside the device's folder in a gate of several devices, and `--part` runs only the named parts; a device with several lanes keeps each lane's Photos wait in a `lane-<number>` folder beside them.
+A gate of every part, on one device or several, writes each part's minutes on each of its devices to `part-times.json` in the evidence folder once every part that runs on each device (its row of `PHONE_PARTS`) has run to its end (`endPhoneGate` in `scripts/phone-test-plan.ts`); no workflow reads it since INF-2539 removed the pull request's part budget, and a copy of one is the gate's own recorded part times.
 The build is `xcodebuild build-for-testing` for any simulator, and each part runs `test-without-building` from a copy of the built test plan that names its own test home and selects its tests.
 That copy sits beside the built plan and is named for the part's device, the part and its simulator, so two lanes running passes of one part at once never share a copy or a test home (`partPlanPath` in `scripts/phone-test-plan.ts`).
 The simulators of the first lanes start while that build runs, so the first parts begin as it ends; a lane past `--simulators` starts its own when a place frees (INF-2125).
@@ -1195,8 +1214,9 @@ The fleet serves that label from every Mac place the placement service runs, the
 The one native job, `native-phone`, requires that mapping with no per-run override, fixed-clone switch or generic-Mac fallback.
 An absent, empty or malformed mapping supplies no runnable destination instead of redirecting to the mini.
 The other nine queue mappings and the generic Mac labels remain unchanged for non-phone jobs.
-Each guest runs `scripts/test-phone.ts` directly for one device, the iPad (`--ipad`) or the iPhone, with as many simulators of it as the guest holds, two on a compute Mac VM of 10 cores and 9 GiB and one on a rented VM of 5 cores (INF-4241 piece 3).
-A request runs each device in its own job (INF-2970's fix 1), and the unsigned TestFlight call runs each in its own call (INF-2582).
+Each guest runs `scripts/test-phone.ts` directly, with as many simulators as the guest holds, two on a compute Mac VM of 10 cores and 9 GiB and one on a rented VM of 5 cores (INF-4241 piece 3).
+A narrower request runs each device in its own job with `--device` (INF-2970's fix 1).
+The unsigned TestFlight call names no device, and a request of every part on every device is the same full check: one job, matrix device `every`, whose gate runs `--every-device`, so every device's lanes run from one build on one guest and write one `part-times.json` (INF-4241 piece 8, the plan's "a phone release runs the full check").
 The ordinary request and the unsigned TestFlight call use the same gate and failure behavior.
 Those places also take other kinds of Mac work, such as the merge batch's Mac lanes, so a phone check and a batch lane wait for the same free places (INF-3726); a phone retry after a failure therefore names only the failing part and device (`docs/testing.md`, "A retry after a failed phone request").
 `tests/phone-pool-isolation.test.ts` evaluates the workflows with configured queues and both release modes, allowing only the native phone job there and refusing secret reads.

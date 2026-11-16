@@ -12,7 +12,9 @@
 # TART names tart (default: tart on PATH); tart keeps the image under its own
 # TART_HOME (default ~/.tart). The base is Cirrus Labs' image of the Xcode
 # scripts/phone-pin.json names, and provisioning refuses it unless it holds
-# that Xcode and the pinned iOS simulator (INF-1645). BASE_IMAGE, CPUS, MEMORY_MB and
+# that Xcode and every iOS simulator build the pin names for its devices
+# (INF-1645; INF-4241 piece 8: iOS 27.0 for the iPhone and iPad, iOS 27.1 for
+# the iPhone Duo, which no other runtime runs). BASE_IMAGE, CPUS, MEMORY_MB and
 # CLAUDE_CODE_VERSION override the defaults below. IOS_RUNTIME_VERSION defaults
 # to 26.1 (the simulator suite's pin). IOS_RUNTIME_DMG can name its Apple-supplied
 # disk; otherwise runtime.sh locates a verified installed copy on this Mac.
@@ -26,9 +28,10 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck source=scripts/virtual-mac/borrow.sh
 source "$ROOT/scripts/virtual-mac/borrow.sh"
 borrow_virtual_mac "Infinitary image" "$@"
-pin() { python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))[sys.argv[2]])' "$ROOT/scripts/phone-pin.json" "$1"; }
-PIN_XCODE="$(pin xcode)"
-PIN_IOS_BUILD="$(pin iosBuild)"
+PIN="$ROOT/scripts/phone-pin.json"
+PIN_XCODE="$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["xcode"])' "$PIN")"
+# Every device's iOS simulator build, each once, separated by spaces.
+PIN_IOS_BUILDS="$(python3 -c 'import json, sys; print(" ".join(dict.fromkeys(d["iosBuild"] for d in json.load(open(sys.argv[1]))["devices"].values())))' "$PIN")"
 BASE_IMAGE="${BASE_IMAGE:-ghcr.io/cirruslabs/macos-tahoe-xcode:$PIN_XCODE}"
 CPUS="${BORROWED_CPUS:-${CPUS:-6}}"
 MEMORY_MB="${BORROWED_MEMORY_MB:-${MEMORY_MB:-16384}}"
@@ -71,7 +74,7 @@ IOS_RUNTIME_DMG="${IOS_RUNTIME_DMG:-$(/bin/bash "$ROOT/scripts/virtual-mac/runti
 [ -f "$IOS_RUNTIME_DMG" ] || { echo "The required Apple-supplied iOS runtime disk is missing." >&2; exit 2; }
 RUNTIME_DIR="$(cd "$(dirname "$IOS_RUNTIME_DMG")" && pwd)"
 RUNTIME_DISK="$SHARED/ios-runtime/$(basename "$IOS_RUNTIME_DMG")"
-printf -v RUNTIME_ENV 'IOS_RUNTIME_VERSION=%q IOS_RUNTIME_DMG=%q PIN_XCODE=%q PIN_IOS_BUILD=%q' "$IOS_RUNTIME_VERSION" "$RUNTIME_DISK" "$PIN_XCODE" "$PIN_IOS_BUILD"
+printf -v RUNTIME_ENV 'IOS_RUNTIME_VERSION=%q IOS_RUNTIME_DMG=%q PIN_XCODE=%q PIN_IOS_BUILDS=%q' "$IOS_RUNTIME_VERSION" "$RUNTIME_DISK" "$PIN_XCODE" "$PIN_IOS_BUILDS"
 
 # Built under another name and renamed only once provisioning passed, so a
 # failed build never leaves a half-made image under the lane's name.

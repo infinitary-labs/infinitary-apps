@@ -4,7 +4,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { PART_OWNERS, phoneFileOwners } from "./phone-part-owners.ts";
-import { PHONE_DEVICES, PHONE_JOURNEY, PHONE_PARTS, partDevices, partIdentifier, partTimes } from "./phone-test-plan.ts";
+import { PHONE_DEVICES, PHONE_JOURNEY, PHONE_PARTS, type PhoneDevice, partDevices, partIdentifier, partTimes } from "./phone-test-plan.ts";
 
 export { partTimes };
 
@@ -704,21 +704,28 @@ export function iphoneOnlyParts(parts: readonly string[], reach: readonly PartRe
   return parts.filter((part) => !reach.some((each) => each.part === part && each.distance === 0));
 }
 
-/** INF-2970's fix 1: the kept parts the iPad's own job runs, every one the iPhone does not run alone that names the
- * iPad in PHONE_PARTS (INF-4241 piece 6); with none, phone.yml's iPad job ends before its gate. */
-export function ipadParts(parts: readonly string[], iphoneOnly: readonly string[]): string[] {
-  return parts.filter((part) => !iphoneOnly.includes(part) && partDevices(part).includes("ipad"));
+/** INF-2970's fix 1: the kept parts a device's own job runs beside the iPhone's, every one the iPhone does not run
+ * alone that names the device in PHONE_PARTS (INF-4241 piece 6); with none, phone.yml's job for it ends before its gate. */
+export function deviceParts(device: Exclude<PhoneDevice, "iphone">, parts: readonly string[], iphoneOnly: readonly string[]): string[] {
+  return parts.filter((part) => !iphoneOnly.includes(part) && partDevices(part).includes(device));
 }
+export const ipadParts = (parts: readonly string[], iphoneOnly: readonly string[]) => deviceParts("ipad", parts, iphoneOnly);
 
-/** A manual request's devices, chosen on Linux. Release calls never use this plan. */
+/** The matrix value of phone.yml's one job that checks every device from one build (INF-4241 piece 8). */
+export const EVERY_DEVICE = "every";
+
+/** A manual request's devices, chosen on Linux. A request of every part on every device runs as one job of
+ * every device from one build, as the phone release's call does (INF-4241 piece 8); a narrower request keeps a job
+ * a device, so each takes its own phone Mac at once (INF-2970's fix 1). */
 export function requestDevicePlan(parts: readonly string[], reach: readonly PartReach[], {
   explicit = false, device = "",
 }: { explicit?: boolean; device?: string } = {}): { iphoneOnly: string[]; devices: string[] } {
   if (device && !PHONE_DEVICES.includes(device as never)) throw new Error(`Unknown phone device: ${device}`);
   const iphoneOnly = explicit ? [] : iphoneOnlyParts(parts, reach);
-  const devices = ["ipad", "iphone"].filter((name) =>
-    (!device || device === name) && (name === "ipad" ? ipadParts(parts, iphoneOnly).length > 0 : parts.length > 0));
-  return { iphoneOnly, devices };
+  if (!device && !iphoneOnly.length && EVERY.every((part) => parts.includes(part))) return { iphoneOnly, devices: [EVERY_DEVICE] };
+  const devices = PHONE_DEVICES.filter((name) => (!device || device === name)
+    && (name === "iphone" ? parts.length > 0 : deviceParts(name, parts, iphoneOnly).length > 0));
+  return { iphoneOnly, devices: [...devices].sort() };
 }
 
 /**
@@ -878,6 +885,7 @@ function main(): void {
   console.log(`repeat_tests=${JSON.stringify(Object.fromEntries(placement.filter((each) => each.repeatTests?.length).map((each) => [each.part, each.repeatTests])))}`);
   console.log(`iphone_parts=${iphoneOnly.join(" ")}`);
   console.log(`ipad_parts=${ipadParts(kept, iphoneOnly).join(" ")}`);
+  console.log(`duo_parts=${deviceParts("duo", kept, iphoneOnly).join(" ")}`);
   const run = values.coverage === undefined ? decision.run : kept.length > 0;
   console.log(`run=${run}`);
   console.log(`parts=${kept.join(" ")}`);
@@ -892,6 +900,7 @@ function main(): void {
       "", `Ordinary coverage: ${kept.join(" ") || "none"}; complete live selection: ${repeats.full}.`,
       `On the iPhone only (the iPad waits for the release check): ${iphoneOnly.join(" ") || "none"}.`,
       `On the iPad (the parts PHONE_PARTS names it for): ${ipadParts(kept, iphoneOnly).join(" ") || "none"}.`,
+      `On the iPhone Duo (the parts PHONE_PARTS names it for): ${deviceParts("duo", kept, iphoneOnly).join(" ") || "none"}.`,
       `Two additional passes on the iPhone, in the same job (the iPad runs each of its own parts once): ${repeats.repeatParts.join(" ") || "none"}.`,
       "", ...(placement.length ? ["#### Parts", "", ...placement.map(row), ""] : [])].join("\n"));
 }

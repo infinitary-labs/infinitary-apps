@@ -121,6 +121,8 @@ export async function startPhoneHome(
     touchOutcome?(since: number): Promise<PhoneTouchOutcome>;
     pickerPreview?(since: number): Promise<PhonePickerPreview>;
     biometry?(step: "enroll" | "face-in-view" | "face-away"): Promise<void>;
+    // INF-4241 piece 8: the Duo's hinge, read or moved once (scripts/phone-hinge.ts); absent on a device with none.
+    hinge?(to?: "open" | "closed"): Promise<{ hinge: "open" | "closed" | null }>;
   },
   // INF-3563: the Settings pages part's computer starts with accounts, projects, usage and automations to show.
   options: { settings?: boolean } = {},
@@ -2340,6 +2342,15 @@ export async function startPhoneHome(
             command === "display-large",
           );
           observations.push({ check: "display", result });
+          break;
+        case "GET hinge":
+          result = controls?.hinge ? await controls.hinge() : { hinge: null };
+          break;
+        case "POST hinge-open":
+        case "POST hinge-closed":
+          if (!controls?.hinge) throw new Error("Only a simulated iPhone Duo has a hinge to move");
+          result = await controls.hinge(command === "hinge-open" ? "open" : "closed");
+          observations.push({ check: "hinge", result });
           break;
         case "POST appearance-dark":
         case "POST appearance-light":

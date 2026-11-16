@@ -1,90 +1,103 @@
 {
   "join-read": {
-    "iphone": 148395
-  },
-  "join-activity": {
-    "iphone": 96662
-  },
-  "join-away": {
-    "iphone": 205804
+    "ipad": 277561,
+    "iphone": 250276
   },
   "talk-tasks": {
-    "iphone": 78521
-  },
-  "talk-drafts": {
-    "iphone": 174417
-  },
-  "relaunch-first": {
-    "iphone": 43135
-  },
-  "relaunch-second": {
-    "iphone": 48557
-  },
-  "cards-merge": {
-    "iphone": 152277
-  },
-  "cards-form": {
-    "iphone": 213703
-  },
-  "cards-media": {
-    "iphone": 210064
+    "ipad": 101162,
+    "iphone": 92945
   },
   "address": {
-    "iphone": 37442
-  },
-  "pick": {
-    "iphone": 41135
-  },
-  "cards-revise": {
-    "iphone": 35495
-  },
-  "cards-place": {
-    "iphone": 49484
-  },
-  "cards-notes": {
-    "iphone": 89302
-  },
-  "cards-diagram": {
-    "iphone": 57474
+    "ipad": 47471,
+    "iphone": 46100
   },
   "keyboard-pinned": {
-    "iphone": 94985
+    "ipad": 92704,
+    "iphone": 90889
   },
   "keyboard-scrolling": {
-    "iphone": 69544
-  },
-  "keyboard-ways-out": {
-    "iphone": 61882
-  },
-  "body-field": {
-    "iphone": 145131
-  },
-  "card-questions": {
-    "iphone": 42882
-  },
-  "google": {
-    "iphone": 54167
+    "ipad": 72020,
+    "iphone": 71276
   },
   "settings-pages": {
-    "iphone": 110507
-  },
-  "languages": {
-    "iphone": 136108
+    "ipad": 120283,
+    "iphone": 112319
   },
   "panels": {
-    "iphone": 57210
-  },
-  "panels-cards": {
-    "iphone": 51106
-  },
-  "weak-link": {
-    "iphone": 398089
+    "ipad": 74197,
+    "iphone": 60858
   },
   "talk-compose": {
-    "iphone": 128674
+    "ipad": 143658,
+    "iphone": 151726
   },
   "rest": {
-    "iphone": 411262
+    "ipad": 448129,
+    "iphone": 480611
+  },
+  "fold": {
+    "duo": 152731,
+    "iphone": 32755
+  },
+  "join-activity": {
+    "iphone": 116903
+  },
+  "join-away": {
+    "iphone": 219123
+  },
+  "talk-drafts": {
+    "iphone": 185563
+  },
+  "relaunch-first": {
+    "iphone": 57734
+  },
+  "relaunch-second": {
+    "iphone": 54295
+  },
+  "cards-merge": {
+    "iphone": 181119
+  },
+  "cards-form": {
+    "iphone": 219196
+  },
+  "cards-media": {
+    "iphone": 216661
+  },
+  "pick": {
+    "iphone": 48390
+  },
+  "cards-revise": {
+    "iphone": 39889
+  },
+  "cards-place": {
+    "iphone": 54087
+  },
+  "cards-notes": {
+    "iphone": 99900
+  },
+  "cards-diagram": {
+    "iphone": 63890
+  },
+  "keyboard-ways-out": {
+    "iphone": 73775
+  },
+  "body-field": {
+    "iphone": 143586
+  },
+  "card-questions": {
+    "iphone": 47348
+  },
+  "google": {
+    "iphone": 58014
+  },
+  "languages": {
+    "iphone": 154766
+  },
+  "panels-cards": {
+    "iphone": 50270
+  },
+  "weak-link": {
+    "iphone": 401958
   },
   "cards-secret": {
     "iphone": 44255

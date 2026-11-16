@@ -91,14 +91,18 @@ for tool in git gh python3 perl swift xcodebuild xcrun; do
   command -v "$tool"
 done
 # The phone check's pin (scripts/phone-pin.json, INF-1645): the base's
-# Xcode and the iOS simulator build the check accepts alone. Xcode's own
-# simulator cannot host the check's devices, so Apple's download adds the
-# pinned build beside it.
-: "${PIN_XCODE:?}" "${PIN_IOS_BUILD:?}"
+# Xcode and every iOS simulator build the pin names for its devices, the only
+# ones the check accepts. Xcode's own simulator cannot host the check's
+# devices, so Apple's download adds each pinned build beside it. INF-4241
+# piece 8: iOS 27.0 runs the iPhone and iPad and iOS 27.1 only the iPhone
+# Duo, so the image holds both.
+: "${PIN_XCODE:?}" "${PIN_IOS_BUILDS:?}"
 test "$(xcodebuild -version | sed -n 's/^Xcode //p')" = "$PIN_XCODE"
-pinned_runtime() { xcrun simctl list runtimes available | grep -F " - $PIN_IOS_BUILD)" > /dev/null; }
-pinned_runtime || xcodebuild -downloadPlatform iOS -buildVersion "$PIN_IOS_BUILD"
-pinned_runtime
+pinned_runtime() { xcrun simctl list runtimes available | grep -F " - $1)" > /dev/null; }
+for build in $PIN_IOS_BUILDS; do
+  pinned_runtime "$build" || xcodebuild -downloadPlatform iOS -buildVersion "$build"
+  pinned_runtime "$build"
+done
 # sshhip's complete suite passes --runtime 26.1 explicitly. The base has
 # only its own Xcode's simulators, which are not a substitute for that job's fixture.
 /bin/bash "$SHARE/runtime.sh" install "${IOS_RUNTIME_VERSION:?}" "${IOS_RUNTIME_DMG:?}"

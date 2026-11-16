@@ -442,25 +442,16 @@ describe("the dispatched workflow's gate", () => {
     const needs = {
       resolve: { result: "success", outputs: { mode: "release", source_commit: source } },
     };
-    // INF-2582 direction A: one call per device, each with the same resolved source.
-    const called = (device: string) =>
-      Object.fromEntries(
-        Object.entries(call.with).map(([key, value]) => [
-          key,
-          String(value).includes("${{")
-            ? workflowValue(String(value), { needs, matrix: { device } })
-            : value,
-        ]),
-      );
-    expect(call.strategy).toEqual({ "fail-fast": false, matrix: { device: ["ipad", "iphone"] } });
+    // INF-4241 piece 8: one call with the resolved source and no device, so phone.yml's one job checks every device.
+    const inputs = Object.fromEntries(
+      Object.entries(call.with).map(([key, value]) => [
+        key,
+        String(value).includes("${{") ? workflowValue(String(value), { needs }) : value,
+      ]),
+    );
+    expect(call.strategy).toBeUndefined();
     // INF-2410's scheme A: its jobs' names lead with the release's trigger.
-    for (const device of call.strategy.matrix.device)
-      expect(called(device)).toEqual({
-        trigger: "Requested TestFlight",
-        source_commit: source,
-        device,
-      });
-    const inputs = called("ipad");
+    expect(inputs).toEqual({ trigger: "Requested TestFlight", source_commit: source });
     expect(phone.on.workflow_call.inputs.source_commit.type).toBe("string");
     expect(phone.on.workflow_call.inputs.device).toMatchObject({ type: "string", default: "" });
     const contexts = {
@@ -469,8 +460,15 @@ describe("the dispatched workflow's gate", () => {
       github: { sha: source, event_name: "workflow_dispatch", ref: "refs/heads/main" },
       env: {},
       steps: {},
-      // The called workflow's one device job for this call (INF-2970's fix 1).
-      matrix: { device: inputs.device },
+      // The called workflow's one job of every device for this call (INF-4241 piece 8).
+      matrix: {
+        device: (
+          workflowValue(phone.jobs["native-phone"].strategy.matrix.device, {
+            inputs,
+            needs: {},
+          }) as string[]
+        )[0],
+      },
     };
     for (const id of ["native-phone"])
       for (const step of phone.jobs[id].steps.filter(

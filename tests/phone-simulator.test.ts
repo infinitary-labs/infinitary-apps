@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   PHONE_BOOT_BUDGET_MS,
+  PHONE_IOS_BUILDS,
   PHONE_PIN,
   phoneSharedCacheFolder,
   phoneSimulator,
@@ -14,21 +15,23 @@ import {
 } from "../scripts/phone-simulator";
 import { scratchDir } from "./helpers/scratchDirs";
 
-// INF-1645 (the captain's "Approve and build the pin"): every Mac's phone check uses the one Xcode and
-// iOS simulator phone-pin.json names, and refuses any other. A crewmate's MacBook with Xcode 27.1's real
-// simctl list, trimmed to the fields read here and the two gate devices plus iPhone Duo: iOS 26.4, 27.0
-// and a 27.1 build, which hosts only iPhone Duo (INF-1552), as Xcode 27.1's own 27.1 does (INF-1653).
+// INF-1645 (the captain's "Approve and build the pin"): every Mac's phone check uses the one Xcode phone-pin.json names
+// and, for each device, the iOS simulator it names, and refuses any other. A crewmate's MacBook with Xcode 27.1's real
+// simctl list, trimmed to the fields read here and the three gate devices: iOS 26.4, 27.0 and a 27.1 build, which hosts
+// only iPhone Duo (INF-1552), as Xcode 27.1's own 27.1 does (INF-1653). INF-4241 piece 8 (the captain's "the iPhone 16
+// and iPad stay on iOS 27.0"): the Duo takes iOS 27.1 and the others keep iOS 27.0.
 const catalog: SimulatorCatalog = JSON.parse(
   readFileSync("tests/fixtures/phone-simulator/xcode-27.1.json", "utf8"),
 );
 
 describe("the phone check's pinned simulator", () => {
-  it.each(["iphone", "ipad"] as const)(
-    "takes the pinned runtime for %s, never a newer one",
+  it.each(["iphone", "ipad", "duo"] as const)(
+    "takes the runtime pinned for %s, never a newer one",
     (device) => {
+      const pin = PHONE_PIN.devices[device];
       const { kind, runtime } = phoneSimulator(catalog, device);
-      expect(kind.name).toBe(PHONE_PIN.devices[device]);
-      expect([runtime.version, runtime.buildversion]).toEqual([PHONE_PIN.ios, PHONE_PIN.iosBuild]);
+      expect(kind.name).toBe(pin.name);
+      expect([runtime.version, runtime.buildversion]).toEqual([pin.ios, pin.iosBuild]);
       // Enumeration order is not installation order or version order.
       expect(
         phoneSimulator({ ...catalog, runtimes: [...catalog.runtimes].reverse() }, device),
@@ -39,33 +42,52 @@ describe("the phone check's pinned simulator", () => {
     },
   );
 
-  it.each(["iphone", "ipad"] as const)(
-    "refuses a Mac without the pinned runtime for %s rather than taking another one",
+  it.each(["iphone", "ipad", "duo"] as const)(
+    "refuses a Mac without the runtime pinned for %s rather than taking another one",
     (device) => {
+      const pin = PHONE_PIN.devices[device];
       const without = {
         ...catalog,
-        runtimes: catalog.runtimes.filter((runtime) => runtime.buildversion !== PHONE_PIN.iosBuild),
+        runtimes: catalog.runtimes.filter((runtime) => runtime.buildversion !== pin.iosBuild),
       };
       expect(() => phoneSimulator(without, device)).toThrow(
-        `needs the iOS ${PHONE_PIN.ios} simulator ${PHONE_PIN.iosBuild}`,
+        `needs the iOS ${pin.ios} simulator ${pin.iosBuild} for the ${pin.name}`,
       );
       expect(() => phoneSimulator(without, device)).toThrow(
-        `xcodebuild -downloadPlatform iOS -buildVersion ${PHONE_PIN.iosBuild}`,
+        `xcodebuild -downloadPlatform iOS -buildVersion ${pin.iosBuild}`,
       );
     },
   );
+
+  it("needs both runtimes on a phone Mac, since neither runs all three devices", () => {
+    expect(PHONE_IOS_BUILDS).toEqual([
+      PHONE_PIN.devices.iphone.iosBuild,
+      PHONE_PIN.devices.duo.iosBuild,
+    ]);
+    // Each device's pinned runtime is one the other kind of device cannot run on.
+    const runs = (device: "iphone" | "duo", build: string) => {
+      const kind = catalog.devicetypes.find(
+        (type) => type.name === PHONE_PIN.devices[device].name,
+      )!;
+      return catalog.runtimes
+        .find((runtime) => runtime.buildversion === build)!
+        .supportedDeviceTypes!.some((type) => type.identifier === kind.identifier);
+    };
+    expect(runs("duo", PHONE_PIN.devices.iphone.iosBuild)).toBe(false);
+    expect(runs("iphone", PHONE_PIN.devices.duo.iosBuild)).toBe(false);
+  });
 
   it("refuses the pinned runtime when it has no supported-device reading", () => {
     const unread = structuredClone(catalog);
     for (const runtime of unread.runtimes) delete runtime.supportedDeviceTypes;
     expect(() => phoneSimulator(unread, "iphone")).toThrow(
-      `does not support ${PHONE_PIN.devices.iphone}`,
+      `does not support ${PHONE_PIN.devices.iphone.name}`,
     );
   });
 
   it("refuses a missing requested device type rather than substituting another device", () => {
     expect(() => phoneSimulator({ ...catalog, devicetypes: [] }, "iphone")).toThrow(
-      `Install the ${PHONE_PIN.devices.iphone} simulator device type`,
+      `Install the ${PHONE_PIN.devices.iphone.name} simulator device type`,
     );
   });
 

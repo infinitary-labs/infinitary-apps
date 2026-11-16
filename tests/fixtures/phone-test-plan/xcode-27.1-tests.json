@@ -70,6 +70,7 @@
   "InfinitaryUITests/PhoneJourney/testKeyboardOverScrollingCard",
   "InfinitaryUITests/PhoneJourney/testKeyboardWaysOut",
   "InfinitaryUITests/PhoneJourney/testLanguages",
+  "InfinitaryUITests/PhoneJourney/testLayoutFollowsTheFold",
   "InfinitaryUITests/PhoneJourney/testMenuPickSurvivesAWorkspaceRedraw",
   "InfinitaryUITests/PhoneJourney/testMergeCard",
   "InfinitaryUITests/PhoneJourney/testPanelsTab",

@@ -167,19 +167,18 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(releaseCall?.with).toEqual({
       trigger: "Requested TestFlight",
       source_commit: "${{ needs.resolve.outputs.source_commit }}",
-      device: "${{ matrix.device }}",
     });
-    expect(releaseCall?.strategy?.["fail-fast"]).toBe(false);
-    expect(releaseCall?.strategy?.matrix.device.toSorted()).toEqual(["ipad", "iphone"]);
+    // INF-4241 piece 8: one call, whose one job checks every device from one build.
+    expect(releaseCall?.strategy).toBeUndefined();
     expect(phoneRelease.jobs.testflight?.needs).toContain("phone");
     const source = "6073f484509752eb55ee1b1c85c38b82b4909cc3";
     const released = {
       github: { event_name: "workflow_dispatch", ref: "refs/heads/main" },
-      inputs: { source_commit: source, device: "ipad" },
+      inputs: { source_commit: source },
       needs: {},
       vars: {},
       env: {},
-      matrix: { device: "ipad" },
+      matrix: { device: "every" },
     };
     const native = phone.jobs["native-phone"];
     expect(workflowValue(native?.if ?? "", released)).toBe(true);

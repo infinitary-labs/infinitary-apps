@@ -283,8 +283,9 @@ it.each(
     },
   ].flatMap((selection) =>
     [
-      { device: "ipad", args: ["--ipad"] },
-      { device: "iphone", args: [] },
+      { device: "ipad", args: ["--device", "ipad"] },
+      { device: "duo", args: ["--device", "duo"] },
+      { device: "iphone", args: ["--device", "iphone"] },
     ].map((each) => ({ ...selection, ...each })),
   ),
 )(
@@ -313,11 +314,12 @@ it.each(
   },
 );
 
-// INF-2582 direction A: the phone release checks each device in its own call, on its own phone Mac,
-// every part with full discovery, each device's evidence in its own folder; an unknown device starts nothing.
+// INF-2582 direction A: a call of one device checks every part on that device, with full discovery, its evidence in
+// its own folder; an unknown device starts nothing.
 it.each([
-  { device: "ipad", args: ["--ipad"] },
-  { device: "iphone", args: [] },
+  { device: "ipad", args: ["--device", "ipad"] },
+  { device: "duo", args: ["--device", "duo"] },
+  { device: "iphone", args: ["--device", "iphone"] },
 ])("runs every part on the $device alone for a device call", ({ device, args }) => {
   const phone = loadYamlFile(".github/workflows/phone.yml") as {
     jobs: Record<string, { steps: { id?: string; run?: string }[] }>;
@@ -332,6 +334,29 @@ it.each([
   });
   expect(call.slice(0, -1)).toEqual(["node", "scripts/test-phone.ts", ...args, "--evidence"]);
   expect(call.at(-1)).toMatch(new RegExp(`/phone/${device}$`));
+});
+
+// INF-4241 piece 8: the phone release's call names no device, so one gate runs every device from one build and keeps
+// each device's evidence in that device's own folder inside the one evidence folder.
+it("runs every part on every device in one gate for the job of every device", () => {
+  const phone = loadYamlFile(".github/workflows/phone.yml") as {
+    jobs: Record<string, { steps: { id?: string; run?: string }[] }>;
+  };
+  const command = phone.jobs["native-phone"]!.steps.find((step) => step.id === "both")!.run!;
+  const call = recordedWorkflowCall(command, {
+    PHONE_DEVICE: "every",
+    PHONE_PARTS: "",
+    PHONE_FULL: "",
+    PHONE_IPHONE_PARTS: "",
+    PHONE_REPEAT_PARTS: "",
+  });
+  expect(call.slice(0, -1)).toEqual([
+    "node",
+    "scripts/test-phone.ts",
+    "--every-device",
+    "--evidence",
+  ]);
+  expect(call.at(-1)).toMatch(/\/phone$/);
 });
 
 it("refuses an unknown phone device before the gate starts", () => {
@@ -689,7 +714,7 @@ describe("the phone check request guard (INF-2576)", () => {
     // GitHub fills an unsent boolean input with its default, false.
     const explained = { affected: false, task: "INF-2576", reason: "Shared phone setup changed" };
     expect(runGuard(branch, explained).summary).toBe(
-      "Phone request: every_part=true affected=false parts= device=both task=INF-2576 reason=Shared phone setup changed\n",
+      "Phone request: every_part=true affected=false parts= device=every task=INF-2576 reason=Shared phone setup changed\n",
     );
   });
 
@@ -715,7 +740,7 @@ describe("the phone check request guard (INF-2576)", () => {
     const result = runGuard(branch, { affected: true, last_pass: lastPass });
     expect(result.status, result.stdout).toBe(0);
     expect(result.summary).toBe(
-      `Phone request: every_part=false affected=true parts= device=both last_pass=${lastPass} task= reason=\n`,
+      `Phone request: every_part=false affected=true parts= device=every last_pass=${lastPass} task= reason=\n`,
     );
     expect(phone.on.workflow_dispatch.inputs).toHaveProperty("last_pass");
   });

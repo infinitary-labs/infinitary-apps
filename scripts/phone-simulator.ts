@@ -12,28 +12,40 @@ type Runtime = {
   supportedDeviceTypes?: { identifier: string }[];
 };
 export type SimulatorCatalog = { devicetypes: DeviceType[]; runtimes: Runtime[] };
-export type PhonePin = { xcode: string; ios: string; iosBuild: string; devices: Record<PhoneDevice, string> };
+/** One device's pin: its simulator device type and the iOS simulator runtime it runs on, by version and build. */
+export type PhoneDevicePin = { name: string; ios: string; iosBuild: string };
+export type PhonePin = { xcode: string; devices: Record<PhoneDevice, PhoneDevicePin> };
 
-/** INF-1645: every Mac's phone check uses one Xcode and its own iOS simulator, named only in phone-pin.json. */
+/** INF-1645: every Mac's phone check uses one Xcode, named only in phone-pin.json. INF-4241 piece 8 (the captain's "the
+ * iPhone 16 and iPad stay on iOS 27.0"): each device names its own iOS simulator, because Apple's iOS 27.1 simulator
+ * runs only the iPhone Duo and iOS 27.0 runs every device but the Duo. */
 export const PHONE_PIN: PhonePin = JSON.parse(readFileSync(new URL("./phone-pin.json", import.meta.url), "utf8"));
-const download = `Install Xcode ${PHONE_PIN.xcode}, then the iOS ${PHONE_PIN.ios} simulator with xcodebuild -downloadPlatform iOS -buildVersion ${PHONE_PIN.iosBuild}`;
+
+/** Every iOS simulator build some device's pin names, each once: the builds a phone Mac must hold. */
+export const PHONE_IOS_BUILDS: readonly string[] = [...new Set(Object.values(PHONE_PIN.devices).map((pin) => pin.iosBuild))];
+
+const download = (pin: { ios: string; iosBuild: string }) =>
+  `Install Xcode ${PHONE_PIN.xcode}, then the iOS ${pin.ios} simulator with xcodebuild -downloadPlatform iOS -buildVersion ${pin.iosBuild}`;
 
 /** Refuses an `xcodebuild -version` reading of any Xcode but the pinned one. */
 export function phoneXcode(reading: string) {
   const version = /^Xcode (\S+)$/m.exec(reading)?.[1];
-  if (version !== PHONE_PIN.xcode) throw new Error(`The phone check needs Xcode ${PHONE_PIN.xcode}, not ${version ?? "an unreadable Xcode"}. ${download}.`);
+  if (version !== PHONE_PIN.xcode) {
+    throw new Error(`The phone check needs Xcode ${PHONE_PIN.xcode}, not ${version ?? "an unreadable Xcode"}. ` +
+      `${PHONE_IOS_BUILDS.map((build) => download(Object.values(PHONE_PIN.devices).find((pin) => pin.iosBuild === build)!)).join("; ")}.`);
+  }
 }
 
-/** The pinned runtime and the device's type; never a newer or older runtime in its place (INF-1552, INF-1645). */
+/** The device's own pinned runtime and its type; never a newer or older runtime in its place (INF-1552, INF-1645). */
 export function phoneSimulator(catalog: SimulatorCatalog, device: PhoneDevice) {
-  const name = PHONE_PIN.devices[device];
-  const kind = catalog.devicetypes.find((item) => item.name === name);
-  if (!kind) throw new Error(`Install the ${name} simulator device type in Xcode`);
+  const pin = PHONE_PIN.devices[device];
+  const kind = catalog.devicetypes.find((item) => item.name === pin.name);
+  if (!kind) throw new Error(`Install the ${pin.name} simulator device type in Xcode`);
   const runtime = catalog.runtimes.find((item) => item.isAvailable && item.identifier.includes(".iOS-")
-    && item.version === PHONE_PIN.ios && item.buildversion === PHONE_PIN.iosBuild);
-  if (!runtime) throw new Error(`The phone check needs the iOS ${PHONE_PIN.ios} simulator ${PHONE_PIN.iosBuild}. ${download}.`);
+    && item.version === pin.ios && item.buildversion === pin.iosBuild);
+  if (!runtime) throw new Error(`The phone check needs the iOS ${pin.ios} simulator ${pin.iosBuild} for the ${pin.name}. ${download(pin)}.`);
   if (!runtime.supportedDeviceTypes?.some((supported) => supported.identifier === kind.identifier)) {
-    throw new Error(`The pinned iOS ${PHONE_PIN.ios} simulator ${PHONE_PIN.iosBuild} does not support ${name}`);
+    throw new Error(`The pinned iOS ${pin.ios} simulator ${pin.iosBuild} does not support ${pin.name}`);
   }
   return { kind, runtime };
 }
@@ -42,8 +54,8 @@ export function phoneSimulator(catalog: SimulatorCatalog, device: PhoneDevice) {
 export const SIMULATOR_CACHES = "/Library/Developer/CoreSimulator/Caches/dyld";
 
 /** The pinned runtime's folder there on a Mac of this build (`sw_vers -buildVersion`). */
-export function phoneSharedCacheFolder(macBuild: string, runtime: { identifier: string }, caches = SIMULATOR_CACHES) {
-  return join(caches, macBuild, `${runtime.identifier}.${PHONE_PIN.iosBuild}`);
+export function phoneSharedCacheFolder(macBuild: string, runtime: { identifier: string; buildversion?: string }, caches = SIMULATOR_CACHES) {
+  return join(caches, macBuild, `${runtime.identifier}.${runtime.buildversion}`);
 }
 
 const holdsNoCache = (folder: string) => {

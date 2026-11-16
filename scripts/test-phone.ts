@@ -21,10 +21,11 @@ import { startPhoneActivity } from "./phone-activity.ts";
 import { finishPhoneCheck, joinPhoneObserver, keepPhoneDiagnostic, runEveryCheck } from "./phone-checks.ts";
 import { keepPhoneFailureLogs, runPhoneLog } from "./phone-failure-logs.ts";
 import { GATE_SIMULATOR, removePhoneLeftovers, SCRATCH_PREFIX } from "./phone-leftovers.ts";
+import { buildPhoneHinge, type PhoneHinge, setPhoneHinge } from "./phone-hinge.ts";
 import { phoneRecording } from "./phone-recording.ts";
 import { startPhoneGuestObserver } from "./phone-guest-observer.ts";
 import { phoneSharedCacheFolder, phoneSimulator, phoneSimulatorBooted, phoneXcode, removeEmptyPhoneSharedCache } from "./phone-simulator.ts";
-import { devicePartNames, devicePhotos, endPhoneGate, PHONE_PARTS, type PhoneDevice, type PhoneJob, type PhonePassEnd, phonePassName, phoneSelectionRunsJourney, phoneTestSelection, phoneTestsStarted, phoneAnimationWaits, phoneExecutionArguments, phoneLanePlan, phoneLanes, phonePasses, phoneStopsEarly, PHONE_PART_TIMES, partPlanPath, partTimes, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
+import { devicePartNames, devicePhotos, partHinge, PHONE_DEVICES, endPhoneGate, PHONE_PARTS, type PhoneDevice, type PhoneJob, type PhonePassEnd, phonePassName, phoneSelectionRunsJourney, phoneTestSelection, phoneTestsStarted, phoneAnimationWaits, phoneExecutionArguments, phoneLanePlan, phoneLanes, phonePasses, phoneStopsEarly, PHONE_PART_TIMES, partPlanPath, partTimes, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
 
 // INF-800: with CI mode on, the phone check runs only through CI (docs/testing.md).
 const refusal = ciModeRefusal("phone");
@@ -45,6 +46,13 @@ const { values } = parseArgs({ options: {
   "guest-observer": { type: "boolean", default: process.env.INFINITARY_PHONE_GUEST_OBSERVER === "1" },
   // INF-662 piece 1: check and build once, then the iPhone and the iPad side by side.
   both: { type: "boolean", default: false },
+  // INF-4241 piece 8: the devices to check from the one build, any of PHONE_DEVICES; --ipad and --both name the iPad
+  // alone and the iPhone with the iPad.
+  device: { type: "string", multiple: true },
+  // INF-4241 piece 8: every device PHONE_PARTS names, from one build, as the phone release's full check runs.
+  "every-device": { type: "boolean", default: false },
+  // INF-4241 piece 8: a Duo part's hinge helper, built once by the gate (scripts/phone-hinge.ts).
+  "hinge-helper": { type: "string" },
   // INF-662 piece 2: the journey's parts to run (all of them unless named), and how many devices at once.
   part: { type: "string", multiple: true },
   // INF-2582 direction A: parts a change only reaches, run on the iPhone alone, and parts whose test code
@@ -68,6 +76,11 @@ const evidence = resolve(values.evidence);
 if (evidence === REPO_ROOT || evidence.startsWith(REPO_ROOT + "/"))
   throw new Error("Native evidence must stay outside the working copy");
 if (values.both && (values.ipad || values.xctestrun)) throw new Error("--both runs the iPhone and the iPad itself");
+if (values["every-device"] && (values.device || values.both || values.ipad || values.xctestrun)) throw new Error("--every-device names every device itself");
+if (values.device && (values.both || values.ipad)) throw new Error("--device names the devices itself, so it takes no --ipad or --both");
+if (values.xctestrun && values.device && values.device.length !== 1) throw new Error("--xctestrun runs on exactly one --device");
+for (const device of values.device ?? []) if (!(PHONE_DEVICES as readonly string[]).includes(device))
+  throw new Error(`The phone check has no device ${device}; it checks ${PHONE_DEVICES.join(", ")}`);
 if (values.xctestrun && values.part?.length !== 1) throw new Error("--xctestrun runs exactly one --part");
 if (!!values.xctestrun !== !!values.simulator) throw new Error("A part needs both its built plan and the gate's simulator");
 if (values.xctestrun && (values["iphone-part"] || values["repeat-part"])) throw new Error("--xctestrun runs one part once");
@@ -82,7 +95,10 @@ for (const [part, tests] of Object.entries(repeatTests)) {
   if (!Array.isArray(tests) || tests.some((test) => typeof test !== "string")) throw new Error("Repeat tests must be arrays of identifiers");
   phoneTestSelection(part, tests);
 }
-const devices: PhoneDevice[] = values.both ? ["iphone", "ipad"] : [values.ipad ? "ipad" : "iphone"];
+const devices: PhoneDevice[] = values["every-device"] ? [...PHONE_DEVICES] : values.device ? [...new Set(values.device as PhoneDevice[])]
+  : values.both ? ["iphone", "ipad"] : [values.ipad ? "ipad" : "iphone"];
+// A gate of several devices keeps a folder of evidence per device, as piece 1 did.
+const perDevice = devices.length > 1;
 // Every part on every device unless parts are named.
 const named = !!(values.part || values["iphone-part"]);
 const jobs: PhoneJob[] = phonePasses(devices, only ? { parts: ["rest"] } : {
@@ -90,7 +106,7 @@ const jobs: PhoneJob[] = phonePasses(devices, only ? { parts: ["rest"] } : {
   iphoneOnly: values["iphone-part"], repeats: values["repeat-part"], repeatTests });
 // INF-4241 piece 6: a part runs only on the devices its row of PHONE_PARTS names, so a gate whose parts none of its
 // devices run would pass having checked nothing.
-if (!jobs.length) throw new Error(`None of the named parts runs on the ${devices[0]}; the parts that do: ${devicePartNames(devices[0]!).join(" ")}`);
+if (!jobs.length) throw new Error(devices.map((device) => `None of the named parts runs on the ${device}; the parts that do: ${devicePartNames(device).join(" ")}`).join(". "));
 const simulators = Number(values.simulators);
 const lanePlan = phoneLanePlan(jobs, simulators, partTimes(readFileSync(join(REPO_ROOT, PHONE_PART_TIMES), "utf8")));
 mkdirSync(evidence, { recursive: true });
@@ -193,6 +209,8 @@ const changeAppearance = async (style: "light" | "dark", until: number) => {
   };
   return { confirmed: confirmed() };
 };
+// The hinge the Duo shows now: the one its part started with until the part moves it.
+let hinge: PhoneHinge | undefined;
 const recording = {
   keyboardBeforeLaunch: async () => {
     if (!keyboard) throw new Error("No owned simulator keyboard observer exists");
@@ -232,6 +250,16 @@ const recording = {
     for (const outcome of textSize) if (outcome.outcome !== "applied" && outcome.outcome !== "unchanged") console.log(`Text size ${size}: ${JSON.stringify(outcome)}`);
     return { appearance: await confirmed, textSize };
   },
+  // INF-4241 piece 8: the fold part moves a Duo's hinge through its test home, once each time; a device with no hinge
+  // answers none.
+  ...(values["hinge-helper"] ? {
+    hinge: async (to?: PhoneHinge): Promise<{ hinge: PhoneHinge | null }> => {
+      if (!simulator) throw new Error("No owned simulator exists");
+      if (!to) return { hinge: hinge ??= partHinge(values.part![0]!) };
+      await setPhoneHinge({ run, simulator, helper: values["hinge-helper"]!, hinge: to, reading: join(root, "displays.json") });
+      return { hinge: hinge = to };
+    },
+  } : {}),
   appearance: async (theme: "dark" | "light"): Promise<PhoneDisplayReport> => ({ appearance: await (await changeAppearance(theme, phoneDisplayDeadline())).confirmed }),
   damageRecord: async () => {
     if (!simulator) throw new Error("No owned simulator exists");
@@ -314,19 +342,21 @@ const ownedSimulators = new Set<string>();
 type Lane = { device: PhoneDevice; owned: string; booted: Date; photos?: ReturnType<typeof devicePhotos> };
 // INF-2445: once per gate, before its first simulator starts, an empty cache folder of the pinned runtime goes, so the
 // kept log every recovery reads spells out the shared cache's words (`removeEmptyPhoneSharedCache`).
-let sharedCache: Promise<void> | undefined;
+// One look a gate for each runtime its devices use (INF-4241 piece 8: the Duo's iOS differs from the others').
+const sharedCaches = new Map<string, Promise<void>>();
 // `simctl bootstatus -b` boots the simulator and prints each step of its boot; the gate waits for it within its budget.
 const bootSimulator = (device: PhoneDevice, owned: string) => phoneSimulatorBooted({ device, simulator: owned,
   boot: (stop, heard) => run("xcrun", ["simctl", "bootstatus", owned, "-b"], false, heard, stop) });
 const startSimulator = async (device: PhoneDevice): Promise<Lane> => {
   const catalog = JSON.parse(await run("xcrun", ["simctl", "list", "--json"]));
   const { kind, runtime } = phoneSimulator(catalog, device);
-  await (sharedCache ??= (async () => {
+  if (!sharedCaches.has(runtime.identifier)) sharedCaches.set(runtime.identifier, (async () => {
     const folder = phoneSharedCacheFolder((await run("sw_vers", ["-buildVersion"])).trim(), runtime);
     const removed = await removeEmptyPhoneSharedCache(folder,
       () => run("xcrun", ["simctl", "runtime", "dyld_shared_cache", "remove", runtime.identifier]));
     if (removed) console.log(removed);
   })());
+  await sharedCaches.get(runtime.identifier);
   const owned = (await run("xcrun", ["simctl", "create", GATE_SIMULATOR, kind.identifier, runtime.identifier])).trim();
   ownedSimulators.add(owned);
   // CoreSimulator is a host service, not a signing operation. This new device owns its own Keychain.
@@ -389,8 +419,9 @@ const LIBRARY_PHOTO = "release-notes/pictures/activity-settles-setting-runs-ligh
 const lanePhotos = (lane: Lane, stopping: AbortSignal, number: number) => devicePhotos(
   () => photosOpened({ device: lane.owned, booting: lane.booted, stopping, env, children, run, failureLog: SIMULATOR_LOG,
     evidence: ((folder) => lanePlan.lanes.filter((each) => each.device === lane.device).length > 1
-      ? (mkdirSync(join(folder, `lane-${number}`), { recursive: true }), join(folder, `lane-${number}`)) : folder)(values.both ? join(evidence, lane.device) : evidence) }),
+      ? (mkdirSync(join(folder, `lane-${number}`), { recursive: true }), join(folder, `lane-${number}`)) : folder)(perDevice ? join(evidence, lane.device) : evidence) }),
   () => libraryPhotoAdded({ device: lane.owned, picture: join(REPO_ROOT, LIBRARY_PHOTO), run }));
+let hingeHelper: Promise<string> | undefined;
 // Builds once for any simulator, then runs each device's parts on the lanes `lanePlan` gives it, each lane one
 // simulator it starts once and each part as its own gate from that build with its own test home, at most
 // --simulators lanes at once (INF-4241 piece 3).
@@ -406,6 +437,11 @@ const everyPart = async () => {
   finally { await Promise.allSettled(starting.values()); }
 };
 const everyPartOn = async (starting: Map<string, Promise<Lane>>) => {
+  // INF-4241 piece 8: the hinge helper builds beside the app when a Duo part runs; its failure fails the Duo's parts.
+  if (jobs.some((job) => job.device === "duo")) {
+    hingeHelper = buildPhoneHinge(run, root);
+    hingeHelper.catch(() => {});
+  }
   const building = Date.now();
   await run("xcodebuild", [...project, "-destination", "generic/platform=iOS Simulator", "-derivedDataPath", join(root, "DerivedData"),
     "-packageCachePath", packageCache, `ARCHS=${process.arch === "x64" ? "x86_64" : "arm64"}`, "build-for-testing"]);
@@ -414,13 +450,13 @@ const everyPartOn = async (starting: Map<string, Promise<Lane>>) => {
   const plans = readdirSync(products).filter((name) => name.endsWith(".xctestrun"));
   const [plan] = plans;
   if (!plan || plans.length !== 1) throw new Error(`The build made ${plans.length} test plans, not one`);
-  // A --both run keeps a folder per device, as piece 1 did; each part writes its own folder in it, and a
+  // A run of several devices keeps a folder per device, as piece 1 did; each part writes its own folder in it, and a
   // later pass of it a folder beside it named for its round (INF-2582).
   const folder = ({ device, part, round }: PhoneJob) => {
     const name = round === 1 ? part : `${part}-round-${round}`;
-    return values.both ? join(evidence, device, name) : join(evidence, name);
+    return perDevice ? join(evidence, device, name) : join(evidence, name);
   };
-  if (values.both) for (const device of devices) mkdirSync(join(evidence, device), { recursive: true });
+  if (perDevice) for (const device of devices) mkdirSync(join(evidence, device), { recursive: true });
   const gate = async (job: PhoneJob, lane: Lane, stopping: AbortSignal): Promise<PhonePassEnd> => {
     const { device, part } = job;
     const name = phonePassName(job);
@@ -430,13 +466,18 @@ const everyPartOn = async (starting: Map<string, Promise<Lane>>) => {
     console.log(`${name}: began at ${new Date(began).toISOString()}`);
     try {
       await readyForPart(lane, name);
+      // INF-4241 piece 8: the Duo starts each part with the hinge its row names, moved once; a Duo that does not show
+      // it fails the part here, by name, and nothing moves it again.
+      if (device === "duo") await setPhoneHinge({ run, simulator: lane.owned, helper: await hingeHelper!, hinge: partHinge(part),
+        reading: join(root, `${lane.owned}-displays.json`) });
       if (lane.photos && PHONE_PARTS.find((each) => each.name === part)?.photos) await lane.photos.ready();
     } catch (error) {
       console.log(`${name}: ${(error as Error).message}`);
       console.log(`${name}: ${stopping.aborted ? "stopped after another part failed" : "failed before its tests"} after ${minutes()} minutes`);
       return ended(stopping.aborted ? "stopped" : "failed");
     }
-    const command = [process.execPath, "scripts/test-phone.ts", ...(device === "ipad" ? ["--ipad"] : []),
+    const command = [process.execPath, "scripts/test-phone.ts", "--device", device,
+      ...(device === "duo" ? ["--hinge-helper", await hingeHelper!] : []),
       ...demo.childArgs, ...(only ? [`--${only}`] : []), ...(values["guest-observer"] ? ["--guest-observer"] : []),
       "--part", part, ...(job.tests ?? []).flatMap((test) => ["--test", test]), "--evidence", folder(job),
       "--xctestrun", join(products, plan), "--simulator", lane.owned];
@@ -481,7 +522,7 @@ const everyPartOn = async (starting: Map<string, Promise<Lane>>) => {
 };
 // A test plan copy beside the built one, naming this part's own test home, one for each simulator.
 const planFor = async (built: string, url: string, owned: string) => {
-  const plan = partPlanPath(built, values.ipad ? "ipad" : "iphone", values.part![0]!, owned);
+  const plan = partPlanPath(built, devices[0]!, values.part![0]!, owned);
   copyFileSync(built, plan);
   for (const key of testHomeKeys(JSON.parse(await run("plutil", ["-convert", "json", "-o", "-", built])))) {
     await run("plutil", ["-replace", key, "-string", url, plan]);

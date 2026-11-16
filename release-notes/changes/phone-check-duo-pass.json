@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-check-duo-pass",
+      "reason": "Test infrastructure: the phone check adds the iPhone Duo, opening and closing its simulated hinge to check the layout in its four flat sizes, pins each device's own iOS simulator, and runs every device from one build at a phone release, with no change to the app."
+    }
+  ]
+}

@@ -243,7 +243,7 @@ describe("running the parts side by side", () => {
 // INF-1438 (the captain's "Start each simulated device once per phone check, not once per part"): a
 // device's parts run one after the other on the one simulator its lane starts, the lanes side by side.
 describe("running each device's parts on one started device", () => {
-  type Job = { device: "iphone" | "ipad"; part: string };
+  type Job = { device: PhoneDevice; part: string };
   const name = ({ device, part }: Job) => `${device} ${part}`;
   it("starts each device once, runs its parts in order on it and ends it after the last", async () => {
     const events: string[] = [];
@@ -421,11 +421,19 @@ describe("several simulated devices of one device", () => {
     });
     const plan = phoneLanePlan(jobs, 6, recorded);
     expect(plan.lanes).toEqual([
-      { device: "ipad", number: 1 },
       { device: "iphone", number: 1 },
       { device: "iphone", number: 2 },
       { device: "iphone", number: 3 },
+      { device: "ipad", number: 1 },
     ]);
+  });
+  // INF-4241 piece 8: the every-device gate on a Mac that runs two simulators at once ran the iPad's and the Duo's
+  // lanes first, so the iPhone's whole pass waited for the iPad's to end and the job neared its time limit.
+  it("starts the device with the most work per lane first when there are fewer simulators than devices", () => {
+    const jobs = phonePasses(["ipad", "duo", "iphone"], {
+      parts: PHONE_PARTS.map(({ name }) => name),
+    });
+    expect(phoneLanePlan(jobs, 2, recorded).lanes[0]).toEqual({ device: "iphone", number: 1 });
   });
   it("starts each lane once, runs every part once on two at a time, and leaves a failed lane's parts to the other", async () => {
     const jobs = phonePasses(["iphone"], { parts: PHONE_PARTS.map(({ name }) => name) });

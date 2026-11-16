@@ -336,20 +336,28 @@ describe("the native gate on an affected request", () => {
     expect(native.queue).toBe("max");
     expect(native["cancel-in-progress"]).toBe(false);
   });
-  // INF-4241 piece 6: PHONE_PARTS is the one list of devices; the phone check's device matrix, the device it accepts
-  // and the phone release's calls follow it, so a device the table adds or drops is checked or refused everywhere.
+  // INF-4241 piece 6: PHONE_PARTS is the one list of devices; the device the phone check accepts, the devices its
+  // job of every device runs and the phone release's call follow it, so a device the table adds or drops is checked
+  // or refused everywhere. INF-4241 piece 8 (the brief's "a phone release runs all three passes from one build"): a
+  // call naming no device is one job whose one gate runs every device the table names.
   it("checks the devices PHONE_PARTS names, in the request, its matrix and the phone release", () => {
     const devices = [...PHONE_DEVICES].sort();
     const native = workflow.jobs[NATIVE_JOB];
-    const every = /'(\[[^']*\])'\)+\s*\}\}$/.exec(native.strategy.matrix.device)?.[1];
-    expect(JSON.parse(every ?? "[]").sort()).toEqual(devices);
+    expect(workflowValue(native.strategy.matrix.device, { inputs: {}, needs: {} })).toEqual([
+      "every",
+    ]);
+    const gate = (native.steps as Step[]).find(isGate)!.run!;
+    expect(gate).toContain("every) device=(--every-device)");
+    expect(
+      /\n\s*([\w|]+)\) device=\(--device "\$PHONE_DEVICE"\)/.exec(gate)?.[1]?.split("|").sort(),
+    ).toEqual(devices);
     const check = (workflow.jobs.request.steps as { run?: string }[]).find((step) =>
       step.run?.includes("Unknown phone device"),
     )!.run!;
     expect(/''\|([\w|]+)\) ;;/.exec(check)?.[1]?.split("|").sort()).toEqual(devices);
     const release = yaml.load(readFileSync(".github/workflows/ios-release.yml", "utf8"));
-    expect([...release.jobs.phone.strategy.matrix.device].sort()).toEqual(devices);
-    expect(release.jobs.phone.with.device).toBe("${{ matrix.device }}");
+    expect(release.jobs.phone.strategy).toBeUndefined();
+    expect(release.jobs.phone.with.device).toBeUndefined();
   });
   it("keeps TestFlight uploads in a line of their own, apart from the phone checks", () => {
     // INF-989 (captain: "keep TestFlight uploads in their own line").
@@ -656,18 +664,18 @@ describe("the phone check on request", () => {
   it("starts the device gate in each device's job", () => {
     // INF-2970's fix 1: each device's job runs its own gate, and neither stops the other.
     for (const virtualMac of [OFF, IN_TURN, TOGETHER])
-      for (const device of ["ipad", "iphone"])
+      for (const device of ["ipad", "duo", "iphone", "every"])
         expect(
           names(stepsThatRun(virtualMac, false, {}, BRANCH_REQUEST, {}, device).filter(isGate)),
         ).toEqual([BOTH]);
     expect(
-      ["", "ipad", "iphone"].map((device) =>
+      ["", "ipad", "duo", "iphone"].map((device) =>
         workflowValue(workflow.jobs[NATIVE_JOB].strategy.matrix.device, {
           inputs: { device },
           needs: {},
         }),
       ),
-    ).toEqual([["ipad", "iphone"], ["ipad"], ["iphone"]]);
+    ).toEqual([["every"], ["ipad"], ["duo"], ["iphone"]]);
     expect(workflow.jobs[NATIVE_JOB].strategy["fail-fast"]).toBe(false);
   });
 });
@@ -710,9 +718,10 @@ describe("a request that names one device", () => {
       ),
     };
   }
-  it("starts only the named device's job, and both when it names none", () => {
-    expect(devices({ affected: true })).toEqual(["ipad", "iphone"]);
-    expect(devices({ affected: true, device: "" })).toEqual(["ipad", "iphone"]);
+  it("starts only the named device's job, and the job of every device when it names none", () => {
+    expect(devices({ affected: true })).toEqual(["every"]);
+    expect(devices({ affected: true, device: "" })).toEqual(["every"]);
+    expect(devices({ affected: true, device: "duo" })).toEqual(["duo"]);
     expect(devices({ affected: true, device: "ipad" })).toEqual(["ipad"]);
     expect(devices({ affected: true, device: "iphone" })).toEqual(["iphone"]);
   });
@@ -875,7 +884,7 @@ describe("complete-selection phone CI repeats", () => {
 // Approved cut 4: the Linux request's matrix prevents an empty device from taking a phone Mac.
 it("uses the preselected device matrix and skips native work when Linux selects none", () => {
   const native = workflow.jobs[NATIVE_JOB];
-  for (const devices of [["iphone"], ["ipad"], ["ipad", "iphone"]]) {
+  for (const devices of [["iphone"], ["ipad"], ["duo", "ipad", "iphone"], ["every"]]) {
     const needs = { request: { outputs: { devices: JSON.stringify(devices) } } };
     expect(workflowValue(native.strategy.matrix.device, { inputs: {}, needs })).toEqual(devices);
     expect(holds(native.if, { inputs: {}, needs })).toBe(true);
@@ -883,10 +892,9 @@ it("uses the preselected device matrix and skips native work when Linux selects 
   expect(holds(native.if, { inputs: {}, needs: { request: { outputs: { devices: "[]" } } } })).toBe(
     false,
   );
-  // A release call has no manual selection and keeps its existing two-device route.
+  // A release call has no manual selection and runs every device in one job (INF-4241 piece 8).
   expect(workflowValue(native.strategy.matrix.device, { inputs: {}, needs: {} })).toEqual([
-    "ipad",
-    "iphone",
+    "every",
   ]);
 });
 

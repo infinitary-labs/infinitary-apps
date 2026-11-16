@@ -746,6 +746,20 @@ describe("the approved phone-check cuts", () => {
     }
     expect(requestDevicePlan([], [])).toEqual({ iphoneOnly: [], devices: [] });
   });
+  // INF-4241 piece 8 (the brief's "an every-part request passes on three devices", and the plan's full check of every
+  // device as lanes from one build): a request of every part names one job of every device; a narrower one, or one
+  // that names a device, keeps a job a device, the Duo's among them when a Duo part is kept.
+  it("runs a request of every part as one job of every device, and a narrower one a job a device", () => {
+    const every = PHONE_PARTS.map(({ name }) => name);
+    expect(requestDevicePlan(every, [], { explicit: true }).devices).toEqual(["every"]);
+    expect(requestDevicePlan(every, [], { explicit: true, device: "duo" }).devices).toEqual([
+      "duo",
+    ]);
+    const fold = PHONE_PARTS.find((part) => partDevices(part.name).includes("duo"))!.name;
+    expect(requestDevicePlan([fold], [], { explicit: true }).devices).toEqual(
+      ["duo", "iphone", ...(partDevices(fold).includes("ipad") ? ["ipad"] : [])].sort(),
+    );
+  });
 });
 
 // Approved cut 2 also covers suite-owning parts, which contain more than one XCTest method.

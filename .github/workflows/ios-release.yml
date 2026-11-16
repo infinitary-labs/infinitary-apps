@@ -60,17 +60,11 @@ jobs:
     if: needs.resolve.outputs.mode == 'release'
     # The reusable workflow and its checkout use this dispatch's resolved source.
     # No release environment or signing secrets cross into the disposable guest.
-    # INF-2582 direction A (the captain's "A: wait once and trim the soak"): one call per
-    # device, so the iPad and the iPhone each take one of the two phone Macs at once; one
-    # failing never cancels the other (INF-2409). INF-4241 piece 6: the devices are the ones
-    # PHONE_PARTS in scripts/phone-test-plan.ts names (tests/phone-ci.test.ts holds this
-    # list to it), and each call runs every part its row names for that device: every part on
-    # the iPhone, and on the iPad only the parts about the iPad.
-    name: Requested TestFlight · Phone checks (${{ matrix.device == 'ipad' && 'iPad' || 'iPhone' }})
-    strategy:
-      fail-fast: false
-      matrix:
-        device: [ipad, iphone]
+    # INF-4241 piece 8: one call that names no device, so phone.yml's one job checks every device
+    # PHONE_PARTS in scripts/phone-test-plan.ts names from one build on one phone Mac
+    # (tests/phone-ci.test.ts holds this): every part on the iPhone, and on the iPad and the iPhone
+    # Duo only the parts about each, the Duo's in the hinge its row names.
+    name: Requested TestFlight · Phone checks
     uses: ./.github/workflows/phone.yml
     # GitHub starts no job of a called workflow that asks for more than this
     # grant, even one its condition skips: phone.yml's Export phone pictures
@@ -81,7 +75,6 @@ jobs:
     with:
       trigger: Requested TestFlight
       source_commit: ${{ needs.resolve.outputs.source_commit }}
-      device: ${{ matrix.device }}
 
   testflight:
     name: Requested TestFlight · Sign and upload

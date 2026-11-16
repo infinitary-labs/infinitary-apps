@@ -19,6 +19,7 @@ import { cutOffSchema, fmEventSchema } from "./events";
 import { filesAnswerSchema, filesReadInputSchema } from "./files";
 import { closeOrder } from "./leftoverPrograms";
 import { keptValidationInputSchema } from "./liveValidation";
+import { personalVersionSchema } from "./personalSet";
 import {
   PLACEMENT_FACTS_ORDER,
   placementFactsAnswerSchema,
@@ -181,6 +182,8 @@ export const placedStateSchema = z.object({
    * older than this.
    */
   accountId: z.string().min(1).max(256).optional(),
+  /** The home's personal set it read as it opened (`inf:session:personal`); absent when none. */
+  personal: personalVersionSchema.optional(),
 });
 export type PlacedState = z.infer<typeof placedStateSchema>;
 
@@ -1244,7 +1247,33 @@ export const workOrders = {
        * keeps none, or speaks a contract older than `TASK_BROWSERS_THERE_SINCE`.
        */
       browsers: z.boolean().optional(),
+      /** The home's personal set kept here (`inf:session:personal`); absent before one arrives. */
+      personal: personalVersionSchema.optional(),
     }),
+  },
+  /**
+   * The home's personal instructions and skills, whole, kept here in place
+   * of the version kept before, only when its fingerprint matches what
+   * arrived (docs/personal-resources.md, "One set, kept on each computer").
+   * Sent when the home's set changed, never with a task. Paths are under
+   * the home's own folder, each `data` its bytes in base64.
+   */
+  "inf:session:personal": {
+    effect: "change",
+    request: z.tuple([
+      z.object({
+        version: z.string().regex(/^[0-9a-f]{64}$/),
+        since: z.number(),
+        files: z.array(
+          z.object({
+            path: z.string().min(1).max(1024),
+            data: z.string(),
+            exec: z.boolean().optional(),
+          }),
+        ),
+      }),
+    ]),
+    response: z.object({ personal: personalVersionSchema }),
   },
   /** Opens the task's conversation; one already open answers its state. */
   "inf:session:open": {

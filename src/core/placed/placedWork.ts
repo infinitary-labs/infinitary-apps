@@ -14,6 +14,8 @@ export type PlacedWork = {
     channel: C,
     request: InvokeRequest<C>[0],
   ): Promise<InvokeResponse<C>>;
+  /** Sends the home's personal set to each computer in reach that keeps another version. */
+  bringPersonal?(): Promise<void>;
 };
 
 /** What the home answers about a task its record does not place on the computer that asks. */

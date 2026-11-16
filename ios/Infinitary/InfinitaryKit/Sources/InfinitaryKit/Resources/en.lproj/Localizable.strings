@@ -1722,6 +1722,7 @@
 "recordFactDelivery" = "Delivery";
 "recordFactMerging" = "Merging";
 "recordFactOperation" = "Operation";
+"recordFactPersonal" = "Global instructions and skills";
 "recordFactResult" = "Result";
 "recordFactRunsOn" = "Runs on";
 "recordFromTask" = "from %1$@";
@@ -1745,6 +1746,8 @@
 "recordMoreDelivery" = "delivery";
 "recordMoreValidation" = "live validation";
 "recordOpenKeptEvidence" = "Open kept evidence";
+"recordPersonalNone" = "None, on %1$@";
+"recordPersonalVersion" = "Version %2$@ from %3$@, on %1$@";
 "recordPolicyParentTask" = "Parent task";
 "recordPolicyProject" = "Project setting";
 "recordPolicyThisTask" = "This task";
@@ -2778,7 +2781,7 @@
 "settingsSubscriptionsOnPace" = "on pace";
 "settingsSubscriptionsOnPaceAll" = "on pace ✓";
 "settingsSubscriptionsPaused" = "paused";
-"settingsSubscriptionsPersonalResourcesDescription" = "New crewmate sessions use the global instructions and skills of the %1$@ they run on. Nothing is copied between %2$@. Crew rules govern delivery; your file guides style and judgment.";
+"settingsSubscriptionsPersonalResourcesDescription" = "New crewmate sessions use the global instructions and skills of the %1$@ where your first mate lives. Other %2$@ that run work keep a copy, sent again only when it changes. Crew rules govern delivery; your file guides style and judgment.";
 "settingsSubscriptionsPersonalResourcesTitle" = "Global instructions and skills";
 "settingsSubscriptionsReading" = "reading…";
 "settingsSubscriptionsRefresh" = "Refresh";

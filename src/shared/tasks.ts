@@ -8,6 +8,7 @@ import { liveValidationSummarySchema } from "./liveValidationSummary";
 import { modelChoiceSchema } from "./modelChoice";
 import { modelReasonSchema } from "./modelReason";
 import { slotSchema } from "./modelSlots";
+import { personalReadSchema } from "./personalSet";
 import { placementSnapshotSchema } from "./placement";
 import { reasoningSchema } from "./reasoning";
 import { repoDeliverySchema, repoKindSchema } from "./repos";
@@ -727,6 +728,12 @@ export const taskDetailSchema = taskViewSchema.extend({
    */
   runsOn: taskRunsOnSchema.optional(),
   placement: placementSnapshotSchema.optional(),
+  /**
+   * The version of the home's personal instructions and skills the task's
+   * newest conversation read, and the computer it read it on
+   * (docs/personal-resources.md). Absent while none read them.
+   */
+  personal: personalReadSchema.optional(),
   intent: taskIntentViewSchema.nullable(),
   /** Dispatch-time care; current care lives in policies. */
   rigor: rigorSchema.nullable(),

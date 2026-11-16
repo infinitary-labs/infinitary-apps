@@ -1036,7 +1036,7 @@
   "settingsSubscriptionsOnPace": "dans le rythme",
   "settingsSubscriptionsOnPaceAll": "dans le rythme ✓",
   "settingsSubscriptionsPaused": "en pause",
-  "settingsSubscriptionsPersonalResourcesDescription": "Les nouvelles conversations des équipiers utilisent les instructions et compétences globales de leur {computer}. Rien n’est copié entre {computers}. Les règles de l’équipage régissent la livraison ; votre fichier guide le style et le jugement.",
+  "settingsSubscriptionsPersonalResourcesDescription": "Les nouvelles conversations des équipiers utilisent les instructions et compétences globales du {computer} où vit votre second. Les autres {computers} qui exécutent du travail en gardent une copie, renvoyée seulement quand elle change. Les règles de l’équipage régissent la livraison ; votre fichier guide le style et le jugement.",
   "settingsSubscriptionsPersonalResourcesTitle": "Instructions et compétences globales",
   "settingsSubscriptionsReading": "lecture…",
   "settingsSubscriptionsRefresh": "Actualiser",

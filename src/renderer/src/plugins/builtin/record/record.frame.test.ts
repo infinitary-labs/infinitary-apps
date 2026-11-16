@@ -1,3 +1,4 @@
+import { placeThisComputer, recordPersonalNone } from "@shared/i18n/messages.generated";
 import type { RecordFact } from "@shared/recordFacts";
 import type { TaskActivityRow, TaskDetail, TaskEventView } from "@shared/tasks";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -97,7 +98,7 @@ class Node {
   }
 }
 
-function mount(options: { knowledge?: boolean; state?: unknown } = {}) {
+function mount(options: { knowledge?: boolean; state?: unknown; home?: string } = {}) {
   const nodes = new Map<string, Node>();
   const node = (selector: string) => {
     if (!nodes.has(selector)) nodes.set(selector, new Node());
@@ -106,7 +107,10 @@ function mount(options: { knowledge?: boolean; state?: unknown } = {}) {
   // The root as the template stamps it: whether the window has knowledge.
   node("[data-record]").setAttribute("data-knowledge", options.knowledge ? "on" : "off");
   // And the record's words, as the window words them in English.
-  node("[data-record]").setAttribute("data-record-words", JSON.stringify(recordWords()));
+  node("[data-record]").setAttribute(
+    "data-record-words",
+    JSON.stringify(recordWords(options.home)),
+  );
   const listeners = new Map<string, (value: unknown) => void>();
   /** Reads of other tasks' records (a parent the board does not list), by id. */
   const others = new Map<string, { callback: (value: unknown) => void; stopped: boolean }>();
@@ -848,6 +852,33 @@ describe("compact task record frame", () => {
     expect(frame.helper().text()).toBe("");
     frame.push(task());
     expect(frame.fact("runs-on")).toBeUndefined();
+  });
+
+  it("names the version of the personal instructions the task read, and on which computer", () => {
+    const frame = mount();
+    const version = "c0ffee".repeat(10).concat("abcd");
+    frame.push(task({ personal: { version, since: now, files: 4, computer: "Mac mini" } }));
+    const words = frame.fact("personal")?.text() ?? "";
+    expect(words).toContain(version.slice(0, 12));
+    expect(words).not.toContain(version.slice(0, 13));
+    expect(words).toContain("Mac mini");
+    expect(frame.section("details").hidden).toBe(false);
+    frame.push(task({ personal: { version, since: now, files: 0, computer: "Mac mini" } }));
+    expect(frame.fact("personal")?.text()).toBe(recordPersonalNone({ computer: "Mac mini" }));
+    frame.push(task());
+    expect(frame.fact("personal")).toBeUndefined();
+  });
+
+  it("words the computer where the first mate lives in the window's language, and by its name from a view", () => {
+    const version = "c0ffee".repeat(10).concat("abcd");
+    const here = mount();
+    here.push(task({ personal: { version, since: now, files: 0, home: true } }));
+    expect(here.fact("personal")?.text()).toBe(
+      recordPersonalNone({ computer: placeThisComputer() }),
+    );
+    const view = mount({ home: "Studio" });
+    view.push(task({ personal: { version, since: now, files: 0, home: true } }));
+    expect(view.fact("personal")?.text()).toBe(recordPersonalNone({ computer: "Studio" }));
   });
 
   it("ends another task's Activity line in that task's key as words, and asks the host nothing", () => {

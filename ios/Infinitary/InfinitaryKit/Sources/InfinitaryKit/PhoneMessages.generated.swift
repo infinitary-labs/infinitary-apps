@@ -1797,6 +1797,7 @@ public enum PhoneMessages {
     public static func `recordFactDelivery`() -> String { PhoneWords.format("recordFactDelivery", []) }
     public static func `recordFactMerging`() -> String { PhoneWords.format("recordFactMerging", []) }
     public static func `recordFactOperation`() -> String { PhoneWords.format("recordFactOperation", []) }
+    public static func `recordFactPersonal`() -> String { PhoneWords.format("recordFactPersonal", []) }
     public static func `recordFactResult`() -> String { PhoneWords.format("recordFactResult", []) }
     public static func `recordFactRunsOn`() -> String { PhoneWords.format("recordFactRunsOn", []) }
     public static func `recordFoldedMore`(`count`: Int) -> String { PhoneWords.format("recordFoldedMore", [`count`]) }
@@ -1822,6 +1823,8 @@ public enum PhoneMessages {
     public static func `recordMoreKnowledge`(`count`: Int) -> String { PhoneWords.format("recordMoreKnowledge", [`count`]) }
     public static func `recordMoreValidation`() -> String { PhoneWords.format("recordMoreValidation", []) }
     public static func `recordOpenKeptEvidence`() -> String { PhoneWords.format("recordOpenKeptEvidence", []) }
+    public static func `recordPersonalNone`(`computer`: String) -> String { PhoneWords.format("recordPersonalNone", [`computer`]) }
+    public static func `recordPersonalVersion`(`computer`: String, `version`: String, `when`: String) -> String { PhoneWords.format("recordPersonalVersion", [`computer`, `version`, `when`]) }
     public static func `recordPolicyParentTask`() -> String { PhoneWords.format("recordPolicyParentTask", []) }
     public static func `recordPolicyProject`() -> String { PhoneWords.format("recordPolicyProject", []) }
     public static func `recordPolicyThisTask`() -> String { PhoneWords.format("recordPolicyThisTask", []) }
@@ -5106,6 +5109,7 @@ extension PhoneWords {
         "recordFactDelivery": [],
         "recordFactMerging": [],
         "recordFactOperation": [],
+        "recordFactPersonal": [],
         "recordFactResult": [],
         "recordFactRunsOn": [],
         "recordFoldedMore": ["count"],
@@ -5131,6 +5135,8 @@ extension PhoneWords {
         "recordMoreKnowledge": ["count"],
         "recordMoreValidation": [],
         "recordOpenKeptEvidence": [],
+        "recordPersonalNone": ["computer"],
+        "recordPersonalVersion": ["computer", "version", "when"],
         "recordPolicyParentTask": [],
         "recordPolicyProject": [],
         "recordPolicyThisTask": [],

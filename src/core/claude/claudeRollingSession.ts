@@ -336,7 +336,7 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
     const previous = this.record.personalAtStart(this.id);
     const current = this.spec.personalResources
       ? personalResources(
-          this.config.env.HOME,
+          this.spec.personalRoot ?? this.config.env.HOME,
           new Set(projectSkillFolders(this.spec.cwd).map((skill) => skill.name)),
         ).digests
       : undefined;
@@ -548,7 +548,7 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
     this.staging ??= await claimStagingFolder(shape.record.dir);
     const { project, personalDigests } = await claudeProjectResources(
       this.spec,
-      this.config.env.HOME,
+      this.spec.personalRoot ?? this.config.env.HOME,
       this.staging.dir,
       (line) => this.note(line),
     );

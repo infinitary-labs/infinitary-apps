@@ -114,7 +114,10 @@ function attributeEscaped(text: string): string {
  */
 export function recordTemplate(taskId: string, knowledge = false): FrameTemplate {
   const escaped = attributeEscaped(taskId);
-  const words = attributeEscaped(JSON.stringify(recordWords()));
+  const thisMac = useShellStore.getState().thisMac;
+  const words = attributeEscaped(
+    JSON.stringify(recordWords(isView(thisMac) ? thisMac.name : undefined)),
+  );
   return {
     // The words first, so a task id that names their slot never takes their place.
     html: recordHtml

@@ -152,6 +152,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/placed/placedOutside.test.ts` | real git on both sides of a placed task's working copy, at the run's own priority; a vite build and the forked command process of a computer's task channel | 10 s |
 | `src/core/placed/placedRunsOn.test.ts` | real git on both sides of a placed task's working copy, at the run's own priority | 10 s |
 | `src/core/placed/placedComputers.test.ts` | real git on both sides of a placed task's working copy, at the run's own priority | 10 s |
+| `src/core/placed/placedPersonal.test.ts` | real git on both sides of a placed task's working copy, at the run's own priority: the home's personal set kept on the computer by the app's own triggers | 10 s |
 | `src/core/placed/placedAccounts.test.ts` | real git for each side's workspace of a placed task, at the run's own priority | 5 s default |
 | `src/core/placed/placedCutOff.test.ts` | real git for each side's workspace of a placed task whose sign-in there is cut off, at the run's own priority | 10 s |
 | `src/core/helper/cleanUp.test.ts` | real git: what a removal takes from a computer's clones and working copies, at the run's own priority; a worker thread holding the route's lock, and that lock's fixed 2 s wait | 30 s |

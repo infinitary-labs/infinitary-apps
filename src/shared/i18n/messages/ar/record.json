@@ -55,6 +55,7 @@
   "recordFactDelivery": "التسليم",
   "recordFactMerging": "الدمج",
   "recordFactOperation": "عملية",
+  "recordFactPersonal": "التعليمات والمهارات العامة",
   "recordFactResult": "الناتج",
   "recordFactRunsOn": "تعمل على",
   "recordFoldedMore": {
@@ -96,6 +97,8 @@
   },
   "recordMoreValidation": "التحقق المباشر",
   "recordOpenKeptEvidence": "فتح الدليل المحفوظ",
+  "recordPersonalNone": "لا شيء، على {computer}",
+  "recordPersonalVersion": "الإصدار {version} من {when}، على {computer}",
   "recordPolicyParentTask": "المهمة الأم",
   "recordPolicyProject": "إعداد المشروع",
   "recordPolicyThisTask": "هذه المهمة",

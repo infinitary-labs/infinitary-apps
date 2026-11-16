@@ -145,7 +145,15 @@ async function computer() {
     env: {},
     app,
   });
-  for (const folder of ["accounts", "forges", "pi-agent", "tasks", "bundles", HOME_ARRIVING_DIR])
+  for (const folder of [
+    "accounts",
+    "forges",
+    "pi-agent",
+    "tasks",
+    "bundles",
+    HOME_ARRIVING_DIR,
+    "personal",
+  ])
     mkdirSync(join(dataDir, folder, "inside"), { recursive: true });
   for (const file of ["home.json", "left.json", "work.log", "service.log", "route.json"])
     writeFileSync(join(dataDir, file), "{}\n");
@@ -266,8 +274,8 @@ describe("removing what Firstmate set up on a computer that runs work", () => {
       kept: [busy.dir],
       unremoved: [clean.dir],
     });
-    // Everything else went, its sign-ins too.
-    for (const gone of ["accounts", "forges", "pi-agent", "tasks", "bundles"])
+    // Everything else went, its sign-ins and the home's personal set too.
+    for (const gone of ["accounts", "forges", "pi-agent", "tasks", "bundles", "personal"])
       expect(existsSync(join(at.dataDir, gone)), gone).toBe(false);
     // The agent, the copy it starts and their record stay, for its next run to finish it.
     expect(existsSync(at.app)).toBe(true);

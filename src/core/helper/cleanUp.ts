@@ -61,8 +61,8 @@ export const LEFT_CLAUDE_LOGIN = "claude-login.json";
 
 /**
  * Folders that hold sign-ins, conversations, the pieces of work in flight,
- * the tasks' command keys and a moving first mate's files, which can hold a
- * copy of its home's key.
+ * the tasks' command keys, the home's personal instructions and skills, and a
+ * moving first mate's files, which can hold a copy of its home's key.
  */
 const ALWAYS = [
   "accounts",
@@ -76,6 +76,7 @@ const ALWAYS = [
   "worktree-trash",
   "task-channel",
   HOME_ARRIVING_DIR,
+  "personal",
 ] as const;
 
 /** Folders a kept working copy needs: the clones it is a working copy of. */

@@ -1,3 +1,4 @@
+import { PERSONAL_READ_FIELD } from "@shared/personalSet";
 import type { InsertTaskEvent, TaskEvent, TaskEventStore } from "../storage/taskEventStore";
 
 /**
@@ -28,6 +29,12 @@ export type CompactedEventData = {
    */
   plan?: unknown[];
   planAt?: number;
+  /**
+   * The newest version of the home's personal set the folded events say a
+   * conversation read, under the field they carried it in, so the Info tab
+   * still names it (`personalReadOf`).
+   */
+  personal?: unknown;
   /** The highest folded program line number per op (docs/programs.md). */
   programLines?: Partial<Record<"log" | "phase", number>>;
 };
@@ -101,11 +108,15 @@ export function compactTimeline(events: TaskEventStore, taskId: string): TaskEve
         data.kinds[kind] = (data.kinds[kind] ?? 0) + n;
       }
       keepLatest(data, prior.plan, prior.planAt ?? 0, prior.programLines);
+      if (event.data?.[PERSONAL_READ_FIELD] !== undefined)
+        data.personal = event.data[PERSONAL_READ_FIELD];
       continue;
     }
     data.folded += 1;
     data.firstAt = Math.min(data.firstAt, event.at);
     data.kinds[event.kind] = (data.kinds[event.kind] ?? 0) + 1;
+    if (event.data?.[PERSONAL_READ_FIELD] !== undefined)
+      data.personal = event.data[PERSONAL_READ_FIELD];
     const line = event.data?.programLine as { op?: unknown; n?: unknown } | undefined;
     keepLatest(
       data,

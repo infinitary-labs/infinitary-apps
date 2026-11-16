@@ -46,6 +46,7 @@
   "recordFactDelivery": "Entrega",
   "recordFactMerging": "Mesclagem",
   "recordFactOperation": "Operação",
+  "recordFactPersonal": "Instruções e habilidades globais",
   "recordFactResult": "Resultado",
   "recordFactRunsOn": "Roda em",
   "recordFoldedMore": {
@@ -81,6 +82,8 @@
   },
   "recordMoreValidation": "validação ao vivo",
   "recordOpenKeptEvidence": "Abrir a evidência guardada",
+  "recordPersonalNone": "Nenhuma, em {computer}",
+  "recordPersonalVersion": "Versão {version} de {when}, em {computer}",
   "recordPolicyParentTask": "Tarefa principal",
   "recordPolicyProject": "Configuração do projeto",
   "recordPolicyThisTask": "Esta tarefa",

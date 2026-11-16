@@ -64,6 +64,7 @@ import { type SelfSourceReader, sourceContext } from "../selfSource/resolve";
 import { serveAnswerFiles } from "../session/answerFiles";
 import { followCompletions } from "../session/followCompletions";
 import { APP_TOOL_REQUESTS, OpenReads } from "../session/openReads";
+import type { PersonalVersion } from "../session/personalSet";
 import {
   type ClientBackgroundTask,
   LOCAL_MACHINE_ID,
@@ -88,6 +89,7 @@ import { HANDOVER_IN_DIR_NAME, HANDOVER_OUT_DIR_NAME } from "../tasks/handoverFi
 import type { TaskQueryRow } from "../tasks/taskQuery";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import type { MovedFolders } from "../workspace/workMove";
+import { keepOrdered, type PersonalCopy } from "./personalCopy";
 import { carryStory, type PlacedMedia, sendCardData, sendPictures } from "./placedStoryMedia";
 import type { PlacedJob, PlacedTaskState, PlacedTasks } from "./placedTasks";
 import { SecretUsesThere } from "./secretUses";
@@ -182,6 +184,8 @@ export type SessionHostOptions = {
    * (src/shared/contract-changes/README.md).
    */
   homeChanges?: () => readonly string[] | null;
+  /** The home's personal set as it last sent it (docs/personal-resources.md); absent, this user's own is read. */
+  personal?: PersonalCopy;
   /**
    * This computer's working copies, which a conversation runs in. Absent,
    * a conversation runs in an empty folder of its task's own.
@@ -272,6 +276,8 @@ type Held = {
   /** Reopening the home’s side can enable the policy without interrupting this conversation. */
   speed: boolean;
   backend: SessionBackend | null;
+  /** The version of the home's personal set the open conversation read, when it read one. */
+  personal?: PersonalVersion | undefined;
   /** The last Pi shell count sent, so another task's job does not repeat it. */
   jobs: number | undefined;
   /** The job that count last named, so a change of its longest-running job is sent too. */
@@ -551,6 +557,8 @@ export class SessionHost {
     request: WorkOrderRequest<C>,
   ): Promise<WorkOrderResponse<C>> {
     if (channel === "inf:session:roster") return this.roster() as WorkOrderResponse<C>;
+    if (channel === "inf:session:personal")
+      return keepOrdered(this.options.personal, request as never) as WorkOrderResponse<C>;
     // Outside the task's order of orders: an order waiting on the stuck turn never holds it.
     if (channel === "inf:session:answer-reads") {
       const [ask] = request as WorkOrderRequest<"inf:session:answer-reads">;
@@ -690,10 +698,12 @@ export class SessionHost {
     const open = [...this.held.values()].filter((held) => held.session).map((held) => held.task);
     const copies = this.options.copies;
     const tasks = new Set([...this.options.tasks.list(), ...open, ...(copies?.list() ?? [])]);
+    const personal = this.options.personal?.held();
     return {
       tasksDir: this.options.tasks.tasksDir,
       ...(copies ? { worktreesDir: copies.worktreesDir } : {}),
       ...(this.options.commands ? { browsers: true } : {}),
+      ...(personal ? { personal } : {}),
       tasks: [...tasks].sort().map((task) => {
         const held = this.hold(task);
         const state = held.session ? this.stateOf(held) : undefined;
@@ -903,6 +913,9 @@ export class SessionHost {
         throw new Error("This task has no working copy here yet.");
       const folders = this.options.tasks.ensure(held.task);
       const instructions = `${spec.instructions}\n${sourceFacts}`;
+      const personal = spec.personalResources
+        ? this.options.personal?.forHome(this.options.homeChanges?.() ?? null)
+        : undefined;
       // Pi records belong to this task's sessions folder, never a path a
       // home cached before an update. Claude's token is its session id.
       const token =
@@ -979,6 +992,7 @@ export class SessionHost {
         ...(spec.personalResources !== undefined
           ? { personalResources: spec.personalResources }
           : {}),
+        ...(personal ? { personalRoot: personal.root } : {}),
         builtins: "coding",
         tools,
         ...(granted ? { shell: granted.shell } : {}),
@@ -1011,6 +1025,7 @@ export class SessionHost {
         secrets: spec.secrets === true,
       };
       held.spec = spec;
+      held.personal = personal?.held;
       held.backend = binding.backend;
       held.account = this.options.accounts?.of(binding);
       held.renewal = session.takeRenewal();
@@ -1320,6 +1335,7 @@ export class SessionHost {
       ...(reasoning ? { reasoning } : {}),
       ...(held.renewal ? { renewal: { ...held.renewal, changed: [...held.renewal.changed] } } : {}),
       ...(held.account ? { accountId: held.account } : {}),
+      ...(held.personal ? { personal: held.personal } : {}),
     };
   }
 

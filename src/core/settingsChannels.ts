@@ -3,11 +3,13 @@ import type { CoreServices } from "./coreServices";
 /**
  * Settings' channels that only hand their arguments to one service and emit
  * nothing: the runbook switches (docs/runbooks.md), the personal-resource
- * switch and the app's cost limit (docs/usage.md, "The cost limit"). The dispatcher
+ * switch, which sends the home's set to its computers when it turns on, and
+ * the app's cost limit (docs/usage.md, "The cost limit"). The dispatcher
  * spreads them into its table, so it stays under the size check's ceiling.
  */
 export function plainSettingsChannels(
-  services: Pick<CoreServices, "runbooks" | "costLimit" | "settings">,
+  services: Pick<CoreServices, "runbooks" | "costLimit" | "settings"> &
+    Partial<Pick<CoreServices, "placed">>,
 ) {
   return {
     "inf:settings:runbooks:get": () => services.runbooks.list(),
@@ -18,6 +20,8 @@ export function plainSettingsChannels(
     "inf:settings:personal-resources:get": () => services.settings.getPersonalResourcesEnabled(),
     "inf:settings:personal-resources:set": (enabled: boolean) => {
       services.settings.setPersonalResourcesEnabled(enabled);
+      // Turned on, the home's set goes to each computer in reach at once.
+      if (enabled) void services.placed?.bringPersonal?.();
       return services.settings.getPersonalResourcesEnabled();
     },
     "inf:settings:cost-limit:get": () => services.costLimit.view(),

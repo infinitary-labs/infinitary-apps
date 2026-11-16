@@ -297,6 +297,11 @@ export type SetupExtras = {
   sendTakenIntegrationAsk?: CrewSupervisorOptions["sendTakenIntegrationAsk"];
   /** The captain's click on a crewmate's kept write sends it once (`GithubGatewayService.sendAsk`). */
   sendWriteAsk?: CrewSupervisorOptions["sendWriteAsk"];
+  /** The home's personal instructions switch and the version of its set (docs/personal-resources.md). */
+  personal?: {
+    enabled: () => boolean;
+    version: () => import("@shared/personalSet").PersonalVersion;
+  };
   /** Where the captain's input comes from (docs/devices.md, "Where the captain is"). */
   captainPlaces?: CrewSupervisorOptions["captainPlaces"];
   /** A panel's held call was answered: the panel hears the choice (`HomeIntegrations`). */
@@ -559,6 +564,12 @@ export function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     ...(extras.accounts ? { accounts: extras.accounts } : {}),
     ...(extras.accountlessServes ? { accountlessServes: extras.accountlessServes } : {}),
     ...(extras.machines ? { machines: extras.machines } : {}),
+    ...(extras.personal
+      ? {
+          personalResourcesEnabled: extras.personal.enabled,
+          personalVersion: extras.personal.version,
+        }
+      : {}),
     ...(extras.takesNoWorkUntilUpdated
       ? { takesNoWorkUntilUpdated: extras.takesNoWorkUntilUpdated }
       : {}),

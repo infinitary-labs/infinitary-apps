@@ -40,6 +40,7 @@
   "recordFactDelivery": "届け方",
   "recordFactMerging": "マージ",
   "recordFactOperation": "操作",
+  "recordFactPersonal": "全体の指示とスキル",
   "recordFactResult": "成果",
   "recordFactRunsOn": "実行先",
   "recordFoldedMore": {
@@ -71,6 +72,8 @@
   },
   "recordMoreValidation": "実地検証",
   "recordOpenKeptEvidence": "保存された証拠を開く",
+  "recordPersonalNone": "なし（{computer}）",
+  "recordPersonalVersion": "{when} のバージョン {version}（{computer}）",
   "recordPolicyParentTask": "親タスク",
   "recordPolicyProject": "プロジェクトの設定",
   "recordPolicyThisTask": "このタスク",

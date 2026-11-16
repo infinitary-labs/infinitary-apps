@@ -38,6 +38,7 @@ import { crewmateResumeToken } from "../orchestrator/crewSession";
 import { type AppPaths, crewmatePlacedDir, crewmateSessionsDir } from "../paths";
 import { errorText } from "../personal/errorText";
 import type { ComputerPool } from "../routing/computerPool";
+import type { PersonalVersion } from "../session/personalSet";
 import type {
   ControlProfile,
   ModelSession,
@@ -54,6 +55,7 @@ import { noteLeftovers, openSuccessor } from "../tasks/leftoverPrograms";
 import { TaskService } from "../tasks/taskService";
 import type { DependencyInstall } from "../workspace/workspaceService";
 import type { AnsweredWait, CrewMachines, PlacedBrowserSink, PlacedHost } from "./crewMachines";
+import { type HomePersonal, PersonalSync } from "./personalSync";
 import { accountKey, PlacedAccounts, type PlacedAccountsOptions } from "./placedAccounts";
 import { answerCall, type CallbackReach, NotHeldHere, replayReport } from "./placedCallbacks";
 import { PlacedCopies, type PlacedCopy } from "./placedCopies";
@@ -174,6 +176,11 @@ export type PlacedSessionsOptions = {
   /** One-shot copy delay; answers its own cancel. Tests drive it with the same clock as now. */
   schedule?: (ms: number, run: () => void) => () => void;
   log?: (line: string) => void;
+  /**
+   * The home's personal instructions and skills, kept on each computer when
+   * the switch is on (`PersonalSync`); absent, none is sent.
+   */
+  personal?: HomePersonal;
 } & Pick<PlacedAccountsOptions, "signIns" | "saidSignIns" | "catalogModels">;
 
 type Roster = {
@@ -276,6 +283,8 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   private readonly callbackReach: CallbackReach;
   /** The home's record of the jobs closes kept running, here and there (`KeptJobs`). */
   readonly keptJobs: KeptJobs;
+  /** The home's personal set on each computer (docs/personal-resources.md). */
+  private readonly personal: PersonalSync | undefined;
 
   constructor(private readonly options: PlacedSessionsOptions) {
     this.startedAt = options.now();
@@ -300,6 +309,10 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       ...options,
       placeOf: (deviceId) => this.placeOf(deviceId),
     });
+    this.personal = options.personal
+      ? new PersonalSync({ devices: options.devices, personal: options.personal, log: this.log })
+      : undefined;
+    options.personal?.onChange(() => void this.bringPersonal());
     this.callbackReach = {
       paths: options.paths,
       host: () => this.host,
@@ -580,6 +593,11 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return accountId ? accountKey(machine, accountId) : undefined;
   }
 
+  personalOf(taskId: string): PersonalVersion | undefined {
+    const placed = this.placed.get(taskId);
+    return placed ? heldSession(placed)?.personalVersion() : undefined;
+  }
+
   cutOffOf(account: string): ReturnType<CrewMachines["cutOffOf"]> {
     return this.accounts.cutOffOf(account);
   }
@@ -854,6 +872,9 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         ? { retries: spec.bounds.request.retries }
         : {}),
     });
+    // The home's set reaches it before a conversation that reads it opens; a
+    // send that fails leaves it the version it had.
+    if (spec.personalResources) await this.personal?.bring(deviceId);
     const task = spec.owner;
     const placed = this.load(task, deviceId);
     const { state } = openAnswerSchema.parse(
@@ -907,6 +928,17 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return session;
   }
 
+  /**
+   * The home's personal set changed, or the switch turned on: each computer
+   * in reach is sent it now, and one out of reach when it is back.
+   */
+  bringPersonal(): Promise<void> {
+    const sends = [...this.devices.values()]
+      .filter((device) => device.roster && this.options.devices.inReach(device.id))
+      .map((device) => this.personal?.bring(device.id));
+    return Promise.all(sends).then(() => undefined);
+  }
+
   // ---- contact ------------------------------------------------------------------
 
   private contact(contact: WorkDeviceContact): void {
@@ -915,6 +947,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     this.awaitRoster(device);
     if (contact.contact === "gone") {
       device.roster = undefined;
+      this.personal?.forget(contact.deviceId);
       device.goneSince = this.options.now();
       device.reachedAt = undefined;
       for (const placed of this.placed.values())
@@ -948,7 +981,11 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       tasks: new Map(roster.tasks.map((entry) => [entry.task, entry])),
       browsers: roster.browsers === true,
     };
+    this.personal?.heard(device.id, roster.personal);
     device.rosterRead();
+    // Its personal set first, so a conversation it opens again reads the home's newest.
+    await this.personal?.bring(device.id);
+    if (device.contact !== contact) return;
     const adopting: Promise<unknown>[] = [];
     // Each entry's computer and close, in one read: a computer keeps every
     // task's folder for a while, thousands of them, and composing each

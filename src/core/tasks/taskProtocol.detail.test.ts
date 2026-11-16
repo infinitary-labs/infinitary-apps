@@ -115,6 +115,35 @@ describe("the task protocol (task-system P3)", () => {
     f.db.close();
   });
 
+  it("names the version of the personal instructions the newest conversation read, after compaction folds its note too", () => {
+    const f = taskProtocolFixture();
+    f.tasks.create({ id: "t", title: "Work", prompt: "p", repoId: "r1" });
+    expect(f.protocol.detail("t").personal).toBeUndefined();
+    const read = (version: string, computer: string) => {
+      f.tick();
+      const personal = { version: version.repeat(64), since: f.clock(), files: 3, computer };
+      f.tasks.note("t", `Read the personal instructions on ${computer}.`, {
+        news: false,
+        data: { personal },
+      });
+      return personal;
+    };
+    read("a", "Mac mini");
+    const newest = read("b", "This computer");
+    expect(f.protocol.detail("t").personal).toEqual(newest);
+    for (let index = 0; index < TIMELINE_CAP; index += 1) {
+      f.tick();
+      f.tasks.noteProgress("t", `checked file ${index}`);
+    }
+    expect(f.tasks.timeline("t").some((event) => event.text.startsWith("Read the personal"))).toBe(
+      false,
+    );
+    const detail = taskDetailSchema.parse(f.protocol.detail("t"));
+    expect(detail.personal).toEqual(newest);
+    f.protocol.dispose();
+    f.db.close();
+  });
+
   it("carries why a crewmate runs on its model in the record's detail, never on the board", () => {
     const { db, tasks, protocol } = taskProtocolFixture();
     const model = { provider: "openai-codex", id: "gpt-5.5" };

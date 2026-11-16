@@ -1722,6 +1722,7 @@
 "recordFactDelivery" = "Entrega";
 "recordFactMerging" = "Mesclagem";
 "recordFactOperation" = "Operação";
+"recordFactPersonal" = "Instruções e habilidades globais";
 "recordFactResult" = "Resultado";
 "recordFactRunsOn" = "Roda em";
 "recordFromTask" = "de %1$@";
@@ -1745,6 +1746,8 @@
 "recordMoreDelivery" = "entrega";
 "recordMoreValidation" = "validação ao vivo";
 "recordOpenKeptEvidence" = "Abrir a evidência guardada";
+"recordPersonalNone" = "Nenhuma, em %1$@";
+"recordPersonalVersion" = "Versão %2$@ de %3$@, em %1$@";
 "recordPolicyParentTask" = "Tarefa principal";
 "recordPolicyProject" = "Configuração do projeto";
 "recordPolicyThisTask" = "Esta tarefa";
@@ -2778,7 +2781,7 @@
 "settingsSubscriptionsOnPace" = "no ritmo";
 "settingsSubscriptionsOnPaceAll" = "no ritmo ✓";
 "settingsSubscriptionsPaused" = "pausada";
-"settingsSubscriptionsPersonalResourcesDescription" = "As novas conversas dos tripulantes usam as instruções e habilidades globais do %1$@ em que rodam. Nada é copiado entre %2$@. As regras da tripulação regem a entrega; seu arquivo orienta o estilo e o julgamento.";
+"settingsSubscriptionsPersonalResourcesDescription" = "As novas conversas dos tripulantes usam as instruções e habilidades globais do %1$@ onde mora seu imediato. Os outros %2$@ que executam trabalho guardam uma cópia, enviada de novo só quando ela muda. As regras da tripulação regem a entrega; seu arquivo orienta o estilo e o julgamento.";
 "settingsSubscriptionsPersonalResourcesTitle" = "Instruções e habilidades globais";
 "settingsSubscriptionsReading" = "lendo…";
 "settingsSubscriptionsRefresh" = "Atualizar";

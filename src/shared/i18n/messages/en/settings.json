@@ -1017,7 +1017,7 @@
   "settingsSubscriptionsOnPace": "on pace",
   "settingsSubscriptionsOnPaceAll": "on pace ✓",
   "settingsSubscriptionsPaused": "paused",
-  "settingsSubscriptionsPersonalResourcesDescription": "New crewmate sessions use the global instructions and skills of the {computer} they run on. Nothing is copied between {computers}. Crew rules govern delivery; your file guides style and judgment.",
+  "settingsSubscriptionsPersonalResourcesDescription": "New crewmate sessions use the global instructions and skills of the {computer} where your first mate lives. Other {computers} that run work keep a copy, sent again only when it changes. Crew rules govern delivery; your file guides style and judgment.",
   "settingsSubscriptionsPersonalResourcesTitle": "Global instructions and skills",
   "settingsSubscriptionsReading": "reading…",
   "settingsSubscriptionsRefresh": "Refresh",

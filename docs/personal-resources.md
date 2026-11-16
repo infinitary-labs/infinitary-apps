@@ -6,9 +6,10 @@ The home persists it under `personal-resources` in SettingsStore and applies it 
 A running session keeps the choice it opened with; turning the switch off takes effect on the next session.
 The first mate and one-shot model calls do not read personal resources.
 
-## Each Mac's own files
+## The home's files
 
-The shared reader `src/core/session/personalResources.ts` runs inside each backend on the Mac that holds the session, under the home folder of that macOS user.
+The shared reader `src/core/session/personalResources.ts` runs inside each backend on the computer that holds the session.
+On the home it reads the home folder of that macOS user; on a computer that runs work it reads the home's set kept there (below), never that computer's own home folder.
 The first readable instruction file wins: `~/AGENTS.md`, `~/.claude/CLAUDE.md`, then `~/.codex/AGENTS.md`.
 An absent, unreadable, non-file or oversized candidate falls through to the next.
 The maximum is 128 KiB per instruction file or SKILL.md.
@@ -17,9 +18,32 @@ Project skill names take precedence over personal names, including in the person
 The `infinitary-axi` skill, which `infinitary-axi setup` writes for the person's own agents, is never listed: that command reads Infinitary as the person, never as the crew (`docs/axi-commands.md`).
 Links are supported, so a user's files managed elsewhere remain usable.
 The reader never writes to the home files or reads settings, MCP configuration, hooks, other agent folders or automatic notes.
-No instruction or skill file is transported: the placed open order carries only the optional `personalResources` boolean.
+The placed open order carries only the optional `personalResources` boolean; the files themselves travel once per version, never with a task (below).
 Personal instructions enter model prompts and session records like project instructions; existing placed-session record copies still return to the home.
-A Mac with no files serves no personal file or skills.
+A home with no files serves no personal file or skills.
+
+## One set, kept on each computer
+
+The home reads its own files as one set (`src/core/session/personalSet.ts`): the instruction file the reader picks and every file of each skill it lists, by their paths under the home folder, skipping a skill's own `.git` folder.
+Its version is a fingerprint, the SHA-256 of each file's path, contents hash and executable bit in path order, so the same files give the same version on any computer.
+A set travels whole in one order, so it is held to half a connection frame; a skill that would take it past that stays out whole and is named in the home's log once each time that changes.
+The budget is counted from each file's size as it is listed, so a skill too large to send (one holding its own packages, say) is never read.
+`HomePersonalSet` lists the set again whenever it is asked and keeps the newest version, with since when the home has had it, in SettingsStore under `personal-version`.
+It reads a file again only when its listing changed (its size, times, mode or inode), keeping each file's hash otherwise, and reads the whole set only when it sends one.
+
+`PersonalSync` (`src/core/placed/personalSync.ts`) keeps each computer that runs work on the home's version, while the switch is on, through the `inf:session:personal` order.
+Each computer's roster says which version it keeps; the home sends its set only when that is not the version it has now, one send at a time per computer.
+It sends at each contact, before a placed open that reads personal resources, when the switch turns on, and when a read of the set finds a new version.
+Both sides speak the `personal-sync` contract change (`src/shared/contract-changes/personal-sync.md`): a home sends only to a computer that lists it, and a computer reads the kept set only for a home that lists it, reading its own home folder for an older home as before.
+
+On the computer, `PersonalCopy` (`src/core/helper/personalCopy.ts`) is the one writer over `personal/` in its work folder (`docs/helper.md`).
+It accepts only the three instruction files and files inside a skill folder, writes the set into a fresh folder, keeps it only when what it wrote has the fingerprint the home named, then points `current` at it with one rename and removes every other version.
+The reader reads `current` in place of the home folder, so a computer out of reach keeps the version it last received, and one that has received none serves no personal file or skills.
+A conversation already open keeps what it opened with; the next one reads the newest kept version.
+
+When a crewmate's conversation opens with the switch on, the supervisor writes which version it read, and on which computer, to the task's timeline (`personal` in the note's data): another computer by its name, or `home` for the computer where the first mate lives.
+The Info tab names the newest of those as Global instructions and skills: the version's first twelve characters, since when the home has had it, and the computer, `home` worded as this computer in the window's language, or by the home's name in a view of it.
+A timeline's fold keeps the newest such version on its `compacted` row, so a long task still names it.
 
 ## Ranking
 
@@ -53,3 +77,8 @@ Its first prompt says why and points the crewmate at its task's record and earli
 The Pi coding resource tests and Claude boxed-client integration tests inspect actual provider requests and skill loading, with personal hooks, environment and MCP kept out.
 `tests/e2e/personal-resources.spec.ts` turns on the switch by keyboard, checks a crewmate's served prompt and verifies the saved choice across a restart.
 Placed-session tests hold the flag's production sender and receiver to the same contract.
+`personalCopy.test.ts` covers keeping, replacing and refusing a set on a computer.
+`sessionHostPersonal.test.ts` sends the home's set through the real connection and helper, edits it on the home, and checks one fingerprint on both computers and a crewmate's served prompt with the computer's own files unread.
+`placedPersonal.test.ts` drives the home's own triggers - its contact with the computer, conversations opening there and an edit on the home - and checks one send per version, never one per task, and the crewmate's served prompt.
+`crewSessions.test.ts`, `taskProtocol.detail.test.ts` and `record.frame.test.ts` cover the version a task read, from the note to the Info tab.
+`cleanUp.test.ts` checks a removal takes the kept set with the rest.

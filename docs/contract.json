@@ -37898,6 +37898,65 @@
               "candidates"
             ]
           },
+          "personal": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  },
+                  "since": {
+                    "type": "number"
+                  },
+                  "files": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "home": {
+                    "type": "boolean",
+                    "const": true
+                  }
+                },
+                "required": [
+                  "version",
+                  "since",
+                  "files",
+                  "home"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  },
+                  "since": {
+                    "type": "number"
+                  },
+                  "files": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "computer": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "version",
+                  "since",
+                  "files",
+                  "computer"
+                ]
+              }
+            ]
+          },
           "intent": {
             "anyOf": [
               {
@@ -68489,6 +68548,28 @@
                                       "type": "string",
                                       "minLength": 1,
                                       "maxLength": 256
+                                    },
+                                    "personal": {
+                                      "type": "object",
+                                      "properties": {
+                                        "version": {
+                                          "type": "string",
+                                          "pattern": "^[0-9a-f]{64}$"
+                                        },
+                                        "since": {
+                                          "type": "number"
+                                        },
+                                        "files": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        }
+                                      },
+                                      "required": [
+                                        "version",
+                                        "since",
+                                        "files"
+                                      ]
                                     }
                                   },
                                   "required": [
@@ -83625,6 +83706,28 @@
                         "type": "string",
                         "minLength": 1,
                         "maxLength": 256
+                      },
+                      "personal": {
+                        "type": "object",
+                        "properties": {
+                          "version": {
+                            "type": "string",
+                            "pattern": "^[0-9a-f]{64}$"
+                          },
+                          "since": {
+                            "type": "number"
+                          },
+                          "files": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "version",
+                          "since",
+                          "files"
+                        ]
                       }
                     },
                     "required": [
@@ -83648,11 +83751,113 @@
             },
             "browsers": {
               "type": "boolean"
+            },
+            "personal": {
+              "type": "object",
+              "properties": {
+                "version": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "since": {
+                  "type": "number"
+                },
+                "files": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "version",
+                "since",
+                "files"
+              ]
             }
           },
           "required": [
             "tasksDir",
             "tasks"
+          ]
+        }
+      },
+      "inf:session:personal": {
+        "effect": "change",
+        "request": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "object",
+              "properties": {
+                "version": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "since": {
+                  "type": "number"
+                },
+                "files": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1024
+                      },
+                      "data": {
+                        "type": "string"
+                      },
+                      "exec": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "path",
+                      "data"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "version",
+                "since",
+                "files"
+              ]
+            }
+          ],
+          "minItems": 1,
+          "items": false
+        },
+        "response": {
+          "type": "object",
+          "properties": {
+            "personal": {
+              "type": "object",
+              "properties": {
+                "version": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "since": {
+                  "type": "number"
+                },
+                "files": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "version",
+                "since",
+                "files"
+              ]
+            }
+          },
+          "required": [
+            "personal"
           ]
         }
       },
@@ -84016,6 +84221,28 @@
                   "type": "string",
                   "minLength": 1,
                   "maxLength": 256
+                },
+                "personal": {
+                  "type": "object",
+                  "properties": {
+                    "version": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "since": {
+                      "type": "number"
+                    },
+                    "files": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "version",
+                    "since",
+                    "files"
+                  ]
                 }
               },
               "required": [
@@ -84904,6 +85131,28 @@
                   "type": "string",
                   "minLength": 1,
                   "maxLength": 256
+                },
+                "personal": {
+                  "type": "object",
+                  "properties": {
+                    "version": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "since": {
+                      "type": "number"
+                    },
+                    "files": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "version",
+                    "since",
+                    "files"
+                  ]
                 }
               },
               "required": [

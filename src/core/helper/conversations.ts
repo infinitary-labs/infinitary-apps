@@ -22,6 +22,7 @@ import { placedLeftovers } from "../tasks/leftoverPrograms";
 import type { ComputerAccounts } from "./accounts";
 import { ComputerBrowsers, type ComputerBrowsersOptions } from "./browsers";
 import { computerForgesDir, computerKnownHosts } from "./forges";
+import { PersonalCopy } from "./personalCopy";
 import { PlacedTasks } from "./placedTasks";
 import { type OwnAccounts, SessionHost } from "./sessionHost";
 import { PLACED_TOOL_WAIT_MS } from "./toolWait";
@@ -269,6 +270,7 @@ export async function startConversations(options: {
     tasks,
     copies,
     secretRunsDir,
+    personal: new PersonalCopy(join(options.dataDir, "personal")),
     ...(options.source ? { source: options.source } : {}),
     ask: options.ask,
     factories: {

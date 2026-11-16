@@ -200,8 +200,14 @@ export type SessionSpec = {
   instructions: { base: string; served?: ServedInstructions };
   /** Beyond the app's tools: nothing, or the backend's own coding set. */
   builtins: "none" | "coding";
-  /** Opt-in to this running Mac's instructions and skills; never transported content. */
+  /** Opt-in to personal instructions and skills: this user's own, or `personalRoot`'s. */
   personalResources?: boolean;
+  /**
+   * Read in place of this user's home folder: the home's set as a computer
+   * that runs work kept it (docs/personal-resources.md, "One set, kept on
+   * each computer").
+   */
+  personalRoot?: string;
   runbookSkills?: RunbookSkillFiles[];
   tools: readonly BoundTool[];
   shape: SessionShape;

@@ -58,6 +58,8 @@ import { runbookStateSchema } from "../../shared/runbooks";
 import { type SeatDigestEntry, seatDigestEntrySchema } from "../orchestrator/seatDigest";
 import type { AppDatabase } from "./db";
 
+const personalSeenSchema = z.object({ version: z.string(), since: z.number() });
+
 const dockSchema = z.object({ showInDock: z.boolean() });
 
 const projectsFolderSchema = z.object({ path: z.string().min(1) });
@@ -508,6 +510,20 @@ export class SettingsStore {
 
   setPersonalResourcesEnabled(enabled: boolean): void {
     this.set("personal-resources", enabled);
+  }
+
+  /**
+   * The home's personal set as it last read it: its fingerprint and since
+   * when it has had it (docs/personal-resources.md, "One set, kept on each
+   * computer"); undefined before the first read.
+   */
+  getPersonalVersion(): { version: string; since: number } | undefined {
+    const parsed = personalSeenSchema.safeParse(this.get("personal-version"));
+    return parsed.success ? parsed.data : undefined;
+  }
+
+  setPersonalVersion(seen: { version: string; since: number }): void {
+    this.set("personal-version", personalSeenSchema.parse(seen));
   }
 
   /**

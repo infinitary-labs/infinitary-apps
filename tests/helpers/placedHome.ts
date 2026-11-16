@@ -49,6 +49,7 @@ import { Router } from "../../src/core/routing/router";
 import type { PiModelRef } from "../../src/core/routing/routingEngine";
 import type { Runbooks } from "../../src/core/runbooks/runbooks";
 import type { SecretsCommand } from "../../src/core/secrets/requests";
+import { homePersonalSetOver } from "../../src/core/session/homePersonalSet";
 import type {
   ControlProfile,
   SessionBinding,
@@ -224,6 +225,12 @@ export function startPlacedHome(options: {
   here?: SessionFactory;
   /** Where a computer's task browsers report here; absent, nothing hears them. */
   browsers?: () => PlacedBrowserSink | undefined;
+  /**
+   * The home's personal instructions and skills, read from `home` as this
+   * user's home folder and kept on each computer as `createServices` keeps
+   * them (docs/personal-resources.md), with the switch on; absent, none is sent.
+   */
+  personal?: { home: string };
   log?: (line: string) => void;
 }): PlacedHome {
   const { now } = options;
@@ -257,6 +264,10 @@ export function startPlacedHome(options: {
   const decisions = new DecisionStore(db);
   const routing = options.routing;
   const settings = new SettingsStore(db);
+  if (options.personal) settings.setPersonalResourcesEnabled(true);
+  const homePersonalSet = options.personal
+    ? homePersonalSetOver(settings, { now, home: options.personal.home })
+    : undefined;
   const latestModels = () =>
     routing && { generatedAt: new Date(now()).toISOString(), models: routing.catalog };
   // The slot record over this Mac's own models and each computer's models
@@ -327,6 +338,7 @@ export function startPlacedHome(options: {
     ...(options.browsers ? { browsers: options.browsers } : {}),
     broadcastEvent: (event) => events.push(event),
     now,
+    ...(homePersonalSet ? { personal: homePersonalSet } : {}),
     schedule: options.scheduleCopy,
     log: options.log ?? (() => {}),
   });
@@ -486,6 +498,7 @@ export function startPlacedHome(options: {
     : undefined;
   const supervisor = new CrewSupervisor({
     personalResourcesEnabled: () => settings.getPersonalResourcesEnabled(),
+    ...(homePersonalSet ? { personalVersion: () => homePersonalSet.current().version } : {}),
     sessions: {
       pi: options.here ?? { ...nothingHere, backend: "pi" },
       claude: { ...nothingHere, backend: "claude" },

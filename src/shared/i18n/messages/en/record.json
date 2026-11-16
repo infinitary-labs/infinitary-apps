@@ -43,6 +43,7 @@
   "recordFactDelivery": "Delivery",
   "recordFactMerging": "Merging",
   "recordFactOperation": "Operation",
+  "recordFactPersonal": "Global instructions and skills",
   "recordFactResult": "Result",
   "recordFactRunsOn": "Runs on",
   "recordFoldedMore": {
@@ -76,6 +77,8 @@
   },
   "recordMoreValidation": "live validation",
   "recordOpenKeptEvidence": "Open kept evidence",
+  "recordPersonalNone": "None, on {computer}",
+  "recordPersonalVersion": "Version {version} from {when}, on {computer}",
   "recordPolicyParentTask": "Parent task",
   "recordPolicyProject": "Project setting",
   "recordPolicyThisTask": "This task",

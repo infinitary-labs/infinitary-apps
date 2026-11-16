@@ -1036,7 +1036,7 @@
   "settingsSubscriptionsOnPace": "no ritmo",
   "settingsSubscriptionsOnPaceAll": "no ritmo ✓",
   "settingsSubscriptionsPaused": "pausada",
-  "settingsSubscriptionsPersonalResourcesDescription": "As novas conversas dos tripulantes usam as instruções e habilidades globais do {computer} em que rodam. Nada é copiado entre {computers}. As regras da tripulação regem a entrega; seu arquivo orienta o estilo e o julgamento.",
+  "settingsSubscriptionsPersonalResourcesDescription": "As novas conversas dos tripulantes usam as instruções e habilidades globais do {computer} onde mora seu imediato. Os outros {computers} que executam trabalho guardam uma cópia, enviada de novo só quando ela muda. As regras da tripulação regem a entrega; seu arquivo orienta o estilo e o julgamento.",
   "settingsSubscriptionsPersonalResourcesTitle": "Instruções e habilidades globais",
   "settingsSubscriptionsReading": "lendo…",
   "settingsSubscriptionsRefresh": "Atualizar",

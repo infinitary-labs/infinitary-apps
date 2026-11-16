@@ -989,6 +989,29 @@
         facts.push(...nodes);
       }
     }
+    // The version of the home's personal instructions and skills it read,
+    // and where (docs/personal-resources.md, "One set, kept on each computer").
+    if (current.personal) {
+      const read = current.personal;
+      const computer = "home" in read ? word("recordPersonalHome") : read.computer;
+      const when = new Date(read.since).toLocaleString(frameLocale, {
+        dateStyle: "medium",
+        timeStyle: "short",
+      });
+      facts.push(
+        ...fact(
+          "personal",
+          word("recordFactPersonal"),
+          read.files === 0
+            ? word("recordPersonalNone", { computer })
+            : word("recordPersonalVersion", {
+                version: read.version.slice(0, 12),
+                when,
+                computer,
+              }),
+        ),
+      );
+    }
     const closed = current.status === "done" || current.status === "dropped";
     const helper = must(document.querySelector("[data-policy-helper]"));
     helper.textContent = [

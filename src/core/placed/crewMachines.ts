@@ -4,6 +4,7 @@ import type { ComputerSignIns, signInPlace } from "@shared/signIns";
 import type { placedTaskFolders, WorkingCopyBase, WorkOrderResponse } from "@shared/work";
 import type { JobExit } from "../jobs/jobManager";
 import type { ComputerPool } from "../routing/computerPool";
+import type { PersonalVersion } from "../session/personalSet";
 import type { ModelSession, SessionFactories } from "../session/session";
 import type { DependencyInstall } from "../workspace/workspaceService";
 import type { PlacedCopy } from "./placedCopies";
@@ -276,6 +277,12 @@ export type CrewMachines = {
    * none, or nothing has said yet.
    */
   accountOf(machine: string, taskId: string): string | undefined;
+  /**
+   * The version of the home's personal instructions and skills a task's
+   * conversation there read when it opened (docs/personal-resources.md);
+   * undefined when it read none, or its computer did not say.
+   */
+  personalOf?(taskId: string): PersonalVersion | undefined;
   /**
    * The cut-off that computer last said stands on an account `accountOf`
    * keyed (docs/helper.md, "Its own sign-ins"); undefined for none, and for

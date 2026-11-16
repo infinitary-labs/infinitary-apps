@@ -1722,6 +1722,7 @@
 "recordFactDelivery" = "交付方式";
 "recordFactMerging" = "合并";
 "recordFactOperation" = "操作";
+"recordFactPersonal" = "全局说明和技能";
 "recordFactResult" = "成果";
 "recordFactRunsOn" = "运行于";
 "recordFromTask" = "来自 %1$@";
@@ -1745,6 +1746,8 @@
 "recordMoreDelivery" = "交付方式";
 "recordMoreValidation" = "实测验证";
 "recordOpenKeptEvidence" = "打开保存的证据";
+"recordPersonalNone" = "无，%1$@";
+"recordPersonalVersion" = "%3$@ 的版本 %2$@，%1$@";
 "recordPolicyParentTask" = "上级任务";
 "recordPolicyProject" = "项目设置";
 "recordPolicyThisTask" = "本任务";
@@ -2778,7 +2781,7 @@
 "settingsSubscriptionsOnPace" = "正常";
 "settingsSubscriptionsOnPaceAll" = "正常 ✓";
 "settingsSubscriptionsPaused" = "已暂停";
-"settingsSubscriptionsPersonalResourcesDescription" = "新的船员对话使用其所在 %1$@ 上的全局说明和技能。%2$@ 之间不会复制任何内容。船员规则决定交付方式；你的文件引导风格和判断。";
+"settingsSubscriptionsPersonalResourcesDescription" = "新的船员对话使用你的大副所在 %1$@ 上的全局说明和技能。运行工作的其他 %2$@ 会保留一份副本，只在内容变化时重新发送。船员规则决定交付方式；你的文件引导风格和判断。";
 "settingsSubscriptionsPersonalResourcesTitle" = "全局说明和技能";
 "settingsSubscriptionsReading" = "正在读取…";
 "settingsSubscriptionsRefresh" = "刷新";

@@ -1259,7 +1259,7 @@ async function openCoding(
   // root alone (FI3-789).
   const personal = spec.personalResources
     ? personalResources(
-        undefined,
+        spec.personalRoot,
         new Set(projectSkillFolders(spec.cwd).map((skill) => skill.name)),
       )
     : undefined;

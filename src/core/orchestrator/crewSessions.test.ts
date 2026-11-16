@@ -326,6 +326,48 @@ describe("a crewmate's session, as CrewSessions holds it", () => {
     expect(h.supervisor.facts.crewStatus(taskId)[0]?.status).toBe("running");
   });
 
+  it("records once which version of the home's personal instructions a conversation opened with", async () => {
+    const crewmate = fakeCrewmate();
+    let version = { version: "a".repeat(64), since: 1_000, files: 2 };
+    let enabled = true;
+    const h = setup(crewmate, {
+      personal: { enabled: () => enabled, version: () => version },
+    });
+    const { taskId } = await h.supervisor.intake.commission({
+      title: "Count presses",
+      intent: intentOf("make the meter count every press"),
+    });
+    await tick();
+    const reads = () =>
+      h.tasks
+        .timeline(taskId)
+        .filter((event) => event.data?.personal !== undefined)
+        .map((event) => event.data?.personal);
+    expect(reads()).toEqual([{ ...version, home: true }]);
+
+    // The same version again writes nothing; a new one is written when a conversation opens with it.
+    const reopen = async () => {
+      crewmate.emit({ type: "turn_end", taskId });
+      crewmate.finishPrompt();
+      await tick();
+      expect(await h.supervisor.sessions.releaseConversation(taskId)).toBe(true);
+      await h.supervisor.sessions.resumeTask(taskId);
+      await tick();
+    };
+    await reopen();
+    expect(reads()).toHaveLength(1);
+    version = { version: "b".repeat(64), since: 2_000, files: 3 };
+    await reopen();
+    expect(reads()).toEqual([
+      { version: "a".repeat(64), since: 1_000, files: 2, home: true },
+      { ...version, home: true },
+    ]);
+    // With the switch off a conversation reads no personal set, and none is written.
+    enabled = false;
+    await reopen();
+    expect(reads()).toHaveLength(2);
+  });
+
   it("stops every started task on a computer being removed, and leaves the rest", async () => {
     const crewmate = fakeCrewmate();
     const h = setup(crewmate, { machines: computer({ ready: false }) });

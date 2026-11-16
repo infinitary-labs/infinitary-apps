@@ -223,8 +223,13 @@ export type CrewSupervisorOptions = {
    * fails loudly rather than running somewhere else.
    */
   bind: (accountId: string | undefined, providerId?: string) => Promise<SessionBinding>;
-  /** The home's opt-in, carried without its files to whichever Mac opens the session. */
+  /** The home's opt-in; a computer that runs work reads the home's set it keeps. */
   personalResourcesEnabled?: () => boolean;
+  /**
+   * The version of the home's personal set a conversation on this Mac reads
+   * (docs/personal-resources.md): its timeline names it, and the Info tab.
+   */
+  personalVersion?: () => import("@shared/personalSet").PersonalVersion;
   source?: import("../selfSource/resolve").SelfSourceReader;
   runbooks?: Runbooks;
   /**

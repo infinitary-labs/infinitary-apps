@@ -43,6 +43,7 @@
   "recordFactDelivery": "Lieferung",
   "recordFactMerging": "Zusammenführen",
   "recordFactOperation": "Vorgang",
+  "recordFactPersonal": "Globale Anweisungen und Skills",
   "recordFactResult": "Ergebnis",
   "recordFactRunsOn": "Läuft auf",
   "recordFoldedMore": {
@@ -76,6 +77,8 @@
   },
   "recordMoreValidation": "Live-Prüfung",
   "recordOpenKeptEvidence": "Aufbewahrten Nachweis öffnen",
+  "recordPersonalNone": "Keine, auf {computer}",
+  "recordPersonalVersion": "Version {version} vom {when}, auf {computer}",
   "recordPolicyParentTask": "Übergeordnete Aufgabe",
   "recordPolicyProject": "Projekteinstellung",
   "recordPolicyThisTask": "Diese Aufgabe",

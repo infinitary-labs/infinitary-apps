@@ -5,8 +5,9 @@ import { tmpdir } from "node:os";
 import { isAbsolute, join } from "node:path";
 import { fileSizeWords } from "@shared/attachments";
 import { isCustomApiProvider } from "@shared/customApi";
-import { COMPUTER, HOME } from "@shared/deviceNames";
+import { COMPUTER, HERE, HOME } from "@shared/deviceNames";
 import { parseOfferingKey } from "@shared/modelSlots";
+import { PERSONAL_READ_FIELD, type PersonalRead, personalReadOf } from "@shared/personalSet";
 import type { InterruptEventData, TASK_CARD_VIA } from "@shared/provenance";
 import { isRetiredProvider } from "@shared/providers";
 import { isFolderRepair, levelDefaultReasoning } from "@shared/routingPolicy";
@@ -149,6 +150,7 @@ export class CrewSessions {
     if (runbookSkills) spec.runbookSkills = runbookSkills;
     if (this.core.disposed()) throw new Error("This computer is stopping.");
     const session = await factory.open(spec);
+    if (spec.personalResources) this.notePersonal(task.id, crewmate.machineId);
     // Unopenable: the backend could not take the recorded conversation, or
     // it was asked to and opened another one instead, as a Claude client
     // with no transcript for it does.
@@ -168,6 +170,31 @@ export class CrewSessions {
       movedTo,
     );
     return session;
+  }
+
+  /**
+   * Names on the timeline the version of the home's personal instructions
+   * and skills a conversation read as it opened, and where, once each time
+   * it moves: the record's Info tab shows the newest (docs/personal-resources.md).
+   */
+  private notePersonal(taskId: string, machine: string): void {
+    const local = machine === LOCAL_MACHINE_ID;
+    const version = local
+      ? this.core.options.personalVersion?.()
+      : this.core.options.machines?.personalOf?.(taskId);
+    if (!version) return;
+    const computer = local
+      ? undefined
+      : (this.core.options.machines?.nameOf(machine) ?? `another ${COMPUTER.one}`);
+    const last = personalReadOf(this.core.options.tasks.timeline(taskId));
+    const where = last && ("home" in last ? undefined : last.computer);
+    if (last?.version === version.version && where === computer) return;
+    const read: PersonalRead = computer ? { ...version, computer } : { ...version, home: true };
+    this.core.options.tasks.note(
+      taskId,
+      `Read the personal instructions and skills, version ${version.version.slice(0, 12)}, on ${computer ?? HERE.this}.`,
+      { news: false, data: { [PERSONAL_READ_FIELD]: read } },
+    );
   }
 
   /** One association writer for starts, replacements, moves and completed turns. */

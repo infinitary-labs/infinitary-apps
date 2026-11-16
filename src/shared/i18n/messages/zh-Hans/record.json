@@ -40,6 +40,7 @@
   "recordFactDelivery": "交付方式",
   "recordFactMerging": "合并",
   "recordFactOperation": "操作",
+  "recordFactPersonal": "全局说明和技能",
   "recordFactResult": "成果",
   "recordFactRunsOn": "运行于",
   "recordFoldedMore": {
@@ -71,6 +72,8 @@
   },
   "recordMoreValidation": "实测验证",
   "recordOpenKeptEvidence": "打开保存的证据",
+  "recordPersonalNone": "无，{computer}",
+  "recordPersonalVersion": "{when} 的版本 {version}，{computer}",
   "recordPolicyParentTask": "上级任务",
   "recordPolicyProject": "项目设置",
   "recordPolicyThisTask": "本任务",

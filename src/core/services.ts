@@ -140,6 +140,7 @@ import {
 } from "./selfSource/resolve";
 import { SessionBinder } from "./session/binding";
 import { BoundsWatcher } from "./session/bounds";
+import { homePersonalSetOver } from "./session/homePersonalSet";
 import { LOCAL_MACHINE_ID, type SessionFactories } from "./session/session";
 import { SharingService } from "./sharing/sharingService";
 import { SqlService } from "./sql/sqlService";
@@ -695,6 +696,8 @@ export async function createServices(
   homeRouting.attachComputerSignIns(() => deviceSignIns.view());
   // The browsers of tasks there, composed below with this Mac's own.
   let browsersThere: PlacedBrowsers | undefined;
+  // The home's personal set, kept on each computer that runs work (docs/personal-resources.md).
+  const homePersonalSet = homePersonalSetOver(settings, { now: ticker.now });
   const placed = new PlacedSessions({
     tasks,
     paths,
@@ -737,6 +740,7 @@ export async function createServices(
     reachMoved: () => scheduleWorkPresentation(),
     broadcastEvent: (event) => broadcastEvent(event),
     now: ticker.now,
+    personal: homePersonalSet,
   });
   /**
    * A crewmate's account to its binding: the account's own Pi runtime, or
@@ -1071,6 +1075,7 @@ export async function createServices(
     crewSpeed: (model) => slots.speed(model),
     modelName: (model) => slots.nameOf(model),
     personalResourcesEnabled: () => settings.getPersonalResourcesEnabled(),
+    personalVersion: () => homePersonalSet.current().version,
     runbooks,
     build: host.app.version,
     source: () => readSelfSourceAsync(sourceLocation),

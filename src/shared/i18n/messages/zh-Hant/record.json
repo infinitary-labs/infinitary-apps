@@ -40,6 +40,7 @@
   "recordFactDelivery": "交付方式",
   "recordFactMerging": "合併",
   "recordFactOperation": "操作",
+  "recordFactPersonal": "全域指示和技能",
   "recordFactResult": "成果",
   "recordFactRunsOn": "執行於",
   "recordFoldedMore": {
@@ -71,6 +72,8 @@
   },
   "recordMoreValidation": "實際驗證",
   "recordOpenKeptEvidence": "開啟保存的證據",
+  "recordPersonalNone": "無，{computer}",
+  "recordPersonalVersion": "{when} 的版本 {version}，{computer}",
   "recordPolicyParentTask": "上層任務",
   "recordPolicyProject": "專案設定",
   "recordPolicyThisTask": "這項任務",

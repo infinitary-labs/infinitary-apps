@@ -123,3 +123,33 @@ export function clipPlanLine<T extends Pick<PlanItem, "state">>(
   if (nodes.length - keep < 2) return null;
   return { shown: nodes.slice(0, keep), later: nodes.slice(keep) };
 }
+
+/**
+ * The task's plan (FI3-734): the newest progress note that carried one,
+ * read exactly as the crewmate declared it, each item with `since` - when it
+ * first read its state in an unbroken run of notes, found by its label - so
+ * a finished item shows when it finished. Null when no note ever carried one.
+ */
+export function planOf(
+  timeline: readonly { kind: string; at: number; data: Record<string, unknown> | null }[],
+): TaskPlan | null {
+  let plan: TaskPlan | null = null;
+  for (const event of timeline) {
+    // A `compacted` row keeps the newest plan it folded, with when it was written.
+    if (event.kind !== "progress" && event.kind !== "compacted") continue;
+    const parsed = planItemsSchema.safeParse(event.data?.plan);
+    if (!parsed.success) continue;
+    const at =
+      event.kind === "compacted" && typeof event.data?.planAt === "number"
+        ? event.data.planAt
+        : event.at;
+    const before = new Map<string, TaskPlanItem>();
+    for (const item of plan?.items ?? []) before.set(item.label, item);
+    const items: TaskPlanItem[] = parsed.data.map((item): TaskPlanItem => {
+      const earlier = before.get(item.label);
+      return { ...item, since: earlier?.state === item.state ? earlier.since : at };
+    });
+    plan = { at, items };
+  }
+  return plan;
+}

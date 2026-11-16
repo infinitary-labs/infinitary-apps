@@ -1722,6 +1722,7 @@
 "recordFactDelivery" = "Lieferung";
 "recordFactMerging" = "Zusammenführen";
 "recordFactOperation" = "Vorgang";
+"recordFactPersonal" = "Globale Anweisungen und Skills";
 "recordFactResult" = "Ergebnis";
 "recordFactRunsOn" = "Läuft auf";
 "recordFromTask" = "aus %1$@";
@@ -1745,6 +1746,8 @@
 "recordMoreDelivery" = "Lieferung";
 "recordMoreValidation" = "Live-Prüfung";
 "recordOpenKeptEvidence" = "Aufbewahrten Nachweis öffnen";
+"recordPersonalNone" = "Keine, auf %1$@";
+"recordPersonalVersion" = "Version %2$@ vom %3$@, auf %1$@";
 "recordPolicyParentTask" = "Übergeordnete Aufgabe";
 "recordPolicyProject" = "Projekteinstellung";
 "recordPolicyThisTask" = "Diese Aufgabe";
@@ -2778,7 +2781,7 @@
 "settingsSubscriptionsOnPace" = "im Plan";
 "settingsSubscriptionsOnPaceAll" = "im Plan ✓";
 "settingsSubscriptionsPaused" = "pausiert";
-"settingsSubscriptionsPersonalResourcesDescription" = "Neue Unterhaltungen von Crewmitgliedern verwenden die globalen Anweisungen und Skills auf dem %1$@, auf dem sie laufen. Zwischen %2$@ wird nichts kopiert. Die Crew-Regeln bestimmen die Lieferung; deine Datei leitet Stil und Urteil.";
+"settingsSubscriptionsPersonalResourcesDescription" = "Neue Unterhaltungen von Crewmitgliedern verwenden die globalen Anweisungen und Skills auf dem %1$@, auf dem dein erster Offizier lebt. Andere %2$@, die Arbeit ausführen, behalten eine Kopie, die nur nach einer Änderung neu gesendet wird. Die Crew-Regeln bestimmen die Lieferung; deine Datei leitet Stil und Urteil.";
 "settingsSubscriptionsPersonalResourcesTitle" = "Globale Anweisungen und Skills";
 "settingsSubscriptionsReading" = "wird gelesen …";
 "settingsSubscriptionsRefresh" = "Aktualisieren";

@@ -1722,6 +1722,7 @@
 "recordFactDelivery" = "Entrega";
 "recordFactMerging" = "Fusión";
 "recordFactOperation" = "Operación";
+"recordFactPersonal" = "Instrucciones y habilidades globales";
 "recordFactResult" = "Resultado";
 "recordFactRunsOn" = "Se ejecuta en";
 "recordFromTask" = "de %1$@";
@@ -1745,6 +1746,8 @@
 "recordMoreDelivery" = "entrega";
 "recordMoreValidation" = "validación en vivo";
 "recordOpenKeptEvidence" = "Abrir la evidencia guardada";
+"recordPersonalNone" = "Ninguna, en %1$@";
+"recordPersonalVersion" = "Versión %2$@ del %3$@, en %1$@";
 "recordPolicyParentTask" = "Tarea principal";
 "recordPolicyProject" = "Configuración del proyecto";
 "recordPolicyThisTask" = "Esta tarea";
@@ -2778,7 +2781,7 @@
 "settingsSubscriptionsOnPace" = "al ritmo";
 "settingsSubscriptionsOnPaceAll" = "al ritmo ✓";
 "settingsSubscriptionsPaused" = "en pausa";
-"settingsSubscriptionsPersonalResourcesDescription" = "Las nuevas conversaciones de los tripulantes usan las instrucciones y habilidades globales de la %1$@ donde se ejecutan. No se copia nada entre %2$@. Las reglas de la tripulación rigen la entrega; tu archivo orienta el estilo y el criterio.";
+"settingsSubscriptionsPersonalResourcesDescription" = "Las nuevas conversaciones de los tripulantes usan las instrucciones y habilidades globales de la %1$@ donde vive tu primer oficial. Otras %2$@ que ejecutan trabajo guardan una copia, que se vuelve a enviar solo cuando cambia. Las reglas de la tripulación rigen la entrega; tu archivo orienta el estilo y el criterio.";
 "settingsSubscriptionsPersonalResourcesTitle" = "Instrucciones y habilidades globales";
 "settingsSubscriptionsReading" = "leyendo…";
 "settingsSubscriptionsRefresh" = "Actualizar";

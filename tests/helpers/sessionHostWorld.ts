@@ -15,6 +15,7 @@ import { DevicePairing } from "../../src/core/devices/pairing";
 import type { CoreActor, CoreDispatch } from "../../src/core/dispatcher";
 import { CoreEventBus } from "../../src/core/events";
 import { joinHome } from "../../src/core/helper/join";
+import { PersonalCopy } from "../../src/core/helper/personalCopy";
 import { PlacedTasks } from "../../src/core/helper/placedTasks";
 import { type HelperRun, startHelper } from "../../src/core/helper/run";
 import { SessionHost, type SessionHostOptions } from "../../src/core/helper/sessionHost";
@@ -294,6 +295,8 @@ export async function placed(
     /** The contract the home's welcome says, in place of the one the link heard. */
     homeVersion?: string;
     homeChanges?: readonly string[];
+    /** It keeps the home's personal set under its work folder (`PersonalCopy`). */
+    personal?: boolean;
     /** Claude's factory on the scripted client, for a conversation the home binds to Claude. */
     claude?: ContractWorld;
     /** Its work starts in Firstmate 3000's folder, before its first update to Infinitary (`moveComputer`). */
@@ -388,6 +391,7 @@ export async function placed(
               ? { homeVersion }
               : {}),
           ...(options.homeChanges ? { homeChanges: () => options.homeChanges ?? [] } : {}),
+          ...(options.personal ? { personal: new PersonalCopy(join(dir, "personal")) } : {}),
           log: () => {},
         });
         const held = host;

@@ -16,6 +16,7 @@ import { ComputerBrowsers } from "../../src/core/helper/browsers";
 import { cleanUp } from "../../src/core/helper/cleanUp";
 import { computerKnownHosts, type HeldForges } from "../../src/core/helper/forges";
 import { joinHome } from "../../src/core/helper/join";
+import { PersonalCopy } from "../../src/core/helper/personalCopy";
 import { PlacedTasks } from "../../src/core/helper/placedTasks";
 import { type HelperRun, startHelper } from "../../src/core/helper/run";
 import { SessionHost } from "../../src/core/helper/sessionHost";
@@ -174,6 +175,7 @@ export function startHome(
     | "programProcess"
     | "secrets"
     | "runbooks"
+    | "personal"
   > & {
     /** A task that moves home runs its conversation here on real Pi. */
     runsHere?: boolean;
@@ -207,6 +209,7 @@ export function startHome(
     ...(extra.programProcess ? { programProcess: extra.programProcess } : {}),
     ...(extra.secrets ? { secrets: extra.secrets } : {}),
     ...(extra.runbooks ? { runbooks: extra.runbooks } : {}),
+    ...(extra.personal ? { personal: extra.personal } : {}),
     ...(extra.runsHere
       ? { here: createPiSessionFactory({ agentDir: join(userData, "pi-agent") }) }
       : {}),
@@ -333,6 +336,11 @@ export async function world(
      * runs work"); otherwise a close there sweeps nothing.
      */
     leftovers?: boolean;
+    /**
+     * The home's personal set, read from this folder as the home's home
+     * folder, which the computer keeps as the work mode does (`PersonalCopy`).
+     */
+    personal?: Parameters<typeof startPlacedHome>[0]["personal"];
   } = {},
 ) {
   const userData = scratchDir("infinitary-placed-home-");
@@ -380,6 +388,8 @@ export async function world(
   let changes = options.changes;
   /** Every binding the home asked the computer to resolve with its own sign-ins. */
   const bound: PlacedSpec["binding"][] = [];
+  /** Every order the computer was sent, oldest first, by its channel. */
+  const ordered: string[] = [];
   const startComputer = (
     tools: readonly CrewmateTool[] | undefined = options.tools,
     version = protocolVersion,
@@ -462,6 +472,7 @@ export async function world(
           // Work compatibility reads the real welcome, as startConversations does;
           // omitting it incorrectly refuses supported artifact and branch operations.
           ...(homeVersion ? { homeVersion } : {}),
+          ...(options.personal ? { personal: new PersonalCopy(join(dir, "personal")) } : {}),
           factories: {
             pi: createPiSessionFactory({
               agentDir: join(dir, "pi-agent"),
@@ -505,6 +516,7 @@ export async function world(
         const answering = new Set<Promise<unknown>>();
         const answer = held.answer.bind(held);
         held.answer = (channel, args) => {
+          ordered.push(channel);
           const answered = answer(channel, args);
           answering.add(answered);
           const settle = () => answering.delete(answered);
@@ -613,6 +625,7 @@ export async function world(
       placedTaskFolders(join(dataDir, "tasks"), taskId, join(dataDir, "worktrees")),
     /** Every binding the home asked the computer to resolve, oldest first. */
     bound,
+    ordered,
     /** Whether the computer refuses to open a conversation from now on. */
     refuseOpens: (on: boolean) => {
       refusing = on;

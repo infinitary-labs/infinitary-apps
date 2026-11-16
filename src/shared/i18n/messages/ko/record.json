@@ -40,6 +40,7 @@
   "recordFactDelivery": "전달 방식",
   "recordFactMerging": "병합",
   "recordFactOperation": "실행",
+  "recordFactPersonal": "전역 지침과 스킬",
   "recordFactResult": "결과물",
   "recordFactRunsOn": "실행 위치",
   "recordFoldedMore": {
@@ -71,6 +72,8 @@
   },
   "recordMoreValidation": "실제 검증",
   "recordOpenKeptEvidence": "보관된 증거 열기",
+  "recordPersonalNone": "없음, {computer}",
+  "recordPersonalVersion": "{when} 버전 {version}, {computer}",
   "recordPolicyParentTask": "상위 작업",
   "recordPolicyProject": "프로젝트 설정",
   "recordPolicyThisTask": "이 작업",

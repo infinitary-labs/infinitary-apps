@@ -329,6 +329,11 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
       "saved whole in the task's temporary folder; the crewmate reads the file it names",
     ),
   },
+  "src/core/session/personalSet.ts": {
+    PERSONAL_SET_BUDGET_BYTES: physical(
+      "the set travels in one frame; a skill past it stays out whole and the home's log names it",
+    ),
+  },
   "src/core/sharing/sharingService.ts": {
     DIAGNOSTICS_PENDING_CAP: physical("none yet: a new event past it is silently dropped"),
     CONTRIBUTION_PREVIEW_LIMIT: physical("the viewer shows 20 in full and counts the rest"),

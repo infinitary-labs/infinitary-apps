@@ -158,6 +158,11 @@ export class PlacedSession implements ModelSession {
     return this.state.accountId;
   }
 
+  /** The version of the home's personal set the conversation read there, when it read one. */
+  personalVersion(): PlacedState["personal"] {
+    return this.state.personal;
+  }
+
   /**
    * Working there, as far as the events taken here and the computer's
    * answers say: a prompt asked here, a turn it runs, or a turn its crewmate

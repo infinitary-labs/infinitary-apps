@@ -1722,6 +1722,7 @@
 "recordFactDelivery" = "Livraison";
 "recordFactMerging" = "Fusion";
 "recordFactOperation" = "Opération";
+"recordFactPersonal" = "Instructions et compétences globales";
 "recordFactResult" = "Résultat";
 "recordFactRunsOn" = "S’exécute sur";
 "recordFromTask" = "de %1$@";
@@ -1745,6 +1746,8 @@
 "recordMoreDelivery" = "livraison";
 "recordMoreValidation" = "validation en direct";
 "recordOpenKeptEvidence" = "Ouvrir la preuve conservée";
+"recordPersonalNone" = "Aucune, sur %1$@";
+"recordPersonalVersion" = "Version %2$@ du %3$@, sur %1$@";
 "recordPolicyParentTask" = "Tâche parente";
 "recordPolicyProject" = "Réglage du projet";
 "recordPolicyThisTask" = "Cette tâche";
@@ -2778,7 +2781,7 @@
 "settingsSubscriptionsOnPace" = "dans le rythme";
 "settingsSubscriptionsOnPaceAll" = "dans le rythme ✓";
 "settingsSubscriptionsPaused" = "en pause";
-"settingsSubscriptionsPersonalResourcesDescription" = "Les nouvelles conversations des équipiers utilisent les instructions et compétences globales de leur %1$@. Rien n’est copié entre %2$@. Les règles de l’équipage régissent la livraison ; votre fichier guide le style et le jugement.";
+"settingsSubscriptionsPersonalResourcesDescription" = "Les nouvelles conversations des équipiers utilisent les instructions et compétences globales du %1$@ où vit votre second. Les autres %2$@ qui exécutent du travail en gardent une copie, renvoyée seulement quand elle change. Les règles de l’équipage régissent la livraison ; votre fichier guide le style et le jugement.";
 "settingsSubscriptionsPersonalResourcesTitle" = "Instructions et compétences globales";
 "settingsSubscriptionsReading" = "lecture…";
 "settingsSubscriptionsRefresh" = "Actualiser";

@@ -12,6 +12,7 @@ export type RecordFact =
   | "care"
   | "runs-on"
   | "computer-choice"
+  | "personal"
   | "parent"
   | "blocked-by"
   | "blocks"

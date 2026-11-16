@@ -1722,6 +1722,7 @@
 "recordFactDelivery" = "交付方式";
 "recordFactMerging" = "合併";
 "recordFactOperation" = "操作";
+"recordFactPersonal" = "全域指示和技能";
 "recordFactResult" = "成果";
 "recordFactRunsOn" = "執行於";
 "recordFromTask" = "來自 %1$@";
@@ -1745,6 +1746,8 @@
 "recordMoreDelivery" = "交付方式";
 "recordMoreValidation" = "實際驗證";
 "recordOpenKeptEvidence" = "開啟保存的證據";
+"recordPersonalNone" = "無，%1$@";
+"recordPersonalVersion" = "%3$@ 的版本 %2$@，%1$@";
 "recordPolicyParentTask" = "上層任務";
 "recordPolicyProject" = "專案設定";
 "recordPolicyThisTask" = "這項任務";
@@ -2778,7 +2781,7 @@
 "settingsSubscriptionsOnPace" = "剛好";
 "settingsSubscriptionsOnPaceAll" = "剛好 ✓";
 "settingsSubscriptionsPaused" = "已暫停";
-"settingsSubscriptionsPersonalResourcesDescription" = "新的船員對話會使用其所在 %1$@ 上的全域指示和技能。%2$@ 之間不會複製任何內容。船員規則決定交付方式；你的檔案引導風格和判斷。";
+"settingsSubscriptionsPersonalResourcesDescription" = "新的船員對話會使用你的大副所在 %1$@ 上的全域指示和技能。執行工作的其他 %2$@ 會保留一份副本，只在內容變更時重新傳送。船員規則決定交付方式；你的檔案引導風格和判斷。";
 "settingsSubscriptionsPersonalResourcesTitle" = "全域指示和技能";
 "settingsSubscriptionsReading" = "讀取中…";
 "settingsSubscriptionsRefresh" = "重新整理";

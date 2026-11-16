@@ -43,8 +43,10 @@ function plural(message: (input: { count: number }) => string): RecordWord {
  * The frame is plain script served as text and cannot import the catalog,
  * so the window words it at draw time and stamps the result on the
  * template (`recordTemplate`); a language change mounts the frame anew.
+ * `home` names the computer where the first mate lives, from a view of it;
+ * absent, it is this computer.
  */
-export function recordWords(): RecordWords {
+export function recordWords(home?: string): RecordWords {
   return {
     locale: languageLocale(),
     words: {
@@ -101,6 +103,16 @@ export function recordWords(): RecordWords {
       recordMergingAsksFirst: m.recordMergingAsksFirst(),
       recordFactCare: m.recordFactCare(),
       recordFactRunsOn: m.recordFactRunsOn(),
+      recordFactPersonal: m.recordFactPersonal(),
+      recordPersonalVersion: m.recordPersonalVersion({
+        version: "{version}",
+        when: "{when}",
+        computer: "{computer}",
+      }),
+      recordPersonalNone: m.recordPersonalNone({ computer: "{computer}" }),
+      // The computer where the first mate lives, as a version it read there
+      // names it: this computer, or by its name from a view of it.
+      recordPersonalHome: home ?? m.placeThisComputer(),
       recordFactComputerChoice: m.recordFactComputerChoice(),
       recordComparedComputers: m.recordComparedComputers(),
       recordHelperLocalCare: m.recordHelperLocalCare(),

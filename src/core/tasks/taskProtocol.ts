@@ -16,6 +16,7 @@ import { liveValidationSummary } from "@shared/liveValidationSummary";
 import type { ModelChoice } from "@shared/modelChoice";
 import type { ModelReason } from "@shared/modelReason";
 import { providerLabel, type Slot, slotSchema } from "@shared/modelSlots";
+import { personalReadOf } from "@shared/personalSet";
 import { crewProblem, typedFailureOf } from "@shared/plainProblem";
 import { isAllowanceProvider, servedProviderOf } from "@shared/quota";
 import { type Reasoning, reasoningSchema } from "@shared/reasoning";
@@ -26,7 +27,7 @@ import type { TaskBrowserFact } from "@shared/taskBrowser";
 import { type TaskHold, taskHoldWords } from "@shared/taskHold";
 import { cardMerges, taskMovesOf } from "@shared/taskMoves";
 import { pinnedPastWeek } from "@shared/taskPin";
-import { planItemsSchema, type TaskPlan, type TaskPlanItem } from "@shared/taskPlan";
+import { planOf } from "@shared/taskPlan";
 import { effectiveTaskPolicies, type PolicyRepo, type TaskRunsOn } from "@shared/taskPolicies";
 import {
   BOARD_DELTA_TRIGGER,
@@ -592,6 +593,7 @@ export class TaskProtocol {
     const modelReason = this.options.modelReason?.(record);
     const modelChoice = this.options.modelChoice?.(record);
     const runsOn = this.options.runsOn?.(record);
+    const personal = personalReadOf(timeline);
     const reasoning = reasoningOf(record, timeline);
     const browser = this.options.browser?.(id);
     const cost = this.options.cost?.(record);
@@ -680,6 +682,7 @@ export class TaskProtocol {
       ),
       ...(runsOn ? { runsOn } : {}),
       ...(record.placement ? { placement: record.placement.snapshot } : {}),
+      ...(personal ? { personal } : {}),
       rigor: record.shape?.rigor ?? null,
       // What the host derived the task DELIVERS (Task B); null on a row
       // shaped before the axis existed, which shipped as a change.
@@ -1967,34 +1970,4 @@ function problemOf(events: readonly TaskEventView[]): string | null {
   const error = typeof last.data?.error === "string" ? last.data.error : last.text;
   const words = crewProblem(error, typedFailureOf(last.data ?? {}));
   return `${words.charAt(0).toUpperCase()}${words.slice(1)}.`;
-}
-
-/**
- * The task's plan (FI3-734): the newest progress note that carried one,
- * read exactly as the crewmate declared it, each item with `since` - when it
- * first read its state in an unbroken run of notes, found by its label - so
- * a finished item shows when it finished. Null when no note ever carried one.
- */
-function planOf(
-  timeline: readonly { kind: string; at: number; data: Record<string, unknown> | null }[],
-): TaskPlan | null {
-  let plan: TaskPlan | null = null;
-  for (const event of timeline) {
-    // A `compacted` row keeps the newest plan it folded, with when it was written.
-    if (event.kind !== "progress" && event.kind !== "compacted") continue;
-    const parsed = planItemsSchema.safeParse(event.data?.plan);
-    if (!parsed.success) continue;
-    const at =
-      event.kind === "compacted" && typeof event.data?.planAt === "number"
-        ? event.data.planAt
-        : event.at;
-    const before = new Map<string, TaskPlanItem>();
-    for (const item of plan?.items ?? []) before.set(item.label, item);
-    const items: TaskPlanItem[] = parsed.data.map((item): TaskPlanItem => {
-      const earlier = before.get(item.label);
-      return { ...item, since: earlier?.state === item.state ? earlier.since : at };
-    });
-    plan = { at, items };
-  }
-  return plan;
 }

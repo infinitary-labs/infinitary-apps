@@ -68,7 +68,7 @@ The floor is code; the ceiling is the prompt, the index, the about line and the 
 
 ## Answer delivery
 
-A captain message the first mate read and then did nothing visible about is a hidden answer: its closing words are never a card, and they become the reply line only when something took effect (`docs/composer.md` "The last turn"), so the captain sees no sign it was heard.
+A captain message the first mate read and then did nothing visible about is a hidden answer: its closing words are never a card, and the reply line (`docs/composer.md` "The last turn") is one sentence beside the message, not an answer the captain can accept, so the message still needs one.
 Each message saved from INF-1610 piece 2 on is followed until a card the captain accepts answers it ("How a message ends" below); a message saved before it keeps the older rule, which only checked that at least one action took effect after the first mate read it.
 The host never judges whether an answer is right (`src/core/orchestrator/answerDelivery.ts`, the pure rule and the served words; `askEnding.ts`, how a message stands; `answerDeliveryCheck.ts`, the stateful check; `FirstmateAgent` records the facts).
 

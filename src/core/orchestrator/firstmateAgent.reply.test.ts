@@ -525,12 +525,22 @@ describe("FirstmateAgent reply line", () => {
     });
   });
 
-  it("shows no closing words when nothing took effect, and the answer check retries", async () => {
+  it("shows the closing words of a turn that only talked, and the answer check still retries", async () => {
+    // INF-4453, the captain's words: "any turn ending reply should count as
+    // the line and show up".
     const f = setup({ silent: true });
     await f.agent.converse("what is PR 58's state?");
     await finish(f, "PR 58 merged an hour ago.");
     await drained(f.session, 2);
-    expect(newestRound(f)).toEqual({ you: "what is PR 58's state?", reply: null });
+    expect(heard(f).slice(0, 3)).toEqual([
+      "busy:true",
+      "reply:PR 58 merged an hour ago.",
+      "busy:false",
+    ]);
+    expect(newestRound(f)).toEqual({
+      you: "what is PR 58's state?",
+      reply: { text: "PR 58 merged an hour ago.", eligibility: "completed" },
+    });
     expect(f.tasks.capture.listAsks().at(-1)?.delivery).toBe("retrying");
   });
 

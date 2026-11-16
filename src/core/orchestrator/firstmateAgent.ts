@@ -1561,7 +1561,8 @@ export class FirstmateAgent {
    * plain words for a turn that failed, else the line its closing words
    * and facts choose (./replyLine). It is kept beside the message for the next launch and
    * sent to the window. A turn that did not read the newest message, or
-   * where nothing took effect, leaves the line as it is.
+   * that closed with no words where nothing took effect, leaves the line as
+   * it is.
    */
   private replyToLastMessage(read: readonly string[], problem: string | undefined): void {
     const text = problem ?? replyLine(this.turn.replyFacts);

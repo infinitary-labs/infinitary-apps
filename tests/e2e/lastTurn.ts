@@ -1,6 +1,9 @@
 import { expect, type Locator, type Page } from "@playwright/test";
+import type { AskDelivery } from "../../src/core/orchestrator/answerDelivery";
 import { atRest } from "./layout";
+import { appOf, readInMain } from "./mainProcess";
 import { promptInput } from "./prompt";
+import { readSavedData } from "./savedData";
 
 declare global {
   interface Window {
@@ -88,11 +91,15 @@ export async function selectFirstLine(words: Locator): Promise<string> {
 
 /**
  * Sends `text` from the main message and waits until the Firstmate has
- * answered it: after the message's own `user_turn`, the core's
+ * answered it whole: after the message's own `user_turn`, the core's
  * `firstmate_reply` and then its busy signal down (docs/composer.md, "The
- * last turn"). The witness is that order of typed events, never a glimpse of
- * the character working: a quick turn, even a refused one with its
- * answer-missing retry, can be over before a loaded runner polls again.
+ * last turn"), and then the message no longer waiting on the answer check's
+ * one retry (docs/task-capture.md, "Answer delivery"). A turn that only
+ * talked sends its reply line before that retry runs, so the reply alone is
+ * not the whole answer. The witness is that order of typed events and the
+ * message's saved delivery state, never a glimpse of the character working:
+ * a quick turn, even a refused one with its answer-missing retry, can be
+ * over before a loaded runner polls again.
  */
 export async function askFirstmate(page: Page, text: string, timeout = 30_000): Promise<void> {
   await page.evaluate(() => {
@@ -120,5 +127,34 @@ export async function askFirstmate(page: Page, text: string, timeout = 30_000): 
       { timeout, message: `the Firstmate answers "${text}"` },
     )
     .toBe("answered");
+  const app = appOf(page);
+  if (!app) throw new Error("askFirstmate needs a page the launcher started");
+  const userDataDir = await readInMain(() =>
+    app.evaluate(({ app: electron }) => electron.getPath("userData")),
+  );
+  await expect
+    .poll(
+      async () => {
+        const heard = await page.evaluate(() => window.__fmAsk?.heard ?? []);
+        const state = heard.filter((event) => event === "busy" || event === "idle").at(-1);
+        const delivery = readSavedData(
+          userDataDir,
+          (db) =>
+            (
+              db
+                .prepare("SELECT delivery FROM captain_asks ORDER BY at DESC, rowid DESC LIMIT 1")
+                .get() as { delivery: string } | undefined
+            )?.delivery,
+        );
+        return state === "idle" && !WAITING_DELIVERY.includes(delivery as AskDelivery)
+          ? "answered whole"
+          : `${heard.join(" > ")} (delivery ${delivery})`;
+      },
+      { timeout, message: `the answer check settles "${text}"` },
+    )
+    .toBe("answered whole");
   await page.evaluate(() => window.__fmAsk?.stop());
 }
+
+/** Delivery states that still wait on the turn that reads the message or on its one retry. */
+const WAITING_DELIVERY: readonly AskDelivery[] = ["pending", "retrying"];

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "words-only-reply-line",
+      "kind": "fix",
+      "area": "message-box",
+      "title": "Your first mate's reply shows beside your message even when it only answers in words",
+      "body": "When your first mate answers a message without showing a card or starting work, its words now appear beside your message on your Mac, iPhone and iPad. Before, that line stayed empty.",
+      "noPicture": "The reply line looks as it did before; a still picture cannot show that it now also appears after a turn that only talked.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1011,3 +1011,51 @@ it("recovers the complete accepted plan through the answer-close wake's task rea
     db.close();
   }
 });
+
+// INF-4452's case, fixed by INF-4453 from the captain's words: "any turn ending
+// reply should count as the line and show up". A question typed while another
+// message's plan card was on screen joined that plan's covered chain, so no
+// retry came, and the words-only answer reached no screen.
+it("shows a words-only answer as the reply line while another message's card is on screen", async () => {
+  const f = setup({ silent: true });
+  const finish = async (text: string) => {
+    f.session.emitTurnEnd(text);
+    f.session.resolveNextPrompt();
+    await tick();
+  };
+  await f.agent.converse("design a pull request comment flow");
+  await toolsOf(f.specs).get("spawn_crewmate")?.execute("s1", {
+    title: "Plan the pull request comment flow",
+    goal: "Design the flow",
+    user_words: "design a pull request comment flow",
+  });
+  await vi.waitFor(() => expect(f.crewSpecs).toHaveLength(1));
+  await finish("Started the plan.");
+  const plan = f.tasks.list().find((task) => task.title === "Plan the pull request comment flow");
+  await f.crewSpecs[0]?.callbacks?.onCard?.({
+    title: "Plan: a crewmate answers comments on its pull request",
+    body: "<p>My plan.</p>",
+    answering: true,
+    actions: [
+      { id: "approve", label: "Approve and build", default: true },
+      { id: "defer", label: "Save and defer" },
+    ],
+  });
+  const planCard = f.supervisor.cards.openCardsFor(plan?.id ?? "")[0];
+  expect(planCard).toBeDefined();
+  await f.agent.converse({
+    text: "the batch cut failed - are we fixing it?",
+    visibleCardId: planCard?.id ?? "",
+  });
+  await vi.waitFor(() => expect(f.tasks.capture.listAsks()).toHaveLength(2));
+  const answer = "Yes. A crewmate started fixing the failed cut.";
+  await finish(answer);
+  expect(f.tasks.capture.listAsks().at(-1)?.delivery).toBe("covered");
+  expect(f.tasks.capture.lastTurn()).toMatchObject({
+    you: "the batch cut failed - are we fixing it?",
+    reply: { text: answer, eligibility: "completed" },
+  });
+  expect(f.events.filter((event) => event.type === "firstmate_reply").at(-1)).toMatchObject({
+    text: answer,
+  });
+});

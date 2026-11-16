@@ -4,6 +4,8 @@ import { replyLine, replyWords, startedReply } from "./replyLine";
 
 // INF-772's plan, the captain's Approve and build: the closing words first,
 // today's typed line as the fallback, and no line when nothing took effect.
+// INF-4453, the captain's words: "any turn ending reply should count as the
+// line and show up", so closing words are the line even when nothing else did.
 describe("the reply line beside the captain's last message", () => {
   it("is the turn's closing words whenever something took effect", () => {
     const closing = "Started the alpha release.";
@@ -35,9 +37,12 @@ describe("the reply line beside the captain's last message", () => {
     }
   });
 
-  it("shows no line when nothing took effect, whatever the closing words say", () => {
-    expect(replyLine({ closing: "The alpha is 1.4-alpha.2." })).toBeUndefined();
-    expect(replyLine({})).toBeUndefined();
+  it("is the closing words of a turn that only talked", () => {
+    expect(replyLine({ closing: "The alpha is\n1.4-alpha.2. " })).toBe("The alpha is 1.4-alpha.2.");
+  });
+
+  it("shows no line when the turn closed with no words and nothing took effect", () => {
+    for (const closing of [undefined, "", " \n "]) expect(replyLine({ closing })).toBeUndefined();
   });
 });
 
@@ -48,6 +53,7 @@ describe("the reply's words as written, for the reply note", () => {
     const closing =
       "I've started a read-only crewmate. It's looking at:\n- which Linux checks run today;\n- the security risk.\n";
     expect(replyWords({ closing, acted: true })).toBe(closing.trim());
+    expect(replyWords({ closing })).toBe(closing.trim());
     expect(replyLine({ closing, acted: true })).toBe(
       "I've started a read-only crewmate. It's looking at: - which Linux checks run today; - the security risk.",
     );
@@ -56,6 +62,6 @@ describe("the reply's words as written, for the reply note", () => {
   it("keeps nothing when the line already says it, or the line is not the closing words", () => {
     expect(replyWords({ closing: " Filed INF-9. ", acted: true })).toBeUndefined();
     expect(replyWords({ closing: " \n ", latest: "Cut the alpha?", acted: true })).toBeUndefined();
-    expect(replyWords({ closing: "Line one.\nLine two." })).toBeUndefined();
+    expect(replyWords({ closing: " \n " })).toBeUndefined();
   });
 });

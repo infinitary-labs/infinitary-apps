@@ -6,11 +6,12 @@ import { AUTOMATIC_EMOTE_WORDS } from "@shared/emotes";
  * beside their last message once the turn that read it ends.
  *
  * Its closing words say it, one short sentence by instruction alone (the
- * host cuts nothing it did not write), whenever something took effect.
- * The typed facts the turn recorded where each call succeeded decide
- * whether anything did, and give the line when the turn closed with no
- * words: the latest card it showed, else the app's own words, else Got it.
- * Nothing took effect: no line, and the answer check retries.
+ * host cuts nothing it did not write), whatever else the turn did (INF-4453,
+ * the captain's words: "any turn ending reply should count as the line and
+ * show up"). When the turn closed with no words, the typed facts it recorded
+ * where each call succeeded give the line: the latest card it showed, else
+ * the app's own words, else Got it when something took effect. No words and
+ * nothing took effect: no line. The answer check judges the message apart.
  */
 export type ReplyFacts = {
   /** The turn's closing words. */
@@ -24,11 +25,11 @@ export type ReplyFacts = {
 };
 
 export function replyLine(facts: ReplyFacts): string | undefined {
-  const typed = facts.latest ?? facts.app ?? (facts.acted ? AUTOMATIC_EMOTE_WORDS.nod : undefined);
-  if (typed === undefined) return undefined;
   // One line: every whitespace run, line breaks included, is one space.
   const closing = facts.closing?.replace(/\s+/gu, " ").trim();
-  return closing || typed;
+  return (
+    closing || (facts.latest ?? facts.app ?? (facts.acted ? AUTOMATIC_EMOTE_WORDS.nod : undefined))
+  );
 }
 
 /**

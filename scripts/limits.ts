@@ -289,6 +289,9 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/core/pi/personalizeTool.ts": {
     SURFACES_CONTEXT_LIMIT: physical("the rest are a count; an unknown id is refused with every id"),
   },
+  "src/core/placed/computerChoice.ts": {
+    DIRECTIONS_BUDGET_CHARS: outside("whole directions past it are left out and counted on the question"),
+  },
   "src/core/placed/loadLine.ts": {
     JOURNAL_MAX_BYTES: physical(
       "the oldest lines drop so the file on disk stays small; the newest half is kept",

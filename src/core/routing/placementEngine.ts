@@ -142,6 +142,12 @@ export type PlacementDecision = {
   chosen?: { computerId: string | null; model: RoutePreview; physicalComputerId: string };
   /** True only when locality changed the ordinary room/tie-break winner. */
   basisPreferred: boolean;
+  /**
+   * How the decision model's pick (`input.pick`) decided: it started or waits
+   * on the picked computer. Absent when there was no pick, or it was no
+   * longer possible and the ordinary rules chose.
+   */
+  picked?: "start" | "wait";
   requirements: ResolvedPlacementRequirements;
   candidates: PlacementEvaluation[];
 };
@@ -159,6 +165,15 @@ export function evaluatePlacement(input: {
   boundComputer?: { computerId: string | null };
   /** Soft locality, applied only among fully admitted candidates at the best model preference. */
   basisComputer?: { computerId: string | null };
+  /**
+   * The decision model's pick among the computers that can run the task
+   * (`src/core/placed/computerChoice.ts`). `start` starts there on its own
+   * best model even when it is busy, as naming it does; `wait` starts
+   * there once it has room, and waits while it is busy or out of reach.
+   * A pick any other check refuses is no longer possible: the ordinary
+   * rules choose.
+   */
+  pick?: { computerId: string | null; mode: "start" | "wait" };
 }): PlacementDecision {
   const { requirements } = input;
   const groups = new Map<string, PlacementDemand>();
@@ -267,13 +282,27 @@ export function evaluatePlacement(input: {
       const bKey = b.computerId ?? "";
       return aKey < bKey ? -1 : aKey > bKey ? 1 : 0;
     });
+  const picked = pickOutcome(evaluations, input.pick);
+  if (picked === "wait")
+    return {
+      status: "waiting",
+      basisPreferred: false,
+      picked,
+      requirements,
+      candidates: evaluations,
+    };
   const besideBasis = input.basisComputer
     ? ranked.find((candidate) => candidate.computerId === input.basisComputer?.computerId)
     : undefined;
-  const chosen = besideBasis ?? ranked[0];
+  const pickedRow =
+    picked === "start"
+      ? evaluations.find((candidate) => candidate.computerId === input.pick?.computerId)
+      : undefined;
+  const chosen = pickedRow ?? besideBasis ?? ranked[0];
   return {
     status: chosen ? "chosen" : "waiting",
-    basisPreferred: chosen !== ranked[0],
+    basisPreferred: !pickedRow && chosen !== ranked[0],
+    ...(picked ? { picked } : {}),
     ...(chosen?.model && chosen.physicalComputerId
       ? {
           chosen: {
@@ -286,6 +315,36 @@ export function evaluatePlacement(input: {
     requirements,
     candidates: evaluations,
   };
+}
+
+/** What only room decides: a pick starts or waits through these. */
+const PICK_ROOM: readonly PlacementRejection[] = [
+  "model-preferred-elsewhere",
+  "cpu-busy",
+  "memory-busy",
+];
+
+/**
+ * Whether a computer can run the task apart from room and which computer
+ * serves the better model: what the decision model chooses among.
+ */
+export function pickable(evaluation: Pick<PlacementEvaluation, "rejections">): boolean {
+  return evaluation.rejections.every((rejection) => PICK_ROOM.includes(rejection));
+}
+
+/** How a pick decides now, from the picked computer's own checks; undefined when it no longer can. */
+function pickOutcome(
+  evaluations: readonly PlacementEvaluation[],
+  pick: { computerId: string | null; mode: "start" | "wait" } | undefined,
+): "start" | "wait" | undefined {
+  if (!pick) return undefined;
+  const row = evaluations.find((candidate) => candidate.computerId === pick.computerId);
+  if (!row) return undefined;
+  if (pick.mode === "start") return pickable(row) ? "start" : undefined;
+  const busy = row.rejections.some((each) => each === "cpu-busy" || each === "memory-busy");
+  if (pickable(row)) return busy ? "wait" : "start";
+  // Out of reach, nothing about it can be read: the pick waits for it to come back.
+  return row.rejections.includes("out-of-reach") ? "wait" : undefined;
 }
 
 /**

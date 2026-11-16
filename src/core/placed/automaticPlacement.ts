@@ -29,6 +29,7 @@ import {
   type LeftOut,
   leftOutComputers,
   type PlacementCandidate,
+  pickable,
   resolvePlacementRequirements,
   type SystemUnserved,
   unservedSystems,
@@ -36,6 +37,7 @@ import {
 import type { RouteResult, Router } from "../routing/router";
 import type { TaskRecord } from "../storage/taskRecords";
 import type { TaskService } from "../tasks/taskService";
+import type { ComputerChoiceComputer, ComputerPick } from "./computerChoice";
 import type { ComputerResourceFeed } from "./computerResourceFeed";
 import { withoutSignIn } from "./placedCopies";
 import { readPlacementFacts } from "./placementFacts";
@@ -84,6 +86,12 @@ export class AutomaticPlacement {
   private readonly generations = new Map<string, number>();
   private readonly reads = new Map<string, Read>();
   private readonly runningSince = new Map<string, number>();
+  /**
+   * The decision model's answer for each task waiting to start, with the
+   * computers in reach when it was asked: asked again only when one comes
+   * into or leaves reach. Undefined is unsure or no answer.
+   */
+  private readonly picks = new Map<string, { reach: string; pick: ComputerPick | undefined }>();
   private readonly stop: (() => void)[];
 
   constructor(
@@ -118,6 +126,22 @@ export class AutomaticPlacement {
       home?: () => ReturnType<typeof thisDeviceSystem>;
       /** Re-read inherited choices after asynchronous compatibility reads. */
       eligible?: (record: TaskRecord) => boolean;
+      /** This computer's own name, as the computer question names it; absent, "This computer". */
+      homeName?: () => string;
+      /**
+       * The computer question (`computerChoice.ts`): whether its use is on,
+       * and the decision model's pick among the computers that can run the
+       * task. Absent, or off, the ordinary rules choose.
+       */
+      chooser?: {
+        allowed(): boolean;
+        pick(
+          record: TaskRecord,
+          repo: RepoView,
+          shape: WorkShape,
+          computers: ComputerChoiceComputer[],
+        ): Promise<ComputerPick | undefined>;
+      };
     },
   ) {
     this.stop = [
@@ -138,6 +162,7 @@ export class AutomaticPlacement {
     for (const stop of this.stop) stop();
     this.reads.clear();
     this.runningSince.clear();
+    this.picks.clear();
   }
 
   /**
@@ -249,7 +274,17 @@ export class AutomaticPlacement {
         return undefined;
     }
     if (!this.stillCurrent(record, repo)) return undefined;
-    return this.options.router.inOrder(async () => {
+    const reach = computers
+      .filter(
+        (computer) =>
+          computer.computerId === null || this.options.work.inReach(computer.computerId),
+      )
+      .map((computer) => computer.computerId ?? "")
+      .sort()
+      .join("\n");
+    const saved = this.picks.get(record.id);
+    let ask: ComputerChoiceComputer[] | undefined;
+    const result = await this.options.router.inOrder(async () => {
       const routingOptions = await Promise.all(
         facts.map((read) => this.options.router.prepare(read?.pool ? { pool: read.pool } : {})),
       );
@@ -296,6 +331,16 @@ export class AutomaticPlacement {
           runtimeDefault: computer.computerId === null,
         };
       });
+      const pick = saved?.reach === reach ? saved.pick : undefined;
+      // Ask once per task, and again only when reach changed, while two or
+      // more computers can run it. A committed task is never asked about.
+      if (!existing && saved?.reach !== reach && this.options.chooser?.allowed()) {
+        const choices = this.choices(record, requirements, computers, candidates);
+        if (choices.length >= 2) {
+          ask = choices;
+          return undefined;
+        }
+      }
       let routed: RouteResult | undefined;
       let wait: AutomaticWait | undefined;
       let onDefault: { computerId: string | null; name: string } | undefined;
@@ -318,10 +363,9 @@ export class AutomaticPlacement {
         // commitment, after all asynchronous facts. A null device is home only
         // once execution is recorded; an unstarted answer supplies no locality.
         const current = this.options.tasks.get(record.id);
-        const relation = current && !existing ? this.options.tasks.graph.basisOf(current) : null;
-        const basis = relation?.verified ? this.options.tasks.resolve(relation.ref) : undefined;
-        const basisComputer =
-          basis && basis.startedAt !== null ? { computerId: basis.deviceId ?? null } : undefined;
+        const continued = current && !existing ? this.continuedOn(current) : undefined;
+        const basis = continued?.task;
+        const basisComputer = continued ? { computerId: continued.computerId } : undefined;
         const decision = evaluatePlacement({
           requirements,
           candidates,
@@ -338,6 +382,7 @@ export class AutomaticPlacement {
               : [],
           ),
           ...(existing ? { boundComputer: { computerId: existing.snapshot.computerId } } : {}),
+          ...(pick && !existing ? { pick } : {}),
         });
         const chosen = decision.chosen;
         const nameOf = (id: string | null) =>
@@ -352,6 +397,21 @@ export class AutomaticPlacement {
           name: nameOf(left.computerId),
           ...(chosen ? { took: nameOf(chosen.computerId) } : {}),
         }));
+        if (!chosen && decision.picked === "wait" && pick) {
+          const name = nameOf(pick.computerId);
+          const away =
+            !this.options.work.inReach(pick.computerId ?? "") && pick.computerId !== null;
+          wait = {
+            wait: {
+              kind: away ? "other" : "room",
+              words: away
+                ? `Waiting for ${name} to come back: the decision model picked it, reading your standing directions. Existing work stays where it started.`
+                : `Waiting for room on ${name}: the decision model picked it, reading your standing directions. Existing work stays where it started.`,
+            },
+            ...(leftOut.length ? { leftOut } : {}),
+          };
+          return undefined;
+        }
         if (!chosen) {
           const held = floorHold(decision.candidates);
           // A fresh reading's system, else the one the computer last said.
@@ -411,6 +471,9 @@ export class AutomaticPlacement {
                   computerId: basisComputer.computerId,
                 },
               }
+            : {}),
+          ...(decision.picked === "start" && pick
+            ? { picked: { ...(pick.source ? { source: pick.source } : {}) } }
             : {}),
           demand: requirements.demand,
           model,
@@ -473,6 +536,88 @@ export class AutomaticPlacement {
         ),
       };
     });
+    if (ask && this.options.chooser) {
+      // Asked outside the routing order, so a slow answer holds no other start.
+      const answer = await this.options.chooser.pick(record, repo, shape, ask);
+      this.picks.set(record.id, { reach, pick: answer });
+      // The readings are read again: a pick is checked against fresh facts.
+      return this.choose(record, repo, prompt, shape, options);
+    }
+    if (result && "computerId" in result) this.picks.delete(record.id);
+    return result;
+  }
+
+  /**
+   * The computers the decision model chooses among: each that can run the
+   * task apart from room and which computer serves the better model, and
+   * each out of reach that last said it runs a system the task allows.
+   */
+  private choices(
+    record: TaskRecord,
+    requirements: ReturnType<typeof resolvePlacementRequirements>,
+    computers: readonly { computerId: string | null; name: string; system?: string }[],
+    candidates: readonly PlacementCandidate[],
+  ): ComputerChoiceComputer[] {
+    const decision = evaluatePlacement({
+      requirements,
+      candidates,
+      reservations: this.options.tasks.placement.pendingPlacements().flatMap((task) =>
+        task.placement
+          ? [
+              {
+                orderId: task.placement.snapshot.orderId,
+                physicalComputerId: task.placement.snapshot.physicalComputerId,
+                demand: task.placement.snapshot.demand,
+              },
+            ]
+          : [],
+      ),
+    });
+    const current = this.options.tasks.get(record.id);
+    const continued = current ? this.continuedOn(current) : undefined;
+    return decision.candidates.flatMap((row, index): ComputerChoiceComputer[] => {
+      const computer = computers[index];
+      if (!computer) return [];
+      const base = {
+        computerId: row.computerId,
+        name:
+          row.computerId === null ? (this.options.homeName?.() ?? computer.name) : computer.name,
+        here: row.computerId === null,
+        continued: continued !== undefined && continued.computerId === row.computerId,
+      };
+      if (pickable(row)) {
+        const busy = row.rejections.some((each) => each === "cpu-busy" || each === "memory-busy");
+        const choice = row.model?.result.choice;
+        return [
+          {
+            ...base,
+            status: busy ? "busy" : "room",
+            ...(!busy && row.score !== null ? { roomFor: Math.floor(row.score) } : {}),
+            ...(choice ? { model: `${choice.provider}/${choice.id}` } : {}),
+          },
+        ];
+      }
+      const away =
+        row.rejections.includes("out-of-reach") &&
+        computer.system !== undefined &&
+        requirements.systems.some((system) => system === computer.system);
+      return away ? [{ ...base, status: "away" }] : [];
+    });
+  }
+
+  /**
+   * Where the work this task continues ran: its basis, else the task a
+   * follow-up was filed from, once that one started.
+   */
+  private continuedOn(
+    current: TaskRecord,
+  ): { task: TaskRecord; computerId: string | null } | undefined {
+    const relation = this.options.tasks.graph.basisOf(current);
+    const basis = relation?.verified ? this.options.tasks.resolve(relation.ref) : undefined;
+    const origin = basis ?? this.options.tasks.graph.discoveredOrigins(current.id)[0];
+    return origin && origin.startedAt !== null
+      ? { task: origin, computerId: origin.deviceId ?? null }
+      : undefined;
   }
 
   /** A sample begun after running was confirmed includes demand; never subtract it twice.

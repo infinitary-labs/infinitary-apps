@@ -141,6 +141,12 @@ export const placementSnapshotSchema = z.object({
       computerId: z.string().nullable(),
     })
     .optional(),
+  /**
+   * Present when the decision model picked this computer, reading the
+   * person's standing directions (`src/core/placed/computerChoice.ts`), with
+   * the model that answered. Absent when the ordinary rules chose.
+   */
+  picked: z.object({ source: z.string().max(256).optional() }).optional(),
   demand: demandSchema,
   model: modelSchema,
   acceptedFallback: z.boolean(),
@@ -190,8 +196,10 @@ export const committedPlacementSchema = z.object({
 export type CommittedPlacement = z.infer<typeof committedPlacementSchema>;
 
 export function placementReason(
-  snapshot: Pick<PlacementSnapshot, "computerName" | "basis">,
+  snapshot: Pick<PlacementSnapshot, "computerName" | "basis" | "picked">,
 ): string {
+  if (snapshot.picked)
+    return `Automatic chose ${snapshot.computerName}: the decision model picked it, reading your standing directions${snapshot.picked.source ? ` (answered by ${snapshot.picked.source})` : ""}.`;
   const beside = snapshot.basis
     ? ` This kept the task beside its basis, ${snapshot.basis.taskKey}, without changing model preference.`
     : "";

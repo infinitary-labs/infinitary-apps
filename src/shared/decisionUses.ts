@@ -36,7 +36,13 @@ export const DECISION_APPROVAL_VERSION = 2;
 export const decisionUseKindSchema = z.enum(["always-on", "default-on", "needs-ok"]);
 export type DecisionUseKind = z.infer<typeof decisionUseKindSchema>;
 
-export const DECISION_USE_IDS = ["kind", "reply-checks", "event-screen", "card-reader"] as const;
+export const DECISION_USE_IDS = [
+  "kind",
+  "reply-checks",
+  "computer",
+  "event-screen",
+  "card-reader",
+] as const;
 export type DecisionUseId = (typeof DECISION_USE_IDS)[number];
 
 export type DecisionUse = {
@@ -68,6 +74,16 @@ export const DECISION_USES: readonly DecisionUse[] = [
     name: "Propose standing direction",
     reads:
       "When you tell your first mate how you like things done, it offers to keep that as a standing direction for the project, so you don't have to say it again. It reads your new replies, the conversation around them and the card you answered.",
+    kind: "default-on",
+    approval: DECISION_APPROVAL_VERSION,
+  },
+  {
+    id: "computer",
+    name: "Choose a computer for new work",
+    reads:
+      "When more than one computer can run a new task, it starts where your standing directions point. It reads the task's title and goal, your standing directions and each computer's room and models.",
+    // On like reply checks: it reaches only the person's own models, or a
+    // decision model whose approval covers every listed use (INF-1729).
     kind: "default-on",
     approval: DECISION_APPROVAL_VERSION,
   },

@@ -106,6 +106,7 @@ import { PiAuthService } from "./pi/piAuth";
 import { createPiSessionFactory } from "./pi/sessionFactory";
 import { readKeptValidationEvidence } from "./pi/validationEvidence";
 import { AutomaticPlacement } from "./placed/automaticPlacement";
+import { computerChooser } from "./placed/computerChoice";
 import { attachComputerNotices } from "./placed/computerNotices";
 import { parseAccountKey } from "./placed/placedAccounts";
 import type { PlacedBrowsers } from "./placed/placedBrowsers";
@@ -1037,6 +1038,8 @@ export async function createServices(
     eligible: (record): boolean => supervisor.placement.automaticFor(record),
     forgeSignIns: () => forgeSignIns.view().signIns,
     knownForgeHosts: () => forgeSignIns.knownHosts(),
+    homeName: () => sourceComputer,
+    chooser: computerChooser(decisions, knowledge.directions),
   });
   // What a closed task left running on this Mac stops at its close, before
   // its working copy and temporary folder go (docs/leftover-programs.md).

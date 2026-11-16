@@ -946,3 +946,172 @@ describe("Automatic starts beside their direct answered basis", () => {
     }
   });
 });
+
+/**
+ * INF-1729, direction A: SSHH-110, filed by the app when SSHH-108 merged,
+ * started on the MacBook because Automatic chose This computer, against the
+ * captain's direction that work goes to the Mac mini. With the computer
+ * question on, the decision model picks among the computers that can run
+ * the task; with it off, or unsure, the ordinary rules choose.
+ */
+describe("Automatic asks the decision model which computer starts a new task", () => {
+  function pickWorld(chooser: ConstructorParameters<typeof AutomaticPlacement>[0]["chooser"]) {
+    const observation = reading(1);
+    if (observation.status !== "sampled") throw new Error("The captured reading is missing.");
+    const resource = {
+      status: "fresh" as const,
+      observation,
+      ageMs: 0,
+      memoryUsedBytes: memoryUsedBytes(observation.memory),
+    };
+    const work = {
+      onWorkDevice: () => () => {},
+      inReach: () => true,
+      version: () => ({ contract: PLACEMENT_FACTS_SINCE }),
+      ask: async () => ({
+        ...facts,
+        physicalComputerId: "b".repeat(64),
+        signIns: { providers: [], accounts: [], quota: null, served: [] },
+      }),
+    } as unknown as WorkDevices;
+    return world(undefined, {
+      devices: () => [macMini],
+      work,
+      homeName: () => "Kun's MacBook Pro",
+      ...(chooser ? { chooser } : {}),
+      resources: {
+        onSample: () => () => {},
+        readCurrent: async () => {},
+        snapshot: () => ({
+          computers: [
+            { computerId: null, reading: resource },
+            { computerId: macMini.id, reading: resource },
+          ],
+        }),
+        sampledAt: () => undefined,
+      } as unknown as ComputerResourceFeed,
+    });
+  }
+
+  it("starts on the picked computer, handing it both computers, and says why", async () => {
+    const asked: unknown[] = [];
+    const w = pickWorld({
+      allowed: () => true,
+      pick: async (_record, _repo, _shape, computers) => {
+        asked.push(computers);
+        return { computerId: macMini.id, mode: "start", source: "jev/jev-1.13.0" };
+      },
+    });
+    try {
+      const task = w.task("follow", "Continue: ship the ledger export");
+      expect(await w.start(task)).toMatchObject({ computerId: macMini.id });
+      expect(asked).toEqual([
+        [
+          expect.objectContaining({
+            computerId: null,
+            name: "Kun's MacBook Pro",
+            here: true,
+            status: "room",
+          }),
+          expect.objectContaining({
+            computerId: macMini.id,
+            name: "Mac mini",
+            here: false,
+            status: "room",
+          }),
+        ],
+      ]);
+      expect(w.tasks.get(task.id)?.placement?.snapshot.picked).toEqual({
+        source: "jev/jev-1.13.0",
+      });
+      expect(w.tasks.timeline(task.id).map((event) => event.text)).toContain(
+        "Automatic chose Mac mini: the decision model picked it, reading your standing directions (answered by jev/jev-1.13.0).",
+      );
+    } finally {
+      w.dispose();
+    }
+  });
+
+  it("keeps the ordinary rules when the model is unsure, and asks once", async () => {
+    let asks = 0;
+    const w = pickWorld({
+      allowed: () => true,
+      pick: async () => {
+        asks += 1;
+        return undefined;
+      },
+    });
+    try {
+      const task = w.task("unsure", "Fix the ledger totals");
+      expect(await w.start(task)).toMatchObject({ computerId: null });
+      expect(asks).toBe(1);
+      expect(w.tasks.get(task.id)?.placement?.snapshot.picked).toBeUndefined();
+    } finally {
+      w.dispose();
+    }
+  });
+
+  it("asks nothing while the switch is off", async () => {
+    let asks = 0;
+    const w = pickWorld({
+      allowed: () => false,
+      pick: async () => {
+        asks += 1;
+        return { computerId: macMini.id, mode: "start" };
+      },
+    });
+    try {
+      expect(await w.start(w.task("off", "Fix the ledger header"))).toMatchObject({
+        computerId: null,
+      });
+      expect(asks).toBe(0);
+    } finally {
+      w.dispose();
+    }
+  });
+
+  it("waits for room on the picked computer with words naming the pick", async () => {
+    let mode: "start" | "wait" = "start";
+    const w = pickWorld({
+      allowed: () => true,
+      pick: async () => ({ computerId: macMini.id, mode }),
+    });
+    try {
+      // Starts picked onto the Mac mini until it has no room left.
+      for (const id of ["one", "two", "three"])
+        expect(await w.start(w.task(id, `Preparing ${id}`))).toMatchObject({
+          computerId: macMini.id,
+        });
+      mode = "wait";
+      expect(await w.start(w.task("waits", "Fix the ledger footer"))).toMatchObject({
+        wait: {
+          kind: "room",
+          words:
+            "Waiting for room on Mac mini: the decision model picked it, reading your standing directions. Existing work stays where it started.",
+        },
+      });
+    } finally {
+      w.dispose();
+    }
+  });
+
+  it("with no answer, keeps a follow-up beside the computer the task it was filed from ran on", async () => {
+    const w = pickWorld(undefined);
+    try {
+      const origin = seedTask(w.tasks, {
+        id: "origin",
+        title: "Ship the ledger export",
+        status: "completed",
+        outcome: "Merged.",
+        repoId: ledger.id,
+        deviceId: macMini.id,
+      });
+      const follow = w.task("follow", "Continue: ship the ledger export");
+      w.tasks.graph.link(follow.id, origin.id, "discovered-from", "host");
+      expect(await w.start(follow)).toMatchObject({ computerId: macMini.id });
+      expect(w.tasks.get(follow.id)?.placement?.snapshot.basis?.taskId).toBe(origin.id);
+    } finally {
+      w.dispose();
+    }
+  });
+});

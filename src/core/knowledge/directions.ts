@@ -88,6 +88,20 @@ export class StandingDirections {
       .map((row) => this.row(row));
   }
 
+  /**
+   * The directions that apply to one project's work, everywhere ones
+   * included: what the computer question reads (`computerChoice.ts`). The
+   * everywhere ones otherwise reach only the first mate.
+   */
+  applying(repoId: string): KnowledgeDirectionRow[] {
+    const crew: KnowledgeActor = { kind: "crewmate", taskId: "", repoId };
+    return this.handle
+      .open()
+      .directions()
+      .filter((row) => !row.retired && (row.scope === PRIVATE_SCOPE || this.visible(crew, row)))
+      .map((row) => this.row(row));
+  }
+
   /** A paged browser view of the authoritative directions. */
   page(args: KnowledgeDirectionsArgs): KnowledgeDirections {
     return this.handle.browsing((store) => {

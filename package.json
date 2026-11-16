@@ -44,6 +44,7 @@
     "eval:approval": "node scripts/evals/approval-handoff.ts",
     "check:account-models": "node scripts/check-account-models.ts",
     "measure:sessions": "node scripts/measure-session-footprint.ts",
+    "score:computers": "node scripts/score-computer-choice.ts",
     "score:kinds": "node scripts/score-kind-classifier.ts",
     "bench:attempt": "node scripts/bench/run-attempt.ts",
     "package:mac": "node scripts/generate-messages.ts --compiled && electron-vite build && node scripts/generate-self-source.mjs && node scripts/release-notes.ts generate --dev --out packaging/generated/release-notes.json && electron-builder --mac dir --universal --config electron-builder.dev.yml && node scripts/verify-local-codesign.mjs --packaged",

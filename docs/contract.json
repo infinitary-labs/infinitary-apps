@@ -37135,6 +37135,15 @@
                   "computerId"
                 ]
               },
+              "picked": {
+                "type": "object",
+                "properties": {
+                  "source": {
+                    "type": "string",
+                    "maxLength": 256
+                  }
+                }
+              },
               "demand": {
                 "type": "object",
                 "properties": {

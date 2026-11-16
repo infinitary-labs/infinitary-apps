@@ -633,3 +633,97 @@ describe("the basis computer's soft preference", () => {
     ).toEqual(["cpu-busy"]);
   });
 });
+
+// INF-1729, direction A: the decision model picks among the computers that
+// can run the task, reading the captain's standing directions; the app keeps
+// every hard fact and falls back to the ordinary rules.
+describe("the decision model's pick", () => {
+  const requirements = resolvePlacementRequirements({
+    home: { system: "macos", chip: "arm64" },
+    workingCopy: true,
+  });
+  const macMini: PlacementCandidate = {
+    ...thisMac,
+    computerId: "mac-mini",
+    physicalComputerId: "b".repeat(64),
+  };
+  const fill = (computer: PlacementCandidate): PlacementReservation[] => [
+    {
+      orderId: "preparing",
+      physicalComputerId: computer.physicalComputerId ?? "",
+      demand: {
+        cpu: requirements.demand.cpu * 3,
+        memoryBytes: requirements.demand.memoryBytes * 3,
+      },
+    },
+  ];
+  const base = { requirements, candidates: [thisMac, macMini] };
+
+  it("starts on the picked computer over the ordinary winner and its better model", () => {
+    const lesser = { ...macMini, model: { ...thisMac.model!, preferenceRank: 1 } };
+    const decision = evaluatePlacement({
+      requirements,
+      candidates: [thisMac, lesser],
+      reservations: [],
+      pick: { computerId: "mac-mini", mode: "start" },
+    });
+    expect(decision.chosen?.computerId).toBe("mac-mini");
+    expect(decision.picked).toBe("start");
+    expect(decision.basisPreferred).toBe(false);
+  });
+
+  it("starts on a busy picked computer, as naming it does", () => {
+    const decision = evaluatePlacement({
+      ...base,
+      reservations: fill(macMini),
+      pick: { computerId: "mac-mini", mode: "start" },
+    });
+    expect(decision.chosen?.computerId).toBe("mac-mini");
+  });
+
+  it("waits for room on a busy picked computer, and starts there once it has room", () => {
+    const pick = { computerId: "mac-mini", mode: "wait" as const };
+    const busy = evaluatePlacement({ ...base, reservations: fill(macMini), pick });
+    expect(busy.status).toBe("waiting");
+    expect(busy.picked).toBe("wait");
+    const room = evaluatePlacement({ ...base, reservations: [], pick });
+    expect(room.chosen?.computerId).toBe("mac-mini");
+  });
+
+  it("waits for a picked computer that is out of reach", () => {
+    const decision = evaluatePlacement({
+      requirements,
+      candidates: [thisMac, { ...macMini, inReach: false, model: null }],
+      reservations: [],
+      pick: { computerId: "mac-mini", mode: "wait" },
+    });
+    expect(decision.status).toBe("waiting");
+    expect(decision.picked).toBe("wait");
+  });
+
+  it.each([
+    { tools: { git: "unavailable" as const } },
+    { projectAccess: "unavailable" as const },
+    { model: { ...thisMac.model!, requiresReasoningWait: true } },
+    { inReach: false, model: null },
+  ])("falls back to the ordinary rules when a start pick is no longer possible: %j", (over) => {
+    const decision = evaluatePlacement({
+      requirements,
+      candidates: [thisMac, { ...macMini, ...over }],
+      reservations: [],
+      pick: { computerId: "mac-mini", mode: "start" },
+    });
+    expect(decision.chosen?.computerId).toBeNull();
+    expect(decision.picked).toBeUndefined();
+  });
+
+  it("never passes an explicit binding", () => {
+    const decision = evaluatePlacement({
+      ...base,
+      reservations: [],
+      boundComputer: { computerId: null },
+      pick: { computerId: "mac-mini", mode: "start" },
+    });
+    expect(decision.chosen?.computerId).toBeNull();
+  });
+});

@@ -170,15 +170,17 @@ They hang off the frozen `window.infinitary.models` namespace; the top-level key
 Each entry has a kind:
 
 - `always-on`: Infinitary needs it to work; its switch shows on and locked (task classification).
-- `default-on`: on until the person turns it off (reply checks, which Settings names Propose standing direction).
+- `default-on`: on until the person turns it off (reply checks, which Settings names Propose standing direction, and the computer question).
 - `needs-ok`: off until the person agrees to its own disclosure in the consent dialog, once (the event screen and the reader check, below).
 
 The person's switches are their own settings row, `decision-uses`, holding only the uses they switched.
 `DecisionModels.decide` refuses a use that is off, or that the answering Jev or OpenRouter approval predates, with the question's abstention and the reason `use-off`; the person's own models never answer in that model's place.
-Four uses are listed:
+Five uses are listed:
 
 - `kind`, task classification ("The first consumer").
 - `reply-checks`, "Optional reply checks" below.
+- `computer`, Choose a computer for new work: when two or more computers can run a new Automatic task, the question reads the task, the standing directions that apply to its project and each computer's facts, and answers start on a computer, wait for one, usual when no direction says which computer runs that kind of task, or unsure (`docs/helper.md`, "Which computer a new task starts on").
+  It is on by default because, like the reply checks, it reaches only the person's own models or a decision model they approved.
 - `event-screen`, Screen automation events: a new event of an automation that says what it waits for is asked `match`, `unrelated` or `unclear`, and only `unrelated` keeps it from the first mate (`docs/automation.md`, "The event screen").
   Its disclosure names what leaves: each event's summary, such as an email's sender and subject, which anyone who can email the person writes.
 - `card-reader`, Reader check on cards: four readings of a crewmate's card once it is up, told to its author as facts (`docs/card-authoring.md`, "The reader check").
@@ -198,6 +200,8 @@ Adding a second consumer is adding a question.
 `pnpm score:kinds --decision-model jev --models <models.json> --provider <p> --model <m>` scores the native model over the same 31 hand labels as the adapter, with `--provider`/`--model` as the fallback the service uses when it cannot answer.
 The key is read from `TYPESAFE_API_KEY` for that offline run only and is never written anywhere; the app itself reads only the user's own stored key.
 The scorer sits behind Observe's development gate like the other offline tools.
+
+`pnpm score:computers --cases <cases.jsonl> --decision-model jev --models <models.json> --provider <p> --model <m>` scores the computer question the same way, over labeled cases of a task, its standing directions and its computers' facts, and reports accuracy overall, by scenario, by what the task delivers and by expected answer; `--split dev` or `--split test` keeps wording work on one split and measures it on the other.
 
 ## Optional reply checks
 

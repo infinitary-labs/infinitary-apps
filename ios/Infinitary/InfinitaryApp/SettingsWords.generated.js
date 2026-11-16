@@ -14126,6 +14126,12 @@ ${events}` : prompt;
       taskKey: string(),
       computerId: string().nullable()
     }).optional(),
+    /**
+     * Present when the decision model picked this computer, reading the
+     * person's standing directions (`src/core/placed/computerChoice.ts`), with
+     * the model that answered. Absent when the ordinary rules chose.
+     */
+    picked: object({ source: string().max(256).optional() }).optional(),
     demand: demandSchema,
     model: modelSchema,
     acceptedFallback: boolean(),

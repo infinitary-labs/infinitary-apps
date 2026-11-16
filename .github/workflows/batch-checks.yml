@@ -82,6 +82,7 @@ jobs:
       profile: stable
       all_journeys: true
       hosted: true
+      fleet_tests: true
       mac_runner: ${{ fromJSON(vars.MAC_QUEUES || '{}').release_split || '' }}
       confirm: true
 

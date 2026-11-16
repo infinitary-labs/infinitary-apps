@@ -44,10 +44,15 @@ const MAC_QUEUES = JSON.stringify({
 describe("batch-checks.yml", () => {
   const batch = workflow(".github/workflows/batch-checks.yml");
 
-  it("sweeps with the alpha's full check: hosted Linux, every journey, the Mac lanes on the release split line", () => {
+  it("sweeps with every journey, PC test groups and the Mac lanes on the release split line", () => {
     const sweep = batch.jobs.sweep!;
     expect(sweep.uses).toBe("./.github/workflows/verify.yml");
-    expect(sweep.with).toMatchObject({ hosted: true, all_journeys: true, profile: "stable" });
+    expect(sweep.with).toMatchObject({
+      hosted: true,
+      fleet_tests: true,
+      all_journeys: true,
+      profile: "stable",
+    });
     expect(workflowString(String(sweep.with!.ref), { inputs })).toBe(head);
     // The captain on INF-2508: "Keep every journey in the batch, and let an
     // alpha reuse them". The sweep calls the whole check, never a part, so

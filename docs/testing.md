@@ -666,7 +666,7 @@ How the app forms, combines, holds and merges a batch is `docs/forge.md`'s.
 What this project adds is the batch's checks, `.github/workflows/batch-checks.yml`, which `batch-pull-request.yml` calls on the batch pull request's version.
 The sweep is `verify.yml` with every journey and without the phone check, the whole check an alpha reuses: an alpha from a merge it checked runs no lane itself (the captain on INF-2508: "Keep every journey in the batch, and let an alpha reuse them").
 A sweep without every journey's complete set still lends its Linux checks and Mac lanes, and the alpha then runs every journey itself (INF-2480; `scripts/main-alpha-proof.mjs`).
-Its Linux jobs run on GitHub's hosted machines and its Mac lanes on the `release_split` queue ("Each Mac job's kind and size").
+Its eight Linux test groups use `LINUX_RUNNER`, the PC-only queue, then hosted Ubuntu when unset; they do not use `LINUX_QUEUES.checks`, whose mixed fleet includes guests without Chromium dependencies; its other Linux jobs stay hosted and its Mac lanes use the `release_split` queue ("Each Mac job's kind and size").
 Beside it, the `critical-path` job runs the critical path on the same version on GitHub's hosted Linux ("The critical path"), so the batch's check runs it whatever part of the full check the sweep runs (the captain, on INF-2508: "the e2e journey + browser tests should all run during the sweep batch").
 The `startup` job runs the Linux automatic startup fixtures, `linux-startup.yml`, on the same version on GitHub's hosted Ubuntu, so they run before a merge (the captain's pick on INF-3052, "In the batch check, beside the critical-path journey").
 The `windows` job builds the Windows installer and checks it on a fresh Windows 11 virtual machine, `windows.yml`, when `scripts/windows-paths.ts` finds the batch touches Windows-relevant files (the captain's pick on the Windows plan; `docs/windows.md`, "The checks").
@@ -748,7 +748,7 @@ The cost is GitHub's per-minute bill for those jobs.
   Rehearsals and an unset variable stay hosted.
 
 `linux-startup.yml`'s job and `alpha-wait.yml`'s jobs name `ubuntu-24.04`, since `main.yml` and, for the startup fixtures, `batch-checks.yml` are their only callers; the alpha wait bills no minutes while its `wait` job is pending in an alpha's group ("Main's desktop release check").
-`batch-checks.yml` passes `hosted: true` to its sweep and its critical path, its startup fixtures name hosted Ubuntu themselves, and its own jobs but the Mac side of its confirm, and `main.yml`'s `sort` and `covered` jobs, name `ubuntu-24.04` ("The swept batch").
+`batch-checks.yml` passes `hosted: true` to its sweep and its critical path, and opts only the sweep's eight Linux test groups into `LINUX_RUNNER` with `fleet_tests: true`; its startup fixtures name hosted Ubuntu themselves, and its own jobs but the Mac side of its confirm, and `main.yml`'s `sort` and `covered` jobs, name `ubuntu-24.04` ("The swept batch").
 
 `ios-release.yml`'s two Linux jobs, `resolve` and `availability`, name `ubuntu-24.04` for every dispatch, since each one checks or releases a phone build.
 A requested check and a pull request keep `LINUX_RUNNER`: `hosted` is an input only a call takes, never a request's.

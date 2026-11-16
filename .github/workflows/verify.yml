@@ -58,6 +58,10 @@ on:
         required: false
         type: boolean
         default: false
+      fleet_tests:
+        description: Let the Linux test groups use LINUX_RUNNER even when other Linux jobs are hosted
+        type: boolean
+        default: false
       profile:
         description: Which lanes run - stable or alpha (both run the full checks)
         required: false
@@ -752,7 +756,7 @@ jobs:
             shard: 1
             shards: 1
             chromium: true
-    runs-on: ${{ inputs.hosted && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').checks || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
+    runs-on: ${{ inputs.hosted && (inputs.fleet_tests && vars.LINUX_RUNNER || 'ubuntu-24.04') || fromJSON(vars.LINUX_QUEUES || '{}').checks || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
     # Under "Application Support", as the lanes above (FI3-152).
     defaults:
       run:

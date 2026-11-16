@@ -573,12 +573,12 @@ describe("a release's hosted machines", () => {
     );
 
   /** Where verify.yml's Linux jobs start when a caller passes `hosted`. */
-  const verified = (hosted: unknown, vars: Record<string, string>) => {
+  const verified = (hosted: unknown, vars: Record<string, string>, fleetTests: unknown = false) => {
     const journeysHosted = passed(verify["linux-e2e"], "hosted", { inputs: { hosted } });
     return {
       request: runsOn(verify.request, { inputs: { hosted }, vars }),
       checks: runsOn(verify.lane, { matrix: { lane: "linux-checks" }, inputs: { hosted }, vars }),
-      tests: runsOn(verify["linux-tests"], { inputs: { hosted }, vars }),
+      tests: runsOn(verify["linux-tests"], { inputs: { hosted, fleet_tests: fleetTests }, vars }),
       journeys: runsOn(journeys, { inputs: { hosted: journeysHosted }, vars }),
     };
   };
@@ -657,6 +657,24 @@ describe("a release's hosted machines", () => {
     expect(call("linux-startup.yml")).toBeDefined();
     expect(literal(workflow("linux-startup.yml").jobs["runtime-facts"])).toBe("ubuntu-24.04");
     expect(Object.keys(workflow("linux-startup.yml").on)).toEqual(["workflow_call"]);
+  });
+
+  it("places batch test groups on the PC queue, ignoring the mixed fleet and falling back to hosted", () => {
+    const sweep = workflow("batch-checks.yml").jobs.sweep;
+    const hosted = passed(sweep, "hosted", {});
+    const fleetTests = passed(sweep, "fleet_tests", {});
+    const other = { request: "ubuntu-24.04", checks: "ubuntu-24.04", journeys: "ubuntu-24.04" };
+    for (const [vars, tests] of [
+      [{ ...pc, LINUX_QUEUES: JSON.stringify({ checks: "fleet-linux" }) }, "shell-pc-linux"],
+      [{ LINUX_QUEUES: JSON.stringify({ checks: "fleet-linux" }) }, "ubuntu-24.04"],
+      [pc, "shell-pc-linux"],
+      [{}, "ubuntu-24.04"],
+    ] as const) {
+      expect(verified(hosted, vars, fleetTests)).toEqual({ ...other, tests });
+    }
+    expect(workflow("verify.yml").on.workflow_call?.inputs?.fleet_tests).toMatchObject({
+      default: false,
+    });
   });
 
   it("keeps a request's Linux jobs on today's labels", () => {

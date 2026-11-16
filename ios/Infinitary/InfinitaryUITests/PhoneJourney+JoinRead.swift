@@ -256,7 +256,7 @@ extension PhoneJourney {
         app.launchEnvironment["INFINITARY_FOLD_SEEN"] = "1"
         app.terminate(); try await launchPhoneApp(app)
         app.launchEnvironment.removeValue(forKey: "INFINITARY_FOLD_SEEN")
-        reach("In reach", timeout: 20)
+        reach("Live", timeout: 20)
         try await openAppearanceByKeys()
         let split = app.switches["phone-fold-split"]
         XCTAssertTrue(split.waitForPresence(timeout: 10), app.debugDescription)
@@ -276,7 +276,7 @@ extension PhoneJourney {
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == '0'"), object: split, timeout: 10), .completed,
                        "Space turns it off again")
         app.terminate(); try await launchPhoneApp(app)
-        reach("In reach", timeout: 20)
+        reach("Live", timeout: 20)
         try await openAppearanceByKeys()
         XCTAssertTrue(split.waitForPresence(timeout: 10), "The switch stays once a fold was seen: \(app.debugDescription)")
         XCTAssertEqual(split.value as? String, "0", "The choice survives a relaunch")

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "fold-split-live-wait",
+      "reason": "Test only: the phone's Split at the fold test now waits for the computer button's Live value after each relaunch; nothing a person sees changes."
+    }
+  ]
+}

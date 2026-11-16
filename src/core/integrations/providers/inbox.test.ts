@@ -1,5 +1,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { cardPresentation } from "@shared/cards";
+import { INBOX_WORDS } from "@shared/integrations";
 import type { DecisionRecord } from "@shared/provenance";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../../tests/helpers/scratchDirs";
@@ -10,7 +12,7 @@ import { FIRSTMATE_RECIPIENT, InboxStore } from "../../storage/inboxStore";
 import { ScheduleStore } from "../../storage/scheduleStore";
 import { INFINITARY_COMMAND } from "../commandWords";
 import { IntegrationSettingsStore, IntegrationsService } from "../index";
-import { INBOX_ID, Inbox } from "./inbox";
+import { INBOX_ID, Inbox, type OldNameWarning } from "./inbox";
 
 /**
  * INF-1214, direction A (the captain's "Approve and build" with all seven
@@ -261,6 +263,57 @@ describe("the inbox", () => {
     await integrations.remove("inbox");
     await integrations.signIn("inbox");
     expect(doorOf()?.oldName).toBeUndefined();
+  });
+
+  // INF-3904, the captain's direction A: warn the people the removal would disrupt, one version before it.
+  it("raises the old name's warning card once per folder, and again at a start until it went up", async () => {
+    const { root, dir, linkDir, inbox, integrations } = await setup();
+    const raised: OldNameWarning[] = [];
+    let refused = false;
+    inbox.warnOldNameThrough((card) => {
+      if (refused) throw new Error("the stack refused it");
+      raised.push(card);
+    });
+    // Not kept, the run is refused before it works, so nothing warns.
+    inbox.door.oldNameRan("/before");
+    expect(raised).toEqual([]);
+
+    await integrations.signIn("inbox");
+    inbox.door.oldNameRan("/scripts/deploy");
+    inbox.door.oldNameRan("/scripts/deploy");
+    expect(raised).toHaveLength(1);
+    const [card] = raised;
+    // The captain's reply: the attention badge, which a host card with a button wears, and their title.
+    expect(card && cardPresentation({ author: "host", actions: card.actions })).toBe("attention");
+    expect(card?.title).toBe(INBOX_WORDS.oldNameWarning.title);
+    expect(card?.body).toContain("/scripts/deploy");
+    expect(card?.body).toContain(INFINITARY_COMMAND);
+    // Another folder warns again, on its own card; a folder's words arrive escaped.
+    inbox.door.oldNameRan("/scripts/<backup>");
+    expect(raised).toHaveLength(2);
+    expect(raised[1]?.id).not.toBe(card?.id);
+    expect(raised[1]?.body).toContain("/scripts/&lt;backup&gt;");
+
+    // A card that never went up keeps its folder unwarned, so the next start raises it.
+    refused = true;
+    expect(() => inbox.door.oldNameRan("/scripts/report")).not.toThrow();
+    const restart = () =>
+      new Inbox({
+        dir,
+        dataDir: root,
+        command: join(BIN_DIR, INFINITARY_COMMAND),
+        defaultDataDir: join(root, "elsewhere"),
+        linkDir,
+      });
+    const atStart: OldNameWarning[] = [];
+    restart().warnOldNameThrough((raisedCard) => atStart.push(raisedCard));
+    expect(atStart.map((raisedCard) => raisedCard.body.includes("/scripts/report"))).toEqual([
+      true,
+    ]);
+    // Once it went up, a later start raises nothing for it.
+    const again: OldNameWarning[] = [];
+    restart().warnOldNameThrough((raisedCard) => again.push(raisedCard));
+    expect(again).toEqual([]);
   });
 
   // INF-1567, the captain's direction C: "the switch is the pause, and Delete moves to Data".

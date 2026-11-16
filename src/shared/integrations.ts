@@ -348,6 +348,19 @@ export const INBOX_WORDS = {
   /** Something still runs the old name, `infinitary-inbox-axi`: when it last did, and from where. */
   oldName: (when: string, cwd: string) =>
     `Something ran the old name infinitary-inbox-axi on ${when}, in ${cwd}. It still works; infinitary-axi is the new name.`,
+  /**
+   * The card a recorded run of the old name raises, once per folder: the
+   * next version removes the name (the captain's words on INF-3904). Each
+   * part arrives already marked up.
+   */
+  oldNameWarning: {
+    title: "Your script uses infinitary-inbox-axi which is being deprecated",
+    ran: (name: string, when: string, cwd: string) =>
+      `Something ran ${name} on ${when}, in ${cwd}.`,
+    change: (name: string) =>
+      `The next version of Infinitary will remove that name, and the script will stop working. Change the name to ${name} in the script; nothing else changes.`,
+    gotIt: "Got it",
+  },
   /** A turned-on rule listens. */
   told: "Your first mate is told of a note at once.",
   /** Every rule on the inbox is paused in Automation. */

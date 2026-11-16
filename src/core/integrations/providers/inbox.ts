@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import {
   accessSync,
   appendFileSync,
@@ -14,7 +14,10 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import type { IntegrationDoorView } from "@shared/integrations";
+import { escapeHtml } from "@shared/cardBodyMarkup";
+import { type Card, FIRSTMATE_CARD_META } from "@shared/cards";
+import { formatDateTime } from "@shared/i18n/format";
+import { INBOX_WORDS, type IntegrationDoorView } from "@shared/integrations";
 import { AXI_KEY_HEADER } from "../../axi/protocol";
 import type { IntegrationBinding, IntegrationEventItem, IntegrationEventSpec } from "../binding";
 import { INFINITARY_COMMAND } from "../commandWords";
@@ -40,7 +43,8 @@ import { INFINITARY_COMMAND } from "../commandWords";
  * its place in the log: a look reads events after a cursor of it, and a
  * receipts read lists lines after one. Once something ran the command's
  * old name, `infinitary-inbox-axi`, it also holds when that last happened
- * and from which folder (`old-name.json`, 0600), which Settings shows.
+ * and from which folder (`old-name.json`, 0600), which Settings shows,
+ * and each folder whose run raised the warning note (`old-name-warned.json`).
  *
  * The switch in Settings is the connection's pause (INF-1567, the
  * captain's direction C): off, the command refuses and the rule is told
@@ -117,6 +121,31 @@ export type InboxWake = {
   added: (say?: (text: string) => void) => void;
 };
 
+/**
+ * The old name's warning, as the host raises it: a card the host authors
+ * with one button, so it wears the attention badge (the captain's reply on
+ * INF-3904), one per folder under an id the folder names.
+ */
+export type OldNameWarning = Pick<Card, "id" | "title" | "meta" | "body" | "actions">;
+
+/** The card for a recorded run of the old name: when, where, and what to change. */
+export function oldNameWarning(run: { at: number; cwd: string }): OldNameWarning {
+  const words = INBOX_WORDS.oldNameWarning;
+  const when = formatDateTime(run.at, { dateStyle: "medium", timeStyle: "short" });
+  const mono = (text: string) => `<span class="inf-mono">${escapeHtml(text)}</span>`;
+  const folder = createHash("sha256").update(run.cwd).digest("hex").slice(0, 16);
+  return {
+    id: `card-old-command-name-${folder}`,
+    title: words.title,
+    meta: FIRSTMATE_CARD_META,
+    body: [
+      `<p>${words.ran(mono("infinitary-inbox-axi"), escapeHtml(when), mono(run.cwd))}</p>`,
+      `<p>${words.change(mono(INFINITARY_COMMAND))}</p>`,
+    ].join("\n"),
+    actions: [{ id: "got-it", label: words.gotIt, variant: "primary", default: true }],
+  };
+}
+
 export type InboxOptions = {
   /** `userData/integrations/inbox`. */
   dir: string;
@@ -168,6 +197,8 @@ export class Inbox {
   };
   /** Late-bound: whether the connection is paused, which the integrations' settings hold. */
   private paused: () => boolean = () => false;
+  /** Late-bound: raise the old name's warning card; its folder is kept once that returns. */
+  private warn?: (card: OldNameWarning) => void;
 
   constructor(private readonly options: InboxOptions) {
     this.now = options.now ?? Date.now;
@@ -186,6 +217,19 @@ export class Inbox {
   /** Whether the person switched the inbox off, as the integrations' settings say. */
   pausedThrough(paused: () => boolean): void {
     this.paused = paused;
+  }
+
+  /**
+   * The old name's warning (docs/integrations.md, "The inbox"): a run of
+   * `infinitary-inbox-axi` the inbox recorded raises a card that the next
+   * version removes that name, once per folder it ran from. Bound once the
+   * cards exist; a run recorded by an earlier version is looked at now. A
+   * raise that throws keeps the folder unwarned, so the next run or start
+   * raises it again, and the run itself still answers.
+   */
+  warnOldNameThrough(warn: (card: OldNameWarning) => void): void {
+    this.warn = warn;
+    this.lookOldName();
   }
 
   /** The Scheduler's look at once after a drop, how many rules listen, and the rule turning on adds. */
@@ -403,6 +447,37 @@ export class Inbox {
     const record = { at: this.now(), cwd: cwd.slice(0, 4096) };
     writeFileSync(this.path("old-name.json"), `${JSON.stringify(record)}\n`, { mode: 0o600 });
     this.options.changed?.();
+    this.lookOldName();
+  }
+
+  /** The newest recorded run, warned about unless its folder already was. */
+  private lookOldName(): void {
+    const run = this.oldName();
+    if (!this.warn || !run || this.warnedFolders().includes(run.cwd)) return;
+    try {
+      this.warn(oldNameWarning(run));
+    } catch {
+      // The card did not go up: the folder stays unwarned, and the run still answers.
+      return;
+    }
+    const folders = [...this.warnedFolders(), run.cwd];
+    writeFileSync(this.path("old-name-warned.json"), `${JSON.stringify(folders)}\n`, {
+      mode: 0o600,
+    });
+  }
+
+  /** The folders a warning was raised for, kept with the inbox; Delete in Data removes them. */
+  private warnedFolders(): string[] {
+    try {
+      const folders = JSON.parse(
+        readFileSync(this.path("old-name-warned.json"), "utf8"),
+      ) as unknown;
+      return Array.isArray(folders)
+        ? folders.filter((folder): folder is string => typeof folder === "string")
+        : [];
+    } catch {
+      return [];
+    }
   }
 
   private oldName(): { at: number; cwd: string } | undefined {

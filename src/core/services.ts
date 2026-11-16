@@ -1294,6 +1294,8 @@ export async function createServices(
   // Seed the notifier with the restored stack: cards surviving a restart are
   // old news, and only cards born after this moment ping.
   notifier.observe(supervisor.cards.ended.stack());
+  // The old name's warning card, once per folder (docs/integrations.md, "The inbox").
+  integrationInbox.warnOldNameThrough((card) => supervisor.cards.hostCards.raiseHostCard(card));
   // Install by talking (Phase A, A2a): the installer stages a plugin and
   // asks on the host's consent card; the supervisor routes the captain's
   // click on it (a host effect only his click on the card's controls runs).

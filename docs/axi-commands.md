@@ -186,7 +186,7 @@ The skill stays the person's own: the personal skills a crewmate is given (`pers
 A request id or source is one word of letters, digits and `._:@/+-`, at most 128; anything else, or a note with no words, is refused with exit 1.
 `infinitary-inbox-axi`, its old name, answers the same until the captain retires it, each answer opening with the line `notice: infinitary-inbox-axi is now infinitary-axi; the old name still works`; with `--json` the same words are the answer's `notice` field instead, so the answer still parses (`withRenamedNotice`).
 A script written for the old inbox may name the inbox's folder, `<data>/integrations/inbox`, in `INFINITARY_INBOX`; when `INFINITARY_DATA` names no data folder, the launcher takes the one above it.
-Each run of the old name keeps when it ran and from which working folder in the inbox's folder (`old-name.json`), and the Infinitary command box in Settings shows that one line, so the captain sees what still runs it before retiring it (`docs/integrations.md`, "The inbox").
+Each run of the old name keeps when it ran and from which working folder in the inbox's folder (`old-name.json`), and the Infinitary command box in Settings shows that one line, so the captain sees what still runs it before retiring it, and a recorded run raises a card, once per folder, that the next version removes the name (`docs/integrations.md`, "The inbox").
 
 ## Never the crew's
 

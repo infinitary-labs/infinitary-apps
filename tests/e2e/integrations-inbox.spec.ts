@@ -12,6 +12,7 @@ import {
   INFINITARY_COMMAND,
 } from "../../src/core/integrations";
 import { NOTICE_WORDS } from "../../src/core/orchestrator/noticeWakes";
+import type { Card } from "../../src/shared/cards";
 import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
 import { type AutomationEventsSeen, automationEvents } from "./scenarios/automationEvents";
@@ -42,6 +43,8 @@ import { focusOn, pressKey, runFromSearch } from "./windowKeys";
  *   captain's answers: the old name lives until they retire it, and the
  *   box says when it last ran): the old name `infinitary-inbox-axi` still
  *   answers, with its notice, and the box names the folder it ran from.
+ *   INF-3904 (the captain's direction A): that run raises one warning card
+ *   naming its folder, and a second run from the same folder raises none.
  * - Data: one deploy notice with a request id and a source, the way a CI
  *   script would send it.
  * - Completion signal: the link on disk, the rule's saved state, the first
@@ -188,6 +191,22 @@ test("a program's drop wakes the first mate through the inbox turned on by keys"
   const oldNameLine = door.locator("[data-inbox-old-name]");
   await expect(oldNameLine).toContainText(INBOX_COMMAND);
   await expect(oldNameLine).toContainText(scriptDir);
+  // A run that worked raises the warning card once for its folder (INF-3904, the captain's direction A:
+  // warn the people the removal would disrupt one version before it); the same folder again raises none.
+  const warnings = async () =>
+    ((await page.evaluate(() => window.infinitary.cards.list())) as Card[]).filter(
+      (card) => card.title === INBOX_WORDS.oldNameWarning.title,
+    );
+  await expect.poll(async () => (await warnings()).length).toBe(1);
+  const [warning] = await warnings();
+  expect(warning?.author).toBe("host");
+  expect(warning?.body).toContain(scriptDir);
+  expect(warning?.body).toContain(INFINITARY_COMMAND);
+  expect(
+    (await sh(`cd '${scriptDir}' && ${oldLine} receipts`, process.env.PATH ?? "")).exitCode,
+  ).toBe(0);
+  await expect(oldNameLine).toContainText(scriptDir);
+  expect(await warnings()).toHaveLength(1);
 
   const rules = () => page.evaluate(async () => (await window.infinitary.automation.list()).rules);
 

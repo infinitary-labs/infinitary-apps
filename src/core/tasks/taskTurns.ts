@@ -91,7 +91,11 @@ export type ReportDeclaration = {
  * A long fact keeps its content digest, so a changed tail is never mistaken
  * for the same observation after clipping, and identical facts stay equal.
  */
-function reportRecoveryOf(declared: ReportDeclaration | undefined) {
+export function boundedRecoveryOf(declared: ReportDeclaration | undefined): {
+  workWait?: WorkWait;
+  recoveryWays?: KeptRecoveryWay[];
+  overflowed: boolean;
+} {
   let overflow = false;
   const short = (text: string) => {
     if (text.length <= 300) return text;
@@ -129,10 +133,22 @@ function reportRecoveryOf(declared: ReportDeclaration | undefined) {
   return {
     ...(workWait ? { workWait } : {}),
     ...(ways.length ? { recoveryWays: ways } : {}),
-    ...(overflow
+    overflowed: overflow,
+  };
+}
+
+/**
+ * The bounded facts the report's event keeps, and their full text through
+ * the overflow owner when they ran past their band.
+ */
+function reportRecoveryOf(declared: ReportDeclaration | undefined) {
+  const { overflowed, ...bounded } = boundedRecoveryOf(declared);
+  return {
+    ...bounded,
+    ...(overflowed
       ? {
           overflow: capWithOverflow(
-            JSON.stringify({ workWait: wait, recoveryWays: declared?.recoveryWays }),
+            JSON.stringify({ workWait: declared?.workWait, recoveryWays: declared?.recoveryWays }),
             "report-recovery",
             { limit: 0, force: true },
           ),

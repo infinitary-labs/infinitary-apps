@@ -1072,6 +1072,50 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
       expect(reportWakes(ops)[1]).toContain("The plan card now names the builder.");
     });
 
+    // INF-4497's finding 5: a blocker report with its wait details reached
+    // the first mate twice - the relay at the call without them, the turn's
+    // end with them - and the second turn had nothing new to do. The relay
+    // carries them, so the first mate hears the report once.
+    it("wakes the first mate once for a blocker report with its work wait and recovery ways", async () => {
+      const crewmate = fakeCrewmate();
+      const { ops, sorts, specs, taskId } = await reportedTask(crewmate);
+      const BLOCKER =
+        "Blocked: the batch check fails on a test this change does not touch, and it fails on main too.";
+      const request = "Start a task that repairs the failing main test; this branch waits for it.";
+      const workWait = {
+        owner: "the main repair task",
+        end: "main's check passes again",
+        observation: "main's newest check failed the same test",
+        cheapestWay: "repair the test on main",
+      };
+      const recoveryWays = [
+        {
+          action: "Repair the failing test on main",
+          approach: "workaround" as const,
+          hold: "checks" as const,
+          evidence: "main's newest check failed the same test",
+          nextFact: "main's check after the repair",
+        },
+      ];
+      expect(
+        specs[0]?.onReport?.(BLOCKER, undefined, {
+          needsFirstmate: request,
+          workWait,
+          recoveryWays,
+        }),
+      ).toContain("The first mate is woken for it now, while your turn goes on.");
+      expect(reportWakes(ops)).toHaveLength(1);
+      const wake = reportWakes(ops)[0] ?? "";
+      expect(wake).toContain(`It asks the first mate to act: ${request}.`);
+      expect(wake).toContain(`Work wait: ${JSON.stringify(workWait)}.`);
+      expect(wake).toContain("Recovery ways (labels grant no permission):");
+      expect(wake).toContain(recoveryWays[0]?.action);
+      expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "needs-firstmate" });
+
+      await endTurn(crewmate, taskId);
+      expect(reportWakes(ops)).toHaveLength(1);
+    });
+
     it("refuses a request with no reason, and keeps nothing of it", async () => {
       const { specs, tasks, taskId } = await plannerWithCard("client");
       expect(() => specs[0]?.onReport?.(RELAY, undefined, { needsFirstmate: "  " })).toThrow(

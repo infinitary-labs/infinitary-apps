@@ -10,7 +10,7 @@ import { reportSummary } from "@shared/feed";
 import { offeringKey } from "@shared/modelSlots";
 import { isProviderRefusal, refusalWords, type TypedFailure } from "@shared/plainProblem";
 import { PROVIDER_CATALOG } from "@shared/providers";
-import { waitStall } from "@shared/recovery";
+import { recoveryWay, waitStall } from "@shared/recovery";
 import type { HandoverFile } from "@shared/work";
 import { renderDirections } from "../knowledge/directions";
 import { capWithOverflow } from "../overflow";
@@ -28,7 +28,7 @@ import { verifyHandoverFiles } from "../tasks/handoverFiles";
 import { modelMoveWords } from "../tasks/recordActivity";
 import { builtOnRows } from "../tasks/taskQuery";
 import { TaskService } from "../tasks/taskService";
-import type { ReportDeclaration } from "../tasks/taskTurns";
+import { boundedRecoveryOf, type ReportDeclaration } from "../tasks/taskTurns";
 import { gitFailure } from "../workspace/git";
 import type { DependencyInstall } from "../workspace/workspaceService";
 import { AccountRefusals } from "./accountRefusals";
@@ -92,6 +92,17 @@ type TurnActs = {
   /** The relay this turn already woke the first mate for (`TaskRuntime.relayWoken`). */
   relayed?: RelayWoken;
 };
+
+/**
+ * The wait and recovery facts a relay's wake carried, as one comparable
+ * key: the bounded facts the record keeps. Facts past their band are
+ * undefined, since the relay cannot carry their full text, which the
+ * record's overflow file holds, so the turn's end sends it.
+ */
+function relayRecovery(declared: ReportDeclaration | undefined): string | undefined {
+  const { overflowed, ...facts } = boundedRecoveryOf(declared);
+  return overflowed ? undefined : JSON.stringify(facts);
+}
 
 /** The idle ladder's rule ids: its wakes are the host's own, never a report's. */
 const IDLE_RULES: ReadonlySet<string> = new Set<IdleRule>([
@@ -539,10 +550,11 @@ export class CrewTurns {
       at: this.core.now(),
       filed: task.filedThisTurn.length,
       withdrawn: task.withdrawnThisTurn.length,
+      recovery: relayRecovery(declared),
     };
     const turn = { filed: [...task.filedThisTurn], withdrawn: [...task.withdrawnThisTurn] };
     this.core.options.tasks.readProjection(() => {
-      const { wake } = this.reportWake(task, report, turn, declared, true);
+      const { wake, stall, recoveryWays } = this.reportWake(task, report, turn, declared, true);
       if (this.core.bypassesSupervision(task.id)) {
         this.core.hooks().notifyOp(wake, "crewmate-report", task.id);
         return;
@@ -552,6 +564,7 @@ export class CrewTurns {
         filedFollowups: turn.filed.length > 0,
         finished: declared?.finished === true,
         needsFirstmate: true,
+        recovery: stall !== undefined || recoveryWays !== undefined,
         workObservable: task.session?.controlProfile.backgroundWork === "host",
       });
       this.recordSort(task.id, task.title, wake, sort.verdict, sort.reason, sort.rule, () => {
@@ -1280,11 +1293,14 @@ export class CrewTurns {
     const needsFirstmate = declared?.needsFirstmate;
     // Read what the report owner normalized and kept, never the uncapped
     // declaration. A relay sent as it is made (`pending`) is not on the
-    // record yet: its own words stand, and its stall and recovery facts
-    // wait for the turn's end, which then wakes with them.
-    const reports = pending ? [] : this.core.options.tasks.lastReportEntries(task.id);
-    const kept = report ? reports.at(-1) : undefined;
-    const workWait = kept?.declared.workWait;
+    // record yet: its own words stand, and its wait and recovery facts are
+    // bounded by the same owner the record uses (`boundedRecoveryOf`), so
+    // the relay carries them and the turn's end has nothing new to send.
+    const reports = this.core.options.tasks.lastReportEntries(task.id);
+    const kept = !pending && report ? reports.at(-1) : undefined;
+    const previous = pending ? reports.at(-1) : reports.at(-2);
+    const bounded = pending ? boundedRecoveryOf(declared) : undefined;
+    const workWait = bounded ? bounded.workWait : kept?.declared.workWait;
     const record = this.core.options.tasks.get(task.id);
     // F3 of INF-1554 (R1 of INF-1644): the ladder's one rule, a check-back
     // with no claimed job owns no wait; its witnesses already leave it out.
@@ -1294,11 +1310,13 @@ export class CrewTurns {
       record !== undefined &&
       this.core.ladder.unownedTimer(record);
     const stall = workWait
-      ? waitStall(workWait, reports.at(-2)?.declared.workWait)
+      ? waitStall(workWait, previous?.declared.workWait)
       : unownedTimer && declared?.checkBack
         ? { kind: "wait-without-owner" as const, observation: declared.checkBack.waitingFor }
         : undefined;
-    const recoveryWays = kept?.declared.recoveryWays;
+    const recoveryWays = bounded
+      ? bounded.recoveryWays?.map(recoveryWay)
+      : kept?.declared.recoveryWays;
     const refused = record?.delivery?.cardRefusal;
     const ci = ciFactOf(record?.delivery, this.core.now());
     const waits = (record ? this.core.ladder.unstartedWaits(record) : []).map((wait) => ({
@@ -1375,15 +1393,17 @@ export class CrewTurns {
     const { filed, relayed } = turn;
     const needsFirstmate = declared?.needsFirstmate;
     // The relay already woke the first mate when it was made (INF-3926's
-    // finding 2): the same report with nothing new since sends no second wake.
+    // finding 2): the same report with nothing new since sends no second
+    // wake. Its wait and recovery facts rode that wake (INF-4497's finding
+    // 5), so only facts the relay did not carry wake again.
     if (
       relayed &&
       needsFirstmate === relayed.request &&
       report === relayed.report &&
       filed.length === relayed.filed &&
       turn.withdrawn.length === relayed.withdrawn &&
-      !declared?.workWait &&
-      !declared?.recoveryWays?.length &&
+      relayed.recovery !== undefined &&
+      relayRecovery(declared) === relayed.recovery &&
       !declared?.checkBack
     )
       return;

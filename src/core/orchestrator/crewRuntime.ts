@@ -283,4 +283,6 @@ export type RelayWoken = {
   at: number;
   filed: number;
   withdrawn: number;
+  /** Its wait and recovery facts as its wake carried them (`relayRecovery`); undefined when they ran past their band. */
+  recovery?: string;
 };

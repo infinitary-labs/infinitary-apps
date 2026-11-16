@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "reply-check-sizes-consent",
+      "reason": "Records the reply-check sizes as the captain's choice in the limits ledger and docs; what a check sends is unchanged."
+    }
+  ]
+}

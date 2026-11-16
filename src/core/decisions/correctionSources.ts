@@ -10,8 +10,10 @@ import type { CorrectionSource } from "./correctionTypes";
 
 /**
  * How much one reply check sends: the whole question, conversation included,
- * and the card text inside it. A size chosen for a cheap question, which the
- * approval screen does not promise; an oversized exact reply is not sent.
+ * and the card text inside it. The captain chose these sizes (INF-4527): at
+ * most about 1,800 words, up to 600 of them from the card. The only physical
+ * bound, the answering model's context window, is far larger, so the sizes
+ * keep a default-on check's cost; an oversized exact reply is not sent.
  */
 export const CORRECTION_EXCERPT_BYTE_LIMIT = 12_000;
 export const CORRECTION_CARD_BYTE_LIMIT = 4_000;

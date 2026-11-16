@@ -213,7 +213,8 @@ Original delivery continues without waiting for a closed question.
 `CorrectionSources` records source-time context, not a later card head or a reconstructed session transcript.
 It includes only original captain wording, nearby known exchange, the actually addressed offer and known task/project facts; captions with unknown legacy provenance remain unknown.
 Card labels, generated settings, attachments, agent messages and historical intake do not become new captain input.
-The shared consent bounds the whole packet and card excerpt; omission is explicit and the latest words are never clipped to fit.
+A check sends at most 12,000 bytes in all, about 1,800 words, and at most 4,000 bytes of the addressed card, about 600 words: sizes the captain chose, since the answering model's context window, the only physical bound, is far larger and filling it would multiply a default-on check's cost.
+The card keeps both ends with its middle marked as left out, older exchange drops first, omission is explicit, and the latest words are never clipped to fit: a reply too long to fit is not checked.
 
 `CorrectionConsumer` uses source-keyed inbox rows and the decision ledger, retaining a first completed result and atomically queuing a first-mate case only for `review`.
 Ordinary, unclear, failed and withdrawn checks add no retention-specific agent wake or fallback detection duty.

@@ -95,6 +95,17 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/core/connection/journal.ts": {
     DEFAULT_JOURNAL_LIMITS: physical("the oldest pushes drop; a device behind them is told to reload"),
   },
+  "src/core/decisions/correctionSources.ts": {
+    // The captain chose today's sizes on INF-4527: "at most about 1,800 words, up to 600 of them from the card".
+    CORRECTION_EXCERPT_BYTE_LIMIT: {
+      rests: "consent",
+      way: "an oversized exact reply is not checked; the person can still keep the instruction by asking",
+    },
+    CORRECTION_CARD_BYTE_LIMIT: {
+      rests: "consent",
+      way: "the card excerpt says content was left out; the reply itself is always sent whole",
+    },
+  },
   "src/core/decisions/jev/jevClient.ts": {
     JEV_MAX_OPTIONS: outside("the question answers its abstention, reason too-many-options recorded"),
   },
@@ -586,10 +597,6 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
 export const BASELINE: Record<string, Record<string, string>> = {
   "src/core/accounts/credentialHealth.ts": {
     CREDENTIAL_RENEW_MAX_ATTEMPTS: "proactive renewal stops; a vendor rejection or a remedy still renews",
-  },
-  "src/core/decisions/correctionSources.ts": {
-    CORRECTION_EXCERPT_BYTE_LIMIT: "an oversized exact reply is not checked; the person can still keep the instruction by asking",
-    CORRECTION_CARD_BYTE_LIMIT: "the card excerpt says content was left out; the reply itself is always sent whole",
   },
   "src/core/forge/projects.ts": {
     MAX_LISTED: "first 8 shown, hidden matches uncounted; a fuller name narrows it",

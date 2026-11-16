@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "orbiting-crew-tap-at-center",
+      "reason": "Test only: the phone crew scene check now taps an orbiting crewmate at its own center, where the scene always gives the touch to that crewmate, instead of the point XCTest picks from accessibility, which could be a corner nearer a neighbour. No shipped behavior changed."
+    }
+  ]
+}

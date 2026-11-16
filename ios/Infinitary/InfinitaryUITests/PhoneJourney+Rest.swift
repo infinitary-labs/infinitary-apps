@@ -527,9 +527,16 @@ extension PhoneJourney {
     /// target then reaches the point the tap aimed at before the touch lands, and opens its own sheet. So an orbiting
     /// crewmate's tap waits until every orbiting crewmate rides one of the orbits about the first mate at pace, then taps
     /// it at once.
+    /// INF-4447: it taps the crewmate's own center, the one point the scene always gives it, since where 44-point squares
+    /// overlap a touch goes to the nearer center (`PhoneTouchCell`). XCTest's element tap aims instead at a point where
+    /// accessibility's own hit test finds the element, which ignores the nearer center: in phone run 43795880792 that
+    /// hit test found the waiting crewmate's center covered, so XCTest aimed at the top-left corner of its square, a
+    /// point nearer "Read the harbour soundings", whose sheet opened. The same run aimed the checks crewmate's tap near
+    /// its top-right corner. The coordinate reads the crewmate's frame as the touch is synthesized, so it aims where the
+    /// crewmate is then.
     private func tapOrbitingCrew(_ crewmate: XCUIElement, in scene: XCUIElement, orbits: CrewOrbits) {
         awaitOrbitPace(crewmate, in: scene, orbits: orbits, before: "tap")
-        tapOnPhone(crewmate, orbiting: true)
+        tapOnPhone(crewmate.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)), orbiting: true)
     }
 
     /// INF-2039: waits until every orbiting crewmate (`orbits.orbiting`, by identifier) rides one of the orbits about the

@@ -10,7 +10,8 @@ extends: ./electron-builder.win.yml
 
 win:
   azureSignOptions:
-    # The publisher Windows names, exactly as on the certificate: the same
-    # person the Mac app is signed as (electron-builder.yml mac.identity),
-    # the captain's pick on the Windows plan. The two move together.
-    publisherName: Kun Chen
+    # The publisher Windows names, exactly as on the certificate: the
+    # company's legal name from Microsoft's identity check. The Mac app is
+    # still signed as a person (electron-builder.yml mac.identity) until it
+    # moves to the company too.
+    publisherName: Infinitary Labs, Inc.

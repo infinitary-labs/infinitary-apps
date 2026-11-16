@@ -45,8 +45,9 @@ Moving to a newer Git for Windows changes the version, file, address, SHA-256 an
 ## Signing
 
 Windows warns people away from an installer whose publisher it cannot name, so a release signs the app, the installer and its uninstaller with Microsoft Artifact Signing, Microsoft's signing service, which it sells through Azure.
-The publisher is the person the Mac app is signed as, Kun Chen, the captain's pick on the Windows plan: `publisherName` in `electron-builder.win-signed.yml` and `mac.identity` in `electron-builder.yml` move together (`tests/release-contract.test.ts` holds them).
-The certificate also names the publisher's city, state and country from Microsoft's identity check.
+The publisher is the company, Infinitary Labs, Inc., exactly as Microsoft's identity check validated its legal name: `publisherName` in `electron-builder.win-signed.yml`.
+The Mac app is still signed as a person (`mac.identity` in `electron-builder.yml`) until it moves to the company too.
+The certificate also names the company's city, state and country from that check.
 Artifact Signing's certificates last a few days, so every signature carries a timestamp from Microsoft's timestamp service and stays valid after its certificate expires.
 
 `electron-builder.win-signed.yml` extends the unsigned `electron-builder.win.yml` with `win.azureSignOptions`.

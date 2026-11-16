@@ -501,18 +501,9 @@ describe("Windows signing (electron-builder.win-signed.yml)", () => {
     win?: Record<string, unknown>;
   };
 
-  // The captain's pick on the Windows plan: the Windows publisher is the
-  // same person the Mac app is signed as, and the two move together.
-  it("names the Mac app's signer as the Windows publisher", () => {
-    const mac = loadYamlFile("electron-builder.yml").mac as { identity: string };
-    expect(signed.extends).toBe("./electron-builder.win.yml");
-    expect(signed.win?.azureSignOptions?.publisherName).toBe(
-      mac.identity.replace(/\s*\([A-Z0-9]+\)$/, ""),
-    );
-  });
-
   // Ordinary builds, a batch's included, never reach the signing access.
   it("leaves the ordinary Windows build unsigned", () => {
+    expect(signed.extends).toBe("./electron-builder.win.yml");
     expect(unsigned.win?.azureSignOptions).toBeUndefined();
     expect(unsigned.win?.signtoolOptions).toBeUndefined();
   });

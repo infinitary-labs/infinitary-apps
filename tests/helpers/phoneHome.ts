@@ -25,14 +25,13 @@ import {
   SCENE_OBSERVATIONS_SINCE,
   speaksSince,
 } from "@shared/contractFeatures";
-import { isPhone } from "@shared/devices";
 import { ENDED_CHIP_LABEL, ENDED_CLOSE_LABEL, endedLineWords } from "@shared/endedCard";
 import type { FmEvent } from "@shared/events";
 import { type HomeUpdate, homeUpdateSchema } from "@shared/homeUpdate";
 import { PROTOCOL_VERSION, VIEW_FLOOR } from "@shared/ipc";
 import { pastEndingWords } from "@shared/pastCard";
 import { RISK_WORDS } from "@shared/risk";
-import { SECRET_ASK_CARD_WORDS, SECRET_DEVICE_WORDS, SECRETS_WORDS } from "@shared/secrets";
+import { SECRET_ASK_CARD_WORDS, SECRET_DEVICE_WORDS } from "@shared/secrets";
 import { CONTRACT_CHANGES } from "../../src/core/connection/contractChanges";
 import { REQUIRED_ACTIONS_LEAD } from "../../src/renderer/src/cards/requiredActionsWords";
 import { contributorWords, THREAD_WHO_LABELS } from "../../src/renderer/src/cards/threadWords";
@@ -938,43 +937,6 @@ export async function startPhoneHome(
           };
           break;
         }
-        // INF-1690 piece 4: the Approves secret uses switch on the paired phone's row in Settings -> Devices, as the
-        // captain turns it on there. The phone offers its key by itself; nothing enrolls until secrets-confirm.
-        case "POST secrets-ask": {
-          const phone = core.services.devices.list().find(isPhone);
-          if (!phone) throw new Error("No phone is paired with this computer");
-          await core.dispatch("inf:secrets:action", [{ kind: "ask-phone", paired: phone.id }]);
-          result = { paired: phone.id };
-          break;
-        }
-        // The switch turned off for every approving device: each asks Stop approvals under the switch in Settings,
-        // and the captain's answer there stops that device's approvals after this computer's own confirmation.
-        case "POST secrets-stop": {
-          const before = secretConfirms;
-          for (const { device } of (await core.services.secrets.view()).devices) {
-            const { question } = await core.dispatch("inf:secrets:action", [
-              { kind: "forget-device", device },
-            ]);
-            if (
-              question?.about.kind !== "device" ||
-              question.about.device !== device ||
-              question.confirm.label !== SECRETS_WORDS.stopApprovals
-            )
-              throw new Error(`No Stop approvals question is waiting for ${device}`);
-            // The answer returns once its decision ends, as the Settings page awaits it.
-            await within(
-              core
-                .dispatch("inf:secrets:action", [{ kind: "answer", pass: question.confirm.pass }])
-                .then(() => undefined),
-              "The stop decision did not end on this computer",
-            );
-          }
-          result = {
-            devices: (await core.services.secrets.view()).devices,
-            confirmed: secretConfirms - before,
-          };
-          break;
-        }
         case "POST secrets-request": {
           secretRequests += 1;
           const receipt = await core.services.secrets.broker(
@@ -1332,64 +1294,6 @@ export async function startPhoneHome(
               .map((write) => ({ actor: write.actor, move: write.args[1] })),
           };
           observations.push({ check: "question-record-state", taskId, result });
-          break;
-        }
-        // INF-2928 piece 1: a required step the captain put off with Not now, filed by the task owner as on the Mac
-        // (tests/e2e/required-action-row.spec.ts), so its row has no open card.
-        case "POST deferred-step-fixture": {
-          const tasks = core.services.tasks;
-          const source = seedTask(tasks, {
-            id: `native-step-${randomBytes(8).toString("hex")}`,
-            title: "Add the harbour link to Settings",
-            status: "completed",
-          });
-          const title = "Install the harbour version on the Mac mini";
-          tasks.delivery.declareRequiredActions(
-            source.id,
-            {
-              cardId: `card-${source.id}-1`,
-              offerId: `offer-${source.id}`,
-              actions: [
-                {
-                  id: "install-harbour-version",
-                  target: "the Mac mini",
-                  title,
-                  consequence: "Until then the Mac mini keeps the old harbour link.",
-                  instructions: ["Open Infinitary on the Mac mini.", "Choose Update now."],
-                  criterion: "The Mac mini reports the new version.",
-                  prerequisites: [],
-                  completion: { kind: "manual", label: "I installed it" },
-                },
-              ],
-            },
-            true,
-          );
-          const step = tasks
-            .listOpen()
-            .find((record) =>
-              record.delivery?.captainAction?.requirements.some(
-                (requirement) => requirement.source === source.id,
-              ),
-            );
-          if (!step) throw new Error("The required step filed no row");
-          tasks.delivery.presentCaptainAction(step.id);
-          tasks.delivery.deferCaptainAction(step.id);
-          result = { taskId: step.id, title };
-          break;
-        }
-        case "POST deferred-step-state": {
-          const { taskId } = JSON.parse(await controlBody(request)) as { taskId: string };
-          result = {
-            runs: writes
-              .filter(
-                (write) =>
-                  write.channel === "inf:task:run" &&
-                  Array.isArray(write.args) &&
-                  write.args[0] === taskId,
-              )
-              .map((write) => ({ actor: write.actor, move: write.args[1] })),
-          };
-          observations.push({ check: "deferred-step-state", taskId, result });
           break;
         }
         case "POST cards-fixture": {
@@ -2323,6 +2227,23 @@ export async function startPhoneHome(
             card.noteDone && !card.noteDone.closesTask ? "inf:cards:note-done" : "inf:cards:close",
             [card.id],
           );
+          result = { ok: true };
+          break;
+        }
+        // INF-4241: the card titled in the body comes back on the stack through the Mac's own show-card move, as a click
+        // on its row on the Mac does; a journey brings back a card it put aside this way where the phone's own row is
+        // not what it checks.
+        case "POST show-titled": {
+          let title = "";
+          for await (const chunk of request) {
+            title += chunk.toString();
+            if (title.length > 1024) throw new Error("A card title is too long");
+          }
+          const card = core.services.supervisor.cards
+            .snapshot()
+            .find((card) => card.title === title);
+          if (!card) throw new Error(`No card is titled ${title}`);
+          await core.dispatch("inf:cards:show", [card.id]);
           result = { ok: true };
           break;
         }

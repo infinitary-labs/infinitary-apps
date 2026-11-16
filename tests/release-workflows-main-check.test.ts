@@ -1,6 +1,5 @@
 import { posix } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { RELAUNCH_PAIRS_PER_PART, relaunchPairs } from "../scripts/phone-test-plan.ts";
 import {
   loadYamlFile,
   read,
@@ -201,10 +200,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(workflowValue(gate?.if ?? "", chosen)).toBe(true);
     expect(workflowString(gate?.env?.PHONE_PARTS ?? "", chosen)).toBe("");
     expect(workflowString(gate?.env?.INFINITARY_PHONE_STOP_EARLY ?? "", chosen)).toBe("0");
-    // INF-2582 direction A: the release keeps all of INF-1735's relaunch pairs and leaves no part to the iPhone alone.
-    expect(
-      relaunchPairs(workflowString(gate?.env?.INFINITARY_PHONE_RELAUNCH_PAIRS ?? "", chosen)),
-    ).toBe(RELAUNCH_PAIRS_PER_PART);
+    // INF-2582 direction A: the release leaves no part to the iPhone alone.
     expect(workflowString(gate?.env?.PHONE_IPHONE_PARTS ?? "", chosen)).toBe("");
     expect(workflowString(gate?.env?.PHONE_REPEAT_PARTS ?? "", chosen)).toBe("");
   });

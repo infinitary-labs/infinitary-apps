@@ -51,12 +51,12 @@ extension PhoneJourney {
         let firstNew = back.staticTexts[added]
         XCTAssertTrue(waitForPhonePress(firstNew), "The jump did not reach the first new line\n\(app.debugDescription)")
         picture("3-at-the-new-lines")
-        // At its foot the thread follows: across two exchanges the captain's reply and the answer are in view, and no jump
-        // down shows.
+        // At its foot the thread follows: after an exchange the captain's reply and the answer are in view, and no jump
+        // down shows. INF-4241 cut a second exchange, which repeated the first.
         let answer = try XCTUnwrap(fixture["replyAnswer"] as? String)
         let reply = app.textFields["card-reply"]
         let send = app.buttons["send-reply"]
-        for exchange in 1...2 {
+        for exchange in [1] {
             XCTAssertFalse(jump.exists, "The thread left its foot before exchange \(exchange)\n\(app.debugDescription)")
             let words = "Exchange \(exchange): go ahead with Thursday."
             reveal(reply); focusForPhoneTyping(reply, in: app); reply.typeText(words)

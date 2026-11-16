@@ -5,7 +5,7 @@ import { data, Evaluator, Lexer, Parser } from "@actions/expressions";
 import { describe, expect, it } from "vitest";
 import { GENERATED_CONTRACT, phoneDecision } from "../scripts/affected-phone";
 import { legacyJobName } from "../scripts/ci-job-names.mjs";
-import { PHONE_DEVICES, PHONE_PARTS, relaunchPairs } from "../scripts/phone-test-plan";
+import { PHONE_DEVICES, PHONE_PARTS } from "../scripts/phone-test-plan";
 import { workflowString, workflowValue } from "./helpers/releaseWorkflows";
 
 // INF-79 / INF-136: the captain requested a Mac mini lane for phone changes; since INF-2139 it
@@ -869,32 +869,6 @@ describe("complete-selection phone CI repeats", () => {
     expect(workflowString(gate().env!.PHONE_IPHONE_PARTS!, chosen)).toBe("join-read rest");
     expect(workflowString(gate().env!.PHONE_REPEAT_PARTS!, chosen)).toBe("talk-tasks");
     expect(workflowString(gate().env!.INFINITARY_PHONE_STOP_EARLY!, chosen)).toBe("1");
-  });
-});
-
-// INF-2582 direction A: a request on a branch runs 2 of INF-1735's 20 relaunch pairs, one per relaunch
-// part; a check of main and the phone release's call run all 20.
-describe("the relaunch soak", () => {
-  const pairs = (github: Plain, inputs: Plain = {}) =>
-    workflowString(
-      String(
-        (workflow.jobs[NATIVE_JOB].steps as Step[]).find(isGate)!.env!
-          .INFINITARY_PHONE_RELAUNCH_PAIRS,
-      ),
-      { github, inputs },
-    );
-  it("trims a branch request to one pair a part and keeps every pair on main and in the release", () => {
-    expect(pairs(BRANCH_REQUEST)).toBe("1");
-    expect(pairs(BRANCH_REQUEST, { affected: true, parts: "relaunch-first" })).toBe("1");
-    expect(relaunchPairs(pairs(BRANCH_REQUEST)) * 2).toBe(2);
-    expect(pairs({ event_name: "workflow_dispatch", ref: "refs/heads/main" })).toBe("");
-    expect(
-      pairs(
-        { event_name: "workflow_dispatch", ref: "refs/heads/main" },
-        { source_commit: "3835224557b6764d4455b13c1cee359fbb09b5f1" },
-      ),
-    ).toBe("");
-    expect(relaunchPairs("") * 2).toBe(20);
   });
 });
 

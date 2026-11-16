@@ -70,10 +70,7 @@ extension PhoneJourney {
         let folded = bubble.frame.height
         tapOnPhone(bubble)
         XCTAssertEqual(waitForPhonePredicate(NSPredicate { _, _ in bubble.frame.height > folded }, object: nil, timeout: 10), .completed)
-        tapOnPhone(bubble)
-        XCTAssertEqual(waitForPhonePredicate(NSPredicate { _, _ in bubble.frame.height == folded }, object: nil, timeout: 10), .completed)
-        tapOnPhone(bubble)
-        XCTAssertEqual(waitForPhonePredicate(NSPredicate { _, _ in bubble.frame.height > folded }, object: nil, timeout: 10), .completed)
+        // INF-4241 dropped a fold back and a third open, which repeated the first open; the question stays open here.
         XCTAssertEqual(body.label, fixture["words"] as? String)
         try await appearances("conversation-long-reply", showing: body)
         let scroll = app.scrollViews["reply-note-scroll"]

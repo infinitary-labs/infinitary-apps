@@ -10,7 +10,7 @@ name: phone
 # source, which runs every part of both device gates, as a default request does.
 # INF-2582 direction A (the captain's "A: wait once and trim the soak" and "iPhone only;
 # iPad waits for the release check"): the iPhone's job runs all three passes of a request, a branch
-# runs 2 of the 20 relaunch pairs and its reached parts on the iPhone alone, and the phone
+# runs its reached parts on the iPhone alone, and the phone
 # release calls this once per device, so each device takes its own phone Mac.
 # INF-2970's fix 1: a request runs its iPad and iPhone parts as two jobs, one per device, so
 # each takes its own phone Mac at once instead of one after the other on one; the edited-part
@@ -69,6 +69,11 @@ on:
         description: Run only native wait-clock tests, without product journeys
         type: boolean
         default: false
+      # INF-4241: the phone check's own tool tests, which the rest part skips; a change to those tools requests them.
+      tools:
+        description: Run only the tests of the phone check's own tools, without product journeys
+        type: boolean
+        default: false
       perf:
         description: Hold native waits to their wall budgets on a quiet run
         type: boolean
@@ -104,7 +109,7 @@ permissions:
 # keep a group of their own run, attempt and device. Cancelling, never queueing, keeps INF-487's
 # fix: no run waits behind another run in the group, only for a free phone guest.
 concurrency:
-  group: ${{ github.workflow == 'phone' && github.ref != 'refs/heads/main' && github.run_attempt == '1' && format('phone-request-{0}-device={1}-affected={2}-base={3}-parts={4}-waits={5}-starve={6}-perf={7}-recording={8}-observer={9}-evidence={10}-since={11}', github.ref, inputs.device, inputs.affected, inputs.base, inputs.parts, inputs.waits, inputs.starve, inputs.perf, inputs.recording, inputs.guest_observer, inputs.evidence_run, inputs.last_pass) || format('phone-run-{0}-{1}-{2}', github.run_id, github.run_attempt, inputs.device) }}
+  group: ${{ github.workflow == 'phone' && github.ref != 'refs/heads/main' && github.run_attempt == '1' && format('phone-request-{0}-device={1}-affected={2}-base={3}-parts={4}-waits={5}-starve={6}-perf={7}-recording={8}-observer={9}-evidence={10}-since={11}-tools={12}', github.ref, inputs.device, inputs.affected, inputs.base, inputs.parts, inputs.waits, inputs.starve, inputs.perf, inputs.recording, inputs.guest_observer, inputs.evidence_run, inputs.last_pass, inputs.tools) || format('phone-run-{0}-{1}-{2}', github.run_id, github.run_attempt, inputs.device) }}
   cancel-in-progress: ${{ github.workflow == 'phone' }}
 
 jobs:
@@ -130,7 +135,7 @@ jobs:
         env:
           MANUAL: ${{ github.event_name == 'workflow_dispatch' && inputs.evidence_run == '' }}
           BRANCH: ${{ github.ref != 'refs/heads/main' }}
-          EVERY_PART: ${{ !inputs.affected && inputs.parts == '' && !inputs.waits }}
+          EVERY_PART: ${{ !inputs.affected && inputs.parts == '' && !inputs.waits && !inputs.tools }}
           AFFECTED: ${{ inputs.affected }}
           PARTS: ${{ inputs.parts }}
           DEVICE: ${{ inputs.device }}
@@ -154,18 +159,18 @@ jobs:
           fi
           printf 'Phone request: every_part=%s affected=%s parts=%s device=%s%s task=%s reason=%s\n' "$EVERY_PART" "$AFFECTED" "$PARTS" "${DEVICE:-both}" "${LAST_PASS:+ last_pass=$LAST_PASS}" "$TASK" "$REASON" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/checkout@v4
-        if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.waits && inputs.evidence_run == ''
+        if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.waits && !inputs.tools && inputs.evidence_run == ''
         with:
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@v4
-        if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.waits && inputs.evidence_run == ''
+        if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.waits && !inputs.tools && inputs.evidence_run == ''
         with:
           node-version: 24
       # INF-4071: a last pass that bringing the branch up to date left on no branch is fetched by its id. The sign-in
       # stays in this step's environment; the checkout above keeps none.
       - name: Fetch the last passing version
-        if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.waits && inputs.evidence_run == '' && inputs.last_pass != ''
+        if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.waits && !inputs.tools && inputs.evidence_run == '' && inputs.last_pass != ''
         env:
           LAST_PASS: ${{ inputs.last_pass }}
           TOKEN: ${{ github.token }}
@@ -175,7 +180,7 @@ jobs:
             fetch --no-tags --quiet origin "$LAST_PASS" || echo "The last pass $LAST_PASS could not be fetched; the whole change is compared."
       - id: request-select
         name: Choose affected parts for a crewmate request
-        if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.waits && inputs.evidence_run == ''
+        if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.waits && !inputs.tools && inputs.evidence_run == ''
         run: |
           coverage=(); if [ "$AFFECTED" != true ] || [ -n "$REQUESTED_PARTS" ]; then coverage=(--coverage "$REQUESTED_PARTS"); fi
           since=(); if [ -n "$LAST_PASS" ]; then since=(--since "$LAST_PASS"); fi
@@ -187,7 +192,7 @@ jobs:
           AFFECTED: ${{ inputs.affected }}
           REQUESTED_PARTS: ${{ inputs.parts }}
       - name: Keep the chosen and left parts
-        if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.waits && inputs.evidence_run == ''
+        if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.waits && !inputs.tools && inputs.evidence_run == ''
         uses: actions/upload-artifact@v4
         with:
           name: phone-placement
@@ -197,7 +202,7 @@ jobs:
   # Each job's name leads with the caller's trigger (scripts/ci-job-names.mjs).
   native-phone:
     needs: request
-    name: ${{ inputs.evidence_run != '' && 'Manual request · Phone checks not requested' || format(inputs.waits && '{0} · Wait-clock tests ({1})' || '{0} · Phone checks ({1})', inputs.trigger || 'Manual request', matrix.device == 'ipad' && 'iPad' || 'iPhone') }}
+    name: ${{ inputs.evidence_run != '' && 'Manual request · Phone checks not requested' || format(inputs.waits && '{0} · Wait-clock tests ({1})' || inputs.tools && '{0} · Tool tests ({1})' || '{0} · Phone checks ({1})', inputs.trigger || 'Manual request', matrix.device == 'ipad' && 'iPad' || 'iPhone') }}
     if: inputs.evidence_run == '' && needs.request.outputs.devices != '[]'
     # INF-2970's fix 1: one job per device, each on its own phone Mac; a call or a request may
     # name its one device (INF-3205).
@@ -243,7 +248,7 @@ jobs:
       # The Linux request job already chose parts before any phone Mac is reserved.
       - id: request-select
         name: Read the chosen parts
-        if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.parts && !inputs.waits && inputs.evidence_run == ''
+        if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.parts && !inputs.waits && !inputs.tools && inputs.evidence_run == ''
         run: |
           printf 'parts=%s\nipad_parts=%s\niphone_parts=%s\nrepeat_parts=%s\nfull=%s\n' "$PARTS" "$IPAD_PARTS" "$IPHONE_PARTS" "$REPEAT_PARTS" "$FULL" >> "$GITHUB_OUTPUT"
         env:
@@ -302,8 +307,7 @@ jobs:
       # INF-2582 direction A: on an affected request a part the change only reaches runs on
       # the iPhone alone, and a part whose test code changed runs on both devices, then twice
       # more in the iPhone job's same step (INF-2732), on the build and simulator it started,
-      # so each device's job waits for a phone Mac once, however few parts it selects (INF-2811). Each pass keeps the 90 minutes INF-2052 gave the gate. A request
-      # on a branch runs 1 of each relaunch part's 10 pairs; main and the release run all 20.
+      # so each device's job waits for a phone Mac once, however few parts it selects (INF-2811). Each pass keeps the 90 minutes INF-2052 gave the gate.
       # INF-1343: a complete branch selection stops at its first failed part, so a failing check
       # frees its Mac at once, and so does any request with edited-part passes, whose failed pass
       # stops the later ones (INF-2811); other proper-subset requests and the phone release keep
@@ -344,8 +348,8 @@ jobs:
           PHONE_IPHONE_PARTS: ${{ needs.request.outputs.iphone_parts }}
           PHONE_REPEAT_PARTS: ${{ steps.request-select.outputs.repeat_parts }}
           PHONE_REPEAT_TESTS: ${{ needs.request.outputs.repeat_tests }}
-          INFINITARY_PHONE_RELAUNCH_PAIRS: ${{ github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main' && !inputs.source_commit && '1' || '' }}
           INFINITARY_PHONE_WAITS_ONLY: ${{ inputs.waits && '1' || '0' }}
+          INFINITARY_PHONE_TOOLS_ONLY: ${{ inputs.tools && '1' || '0' }}
           INFINITARY_STARVE_CHECK: ${{ inputs.starve && '1' || '0' }}
           INFINITARY_PERF_BUDGETS: ${{ inputs.perf && '1' || '0' }}
           PHONE_RECORDING: ${{ inputs.recording && '1' || '' }}

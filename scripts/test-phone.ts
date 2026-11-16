@@ -24,7 +24,7 @@ import { GATE_SIMULATOR, removePhoneLeftovers, SCRATCH_PREFIX } from "./phone-le
 import { phoneRecording } from "./phone-recording.ts";
 import { startPhoneGuestObserver } from "./phone-guest-observer.ts";
 import { phoneSharedCacheFolder, phoneSimulator, phoneSimulatorBooted, phoneXcode, removeEmptyPhoneSharedCache } from "./phone-simulator.ts";
-import { devicePartNames, devicePhotos, endPhoneGate, PHONE_PARTS, type PhoneDevice, type PhoneJob, type PhonePassEnd, phonePassName, phoneSelectionRunsJourney, phoneTestSelection, phoneTestsStarted, phoneAnimationWaits, phoneExecutionArguments, phoneLanePlan, phoneLanes, phonePasses, phoneStopsEarly, PHONE_PART_TIMES, partPlanPath, partTimes, relaunchPairs, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
+import { devicePartNames, devicePhotos, endPhoneGate, PHONE_PARTS, type PhoneDevice, type PhoneJob, type PhonePassEnd, phonePassName, phoneSelectionRunsJourney, phoneTestSelection, phoneTestsStarted, phoneAnimationWaits, phoneExecutionArguments, phoneLanePlan, phoneLanes, phonePasses, phoneStopsEarly, PHONE_PART_TIMES, partPlanPath, partTimes, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
 
 // INF-800: with CI mode on, the phone check runs only through CI (docs/testing.md).
 const refusal = ciModeRefusal("phone");
@@ -39,6 +39,8 @@ const { values } = parseArgs({ options: {
   // CI needs no encoder: keep simctl's H.264 capture for conversion on the evidence reader's Mac.
   "raw-demo": { type: "boolean", default: process.env.PHONE_RECORDING === "1" },
   waits: { type: "boolean", default: process.env.INFINITARY_PHONE_WAITS_ONLY === "1" },
+  // INF-4241: every test of the phone check's own tools, which the rest part skips (PHONE_TOOL_TESTS).
+  tools: { type: "boolean", default: process.env.INFINITARY_PHONE_TOOLS_ONLY === "1" },
   starve: { type: "boolean", default: process.env.INFINITARY_STARVE_CHECK === "1" },
   "guest-observer": { type: "boolean", default: process.env.INFINITARY_PHONE_GUEST_OBSERVER === "1" },
   // INF-662 piece 1: check and build once, then the iPhone and the iPad side by side.
@@ -51,8 +53,6 @@ const { values } = parseArgs({ options: {
   "repeat-part": { type: "string", multiple: true },
   "repeat-tests": { type: "string" },
   test: { type: "string", multiple: true },
-  // INF-2582 direction A: how many of INF-1735's relaunch pairs each relaunch part runs; all ten unless given.
-  "relaunch-pairs": { type: "string", default: process.env.INFINITARY_PHONE_RELAUNCH_PAIRS },
   // Local repeats stop at their first failed part; CI chooses fail-fast or full discovery explicitly.
   "stop-early": { type: "boolean", default: phoneStopsEarly(process.env) },
   // INF-4241 piece 3: how many simulated devices run at once, as many as this Mac's processors and memory hold
@@ -72,17 +72,20 @@ if (values.xctestrun && values.part?.length !== 1) throw new Error("--xctestrun 
 if (!!values.xctestrun !== !!values.simulator) throw new Error("A part needs both its built plan and the gate's simulator");
 if (values.xctestrun && (values["iphone-part"] || values["repeat-part"])) throw new Error("--xctestrun runs one part once");
 if (values.waits && (values["iphone-part"] || values["repeat-part"])) throw new Error("--waits runs only the wait-clock tests");
+if (values.tools && (values["iphone-part"] || values["repeat-part"])) throw new Error("--tools runs only the tool tests");
+if (values.waits && values.tools) throw new Error("--waits and --tools are two different selections");
+// The rest part's tests replaced by the wait clock's or the tools', or none.
+const only = values.waits ? "waits" as const : values.tools ? "tools" as const : undefined;
 if (values.test && !values.xctestrun) throw new Error("--test needs the gate's built test plan");
 const repeatTests: Record<string, string[]> = JSON.parse(values["repeat-tests"] || "{}");
 for (const [part, tests] of Object.entries(repeatTests)) {
   if (!Array.isArray(tests) || tests.some((test) => typeof test !== "string")) throw new Error("Repeat tests must be arrays of identifiers");
   phoneTestSelection(part, tests);
 }
-const pairs = relaunchPairs(values["relaunch-pairs"]);
 const devices: PhoneDevice[] = values.both ? ["iphone", "ipad"] : [values.ipad ? "ipad" : "iphone"];
 // Every part on every device unless parts are named.
 const named = !!(values.part || values["iphone-part"]);
-const jobs: PhoneJob[] = phonePasses(devices, values.waits ? { parts: ["rest"] } : {
+const jobs: PhoneJob[] = phonePasses(devices, only ? { parts: ["rest"] } : {
   parts: named ? values.part ?? [] : PHONE_PARTS.map((part) => part.name),
   iphoneOnly: values["iphone-part"], repeats: values["repeat-part"], repeatTests });
 // INF-4241 piece 6: a part runs only on the devices its row of PHONE_PARTS names, so a gate whose parts none of its
@@ -434,8 +437,8 @@ const everyPartOn = async (starting: Map<string, Promise<Lane>>) => {
       return ended(stopping.aborted ? "stopped" : "failed");
     }
     const command = [process.execPath, "scripts/test-phone.ts", ...(device === "ipad" ? ["--ipad"] : []),
-      ...demo.childArgs, ...(values.waits ? ["--waits"] : []), ...(values["guest-observer"] ? ["--guest-observer"] : []),
-      "--part", part, ...(job.tests ?? []).flatMap((test) => ["--test", test]), "--relaunch-pairs", String(pairs), "--evidence", folder(job),
+      ...demo.childArgs, ...(only ? [`--${only}`] : []), ...(values["guest-observer"] ? ["--guest-observer"] : []),
+      "--part", part, ...(job.tests ?? []).flatMap((test) => ["--test", test]), "--evidence", folder(job),
       "--xctestrun", join(products, plan), "--simulator", lane.owned];
     if (values.starve) command.unshift("python3", "scripts/starve-check.py", "--timeout", "3600", "--stall-seconds", "12", "--");
     const child = spawn(command[0]!, command.slice(1), { cwd: REPO_ROOT, env, stdio: ["ignore", "pipe", "pipe"] });
@@ -461,7 +464,7 @@ const everyPartOn = async (starting: Map<string, Promise<Lane>>) => {
       console.log(`${device}: lane ${number} runs on simulator ${lane.owned}`);
       // The wait for Photos begins beside the device's first part; the device's first part that chooses a photo hears
       // how it went, and adds the photo.
-      if (!values.waits && jobs.some((job) => job.device === device && PHONE_PARTS.find((each) => each.name === job.part)?.photos)) {
+      if (!only && jobs.some((job) => job.device === device && PHONE_PARTS.find((each) => each.name === job.part)?.photos)) {
         lane.photos = lanePhotos(lane, stopping, number);
         lane.photos.watched().catch(() => {});
       }
@@ -485,9 +488,6 @@ const planFor = async (built: string, url: string, owned: string) => {
     // Xcode does not inherit the launcher's environment into its test targets.
     await run("plutil", ["-replace", key.replace(/PHONE_TEST_HOME$/, "INFINITARY_PERF_BUDGETS"),
       "-string", GRADES_BUDGETS ? "1" : "0", plan]);
-    // INF-2582: the relaunch parts read how many of INF-1735's pairs to run.
-    await run("plutil", ["-replace", key.replace(/PHONE_TEST_HOME$/, "INFINITARY_PHONE_RELAUNCH_PAIRS"),
-      "-string", String(pairs), plan]);
   }
   return plan;
 };
@@ -565,7 +565,7 @@ const onePart = async () => {
     } });
   const testing = new Date();
   let output = "";
-  await finishPhoneCheck(run("xcodebuild", ["-xctestrun", plan, ...destination, ...phoneTestSelection(values.part![0]!, values.test, values.waits),
+  await finishPhoneCheck(run("xcodebuild", ["-xctestrun", plan, ...destination, ...phoneTestSelection(values.part![0]!, values.test, only),
     ...phoneExecutionArguments(GRADES_BUDGETS), "test-without-building"], false, guestObserver ? (line) => {
       if (phoneGuestJourneyFinished(line, values.part![0]!)) guestObserver?.stop();
     } : undefined)
@@ -598,10 +598,10 @@ const onePart = async () => {
     .finally(() => console.log(`XCTest animation waits that ran out: ${phoneAnimationWaits(output).missed}`));
   // INF-1541 piece 1: the native wait-clock tests launch no app, so only a journey part must say it skipped the wait;
   // a part that runs an app-hosted class alone (INF-2989's weak-link) drives no UI and has no such wait.
-  if (!values.waits && phoneSelectionRunsJourney(values.part![0]!, values.test) && !phoneAnimationWaits(output).skipped)
+  if (!only && phoneSelectionRunsJourney(values.part![0]!, values.test) && !phoneAnimationWaits(output).skipped)
     throw new Error(`The ${values.part![0]} part ran with XCTest's animation wait: its journey never printed "Phone animation wait skipped", so the hook in PhoneAnimationWait.swift is missing`);
   // INF-2625: a test XCTest no longer finds passes silently; the part's own journey test must have started.
-  if (!values.waits && !phoneTestsStarted(values.part![0]!, output, values.test))
+  if (!only && !phoneTestsStarted(values.part![0]!, output, values.test))
     throw new Error(`The ${values.part![0]} part never started its journey test: XCTest did not find it in the built tests`);
 };
 let failures: string[] = [];
@@ -623,7 +623,7 @@ try {
   }
   await (values.xctestrun ? onePart() : everyPart());
   if (failures.length > 0) throw new Error(`The simulator tests passed, but ${failures.length} earlier check(s) failed: ${failures.join("; ")}`);
-  console.log(values.waits ? `Native wait-clock tests passed on ${devices.join(" and ")}, with disposable simulators and homes.`
+  console.log(only ? `Native ${only === "waits" ? "wait-clock" : "tool"} tests passed on ${devices.join(" and ")}, with disposable simulators and homes.`
     : values.xctestrun ? `The ${values.part![0]} part passed on the gate's simulator and its own disposable Mac.`
     : `Every part passed on ${devices.join(" and ")}, each simulator started once and every part on its own disposable Mac.`);
 } finally {

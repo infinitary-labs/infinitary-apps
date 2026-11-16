@@ -192,7 +192,7 @@ export const UI_TESTS = "ios/Infinitary/InfinitaryUITests/";
 // names as its `suite` (INF-2989's weak-link), which runs in that part alone.
 export const APP_TESTS = "ios/Infinitary/InfinitaryTests/";
 // INF-2125 direction C: a part's owned files are its family's, the part name before its first hyphen,
-// so each short part split from join, talk, cards or relaunch owns what that part owned.
+// so each short part split from join, talk or cards owns what that part owned.
 export const partFamily = (part: string) => part.split("-")[0]!;
 export { PART_OWNERS } from "./phone-part-owners.ts";
 

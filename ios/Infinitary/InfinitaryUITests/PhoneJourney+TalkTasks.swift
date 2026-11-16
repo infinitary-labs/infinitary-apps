@@ -113,7 +113,7 @@ extension PhoneJourney {
     }
 
     private func tasksAndSteer(_ fixture: [String: Any]) async throws {
-        // One pair here for the hero pictures; the relaunch parts run INF-1735's 20.
+        // INF-1735's one dark and light relaunch pair, with the hero pictures; INF-4241 removed its twenty-pair soak.
         try await relaunchPairs(1, pictured: true)
         XCTAssertTrue(app.buttons["group-backlog"].waitForPresence(timeout: 10))
         picture("tasks")
@@ -163,14 +163,9 @@ extension PhoneJourney {
         XCTAssertEqual(stop.label, "Stop")
         picture("crewmate-working")
         _ = try await home("capture-stop")
-        // INF-2553: a Stop the computer still holds already reads Stopping on the record.
-        _ = try await home("hold-card-action", body: #"{"channel":"inf:task:interrupt"}"#)
+        // INF-2553's Stopping at the tap is PhoneIntentsTests' anInterruptReadsStoppingUntilTheTurnEnds; INF-4241 keeps the
+        // held Start and steer here, the same at-the-tap rule on the record, and lets the Stop through.
         tapOnPhone(stop)
-        _ = try await home("card-action-held")
-        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier == %@ AND label == %@", "crew-stop", "Stopping…")).firstMatch
-            .waitForPresence(timeout: 10), "A Stop shows at the tap, before the computer answers")
-        picture("task-interrupt-at-tap")
-        _ = try await home("release-card-action")
         let interrupted = try await home("talk-interrupted")
         let events = try XCTUnwrap(interrupted["events"] as? [[String: Any]])
         XCTAssertTrue(events.contains { $0["kind"] as? String == "interrupted" && $0["actor"] as? String == "captain" })

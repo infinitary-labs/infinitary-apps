@@ -27,51 +27,9 @@ extension PhoneJourney {
         let reading = try XCTUnwrap(readPhoneTarget(photo))
         XCTAssertNotNil(reading.drawn)
         print("Photo readiness fixture: frame=\(reading.frame), bytes=\(reading.drawn?.count ?? 0)")
-        var observation = PhonePhotoObservation()
-        XCTAssertNil(observation.read(selected: false, preview: false, target: reading))
-        XCTAssertEqual(observation.read(selected: false, preview: false, target: reading), .settled)
-        XCTAssertEqual(observation.read(selected: true, preview: true, target: reading), .selected)
-        XCTAssertEqual(observation.read(selected: false, preview: true, target: reading), .preview)
-        XCTAssertNil(observation.read(selected: false, preview: false, target: reading), "A preview resets steadiness")
-        for absent in [nil, PhoneTargetReading(frame: reading.frame, drawn: nil)] {
-            XCTAssertNil(observation.read(selected: false, preview: false, target: absent))
-            XCTAssertNil(observation.read(selected: false, preview: false, target: absent))
-            XCTAssertNil(observation.read(selected: false, preview: false, target: reading), "Missing pixels reset steadiness")
-        }
-        // Replay a changed frame using this real photo's other observed frame, not invented screen pixels.
-        let other = try XCTUnwrap(readPhoneTarget(app.buttons.matching(NSPredicate(format: "label == 'Done' OR label == 'Add'")).firstMatch))
-        XCTAssertNotEqual(other.frame, reading.frame)
-        XCTAssertNil(observation.read(selected: false, preview: false, target: other))
-        XCTAssertNil(observation.read(selected: false, preview: false, target: reading))
-        XCTAssertEqual(observation.read(selected: false, preview: false, target: reading), .settled)
-        // Hold the captured frame fixed while replaying the two real native pixel captures: geometry alone is insufficient.
-        XCTAssertNotEqual(other.drawn, reading.drawn)
-        let repainted = PhoneTargetReading(frame: reading.frame, drawn: other.drawn)
-        XCTAssertNil(observation.read(selected: false, preview: false, target: repainted))
-        XCTAssertEqual(observation.read(selected: false, preview: false, target: repainted), .settled)
-
-        var closed = false
-        XCTAssertEqual(recoverPhonePhoto(selected: { true }, preview: { true }, target: { nil },
-            closedPreview: &closed, close: { XCTFail("A selected photo needs no closing tap") }), .selected)
-        XCTAssertFalse(closed)
-        var reads = 0
-        var closes = 0
-        XCTAssertEqual(recoverPhonePhoto(selected: { false }, preview: {
-            reads += 1
-            // The delayed preview arrives only at the final pre-tap recheck, after two matching grid readings.
-            return reads >= 3 && closes == 0
-        }, target: { reading }, closedPreview: &closed, close: { closes += 1 }), .settled)
-        XCTAssertEqual(closes, 1, "A late preview takes the closing path before another photo tap")
-        XCTAssertTrue(closed)
-        closed = false; closes = 0
-        XCTAssertEqual(recoverPhonePhoto(selected: { false }, preview: { closes == 0 }, target: { reading },
-            closedPreview: &closed, close: { closes += 1 }), .settled)
-        XCTAssertEqual(closes, 1, "An already-open preview closes once")
-        closed = false
-        XCTAssertEqual(recoverPhonePhoto(selected: { false }, preview: { false }, target: { reading },
-            closedPreview: &closed, close: { XCTFail("A settled grid needs no closing tap") }), .settled)
-        XCTAssertFalse(closed)
-        // Reproduce the picker’s real press-and-hold too; the iPad can select instead of opening Preview.
+        // INF-4241 removed the replay of recorded readings through the readiness rule, which needs no app: every journey
+        // that chooses a photo (talk-compose's included) runs the rule on live readings, and this press-and-hold below.
+        // Reproduce the picker’s real press-and-hold; the iPad can select instead of opening Preview.
         let since = Date().timeIntervalSince1970 * 1000
         photo.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(forDuration: 1.8)
         let proof = try askPhoneHome("picker-preview", since: since)
@@ -79,25 +37,12 @@ extension PhoneJourney {
         XCTAssertEqual(try proof.answer()["previewed"] as? Bool, true)
         let add = app.buttons.matching(NSPredicate(format: "label == 'Done' OR label == 'Add'")).firstMatch
         let preview = app.otherElements["Preview"]
-        closed = false
+        var closed = false
         let live = recoverPhonePhoto(selected: { add.exists && add.isEnabled }, preview: { preview.exists },
             target: { readPhoneTarget(photo) }, closedPreview: &closed,
             close: { closePhonePickerPreview(preview, in: self.app) })
         XCTAssertNotNil(live)
         print("Photo readiness live press-and-hold: outcome=\(live?.rawValue ?? "unresolved"), closedPreview=\(closed)")
-        closed = false
-        // Capture typed failure reports, rather than XCTest's fail-fast issue: every negative branch must run.
-        var failures: [PhonePhotoRecoveryFailure] = []
-        XCTAssertNil(recoverPhonePhoto(selected: { false }, preview: { false }, target: { nil },
-            closedPreview: &closed, timeout: 0.01, failure: { failures.append($0) },
-            close: { XCTFail("No preview exists") }))
-        XCTAssertEqual(failures, [.unresolved])
-        closed = true
-        XCTAssertNil(recoverPhonePhoto(selected: { false }, preview: { true }, target: { nil },
-            closedPreview: &closed, failure: { failures.append($0) },
-            close: { XCTFail("Only one closing tap is allowed") }))
-        XCTAssertEqual(failures, [.unresolved, .previewAfterClose])
-        print("Photo readiness negative branches: \(failures.map { $0.rawValue })")
     }
 
     /// INF-82: a real Mac conversation, not focus, task traffic or a fabricated listening state, drives the character.

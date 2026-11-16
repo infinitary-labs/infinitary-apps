@@ -30,8 +30,8 @@ extension PhoneJourney {
         focusForPhoneTyping(reply, in: app); keyboardViewportProbe("reply, hero card", reply, into: &failures)
         turnForProbe(.landscapeLeft)
         keyboardViewportProbe("reply, hero card, turned on its side with the keyboard up", reply, into: &failures)
+        // INF-4241: the five-line probe below reads the reply turned upright again, so no separate probe repeats it.
         turnForProbe(.portrait)
-        keyboardViewportProbe("reply, hero card, turned upright again", reply, into: &failures)
         reply.typeText("\ntwo\nthree\nfour\nfive")
         keyboardViewportProbe("reply, hero card, five lines", reply, into: &failures)
         try await dismissKeyboardForProbe()

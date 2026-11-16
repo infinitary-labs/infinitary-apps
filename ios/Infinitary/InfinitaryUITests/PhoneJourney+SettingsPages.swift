@@ -87,7 +87,6 @@ extension PhoneJourney {
         XCTAssertEqual(app.switches.count, 0, "Nothing on Intelligence changes an account")
         for account in accounts { XCTAssertEqual(account.buttons.count, 0, "An account's row has nothing to press") }
         settingsShows(settingsPart("intelligence-foot"), "Sign-ins stay on Test Mac mini.")
-        try await appearances("settings-intelligence", showing: summary)
 
         // The computer reads its allowance again; the open page follows it with nothing pressed here.
         let later = try await home("settings-allowance")

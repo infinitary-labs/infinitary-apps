@@ -56,10 +56,8 @@ extension PhoneJourney {
         }
         focusForPhoneTyping(reply, in: app)
         keyboardWayOut("thread, a tap on the head", reply, keeps: "Hold the four builds", into: &failures) { tapOnPhone(threadTitle) }
-        focusForPhoneTyping(reply, in: app)
-        keyboardWayOut("thread, Done in the bar", reply, keeps: "Hold the four builds", into: &failures) {
-            tapOnPhone(app.navigationBars.buttons["dismiss-phone-keyboard"])
-        }
+        // INF-4241: the bar's Done is not pressed here again: every keyboard probe closes the keyboard with it
+        // (dismissKeyboardForProbe), and talk-compose's draft checks read the words it keeps.
         let back = app.buttons["thread-return"]
         reveal(back); tapOnPhone(back)
         XCTAssertTrue(cue.waitForPresence(timeout: 10), app.debugDescription)

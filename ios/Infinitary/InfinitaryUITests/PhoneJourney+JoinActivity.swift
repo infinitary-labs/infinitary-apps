@@ -14,7 +14,6 @@ extension PhoneJourney {
         tapOnPhone(app.buttons["put-aside-card"])
         XCTAssertTrue(cardHeading("Your phone is reading your Mac").waitForPresence(timeout: 10))
         let first = try await home("state", method: "GET")
-        let phone = try XCTUnwrap((first["devices"] as? [[String: Any]])?.first)
         tab("Activity")
         let feed = try XCTUnwrap(first["feed"] as? [[String: Any]])
         let line = try XCTUnwrap(feed.first?["text"] as? String)
@@ -38,10 +37,8 @@ extension PhoneJourney {
         _ = try await home("stream-reset")
         XCTAssertTrue(app.staticTexts["Your phone is reading your Mac"].waitForPresence(timeout: 10))
 
-        app.terminate(); try await launchPhoneApp(app)
-        reach("Live", timeout: 20)
-        let afterLaunch = try await home("state", method: "GET")
-        XCTAssertEqual((afterLaunch["devices"] as? [[String: Any]])?.first?["id"] as? String, phone["id"] as? String)
+        // INF-4241 removed a relaunch that read the same device id again: join-read's relaunch reaches the computer again
+        // only with the identity it paired, join-away's fresh link reuses it, and RecoveryTests' keeps its stored key.
 
         _ = try await home("offline")
         outOfReach()

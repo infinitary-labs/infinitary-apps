@@ -825,7 +825,6 @@ INF-2582 direction A (the captain's choices "A: wait once and trim the soak" and
 A part the change only reaches runs on the iPhone alone (the chooser's `iphone_parts`), and the iPad runs it in the next phone release when it is a part about the iPad; a part whose test code changed, or every part of a change the chooser could not read, runs on each device its row names.
 Its selection runs once, then only parts whose test's own code changed run twice more on the iPhone alone in the iPhone job's same gate step (the iPad runs each once, INF-2732), on the build and simulator it started, so each device's job waits for a phone Mac once (`phonePasses` in `scripts/phone-test-plan.ts`).
 This holds for a proper subset as for a complete selection (INF-2811), so a branch that edits one part's test code gets all three of that part's iPhone runs from its one affected request.
-A request on a branch runs one of each relaunch part's ten dark and light relaunch pairs (INF-1735), so 2 of the 20, through the gate's `--relaunch-pairs`; a request on `main` and the phone release run all 20.
 Named `parts` and every-part requests run their parts on both devices.
 Shared helpers and setup reach their consumers without repeating them; changed test bodies, signatures and helpers used by only one part retain three rounds.
 For a part containing a suite, the chooser carries exact changed-test identifiers into the two further rounds, so the other tests run only in ordinary coverage.

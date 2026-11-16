@@ -197,16 +197,12 @@ extension PhoneJourney {
         XCTAssertTrue(cardHeading(choice).waitForPresence(timeout: 10), "A sheet keeps its pager shortcut from the stage behind it")
         try await pressPhoneKey("]", modifiers: [.command, .shift], in: app)
         XCTAssertTrue(cardHeading(chart).waitForPresence(timeout: 10))
-        app.terminate(); try await launchPhoneApp(app)
-        XCTAssertTrue(app.scrollViews["card-scroll"].waitForPresence(timeout: 20))
-        showCard(chart)
+        // INF-4241: the first chord after a launch is read once, above; the chords themselves are PhonePagerKeysTests'.
         XCTAssertTrue(app.buttons["previous-card"].isEnabled)
         try await pressPhoneKey("[", modifiers: [.command, .shift], in: app)
         XCTAssertTrue(cardHeading(choice).waitForPresence(timeout: 10))
 
         // INF-82: Command-Return sends the complete multiline ask once, not merely hides a keyboard.
-        app.terminate(); try await launchPhoneApp(app)
-        reach("Live", timeout: 20)
         XCTAssertTrue(input.waitForPresence(timeout: 10))
         // A multiline field exposes its empty value differently from placeholderValue.
         // Read that state before typing, then require Send to restore it.

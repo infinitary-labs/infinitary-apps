@@ -81,10 +81,8 @@ extension PhoneJourney {
             XCTAssertGreaterThanOrEqual(control.frame.height + 0.001, 44, id)
         }
         picture("card-form-before-answer")
-        _ = try await home("appearance-dark", budget: displayBudget)
-        XCTAssertTrue(app.webViews.staticTexts["Night chart"].waitForPresence(timeout: 10))
-        picture("card-form-dark")
-        _ = try await home("appearance-light", budget: displayBudget)
+        // INF-4241: a card body following dark and light is cards-media's to read, on its hero pair (cards-hero-light and
+        // cards-hero-dark).
         XCTAssertTrue(app.webViews.staticTexts["Day chart"].waitForPresence(timeout: 10))
         let before = try await home("card-state", method: "GET")
         XCTAssertEqual(before["leaks"] as? Int, 0)
@@ -197,12 +195,8 @@ extension PhoneJourney {
         // Paging brings the document back, kept loaded beside the shown card (INF-3460); the named answers and staged
         // value still leave together.
         // INF-1086 / INF-1574: the remounted card's footer stays disabled until its body is revealed at its drawn height.
-        let settings = app.buttons["card-action-settings"]
-        waitUntilEnabled(settings)
-        reveal(settings); tapOnPhone(settings)
-        XCTAssertTrue(app.staticTexts["Do this on Test Mac mini."].waitForPresence(timeout: 10))
-        let unsent = try await home("card-state", method: "GET")
-        XCTAssertFalse((unsent["calls"] as? [[String: Any]] ?? []).contains { $0["channel"] as? String == "inf:cards:act" })
+        // INF-4241: the "Do this on" line of an action for the computer is cards-media's (its browser action) and the
+        // secrets journey's to read.
         // INF-1122: a drawn footer is not proof the remounted form restored its required answer.
         // Wait on the native form reading, then the actual action gate, never on a quiet interval.
         waitForAnsweredPhoneForm(in: app)
@@ -226,15 +220,13 @@ extension PhoneJourney {
         let chartData = try XCTUnwrap(chartValue.data(using: .utf8))
         XCTAssertEqual((try JSONSerialization.jsonObject(with: chartData) as? [String: Int])?["zoom"], 2)
         XCTAssertEqual((past["ending"] as? [String: Any])?["actionId"] as? String, "choose")
+        // INF-589 item 7: an answered card opened from its notice shows as a past card. INF-4241 shows it once, where it
+        // was shown twice the same way.
         _ = try await home("show-past")
         XCTAssertTrue(app.staticTexts["Past"].waitForPresence(timeout: 10))
         XCTAssertFalse(app.buttons["card-action-choose"].isEnabled)
         XCTAssertFalse(app.textFields["card-reply"].exists)
         picture("past-card")
-        tapOnPhone(app.buttons["put-aside-card"])
-        _ = try await home("show-past")
-        // INF-589 item 7: an answered card opened from its notice shows as a past card.
-        XCTAssertTrue(app.staticTexts["Past"].waitForPresence(timeout: 10))
         XCTAssertEqual(app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch.label, "Past card")
         tapOnPhone(app.buttons["put-aside-card"])
     }

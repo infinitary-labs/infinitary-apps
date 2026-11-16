@@ -2,8 +2,11 @@ import XCTest
 
 /// The languages part (scripts/phone-test-plan.ts): its test and the steps only it takes.
 extension PhoneJourney {
-    /// The approved plan for the phone's languages (INF-3675, piece 4): the phone speaks each catalog language iOS picks
+    /// The approved plan for the phone's languages (INF-3675, piece 4): the phone speaks a catalog language iOS picks
     /// for it, right to left in Arabic, and Settings → Appearance's Language row names it and opens iOS Settings.
+    /// INF-4241 keeps Arabic (right to left) and Japanese (another script) of the nine catalog languages: that every
+    /// catalog language ships its string files, word for word with the catalog and listed in Info.plist, is
+    /// `generate-messages.ts --check`'s and tests/generate-messages.test.ts's ("write every catalog language's string files").
     /// Data: the disposable home's join note, the phone's own catalog words and iOS's own language names.
     /// Completion: each language's views pictured, the row naming that language, Arabic's back arrow at the right,
     /// every word on Appearance marked under Apple's surrounding pseudo-language and inside the screen when doubled,
@@ -11,7 +14,7 @@ extension PhoneJourney {
     func testLanguages() async throws {
         try await launchFresh()
         try await join()
-        for tag in ["ar", "de", "es", "fr", "ja", "ko", "pt-BR", "zh-Hans", "zh-Hant"] {
+        for tag in ["ar", "ja"] {
             try await relaunch(["-AppleLanguages", "(\(tag))", "-AppleLocale", tag.replacingOccurrences(of: "-", with: "_")])
             XCTAssertTrue(app.staticTexts["card-title"].waitForPresence(timeout: 20), app.debugDescription)
             picture("language-\(tag)-cards")
@@ -47,10 +50,9 @@ extension PhoneJourney {
         }
         picture("language-pseudo-appearance")
 
-        // The row by keys: Theme holds focus as Appearance opens, the down arrow moves to Language and Return opens it.
+        // The row by keys, on the Appearance page the pseudo-language opened (INF-4241 dropped a relaunch in English
+        // for it): Theme holds focus as Appearance opens, the down arrow moves to Language and Return opens it.
         // As PhoneKeys owns, Xcode emits the physical Return for LF, not CR.
-        try await relaunch(englishPhone)
-        _ = try openAppearance()
         waitForSteadyTarget(app.segmentedControls["phone-theme"])
         app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: [])
         app.typeKey("\n", modifierFlags: [])

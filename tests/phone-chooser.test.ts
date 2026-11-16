@@ -161,7 +161,10 @@ describe("affected phone requests", () => {
   it("runs every reached part, not just the closest or one fitting a time budget", () => {
     // Replay only the real UI-test hunks: its other product edits include shared style.
     expect(request("2dbbedc52", false, true)).toEqual(["join", "talk"]);
-    expect(request("2dbbedc52")).toEqual(BEFORE_SPLIT.map((part) => part.name));
+    // INF-4241 removed the relaunch parts, so the table's relaunch part owns no file today and nothing reaches it.
+    expect(request("2dbbedc52")).toEqual(
+      BEFORE_SPLIT.map((part) => part.name).filter((part) => part !== "relaunch"),
+    );
   });
   it("runs a smoke part for gate setup and all parts for an unreadable test diff", () => {
     const all = BEFORE_SPLIT.map((part) => part.name);

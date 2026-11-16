@@ -203,63 +203,18 @@ extension PhoneJourney {
         picture("card-close-refused")
         tapOnPhone(notice)
         XCTAssertTrue(notice.waitForAbsence(timeout: 10))
-        if phoneTurnedLayout(app) == .onItsSide {
-            // INF-2553, the captain's pick for an iPhone on its side, where the pill has no room: the words stay on
-            // the place's own line until its next change, so they are never cleared unseen. In a stack of two, the
-            // card that came back keeps them while the other card is up.
-            let asked = try await home("asked-card")
-            let second = try XCTUnwrap(asked["title"] as? String)
-            showCard(second)
-            turnPhone(to: .landscapeLeft, in: app, moving: cardHeading(second))
-            XCTAssertEqual(phoneShownLayout(app), .onItsSide, "Turned, the app shows the layout read before the turn")
-            _ = try await home("refuse-next-change", body: #"{"channel":"inf:cards:close","words":"\#(refusal)"}"#)
-            tapOnPhone(app.buttons["put-aside-card"])
-            showCard(note)
-            XCTAssertFalse(app.staticTexts["card-error"].exists, "The words stay with the card that came back")
-            showCard(second)
-            let line = app.staticTexts["card-error"]
-            XCTAssertTrue(line.waitForPresence(timeout: 10), app.debugDescription)
-            XCTAssertEqual(line.label, refusal)
-            XCTAssertFalse(notice.exists, "On its side the words are on the card's line, not in a pill")
-            picture("card-close-refused-on-its-side")
-            // A message the computer refuses goes back in the box and says why on the composer's own line.
-            let messageRefusal = "Your computer could not take this message. Try again."
-            _ = try await home("refuse-next-change", body: #"{"channel":"inf:converse","words":"\#(messageRefusal)"}"#)
-            let input = app.textFields["message-box"]
-            let message = "Count the north buoys"
-            focusForPhoneTyping(input, in: app); input.typeText(message)
-            tapOnPhone(app.buttons["send-message"])
-            let messageLine = app.staticTexts["message-problem"]
-            XCTAssertTrue(messageLine.waitForPresence(timeout: 10), app.debugDescription)
-            XCTAssertEqual(messageLine.label, messageRefusal)
-            XCTAssertEqual(input.value as? String, message, "A refused message goes back in the box")
-            XCTAssertFalse(notice.exists, "On its side the words are on the composer's line, not in a pill")
-            picture("message-refused-on-its-side")
-            turnPhone(to: .portrait, in: app, moving: cardHeading(second))
-            // Upright, the pill may still show the words until they leave on their own, and the lines stay quiet.
-            XCTAssertTrue(notice.waitForAbsence(timeout: 20))
-            XCTAssertFalse(messageLine.exists, "Upright, the pill says it instead of the composer's line")
-            // The words go back out of the box, so the rest of the journey starts from an empty one.
-            focusForPhoneTyping(input, in: app)
-            input.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: message.count))
-            let done = app.navigationBars.buttons["dismiss-phone-keyboard"]
-            XCTAssertTrue(done.waitForPresence(timeout: 10), app.debugDescription); tapOnPhone(done)
-            XCTAssertTrue(app.keyboards.firstMatch.waitForAbsence(timeout: 10))
-            tapOnPhone(app.buttons["put-aside-card"])
-            XCTAssertTrue(cardHeading(second).waitForAbsence(timeout: 10), app.debugDescription)
-            showCard(note)
-        }
+        // INF-4241: of the four refusals this part read, it keeps the upright close above; where a refused close puts the
+        // card is PhoneIntentsTests' aRefusedCloseReturnsTheCardToItsPlace.
         // INF-2794: the note's own Got it sits in the pinned row under the hairline and reads it; a press the
         // computer still holds has already taken the card off Home.
         let gotIt = app.buttons["note-done"]
         XCTAssertTrue(gotIt.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertEqual(gotIt.label, "Got it")
         picture("note-got-it")
-        _ = try await home("hold-card-action", body: #"{"channel":"inf:cards:note-done"}"#)
+        // INF-4241: a choice leaving at the tap, before the computer answers, is read once in this part, on the body's
+        // choice above, and on the merge part's note Done (testMergeCard).
         tapOnPhone(gotIt)
-        _ = try await home("card-action-held")
-        XCTAssertTrue(cardHeading(note).waitForAbsence(timeout: 10), "Got it shows at the tap, before the computer answers")
-        _ = try await home("release-card-action")
+        XCTAssertTrue(cardHeading(note).waitForAbsence(timeout: 10), app.debugDescription)
         let closed = try await home("card-state", method: "GET")
         XCTAssertNotNil(closed["note"] as? [String: Any])
         XCTAssertEqual(closed["leaks"] as? Int, 0)
@@ -324,39 +279,13 @@ extension PhoneJourney {
         // INF-2928 piece 1: Waiting on you always shows its rows, so its header is a label, not a button, as on the Mac.
         XCTAssertLessThan(app.staticTexts["group-waiting"].frame.minY, restore.frame.minY, "It is listed under Waiting on you")
         picture("tasks-minimized")
-        if phoneTurnedLayout(app) == .onItsSide {
-            // INF-2553: on an iPhone on its side, a bring-back the computer refuses puts the card aside again and says
-            // why on the Tasks list's own line, as a refused bring-back did before.
-            turnPhone(to: .landscapeLeft, in: app, moving: restore)
-            XCTAssertEqual(phoneShownLayout(app), .onItsSide, "Turned, the app shows the layout read before the turn")
-            _ = try await home("refuse-next-change", body: #"{"channel":"inf:cards:minimize","words":"\#(refusal)"}"#)
-            tapOnPhone(restore)
-            tab("Tasks")
-            let asideLine = app.staticTexts["tasks-problem"]
-            XCTAssertTrue(asideLine.waitForPresence(timeout: 10), app.debugDescription)
-            XCTAssertEqual(asideLine.label, refusal)
-            XCTAssertTrue(restore.waitForPresence(timeout: 10), "A refused bring-back puts the card aside again")
-            XCTAssertFalse(app.buttons["change-notice"].exists, "On its side the words are on the list's line, not in a pill")
-            picture("bring-back-refused-on-its-side")
-            turnPhone(to: .portrait, in: app, moving: restore)
-            XCTAssertTrue(app.buttons["change-notice"].waitForAbsence(timeout: 20))
-        }
         tapOnPhone(restore)
         XCTAssertTrue(cardHeading(heroTitle).waitForPresence(timeout: 10), "Its row brings the card back on Home")
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: app.buttons["tab-home"], timeout: 10), .completed)
         let restored = try await home("hero-state", method: "GET")
         let restoredCard = try XCTUnwrap(restored["card"] as? [String: Any])
         XCTAssertNil(restoredCard["minimized"], "The phone brings it back on the computer too")
-        // INF-209: the native frame remains usable at the largest standard Dynamic Type size.
-        app.terminate()
-        app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL"]
-        try await launchPhoneApp(app)
-        reach("Live", timeout: 20)
-        showCard(try XCTUnwrap(hero["title"] as? String))
-        let largeChoice = app.buttons["card-action-keep"]
-        reveal(largeChoice)
-        XCTAssertEqual(largeChoice.label, "Use this entrance")
-        picture("card-large-type")
+        // INF-4241: the phone at the largest standard type is the join-read part's to read (testJoinAndRead).
     }
 }
 

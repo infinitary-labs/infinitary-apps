@@ -8,6 +8,7 @@ import {
   PHONE_DEVICES,
   PHONE_PART_TIMES,
   PHONE_PARTS,
+  PHONE_TOOL_TESTS,
   type PhoneDevice,
   type PhoneJob,
   type PhonePassEnd,
@@ -28,8 +29,6 @@ import {
   phoneSelectionRunsJourney,
   phoneTestSelection,
   phoneTestsStarted,
-  RELAUNCH_PAIRS_PER_PART,
-  relaunchPairs,
   runDeviceLanes,
   runSideBySide,
   testHomeKeys,
@@ -93,7 +92,10 @@ const partsRunning = (test: string) =>
 describe("the phone journey's parts", () => {
   it("run every test the build has exactly once, each journey test in its own part", () => {
     expect(everyTest.length).toBeGreaterThan(PHONE_PARTS.length);
-    for (const test of everyTest) expect(partsRunning(test), test).toHaveLength(1);
+    // INF-4241: the phone check's own tool tests run in no part, only in the tool selection.
+    const tool = (test: string) => chosen(partSelection("rest", "tools"), test);
+    for (const test of everyTest) expect(partsRunning(test), test).toHaveLength(tool(test) ? 0 : 1);
+    expect(everyTest.filter(tool).length).toBeGreaterThan(0);
     for (const part of PHONE_PARTS) expect(partsRunning(partIdentifier(part))).toEqual([part.name]);
     // INF-2989: the weak link checks run in their own part, every one of them and only there.
     const weakLink = everyTest.filter((test) =>
@@ -566,12 +568,12 @@ describe("the native test's outer deadline", () => {
 // INF-1083: the native clock proof is not a grading of unrelated UI recovery latency.
 describe("the native clock proof selection", () => {
   it("selects only the existing native clock class on request, leaving ordinary parts unchanged", () => {
-    expect(partSelection("rest", true)).toEqual([
+    expect(partSelection("rest", "waits")).toEqual([
       "-only-testing:InfinitaryUITests/PhoneWaitsTests",
     ]);
-    expect(partSelection("rest")).toHaveLength(PHONE_PARTS.length - 1);
-    expect(() => partSelection("cards-form", true)).toThrow(
-      "Native wait-clock tests belong to the rest part",
+    expect(partSelection("rest")).toHaveLength(PHONE_PARTS.length - 1 + PHONE_TOOL_TESTS.length);
+    expect(() => partSelection("cards-form", "waits")).toThrow(
+      "Native wait-clock and tool tests belong to the rest part",
     );
   });
 });
@@ -747,19 +749,6 @@ describe("a gate's end", () => {
       `The phone gate failed: ${first}; it never started ${rest.join(", ")}; see its results in ${evidence}`,
     );
     expect(existsSync(kept(evidence))).toBe(false);
-  });
-});
-
-// INF-2582 direction A: a branch runs 2 of INF-1735's 20 relaunch pairs, one in each relaunch part.
-describe("the relaunch soak's pair count", () => {
-  it("runs every pair unless a count is given, and refuses a count outside one to ten", () => {
-    const relaunchParts = PHONE_PARTS.filter(({ name }) => name.startsWith("relaunch-"));
-    expect(relaunchParts.length * relaunchPairs(undefined)).toBe(20);
-    expect(relaunchParts.length * relaunchPairs("")).toBe(20);
-    expect(relaunchParts.length * relaunchPairs("1")).toBe(2);
-    expect(relaunchPairs(String(RELAUNCH_PAIRS_PER_PART))).toBe(RELAUNCH_PAIRS_PER_PART);
-    for (const value of ["0", "11", "1.5", "two", "-1"])
-      expect(() => relaunchPairs(value)).toThrow(/whole number from 1 to 10/);
   });
 });
 

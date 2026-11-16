@@ -2,8 +2,8 @@ import XCTest
 
 /// The join-away part (scripts/phone-test-plan.ts): its test and the steps only it takes.
 extension PhoneJourney {
-    /// INF-2125 direction C, the third join test: short and long trips away, Leave, Forget, Removed and a damaged record.
-    /// Data: changes the home makes while the app is away, its removal of the phone and a truncated saved record.
+    /// INF-2125 direction C, the third join test: short and long trips away, Leave, Forget and Removed.
+    /// Data: changes the home makes while the app is away and its removal of the phone.
     /// Completion: the phone returns in reach with what changed, leaves and forgets on request, and rejoins after each.
     func testAwayLeaveAndRemoved() async throws {
         try await launchJoined()
@@ -44,30 +44,8 @@ extension PhoneJourney {
         // on the first card. The home's own mark of this card closes that race before the phone leaves.
         _ = try await home("seen-wait", body: replayed)
 
-        // INF-2157, the captain: "often when i reopen my ios app, it takes a long time before the app would attempt
-        // to reconnect." A reopen dials every saved address together, so one that never answers holds nothing up:
-        // this connection's welcome names a stalled address ahead of the home's own, and the next reopen reaches the
-        // home while that stalled attempt is still open, with one connection.
-        _ = try await home("routing-stalled-first")
-        try await background()
-        app.activate()
-        reach("Live", timeout: 20)
-        try await background()
-        let beforeReopenState = try await home("state", method: "GET")
-        let beforeReopen = try XCTUnwrap(beforeReopenState["readings"] as? [String: Int])
-        _ = try await home("capture-reopen-start")
-        app.activate()
-        reach("Live", timeout: 20)
-        _ = try await home("capture-stop")
-        let afterReopenState = try await home("state", method: "GET")
-        let afterReopen = try XCTUnwrap(afterReopenState["readings"] as? [String: Int])
-        func reopened(_ reading: String) throws -> Int { try XCTUnwrap(afterReopen[reading]) - XCTUnwrap(beforeReopen[reading]) }
-        XCTAssertEqual(try reopened("stalledConnections"), 1,
-            "The reopen dialed the stalled address too: before \(beforeReopen), after \(afterReopen)")
-        XCTAssertEqual(afterReopen["stalledCutsAtHomeAttempt"], beforeReopen["stalledCuts"],
-            "The reopen reached the home before giving up on the stalled address: before \(beforeReopen), after \(afterReopen)")
-        XCTAssertEqual(try reopened("connections"), 1, "One welcomed connection per reopen")
-        _ = try await home("routing-reset")
+        // INF-2157: a reopen dials every saved address together. INF-4241: the removal below reads each round dialing
+        // the home and a stalled address together, and PhoneReopenTests owns what a reopen checks.
 
         computerDetails()
         tapOnPhone(app.buttons["leave"])
@@ -124,20 +102,7 @@ extension PhoneJourney {
         tapOnPhone(app.buttons["join-again"])
         app.terminate(); try await launchPhoneApp(app)
         XCTAssertTrue(app.buttons["paste-link"].waitForPresence(timeout: 10))
-        // INF-136 re-review #1: a damaged saved record must not block a fresh confirmed link.
-        try await join()
-        let beforeDamage = try await home("state", method: "GET")
-        let retainedIDs = (beforeDamage["devices"] as? [[String: Any]])?.compactMap { $0["id"] as? String }
-        XCTAssertEqual(retainedIDs?.count, 1)
-        app.terminate()
-        _ = try await home("damage-record")
-        try await launchPhoneApp(app)
-        XCTAssertTrue(app.buttons["paste-link"].waitForPresence(timeout: 10))
-        picture("damaged-record")
-        try await join()
-        XCTAssertTrue(app.staticTexts["Your phone is reading your Mac"].waitForPresence(timeout: 10))
-        let afterDamage = try await home("state", method: "GET")
-        XCTAssertEqual((afterDamage["devices"] as? [[String: Any]])?.compactMap { $0["id"] as? String }, retainedIDs)
-        picture("rejoined-after-damaged-record")
+        // INF-136 re-review #1: a damaged saved record must not block a fresh confirmed link. INF-4241: that is
+        // RecoveryTests' testInvalidSavedMacDoesNotBecomeAConnection.
     }
 }

@@ -68,6 +68,11 @@ extension PhoneJourney {
         picture("panels-folded")
         tapOnPhone(header, repeatDiscarded: false)
         XCTAssertTrue(tally(42).waitForPresence(timeout: 60), app.debugDescription)
+        // The panel's buttons are pressed while its body is drawn on the Panels tab, before an iPad turns: a press
+        // before the body draws reaches no page.
+        try await verifyPanelCards(header: header)
+        try await pressPhoneKey("4", modifiers: .command, in: app)
+        XCTAssertTrue(header.waitForPresence(timeout: 20), app.debugDescription)
 
         // In the wide layout (an iPad on its side), Panels is the sidebar's third choice beside the stage.
         if phoneTurnedLayout(app) == .wide {
@@ -80,6 +85,9 @@ extension PhoneJourney {
             XCUIDevice.shared.orientation = .portrait
             XCTAssertTrue(panelsTab.waitForPresence(timeout: 20), app.debugDescription)
         }
+
+        try await pressPhoneKey("4", modifiers: .command, in: app)
+        XCTAssertTrue(header.waitForPresence(timeout: 20), app.debugDescription)
 
         // Background work that ended shows the computer's own line and Retry, which starts it again there.
         _ = try await home("panel-quit")
@@ -117,26 +125,17 @@ extension PhoneJourney {
     /// INF-3830 piece 3, done when "A panel's title-row buttons draw beside its fold and work", "A card a panel puts up
     /// shows on Home, and its buttons work" and "A panel's tap on a task opens that task's record on the phone". Data: the
     /// test home's real core serves the fixture panel (tests/fixtures/phone-panels/phone-tally) with its note card view,
-    /// a title-row button that puts the note up and one that asks the panel, and the test home's seeded task. Completion:
+    /// a title-row button that puts the note up and one that asks the panel, and the test home's seeded task. INF-4241 runs it inside the panels part, on the panel that part drew, rather than
+    /// in a part of its own with its own launch and join. Completion:
     /// the asking button reaches the panel's own code once a press and leaves with its body when folded; the note shows
     /// on Home from the button and from the panel's own press, counts a second press as a revision and leaves on Hide;
     /// the card's tap opens the seeded task's record on Tasks, and the panel's opens the task.
-    func testPanelCards() async throws {
-        try await launchFresh()
-        try await join()
-        _ = try await home("panel-seed")
-        let panelsTab = app.buttons["tab-panels"]
-        XCTAssertTrue(panelsTab.waitForPresence(timeout: 20), app.debugDescription)
-        try await pressPhoneKey("4", modifiers: .command, in: app)
-        let header = app.buttons["panel-header-phone-tally"]
-        XCTAssertTrue(header.waitForPresence(timeout: 20), app.debugDescription)
-        XCTAssertTrue(app.webViews.staticTexts["Tally 0"].waitForPresence(timeout: 60), app.debugDescription)
-
+    private func verifyPanelCards(header: XCUIElement) async throws {
         // The title row: the note button and the asking button beside the fold; a press of the asking one reaches the
         // panel's own code once.
         let note = app.buttons["panel-button-phone-tally-note"]
         let mark = app.buttons["panel-button-phone-tally-mark"]
-        XCTAssertTrue(note.exists && mark.exists, app.debugDescription)
+        XCTAssertTrue(note.waitForPresence(timeout: 20) && mark.waitForPresence(timeout: 20), app.debugDescription)
         XCTAssertEqual(note.label, "Open the note")
         picture("panel-title-buttons")
         tapOnPhone(mark, repeatDiscarded: false)
@@ -193,6 +192,5 @@ extension PhoneJourney {
         XCTAssertEqual(recordTitle.label, "Check the phone connection")
         tapOnPhone(close)
         XCTAssertTrue(close.waitForAbsence(timeout: 10), app.debugDescription)
-        _ = try await home("panel-remove")
     }
 }

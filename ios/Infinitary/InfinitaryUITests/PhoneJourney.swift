@@ -332,18 +332,11 @@ import XCTest
         return fixture
     }
 
-    /// INF-2582 direction A (the captain's "wait once and trim the soak"): the gate names how many pairs each relaunch
-    /// part runs in the test plan (scripts/test-phone.ts). A request on a branch runs 1, so 2 of the 20; the release check
-    /// and a run with no count run all ten.
-    var soakPairs: Int {
-        let named = Int(ProcessInfo.processInfo.environment["INFINITARY_PHONE_RELAUNCH_PAIRS"] ?? "") ?? 10
-        return min(max(named, 1), 10)
-    }
-
     /// INF-1735: reach and the restored last turn can precede the requested appearance's drawn chrome.
     /// Use the same observed-appearance owner as appearances(), not a raw hero screenshot followed by a press.
     /// Each round is a fresh dark/light relaunch pair with exactly one Tasks press; a miss fails immediately.
-    /// Tasks stays shown after the last round. `pictured` keeps the first round's hero pictures.
+    /// Tasks stays shown after the last round. `pictured` keeps the first round's hero pictures. INF-4241 removed
+    /// INF-1735's twenty-pair soak; talk-tasks runs the one pair that guards the fix.
     func relaunchPairs(_ rounds: Int, pictured: Bool = false) async throws {
         for round in 1...rounds {
             print("INF-1735 relaunch pair \(round)")
@@ -439,8 +432,6 @@ import XCTest
     /// and the calendar are the test home's stand-ins. Completion: the computer's Secrets history reads each use's end.
     /// Prerequisites: the owned simulator's Face ID, which the test home enrolls. It runs alone or in the rest part,
     /// installs its own native wait and failure hooks, and joins only when the phone has not.
-    /// INF-1109's decision on a damaged record ends it: Settings says so, and only Set up approvals again replaces
-    /// the record, whose new key the computer enrolls only after its own confirmation, beside the earlier one.
     func testSecretsApprovals() async throws {
         continueAfterFailure = false
         // INF-1109 / INF-2092: this test must run alone, without launchFresh installing its prerequisites first.
@@ -638,72 +629,8 @@ import XCTest
         XCTAssertEqual(state["sent"] as? [Bool], [true], "A refusal sends nothing")
         XCTAssertEqual((state["cards"] as? [Any])?.count, 0)
 
-        // The phone's record is damaged by the next launch: Settings says so, and Set up approvals offers nothing.
-        app.launchEnvironment["INFINITARY_DAMAGED_APPROVAL"] = "1"
-        try await launchPhoneApp(app)
-        app.launchEnvironment.removeValue(forKey: "INFINITARY_DAMAGED_APPROVAL")
-        reach("Live", timeout: 20)
-        openSettings()
-        let again = app.buttons["approval-set-up"]
-        XCTAssertTrue(again.waitForPresence(timeout: 20), app.debugDescription)
-        // The same setup control must finish entering in its damaged-record state too; presence is not readiness.
-        waitForSteadyTarget(again)
-        picture("secrets-settings-damaged")
-        XCTAssertEqual(again.label, "Set up approvals again")
-        XCTAssertTrue(again.isHittable, "The choice shows at the sheet's medium height, with no scrolling")
-        XCTAssertTrue(app.staticTexts["approval-damaged"].exists, app.debugDescription)
-        XCTAssertFalse(app.staticTexts["approval-problem"].exists, "A damaged record does not ask to unlock the phone")
-        tapOnPhone(again, repeatDiscarded: false)
-        let replaced = app.staticTexts["approval-code"]
-        XCTAssertTrue(replaced.waitForPresence(timeout: 20), app.debugDescription)
-        let newCode = replaced.label.replacingOccurrences(of: "Code ", with: "")
-        XCTAssertNotEqual(newCode, shown, "Set up approvals again offers a new key")
-        picture("secrets-settings-damaged-code")
-        closeSettings()
-
-        // Only the computer's own confirmation enrolls the new key, and the earlier enrollment stays there.
-        let reoffered = try await home("secrets-state", method: "GET")
-        XCTAssertEqual((reoffered["devices"] as? [[String: Any]])?.map { $0["device"] as? String }, [enrolled])
-        let reconfirmed = try await home("secrets-confirm")
-        XCTAssertEqual(reconfirmed["code"] as? String, newCode, "The computer's card shows the new code this phone shows")
-        XCTAssertEqual(reconfirmed["confirmed"] as? Int, 1)
-        let both = try XCTUnwrap(reconfirmed["devices"] as? [[String: Any]])
-        XCTAssertEqual(Set(both.compactMap { $0["code"] as? String }), [shown, newCode])
-        XCTAssertFalse(both.contains { $0["code"] as? String == newCode && $0["device"] as? String == enrolled },
-                       "The new key is enrolled under a new device name")
-        openSettings()
-        XCTAssertTrue(app.staticTexts["approval-enrolled"].waitForPresence(timeout: 20), app.debugDescription)
-        picture("secrets-settings-damaged-enrolled")
-        closeSettings()
-
-        // INF-1690 piece 4: the switch on this phone's row in Settings → Devices on the computer. With every approval
-        // stopped there, turning it on makes this phone offer its kept key by itself, the same key underneath. The
-        // code card that offer raises pushes a Secrets change, which must not cancel the offer (INF-3506).
-        let stopped = try await home("secrets-stop")
-        XCTAssertEqual((stopped["devices"] as? [Any])?.count, 0, "Stopping on the computer leaves no approving device")
-        XCTAssertEqual(stopped["confirmed"] as? Int, 2, "Each stop asked for this computer's own confirmation")
-        openSettings()
-        let switchedOff = app.switches["approval-switch"]
-        XCTAssertTrue(switchedOff.waitForPresence(timeout: 20), app.debugDescription)
-        XCTAssertTrue(waitForPhonePredicate(NSPredicate(format: "value == '0'"), object: switchedOff, timeout: 20) == .completed,
-                      "The switch reads off once the computer stopped its approvals: \(app.debugDescription)")
-        _ = try await home("secrets-ask")
-        let askedCode = app.staticTexts["approval-code"]
-        XCTAssertTrue(askedCode.waitForPresence(timeout: 20), app.debugDescription)
-        XCTAssertEqual(askedCode.label.replacingOccurrences(of: "Code ", with: ""), newCode, "The phone offers the key it keeps")
-        XCTAssertEqual(app.switches["approval-switch"].value as? String, "1", "The switch reads on while the computer compares codes")
-        XCTAssertFalse(app.staticTexts["approval-problem"].exists, "The card's own change does not cancel the offer: \(app.debugDescription)")
-        picture("secrets-settings-asked")
-        closeSettings()
-        let linked = try await home("secrets-confirm")
-        XCTAssertEqual(linked["code"] as? String, newCode, "The computer's card shows the code this phone shows")
-        XCTAssertEqual(linked["confirmed"] as? Int, 1, "Only the computer's code card enrolls the key")
-        openSettings()
-        XCTAssertTrue(app.staticTexts["approval-enrolled"].waitForPresence(timeout: 20), app.debugDescription)
-        XCTAssertEqual(app.switches["approval-switch"].value as? String, "1")
-        XCTAssertFalse(app.staticTexts["approval-problem"].exists, app.debugDescription)
-        picture("secrets-settings-asked-enrolled")
-        closeSettings()
+        // INF-4241 removed the damaged-record relaunch and the computer stopping approvals from this journey: the phone's
+        // side is PhoneSecretsTests' and ApprovalStorageTests', and the damaged key ApprovalKeyTests', on the same rules.
     }
 
 

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "phone-check-fewer-repeats",
+      "reason": "Test suite only: the phone check drops a relaunch soak, seven of nine language passes and checks that faster tests already make, and runs its own tool tests only on request. No shipped behavior changed."
+    }
+  ]
+}

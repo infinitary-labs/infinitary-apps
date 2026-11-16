@@ -34,10 +34,10 @@ export function partPlanPath(built: string, device: PhoneDevice, part: string, s
 
 // INF-662 piece 2 (the captain's "Both at once, journey in parts"): the phone journey is in parts,
 // and each runs alone from its own test home and a clean app on its device's one simulator
-// (INF-1438), the devices side by side. The order is each device's start order. INF-1878: INF-1735's
-// 20 relaunch pairs are parts of their own.
+// (INF-1438), the devices side by side. The order is each device's start order. INF-4241 removed INF-1735's
+// relaunch soak, twenty repeats of one proof: talk-tasks keeps its one dark and light relaunch pair.
 // INF-2125 direction C (the captain's "Shared fixes, then short parts", so each pull request's phone
-// check finishes quickly): join, talk, cards and relaunch are each split into short tests, named for
+// check finishes quickly): join, talk and cards are each split into short tests, named for
 // the part they came from, so a check of the parts a change reaches can run the closest one alone.
 // INF-804: `photos` marks a part that chooses a library photo; the gate waits for its device's Photos
 // to open its shared-with-you library first, since Photos hands over no chosen photo before then.
@@ -64,8 +64,6 @@ export const PHONE_PARTS = [
   { name: "join-away", test: "testAwayLeaveAndRemoved", photos: false },
   { name: "talk-tasks", test: "testTasksAndSteer", photos: false, devices: ["ipad"], why: "turned, Home's stage and Tasks sit beside the wide layout's sidebar, and the strip comes back from nowhere upright" },
   { name: "talk-drafts", test: "testDraftsAcrossHomes", photos: false },
-  { name: "relaunch-first", test: "testRelaunchPairsFirstTen", photos: false },
-  { name: "relaunch-second", test: "testRelaunchPairsSecondTen", photos: false },
   { name: "cards-merge", test: "testMergeCard", photos: false },
   { name: "cards-form", test: "testCardForm", photos: false },
   { name: "cards-media", test: "testCardMediaAndBody", photos: false },
@@ -100,10 +98,9 @@ export const PHONE_PARTS = [
   // INF-3675 piece 4: the phone in each catalog language, Arabic right to left, Apple's pseudo-languages on Settings →
   // Appearance and its Language row opening iOS Settings by keys.
   { name: "languages", test: "testLanguages", photos: false },
-  // INF-3830 piece 2: the computer's panels on the Panels tab, from a fixture panel on the test home's real core.
+  // INF-3830 pieces 2 and 3: the computer's panels on the Panels tab, from a fixture panel on the test home's real core,
+  // with a panel's title-row buttons, its cards on Home and its taps that open a task (one part since INF-4241).
   { name: "panels", test: "testPanelsTab", photos: false, devices: ["ipad"], why: "turned, Panels is the wide layout sidebar's third choice beside the stage" },
-  // INF-3830 piece 3: a panel's title-row buttons, its cards on Home and its taps that open a task.
-  { name: "panels-cards", test: "testPanelCards", photos: false },
   // INF-2989: the weak link checks (INF-2668, INF-2669) wait out real links and silences, about five minutes a
   // device, which doubled the rest part they joined. An app-hosted class of their own, so a change to the other
   // app-hosted tests repeats only the rest part and a change to these repeats only them.
@@ -162,17 +159,39 @@ export function phoneAnimationWaits(output: string): { skipped: boolean; missed:
   };
 }
 
+/** INF-4241 (the captain's "remove all", whose fourth group is "tests of the test tools ... The tool tests then run
+ * only when the tools change"): the tests that check the phone check's own tools - its wait clock, its target pixels,
+ * the crew reveal's geometry and the scene evidence recorder - rather than the app. The rest part skips them; the
+ * `tools` selection runs them, on request from a change to those tools. */
+export const PHONE_TOOL_TESTS = [
+  "InfinitaryUITests/PhoneWaitsTests",
+  "InfinitaryUITests/PhoneTargetPixelsTests",
+  `${PHONE_JOURNEY}/testCrewRevealRejectsRecordedClippingEdge`,
+  `${PHONE_JOURNEY}/testCrewRevealWaitsForTheOrbitNotADrag`,
+  "InfinitaryTests/PhoneSceneEvidenceTests/testFrameSamplesKeepTheirDrawingScopeAndSource",
+  "InfinitaryTests/PhoneSceneEvidenceTests/testWarmupTraceRecordsActualMainRunLoopProgress",
+  "InfinitaryTests/PhoneSceneEvidenceTests/testStoppedDisplaySampleNamesMissingCallbacks",
+  "InfinitaryTests/PhoneSceneEvidenceTests/testMainThreadStallDoesNotSpendTheDisplayBudget",
+  "InfinitaryTests/PhoneSceneEvidenceTests/testLongIdleSampleNamesTheActualUnexpectedMode",
+] as const;
+
+/** A selection of tests in the rest part's place instead of a part's own: the native wait clock alone, or every
+ * test of the phone check's tools. */
+export type PhoneToolSelection = "waits" | "tools";
+
 /** The xcodebuild arguments that choose one part's tests from the built test plan. */
-export function partSelection(name: string, waitsOnly = false): string[] {
+export function partSelection(name: string, only?: PhoneToolSelection): string[] {
   // INF-1083: prove the native clock in either mode without grading unrelated UI journeys.
-  if (waitsOnly) {
-    if (name !== "rest") throw new Error("Native wait-clock tests belong to the rest part");
-    return ["-only-testing:InfinitaryUITests/PhoneWaitsTests"];
+  if (only) {
+    if (name !== "rest") throw new Error("Native wait-clock and tool tests belong to the rest part");
+    return only === "waits" ? ["-only-testing:InfinitaryUITests/PhoneWaitsTests"]
+      : PHONE_TOOL_TESTS.map((test) => `-only-testing:${test}`);
   }
   const index = PHONE_PARTS.findIndex((part) => part.name === name);
   if (index < 0) throw new Error(`No phone journey part is named ${name}`);
   if (index < PHONE_PARTS.length - 1) return [`-only-testing:${partIdentifier(PHONE_PARTS[index]!)}`];
-  return PHONE_PARTS.slice(0, -1).map((part) => `-skip-testing:${partIdentifier(part)}`);
+  return [...PHONE_PARTS.slice(0, -1).map((part) => `-skip-testing:${partIdentifier(part)}`),
+    ...PHONE_TOOL_TESTS.map((test) => `-skip-testing:${test}`)];
 }
 
 /** Whether a part drives the app through a UI journey test, rather than running an app-hosted class alone. */
@@ -193,14 +212,16 @@ export function partTestStarted(name: string, output: string): boolean {
 }
 
 /** Exact repeat selectors retain the ordinary part when the change could not be read. */
-export function phoneTestSelection(part: string, tests: readonly string[] = [], waits = false): string[] {
-  const selection = partSelection(part, waits);
+export function phoneTestSelection(part: string, tests: readonly string[] = [], only?: PhoneToolSelection): string[] {
+  const selection = partSelection(part, only);
   if (!tests.length) return selection;
   const matches = (test: string, selected: string) => test === selected || test.startsWith(`${selected}/`);
   for (const test of tests) {
     if (!/^(?:InfinitaryTests|InfinitaryUITests)\/\w+\/test\w+$/.test(test)) throw new Error(`Invalid phone test: ${test}`);
     if (selection.some((arg) => arg.startsWith("-only-testing:") && !matches(test, arg.slice("-only-testing:".length))) ||
-      selection.some((arg) => arg.startsWith("-skip-testing:") && matches(test, arg.slice("-skip-testing:".length))))
+      selection.some((arg) => arg.startsWith("-skip-testing:") && matches(test, arg.slice("-skip-testing:".length)) &&
+        // INF-4241: a tool test the rest part skips is still the rest part's to run when its own code changed.
+        !(part === "rest" && (PHONE_TOOL_TESTS as readonly string[]).includes(arg.slice("-skip-testing:".length)))))
       throw new Error(`The ${part} part does not own ${test}`);
   }
   return tests.map((test) => `-only-testing:${test}`);
@@ -224,20 +245,6 @@ export function phoneJobs(devices: PhoneDevice[], parts: readonly string[] = PHO
   return PHONE_PARTS.filter((part) => parts.includes(part.name)).flatMap((part) => order
     .filter((device) => devices.includes(device) && partDevices(part.name).includes(device))
     .map((device) => ({ device, part: part.name })));
-}
-
-/** INF-1735's soak: each relaunch part runs ten dark/light relaunch pairs, twenty across the two parts
- * (PhoneJourney's testRelaunchPairsFirstTen and testRelaunchPairsSecondTen). */
-export const RELAUNCH_PAIRS_PER_PART = 10;
-
-/** How many relaunch pairs each relaunch part runs: every one unless a count is given. INF-2582 direction A:
- * a request on a branch gives 1, so it runs 2 of the 20 pairs, and the release check keeps all 20. */
-export function relaunchPairs(value: string | undefined): number {
-  if (value === undefined || value === "") return RELAUNCH_PAIRS_PER_PART;
-  const pairs = Number(value);
-  if (!Number.isInteger(pairs) || pairs < 1 || pairs > RELAUNCH_PAIRS_PER_PART)
-    throw new Error(`Relaunch pairs per part must be a whole number from 1 to ${RELAUNCH_PAIRS_PER_PART}, not ${value}`);
-  return pairs;
 }
 
 /** One part's run in a gate: its device, its part, and which pass of the gate it belongs to. */

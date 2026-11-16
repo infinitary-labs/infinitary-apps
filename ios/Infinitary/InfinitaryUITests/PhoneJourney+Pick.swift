@@ -18,8 +18,9 @@ extension PhoneJourney {
         let merge = try XCTUnwrap(merged["title"] as? String)
         let probe = app.descendants(matching: .any).matching(identifier: "menu-tap-probe").firstMatch
         XCTAssertTrue(probe.waitForPresence(timeout: 10), app.debugDescription)
-        // Four picks, each of the card not shown, so every pick that lands changes the heading.
-        for (round, title) in [merge, first, merge, first].enumerated() {
+        // Two picks, each of the card not shown, so every pick that lands changes the heading: the first redraw clears the
+        // notice and the second changes nothing. INF-4241 cut the third and fourth, which repeated the second.
+        for (round, title) in [merge, first].enumerated() {
             showCard(title)
             let counted = NSPredicate(format: "label BEGINSWITH %@", "\(round + 1) taps, ")
             XCTAssertEqual(waitForPhonePredicate(counted, object: probe, timeout: 10), .completed, probe.label)

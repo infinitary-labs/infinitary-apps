@@ -12,7 +12,6 @@ extension PhoneJourney {
         try await verifyMergeCard()
         try await verifyAnswerDone()
         try await verifyQuestionDismiss()
-        try await verifyDeferredStep()
         try await verifyAskedLine()
         try await verifyCardReadiness()
         try await verifySharedSeen()
@@ -66,12 +65,7 @@ extension PhoneJourney {
         XCTAssertTrue(cardHeading(titles[2]).waitForPresence(timeout: 10), "A middle close brings up the card after it")
         XCTAssertEqual(app.buttons["card-pager"].label, "2 of 3")
         picture("next-after-middle-close")
-        showCard(titles[3])
-        _ = try await home("close-titled", body: titles[3])
-        XCTAssertTrue(cardHeading(titles[3]).waitForAbsence(timeout: 10), app.debugDescription)
-        XCTAssertTrue(cardHeading(titles[2]).waitForPresence(timeout: 10), "Closing the last card brings up the one before it")
-        XCTAssertEqual(app.buttons["card-pager"].label, "2 of 2")
-        picture("next-after-last-close")
+        // INF-4241: closing the last card bringing up the one before it is PhoneCardDepartureTests', from the Mac's table.
     }
 
     /// INF-1610: a card about the captain's message names it under its title, as on the Mac.
@@ -220,15 +214,12 @@ extension PhoneJourney {
         XCTAssertTrue(cardHeading(title).waitForAbsence(timeout: 10), app.debugDescription)
         let aside = try await home("card-state", method: "GET")
         XCTAssertEqual((aside["mergeCard"] as? [String: Any])?["minimized"] as? Bool, true, "Put aside minimizes the card on the computer")
-        // The join note takes the stage and draws its body after its heading; a Tasks press while it still drew read
-        // Home on a busy iPad, as INF-1735's did after a relaunch, so the press waits for the note's drawn body.
+        // INF-4241: the card comes back through the Mac's show-card move; a row bringing back its task's card is read once,
+        // above, and the rows' rules are PhoneBoardTests'.
         let note = app.webViews.staticTexts["This card belongs to the disposable test home."].firstMatch
         XCTAssertTrue(note.waitForPresence(timeout: 10), app.debugDescription)
-        _ = waitForRedraw(app.scrollViews["card-scroll"].firstMatch, from: nil)
-        tab("Tasks")
-        let restore = app.buttons.matching(identifier: "task-\(try XCTUnwrap(fixture["taskId"] as? String))").firstMatch
-        XCTAssertTrue(restore.waitForPresence(timeout: 10), app.debugDescription)
-        tapOnPhone(restore)
+        _ = try await home("show-titled", body: title)
+        showCard(title)
         XCTAssertTrue(cardHeading(title).waitForPresence(timeout: 10), app.debugDescription)
         // A card that arrives while this one is read is counted beside the pager, not in a pill over the stage.
         // The first mate's new card replaces its earlier note, so the count is read as a count, not as a number.
@@ -325,7 +316,6 @@ extension PhoneJourney {
         XCTAssertEqual(noteDone.label, "Done")
         XCTAssertTrue(app.webViews.staticTexts[try XCTUnwrap(fixture["answerText"] as? String)].waitForPresence(timeout: 10), app.debugDescription)
         reveal(noteDone)
-        try await appearances("answer-note-done", showing: cardHeading(title))
         tapOnPhone(app.buttons["put-aside-card"])
         XCTAssertTrue(cardHeading(title).waitForAbsence(timeout: 10), app.debugDescription)
         // INF-2794: the minus only puts the answer aside; the card stays open and its task waits on the captain.
@@ -333,10 +323,10 @@ extension PhoneJourney {
         XCTAssertEqual(read["status"] as? String, "active")
         XCTAssertEqual(read["cardOpen"] as? Bool, true)
         XCTAssertEqual(read["ready"] as? Bool, true)
-        tab("Tasks")
-        let row = app.buttons.matching(identifier: "task-\(taskID)").firstMatch
-        tapOnPhone(row)
-        // The row brings the put-aside note back with its Done; its task key opens the record.
+        // The put-aside note comes back with its Done; its task key opens the record. INF-4241: it comes back through the
+        // Mac's show-card move, as a row's rules are PhoneBoardTests' and the merge card above reads a row bringing one back.
+        _ = try await home("show-titled", body: title)
+        showCard(title)
         XCTAssertTrue(cardHeading(title).waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertTrue(noteDone.waitForPresence(timeout: 10), app.debugDescription)
         let taskKey = app.buttons["card-task-key"]
@@ -344,7 +334,7 @@ extension PhoneJourney {
         tapOnPhone(taskKey)
         let done = app.buttons["record-answer-done"]
         XCTAssertTrue(done.waitForPresence(timeout: 10), app.debugDescription)
-        try await appearances("answer-record-done", showing: app.staticTexts["task-record-title"])
+        XCTAssertTrue(app.staticTexts["task-record-title"].waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertTrue(done.isHittable, app.debugDescription)
         let hide = app.buttons["close-record"]
         XCTAssertEqual(hide.label, try XCTUnwrap(fixture["hideLabel"] as? String))
@@ -353,15 +343,11 @@ extension PhoneJourney {
         let hidden = try await home("answer-note-state", body: "{\"taskId\":\"\(taskID)\"}")
         XCTAssertEqual(hidden["status"] as? String, "active", "Hiding the record never answers its task")
         XCTAssertEqual(hidden["ready"] as? Bool, true)
-        tab("Tasks")
-        try await appearances("saved-answer-in-tasks", showing: row)
-        // INF-3588: with no card put aside, the row shows the task's newest card, the answer note, on Home, as the Mac's
-        // row does; the record waits behind its task key.
-        tapOnPhone(row)
+        // INF-3588: with no card put aside, a row shows the task's newest card; INF-4241 leaves that to PhoneBoardTests'
+        // aRowShowsItsNewestCardOnTheStackWhenNoDecisionWaits. The task key opens the record under Tasks on an iPad, so
+        // Home is pressed again to read the note still waiting there.
+        tab("Home")
         XCTAssertTrue(cardHeading(title).waitForPresence(timeout: 10), app.debugDescription)
-        XCTAssertTrue(app.buttons["tab-home"].isSelected, "The row shows the answer note on Home")
-        XCTAssertFalse(app.staticTexts["task-record-title"].exists, "The row shows its newest card, not its record")
-        picture("answer-row-shows-note")
         tapOnPhone(taskKey)
         XCTAssertTrue(done.waitForPresence(timeout: 10), app.debugDescription)
         tapOnPhone(done)
@@ -416,7 +402,6 @@ extension PhoneJourney {
         XCTAssertTrue(dismiss.waitForPresence(timeout: 10), app.debugDescription)
         let hide = app.buttons["close-record"]
         XCTAssertEqual(hide.label, try XCTUnwrap(fixture["hideLabel"] as? String))
-        try await appearances("question-record-dismiss", showing: app.staticTexts["task-record-title"])
         tapOnPhone(hide)
         XCTAssertTrue(hide.waitForAbsence(timeout: 10), app.debugDescription)
         let hidden = try await home("question-record-state", body: stateBody)
@@ -447,27 +432,5 @@ extension PhoneJourney {
         tapOnPhone(hide)
         XCTAssertTrue(hide.waitForAbsence(timeout: 10), app.debugDescription)
         tab("Home")
-    }
-
-    /// INF-2928 piece 1, spec item 7's third check: a tap on the row of a required step put off with Not now shows its
-    /// card again on Home through the Mac's show-card move, as a click on the Mac's row does, rather than the record.
-    private func verifyDeferredStep() async throws {
-        let fixture = try await home("deferred-step-fixture")
-        let taskID = try XCTUnwrap(fixture["taskId"] as? String)
-        let title = try XCTUnwrap(fixture["title"] as? String)
-        tab("Tasks")
-        let row = app.buttons.matching(identifier: "task-\(taskID)").firstMatch
-        XCTAssertTrue(row.waitForPresence(timeout: 10), app.debugDescription)
-        tapOnPhone(row)
-        XCTAssertTrue(cardHeading(title).waitForPresence(timeout: 20), app.debugDescription)
-        XCTAssertTrue(app.buttons["tab-home"].isSelected, "The put-off step's card shows on Home")
-        XCTAssertFalse(app.staticTexts["task-record-title"].exists, "The row shows its card again, not its record")
-        picture("deferred-step-card")
-        let state = try await home("deferred-step-state", body: "{\"taskId\":\"\(taskID)\"}")
-        let runs = try XCTUnwrap(state["runs"] as? [[String: Any]])
-        XCTAssertEqual(runs.map { $0["move"] as? String }, ["show-card"], "One show-card move, the Mac's")
-        XCTAssertEqual((runs.first?["actor"] as? [String: Any])?["kind"] as? String, "captain")
-        tapOnPhone(app.buttons["put-aside-card"])
-        XCTAssertTrue(cardHeading(title).waitForAbsence(timeout: 10), app.debugDescription)
     }
 }

@@ -55,7 +55,6 @@ extension PhoneJourney {
         XCTAssertTrue(app.staticTexts["Live"].exists, "The computer's sheet says its reach")
         XCTAssertTrue(app.staticTexts["reached-address"].label.hasPrefix("127.0.0.1:"), "The sheet names the route reached, not the saved preference")
         XCTAssertTrue(app.buttons["leave"].exists)
-        try await appearances("computer-details", showing: app.staticTexts["home-name"])
         tapOnPhone(app.buttons["close-computer-details"])
         // INF-1062, the captain's pick: Settings at the bar's left is this phone's own sheet, with no Leave in it.
         try await pressPhoneKey(",", modifiers: .command, in: app)
@@ -70,22 +69,19 @@ extension PhoneJourney {
         XCTAssertTrue(general.waitForPresence(timeout: 10), app.debugDescription)
         // INF-3454: Integrations joins the list once the computer answers its connections, in the desktop's place.
         XCTAssertTrue(integrations.waitForPresence(timeout: 20), app.debugDescription)
-        // INF-3563: the five sections the computer answers join the list together, each in the desktop's place.
+        // INF-3563: the five sections the computer answers join the list together. INF-4241: their order, each in the
+        // desktop's place, is the settings-pages part's to read (testSettingsPages); the keys below need them listed.
         let computerSections = ["projects", "intelligence", "runbooks", "usage", "automation"].map { app.buttons["phone-settings-\($0)"] }
         for row in computerSections { XCTAssertTrue(row.waitForPresence(timeout: 20), app.debugDescription) }
-        let list = [general, appearance] + computerSections + [integrations, devicesSection]
-        for (above, below) in zip(list, list.dropFirst()) { XCTAssertLessThan(above.frame.maxY, below.frame.minY, "\(above.identifier) sits above \(below.identifier)") }
         XCTAssertFalse(app.staticTexts["app-version"].exists, "Version content lives on General, not the list")
         XCTAssertFalse(app.segmentedControls["phone-theme"].exists)
         XCTAssertFalse(app.buttons["leave"].exists)
-        try await appearances("phone-settings", showing: general)
         // The list starts on General. As PhoneKeys owns, Xcode emits the physical Return for LF, not CR.
         // Unmodified keys have no BackBoard registration; send each physical key once and prove its result.
         waitForSteadyTarget(general)
         app.typeKey("\n", modifierFlags: [])
         XCTAssertTrue(app.staticTexts["app-version"].waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertTrue(app.staticTexts["app-version"].label.hasPrefix("Version "), app.staticTexts["app-version"].label)
-        try await appearances("phone-settings-general", showing: app.staticTexts["app-version"])
         try await settingsBack()
         waitForSteadyTarget(appearance)
         app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: [])
@@ -94,7 +90,7 @@ extension PhoneJourney {
         try await phoneFoldSplit()
         try await settingsBack()
         XCTAssertTrue(app.staticTexts["Theme: Device"].exists, "The list reads the current saved choice")
-        XCTAssertTrue(app.staticTexts["Google: Not signed in"].exists, "The list reads the computer's Google state")
+        // INF-4241: the list's Google line is the google part's to read (testGoogleSignInAndOut).
         waitForSteadyTarget(integrations)
         // Down passes the five sections the computer answers (the settings-pages part opens them) to Integrations.
         for _ in 0...computerSections.count { app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: []) }
@@ -108,7 +104,6 @@ extension PhoneJourney {
         XCTAssertTrue(app.staticTexts[device].waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertTrue(app.staticTexts["Conversation stays on your computer."].exists)
         XCTAssertFalse(app.segmentedControls["phone-theme"].exists)
-        try await appearances("phone-settings-devices", showing: app.staticTexts[device])
         tapOnPhone(app.buttons["close-phone-settings"])
         XCTAssertTrue(app.buttons["close-phone-settings"].waitForAbsence(timeout: 10))
         let settings = app.buttons["phone-settings"]
@@ -119,16 +114,15 @@ extension PhoneJourney {
         XCTAssertLessThanOrEqual(strip[0].frame.maxX, strip[1].frame.minX); XCTAssertLessThanOrEqual(strip[1].frame.maxX, strip[2].frame.minX)
         XCTAssertLessThan(strip[2].frame.maxX, app.buttons["computer-details"].frame.minX, "The computer sits right of the strip")
         XCTAssertTrue(strip[0].isSelected, "Home is the lit tab")
-        let stripFrames = strip.map { $0.frame.integral }
         // INF-1541 piece 1: the card's heading redraws at the largest type before the strip is read against it.
         let heading = app.staticTexts["Your phone is reading your Mac"]
         let standard = waitForRedraw(heading, from: nil)
         _ = try await home("display-large", budget: displayBudget)
         let largest = waitForRedraw(heading, from: standard)
         XCTAssertTrue(waitForPhonePress(app.buttons["computer-details"]))
-        // INF-1062: the strip keeps the bar's own size at the largest standard type, so no word truncates and the
-        // bar's buttons stay where they were; growing words once truncated Activity and lost a tap on the computer.
-        XCTAssertEqual(strip.map { $0.frame.integral }, stripFrames, "The strip's words keep the bar's own size at the largest type")
+        // INF-1062: growing words once truncated Activity and lost a tap on the computer; the bar's computer stays
+        // pressable at the largest standard type. INF-4241: that the strip keeps the bar's own size through a change of
+        // type size is PhoneShellTests' testTabStripKeepsItsSizeFromLaunch.
         picture("cards-largest-standard-type")
         computerDetails()
         XCTAssertTrue(waitForPhonePress(app.buttons["leave"]))

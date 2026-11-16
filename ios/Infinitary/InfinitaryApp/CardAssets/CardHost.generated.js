@@ -13610,6 +13610,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `This card could not be read`;
   }
+  function cardQuickAnswer() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إجابة سريعة`;
+      case "de":
+        return `Schnelle Antwort`;
+      case "es":
+        return `Respuesta rápida`;
+      case "fr":
+        return `Réponse rapide`;
+      case "ja":
+        return `クイック回答`;
+      case "ko":
+        return `빠른 답변`;
+      case "pt-BR":
+        return `Resposta rápida`;
+      case "zh-Hans":
+        return `快速回答`;
+      case "zh-Hant":
+        return `快速回答`;
+      case "en-XA":
+        return `[Ǫûîçķ áñšŵéŕ ~~~~]`;
+      case "ar-XB":
+        return `‮Quick answer‬`;
+    }
+    return `Quick answer`;
+  }
   function cardRecordBodyTitle() {
     switch (currentLanguage()) {
       case "ar":
@@ -73671,6 +73698,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardPastMeta,
     cardPastSentLead,
     cardPastUnreadable,
+    cardQuickAnswer,
     cardRecordBodyTitle,
     cardRecordCare,
     cardRecordChecking,
@@ -76049,6 +76077,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardPastMeta": [],
     "cardPastSentLead": [],
     "cardPastUnreadable": [],
+    "cardQuickAnswer": [],
     "cardRecordBodyTitle": [],
     "cardRecordCare": ["care"],
     "cardRecordChecking": [],
@@ -78875,6 +78904,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
      * author's. Absent on a card about no message of theirs.
      */
     asked: cardAskedSchema.optional(),
+    /**
+     * The app's Quick answer mark (INF-4344, the captain's direction C of
+     * INF-4341): a crewmate's card from a task sorted as a quick answer
+     * (`isQuickAnswer`), which the chrome draws as a quiet chip after the kind
+     * chip. Host-computed on the stage's snapshot from the task's recorded
+     * kind, never stored on the row and never an author's.
+     */
+    quick: literal(true).optional(),
     /** Snapshot-only: the captain has seen an offer in this lifecycle, from card observations. */
     seen: boolean().optional(),
     /** Snapshot-only: the exact released update, distinct from its historical offer. */

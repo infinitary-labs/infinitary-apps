@@ -22,6 +22,7 @@ import type { TaskRecord } from "../storage/taskRecords";
 import { legacyStateOf, seedTask } from "../tasks/seedTask";
 import { taskFeedLine } from "../tasks/taskFeed";
 import { JOB_BOUND_MS } from "./idleLadder";
+import { RETRIEVAL_BOUNDARY_WORDS } from "./intentBrief";
 
 fakeCrewTimersEachTest();
 
@@ -409,9 +410,9 @@ describe("the task graph (R1)", () => {
       expect(crew.promptCalls[0]).toContain(
         "commit nothing, push nothing, and open no pull request",
       );
-      // It stops at what is on this computer, with Look deeper the way on.
-      expect(crew.promptCalls[0]).toContain("Stop at that boundary rather than reaching past it");
-      expect(crew.promptCalls[0]).toContain("makes Look deeper its default action");
+      // A quick answer's words (INF-4344): answer first, its closing line
+      // with Look deeper, and straight to research when it cannot answer.
+      expect(crew.promptCalls[0]).toContain(RETRIEVAL_BOUNDARY_WORDS);
       await supervisor.starts.dispatchQueuedTask(taskId);
       expect(classify).toHaveBeenCalledTimes(1);
     },

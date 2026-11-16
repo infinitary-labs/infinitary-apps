@@ -9,6 +9,7 @@ import {
   type InPlaceFacts,
   type InPlacePull,
   isAnswerKind,
+  isQuickAnswer,
   type WorkKind,
 } from "@shared/routingPolicy";
 import { RIGOR_WORDS } from "@shared/vocabulary";
@@ -575,21 +576,44 @@ export const ANSWER_MARK_WORDS =
 export function renderAnswerShapeSection(internalStep = false, kind?: WorkKind): string {
   const shape = answerShape(internalStep);
   // An internal step's answer goes to the next step, not to a card.
-  return kind === "retrieval" && !internalStep ? `${shape} ${RETRIEVAL_BOUNDARY_WORDS}` : shape;
+  return isQuickAnswer({ kind, internal_step: internalStep })
+    ? `${shape} ${RETRIEVAL_BOUNDARY_WORDS}`
+    : shape;
 }
 
 /**
- * A retrieval answer's boundary (INF-1430 piece 1): it was routed low to
- * read what this app can already read, so it stops where that ends rather than
- * reaching past it, and the captain's Look deeper is the way on - the
- * first mate starts a research step built on this answer. A crewmate never
- * climbs on its own: a stronger model stays the captain's move.
+ * A retrieval answer is the captain's quick answer (INF-1430 piece 1,
+ * INF-4344 from INF-4341's plan, the captain's direction C): it was routed
+ * low to read what this app can already read, so it answers the question
+ * from those sources first and stops where they end rather than reaching
+ * past them. The captain's Look deeper is the way on - the first mate
+ * starts a research step built on this answer - and an answer those
+ * sources cannot give at all goes to that research with no card (the
+ * captain's written-in answer). A crewmate never climbs on its own: the
+ * first mate starts the research step.
  */
 export const LOOK_DEEPER_LABEL = "Look deeper";
+/** The words the app's own mark on a quick answer's card says, and the crewmate's closing line begins with. */
+export const QUICK_ANSWER_MARK = "Quick answer";
+/** What a quick answer may read: what the app reads now, never the web (the captain's "No" to one web page). */
+export const QUICK_ANSWER_REACH_WORDS =
+  "Quick answer: this answer reads only what this app can already read - the code and its history, the task record, the docs, and the current state of the computers, checks and GitHub runs it connects to - and never the web.";
+/** The answer comes first: the question as asked, with how sure it is. */
+export const QUICK_ANSWER_FIRST_WORDS =
+  "The card's first sentence answers the captain's question as asked, with the best answer those sources support, and says how sure it is: a likely cause is stated as likely, with what would confirm it. Read every source the goal names that this reach covers before you answer.";
+/** Where it stops, and the one line that says what Look deeper adds. */
+export const QUICK_ANSWER_LINE_WORDS =
+  "Stop at work past that reach - a cause traced across past runs, a reproduction, a measurement, a computer the app does not reach or the web. When the answer stops short, the open card ends with one line that begins " +
+  `"${QUICK_ANSWER_MARK}." and says what you did not check and what ${LOOK_DEEPER_LABEL} would add, and makes ${LOOK_DEEPER_LABEL} its default action, which the first mate answers with a research step built on this answer. A complete answer offers no ${LOOK_DEEPER_LABEL}.`;
+/** No meaningful answer from these sources: no card, straight to the research step. */
+export const QUICK_ANSWER_STRAIGHT_DEEPER_WORDS =
+  "When these sources cannot give a meaningful answer to the question at all, show no card: report with needs_firstmate what you read, why it cannot answer, and the source the answer needs, and the first mate starts that research step at once, as if the captain had chosen " +
+  `${LOOK_DEEPER_LABEL}.`;
 export const RETRIEVAL_BOUNDARY_WORDS = [
-  "Retrieval: this answer reads only what this app can already read - the code and its history, the task record, the docs, and the current state of the computers, checks and GitHub runs it connects to.",
-  "Stop at that boundary rather than reaching past it: when the whole answer needs a cause traced across past runs, a reproduction, a measurement, a computer the app does not reach or the web, the card says what is established and what is not, names the source still needed, and makes " +
-    `${LOOK_DEEPER_LABEL} its default action, which the first mate answers with a research step built on this answer.`,
+  QUICK_ANSWER_REACH_WORDS,
+  QUICK_ANSWER_FIRST_WORDS,
+  QUICK_ANSWER_LINE_WORDS,
+  QUICK_ANSWER_STRAIGHT_DEEPER_WORDS,
 ].join(" ");
 
 function answerShape(internalStep: boolean): string {

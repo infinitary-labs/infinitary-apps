@@ -539,6 +539,7 @@ export function StackedCard({
         taskKey={task && !bare ? <CardTaskKey task={task} cardId={card.id} /> : undefined}
         meta={cardMetaWords(card.meta)}
         reviewFinding={Boolean(card.reviewTaskId)}
+        quick={card.quick}
         place={card.place}
         model={card.model}
         revised={card.changes ? revisedLine(card.changes) : undefined}

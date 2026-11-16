@@ -152,10 +152,11 @@ test("a bounded explanation requests low, reads its source and stays an answer a
     expect(
       bodies.some((body) => body.includes(KIND_CLASSIFIER_OPENING) && body.includes(answerOffer)),
     ).toBe(true);
+    // A body is raw request JSON, so the words are matched as JSON writes them (their quotes escaped).
+    const boundaryInJson = JSON.stringify(RETRIEVAL_BOUNDARY_WORDS).slice(1, -1);
     expect(
       bodies.some(
-        (body) =>
-          !body.includes(KIND_CLASSIFIER_OPENING) && body.includes(RETRIEVAL_BOUNDARY_WORDS),
+        (body) => !body.includes(KIND_CLASSIFIER_OPENING) && body.includes(boundaryInJson),
       ),
     ).toBe(true);
     if (evidence) {

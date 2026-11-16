@@ -101,6 +101,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | purge (task data) | effacer | "Effacer les données des tâches", "{count} tâches effacées"; plainer than "purger". |
 | push | pousser | GitHub's French docs say "pousser"; "Branche poussée". |
 | queued | en attente | |
+| Quick answer (a card's mark) | Réponse rapide | The chip on a quick answer's card. |
 | quota, rate limit (never said) | allocation de votre forfait | |
 | rail | colonne | Only in search words ("colonnes"); a plain word for the side column of panels. |
 | reach (another computer) | joindre | "Impossible de joindre {host}", "joint sur ce réseau"; never "atteindre". |

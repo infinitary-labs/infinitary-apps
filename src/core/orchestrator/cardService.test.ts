@@ -344,6 +344,47 @@ describe("CardService", () => {
     cards.dispose();
   });
 
+  // INF-4344 (the captain's direction C of INF-4341): a quick answer's card
+  // says it is quick, so Look deeper reads as the way to a fuller answer.
+  it("marks a crewmate's card from a quick answer task, and no research or step card", () => {
+    const { tasks, make } = setup();
+    const shapes = {
+      quick: { kind: "retrieval", deliverable: "answer" },
+      research: { kind: "research", deliverable: "answer" },
+      step: { kind: "retrieval", deliverable: "answer", internal_step: true },
+    } as const;
+    for (const [id, shape] of Object.entries(shapes))
+      seedTask(tasks, { id, title: `Why ${id}`, status: "running", shape });
+    const cards = make();
+    const emit = (taskId: string) =>
+      cards.emitCrewmateCard(
+        taskId,
+        {
+          title: "The checks failed on our size limit",
+          body: "<p>Our project's file-size check failed, not GitHub.</p>",
+          answering: true,
+          actions: [],
+        },
+        "Claude Sonnet 5.5",
+      );
+    const quick = emit("quick");
+    const research = emit("research");
+    const step = emit("step");
+    const firstmate = cards.addFirstmateCard({
+      title: "It picks the port",
+      body: "<p>It picks the port.</p>",
+      actions: [],
+      taskId: "quick",
+      aboutTask: true,
+    });
+    const shown = new Map(cards.snapshot().map((card) => [card.id, card]));
+    expect(shown.get(quick)?.quick).toBe(true);
+    for (const id of [research, step, firstmate]) expect(shown.get(id)).not.toHaveProperty("quick");
+    // The mark is the host's reading of the task's kind, never saved on the card.
+    expect(cards.stored(quick)).not.toHaveProperty("quick");
+    cards.dispose();
+  });
+
   // INF-2255: a check-watch refresh must derive one current strip per task,
   // not repeat its recorded checks for both the saved and shown revisions.
   it("shares settle facts across saved and shown revisions, then sees new checks and time", () => {

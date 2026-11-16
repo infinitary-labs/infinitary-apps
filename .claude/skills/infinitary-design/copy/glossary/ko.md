@@ -111,6 +111,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | push | 푸시 | "Pushed the branch" is 분기를 푸시했어요 |
 | queued / queue | 대기열 | |
 | Quick / Default / Careful | 빠르게 / 기본 / 신중하게 | |
+| Quick answer (a card's mark) | 빠른 답변 | The chip on a quick answer's card. |
 | quota, rate limit | (not used) | 사용 한도 instead |
 | rail | 레일 | Only in command search words |
 | Reasoning | 추론 | |

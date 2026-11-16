@@ -1,4 +1,5 @@
 import { CARD_LEAVE } from "@shared/cardLeave";
+import * as m from "@shared/i18n/messages.generated";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { Button } from "../core/Button";
@@ -72,6 +73,36 @@ describe("ResponseCard chrome", () => {
     );
     expect(plain).not.toContain("data-card-key");
     expect(plain).not.toContain(">·<");
+  });
+
+  // INF-4344 (the captain's direction C of INF-4341): a quick answer's card
+  // says it is quick right after its kind, and a card that is not says nothing.
+  it("draws the Quick answer mark after the kind chip only on a quick answer's card", () => {
+    const quick = renderToStaticMarkup(
+      <ResponseCard
+        kind="decision"
+        title="Our project caused it"
+        meta="INF-4304"
+        model="GPT-6 Sol"
+        quick
+      >
+        Our own file-size check failed.
+      </ResponseCard>,
+    );
+    const head = quick.match(
+      /Decision<\/span><span data-card-quick="" style="[^"]*"><span style="([^"]*)">([^<]*)<\/span><\/span>/,
+    );
+    expect(head?.[2]).toBe(m.cardQuickAnswer());
+    // The outline chip, not a control: no button and no Tab stop.
+    expect(head?.[1]).toContain("background:transparent");
+    expect(quick.indexOf("data-card-quick")).toBeLessThan(quick.indexOf("data-model-chip"));
+    const research = renderToStaticMarkup(
+      <ResponseCard kind="decision" title="Our project caused it" meta="INF-4305" model="GPT-6 Sol">
+        Our own file-size check failed.
+      </ResponseCard>,
+    );
+    expect(research).not.toContain("data-card-quick");
+    expect(research).not.toContain(m.cardQuickAnswer());
   });
 
   it("keeps real footer actions next to the leaving control", () => {

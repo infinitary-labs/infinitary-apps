@@ -57,6 +57,7 @@ The right column is the whole list of allowed forms; pick the one the sentence n
 | posture, delivery posture, direct-pr, local-only | how it is delivered: "as a pull request", "merged locally, no pull request" (pill "local merge"), "built in place". The record label is "Delivery" |
 | rigor, tier, quick / standard / reviewed (internal values) | the setting is "Rigor" ("Careful rigor" after a level, never "care"), with the labels "Quick", "Default", "Careful"; the reviewer's pass is "review" |
 | autonomy | "Merges on its own" / "Asks first"; the switch is "Ask before merging" |
+| retrieval, lookup, quick explanation, for an answer sorted to read only what the app reads now | a quick answer: the card's chip "Quick answer", and "Look deeper" for the research built on it (`components/cards/ResponseCard.prompt.md`, "The Quick answer mark") |
 | settle (as a verb about a task) | merge it, discard it, stop it - discard and drop are plain words and stay |
 | escalation, escalate, stronger model | "a stronger model", "try a stronger model" |
 | inbox, wake, [fm-op], steer, drain, tick | never shown; "told", "asked", "nudged" |

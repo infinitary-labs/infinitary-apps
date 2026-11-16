@@ -109,6 +109,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | purge (task data) | 清除 | Settings → General's button and its confirm; distinct from 移除 for a device. |
 | push | 推送 | |
 | queued | 排队中 | |
+| Quick answer (a card's mark) | 快速回答 | The chip on a quick answer's card. |
 | rail | 侧栏 | |
 | Reasoning | 推理 | Used instead of thinking level or effort. |
 | rebase merges, merge commits (the host's settings) | 变基合并、合并提交 | Named only as the settings where the project lives, in GitHub's own Simplified Chinese wording; the app's own action stays 更新到最新. |

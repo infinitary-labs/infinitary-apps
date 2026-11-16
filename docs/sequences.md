@@ -20,6 +20,7 @@ The goal names every source the answer needs, another computer included, because
 The first mate declares the kind on spawn or create; the classifier sorts only undeclared work, within the same answer/change branches.
 An answer that needs past runs compared, a computer the app does not reach, a reproduction, a measurement or the web is research or reproduce.
 When the captain chooses Look deeper on a retrieval answer's card, the first mate starts a read-only research step built on that answer, its goal naming the source the answer said was missing.
+When a retrieval crewmate reports that its sources hold no meaningful answer, the first mate starts that research step at once, with no card for the captain, and closes the retrieval as answered (INF-4344).
 
 The Lessons and Casual projects runbooks draw the line between lessons, projects and panels.
 Someone learning or practising a subject, including a math quiz, gets one ongoing task per subject on the personal workspace with `personal_ui` true and requested intelligence high; its brief names the lessons guide and cards (`docs/lessons.md`).

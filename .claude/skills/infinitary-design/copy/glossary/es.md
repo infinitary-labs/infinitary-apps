@@ -103,6 +103,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | purge (task data) | eliminar | "Eliminar los datos de las tareas", "{count} tareas eliminadas"; plainer than "purgar". |
 | push | insertar | GitHub's Spanish docs say "insertar" for git push: "Insertó la rama". |
 | queued | en cola | |
+| Quick answer (a card's mark) | Respuesta rápida | The chip on a quick answer's card. |
 | quota, rate limit (never said) | asignación de tu plan | |
 | rail | barra | The column of panels at a window's side; "barras" in command search words. |
 | reading (of an allowance) | lectura | From "leer": "leyendo…", "sin lectura de la asignación". |

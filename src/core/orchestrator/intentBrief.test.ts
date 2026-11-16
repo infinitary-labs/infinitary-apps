@@ -10,6 +10,11 @@ import {
   deliverableFor,
   LOOK_DEEPER_LABEL,
   parseSpawnIntent,
+  QUICK_ANSWER_FIRST_WORDS,
+  QUICK_ANSWER_LINE_WORDS,
+  QUICK_ANSWER_MARK,
+  QUICK_ANSWER_REACH_WORDS,
+  QUICK_ANSWER_STRAIGHT_DEEPER_WORDS,
   REVIEW_FIX_RULES,
   renderAnswerShapeSection,
   renderBasisSection,
@@ -615,16 +620,28 @@ describe("the answer-shape section (contract v3.6, captain lock 2; Task B)", () 
   });
 });
 
-// INF-1430 piece 1: a retrieval answer stops at what the app can already read and
-// offers Look deeper as the way on, never climbing on its own.
-describe("a retrieval answer's boundary", () => {
-  it("tells a retrieval crewmate to stop at the boundary with Look deeper the default", () => {
+// INF-1430 piece 1, rewritten by INF-4344 (the captain's direction C of
+// INF-4341): a quick answer answers the question first from what the app can
+// already read, ends a short answer with its Quick answer line and Look
+// deeper, and goes straight to research when its sources hold no answer.
+describe("a quick answer's instructions", () => {
+  const QUICK_WORDS = [
+    QUICK_ANSWER_REACH_WORDS,
+    QUICK_ANSWER_FIRST_WORDS,
+    QUICK_ANSWER_LINE_WORDS,
+    QUICK_ANSWER_STRAIGHT_DEEPER_WORDS,
+  ];
+
+  it("tells a retrieval crewmate to answer first, mark a short answer and go deeper when it cannot", () => {
     const section = renderAnswerShapeSection(false, "retrieval");
-    expect(section).toContain("this answer reads only what this app can already read");
-    expect(section).toContain("Stop at that boundary rather than reaching past it");
-    expect(section).toContain("says what is established and what is not");
-    expect(section).toContain("names the source still needed");
-    expect(section).toContain(`makes ${LOOK_DEEPER_LABEL} its default action`);
+    for (const words of QUICK_WORDS) expect(section).toContain(words);
+    // The order the plan settled: reach, answer, stop with its line, no card.
+    const at = QUICK_WORDS.map((words) => section.indexOf(words));
+    expect(at).toEqual([...at].sort((a, b) => a - b));
+    expect(QUICK_ANSWER_LINE_WORDS).toContain(`begins "${QUICK_ANSWER_MARK}."`);
+    expect(QUICK_ANSWER_LINE_WORDS).toContain(`makes ${LOOK_DEEPER_LABEL} its default action`);
+    // The captain's "No" to one web page: the web stays past the reach.
+    expect(QUICK_ANSWER_REACH_WORDS).toContain("never the web");
   });
 
   it("leaves research, and a retrieval step handed to the next step, without it", () => {
@@ -634,6 +651,7 @@ describe("a retrieval answer's boundary", () => {
       renderAnswerShapeSection(true, "retrieval"),
     ]) {
       expect(section).not.toContain(LOOK_DEEPER_LABEL);
+      for (const words of QUICK_WORDS) expect(section).not.toContain(words);
     }
   });
 });

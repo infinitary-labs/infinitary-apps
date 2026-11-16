@@ -1244,6 +1244,14 @@ export const cardSchema = z.strictObject({
    * author's. Absent on a card about no message of theirs.
    */
   asked: cardAskedSchema.optional(),
+  /**
+   * The app's Quick answer mark (INF-4344, the captain's direction C of
+   * INF-4341): a crewmate's card from a task sorted as a quick answer
+   * (`isQuickAnswer`), which the chrome draws as a quiet chip after the kind
+   * chip. Host-computed on the stage's snapshot from the task's recorded
+   * kind, never stored on the row and never an author's.
+   */
+  quick: z.literal(true).optional(),
   /** Snapshot-only: the captain has seen an offer in this lifecycle, from card observations. */
   seen: z.boolean().optional(),
   /** Snapshot-only: the exact released update, distinct from its historical offer. */

@@ -47,7 +47,7 @@ An answer that needs a computer the app does not reach, a cause traced across pa
 Reading that state now - which job is running or waiting its turn, whether a running job is stuck, what a setting or label says - can be retrieval; finding out why something got slow, failed or restarted across past runs is research.
 The dominant-effort rule applies only after retrieval is excluded.
 “Read-only,” “simple” and “quick” are not shortcuts to this verdict; uncertain boundaries answer `unclear` and request high.
-A retrieval crewmate's brief tells it to stop at that boundary: its card says what is and is not established, names the source still needed, and makes Look deeper the default (`renderAnswerShapeSection`).
+A retrieval crewmate's brief tells it to answer the question as asked first, saying how sure it is, and to stop at that boundary: a short answer ends with its "Quick answer." line and makes Look deeper the default, and an answer its sources cannot give goes to research with no card (`renderAnswerShapeSection`, INF-4344).
 R10 requests low for retrieval; for work the first mate commissioned the kind never decides the deliverable, which only the typed `read-only` constraint makes an answer (`docs/delivery-rigor.md`, "The deliverable axis").
 An older task's saved classification is not rewritten.
 

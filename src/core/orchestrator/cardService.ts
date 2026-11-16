@@ -30,6 +30,7 @@ import {
   onStage,
   type PastCard,
 } from "@shared/cards";
+import { isQuickAnswer } from "@shared/routingPolicy";
 import { shortTaskTitle } from "@shared/taskTitle";
 import { decidedCardWidth } from "../pi/cardWidth";
 import type { EmittedCardInput } from "../session/tools";
@@ -599,7 +600,11 @@ export class CardService {
           : false,
       };
       const about = this.askedAbout(shown, asked);
-      return { ...shown, ...(about ? { asked: about } : {}) };
+      return {
+        ...shown,
+        ...(about ? { asked: about } : {}),
+        ...(this.quickAnswer(shown) ? { quick: true as const } : {}),
+      };
     });
   }
 
@@ -617,6 +622,16 @@ export class CardService {
       return;
     if (!this.evidence.noteUpdateSeen(shown, lifecycleId, shown.offerId, updateId)) return;
     this.scheduleBroadcast();
+  }
+
+  /**
+   * Whether a card wears the app's Quick answer mark (INF-4344): a
+   * crewmate's card whose task was sorted as a quick answer, read from the
+   * task's recorded kind (`isQuickAnswer`), never from the card's words.
+   */
+  private quickAnswer(card: Card): boolean {
+    if (card.author !== "crewmate" || !card.taskId) return false;
+    return isQuickAnswer(this.host.tasks.get(card.taskId)?.shape);
   }
 
   /**

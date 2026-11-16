@@ -297,6 +297,7 @@
 "cardPastMeta" = "frühere Karte";
 "cardPastSentLead" = "Mit deiner Wahl gesendet:";
 "cardPastUnreadable" = "Diese Karte konnte nicht gelesen werden";
+"cardQuickAnswer" = "Schnelle Antwort";
 "cardRecordBodyTitle" = "Inhalt des Aufgabenprotokolls";
 "cardRecordCare" = "Sorgfalt: %1$@";
 "cardRecordChecking" = "Wird geprüft, ob sie gestartet ist";

@@ -1026,6 +1026,13 @@ private struct PhoneCardPane: View {
                     if card.reviewTaskId != nil {
                         Text(PhoneCardWords.reviewFinding).font(PhoneFont.caption).foregroundStyle(PhoneTheme.warning)
                     }
+                    // INF-4344: the app's Quick answer mark on a crewmate's card from a task sorted as a quick answer.
+                    if card.value["quick"].flag {
+                        Text(PhoneMessages.cardQuickAnswer()).font(PhoneFont.micro).foregroundStyle(PhoneTheme.secondary)
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .overlay { Capsule().strokeBorder(PhoneTheme.line) }
+                            .accessibilityIdentifier("card-quick")
+                    }
                     if let task {
                         Button(task.key) { onTask(task.key) }
                             .font(PhoneFont.mono).foregroundStyle(PhoneTheme.secondary).buttonStyle(.plain)

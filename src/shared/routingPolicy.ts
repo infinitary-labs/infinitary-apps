@@ -51,6 +51,19 @@ export const workKindSchema = z.enum([
 export type WorkKind = z.infer<typeof workKindSchema>;
 
 /**
+ * Whether a task is the captain's quick answer (INF-4344, from INF-4341's
+ * plan): retrieval, and not an internal step whose answer goes to the next
+ * step rather than to a card. Its crewmate's brief carries the quick
+ * answer's words (`renderAnswerShapeSection`) and its cards wear the app's
+ * Quick answer mark (`Card.quick`); both read this one fact.
+ */
+export function isQuickAnswer(
+  shape: { kind?: WorkKind; internal_step?: boolean } | null | undefined,
+): boolean {
+  return shape?.kind === "retrieval" && shape.internal_step !== true;
+}
+
+/**
  * What a piece of work DELIVERS (the deliverable axis, crew-posture
  * rationalization Task B, captain F1 A of 2026-09-20). Orthogonal to the
  * kind and to the tier: an `answer` task finds something out and lands one

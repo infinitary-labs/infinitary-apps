@@ -10,6 +10,12 @@ export interface ResponseCardProps {
    */
   kind?: "decision" | "note" | "attention" | "working" | "record" | "ended";
   title?: React.ReactNode;
+  /**
+   * The Quick answer mark: a quiet outline chip "Quick answer" right after the kind chip on a
+   * crewmate's card from a task sorted as a quick answer (`ResponseCard.prompt.md`). The app sets
+   * it from the task's kind; it is never cut short and never a control.
+   */
+  quick?: boolean;
   /** Small mono metadata, e.g. "2m ago · crewmate 4". */
   meta?: React.ReactNode;
   /**

@@ -111,6 +111,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | push | pushen | "Den Branch gepusht", as GitHub's German docs say it. |
 | queued | eingereiht | |
 | Queued (board lane) | Eingereiht | |
+| Quick answer (a card's mark) | Schnelle Antwort | The chip on a quick answer's card. |
 | rail | Leiste | |
 | Reasoning | Denkaufwand | |
 | rebase merges, merge commits (the host's settings) | Rebase-Merges, Merge-Commits | Named only as the settings where the project lives, as GitHub's German docs say them; the app's own action stays "auf den neuesten Stand bringen". |

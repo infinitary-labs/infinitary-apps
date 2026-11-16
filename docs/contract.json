@@ -11406,6 +11406,10 @@
                 "text"
               ]
             },
+            "quick": {
+              "type": "boolean",
+              "const": true
+            },
             "seen": {
               "type": "boolean"
             },
@@ -12801,6 +12805,10 @@
                   "at",
                   "text"
                 ]
+              },
+              "quick": {
+                "type": "boolean",
+                "const": true
               },
               "seen": {
                 "type": "boolean"
@@ -74138,6 +74146,10 @@
                 "at",
                 "text"
               ]
+            },
+            "quick": {
+              "type": "boolean",
+              "const": true
             },
             "seen": {
               "type": "boolean"

@@ -39,6 +39,13 @@ export type ResponseCardProps = {
   taskKey?: React.ReactNode;
   /** Host-validated review attribution, separate from the decision kind. */
   reviewFinding?: boolean;
+  /**
+   * The Quick answer mark (INF-4344): a quiet outline chip right after the
+   * kind chip on a crewmate's card from a task sorted as a quick answer
+   * (design skill `components/cards/ResponseCard.prompt.md`, "Quick
+   * answer"). Never cut short and never a control.
+   */
+  quick?: boolean;
   /** Mono metadata line: relative time, crewmate ref. */
   meta?: string;
   /**
@@ -202,6 +209,7 @@ export function ResponseCard({
   titleWords,
   taskKey,
   reviewFinding,
+  quick,
   meta,
   place,
   model,
@@ -278,6 +286,11 @@ export function ResponseCard({
                 <Badge tone="warn" style={{ flexShrink: 0 }}>
                   {m.cardReviewFinding()}
                 </Badge>
+              )}
+              {quick && (
+                <span data-card-quick="" style={{ display: "inline-flex", flexShrink: 0 }}>
+                  <Badge tone="outline">{m.cardQuickAnswer()}</Badge>
+                </span>
               )}
               {headExtra}
               {(taskKey || meta || place || model) && (

@@ -297,6 +297,7 @@
 "cardPastMeta" = "بطاقة سابقة";
 "cardPastSentLead" = "أُرسل مع اختيارك:";
 "cardPastUnreadable" = "تعذّرت قراءة هذه البطاقة";
+"cardQuickAnswer" = "إجابة سريعة";
 "cardRecordBodyTitle" = "نص سجل المهمة";
 "cardRecordCare" = "العناية: %1$@";
 "cardRecordChecking" = "جارٍ التحقق مما إذا كانت قد بدأت";

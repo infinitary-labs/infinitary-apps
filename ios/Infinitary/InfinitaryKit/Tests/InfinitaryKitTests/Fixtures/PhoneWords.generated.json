@@ -323,6 +323,7 @@
   {"said":{"m":"cardPastMeta"},"words":"past card"},
   {"said":{"m":"cardPastSentLead"},"words":"Sent with your choice:"},
   {"said":{"m":"cardPastUnreadable"},"words":"This card could not be read"},
+  {"said":{"m":"cardQuickAnswer"},"words":"Quick answer"},
   {"said":{"m":"cardRecordBodyTitle"},"words":"Task record body"},
   {"said":{"m":"cardRecordCare","a":{"care":"‹care›"}},"words":"‹care› rigor"},
   {"said":{"m":"cardRecordChecking"},"words":"Checking whether it started"},

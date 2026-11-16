@@ -105,6 +105,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | purge (task data) | 清除 | Settings → General's button and its confirm; distinct from 移除 for a device. |
 | push | 推送 | Standard. |
 | queued | 排入佇列 | Taiwan writes 佇列 for a queue; 队列 is mainland. |
+| Quick answer (a card's mark) | 快速回答 | The chip on a quick answer's card. |
 | quota, rate limit (never said) | 方案額度 | Never 配額. |
 | rail | 側欄 | Used in command search words. |
 | reading (of the allowance) | 讀數 / 讀取 | The noun is 讀數 and the verb 讀取, as in 尚未讀取. |

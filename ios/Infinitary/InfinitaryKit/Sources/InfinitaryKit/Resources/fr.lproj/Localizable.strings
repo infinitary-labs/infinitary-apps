@@ -297,6 +297,7 @@
 "cardPastMeta" = "carte passée";
 "cardPastSentLead" = "Envoyé avec votre choix :";
 "cardPastUnreadable" = "Cette carte n’a pas pu être lue";
+"cardQuickAnswer" = "Réponse rapide";
 "cardRecordBodyTitle" = "Corps de la fiche de la tâche";
 "cardRecordCare" = "Soin : %1$@";
 "cardRecordChecking" = "Vérification du démarrage";

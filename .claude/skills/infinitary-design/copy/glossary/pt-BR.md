@@ -95,6 +95,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | purge (task data) | excluir | "Excluir dados das tarefas", "{count} tarefas excluídas"; plainer than "purgar". |
 | push | push, fazer push | As in GitHub's Portuguese docs: "Fez push do branch". |
 | queued | na fila | "Enter põe na fila". |
+| Quick answer (a card's mark) | Resposta rápida | The chip on a quick answer's card. |
 | quota, rate limit, usage (avoided) | franquia | |
 | rail | barra lateral | The column of panels at a window's side. |
 | reach (another computer) | alcançar | "Não foi possível alcançar o {host}", matching "fora de alcance". |

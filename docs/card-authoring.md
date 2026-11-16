@@ -1227,6 +1227,22 @@ The visual rules are the design skill's (`components/cards/ResponseCard.prompt.m
 
 Tests: `taskService.capture.test.ts` "finds the captain's message a task's cards are about through the task graph", `taskOrigin.test.ts` (one chain per real card INF-2299 replayed, and INF-3650's first-mate-started change), `turnOrigins.test.ts`, `firstmateAgent.capture.test.ts` "saves the automation run or report a filing answered as the work's origin" and "keeps the captain's words a report passed on as the origin of work filed from it", `captainOverrides.test.ts` "reads the words a report passes on with when they were typed, and refuses where there are none", `crewTurns.whoseTurn.test.ts` "keeps the captain's approval words a relay names, with when he typed them", `cardService.test.ts` "puts the captain's message on each card about it", `cardTool.test.ts` "carries the answering mark", `src/renderer/src/cards/askedWords.test.ts`, the browser test `tests/browser/card-asked-line.test.tsx` (a short message whole, a long one in two lines that opens from the keyboard with its paragraphs and folds again, then an automation, a click and a task), the phone's `CardValuesTests` and `PhoneJourney`'s asked line.
 
+## The Quick answer mark
+
+INF-4344, the captain's direction C on INF-4341's plan for more useful quick answers: a quick answer's card says it is quick, and its own closing line says what Look deeper adds.
+The visual rules are the design skill's (`components/cards/ResponseCard.prompt.md`, the Quick answer mark).
+
+- **From the task's kind, never the card's words.**
+  The snapshot carries `Card.quick` on a crewmate's card whose task `isQuickAnswer` (retrieval, and not an internal step), read by `CardService.snapshot` from the task's recorded shape and never stored on the card.
+  A first mate card, the app's own card and a card from any other kind of task carry none.
+- **Where it shows.**
+  The desktop's card head draws it right after the kind chip (`ResponseCard`'s `quick`), and the phone's card head right after its kind label.
+  A past card's own strip draws no model chip and no mark.
+- **What the crewmate writes.**
+  The quick crewmate's brief (`renderAnswerShapeSection`) asks for the answer in the card's first sentence, a closing line beginning "Quick answer." when the answer stops short, and no card at all when its sources hold no meaningful answer, which goes to the first mate as a report and starts research at once.
+
+Tests: `cardService.test.ts` "marks a crewmate's card from a quick answer task, and no research or step card", `ResponseCard.test.tsx` "draws the Quick answer mark after the kind chip only on a quick answer's card", `intentBrief.test.ts` "a quick answer's instructions".
+
 ## Revision links in the thread
 
 Each revised thread line keeps links for that revision alone, comparing its saved offer with its immediate predecessor, separately from the since-last-seen line and bars above.

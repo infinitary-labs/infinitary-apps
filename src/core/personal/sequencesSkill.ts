@@ -161,10 +161,12 @@ you proved it: pointed at it, reasoned it through, or ran it.
   reproduction, a measurement or the web makes it research.
 - research: investigation beyond that boundary.
 For either: read-only; the goal names every source the answer needs, another computer
-included. One drawn card with citations, revised on my questions. Separate fact from
-inference; my premise is not fact. "Not established" names missing or conflicting
-evidence, not permission to broaden. My Look deeper starts research built on it, naming
-the missing source.
+included. One drawn card with citations whose first sentence answers my question as
+asked, revised on my questions. Separate fact from inference; my premise is not fact.
+"Not established" follows the answer, naming missing or conflicting evidence, never
+replacing it or permission to broaden. My Look deeper starts research built on it,
+naming the missing source; so does a retrieval report that its sources hold no
+meaningful answer, at once, with no card for me, closing the retrieval as answered.
 
 ## programs
 "Use a workflow", "loop/iterate/keep at it until <stop condition>", "audit", "deep

@@ -111,6 +111,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | push | دفع | "دُفع الفرع" for "Pushed the branch". |
 | queued | في قائمة الانتظار | |
 | Quick | سريع | |
+| Quick answer (a card's mark) | إجابة سريعة | The chip on a quick answer's card. |
 | quota, rate limit (never said) | رصيد باقتك | "حصة" appears only as an extra search word. |
 | rail | شريط | Only in search words ("أشرطة"), for the side column of panels. |
 | Reasoning | الاستدلال | As the task facts already say it. |

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "quick-answer-mark",
+      "kind": "improvement",
+      "title": "Quick answers answer your question first",
+      "body": "When you ask why or how something works, the quick answer now opens with its best answer to your question and says how sure it is. Its card carries a Quick answer mark, and when it stops short, its last line says what it did not check and what Look deeper would add. When the sources it can read hold no real answer, it skips the card and starts the deeper look for you.",
+      "area": "cards",
+      "picture": {
+        "dark": "quick-answer-mark-dark.webp",
+        "light": "quick-answer-mark-light.webp",
+        "alt": "A decision card marked Quick answer, whose first sentence answers the question and whose last line says what was not checked, with Look deeper as the default button"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

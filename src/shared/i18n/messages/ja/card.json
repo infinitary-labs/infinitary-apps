@@ -113,6 +113,7 @@
   "cardPastMeta": "過去のカード",
   "cardPastSentLead": "選択と一緒に送信：",
   "cardPastUnreadable": "このカードを読み取れませんでした",
+  "cardQuickAnswer": "クイック回答",
   "cardRecordBodyTitle": "タスク記録の本文",
   "cardRecordCare": "慎重さ：{care}",
   "cardRecordChecking": "開始したか確認中",

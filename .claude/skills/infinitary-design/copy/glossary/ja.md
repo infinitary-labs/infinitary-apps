@@ -117,6 +117,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | push | プッシュ | 「ブランチをプッシュしました」. |
 | queued | 待機中 | The Queued lane. |
 | Quick | クイック | Rigor level. |
+| Quick answer (a card's mark) | クイック回答 | The chip on a quick answer's card. |
 | rail | パネル列 | The column of panels; レール would be opaque. |
 | reading (of the allowance) | 読み取り | As in 「読み取り中…」 and 「利用枠の読み取りなし」. |
 | Reasoning | 推論 | The fact strip's label. |

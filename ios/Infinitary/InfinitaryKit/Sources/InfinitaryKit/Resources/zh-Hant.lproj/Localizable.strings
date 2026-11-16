@@ -297,6 +297,7 @@
 "cardPastMeta" = "過去的卡片";
 "cardPastSentLead" = "隨你的選擇送出：";
 "cardPastUnreadable" = "無法讀取這張卡片";
+"cardQuickAnswer" = "快速回答";
 "cardRecordBodyTitle" = "任務紀錄內文";
 "cardRecordCare" = "謹慎度：%1$@";
 "cardRecordChecking" = "正在確認是否已開始";

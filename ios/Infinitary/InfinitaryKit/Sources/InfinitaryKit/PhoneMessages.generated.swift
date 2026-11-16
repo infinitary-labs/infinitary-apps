@@ -313,6 +313,7 @@ public enum PhoneMessages {
     public static func `cardPastMeta`() -> String { PhoneWords.format("cardPastMeta", []) }
     public static func `cardPastSentLead`() -> String { PhoneWords.format("cardPastSentLead", []) }
     public static func `cardPastUnreadable`() -> String { PhoneWords.format("cardPastUnreadable", []) }
+    public static func `cardQuickAnswer`() -> String { PhoneWords.format("cardQuickAnswer", []) }
     public static func `cardRecordBodyTitle`() -> String { PhoneWords.format("cardRecordBodyTitle", []) }
     public static func `cardRecordCare`(`care`: String) -> String { PhoneWords.format("cardRecordCare", [`care`]) }
     public static func `cardRecordChecking`() -> String { PhoneWords.format("cardRecordChecking", []) }
@@ -3656,6 +3657,7 @@ extension PhoneWords {
         "cardPastMeta": [],
         "cardPastSentLead": [],
         "cardPastUnreadable": [],
+        "cardQuickAnswer": [],
         "cardRecordBodyTitle": [],
         "cardRecordCare": ["care"],
         "cardRecordChecking": [],

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "kept-merge-no-second-ask",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "After you click Merge, your first mate stops asking you to merge again",
+      "body": "Once you click Merge on a change, your first mate no longer asks you to merge it again or to put its merge card back up while the change waits. It merges by itself once its checks pass.",
+      "noPicture": "Nothing on screen changes: the first mate is now told that your Merge click still stands while the change waits.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -882,6 +882,14 @@ export const FAILED_BATCH_NOTE =
   "The change was the only one in its batch, and the batch's checks failed. Merge anyway could do nothing there, so never offer or ask for it: the crewmate reads the failed checks on the batch's pull request and fixes the cause in a new version, which joins the batch again once approved.";
 
 /**
+ * The sentence every first mate message about a kept approval opens with:
+ * the note beside its wait and the refusal of the first mate's own merge
+ * while it stands (INF-4525).
+ */
+export const KEPT_APPROVAL_WORDS =
+  "The captain's merge approval is KEPT: the host merges by itself once the gates pass, so do not ask the captain to merge again or to put up a new card.";
+
+/**
  * What the Firstmate is told beside a wait on a kept approval: who moves
  * next, and that the captain is not asked for a second click. A checks wait
  * on a failed batch check carries what clears it (`batchNote`, INF-3208); a
@@ -897,8 +905,7 @@ export function keptNote(
   batchNote?: string,
   skip?: PrOutcome["skip"],
 ): string {
-  const kept =
-    "The captain's merge approval is KEPT: the host merges by itself once the gates pass, so do not ask the captain to merge again or to put up a new card.";
+  const kept = KEPT_APPROVAL_WORDS;
   const declare = `When the crewmate pushes a new version - brought up to date, or a fix for what stopped the merge - it declares the repair with check_change conflictRepair from ${head}: impact none keeps the approval; changed-work ends it and it puts up a new merge card.`;
   switch (wait) {
     case "conflict":

@@ -3,13 +3,16 @@
  * never general consent. Drive the real click/citation/declaration and merge
  * gate against the existing disposable project and forge fixture. No service
  * merge is sent. Scoped approval/repair execution stays owned by the kept-merge
- * tests; this file owns rejection of the duplicate override route.
+ * tests; this file owns rejection of the duplicate override route, and the
+ * merge refusal that must not invite it while the click's approval stands
+ * (INF-4525).
  */
-import { type HoldOverride, standingOverride } from "@shared/holds";
+import { type HoldOverride, softHoldWords, standingOverride } from "@shared/holds";
 import { describe, expect, it, vi } from "vitest";
 import { fakeCrewTimersEachTest } from "../../../tests/helpers/crewHarness";
 import { approved, REPAIRED } from "../../../tests/helpers/crewHarnessGit";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
+import { KEPT_APPROVAL_WORDS } from "./mergeAuthorization";
 import { mergeGate } from "./settleRefusals";
 
 fakeCrewTimersEachTest();
@@ -58,6 +61,24 @@ describe("ordinary merge clicks are not general consent (INF-3284)", () => {
       }
     }
     expect(standingOverride(h.tasks.get(h.taskId)?.delivery)).toEqual(spoken);
+    expect(h.forge.sends).toBe(0);
+  });
+
+  // INF-4525, the captain's pick on the weekly reach audit ("fix its
+  // refusal words now"): the first mate's own merge under autonomy off,
+  // while the click's approval stands, hears that the host merges it, and
+  // is invited to neither a merge card nor an override from the click.
+  it("refuses the first mate's merge under the kept approval without asking for a card or a click override", async () => {
+    const h = await clicked();
+    expect(h.supervisor.facts.taskAutonomy(h.taskId)).toBe(false);
+    const result = await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr");
+    expect(result.refusal).toMatchObject({ refused: "autonomy-off", ways: [] });
+    expect(result.text).toContain("is not yours to do: autonomy is off for this task");
+    expect(result.text).toContain(KEPT_APPROVAL_WORDS);
+    expect(result.text).toContain(`waits on checks at ${h.authorization()?.waiting?.head}`);
+    expect(result.text).not.toContain(softHoldWords("asks-first", "firstmate"));
+    // The refusal moved nothing: the approval still stands and nothing was sent.
+    expect(h.authorization()).toMatchObject({ status: "standing", issuer: "captain" });
     expect(h.forge.sends).toBe(0);
   });
 

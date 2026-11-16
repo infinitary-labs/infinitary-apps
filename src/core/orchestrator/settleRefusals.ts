@@ -3,9 +3,14 @@ import { fixedHoldWords, overridePasses, softHoldWords } from "@shared/holds";
 import { opensPullRequest } from "@shared/repos";
 import { MERGE_WORDS, mergeWordsFor } from "@shared/vocabulary";
 import { signInRefusal } from "../forge";
-import type { TaskRecord } from "../storage/taskRecords";
+import type { MergeAuthorization, TaskRecord } from "../storage/taskRecords";
 import type { SettleRefusal, SettleWay } from "../tasks/taskGraph";
-import { mergeHold } from "./mergeAuthorization";
+import {
+  candidateHead,
+  KEPT_APPROVAL_WORDS,
+  mergeHold,
+  standingApprovals,
+} from "./mergeAuthorization";
 import type { OpenMergeAction, SettleServiceHost } from "./settleHost";
 import { unlandedWorkText } from "./settleWords";
 import { mergesInOwnBatch } from "./workShape";
@@ -167,7 +172,10 @@ export type MergeActor = "captain" | "firstmate" | "app";
  * whatever autonomy says (FI3-304): only his new click merges it. The one
  * way out the refusal names is the button it is already sitting on: the
  * merge card's merge action, by card id and action id. With no such card
- * open, the text says whose card is owed instead.
+ * open, the text says whose card is owed instead - or, when the captain's
+ * click already approved this merge and that approval stands, that the
+ * host merges it once the gates pass and that the click is no override
+ * (INF-4525, INF-3284): nothing is owed and no way is named.
  */
 export function mergeGate(
   host: RefusalHost,
@@ -203,16 +211,31 @@ export function mergeGate(
     open && !open.held
       ? [{ label: open.label, card: { id: open.cardId, action: open.actionId } }]
       : [];
-  const pointer = open?.held
-    ? `The merge card "${open.cardTitle}" is on the stack without its "${open.label}" button, because its change moved on after it went up; it waits for its crewmate to bring it to the current change, and that click will be the captain's to make. Nothing further is needed from you.`
-    : open
-      ? `The merge card "${open.cardTitle}" is on the stack with its "${open.label}" button: that click is the merge, and it is the captain's to make. Nothing further is needed from you.`
-      : "The captain merges it from the crewmate's merge card; steer the crewmate to emit one if it has not.";
   const why = hold
     ? `the captain's merge approval ended because ${hold}, so the merge is theirs again`
     : asks
       ? `its crewmate asked the captain to decide this merge: ${asks}`
       : `autonomy is off for this task (${standing})`;
+  // The captain's click already approved this merge (INF-4525): the host
+  // runs it, so no card is owed, and the click passes no hold.
+  const kept = !hold && !open && actor === "firstmate" ? keptByCaptain(record, scope) : undefined;
+  if (kept) {
+    const waits = kept.waiting
+      ? ` Its merge waits on ${kept.waiting.on} at ${kept.waiting.head ?? candidateHead(kept)}: the host's note on that wait says who moves next, and that is never the captain's click or a merge of yours.`
+      : "";
+    return {
+      refused: "autonomy-off",
+      task,
+      tasks: [],
+      ways: [],
+      text: `${verb} ${task.key} "${record.title}" is not yours to do: ${why}. ${KEPT_APPROVAL_WORDS}${waits} Their merge click approves that change at that version and is not an override, so declare no update_task override from it.`,
+    };
+  }
+  const pointer = open?.held
+    ? `The merge card "${open.cardTitle}" is on the stack without its "${open.label}" button, because its change moved on after it went up; it waits for its crewmate to bring it to the current change, and that click will be the captain's to make. Nothing further is needed from you.`
+    : open
+      ? `The merge card "${open.cardTitle}" is on the stack with its "${open.label}" button: that click is the merge, and it is the captain's to make. Nothing further is needed from you.`
+      : "The captain merges it from the crewmate's merge card; steer the crewmate to emit one if it has not.";
   return {
     refused: "autonomy-off",
     task,
@@ -231,14 +254,36 @@ export function openCurrentMerge(
   host: Pick<SettleServiceHost, "cards">,
   record: TaskRecord,
 ): OpenMergeAction | undefined {
-  const target = record.delivery?.checkTarget;
-  const review = target
-    ? record.delivery?.mergeReviews?.find(
-        (item) => item.number === target.number && item.branch === target.branch,
-      )
-    : undefined;
+  const review = currentReview(record);
   return (
-    (review ? host.cards.openMergeAction(record.id, { review: review.id }) : undefined) ??
+    (review ? host.cards.openMergeAction(record.id, { review }) : undefined) ??
     host.cards.openMergeAction(record.id, { review: undefined })
   );
+}
+
+/**
+ * The captain's own approval standing on the merge the gate is asked about
+ * (INF-4525): the pull request `scope` names, else the task's current
+ * change, picked as `openCurrentMerge` picks its card. An approval the app
+ * kept under autonomy is left out: autonomy off ends it on its next run.
+ */
+function keptByCaptain(
+  record: TaskRecord,
+  scope?: { review?: string },
+): MergeAuthorization | undefined {
+  const kept = standingApprovals(record.delivery).filter((item) => item.issuer === "captain");
+  const about = (review: string | undefined) => kept.find((item) => item.review?.id === review);
+  if (scope) return about(scope.review);
+  const review = currentReview(record);
+  return (review ? about(review) : undefined) ?? about(undefined);
+}
+
+/** The stored review of the pull request the task reads now, when another branch's is current (INF-2490). */
+function currentReview(record: TaskRecord): string | undefined {
+  const target = record.delivery?.checkTarget;
+  return target
+    ? record.delivery?.mergeReviews?.find(
+        (item) => item.number === target.number && item.branch === target.branch,
+      )?.id
+    : undefined;
 }

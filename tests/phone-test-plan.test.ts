@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   devicePartNames,
@@ -13,6 +13,7 @@ import {
   type PhonePassEnd,
   partDevices,
   partIdentifier,
+  partPlanPath,
   partRunsJourney,
   partSelection,
   partTestStarted,
@@ -53,6 +54,19 @@ describe("the phone check's built test plan", () => {
     for (const target of ["InfinitaryTests", "InfinitaryUITests"])
       delete without[target].EnvironmentVariables.PHONE_TEST_HOME;
     expect(() => testHomeKeys(without)).toThrow(/no PHONE_TEST_HOME/);
+  });
+  it("gives each simulator its own copy beside the built plan, so two passes of one part never share a test home", () => {
+    // Phone run 43797348609: the edited talk-drafts part's first two passes ran at once on the iPhone's two lanes, each
+    // wrote its copy to one path named for the part alone, and the first pass then drove the second pass's test home.
+    const products =
+      "/var/folders/p7/f_99nxmj7s16qrxbl0cbpz4r0000gn/T/infinitary-native-AFTDPH/DerivedData/Build/Products";
+    const builtPlan = join(products, "Infinitary_iphonesimulator27.1-arm64.xctestrun");
+    const lanes = ["D2BE64A7-904E-449F-874B-71AD830D05AD", "9B291690-9562-4A2F-B268-AC5CEC9521A9"];
+    const copies = lanes.map((simulator) =>
+      partPlanPath(builtPlan, "iphone", "talk-drafts", simulator),
+    );
+    expect(new Set(copies).size).toBe(lanes.length);
+    for (const copy of copies) expect(dirname(copy)).toBe(products);
   });
 });
 

@@ -155,6 +155,13 @@ extension PhoneJourney {
         XCTAssertEqual(updateAsks.filter { $0 != "inf:home-update:status" },
                        ["inf:home-update:install", "inf:home-update:later"], "The older home took Update, then Update later")
         _ = try await home("home-update", body: "")
+        // Back on the computer's own updater, nothing is offered from afar: the line says the copy is updated at the
+        // computer itself, and Update leaves. The phone reads this on its next poll, a few seconds later, and the row's
+        // leaving moves the message box down; tapping the box before that once landed on the last turn, now where the box
+        // had been, and opened its Reply sheet instead of the keyboard (phone run 43789833399).
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "label == %@", "This copy is updated at the computer itself, not from afar."),
+                                             object: updateLine, timeout: 20), .completed, app.debugDescription)
+        XCTAssertTrue(update.waitForAbsence(timeout: 10), "With nothing offered from afar, Update leaves")
         focusForPhoneTyping(input, in: app); input.typeText("Sent to an older computer")
         // A home at this phone's floor answers it in full, and the draft sends there.
         _ = try await home("older-home-within")

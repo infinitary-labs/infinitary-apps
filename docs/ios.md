@@ -842,6 +842,7 @@ A removal that fails, or leaves the folder, is printed while the gate goes on, a
 A part's results are in its own folder, inside the device's folder with `--both`, and `--part` runs only the named parts; a device with several lanes keeps each lane's Photos wait in a `lane-<number>` folder beside them.
 A gate of every part, on one device or with `--both`, writes each part's minutes on each of its devices to `part-times.json` in the evidence folder once every part that runs on each device (its row of `PHONE_PARTS`) has run to its end (`endPhoneGate` in `scripts/phone-test-plan.ts`); no workflow reads it since INF-2539 removed the pull request's part budget, and a copy of one is the gate's own recorded part times.
 The build is `xcodebuild build-for-testing` for any simulator, and each part runs `test-without-building` from a copy of the built test plan that names its own test home and selects its tests.
+That copy sits beside the built plan and is named for the part's device, the part and its simulator, so two lanes running passes of one part at once never share a copy or a test home (`partPlanPath` in `scripts/phone-test-plan.ts`).
 The simulators of the first lanes start while that build runs, so the first parts begin as it ends; a lane past `--simulators` starts its own when a place frees (INF-2125).
 The Swift package tests and the build share one folder of fetched package repositories, so the build fetches nothing the package tests already did.
 It is `INFINITARY_PHONE_PACKAGE_CACHE` when set, otherwise inside the gate's scratch folder.

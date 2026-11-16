@@ -1,5 +1,5 @@
 import { writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 // INF-662 piece 1: the phone check builds once and gives each device's tests their own
 // test home. Xcode writes the scheme's PHONE_TEST_HOME, empty, into each test target's
@@ -22,6 +22,14 @@ export function testHomeKeys(plan: Record<string, unknown>): string[] {
   }).map(([name]) => `${name}.EnvironmentVariables.PHONE_TEST_HOME`);
   if (keys.length === 0) throw new Error("The built test plan has no PHONE_TEST_HOME to name a test home in");
   return keys;
+}
+
+/** Where a part writes its own copy of the built test plan, the copy that names its test home: beside the built plan,
+ * whose app and test runner a plan finds beside itself, and named for the simulator the part runs on as well as its
+ * device and part. A device's lanes can run two passes of one part at once, and a copy named for the part alone gave
+ * both passes the test home its last writer named (phone run 43797348609). */
+export function partPlanPath(built: string, device: PhoneDevice, part: string, simulator: string): string {
+  return join(dirname(built), `${device}-${part}-${simulator}.xctestrun`);
 }
 
 // INF-662 piece 2 (the captain's "Both at once, journey in parts"): the phone journey is in parts,

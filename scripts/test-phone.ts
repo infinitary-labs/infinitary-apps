@@ -2,7 +2,7 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { copyFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { availableParallelism, totalmem, userInfo } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { parseArgs } from "node:util";
 import { budgetTimer, GRADES_BUDGETS, startPhoneLoadClock } from "../tests/helpers/budgets.ts";
@@ -24,7 +24,7 @@ import { GATE_SIMULATOR, removePhoneLeftovers, SCRATCH_PREFIX } from "./phone-le
 import { phoneRecording } from "./phone-recording.ts";
 import { startPhoneGuestObserver } from "./phone-guest-observer.ts";
 import { phoneSharedCacheFolder, phoneSimulator, phoneSimulatorBooted, phoneXcode, removeEmptyPhoneSharedCache } from "./phone-simulator.ts";
-import { devicePartNames, devicePhotos, endPhoneGate, PHONE_PARTS, type PhoneDevice, type PhoneJob, type PhonePassEnd, phonePassName, phoneSelectionRunsJourney, phoneTestSelection, phoneTestsStarted, phoneAnimationWaits, phoneExecutionArguments, phoneLanePlan, phoneLanes, phonePasses, phoneStopsEarly, PHONE_PART_TIMES, partTimes, relaunchPairs, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
+import { devicePartNames, devicePhotos, endPhoneGate, PHONE_PARTS, type PhoneDevice, type PhoneJob, type PhonePassEnd, phonePassName, phoneSelectionRunsJourney, phoneTestSelection, phoneTestsStarted, phoneAnimationWaits, phoneExecutionArguments, phoneLanePlan, phoneLanes, phonePasses, phoneStopsEarly, PHONE_PART_TIMES, partPlanPath, partTimes, relaunchPairs, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
 
 // INF-800: with CI mode on, the phone check runs only through CI (docs/testing.md).
 const refusal = ciModeRefusal("phone");
@@ -476,9 +476,9 @@ const everyPartOn = async (starting: Map<string, Promise<Lane>>) => {
   // A full gate keeps its part times; any failed part fails it.
   endPhoneGate(jobs, outcomes, evidence);
 };
-// A test plan copy beside the built one, naming this device's own test home.
-const planFor = async (built: string, url: string) => {
-  const plan = join(dirname(built), `${values.ipad ? "ipad" : "iphone"}-${values.part![0]}.xctestrun`);
+// A test plan copy beside the built one, naming this part's own test home, one for each simulator.
+const planFor = async (built: string, url: string, owned: string) => {
+  const plan = partPlanPath(built, values.ipad ? "ipad" : "iphone", values.part![0]!, owned);
   copyFileSync(built, plan);
   for (const key of testHomeKeys(JSON.parse(await run("plutil", ["-convert", "json", "-o", "-", built])))) {
     await run("plutil", ["-replace", key, "-string", url, plan]);
@@ -504,7 +504,7 @@ const onePart = async () => {
   writeFileSync(join(evidence, "published-client.json"), JSON.stringify(await fixture.checkPublishedClient(), null, 2));
   const destination = ["-parallel-testing-enabled", "NO", "-destination", `platform=iOS Simulator,id=${owned}`,
     "-resultBundlePath", join(evidence, "phone.xcresult")];
-  const plan = await planFor(values.xctestrun!, fixture.url);
+  const plan = await planFor(values.xctestrun!, fixture.url, owned);
   // INF-1066: keep the talk journey's exact Photos/tap order and waits. Capture once
   // at the actual UIKit fault, while the blocked stack still exists, not on retry.
   if (values.part![0]?.startsWith("talk-")) {

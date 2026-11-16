@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "computer-choice-task-words",
+      "kind": "improvement",
+      "area": "subscriptions",
+      "title": "A task that needs one computer starts on it",
+      "body": "When a new task's own words need one of your computers, such as files in its Downloads, its settings or \"on this MacBook\", your decision model now starts it there, whatever your directions say about that kind of work. It also follows your directions more often, for example keeping code reviews on the computer your directions name for code.",
+      "noPicture": "Where a task starts shows in its Details, which look the same; only the computer it picks changes.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

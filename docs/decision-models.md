@@ -179,7 +179,7 @@ Five uses are listed:
 
 - `kind`, task classification ("The first consumer").
 - `reply-checks`, "Optional reply checks" below.
-- `computer`, Choose a computer for new work: when two or more computers can run a new Automatic task, the question reads the task, the standing directions that apply to its project and each computer's facts, and answers start on a computer, wait for one, usual when no direction says which computer runs that kind of task, or unsure (`docs/helper.md`, "Which computer a new task starts on").
+- `computer`, Choose a computer for new work: when two or more computers can run a new Automatic task, the question reads the task, the standing directions that apply to its project and each computer's facts, and answers which computer the task belongs on, or usual when no direction says which computer runs that kind of task, and, when a computer cannot start it now, whether to keep it there, wait for it or use another (`docs/helper.md`, "Which computer a new task starts on").
   It is on by default because, like the reply checks, it reaches only the person's own models or a decision model they approved.
 - `event-screen`, Screen automation events: a new event of an automation that says what it waits for is asked `match`, `unrelated` or `unclear`, and only `unrelated` keeps it from the first mate (`docs/automation.md`, "The event screen").
   Its disclosure names what leaves: each event's summary, such as an email's sender and subject, which anyone who can email the person writes.
@@ -202,6 +202,8 @@ The key is read from `TYPESAFE_API_KEY` for that offline run only and is never w
 The scorer sits behind Observe's development gate like the other offline tools.
 
 `pnpm score:computers --cases <cases.jsonl> --decision-model jev --models <models.json> --provider <p> --model <m>` scores the computer question the same way, over labeled cases of a task, its standing directions and its computers' facts, and reports accuracy overall, by scenario, by what the task delivers and by expected answer; `--split dev` or `--split test` keeps wording work on one split and measures it on the other.
+A case may list other answers its directions fit as well (`accept`) and the computer the usual rules would start it on (`usual`), and the report then also scores where each task lands, since an unsure answer the usual rules turn into the expected computer lands it right.
+With `--decision-model jev` it asks Jev with no threshold and applies the catalog's own, so each row also keeps the option Jev leaned to and its confidence.
 
 ## Optional reply checks
 

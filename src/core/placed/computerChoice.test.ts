@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseOption } from "../decisions/decisionModel";
 import {
   type ComputerChoiceComputer,
-  computerChoiceQuestion,
+  computerChoiceQuestions,
   computerChoiceState,
   readComputerPick,
 } from "./computerChoice";
@@ -32,41 +32,72 @@ const macMini: ComputerChoiceComputer = {
 };
 
 describe("the computer question", () => {
-  it("offers a start on each computer, a wait only where there is something to wait for, usual and unsure", () => {
-    const question = computerChoiceQuestion([macBook, macMini]);
-    expect(Object.keys(question.criteria)).toEqual([
-      "startmacbook",
-      "startmini",
-      "waitmini",
+  it("asks where the task belongs among every computer, and what to do only when one cannot start it now", () => {
+    const questions = computerChoiceQuestions([macBook, macMini]);
+    expect(Object.keys(questions.computer?.criteria ?? {})).toEqual([
+      "onmacbook",
+      "onmini",
       "usual",
       "unsure",
     ]);
-    expect(question.abstain).toBe("unsure");
+    expect(Object.keys(questions.ifNotNow?.criteria ?? {})).toEqual([
+      "anyway",
+      "wait",
+      "other",
+      "usual",
+      "unsure",
+    ]);
     // A person's own model answers in one word, read as letters: each option survives that read.
-    const ids = Object.keys(question.criteria);
-    expect(ids.map((id) => parseOption(`${id}.`, ids))).toEqual(ids);
-    const away = computerChoiceQuestion([macBook, { ...macMini, status: "away" }]);
-    expect(Object.keys(away.criteria)).toEqual(["startmacbook", "waitmini", "usual", "unsure"]);
+    for (const question of Object.values(questions)) {
+      const ids = Object.keys(question.criteria);
+      expect(question.abstain).toBe("unsure");
+      expect(ids.map((id) => parseOption(`${id}.`, ids))).toEqual(ids);
+    }
+    expect(Object.keys(computerChoiceQuestions([macBook, { ...macMini, status: "room" }]))).toEqual(
+      ["computer"],
+    );
   });
 
-  it("reads an answer back to the computer it names, and nothing from usual, unsure or a failure", () => {
-    const computers = [macBook, macMini];
+  it("starts or waits on the computer the task belongs on, as its room and the second answer say", () => {
     const answer = (value: string, outcome: "answered" | "abstained" | "failed" = "answered") => ({
       value,
       outcome,
-      version: "cc1-x",
+      version: "cc13-x",
       source: "jev/jev-1.13.0",
     });
-    expect(readComputerPick(computers, answer("waitmini"))).toEqual({
+    const away = { ...macMini, status: "away" as const };
+    const pick = (computers: ComputerChoiceComputer[], where: string, notNow?: string) =>
+      readComputerPick(computers, {
+        computer: answer(where),
+        ...(notNow ? { ifNotNow: answer(notNow) } : {}),
+      });
+    // Room: the first answer alone starts it.
+    expect(pick([macBook, macMini], "onmacbook")).toEqual({
+      computerId: null,
+      mode: "start",
+      source: "jev/jev-1.13.0",
+    });
+    // Busy: start anyway, wait, or leave another computer to the usual rules.
+    expect(pick([macBook, macMini], "onmini", "anyway")).toMatchObject({
+      computerId: macMini.computerId,
+      mode: "start",
+    });
+    expect(pick([macBook, macMini], "onmini", "wait")?.mode).toBe("wait");
+    expect(pick([macBook, macMini], "onmini", "other")).toBeUndefined();
+    expect(pick([macBook, macMini], "onmini")).toBeUndefined();
+    // Out of reach: anyway waits, since nothing can start there.
+    expect(pick([macBook, away], "onmini", "anyway")).toMatchObject({
       computerId: macMini.computerId,
       mode: "wait",
-      source: "jev/jev-1.13.0",
     });
-    expect(readComputerPick(computers, answer("startmacbook"))?.computerId).toBeNull();
-    expect(readComputerPick(computers, answer("usual"))).toBeUndefined();
-    expect(readComputerPick(computers, answer("unsure", "abstained"))).toBeUndefined();
-    expect(readComputerPick(computers, answer("unsure", "failed"))).toBeUndefined();
-    expect(readComputerPick(computers, answer("startelsewhere"))).toBeUndefined();
+    expect(pick([macBook, macMini], "usual", "anyway")).toBeUndefined();
+    expect(
+      readComputerPick([macBook, macMini], { computer: answer("unsure", "abstained") }),
+    ).toBeUndefined();
+    expect(
+      readComputerPick([macBook, macMini], { computer: answer("onmini", "failed") }),
+    ).toBeUndefined();
+    expect(pick([macBook, macMini], "onelsewhere")).toBeUndefined();
   });
 
   it("sends each direction whole, leaving out and counting one that does not fit", () => {

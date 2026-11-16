@@ -128,66 +128,82 @@ function shortNames(computers: readonly ComputerChoiceComputer[]): string[] {
   });
 }
 
-type Option = { id: string; computerId: string | null; mode: "start" | "wait"; meaning: string };
+type Option = { id: string; computerId: string | null; meaning: string };
 
 /**
- * The closed set of answers: start on any computer with room or busy, wait
- * on one that is busy or out of reach, usual when no direction decides, or
- * unsure. A wait is offered only
- * where there is something to wait for.
+ * The computers the first question may name: each one, whatever its room,
+ * since it asks where the task belongs, not where it can start now.
  */
 export function computerChoiceOptions(computers: readonly ComputerChoiceComputer[]): Option[] {
   const names = shortNames(computers);
-  const options: Option[] = [];
-  for (const [index, computer] of computers.entries()) {
-    const id = names[index] as string;
-    if (computer.status !== "away")
-      options.push({
-        id: `start${id}`,
-        computerId: computer.computerId,
-        mode: "start",
-        meaning: `The person's standing directions send this task to ${computer.name} now${computer.status === "busy" ? ", even though it is busy" : ""}.`,
-      });
-    if (computer.status !== "room")
-      options.push({
-        id: `wait${id}`,
-        computerId: computer.computerId,
-        mode: "wait",
-        meaning:
-          computer.status === "busy"
-            ? `The person's standing directions send this task to ${computer.name} and say to wait for it while it is busy.`
-            : `The person's standing directions send this task to ${computer.name} and allow no other computer for it, so it waits until ${computer.name} is back in reach.`,
-      });
-  }
-  return options;
+  return computers.map((computer, index) => ({
+    id: `on${names[index] as string}`,
+    computerId: computer.computerId,
+    meaning: `This task belongs on ${computer.name}: its own words need ${computer.name}, or the standing directions send this kind of work to ${computer.name} first.`,
+  }));
 }
 
-export const COMPUTER_QUESTION_VERSION = "cc6";
+export const COMPUTER_QUESTION_VERSION = "cc13";
 
-/** The question, its options named for these computers. */
-export function computerChoiceQuestion(
+const WHICH_KIND =
+  "Read task_delivers and task_title to tell what kind of work this task is; reviewing code headed for a pull request is code work.";
+const OWN_WORDS =
+  'A task whose task_title or task_goal says it must run on one particular computer, because it works with files, settings, logs or programs on that computer or says "on this MacBook" or "on the Mac mini", belongs on that computer whatever the directions say. "This computer", "this Mac", "my Downloads" or "my desktop" mean the computer Infinitary\'s window runs on. A name may be shortened.';
+
+/** What the second question's answers do once the first named a computer. */
+const IF_NOT_NOW = { anyway: "anyway", wait: "wait", other: "other" } as const;
+
+/**
+ * The questions, asked together: which computer the task belongs on, and,
+ * when any computer cannot start it now, what the directions say for that
+ * case. Two narrow questions, because a native decision model judged both at
+ * once leaned to whichever computer had room.
+ */
+export function computerChoiceQuestions(
   computers: readonly ComputerChoiceComputer[],
-): DecisionQuestion {
-  return {
+): Record<string, DecisionQuestion> {
+  const where: DecisionQuestion = {
     type: "choice",
     version: COMPUTER_QUESTION_VERSION,
     instructions: [
-      "An app runs a person's AI tasks on one of their computers. A new task is about to start, and more than one of the person's computers can run it. Pick where it starts by following the person's standing directions.",
-      "1. Find the directions that say which computer runs work. A direction may shorten a computer's name, and \"this computer\" is the one Infinitary's window runs on. If none says which computer runs work, answer usual.",
-      "2. Read task_delivers to tell what kind of work this task is, and find the computer the direction names for that kind of work.",
-      "3. If that computer has room, start there. If it is busy or out of reach, do what the direction says for that case: start there anyway, wait for it, or use another computer. A direction that says to use a computer even when it is busy, or never to use another one for this kind of work, means start there while it is busy, and wait for it while it is out of reach: never start this kind of work on a computer the direction rules out. A direction that allows another computer when the first is busy or cannot take the work also allows it when the first is out of reach.",
-      "Answer usual only when no direction says which computer runs this kind of work. Directions about anything other than which computer runs work do not decide this.",
+      "An app runs a person's AI tasks on one of their computers. A new task is about to start. Name the computer this task belongs on, whether or not that computer is busy or out of reach right now.",
+      `1. ${OWN_WORDS}`,
+      `2. Otherwise find the standing direction that says which computer runs this kind of work, and name the computer it sends this kind of work to first. ${WHICH_KIND}`,
+      "3. Answer usual only when no direction says which computer runs this kind of work. A computer being busy or out of reach right now never makes the answer usual: this question asks where the task belongs, and another question handles a computer that cannot start it now. Directions about anything other than which computer runs work do not decide this.",
     ].join("\n"),
     criteria: {
       ...Object.fromEntries(
         computerChoiceOptions(computers).map((option) => [option.id, option.meaning]),
       ),
       [NO_DIRECTION]:
-        "No standing direction says which computer runs this kind of task, so the app's usual rules choose.",
+        "No standing direction says which computer runs this kind of task, and the task's own words need no particular computer, so the app's usual rules choose.",
       [UNSURE]: "The facts given do not make the answer clear.",
     },
     abstain: UNSURE,
   };
+  if (computers.every((computer) => computer.status === "room")) return { computer: where };
+  const notNow: DecisionQuestion = {
+    type: "choice",
+    version: COMPUTER_QUESTION_VERSION,
+    instructions: [
+      "An app runs a person's AI tasks on one of their computers. A new task is about to start.",
+      `First find the computer this task belongs on. ${OWN_WORDS} Otherwise it is the computer the standing directions send this kind of work to first. ${WHICH_KIND}`,
+      "Then answer what should happen to this task when that computer is busy or out of reach.",
+      "A direction that says to use a computer for this kind of work even when it is busy, or never to use another computer for it, means keep it on that computer, also while it is out of reach. A direction that allows another computer when the first is busy or cannot take the work also allows it while the first is out of reach. Directions about anything other than which computer runs work do not decide this.",
+    ].join("\n"),
+    criteria: {
+      [IF_NOT_NOW.anyway]:
+        "Keep it on that computer: the task's own words need that computer, or the directions say to use it for this kind of work even when it is busy, or never to use another computer for it.",
+      [IF_NOT_NOW.wait]: "Wait for that computer: the directions say to wait until it has room.",
+      [IF_NOT_NOW.other]:
+        "Use another computer: the directions allow another computer for this kind of work when the first is busy or cannot take it.",
+      [NO_DIRECTION]:
+        "No standing direction says which computer runs this kind of task, and the task's own words need no particular computer.",
+      [UNSURE]: "The facts given do not make the answer clear.",
+    },
+    abstain: UNSURE,
+  };
+  return { computer: where, ifNotNow: notNow };
 }
 
 /** One computer's line of facts. */
@@ -243,20 +259,36 @@ export function computerChoiceState(input: ComputerChoiceInput): DecisionState {
   };
 }
 
-/** The pick an answer names, or undefined for usual, unsure, a failure or an unknown option. */
+/**
+ * The pick the answers name, or undefined where the usual rules choose: the
+ * first answer names the computer the task belongs on; one with room starts
+ * it there, and one that cannot start it now follows the second answer -
+ * start there anyway while busy, wait for it, or leave another computer to
+ * the usual rules. Usual, unsure, a failure or an unknown option picks
+ * nothing.
+ */
 export function readComputerPick(
   computers: readonly ComputerChoiceComputer[],
-  answer: DecisionAnswer | undefined,
+  answers: Record<string, DecisionAnswer | undefined>,
 ): ComputerPick | undefined {
-  if (answer?.outcome !== "answered") return undefined;
-  const option = computerChoiceOptions(computers).find((each) => each.id === answer.value);
-  return option
-    ? {
-        computerId: option.computerId,
-        mode: option.mode,
-        ...(answer.source ? { source: answer.source } : {}),
-      }
-    : undefined;
+  const where = answers.computer;
+  if (where?.outcome !== "answered") return undefined;
+  const at = computerChoiceOptions(computers).findIndex((each) => each.id === where.value);
+  const computer = computers[at];
+  if (!computer) return undefined;
+  const source = where.source ? { source: where.source } : {};
+  if (computer.status === "room")
+    return { computerId: computer.computerId, mode: "start", ...source };
+  const notNow = answers.ifNotNow;
+  if (notNow?.outcome !== "answered") return undefined;
+  if (
+    notNow.value === IF_NOT_NOW.wait ||
+    (notNow.value === IF_NOT_NOW.anyway && computer.status === "away")
+  )
+    return { computerId: computer.computerId, mode: "wait", ...source };
+  if (notNow.value === IF_NOT_NOW.anyway)
+    return { computerId: computer.computerId, mode: "start", ...source };
+  return undefined;
 }
 
 /** The decision service as the computer question reaches it. */
@@ -284,10 +316,10 @@ export async function askComputerChoice(
   const answers = await models.decide(
     { purpose: "computer", use: "computer", taskId },
     computerChoiceState(input),
-    { computer: computerChoiceQuestion(input.computers) },
+    computerChoiceQuestions(input.computers),
     signal,
   );
-  return readComputerPick(input.computers, answers.computer);
+  return readComputerPick(input.computers, answers);
 }
 
 /**

@@ -18,9 +18,15 @@
  * where `input` is a `ComputerChoiceInput` and `expected` is
  * `{ mode: "start" | "wait", name }` or null where no direction decides, which
  * `usual` or the abstention `unsure` both answer, since the app then uses its
- * usual rules either way. With
+ * usual rules either way. Optional fields: `accept`, other answers in the
+ * same shape a case's directions fit as well, and `usual`, the name of the
+ * computer the usual rules start the task on (null when none has room), so
+ * the report also scores where each task lands: an answer the usual rules
+ * turn into the expected placement counts there. With
  * `--decision-model jev` the key is read from `TYPESAFE_API_KEY` for this
  * run only; `--provider`/`--model` answer when Jev cannot, as in the app.
+ * Jev is asked with no threshold, so each row keeps the option it leaned
+ * to and its confidence, and the scorer applies the catalog's threshold.
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -53,6 +59,8 @@ type Case = {
   id: string;
   input: ComputerChoiceInput;
   expected: Expected;
+  accept?: Expected[];
+  usual?: string | null;
   split?: string;
   scenario?: string;
 };
@@ -211,6 +219,7 @@ async function main(): Promise<number> {
     const { JevDecisionModel } = await runner.import<
       typeof import("../src/core/decisions/jev/jevClient.ts")
     >("/src/core/decisions/jev/jevClient.ts");
+    let threshold: number | undefined;
     const settings: DecisionsSettings = nativeKey
       ? {
           version: 1,
@@ -229,14 +238,17 @@ async function main(): Promise<number> {
       ...(nativeKey
         ? {
             keys: { has: () => true, read: () => nativeKey, set: () => {}, remove: () => {} },
-            createNative: (row) =>
-              new JevDecisionModel({
-                row,
+            createNative: (row) => {
+              threshold = row.abstainBelow;
+              return new JevDecisionModel({
+                // No threshold here: the scorer applies the catalog's below.
+                row: { ...row, abstainBelow: 0 } as unknown as typeof row,
                 key: () => nativeKey,
                 ...(settingFrom(process.env, "JEV_URL")?.trim()
                   ? { endpoint: settingFrom(process.env, "JEV_URL")?.trim() }
                   : {}),
-              }),
+              });
+            },
           }
         : {}),
     });
@@ -244,42 +256,66 @@ async function main(): Promise<number> {
     const work = async () => {
       while (next < cases.length) {
         const each = cases[next++] as Case;
-        const options = choice.computerChoiceOptions(each.input.computers);
-        const expected = each.expected
-          ? options.find(
-              (option) =>
-                option.mode === each.expected?.mode &&
-                each.input.computers.find((computer) => computer.computerId === option.computerId)
-                  ?.name === each.expected?.name,
-            )?.id
-          : choice.NO_DIRECTION;
-        if (!expected) throw new Error(`Case ${each.id} expects an option it does not offer.`);
+        const computers = each.input.computers;
+        const nameOf = (computerId: string | null) =>
+          computers.find((computer) => computer.computerId === computerId)?.name;
+        // A placement as words: "start <name>", "wait <name>" or usual.
+        const placed = (want: Expected) => (want ? `${want.mode} ${want.name}` : choice.NO_DIRECTION);
+        const fits = [each.expected, ...(each.accept ?? [])].map(placed);
+        const questions = choice.computerChoiceQuestions(computers);
         const answers = await models.decide(
           { purpose: "computer-score", use: "computer", taskId: each.id },
           choice.computerChoiceState(each.input),
-          { computer: choice.computerChoiceQuestion(each.input.computers) },
+          questions,
           AbortSignal.timeout(20_000),
         );
-        const answer = answers.computer;
+        const confidence = (answer: { detail?: string } | undefined) =>
+          Number(/p=([0-9.]+)/.exec(answer?.detail ?? "")?.[1] ?? Number.NaN);
+        // Jev was asked with no threshold: the catalog's applies here.
+        const held = Object.fromEntries(
+          Object.entries(answers).map(([id, answer]) => [
+            id,
+            threshold !== undefined && answer.outcome === "answered" && confidence(answer) < threshold
+              ? { ...answer, value: questions[id]?.abstain ?? "unsure", outcome: "abstained" as const }
+              : answer,
+          ]),
+        );
+        const pickOf = (from: typeof answers) => {
+          const pick = choice.readComputerPick(computers, from);
+          return pick ? `${pick.mode} ${nameOf(pick.computerId)}` : choice.NO_DIRECTION;
+        };
+        const value = pickOf(held);
+        const leaned = threshold !== undefined ? pickOf(answers) : undefined;
+        const lands = (pick: string) =>
+          pick === choice.NO_DIRECTION
+            ? each.usual === undefined
+              ? "usual"
+              : `start ${each.usual}`
+            : pick;
         const row = {
           id: each.id,
           split: each.split,
           scenario: each.scenario,
           delivers: each.input.task.delivers,
           title: each.input.task.title,
-          expected,
-          value: answer?.value,
-          outcome: answer?.outcome,
-          reason: answer?.reason,
-          source: answer?.source,
-          detail: answer?.detail,
-          correct:
-            answer?.value === expected ||
-            (expected === choice.NO_DIRECTION && answer?.outcome === "abstained"),
+          expected: fits[0],
+          ...(each.accept ? { accept: fits.slice(1) } : {}),
+          value,
+          answers: Object.fromEntries(
+            Object.entries(answers).map(([id, answer]) => [
+              id,
+              { value: answer.value, outcome: held[id]?.outcome, reason: answer.reason, detail: answer.detail },
+            ]),
+          ),
+          source: answers.computer?.source,
+          ...(leaned !== undefined ? { leaned } : {}),
+          landed: lands(value),
+          correct: fits.includes(value),
+          landedRight: fits.some((fit) => lands(fit) === lands(value)),
         };
         rows.push(row);
         process.stderr.write(
-          `${row.correct ? "ok  " : "MISS"} ${String(row.scenario).padEnd(18)} ${String(row.value).padEnd(26)} want ${expected.padEnd(26)} ${row.title}\n`,
+          `${row.correct ? "ok  " : "MISS"} ${String(row.scenario).padEnd(18)} ${value.padEnd(26)} want ${String(fits[0]).padEnd(26)} ${row.title}\n`,
         );
       }
     };
@@ -290,22 +326,55 @@ async function main(): Promise<number> {
   const share = (part: number, whole: number) =>
     whole ? Number((part / whole).toFixed(3)) : null;
   const by = (key: string) => {
-    const groups: Record<string, { n: number; correct: number; accuracy: number | null }> = {};
+    const groups: Record<
+      string,
+      { n: number; correct: number; accuracy: number | null; landed: number | null }
+    > = {};
+    const right: Record<string, number> = {};
     for (const row of rows) {
       const name = String(row[key]);
-      const group = groups[name] ?? { n: 0, correct: 0, accuracy: null };
+      const group = groups[name] ?? { n: 0, correct: 0, accuracy: null, landed: null };
       group.n += 1;
       if (row.correct) group.correct += 1;
+      if (row.landedRight) right[name] = (right[name] ?? 0) + 1;
       groups[name] = group;
     }
-    for (const group of Object.values(groups)) group.accuracy = share(group.correct, group.n);
+    for (const [name, group] of Object.entries(groups)) {
+      group.accuracy = share(group.correct, group.n);
+      group.landed = share(right[name] ?? 0, group.n);
+    }
     return groups;
   };
   const scores = {
     cases: rows.length,
     accuracy: share(rows.filter((row) => row.correct).length, rows.length),
-    failed: rows.filter((row) => row.outcome === "failed").length,
-    failures: [...new Set(rows.flatMap((row) => (row.reason ? [String(row.reason)] : [])))],
+    landed: share(rows.filter((row) => row.landedRight).length, rows.length),
+    ...(rows.some((row) => "leaned" in row)
+      ? {
+          leaned: share(
+            rows.filter(
+              (row) =>
+                row.leaned !== undefined &&
+                [row.expected, ...((row.accept as string[]) ?? [])].includes(row.leaned as string),
+            ).length,
+            rows.length,
+          ),
+        }
+      : {}),
+    failed: rows.filter((row) =>
+      Object.values(row.answers as Record<string, { outcome?: string }>).some(
+        (answer) => answer.outcome === "failed",
+      ),
+    ).length,
+    failures: [
+      ...new Set(
+        rows.flatMap((row) =>
+          Object.values(row.answers as Record<string, { reason?: string }>).flatMap((answer) =>
+            answer.reason ? [answer.reason] : [],
+          ),
+        ),
+      ),
+    ],
     by_scenario: by("scenario"),
     by_delivers: by("delivers"),
     by_expected: by("expected"),

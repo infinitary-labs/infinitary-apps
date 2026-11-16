@@ -982,6 +982,64 @@ export class TaskIntake {
   }
 
   /**
+   * The parts closed while the first mate's current turn runs (INF-4509),
+   * heard on the task change seam: null between turns. A container whose
+   * last part closed in that turn waits for the turn's end, since the turn
+   * may still file the part its goal lacks; the close that purges a part's
+   * news cannot end that wait, as it ended the news one (INF-3846).
+   */
+  private turnClosed: { ids: Set<string>; stop: () => void } | null = null;
+
+  /** The first mate's turn begins: closes from now on hold their containers. */
+  firstmateTurnBegan(): void {
+    this.turnClosed?.stop();
+    const ids = new Set<string>();
+    const stop = this.options.tasks.onChange((change) => {
+      for (const event of change.events) {
+        const status = event.data?.status;
+        if (status === "done" || status === "dropped") ids.add(event.taskId);
+      }
+    });
+    this.turnClosed = { ids, stop };
+  }
+
+  /**
+   * The first mate's turn ended: the containers it held are judged again
+   * now, unless the app is quitting (`complete` false), when the next
+   * boot's sweep judges them.
+   */
+  firstmateTurnEnded(complete = true): void {
+    const held = this.turnClosed;
+    if (!held) return;
+    this.turnClosed = null;
+    held.stop();
+    if (complete) this.completeContainers();
+  }
+
+  /**
+   * Whether a parent closes itself when its parts have (docs/task-graph.md,
+   * "The close rules"): work on request that never started - no crewmate,
+   * no working copy - and no program, with at least one part and every part
+   * closed, and no card of its own. Waits on the first mate are read apart.
+   */
+  private closesWithParts(record: TaskRecord): boolean {
+    if (record.kind !== "work" || record.startPolicy !== "on-request") return false;
+    if (TaskService.isClosed(record)) return false;
+    if (
+      record.startedAt !== null ||
+      record.worktreeDir ||
+      this.host.runtime(record.id) !== undefined
+    )
+      return false;
+    // A program closes when its script ends, not when its parts so far have.
+    if (record.shape?.program) return false;
+    const children = this.options.tasks.graph.children(record.id);
+    if (children.length === 0 || children.some((child) => !TaskService.isClosed(child)))
+      return false;
+    return !this.host.cards.snapshot().some((card) => card.taskId === record.id);
+  }
+
+  /**
    * A container completes with its children (docs/task-graph.md, "The
    * close rules"). A parent that never started - on request, no crewmate,
    * no working copy - has nothing of its own to settle, so nothing else
@@ -989,27 +1047,18 @@ export class TaskIntake {
    * when any child is done, else dropped. A parent that carries a
    * crewmate, ever started, still has an open child, or has a card of its
    * own waiting on the captain is left exactly as it is, and so is one
-   * whose last part's news the first mate has not finished a turn on: its
-   * answer may file the next parts (INF-3846). A container closed while a
-   * part under it is live opens again first.
+   * whose last part's news the first mate has not finished a turn on, or
+   * whose part closed in the first mate's turn still running: its answer
+   * may file the next parts (INF-3846, INF-4509). A container closed while
+   * a part under it is live opens again first.
    */
   completeContainers(): void {
     this.options.tasks.reopenHeldContainers();
     for (const record of this.options.tasks.listOpen()) {
-      if (record.kind !== "work" || record.startPolicy !== "on-request") continue;
-      if (
-        record.startedAt !== null ||
-        record.worktreeDir ||
-        this.host.runtime(record.id) !== undefined
-      )
-        continue;
-      // A program closes when its script ends, not when its parts so far have.
-      if (record.shape?.program) continue;
+      if (!this.closesWithParts(record)) continue;
       const children = this.options.tasks.graph.children(record.id);
-      if (children.length === 0 || children.some((child) => !TaskService.isClosed(child))) {
-        continue;
-      }
-      if (this.host.cards.snapshot().some((card) => card.taskId === record.id)) continue;
+      const turnClosed = this.turnClosed?.ids;
+      if (turnClosed && children.some((child) => turnClosed.has(child.id))) continue;
       if (
         children.some((child) => this.options.inbox.holdsUnhandled(FIRSTMATE_RECIPIENT, child.id))
       )
@@ -1026,6 +1075,36 @@ export class TaskIntake {
       );
       this.host.broadcastCrewCounts();
     }
+  }
+
+  /**
+   * What a close by the first mate leaves its parent (INF-4509): when the
+   * task just closed was the last open part of a parent that closes itself,
+   * the close's answer names that parent, its goal and its basis, and says
+   * it closes when this turn ends unless a part is filed under it. The host
+   * carries the facts; whether the goal is met is the first mate's judgment.
+   * Empty when the close leaves no such parent.
+   */
+  parentCloseNote(taskId: string): string {
+    const record = this.options.tasks.resolve(taskId);
+    if (!record?.parentId || !TaskService.isClosed(record)) return "";
+    const parent = this.options.tasks.get(record.parentId);
+    if (!parent || !this.closesWithParts(parent)) return "";
+    const children = this.options.tasks.graph.children(parent.id);
+    const done = children.some((child) => child.status === "done");
+    const basis =
+      this.options.tasks.graph.basisOf(parent)?.ref ??
+      children.map((child) => this.options.tasks.graph.basisOf(child)?.ref).find(Boolean);
+    const goal = parent.intent?.goal?.trim();
+    return [
+      `${record.key || record.id} was the last open part of ${parent.key || parent.id} "${parent.title}".`,
+      `That parent closes as ${done ? "finished" : "dropped"} when this turn ends unless a part is filed under it.`,
+      goal ? `Its goal: "${goal}".` : "It records no goal.",
+      basis ? `Its basis: ${basis}.` : "",
+      "Compare that goal and every piece its plan named with its parts, and file each missing piece under it now.",
+    ]
+      .filter(Boolean)
+      .join(" ");
   }
 
   /**

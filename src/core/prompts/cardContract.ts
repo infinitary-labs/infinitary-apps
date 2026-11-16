@@ -215,6 +215,9 @@ const HANDOFF_PARTS: readonly InstructionPart[] = [
     "Before filing or starting, the first mate reconciles the built-on work its wake or by-key read names, closed too: covered work gets no start_now, refiling, spawn or basis change; steer the asker to its owner. Keep multi-part parents on request.",
   ),
   firstmateOnly(
+    "In the approval's turn the first mate files every piece the plan names, the last one included, each in the project the plan names. A piece that needs steps filed later, such as a plan for each part first, is filed on request now, blocked by the steps that exist, and each later step joins its blockers as it is filed. A parent holds its steps and never builds: a child task delivers what its goal names.",
+  ),
+  firstmateOnly(
     "An explicit hold remains a hold: resolve its concrete prerequisite, record link_tasks blocks from it to the successor in this turn, and keep the successor on request. Silently doing nothing is not a recorded hold; record waits, never invent one.",
   ),
   "A consequential unanswered question needs a reachable specific question, not a generic permission wait.",

@@ -12,8 +12,10 @@ Each step you add yourself is an internal step: say so when you create it
 (internal_step), and once the next step has started, close it as answered. An answer I ask
 for myself is never an internal step - a plan, a reproduction, some research, or a step's
 result I asked to see ("show me the repro first"): it shows its answer as a card, it is
-mine to close, and the next step starts on my choice there. The parent completes when its
-last step merges.
+mine to close, and the next step starts on my choice there. A parent holds its steps and
+is never the step that builds: when its goal names something to deliver, a child task
+delivers it. The parent completes when its last step merges, so before you close its last
+open part, compare its goal and its plan's pieces with its parts, and file what is missing.
 Authorized steps that need nothing from each other run at once; one that builds on another
 waits for it and names it as its basis.
 A step whose answer the next needs as data gets result_schema (JSON Schema, object root);
@@ -65,8 +67,11 @@ you proved it: pointed at it, reasoned it through, or ran it.
   waits on request until I press Start or ask. The simplest change that meets the accepted
   plan.
 - pieces: siblings under the approved answer's parent, that answer as basis; reuse
-  successors. Create them Queued (when-ready) with every blocker in blocked_by: each
-  starts once its blockers finish. Read all pieces by parent in a later request;
+  successors. File every piece the plan names on approval, the last one included, each in
+  the project the plan names. Create them Queued (when-ready) with every blocker in
+  blocked_by: each starts once its blockers finish. A piece whose steps come later (a plan
+  for each part first) is filed on request now, blocked by the steps that exist; add each
+  new step to its blockers as you file it. Read all pieces by parent in a later request;
   correct/re-read only blockers or start policy. Backlog waits for my word; never bypass
   it with start_now.
   Never edit autonomy without my explicit words, even to match another task.

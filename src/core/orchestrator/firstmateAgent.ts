@@ -1269,6 +1269,8 @@ export class FirstmateAgent {
   ): Promise<void> {
     this.running = true;
     beginTurn(this.turn, asked);
+    // A parent whose last part this turn closes waits for the turn's end (INF-4509).
+    this.options.supervisor.intake.firstmateTurnBegan();
     this.lastEventAt = Date.now();
     this.quietLevel = 0;
     if (!inboxRows) this.servedOrigins.clear();
@@ -1337,6 +1339,7 @@ export class FirstmateAgent {
           endedTurn(this.turn, threw, this.contextRecoveryAttempted),
           inboxRows,
         );
+      this.options.supervisor.intake.firstmateTurnEnded(!this.disposed);
     }
   }
 

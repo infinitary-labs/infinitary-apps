@@ -321,6 +321,9 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
         // A refusal comes back as text; only a task that is now dropped took effect.
         if (record.status !== "dropped" && tasks.get(record.id)?.status === "dropped") {
           tookEffect(record.id, `Dropped ${record.key}: ${record.title}`);
+          // The parent this drop left with no open part (INF-4509).
+          const parent = supervisor.intake.parentCloseNote(record.id);
+          if (parent) return `${text} ${parent}`;
         }
         return text;
       }),

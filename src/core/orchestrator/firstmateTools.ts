@@ -118,6 +118,9 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
     if (!result.refusal && (status === "done" || status === "dropped")) {
       host.turn.delivered = true;
       host.noteDelivery({ outcome: "action", kind: "work", tool: "settle_task", ref: taskId });
+      // The parent this close left with no open part, named for the first mate to judge (INF-4509).
+      const parent = supervisor.intake.parentCloseNote(taskId);
+      if (parent) return { ...result, text: `${result.text} ${parent}` };
     }
     return result;
   };

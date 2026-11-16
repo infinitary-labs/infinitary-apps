@@ -1393,10 +1393,46 @@ describe("parent tasks with planned children", () => {
     expect(tasks.get(parent.id)?.status).toBe("open");
     expect(tasks.get(part.id)?.parentId).toBe(parent.id);
 
-    // A turn that filed nothing leaves nothing to wait for: the parent closes.
+    // INF-4509: the first mate's own turn closes the last part, which purges
+    // that part's news. The parent waits for the turn's end, and the close's
+    // answer names the parent, its goal and its basis for the first mate.
+    supervisor.intake.firstmateTurnBegan();
     supervisor.intake.dropTask(part.id, { reason: "not wanted" });
+    expect(inbox.holdsUnhandled(FIRSTMATE_RECIPIENT, part.id)).toBe(false);
     await supervisor.watch.sweepGates(Date.now());
+    expect(tasks.get(parent.id)?.status).toBe("open");
+    const note = supervisor.intake.parentCloseNote(part.id);
+    expect(note).toContain(
+      `${tasks.get(part.id)?.key} was the last open part of ${tasks.get(parent.id)?.key}`,
+    );
+    expect(note).toContain("closes as finished when this turn ends");
+    expect(note).toContain(`"${tasks.get(parent.id)?.intent?.goal}"`);
+    expect(supervisor.intake.parentCloseNote(plan.taskId)).toContain(
+      `${tasks.get(parent.id)?.key}`,
+    );
+
+    // A turn that filed nothing leaves nothing to wait for: the parent closes as it ends.
+    supervisor.intake.firstmateTurnEnded();
     expect(tasks.get(parent.id)).toMatchObject({ status: "done", closedReason: "finished" });
+    expect(supervisor.intake.parentCloseNote(part.id)).toBe("");
+  });
+
+  // INF-4509: a part filed in that turn keeps the parent open past its end.
+  it("keeps a container open when the turn that closed its last part files another", async () => {
+    const { supervisor, tasks } = setup(fakeCrewmate());
+    const planOf = (title: string, parent?: string) =>
+      supervisor.intake.plan({ title, intent: intentOf(title), ...(parent ? { parent } : {}) });
+    const container = planOf("Rebuild the home page around the hero shots");
+    const shot = planOf("Record the first hero shot", container.key);
+    supervisor.intake.firstmateTurnBegan();
+    tasks.close(shot.id, { status: "done", reason: "answered", actor: "firstmate" });
+    await supervisor.watch.sweepGates(Date.now());
+    expect(tasks.get(container.id)?.status).toBe("open");
+    const build = planOf("Build the page in the site project", container.key);
+    supervisor.intake.firstmateTurnEnded();
+    expect(tasks.get(container.id)?.status).toBe("open");
+    expect(supervisor.intake.parentCloseNote(shot.id)).toBe("");
+    expect(tasks.get(build.id)).toMatchObject({ status: "open", parentId: container.id });
   });
 
   it("opens a container again when a part is filed or moved under it, and no other closed parent", async () => {

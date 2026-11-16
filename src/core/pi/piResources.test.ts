@@ -1925,7 +1925,8 @@ it("keeps the full authoring and handoff sources word for word", () => {
   // INF-2744 names the captain's separate click by the merge card's name.
   // INF-3170's approved plan keeps a builder's repair of its own work inside the approval.
   // The prompt-budget trim (INF-3227) says the same rules in fewer words, in both sources.
-  expect(hash(HANDOFF)).toBe("9a04954bb1cdeebe884cf216f138993e5227fe805d91732be621c9ed388c1f88");
+  // INF-4509's chosen direction B files every approved piece in the approval's turn, and a parent never builds.
+  expect(hash(HANDOFF)).toBe("e3caa52175c82660098180be55cf181fe32ad14cbd7c1fc3f10b0ec47b0fd935");
 });
 
 // INF-880: the submitted words-only rule must survive procedure filtering on every tier.

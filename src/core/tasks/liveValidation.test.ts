@@ -358,6 +358,44 @@ describe("Careful's accepted live-validation contract", () => {
     expect(review(replanned, head, { verdict: "go" }).reviews.at(-1)?.verdict).toBe("go");
   });
 
+  // INF-3883: on INF-3771 the proof read cleared the code and matched the
+  // run's inconclusive verdict, but recorded coverage missing with the
+  // accepted gap's check omitted, so the merge card and the story's table
+  // were refused and the builder was told to cover a gap it could not ask
+  // about again.
+  it("INF-3883: a proof read that lists only the accepted gap's check as omitted lets the change proceed", () => {
+    const permitted = approve(askGap(run(plan(), head, true)), "no-device");
+    const missing = {
+      coverage: "missing",
+      coverageReason: "The device check has no live run; the captain accepted that gap.",
+      verdict: "inconclusive",
+    } as const;
+    expect(
+      acceptedValidation(review(permitted, head, { ...missing, omitted: [scenario.id] }), head),
+    ).toMatchObject({
+      ready: true,
+      label: "Proceeding without live proof",
+    });
+    // An omission the captain did not accept still sends the builder back.
+    const unaccepted = review(permitted, head, {
+      ...missing,
+      omitted: [scenario.id, "focus-recovery"],
+    });
+    expect(acceptedValidation(unaccepted, head)).toMatchObject({ ready: false, by: "crewmate" });
+    expect(acceptedValidation(unaccepted, head).missing).toContain(
+      "(omitted: keyboard-close; focus-recovery)",
+    );
+    // Coverage missing with no omission named is the reviewer's own reason, never read.
+    expect(
+      acceptedValidation(review(permitted, head, { ...missing, omitted: [] }), head).ready,
+    ).toBe(false);
+    // Before the captain answers, the same omission still holds.
+    const asked = askGap(run(plan(), head, true));
+    expect(
+      acceptedValidation(review(asked, head, { ...missing, omitted: [scenario.id] }), head).ready,
+    ).toBe(false);
+  });
+
   it("refuses fabricated go, missing observations and contradictory no-surface results", () => {
     const state = run(plan());
     const { revision: _revision, at: _at, deviceId: _device, ...input } = state.runs[0]!;

@@ -577,7 +577,7 @@ Which level a hold takes is a judgment by the four questions above, made by its 
 | `waits` | soft | record | a close or merge card while a wait on other work stands | the override, or the captain's words on the close |
 | `parts` | soft | record | a close while the task's planned parts are open | `proceed_with_open`, the override, or the captain's words on the close |
 | `checks` | soft | record | a merge card or merge while the checks failed or are running | Merge anyway on the merge card, or the override |
-| `proof` | soft | record | the first mate's own close as done while its crewmate has not reported, its own pull request is open, or its unmerged work goes nowhere the close names | the override, or the captain's words on the close |
+| `proof` | soft | record | the first mate's own close as done while its crewmate has not reported, its own pull request is open, or its unmerged work goes nowhere the close names; and the merge card while the live proof at its version is not accepted | the override, or the captain's words on the close |
 | `story` | soft | consent | a GitHub or GitLab pull request opened, or merged, without its current published story | the override |
 | `escalation` | soft | made-up number | a stronger model past the ladder's top | the captain names the model |
 | `program-bound` | soft | consent | a program's task() call past its bound | on the captain's words the crewmate that started it raises the bound with `start_program`, or the first mate with `update_task program_bound` |
@@ -789,6 +789,7 @@ An observed failure is no-go even with other proof missing; missing proof or omi
 This distinction applies to the reviewer's live-proof verdict too; code findings remain separate.
 The record refuses a review whose verdict the run it judges could not carry, by the same rules as that run's own record, judged against the scenarios the run ran (`verdictContradiction`, INF-3664): acceptance needs the two verdicts to match, so such a review could only stall the change.
 A gap the captain accepted is still missing proof, so its run and every review of it stay inconclusive, and acceptance shows the gap as Proceeding without live proof; the refusal of a go says so, and the reviewer's brief says it first.
+It is not omitted coverage: the reviewer's brief says to leave its check out of `omitted`, and acceptance reads a review whose only omissions are exactly the ids of required checks left untested under an accepted gap as covering the change (INF-3883); coverage missing with nothing omitted, or any other omission, still goes back to the builder.
 The reviewer records its assigned version and evidence revision, code clearance, coverage with omissions, any inspected effect identities, and its verdict and reason.
 Code clearance is separate from final proof acceptance.
 A missing required scenario goes back to the builder; supplementary gaps remain explained beside the claim.

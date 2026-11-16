@@ -462,10 +462,39 @@ export function scenariosOfRun(
   );
 }
 /**
+ * Whether a review leaves no coverage missing (INF-3883). A required
+ * scenario the run left untested under the captain's accepted gap is not
+ * omitted coverage: the captain's consent is the typed fact, so a review
+ * whose only omissions are exactly such scenarios' ids still covers the
+ * change. The gap stays missing proof and acceptance shows it as an
+ * exception. Coverage missing with no omission named stays incomplete: the
+ * app never reads the reviewer's reason.
+ */
+function reviewCovers(
+  state: LiveValidation,
+  review: ValidationReview,
+  run: ValidationRun,
+): boolean {
+  if (review.coverage === "complete" && !review.omitted.length) return true;
+  return (
+    review.omitted.length > 0 &&
+    review.omitted.every((omitted) => {
+      const scenario = state.scenarios.find((item) => item.id === omitted);
+      const observation = run.observations.find((item) => item.scenario === omitted);
+      return (
+        scenario?.importance === "required" &&
+        observation !== undefined &&
+        gapPermission(state, scenario, observation) !== undefined
+      );
+    })
+  );
+}
+/**
  * Which part of a review holds acceptance, and who supplies it (INF-3717
  * piece 1): a refusal names the one thing missing, never the whole rule.
  */
 function reviewGap(
+  state: LiveValidation,
   review: ValidationReview | undefined,
   run: ValidationRun,
 ): { missing: string; by: ValidationSupplier } {
@@ -479,7 +508,7 @@ function reviewGap(
       missing: `The review at this version did not clear the code (code: ${review.code}); the crewmate answers its findings and the reviewer reviews again.`,
       by: "crewmate",
     };
-  if (review.coverage !== "complete" || review.omitted.length)
+  if (!reviewCovers(state, review, run))
     return {
       missing: `The review at this version found coverage incomplete${review.omitted.length ? ` (omitted: ${review.omitted.join("; ")})` : ""}: ${review.coverageReason} The crewmate covers it and the reviewer reviews again.`,
       by: "crewmate",
@@ -538,14 +567,13 @@ export function acceptedValidation(
   if (
     !review ||
     review.code !== "clear" ||
-    review.coverage !== "complete" ||
-    review.omitted.length ||
+    !reviewCovers(state, review, run) ||
     review.verdict !== run.verdict
   )
     return {
       ready: false,
       reason: "This version and evidence need an independent review of coverage and proof.",
-      ...reviewGap(review, run),
+      ...reviewGap(state, review, run),
     };
   if (
     run.completion !== "complete" ||

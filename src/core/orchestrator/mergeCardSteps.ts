@@ -1,5 +1,6 @@
 import type { StagedChangePresentation } from "@shared/changePresentation";
 import { hasChangeRequests } from "@shared/forge";
+import { overridePasses, softHoldWords } from "@shared/holds";
 import { acceptedValidation } from "@shared/liveValidation";
 import {
   type Forge,
@@ -271,12 +272,20 @@ export class MergeCardSteps {
     }
 
     // 4. Review and live proof at this version, when the task has them.
-    const validation = options.tasks.get(taskId)?.delivery?.liveValidation;
+    // The captain's recorded override that passes the proof hold at this
+    // version passes this step too (INF-3883): the first mate declared it on
+    // their words, so the card no longer waits for proof they let go.
+    const delivery = options.tasks.get(taskId)?.delivery;
+    const validation = delivery?.liveValidation;
     let shown = newest.revision;
     if (validation) {
       const acceptance = acceptedValidation(validation, head);
-      if (!acceptance.ready)
-        return stop("proof", acceptance.missing ?? acceptance.reason, acceptance.by ?? "crewmate");
+      if (!acceptance.ready && !overridePasses(delivery, "proof", head))
+        return stop(
+          "proof",
+          `${acceptance.missing ?? acceptance.reason} ${softHoldWords("proof", "crewmate")}`,
+          acceptance.by ?? "crewmate",
+        );
       // Proof accepted after the story, with the same scenarios: the same
       // words again, with the summary accepted now.
       try {

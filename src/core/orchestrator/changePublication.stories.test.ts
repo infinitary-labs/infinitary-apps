@@ -1352,6 +1352,80 @@ describe("shared story delivery boundaries", () => {
       expect(opens(at)).toBe(0);
     });
 
+    // INF-3883: three of three times on Nov 15 the captain let a change go on
+    // without live proof and the first mate recorded the override, yet the
+    // merge card still waited for the proof read.
+    it("passes the proof step and shows the card on the captain's recorded proof override at this version", async () => {
+      const { at, story: saved } = await deliveringFromAnotherBranch();
+      const story = {
+        ...saved,
+        version: 2 as const,
+        title: "feat: share the story",
+        validationRows: [],
+        checked: [{ check: "Read the saved publication", result: "It names the story." }],
+      };
+      // No proof read judged this version.
+      seedDelivery(at.tasks, "ab12cd34", {
+        liveValidation: { ...noSurfaceProof(original), reviews: [] },
+      });
+      await at.service.publication.preparePresentation("ab12cd34", story);
+      const first = at.tasks.delivery.changePresentation("ab12cd34", phone)
+        ?.revisions[0] as ChangePresentation;
+      const region = presentationMarkdown(first, new Map(), "passed");
+      const published = {
+        revision: 1,
+        head: original,
+        state: "confirmed" as const,
+        region,
+        regionHash: createHash("sha256").update(region).digest("hex"),
+        contentHash: presentationContentHash(first),
+        number: 1413,
+      };
+      at.tasks.delivery.updateChangePresentation(
+        "ab12cd34",
+        (old) => ({
+          ...(old ?? { revisions: [first], receipts: [] }),
+          publication: published,
+          published,
+        }),
+        phone,
+      );
+      at.forge.change = {
+        ...at.forge.opened,
+        number: 1413,
+        url: "https://github.com/x/y/pull/1413",
+        branch: phone,
+        title: story.title,
+        headSha: original,
+        body: region,
+      };
+      const held = await at.service.mergeCard.walk("ab12cd34");
+      expect(held.stop).toMatchObject({ step: "proof", by: "reviewer" });
+      expect(held.stop?.missing).toContain(softHoldWords("proof", "crewmate"));
+      await expect(
+        at.presentations.completion("ab12cd34", 1, original, phone, 1413),
+      ).rejects.toThrow("Live validation is not accepted for this version");
+      // An override for another version passes nothing here.
+      const override = {
+        words: 'Go on without the proof read, on the card "Proof"',
+        holds: ["proof" as const],
+        until: "version" as const,
+        at: 5,
+      };
+      seedDelivery(at.tasks, "ab12cd34", { override: { ...override, head: repaired } });
+      expect((await at.service.mergeCard.walk("ab12cd34")).stop).toMatchObject({ step: "proof" });
+      seedDelivery(at.tasks, "ab12cd34", { override: { ...override, head: original } });
+      expect(await at.service.mergeCard.walk("ab12cd34")).toEqual({
+        did: [],
+        ready: { revision: 1, title: story.title, head: original },
+      });
+      // The card opens from that story, its table still awaiting proof.
+      const card = await at.presentations.completion("ab12cd34", 1, original, phone, 1413);
+      expect(card.title).toBe(story.title);
+      expect(card.body).toContain("Awaiting live validation");
+      expect(opens(at)).toBe(0);
+    });
+
     it("stops at the pull request when the one that carried the story closed, sending nothing again", async () => {
       const { at, story: saved } = await deliveringFromAnotherBranch();
       // One title for the story, the pull request and the card.

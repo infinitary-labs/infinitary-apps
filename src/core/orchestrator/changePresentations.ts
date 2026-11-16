@@ -13,6 +13,7 @@ import {
   readyPresentation,
   type StoryAround,
 } from "@shared/changePresentation";
+import { overridePasses } from "@shared/holds";
 import { servedNumber } from "@shared/i18n/format";
 import { acceptedValidation } from "@shared/liveValidation";
 import { liveValidationSummary } from "@shared/liveValidationSummary";
@@ -925,6 +926,10 @@ export class ChangePresentations {
       false,
     );
     if (!current?.verdict) {
+      // INF-3883: the captain's recorded override passes the proof hold at
+      // this version, so the card shows the story's table as it reads now.
+      if (overridePasses(this.options.tasks.get(taskId)?.delivery, "proof", story.head))
+        return current;
       // INF-3717 piece 1: the refusal names which part of acceptance is
       // missing and who supplies it; a new story changes none of them.
       const acceptance = acceptedValidation(

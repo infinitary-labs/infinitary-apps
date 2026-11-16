@@ -1,12 +1,13 @@
 import { posix } from "node:path";
 import { describe, expect, it } from "vitest";
-import { readMainPush } from "../scripts/batch.mjs";
+import { readCheckFiles, readMainPush } from "../scripts/batch.mjs";
 import { confirmPlan, failedTestFiles, failures } from "../scripts/batch-failures.mjs";
 import {
   BATCH_BRANCH,
   BATCH_PULL_CHECKS,
   BATCH_PULL_RUN,
   batchPullTree,
+  batchRunCheckFiles,
   sortBatchPull,
 } from "../scripts/batch-pull.mjs";
 import { verifyBatchEvidence } from "../scripts/main-alpha-proof.mjs";
@@ -351,11 +352,22 @@ describe("a failed batch pull request's confirm plan", () => {
   });
 });
 
+// The check files of this repository's own version, as main's sort reads
+// them from its checkout of the pushed version.
+const checkFiles = await readCheckFiles(".");
+
 describe("main's check sorting a push that merged a batch pull request", () => {
   const passed = { id: rehearsal.run, jobs: jobsOf(passedRun) };
   const files = [{ filename: "src/core/session/tools.ts" }, { filename: "docs/testing.md" }];
   const sorted = (input: Partial<Parameters<typeof sortBatchPull>[0]>) =>
-    sortBatchPull({ tree: rehearsal.tree, runs: [passed], files, total: files.length, ...input });
+    sortBatchPull({
+      tree: rehearsal.tree,
+      runs: [passed],
+      files,
+      total: files.length,
+      checkFiles,
+      ...input,
+    });
 
   it("reads files that are exactly the batch's as covered, whether it passed outright or on its confirm", () => {
     expect(batchPullTree(passed.jobs)).toBe(rehearsal.tree);
@@ -385,14 +397,71 @@ describe("main's check sorting a push that merged a batch pull request", () => {
       { filename: ".github/workflows/batch-checks.yml" },
       { filename: ".github/workflows/verify.yml" },
       { filename: ".github/actions/linux-desktop/action.yml" },
-      // A check file moved out of its folder is a changed check file.
-      { filename: "docs/old-check.yml", previous_filename: ".github/workflows/old-check.yml" },
+      // A file of an action the run uses, which a step runs by its path.
+      { filename: ".github/actions/electron-download/zips.mjs" },
+      // A file removed from the folder of an action the run uses.
+      { filename: ".github/actions/linux-desktop/setup.sh" },
+      // A check file the run reads under a new name is a changed check file.
+      {
+        filename: ".github/workflows/verify.yml",
+        previous_filename: ".github/workflows/full-check.yml",
+      },
     ])
       expect(sorted({ files: [...files, changed], total: 3 }), changed.filename).toEqual({
         kind: "full",
       });
     // A list GitHub cut short may hide one.
     expect(sorted({ total: 3001 })).toEqual({ kind: "full" });
+  });
+
+  // INF-4347's fix the captain started: "Check main again only for check
+  // files the batch did not run, so the alpha does not re-run every journey."
+  it("reuses the run of a batch whose changed check files that run never reads", () => {
+    for (const changed of [
+      { filename: ".github/workflows/release.yml" },
+      { filename: ".github/workflows/main.yml" },
+      { filename: ".github/workflows/ci.yml" },
+      { filename: ".github/workflows/journeys.yml" },
+      { filename: ".github/actions/linux-packages/action.yml" },
+      // A check file moved out of its folder is one the run could not read.
+      { filename: "docs/old-check.yml", previous_filename: ".github/workflows/old-check.yml" },
+    ])
+      expect(sorted({ files: [...files, changed], total: 3 }), changed.filename).toEqual({
+        kind: "covered",
+        run: rehearsal.run,
+      });
+  });
+
+  it("reads the check files the batch's run reaches through its workflows and actions", () => {
+    const read = batchRunCheckFiles(checkFiles);
+    // The batch's workflow, what it calls, and what that calls in turn.
+    for (const path of [
+      BATCH_PULL_RUN,
+      ".github/workflows/batch-checks.yml",
+      ".github/workflows/verify.yml",
+      ".github/workflows/source-journeys.yml",
+      ".github/workflows/linux-startup.yml",
+      // Used from a checkout in another folder: ./Application Support/firstmate/.github/actions/pnpm.
+      ".github/actions/pnpm/action.yml",
+      // A whole action's folder, the file a step runs included.
+      ".github/actions/electron-download/zips.mjs",
+    ])
+      expect(read, path).toContain(path);
+    for (const path of [".github/workflows/release.yml", ".github/workflows/main.yml"])
+      expect(read, path).not.toContain(path);
+    // A file a comment names is not read.
+    const named = new Map(checkFiles);
+    const checks = ".github/workflows/batch-checks.yml";
+    named.set(
+      checks,
+      `# The alpha's own check is .github/workflows/release.yml.\n${checkFiles.get(checks)}`,
+    );
+    expect(batchRunCheckFiles(named)).not.toContain(".github/workflows/release.yml");
+    named.set(
+      checks,
+      `${checkFiles.get(checks)}\n      - run: cat .github/workflows/release.yml\n`,
+    );
+    expect(batchRunCheckFiles(named)).toContain(".github/workflows/release.yml");
   });
 
   it("reads the merged pull request, its files and its own run from GitHub", async () => {
@@ -443,7 +512,7 @@ describe("main's check sorting a push that merged a batch pull request", () => {
         return passed.jobs;
       },
     };
-    const push = { sha: merge, tree: rehearsal.tree };
+    const push = { sha: merge, tree: rehearsal.tree, checkFiles };
     expect(await readMainPush(github, repo, push)).toEqual({ kind: "covered", run: rehearsal.run });
     expect(await readMainPush(github, repo, { ...push, tree: "d".repeat(40) })).toEqual({
       kind: "full",

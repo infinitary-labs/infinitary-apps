@@ -75,8 +75,9 @@ jobs:
   # keep a fallback full check on main for versions no batch built"). A batch
   # is one pull request, merged in one push, so the push that merges it holds
   # its files. They are a passed batch's when the pull request's own run
-  # passed on exactly them and the batch changed no file under .github/,
-  # which its run reads from the pull request itself.
+  # passed on exactly them and the batch changed no file under .github/ that
+  # run reads, since it reads them from the pull request itself; a changed
+  # check file it never reads, such as release.yml, chose nothing of it.
   sort:
     name: ${{ format('{0} · Compare with checked batches', (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request')) }}
     runs-on: ubuntu-24.04
@@ -90,10 +91,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # The sort and its reader of a batch pull request's own run.
+          # The sort, its reader of a batch pull request's own run, and the
+          # check files that run reads.
           sparse-checkout: |
             scripts/batch.mjs
             scripts/batch-pull.mjs
+            .github/
           sparse-checkout-cone-mode: false
       - id: sort
         name: Compare the push with its batch
@@ -108,7 +111,8 @@ jobs:
             if (context.eventName === 'push') {
               try {
                 const tree = process.env.TREE || (await github.rest.repos.getCommit({...context.repo, ref: context.sha})).data.commit.tree.sha;
-                sorted = await batch.readMainPush(github, context.repo, {sha: context.sha, tree});
+                const checkFiles = await batch.readCheckFiles(process.env.GITHUB_WORKSPACE);
+                sorted = await batch.readMainPush(github, context.repo, {sha: context.sha, tree, checkFiles});
               } catch (error) {
                 core.warning(`The push could not be sorted, so the full check runs: ${error.message}`);
               }

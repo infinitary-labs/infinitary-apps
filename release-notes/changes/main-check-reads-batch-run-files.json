@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "main-check-reads-batch-run-files",
+      "reason": "Main's check now re-runs after a merged batch only when the batch changed a check file its own run reads, so a change to another workflow no longer repeats every journey at the next alpha; CI only, nothing in the app changes."
+    }
+  ]
+}

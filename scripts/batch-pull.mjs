@@ -55,33 +55,86 @@ export function batchPullTree(jobs) {
 
 // Where the workflows and the actions they run live. A pull request's run
 // reads them from the pull request's own version, so a batch that changes one
-// chose its own check.
+// its run reads chose its own check.
 const CHECK_FILES = ".github/";
 
+// A path under .github/ as a workflow or action names it: in a step's uses,
+// such as ./.github/actions/pnpm or ./Application Support/firstmate/.github/actions/pnpm,
+// in a sparse checkout, or in a command that runs a file there.
+const CHECK_PATH = /\.github\/[\w.\/-]*[\w-]/g;
+
 /**
- * Whether a batch changed a file its own check is made of, from the files
- * its pull request changed as GitHub lists them and the count GitHub gives
- * for all of them. A list GitHub cut short may hide one, so it counts as
- * changed.
+ * The check files a batch pull request's own run reads, from every file
+ * under .github/ at the batch's version (`checkFiles`, path to text): the
+ * batch's workflow, and each workflow, action or other file under .github/
+ * that a file it reads names outside a comment, read the same way in turn.
+ * A named folder, such as an action's, counts with every file in it, and is
+ * listed too, ending in a slash, so a file removed from it counts as well. It
+ * reads what a run could reach, whether or not a job of that run started, so
+ * a file it lists may have stayed unread, never the other way.
  */
-export function changedCheckFile(files, total) {
+export function batchRunCheckFiles(checkFiles) {
+  const paths = [...checkFiles.keys()];
+  const read = new Set();
+  const folders = new Set();
+  const queue = [BATCH_PULL_RUN];
+  while (queue.length > 0) {
+    const path = queue.shift();
+    if (read.has(path) || !checkFiles.has(path)) continue;
+    read.add(path);
+    const text = checkFiles
+      .get(path)
+      .split("\n")
+      .filter((line) => !line.trimStart().startsWith("#"))
+      .join("\n");
+    for (const [named] of text.matchAll(CHECK_PATH)) {
+      const folder = `${named}/`;
+      for (const candidate of paths) {
+        if (candidate === named) queue.push(candidate);
+        else if (candidate.startsWith(folder)) {
+          folders.add(folder);
+          queue.push(candidate);
+        }
+      }
+    }
+  }
+  return new Set([...read, ...folders]);
+}
+
+/**
+ * Whether a batch changed a file its own run reads, from the files its pull
+ * request changed as GitHub lists them, the count GitHub gives for all of
+ * them, and the check files its run reads (batchRunCheckFiles). A list GitHub
+ * cut short may hide one, so it counts as changed. A file under .github/ the
+ * run never reads, such as the release's workflow, chose nothing of the
+ * batch's check, so main does not check the batch again for it.
+ */
+export function changedCheckFile(files, total, runCheckFiles) {
   if (files.length < total) return true;
   return files.some((file) =>
-    [file.filename, file.previous_filename].some((path) => path?.startsWith(CHECK_FILES)),
+    [file.filename, file.previous_filename].some(
+      (path) =>
+        path?.startsWith(CHECK_FILES) &&
+        (runCheckFiles.has(path) ||
+          [...runCheckFiles].some((read) => read.endsWith("/") && path.startsWith(read))),
+    ),
   );
 }
 
 /**
  * How main's check treats a push that merged a batch pull request, from the
  * pushed files' `tree`, the pull request's runs newest first, each with its
- * latest jobs, and its changed `files` with their `total`:
+ * latest jobs, its changed `files` with their `total`, and every file under
+ * .github/ in the pushed version (`checkFiles`, path to text):
  * - covered: a run passed on exactly these files and the batch changed no
- *   check file, so nothing runs again;
+ *   check file that run reads, so nothing runs again;
  * - full otherwise: main moved under the batch, no run passed, or the batch
  *   changed a file its own check is made of.
+ * The pushed version is the batch's whenever a run passed on its tree, so
+ * its check files are the ones that run read.
  */
-export function sortBatchPull({ tree, runs, files, total }) {
-  if (changedCheckFile(files, total)) return { kind: "full" };
+export function sortBatchPull({ tree, runs, files, total, checkFiles }) {
+  if (changedCheckFile(files, total, batchRunCheckFiles(checkFiles))) return { kind: "full" };
   const run = runs.find((candidate) => batchPullTree(candidate.jobs) === tree);
   return run ? { kind: "covered", run: run.id } : { kind: "full" };
 }

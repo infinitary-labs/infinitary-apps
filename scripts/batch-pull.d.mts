@@ -30,8 +30,14 @@ export function isBatchPull(pull: BatchPull, repository: string): boolean;
 export function isBatchPullRun(run: BatchPullRun, repository: string): boolean;
 /** The tree a batch pull request's run passed, from its jobs, or null when its last job did not pass. */
 export function batchPullTree(jobs: readonly BatchPullJob[]): string | null;
-/** Whether a batch changed a file its own check is made of; a list GitHub cut short counts as changed. */
-export function changedCheckFile(files: readonly ChangedFile[], total: number): boolean;
+/** The check files a batch pull request's own run reads, and the folders it names ending in a slash, from every file under .github/ (path to text). */
+export function batchRunCheckFiles(checkFiles: ReadonlyMap<string, string>): Set<string>;
+/** Whether a batch changed a file its own run reads; a list GitHub cut short counts as changed. */
+export function changedCheckFile(
+  files: readonly ChangedFile[],
+  total: number,
+  runCheckFiles: ReadonlySet<string>,
+): boolean;
 /** How main's check treats a push that merged a batch pull request. */
 export function sortBatchPull(input: {
   tree: string;
@@ -40,4 +46,6 @@ export function sortBatchPull(input: {
   files: readonly ChangedFile[];
   /** How many files GitHub says the pull request changed. */
   total: number;
+  /** Every file under .github/ in the pushed version, path to text. */
+  checkFiles: ReadonlyMap<string, string>;
 }): { kind: "full" | "covered"; run?: number };

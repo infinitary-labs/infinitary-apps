@@ -9,10 +9,26 @@
  * exactly a passed batch's needs no check run again, whether the batch
  * passed outright or on its confirm (the captain's pick on INF-3052,
  * "Nothing more: the batch's run and its recheck together passed every
- * test"), unless the batch changed a file its own check is made of. Main's
+ * test"), unless the batch changed a file its own run reads. Main's
  * own full check runs only for files no batch built.
  */
+import { readdir, readFile } from "node:fs/promises";
+import { posix } from "node:path";
 import { BATCH_PULL_RUN, isBatchPull, isBatchPullRun, sortBatchPull } from "./batch-pull.mjs";
+
+/**
+ * Every file under .github/ in the checkout at `root`, path to text, as
+ * sortBatchPull reads the check files of the pushed version.
+ */
+export async function readCheckFiles(root) {
+  const files = new Map();
+  for (const entry of await readdir(posix.join(root, ".github"), { recursive: true, withFileTypes: true })) {
+    if (!entry.isFile()) continue;
+    const path = posix.relative(root, posix.join(entry.parentPath ?? entry.path, entry.name));
+    files.set(path, await readFile(posix.join(root, path), "utf8"));
+  }
+  return files;
+}
 
 /** The pull request a commit merged, or undefined when it merged none. */
 async function mergedPull(github, repo, sha) {
@@ -24,7 +40,7 @@ async function mergedPull(github, repo, sha) {
 }
 
 /** A merged batch pull request's sort: its own runs on its version, their latest jobs, and the files it changed. */
-async function readBatchPull(github, repo, pull, tree) {
+async function readBatchPull(github, repo, pull, tree, checkFiles) {
   const repository = `${repo.owner}/${repo.repo}`;
   const { data: whole } = await github.rest.pulls.get({ ...repo, pull_number: pull.number });
   const files = await github.paginate(github.rest.pulls.listFiles, {
@@ -50,16 +66,18 @@ async function readBatchPull(github, repo, pull, tree) {
     });
     runs.push({ id: run.id, jobs });
   }
-  return sortBatchPull({ tree, runs, files, total: whole.changed_files });
+  return sortBatchPull({ tree, runs, files, total: whole.changed_files, checkFiles });
 }
 
 /**
  * main.yml's sort: reads the pull request the pushed commit merged and, for
- * a batch pull request, its own run and the files it changed. A push that
- * merged any other pull request, or none, gets the full check.
+ * a batch pull request, its own run and the files it changed, against the
+ * pushed version's `checkFiles` (readCheckFiles). A push that merged any
+ * other pull request, or none, gets the full check.
  */
-export async function readMainPush(github, repo, { sha, tree }) {
+export async function readMainPush(github, repo, { sha, tree, checkFiles }) {
   const pull = await mergedPull(github, repo, sha);
-  if (pull && isBatchPull(pull, `${repo.owner}/${repo.repo}`)) return readBatchPull(github, repo, pull, tree);
+  if (pull && isBatchPull(pull, `${repo.owner}/${repo.repo}`))
+    return readBatchPull(github, repo, pull, tree, checkFiles);
   return { kind: "full" };
 }

@@ -110,7 +110,7 @@ describe("signed release workflow", () => {
         "upload:private",
         "upload:adopt",
         "upload:upload",
-        "publish:private-fetch-back",
+        "publish:fetch-back",
       ],
       R2_ENDPOINT: ["release:visibility", "upload:adopt", "upload:upload", "publish:feeds"],
       R2_ACCESS_KEY_ID: ["upload:adopt", "upload:upload", "publish:feeds"],

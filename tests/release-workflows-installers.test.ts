@@ -359,9 +359,12 @@ describe("the private alpha (roadmap 1.2)", () => {
     expect(publication.env).toEqual(job.env);
     for (const [name, value] of Object.entries(workflow.jobs.upload.env))
       expect(value, name).toBe(job.env[name]);
-    // Cloudflare's copies are fetched back with no credential at all.
-    const publicRead = publication.steps.find((step) => step.id === "public-fetch-back");
-    expect(publicRead?.env).toBeUndefined();
+    // Cloudflare's copies are fetched back from the job's own DOWNLOAD_URL,
+    // the address published under that name; the fetch-back gives the token
+    // only to the record's reader (tests/release-workflows-handoff.test.ts).
+    const fetchBack = publication.steps.find((step) => step.id === "fetch-back");
+    expect(fetchBack).toBeDefined();
+    expect(Object.keys(fetchBack?.env ?? {})).not.toContain("DOWNLOAD_URL");
   });
 });
 

@@ -1780,6 +1780,7 @@ jobs:
             scripts/linux-package-sums.ts
             .github/actions/electron-download/
             scripts/fetch-without-credential.sh
+            scripts/fetch-back-copies.sh
 
       - name: Use the workflow's own launch gate
         id: publish-launch-gate
@@ -1834,122 +1835,31 @@ jobs:
           JS
           cat "$RUNNER_TEMP/expected/files.sha256"
 
-      # The record's copies, fetched back with a token that only reads - the
-      # product repository is private - each checked against its sidecar and
-      # the upload job's list, with the full gate run again on what came back
-      # (pi-launcher's philosophy). The Linux release is laid out from these
-      # copies: the recipes rendered again from the fetched packages must be
-      # the ones fetched, and give the manifest the tap writer and the feeds
-      # read.
-      - name: Fetch back and check the record's copies
-        id: private-fetch-back
+      # Every place's copies, fetched back and checked at once (INF-4347's
+      # review: one after another they took about nine minutes, the record's
+      # alone over three): the record's with a token that only reads - the
+      # product repository is private - and Cloudflare's, the tap's and
+      # Firstmate 3000's with none, the unauthenticated GET a person, the
+      # updater and Homebrew perform, so a private, missing or altered asset
+      # fails the release before any cask or feed learns of it. Each copy is
+      # checked against its sidecar and the upload job's list, with the full
+      # gate run again on what came back (pi-launcher's philosophy), and the
+      # Linux release is laid out from the record's copies: the recipes
+      # rendered again from the fetched packages must be the ones fetched, and
+      # give the manifest the tap writer and the feeds read. The workflow's
+      # own scripts/fetch-back-copies.sh holds the checks; only its record
+      # check is handed the token.
+      - name: Fetch back and check every place's copies at once
+        id: fetch-back
         if: ${{ needs.resolve.outputs.dry_run == 'false' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RECIPE_HOST: ${{ needs.release.outputs.direct == 'true' && 'downloads' || 'tap' }}
-        run: |
-          set -euo pipefail
-          EXPECTED="$RUNNER_TEMP/expected/files.sha256"
-          DIR="$RUNNER_TEMP/recorded-verify"
-          rm -rf "$DIR" && mkdir -p "$DIR"
-          while read -r _ NAME; do
-            gh release download "$TAG_NAME" --repo "$GITHUB_REPOSITORY" --pattern "$NAME" --pattern "$NAME.sha256" --dir "$DIR"
-            (cd "$DIR" && shasum -a 256 -c "$NAME.sha256")
-            grep -qxF -- "$(cd "$DIR" && shasum -a 256 "$NAME")" "$EXPECTED" \
-              || { echo "::error title=A copy differs::The record's $NAME is not the file the upload job uploaded." >&2; exit 1; }
-          done < "$EXPECTED"
-          EXTRACT_DIR="$RUNNER_TEMP/recorded-extract"
-          rm -rf "$EXTRACT_DIR" && mkdir -p "$EXTRACT_DIR"
-          ditto -x -k "$DIR/$ZIP_NAME" "$EXTRACT_DIR"
-          scripts/verify-app.sh "$EXTRACT_DIR/$APP_NAME" --signed --gatekeeper
-          scripts/check-app-launch.sh "$EXTRACT_DIR/$APP_NAME" "$VERSION"
-          [[ ! -f "$DIR/$DMG_NAME" ]] || scripts/verify-mac-dmg.sh "$DIR/$DMG_NAME" "$DIR/$ZIP_NAME" "$VERSION"
-          PACKAGES="$RUNNER_TEMP/recorded-packages"
-          rm -rf "$PACKAGES" && mkdir -p "$PACKAGES"
-          while IFS= read -r NAME; do
-            case "$NAME" in *.deb | *.rpm | *.AppImage) cp "$DIR/$NAME" "$PACKAGES/" ;; esac
-          done < "$RUNNER_TEMP/expected/linux.txt"
-          LINUX="$RUNNER_TEMP/linux-release"
-          rm -rf "$LINUX"
-          node scripts/linux-recipes.ts release --version "$VERSION" --packages "$PACKAGES" --out "$LINUX" >/dev/null
-          diff "$LINUX/assets.txt" "$RUNNER_TEMP/expected/linux.txt"
-          while IFS= read -r NAME; do cmp "$LINUX/$NAME" "$DIR/$NAME"; done < "$LINUX/assets.txt"
-          echo "fetched back and checked every recorded file: $(wc -l < "$EXPECTED" | tr -d ' ') files"
-
-      - name: Fetch back and check every Cloudflare download without a sign-in
-        id: public-fetch-back
-        if: ${{ needs.resolve.outputs.dry_run == 'false' && needs.release.outputs.direct == 'true' }}
-        # No credential: neither the installer nor the updater requires a GitHub sign-in.
-        run: |
-          set -euo pipefail
-          EXPECTED="$RUNNER_TEMP/expected/files.sha256"
-          PUBLIC_DIR="$RUNNER_TEMP/public-verify"
-          rm -rf "$PUBLIC_DIR" && mkdir -p "$PUBLIC_DIR"
-          BASE="${DOWNLOAD_URL%/*}"
-          while read -r _ NAME; do
-            .release-tooling/scripts/fetch-without-credential.sh "$BASE/$NAME" "$PUBLIC_DIR/$NAME"
-            .release-tooling/scripts/fetch-without-credential.sh "$BASE/$NAME.sha256" "$PUBLIC_DIR/$NAME.sha256"
-            (cd "$PUBLIC_DIR" && shasum -a 256 -c "$NAME.sha256")
-            grep -qxF -- "$(cd "$PUBLIC_DIR" && shasum -a 256 "$NAME")" "$EXPECTED" \
-              || { echo "::error title=A copy differs::Cloudflare's $NAME is not the file the upload job uploaded." >&2; exit 1; }
-          done < "$EXPECTED"
-          EXTRACT_DIR="$RUNNER_TEMP/public-extract"
-          rm -rf "$EXTRACT_DIR" && mkdir -p "$EXTRACT_DIR"
-          ditto -x -k "$PUBLIC_DIR/$ZIP_NAME" "$EXTRACT_DIR"
-          scripts/verify-app.sh "$EXTRACT_DIR/$APP_NAME" --signed --gatekeeper
-          scripts/check-app-launch.sh "$EXTRACT_DIR/$APP_NAME" "$VERSION"
-          scripts/verify-mac-dmg.sh "$PUBLIC_DIR/$DMG_NAME" "$PUBLIC_DIR/$ZIP_NAME" "$VERSION"
-          echo "fetched back every download without a credential: $(wc -l < "$EXPECTED" | tr -d ' ') files"
-
-      - name: Fetch back and check the tap's copies as Homebrew fetches them
-        id: homebrew-fetch-back
-        if: ${{ needs.resolve.outputs.dry_run == 'false' }}
-        # No token here, on purpose: this is the unauthenticated GET the cask
-        # performs, so a private, missing or altered asset fails the release
-        # before the tap learns of it.
-        env:
-          DOWNLOAD_URL: ${{ needs.resolve.outputs.download_url }}
-        run: |
-          set -euo pipefail
-          EXPECTED="$RUNNER_TEMP/expected/files.sha256"
-          PUBLIC_DIR="$RUNNER_TEMP/homebrew-verify"
-          rm -rf "$PUBLIC_DIR" && mkdir -p "$PUBLIC_DIR"
-          BASE="${DOWNLOAD_URL%/*}"
-          while read -r _ NAME; do
-            [[ "$NAME" != "$DMG_NAME" ]] || continue
-            .release-tooling/scripts/fetch-without-credential.sh "$BASE/$NAME" "$PUBLIC_DIR/$NAME"
-            .release-tooling/scripts/fetch-without-credential.sh "$BASE/$NAME.sha256" "$PUBLIC_DIR/$NAME.sha256"
-            (cd "$PUBLIC_DIR" && shasum -a 256 -c "$NAME.sha256")
-            grep -qxF -- "$(cd "$PUBLIC_DIR" && shasum -a 256 "$NAME")" "$EXPECTED" \
-              || { echo "::error title=A copy differs::The tap's $NAME is not the file the upload job uploaded." >&2; exit 1; }
-          done < "$EXPECTED"
-          EXTRACT_DIR="$RUNNER_TEMP/homebrew-extract"
-          rm -rf "$EXTRACT_DIR" && mkdir -p "$EXTRACT_DIR"
-          ditto -x -k "$PUBLIC_DIR/$ZIP_NAME" "$EXTRACT_DIR"
-          scripts/verify-app.sh "$EXTRACT_DIR/$APP_NAME" --signed --gatekeeper
-          scripts/check-app-launch.sh "$EXTRACT_DIR/$APP_NAME" "$VERSION"
-          echo "fetched back every tap file without a credential"
-
-      - name: Fetch back and check Firstmate 3000's copies as Homebrew fetches them
-        id: old-public-fetch-back
-        if: ${{ needs.resolve.outputs.dry_run == 'false' && needs.resolve.outputs.old_cask == 'true' }}
-        env:
+          TAP_DOWNLOAD_URL: ${{ needs.resolve.outputs.download_url }}
           OLD_DOWNLOAD_URL: ${{ needs.resolve.outputs.old_download_url }}
-        run: |
-          set -euo pipefail
-          EXPECTED="$RUNNER_TEMP/expected/files.sha256"
-          OLD_DIR="$RUNNER_TEMP/old-public-verify"
-          rm -rf "$OLD_DIR" && mkdir -p "$OLD_DIR"
-          BASE="${OLD_DOWNLOAD_URL%/*}"
-          while read -r _ NAME; do
-            [[ "$NAME" != "$DMG_NAME" ]] || continue
-            .release-tooling/scripts/fetch-without-credential.sh "$BASE/$NAME" "$OLD_DIR/$NAME"
-            .release-tooling/scripts/fetch-without-credential.sh "$BASE/$NAME.sha256" "$OLD_DIR/$NAME.sha256"
-            (cd "$OLD_DIR" && shasum -a 256 -c "$NAME.sha256")
-            grep -qxF -- "$(cd "$OLD_DIR" && shasum -a 256 "$NAME")" "$EXPECTED" \
-              || { echo "::error title=A copy differs::Firstmate 3000's $NAME is not the file the upload job uploaded." >&2; exit 1; }
-          done < "$EXPECTED"
-          echo "fetched back every Firstmate 3000 file without a credential"
+          PLACES: record${{ needs.release.outputs.direct == 'true' && ' cloudflare' || '' }} tap${{ needs.resolve.outputs.old_cask == 'true' && ' old-tap' || '' }}
+        # One word per place, split on purpose.
+        run: .release-tooling/scripts/fetch-back-copies.sh $PLACES
 
       # Only after every copy on every place was fetched back and checked:
       # the casks of every channel that moves, infinitary-updates.json and
@@ -2117,10 +2027,11 @@ jobs:
           GATES: >-
             uploads=${{ needs.upload.result }}
             expected=${{ steps.expected.outcome }}
-            recorded-fetch-back=${{ steps.private-fetch-back.outcome }}
-            public-fetch-back=${{ steps.public-fetch-back.outcome }}
-            homebrew-fetch-back=${{ steps.homebrew-fetch-back.outcome }}
-            old-public-fetch-back=${{ steps.old-public-fetch-back.outcome }}
+            fetch-back=${{ steps.fetch-back.outcome }}
+            recorded-fetch-back=${{ steps.fetch-back.outputs.record || 'skipped' }}
+            public-fetch-back=${{ steps.fetch-back.outputs.cloudflare || 'skipped' }}
+            homebrew-fetch-back=${{ steps.fetch-back.outputs.tap || 'skipped' }}
+            old-public-fetch-back=${{ steps.fetch-back.outputs.old-tap || 'skipped' }}
             tap=${{ steps.tap.outcome }} old-tap=${{ steps.old-tap.outcome }}
             feeds=${{ steps.feeds.outcome }}
             rehearsal-files=${{ steps.rehearsal-files.outcome }}

@@ -361,6 +361,15 @@ describe("the signed channel workflow", () => {
    * the signing job's, then the upload job's and the publication job's when
    * each starts after them.
    */
+  /** The places the publication job's fetch-back reads, in a release with these choices. */
+  const fetchedPlaces = (oldCask: boolean, direct: boolean) =>
+    workflowString(step("fetch-back").env?.PLACES ?? "", {
+      needs: {
+        resolve: { outputs: { old_cask: String(oldCask) } },
+        release: { outputs: { direct: String(direct) } },
+      },
+    });
+
   const ranSteps = (channel: string, dryRun: boolean, oldCask = false, direct = true) => {
     const needs = {
       resolve: {
@@ -473,22 +482,22 @@ describe("the signed channel workflow", () => {
         );
         // INF-2498's plan, piece 2: the record takes the zip first, every
         // place is read, then every place is uploaded to at once; the virtual
-        // Mac fetches back and checks every copy before any switch.
+        // Mac fetches back and checks every copy before any switch, every
+        // place's at once (INF-4347's review).
         const publication = [
           "private",
           "adopt",
           "upload",
           "files",
           "expected",
-          "private-fetch-back",
-          ...(direct ? ["public-fetch-back"] : []),
-          "homebrew-fetch-back",
+          "fetch-back",
           "tap",
           ...(direct ? ["feeds"] : []),
         ];
         expect(
           ran.filter((id) => publication.includes(id ?? "") || /fetch-back$/.test(id ?? "")),
         ).toEqual(publication);
+        expect(fetchedPlaces(false, direct)).toBe(direct ? "record cloudflare tap" : "record tap");
         expect(ran.indexOf("visibility")).toBeLessThan(ran.indexOf("developer_id_cert"));
         // INF-2074: the signing job reads the record before its image and
         // records nothing; the upload job records after every check.
@@ -508,7 +517,13 @@ describe("the signed channel workflow", () => {
         expect(ran.indexOf("handoff-check")).toBeGreaterThan(ran.indexOf("handoff-upload"));
         expect(ran.indexOf("handoff-check")).toBeLessThan(ran.indexOf("private"));
       }
-      expect(JSON.stringify(step("public-fetch-back").env ?? {})).not.toContain("secrets.");
+      // The fetch-back's one key is the record's read-only token; its
+      // keyless checks run without it (tests/release-workflows-handoff.test.ts).
+      expect(
+        Object.entries(step("fetch-back").env ?? {}).filter(([, value]) =>
+          value.includes("secrets."),
+        ),
+      ).toEqual([["GH_TOKEN", "${{ secrets.GITHUB_TOKEN }}"]]);
       // Every place gets the record's zip and the disk image the places
       // already hold, or this attempt's; the virtual Mac checks each copy
       // against the upload job's list and the signing job's zip.
@@ -530,7 +545,7 @@ describe("the signed channel workflow", () => {
         "private",
         "adopt",
         "upload",
-        "private-fetch-back",
+        "fetch-back",
         "tap",
         "old-tap",
         "feeds",
@@ -544,15 +559,22 @@ describe("the signed channel workflow", () => {
       // Revised INF-643: retain both paths, including the already-activated old-cask bridge.
       const inactive = ranSteps(channel, false, false).map((step) => step.id);
       const active = ranSteps(channel, false, true).map((step) => step.id);
-      for (const id of ["old-public-fetch-back", "old-tap"]) {
-        expect(inactive).not.toContain(id);
-        expect(active).toContain(id);
-      }
-      expect(active.indexOf("old-public-fetch-back")).toBeGreaterThan(active.indexOf("upload"));
-      expect(active.indexOf("old-tap")).toBeGreaterThan(active.indexOf("old-public-fetch-back"));
+      expect(inactive).not.toContain("old-tap");
+      expect(active).toContain("old-tap");
+      // Firstmate 3000's copies are fetched back only once its switch is active.
+      expect(fetchedPlaces(false, true)).not.toContain("old-tap");
+      expect(fetchedPlaces(true, true)).toBe("record cloudflare tap old-tap");
+      expect(fetchedPlaces(true, false)).toBe("record tap old-tap");
+      expect(active.indexOf("fetch-back")).toBeGreaterThan(active.indexOf("upload"));
+      expect(active.indexOf("old-tap")).toBeGreaterThan(active.indexOf("fetch-back"));
       expect(active.indexOf("old-tap")).toBeGreaterThan(active.indexOf("tap"));
-      for (const id of ["homebrew-fetch-back", "old-public-fetch-back"])
-        expect(JSON.stringify(step(id).env)).not.toContain("secrets.");
+      // Each keyless check reads where Homebrew reads that cask's zip.
+      expect(step("fetch-back").env?.TAP_DOWNLOAD_URL).toBe(
+        "${{ needs.resolve.outputs.download_url }}",
+      );
+      expect(step("fetch-back").env?.OLD_DOWNLOAD_URL).toBe(
+        "${{ needs.resolve.outputs.old_download_url }}",
+      );
       expect(step("tap").env?.DOWNLOAD_URL).toBe("${{ needs.resolve.outputs.download_url }}");
       expect(step("old-tap").env?.DOWNLOAD_URL).toBe(
         "${{ needs.resolve.outputs.old_download_url }}",
@@ -572,15 +594,18 @@ describe("the signed channel workflow", () => {
         (match) => match[1],
       ),
     );
-    const launchStages = [
-      "launch",
-      "zip",
-      "private-fetch-back",
-      "public-fetch-back",
-      "homebrew-fetch-back",
-    ];
+    const launchStages = ["launch", "zip"];
     expect(launches).toEqual(launchStages.map(() => "$VERSION"));
     for (const id of launchStages) expect(step(id).run).toContain("scripts/check-app-launch.sh");
+    // The fetch-back launches each fetched zip's app through its script.
+    expect(step("fetch-back").run).toContain(".release-tooling/scripts/fetch-back-copies.sh ");
+    expect(
+      [
+        ...read("scripts/fetch-back-copies.sh").matchAll(
+          /scripts\/check-app-launch\.sh "[^"]+" "([^"]+)"/g,
+        ),
+      ].map((match) => match[1]),
+    ).toEqual(["$VERSION"]);
   });
 
   it("launches the app only through the workflow's own launch gate, after packaging", () => {
@@ -588,8 +613,11 @@ describe("the signed channel workflow", () => {
     // call the gate beside them, so a repair to the gate reaches that
     // release only when the workflow puts its own copy there first.
     const gate = ["scripts/check-app-launch.sh", "scripts/app-runtime-version.mjs"];
+    // The publication job's fetch-back launches through its script.
     const launches = (candidate: Step) =>
-      /(^|\s)scripts\/(check-app-launch|verify-mac-dmg)\.sh /m.test(candidate.run ?? "");
+      /(^|\s)(scripts\/(check-app-launch|verify-mac-dmg)|\.release-tooling\/scripts\/fetch-back-copies)\.sh /m.test(
+        candidate.run ?? "",
+      );
     // A rehearsal's publication job fetches the Linux packages through the
     // workflow's own package check too (INF-2879; tests/linux-package-sums.test.ts).
     const packageCheck = [".github/actions/linux-packages/", "scripts/linux-package-sums.ts"];
@@ -610,10 +638,12 @@ describe("the signed channel workflow", () => {
     const downloads = [".github/actions/electron-download/"];
     // Its keyless fetch-backs go through the workflow's own fetcher, which an
     // older alpha's commit predates (INF-3224; tests/release-workflows-handoff.test.ts).
-    const fetcher = "scripts/fetch-without-credential.sh";
+    // Its fetch-back's checks are the workflow's own too, with every place's
+    // at once (INF-4347's review).
+    const fetcher = ["scripts/fetch-without-credential.sh", "scripts/fetch-back-copies.sh"];
     for (const [job, jobSteps, tooling] of [
       ["release", signingSteps, [...gate, notarizer, zipsReader]],
-      ["publish", publishSteps, [...gate, ...packageCheck, ...downloads, fetcher]],
+      ["publish", publishSteps, [...gate, ...packageCheck, ...downloads, ...fetcher]],
     ] as const) {
       const fetched = jobSteps.findIndex(
         (candidate) => candidate.with?.path === ".release-tooling",

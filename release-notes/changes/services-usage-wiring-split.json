@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "services-usage-wiring-split",
+      "reason": "The usage ledger and cost limit wiring moves out of the app's composition root into a module of its own, so that file stays under the size check's ceiling; nothing a person sees or does changes."
+    }
+  ]
+}

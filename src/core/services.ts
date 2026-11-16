@@ -1,11 +1,5 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
-import {
-  type AppCostLimitView,
-  effectiveCostLimit,
-  limitUsd,
-  RECENT_COST_DAYS,
-} from "@shared/costLimit";
 import { emptyTranscript } from "@shared/crewTranscript";
 import { isCustomApiProvider } from "@shared/customApi";
 import { deviceRunsWork } from "@shared/devices";
@@ -148,14 +142,13 @@ import { SqlService } from "./sql/sqlService";
 import { readStandIns } from "./standIns";
 import { ActivityStore } from "./storage/activityStore";
 import { type CardResolution, CardStore } from "./storage/cardStore";
-import { CostLimitStore } from "./storage/costLimitStore";
 import { assertSavedDataCompatible, openDatabase } from "./storage/db";
 import { DecisionStore } from "./storage/decisionStore";
+import { homeUsage } from "./storage/homeUsage";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "./storage/inboxStore";
 import { ScheduleStore } from "./storage/scheduleStore";
 import { SettingsStore } from "./storage/settingsStore";
 import type { TaskRecord } from "./storage/taskRecords";
-import { type UsageInput, UsageStore } from "./storage/usageStore";
 import { CrewActions } from "./tasks/crewActions";
 import { CrewLiveText, CrewTranscripts } from "./tasks/crewTranscript";
 import { startHomeTaskFiles } from "./tasks/homeTaskFiles";
@@ -753,32 +746,12 @@ export async function createServices(
     runtimeFor: (accountId) => vault.runtimeFor(accountId),
     baseRuntime: auth.modelRuntime,
   });
-  // The per-account usage ledger (broker phase 2): cost comes from session
-  // turn_end and model-powered tool_end usage (Pi's listed prices, Claude's
-  // own estimate) - never a proxy - keyed by the serving account and model.
-  const usageStore = new UsageStore(db);
-  // Each task's cost limit below the app's own, and the holds a limit placed
-  // (docs/usage.md, "The cost limit").
-  const costLimitStore = new CostLimitStore(db);
-  taskCostOf = (record) => ({
-    ...costLimitStore.familySpend(record.id),
-    ...effectiveCostLimit({
-      task: costLimitStore.taskLimit(record.id)?.limit,
-      project: record.repoId ? repos.get(record.repoId)?.costLimit : null,
-      app: settings.getTaskCostLimit(),
-    }),
+  // The usage ledger and each task's cost limit (homeUsage.ts).
+  const { usageStore, costLimitStore, appCostLimitView, recordUsage, ...usage } = homeUsage(db, {
+    appLimit: () => settings.getTaskCostLimit(),
+    projectLimit: (repoId) => repos.get(repoId)?.costLimit,
   });
-  const appCostLimitView = (): AppCostLimitView => {
-    const limit = settings.getTaskCostLimit();
-    const since = Date.now() - RECENT_COST_DAYS * 24 * 60 * 60 * 1000;
-    return {
-      limit,
-      recent: { ...costLimitStore.recent(limitUsd(limit), since), days: RECENT_COST_DAYS },
-    };
-  };
-  const recordUsage = (input: Omit<UsageInput, "at">) => {
-    usageStore.record({ ...input, at: Date.now() });
-  };
+  taskCostOf = usage.taskCostOf;
   // Card-worthy moments reach Notification Center while the window is not
   // front (P2); the card/feed split is the noise filter, so feed lines never
   // notify. E2E windows stay hidden and unfocused, so the isolated-userData

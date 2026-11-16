@@ -10,7 +10,10 @@ import { HANDOVER_FILE_NAME, type HandoverFile } from "@shared/work";
  * steer delivers them into the waiting task's hand-over folder. A handed
  * file may hold secrets, so nothing here reads its content into a string,
  * logs it or names more than its kept name, size and sha256. Every copy is
- * 0600 in a 0700 folder, and each folder goes when its task closes.
+ * 0600 in a 0700 folder. A task's kept files stay past its close, so a
+ * steer after it still hands them, and go with its other leftover files a
+ * week on (`closedTaskFiles.ts`); a delivered copy goes with the receiving
+ * task's temporary folder at its close.
  */
 
 /** The folder a task's reported files are kept in, beside its other folders. */
@@ -136,9 +139,4 @@ export async function deliverHandoverFile(
   const to = join(dir, file);
   await copyVerified(from, to, info.size, await sha256OfFile(from));
   return to;
-}
-
-/** Removes a task's kept files whole, at its close. */
-export function removeHandoverFiles(dir: string): Promise<void> {
-  return rm(dir, { recursive: true, force: true });
 }

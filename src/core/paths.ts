@@ -246,8 +246,9 @@ export function crewmateTempDir(paths: AppPaths, taskId: string): string {
 
 /**
  * The verified copies of the files a task's reports hand on (INF-992):
- * `crewmates/<taskId>/handover-out/`, each 0600, kept until the first
- * mate's steer delivers them and removed when the task closes.
+ * `crewmates/<taskId>/handover-out/`, each 0600, kept past the task's close
+ * for every steer that hands them, and removed with its other leftover files
+ * a week on, or later while live work builds on it (`tasks/closedTaskFiles.ts`).
  */
 export function crewmateHandoverDir(paths: AppPaths, taskId: string): string {
   return join(paths.crewmatesDir, taskId, "handover-out");

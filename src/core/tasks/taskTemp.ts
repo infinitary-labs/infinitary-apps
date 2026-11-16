@@ -5,7 +5,6 @@ import { fileSizeWords } from "@shared/attachments";
 import type { AppPaths } from "../paths";
 import { lstat, mkdir, readdir, readFile, rename, rm } from "../plainFs";
 import type { TaskRetentionFields } from "../storage/taskRecords";
-import { HANDOVER_OUT_DIR_NAME, removeHandoverFiles } from "./handoverFiles";
 import { TaskService } from "./taskService";
 
 /**
@@ -315,10 +314,9 @@ export class TaskTempFiles {
 
   private async remove(record: TaskRetentionFields): Promise<TempRemoval> {
     await this.options.leftoversSettled?.(record.id);
-    // The files its reports handed on go at the close too, wherever it ran (INF-992).
-    await removeHandoverFiles(
-      join(this.options.paths.crewmatesDir, record.id, HANDOVER_OUT_DIR_NAME),
-    );
+    // The files its reports handed on stay: a steer after the close still
+    // hands them, and they go with its other leftover files a week on, or
+    // later while live work builds on it (`closedTaskFiles.ts`).
     if (record.deviceId) {
       if (!this.options.removePlaced)
         return Promise.resolve(pending("its computer is out of reach"));

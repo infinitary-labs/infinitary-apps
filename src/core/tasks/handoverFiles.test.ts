@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { appPathsFor, crewmateHandoverDir } from "../paths";
 import { openInMemoryDatabase } from "../storage/db";
+import { CLOSED_TASK_FILES_KEPT_MS, ClosedTaskFiles } from "./closedTaskFiles";
 import {
   deliverHandoverFile,
   keepHandoverFiles,
@@ -84,27 +85,57 @@ describe("files one task hands another", () => {
     expect(JSON.stringify(refusals) + refused).not.toContain(SECRET);
   });
 
-  it("goes when its task closes, here or on another computer, and stays while it is live", async () => {
+  it("outlives its task's close, so a later steer still delivers it, and goes with the week-old leftovers", async () => {
+    // The session audit's finding: 3 of 10 hand-overs in a day were lost,
+    // because the source task closed before the first mate's steer handed
+    // its files on. A hand-over after the close must still arrive.
     const paths = appPathsFor(scratchDir("infinitary-handover-close-"));
-    const tasks = new TaskService({ db: openInMemoryDatabase(), now: () => 1, strict: true });
+    let now = 1;
+    const tasks = new TaskService({ db: openInMemoryDatabase(), now: () => now, strict: true });
     seedTask(tasks, { id: "t-here", title: "Find the W-9", status: "cancelled" });
     seedTask(tasks, { id: "t-there", title: "Find the client file", status: "cancelled" });
     tasks.placement.setDevice("t-there", "mac-mini");
-    seedTask(tasks, { id: "t-live", title: "Find the log", status: "running" });
-    for (const id of ["t-here", "t-there", "t-live"]) {
-      mkdirSync(crewmateHandoverDir(paths, id), { recursive: true });
-      await keepHandoverFiles([clientFile()], crewmateHandoverDir(paths, id));
-    }
+    seedTask(tasks, { id: "t-held", title: "Find the log", status: "cancelled" });
+    seedTask(tasks, {
+      id: "t-waiting",
+      title: "Read the log",
+      status: "running",
+      shape: { kind: "implement", basis: "t-held" },
+    });
+    const source = clientFile();
+    for (const id of ["t-here", "t-there", "t-held"])
+      await keepHandoverFiles([source], crewmateHandoverDir(paths, id));
     const temp = new TaskTempFiles({
       paths,
       tasks,
       deleteInBackground: () => {},
-      now: () => 2,
+      now: () => now,
       removePlaced: async () => ({ status: "absent", bytes: 0 }),
     });
+    now = 2;
     await temp.sweep();
+    for (const id of ["t-here", "t-there", "t-held"])
+      expect(await keptHandoverFiles(crewmateHandoverDir(paths, id))).toHaveLength(1);
+
+    // The steer after the close delivers the kept file whole.
+    const [listed] = await keptHandoverFiles(crewmateHandoverDir(paths, "t-here"));
+    const into = join(scratchDir("infinitary-handover-in-"), "temp", "handover");
+    const delivered = await deliverHandoverFile(listed?.path ?? "", into, listed?.file ?? "");
+    expect(readFileSync(delivered)).toEqual(readFileSync(source));
+
+    // A week on, the kept files go with the task's other leftovers, wherever it
+    // ran, and stay while live work still builds on the task.
+    const leftovers = new ClosedTaskFiles({
+      paths,
+      tasks,
+      deleteInBackground: () => {},
+      now: () => now,
+      removePlaced: async () => ({ removedFiles: [], bytes: 0 }),
+    });
+    now = 2 + CLOSED_TASK_FILES_KEPT_MS;
+    await leftovers.sweep();
     expect(existsSync(crewmateHandoverDir(paths, "t-here"))).toBe(false);
     expect(existsSync(crewmateHandoverDir(paths, "t-there"))).toBe(false);
-    expect(await keptHandoverFiles(crewmateHandoverDir(paths, "t-live"))).toHaveLength(1);
+    expect(await keptHandoverFiles(crewmateHandoverDir(paths, "t-held"))).toHaveLength(1);
   });
 });

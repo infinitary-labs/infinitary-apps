@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "handed-files-outlive-close",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Files one crewmate hands another are no longer lost when its task closes",
+      "body": "A crewmate can pass files it found to another task. Those files used to be deleted as soon as the first task closed, so a hand-over that came a moment later found nothing. They now stay for a week after the close, like the task's other kept files, and longer while work that builds on it is still open.",
+      "noPicture": "This changes how long handed files are kept, not anything on screen.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

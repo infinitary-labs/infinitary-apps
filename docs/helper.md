@@ -1332,7 +1332,7 @@ The home verifies each declared name, size and sha256 before recording the repor
 The first mate's `steer_crewmate` with `files_from` then delivers them into the waiting task's `temp/handover/` folder at 0600, here by a verified copy or there through `inf:session:source-file` with `into: handover`.
 A handed file may hold secrets: no side reads its content into a string, logs it or names more than its kept name, size and sha256.
 Every computer taking work on the current contract major supports handing files; a waiting task on another major cannot start until updated.
-Both folders go when their task closes (`docs/task-retention.md`).
+The waiting task's `temp/handover/` goes when that task closes; the handing task's `handover-out/` stays past its close, so a steer after it still hands the files, and goes with its other leftover files a week later, or later while live work builds on it (`docs/task-retention.md`).
 The captain’s message attachments use this same destination automatically when their task starts (`docs/task-capture.md`), without a file-finding task or `files_from` steer.
 An empty text attachment uses a zero-byte source-file order, supported by every computer taking work on the current contract major.
 

@@ -166,6 +166,8 @@ import XCTest
     }
 
     /// INF-1375: exercise the real native view through wait start/end, retaining its real-speed recording.
+    /// The scene draws on its own render thread (INF-2566), whose first frame also builds its shaders, so the main
+    /// thread's display ticks say nothing of what it has drawn: each check reads the frame the render thread published.
     func testRelationshipCircleReturnsInTheNativeView() async throws {
         let ids = (1...8).map { "crew-\($0)" }, arrived = Dictionary(uniqueKeysWithValues: (1...8).map { ("crew-\($0)", $0) })
         let cache = PhoneSceneRoster.Cache()
@@ -179,11 +181,23 @@ import XCTest
         CharacterCues.greetingPending = false
         window.rootViewController = UIHostingController(rootView: OrbitGapView(stage: stage, bounds: window.bounds.size))
         window.makeKeyAndVisible()
-        func ticks(_ count: Int) async {
+        /// Waits on the load clock until the render thread has published a frame showing `what`.
+        func published(_ what: String, _ shows: (PhoneSceneMotion.Frame) -> Bool) async throws {
+            var deadline = PhoneWaitDeadline(20)
+            while !shows(stage.crew.current) {
+                if deadline.expired() {
+                    let frame = stage.crew.current
+                    XCTFail("The render thread never published \(what): glyphs=\(frame.glyphs.count) links=\(frame.links.count)")
+                    return
+                }
+                try await Task.sleep(for: .seconds(PhoneWaitDeadline.tick))
+            }
+        }
+        /// Real-speed time on screen for the recording, paced by the display.
+        func play(_ count: Int) async {
             let sample = DisplaySample(ticks: count)
             let result = await sample.complete(within: 20)
             sample.stop(); XCTAssertEqual(result, .completed)
-            XCTAssertEqual(stage.crew.current.glyphs.count, ids.count)
         }
         func capture(_ action: String) async throws {
             let control = try XCTUnwrap(ProcessInfo.processInfo.environment["PHONE_TEST_HOME"])
@@ -192,14 +206,14 @@ import XCTest
             let (_, response) = try await URLSession.shared.data(for: request)
             XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200)
         }
-        await ticks(60)
+        try await published("the eight crew") { $0.glyphs.count == ids.count }
         try await capture("capture-orbit-gap-start")
         stage.roster = try roster(2, waiting: true)
-        await ticks(180)
-        XCTAssertEqual(stage.crew.current.links.count, 1)
+        try await published("the wait's link") { $0.glyphs.count == ids.count && $0.links.count == 1 }
+        await play(180)
         stage.roster = try roster(3, waiting: false)
-        await ticks(180)
-        XCTAssertTrue(stage.crew.current.links.isEmpty)
+        try await published("the wait's end") { $0.glyphs.count == ids.count && $0.links.isEmpty }
+        await play(180)
         try await capture("capture-stop")
     }
 

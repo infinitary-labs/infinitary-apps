@@ -7,21 +7,26 @@ extension PhoneJourney {
     /// and "when i only annotated a range of text, it should be only the range of text that gets highlighted", built for
     /// the phone. INF-3746, the captain: "the annotation related UI on the ios app is ugly.. all kinds of overflow and not
     /// appearing cohesive", built as direction B, and "pay attention to keeping the focused text input in viewport not
-    /// scrolled away". Data: a first mate card whose body holds two paragraphs and a list.
-    /// Completion: Point at, then a tap on the first paragraph, opens the note editor under it inside the card, whose
+    /// scrolled away". INF-4353, the captain: "this annotate button doesn't work at all.. bug?", on a card the pager moved
+    /// to. Data: a first mate card whose body holds two paragraphs and a list, behind a card shown ahead of it.
+    /// Completion: the pager moves to the notes card, whose body drew beside the shown card, and words long-pressed there
+    /// open the note editor from the selection's Annotate with nothing touched before;
+    /// Point at, then a tap on the first paragraph, opens the note editor under it inside the card, whose
     /// comment stays in view above the keyboard and queues one note; words long-pressed in the second paragraph open it
     /// again from the selection's Annotate, and it queues as-is; on an iPhone on its side the editor's comment stays in
     /// view too; the field counts two notes not sent; one send gives the computer one captain line holding a paragraph
     /// note with its comment and a text note with its range; and a press on a sent note turns the card to its face with
     /// nothing reported stale.
     func testCardNotes() async throws {
+        app.launchEnvironment["INFINITARY_TEST_CARD_ROW_PROBE"] = "1"
         try await launchJoined()
         let fixture = try await home("note-card")
+        let lead = try XCTUnwrap(fixture["lead"] as? String)
         let title = try XCTUnwrap(fixture["title"] as? String)
         let part = try XCTUnwrap(fixture["part"] as? String)
         let words = try XCTUnwrap(fixture["words"] as? String)
-        XCTAssertTrue(cardHeading(title).waitForPresence(timeout: 10), app.debugDescription)
-        waitForShownBodyRevealed()
+        let editor = app.descendants(matching: .any).matching(identifier: "note-editor").firstMatch
+        verifyAnnotateAfterPaging(from: lead, to: title, words: words, editor: editor)
         let first = app.webViews.staticTexts[part].firstMatch
         XCTAssertTrue(first.waitForPresence(timeout: 20), app.debugDescription)
         // Point at, then a tap on a whole part: the note editor opens under it with its comment ready.
@@ -30,7 +35,6 @@ extension PhoneJourney {
         reveal(point); tapOnPhone(point)
         picture("0-point-at-on")
         reveal(first); tapOnPhone(first)
-        let editor = app.descendants(matching: .any).matching(identifier: "note-editor").firstMatch
         XCTAssertTrue(editor.waitForPresence(timeout: 10), "Point at did not open the note editor\n\(app.debugDescription)")
         let comment = keyboardInput("note-comment")
         XCTAssertTrue(comment.waitForPresence(timeout: 10), app.debugDescription)
@@ -126,6 +130,36 @@ extension PhoneJourney {
         XCTAssertFalse(app.staticTexts["thread-note-status"].exists, app.debugDescription)
         XCTAssertTrue(waitForPhonePress(first), "The noted paragraph is not in view\n\(app.debugDescription)")
         picture("5-note-revealed-on-the-face")
+    }
+
+    /// INF-4353: the pager moves from the card shown first to the notes card, whose body drew beside it with no pane
+    /// listening. Words long-pressed there, before Point at or any note, open the note editor from the selection's Annotate.
+    private func verifyAnnotateAfterPaging(from lead: String, to title: String, words: String, editor: XCUIElement) {
+        XCTAssertTrue(cardHeading(lead).waitForPresence(timeout: 10), "\(lead) is not the card shown first\n\(app.debugDescription)")
+        waitForShownBodyRevealed()
+        let probe = app.descendants(matching: .any).matching(identifier: "card-row-probe").firstMatch
+        let beside = NSPredicate { _, _ in probe.exists && probe.label.hasPrefix("beside drawn") }
+        XCTAssertEqual(waitForPhonePredicate(beside, object: nil, timeout: 30), .completed,
+                       "The notes card's body never drew beside the shown card: \(probe.label)")
+        tapOnPhone(app.buttons["next-card"])
+        let titles = app.staticTexts.matching(identifier: "card-title")
+        let settled = NSPredicate { _, _ in titles.count == 1 && titles.firstMatch.label == title }
+        XCTAssertEqual(waitForPhonePredicate(settled, object: nil, timeout: 10), .completed,
+                       "The pager never settled on \(title)\n\(app.debugDescription)")
+        XCTAssertTrue(probe.label.contains("arrived drawn"), "\(title) arrived before its body drew: \(probe.label)")
+        waitForShownBodyRevealed()
+        let selected = app.webViews.staticTexts[words].firstMatch
+        XCTAssertTrue(selected.waitForPresence(timeout: 20), app.debugDescription)
+        reveal(selected)
+        selected.press(forDuration: 1.2)
+        XCTAssertTrue(openAnnotateFromSelection(), "The selection offers no Annotate\n\(app.debugDescription)")
+        XCTAssertTrue(editor.waitForPresence(timeout: 10),
+                      "Annotate on a card the pager moved to did not open the note editor\n\(app.debugDescription)")
+        picture("0-annotate-after-paging")
+        let cancel = app.buttons["note-cancel"]
+        XCTAssertTrue(waitForPhonePress(cancel), app.debugDescription)
+        tapOnPhone(cancel)
+        XCTAssertTrue(editor.waitForAbsence(timeout: 10), app.debugDescription)
     }
 
     /// Chooses Annotate in the selection's menu, past its next-page arrow when the menu is narrower than its items.

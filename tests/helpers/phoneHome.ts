@@ -1727,7 +1727,7 @@ export async function startPhoneHome(
           break;
         }
         // INF-3296's phone piece: a first mate card whose body holds two paragraphs and a list, for notes on a whole
-        // part and on words selected in one.
+        // part and on words selected in one, behind a card shown ahead of it (INF-4353).
         case "POST note-card": {
           for (const card of await core.dispatch("inf:cards:list", []))
             await core.dispatch(
@@ -1736,6 +1736,19 @@ export async function startPhoneHome(
                 : "inf:cards:close",
               [card.id],
             );
+          // INF-4353: a card shown before the notes card, so the notes card's body first draws beside it, kept loaded
+          // with no pane, and shows only once the pager moves to it. Like the notes card it asks a choice, so the
+          // stack's order (priority, then oldest) puts it first.
+          const lead = "The harbour survey is booked";
+          core.services.supervisor.addFirstmateCard({
+            id: "phone-notes-lead",
+            title: lead,
+            body: "<p>The survey boat leaves on Monday.</p>",
+            actions: [
+              { id: "keep", label: "Keep Monday", default: true },
+              { id: "move", label: "Move to Tuesday" },
+            ],
+          });
           const title = "The release window moves to Thursday";
           const part = "The release window moves to Thursday, after the long check finishes.";
           const words = "Four builds wait in the test line behind one long check.";
@@ -1750,7 +1763,7 @@ export async function startPhoneHome(
           });
           core.services.supervisor.cards.closeOut({ kind: "firstmate" }, "turn-end");
           core.services.supervisor.cards.flushBroadcast();
-          result = { title, part, words };
+          result = { lead, title, part, words };
           break;
         }
         // The notes card's thread as the computer keeps it, each captain line with its notes.

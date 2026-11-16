@@ -1586,6 +1586,10 @@ private struct PhoneCardPane: View {
         host.onQuestioned = { step in if shown { followQuestion(step) } }
         // INF-3110: a card beside the shown one keeps its body out of accessibility, which a hidden view above it cannot do.
         host.aside = !shown; factsHost?.aside = !shown
+        // INF-4353: a body the row kept loaded beside the shown card drew with no pane listening, so its drawing never
+        // came to tell it how the notes stand, and its frame took no Annotate. The pane tells it now; a body still
+        // loading hears it when it draws.
+        syncNotes()
     }
     /// INF-3296's phone piece: tells the body how the notes stand, which it lights: Point at, every queued note and the
     /// one being written. The body never hears a comment.

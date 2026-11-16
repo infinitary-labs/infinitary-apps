@@ -178,7 +178,16 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
     },
     startedFrom: (cardId, taskId, queued) => {
       const task = host.options.tasks.get(taskId);
-      return task ? writeStartedLine(supervisor.cards, cardId, task, queued) : "";
+      if (!task) return "";
+      const line = writeStartedLine(supervisor.cards, cardId, task, queued);
+      // The started task keeps which card's reply started it, so the
+      // card's own answer task can close as carried on by it (INF-4526).
+      if (line.reply)
+        host.options.tasks.capture.recordStartedFromCard(task.id, {
+          cardId: line.reply.cardId,
+          reply: line.reply.id,
+        });
+      return line.text;
     },
     // The ask is about the task the captain named, whatever the tool then
     // says about it - a refused settle is still about that task.

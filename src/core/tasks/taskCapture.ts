@@ -978,6 +978,31 @@ export class TaskCapture {
       .some((event) => event.kind === "note" && event.data?.resultHandoff !== undefined);
   }
 
+  /**
+   * The captain's reply under a card started this task: `spawn_crewmate`'s
+   * `from_card` wrote its line in that card's thread, which it does only
+   * under a captain's reply (`writeStartedLine`). Kept on the started task,
+   * so a close of the card's own task can read where its follow-up came
+   * from (INF-4526).
+   */
+  recordStartedFromCard(id: string, start: { cardId: string; reply: number }): void {
+    this.tasks.note(id, "Started from your reply under a card.", {
+      news: false,
+      feed: false,
+      data: { startedFromCard: start, journal: true },
+    });
+  }
+
+  /** The cards whose captain's reply started this task (`recordStartedFromCard`). */
+  startedFromCardsOf(id: string): string[] {
+    return this.writer.events.listFor(id).flatMap((event) => {
+      const start = event.kind === "note" ? event.data?.startedFromCard : undefined;
+      const cardId =
+        start && typeof start === "object" ? (start as { cardId?: unknown }).cardId : undefined;
+      return typeof cardId === "string" ? [cardId] : [];
+    });
+  }
+
   /** A card about this task left the stack (an action, Later, or a dismiss). */
   recordCardResolved(
     id: string,

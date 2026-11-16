@@ -60,11 +60,17 @@ describe("the line naming the work a reply started", () => {
 
     const answer = writeStartedLine(h.supervisor.cards, card.id, { key: "INF-3022" }, false);
 
-    expect(answer).toContain("INF-3022");
+    expect(answer.text).toContain("INF-3022");
     const thread = h.supervisor.cards.thread(card.id).messages;
     expect(thread.at(-1)).toMatchObject({
       who: "host",
       text: startedLineWords("INF-3022", false),
+    });
+    // The reply the line answers is the captain's, under this card.
+    expect(answer.reply).toMatchObject({
+      who: "captain",
+      cardId: card.id,
+      text: "start a planning crewmate for this",
     });
     h.supervisor.cards.flushBroadcast();
     expect(h.cards().find((entry) => entry.id === card.id)?.ended).toBeDefined();
@@ -85,7 +91,8 @@ describe("the line naming the work a reply started", () => {
 
     const answer = writeStartedLine(h.supervisor.cards, card.id, { key: "INF-3022" }, false);
 
-    expect(answer).toContain("has not replied under it");
+    expect(answer.text).toContain("has not replied under it");
+    expect(answer.reply).toBeUndefined();
     expect(h.supervisor.cards.thread(card.id).messages).toEqual([]);
   });
 
@@ -124,5 +131,8 @@ describe("the line naming the work a reply started", () => {
     const line = supervisor.cards.thread(card.id).messages.at(-1);
     expect(line?.who).toBe("host");
     expect(line?.text).toBe(startedLineWords(started.key, true));
+    // INF-4526: the started task keeps which card's reply started it, so
+    // that card's own answer task can close as carried on by it.
+    expect(tasks.capture.startedFromCardsOf(started.id)).toEqual([card.id]);
   });
 });

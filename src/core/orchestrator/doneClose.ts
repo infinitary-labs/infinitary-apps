@@ -231,7 +231,9 @@ export class DoneClose {
   ): DoneCloseResult | undefined {
     const passes = (kind: OverridableHold) =>
       overridePasses(record.delivery, kind, record.delivery?.headSha);
-    const decision = passes("decisions") ? undefined : this.openDecision(record);
+    const decision = passes("decisions")
+      ? undefined
+      : this.openDecision(record, why === "carried_on" ? carrier : undefined);
     if (decision)
       return { ok: false, text: `${decision} ${softHoldWords("decisions", "firstmate")}` };
     // A part of its own that carries the work on, at any depth, holds
@@ -261,14 +263,23 @@ export class DoneClose {
    * task that still asks the captain something, a wait on him, or an answer
    * he asked for and has not read - its crewmate's card is still up, or he
    * has neither chosen on it nor seen it finished nor had it handed on.
+   * An answer carried on by the task the captain's own reply under its
+   * crewmate's card started is read and answered: his reply chose what
+   * follows (INF-4526).
    */
-  private openDecision(record: TaskRecord): string | undefined {
+  private openDecision(record: TaskRecord, carrier?: TaskRecord): string | undefined {
     const cards = this.host.cards.snapshot().filter((card) => card.taskId === record.id);
     const asking = cards.find((card) => card.actions.length > 0);
     if (asking) return `its card "${asking.title}" still asks the captain.`;
     if (record.gate || record.delivery?.captainWait)
       return "it still waits on the captain's decision.";
     if (this.host.deliverableOf(record) !== "answer") return undefined;
+    const startedFromItsCard =
+      carrier !== undefined &&
+      this.host.tasks.capture
+        .startedFromCardsOf(carrier.id)
+        .some((cardId) => cardEmitter(cardId, record.id) === "crewmate");
+    if (startedFromItsCard) return undefined;
     const note = cards.find((card) => cardEmitter(card.id, record.id) === "crewmate");
     if (note) return `its answer "${note.title}" is still up for the captain to read.`;
     const read =

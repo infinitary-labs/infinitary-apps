@@ -7,6 +7,7 @@
  * task's own pull request: "Leave it open where the project lives, and say
  * so on the record".
  */
+import type { Card } from "@shared/cards";
 import { deliveryFactsOf } from "@shared/deliveryFacts";
 import { describe, expect, it } from "vitest";
 import {
@@ -559,5 +560,137 @@ describe("guidance its crewmate never took", () => {
     expect(other).toMatchObject({ ok: false });
     expect(other.text).toContain(`Waiting: message ${id},`);
     expect(world.inbox.get(busy)).toBeDefined();
+  });
+});
+
+// INF-4526, from the weekly reach audit the captain answered "Drop a level
+// now: it passes by itself when the follow-up started from your reply on
+// its card", scoped on that card to an answer task whose card the captain
+// replied under. INF-4191's case: the captain replied under the answer
+// card asking for deeper work, the first mate started the carrier naming
+// that card, and the close as carried on was refused until an override.
+describe("an answer carried on by the task the captain's reply under its card started", () => {
+  const ANSWER = "split-check";
+  const ANSWER_CARD = `card-${ANSWER}-10`;
+  const CARRIER = "split-explain";
+  const REPLY =
+    "ok i want a clear architectural explanation how this aspect works holistically, done by a fable crewmate";
+
+  /** The answer task, its crewmate's card with the captain's reply under it, and the task he asked for. */
+  function answered(world: SettleWorld, card: { actions?: Card["actions"]; id?: string } = {}) {
+    world.live.deliverable = "answer";
+    seedTask(world.tasks, {
+      id: ANSWER,
+      title: "Check if the view and background split is done",
+      status: "idle",
+      repoId: "project",
+      repoDir: "/not-mounted/project",
+      worktreeDir: "/not-mounted/split-check",
+      branch: "fm/task-split-check",
+      outcome: "All seven pieces of the split are merged and in the latest alpha.",
+      shape: { kind: "research", deliverable: "answer" },
+    });
+    const id = card.id ?? ANSWER_CARD;
+    world.cards.put({
+      id,
+      taskId: ANSWER,
+      author: id.startsWith("card-fm-") ? "firstmate" : "crewmate",
+      priority: 15,
+      title: "The view and background split is in the latest alpha",
+      meta: ANSWER,
+      body: "<p>Yes: all seven planned pieces are merged and in the latest alpha.</p>",
+      actions: card.actions ?? [],
+      status: "ready",
+      createdAt: 1_000,
+    });
+    const reply = world.cards.addMessage(id, "captain", REPLY);
+    seedTask(world.tasks, {
+      id: CARRIER,
+      title: "Explain how the view and background split works",
+      status: "queued",
+      shape: {
+        kind: "research",
+        deliverable: "answer",
+        basis: world.tasks.get(ANSWER)?.key ?? ANSWER,
+      },
+    });
+    return {
+      start: () =>
+        world.tasks.capture.recordStartedFromCard(CARRIER, { cardId: id, reply: reply.id }),
+    };
+  }
+
+  it.each([
+    {
+      card: "still up",
+      arrange: () => {},
+      refusal: 'its answer "The view and background split is in the latest alpha" is still up',
+    },
+    {
+      card: "withdrawn by its crewmate",
+      arrange: (world: SettleWorld) =>
+        world.cards.close(ANSWER_CARD, { kind: "crewmate", taskId: ANSWER }, "Passed on."),
+      refusal: "the captain asked for its answer",
+    },
+  ])(
+    "closes once the carrier started from his reply, its card $card",
+    async ({ arrange, refusal }) => {
+      const world = settleWorld();
+      const { start } = answered(world);
+      arrange(world);
+      const held = await world.done.close(ANSWER, { why: "carried_on", carriedBy: CARRIER });
+      expect(held).toMatchObject({ ok: false });
+      expect(held.text).toContain(refusal);
+      expect(held.text).toContain("Soft hold decisions");
+
+      start();
+      const closed = await world.done.close(ANSWER, { why: "carried_on", carriedBy: CARRIER });
+      expect(closed).toMatchObject({ ok: true });
+      expect(world.tasks.get(ANSWER)).toMatchObject({ status: "done", closedReason: "superseded" });
+      expect(world.tasks.graph.replacementOf(ANSWER)).toBe(world.tasks.get(CARRIER)?.key);
+    },
+  );
+
+  it.each([
+    {
+      hold: "its card still asks",
+      arrange: (world: SettleWorld) =>
+        answered(world, { actions: [{ id: "deeper", label: "Look deeper", default: true }] }),
+      refusal: "still asks the captain",
+    },
+    {
+      hold: "it waits on the captain",
+      arrange: (world: SettleWorld) => {
+        const answer = answered(world);
+        seedDelivery(world.tasks, ANSWER, {
+          captainWait: { reason: "Read the result", at: 1_000 },
+        });
+        return answer;
+      },
+      refusal: "it still waits on the captain's decision",
+    },
+    {
+      hold: "his reply was under the first mate's card, not its answer",
+      arrange: (world: SettleWorld) => answered(world, { id: "card-fm-split" }),
+      refusal: "the captain asked for its answer",
+    },
+  ])("still holds when $hold", async ({ arrange, refusal }) => {
+    const world = settleWorld();
+    arrange(world).start();
+    const held = await world.done.close(ANSWER, { why: "carried_on", carriedBy: CARRIER });
+    expect(held).toMatchObject({ ok: false });
+    expect(held.text).toContain(refusal);
+    expect(held.text).toContain("Soft hold decisions");
+    expect(world.tasks.get(ANSWER)?.status).toBe("active");
+  });
+
+  it("still holds a close carried on by a task his reply did not start", async () => {
+    const world = settleWorld();
+    answered(world).start();
+    seedTask(world.tasks, { id: "split-other", title: "Tidy the split docs", status: "queued" });
+    const held = await world.done.close(ANSWER, { why: "carried_on", carriedBy: "split-other" });
+    expect(held).toMatchObject({ ok: false });
+    expect(held.text).toContain("Soft hold decisions");
+    expect(world.tasks.get(ANSWER)?.status).toBe("active");
   });
 });

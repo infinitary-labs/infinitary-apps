@@ -125,6 +125,7 @@ A verified file delivery through `steer_crewmate files_from`, or a plain result 
 The first mate judges whether the result completes the task; the receipt proves only that it was handed on.
 Consent, browser handoffs, continuing cards, invalid actions and dismissals record no result receipt.
 Closing on its own, the first mate's close is held on a task still working or with guidance queued, one whose crewmate has not reported, one whose own pull request reads open, one whose commits are not merged when the close names nowhere else the work went, an answer the captain asked for and has not read, one whose own answer card is still up, one whose card still asks the captain something, and open children or dependencies.
+An answer carried on by the task the captain's reply under its own answer card started is read and answered, so neither its unread answer nor its answer card still up holds it (`docs/task-record.md`, "One close as done").
 Each is a soft hold the captain's own words pass (`captain_words`).
 A first mate note on the task stays on the stack through the close, the same as a crewmate's note, until the captain closes it.
 Discard and Drop task close through the one drop (`docs/task-record.md`, "One drop"); `interrupt_crewmate` cancel and `update_task drop` keep their own closes.

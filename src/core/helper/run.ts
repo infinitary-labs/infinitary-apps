@@ -8,6 +8,7 @@ import { isFileOrderChannel } from "@shared/files";
 import { isHomeMoveOrderChannel } from "@shared/homeMove";
 import { formatDateTime } from "@shared/i18n/format";
 import type { WorkInvokeChannel } from "@shared/ipc";
+import { KEPT_JOB_ORDER } from "@shared/keptJobs";
 import { LEFT_BEHIND_ORDER, leftBehindOrders } from "@shared/leftoverPrograms";
 import { LOAD_ORDER, loadOrders } from "@shared/load";
 import { PLACEMENT_FACTS_ORDER } from "@shared/placement";
@@ -42,8 +43,10 @@ import { LoadLine } from "../placed/loadLine";
 import { answerPlacementFacts } from "../placed/placementFacts";
 import { readProcesses } from "../placed/processResources";
 import { ResourceSampler } from "../placed/resourceSampler";
+import { runKeptJobHere } from "../tasks/keptRunning";
 import type { LeftBehindHere } from "../tasks/leftBehind";
 import { leftBehindHere } from "../tasks/leftoverPrograms";
+import { keptRoot } from "../tasks/taskStops";
 import type { ComputerAccounts } from "./accounts";
 import {
   type BackgroundContext,
@@ -692,6 +695,8 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
         return leftBehind.list();
       }
       if (isHomeMoveOrderChannel(channel)) return homeMove.answer(channel, args);
+      // A kept job's own check or remove, the home's Kept running asks (docs/leftover-programs.md).
+      if (channel === KEPT_JOB_ORDER) return runKeptJobHere(keptRoot(placedTasks.tasksDir), args);
       if (channel === RESOURCE_ORDER) {
         resourceOrders[RESOURCE_ORDER].request.parse(args);
         return resources.read();

@@ -8,6 +8,7 @@ import {
   automationSaveSchema,
   automationSpecSchema,
 } from "../automation";
+import { keptJobsViewSchema, keptJobViewSchema, keptRemoveResultSchema } from "../keptJobs";
 import {
   observeLiveSchema,
   observeSessionDetailSchema,
@@ -120,6 +121,37 @@ export const activityChannels = {
     surface: "core",
     reach: "views",
     request: z.tuple([z.string().min(1)]),
+    response: z.object({ id: z.string() }),
+  },
+  // Kept running (docs/leftover-programs.md, "Kept running"): the jobs the
+  // captain asked to keep past their task's close, recorded at the home,
+  // and one's own check or remove, run on the computer it runs on.
+  "inf:automation:kept": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([]),
+    response: keptJobsViewSchema,
+  },
+  "inf:automation:kept-check": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().min(1).max(256)]),
+    response: keptJobViewSchema,
+  },
+  "inf:automation:kept-remove": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().min(1).max(256)]),
+    response: keptRemoveResultSchema,
+  },
+  "inf:automation:kept-forget": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().min(1).max(256)]),
     response: z.object({ id: z.string() }),
   },
   // Settings → Usage (docs/usage.md): the usage ledger over a period and a

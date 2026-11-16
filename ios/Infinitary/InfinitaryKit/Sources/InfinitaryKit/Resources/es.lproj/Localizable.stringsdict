@@ -39,6 +39,24 @@
       <string>activas: %1$ld</string>
     </dict>
   </dict>
+  <key>automationPanelKeptCount</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>en marcha: %1$ld</string>
+      <key>many</key>
+      <string>en marcha: %1$ld</string>
+      <key>other</key>
+      <string>en marcha: %1$ld</string>
+    </dict>
+  </dict>
   <key>automationPanelPausedCount</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

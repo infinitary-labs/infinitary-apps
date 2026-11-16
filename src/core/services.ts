@@ -159,6 +159,7 @@ import { type UsageInput, UsageStore } from "./storage/usageStore";
 import { CrewActions } from "./tasks/crewActions";
 import { CrewLiveText, CrewTranscripts } from "./tasks/crewTranscript";
 import { startHomeTaskFiles } from "./tasks/homeTaskFiles";
+import { keptRunningAt } from "./tasks/keptRunning";
 import { LeftoverPrograms } from "./tasks/leftoverPrograms";
 import { TaskProtocol } from "./tasks/taskProtocol";
 import { TaskService } from "./tasks/taskService";
@@ -1981,6 +1982,7 @@ export async function createServices(
     computerLoads,
     automaticPlacement,
     placed,
+    keptRunning: keptRunningAt(placed.keptJobs, workDevices, devices, () => sourceComputer),
     deviceSignIns,
     forgeChanges: forges.changes,
     forgeProjects: forges.projects,

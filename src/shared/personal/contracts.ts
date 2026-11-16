@@ -69,6 +69,7 @@ export type PanelReadName =
   | "feed.recent"
   | "forge.changes"
   | "automation.list"
+  | "automation.kept"
   | "knowledge.collections"
   | "knowledge.graph"
   | "knowledge.concepts"
@@ -463,6 +464,30 @@ export type PanelAutomationRules =
   | { state: "unavailable"; reason: string; rules: PanelAutomationRule[] };
 
 /**
+ * One job the captain asked to keep running past its task's close, as
+ * `automation.kept` gives it (docs/leftover-programs.md, "Kept running"):
+ * its label, the computer it runs on (`computer` null for the computer the
+ * first mate lives on) and that computer's name, the account it runs as,
+ * the task that set it up, when its close kept it, how its last check went
+ * and how a remove that did not finish went. Times are epoch milliseconds.
+ */
+export type PanelKeptJob = {
+  id: string;
+  label: string;
+  computer: string | null;
+  computerName: string;
+  account: string;
+  task: string;
+  key: string;
+  at: number;
+  checked?: { at: number; outcome: "running" | "not-running" | "timed-out" | "unreachable" };
+  removeFailed?: { at: number; outcome: "failed" | "timed-out" | "unreachable"; exitCode?: number };
+};
+
+/** `automation.kept`'s answer: every kept job, oldest first. */
+export type PanelKeptJobs = { jobs: PanelKeptJob[] };
+
+/**
  * `tasks.search` (`reads.subscribe("tasks.search", { query }, listener)`):
  * closed work the board no longer lists - done before its seven days, or
  * dropped - whose key or title holds the words, newest first, at most 50:
@@ -795,21 +820,23 @@ export type PanelReadValue<N extends PanelReadName> = N extends "computers.resou
             ? PanelForgeChanges
             : N extends "automation.list"
               ? PanelAutomationRules
-              : N extends "knowledge.collections"
-                ? PanelKnowledgeCollections
-                : N extends "knowledge.graph"
-                  ? PanelKnowledgeGraph
-                  : N extends "knowledge.concepts"
-                    ? PanelKnowledgeConcepts
-                    : N extends "knowledge.findings"
-                      ? PanelKnowledgeFindings
-                      : N extends "knowledge.entry"
-                        ? PanelKnowledgeEntryRead
-                        : N extends "knowledge.directions"
-                          ? PanelKnowledgeDirections
-                          : N extends "knowledge.direction"
-                            ? PanelKnowledgeDirectionRead
-                            : PanelFeedLine[];
+              : N extends "automation.kept"
+                ? PanelKeptJobs
+                : N extends "knowledge.collections"
+                  ? PanelKnowledgeCollections
+                  : N extends "knowledge.graph"
+                    ? PanelKnowledgeGraph
+                    : N extends "knowledge.concepts"
+                      ? PanelKnowledgeConcepts
+                      : N extends "knowledge.findings"
+                        ? PanelKnowledgeFindings
+                        : N extends "knowledge.entry"
+                          ? PanelKnowledgeEntryRead
+                          : N extends "knowledge.directions"
+                            ? PanelKnowledgeDirections
+                            : N extends "knowledge.direction"
+                              ? PanelKnowledgeDirectionRead
+                              : PanelFeedLine[];
 
 // --- the app's own record, through SQL -------------------------------------
 

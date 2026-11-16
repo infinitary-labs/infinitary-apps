@@ -72,6 +72,7 @@ Keyboard commands are a separate catalog (`KEYBOARD_COMMANDS` in `src/shared/key
 - The window Size picker, the size keys, the View menu and command search, all making the `window-size` change.
 - Theme, wash and panel arrangement from Settings → Appearance or the first mate (`theme`, `panel`).
 - Settings → Automation's edit, pause and delete (`automation-edit`, `automation-state`, `automation-pause-all`, `automation-delete`).
+- Settings → Automation's Remove for good on a job kept running (`kept-job-remove`).
 - The first mate's `project-setup` proposal card and `device-invite` hand-over card.
 
 ## Checks

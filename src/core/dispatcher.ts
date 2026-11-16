@@ -1351,6 +1351,14 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       services.scheduler.cancel(id, { say });
       return { id };
     },
+    "inf:automation:kept": () => services.keptRunning.list(),
+    "inf:automation:kept-check": (id) => services.keptRunning.check(id),
+    "inf:automation:kept-remove": (id) => services.keptRunning.remove(id, { say }),
+    // Its own feed line: after Forget it is the one place still naming a job that may run.
+    "inf:automation:kept-forget": (id) =>
+      services.keptRunning.forget(id, {
+        say: (text) => services.broadcastEvent({ type: "personalized", actor: "captain", text }),
+      }),
     "inf:usage:summary": (query) => services.usage.summary(query),
     "inf:usage:tasks": (query) => services.usage.tasks(query),
 

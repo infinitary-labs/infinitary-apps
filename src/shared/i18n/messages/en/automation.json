@@ -6,6 +6,13 @@
     "other": "{count} active"
   },
   "automationPanelEmpty": "No automations yet",
+  "automationPanelKeptCount": {
+    "plural": "count",
+    "one": "{count} kept",
+    "other": "{count} kept"
+  },
+  "automationPanelKeptHeading": "Kept running",
+  "automationPanelKeptRow": "{label} · {computer} · Open in Settings",
   "automationPanelListLabel": "Automations",
   "automationPanelPausedCount": {
     "plural": "count",

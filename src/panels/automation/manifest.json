@@ -5,6 +5,6 @@
   "order": 30,
   "size": "content",
   "presence": { "code": true },
-  "reads": ["automation.list"],
+  "reads": ["automation.list", "automation.kept"],
   "header": [{ "id": "open", "icon": "open", "label": "Open Automation" }]
 }

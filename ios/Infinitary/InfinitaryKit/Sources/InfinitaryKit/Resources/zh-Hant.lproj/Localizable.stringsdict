@@ -31,6 +31,20 @@
       <string>%1$ld 個啟用中</string>
     </dict>
   </dict>
+  <key>automationPanelKeptCount</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%1$ld 個持續執行</string>
+    </dict>
+  </dict>
   <key>automationPanelPausedCount</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

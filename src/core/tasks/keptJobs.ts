@@ -1,5 +1,6 @@
 import { chmodSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { keptCheckSchema, keptRemoveFailedSchema } from "@shared/keptJobs";
 import { type LeftoversReport, stopCommandSchema, stopLabelSchema } from "@shared/leftoverPrograms";
 import { z } from "zod";
 import { keptRoot } from "./taskStops";
@@ -28,6 +29,10 @@ export const keptJobSchema = z.object({
   task: z.string().min(1).max(64),
   key: z.string().max(64),
   at: z.number().int().nonnegative(),
+  /** How its last check from Kept running went (docs/leftover-programs.md, "Kept running"). */
+  checked: keptCheckSchema.optional(),
+  /** How its last remove went when it did not finish, which keeps it listed. */
+  removeFailed: keptRemoveFailedSchema.optional(),
 });
 export type KeptJob = z.infer<typeof keptJobSchema>;
 
@@ -88,6 +93,33 @@ export class KeptJobs {
     if (added.length === 0) return [];
     this.write([...known, ...added]);
     return added;
+  }
+
+  /**
+   * Notes how a check or a remove that did not finish went on the job on
+   * that computer with that kept folder; answers the job as now kept, or
+   * undefined when it is no longer listed.
+   */
+  note(
+    computer: string | null,
+    folder: string,
+    fact: Pick<KeptJob, "checked"> | Pick<KeptJob, "removeFailed">,
+  ): KeptJob | undefined {
+    const jobs = this.list();
+    const at = jobs.findIndex((job) => job.computer === computer && job.folder === folder);
+    const job = jobs[at];
+    if (!job) return undefined;
+    const next = { ...job, ...fact };
+    jobs[at] = next;
+    this.write(jobs);
+    return next;
+  }
+
+  /** Takes the job on that computer with that kept folder off the record, once its remove ran or the captain forgot it. */
+  forget(computer: string | null, folder: string): void {
+    const jobs = this.list();
+    const kept = jobs.filter((job) => !(job.computer === computer && job.folder === folder));
+    if (kept.length !== jobs.length) this.write(kept);
   }
 
   private write(jobs: KeptJob[]): void {

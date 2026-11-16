@@ -51,6 +51,30 @@
       <string>نشطة: %1$ld</string>
     </dict>
   </dict>
+  <key>automationPanelKeptCount</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>مستمرة: %1$ld</string>
+      <key>one</key>
+      <string>مستمرة: %1$ld</string>
+      <key>two</key>
+      <string>مستمرة: %1$ld</string>
+      <key>few</key>
+      <string>مستمرة: %1$ld</string>
+      <key>many</key>
+      <string>مستمرة: %1$ld</string>
+      <key>other</key>
+      <string>مستمرة: %1$ld</string>
+    </dict>
+  </dict>
   <key>automationPanelPausedCount</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

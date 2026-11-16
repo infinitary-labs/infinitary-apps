@@ -82,6 +82,18 @@ A crewmate whose task runs as another user on the home's own computer is refused
 An administrator's step, such as a system-wide unit or letting a job run while the captain is logged out, is one required action on the crewmate's card naming its one command; no password or sign-in is ever asked for.
 A job made before this shipped is not recorded.
 
+### Kept running
+
+Settings → Automation and the Automation panel list each recorded job under Kept running, by its label, the computer it runs on, the account it runs as and the task that set it up (`KeptRunning`, `src/core/tasks/keptRunning.ts`; the read `automation.kept`).
+A job's id is its kept folder's own name, `<task>-<id>`, and for a job on a computer that runs work `@` and that computer's id too, since a task that moved computers counts its keeps again from 1 there.
+Check runs the job's check where it runs and notes on its record whether it exited 0 (running), exited otherwise (not running), ran past the stops' minute, or could not reach that computer.
+Remove asks once, as its button turns into Remove for good, then runs the job's remove there through the catalog's `kept-job-remove`, which the first mate can also run when the captain asks.
+A remove that ran cleanly takes the kept folder and drops the job from `kept/jobs.json`; one that failed, did not finish, or could not reach the computer keeps the job listed with how it went.
+Here the command runs as a close runs a stop, in the kept folder; on a computer that runs work the home sends `inf:computer:kept-job` (`kept-job-orders.md`) with the command it keeps, and that computer runs it only in a folder directly inside its own kept folder.
+On either computer a kept folder that is gone is made again before the command runs, so it never runs among other jobs' folders.
+A computer out of reach, or one without that change, runs nothing, and the job stays.
+Beside a remove that did not finish, Forget takes the job off the list without running anything (`inf:automation:kept-forget`, through `KeptJobs.forget`); its words say the job may still run on that computer, whose kept folder stays.
+
 ## A task carried on by another
 
 A task closed as carried on by a successor (`carriedOnClose`), or as the earlier attempt of a stronger-model retry, hands its stops and keeps to that task, after the successor's own, and runs none of them: what it registered belongs to the work that goes on (`openSuccessor`).

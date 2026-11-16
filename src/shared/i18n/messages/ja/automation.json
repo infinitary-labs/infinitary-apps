@@ -5,6 +5,12 @@
     "other": "{count}件が有効"
   },
   "automationPanelEmpty": "自動化はまだありません",
+  "automationPanelKeptCount": {
+    "plural": "count",
+    "other": "{count}件が継続中"
+  },
+  "automationPanelKeptHeading": "継続中のジョブ",
+  "automationPanelKeptRow": "{label} · {computer} · 設定で開く",
   "automationPanelListLabel": "自動化",
   "automationPanelPausedCount": {
     "plural": "count",

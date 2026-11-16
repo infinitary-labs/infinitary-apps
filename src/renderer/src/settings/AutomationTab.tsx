@@ -59,6 +59,7 @@ import {
   weekdayToggles,
   zoneNote,
 } from "./automationWords";
+import { KEPT_ITEM_PREFIX, KeptRunning } from "./KeptRunning";
 import { LABEL_GAP, ROW_GAP, SettingError } from "./settingRows";
 
 /**
@@ -169,7 +170,8 @@ export function AutomationTab() {
   // A rule a panel row opened: select it once the list holds it, and put
   // the keyboard in its sheet.
   useEffect(() => {
-    if (arrival === null || rules === null) return;
+    // A kept job's row is Kept running's to open.
+    if (arrival === null || rules === null || arrival.startsWith(KEPT_ITEM_PREFIX)) return;
     useShellStore.getState().clearSettingsItem();
     if (!rules.some((rule) => rule.id === arrival)) return;
     setSearch("");
@@ -306,6 +308,7 @@ export function AutomationTab() {
           )}
         </div>
       </div>
+      <KeptRunning />
     </div>
   );
 }

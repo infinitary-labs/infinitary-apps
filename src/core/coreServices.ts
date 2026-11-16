@@ -61,6 +61,7 @@ import type { SqlService } from "./sql/sqlService";
 import type { ActivityStore } from "./storage/activityStore";
 import type { SettingsStore } from "./storage/settingsStore";
 import type { CrewLiveText } from "./tasks/crewTranscript";
+import type { KeptRunning } from "./tasks/keptRunning";
 import type { TaskProtocol } from "./tasks/taskProtocol";
 import type { TaskService } from "./tasks/taskService";
 import type { TaskTimeline } from "./tasks/taskTimeline";
@@ -252,6 +253,8 @@ export type CoreServices = {
    * computer asks, answered for the task its record names on it.
    */
   placed: PlacedWork;
+  /** The jobs kept running past their task's close, and each one's check and remove (docs/leftover-programs.md, "Kept running"). */
+  keptRunning: KeptRunning;
   /**
    * The core's way to the computers that run work (src/core/placed/workDevices.ts):
    * the shell attaches the connection once it listens.

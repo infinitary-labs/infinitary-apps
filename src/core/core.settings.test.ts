@@ -1,4 +1,4 @@
-import { rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ACTION_NAMES, ACTIONS } from "@shared/actions";
 import type { FmEvent } from "@shared/events";
@@ -15,7 +15,9 @@ import { automationWords } from "./orchestrator/scheduler";
 import { actionValue, createAppTools } from "./pi/appTools";
 import { catalogRefreshesSettled } from "./pi/modelRuntime";
 import { NO_PLACED_TASK } from "./placed/placedWork";
+import { keptJobsAt } from "./tasks/keptJobs";
 import { seedTask } from "./tasks/seedTask";
+import { keptRoot } from "./tasks/taskStops";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
 // the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).
@@ -1075,6 +1077,84 @@ describe("the core, driven with no Electron in the process", () => {
     // added no line of its own beside them.
     expect(notes()).toHaveLength(notesBefore);
     detach();
+  });
+
+  // INF-4381's approved plan, piece 2: "The first mate can remove one when
+  // asked, through the app action catalog." A job recorded as a merged close
+  // keeps it, removed through app_change with the captain's ask as evidence:
+  // its remove runs, it leaves the list, and one feed line names the first mate.
+  it("removes a job kept running past its task's close when the first mate is asked", async () => {
+    const jobs = keptJobsAt(core.services.paths.crewmatesDir);
+    const folder = join(keptRoot(core.services.paths.crewmatesDir), "task-9-s1");
+    mkdirSync(folder, { recursive: true });
+    const marker = join(folder, "backup.timer");
+    writeFileSync(marker, "[Timer]\n");
+    const label = "Nightly backup of the notes folder";
+    jobs.record(
+      [
+        {
+          id: "s1",
+          label,
+          check: `test -f "${marker}"`,
+          remove: `rm "${marker}"`,
+          folder,
+          account: "captain",
+        },
+      ],
+      { computer: null, task: "task-9", key: "INF-9" },
+    );
+    const tools = createAppTools({
+      dispatch: core.dispatch,
+      actor: () => ({ kind: "firstmate", wake: "captain" }),
+    });
+    const change = tools.find((tool) => tool.name === "app_change");
+    if (!change) throw new Error("Missing app_change");
+    // Asked with no words of the captain's, it is refused and runs nothing.
+    expect(
+      (await change.run({ action: "kept-job-remove", value: { id: "task-9-s1" } })).text,
+    ).toMatch(/captain's words/);
+    expect(existsSync(marker)).toBe(true);
+    const answer = JSON.parse(
+      (
+        await change.run({
+          action: "kept-job-remove",
+          value: { id: "task-9-s1" },
+          evidence: "Stop the nightly backup job, I moved the notes.",
+        })
+      ).text,
+    );
+    expect(answer.current.jobs).toEqual([]);
+    expect(existsSync(folder)).toBe(false);
+    expect(jobs.list()).toEqual([]);
+    const said = `Removed the kept job "${label}" on`;
+    const line = (await core.dispatch("inf:feed:recent", [])).find((entry) =>
+      entry.text.includes(said),
+    );
+    expect(line?.text).toBeTruthy();
+  });
+
+  // The captain's choice on the review: Forget beside a remove that did not
+  // finish takes the job off the list, runs nothing, and its feed line says
+  // the job may still run on that computer.
+  it("forgets a kept job on the captain's click with a feed line that it may still run", async () => {
+    const jobs = keptJobsAt(core.services.paths.crewmatesDir);
+    const folder = join(keptRoot(core.services.paths.crewmatesDir), "task-8-s1");
+    mkdirSync(folder, { recursive: true });
+    const label = "Weekly photo sync";
+    jobs.record(
+      [{ id: "s1", label, check: "true", remove: "exit 3", folder, account: "captain" }],
+      { computer: null, task: "task-8", key: "INF-8" },
+    );
+    expect((await core.dispatch("inf:automation:kept-remove", ["task-8-s1"])).removed).toBe(false);
+    expect(await core.dispatch("inf:automation:kept-forget", ["task-8-s1"])).toEqual({
+      id: "task-8-s1",
+    });
+    expect(jobs.list()).toEqual([]);
+    expect(existsSync(folder)).toBe(true);
+    const line = (await core.dispatch("inf:feed:recent", [])).find((entry) =>
+      entry.text.includes(`Forgot the kept job "${label}"`),
+    );
+    expect(line?.text).toContain("may still run on");
   });
 
   it("runs presence through the core and refuses captain-owned actions without side effects", async () => {

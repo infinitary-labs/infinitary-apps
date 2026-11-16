@@ -31,6 +31,7 @@ import {
   integrationSettingsPatchSchema,
 } from "./integrations";
 import { type CoreInvokeChannel, invokeContract } from "./ipc";
+import type { KeptJobsView } from "./keptJobs";
 import { type KnowledgeDirections, knowledgeDirectionChangeSchema } from "./knowledge";
 import { reasoningChoiceSchema, slotSchema } from "./modelSlots";
 import { arrangePanels, movePanel } from "./panelArrangement";
@@ -1729,6 +1730,32 @@ const actionLines = {
     line: "Delete one automation and its run history by id on your own judgment, as cancel_schedule does.",
     toRequest: (v, current) => [automationRule(current, v.id).id],
     readValue: (current) => automationValue(current, true),
+    done: (v) => String(v.text),
+  },
+  // Kept running's Remove (docs/leftover-programs.md, "Kept running"): a job
+  // the captain asked to keep past its task's close, removed on the
+  // computer it runs on by the command its crewmate recorded.
+  "kept-job-remove": {
+    area: "automation",
+    tier: "asked",
+    change: "inf:automation:kept-remove",
+    current: "inf:automation:kept",
+    value: z.strictObject({ id: z.string().trim().min(1).max(256) }),
+    line: "Remove one job kept running past its task's close, by id, when asked: its recorded remove runs on the computer it runs on. A remove that does not finish keeps it listed.",
+    toRequest: (v, current) => {
+      const job = (current as KeptJobsView).jobs.find((entry) => entry.id === v.id);
+      if (!job) throw new Error(`No kept job ${v.id}. Its id is in this action's current value.`);
+      return [job.id];
+    },
+    readValue: (current) => ({
+      jobs: (current as KeptJobsView).jobs.map((job) => ({
+        id: job.id,
+        label: job.label,
+        computer: job.computerName,
+        task: job.key || job.task,
+        ...(job.removeFailed ? { removeFailed: job.removeFailed.outcome } : {}),
+      })),
+    }),
     done: (v) => String(v.text),
   },
 } as const satisfies Record<string, ActionLine>;

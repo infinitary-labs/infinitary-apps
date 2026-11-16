@@ -5,6 +5,12 @@
     "other": "{count}개 실행 중"
   },
   "automationPanelEmpty": "아직 자동화가 없어요",
+  "automationPanelKeptCount": {
+    "plural": "count",
+    "other": "{count}개 계속 실행 중"
+  },
+  "automationPanelKeptHeading": "계속 실행 중",
+  "automationPanelKeptRow": "{label} · {computer} · 설정에서 열기",
   "automationPanelListLabel": "자동화",
   "automationPanelPausedCount": {
     "plural": "count",

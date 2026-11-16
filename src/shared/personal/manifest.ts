@@ -100,6 +100,7 @@ export const PANEL_READ_NAMES = [
   "feed.recent",
   "forge.changes",
   "automation.list",
+  "automation.kept",
   "knowledge.collections",
   "knowledge.graph",
   "knowledge.concepts",

@@ -53415,6 +53415,426 @@
         ]
       }
     },
+    "inf:automation:kept": {
+      "effect": "read",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "maxItems": 0
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "jobs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 120
+                },
+                "computer": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "computerName": {
+                  "type": "string",
+                  "maxLength": 256
+                },
+                "account": {
+                  "type": "string",
+                  "maxLength": 256
+                },
+                "task": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "key": {
+                  "type": "string",
+                  "maxLength": 64
+                },
+                "at": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "checked": {
+                  "type": "object",
+                  "properties": {
+                    "at": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "outcome": {
+                      "type": "string",
+                      "enum": [
+                        "running",
+                        "not-running",
+                        "timed-out",
+                        "unreachable"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "at",
+                    "outcome"
+                  ]
+                },
+                "removeFailed": {
+                  "type": "object",
+                  "properties": {
+                    "at": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "outcome": {
+                      "type": "string",
+                      "enum": [
+                        "failed",
+                        "timed-out",
+                        "unreachable"
+                      ]
+                    },
+                    "exitCode": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "at",
+                    "outcome"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "label",
+                "computer",
+                "computerName",
+                "account",
+                "task",
+                "key",
+                "at"
+              ]
+            }
+          }
+        },
+        "required": [
+          "jobs"
+        ]
+      }
+    },
+    "inf:automation:kept-check": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "computer": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "computerName": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "account": {
+            "type": "string",
+            "maxLength": 256
+          },
+          "task": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "key": {
+            "type": "string",
+            "maxLength": 64
+          },
+          "at": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "checked": {
+            "type": "object",
+            "properties": {
+              "at": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "outcome": {
+                "type": "string",
+                "enum": [
+                  "running",
+                  "not-running",
+                  "timed-out",
+                  "unreachable"
+                ]
+              }
+            },
+            "required": [
+              "at",
+              "outcome"
+            ]
+          },
+          "removeFailed": {
+            "type": "object",
+            "properties": {
+              "at": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "outcome": {
+                "type": "string",
+                "enum": [
+                  "failed",
+                  "timed-out",
+                  "unreachable"
+                ]
+              },
+              "exitCode": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "at",
+              "outcome"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "computer",
+          "computerName",
+          "account",
+          "task",
+          "key",
+          "at"
+        ]
+      }
+    },
+    "inf:automation:kept-remove": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "removed": {
+            "type": "boolean"
+          },
+          "job": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "computer": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "computerName": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "account": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "task": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "key": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "at": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "checked": {
+                "type": "object",
+                "properties": {
+                  "at": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "outcome": {
+                    "type": "string",
+                    "enum": [
+                      "running",
+                      "not-running",
+                      "timed-out",
+                      "unreachable"
+                    ]
+                  }
+                },
+                "required": [
+                  "at",
+                  "outcome"
+                ]
+              },
+              "removeFailed": {
+                "type": "object",
+                "properties": {
+                  "at": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "outcome": {
+                    "type": "string",
+                    "enum": [
+                      "failed",
+                      "timed-out",
+                      "unreachable"
+                    ]
+                  },
+                  "exitCode": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "at",
+                  "outcome"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "label",
+              "computer",
+              "computerName",
+              "account",
+              "task",
+              "key",
+              "at"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "removed"
+        ]
+      }
+    },
+    "inf:automation:kept-forget": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ]
+      }
+    },
     "inf:usage:summary": {
       "effect": "read",
       "reach": "views",
@@ -56314,6 +56734,7 @@
                       "feed.recent",
                       "forge.changes",
                       "automation.list",
+                      "automation.kept",
                       "knowledge.collections",
                       "knowledge.graph",
                       "knowledge.concepts",
@@ -56815,6 +57236,7 @@
                       "feed.recent",
                       "forge.changes",
                       "automation.list",
+                      "automation.kept",
                       "knowledge.collections",
                       "knowledge.graph",
                       "knowledge.concepts",
@@ -78202,6 +78624,7 @@
                       "feed.recent",
                       "forge.changes",
                       "automation.list",
+                      "automation.kept",
                       "knowledge.collections",
                       "knowledge.graph",
                       "knowledge.concepts",
@@ -78703,6 +79126,7 @@
                       "feed.recent",
                       "forge.changes",
                       "automation.list",
+                      "automation.kept",
                       "knowledge.collections",
                       "knowledge.graph",
                       "knowledge.concepts",
@@ -91733,6 +92157,70 @@
             "programs",
             "runs",
             "kept"
+          ]
+        }
+      },
+      "inf:computer:kept-job": {
+        "effect": "change",
+        "request": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "type": "string",
+                  "enum": [
+                    "check",
+                    "remove"
+                  ]
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 120
+                },
+                "command": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4000
+                },
+                "folder": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096
+                }
+              },
+              "required": [
+                "action",
+                "label",
+                "command",
+                "folder"
+              ]
+            }
+          ],
+          "minItems": 1,
+          "items": false
+        },
+        "response": {
+          "type": "object",
+          "properties": {
+            "outcome": {
+              "type": "string",
+              "enum": [
+                "ran",
+                "failed",
+                "timed-out"
+              ]
+            },
+            "exitCode": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": [
+            "outcome"
           ]
         }
       },

@@ -1,4 +1,5 @@
 import type { AutomationList } from "@shared/automation";
+import type { KeptJobsView } from "@shared/keptJobs";
 import type { FrameTemplate } from "@shared/plugins/frameDocument";
 import {
   APP_PANEL_FOLDERS,
@@ -286,7 +287,7 @@ function gateHolder(host: PluginHost, gate: AppPanelGate, title: string) {
  * question - asks once and registers nothing.
  *
  * The Automation panel (docs/automation.md, "The Automation panel") while a
- * saved rule exists: the window follows the same `automation.list` read
+ * saved rule exists or a job is kept running past its task's close: the window follows the same `automation.list` read
  * Settings and the panel show, and a read that fails leaves the panel as it
  * was - an unreadable list is not an empty one. A Mac that controls another
  * reads the rules of the Mac it controls, so it shows the panel the same way.
@@ -347,6 +348,13 @@ export function startGatedPanels(host: PluginHost): () => void {
 
   // i18n-exempt: not shown (names a panel in a console line)
   const automationGate = gateHolder(host, "automation", "Automation");
+  // Open while a rule is saved or a job is kept (docs/leftover-programs.md, "Kept running").
+  let savedRules: boolean | null = null;
+  let keptJobs = false;
+  const setAutomationGate = () => {
+    if (stopped || savedRules === null) return;
+    automationGate.set(savedRules || keptJobs);
+  };
   const offRules = appReadExecutor().subscribe(
     "automation.list",
     {},
@@ -355,9 +363,22 @@ export function startGatedPanels(host: PluginHost): () => void {
         const list = value as AutomationList;
         // Unreadable is not empty: the panel stays as it was.
         if (stopped || list.state === "unavailable") return;
-        automationGate.set(list.rules.length > 0);
+        savedRules = list.rules.length > 0;
+        setAutomationGate();
       },
       // Unreadable is not empty: the panel stays as it was.
+      onError: () => {},
+    },
+  );
+  const offKept = appReadExecutor().subscribe(
+    "automation.kept",
+    {},
+    {
+      onValue: (value) => {
+        keptJobs = (value as KeptJobsView).jobs.length > 0;
+        setAutomationGate();
+      },
+      // A home older than kept jobs refuses the read: the gate follows the rules alone.
       onError: () => {},
     },
   );
@@ -367,6 +388,7 @@ export function startGatedPanels(host: PluginHost): () => void {
     off?.();
     offReach();
     offRules();
+    offKept();
     knowledgeGate.stop();
     automationGate.stop();
   };

@@ -5,6 +5,12 @@
     "other": "{count} 个启用中"
   },
   "automationPanelEmpty": "还没有自动化",
+  "automationPanelKeptCount": {
+    "plural": "count",
+    "other": "{count} 个持续运行"
+  },
+  "automationPanelKeptHeading": "持续运行",
+  "automationPanelKeptRow": "{label} · {computer} · 在设置中打开",
   "automationPanelListLabel": "自动化",
   "automationPanelPausedCount": {
     "plural": "count",

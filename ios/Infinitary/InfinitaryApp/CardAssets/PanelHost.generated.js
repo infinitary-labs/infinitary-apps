@@ -36396,6 +36396,422 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Insert schedule detail…`;
   }
+  function settingsAutomationKeptCheck() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تحقّق`;
+      case "de":
+        return `Prüfen`;
+      case "es":
+        return `Comprobar`;
+      case "fr":
+        return `Vérifier`;
+      case "ja":
+        return `確認`;
+      case "ko":
+        return `확인`;
+      case "pt-BR":
+        return `Verificar`;
+      case "zh-Hans":
+        return `检查`;
+      case "zh-Hant":
+        return `檢查`;
+      case "en-XA":
+        return `[Çĥéçķ ~~]`;
+      case "ar-XB":
+        return `‮Check‬`;
+    }
+    return `Check`;
+  }
+  function settingsAutomationKeptCheckUnfinished(input2) {
+    const time2 = input2.time;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يكتمل الفحص · ${time2}`;
+      case "de":
+        return `Die Prüfung wurde nicht fertig · ${time2}`;
+      case "es":
+        return `La comprobación no terminó · ${time2}`;
+      case "fr":
+        return `La vérification n’a pas abouti · ${time2}`;
+      case "ja":
+        return `確認が終わりませんでした · ${time2}`;
+      case "ko":
+        return `확인이 끝나지 않았어요 · ${time2}`;
+      case "pt-BR":
+        return `A verificação não terminou · ${time2}`;
+      case "zh-Hans":
+        return `检查没有完成 · ${time2}`;
+      case "zh-Hant":
+        return `檢查沒有完成 · ${time2}`;
+      case "en-XA":
+        return `[Ţĥé çĥéçķ ðîð ñöţ ƒîñîšĥ · ${time2} ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The check did not finish · ‬${time2}`;
+    }
+    return `The check did not finish · ${time2}`;
+  }
+  function settingsAutomationKeptDescription() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مهام مجدولة أعدّها فرد الطاقم بطلبك وتستمر في العمل بعد إغلاق مهمتها. تعمل على حاسوبها حتى عندما يكون Infinitary مغلقًا.`;
+      case "de":
+        return `Jobs, die ein Crewmitglied auf deinen Wunsch eingerichtet hat und die nach dem Ende ihrer Aufgabe weiterlaufen. Sie laufen auf ihrem Computer, auch wenn Infinitary geschlossen ist.`;
+      case "es":
+        return `Trabajos que un tripulante configuró a petición tuya y que siguen en marcha después de cerrarse su tarea. Se ejecutan en su computadora aunque Infinitary esté cerrado.`;
+      case "fr":
+        return `Des tâches planifiées qu’un équipier a mises en place à votre demande et qui continuent après la clôture de leur tâche. Elles tournent sur leur ordinateur, même quand Infinitary est fermé.`;
+      case "ja":
+        return `あなたの依頼で乗組員が設定し、タスクが閉じたあとも動き続けるジョブです。Infinitary を閉じていても、そのコンピューター上で動きます。`;
+      case "ko":
+        return `요청에 따라 선원이 설정했고, 작업이 닫힌 뒤에도 계속 실행되는 작업이에요. Infinitary가 닫혀 있어도 해당 컴퓨터에서 실행돼요.`;
+      case "pt-BR":
+        return `Rotinas que um tripulante configurou a seu pedido e que continuam rodando depois que a tarefa delas foi fechada. Elas rodam no computador delas mesmo com o Infinitary fechado.`;
+      case "zh-Hans":
+        return `船员按你的要求设置、在任务关闭后仍继续运行的作业。即使 Infinitary 已关闭，它们也会在各自的电脑上运行。`;
+      case "zh-Hant":
+        return `船員依你的要求設定、在任務關閉後仍繼續執行的工作。即使 Infinitary 已關閉，它們也會在各自的電腦上執行。`;
+      case "en-XA":
+        return `[Ĵöƀš á çŕéŵɱáţé šéţ ûþ áţ ýöûŕ ášķ ţĥáţ ķééþ ŕûññîñĝ áƒţéŕ ţĥéîŕ ţášķ çļöšéð. Ţĥéý ŕûñ öñ ţĥéîŕ çöɱþûţéŕ éṽéñ ŵĥîļé Îñƒîñîţáŕý îš çļöšéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Jobs a crewmate set up at your ask that keep running after their task closed. They run on their computer even while Infinitary is closed.‬`;
+    }
+    return `Jobs a crewmate set up at your ask that keep running after their task closed. They run on their computer even while Infinitary is closed.`;
+  }
+  function settingsAutomationKeptForget(input2) {
+    const computer = input2.computer;
+    switch (currentLanguage()) {
+      case "ar":
+        return `نسيان (قد يبقى قيد التشغيل على ${computer})`;
+      case "de":
+        return `Vergessen (läuft auf ${computer} eventuell weiter)`;
+      case "es":
+        return `Olvidar (puede seguir ejecutándose en ${computer})`;
+      case "fr":
+        return `Oublier (il peut encore tourner sur ${computer})`;
+      case "ja":
+        return `忘れる（${computer} ではまだ動いている可能性があります）`;
+      case "ko":
+        return `잊기 (${computer}에서 계속 실행 중일 수 있음)`;
+      case "pt-BR":
+        return `Esquecer (pode continuar rodando em ${computer})`;
+      case "zh-Hans":
+        return `忘记（它可能仍在 ${computer} 上运行）`;
+      case "zh-Hant":
+        return `忘記（它可能仍在 ${computer} 上執行）`;
+      case "en-XA":
+        return `[Ƒöŕĝéţ (îţ ɱáý šţîļļ ŕûñ öñ ${computer}) ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Forget (it may still run on ‬${computer}‮)‬`;
+    }
+    return `Forget (it may still run on ${computer})`;
+  }
+  function settingsAutomationKeptFrom(input2) {
+    const account = input2.account;
+    const computer = input2.computer;
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${computer} · ${account} · أعدّتها ${key}`;
+      case "de":
+        return `${computer} · ${account} · eingerichtet von ${key}`;
+      case "es":
+        return `${computer} · ${account} · configurado por ${key}`;
+      case "fr":
+        return `${computer} · ${account} · mise en place par ${key}`;
+      case "ja":
+        return `${computer} · ${account} · ${key} で設定`;
+      case "ko":
+        return `${computer} · ${account} · ${key}에서 설정`;
+      case "pt-BR":
+        return `${computer} · ${account} · configurada por ${key}`;
+      case "zh-Hans":
+        return `${computer} · ${account} · 由 ${key} 设置`;
+      case "zh-Hant":
+        return `${computer} · ${account} · 由 ${key} 設定`;
+      case "en-XA":
+        return `[${computer} · ${account} · šéţ ûþ ƀý ${key} ~~~~~~]`;
+      case "ar-XB":
+        return `${computer}‮ · ‬${account}‮ · set up by ‬${key}`;
+    }
+    return `${computer} · ${account} · set up by ${key}`;
+  }
+  function settingsAutomationKeptList() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مهام مجدولة مستمرة في العمل`;
+      case "de":
+        return `Weiterlaufende Jobs`;
+      case "es":
+        return `Trabajos que siguen en marcha`;
+      case "fr":
+        return `Tâches planifiées toujours en marche`;
+      case "ja":
+        return `継続中のジョブ`;
+      case "ko":
+        return `계속 실행 중인 작업`;
+      case "pt-BR":
+        return `Rotinas que continuam rodando`;
+      case "zh-Hans":
+        return `持续运行的作业`;
+      case "zh-Hant":
+        return `持續執行的工作`;
+      case "en-XA":
+        return `[Ķéþţ ŕûññîñĝ ĵöƀš ~~~~~~]`;
+      case "ar-XB":
+        return `‮Kept running jobs‬`;
+    }
+    return `Kept running jobs`;
+  }
+  function settingsAutomationKeptNotRunning(input2) {
+    const time2 = input2.time;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا تعمل · فُحصت ${time2}`;
+      case "de":
+        return `Läuft nicht · geprüft ${time2}`;
+      case "es":
+        return `Detenido · comprobado ${time2}`;
+      case "fr":
+        return `Arrêté · vérifié ${time2}`;
+      case "ja":
+        return `停止中 · ${time2} に確認`;
+      case "ko":
+        return `실행 안 됨 · ${time2}에 확인`;
+      case "pt-BR":
+        return `Parada · verificada ${time2}`;
+      case "zh-Hans":
+        return `未运行 · ${time2} 检查`;
+      case "zh-Hant":
+        return `未執行 · ${time2} 檢查`;
+      case "en-XA":
+        return `[Ñöţ ŕûññîñĝ · çĥéçķéð ${time2} ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Not running · checked ‬${time2}`;
+    }
+    return `Not running · checked ${time2}`;
+  }
+  function settingsAutomationKeptOutOfReach(input2) {
+    const computer = input2.computer;
+    const time2 = input2.time;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر الوصول إلى ${computer} · ${time2}`;
+      case "de":
+        return `${computer} war nicht erreichbar · ${time2}`;
+      case "es":
+        return `${computer} no estaba al alcance · ${time2}`;
+      case "fr":
+        return `${computer} était hors de portée · ${time2}`;
+      case "ja":
+        return `${computer} に接続できませんでした · ${time2}`;
+      case "ko":
+        return `${computer}에 연결할 수 없었어요 · ${time2}`;
+      case "pt-BR":
+        return `${computer} estava fora de alcance · ${time2}`;
+      case "zh-Hans":
+        return `当时无法连接 ${computer} · ${time2}`;
+      case "zh-Hant":
+        return `當時無法連線 ${computer} · ${time2}`;
+      case "en-XA":
+        return `[${computer} ŵáš öûţ öƒ ŕéáçĥ · ${time2} ~~~~~~~]`;
+      case "ar-XB":
+        return `${computer}‮ was out of reach · ‬${time2}`;
+    }
+    return `${computer} was out of reach · ${time2}`;
+  }
+  function settingsAutomationKeptRemove() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إزالة`;
+      case "de":
+        return `Entfernen`;
+      case "es":
+        return `Quitar`;
+      case "fr":
+        return `Retirer`;
+      case "ja":
+        return `削除`;
+      case "ko":
+        return `제거`;
+      case "pt-BR":
+        return `Remover`;
+      case "zh-Hans":
+        return `移除`;
+      case "zh-Hant":
+        return `移除`;
+      case "en-XA":
+        return `[Ŕéɱöṽé ~~]`;
+      case "ar-XB":
+        return `‮Remove‬`;
+    }
+    return `Remove`;
+  }
+  function settingsAutomationKeptRemoveAsk(input2) {
+    const computer = input2.computer;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تشغّل الإزالة على ${computer} أمر الإزالة الذي سجّله فرد الطاقم.`;
+      case "de":
+        return `Entfernen führt auf ${computer} den Befehl zum Entfernen aus, den sein Crewmitglied festgehalten hat.`;
+      case "es":
+        return `Quitar ejecuta en ${computer} el comando para quitarlo que anotó su tripulante.`;
+      case "fr":
+        return `Retirer lance sur ${computer} la commande de retrait que son équipier a notée.`;
+      case "ja":
+        return `削除すると、乗組員が記録した削除コマンドを ${computer} で実行します。`;
+      case "ko":
+        return `제거하면 선원이 기록한 제거 명령을 ${computer}에서 실행해요.`;
+      case "pt-BR":
+        return `Remover executa em ${computer} o comando de remoção que o tripulante anotou.`;
+      case "zh-Hans":
+        return `移除会在 ${computer} 上运行船员记下的移除命令。`;
+      case "zh-Hant":
+        return `移除會在 ${computer} 上執行船員記下的移除指令。`;
+      case "en-XA":
+        return `[Ŕéɱöṽé ŕûñš ţĥé ŕéɱöṽé çöɱɱáñð îţš çŕéŵɱáţé ŕéçöŕðéð, öñ ${computer}. ~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Remove runs the remove command its crewmate recorded, on ‬${computer}‮.‬`;
+    }
+    return `Remove runs the remove command its crewmate recorded, on ${computer}.`;
+  }
+  function settingsAutomationKeptRemoveForGood() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إزالة نهائية`;
+      case "de":
+        return `Endgültig entfernen`;
+      case "es":
+        return `Quitar para siempre`;
+      case "fr":
+        return `Retirer définitivement`;
+      case "ja":
+        return `完全に削除`;
+      case "ko":
+        return `영구 제거`;
+      case "pt-BR":
+        return `Remover de vez`;
+      case "zh-Hans":
+        return `永久移除`;
+      case "zh-Hant":
+        return `永久移除`;
+      case "en-XA":
+        return `[Ŕéɱöṽé ƒöŕ ĝööð ~~~~~]`;
+      case "ar-XB":
+        return `‮Remove for good‬`;
+    }
+    return `Remove for good`;
+  }
+  function settingsAutomationKeptRemoveUnfinished(input2) {
+    const time2 = input2.time;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم تكتمل الإزالة، لذا ما زالت المهمة المجدولة في القائمة · ${time2}`;
+      case "de":
+        return `Das Entfernen wurde nicht fertig, daher steht der Job noch in der Liste · ${time2}`;
+      case "es":
+        return `La eliminación no terminó, así que el trabajo sigue en la lista · ${time2}`;
+      case "fr":
+        return `Le retrait n’a pas abouti, la tâche planifiée reste donc listée · ${time2}`;
+      case "ja":
+        return `削除が終わらなかったため、ジョブは一覧に残っています · ${time2}`;
+      case "ko":
+        return `제거가 끝나지 않아 목록에 남아 있어요 · ${time2}`;
+      case "pt-BR":
+        return `A remoção não terminou, então a rotina continua na lista · ${time2}`;
+      case "zh-Hans":
+        return `移除没有完成，所以作业仍在列表中 · ${time2}`;
+      case "zh-Hant":
+        return `移除沒有完成，所以工作仍在清單中 · ${time2}`;
+      case "en-XA":
+        return `[Ţĥé ŕéɱöṽé ðîð ñöţ ƒîñîšĥ, šö ţĥé ĵöƀ îš šţîļļ ļîšţéð · ${time2} ~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The remove did not finish, so the job is still listed · ‬${time2}`;
+    }
+    return `The remove did not finish, so the job is still listed · ${time2}`;
+  }
+  function settingsAutomationKeptRunning(input2) {
+    const time2 = input2.time;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعمل · فُحصت ${time2}`;
+      case "de":
+        return `Läuft · geprüft ${time2}`;
+      case "es":
+        return `En marcha · comprobado ${time2}`;
+      case "fr":
+        return `En marche · vérifié ${time2}`;
+      case "ja":
+        return `動作中 · ${time2} に確認`;
+      case "ko":
+        return `실행 중 · ${time2}에 확인`;
+      case "pt-BR":
+        return `Rodando · verificada ${time2}`;
+      case "zh-Hans":
+        return `运行中 · ${time2} 检查`;
+      case "zh-Hant":
+        return `執行中 · ${time2} 檢查`;
+      case "en-XA":
+        return `[Ŕûññîñĝ · çĥéçķéð ${time2} ~~~~~~]`;
+      case "ar-XB":
+        return `‮Running · checked ‬${time2}`;
+    }
+    return `Running · checked ${time2}`;
+  }
+  function settingsAutomationKeptTitle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يستمر في العمل`;
+      case "de":
+        return `Läuft weiter`;
+      case "es":
+        return `Sigue en marcha`;
+      case "fr":
+        return `Toujours en marche`;
+      case "ja":
+        return `継続中のジョブ`;
+      case "ko":
+        return `계속 실행 중`;
+      case "pt-BR":
+        return `Continua rodando`;
+      case "zh-Hans":
+        return `持续运行`;
+      case "zh-Hant":
+        return `持續執行`;
+      case "en-XA":
+        return `[Ķéþţ ŕûññîñĝ ~~~~]`;
+      case "ar-XB":
+        return `‮Kept running‬`;
+    }
+    return `Kept running`;
+  }
+  function settingsAutomationKeptUnreadable() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّرت قراءة مهامك المجدولة المستمرة الآن.`;
+      case "de":
+        return `Deine weiterlaufenden Jobs können gerade nicht gelesen werden.`;
+      case "es":
+        return `Ahora no se pueden leer tus trabajos que siguen en marcha.`;
+      case "fr":
+        return `Impossible de lire vos tâches planifiées gardées pour le moment.`;
+      case "ja":
+        return `継続中のジョブを今は読み込めません。`;
+      case "ko":
+        return `지금은 계속 실행 중인 작업을 읽을 수 없어요.`;
+      case "pt-BR":
+        return `Não é possível ler suas rotinas mantidas agora.`;
+      case "zh-Hans":
+        return `目前无法读取你的持续运行作业。`;
+      case "zh-Hant":
+        return `目前無法讀取你的持續執行工作。`;
+      case "en-XA":
+        return `[Ýöûŕ ķéþţ ĵöƀš çáññöţ ƀé ŕéáð ŕîĝĥţ ñöŵ. ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your kept jobs cannot be read right now.‬`;
+    }
+    return `Your kept jobs cannot be read right now.`;
+  }
   function settingsAutomationKindDaily() {
     switch (currentLanguage()) {
       case "ar":
@@ -74226,6 +74642,21 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsAutomationHistory,
     settingsAutomationInsertDetail,
     settingsAutomationInsertDetailChoice,
+    settingsAutomationKeptCheck,
+    settingsAutomationKeptCheckUnfinished,
+    settingsAutomationKeptDescription,
+    settingsAutomationKeptForget,
+    settingsAutomationKeptFrom,
+    settingsAutomationKeptList,
+    settingsAutomationKeptNotRunning,
+    settingsAutomationKeptOutOfReach,
+    settingsAutomationKeptRemove,
+    settingsAutomationKeptRemoveAsk,
+    settingsAutomationKeptRemoveForGood,
+    settingsAutomationKeptRemoveUnfinished,
+    settingsAutomationKeptRunning,
+    settingsAutomationKeptTitle,
+    settingsAutomationKeptUnreadable,
     settingsAutomationKindDaily,
     settingsAutomationKindEvent,
     settingsAutomationKindEvery,
@@ -76589,6 +77020,21 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsAutomationHistory": [],
     "settingsAutomationInsertDetail": [],
     "settingsAutomationInsertDetailChoice": [],
+    "settingsAutomationKeptCheck": [],
+    "settingsAutomationKeptCheckUnfinished": ["time"],
+    "settingsAutomationKeptDescription": [],
+    "settingsAutomationKeptForget": ["computer"],
+    "settingsAutomationKeptFrom": ["account", "computer", "key"],
+    "settingsAutomationKeptList": [],
+    "settingsAutomationKeptNotRunning": ["time"],
+    "settingsAutomationKeptOutOfReach": ["computer", "time"],
+    "settingsAutomationKeptRemove": [],
+    "settingsAutomationKeptRemoveAsk": ["computer"],
+    "settingsAutomationKeptRemoveForGood": [],
+    "settingsAutomationKeptRemoveUnfinished": ["time"],
+    "settingsAutomationKeptRunning": ["time"],
+    "settingsAutomationKeptTitle": [],
+    "settingsAutomationKeptUnreadable": [],
     "settingsAutomationKindDaily": [],
     "settingsAutomationKindEvent": [],
     "settingsAutomationKindEvery": [],
@@ -79360,6 +79806,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "feed.recent",
     "forge.changes",
     "automation.list",
+    "automation.kept",
     "knowledge.collections",
     "knowledge.graph",
     "knowledge.concepts",
@@ -85117,6 +85564,63 @@ ${FRAME_QUESTION_SCRIPT}
       request: tuple([])
     }
   });
+  const keptCheckOutcomeSchema = _enum([
+    "running",
+    "not-running",
+    "timed-out",
+    "unreachable"
+  ]);
+  const keptRemoveFailureSchema = _enum(["failed", "timed-out", "unreachable"]);
+  const keptCheckSchema = object({
+    at: number().int().nonnegative(),
+    outcome: keptCheckOutcomeSchema
+  });
+  const keptRemoveFailedSchema = object({
+    at: number().int().nonnegative(),
+    outcome: keptRemoveFailureSchema,
+    exitCode: number().int().optional()
+  });
+  const keptJobViewSchema = object({
+    /** Its kept folder's own name (`<task>-<keep id>`), with `@` and the computer's id for a job on a computer that runs work. */
+    id: string().min(1).max(256),
+    label: stopLabelSchema,
+    /** The computer that runs work it runs on, by device id; null for the home itself. */
+    computer: string().min(1).max(128).nullable(),
+    /** That computer's name, as Settings → Computers names it. */
+    computerName: string().max(256),
+    account: string().max(256),
+    task: string().min(1).max(64),
+    key: string().max(64),
+    /** When its task's close kept it, in ms since the epoch. */
+    at: number().int().nonnegative(),
+    checked: keptCheckSchema.optional(),
+    removeFailed: keptRemoveFailedSchema.optional()
+  });
+  object({
+    jobs: array(keptJobViewSchema)
+  });
+  object({
+    id: string(),
+    removed: boolean(),
+    job: keptJobViewSchema.optional()
+  });
+  const KEPT_JOB_ORDER = "inf:computer:kept-job";
+  ({
+    [KEPT_JOB_ORDER]: {
+      request: tuple([
+        object({
+          action: _enum(["check", "remove"]),
+          label: stopLabelSchema,
+          command: stopCommandSchema,
+          folder: string().min(1).max(4096)
+        })
+      ]),
+      response: object({
+        outcome: _enum(["ran", "failed", "timed-out"]),
+        exitCode: number().int().optional()
+      })
+    }
+  });
   const RESOURCE_SAMPLE_MS = 250;
   const RESOURCE_MAX_SAMPLE_MS = 5e3;
   const RESOURCE_MAX_AGE_MS = 1e4;
@@ -89683,6 +90187,18 @@ ${FRAME_QUESTION_SCRIPT}
         pollMs: 3e4
       },
       description: "Every automation rule: its name, state, schedule, prompt and next run."
+    }),
+    // Kept running (docs/leftover-programs.md, "Kept running"): a close keeps
+    // a job and writes its timeline line; a Remove's trail is a feed line.
+    "automation.kept": entry({
+      channel: "inf:automation:kept",
+      args: noArgs,
+      toRequest: () => [],
+      invalidate: {
+        events: (event) => event.type === "firstmate_note" || event.type === "task_event" || event.type === "task_finished" || event.type === "task_landed",
+        pollMs: 3e4
+      },
+      description: "The jobs kept running past their task's close: each one's label, computer, account, task and last check."
     }),
     // A delivery is handled when a Firstmate turn ends, which no feed line says.
     "automation.history": entry({

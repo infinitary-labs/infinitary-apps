@@ -13126,6 +13126,63 @@ ${events}` : prompt;
       request: tuple([])
     }
   });
+  const keptCheckOutcomeSchema = _enum([
+    "running",
+    "not-running",
+    "timed-out",
+    "unreachable"
+  ]);
+  const keptRemoveFailureSchema = _enum(["failed", "timed-out", "unreachable"]);
+  const keptCheckSchema = object({
+    at: number().int().nonnegative(),
+    outcome: keptCheckOutcomeSchema
+  });
+  const keptRemoveFailedSchema = object({
+    at: number().int().nonnegative(),
+    outcome: keptRemoveFailureSchema,
+    exitCode: number().int().optional()
+  });
+  const keptJobViewSchema = object({
+    /** Its kept folder's own name (`<task>-<keep id>`), with `@` and the computer's id for a job on a computer that runs work. */
+    id: string().min(1).max(256),
+    label: stopLabelSchema,
+    /** The computer that runs work it runs on, by device id; null for the home itself. */
+    computer: string().min(1).max(128).nullable(),
+    /** That computer's name, as Settings → Computers names it. */
+    computerName: string().max(256),
+    account: string().max(256),
+    task: string().min(1).max(64),
+    key: string().max(64),
+    /** When its task's close kept it, in ms since the epoch. */
+    at: number().int().nonnegative(),
+    checked: keptCheckSchema.optional(),
+    removeFailed: keptRemoveFailedSchema.optional()
+  });
+  object({
+    jobs: array(keptJobViewSchema)
+  });
+  object({
+    id: string(),
+    removed: boolean(),
+    job: keptJobViewSchema.optional()
+  });
+  const KEPT_JOB_ORDER = "inf:computer:kept-job";
+  ({
+    [KEPT_JOB_ORDER]: {
+      request: tuple([
+        object({
+          action: _enum(["check", "remove"]),
+          label: stopLabelSchema,
+          command: stopCommandSchema,
+          folder: string().min(1).max(4096)
+        })
+      ]),
+      response: object({
+        outcome: _enum(["ran", "failed", "timed-out"]),
+        exitCode: number().int().optional()
+      })
+    }
+  });
   const RESOURCE_SAMPLE_MS = 250;
   const RESOURCE_MAX_SAMPLE_MS = 5e3;
   const RESOURCE_MAX_AGE_MS = 1e4;

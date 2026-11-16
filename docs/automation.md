@@ -211,19 +211,22 @@ The history reads again when a first mate turn ends, since nothing else says a d
 ## The Automation panel
 
 `src/panels/automation/` is an ordinary app panel folder on the right rail, below Tasks and Knowledge (docs/ui-plugins.md, "A folder that waits on a gate").
-It waits on the `automation` gate, open while a saved rule exists in any state: the window follows `automation.list` and registers the panel on the first saved rule, and takes it away, with its place on the rail, when the last one is deleted.
+It waits on the `automation` gate, open while a saved rule exists in any state or a job is kept running (`docs/leftover-programs.md`, "Kept running"): the window follows `automation.list` and `automation.kept`, registers the panel on the first saved rule or kept job, and takes it away, with its place on the rail, when the last one goes.
 An unreadable answer leaves it as it was.
 It starts collapsed; the rail keeps the collapse choice by the panel's id, so it holds when the panel goes and comes back.
 Collapsed, its header counts the running rules as active and, when there are any, the paused ones: "1 active · 2 paused", or "1 active"; a draft or a finished rule is in neither count.
+It adds the jobs kept running when there are any, "1 active · 2 kept", and with no rule saved counts only them: "2 kept".
 Each row shows a rule's state, name and next run; a draft reads Draft where a running rule shows its next run.
 A click or Enter opens that rule's sheet in Settings → Automation through `point.openSettings("automation", id)`, with the keyboard in the sheet; nothing runs, pauses or changes.
+Under Kept running, a row per kept job shows its last check, label and computer; a click or Enter opens Settings → Automation at that job with the keyboard on its Check, through `point.openSettings("automation", "kept:<id>")`.
+The rule rows and kept rows are one stop the arrows move through.
 Expanded, its header shows Open Automation, the app's open button, as Knowledge's header does; it names no card, so it is pressed into the panel, which opens Settings → Automation at the full list through `point.openSettings("automation")` (docs/ui-plugins.md, "A panel's cards").
 Hiding or collapsing the panel changes nothing about delivery.
 It takes its place on that rail however many panels the rail already holds.
 
 ## Where it shows
 
-Settings → Automation, the Automation panel and its header's Open Automation, and command search's Open Automation (`settings.automation`) and Pause all automations (`automation.pause-all`), neither with a default key.
+Settings → Automation with its Kept running list, the Automation panel and its header's Open Automation, and command search's Open Automation (`settings.automation`) and Pause all automations (`automation.pause-all`), neither with a default key.
 
 ## On a computer that controls another
 

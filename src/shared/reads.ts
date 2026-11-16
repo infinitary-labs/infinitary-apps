@@ -229,6 +229,23 @@ export const readCatalog = {
     },
     description: "Every automation rule: its name, state, schedule, prompt and next run.",
   }),
+  // Kept running (docs/leftover-programs.md, "Kept running"): a close keeps
+  // a job and writes its timeline line; a Remove's trail is a feed line.
+  "automation.kept": entry({
+    channel: "inf:automation:kept",
+    args: noArgs,
+    toRequest: () => [],
+    invalidate: {
+      events: (event) =>
+        event.type === "firstmate_note" ||
+        event.type === "task_event" ||
+        event.type === "task_finished" ||
+        event.type === "task_landed",
+      pollMs: 30_000,
+    },
+    description:
+      "The jobs kept running past their task's close: each one's label, computer, account, task and last check.",
+  }),
   // A delivery is handled when a Firstmate turn ends, which no feed line says.
   "automation.history": entry({
     channel: "inf:automation:history",

@@ -71,6 +71,7 @@ import type {
 } from "./integrations";
 import type { AppInfo, InvokeResponse, RecordedKey } from "./ipc";
 import type { JoinAtAnswer, JoinAtOptions } from "./joinByAddress";
+import type { KeptJobsView, KeptJobView, KeptRemoveResult } from "./keptJobs";
 import type { MainCommandId, PanelCommand, PanelCommandId, ShellCommandId } from "./keyboard";
 import type { KeymapSnapshot, SavedKeymap } from "./keymap";
 import type { LastTurn } from "./lastTurn";
@@ -289,6 +290,14 @@ export type FirstmateApi = {
     saveNotes: (id: string, text: string) => Promise<AutomationNotes | null>;
     pauseAll: () => Promise<{ paused: number }>;
     delete: (id: string) => Promise<{ id: string }>;
+    /** The jobs kept running past their task's close (docs/leftover-programs.md, "Kept running"). */
+    kept: () => Promise<KeptJobsView>;
+    /** Runs one kept job's check on its computer and answers it with how it went. */
+    checkKept: (id: string) => Promise<KeptJobView>;
+    /** Runs one kept job's remove on its computer; a remove that did not finish keeps it listed. */
+    removeKept: (id: string) => Promise<KeptRemoveResult>;
+    /** Takes a kept job off the list without running its remove; it may still run there. */
+    forgetKept: (id: string) => Promise<{ id: string }>;
   };
   repos: {
     setup: (spec: RepoSetupSpec) => Promise<RepoSetupResult>;

@@ -202,6 +202,10 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
         ),
       pauseAll: () => invoke("inf:automation:pause-all"),
       delete: (id) => invoke("inf:automation:delete", id),
+      kept: () => invoke("inf:automation:kept"),
+      checkKept: (id) => invoke("inf:automation:kept-check", id),
+      removeKept: (id) => invoke("inf:automation:kept-remove", id),
+      forgetKept: (id) => invoke("inf:automation:kept-forget", id),
     },
     repos: {
       setup: (spec) => readableRequest("inf:repos:setup", () => invoke("inf:repos:setup", spec)),

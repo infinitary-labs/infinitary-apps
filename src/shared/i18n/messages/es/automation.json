@@ -7,6 +7,14 @@
     "other": "activas: {count}"
   },
   "automationPanelEmpty": "Todavía no hay automatizaciones",
+  "automationPanelKeptCount": {
+    "plural": "count",
+    "one": "en marcha: {count}",
+    "many": "en marcha: {count}",
+    "other": "en marcha: {count}"
+  },
+  "automationPanelKeptHeading": "Sigue en marcha",
+  "automationPanelKeptRow": "{label} · {computer} · Abrir en Ajustes",
   "automationPanelListLabel": "Automatizaciones",
   "automationPanelPausedCount": {
     "plural": "count",

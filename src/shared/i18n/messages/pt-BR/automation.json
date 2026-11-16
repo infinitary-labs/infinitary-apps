@@ -7,6 +7,14 @@
     "other": "{count} ativas"
   },
   "automationPanelEmpty": "Nenhuma automação ainda",
+  "automationPanelKeptCount": {
+    "plural": "count",
+    "one": "{count} rodando",
+    "many": "{count} rodando",
+    "other": "{count} rodando"
+  },
+  "automationPanelKeptHeading": "Continua rodando",
+  "automationPanelKeptRow": "{label} · {computer} · Abrir nos Ajustes",
   "automationPanelListLabel": "Automações",
   "automationPanelPausedCount": {
     "plural": "count",

@@ -203,6 +203,9 @@ public enum PhoneMessages {
     public static func `automationEventsSkipped`() -> String { PhoneWords.format("automationEventsSkipped", []) }
     public static func `automationPanelActiveCount`(`count`: Int) -> String { PhoneWords.format("automationPanelActiveCount", [`count`]) }
     public static func `automationPanelEmpty`() -> String { PhoneWords.format("automationPanelEmpty", []) }
+    public static func `automationPanelKeptCount`(`count`: Int) -> String { PhoneWords.format("automationPanelKeptCount", [`count`]) }
+    public static func `automationPanelKeptHeading`() -> String { PhoneWords.format("automationPanelKeptHeading", []) }
+    public static func `automationPanelKeptRow`(`computer`: String, `label`: String) -> String { PhoneWords.format("automationPanelKeptRow", [`computer`, `label`]) }
     public static func `automationPanelListLabel`() -> String { PhoneWords.format("automationPanelListLabel", []) }
     public static func `automationPanelPausedCount`(`count`: Int) -> String { PhoneWords.format("automationPanelPausedCount", [`count`]) }
     public static func `automationPanelUnreadableSummary`() -> String { PhoneWords.format("automationPanelUnreadableSummary", []) }
@@ -2037,6 +2040,21 @@ public enum PhoneMessages {
     public static func `settingsAutomationHistory`() -> String { PhoneWords.format("settingsAutomationHistory", []) }
     public static func `settingsAutomationInsertDetail`() -> String { PhoneWords.format("settingsAutomationInsertDetail", []) }
     public static func `settingsAutomationInsertDetailChoice`() -> String { PhoneWords.format("settingsAutomationInsertDetailChoice", []) }
+    public static func `settingsAutomationKeptCheck`() -> String { PhoneWords.format("settingsAutomationKeptCheck", []) }
+    public static func `settingsAutomationKeptCheckUnfinished`(`time`: String) -> String { PhoneWords.format("settingsAutomationKeptCheckUnfinished", [`time`]) }
+    public static func `settingsAutomationKeptDescription`() -> String { PhoneWords.format("settingsAutomationKeptDescription", []) }
+    public static func `settingsAutomationKeptForget`(`computer`: String) -> String { PhoneWords.format("settingsAutomationKeptForget", [`computer`]) }
+    public static func `settingsAutomationKeptFrom`(`account`: String, `computer`: String, `key`: String) -> String { PhoneWords.format("settingsAutomationKeptFrom", [`account`, `computer`, `key`]) }
+    public static func `settingsAutomationKeptList`() -> String { PhoneWords.format("settingsAutomationKeptList", []) }
+    public static func `settingsAutomationKeptNotRunning`(`time`: String) -> String { PhoneWords.format("settingsAutomationKeptNotRunning", [`time`]) }
+    public static func `settingsAutomationKeptOutOfReach`(`computer`: String, `time`: String) -> String { PhoneWords.format("settingsAutomationKeptOutOfReach", [`computer`, `time`]) }
+    public static func `settingsAutomationKeptRemove`() -> String { PhoneWords.format("settingsAutomationKeptRemove", []) }
+    public static func `settingsAutomationKeptRemoveAsk`(`computer`: String) -> String { PhoneWords.format("settingsAutomationKeptRemoveAsk", [`computer`]) }
+    public static func `settingsAutomationKeptRemoveForGood`() -> String { PhoneWords.format("settingsAutomationKeptRemoveForGood", []) }
+    public static func `settingsAutomationKeptRemoveUnfinished`(`time`: String) -> String { PhoneWords.format("settingsAutomationKeptRemoveUnfinished", [`time`]) }
+    public static func `settingsAutomationKeptRunning`(`time`: String) -> String { PhoneWords.format("settingsAutomationKeptRunning", [`time`]) }
+    public static func `settingsAutomationKeptTitle`() -> String { PhoneWords.format("settingsAutomationKeptTitle", []) }
+    public static func `settingsAutomationKeptUnreadable`() -> String { PhoneWords.format("settingsAutomationKeptUnreadable", []) }
     public static func `settingsAutomationKindDaily`() -> String { PhoneWords.format("settingsAutomationKindDaily", []) }
     public static func `settingsAutomationKindEvent`() -> String { PhoneWords.format("settingsAutomationKindEvent", []) }
     public static func `settingsAutomationKindEvery`() -> String { PhoneWords.format("settingsAutomationKindEvery", []) }
@@ -3528,6 +3546,9 @@ extension PhoneWords {
         "automationEventsSkipped": [],
         "automationPanelActiveCount": ["count"],
         "automationPanelEmpty": [],
+        "automationPanelKeptCount": ["count"],
+        "automationPanelKeptHeading": [],
+        "automationPanelKeptRow": ["computer", "label"],
         "automationPanelListLabel": [],
         "automationPanelPausedCount": ["count"],
         "automationPanelUnreadableSummary": [],
@@ -5362,6 +5383,21 @@ extension PhoneWords {
         "settingsAutomationHistory": [],
         "settingsAutomationInsertDetail": [],
         "settingsAutomationInsertDetailChoice": [],
+        "settingsAutomationKeptCheck": [],
+        "settingsAutomationKeptCheckUnfinished": ["time"],
+        "settingsAutomationKeptDescription": [],
+        "settingsAutomationKeptForget": ["computer"],
+        "settingsAutomationKeptFrom": ["account", "computer", "key"],
+        "settingsAutomationKeptList": [],
+        "settingsAutomationKeptNotRunning": ["time"],
+        "settingsAutomationKeptOutOfReach": ["computer", "time"],
+        "settingsAutomationKeptRemove": [],
+        "settingsAutomationKeptRemoveAsk": ["computer"],
+        "settingsAutomationKeptRemoveForGood": [],
+        "settingsAutomationKeptRemoveUnfinished": ["time"],
+        "settingsAutomationKeptRunning": ["time"],
+        "settingsAutomationKeptTitle": [],
+        "settingsAutomationKeptUnreadable": [],
         "settingsAutomationKindDaily": [],
         "settingsAutomationKindEvent": [],
         "settingsAutomationKindEvery": [],
@@ -6655,6 +6691,7 @@ extension PhoneWords {
     static let counts: [String: String] = [
         "accountsCustomApiListed": "count",
         "automationPanelActiveCount": "count",
+        "automationPanelKeptCount": "count",
         "automationPanelPausedCount": "count",
         "automationRunSkipped": "count",
         "cardAfterMergeWait": "count",

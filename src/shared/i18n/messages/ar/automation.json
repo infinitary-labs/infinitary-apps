@@ -10,6 +10,17 @@
     "other": "نشطة: {count}"
   },
   "automationPanelEmpty": "لا توجد عمليات أتمتة بعد",
+  "automationPanelKeptCount": {
+    "plural": "count",
+    "zero": "مستمرة: {count}",
+    "one": "مستمرة: {count}",
+    "two": "مستمرة: {count}",
+    "few": "مستمرة: {count}",
+    "many": "مستمرة: {count}",
+    "other": "مستمرة: {count}"
+  },
+  "automationPanelKeptHeading": "يستمر في العمل",
+  "automationPanelKeptRow": "{label} · {computer} · فتح في الإعدادات",
   "automationPanelListLabel": "عمليات الأتمتة",
   "automationPanelPausedCount": {
     "plural": "count",

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { keptJobOrders } from "./keptJobs";
 import { leftBehindOrders } from "./leftoverPrograms";
 import { computerLoadReadingSchema, loadOrders } from "./load";
 import type { PanelComputerResourceReading, PanelComputerResources } from "./personal/contracts";
@@ -124,10 +125,11 @@ export const RESOURCE_REFRESH_MS = 2_000;
 export const RESOURCE_DEMAND_RENEW_MS = 5_000;
 export const RESOURCE_DEMAND_LEASE_MS = 15_000;
 
-/** Computer facts and declared-run admission; neither loads accounts or opens a conversation. */
+/** Computer facts, declared-run admission and kept jobs' own commands; none loads accounts or opens a conversation. */
 export const resourceOrders = {
   ...loadOrders,
   ...leftBehindOrders,
+  ...keptJobOrders,
   [RESOURCE_ORDER]: {
     effect: "read",
     request: z.tuple([]),

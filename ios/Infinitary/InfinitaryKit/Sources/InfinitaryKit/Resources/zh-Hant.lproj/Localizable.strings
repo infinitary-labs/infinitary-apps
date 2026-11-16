@@ -2556,6 +2556,9 @@
 "settingsProjectsAutonomyOn" = "通過檢查的工作可以不問你就合併。";
 "settingsProjectsAutonomyPersonal" = "就地建置。通過檢查的工作一完成就會寫入。";
 "settingsProjectsBatchChanges" = "要退回的變更";
+"settingsProjectsBatchGap" = "何時開始一個批次";
+"settingsProjectsBatchGapDescription" = "間隔越長，每個批次包含的已核准變更越多，檢查執行得越少。被暫停的批次的修復從不等待。";
+"settingsProjectsBatchGapNow" = "變更一經核准就開始";
 "settingsProjectsBatchHeld" = "批次已暫緩";
 "settingsProjectsBatchHeldNoWay" = "從 %1$@ 起暫緩：這個專案不允許任何能為每項變更保留一個提交的合併方式。請在專案所在處允許 rebase 合併或合併提交，然後再試一次。";
 "settingsProjectsBatchHeldRefused" = "從 %2$@ 起暫緩：合併在專案所在處遭到拒絕：%1$@";

@@ -748,6 +748,17 @@
   "settingsProjectsAutonomyOn": "검사를 통과한 작업은 묻지 않고 병합될 수 있어요.",
   "settingsProjectsAutonomyPersonal": "그 자리에서 만들어요. 검사를 통과한 작업은 끝나는 즉시 기록돼요.",
   "settingsProjectsBatchChanges": "돌려보낼 변경",
+  "settingsProjectsBatchGap": "일괄 끌어오기 요청을 시작하는 때",
+  "settingsProjectsBatchGapDescription": "간격이 길수록 일괄 끌어오기 요청마다 승인된 변경이 더 많이 들어가서 검사가 덜 자주 실행돼요. 멈춘 일괄 끌어오기 요청의 수정은 기다리지 않아요.",
+  "settingsProjectsBatchGapHours": {
+    "plural": "count",
+    "other": "최대 {count}시간마다"
+  },
+  "settingsProjectsBatchGapMinutes": {
+    "plural": "count",
+    "other": "최대 {count}분마다"
+  },
+  "settingsProjectsBatchGapNow": "변경이 승인되는 즉시",
   "settingsProjectsBatchHeld": "일괄 끌어오기 요청 보류됨",
   "settingsProjectsBatchHeldChecks": {
     "plural": "count",

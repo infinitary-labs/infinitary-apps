@@ -2652,6 +2652,11 @@ public enum PhoneMessages {
     public static func `settingsProjectsAutonomyOn`() -> String { PhoneWords.format("settingsProjectsAutonomyOn", []) }
     public static func `settingsProjectsAutonomyPersonal`() -> String { PhoneWords.format("settingsProjectsAutonomyPersonal", []) }
     public static func `settingsProjectsBatchChanges`() -> String { PhoneWords.format("settingsProjectsBatchChanges", []) }
+    public static func `settingsProjectsBatchGap`() -> String { PhoneWords.format("settingsProjectsBatchGap", []) }
+    public static func `settingsProjectsBatchGapDescription`() -> String { PhoneWords.format("settingsProjectsBatchGapDescription", []) }
+    public static func `settingsProjectsBatchGapHours`(`count`: Int) -> String { PhoneWords.format("settingsProjectsBatchGapHours", [`count`]) }
+    public static func `settingsProjectsBatchGapMinutes`(`count`: Int) -> String { PhoneWords.format("settingsProjectsBatchGapMinutes", [`count`]) }
+    public static func `settingsProjectsBatchGapNow`() -> String { PhoneWords.format("settingsProjectsBatchGapNow", []) }
     public static func `settingsProjectsBatchHeld`() -> String { PhoneWords.format("settingsProjectsBatchHeld", []) }
     public static func `settingsProjectsBatchHeldChecks`(`checks`: String, `count`: Int, `since`: String) -> String { PhoneWords.format("settingsProjectsBatchHeldChecks", [`checks`, `count`, `since`]) }
     public static func `settingsProjectsBatchHeldChecksUnnamed`(`count`: Int, `since`: String) -> String { PhoneWords.format("settingsProjectsBatchHeldChecksUnnamed", [`count`, `since`]) }
@@ -5972,6 +5977,11 @@ extension PhoneWords {
         "settingsProjectsAutonomyOn": [],
         "settingsProjectsAutonomyPersonal": [],
         "settingsProjectsBatchChanges": [],
+        "settingsProjectsBatchGap": [],
+        "settingsProjectsBatchGapDescription": [],
+        "settingsProjectsBatchGapHours": ["count"],
+        "settingsProjectsBatchGapMinutes": ["count"],
+        "settingsProjectsBatchGapNow": [],
         "settingsProjectsBatchHeld": [],
         "settingsProjectsBatchHeldChecks": ["checks", "count", "since"],
         "settingsProjectsBatchHeldChecksUnnamed": ["count", "since"],
@@ -6734,6 +6744,8 @@ extension PhoneWords {
         "settingsGeneralTasksPurged": "count",
         "settingsIntegrationsActionCount": "count",
         "settingsPhonePauseAllAsk": "count",
+        "settingsProjectsBatchGapHours": "count",
+        "settingsProjectsBatchGapMinutes": "count",
         "settingsProjectsBatchHeldChecks": "count",
         "settingsProjectsBatchHeldChecksUnnamed": "count",
         "settingsProjectsBatchSentBack": "count",

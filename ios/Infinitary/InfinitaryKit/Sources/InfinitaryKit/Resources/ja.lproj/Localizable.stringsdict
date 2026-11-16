@@ -1277,6 +1277,34 @@
       <string>稼働中の自動化（%1$ld件）をすべて一時停止しますか？</string>
     </dict>
   </dict>
+  <key>settingsProjectsBatchGapHours</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>最短で%1$ld時間ごと</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsBatchGapMinutes</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>最短で%1$ld分ごと</string>
+    </dict>
+  </dict>
   <key>settingsProjectsBatchHeldChecks</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

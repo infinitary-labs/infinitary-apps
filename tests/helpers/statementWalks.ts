@@ -214,7 +214,7 @@ export const WALKS: Record<string, { walks: string[]; reason: string }> = {
     walks: ["SCAN tasks"],
     reason: "the boot check of the record's invariants, once at start",
   },
-  "SELECT id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, contribution_json, batch_json, no_checks_json FROM repos ORDER BY added_at":
+  "SELECT id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, contribution_json, batch_json, no_checks_json, batch_gap_minutes FROM repos ORDER BY added_at":
     {
       walks: ["SCAN repos", "USE TEMP B-TREE FOR ORDER BY"],
       reason: "one row per project the captain adds",
@@ -223,17 +223,17 @@ export const WALKS: Record<string, { walks: string[]; reason: string }> = {
     walks: ["SCAN repos"],
     reason: "one row per project the captain adds",
   },
-  "SELECT id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, contribution_json, batch_json, no_checks_json FROM repos WHERE origin = ? AND kind = 'project'":
+  "SELECT id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, contribution_json, batch_json, no_checks_json, batch_gap_minutes FROM repos WHERE origin = ? AND kind = 'project'":
     {
       walks: ["SCAN repos"],
       reason: "one row per project the captain adds",
     },
-  "SELECT id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, contribution_json, batch_json, no_checks_json FROM repos WHERE name = ?":
+  "SELECT id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, contribution_json, batch_json, no_checks_json, batch_gap_minutes FROM repos WHERE name = ?":
     {
       walks: ["SCAN repos"],
       reason: "one row per project the captain adds",
     },
-  "SELECT id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, contribution_json, batch_json, no_checks_json FROM repos WHERE origin = ? AND setup_kind = 'clone'":
+  "SELECT id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, contribution_json, batch_json, no_checks_json, batch_gap_minutes FROM repos WHERE origin = ? AND setup_kind = 'clone'":
     {
       walks: ["SCAN repos"],
       reason: "one row per project the captain adds",

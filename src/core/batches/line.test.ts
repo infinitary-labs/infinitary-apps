@@ -110,6 +110,71 @@ describe("the formation rule", () => {
   });
 });
 
+// Intent: the captain's approved plan to run a batched project's batch check less often
+// (piece 1, "Approve and build"): with a batch gap, changes approved after a batch formed
+// wait and go up together once the gap from that batch's start has passed; a held batch's
+// repair never waits; with no gap a batch forms at once, as before.
+describe("the batch gap", () => {
+  const HOURS_3 = 180;
+  const GAP_MS = HOURS_3 * 60_000;
+
+  /** The open batch #31, formed at 5_000, merged at 8_000, then two changes approved. */
+  function afterMerge(): BatchRecord {
+    const done = merged(openBatch(), new Map(), 8_000);
+    return enqueue(enqueue(done, { ...LEGEND, at: 9_000 }), {
+      ...PARSER,
+      head: EXPORT_COMMIT,
+      at: 10_000,
+    });
+  }
+
+  it("keeps two approvals in line until the gap from the last batch's start has passed, then takes both", () => {
+    const record = afterMerge();
+    expect(record.formed).toBe(5_000);
+    expect(forms(record, HOURS_3, 10_000)).toBe(false);
+    expect(forms(record, HOURS_3, 5_000 + GAP_MS - 1)).toBe(false);
+    expect(forms(record, HOURS_3, 5_000 + GAP_MS)).toBe(true);
+    const next = combined(
+      record,
+      combineOf([
+        member(LEGEND, LEGEND_COMMIT),
+        member({ ...PARSER, head: EXPORT_COMMIT }, PARSER_COMMIT),
+      ]),
+      { branch: "infinitary-batch/9a02", at: 5_000 + GAP_MS },
+    );
+    expect(next.open?.members.map((entry) => entry.taskId)).toEqual(["t-legend", "t-parser"]);
+    expect(next.formed).toBe(5_000 + GAP_MS);
+  });
+
+  it("forms at once with no gap, or when the project has had no batch yet", () => {
+    expect(forms(afterMerge(), undefined, 10_000)).toBe(true);
+    expect(forms(enqueue(EMPTY_BATCH_RECORD, PARSER), HOURS_3, 1_000)).toBe(true);
+  });
+
+  it("moves nothing when the open batch is combined again, as a held batch's repair does", () => {
+    const held = hold(openBatch(), {
+      at: 6_000,
+      head: EXPORT_COMMIT,
+      reason: "checks",
+      checks: ["typecheck-lint-build"],
+    }).record;
+    const fixed = enqueue(held, { ...LEGEND, fix: true, at: 7_000 });
+    // The repair answers the open batch, which the gap never holds: its fix joins at once.
+    expect(fixWaits(fixed)).toBe(true);
+    const again = combined(
+      release(fixed),
+      combineOf([
+        member(PARSER, PARSER_COMMIT),
+        member(EXPORT, EXPORT_COMMIT),
+        member(LEGEND, LEGEND_COMMIT),
+      ]),
+      { branch: "infinitary-batch/7c41", at: 7_500 },
+    );
+    expect(again.open?.members).toHaveLength(3);
+    expect(again.formed).toBe(5_000);
+  });
+});
+
 describe("a combine's result on the record", () => {
   it("opens the batch with one commit per change and empties the line of what it carried", () => {
     const record = openBatch();

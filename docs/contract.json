@@ -2145,6 +2145,9 @@
                   "items": {
                     "type": "string"
                   }
+                },
+                "formed": {
+                  "type": "number"
                 }
               },
               "required": [
@@ -2172,6 +2175,11 @@
               "required": [
                 "at"
               ]
+            },
+            "batchGap": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
             }
           },
           "required": [
@@ -2848,6 +2856,9 @@
                     "items": {
                       "type": "string"
                     }
+                  },
+                  "formed": {
+                    "type": "number"
                   }
                 },
                 "required": [
@@ -2875,6 +2886,11 @@
                 "required": [
                   "at"
                 ]
+              },
+              "batchGap": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
               }
             },
             "required": [
@@ -3156,6 +3172,18 @@
               },
               "requireChecks": {
                 "type": "boolean"
+              },
+              "batchGap": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "additionalProperties": false
@@ -3715,6 +3743,9 @@
                 "items": {
                   "type": "string"
                 }
+              },
+              "formed": {
+                "type": "number"
               }
             },
             "required": [
@@ -3742,6 +3773,11 @@
             "required": [
               "at"
             ]
+          },
+          "batchGap": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
           }
         },
         "required": [
@@ -7090,6 +7126,9 @@
                 "items": {
                   "type": "string"
                 }
+              },
+              "formed": {
+                "type": "number"
               }
             },
             "required": [
@@ -7117,6 +7156,11 @@
             "required": [
               "at"
             ]
+          },
+          "batchGap": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
           }
         },
         "required": [

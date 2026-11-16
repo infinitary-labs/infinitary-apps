@@ -1277,6 +1277,34 @@
       <string>要暂停这 %1$ld 个会运行的自动化吗？</string>
     </dict>
   </dict>
+  <key>settingsProjectsBatchGapHours</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>最多每 %1$ld 小时一次</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsBatchGapMinutes</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>最多每 %1$ld 分钟一次</string>
+    </dict>
+  </dict>
   <key>settingsProjectsBatchHeldChecks</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

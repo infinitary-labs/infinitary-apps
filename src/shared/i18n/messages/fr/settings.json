@@ -776,6 +776,21 @@
   "settingsProjectsAutonomyOn": "Le travail qui passe les vérifications peut être fusionné sans vous demander.",
   "settingsProjectsAutonomyPersonal": "Construit sur place. Le travail qui passe les vérifications est écrit dès qu’il est terminé.",
   "settingsProjectsBatchChanges": "Modifications à renvoyer",
+  "settingsProjectsBatchGap": "Quand un lot démarre",
+  "settingsProjectsBatchGapDescription": "Un intervalle plus long met plus de modifications approuvées dans chaque lot, donc ses vérifications s’exécutent moins souvent. La réparation d’un lot bloqué n’attend jamais.",
+  "settingsProjectsBatchGapHours": {
+    "plural": "count",
+    "one": "Au plus toutes les heures",
+    "many": "Au plus toutes les {count} heures",
+    "other": "Au plus toutes les {count} heures"
+  },
+  "settingsProjectsBatchGapMinutes": {
+    "plural": "count",
+    "one": "Au plus toutes les minutes",
+    "many": "Au plus toutes les {count} minutes",
+    "other": "Au plus toutes les {count} minutes"
+  },
+  "settingsProjectsBatchGapNow": "Dès qu’une modification est approuvée",
   "settingsProjectsBatchHeld": "Lot retenu",
   "settingsProjectsBatchHeldChecks": {
     "plural": "count",

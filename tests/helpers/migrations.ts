@@ -162,7 +162,10 @@ export const REVERSE_MIGRATION_66 = `
 /** Migration 65's live attachment, undone: the `cards` column. */
 export const REVERSE_MIGRATION_65 = "ALTER TABLE cards DROP COLUMN attachment_json;\n";
 /** A project's record that it runs no checks, undone: the newest project column. */
-export const REVERSE_PROJECT_NO_CHECKS = "ALTER TABLE repos DROP COLUMN no_checks_json;\n";
+/** A batched project's batch gap (docs/forge.md, "The batch gap"), the newest project column, undone first. */
+export const REVERSE_PROJECT_BATCH_GAP = "ALTER TABLE repos DROP COLUMN batch_gap_minutes;\n";
+/** The no-checks record, undone after the later batch gap. */
+export const REVERSE_PROJECT_NO_CHECKS = `${REVERSE_PROJECT_BATCH_GAP}ALTER TABLE repos DROP COLUMN no_checks_json;\n`;
 /** Which project each repository belongs to (INF-4220), undone after the later no-checks column and before any older project column. */
 export const REVERSE_PROJECT_MEMBERSHIP = `${REVERSE_PROJECT_NO_CHECKS}DROP INDEX repos_project; ALTER TABLE repos DROP COLUMN project_id;\n`;
 /** A project's batch of its own, undone, after the later project columns. */

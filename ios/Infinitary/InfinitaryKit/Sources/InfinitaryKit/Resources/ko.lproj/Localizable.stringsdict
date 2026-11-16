@@ -1277,6 +1277,34 @@
       <string>실행되는 자동화 %1$ld개를 일시 정지할까요?</string>
     </dict>
   </dict>
+  <key>settingsProjectsBatchGapHours</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>최대 %1$ld시간마다</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsBatchGapMinutes</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>최대 %1$ld분마다</string>
+    </dict>
+  </dict>
   <key>settingsProjectsBatchHeldChecks</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

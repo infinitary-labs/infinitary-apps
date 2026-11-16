@@ -53769,6 +53769,275 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Changes to send back`;
   }
+  function settingsProjectsBatchGap() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `متى تبدأ الدفعة`;
+      case "de":
+        return `Wann ein Bündel startet`;
+      case "es":
+        return `Cuándo empieza un lote`;
+      case "fr":
+        return `Quand un lot démarre`;
+      case "ja":
+        return `一括プルリクエストを始めるタイミング`;
+      case "ko":
+        return `일괄 끌어오기 요청을 시작하는 때`;
+      case "pt-BR":
+        return `Quando um lote começa`;
+      case "zh-Hans":
+        return `何时开始一批改动`;
+      case "zh-Hant":
+        return `何時開始一個批次`;
+      case "en-XA":
+        return `[Ŵĥéñ á ƀáţçĥ šţáŕţš ~~~~~~~]`;
+      case "ar-XB":
+        return `‮When a batch starts‬`;
+    }
+    return `When a batch starts`;
+  }
+  function settingsProjectsBatchGapDescription() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كلما طال الفاصل دخلت تغييرات موافق عليها أكثر في كل دفعة، فتعمل فحوصاتها مرات أقل. إصلاح الدفعة المتوقفة لا ينتظره أبدًا.`;
+      case "de":
+        return `Ein längerer Abstand bringt mehr bestätigte Änderungen in jedes Bündel, sodass seine Überprüfungen seltener laufen. Die Reparatur eines angehaltenen Bündels wartet nie darauf.`;
+      case "es":
+        return `Un intervalo más largo pone más cambios aprobados en cada lote, así que sus comprobaciones se ejecutan menos a menudo. La reparación de un lote retenido nunca espera.`;
+      case "fr":
+        return `Un intervalle plus long met plus de modifications approuvées dans chaque lot, donc ses vérifications s’exécutent moins souvent. La réparation d’un lot bloqué n’attend jamais.`;
+      case "ja":
+        return `間隔を長くすると、1つの一括プルリクエストに入る承認済みの変更が増え、チェックの実行回数が減ります。止まった一括プルリクエストの修正は待ちません。`;
+      case "ko":
+        return `간격이 길수록 일괄 끌어오기 요청마다 승인된 변경이 더 많이 들어가서 검사가 덜 자주 실행돼요. 멈춘 일괄 끌어오기 요청의 수정은 기다리지 않아요.`;
+      case "pt-BR":
+        return `Um intervalo maior coloca mais alterações aprovadas em cada lote, então as verificações rodam com menos frequência. O reparo de um lote retido nunca espera.`;
+      case "zh-Hans":
+        return `间隔越长，每批包含的已批准改动越多，检查运行得越少。被暂停的一批改动的修复从不等待。`;
+      case "zh-Hant":
+        return `間隔越長，每個批次包含的已核准變更越多，檢查執行得越少。被暫停的批次的修復從不等待。`;
+      case "en-XA":
+        return `[Å ļöñĝéŕ ţîɱé ƀéţŵééñ ƀáţçĥéš þûţš ɱöŕé áþþŕöṽéð çĥáñĝéš îñ éáçĥ öñé, šö ţĥéîŕ çĥéçķš ŕûñ ļéšš öƒţéñ. Å ĥéļð ƀáţçĥ'š ŕéþáîŕ ñéṽéŕ ŵáîţš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A longer time between batches puts more approved changes in each one, so their checks run less often. A held batch's repair never waits.‬`;
+    }
+    return `A longer time between batches puts more approved changes in each one, so their checks run less often. A held batch's repair never waits.`;
+  }
+  function settingsProjectsBatchGapHours(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `كل ${count} ساعة على الأكثر`;
+          case "one":
+            return `كل ساعة على الأكثر`;
+          case "two":
+            return `كل ساعتين على الأكثر`;
+          case "few":
+            return `كل ${count} ساعات على الأكثر`;
+          case "many":
+            return `كل ${count} ساعة على الأكثر`;
+          default:
+            return `كل ${count} ساعة على الأكثر`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Höchstens jede Stunde`;
+          default:
+            return `Höchstens alle ${count} Stunden`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Como mucho cada hora`;
+          case "many":
+            return `Como mucho cada ${count} horas`;
+          default:
+            return `Como mucho cada ${count} horas`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Au plus toutes les heures`;
+          case "many":
+            return `Au plus toutes les ${count} heures`;
+          default:
+            return `Au plus toutes les ${count} heures`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `最短で${count}時間ごと`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `최대 ${count}시간마다`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `No máximo a cada hora`;
+          case "many":
+            return `No máximo a cada ${count} horas`;
+          default:
+            return `No máximo a cada ${count} horas`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `最多每 ${count} 小时一次`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `最多每 ${count} 小時一次`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Åţ ɱöšţ éṽéŕý ĥöûŕ ~~~~~~]`;
+          default:
+            return `[Åţ ɱöšţ éṽéŕý ${count} ĥöûŕš ~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮At most every hour‬`;
+          default:
+            return `‮At most every ‬${count}‮ hours‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `At most every hour`;
+      default:
+        return `At most every ${count} hours`;
+    }
+  }
+  function settingsProjectsBatchGapMinutes(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `كل ${count} دقيقة على الأكثر`;
+          case "one":
+            return `كل دقيقة على الأكثر`;
+          case "two":
+            return `كل دقيقتين على الأكثر`;
+          case "few":
+            return `كل ${count} دقائق على الأكثر`;
+          case "many":
+            return `كل ${count} دقيقة على الأكثر`;
+          default:
+            return `كل ${count} دقيقة على الأكثر`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Höchstens jede Minute`;
+          default:
+            return `Höchstens alle ${count} Minuten`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Como mucho cada minuto`;
+          case "many":
+            return `Como mucho cada ${count} minutos`;
+          default:
+            return `Como mucho cada ${count} minutos`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Au plus toutes les minutes`;
+          case "many":
+            return `Au plus toutes les ${count} minutes`;
+          default:
+            return `Au plus toutes les ${count} minutes`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `最短で${count}分ごと`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `최대 ${count}분마다`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `No máximo a cada minuto`;
+          case "many":
+            return `No máximo a cada ${count} minutos`;
+          default:
+            return `No máximo a cada ${count} minutos`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `最多每 ${count} 分钟一次`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `最多每 ${count} 分鐘一次`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Åţ ɱöšţ éṽéŕý ɱîñûţé ~~~~~~~]`;
+          default:
+            return `[Åţ ɱöšţ éṽéŕý ${count} ɱîñûţéš ~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮At most every minute‬`;
+          default:
+            return `‮At most every ‬${count}‮ minutes‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `At most every minute`;
+      default:
+        return `At most every ${count} minutes`;
+    }
+  }
+  function settingsProjectsBatchGapNow() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `بمجرد الموافقة على تغيير`;
+      case "de":
+        return `Sobald eine Änderung bestätigt ist`;
+      case "es":
+        return `En cuanto se aprueba un cambio`;
+      case "fr":
+        return `Dès qu’une modification est approuvée`;
+      case "ja":
+        return `変更が承認されたらすぐ`;
+      case "ko":
+        return `변경이 승인되는 즉시`;
+      case "pt-BR":
+        return `Assim que uma alteração é aprovada`;
+      case "zh-Hans":
+        return `改动一获批准就开始`;
+      case "zh-Hant":
+        return `變更一經核准就開始`;
+      case "en-XA":
+        return `[Åš šööñ áš á çĥáñĝé îš áþþŕöṽéð ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮As soon as a change is approved‬`;
+    }
+    return `As soon as a change is approved`;
+  }
   function settingsProjectsBatchHeld() {
     switch (currentLanguage()) {
       case "ar":
@@ -74375,6 +74644,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsProjectsAutonomyOn,
     settingsProjectsAutonomyPersonal,
     settingsProjectsBatchChanges,
+    settingsProjectsBatchGap,
+    settingsProjectsBatchGapDescription,
+    settingsProjectsBatchGapHours,
+    settingsProjectsBatchGapMinutes,
+    settingsProjectsBatchGapNow,
     settingsProjectsBatchHeld,
     settingsProjectsBatchHeldChecks,
     settingsProjectsBatchHeldChecksUnnamed,
@@ -76733,6 +77007,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsProjectsAutonomyOn": [],
     "settingsProjectsAutonomyPersonal": [],
     "settingsProjectsBatchChanges": [],
+    "settingsProjectsBatchGap": [],
+    "settingsProjectsBatchGapDescription": [],
+    "settingsProjectsBatchGapHours": ["count"],
+    "settingsProjectsBatchGapMinutes": ["count"],
+    "settingsProjectsBatchGapNow": [],
     "settingsProjectsBatchHeld": [],
     "settingsProjectsBatchHeldChecks": ["checks", "count", "since"],
     "settingsProjectsBatchHeldChecksUnnamed": ["count", "since"],

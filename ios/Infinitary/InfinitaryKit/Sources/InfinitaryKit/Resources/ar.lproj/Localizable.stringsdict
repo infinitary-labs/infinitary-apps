@@ -2187,6 +2187,54 @@
       <string>هل تريد إيقاف كل عمليات الأتمتة العاملة (%1$ld) مؤقتًا؟</string>
     </dict>
   </dict>
+  <key>settingsProjectsBatchGapHours</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>كل %1$ld ساعة على الأكثر</string>
+      <key>one</key>
+      <string>كل ساعة على الأكثر</string>
+      <key>two</key>
+      <string>كل ساعتين على الأكثر</string>
+      <key>few</key>
+      <string>كل %1$ld ساعات على الأكثر</string>
+      <key>many</key>
+      <string>كل %1$ld ساعة على الأكثر</string>
+      <key>other</key>
+      <string>كل %1$ld ساعة على الأكثر</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsBatchGapMinutes</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>كل %1$ld دقيقة على الأكثر</string>
+      <key>one</key>
+      <string>كل دقيقة على الأكثر</string>
+      <key>two</key>
+      <string>كل دقيقتين على الأكثر</string>
+      <key>few</key>
+      <string>كل %1$ld دقائق على الأكثر</string>
+      <key>many</key>
+      <string>كل %1$ld دقيقة على الأكثر</string>
+      <key>other</key>
+      <string>كل %1$ld دقيقة على الأكثر</string>
+    </dict>
+  </dict>
   <key>settingsProjectsBatchHeldChecks</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

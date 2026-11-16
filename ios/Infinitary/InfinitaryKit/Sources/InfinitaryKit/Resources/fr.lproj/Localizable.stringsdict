@@ -1641,6 +1641,42 @@
       <string>Mettre en pause les %1$ld automatisations actives ?</string>
     </dict>
   </dict>
+  <key>settingsProjectsBatchGapHours</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Au plus toutes les heures</string>
+      <key>many</key>
+      <string>Au plus toutes les %1$ld heures</string>
+      <key>other</key>
+      <string>Au plus toutes les %1$ld heures</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsBatchGapMinutes</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Au plus toutes les minutes</string>
+      <key>many</key>
+      <string>Au plus toutes les %1$ld minutes</string>
+      <key>other</key>
+      <string>Au plus toutes les %1$ld minutes</string>
+    </dict>
+  </dict>
   <key>settingsProjectsBatchHeldChecks</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

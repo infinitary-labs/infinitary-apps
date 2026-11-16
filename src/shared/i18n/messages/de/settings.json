@@ -762,6 +762,19 @@
   "settingsProjectsAutonomyOn": "Arbeit, die die Überprüfungen besteht, darf ohne Rückfrage zusammengeführt werden.",
   "settingsProjectsAutonomyPersonal": "Baut direkt im Ordner. Arbeit, die die Überprüfungen besteht, wird geschrieben, sobald sie fertig ist.",
   "settingsProjectsBatchChanges": "Änderungen zum Zurückschicken",
+  "settingsProjectsBatchGap": "Wann ein Bündel startet",
+  "settingsProjectsBatchGapDescription": "Ein längerer Abstand bringt mehr bestätigte Änderungen in jedes Bündel, sodass seine Überprüfungen seltener laufen. Die Reparatur eines angehaltenen Bündels wartet nie darauf.",
+  "settingsProjectsBatchGapHours": {
+    "plural": "count",
+    "one": "Höchstens jede Stunde",
+    "other": "Höchstens alle {count} Stunden"
+  },
+  "settingsProjectsBatchGapMinutes": {
+    "plural": "count",
+    "one": "Höchstens jede Minute",
+    "other": "Höchstens alle {count} Minuten"
+  },
+  "settingsProjectsBatchGapNow": "Sobald eine Änderung bestätigt ist",
   "settingsProjectsBatchHeld": "Bündel angehalten",
   "settingsProjectsBatchHeldChecks": {
     "plural": "count",

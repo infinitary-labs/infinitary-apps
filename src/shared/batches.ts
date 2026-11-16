@@ -1,4 +1,5 @@
 import { z } from "zod";
+import * as m from "./i18n/messages.generated.ts";
 
 /**
  * Batches of your own (docs/forge.md, "Batches of your own"): one person's
@@ -124,6 +125,12 @@ export const batchRecordSchema = z.object({
   ways: mergeWaysSchema.optional(),
   /** Tasks whose change a repair declared the held batch's fix. */
   fixes: z.array(z.string()).optional(),
+  /**
+   * When the project's last batch formed from the line (epoch ms): a
+   * project's batch gap counts from it (`batchGap` on the project). A held
+   * batch combined again by its repair forms no new batch, so it moves nothing.
+   */
+  formed: z.number().optional(),
 });
 export type BatchRecord = z.infer<typeof batchRecordSchema>;
 
@@ -205,6 +212,8 @@ export function batchKindOf(state: string): BatchStatus["kind"] {
 }
 
 export const BATCH_STATUS_WORDS = {
+  /** A change in line while the project's batch gap runs: the time its next batch starts. */
+  waitingUntil: (time: string) => `${BATCH_WAITING_WORDS}; the next batch starts at ${time}`,
   batch: "In a batch; its checks are running",
   held: (reason: BatchHold["reason"]) =>
     reason === "rules"
@@ -243,3 +252,27 @@ export function mergeWayFor(ways: MergeWays, members: number): MergeWay | undefi
   if (ways.merge) return "merge";
   return undefined;
 }
+
+/**
+ * The gaps Settings → Projects offers under When a batch starts (docs/forge.md,
+ * "The batch gap"), in minutes, after As soon as a change is approved. The
+ * first mate may set any whole number of minutes; Settings then offers it too.
+ */
+export const BATCH_GAP_CHOICES: readonly number[] = [60, 120, 180, 240, 360];
+
+/** The words of a project's batch gap, from one owner. */
+export const BATCH_GAP_WORDS = {
+  get title() {
+    return m.settingsProjectsBatchGap();
+  },
+  get description() {
+    return m.settingsProjectsBatchGapDescription();
+  },
+  /** A gap in minutes as its choice reads, or As soon as a change is approved with none. */
+  label: (gap: number | null | undefined): string =>
+    !gap
+      ? m.settingsProjectsBatchGapNow()
+      : gap % 60 === 0
+        ? m.settingsProjectsBatchGapHours({ count: gap / 60 })
+        : m.settingsProjectsBatchGapMinutes({ count: gap }),
+} as const;

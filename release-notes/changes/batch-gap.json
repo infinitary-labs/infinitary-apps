@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "batch-gap",
+      "kind": "feature",
+      "area": "projects",
+      "title": "Choose how often a batched project starts a batch",
+      "body": "A project on batched pull requests can now wait between batches, so more approved changes go up together and their checks run less often. Choose When a batch starts in Settings, Projects, such as at most every 3 hours, or ask your first mate. Changes approved meanwhile wait in line, and their merge says when the next batch starts. A held batch's fix still goes up at once. Everyone starts with As soon as a change is approved, which works as before.",
+      "picture": {
+        "dark": "batch-gap-dark.webp",
+        "light": "batch-gap-light.webp",
+        "alt": "When a batch starts in Settings, Projects is set to at most every 3 hours, below Where changes go with batched pull requests chosen"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

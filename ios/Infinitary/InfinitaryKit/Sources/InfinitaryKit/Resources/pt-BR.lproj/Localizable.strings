@@ -2556,6 +2556,9 @@
 "settingsProjectsAutonomyOn" = "O trabalho que passa nas verificações pode ser mesclado sem perguntar a você.";
 "settingsProjectsAutonomyPersonal" = "Feito no local. O trabalho que passa nas verificações é gravado assim que fica pronto.";
 "settingsProjectsBatchChanges" = "Alterações para devolver";
+"settingsProjectsBatchGap" = "Quando um lote começa";
+"settingsProjectsBatchGapDescription" = "Um intervalo maior coloca mais alterações aprovadas em cada lote, então as verificações rodam com menos frequência. O reparo de um lote retido nunca espera.";
+"settingsProjectsBatchGapNow" = "Assim que uma alteração é aprovada";
 "settingsProjectsBatchHeld" = "Lote retido";
 "settingsProjectsBatchHeldNoWay" = "Retido desde as %1$@: este projeto não permite nenhuma mesclagem que mantenha um commit para cada alteração. Permita mesclagens com rebase ou commits de mesclagem onde o projeto fica e tente de novo.";
 "settingsProjectsBatchHeldRefused" = "Retido desde as %2$@: a mesclagem foi recusada onde o projeto fica: %1$@";

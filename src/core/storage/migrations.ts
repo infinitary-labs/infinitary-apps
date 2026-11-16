@@ -1436,6 +1436,13 @@ export const MIGRATIONS: readonly Migration[] = [
     PRIMARY KEY (schedule_id, version)
   );
   `,
+  // The batch gap (docs/forge.md, "The batch gap"): the least time in
+  // minutes from one of a batched project's batches starting to the next,
+  // set in Settings → Projects or by the first mate. Null on every existing
+  // project, whose batches start as soon as a change is approved, as before.
+  // `RepoRegistry` is the only writer; no published view reads it. Dropping
+  // the column reverses it.
+  (db) => addColumn(db, "repos", "batch_gap_minutes", "INTEGER"),
 ];
 
 /**

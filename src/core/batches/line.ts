@@ -155,9 +155,25 @@ export function reworded(
   };
 }
 
-/** The formation rule: at least one change in line and no open batch of this home's. */
-export function forms(record: BatchRecord): boolean {
-  return !record.open && record.line.length > 0;
+/**
+ * The formation rule: at least one change in line, no open batch of this
+ * home's, and the project's batch gap (`gap`, in minutes) passed since its
+ * last batch formed (docs/forge.md, "The batch gap"). With no gap, or no
+ * batch formed yet, a batch forms at once. `now` is the pass's own clock.
+ */
+export function forms(record: BatchRecord, gap?: number, now?: number): boolean {
+  if (record.open || record.line.length === 0) return false;
+  const next = nextBatchAt(record, gap);
+  return next === undefined || (now !== undefined && now >= next);
+}
+
+/**
+ * When the project's next batch may form under its gap (epoch ms), or
+ * undefined when one may form at once: no gap, or no batch formed yet.
+ * A held batch's repair never reads it: it answers the open batch.
+ */
+export function nextBatchAt(record: BatchRecord, gap?: number): number | undefined {
+  return gap && record.formed !== undefined ? record.formed + gap * 60_000 : undefined;
 }
 
 /**
@@ -240,8 +256,11 @@ export function combined(
         since: previous?.since ?? batch.at,
       }
     : undefined;
+  // A new batch from the line starts the project's gap; the open batch combined again does not.
+  const formed = open && !previous ? batch.at : record.formed;
   return {
     ...rest,
+    ...(formed !== undefined ? { formed } : {}),
     line: record.line.filter((entry) => !carriedIds.has(entry.taskId)),
     ...(open ? { open } : {}),
     leftOut: [

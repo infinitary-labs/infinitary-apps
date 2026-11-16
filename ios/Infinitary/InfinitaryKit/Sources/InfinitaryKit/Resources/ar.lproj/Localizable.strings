@@ -2556,6 +2556,9 @@
 "settingsProjectsAutonomyOn" = "العمل الذي يجتاز الفحوصات قد يُدمج دون سؤالك.";
 "settingsProjectsAutonomyPersonal" = "يُبنى في مكانه. العمل الذي يجتاز الفحوصات يُكتب فور انتهائه.";
 "settingsProjectsBatchChanges" = "التغييرات المراد إرجاعها";
+"settingsProjectsBatchGap" = "متى تبدأ الدفعة";
+"settingsProjectsBatchGapDescription" = "كلما طال الفاصل دخلت تغييرات موافق عليها أكثر في كل دفعة، فتعمل فحوصاتها مرات أقل. إصلاح الدفعة المتوقفة لا ينتظره أبدًا.";
+"settingsProjectsBatchGapNow" = "بمجرد الموافقة على تغيير";
 "settingsProjectsBatchHeld" = "الدفعة معلّقة";
 "settingsProjectsBatchHeldNoWay" = "معلّقة منذ %1$@: لا يسمح هذا المشروع بأي دمج يُبقي إيداعًا واحدًا لكل تغيير. اسمح بالدمج بإعادة التأسيس (rebase) أو بإيداعات الدمج حيث يُستضاف المشروع، ثم حاول مجددًا.";
 "settingsProjectsBatchHeldRefused" = "معلّقة منذ %2$@: رُفض الدمج حيث يُستضاف المشروع: %1$@";

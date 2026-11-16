@@ -113,13 +113,14 @@ type Row = {
   contribution_json?: string | null;
   batch_json?: string | null;
   no_checks_json?: string | null;
+  batch_gap_minutes?: number | null;
 };
 
 /** Where a new repository goes: a task key of its own, or the existing project it joins by key. */
 type Into = { key?: string | undefined; project?: string | undefined };
 
 const ROW_COLUMNS =
-  "id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, contribution_json, batch_json, no_checks_json";
+  "id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, contribution_json, batch_json, no_checks_json, batch_gap_minutes";
 
 function fromRow(row: Row): RepoView {
   const contribution = row.contribution_json ? JSON.parse(row.contribution_json) : null;
@@ -151,6 +152,7 @@ function fromRow(row: Row): RepoView {
       : {}),
     ...(row.batch_json ? batchOf(row.batch_json) : {}),
     ...(row.no_checks_json ? noChecksOf(row.no_checks_json) : {}),
+    ...(row.batch_gap_minutes ? { batchGap: row.batch_gap_minutes } : {}),
   };
 }
 
@@ -665,6 +667,10 @@ export class RepoRegistry {
           this.db
             .prepare("UPDATE repos SET no_checks_json = ? WHERE id = ?")
             .run(changes.requireChecks ? null : JSON.stringify({ at: Date.now() }), id);
+        if (changes.batchGap !== undefined)
+          this.db
+            .prepare("UPDATE repos SET batch_gap_minutes = ? WHERE id = ?")
+            .run(changes.batchGap, id);
         this.projects.renameForRepo(id, name);
       })();
     } catch (error) {

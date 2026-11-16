@@ -1641,6 +1641,42 @@
       <string>¿Pausar las %1$ld automatizaciones que se ejecutan?</string>
     </dict>
   </dict>
+  <key>settingsProjectsBatchGapHours</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Como mucho cada hora</string>
+      <key>many</key>
+      <string>Como mucho cada %1$ld horas</string>
+      <key>other</key>
+      <string>Como mucho cada %1$ld horas</string>
+    </dict>
+  </dict>
+  <key>settingsProjectsBatchGapMinutes</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Como mucho cada minuto</string>
+      <key>many</key>
+      <string>Como mucho cada %1$ld minutos</string>
+      <key>other</key>
+      <string>Como mucho cada %1$ld minutos</string>
+    </dict>
+  </dict>
   <key>settingsProjectsBatchHeldChecks</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

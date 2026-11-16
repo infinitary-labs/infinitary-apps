@@ -2556,6 +2556,9 @@
 "settingsProjectsAutonomyOn" = "通过检查的工作可以不经询问直接合并。";
 "settingsProjectsAutonomyPersonal" = "就地构建。通过检查的工作一完成就会写入。";
 "settingsProjectsBatchChanges" = "要退回的改动";
+"settingsProjectsBatchGap" = "何时开始一批改动";
+"settingsProjectsBatchGapDescription" = "间隔越长，每批包含的已批准改动越多，检查运行得越少。被暂停的一批改动的修复从不等待。";
+"settingsProjectsBatchGapNow" = "改动一获批准就开始";
 "settingsProjectsBatchHeld" = "这批改动已暂缓";
 "settingsProjectsBatchHeldNoWay" = "自 %1$@ 起暂缓：这个项目不允许任何能为每个改动保留一个提交的合并方式。请在项目托管处允许变基合并或合并提交，然后重试。";
 "settingsProjectsBatchHeldRefused" = "自 %2$@ 起暂缓：合并在项目托管处被拒绝：%1$@";

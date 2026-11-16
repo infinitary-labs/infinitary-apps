@@ -818,6 +818,27 @@
   "settingsProjectsAutonomyOn": "العمل الذي يجتاز الفحوصات قد يُدمج دون سؤالك.",
   "settingsProjectsAutonomyPersonal": "يُبنى في مكانه. العمل الذي يجتاز الفحوصات يُكتب فور انتهائه.",
   "settingsProjectsBatchChanges": "التغييرات المراد إرجاعها",
+  "settingsProjectsBatchGap": "متى تبدأ الدفعة",
+  "settingsProjectsBatchGapDescription": "كلما طال الفاصل دخلت تغييرات موافق عليها أكثر في كل دفعة، فتعمل فحوصاتها مرات أقل. إصلاح الدفعة المتوقفة لا ينتظره أبدًا.",
+  "settingsProjectsBatchGapHours": {
+    "plural": "count",
+    "zero": "كل {count} ساعة على الأكثر",
+    "one": "كل ساعة على الأكثر",
+    "two": "كل ساعتين على الأكثر",
+    "few": "كل {count} ساعات على الأكثر",
+    "many": "كل {count} ساعة على الأكثر",
+    "other": "كل {count} ساعة على الأكثر"
+  },
+  "settingsProjectsBatchGapMinutes": {
+    "plural": "count",
+    "zero": "كل {count} دقيقة على الأكثر",
+    "one": "كل دقيقة على الأكثر",
+    "two": "كل دقيقتين على الأكثر",
+    "few": "كل {count} دقائق على الأكثر",
+    "many": "كل {count} دقيقة على الأكثر",
+    "other": "كل {count} دقيقة على الأكثر"
+  },
+  "settingsProjectsBatchGapNow": "بمجرد الموافقة على تغيير",
   "settingsProjectsBatchHeld": "الدفعة معلّقة",
   "settingsProjectsBatchHeldChecks": {
     "plural": "count",

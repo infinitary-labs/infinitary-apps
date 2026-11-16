@@ -748,6 +748,17 @@
   "settingsProjectsAutonomyOn": "通过检查的工作可以不经询问直接合并。",
   "settingsProjectsAutonomyPersonal": "就地构建。通过检查的工作一完成就会写入。",
   "settingsProjectsBatchChanges": "要退回的改动",
+  "settingsProjectsBatchGap": "何时开始一批改动",
+  "settingsProjectsBatchGapDescription": "间隔越长，每批包含的已批准改动越多，检查运行得越少。被暂停的一批改动的修复从不等待。",
+  "settingsProjectsBatchGapHours": {
+    "plural": "count",
+    "other": "最多每 {count} 小时一次"
+  },
+  "settingsProjectsBatchGapMinutes": {
+    "plural": "count",
+    "other": "最多每 {count} 分钟一次"
+  },
+  "settingsProjectsBatchGapNow": "改动一获批准就开始",
   "settingsProjectsBatchHeld": "这批改动已暂缓",
   "settingsProjectsBatchHeldChecks": {
     "plural": "count",

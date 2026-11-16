@@ -2556,6 +2556,9 @@
 "settingsProjectsAutonomyOn" = "チェックに合格した作業は、確認なしでマージされることがあります。";
 "settingsProjectsAutonomyPersonal" = "その場で作成。チェックに合格した作業は、終わりしだい書き込まれます。";
 "settingsProjectsBatchChanges" = "差し戻す変更";
+"settingsProjectsBatchGap" = "一括プルリクエストを始めるタイミング";
+"settingsProjectsBatchGapDescription" = "間隔を長くすると、1つの一括プルリクエストに入る承認済みの変更が増え、チェックの実行回数が減ります。止まった一括プルリクエストの修正は待ちません。";
+"settingsProjectsBatchGapNow" = "変更が承認されたらすぐ";
 "settingsProjectsBatchHeld" = "一括プルリクエストを保留中";
 "settingsProjectsBatchHeldNoWay" = "%1$@ から保留中：このプロジェクトでは、変更ごとに1つのコミットを残すマージが許可されていません。プロジェクトの保管先でリベースマージかマージコミットを許可してから、もう一度お試しください。";
 "settingsProjectsBatchHeldRefused" = "%2$@ から保留中：プロジェクトの保管先でマージが拒否されました：%1$@";

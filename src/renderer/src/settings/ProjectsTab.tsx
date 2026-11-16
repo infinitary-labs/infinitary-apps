@@ -1,4 +1,9 @@
-import { keepsCommits, SQUASH_ONLY_WORDS } from "@shared/batches";
+import {
+  BATCH_GAP_CHOICES,
+  BATCH_GAP_WORDS,
+  keepsCommits,
+  SQUASH_ONLY_WORDS,
+} from "@shared/batches";
 import { CONTRIBUTION_WORDS } from "@shared/contributions";
 import * as m from "@shared/i18n/messages.generated";
 import {
@@ -29,6 +34,7 @@ import { isView } from "../devices/viewWords";
 import { AddProject } from "./AddProject";
 import { FOLDER_THERE_WORDS } from "./addProjectWords";
 import { BatchHoldPanel } from "./BatchHoldPanel";
+import { FIRSTMATE_SELECT_STYLE } from "./GeneralTab";
 import { ProjectCostLimit } from "./ProjectCostLimit";
 import { PROJECT_COST_WORDS } from "./projectCostWords";
 import { type GroupProject, projectEntries } from "./projectGroups";
@@ -804,6 +810,19 @@ function ProjectRow({
           {squashOnly && <BatchNote words={SQUASH_ONLY_WORDS} data="squash-only" id={repo.id} />}
           {ownBatch && <BatchNote words={BATCH_OWN_WORDS.note} data="own-batch" id={repo.id} />}
           {held?.hold && <BatchHoldPanel repo={repo} batch={{ ...held, hold: held.hold }} />}
+          {ownBatch && (
+            <PolicyRow
+              title={BATCH_GAP_WORDS.title}
+              description={BATCH_GAP_WORDS.description}
+              wrapsBesideControl
+              control={
+                <BatchGapPicker
+                  gap={repo.batchGap}
+                  onChange={(batchGap) => onPatch({ batchGap })}
+                />
+              }
+            />
+          )}
           {/* Right below Where changes go and its notes, since it says how those changes merge. */}
           {readsPullRequestChecks(repo) && (
             <PolicyRow
@@ -922,6 +941,44 @@ function BatchNote({ words, data, id }: { words: string; data: string; id: strin
     >
       {words}
     </div>
+  );
+}
+
+/** The select's value for As soon as a change is approved: no gap. */
+const NO_GAP = "now";
+
+/**
+ * When a batched project's next batch may start (docs/forge.md, "The batch
+ * gap"): as soon as a change is approved, or at most every so many hours.
+ * A gap the first mate set that is not among the choices is offered too.
+ */
+function BatchGapPicker({
+  gap,
+  onChange,
+}: {
+  gap: number | undefined;
+  onChange: (gap: number | null) => void;
+}) {
+  const choices =
+    gap && !BATCH_GAP_CHOICES.includes(gap)
+      ? [...BATCH_GAP_CHOICES, gap].sort((a, b) => a - b)
+      : BATCH_GAP_CHOICES;
+  return (
+    <select
+      aria-label={BATCH_GAP_WORDS.title}
+      value={gap ? String(gap) : NO_GAP}
+      onChange={(event) =>
+        onChange(event.target.value === NO_GAP ? null : Number(event.target.value))
+      }
+      style={{ ...FIRSTMATE_SELECT_STYLE, fontFamily: "var(--font-ui)" }}
+    >
+      <option value={NO_GAP}>{BATCH_GAP_WORDS.label(null)}</option>
+      {choices.map((choice) => (
+        <option key={choice} value={String(choice)}>
+          {BATCH_GAP_WORDS.label(choice)}
+        </option>
+      ))}
+    </select>
   );
 }
 

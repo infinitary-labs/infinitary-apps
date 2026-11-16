@@ -297,6 +297,9 @@ export function repoHostFrom(where: { kind: ForgeKind; host: string | null }): R
   return where.kind === "none" ? null : { kind: where.kind, name: where.host };
 }
 
+/** A project's batch gap in whole minutes (`RepoView.batchGap`). */
+export const batchGapSchema = z.number().int().positive();
+
 export const repoPolicyPatchSchema = z
   .object({
     contributionDestination: contributionDestinationSchema.optional(),
@@ -315,11 +318,17 @@ export const repoPolicyPatchSchema = z
      * checks, true ends that record.
      */
     requireChecks: z.boolean().optional(),
+    /**
+     * Settings → Projects' When a batch starts, for a batched project
+     * (docs/forge.md, "The batch gap"): the least time in minutes from one
+     * batch's start to the next, or null to start one as soon as a change is approved.
+     */
+    batchGap: batchGapSchema.nullable().optional(),
   })
   .strict()
   .refine((patch) => Object.values(patch).some((value) => value !== undefined), {
     message:
-      "pass delivery, autonomy, rigor, costLimit, scope, name, path, origin, requireChecks, or several",
+      "pass delivery, autonomy, rigor, costLimit, scope, name, path, origin, requireChecks, batchGap, or several",
   });
 export type RepoPolicyPatch = z.infer<typeof repoPolicyPatchSchema>;
 
@@ -401,6 +410,12 @@ export const repoViewSchema = z.object({
    * project with no checks").
    */
   noChecks: noChecksRecordSchema.optional(),
+  /**
+   * The least time in minutes from one of this person's batches starting
+   * to the next (docs/forge.md, "The batch gap"); absent, a batch starts as
+   * soon as a change is approved. A held batch's repair never waits for it.
+   */
+  batchGap: batchGapSchema.optional(),
 });
 export type RepoView = z.infer<typeof repoViewSchema>;
 

@@ -846,7 +846,7 @@ Merge anyway never stands beside a failed batch check, since no checks override 
 
 `Batches` (`src/core/batches/batches.ts`) is the one writer of a project's line and its one open batch, kept on the project's row (`RepoRegistry.recordBatch`) and shown as `batch` on the project's view.
 `line.ts` holds the rules as pure steps over that record, and `combine.ts` the git work.
-A batch forms when the line holds a change and no batch of this home's is open (`forms`), and takes the whole line in approval order.
+A batch forms when the line holds a change, no batch of this home's is open and the project's batch gap has passed (`forms`, "The batch gap"), and takes the whole line in approval order.
 The order is the approvals' own: each change stands in line at the time its kept approval was given (`MergeGuard.approvedAt`), never at the time its merge run reached the line.
 A change reaches the line only once its merge run has read its branch where the project lives, and a batch forms from the changes that have reached it.
 So with no batch open, a change approved a few seconds after another can reach the line first, form a batch alone and merge ahead of it, and where the two clash the earlier-approved one is then the one left out.
@@ -915,6 +915,22 @@ Its line on the feed names the answer that was asked (`ACTIONS["project-batch-an
 Every answer names the held version it answers (`BatchAnswer`, `inf:repos:batch-answer`), so one for a hold that already ended is refused in words and changes nothing.
 A merge the host refused is never sent again at that version: Try again makes a new one.
 A batch GitHub removed from its own merge queue holds the same way, with GitHub's removal as its reason ("The host's merge queue").
+
+### The batch gap
+
+A project can wait between batches, so more approved changes go up together and the batch's checks run less often.
+Settings → Projects shows When a batch starts on every batched project, under Where changes go and its notes, and the first mate sets it through its project settings (`batchGap` on `app_change project-settings` and `inf:repos:configure`).
+Everyone's default is As soon as a change is approved, which forms a batch as soon as the line holds a change and none is open.
+Settings offers at most every 1, 2, 3, 4 or 6 hours (`BATCH_GAP_CHOICES`); the first mate may set any whole number of minutes, and Settings then offers that too (`BATCH_GAP_WORDS`).
+The gap is the project's `batchGap` in minutes (`RepoView`, the `batch_gap_minutes` column), and `RepoRegistry` is its only writer.
+
+The gap counts from when the project's last batch formed from the line, kept as the record's `formed` (`BatchRecord`, set by `combined`).
+A batch still takes the whole line, so every change approved during the gap goes up in the next batch together.
+The pass on the tick forms it on its first run once the gap has passed (`forms`, `nextBatchAt`), and the first change after a quiet stretch longer than the gap forms one at once.
+A held batch's repair never waits for the gap: a declared fix, Try again and a send-back each combine the open batch again with every change waiting in line, which forms no new batch and moves no `formed`.
+While a change waits in line under a gap, its batch check says when the next batch starts (`BATCH_STATUS_WORDS.waitingUntil`, `Batches.status`).
+
+Evidence: `src/core/batches/line.test.ts` and `batches.test.ts` ("the batch gap"), and the journey `tests/e2e/batch-gap.spec.ts`, which sets it by keys.
 
 ## A project that still carries the team queue's files
 

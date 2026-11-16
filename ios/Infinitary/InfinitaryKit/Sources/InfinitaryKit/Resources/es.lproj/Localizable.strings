@@ -2556,6 +2556,9 @@
 "settingsProjectsAutonomyOn" = "El trabajo que supera las comprobaciones puede fusionarse sin preguntarte.";
 "settingsProjectsAutonomyPersonal" = "Se construye en el lugar. El trabajo que supera las comprobaciones se escribe en cuanto está terminado.";
 "settingsProjectsBatchChanges" = "Cambios para devolver";
+"settingsProjectsBatchGap" = "Cuándo empieza un lote";
+"settingsProjectsBatchGapDescription" = "Un intervalo más largo pone más cambios aprobados en cada lote, así que sus comprobaciones se ejecutan menos a menudo. La reparación de un lote retenido nunca espera.";
+"settingsProjectsBatchGapNow" = "En cuanto se aprueba un cambio";
 "settingsProjectsBatchHeld" = "Lote retenido";
 "settingsProjectsBatchHeldNoWay" = "Retenido desde las %1$@: este proyecto no permite ninguna fusión que conserve una confirmación por cada cambio. Permite las fusiones con cambio de base (rebase) o las confirmaciones de fusión donde se aloja el proyecto y vuelve a intentarlo.";
 "settingsProjectsBatchHeldRefused" = "Retenido desde las %2$@: la fusión se rechazó donde se aloja el proyecto: %1$@";

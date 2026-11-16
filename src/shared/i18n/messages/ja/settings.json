@@ -748,6 +748,17 @@
   "settingsProjectsAutonomyOn": "チェックに合格した作業は、確認なしでマージされることがあります。",
   "settingsProjectsAutonomyPersonal": "その場で作成。チェックに合格した作業は、終わりしだい書き込まれます。",
   "settingsProjectsBatchChanges": "差し戻す変更",
+  "settingsProjectsBatchGap": "一括プルリクエストを始めるタイミング",
+  "settingsProjectsBatchGapDescription": "間隔を長くすると、1つの一括プルリクエストに入る承認済みの変更が増え、チェックの実行回数が減ります。止まった一括プルリクエストの修正は待ちません。",
+  "settingsProjectsBatchGapHours": {
+    "plural": "count",
+    "other": "最短で{count}時間ごと"
+  },
+  "settingsProjectsBatchGapMinutes": {
+    "plural": "count",
+    "other": "最短で{count}分ごと"
+  },
+  "settingsProjectsBatchGapNow": "変更が承認されたらすぐ",
   "settingsProjectsBatchHeld": "一括プルリクエストを保留中",
   "settingsProjectsBatchHeldChecks": {
     "plural": "count",

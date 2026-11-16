@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { isDeepStrictEqual } from "node:util";
 import { ACTIONS, type ActionActor, type ActionName, isProjectChange } from "@shared/actions";
+import { BATCH_GAP_WORDS } from "@shared/batches";
 import { type Card, FIRSTMATE_CARD_META } from "@shared/cards";
 import { type CostLimit, formatUsd } from "@shared/costLimit";
 import type { DeviceView } from "@shared/devices";
@@ -242,6 +243,7 @@ function changeRows(offer: Offer, devices: readonly DeviceView[]): string {
     runsOn: "Runs on",
     placementRequirements: "Computer requirements",
     requireChecks: "Require pull request checks",
+    batchGap: BATCH_GAP_WORDS.title,
   };
   // Each detail as the project has it now; the project keeps Require pull
   // request checks as its record that it runs none.
@@ -259,6 +261,7 @@ function changeRows(offer: Offer, devices: readonly DeviceView[]): string {
       return RIGOR_WORDS[(value ?? "standard") as NonNullable<RepoView["rigor"]>];
     if (key === "origin" && value === null) return "Kept on this computer";
     if (key === "requireChecks") return value ? "On" : "Off";
+    if (key === "batchGap") return BATCH_GAP_WORDS.label(value as number | null | undefined);
     if (key === "runsOn")
       return value === AUTOMATIC_COMPUTER
         ? AUTOMATIC_WORD

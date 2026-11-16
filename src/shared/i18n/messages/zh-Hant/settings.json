@@ -748,6 +748,17 @@
   "settingsProjectsAutonomyOn": "通過檢查的工作可以不問你就合併。",
   "settingsProjectsAutonomyPersonal": "就地建置。通過檢查的工作一完成就會寫入。",
   "settingsProjectsBatchChanges": "要退回的變更",
+  "settingsProjectsBatchGap": "何時開始一個批次",
+  "settingsProjectsBatchGapDescription": "間隔越長，每個批次包含的已核准變更越多，檢查執行得越少。被暫停的批次的修復從不等待。",
+  "settingsProjectsBatchGapHours": {
+    "plural": "count",
+    "other": "最多每 {count} 小時一次"
+  },
+  "settingsProjectsBatchGapMinutes": {
+    "plural": "count",
+    "other": "最多每 {count} 分鐘一次"
+  },
+  "settingsProjectsBatchGapNow": "變更一經核准就開始",
   "settingsProjectsBatchHeld": "批次已暫緩",
   "settingsProjectsBatchHeldChecks": {
     "plural": "count",

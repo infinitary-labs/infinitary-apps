@@ -1,11 +1,13 @@
 import { createHash } from "node:crypto";
 import {
+  BATCH_STATUS_WORDS,
   type BatchChange,
   type BatchMember,
   type MergeWay,
   type MergeWays,
   SQUASH_ONLY_WORDS,
 } from "@shared/batches";
+import { formatTime } from "@shared/i18n/format";
 import type { NamingRule } from "@shared/runbooks";
 import { describe, expect, it } from "vitest";
 import { BUNDLED_NAMING } from "../../../tests/helpers/namingRunbook";
@@ -424,6 +426,10 @@ function setup(ways: MergeWays = EVERY_WAY) {
     },
     /** One more pass, after every pass already asked for. */
     pass: () => batches.pass(REPO),
+    /** Time passes on the app's clock. */
+    advance(ms: number) {
+      clock += ms;
+    },
     /** The app closes and opens again: nothing but the saved record and the host carries over. */
     async restart() {
       batches = start();
@@ -981,6 +987,68 @@ describe("merging a batch of several", () => {
 // Intent: the approved plan's piece 5, for batches: a branch with a merge
 // queue of GitHub's own takes the batch's pull request, and the batch waits
 // "until the host merges or removes it".
+// Intent: the captain's approved plan to run a batched project's batch check less often
+// (piece 1, "Approve and build"): at most every 3 hours, set in Settings → Projects or by the
+// first mate. Its done-when list: with a 3-hour gap, two approvals after a batch formed join
+// one batch formed 3 hours after the previous one, and a held batch's fix reruns at once.
+// With no gap a batch forms as today, which the tests above keep.
+describe("the batch gap", () => {
+  const HOURS_3 = 3 * 60 * 60 * 1000;
+
+  it("keeps two approvals after a batch formed in line, saying when the next batch starts, then forms one batch with both 3 hours after the previous one", async () => {
+    const home = setup();
+    home.repos.configure(REPO, { batchGap: 180 });
+    home.approve(PARSER);
+    await home.pass();
+    const formed = home.record().formed as number;
+    expect(home.open()).toMatchObject({ number: 31, since: formed });
+    home.host.report([passed("build")]);
+    home.host.ready("clean");
+    await home.pass();
+    expect(home.place(PARSER)).toMatchObject({ state: "merged" });
+
+    home.approve(LEGEND);
+    await home.pass();
+    home.advance(60 * 60 * 1000);
+    home.approve(FIX);
+    await home.pass();
+    expect(home.record().open).toBeUndefined();
+    expect(home.record().line.map((change) => change.taskId)).toEqual(["t-legend", "t-fix"]);
+    expect([...home.host.pulls.keys()]).toEqual([31]);
+    expect(home.batches.status(REPO, FIX.taskId, FIX.head)).toEqual({
+      kind: "waiting",
+      words: BATCH_STATUS_WORDS.waitingUntil(
+        formatTime(formed + HOURS_3, { hour: "numeric", minute: "2-digit" }),
+      ),
+    });
+
+    // The first pass once 3 hours have passed since the previous batch started.
+    home.advance(2 * 60 * 60 * 1000);
+    await home.pass();
+    expect(home.open()).toMatchObject({ number: 32 });
+    expect(home.members()).toEqual(["t-legend", "t-fix"]);
+    expect(home.record().formed).toBeGreaterThanOrEqual(formed + HOURS_3);
+  });
+
+  it("lets a held batch's declared fix join it at once while the gap runs", async () => {
+    const home = await batchOfTwo();
+    home.repos.configure(REPO, { batchGap: 180 });
+    home.host.report([passed("build"), failed("unit-tests")]);
+    await home.pass();
+    const held = home.open();
+    expect(held.hold).toMatchObject({ reason: "checks" });
+
+    expect(await home.batches.declareFix(REPO, FIX.taskId)).toBeUndefined();
+    home.approve(FIX);
+    await home.pass();
+    expect(home.members()).toEqual(["t-parser", "t-export", "t-fix"]);
+    expect(home.open().hold).toBeUndefined();
+    expect(home.open().head).not.toBe(held.head);
+    // The repair answers the open batch; the gap still counts from when it formed.
+    expect(home.record().formed).toBe(held.since);
+  });
+});
+
 describe("a batch on a branch with GitHub's merge queue", () => {
   async function queuedBatch() {
     const home = await batchOfTwo();

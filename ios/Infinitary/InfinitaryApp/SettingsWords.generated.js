@@ -12541,7 +12541,13 @@ ${events}` : prompt;
     /** The merges the project allows, as last read where it lives. */
     ways: mergeWaysSchema.optional(),
     /** Tasks whose change a repair declared the held batch's fix. */
-    fixes: array(string()).optional()
+    fixes: array(string()).optional(),
+    /**
+     * When the project's last batch formed from the line (epoch ms): a
+     * project's batch gap counts from it (`batchGap` on the project). A held
+     * batch combined again by its repair forms no new batch, so it moves nothing.
+     */
+    formed: number().optional()
   });
   discriminatedUnion("action", [
     object({ action: literal("try-again"), head: string().min(1) }),
@@ -14279,6 +14285,7 @@ ${events}` : prompt;
     if (!host) return ["local-only"];
     return hostTakesBatches(host) ? ["local-only", "direct-pr", "queue-pr"] : ["local-only", "direct-pr"];
   }
+  const batchGapSchema = number().int().positive();
   object({
     contributionDestination: contributionDestinationSchema.optional(),
     placementRequirements: placementRequirementsSchema.nullable().optional(),
@@ -14295,9 +14302,15 @@ ${events}` : prompt;
      * project with no checks"): false records that the project runs no
      * checks, true ends that record.
      */
-    requireChecks: boolean().optional()
+    requireChecks: boolean().optional(),
+    /**
+     * Settings → Projects' When a batch starts, for a batched project
+     * (docs/forge.md, "The batch gap"): the least time in minutes from one
+     * batch's start to the next, or null to start one as soon as a change is approved.
+     */
+    batchGap: batchGapSchema.nullable().optional()
   }).strict().refine((patch) => Object.values(patch).some((value) => value !== void 0), {
-    message: "pass delivery, autonomy, rigor, costLimit, scope, name, path, origin, requireChecks, or several"
+    message: "pass delivery, autonomy, rigor, costLimit, scope, name, path, origin, requireChecks, batchGap, or several"
   });
   const noChecksRecordSchema = object({
     at: number(),
@@ -14355,7 +14368,13 @@ ${events}` : prompt;
      * one; absent, its changes' checks hold their merge (docs/forge.md, "A
      * project with no checks").
      */
-    noChecks: noChecksRecordSchema.optional()
+    noChecks: noChecksRecordSchema.optional(),
+    /**
+     * The least time in minutes from one of this person's batches starting
+     * to the next (docs/forge.md, "The batch gap"); absent, a batch starts as
+     * soon as a change is approved. A held batch's repair never waits for it.
+     */
+    batchGap: batchGapSchema.optional()
   });
   object({
     repo: repoViewSchema,

@@ -776,6 +776,21 @@
   "settingsProjectsAutonomyOn": "El trabajo que supera las comprobaciones puede fusionarse sin preguntarte.",
   "settingsProjectsAutonomyPersonal": "Se construye en el lugar. El trabajo que supera las comprobaciones se escribe en cuanto está terminado.",
   "settingsProjectsBatchChanges": "Cambios para devolver",
+  "settingsProjectsBatchGap": "Cuándo empieza un lote",
+  "settingsProjectsBatchGapDescription": "Un intervalo más largo pone más cambios aprobados en cada lote, así que sus comprobaciones se ejecutan menos a menudo. La reparación de un lote retenido nunca espera.",
+  "settingsProjectsBatchGapHours": {
+    "plural": "count",
+    "one": "Como mucho cada hora",
+    "many": "Como mucho cada {count} horas",
+    "other": "Como mucho cada {count} horas"
+  },
+  "settingsProjectsBatchGapMinutes": {
+    "plural": "count",
+    "one": "Como mucho cada minuto",
+    "many": "Como mucho cada {count} minutos",
+    "other": "Como mucho cada {count} minutos"
+  },
+  "settingsProjectsBatchGapNow": "En cuanto se aprueba un cambio",
   "settingsProjectsBatchHeld": "Lote retenido",
   "settingsProjectsBatchHeldChecks": {
     "plural": "count",

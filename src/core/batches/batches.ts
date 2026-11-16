@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import {
   BATCH_BRANCH_PREFIX,
+  BATCH_STATUS_WORDS,
   type BatchAnswer,
   type BatchChange,
   type BatchMember,
@@ -14,6 +15,7 @@ import {
   SQUASH_ONLY_WORDS,
 } from "@shared/batches";
 import { checkSnapshotSummary, checksThatRan, isRedCheckState } from "@shared/checkSnapshot";
+import { formatTime } from "@shared/i18n/format";
 import type { RepoView } from "@shared/repos";
 import type { NamingRule } from "@shared/runbooks";
 import {
@@ -45,6 +47,7 @@ import {
   hold,
   markFix,
   merged,
+  nextBatchAt,
   pruned,
   release,
   reopened,
@@ -54,6 +57,9 @@ import {
   unfixed,
   withdraw,
 } from "./line";
+
+/** A time of day as the batch check says it: hour and minute. */
+const TIME_OF_DAY: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit" };
 
 /** The words a batch puts on the Activity feed and its tasks, from one owner. */
 export const BATCH_WORDS = {
@@ -198,7 +204,16 @@ export class Batches {
   /** A change's place as its batch check says it; undefined when it has none at that version. */
   status(repoId: string, taskId: string, head: string): BatchStatus | undefined {
     const place = this.standing(repoId, taskId, head);
-    return place ? batchStatus(place) : undefined;
+    if (!place) return undefined;
+    // In line while the project's batch gap runs: it says when the next batch starts.
+    const record = this.record(repoId);
+    const next =
+      place.state === "waiting" && place.place === "line" && !record.open
+        ? nextBatchAt(record, this.options.repos.get(repoId)?.batchGap)
+        : undefined;
+    return next !== undefined && next > this.options.now()
+      ? { kind: "waiting", words: BATCH_STATUS_WORDS.waitingUntil(formatTime(next, TIME_OF_DAY)) }
+      : batchStatus(place);
   }
 
   /**
@@ -373,7 +388,8 @@ export class Batches {
       if (!this.options.approved(entry.taskId, entry.head)) record = withdraw(record, entry.taskId);
     this.save(repoId, record);
     if (record.open) record = await this.follow(repo, record);
-    if (forms(record)) await this.recombine(repo, record, "none");
+    if (forms(record, repo.batchGap, this.options.now()))
+      await this.recombine(repo, record, "none");
   }
 
   /** The open batch, from the host's reading of its pull request and checks. */

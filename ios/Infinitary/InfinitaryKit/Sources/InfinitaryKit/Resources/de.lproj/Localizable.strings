@@ -2556,6 +2556,9 @@
 "settingsProjectsAutonomyOn" = "Arbeit, die die Überprüfungen besteht, darf ohne Rückfrage zusammengeführt werden.";
 "settingsProjectsAutonomyPersonal" = "Baut direkt im Ordner. Arbeit, die die Überprüfungen besteht, wird geschrieben, sobald sie fertig ist.";
 "settingsProjectsBatchChanges" = "Änderungen zum Zurückschicken";
+"settingsProjectsBatchGap" = "Wann ein Bündel startet";
+"settingsProjectsBatchGapDescription" = "Ein längerer Abstand bringt mehr bestätigte Änderungen in jedes Bündel, sodass seine Überprüfungen seltener laufen. Die Reparatur eines angehaltenen Bündels wartet nie darauf.";
+"settingsProjectsBatchGapNow" = "Sobald eine Änderung bestätigt ist";
 "settingsProjectsBatchHeld" = "Bündel angehalten";
 "settingsProjectsBatchHeldNoWay" = "Seit %1$@ angehalten: Dieses Projekt erlaubt kein Zusammenführen, das einen Commit je Änderung behält. Erlaube dort, wo das Projekt liegt, Rebase-Merges oder Merge-Commits, und versuch es dann noch einmal.";
 "settingsProjectsBatchHeldRefused" = "Seit %2$@ angehalten: Das Zusammenführen wurde dort, wo das Projekt liegt, abgelehnt: %1$@";

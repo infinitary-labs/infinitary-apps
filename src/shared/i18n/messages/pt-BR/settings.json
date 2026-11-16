@@ -776,6 +776,21 @@
   "settingsProjectsAutonomyOn": "O trabalho que passa nas verificações pode ser mesclado sem perguntar a você.",
   "settingsProjectsAutonomyPersonal": "Feito no local. O trabalho que passa nas verificações é gravado assim que fica pronto.",
   "settingsProjectsBatchChanges": "Alterações para devolver",
+  "settingsProjectsBatchGap": "Quando um lote começa",
+  "settingsProjectsBatchGapDescription": "Um intervalo maior coloca mais alterações aprovadas em cada lote, então as verificações rodam com menos frequência. O reparo de um lote retido nunca espera.",
+  "settingsProjectsBatchGapHours": {
+    "plural": "count",
+    "one": "No máximo a cada hora",
+    "many": "No máximo a cada {count} horas",
+    "other": "No máximo a cada {count} horas"
+  },
+  "settingsProjectsBatchGapMinutes": {
+    "plural": "count",
+    "one": "No máximo a cada minuto",
+    "many": "No máximo a cada {count} minutos",
+    "other": "No máximo a cada {count} minutos"
+  },
+  "settingsProjectsBatchGapNow": "Assim que uma alteração é aprovada",
   "settingsProjectsBatchHeld": "Lote retido",
   "settingsProjectsBatchHeldChecks": {
     "plural": "count",

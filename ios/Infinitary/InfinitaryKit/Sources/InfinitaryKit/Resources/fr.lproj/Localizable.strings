@@ -2556,6 +2556,9 @@
 "settingsProjectsAutonomyOn" = "Le travail qui passe les vérifications peut être fusionné sans vous demander.";
 "settingsProjectsAutonomyPersonal" = "Construit sur place. Le travail qui passe les vérifications est écrit dès qu’il est terminé.";
 "settingsProjectsBatchChanges" = "Modifications à renvoyer";
+"settingsProjectsBatchGap" = "Quand un lot démarre";
+"settingsProjectsBatchGapDescription" = "Un intervalle plus long met plus de modifications approuvées dans chaque lot, donc ses vérifications s’exécutent moins souvent. La réparation d’un lot bloqué n’attend jamais.";
+"settingsProjectsBatchGapNow" = "Dès qu’une modification est approuvée";
 "settingsProjectsBatchHeld" = "Lot retenu";
 "settingsProjectsBatchHeldNoWay" = "Retenu depuis %1$@ : ce projet n’autorise aucune fusion qui garde un commit par modification. Autorisez la fusion par rebasage (rebase) ou les commits de fusion là où le projet est hébergé, puis réessayez.";
 "settingsProjectsBatchHeldRefused" = "Retenu depuis %2$@ : la fusion a été refusée là où le projet est hébergé : %1$@";

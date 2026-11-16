@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Locator, test } from "@playwright/test";
 import * as m from "../../src/shared/i18n/messages.generated";
@@ -9,7 +9,7 @@ import { type LaunchedApp, launchApp } from "./launch";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { regionShot } from "./pictures";
 import { promptInput } from "./prompt";
-import { HELD_CALL_MARKER, heldCall, heldCallPipe } from "./scenarios/heldCall";
+import { HELD_CALL_MARKER, heldCall, heldCallPipe, releaseHeldCall } from "./scenarios/heldCall";
 import { pressKey, runFromSearch, untilFocused } from "./windowKeys";
 
 /**
@@ -24,8 +24,8 @@ import { pressKey, runFromSearch, untilFocused } from "./windowKeys";
  * (`INFINITARY_CONTRACT_VERSION`, `INFINITARY_VIEW_FLOOR`) and its release
  * feed and copy replacement stood in (`INFINITARY_MAC_UPDATE_STAND_IN`,
  * src/main/host/macUpdateStandIn.ts), so nothing is downloaded or replaced.
- * In the first journey a crewmate there makes a call that waits for the
- * journey's word (scenarios/heldCall.ts), so the update saves running
+ * In the first journey a crewmate there makes a call that runs until the
+ * journey ends it (scenarios/heldCall.ts), so the update saves running
  * work and the view's Update later lets it go. The other journeys' first
  * mate is started by a command (docs/run.md), so the window opened beside it
  * installs, as a release's would; when that window is closed, the first mate
@@ -151,7 +151,7 @@ test("a Mac reading only starts the first mate's computer's own update, puts it 
     );
 
     // Once the call ends, Update goes through.
-    writeFileSync(pipe, "released");
+    await expect.poll(() => releaseHeldCall(pipe)).toBe(true);
     await expect
       .poll(
         async () =>

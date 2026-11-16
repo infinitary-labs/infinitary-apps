@@ -1,8 +1,8 @@
 import { CONTRIBUTION_MERGE_REFUSAL } from "@shared/contributions";
-import { hasChangeRequests } from "@shared/forge";
+import { forgeOf, hasChangeRequests } from "@shared/forge";
 import { fixedHoldWords, overridePasses, softHoldWords } from "@shared/holds";
 import { englishOf, type Said, said } from "@shared/i18n/said";
-import { isForkReview } from "@shared/mergeReview";
+import { isForkReview, mergeRuleWords, type SkippedRule } from "@shared/mergeReview";
 import { isMergeConflict } from "@shared/plainProblem";
 import { deliveryForRecord, opensPullRequest, type RepoView } from "@shared/repos";
 import {
@@ -13,7 +13,9 @@ import {
   ForgeError,
   type ForgePull,
   type ForgeReadiness,
+  type ForgeRuleset,
   forkStoryForge,
+  isRedCheckState,
   isSignInForgeFailure,
   isTransientForgeFailure,
   messageWithoutPresentation,
@@ -27,6 +29,7 @@ import {
   type ChangeDeliveryOptions,
   numberLabel,
   placeWords,
+  projectOf,
   type SignInFact,
 } from "./changeContext";
 import {
@@ -73,6 +76,14 @@ export type PrOutcome = {
    * turns this into the not-signed-in refusal and its two ways.
    */
   signIn?: SignInFact;
+  /**
+   * On a stop for GitHub's branch rules (INF-4360): whether this sign-in may
+   * skip every rule set holding the merge, with squash allowed, read once
+   * with the reading a merge past the rules makes - the rules it would skip,
+   * or the host's words on why it may not. Absent when that reading could
+   * not tell.
+   */
+  skip?: { may: true; rules: SkippedRule[] } | { may: false; why: string };
 };
 
 /**
@@ -257,7 +268,7 @@ export class ChangeMerge {
     if (guard && !outcome.ok && attempt.transient && !outcome.stop) {
       return { ...outcome, stop: attempt.dispatched ? "outcome" : "transient" };
     }
-    return outcome;
+    return this.withSkip(taskId, guard, outcome, "current");
   }
 
   /**
@@ -904,6 +915,169 @@ export class ChangeMerge {
   }
 
   /**
+   * What a merge past the rules would skip, read fresh: the pull request
+   * must be able to merge but for its rules and checks, every check must
+   * have finished, and GitHub must say this sign-in may skip every rule set
+   * holding the default branch, with squash allowed. Undefined text when it
+   * may; otherwise why not, in the host's words.
+   */
+  async skipState(
+    taskId: string,
+    forge: Forge,
+    pull: ForgePull,
+    project: { project?: string },
+  ): Promise<
+    | { ok: true; rules: SkippedRule[]; failedChecks: string[] }
+    | { ok: false; text: string; stop?: MergeStop }
+  > {
+    const place = forge.place ?? "GitHub";
+    const destination = await forge.defaultBranch().catch(() => undefined);
+    if (!destination || pull.base !== destination) {
+      return {
+        ok: false,
+        text: `pull request ${pull.number} merges into ${pull.base}, not this project's default branch.`,
+        stop: "identity",
+      };
+    }
+    if (
+      pull.readiness === "conflict" ||
+      pull.readiness === "draft" ||
+      pull.readiness === "computing"
+    ) {
+      const { stop, plain } = readinessStops(place)[pull.readiness];
+      return { ok: false, text: `${plain}. Skipping rules does not change that.`, stop };
+    }
+    const change: ForgeChange = {
+      number: pull.number,
+      url: null,
+      branch: pull.branch ?? "",
+      headSha: pull.headSha,
+      title: pull.title ?? "",
+      body: "",
+    };
+    let checks: Awaited<ReturnType<Forge["checks"]>>;
+    let sets: ForgeRuleset[];
+    try {
+      checks = await forge.checks(change);
+      sets = forge.branchRules ? await forge.branchRules(pull.base) : [];
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : String(caught);
+      return {
+        ok: false,
+        text: `the checks or the branch rules could not be read. ${message}`,
+        stop: isSignInForgeFailure(caught) ? "sign-in" : "checks",
+      };
+    }
+    this.checks.endNoChecks({ forge, change, ...project }, checks.items);
+    // Captain F4: final results precede both bypass preparation and sending.
+    if (checks.problem)
+      return { ok: false, text: `The checks cannot be read. ${checks.problem}`, stop: "checks" };
+    const record = this.options.tasks.get(taskId);
+    const absent = record && this.checks.absenceDeclared(record, { forge, change, ...project });
+    const items = checks.items;
+    if (
+      checks.complete === false ||
+      items.some((item) => item.state === "pending") ||
+      (items.length === 0 && !absent)
+    )
+      return {
+        ok: false,
+        text: "The checks have not finished. Wait for their final results before preparing or sending a rule-bypass review.",
+        stop: "checks",
+      };
+    const failedChecks = items
+      .filter((item) => isRedCheckState(item.state))
+      .map((item) => item.name);
+    const holding = sets.filter((set) => set.rules.some((rule) => mergeRuleWords(rule)));
+    const locked = holding.filter((set) => set.bypass === null || set.bypass === "never");
+    if (locked.length) {
+      return {
+        ok: false,
+        text: `${place} says your sign-in may not skip ${locked.map((set) => `the rule set ${set.name}`).join(", ")}.`,
+        stop: "protected",
+      };
+    }
+    const noSquash = holding.find(
+      (set) => set.mergeMethods && !set.mergeMethods.includes("squash"),
+    );
+    if (noSquash) {
+      return {
+        ok: false,
+        text: `the rule set ${noSquash.name} allows no squash merge, the one method the app sends.`,
+        stop: "protected",
+      };
+    }
+    if ((pull.readiness === "blocked" || pull.readiness === "behind") && holding.length === 0) {
+      return {
+        ok: false,
+        text: `${place} holds it by a rule outside its rule sets, such as classic branch protection, which the app cannot skip.`,
+        stop: "protected",
+      };
+    }
+    const rules = holding.flatMap((set) =>
+      set.rules.flatMap((rule) => {
+        const words = mergeRuleWords(rule);
+        return words ? [{ ruleset: set.name, rule: words }] : [];
+      }),
+    );
+    return { ok: true, rules, failedChecks };
+  }
+
+  /**
+   * A guarded merge stopped for GitHub's branch rules carries whether this
+   * sign-in may skip them (INF-4360, `PrOutcome.skip`); every other outcome
+   * comes back as it is. `on` locates the pull request the guard names.
+   */
+  async withSkip(
+    taskId: string,
+    guard: MergeGuard | undefined,
+    outcome: PrOutcome,
+    on: "current" | { repoId?: string },
+  ): Promise<PrOutcome> {
+    if (outcome.ok || outcome.stop !== "protected" || guard?.prNumber === undefined) return outcome;
+    const skip = await this.protectedSkip(taskId, guard.prNumber, guard.head, on);
+    return skip ? { ...outcome, skip } : outcome;
+  }
+
+  /**
+   * Whether this sign-in may skip what holds pull request `number` at
+   * `head` (INF-4360): the reading `skipState` makes for a merge past the
+   * rules. Undefined when it cannot tell - not GitHub, the pull request past
+   * that version, unfinished checks, or a failed read.
+   */
+  private async protectedSkip(
+    taskId: string,
+    number: number,
+    head: string,
+    on: "current" | { repoId?: string },
+  ): Promise<PrOutcome["skip"]> {
+    const located = this.context.locate(taskId, "check", on);
+    // Only what check_change skipRules can prepare: the task's own project.
+    if ("said" in located || located.elsewhere) return undefined;
+    const { forge } = located;
+    const origin = forgeOf(located.repo?.origin);
+    if (
+      forge.kind !== "github" ||
+      !forge.pull ||
+      !forge.branchRules ||
+      !forge.putInSkippingRules ||
+      !origin.owner ||
+      !origin.name
+    )
+      return undefined;
+    try {
+      const pull = await forge.pull(number);
+      if (pull.state !== "open" || pull.merged || pull.headSha !== head) return undefined;
+      if (!branchInProject(pull, `${origin.owner}/${origin.name}`)) return undefined;
+      const state = await this.skipState(taskId, forge, pull, projectOf(located));
+      if (state.ok) return state.rules.length ? { may: true, rules: state.rules } : undefined;
+      return state.stop === "protected" ? { may: false, why: state.text } : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
    * Why GitHub refused a guarded merge request, read from its typed answer
    * and the pull request's own state - never from the words, but for the
    * merge endpoint's conflict refusal the feed already recognizes. A refusal
@@ -1097,6 +1271,14 @@ export async function readDecided(
     pull = await read();
   }
   return { pull, waited };
+}
+
+/**
+ * Whether a pull request's branch lives in `project` (owner/name) itself: a
+ * merge past the branch rules is never prepared for a fork's branch.
+ */
+export function branchInProject(pull: ForgePull, project: string): boolean {
+  return pull.headRepo?.toLowerCase() === project.toLowerCase();
 }
 
 /** Why a readiness holds a merge, with where the project lives in the host's words. */

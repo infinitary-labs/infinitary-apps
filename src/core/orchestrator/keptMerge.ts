@@ -96,7 +96,7 @@ export class KeptMerge {
         const outcome = kept
           ? {
               ...result,
-              text: `${result.text}\n\n${keptNote(kept.wait, kept.head, placeOf(this.host.repos, record), currentCheckStatus(this.host.tasks.get(taskId)?.delivery), this.approvals.batchWarning(taskId, kept.wait))}`,
+              text: `${result.text}\n\n${keptNote(kept.wait, kept.head, placeOf(this.host.repos, record), currentCheckStatus(this.host.tasks.get(taskId)?.delivery), this.approvals.batchWarning(taskId, kept.wait), result.skip)}`,
             }
           : result;
         if (kept?.changed && unattended)
@@ -289,7 +289,7 @@ export class KeptMerge {
       "merge-pr (kept)",
       {
         ...result,
-        text: `${result.text}\n\n${keptNote(wait, head, place, currentCheckStatus(record?.delivery), this.approvals.batchWarning(taskId, wait))}`,
+        text: `${result.text}\n\n${keptNote(wait, head, place, currentCheckStatus(record?.delivery), this.approvals.batchWarning(taskId, wait), result.skip)}`,
       },
       [],
       standingAuthorization(record?.delivery)?.issuer !== "autonomy",

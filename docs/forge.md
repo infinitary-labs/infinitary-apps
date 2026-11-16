@@ -753,8 +753,13 @@ The review is marked sent first, then GitHub's asynchronous merge goes once (`PU
 A result the app could not read, or a transport failure, is unknown, and the pull request is read once to see whether it merged.
 Nothing is ever sent again for that review: a second click, a restart or a revised card naming it answers from the record.
 Its merge card's `after` says whether the task continues or closes.
-Not established: whether GitHub honours `bypass_rules` for the app's sign-in, an OAuth App, or on GitHub Enterprise Server.
-No real merge past the rules has been attempted; the check is the captain's, on a throwaway repository.
+When GitHub stops a merge under a kept approval for its branch rules (INF-4360), the host reads once whether this sign-in may skip them, with the same reading the review makes (`ChangeMerge.skipState`), and carries the answer on the merge's outcome as a typed fact (`PrOutcome.skip`, `ChangeMerge.withSkip`).
+With it, the first mate's words beside the kept approval (`keptNote`) steer the crewmate to prepare `skipRules` at the approved version and put up its merge card, never to ask the captain for an approval, and never to merge another way.
+Without it, they say the sign-in cannot skip the rules, in the host's words, after GitHub's own refusal, which is passed on unparsed.
+The fact adds no hold and leaves the kept approval as it is: an approval that arrives first merges by itself, and only the captain's click on the skip card sends a merge past the rules.
+Evidence: `mergeReviews.test.ts` ("a kept merge GitHub refuses for its branch rules") reads the fact from an always and a never rule set after GitHub's refusal, and `settleService.keptMerge.test.ts` ("a kept merge held by the branch rules") holds the words each one steers to.
+GitHub honours `bypass_rules` for the app's sign-in on github.com where the rule set's skip right is always, shown by a real merge past a rule asking for an approval from someone other than the last pusher.
+Not established: the pull-requests-only and exempt skip rights, an OAuth App, and GitHub Enterprise Server.
 Evidence: `tests/e2e/request-merge.spec.ts` ("a merge that skips the branch rules ...") has a scripted crewmate prepare an adopted release pull request held by a review rule and a failed check, reads the rules and the check off the card, finds nothing sent before the captain's key and one asynchronous merge with `bypass_rules` after it, and refuses the same review on a revised card.
 `mergeReviews.test.ts` holds each refusal word for word, the review marked sent before the request, and every outcome of the one send: merged, refused, unknown, a lost answer read back as merged, and a second click that sends nothing.
 

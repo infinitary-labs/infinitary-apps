@@ -1,6 +1,6 @@
 import type { ChangePresentationDraft } from "@shared/changePresentation";
 import { fixedHoldWords } from "@shared/holds";
-import type { MergeReview } from "@shared/mergeReview";
+import { type MergeReview, mergeRuleWords } from "@shared/mergeReview";
 import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -1052,6 +1052,76 @@ describe("the captain's click on an ordinary review", () => {
       receipt: { head: HEAD, sha: MERGED, already: true },
     });
     expect(harness.forge.calls).toEqual([]);
+  });
+});
+
+// INF-4360, direction A: "the app reads the sign-in's right to skip branch
+// rules, and when GitHub refuses a merge for a skippable rule the crewmate
+// puts up the skip card". The refusal and the rule set are the ones GitHub
+// gave a project whose main branch asks for an approval from someone other
+// than the last pusher, with an Admin role on the skip list.
+describe("a kept merge GitHub refuses for its branch rules (INF-4360)", () => {
+  const REFUSAL =
+    "GitHub did not merge #23: Repository rule violations found\n\nNew changes require approval from someone other than the last pusher.\n\n";
+  const MAIN_RULES = (bypass: ForgeRuleset["bypass"]): ForgeRuleset => ({
+    id: 4,
+    name: "main",
+    bypass,
+    mergeMethods: ["squash"],
+    rules: ["deletion", "non_fast_forward", "pull_request", "required_linear_history"],
+  });
+
+  async function refused(bypass: ForgeRuleset["bypass"], headRepo = "x/y") {
+    const world = await onGitHub();
+    const review = await world.prepare();
+    world.host.rules = [MAIN_RULES(bypass)];
+    // GitHub read the pull request as mergeable until the merge went out,
+    // then refused it and reads it as blocked.
+    world.forge.putIn = async () => {
+      world.host.pull = openPull({ readiness: "blocked", headRepo });
+      throw new ForgeError("refused", REFUSAL);
+    };
+    const guard: MergeGuard = {
+      head: HEAD,
+      prNumber: 23,
+      unattended: false,
+      beforeDispatch: () => undefined,
+    };
+    return world.service.reviews.mergeReview(world.task.id, review.id, guard);
+  }
+
+  it("records that the sign-in may skip every rule set holding it, naming each rule", async () => {
+    const answer = await refused("always");
+    expect(answer).toMatchObject({
+      ok: false,
+      stop: "protected",
+      skip: {
+        may: true,
+        rules: ["pull_request", "required_linear_history"].map((rule) => ({
+          ruleset: "main",
+          rule: mergeRuleWords(rule),
+        })),
+      },
+    });
+    expect(answer.text).toContain(REFUSAL.trim());
+  });
+
+  it("records that it may not, in the host's words, beside GitHub's own refusal", async () => {
+    const answer = await refused("never");
+    expect(answer).toMatchObject({
+      ok: false,
+      stop: "protected",
+      skip: { may: false, why: "GitHub says your sign-in may not skip the rule set main." },
+    });
+    expect(answer.text).toContain(REFUSAL.trim());
+  });
+
+  // INF-4373's review: check_change skipRules refuses a fork's branch, so
+  // the refusal must not steer to a card that cannot go up.
+  it("records nothing for a branch outside the project, which skipRules refuses", async () => {
+    const answer = await refused("always", "someone/y");
+    expect(answer).toMatchObject({ ok: false, stop: "protected" });
+    expect(answer).not.toHaveProperty("skip");
   });
 });
 

@@ -10,7 +10,7 @@ import {
 } from "../../../tests/helpers/settleHarness";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import type { MergeAuthorization } from "../storage/taskRecords";
-import type { MergeGuard, MergeStop } from "./changeMerge";
+import type { MergeGuard, MergeStop, PrOutcome } from "./changeMerge";
 import { PULL_NOT_THE_TASKS } from "./keptApproval";
 
 const OTHER_HEAD = "b".repeat(40);
@@ -383,6 +383,58 @@ describe("a merge request's refusals", () => {
       ok: false,
       text: `Cannot merge: task ${TASK} is already cancelled.`,
     });
+  });
+});
+
+// INF-4360, direction A: "the app reads the sign-in's right to skip branch
+// rules, and when GitHub refuses a merge for a skippable rule the crewmate
+// puts up the skip card". The skip fact rides the merge's answer; the words
+// beside the kept approval steer from it, and GitHub's refusal stays whole.
+describe("a kept merge held by the branch rules (INF-4360)", () => {
+  const REFUSAL =
+    "Cannot merge: GitHub did not merge #71: Repository rule violations found. New changes require approval from someone other than the last pusher.";
+  const SKIPPABLE: PrOutcome["skip"] = {
+    may: true,
+    rules: [{ ruleset: "main", rule: "a review before merging" }],
+  };
+  const LOCKED: PrOutcome["skip"] = {
+    may: false,
+    why: "GitHub says your sign-in may not skip the rule set main.",
+  };
+
+  it("steers the crewmate to the merge card that skips the rules when the sign-in may skip them", async () => {
+    const world = approved();
+    world.merge = async () => ({ ok: false, text: REFUSAL, stop: "protected", skip: SKIPPABLE });
+    const click = await world.settle.reportCardSettle(TASK, "merge-pr");
+    expect(approvalOf(world)?.waiting?.on).toBe("protected");
+    expect(click.text).toContain(REFUSAL);
+    expect(click.text).toContain(`prepare check_change skipRules at ${HEAD}`);
+    expect(click.text).toContain("a review before merging (main)");
+    expect(click.text).toContain("Never ask the captain to get an approval");
+    expect(click.text).not.toContain("never bypasses");
+  });
+
+  it("says the sign-in cannot skip them, in the host's words, when it may not", async () => {
+    const world = approved();
+    world.merge = async () => ({ ok: false, text: REFUSAL, stop: "protected", skip: LOCKED });
+    const click = await world.settle.reportCardSettle(TASK, "merge-pr");
+    expect(click.text).toContain(REFUSAL);
+    expect(click.text).toContain(
+      "the captain's sign-in cannot skip them: GitHub says your sign-in may not skip the rule set main.",
+    );
+    expect(click.text).not.toContain("skipRules");
+  });
+
+  it("tells the Firstmate of a host-run attempt held by rules it may skip", async () => {
+    const world = approved();
+    world.merge = async () => ({ ok: false, text: REFUSAL, stop: "protected", skip: SKIPPABLE });
+    await world.kept.runMergeAuthorization(TASK);
+    expect(world.wakes).toEqual([
+      expect.objectContaining({
+        kind: "settled",
+        outcome: expect.stringContaining(`prepare check_change skipRules at ${HEAD}`),
+      }),
+    ]);
   });
 });
 

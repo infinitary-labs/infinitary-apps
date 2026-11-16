@@ -22,6 +22,7 @@ import type {
   TaskRecord,
 } from "../storage/taskRecords";
 import type { TaskService } from "../tasks/taskService";
+import type { PrOutcome } from "./changeMerge";
 import { publicationRepo } from "./publicationRepo";
 import type { WakeBody } from "./wakes";
 
@@ -859,7 +860,10 @@ export const FAILED_BATCH_NOTE =
 /**
  * What the Firstmate is told beside a wait on a kept approval: who moves
  * next, and that the captain is not asked for a second click. A checks wait
- * on a failed batch check carries what clears it (`batchNote`, INF-3208).
+ * on a failed batch check carries what clears it (`batchNote`, INF-3208); a
+ * wait on the branch rules carries whether the captain's sign-in may skip
+ * them (`skip`, INF-4360), which steers the crewmate to the merge card that
+ * skips them.
  */
 export function keptNote(
   wait: MergeWait,
@@ -867,6 +871,7 @@ export function keptNote(
   place: string,
   checks?: string,
   batchNote?: string,
+  skip?: PrOutcome["skip"],
 ): string {
   const kept =
     "The captain's merge approval is KEPT: the host merges by itself once the gates pass, so do not ask the captain to merge again or to put up a new card.";
@@ -885,6 +890,10 @@ export function keptNote(
     case "cap":
       return `${kept} A round cap holds the task: the captain's answer to the cap comes first, then the host merges.`;
     case "protected":
+      if (skip?.may)
+        return `${kept} ${place}'s rules on the main branch hold the merge, and ${place} says the captain's sign-in may skip every rule set that holds it, with squash allowed: ${skip.rules.map((rule) => `${rule.rule} (${rule.ruleset})`).join("; ")}. Steer the crewmate to prepare check_change skipRules at ${head} and put up its merge card, naming the rule ${place}'s refusal names: the kept approval never merges past the rules, so that card is the one new card this wait calls for, and only the captain's click on it sends the merge past the rules. Never ask the captain to get an approval or change the rule, and never merge another way, such as from a shell. If someone approves first, the host merges by itself and the crewmate's card finds nothing to skip.`;
+      if (skip)
+        return `${kept} ${place}'s rules on the main branch hold the merge (a required review or another protection), and the captain's sign-in cannot skip them: ${skip.why} The host tries again on its own; an approval or a change to the rule where the project lives clears it. Nothing is needed from the crewmate.`;
       return `${kept} ${place}'s rules on the main branch hold the merge (a required review or another protection); the host never bypasses them and tries again on its own. Nothing is needed from the crewmate.`;
     case "computing":
     case "transient":

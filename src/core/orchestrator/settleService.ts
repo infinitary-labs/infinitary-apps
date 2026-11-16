@@ -398,6 +398,7 @@ export class SettleService {
         ...(result.plain ? { plain: result.plain } : {}),
         ...(result.notGreen ? { notGreen: true } : {}),
         ...(result.stop ? { stop: result.stop } : {}),
+        ...(result.skip ? { skip: result.skip } : {}),
         ...(refusal ? { refusal } : {}),
       };
     }
@@ -1204,7 +1205,7 @@ export class SettleService {
       const place = placeOf(this.host.repos, this.host.tasks.get(taskId));
       result = {
         ...result,
-        text: `${result.text}\n\n${keptNote(kept.wait, kept.head, place, currentCheckStatus(this.host.tasks.get(taskId)?.delivery), this.approvals.batchWarning(taskId, kept.wait))}`,
+        text: `${result.text}\n\n${keptNote(kept.wait, kept.head, place, currentCheckStatus(this.host.tasks.get(taskId)?.delivery), this.approvals.batchWarning(taskId, kept.wait), result.skip)}`,
       };
     }
     // Only the captain's own click leaves them with no card to read (INF-2913).

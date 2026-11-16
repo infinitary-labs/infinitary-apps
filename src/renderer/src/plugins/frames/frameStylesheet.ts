@@ -170,6 +170,9 @@ export const FRAME_BASE_STYLE = `
      theme, so a dark and a light picture of one view swap when the theme does. */
   :root:not([data-theme="light"]) [data-inf-theme="light"],
   :root[data-theme="light"] [data-inf-theme="dark"] { display: none; }
+  /* An ask to keep a secret (docs/secrets.md): its line saying where to type
+     the values is for a window or phone that draws no field; this one does. */
+  [data-inf-secret-elsewhere] { display: none; }
   ul, ol { padding-left: var(--space-4); }
   li + li { margin-top: var(--space-1); }
   a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }

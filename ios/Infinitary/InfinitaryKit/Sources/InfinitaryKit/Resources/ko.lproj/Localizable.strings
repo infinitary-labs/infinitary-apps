@@ -1520,6 +1520,8 @@
 "phoneSceneWaitingBatchCheck" = "일괄 검사 기다리는 중";
 "phoneSceneWaitingChecks" = "검사 기다리는 중";
 "phoneSceneWorking" = "작업 중";
+"phoneSecretsAskFields" = "각 비밀 정보 입력";
+"phoneSecretsAskNote" = "각 값은 바로 비밀 정보에 보관됩니다. Infinitary는 이 값을 다시 보여 주지 않으며, 일등항해사와 선원들도 받지 않습니다.";
 "phoneSecretsGiveOnce" = "%1$@에 %2$@을(를) 한 번 제공";
 "phoneSecretsRefusedDenied" = "이 요청은 거부됐어요. 아무것도 허용하지 않았어요.";
 "phoneSecretsRefusedExpired" = "이 요청은 만료됐어요. 결정을 받아들이지 않았어요.";
@@ -1846,6 +1848,8 @@
 "secretsArchiveOpenTitle" = "암호화된 비밀 정보 보관 파일 선택";
 "secretsArchiveSaveMessage" = "새 파일을 선택하세요. 기존 보관 파일은 덮어쓰지 않아요.";
 "secretsArchiveSaveTitle" = "암호화된 비밀 정보 보관 파일 저장";
+"secretsAskFields" = "각 비밀 정보 입력";
+"secretsAskNote" = "각 값은 바로 비밀 정보에 보관됩니다. Infinitary는 이 값을 다시 보여 주지 않으며, 일등항해사와 선원들도 받지 않습니다.";
 "secretsDeny" = "허용 안 함";
 "secretsHistoryExportTitle" = "비밀 정보 기록 내보내기";
 "secretsKeyOpenTitle" = "해당 복구 키 선택";

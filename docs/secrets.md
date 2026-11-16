@@ -34,7 +34,7 @@ Bare invocation and `list` return that metadata and current receipts; `show <ref
 A listed secret carries its environment label when it has one, as context beside its name, never as a filter.
 Listing or naming a reference grants no access: each use still needs that entry to be agent-visible and an exact approval or Allow rule.
 A task on another computer lists and shows the same catalog: its command there asks the home over the authenticated work route (`inf:work:secrets`), whose answer holds each secret's reference, name, version and environment label and nothing else.
-On a computer whose app lists the contract change `secret-uses-elsewhere`, the same command also checks and asks for uses ("On a computer that runs work"), and its crewmate reads `CREWMATE_SECRETS_LINE`.
+On a computer whose app lists the contract change `secret-uses-elsewhere`, the same command also checks and asks for uses ("On a computer that runs work"), and its crewmate reads `CREWMATE_SECRETS_THERE_LINE`: the same words without the ask to keep a secret, which that command does not offer.
 On an older one, `inject`, `status` and `cancel` answer `unavailable` with a fixed explanation, no value, receipt, approval or custody reaches it, and its crewmate reads `CREWMATE_SECRETS_CATALOG_LINE`.
 `inject --env '{"SERVICE_TOKEN":"s1"}' --reason 'Check staging' --id staging-check -- /bin/sh ./scripts/check-staging.sh` submits references and an explicit argument vector.
 The example neither approves that script nor reads a secret.
@@ -42,6 +42,7 @@ The channel adds the calling shell's working folder as the request's working dir
 `status <request>` reads a receipt and never executes again; `cancel <request>` withdraws unused authority.
 `check --env '<references>' -- <program> [args...]` is the crew's pre-check (see "The crew's pre-check").
 Help and version use the ordinary runtime; unknown flags and unsupported commands refuse.
+`ask` asks the captain to keep a secret by name, place and reason ("Asking to keep a secret").
 There is no `get`, `approve`, raw-output mode or session-wide environment export.
 The command has no brokered-operation, private-file or private-input-stream delivery yet.
 No command may turn a reference into an agent-readable value.
@@ -206,6 +207,31 @@ Remove and Stop approvals still ask the system to confirm after the answer and s
 Keep returns focus to the button that asked; after Forget, focus moves to the next secret, or Add secret when none is left.
 A paired phone never sees these questions: only this computer's window reads the Secrets view.
 
+### Asking to keep a secret
+
+An agent that needs a secret the captain has not kept asks for it by name, place and reason, never a value, and Infinitary draws its own masked field for the captain to type it (INF-4239, the captain's direction A).
+A crewmate runs `infinitary-secrets-axi ask --name '<name>' [--place '<place>'] --reason '<why>' --id <ask>`; `--replace <reference>` names a kept secret that stopped working, and `--secrets '<JSON list>'` asks for several on one card.
+A crewmate on a computer that runs work cannot ask yet: its `ask` answers `unavailable` with words telling it to name the secret and its place in its report, so the first mate can ask with `ask_secret`.
+The first mate asks the same way with its `ask_secret` tool.
+`SecretsSettings.askToKeep` answers at once: `waiting` while the card asks, `kept` with each reference when every secret it names is already kept under that name and place, so no card goes up, or `unavailable` with words where Secrets is not offered or the secret it replaces cannot be read.
+Asking again with a waiting ask's id raises nothing new, and `cancel <ask>` (or `ask_secret` with `cancel`) withdraws it.
+A waiting ask is kept in `<userData>/secret-asks.json`, which holds names, places, reasons and references and never a value (`SecretAskBook`, `asks.ts`); after a restart each comes back with new passes, and a closed task's ask ends.
+
+The card is Infinitary's own (`askCard.ts`): its title names the secrets and who asks, its body the asker's reason in its own words, a row per secret with its place, and, for a replacement, the version it replaces.
+Its answers are Don't keep, an ordinary one-time pass, and Keep in Secrets, a host effect `secrets-keep` whose argument names the fields (`SecretKeepOffer`) and whose id is a pass only `keep` spends.
+The window draws one masked field per secret between the body and the buttons (`SecretAskFields.tsx`), outside the card's frame, so the body's own script never reads it.
+Tab reaches each field, Enter moves to the next, and Enter in the last keeps.
+Keep sends the values with the pass in their own request, `inf:secrets:keep`, never as a card choice, so a value never reaches a card answer, its thread, the task record or a log; a Keep sent as a card choice does nothing.
+The controller spends the pass before it writes, puts each value straight into the protected owner as Add secret does, zero-fills its copy and records nothing of it.
+A missing value, a spent or stale pass, or a closed task's ask keeps nothing.
+A Keep that cannot finish leaves the card up with new passes, and the window or phone that pressed it says why once, outside the card's body (a window above the body, the phone beside the card's buttons, kept through the card's new passes), while a card a restore changed says why above its rows: locked storage adds Unlock, storage that needs recovery points to Settings, and a replaced secret that changed since the card asked names its current version.
+What was kept stays kept, and the card asks again only for the rest.
+When the ask ends, its asker hears once, through its inbox (`secrets-ask-ended`), each kept secret's name, place, reference and version, that the captain chose Don't keep, or that it was withdrawn; never a value.
+
+Another Mac's window and the phone answer the same card: each lists the contract change `secrets-ask` in its hello and sends Keep through the same request over the connection.
+A view that does not list it gets the card without Keep in Secrets (`frameWithoutUnreadActions`, `taskAllow.ts`) and shows the card's line saying where to answer it, which a view that draws the fields hides (`data-inf-secret-elsewhere`); its Don't keep still works.
+The card lint refuses an agent's own card that holds a password field and points the agent to the ask (`PASSWORD_FIELD_REFUSAL`, `cardLint.ts`).
+
 ### Saved decisions
 
 The approval card's answers are Allow once, Always allow this (Allow for 10 minutes for an eligible read instead) and Don't allow, drawn as Don't allow, the second allow, then Allow once, so the refusal stands apart from the two allows.
@@ -355,7 +381,7 @@ A paired view reaches this through three channels, each answered in `SecretsSett
   It raises a host card only while Secrets is set up and open and the key is a P-256 key the home does not already hold for that device, or the key it holds offered from a paired phone it has not linked that key to.
 - `inf:secrets:decide` carries one signed Allow or one Deny.
 
-A computer that controls a first mate asks these three and no other Secrets request (the other Secrets channels' `reach` is `home`, `docs/view.md`, "What the window asks").
+A computer that controls a first mate asks these three, and `inf:secrets:keep`, which carries the values typed on an ask's card with its one-time pass ("Asking to keep a secret"), and no other Secrets request (the other Secrets channels' `reach` is `home`, `docs/view.md`, "What the window asks").
 Secrets settings, entry, rehearsal, history, permissions and recovery stay on the home, and its Secrets tab and command are not offered there.
 
 Enrollment is the captain's on this computer.
@@ -441,7 +467,7 @@ The optional 600-second/20-use permission applies only to supported brokered rea
 Settings → Secrets exposes searchable metadata with each secret's last use, saved decisions, phone approvals, history and recovery, trusted Add/Replace, End access and export/storage display through the host seam, which the app fills on macOS and Linux.
 Without that capability, Settings offers no Secrets tab and command search no Open Secrets: nothing a person can open and not use.
 The window asks `inf:secrets:shown` once, which answers from the host seam without opening storage.
-No reveal, partial-value display, clipboard export or agent-authored secret-entry form is planned.
+No reveal, partial-value display or clipboard export is planned, and an agent never draws a field for a secret: it asks, and Infinitary draws the field ("Asking to keep a secret").
 
 ## Consumer register
 

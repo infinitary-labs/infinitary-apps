@@ -5,6 +5,7 @@ import {
   decisionWords,
   SAVED_DECISION_WORDS,
   SECRET_APPROVAL_CARD_WORDS,
+  SECRET_ASK_CARD_WORDS,
   SECRET_DEVICE_WORDS,
   SECRET_QUESTION_WORDS,
   SECRETS_RECOVERY_WORDS,
@@ -15,6 +16,9 @@ import {
   type SecretDecisionInput,
   type SecretEnrollInput,
   type SecretEntryInput,
+  type SecretKeep,
+  type SecretKeepInput,
+  type SecretKeepOffer,
   type SecretRehearsal,
   type SecretRehearsalInput,
   type SecretsView,
@@ -38,8 +42,19 @@ import {
   secretApprovalBody,
 } from "./approvalCard";
 import { approvalCode, approvalKey, type RemoteDecision } from "./approvals";
+import { secretAskBody, secretAskCardId, secretAskTitle } from "./askCard";
+import {
+  type KeptSecret,
+  type SecretAskAnswer,
+  SecretAskBook,
+  type SecretAskEnded,
+  type SecretAskInput,
+  validSecretAsk,
+  type WaitingSecretAsk,
+} from "./asks";
 import type { ApprovalDevice, Rule } from "./authority";
 import { type BrokeredUse, type SecretBroker, validBrokeredUse } from "./brokers";
+import { SECRET_ASK_WORDS } from "./commandWords";
 import { SecretHandoffs } from "./handoffs";
 import type { HistoryItem } from "./journal";
 import type { ProtectedSecrets, ProtectedSecretsOptions } from "./protected";
@@ -71,15 +86,29 @@ export type SecretsSettingsOptions = {
   settled?: (task: string, receipt: EndedUseReceipt) => void;
   /** A task's title, so the approval card says which task asks and the page which task last used a secret. */
   taskTitle?: (task: string) => string | undefined;
+  /** Where the asks waiting for the captain are kept across a restart (`SecretAskBook`); none keeps them in memory. */
+  asksFile?: string;
+  /**
+   * An ask ended (docs/secrets.md, "Asking to keep a secret"): its asker, a
+   * task or the first mate (null), hears once through its inbox, never a value.
+   */
+  asked?: (task: string | null, ended: SecretAskEnded) => void;
+  /** Whether an asking task is still open: a closed task's ask keeps nothing. */
+  taskOpen?: (task: string) => boolean;
   now?: ProtectedSecretsOptions["now"];
 };
 type Owner = { protected: ProtectedSecrets; requests: SecretRequests };
-/** Where an offer's answer comes from: a host card's chrome, or the question on its row in Settings. */
+/**
+ * Where an offer's answer comes from: a host card's chrome, the question on
+ * its row in Settings, or an ask card's Keep, which only `keep` spends with
+ * the values the window sends (`ask` names the waiting ask).
+ */
 type Offer = {
   group: string;
   run: () => Promise<void>;
-  place: "card" | "settings";
+  place: "card" | "settings" | "keep";
   kind?: SecretUseAnswer;
+  ask?: string;
 };
 type Question = NonNullable<SecretsView["question"]>;
 
@@ -121,9 +150,12 @@ export class SecretsSettings {
   /** The paired device each waiting enrollment offer came from, by its approval device. */
   private readonly offeredFrom = new Map<string, string>();
   private viewEpoch = 0;
+  /** The asks waiting for the captain to keep a secret, by the asker and its id. */
+  private readonly asks: SecretAskBook;
 
   constructor(private readonly options: SecretsSettingsOptions) {
     this.now = options.now ?? Date.now;
+    this.asks = new SecretAskBook(options.asksFile);
     // Every published change invalidates older async snapshots, including ones
     // that kept the same owner (for example an explicit history deletion).
     this.options = {
@@ -616,6 +648,7 @@ export class SecretsSettings {
     this.question = null;
     this.owner = undefined;
     for (const group of groups) {
+      if (group.startsWith("ask-")) continue;
       try {
         this.options.withdraw(
           `card-secrets-${group}`,
@@ -625,6 +658,8 @@ export class SecretsSettings {
         /* A failed presentation update cannot restore the retired authority. */
       }
     }
+    // An ask still waits, but what it replaces is read again from the new home.
+    for (const ask of this.asks.all()) void this.reaskAfterReplace(ask);
   }
 
   /**
@@ -1173,6 +1208,8 @@ export class SecretsSettings {
         return receipt;
       },
       status: async (request: string) => (await this.ready())?.requests.status(request),
+      ask: (input: SecretAskInput) => this.askToKeep(context.task, input),
+      cancelAsk: (id: string) => this.cancelAsk(context.task, id),
       cancel: async (request: string) => {
         const owner = await this.ready();
         // The caller receives its cancellation directly; other requesters still need the result.
@@ -1302,6 +1339,367 @@ export class SecretsSettings {
         void this.owner.requests.cancel(request).catch(() => undefined);
       this.handoffs.wake(request);
     }
+  }
+
+  /**
+   * An agent's ask to keep secrets (docs/secrets.md, "Asking to keep a
+   * secret"): names, places and a reason, never a value. It answers at once:
+   * unavailable where Secrets is not offered, kept when every secret it names
+   * is already kept under that name and place, or waiting while Infinitary's
+   * own card asks the captain. Asking again with a waiting ask's id raises
+   * nothing new.
+   */
+  async askToKeep(task: string | null, input: SecretAskInput): Promise<SecretAskAnswer> {
+    const copied = structuredClone(input);
+    if (!validSecretAsk(copied)) throw new Error("Invalid ask.");
+    if (!this.options.open)
+      return { ask: copied.id, state: "unavailable", help: SECRET_ASK_WORDS.notOffered };
+    const key = SecretAskBook.key(task, copied.id);
+    const waiting = this.asks.get(key);
+    if (waiting) {
+      this.raiseAsk(waiting);
+      return { ask: copied.id, state: "waiting" };
+    }
+    const owner = await this.ready().catch(() => undefined);
+    const state = owner ? await owner.protected.status().catch(() => "unavailable" as const) : null;
+    const readable = state === "available";
+    const entries = readable
+      ? (await owner?.protected.metadata().catch(() => undefined))?.filter(
+          (one) => one.discoverable,
+        )
+      : state === "uninitialized"
+        ? []
+        : undefined;
+    const fields: WaitingSecretAsk["fields"] = [];
+    const already: KeptSecret[] = [];
+    for (const secret of copied.secrets) {
+      const name = secret.name?.trim() ?? "";
+      const place = secret.place?.trim() ?? "";
+      if (secret.replace !== undefined) {
+        // The card names the kept secret and its version, so it must be read now.
+        if (!entries)
+          return { ask: copied.id, state: "unavailable", help: SECRET_ASK_WORDS.cannotRead };
+        const entry = entries.find((one) => one.ref === secret.replace);
+        if (!entry)
+          return { ask: copied.id, state: "unavailable", help: SECRET_ASK_WORDS.noSuchSecret };
+        fields.push({
+          id: `s${fields.length + 1}`,
+          name: entry.label,
+          place: entry.environment ?? "",
+          replaces: { ref: entry.ref, version: entry.version, revision: entry.revision },
+        });
+        continue;
+      }
+      const kept = entries?.find((one) => one.label === name && (one.environment ?? "") === place);
+      if (kept) already.push({ ref: kept.ref, name, place, version: kept.version });
+      else fields.push({ id: `s${fields.length + 1}`, name, place });
+    }
+    if (fields.length === 0) return { ask: copied.id, state: "kept", secrets: already };
+    const ask: WaitingSecretAsk = {
+      key,
+      task,
+      id: copied.id,
+      reason: copied.reason.trim(),
+      at: this.now(),
+      fields,
+      already,
+    };
+    this.asks.put(ask);
+    this.raiseAsk(ask);
+    this.options.changed();
+    return { ask: copied.id, state: "waiting" };
+  }
+
+  /** The first mate's own asks, which no task owns. */
+  firstMateAsks() {
+    return {
+      ask: (input: SecretAskInput) => this.askToKeep(null, input),
+      cancel: (id: string) => this.cancelAsk(null, id),
+    };
+  }
+
+  /** The asker withdrew its waiting ask: its card goes, and nothing is kept. */
+  cancelAsk(task: string | null, id: string): boolean {
+    const key = SecretAskBook.key(task, id);
+    if (!this.asks.get(key)) return false;
+    this.endAsk(key, { ask: id, state: "withdrawn", why: SECRET_ASK_WORDS.cancelled }, false);
+    return true;
+  }
+
+  /**
+   * Raises each ask that waited through a restart again, with new passes:
+   * the card an earlier process raised is inert. A closed task's ask ends.
+   */
+  resumeAsks(): void {
+    for (const ask of this.asks.all()) {
+      if (ask.task && this.options.taskOpen && !this.options.taskOpen(ask.task)) {
+        this.endAsk(ask.key, { ask: ask.id, state: "withdrawn", why: SECRET_ASK_WORDS.closed });
+        continue;
+      }
+      this.raiseAsk(ask);
+    }
+  }
+
+  private askCardId(ask: WaitingSecretAsk): string {
+    return secretAskCardId(ask.task, ask.id);
+  }
+
+  /**
+   * Infinitary's own card for one ask. Keep in Secrets carries the fields
+   * the window draws (`SecretKeepOffer`) and its id is a pass only `keep`
+   * spends, with the values; Don't keep is an ordinary one-time pass.
+   * `trouble` puts why the card changed above the rows, with Unlock when
+   * storage is locked and this computer can unlock it. A Keep's own trouble
+   * is `answered`: Keep's answer already says it in the window or phone that
+   * pressed it, so the body does not say it again.
+   */
+  private raiseAsk(
+    ask: WaitingSecretAsk,
+    trouble?: "locked" | "recovery" | "unavailable" | "stale",
+    answered = false,
+  ) {
+    const group = `ask-${ask.key}`;
+    for (const [id, offer] of this.offers) if (offer.group === group) this.offers.delete(id);
+    const words = SECRET_ASK_CARD_WORDS;
+    const keep = randomUUID();
+    const dont = randomUUID();
+    this.offers.set(keep, { group, run: async () => {}, place: "keep", ask: ask.key });
+    this.offers.set(dont, {
+      group,
+      place: "card",
+      run: async () => this.endAsk(ask.key, { ask: ask.id, state: "not-kept" }),
+    });
+    const unlock = trouble === "locked" && this.options.unlock ? randomUUID() : undefined;
+    if (unlock)
+      this.offers.set(unlock, {
+        group,
+        place: "card",
+        run: async () => {
+          await this.options.unlock?.();
+          const owner = this.owner;
+          if (owner && owner.protected.availability !== "available") this.owner = undefined;
+          const current = this.asks.get(ask.key);
+          if (current) this.raiseAsk(current);
+        },
+      });
+    const offer: SecretKeepOffer = {
+      fields: ask.fields.map((field) => ({
+        id: field.id,
+        name: field.name,
+        ...(field.place ? { place: field.place } : {}),
+        ...(field.replaces
+          ? { replaces: { ref: field.replaces.ref, version: field.replaces.version } }
+          : {}),
+      })),
+    };
+    const taskTitle = ask.task ? (this.options.taskTitle?.(ask.task) ?? null) : null;
+    this.options.raise({
+      id: this.askCardId(ask),
+      title: secretAskTitle(ask, taskTitle),
+      body: secretAskBody(ask, trouble && !answered ? words[trouble] : undefined),
+      meta: FIRSTMATE_CARD_META,
+      ...(ask.task ? { taskId: ask.task } : {}),
+      actions: [
+        {
+          id: dont,
+          label: words.dontKeep,
+          variant: "ghost" as const,
+          declines: true,
+          effect: { kind: "host" as const, op: "secrets-decision" as const, arg: dont },
+        },
+        ...(unlock
+          ? [
+              {
+                id: unlock,
+                label: words.unlock,
+                variant: "secondary" as const,
+                effect: { kind: "host" as const, op: "secrets-decision" as const, arg: unlock },
+              },
+            ]
+          : []),
+        {
+          id: keep,
+          label: words.keep,
+          default: true,
+          variant: "primary" as const,
+          effect: {
+            kind: "host" as const,
+            op: "secrets-keep" as const,
+            arg: JSON.stringify(offer),
+          },
+        },
+      ],
+    });
+  }
+
+  /** The ask ended: its passes stop working, its card goes, and its asker hears once. */
+  private endAsk(key: string, ended: SecretAskEnded, tell = true): void {
+    const ask = this.asks.drop(key);
+    if (!ask) return;
+    const group = `ask-${key}`;
+    for (const [id, offer] of this.offers) if (offer.group === group) this.offers.delete(id);
+    this.options.withdraw(this.askCardId(ask), "This ask to keep a secret ended.");
+    if (tell) this.options.asked?.(ask.task, ended);
+    this.options.changed();
+  }
+
+  /** After a restore or Start over, what a waiting ask replaces is read again from the new home. */
+  private async reaskAfterReplace(ask: WaitingSecretAsk): Promise<void> {
+    if (!ask.fields.some((field) => field.replaces)) {
+      this.raiseAsk(ask);
+      return;
+    }
+    const owner = await this.ready().catch(() => undefined);
+    const entries = owner ? await owner.protected.metadata().catch(() => []) : [];
+    const fields = ask.fields.flatMap((field) => {
+      if (!field.replaces) return [field];
+      const entry = entries.find((one) => one.ref === field.replaces?.ref && one.discoverable);
+      return entry
+        ? [
+            {
+              ...field,
+              replaces: { ref: entry.ref, version: entry.version, revision: entry.revision },
+            },
+          ]
+        : [];
+    });
+    if (fields.length === 0) {
+      this.endAsk(ask.key, { ask: ask.id, state: "withdrawn", why: SECRET_ASK_WORDS.noSuchSecret });
+      return;
+    }
+    const next = { ...ask, fields };
+    this.asks.put(next);
+    this.raiseAsk(next, fields.length === ask.fields.length ? undefined : "stale");
+  }
+
+  /**
+   * Keep on an ask card (`inf:secrets:keep`), from the window that shows
+   * it: here, another Mac or the phone. Its pass is spent once, and only
+   * with one value for every field the card asked for; each value goes
+   * straight to the protected owner, as Settings' Add secret does, and is
+   * zero-filled. Nothing records a value. A Keep that cannot finish leaves
+   * the card up with a new pass and says why on it.
+   */
+  async keep(input: SecretKeepInput): Promise<SecretKeep> {
+    const words = SECRET_ASK_CARD_WORDS;
+    const offer = this.offers.get(input.pass);
+    const ask = offer?.place === "keep" && offer.ask ? this.asks.get(offer.ask) : undefined;
+    if (!offer || !ask) return { kept: false, words: words.gone };
+    if (ask.task && this.options.taskOpen && !this.options.taskOpen(ask.task)) {
+      this.endAsk(ask.key, { ask: ask.id, state: "withdrawn", why: SECRET_ASK_WORDS.closed });
+      return { kept: false, words: words.closed };
+    }
+    const values = new Map<string, string>();
+    for (const one of input.values) {
+      if (values.has(one.field)) return { kept: false, words: words.empty };
+      values.set(one.field, one.value);
+    }
+    if (values.size !== ask.fields.length || ask.fields.some((field) => !values.get(field.id)))
+      return { kept: false, words: words.empty };
+    // Spent before anything is written, so a second Keep in flight does nothing.
+    for (const [id, one] of this.offers) if (one.group === offer.group) this.offers.delete(id);
+    const buffers = new Map(
+      ask.fields.map((field) => [field.id, Buffer.from(values.get(field.id) ?? "")]),
+    );
+    values.clear();
+    const kept: KeptSecret[] = [];
+    const left: WaitingSecretAsk["fields"] = [];
+    let trouble: "locked" | "recovery" | "unavailable" | "stale" | undefined;
+    try {
+      const owner = await this.ready(true).catch(() => undefined);
+      const state = owner
+        ? await owner.protected.status().catch(() => "unavailable" as const)
+        : null;
+      if (!owner || state !== "available") {
+        trouble =
+          state === "locked"
+            ? "locked"
+            : state === "lost" || state === "tampered"
+              ? "recovery"
+              : "unavailable";
+        // As Unlock does: only an owner that is itself no longer open is let go,
+        // never one whose custody locked while its uses still wait or run.
+        if (owner && owner.protected.availability !== "available") this.owner = undefined;
+      } else {
+        const metadata = await owner.protected.metadata();
+        const taken = [
+          ...metadata.map((entry) => entry.ref),
+          ...(owner.protected.authority()?.rules.map((rule) => rule.secret) ?? []),
+          ...owner.protected.history().flatMap((item) => item.secrets),
+        ];
+        for (const field of ask.fields) {
+          if (trouble) {
+            left.push(field);
+            continue;
+          }
+          const value = buffers.get(field.id) as Buffer;
+          const ref = field.replaces?.ref ?? newReference(field.name, taken);
+          taken.push(ref);
+          const written = await owner.protected
+            .putSecret(ref, field.name, value, {
+              discoverable: true,
+              expectedVersion: field.replaces?.version ?? 0,
+              expectedRevision: field.replaces?.revision ?? null,
+              ...(field.place ? { environment: field.place } : {}),
+            })
+            .catch(() => undefined);
+          if (written) {
+            kept.push({
+              ref: written.ref,
+              name: field.name,
+              place: field.place,
+              version: written.version,
+            });
+            continue;
+          }
+          if (!field.replaces) {
+            trouble = "unavailable";
+            left.push(field);
+            continue;
+          }
+          // What it replaces changed since the card asked: the card names its current version.
+          const current = (await owner.protected.metadata()).find(
+            (entry) => entry.ref === field.replaces?.ref && entry.discoverable,
+          );
+          trouble = "stale";
+          if (current)
+            left.push({
+              ...field,
+              replaces: { ref: current.ref, version: current.version, revision: current.revision },
+            });
+        }
+      }
+    } catch {
+      trouble = "unavailable";
+    } finally {
+      for (const buffer of buffers.values()) buffer.fill(0);
+      buffers.clear();
+    }
+    if (!trouble) {
+      this.endAsk(ask.key, { ask: ask.id, state: "kept", secrets: [...ask.already, ...kept] });
+      return { kept: true };
+    }
+    // What was kept stays kept; the card asks again only for the rest.
+    const remaining = kept.length || trouble === "stale" ? left : ask.fields;
+    if (remaining.length === 0) {
+      // Everything it replaced is gone: nothing is left to ask for.
+      this.endAsk(
+        ask.key,
+        kept.length
+          ? { ask: ask.id, state: "kept", secrets: [...ask.already, ...kept] }
+          : { ask: ask.id, state: "withdrawn", why: SECRET_ASK_WORDS.noSuchSecret },
+      );
+      return kept.length ? { kept: true } : { kept: false, words: SECRET_ASK_CARD_WORDS.gone };
+    }
+    const next: WaitingSecretAsk = {
+      ...ask,
+      fields: remaining,
+      already: [...ask.already, ...kept],
+    };
+    this.asks.put(next);
+    this.raiseAsk(next, trouble, true);
+    this.options.changed();
+    return { kept: false, words: SECRET_ASK_CARD_WORDS[trouble] };
   }
 
   /** Core composition supplies executable adapters, never data from a renderer or agent. */

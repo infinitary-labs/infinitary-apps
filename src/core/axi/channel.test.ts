@@ -13,7 +13,12 @@ import type { TaskFiles } from "../files/taskFiles";
 import { hostEnv } from "../hostEnv";
 import type { IntegrationAnswer, TaskIntegrations } from "../integrations";
 import { JobManager } from "../jobs/jobManager";
-import { SECRETS_CHECK_WORDS, SECRETS_ELSEWHERE_HELP } from "../secrets/commandWords";
+import type { SecretAskInput } from "../secrets/asks";
+import {
+  SECRET_ASK_WORDS,
+  SECRETS_CHECK_WORDS,
+  SECRETS_ELSEWHERE_HELP,
+} from "../secrets/commandWords";
 import { type Injection, SECRETS_COMMAND, SecretRequests } from "../secrets/requests";
 import { forkChildProcess } from "../sql/forkChildProcess";
 import { BROWSER_COMMANDS } from "./browserCommands";
@@ -868,6 +873,87 @@ describe("the Secrets command's disposable operation proof", () => {
       receipt: { state: "unavailable" },
       help: SECRETS_CHECK_WORDS.refused,
     });
+  });
+
+  // Intent: INF-4239, direction A: a crewmate asks by name, place and reason,
+  // never a value, and hears at once that the card waits; several secrets ask
+  // on one card; cancel withdraws the ask by the id it asked with.
+  it("asks to keep secrets by name and place, and cancels the ask by its id", async () => {
+    const channel = await openChannel();
+    const owner = new SecretRequests({
+      list: async () => [],
+      authenticate: async () => false,
+      prepare: async () => undefined,
+    });
+    const asked: SecretAskInput[] = [];
+    const waiting = new Set<string>();
+    const grant = channel.grant("asking-secrets", {
+      secrets: {
+        list: owner.list.bind(owner),
+        receipts: owner.receipts.bind(owner),
+        check: owner.check.bind(owner),
+        inject: owner.inject.bind(owner),
+        cancel: owner.cancel.bind(owner),
+        status: owner.status.bind(owner),
+        ask: async (input) => {
+          asked.push(input);
+          waiting.add(input.id);
+          return { ask: input.id, state: "waiting" };
+        },
+        cancelAsk: (id) => waiting.delete(id),
+      },
+    });
+    const run = (args: string[]) => shell(grant, args, {}, SECRETS_COMMAND);
+    const one = await run([
+      "ask",
+      "--name",
+      "Stripe test key",
+      "--place",
+      "Test",
+      "--reason",
+      "Charge the test card",
+      "--id",
+      "stripe",
+    ]);
+    expect(one.exitCode).toBe(0);
+    expect(decode(one.stdout)).toEqual({
+      ask: { ask: "stripe", state: "waiting" },
+      help: SECRET_ASK_WORDS.waiting,
+    });
+    const many = await run([
+      "ask",
+      "--secrets",
+      '[{"name":"Webhook secret"},{"replace":"stripe-old"}]',
+      "--reason",
+      "Rotate the webhook",
+      "--id",
+      "rotate",
+    ]);
+    expect(many.exitCode).toBe(0);
+    expect(asked).toEqual([
+      {
+        id: "stripe",
+        reason: "Charge the test card",
+        secrets: [{ name: "Stripe test key", place: "Test" }],
+      },
+      {
+        id: "rotate",
+        reason: "Rotate the webhook",
+        secrets: [{ name: "Webhook secret" }, { replace: "stripe-old" }],
+      },
+    ]);
+    // No reason, a name beside a replacement, or a value in the list is refused before asking.
+    for (const args of [
+      ["ask", "--name", "Key", "--id", "a"],
+      ["ask", "--name", "Key", "--replace", "stripe-old", "--reason", "r", "--id", "a"],
+      ["ask", "--secrets", '[{"name":"Key","value":"sk_test_x"}]', "--reason", "r", "--id", "a"],
+    ])
+      expect((await run(args)).exitCode).toBe(2);
+    expect(asked).toHaveLength(2);
+    expect(decode((await run(["cancel", "stripe"])).stdout)).toEqual({
+      ask: { ask: "stripe", state: "withdrawn" },
+    });
+    expect(waiting.has("stripe")).toBe(false);
   });
 
   it("gives a task on another computer the catalog alone: list and show answer, every use is unavailable", async () => {

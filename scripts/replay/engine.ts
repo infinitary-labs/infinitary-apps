@@ -335,6 +335,7 @@ const RECORDED_ANSWER_TOOLS = new Set([
   "record_knowledge",
   "integrations",
   "use_integration",
+  "ask_secret",
 ]);
 
 /** A successful call to one of these is the Firstmate acting on a wake. */

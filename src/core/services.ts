@@ -1252,10 +1252,14 @@ export async function createServices(
     raise: (card) => supervisor.cards.hostCards.raiseHostCard(card),
     withdraw: (id, reason) => supervisor.cards.hostCards.withdrawHostCard(id, reason),
     settled: (taskId, receipt) => supervisor.steer.secretsUseEnded(taskId, receipt),
+    ...(secretHost ? { asksFile: join(paths.userData, "secret-asks.json") } : {}),
+    asked: (taskId, ended) => supervisor.steer.secretsAskEnded(taskId, ended),
+    taskOpen: (taskId) => !TaskService.isClosed(tasks.get(taskId) ?? { status: "dropped" }),
     taskTitle: (taskId) => tasks.get(taskId)?.title,
     changed: () => emit("inf:secrets:changed", {}),
   });
   supervisor.hostOps.setSecretsDecision((offer) => secrets.decide(offer));
+  secrets.resumeAsks(); // An ask that waited through a restart comes back with a new pass.
   integrationSecrets = secrets;
   for (const broker of integrationBrokers.splice(0)) secrets.registerBroker(broker);
   // A Google sign-in an earlier version kept in its own file, and the keys an
@@ -1546,6 +1550,7 @@ export async function createServices(
     onCaptainTurnAccepted: () => onCaptainTurnAccepted(),
     forges: forges.access,
     integrations,
+    secretAsks: secrets.firstMateAsks(),
     // Diagnostics' turn events: who the turn answered and, failed, its kind.
     onTurnSettled: (outcome) =>
       sharing.record(

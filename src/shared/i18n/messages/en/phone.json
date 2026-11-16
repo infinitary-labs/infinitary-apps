@@ -502,6 +502,8 @@
   "phoneSceneWaitingBatchCheck": "Waiting for the batch check",
   "phoneSceneWaitingChecks": "Waiting for checks",
   "phoneSceneWorking": "Working",
+  "phoneSecretsAskFields": "Type each secret",
+  "phoneSecretsAskNote": "Each value goes straight into Secrets. Infinitary never shows it again, and neither the first mate nor the crew gets it.",
   "phoneSecretsGiveOnce": "Give {secrets} to {recipient} once",
   "phoneSecretsRefusedDenied": "This request was denied. Nothing was allowed.",
   "phoneSecretsRefusedExpired": "This request expired. Your decision was not accepted.",

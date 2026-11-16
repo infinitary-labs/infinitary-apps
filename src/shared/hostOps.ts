@@ -16,7 +16,11 @@
  * start a charted task now (`arg` = task id), answer a task's cost limit
  * card - Allow more, No limit for this task or Stop here (`arg` = task id;
  * docs/usage.md, "The cost limit") - and send a message
- * Firstmate never answered once more (`arg` = the message's id). `plan-queue`
+ * Firstmate never answered once more (`arg` = the message's id). Secrets'
+ * own cards spend a one-time pass with `secrets-decision` (`arg` = the pass)
+ * and keep what an agent asked for with `secrets-keep` (`arg` = the fields the
+ * window draws as JSON, `SecretKeepOffer`): the window sends that one with the
+ * typed values on `inf:secrets:keep`, never as a card choice. `plan-queue`
  * and `keep-delivery` are retired: a card saved by an earlier version may
  * still carry one, and it does nothing. An effect is
  * never declared to a body's frame, so only the captain's click on the
@@ -53,4 +57,5 @@ export const HOST_OPS = [
   "lift-cost-limit",
   "stop-at-cost",
   "secrets-decision",
+  "secrets-keep",
 ] as const;

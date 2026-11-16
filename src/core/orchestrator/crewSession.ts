@@ -258,12 +258,13 @@ export function crewmateSessionSpec(
       // Secrets uses run here, or there when the home decides them for that
       // computer (docs/secrets.md, "On a computer that runs work"); a computer
       // without them lists the catalog alone.
-      (spec.secrets === true && spec.shell !== undefined && spec.machineId === LOCAL_MACHINE_ID) ||
-        (spec.secretUses !== undefined && spec.machineId !== LOCAL_MACHINE_ID)
+      spec.secrets === true && spec.shell !== undefined && spec.machineId === LOCAL_MACHINE_ID
         ? "use"
-        : spec.secretsCatalog !== undefined && spec.machineId !== LOCAL_MACHINE_ID
-          ? "list"
-          : undefined,
+        : spec.secretUses !== undefined && spec.machineId !== LOCAL_MACHINE_ID
+          ? "use-there"
+          : spec.secretsCatalog !== undefined && spec.machineId !== LOCAL_MACHINE_ID
+            ? "list"
+            : undefined,
       spec.stops === true && (spec.shell !== undefined || spec.machineId !== LOCAL_MACHINE_ID),
       // The captain's language as this Mac's app speaks it when the session opens.
       crewmateLanguage(),

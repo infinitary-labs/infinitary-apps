@@ -9,6 +9,7 @@
 
 import type { FiledAfterMergeStep, FirstmateAfterMergeStep } from "@shared/afterMerge";
 import { formatDurationShort } from "@shared/quotaSignals";
+import type { SecretAskEnded } from "../secrets/asks";
 import type { EndedUseReceipt } from "../secrets/requests";
 import type { SettleRefusal } from "../tasks/taskGraph";
 import type { KindWords, TypedWake, WakeFacts, WakeTask } from "./wakes";
@@ -16,6 +17,8 @@ import type { KindWords, TypedWake, WakeFacts, WakeTask } from "./wakes";
 /** The facts of a change's delivery wakes. */
 export type DeliveryFacts =
   | { kind: "secrets-use-ended"; receipt: EndedUseReceipt }
+  /** An ask to keep a secret ended (docs/secrets.md, "Asking to keep a secret"): names and references, never a value. */
+  | { kind: "secrets-ask-ended"; ended: SecretAskEnded }
   | {
       /** A settle the captain chose on a card, run by the host, and its outcome. */
       kind: "settled";
@@ -541,6 +544,7 @@ function writeAnsweredWords(facts: Omit<WriteAnswered, "kind" | "also">): string
 export const DELIVERY_WORDS: KindWords<DeliveryFacts> = {
   "secrets-use-ended": (facts) =>
     `[fm-op] ${SECRETS_USE_ENDED_LEAD} ${facts.receipt.request}: ${facts.receipt.state}.${facts.receipt.exitCode === undefined ? "" : ` The recipient exited with status ${facts.receipt.exitCode}.`} This is a receipt, not permission for another use or an external action.${facts.receipt.state === "unknown" ? " Do not repeat this request; reconcile what happened before depending on it." : ""}`,
+  "secrets-ask-ended": (facts) => secretsAskEndedWords(facts.ended),
   settled: (facts) =>
     `[fm-op] the captain chose ${facts.chose} for task ${facts.task.id} "${facts.task.title}"; the host settled it and the outcome was: ${facts.outcome}${facts.unseen ? ` ${UNSEEN_STOP_WORDS}` : ""}${facts.afterMerge?.length || facts.firstmateSteps?.length ? ` ${afterMergeWords(facts.afterMerge ?? [], facts.firstmateSteps)}` : ""}${facts.refusal ? `\n\`\`\`json\n${JSON.stringify(facts.refusal, null, 2)}\n\`\`\`` : ""}`,
   "contribution-updated": (facts) =>
@@ -580,3 +584,20 @@ export const DELIVERY_WORDS: KindWords<DeliveryFacts> = {
 
 /** Protected-use completion, metadata only; its receipt grants no further authority. */
 export const SECRETS_USE_ENDED_LEAD = "Secrets request";
+/** The lead of every ask-ended wake. */
+export const SECRETS_ASK_ENDED_LEAD = "Your ask to keep a secret";
+
+/** What the asker hears once when its ask ends: each kept secret's name, place, reference and version, never a value. */
+function secretsAskEndedWords(ended: SecretAskEnded): string {
+  const lead = `[fm-op] ${SECRETS_ASK_ENDED_LEAD} ${ended.ask}`;
+  if (ended.state === "not-kept")
+    return `${lead}: the captain chose not to keep it, and nothing was kept. Do not ask again for the same secret unless the captain says to; say in your answer or report that the work still needs it.`;
+  if (ended.state === "withdrawn") return `${lead} ended with nothing kept: ${ended.why}`;
+  const kept = ended.secrets
+    .map(
+      (one) =>
+        `${one.name}${one.place ? ` (place ${one.place})` : ""} as reference ${one.ref}, version ${one.version}`,
+    )
+    .join("; ");
+  return `${lead}: kept in Secrets: ${kept}. Use a secret by its reference; each use still asks the captain unless a saved decision allows it. You never receive a value.`;
+}

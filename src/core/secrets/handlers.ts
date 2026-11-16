@@ -19,5 +19,6 @@ export function secretsHandlers(services: Pick<CoreServices, "secrets">): Secret
     "inf:secrets:approvals": ({ device }) => services.secrets.approvals(device),
     "inf:secrets:enroll": (input) => services.secrets.enroll(input),
     "inf:secrets:decide": (input) => services.secrets.decideRemotely(input),
+    "inf:secrets:keep": (input) => services.secrets.keep(input),
   };
 }

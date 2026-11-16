@@ -1520,6 +1520,8 @@
 "phoneSceneWaitingBatchCheck" = "Aguardando a verificação em lote";
 "phoneSceneWaitingChecks" = "Aguardando as verificações";
 "phoneSceneWorking" = "Trabalhando";
+"phoneSecretsAskFields" = "Digite cada segredo";
+"phoneSecretsAskNote" = "Cada valor vai direto para Segredos. O Infinitary nunca o mostra de novo, e nem o imediato nem a tripulação o recebem.";
 "phoneSecretsGiveOnce" = "Dar %2$@ a %1$@ uma vez";
 "phoneSecretsRefusedDenied" = "Este pedido foi negado. Nada foi permitido.";
 "phoneSecretsRefusedExpired" = "Este pedido expirou. Sua decisão não foi aceita.";
@@ -1846,6 +1848,8 @@
 "secretsArchiveOpenTitle" = "Escolha o arquivo criptografado de Segredos";
 "secretsArchiveSaveMessage" = "Escolha um arquivo novo. Arquivos existentes não serão substituídos.";
 "secretsArchiveSaveTitle" = "Salvar o arquivo criptografado de Segredos";
+"secretsAskFields" = "Digite cada segredo";
+"secretsAskNote" = "Cada valor vai direto para Segredos. O Infinitary nunca o mostra de novo, e nem o imediato nem a tripulação o recebem.";
 "secretsDeny" = "Não permitir";
 "secretsHistoryExportTitle" = "Exportar o histórico de Segredos";
 "secretsKeyOpenTitle" = "Escolha a chave de recuperação separada dele";

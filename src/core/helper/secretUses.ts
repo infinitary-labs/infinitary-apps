@@ -104,7 +104,7 @@ export class SecretUsesThere implements SecretsCommand {
       const receipt = await known.receipt;
       return this.receiptsSeen.get(receipt.request) ?? receipt;
     }
-    const asked = this.ask(copied);
+    const asked = this.askHome(copied);
     this.intents.set(copied.id, { digest, receipt: asked });
     // A use that could not be asked may be asked again under the same intent.
     asked.catch(() => this.intents.delete(copied.id));
@@ -121,7 +121,7 @@ export class SecretUsesThere implements SecretsCommand {
     return this.seen("receipt" in answer ? answer.receipt : null);
   }
 
-  private async ask(input: Injection): Promise<UseReceipt> {
+  private async askHome(input: Injection): Promise<UseReceipt> {
     if (!input.cwd) return { request: input.id, state: "unavailable" };
     const runDir = join(this.options.runsDir, randomUUID());
     const recipient = await this.bind(input, runDir).catch(() => undefined);

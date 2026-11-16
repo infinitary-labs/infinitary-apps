@@ -509,6 +509,7 @@ describe("ipc contract", () => {
       "inf:secrets:approvals",
       "inf:secrets:decide",
       "inf:secrets:enroll",
+      "inf:secrets:keep",
       "inf:settings:appearance:get",
       "inf:settings:cost-limit:get",
       "inf:settings:cost-limit:set",
@@ -668,6 +669,7 @@ describe("ipc contract", () => {
       "inf:secrets:approvals",
       "inf:secrets:decide",
       "inf:secrets:enroll",
+      "inf:secrets:keep",
     ]);
   });
 });

@@ -483,6 +483,8 @@
   "phoneSceneWaitingBatchCheck": "一括チェックを待っています",
   "phoneSceneWaitingChecks": "チェックを待っています",
   "phoneSceneWorking": "作業中",
+  "phoneSecretsAskFields": "シークレットをそれぞれ入力",
+  "phoneSecretsAskNote": "各値はそのままシークレットに保管されます。Infinitary が再び表示することはなく、一等航海士にも乗組員にも渡りません。",
   "phoneSecretsGiveOnce": "{secrets} を {recipient} に一度だけ渡す",
   "phoneSecretsRefusedDenied": "このリクエストは拒否されました。何も許可されていません。",
   "phoneSecretsRefusedExpired": "このリクエストは期限切れです。判断は受け付けられませんでした。",

@@ -10709,7 +10709,8 @@
                               "allow-cost",
                               "lift-cost-limit",
                               "stop-at-cost",
-                              "secrets-decision"
+                              "secrets-decision",
+                              "secrets-keep"
                             ]
                           },
                           "arg": {
@@ -12104,7 +12105,8 @@
                                 "allow-cost",
                                 "lift-cost-limit",
                                 "stop-at-cost",
-                                "secrets-decision"
+                                "secrets-decision",
+                                "secrets-keep"
                               ]
                             },
                             "arg": {
@@ -47687,6 +47689,68 @@
         ]
       }
     },
+    "inf:secrets:keep": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "pass": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "values": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "field": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 32
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "field",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "pass",
+              "values"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "kept": {
+            "type": "boolean"
+          },
+          "words": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kept"
+        ]
+      }
+    },
     "inf:secrets:shown": {
       "effect": "read",
       "reach": "home",
@@ -58926,7 +58990,8 @@
                                     "allow-cost",
                                     "lift-cost-limit",
                                     "stop-at-cost",
-                                    "secrets-decision"
+                                    "secrets-decision",
+                                    "secrets-keep"
                                   ]
                                 },
                                 "arg": {
@@ -72664,7 +72729,8 @@
                               "allow-cost",
                               "lift-cost-limit",
                               "stop-at-cost",
-                              "secrets-decision"
+                              "secrets-decision",
+                              "secrets-keep"
                             ]
                           },
                           "arg": {

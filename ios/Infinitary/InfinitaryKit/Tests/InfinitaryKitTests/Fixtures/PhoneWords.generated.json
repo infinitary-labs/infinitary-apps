@@ -1039,6 +1039,8 @@
   {"said":{"m":"secretsArchiveOpenTitle"},"words":"Choose the encrypted Secrets archive"},
   {"said":{"m":"secretsArchiveSaveMessage"},"words":"Choose a new file. Existing archives will not be replaced."},
   {"said":{"m":"secretsArchiveSaveTitle"},"words":"Save encrypted Secrets archive"},
+  {"said":{"m":"secretsAskFields"},"words":"Type each secret"},
+  {"said":{"m":"secretsAskNote"},"words":"Each value goes straight into Secrets. Infinitary never shows it again, and neither the first mate nor the crew gets it."},
   {"said":{"m":"secretsDeny"},"words":"Don't allow"},
   {"said":{"m":"secretsHistoryExportTitle"},"words":"Export Secrets history"},
   {"said":{"m":"secretsKeyOpenTitle"},"words":"Choose its separate recovery key"},

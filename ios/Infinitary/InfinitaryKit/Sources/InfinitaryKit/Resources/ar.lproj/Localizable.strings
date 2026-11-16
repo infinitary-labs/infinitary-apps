@@ -1520,6 +1520,8 @@
 "phoneSceneWaitingBatchCheck" = "في انتظار فحص الدفعة";
 "phoneSceneWaitingChecks" = "في انتظار الفحوصات";
 "phoneSceneWorking" = "يعمل";
+"phoneSecretsAskFields" = "اكتب كل سر";
+"phoneSecretsAskNote" = "تذهب كل قيمة مباشرةً إلى الأسرار. لا يعرضها Infinitary مرة أخرى، ولا يحصل عليها نائب القبطان ولا الطاقم.";
 "phoneSecretsGiveOnce" = "إعطاء %2$@ إلى %1$@ مرة واحدة";
 "phoneSecretsRefusedDenied" = "رُفض هذا الطلب. لم يُسمح بشيء.";
 "phoneSecretsRefusedExpired" = "انتهت صلاحية هذا الطلب. لم يُقبل قرارك.";
@@ -1846,6 +1848,8 @@
 "secretsArchiveOpenTitle" = "اختيار أرشيف الأسرار المشفّر";
 "secretsArchiveSaveMessage" = "اختر ملفًا جديدًا. لن تُستبدل الأرشيفات الموجودة.";
 "secretsArchiveSaveTitle" = "حفظ أرشيف الأسرار المشفّر";
+"secretsAskFields" = "اكتب كل سر";
+"secretsAskNote" = "تذهب كل قيمة مباشرةً إلى الأسرار. لا يعرضها Infinitary مرة أخرى، ولا يحصل عليها نائب القبطان ولا الطاقم.";
 "secretsDeny" = "عدم السماح";
 "secretsHistoryExportTitle" = "تصدير سجل الأسرار";
 "secretsKeyOpenTitle" = "اختيار مفتاح الاسترداد المنفصل الخاص به";

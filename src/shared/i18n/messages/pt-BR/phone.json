@@ -521,6 +521,8 @@
   "phoneSceneWaitingBatchCheck": "Aguardando a verificação em lote",
   "phoneSceneWaitingChecks": "Aguardando as verificações",
   "phoneSceneWorking": "Trabalhando",
+  "phoneSecretsAskFields": "Digite cada segredo",
+  "phoneSecretsAskNote": "Cada valor vai direto para Segredos. O Infinitary nunca o mostra de novo, e nem o imediato nem a tripulação o recebem.",
   "phoneSecretsGiveOnce": "Dar {secrets} a {recipient} uma vez",
   "phoneSecretsRefusedDenied": "Este pedido foi negado. Nada foi permitido.",
   "phoneSecretsRefusedExpired": "Este pedido expirou. Sua decisão não foi aceita.",

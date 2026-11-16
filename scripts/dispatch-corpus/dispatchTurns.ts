@@ -93,6 +93,11 @@ const BOOKKEEPING_TOOLS = ["close_card"];
  */
 const AUXILIARY_TOOLS = ["emote"];
 export const CARD_TOOL = "emit_card";
+/**
+ * The first mate's ask to keep a secret (src/core/pi/secretTools.ts): the
+ * host raises its own decision card for the captain, so the turn asked.
+ */
+const SECRET_ASK_TOOL = "ask_secret";
 
 /**
  * A turn with no class-bearing tool: reading alone is an answer, withdrawing
@@ -667,6 +672,7 @@ export function inferClassFromNames(names: string[]): DispatchClass | "answer-or
   if (names.some((n) => SETTLE_TOOLS.includes(n))) return "settle";
   if (names.some((n) => STEER_TOOLS.includes(n))) return "steer";
   if (names.some((n) => OPERATE_TOOLS.includes(n))) return "operate";
+  if (names.includes(SECRET_ASK_TOOL)) return "ask";
   if (names.includes(CARD_TOOL)) return "answer-or-ask";
   return fallbackClass(names);
 }
@@ -695,8 +701,9 @@ export function classifyTurn(
   if (names.some((n) => SETTLE_TOOLS.includes(n))) classes.push("settle");
   if (names.some((n) => STEER_TOOLS.includes(n))) classes.push("steer");
   if (names.some((n) => OPERATE_TOOLS.includes(n))) classes.push("operate");
+  if (names.includes(SECRET_ASK_TOOL)) classes.push("ask");
   const fromTools = classes.length;
-  if (cardKinds.includes("decision")) classes.push("ask");
+  if (cardKinds.includes("decision") && !classes.includes("ask")) classes.push("ask");
   // `live-prototype` is retired, but a recorded session still names it and a
   // corpus row is only as classifiable as the history it was taken from.
   if (cardKinds.some((kind) => kind === "note" || kind === "live-prototype")) classes.push("answer");

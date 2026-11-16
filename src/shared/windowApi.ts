@@ -129,6 +129,8 @@ import type { KeptOutsideData, OutsideDataDeleted } from "./savedOutsideData";
 import type {
   SecretAction,
   SecretEntryInput,
+  SecretKeep,
+  SecretKeepInput,
   SecretRehearsal,
   SecretRehearsalInput,
   SecretsView,
@@ -164,6 +166,8 @@ export type FirstmateApi = {
     entry: (input: SecretEntryInput) => Promise<SecretsView>;
     action: (input: SecretAction) => Promise<SecretsView>;
     rehearse: (input: SecretRehearsalInput) => Promise<SecretRehearsal>;
+    /** Keep on an ask card: its one-time pass and the values typed into its masked fields. */
+    keep: (input: SecretKeepInput) => Promise<SecretKeep>;
     exportHistory: () => Promise<{ saved: boolean }>;
     onChange: (listener: () => void) => () => void;
   };

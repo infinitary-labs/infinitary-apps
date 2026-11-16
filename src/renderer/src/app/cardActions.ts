@@ -28,6 +28,7 @@ import {
 import { openedSection } from "@shared/integrations";
 import type { FrameAnswers, FrameBox } from "@shared/plugins/bridge";
 import { isPreparing } from "../attachments/intake";
+import { clearSecretValues, readSecretValues } from "../cards/SecretAskFields";
 import type { ImageAttachment } from "../design";
 import { changesOff, changesOffWords, doneThereWords, isView } from "../devices/viewWords";
 import { takePictures } from "./composer";
@@ -165,6 +166,37 @@ export function leaveCard(
 }
 
 export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
+  /**
+   * Keep on an ask card: reads its masked fields now and sends them with the
+   * button's one-time pass. Infinitary withdraws the card once everything is
+   * kept; otherwise the card stays and shows why, with what was typed still
+   * in its fields for another Keep.
+   */
+  const keepSecrets = async (cardId: string, pass: string): Promise<void> => {
+    const request = { actionId: pass };
+    set((s) => ({
+      pendingCardActions: { ...s.pendingCardActions, [cardId]: request },
+      cardActionErrors: withoutKey(s.cardActionErrors, cardId),
+    }));
+    try {
+      const answer = await window.infinitary.secrets.keep({
+        pass,
+        values: readSecretValues(cardId) ?? [],
+      });
+      if (answer.kept) clearSecretValues(cardId);
+      else if (answer.words) {
+        const words = answer.words;
+        set((s) => ({ cardActionErrors: { ...s.cardActionErrors, [cardId]: words } }));
+      }
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : String(caught);
+      set((s) => ({ cardActionErrors: { ...s.cardActionErrors, [cardId]: message } }));
+    } finally {
+      if (get().pendingCardActions[cardId] === request) {
+        set((s) => ({ pendingCardActions: withoutKey(s.pendingCardActions, cardId) }));
+      }
+    }
+  };
   return {
     pendingCardActions: {},
     cardActionErrors: {},
@@ -201,6 +233,14 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         // Devices included (docs/view.md): nothing is sent, so the card stays
         // on both computers and says what to do.
         set((s) => ({ cardActionErrors: { ...s.cardActionErrors, [cardId]: there } }));
+        return;
+      }
+      if (chosen?.effect?.kind === "host" && chosen.effect.op === "secrets-keep") {
+        // An ask to keep a secret: the values go from its masked fields with
+        // the button's pass, in their own request, never as a card answer
+        // (docs/secrets.md, "Asking to keep a secret").
+        if (source !== "chrome") return;
+        await keepSecrets(cardId, actionId);
         return;
       }
       const request = { actionId };

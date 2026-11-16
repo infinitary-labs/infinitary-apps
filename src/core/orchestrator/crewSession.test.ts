@@ -16,7 +16,11 @@ import {
 } from "../paths";
 import { languageCompletionHeadings } from "../prompts/captainLanguage";
 import { localTimeZoneName, timeZoneFact } from "../prompts/timeZone";
-import { CREWMATE_SECRETS_CATALOG_LINE, CREWMATE_SECRETS_LINE } from "../secrets/commandWords";
+import {
+  CREWMATE_SECRETS_CATALOG_LINE,
+  CREWMATE_SECRETS_LINE,
+  CREWMATE_SECRETS_THERE_LINE,
+} from "../secrets/commandWords";
 import { answersDir, savedAnswerText } from "../session/answerFiles";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import { crewmateContractStamp, crewmateRestartText, crewmateSessionSpec } from "./crewSession";
@@ -94,6 +98,31 @@ it.each(["pi", "claude"] as const)(
     expect(open(true, shell, LOCAL_MACHINE_ID, catalog)).not.toContain(
       CREWMATE_SECRETS_CATALOG_LINE,
     );
+  },
+);
+
+it.each(["pi", "claude"] as const)(
+  "a %s session on a computer that runs work is never told to ask for a secret its command cannot ask",
+  (backend) => {
+    // INF-4248's review: that computer's command takes uses but offers no ask, so its crewmate names
+    // the secret in its report instead of hearing a false "Secrets is not offered".
+    const root = scratchDir("crew-secrets-there-");
+    const unused = async () => {
+      throw new Error("No use is asked while the prompt is built.");
+    };
+    const base = crewmateSessionSpec(
+      appPathsFor(root),
+      {
+        machineId: "work-computer",
+        taskId: "secrets-there",
+        cwd: root,
+        secretUses: { use: unused, take: unused, gone: () => undefined },
+      },
+      backend === "pi" ? fakeBinding("test-account") : { backend, accountId: "test-account" },
+    ).instructions.base;
+    expect(base).toContain(CREWMATE_SECRETS_THERE_LINE);
+    expect(base).not.toContain(CREWMATE_SECRETS_LINE);
+    expect(base).not.toContain("run `ask`");
   },
 );
 

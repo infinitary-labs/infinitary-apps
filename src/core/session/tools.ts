@@ -783,6 +783,7 @@ export const FIRSTMATE_TOOLS: readonly { name: string; module: string }[] = [
   { name: "record_knowledge", module: "src/core/knowledge/knowledgeTools.ts" },
   { name: "integrations", module: "src/core/pi/integrationTools.ts" },
   { name: "use_integration", module: "src/core/pi/integrationTools.ts" },
+  { name: "ask_secret", module: "src/core/pi/secretTools.ts" },
   { name: "correction_case", module: "src/core/pi/correctionTool.ts" },
   { name: "app_state", module: "src/core/pi/appTools.ts" },
   { name: "app_change", module: "src/core/pi/appTools.ts" },

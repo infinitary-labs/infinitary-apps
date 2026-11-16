@@ -9,6 +9,8 @@ export type InputProps = {
   mono?: boolean;
   size?: "md" | "lg";
   style?: React.CSSProperties;
+  /** The input element itself, for a field whose value is read only when it is sent. */
+  ref?: React.Ref<HTMLInputElement>;
 } & Omit<React.InputHTMLAttributes<HTMLInputElement>, "size" | "style">;
 
 export function Input({

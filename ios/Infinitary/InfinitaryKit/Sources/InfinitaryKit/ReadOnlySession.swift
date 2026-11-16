@@ -972,7 +972,7 @@ public struct PhoneNotice: Equatable, Sendable {
         var reached = false
         var hello: [String: Any] = ["t": "hello", "protocolVersion": PhoneContract.version,
             "as": "view", "viewFloor": PhoneContract.viewFloor, "system": "ios", "spellings": ["inf"], "appVersion": "0.1.0",
-            "changes": [PhoneContract.frameParts, PhoneContract.cardAnnotations, PhoneGoogleWords.signInReturn]]
+            "changes": [PhoneContract.frameParts, PhoneContract.cardAnnotations, PhoneGoogleWords.signInReturn, PhoneContract.secretsAsk]]
         if let epoch { hello["cursor"] = ["epoch": epoch, "seq": sequence] }
         let opened = ContinuousClock.now
         // INF-2668: the connection is cut for silence alone, never because an answer is slow. Quiet for `patience`

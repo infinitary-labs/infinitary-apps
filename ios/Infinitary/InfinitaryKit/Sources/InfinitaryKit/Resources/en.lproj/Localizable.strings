@@ -1520,6 +1520,8 @@
 "phoneSceneWaitingBatchCheck" = "Waiting for the batch check";
 "phoneSceneWaitingChecks" = "Waiting for checks";
 "phoneSceneWorking" = "Working";
+"phoneSecretsAskFields" = "Type each secret";
+"phoneSecretsAskNote" = "Each value goes straight into Secrets. Infinitary never shows it again, and neither the first mate nor the crew gets it.";
 "phoneSecretsGiveOnce" = "Give %2$@ to %1$@ once";
 "phoneSecretsRefusedDenied" = "This request was denied. Nothing was allowed.";
 "phoneSecretsRefusedExpired" = "This request expired. Your decision was not accepted.";
@@ -1846,6 +1848,8 @@
 "secretsArchiveOpenTitle" = "Choose the encrypted Secrets archive";
 "secretsArchiveSaveMessage" = "Choose a new file. Existing archives will not be replaced.";
 "secretsArchiveSaveTitle" = "Save encrypted Secrets archive";
+"secretsAskFields" = "Type each secret";
+"secretsAskNote" = "Each value goes straight into Secrets. Infinitary never shows it again, and neither the first mate nor the crew gets it.";
 "secretsDeny" = "Don't allow";
 "secretsHistoryExportTitle" = "Export Secrets history";
 "secretsKeyOpenTitle" = "Choose its separate recovery key";

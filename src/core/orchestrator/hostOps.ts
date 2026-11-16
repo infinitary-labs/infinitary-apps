@@ -123,6 +123,9 @@ export class HostOps {
       case "secrets-decision":
         if (effect.arg) void this.secretsDecision?.(effect.arg);
         return {};
+      case "secrets-keep":
+        // Its values ride their own request (`inf:secrets:keep`), never a card choice.
+        return {};
       case "confirm-required-action": {
         const [id] = (effect.arg ?? "").split(":");
         if (id && this.core.options.tasks.get(id)?.status === "open")

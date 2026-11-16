@@ -277,6 +277,7 @@ A crewmate's browser on its card is a strip naming Browser, the page's site and 
 A lone or marked card stays; an ordinary reply with another card declares its departure to the core.
 Settings and browser doors name the computer where they must be used and send no action, and so do a Secrets card's own choices, which need the computer's confirmation.
 A Secrets use's approval card instead shows the phone's own Allow once and Deny, which the phone signs or sends itself (`docs/secrets.md`, "Remote decisions").
+An ask to keep a secret draws one masked field per secret above its buttons (`PhoneSecretAsk`, `PhoneCards.swift`): Return moves to the next field and, in the last, keeps; Keep in Secrets sends the values with its pass in their own request (`inf:secrets:keep`), never as a choice, the values stay only in the card's state and are cleared once kept, and Don't keep is sent like any other choice (`docs/secrets.md`, "Asking to keep a secret").
 The host’s saved-sign-in choice needs no local browser page and is sent like any other choice.
 A card its author ended after the captain had seen it stays on Home as the Mac draws it (INF-3071): its chip reads Ended, its thread carries the computer's app line among the messages by when it ended, and its one button and the minus both read Close, which the computer sends as the note's button and the card's close.
 A phone from before ended cards draws the same card as a note whose one button reads Close.

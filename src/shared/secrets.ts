@@ -706,3 +706,101 @@ export function secretUseAnswerOf(pass: string): SecretUseAnswer | undefined {
     ? (kind as SecretUseAnswer)
     : undefined;
 }
+
+/**
+ * One secret an agent asked the captain to keep (docs/secrets.md, "Asking to
+ * keep a secret"): a name, an optional place, and the kept secret it
+ * replaces with the version the card named. Never a value.
+ */
+export const secretAskFieldSchema = z.strictObject({
+  /** The field's id on its card, which the window's Keep names beside each value. */
+  id: z.string().regex(/^[a-z0-9-]{1,32}$/),
+  name: z.string().trim().min(1),
+  place: z.string().optional(),
+  replaces: z
+    .strictObject({ ref: secretRefSchema, version: z.number().int().positive() })
+    .optional(),
+});
+export type SecretAskField = z.infer<typeof secretAskFieldSchema>;
+
+/**
+ * What the ask card's Keep in Secrets button carries as its host effect's
+ * `arg`, as JSON: the fields the window draws, one masked field each. The
+ * button's id is the one-time pass the window's Keep sends.
+ */
+export const secretKeepOfferSchema = z.strictObject({
+  fields: z.array(secretAskFieldSchema).min(1),
+});
+export type SecretKeepOffer = z.infer<typeof secretKeepOfferSchema>;
+
+/** The fields a host card's Keep button offers, or none: an agent's card never draws one. */
+export function secretKeepFields(card: {
+  author: string;
+  actions: readonly { id: string; effect?: unknown }[];
+}): { pass: string; fields: SecretAskField[] } | undefined {
+  if (card.author !== "host") return undefined;
+  for (const action of card.actions) {
+    const effect = action.effect as { kind?: unknown; op?: unknown; arg?: unknown } | undefined;
+    if (effect?.kind !== "host" || effect.op !== "secrets-keep" || typeof effect.arg !== "string")
+      continue;
+    try {
+      const offer = secretKeepOfferSchema.safeParse(JSON.parse(effect.arg));
+      if (offer.success) return { pass: action.id, fields: offer.data.fields };
+    } catch {
+      return undefined;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * The window's Keep on an ask card (`inf:secrets:keep`): its pass and one
+ * value per field. The values go straight to the protected owner and are
+ * zero-filled there; nothing records them.
+ */
+export const secretKeepInputSchema = z.strictObject({
+  pass: z.string().min(1).max(64),
+  values: z.array(z.strictObject({ field: z.string().min(1).max(32), value: z.string() })).min(1),
+});
+export type SecretKeepInput = z.infer<typeof secretKeepInputSchema>;
+/** Whether the values were kept, and the host's words for the card when they were not. */
+export const secretKeepSchema = z.strictObject({
+  kept: z.boolean(),
+  words: z.string().optional(),
+});
+export type SecretKeep = z.infer<typeof secretKeepSchema>;
+
+/** The ask card's own words (INF-4239, direction A). */
+export const SECRET_ASK_CARD_WORDS = {
+  /** Its title names the secrets and who asks, the task's title in quotes. */
+  title: (secrets: string, task: string | null) =>
+    `Keep ${secrets} for ${task ? `“${task}”` : "the first mate"}?`,
+  asked: (task: string | null) =>
+    task
+      ? "Asked by the crewmate on this task, in its own words."
+      : "Asked by the first mate, in its own words.",
+  secret: "Secret",
+  secrets: "Secrets",
+  place: "Place",
+  replaces: (version: number) => `Replaces version ${version} of the secret you keep`,
+  reason: "Its reason",
+  /** What keeping allows, then what it never does. */
+  keeps: (task: string | null, many: boolean) =>
+    `Infinitary keeps ${many ? "them" : "it"} sealed in Secrets. ${task ? "The crewmate" : "The first mate"} gets ${many ? "their names and references" : "its name and reference"}, never ${many ? "the values" : "the value"}. Each use still asks you.`,
+  /** Shown only where the window draws no field: an older window or phone. */
+  elsewhere:
+    "No field shows here? Answer this card in Infinitary on the first mate's computer, or update Infinitary on this one.",
+  keep: "Keep in Secrets",
+  dontKeep: "Don't keep",
+  unlock: "Unlock",
+  openSettings: "Open Settings",
+  /** Above the card's rows when the last Keep could not finish. */
+  locked: "Secrets storage is locked. Unlock it, then keep again.",
+  recovery:
+    "Secrets storage needs recovery before it can keep anything. Open Settings → Secrets to see the options.",
+  unavailable: "Secrets could not keep this now. Nothing was kept; try Keep again.",
+  stale: "This secret changed since the card asked. The card now names its current version.",
+  empty: "Type a value in every field before keeping.",
+  closed: "The task that asked has closed, so nothing was kept.",
+  gone: "This card no longer asks. Nothing was kept.",
+} as const;

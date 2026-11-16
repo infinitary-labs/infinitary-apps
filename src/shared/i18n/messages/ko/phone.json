@@ -483,6 +483,8 @@
   "phoneSceneWaitingBatchCheck": "일괄 검사 기다리는 중",
   "phoneSceneWaitingChecks": "검사 기다리는 중",
   "phoneSceneWorking": "작업 중",
+  "phoneSecretsAskFields": "각 비밀 정보 입력",
+  "phoneSecretsAskNote": "각 값은 바로 비밀 정보에 보관됩니다. Infinitary는 이 값을 다시 보여 주지 않으며, 일등항해사와 선원들도 받지 않습니다.",
   "phoneSecretsGiveOnce": "{recipient}에 {secrets}을(를) 한 번 제공",
   "phoneSecretsRefusedDenied": "이 요청은 거부됐어요. 아무것도 허용하지 않았어요.",
   "phoneSecretsRefusedExpired": "이 요청은 만료됐어요. 결정을 받아들이지 않았어요.",

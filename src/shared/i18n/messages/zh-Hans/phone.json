@@ -483,6 +483,8 @@
   "phoneSceneWaitingBatchCheck": "正在等待批量检查",
   "phoneSceneWaitingChecks": "正在等待检查",
   "phoneSceneWorking": "工作中",
+  "phoneSecretsAskFields": "输入每项机密",
+  "phoneSecretsAskNote": "每个值都直接存入机密。Infinitary 不会再显示它，大副和船员们也拿不到它。",
   "phoneSecretsGiveOnce": "将 {secrets} 提供给 {recipient} 一次",
   "phoneSecretsRefusedDenied": "这个请求已被拒绝。没有允许任何操作。",
   "phoneSecretsRefusedExpired": "这个请求已过期。你的决定没有被接受。",

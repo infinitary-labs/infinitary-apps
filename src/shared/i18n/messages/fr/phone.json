@@ -521,6 +521,8 @@
   "phoneSceneWaitingBatchCheck": "En attente de la vérification groupée",
   "phoneSceneWaitingChecks": "En attente des vérifications",
   "phoneSceneWorking": "Au travail",
+  "phoneSecretsAskFields": "Saisissez chaque secret",
+  "phoneSecretsAskNote": "Chaque valeur va directement dans Secrets. Infinitary ne l’affiche plus jamais, et ni le second ni l’équipage ne la reçoivent.",
   "phoneSecretsGiveOnce": "Donner {secrets} à {recipient} une fois",
   "phoneSecretsRefusedDenied": "Cette demande a été refusée. Rien n’a été autorisé.",
   "phoneSecretsRefusedExpired": "Cette demande a expiré. Votre décision n’a pas été acceptée.",

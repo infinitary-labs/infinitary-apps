@@ -28,12 +28,14 @@ import { createOpenWorkTool } from "../pi/openWorkTool";
 import { createPersonalizeTool } from "../pi/personalizeTool";
 import { createInstallPluginTool } from "../pi/pluginTools";
 import { createScheduleTools } from "../pi/scheduleTools";
+import { createSecretTools } from "../pi/secretTools";
 import {
   createFlagDuplicateTool,
   createFlagMissedEscalationTool,
   createSupervisionLogTool,
 } from "../pi/supervisionTools";
 import { createTaskTools } from "../pi/taskTools";
+import { secretAskCardId } from "../secrets/askCard";
 import { type BoundTool, bindTool } from "../session/tools";
 import type { SettleRefusal } from "../tasks/taskGraph";
 import { TaskService } from "../tasks/taskService";
@@ -628,6 +630,17 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
             ref: fact.card,
           });
         })
+      : []),
+    // Asking to keep a secret: Infinitary's own card is what the turn did.
+    ...(host.options.secretAsks
+      ? createSecretTools(host.options.secretAsks, (askId) =>
+          host.noteDelivery({
+            outcome: "action",
+            kind: "card",
+            tool: "ask_secret",
+            ref: secretAskCardId(null, askId),
+          }),
+        )
       : []),
     createCorrectionTool(async (request) =>
       host.options.correctionCase

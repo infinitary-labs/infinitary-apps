@@ -5,6 +5,7 @@ import type { AskedResponsePolicy, ResponsePolicy } from "@shared/crewResponses"
 import type { CrewSendResult } from "@shared/crewTranscript";
 import { CREWMATE_TAB_VIA, type TASK_CARD_VIA } from "@shared/provenance";
 import { capWithOverflow } from "../overflow";
+import type { SecretAskEnded } from "../secrets/asks";
 import type { EndedUseReceipt } from "../secrets/requests";
 import type { ModelSession } from "../session/session";
 import type { TaskRecord } from "../storage/taskRecords";
@@ -73,6 +74,30 @@ export class CrewSteer {
     ).catch(() => {
       // The durable receipt remains readable; the existing ladder handles an absent conversation.
       console.warn("[crew] Secrets result's steer not delivered.");
+    });
+  }
+
+  /**
+   * An ask to keep a secret ended (docs/secrets.md, "Asking to keep a
+   * secret"): its asker hears once, metadata only. A task's crewmate through
+   * its lane, the first mate (no task) as a wake on its next turn.
+   */
+  secretsAskEnded(taskId: string | null, ended: SecretAskEnded): void {
+    const once = `secrets-ask-ended:${taskId ?? "firstmate"}:${ended.ask}:${this.core.now()}`;
+    const wake = { facts: { kind: "secrets-ask-ended" as const, ended }, once };
+    if (!taskId) {
+      this.core.hooks().notifyOp(wake, "agent");
+      return;
+    }
+    if (this.core.options.inbox.woken(taskId, once)) return;
+    this.core.options.tasks.turns.endIdle(taskId);
+    void this.steerInternal(taskId, wake, {
+      actor: "supervisor",
+      via: "supervision",
+      decision: null,
+      cardId: null,
+    }).catch(() => {
+      console.warn("[crew] Secrets ask's steer not delivered.");
     });
   }
 

@@ -450,10 +450,13 @@ extension UIApplication {
 
 /// What a card's pane keeps across a revision that builds it again (INF-2565): the side it shows, how much of its thread
 /// the captain has read, and the offer the face last showed, so the back marks a revision that came while it showed.
+/// A Keep that could not finish raises its card again with new passes, which builds the pane again, so the words saying
+/// why are kept here too, until the card's next action.
 struct PhoneCardSide: Equatable {
     var turned = false
     var readCount: Int?
     var faceOffer: String?
+    var refused: String?
 }
 
 private struct PhoneCardPane: View {
@@ -477,6 +480,9 @@ private struct PhoneCardPane: View {
     let onTask: (String) -> Void
     let onDraft: (String) -> Void
     @State private var surfaceHeight: CGFloat = 0
+    /// INF-4239 piece 4: what is typed into an ask's masked fields, by field; emptied once kept or the card goes.
+    @State private var secretValues: [String: String] = [:]
+    @FocusState private var secretFocus: String?
     @State private var contentHeight: CGFloat = 0
     /// The body runs on below the choices, so a hairline separates them, as on the Mac.
     @State private var runsOn = false
@@ -626,7 +632,7 @@ private struct PhoneCardPane: View {
 
     /// INF-2553, the captain's pick: an iPhone on its side has no room for the notice pill, so the words about a change
     /// taken back on this card stay on its own line until its next change, as a refused change's did before.
-    private var line: String? { problem ?? (phoneOnItsSide(verticalSize) ? session.takenBack[card.id] : nil) }
+    private var line: String? { problem ?? side.refused ?? (phoneOnItsSide(verticalSize) ? session.takenBack[card.id] : nil) }
 
     private var hasFoot: Bool {
         !card.actions.isEmpty || line != nil || takesReply || factsHost != nil || !messages.isEmpty
@@ -1195,6 +1201,9 @@ private struct PhoneCardPane: View {
                 Text("\(PhoneCardWords.sentWithChoice) \(words)").font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
                     .accessibilityIdentifier("past-sent-words")
             }
+            if pick == nil, !card.isPast, let ask = PhoneSecretAsk.of(card) {
+                secretFields(ask).modifier(PhoneFaceOnly(angle: turnAngle))
+            }
             if pick == nil { choiceRow.modifier(PhoneFaceOnly(angle: turnAngle)) }
         }
         .padding(.horizontal, PhoneTheme.space4).padding(.top, PhoneTheme.space2).padding(.bottom, PhoneTheme.space3)
@@ -1454,12 +1463,63 @@ private struct PhoneCardPane: View {
         let effect = action["effect"]
         return (effect["kind"].text == "open" && !(effect["target"].text == "browser" && effect["savedSignIn"].flag))
             || (effect["kind"].text == "host" && effect["op"].text == "restore-account")
-            // Its other Secrets choices need the person's confirmation on the computer itself.
-            || (effect["kind"].text == "host" && effect["op"].text == "secrets-decision")
+            // Its other Secrets choices need the person's confirmation on the computer itself, an ask's Unlock among
+            // them; an ask's Don't keep, its declining choice, allows nothing, so it is answered here.
+            || (effect["kind"].text == "host" && effect["op"].text == "secrets-decision"
+                && !(PhoneSecretAsk.of(card) != nil && action["declines"].flag))
+    }
+
+    /// INF-4239 piece 4: one masked field per secret an ask names, as the Mac's SecretAskFields draws them. A return
+    /// moves to the next field and, in the last, keeps.
+    private func secretFields(_ ask: PhoneSecretAsk) -> some View {
+        VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+            Text(PhoneMessages.phoneSecretsAskFields()).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
+            ForEach(Array(ask.fields.enumerated()), id: \.element.id) { at, field in
+                let label = field.place.map { "\(field.name) · \($0)" } ?? field.name
+                SecureField(label, text: Binding(
+                    get: { secretValues[field.id] ?? "" },
+                    set: { secretValues[field.id] = $0 }))
+                    .textFieldStyle(.phone).textContentType(.password)
+                    .autocorrectionDisabled().textInputAutocapitalization(.never)
+                    .focused($secretFocus, equals: field.id)
+                    .submitLabel(at + 1 < ask.fields.count ? .next : .done)
+                    .onSubmit {
+                        if at + 1 < ask.fields.count { secretFocus = ask.fields[at + 1].id } else { keepSecrets(ask) }
+                    }
+                    .disabled(host.changing || !session.canChange)
+                    .accessibilityLabel(label)
+                    .accessibilityIdentifier("secret-ask-\(field.id)")
+            }
+            Text(PhoneMessages.phoneSecretsAskNote()).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
+        }
+        .onDisappear { secretValues.removeAll() }
+    }
+
+    /// Sends what was typed with the Keep button's pass in its own request, never as a card choice. The home withdraws
+    /// the card once everything is kept; otherwise the card stays, says why, and keeps the fields for another Keep.
+    private func keepSecrets(_ ask: PhoneSecretAsk) {
+        let values = secretValues
+        perform {
+            pending = ask.pass
+            defer { pending = nil }
+            switch try await ask.keep(values, home: session) {
+            case .kept:
+                secretValues.removeAll()
+                secretFocus = nil
+                host.chosen = true
+                onSent()
+            // The home raises the card again with new passes, so the words outlast this pane on its side.
+            case .refused(let words): side.refused = words
+            }
+        }
     }
 
     private func choose(_ action: PhoneJSON) {
         if onMac(action) { host.notice = PhoneMessages.phoneCardsDoThisOn(computer: session.mac.name); return }
+        if PhoneSecretAsk.isKeep(action) {
+            if let ask = PhoneSecretAsk.of(card) { keepSecrets(ask) }
+            return
+        }
         let id = action["id"].text
         perform {
             pending = id
@@ -1562,6 +1622,7 @@ private struct PhoneCardPane: View {
         let activeHost = host
         guard activeHost.beginChange() else { return }
         problem = nil
+        side.refused = nil
         Task {
             defer { activeHost.busy = false }
             do { try await operation() } catch { problem = error.localizedDescription }

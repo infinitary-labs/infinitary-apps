@@ -32,7 +32,7 @@ import { type HomeUpdate, homeUpdateSchema } from "@shared/homeUpdate";
 import { PROTOCOL_VERSION, VIEW_FLOOR } from "@shared/ipc";
 import { pastEndingWords } from "@shared/pastCard";
 import { RISK_WORDS } from "@shared/risk";
-import { SECRET_DEVICE_WORDS, SECRETS_WORDS } from "@shared/secrets";
+import { SECRET_ASK_CARD_WORDS, SECRET_DEVICE_WORDS, SECRETS_WORDS } from "@shared/secrets";
 import { CONTRACT_CHANGES } from "../../src/core/connection/contractChanges";
 import { REQUIRED_ACTIONS_LEAD } from "../../src/renderer/src/cards/requiredActionsWords";
 import { contributorWords, THREAD_WHO_LABELS } from "../../src/renderer/src/cards/threadWords";
@@ -995,6 +995,71 @@ export async function startPhoneHome(
                 (card) => card.id === `card-secrets-use-${receipt.request}`,
               )?.title ?? null,
           };
+          break;
+        }
+        // INF-4239 piece 4 (docs/secrets.md, "Asking to keep a secret"): the home's task asks to keep one secret, and the
+        // real Secrets controller raises its own card, whose masked field the phone draws.
+        case "POST secrets-ask-keep": {
+          const answer = await core.services.secrets.askToKeep(task.id, {
+            id: "phone-ask",
+            reason: "Charge the test card in the checkout tests",
+            secrets: [{ name: "Stripe test key", place: "Test" }],
+          });
+          result = {
+            state: answer.state,
+            title:
+              (await core.dispatch("inf:cards:list", [])).find((card) =>
+                card.id.startsWith("card-secrets-ask-"),
+              )?.title ?? null,
+          };
+          break;
+        }
+        // A Keep that cannot finish (docs/secrets.md, "Asking to keep a secret"): the task asks to replace the kept
+        // calendar sign-in, which then changes on this computer, so the phone's Keep finds it stale and the card comes
+        // back with new passes and the words saying why.
+        case "POST secrets-ask-replace": {
+          const answer = await core.services.secrets.askToKeep(task.id, {
+            id: "phone-replace",
+            reason: "Renew the calendar sign-in",
+            secrets: [{ replace: "calendar" }],
+          });
+          const shown = (await core.services.secrets.view()).entries.find(
+            (entry) => entry.ref === "calendar",
+          );
+          if (!shown)
+            throw new Error("The calendar sign-in is not kept; POST secrets-ready first.");
+          await core.services.secrets.put({
+            ref: "calendar",
+            label: shown.label,
+            value: `${SECRET_TOKEN}-changed`,
+            expectedVersion: shown.version,
+            expectedRevision: shown.revision,
+            environment: shown.environment,
+          });
+          result = {
+            state: answer.state,
+            title:
+              (await core.dispatch("inf:cards:list", [])).find((card) =>
+                card.id.startsWith("card-secrets-ask-"),
+              )?.title ?? null,
+            stale: SECRET_ASK_CARD_WORDS.stale,
+          };
+          break;
+        }
+        // What Secrets keeps after the phone's Keep: names, places and versions, never a value.
+        case "GET secrets-kept": {
+          const view = await core.services.secrets.view();
+          result = {
+            entries: view.entries.map(({ label, environment, version }) => ({
+              label,
+              environment,
+              version,
+            })),
+            asks: (await core.dispatch("inf:cards:list", [])).filter((card) =>
+              card.id.startsWith("card-secrets-ask-"),
+            ).length,
+          };
+          observations.push({ check: "secrets-kept", result });
           break;
         }
         case "GET secrets-state": {

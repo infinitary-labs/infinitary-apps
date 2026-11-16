@@ -18,6 +18,7 @@ import * as m from "@shared/i18n/messages.generated";
 import { CARD_CHOICE_COMMANDS } from "@shared/keyboard";
 import type { FrameAnswers } from "@shared/plugins/bridge";
 import type { Theme } from "@shared/preferences";
+import { secretKeepFields } from "@shared/secrets";
 import { wordedTitle } from "@shared/welcome";
 import {
   type CSSProperties,
@@ -48,6 +49,7 @@ import {
 import { QuestionStepper } from "../../cards/QuestionStepper";
 import { QUESTION_EVENT } from "../../cards/questionEvent";
 import { revisedLine } from "../../cards/revisedLine";
+import { SecretAskFields } from "../../cards/SecretAskFields";
 import { useBodyEntrance } from "../../cards/SurfaceReveal";
 import { CardTaskKey, KeyedText } from "../../cards/TaskKey";
 import { Button, ResponseCard } from "../../design";
@@ -156,6 +158,8 @@ export function StackedCard({
   style,
 }: StackedCardProps) {
   const pending = useShellStore((s) => s.pendingCardActions[card.id]);
+  // Infinitary's own ask to keep a secret draws its masked fields here (docs/secrets.md).
+  const secretAsk = useMemo(() => secretKeepFields(card), [card]);
   const error = useShellStore((s) => s.cardActionErrors[card.id]);
   // On a Mac controlling another, its buttons are off while that Mac is
   // out of reach (docs/view.md): still Tab stops, whose note says until when.
@@ -553,9 +557,20 @@ export function StackedCard({
         }
         attachment={
           !bare &&
-          ((card.answerDone && !card.noteDone) || card.attachment || card.files?.length) ? (
+          ((card.answerDone && !card.noteDone) ||
+            card.attachment ||
+            card.files?.length ||
+            secretAsk) ? (
             <>
               {card.answerDone && !card.noteDone && <AnswerDone done={card.answerDone} />}
+              {secretAsk && (
+                <SecretAskFields
+                  cardId={card.id}
+                  fields={secretAsk.fields}
+                  disabled={Boolean(pending) || offWords !== null}
+                  onKeep={() => void onAction(secretAsk.pass, "chrome", undefined, undefined, card)}
+                />
+              )}
               {card.files?.length ? <CardFiles cardId={card.id} files={card.files} /> : null}
               {card.attachment && <CardAttachment cardId={card.id} attachment={card.attachment} />}
             </>

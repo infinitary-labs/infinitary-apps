@@ -15,6 +15,7 @@ import {
   lintCrewmateCard,
   lintFirstmateCard,
   NOTE_NAMES_TASK_REFUSAL,
+  PASSWORD_FIELD_REFUSAL,
   steerNotAnswerRefusal,
   unknownRelatedRefusal,
   untaggedNewMarkRefusal,
@@ -238,6 +239,30 @@ describe("lintCardShape (both boundaries)", () => {
     expect(
       lintCardShape(note({ body: '<p>Shipped.</p><textarea name="anything_else"></textarea>' })),
     ).toBeUndefined();
+  });
+
+  it("refuses an agent's own password field and points to the ask to keep a secret (INF-4239)", () => {
+    // The captain on INF-4239: refuse an agent's own card that holds a
+    // password field, and point the agent to the ask.
+    for (const body of [
+      '<p>Paste the key.</p><label>Key <input type="password" name="key"></label>',
+      "<p>Paste the key.</p><INPUT TYPE='Password' name='key'>",
+      '<p>Paste the key.</p><figure><script>const i=document.createElement("input");i.setAttribute("type","password");</script></figure>',
+    ]) {
+      expect(lintCardShape(decision({ body })), body).toBe(PASSWORD_FIELD_REFUSAL);
+    }
+    // Words about passwords, other fields and quoted markup are still allowed.
+    for (const body of [
+      '<p>The form reads:</p><pre><code>&lt;input type="password" name="key"&gt;</code></pre>',
+      "<p>Set <code>type='password'</code> on the field.</p>",
+    ]) {
+      expect(lintCardShape(decision({ body })), body).not.toBe(PASSWORD_FIELD_REFUSAL);
+    }
+    expect(
+      lintCardShape(
+        decision({ body: '<p>Which password manager?</p><input type="text" name="manager">' }),
+      ),
+    ).not.toBe(PASSWORD_FIELD_REFUSAL);
   });
 
   it("names an entity-escaped body as such, never as a shape problem (v2.0)", () => {

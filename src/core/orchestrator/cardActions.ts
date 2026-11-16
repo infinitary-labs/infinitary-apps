@@ -36,6 +36,7 @@ import { VALIDATION_GAPS_FIELD } from "@shared/liveValidation";
 import { heldMerges } from "@shared/mergeHeld";
 import { opensPullRequest } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
+import { SECRET_ASK_CARD_WORDS } from "@shared/secrets";
 import {
   attachmentStanding,
   type TaskBrowserCommandResult,
@@ -336,6 +337,11 @@ export class CardActions {
     // A put-off (INF-3846 piece 3) is kept only on the captain's own click,
     // never a body's script; the frame is never offered it (`bridgeActionIds`).
     if (chosen.until && source !== "chrome") throw new CardChoiceUnavailableError("undeclared");
+    // Keep on an ask card goes with its typed values on `inf:secrets:keep`, never
+    // as a choice: a window or phone that draws no field, an older one, sends it
+    // here, and the card stays up saying where to answer (docs/secrets.md).
+    if (chosen.effect?.kind === "host" && chosen.effect.op === "secrets-keep")
+      throw new Error(SECRET_ASK_CARD_WORDS.elsewhere);
     // A frame value belongs only to a frame reply, never a host effect; a
     // footer click's value is only ever its answers.
     let valueJson: string | undefined;

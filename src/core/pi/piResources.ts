@@ -24,7 +24,11 @@ import { FLEET_WORK } from "../prompts/fleetWork";
 import { PUBLIC_WRITING } from "../prompts/publicWriting";
 import { RIGOR_SAFETY } from "../prompts/validationResources";
 import { deliveryGuide, namingGuide, testingGuide } from "../runbooks/fallback.generated";
-import { CREWMATE_SECRETS_CATALOG_LINE, CREWMATE_SECRETS_LINE } from "../secrets/commandWords";
+import {
+  CREWMATE_SECRETS_CATALOG_LINE,
+  CREWMATE_SECRETS_LINE,
+  CREWMATE_SECRETS_THERE_LINE,
+} from "../secrets/commandWords";
 import { CLAUDE_SEAT_TOOL_PREFIX } from "../storage/sessionReader";
 
 export { RIGOR_SAFETY } from "../prompts/validationResources";
@@ -279,8 +283,11 @@ export function buildCrewmateSystemPrompt(
   integrations?: boolean,
   load?: boolean,
   runbookText?: string,
-  /** The Secrets command it was granted: requests here, or the catalog alone on another computer. */
-  secrets?: "use" | "list",
+  /**
+   * The Secrets command it was granted: requests and asks here, requests
+   * decided by the home on a computer that runs work, or the catalog alone.
+   */
+  secrets?: "use" | "use-there" | "list",
   /** Its shell has `infinitary-stops-axi` (docs/leftover-programs.md). */
   stops?: boolean,
   /** The captain's language, which `CARD_AUTHORING`'s language rule reads. */
@@ -333,6 +340,7 @@ The user sees cards and their threads, never a chat of your own. Follow emit_car
     ...(load ? [CREWMATE_LOAD_LINE] : []),
     ...(stops ? [CREWMATE_STOPS_LINE] : []),
     ...(secrets === "use" ? [CREWMATE_SECRETS_LINE] : []),
+    ...(secrets === "use-there" ? [CREWMATE_SECRETS_THERE_LINE] : []),
     ...(secrets === "list" ? [CREWMATE_SECRETS_CATALOG_LINE] : []),
   ].join("\n\n");
 }

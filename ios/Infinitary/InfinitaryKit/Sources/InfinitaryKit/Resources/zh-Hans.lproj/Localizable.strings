@@ -1520,6 +1520,8 @@
 "phoneSceneWaitingBatchCheck" = "正在等待批量检查";
 "phoneSceneWaitingChecks" = "正在等待检查";
 "phoneSceneWorking" = "工作中";
+"phoneSecretsAskFields" = "输入每项机密";
+"phoneSecretsAskNote" = "每个值都直接存入机密。Infinitary 不会再显示它，大副和船员们也拿不到它。";
 "phoneSecretsGiveOnce" = "将 %2$@ 提供给 %1$@ 一次";
 "phoneSecretsRefusedDenied" = "这个请求已被拒绝。没有允许任何操作。";
 "phoneSecretsRefusedExpired" = "这个请求已过期。你的决定没有被接受。";
@@ -1846,6 +1848,8 @@
 "secretsArchiveOpenTitle" = "选择加密的机密存档";
 "secretsArchiveSaveMessage" = "请选择一个新文件。现有存档不会被替换。";
 "secretsArchiveSaveTitle" = "保存加密的机密存档";
+"secretsAskFields" = "输入每项机密";
+"secretsAskNote" = "每个值都直接存入机密。Infinitary 不会再显示它，大副和船员们也拿不到它。";
 "secretsDeny" = "不允许";
 "secretsHistoryExportTitle" = "导出机密历史记录";
 "secretsKeyOpenTitle" = "选择它单独的恢复密钥";

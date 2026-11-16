@@ -578,6 +578,8 @@
   "phoneSceneWaitingBatchCheck": "في انتظار فحص الدفعة",
   "phoneSceneWaitingChecks": "في انتظار الفحوصات",
   "phoneSceneWorking": "يعمل",
+  "phoneSecretsAskFields": "اكتب كل سر",
+  "phoneSecretsAskNote": "تذهب كل قيمة مباشرةً إلى الأسرار. لا يعرضها Infinitary مرة أخرى، ولا يحصل عليها نائب القبطان ولا الطاقم.",
   "phoneSecretsGiveOnce": "إعطاء {secrets} إلى {recipient} مرة واحدة",
   "phoneSecretsRefusedDenied": "رُفض هذا الطلب. لم يُسمح بشيء.",
   "phoneSecretsRefusedExpired": "انتهت صلاحية هذا الطلب. لم يُقبل قرارك.",

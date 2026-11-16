@@ -100,6 +100,10 @@ export async function firstmateSeat(): Promise<{
       bindings: [],
       store: new IntegrationSettingsStore(paths.integrationsDir),
     }),
+    secretAsks: {
+      ask: async (input) => ({ ask: input.id, state: "waiting" }),
+      cancel: () => false,
+    },
     scheduler: {} as Scheduler,
     supervisionLog: () => [],
     flagMissedEscalation: ({ taskId }) => ({ status: "no-outcome", taskId }),

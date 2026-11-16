@@ -121,3 +121,71 @@ it("sends the Keep going on credits button only to views that read it", async ()
   await current.close();
   await phone.close();
 });
+
+// INF-4239: an ask to keep a secret is answered with a Keep that sends the
+// typed values in their own request, which an older window or phone does not
+// make. The home leaves Keep in Secrets off every card it sends a view whose
+// hello does not list `secrets-ask`, so that view shows the card's line
+// saying where to answer it and its Don't keep still works.
+it("sends Keep in Secrets only to views that list the ask", async () => {
+  const card = cardSchema.parse({
+    id: "card-secrets-ask-task-1-checkout",
+    title: "Keep Stripe test key for “Wire up the checkout”?",
+    body: "<p>Asked by the crewmate on this task.</p>",
+    author: "host",
+    meta: "Infinitary",
+    priority: 1,
+    status: "ready",
+    createdAt: 1000,
+    actions: [
+      {
+        id: "pass-dont",
+        label: "Don't keep",
+        effect: { kind: "host", op: "secrets-decision", arg: "pass-dont" },
+      },
+      {
+        id: "pass-keep",
+        label: "Keep in Secrets",
+        default: true,
+        effect: {
+          kind: "host",
+          op: "secrets-keep",
+          arg: JSON.stringify({ fields: [{ id: "s1", name: "Stripe test key", place: "Test" }] }),
+        },
+      },
+    ],
+  });
+  const at = await home({
+    dispatch: (async (channel) => {
+      if (channel === "inf:cards:list") return [card];
+      if (channel === "inf:cards:show") return card;
+      throw new Error("Unexpected request");
+    }) as CoreDispatch,
+  });
+  const grant = await at.join();
+  const old = await connectClient(grant, { protocolVersion: PROTOCOL_VERSION, changes: [] });
+  const oldPhone = await connectClient(grant, { system: { system: "ios" }, changes: [] });
+  const current = await connectClient(grant, {
+    protocolVersion: PROTOCOL_VERSION,
+    changes: ["secrets-ask"],
+  });
+  const phone = await connectClient(grant, {
+    system: { system: "ios" },
+    changes: ["secrets-ask"],
+  });
+  const ids = (value: unknown) =>
+    (value as { actions: { id: string }[] }).actions.map((action) => action.id);
+  for (const view of [old, oldPhone]) {
+    expect(ids((await view.invoke("inf:cards:list", []))[0])).toEqual(["pass-dont"]);
+    expect(ids(await view.invoke("inf:cards:show", [card.id]))).toEqual(["pass-dont"]);
+  }
+  for (const view of [current, phone]) {
+    expect((await view.invoke("inf:cards:list", []))[0]).toEqual(card);
+    expect(await view.invoke("inf:cards:show", [card.id])).toEqual(card);
+  }
+  at.events.emit("inf:cards", [card]);
+  const oldPush = await old.push((push) => push.channel === "inf:cards");
+  expect(ids((oldPush.payload as unknown[])[0])).toEqual(["pass-dont"]);
+  expect((await current.push((push) => push.channel === "inf:cards")).payload).toEqual([card]);
+  for (const view of [old, oldPhone, current, phone]) await view.close();
+});

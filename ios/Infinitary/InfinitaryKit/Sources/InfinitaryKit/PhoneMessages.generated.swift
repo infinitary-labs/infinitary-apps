@@ -1590,6 +1590,8 @@ public enum PhoneMessages {
     public static func `phoneSceneWaitingBatchCheck`() -> String { PhoneWords.format("phoneSceneWaitingBatchCheck", []) }
     public static func `phoneSceneWaitingChecks`() -> String { PhoneWords.format("phoneSceneWaitingChecks", []) }
     public static func `phoneSceneWorking`() -> String { PhoneWords.format("phoneSceneWorking", []) }
+    public static func `phoneSecretsAskFields`() -> String { PhoneWords.format("phoneSecretsAskFields", []) }
+    public static func `phoneSecretsAskNote`() -> String { PhoneWords.format("phoneSecretsAskNote", []) }
     public static func `phoneSecretsGiveOnce`(`recipient`: String, `secrets`: String) -> String { PhoneWords.format("phoneSecretsGiveOnce", [`recipient`, `secrets`]) }
     public static func `phoneSecretsRefusedDenied`() -> String { PhoneWords.format("phoneSecretsRefusedDenied", []) }
     public static func `phoneSecretsRefusedExpired`() -> String { PhoneWords.format("phoneSecretsRefusedExpired", []) }
@@ -1925,6 +1927,8 @@ public enum PhoneMessages {
     public static func `secretsArchiveOpenTitle`() -> String { PhoneWords.format("secretsArchiveOpenTitle", []) }
     public static func `secretsArchiveSaveMessage`() -> String { PhoneWords.format("secretsArchiveSaveMessage", []) }
     public static func `secretsArchiveSaveTitle`() -> String { PhoneWords.format("secretsArchiveSaveTitle", []) }
+    public static func `secretsAskFields`() -> String { PhoneWords.format("secretsAskFields", []) }
+    public static func `secretsAskNote`() -> String { PhoneWords.format("secretsAskNote", []) }
     public static func `secretsDeny`() -> String { PhoneWords.format("secretsDeny", []) }
     public static func `secretsHistoryExportTitle`() -> String { PhoneWords.format("secretsHistoryExportTitle", []) }
     public static func `secretsKeyOpenTitle`() -> String { PhoneWords.format("secretsKeyOpenTitle", []) }
@@ -4895,6 +4899,8 @@ extension PhoneWords {
         "phoneSceneWaitingBatchCheck": [],
         "phoneSceneWaitingChecks": [],
         "phoneSceneWorking": [],
+        "phoneSecretsAskFields": [],
+        "phoneSecretsAskNote": [],
         "phoneSecretsGiveOnce": ["recipient", "secrets"],
         "phoneSecretsRefusedDenied": [],
         "phoneSecretsRefusedExpired": [],
@@ -5230,6 +5236,8 @@ extension PhoneWords {
         "secretsArchiveOpenTitle": [],
         "secretsArchiveSaveMessage": [],
         "secretsArchiveSaveTitle": [],
+        "secretsAskFields": [],
+        "secretsAskNote": [],
         "secretsDeny": [],
         "secretsHistoryExportTitle": [],
         "secretsKeyOpenTitle": [],

@@ -7,13 +7,15 @@ import {
   secretDecisionSchema,
   secretEnrollInputSchema,
   secretEntryInputSchema,
+  secretKeepInputSchema,
+  secretKeepSchema,
   secretRehearsalInputSchema,
   secretRehearsalSchema,
   secretsViewSchema,
 } from "../secrets";
 import type { ChannelDeclaration } from "./common";
 
-/** Protected Secrets management stays on the home; only explicit paired approvals travel. */
+/** Protected Secrets management stays on the home; only explicit paired approvals and an ask's Keep travel. */
 export const secretsChannels = {
   // A phone's approvals (docs/secrets.md, "Remote decisions"): a paired view asks, and only
   // an enrolled key's signature or the captain's confirmation on the home changes anything.
@@ -37,6 +39,17 @@ export const secretsChannels = {
     reach: "views",
     request: z.tuple([secretDecisionInputSchema]),
     response: secretDecisionSchema,
+  },
+  // Keep on an agent's ask card (docs/secrets.md, "Asking to keep a secret"): the
+  // window that shows it, here, on another Mac or on the phone, sends the typed
+  // values with the card's one-time pass. It adds or replaces only what the
+  // card asked for, and never reads a value back.
+  "inf:secrets:keep": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([secretKeepInputSchema]),
+    response: secretKeepSchema,
   },
   // Whether this build keeps protected storage at all: a build without it offers no Secrets
   // tab, and the answer opens nothing (docs/secrets.md, "A build without protected storage").

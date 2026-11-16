@@ -26,6 +26,7 @@ import type { MessageFile } from "../overflow";
 import type { AppPaths } from "../paths";
 import type { PersonalizeDelegate } from "../pi/personalizeTool";
 import { FIRSTMATE_CONTRACT_VERSION, firstmatePromptSha } from "../pi/piResources";
+import type { SecretAskReach } from "../pi/secretTools";
 import type { ModelRuntime } from "../pi/types";
 import type { PluginInstallRequest } from "../plugins/pluginInstaller";
 import type { ShellPreferencesService } from "../preferences/shellPreferences";
@@ -206,6 +207,11 @@ export type FirstmateAgentOptions = {
    * tests that do not exercise them.
    */
   integrations?: IntegrationsService;
+  /**
+   * Asking the captain to keep a secret (docs/secrets.md, "Asking to keep a
+   * secret"): the `ask_secret` tool. Absent in tests that do not exercise it.
+   */
+  secretAsks?: SecretAskReach;
   broadcastEvent: (event: FmEvent) => void;
   /** Synchronous acceptance witness; applies to main input and card-thread turns alike. */
   onCaptainTurnAccepted?: () => void;

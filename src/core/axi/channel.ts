@@ -22,7 +22,13 @@ import {
 } from "../integrations";
 import { type LoadClaim, type LoadReceipt, loadWaitWords, type TaskLoad } from "../placed/loadLine";
 import { claimShellGroup, type ShellGroups } from "../placed/shellGroups";
-import { checkWords, SECRETS_CHECK_WORDS, SECRETS_ELSEWHERE_HELP } from "../secrets/commandWords";
+import type { SecretAskInput } from "../secrets/asks";
+import {
+  checkWords,
+  SECRET_ASK_WORDS,
+  SECRETS_CHECK_WORDS,
+  SECRETS_ELSEWHERE_HELP,
+} from "../secrets/commandWords";
 import {
   type Injection,
   SECRETS_COMMAND,
@@ -927,8 +933,25 @@ export class AxiChannel {
           const receipt = await secrets.status((message.input as { request: string }).request);
           return receipt ? { receipt } : { unavailable: true };
         }
+        case "secrets.ask": {
+          if (!secrets.ask) return { unavailable: true, help: SECRET_ASK_WORDS.notHere };
+          const answer = await secrets.ask(message.input as SecretAskInput);
+          // The help line is said once, beside the ask, never inside it too.
+          return {
+            ask: answer.state === "unavailable" ? { ask: answer.ask, state: answer.state } : answer,
+            help:
+              answer.state === "unavailable"
+                ? answer.help
+                : answer.state === "kept"
+                  ? SECRET_ASK_WORDS.kept
+                  : SECRET_ASK_WORDS.waiting,
+          };
+        }
         case "secrets.cancel": {
-          const receipt = await secrets.cancel((message.input as { request: string }).request);
+          const request = (message.input as { request: string }).request;
+          // An ask this task is waiting on is withdrawn by the same id it asked with.
+          if (secrets.cancelAsk?.(request)) return { ask: { ask: request, state: "withdrawn" } };
+          const receipt = await secrets.cancel(request);
           return receipt ? { receipt } : { unavailable: true };
         }
         default:

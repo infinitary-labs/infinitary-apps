@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import type { SecretAskAnswer, SecretAskInput } from "./asks";
 import { type BrokeredUse, brokerInputDigest, validBrokeredUse } from "./brokers";
 import type { LaunchResult, RecipientFacts } from "./recipient";
 
@@ -607,6 +608,14 @@ export type SecretsCommand = Pick<
 > & {
   /** A lazy native owner may need to read its durable receipts before answering. */
   status: (request: string) => UseReceipt | undefined | Promise<UseReceipt | undefined>;
+  /**
+   * Asks the captain to keep secrets by name, place and reason, never a value
+   * (docs/secrets.md, "Asking to keep a secret"); the outcome reaches the
+   * task's inbox once.
+   */
+  ask?: (input: SecretAskInput) => Promise<SecretAskAnswer>;
+  /** Withdraws this task's waiting ask by its id; false when none waits. */
+  cancelAsk?: (id: string) => boolean;
 };
 /**
  * Discovery alone, for a task on another computer (docs/secrets.md, "Current

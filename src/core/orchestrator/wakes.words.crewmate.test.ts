@@ -13,6 +13,7 @@ import {
   WAKE_TASK as TASK,
   type WordsCases,
 } from "../../../tests/helpers/wakeWords";
+import { SECRET_ASK_WORDS } from "../secrets/commandWords";
 
 const completedSecret = await secretsReceipt("completed");
 const unknownSecret = await secretsReceipt("unknown");
@@ -73,6 +74,41 @@ const CASES: WordsCases<CrewmateWakeKind> = {
       name: "an unknown protected effect",
       wake: { facts: { kind: "secrets-use-ended", receipt: unknownSecret } },
       words: `[fm-op] Secrets request ${unknownSecret.request}: unknown. This is a receipt, not permission for another use or an external action. Do not repeat this request; reconcile what happened before depending on it.`,
+    },
+  ],
+  "secrets-ask-ended": [
+    {
+      name: "a kept ask",
+      wake: {
+        facts: {
+          kind: "secrets-ask-ended",
+          ended: {
+            ask: "stripe-key",
+            state: "kept",
+            secrets: [{ ref: "s-4f2a", name: "Stripe key", place: "test", version: 1 }],
+          },
+        },
+      },
+      words:
+        "[fm-op] Your ask to keep a secret stripe-key: kept in Secrets: Stripe key (place test) as reference s-4f2a, version 1. Use a secret by its reference; each use still asks the captain unless a saved decision allows it. You never receive a value.",
+    },
+    {
+      name: "an ask the captain did not keep",
+      wake: {
+        facts: { kind: "secrets-ask-ended", ended: { ask: "stripe-key", state: "not-kept" } },
+      },
+      words:
+        "[fm-op] Your ask to keep a secret stripe-key: the captain chose not to keep it, and nothing was kept. Do not ask again for the same secret unless the captain says to; say in your answer or report that the work still needs it.",
+    },
+    {
+      name: "a withdrawn ask",
+      wake: {
+        facts: {
+          kind: "secrets-ask-ended",
+          ended: { ask: "stripe-key", state: "withdrawn", why: SECRET_ASK_WORDS.cancelled },
+        },
+      },
+      words: `[fm-op] Your ask to keep a secret stripe-key ended with nothing kept: ${SECRET_ASK_WORDS.cancelled}`,
     },
   ],
   "responses-cancelled": [

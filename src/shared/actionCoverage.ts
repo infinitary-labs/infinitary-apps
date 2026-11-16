@@ -15,6 +15,8 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
     "A phone offers its approval key; nothing changes until the captain confirms on the home",
   "inf:secrets:decide":
     "A phone's signed decision on one exact use, or its refusal; never a first mate operation",
+  "inf:secrets:keep":
+    "The captain's typed values on an ask card the app drew, sent with its one-time pass; never a first mate operation or an agent-authored form",
   "inf:decisions:use:set":
     "Captain-only in Settings: turning a decision model use on can approve what a model receives",
   "inf:quota:opened":

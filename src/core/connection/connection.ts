@@ -96,6 +96,7 @@ import {
   type ActionReads,
   frameWithoutUnreadActions,
   readsKeepGoing,
+  readsSecretKeep,
   readsTaskAllow,
   withoutUnreadActions,
 } from "./taskAllow";
@@ -1094,6 +1095,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       client.actionReads = {
         taskAllow: readsTaskAllow(hello.protocolVersion, hello.changes),
         keepGoing: readsKeepGoing(hello.protocolVersion, hello.changes, hello.system),
+        secretKeep: readsSecretKeep(hello.changes),
       };
       client.streamed = unnumberedFor(hello, STREAMED_EVENTS_LIVE);
       client.readings = unnumberedFor(hello, COMPUTER_READINGS_LIVE);
@@ -1330,7 +1332,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           through: false,
         },
         sharedCards: false,
-        actionReads: { taskAllow: false, keepGoing: false },
+        actionReads: { taskAllow: false, keepGoing: false, secretKeep: false },
         streamed: "none",
         readings: "none",
         access: "read",

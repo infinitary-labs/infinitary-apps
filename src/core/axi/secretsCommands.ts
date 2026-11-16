@@ -1,4 +1,6 @@
 import { AxiError } from "axi-sdk-js";
+import type { SecretAskAnswer } from "../secrets/asks";
+import { type SecretAskInput, validSecretAsk } from "../secrets/asks";
 import {
   type Injection,
   SECRETS_COMMAND,
@@ -16,7 +18,8 @@ export type SecretsOp =
   | "secrets.check"
   | "secrets.inject"
   | "secrets.status"
-  | "secrets.cancel";
+  | "secrets.cancel"
+  | "secrets.ask";
 export type SecretsAnswer = {
   secrets?: SecretReference[];
   secret?: SecretReference;
@@ -24,6 +27,10 @@ export type SecretsAnswer = {
   receipt?: UseReceipt;
   /** The crew's pre-check: the failed check, or the checked run and its saved decision. */
   check?: UseCheck;
+  /** An ask to keep secrets: waiting, already kept with references, unavailable (its help beside it), or withdrawn. */
+  ask?:
+    | Exclude<SecretAskAnswer, { state: "unavailable" }>
+    | { ask: string; state: "unavailable" | "withdrawn" };
   unavailable?: true;
   /** Why a use is unavailable, or what a check means; host words, never a backend's. */
   help?: string;
@@ -136,6 +143,43 @@ const COMMANDS: Record<string, AxiCommand<SecretsConnection>> = {
       return call(connection, "inject", "secrets.inject", input);
     },
   },
+  ask: {
+    usage:
+      "ask --name '<name>' [--place '<place>'] --reason '<why>' --id <ask> | ask --replace <reference> --reason '<why>' --id <ask> | ask --secrets '<JSON list>' --reason '<why>' --id <ask>",
+    description:
+      'Ask the captain to keep a secret, by name, place and reason, never a value: Infinitary draws its own field for them. --replace names one already kept that stopped working. --secrets asks for several on one card, as [{"name":"...","place":"...","replace":"..."}]. Answers at once; whether it was kept, and each reference, reach your inbox once. Cancel a waiting ask with cancel <ask>.',
+    flags: {
+      "--name": "value",
+      "--place": "value",
+      "--replace": "value",
+      "--secrets": "value",
+      "--reason": "value",
+      "--id": "value",
+    },
+    run: async (args, connection) => {
+      if (args.positional.length) invalid();
+      const one = (flag: string) =>
+        args.flags[flag] === undefined ? undefined : String(args.flags[flag]);
+      let secrets: unknown;
+      if (one("--secrets") !== undefined) {
+        if (one("--name") ?? one("--place") ?? one("--replace")) invalid();
+        try {
+          secrets = JSON.parse(String(one("--secrets")));
+        } catch {
+          invalid();
+        }
+      } else if (one("--replace") !== undefined) {
+        if (one("--name") ?? one("--place")) invalid();
+        secrets = [{ replace: one("--replace") }];
+      } else {
+        const place = one("--place");
+        secrets = [{ name: one("--name"), ...(place !== undefined ? { place } : {}) }];
+      }
+      const input = { id: one("--id"), reason: one("--reason"), secrets } as SecretAskInput;
+      if (!validSecretAsk(input)) invalid();
+      return call(connection, "ask", "secrets.ask", input);
+    },
+  },
 };
 for (const name of ["status", "cancel"] as const) {
   COMMANDS[name] = {
@@ -143,7 +187,7 @@ for (const name of ["status", "cancel"] as const) {
     description:
       name === "status"
         ? "Read state and exit status without launching again."
-        : "Withdraw unused permission; an operation already sent may still finish.",
+        : "Withdraw unused permission, or a waiting ask by its id; an operation already sent may still finish.",
     run: async (args, connection) => {
       if (args.positional.length !== 1 || !args.positional[0]) invalid();
       return call(connection, name, `secrets.${name}`, { request: args.positional[0] });
@@ -160,7 +204,7 @@ export function secretsAxi(
     version,
     connect,
     description:
-      "Request approved program operations using secret references. Task names are context, not secret authority. No value-returning command.",
+      "Request approved program operations using secret references, or ask the captain to keep a secret. Task names are context, not secret authority. No value-returning command.",
     commands: COMMANDS,
     home: (connection) => call(connection, "list", "secrets.list", {}),
   };

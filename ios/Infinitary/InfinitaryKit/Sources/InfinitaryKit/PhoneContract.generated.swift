@@ -14,6 +14,7 @@ public enum PhoneContract {
     public static let frameParts = "frame-parts"
     public static let cardAnnotations = "card-annotations"
     public static let boardWithoutClosed = "board-without-closed"
+    public static let secretsAsk = "secrets-ask"
     public static let messagesWhileReading = "messages-while-reading"
     public static let homeUpdate = "home-update"
     public static let homeUpdateFolded = 17
@@ -86,6 +87,7 @@ public enum PhoneRequest: String, Sendable {
     case secretApprovals = "inf:secrets:approvals"
     case secretEnroll = "inf:secrets:enroll"
     case secretDecide = "inf:secrets:decide"
+    case secretKeep = "inf:secrets:keep"
     case integrations = "inf:integrations:list"
     case signIn = "inf:integrations:sign-in"
     case signInReturn = "inf:integrations:sign-in-return"
@@ -114,7 +116,7 @@ public enum PhoneRequest: String, Sendable {
     case homeUpdateInstall = "inf:home-update:install"
     case homeUpdateLater = "inf:home-update:later"
     public var changes: Bool {
-        switch self { case .converse, .run, .pin, .steer, .interrupt, .secretEnroll, .secretDecide, .signIn, .signInReturn, .signInCancel, .integrationRemove, .automationState, .automationPauseAll, .automationSave, .projectConfigure, .runbookSet, .homeUpdateInstall, .homeUpdateLater: true; default: false }
+        switch self { case .converse, .run, .pin, .steer, .interrupt, .secretEnroll, .secretDecide, .secretKeep, .signIn, .signInReturn, .signInCancel, .integrationRemove, .automationState, .automationPauseAll, .automationSave, .projectConfigure, .runbookSet, .homeUpdateInstall, .homeUpdateLater: true; default: false }
     }
 }
 

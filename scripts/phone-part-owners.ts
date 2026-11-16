@@ -102,6 +102,7 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryApp/PhoneCardParts.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/CardValues.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneCardDeparture.swift",
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneSecretAsk.swift",
   ] },
   { parts: family("rest"), files: [
     "ios/Infinitary/InfinitaryApp/CharacterCatalog.swift",

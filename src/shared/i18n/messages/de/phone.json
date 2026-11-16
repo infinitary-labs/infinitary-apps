@@ -502,6 +502,8 @@
   "phoneSceneWaitingBatchCheck": "Wartet auf die Sammelprüfung",
   "phoneSceneWaitingChecks": "Wartet auf die Überprüfungen",
   "phoneSceneWorking": "Arbeitet",
+  "phoneSecretsAskFields": "Gib jedes Geheimnis ein",
+  "phoneSecretsAskNote": "Jeder Wert geht direkt in Geheimnisse. Infinitary zeigt ihn nie wieder, und weder der erste Offizier noch die Crew bekommt ihn.",
   "phoneSecretsGiveOnce": "{secrets} einmal an {recipient} geben",
   "phoneSecretsRefusedDenied": "Diese Anfrage wurde abgelehnt. Nichts wurde erlaubt.",
   "phoneSecretsRefusedExpired": "Diese Anfrage ist abgelaufen. Deine Entscheidung wurde nicht angenommen.",

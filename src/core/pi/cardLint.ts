@@ -153,6 +153,37 @@ function escapedBodyRefusal(body: string): string | undefined {
   return hasElement ? undefined : ESCAPED_BODY_REFUSAL;
 }
 
+/**
+ * Consent (docs/secrets.md, "Asking to keep a secret"; INF-4239): a
+ * password field on an agent's own card would carry what the captain types
+ * back as the card's answer, into the agent's wake, the card's thread and
+ * the task record. Infinitary's own ask draws that field outside the card's
+ * page instead, so an agent card that holds one is refused and pointed to
+ * the ask. A markup field and a script that makes one are both read.
+ */
+export const PASSWORD_FIELD_REFUSAL =
+  "the body holds a password field, whose answer would reach you and the card's record; never ask for a secret on a card: ask to keep it in Secrets instead (ask_secret for the first mate, infinitary-secrets-axi ask for a crewmate), and the app draws its own masked field.";
+
+const SCRIPTED_PASSWORD =
+  /\btype\s*=\s*["'`]password["'`]|["'`]type["'`]\s*,\s*["'`]password["'`]/i;
+
+function passwordFieldRefusal(body: string): string | undefined {
+  if (!/password/i.test(body)) return undefined;
+  const walk = (nodes: DomNode[]): boolean =>
+    nodes.some((node) => {
+      if (!ELEMENT_TYPES.has(node.type)) return false;
+      // A script that makes the field is read as its script text alone; words
+      // quoting the markup, as in <code> or <pre>, make no field.
+      if (node.name?.toLowerCase() === "script")
+        return (node.children ?? []).some((child) => SCRIPTED_PASSWORD.test(child.data ?? ""));
+      const attrs = (node as FigureNode).attribs ?? {};
+      if (node.name?.toLowerCase() === "input" && attrs.type?.trim().toLowerCase() === "password")
+        return true;
+      return walk(node.children ?? []);
+    });
+  return walk(parseDocument(body).children as DomNode[]) ? PASSWORD_FIELD_REFUSAL : undefined;
+}
+
 /** A product fact: the usual card's figure column, a 560 px card less its
  * 1 px border, 20 px body padding each side and 4 px frame padding each side. Draw-at-true-size
  * measures the 11 px floor here, not at the 350 px column a card gets with a
@@ -518,6 +549,9 @@ export function lintCardShape(card: ShapedCard): string | undefined {
   }
   const fake = fakeSettleRefusal(card.actions);
   if (fake) return fake;
+  // Consent, in a preview too: a secret is never typed into an agent's card.
+  const password = passwordFieldRefusal(card.body);
+  if (password) return password;
 
   // A product fact (D-9): a card with actions is a decision (one card
   // shape, ruling D1 a), with 2 or 3 actions and one default.

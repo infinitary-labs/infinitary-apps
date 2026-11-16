@@ -123,7 +123,7 @@ import { RecordReader } from "./recordReads/recordReader";
 import { DecisionKindClassifier } from "./routing/decisionKindClassifier";
 import { startHomeRouting } from "./routing/homeRouting";
 import { modelChoiceOf } from "./routing/modelChoice";
-import { modelAddedNote, modelGoneNote } from "./routing/modelNews";
+import { reconcileModelNews } from "./routing/modelNews";
 import { modelReasonOf } from "./routing/modelReason";
 import { PlacedWorkScores } from "./routing/placedWork";
 import { quotaGateCleared, quotaGateRefValid } from "./routing/quotaGate";
@@ -1731,42 +1731,15 @@ export async function createServices(
     supervisor.placement.deviceSignInsChanged(deviceId);
   });
   firstmate.pokeInbox();
-  /**
-   * Seeds never-seen offerings from the starter map and reports live-catalog
-   * newcomers - once each, as an ordinary feed line, because a model arriving
-   * into a subscription is fleet news the captain should see without a card.
-   * A first-time seed for a provider announces nothing. A later arrival is
-   * placed when the map names it, otherwise off until the user slots it.
-   *
-   * It runs on the same beats the availability snapshot moves on: app start,
-   * the daily liveness sweep, every quota refresh (which is also when a 4h
-   * pi.dev catalog overlay has had a chance to land), and after an account
-   * is added.
-   */
-  const reconcileActivation = () => {
-    // Departures first, from successful reads only (docs/model-lists.md):
-    // a client-served or Pi-filtered account counts only once its own read
-    // has succeeded; an unfiltered Pi account's catalog is Pi's own answer.
-    const snapshots = vault.availableModelsByAccount().flatMap((row) => {
-      if (served.reads(row.providerId) && served.read(row.accountId) === undefined) return [];
-      const ids = row.models
-        .filter((model) => model.provider === row.providerId)
-        .map((model) => model.id);
-      return [{ accountId: row.accountId, providerId: row.providerId, ids }];
+  // Models a read brought in or took away, seeded and said once each (modelNews.ts).
+  const reconcileActivation = () =>
+    reconcileModelNews({
+      vault,
+      served,
+      slots,
+      providerName: (providerId) => flagship.providerNameOf(providerId),
+      note: (text) => broadcastEvent({ type: "firstmate_note", text }),
     });
-    for (const notice of slots.departures(snapshots)) {
-      const name = flagship.providerNameOf(notice.providerId);
-      const label = slots.labelOf({ provider: notice.providerId, id: notice.id }) ?? notice.id;
-      broadcastEvent({ type: "firstmate_note", text: modelGoneNote(name, label, notice.slots) });
-    }
-    for (const notice of slots.reconcile()) {
-      const name = flagship.providerNameOf(notice.providerId);
-      broadcastEvent({
-        type: "firstmate_note",
-        text: modelAddedNote(name, notice.id, notice.slots ?? []),
-      });
-    }
-  };
   const creditsCards = new CreditsCards({
     setHere: (accountId, on) => homeQuota.setKeepGoingOnCredits(accountId, on),
     onHere: (accountId) => vault.keepsGoingOnCredits(accountId),

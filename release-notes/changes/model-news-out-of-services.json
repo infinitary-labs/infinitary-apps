@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "model-news-out-of-services",
+      "reason": "Internal: the pass that says a model a provider added or no longer serves moved from the core's wiring file into its own module, so that file stays under the size check's ceiling; nothing a person sees changes."
+    }
+  ]
+}

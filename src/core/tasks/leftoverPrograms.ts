@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import {
+  keepsAtClose,
   LEFTOVERS_DATA_KEY,
   type LeftoversReport,
   leftoversKept,
@@ -14,9 +15,11 @@ import { hostEnv } from "../hostEnv";
 import { endHolder, findFolderHolders, type HolderOptions } from "../placed/folderHolders";
 import { processRoots } from "../placed/processRoots";
 import { hostPlatform } from "../platform";
+import { removeAll } from "../removeWhole";
 import type { TaskRecord } from "../storage/taskRecords";
+import { type KeptJobs, keptJobsAt } from "./keptJobs";
 import { keepLeftovers, LeftBehindHere, type LeftBehindOptions } from "./leftBehind";
-import { handOverStops, takeStops } from "./taskStops";
+import { handOverStops, takeKeeps, takeStops } from "./taskStops";
 import { TEMP_DIR_NAME } from "./taskTemp";
 
 /**
@@ -39,6 +42,12 @@ export type LeftoverSweep = {
   folders: readonly string[];
   /** The task that carries its work on, on this same computer: its folder and key. */
   handTo?: { folder: string; key: string };
+  /**
+   * What the close does with the task's keeps (docs/leftover-programs.md, "A
+   * job the captain asked to keep"): keep them running, or run their removes
+   * after the stops. Absent, they are removed.
+   */
+  keeps?: "keep" | "remove";
   holders?: HolderOptions;
   stopTimeMs?: number;
   graceMs?: number;
@@ -103,17 +112,51 @@ export function leftBehindHere(
 
 /** The close's sweep of one task's leftovers on this computer, and what it did. */
 export async function sweepLeftovers(input: LeftoverSweep): Promise<LeftoversReport> {
-  // A task carried on hands its stops to the task that goes on, and runs none.
-  const handed = input.handTo ? handOverStops(input.taskFolder, input.handTo.folder) : 0;
-  const handedTo = input.handTo && handed > 0 ? { handed, handedTo: input.handTo.key } : {};
+  // A task carried on hands its stops and keeps to the task that goes on, and runs none.
+  const handed = input.handTo
+    ? handOverStops(input.taskFolder, input.handTo.folder)
+    : { stops: 0, keeps: 0 };
+  const handedTo =
+    input.handTo && handed.stops + handed.keeps > 0
+      ? {
+          ...(handed.stops > 0 ? { handed: handed.stops } : {}),
+          ...(handed.keeps > 0 ? { handedKeeps: handed.keeps } : {}),
+          handedTo: input.handTo.key,
+        }
+      : {};
+  const timeMs = input.stopTimeMs ?? STOP_TIME_MS;
   const ran: { stop: TaskStop; outcome: StopOutcome }[] = [];
-  if (!input.handTo)
+  const removes: { stop: TaskStop; outcome: StopOutcome }[] = [];
+  let kept: LeftoversReport["kept"] = [];
+  if (!input.handTo) {
     for (const stop of takeStops(input.taskFolder))
-      ran.push({
-        stop,
-        outcome: await runStop(stop, input.taskFolder, input.stopTimeMs ?? STOP_TIME_MS),
-      });
+      ran.push({ stop, outcome: await runStop(stop, input.taskFolder, timeMs) });
+    const keeps = takeKeeps(input.taskFolder);
+    // A merged or answered close leaves the job running, its folder kept.
+    if (input.keeps === "keep") kept = keeps.map(({ cwd: _cwd, at: _at, ...job }) => job).reverse();
+    // Any other close removes it, once, as a stop runs, after the stops.
+    else
+      for (const keep of keeps) {
+        const stop: TaskStop = {
+          id: keep.id,
+          label: keep.label,
+          command: keep.remove,
+          ...(keep.cwd ? { cwd: keep.cwd } : {}),
+          at: keep.at,
+        };
+        const outcome = await runStop(stop, input.taskFolder, timeMs);
+        // A job removed cleanly takes its kept folder; a failed remove keeps both for a later look.
+        // A folder the job left read-only is made writable once; one still not gone stays, never stopping the close.
+        if (outcome.outcome === "ran") removeAll(keep.folder);
+        removes.push({ stop, outcome });
+      }
+  }
   const stops = ran.map((entry) => entry.outcome);
+  const keepsReport = {
+    ...(kept.length > 0 ? { kept } : {}),
+    ...(removes.length > 0 ? { removed: removes.map((entry) => entry.outcome) } : {}),
+  };
+  const unfinished = [...ran, ...removes];
   // Its folders go either way, so what still holds them ends (the captain's
   // answer on the review of INF-3447's piece 1).
   const reading = await findFolderHolders(
@@ -121,12 +164,13 @@ export async function sweepLeftovers(input: LeftoverSweep): Promise<LeftoversRep
     input.holders,
   );
   if (reading.status !== "checked") {
-    const keptInFile = keepLeftovers(input.taskFolder, ran, []);
+    const keptInFile = keepLeftovers(input.taskFolder, unfinished, []);
     return {
       stops,
       programs: [],
       holders: reading.status,
       ...handedTo,
+      ...keepsReport,
       ...(keptInFile ? { keptInFile } : {}),
     };
   }
@@ -136,12 +180,13 @@ export async function sweepLeftovers(input: LeftoverSweep): Promise<LeftoversRep
     ),
   );
   // What it could not finish stays here, for a later look (docs/leftover-programs.md).
-  const keptInFile = keepLeftovers(input.taskFolder, ran, programs);
+  const keptInFile = keepLeftovers(input.taskFolder, unfinished, programs);
   return {
     stops,
     programs,
     holders: "checked",
     ...handedTo,
+    ...keepsReport,
     ...(keptInFile ? { keptInFile } : {}),
   };
 }
@@ -178,13 +223,18 @@ export function placedLeftovers(
   timing: { stopTimeMs?: number; graceMs?: number } = {},
 ): (
   task: string,
-  close: { carriedTo?: { task: string; key: string }; startedAt?: number },
+  close: {
+    carriedTo?: { task: string; key: string };
+    startedAt?: number;
+    keeps?: "keep" | "remove";
+  },
 ) => Promise<LeftoversReport> {
-  return (task, { carriedTo, startedAt }) => {
+  return (task, { carriedTo, startedAt, keeps }) => {
     const folders = tasks.folders(task);
     return sweepLeftovers({
       taskFolder: folders.root,
       folders: [folders.work, folders.temp],
+      ...(keeps ? { keeps } : {}),
       ...(carriedTo
         ? { handTo: { folder: tasks.folders(carriedTo.task).root, key: carriedTo.key } }
         : {}),
@@ -235,6 +285,8 @@ export function openSuccessor(
 
 export type LeftoverProgramsOptions = {
   crewmatesDir: string;
+  /** The home's record of the jobs closes kept running; at `<userData>/kept` when absent. */
+  keptJobs?: KeptJobs;
   tasks: TasksPart;
   stopTimeMs?: number;
   graceMs?: number;
@@ -271,8 +323,12 @@ export function noteLeftovers(
  */
 export class LeftoverPrograms {
   private readonly sweeps = new Map<string, Promise<void>>();
+  /** The home's record of the jobs closes kept running, which piece 2 lists (`KeptJobs`). */
+  readonly keptJobs: KeptJobs;
 
-  constructor(private readonly options: LeftoverProgramsOptions) {}
+  constructor(private readonly options: LeftoverProgramsOptions) {
+    this.keptJobs = options.keptJobs ?? keptJobsAt(options.crewmatesDir);
+  }
 
   /**
    * Begins the task's sweep once `after` (its crewmate's stop) settles.
@@ -351,6 +407,7 @@ export class LeftoverPrograms {
       taskFolder,
       folders,
       ...(handTo ? { handTo } : {}),
+      keeps: keepsAtClose(record.closedReason),
       holders: {
         ...(record.startedAt !== null ? { startedAt: record.startedAt } : {}),
         ownedElsewhere: ownedByOtherTask(taskId, (owner) => {
@@ -362,5 +419,13 @@ export class LeftoverPrograms {
       ...(this.options.graceMs !== undefined ? { graceMs: this.options.graceMs } : {}),
     });
     noteLeftovers(tasks, taskId, report);
+    // The line already names each kept job, so a record that cannot be written loses no word of it.
+    try {
+      this.keptJobs.record(report.kept ?? [], { computer: null, task: taskId, key: record.key });
+    } catch (caught) {
+      this.options.log?.(
+        `could not record the kept jobs of ${taskId}: ${caught instanceof Error ? caught.message : String(caught)}`,
+      );
+    }
   }
 }

@@ -918,7 +918,7 @@ export class SessionHost {
           ? this.options.commands?.grant(held.task, {
               browser: spec.browser === true,
               ...(spec.load ? { load: true } : {}),
-              ...(spec.stops ? { stops: true } : {}),
+              ...(spec.stops ? { stops: true, keeps: spec.keeps } : {}),
               ...(spec.integrations ? { integrations: this.integrationsOf(held) } : {}),
               ...(spec.files ? { files: this.filesOf(held) } : {}),
               ...(spec.secrets ? { secretsCatalog: this.secretsOf(held) } : {}),

@@ -16,6 +16,7 @@ import type { ChannelReply } from "./protocol";
 export type StopsOp =
   | "stops.list"
   | "stops.add"
+  | "stops.keep"
   | "stops.drop"
   | "stops.left"
   | "stops.rerun"
@@ -25,6 +26,7 @@ export type StopsOp =
 export type StopsOpInput = {
   "stops.list": Record<string, never>;
   "stops.add": { label: string; command: string };
+  "stops.keep": { label: string; check: string; remove: string };
   "stops.drop": { id: string };
   "stops.left": Record<string, never>;
   "stops.rerun": { task: string; id: string };
@@ -43,12 +45,20 @@ export type StopsConnection = {
 };
 
 const DESCRIPTION =
-  "This task's stops: how to stop each machine, simulator, container or server you started that outlives the command that started it. The app runs them, newest first, when the task closes.";
+  "This task's stops: how to stop each machine, simulator, container or server you started that outlives the command that started it. The app runs them, newest first, when the task closes. And its keeps: each job the captain asked to keep running after the task closes.";
 
 const HELP = [
   `Run \`${STOPS_COMMAND} add --label "<what it stops>" '<command that stops it>'\` in the same command that starts it; quote the command so the shell keeps it whole`,
   "A stop deletes what this task created and only stops what it borrowed",
   `Run \`${STOPS_COMMAND} drop <id>\` after you stopped it yourself`,
+  `For a job the captain asked to keep running, run \`${STOPS_COMMAND} keep --label "<the job>" --check '<command that checks it runs>' '<command that removes it>'\` before you set it up, and keep its files in the kept folder it answers`,
+];
+
+const KEEP_HELP = [
+  "Keep the job's files in this kept folder, never in your working copy or temporary folder, and point the job at them",
+  "A merge or an answer leaves the job running; a discard, cancel or failure runs its remove once",
+  "Name the job, the computer, how to check it and how to remove it on your outcome card",
+  `Run \`${STOPS_COMMAND} drop <id>\` if you removed the job yourself`,
 ];
 
 function output(reply: StopsReply): string {
@@ -64,6 +74,8 @@ function output(reply: StopsReply): string {
       answer.refused === "invalid" ? "VALIDATION_ERROR" : "REFUSED",
     );
   const body: Record<string, unknown> = {};
+  if (answer.kept)
+    return `${encode({ kept: answer.kept.id, label: answer.kept.label, folder: answer.kept.folder })}\n${encode({ help: KEEP_HELP })}\n`;
   if (answer.left) return `${encode(leftBody(answer.left))}\n${encode({ help: LEFT_HELP })}\n`;
   if (answer.reran) return `${encode({ reran: answer.reran })}\n`;
   if (answer.ended) return `${encode({ ended: answer.ended })}\n`;
@@ -75,6 +87,9 @@ function output(reply: StopsReply): string {
     stops.length === 0
       ? "0 stops"
       : stops.map((stop) => ({ id: stop.id, label: stop.label, command: stop.command }));
+  const keeps = answer.keeps ?? [];
+  if (keeps.length > 0)
+    body.keeps = keeps.map((keep) => ({ id: keep.id, label: keep.label, folder: keep.folder }));
   return `${encode(body)}\n${encode({ help: HELP })}\n`;
 }
 
@@ -135,10 +150,36 @@ export function stopsAxi(
           return output(await connection.call("add", "stops.add", { label, command }));
         },
       },
+      keep: {
+        usage: `keep --label "<the job>" --check '<command that checks it runs>' '<command that removes it>'`,
+        description:
+          "Record a job the captain asked to keep running after the task closes, and get a kept folder for its files outside your task's folders. A merge or an answer leaves it running; a discard, cancel or failure runs its remove once, after the stops.",
+        flags: { "--label": "value", "--check": "value" },
+        run: async (args, connection) => {
+          const label = args.flags["--label"];
+          const check = args.flags["--check"];
+          if (typeof label !== "string" || !label.trim())
+            throw new AxiError("Name the job with --label.", "VALIDATION_ERROR", HELP.slice(3));
+          if (typeof check !== "string" || !check.trim())
+            throw new AxiError(
+              "Give the command that checks the job runs with --check.",
+              "VALIDATION_ERROR",
+              HELP.slice(3),
+            );
+          const remove = args.positional.join(" ").trim();
+          if (!remove)
+            throw new AxiError(
+              "Give the command that removes the job.",
+              "VALIDATION_ERROR",
+              HELP.slice(3),
+            );
+          return output(await connection.call("keep", "stops.keep", { label, check, remove }));
+        },
+      },
       drop: {
         usage: "drop <id> | drop <task> <stop id>",
         description:
-          "Drop a stop you ran yourself, so the close does not run it again; or, with a finished task's id, drop its kept stop whose target is already gone, without running it.",
+          "Drop a stop you ran yourself, so the close does not run it again, or a keep whose job you removed yourself; or, with a finished task's id, drop its kept stop whose target is already gone, without running it.",
         run: async (args, connection) => {
           if (args.positional.length === 2) {
             const [task, id] = args.positional;

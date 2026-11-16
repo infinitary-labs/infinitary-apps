@@ -293,6 +293,7 @@ export function startPlacedHome(options: {
     tasks,
     paths,
     devices,
+    onThisMac: (deviceId) => options.pairing().onThisMac(deviceId),
     profiles: options.profiles,
     deviceName: () => "Mac mini",
     computers: () =>

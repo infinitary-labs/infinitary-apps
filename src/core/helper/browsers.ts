@@ -24,7 +24,7 @@ import type { TaskIntegrations } from "../integrations";
 import type { LoadLine } from "../placed/loadLine";
 import type { SecretsCatalog, SecretsCommand } from "../secrets/requests";
 import type { LeftBehindHere } from "../tasks/leftBehind";
-import { taskStopsCommand } from "../tasks/taskStops";
+import { keepsThere, taskStopsCommand } from "../tasks/taskStops";
 
 /**
  * The browsers of the tasks a computer that runs work holds
@@ -269,6 +269,8 @@ export class ComputerBrowsers {
       /** Its uses, asked of the home and run here (docs/secrets.md, "On a computer that runs work"). */
       secrets?: SecretsCommand;
       stops?: boolean;
+      /** Whether its crewmate may keep a job past the close: false for another user on the home's own computer. */
+      keeps?: boolean | undefined;
     },
   ): { browser?: CrewmateBrowser; shell: TaskShell } {
     const browser = tools.browser ? this.browsers.forTask(task) : undefined;
@@ -286,6 +288,7 @@ export class ComputerBrowsers {
               this.options.taskFolder(task),
               Date.now,
               this.options.leftBehind,
+              keepsThere(tools.keeps),
             ),
           }
         : {}),

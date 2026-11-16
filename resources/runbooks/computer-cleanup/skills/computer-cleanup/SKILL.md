@@ -39,6 +39,7 @@ Use only installed programs’ read-only listings: for example, `xcrun simctl li
 Do not start a stopped runtime, machine, simulator or container merely to list it.
 If a command might start a service, omit it and report the visibility gap.
 Match a candidate’s working folder, parent tree, recorded stop, identifier or named scratch disk against task records and evidence.
+A program whose working folder or files are in the app’s `kept/` folder, or that `kept/jobs.json` lists, is a job the captain asked to keep running after its task closed: its folder name names the task that set it up, but it is never that task’s leftover, and it is never offered to stop.
 Include the app’s named `work/worktree-trash/` folder when a candidate’s working folder points there; do not sweep other folders to find it.
 A retired folder keeps its original basename with a random suffix; task temporary folders can include `<task-id>-temp-<suffix>`, and older folders can include a timestamp before the original basename.
 Treat the original task id as a lookup lead, not the random suffix; confirm it with tasks and the task’s recorded paths or timeline.

@@ -11,7 +11,7 @@ import { awayWord, type ComputerReach } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
 import { said, saidLine } from "@shared/i18n/said";
 import type { InvokeRequest, InvokeResponse, WorkInvokeChannel } from "@shared/ipc";
-import { leftoversOf } from "@shared/leftoverPrograms";
+import { keepsAtClose, leftoversOf } from "@shared/leftoverPrograms";
 import type { ComputerSignIns, signInPlace } from "@shared/signIns";
 import {
   type PlacedEventRecord,
@@ -49,6 +49,7 @@ import type {
 import type { SecretUsesElsewhere } from "../session/tools";
 import { sameNames } from "../session/workRecovery";
 import type { TaskRecord, TaskRetentionFields } from "../storage/taskRecords";
+import { type KeptJobs, keptJobsAt } from "../tasks/keptJobs";
 import { noteLeftovers, openSuccessor } from "../tasks/leftoverPrograms";
 import { TaskService } from "../tasks/taskService";
 import type { DependencyInstall } from "../workspace/workspaceService";
@@ -98,12 +99,23 @@ import type { WorkDevices } from "./workDevices";
 /** Uses of this Mac's Secrets whose programs run on that computer (`secret-uses-elsewhere.md`). */
 const SECRET_USES_ELSEWHERE = contractChange("secret-uses-elsewhere");
 
+/** Jobs the captain asked to keep running past a close (`kept-jobs.md`). */
+const KEPT_JOBS = contractChange("kept-jobs");
+
 /** How long a computer with work is out of reach before the feed says so. */
 const OUT_OF_REACH_LINE_MS = 60_000;
 export type PlacedSessionsOptions = {
   tasks: TaskService;
   paths: AppPaths;
   devices: WorkDevices;
+  /**
+   * Whether a computer on the list runs as another user on this Mac
+   * (`DevicePairing.onThisMac`): its crewmates keep no job, which would run
+   * as that user. Absent, none may keep one.
+   */
+  onThisMac?: (deviceId: string) => boolean;
+  /** The home's record of kept jobs, at `<userData>/kept` when absent (docs/leftover-programs.md). */
+  keptJobs?: KeptJobs;
   /** Each backend's control plane on this Mac, which it presents from there. */
   profiles: { pi: ControlProfile; claude?: ControlProfile };
   /** A paired computer's name, as Devices lists it. */
@@ -262,9 +274,12 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   private readonly accounts: PlacedAccounts;
   /** What answering a callback reads of this side. */
   private readonly callbackReach: CallbackReach;
+  /** The home's record of the jobs closes kept running, here and there (`KeptJobs`). */
+  readonly keptJobs: KeptJobs;
 
   constructor(private readonly options: PlacedSessionsOptions) {
     this.startedAt = options.now();
+    this.keptJobs = options.keptJobs ?? keptJobsAt(options.paths.crewmatesDir, options.now);
     this.log = options.log ?? ((line) => console.warn(`[placed] ${line}`));
     this.copies = new PlacedCopies({
       tasks: options.tasks,
@@ -389,6 +404,23 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
    */
   takesStops(machine: string): boolean {
     return this.keepsBrowsers(machine) && this.listsStops(machine);
+  }
+
+  /**
+   * Whether the computer's crewmates may keep a job past the close
+   * (docs/leftover-programs.md, "A job the captain asked to keep"): one
+   * that runs as another user on this Mac may not, since the job would run
+   * as that user (false, which its crewmate hears as that refusal), and one
+   * without the change cannot (undefined).
+   */
+  takesKeeps(machine: string): boolean | undefined {
+    if (
+      !this.takesStops(machine) ||
+      !this.options.onThisMac ||
+      !listsChange(this.options.devices.version(machine)?.changes, KEPT_JOBS)
+    )
+      return undefined;
+    return !this.options.onThisMac(machine);
   }
 
   /** Whether the computer's emit_card takes files for the captain (docs/card-authoring.md). */
@@ -801,6 +833,10 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       tools: spec.tools.map((tool) => tool.name),
       ...(spec.load ? { load: true } : {}),
       ...(spec.stops && this.takesStops(deviceId) ? { stops: true } : {}),
+      // Its keeps there, or a refusal naming another user (docs/leftover-programs.md).
+      ...(spec.stops && this.takesKeeps(deviceId) !== undefined
+        ? { keeps: this.takesKeeps(deviceId) }
+        : {}),
       // Its own browser, there beside its shell (docs/task-browser.md, "On another computer").
       ...(spec.callbacks?.browser && device.roster.browsers ? { browser: true } : {}),
       // Its integrations, asked of this Mac (docs/integrations.md, "On a computer that runs work").
@@ -1456,13 +1492,21 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   ): Promise<unknown> {
     const stops = this.listsStops(deviceId);
     const carrier = stops ? this.carrierThere(task, deviceId) : undefined;
-    const startedAt = stops ? this.options.tasks.get(task)?.startedAt : null;
+    const record = stops ? this.options.tasks.get(task) : undefined;
+    const startedAt = record?.startedAt;
+    // A merged or answered close keeps the task's kept jobs running there;
+    // any other close, a move's or one whose record is gone, removes them,
+    // as the computer does when the order says nothing.
+    const keeps =
+      (record?.status === "done" || record?.status === "dropped") &&
+      keepsAtClose(record.closedReason) === "keep";
     const answer = await this.options.devices.ask(deviceId, "inf:session:close", [
       {
         orderId,
         task,
         ...(carrier ? { carriedTo: carrier } : {}),
         ...(typeof startedAt === "number" ? { startedAt } : {}),
+        ...(keeps ? { keeps: "keep" as const } : {}),
       },
     ]);
     const parsed = workOrders["inf:session:close"].response.safeParse(answer);
@@ -1481,6 +1525,21 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         );
       if (!already) noteLeftovers(this.options.tasks, task, report, deviceId);
     }
+    // Its kept jobs run there now, recorded here by that computer (`KeptJobs`, once per job).
+    const kept = report?.kept ?? [];
+    if (kept.length > 0)
+      try {
+        this.keptJobs.record(kept, {
+          computer: deviceId,
+          task,
+          key: this.options.tasks.get(task)?.key ?? task,
+        });
+      } catch (caught) {
+        // The close's line already names each kept job; the order's answer still goes back.
+        this.log(
+          `could not record the kept jobs of ${task}: ${caught instanceof Error ? caught.message : String(caught)}`,
+        );
+      }
     return answer;
   }
 

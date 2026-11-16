@@ -1,5 +1,12 @@
 import { execFile } from "node:child_process";
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { LEFTOVERS_DATA_KEY, leftoversOf } from "@shared/leftoverPrograms";
@@ -567,6 +574,201 @@ describe("what a close leaves, and a look clearing it", () => {
       });
       expect(existsSync(join(folders.root, KEPT_LEFTOVERS_FILE))).toBe(false);
       expect(readdirSync(join(tasks.tasksDir, KEPT_INDEX_DIR))).toEqual([]);
+    } finally {
+      killAll(pids);
+    }
+  });
+});
+
+describe("a job the captain asked to keep", () => {
+  /**
+   * INF-4381's approved plan, piece 1, done criteria 3 and 9: a merged
+   * close leaves the job a keep recorded running, with the program working
+   * in its kept folder, while the program holding the task's temporary
+   * folder ends; the home records the job and the line names it.
+   */
+  it("keeps the program in its kept folder past a merged close, and ends the other", async () => {
+    const root = scratchDir("infinitary-kept-merged-");
+    const crewmatesDir = join(root, "crewmates");
+    const taskFolder = join(crewmatesDir, "task-merged");
+    const temp = join(taskFolder, TEMP_DIR_NAME);
+    mkdirSync(temp, { recursive: true });
+    const pids: number[] = [];
+    try {
+      const keep = taskStopsCommand(taskFolder, Date.now).keep({
+        label: "nightly photo backup",
+        check: "true",
+        remove: "false",
+      }).kept;
+      const folder = keep?.folder ?? "";
+      expect(existsSync(folder)).toBe(true);
+      // The job's run, working in its kept folder with its log open there.
+      const job = await detached(
+        `exec sleep 310 3>>"${join(folder, "backup.log")}"`,
+        folder,
+        join(root, "job.pid"),
+      );
+      pids.push(job);
+      // Scaffolding left holding the temporary folder.
+      const scaffold = await detached(
+        `exec sleep 311 3>>"${join(temp, "scratch.log")}"`,
+        temp,
+        join(root, "scaffold.pid"),
+      );
+      pids.push(scaffold);
+      const records = new Map<string, TaskRecord>([
+        [
+          "task-merged",
+          {
+            id: "task-merged",
+            key: "INF-11",
+            status: "done",
+            closedReason: "merged",
+            startedAt: Date.now() - 60_000,
+            worktreeDir: "",
+            workspaceState: "removed",
+            deviceId: null,
+          } as unknown as TaskRecord,
+        ],
+      ]);
+      const notes: { text: string; data?: Record<string, unknown> }[] = [];
+      const sweeps = new LeftoverPrograms({
+        crewmatesDir,
+        graceMs: 2000,
+        tasks: {
+          get: (id) => records.get(id),
+          note: (_id, text, options) =>
+            notes.push({ text, ...(options.data ? { data: options.data } : {}) }),
+          graph: { carrierOf: (id) => records.get(id), escalatedTo: () => [] },
+        },
+      });
+      await sweeps.begin("task-merged");
+
+      // The report carries the keep as recorded, without when or where it was recorded.
+      const { at: _at, ...kept } = keep ?? { at: 0 };
+      expect(leftoversOf(notes[0]?.data)).toEqual({
+        stops: [],
+        programs: [{ pid: scaffold, name: "sleep", outcome: "ended", started: expect.any(String) }],
+        holders: "checked",
+        kept: [kept],
+      });
+      expect(notes[0]?.text).toBe(
+        `Leftovers at close: job "nightly photo backup" keeps running; sleep (${scaffold}) ended.`,
+      );
+      await vi.waitFor(async () => expect(await running(scaffold)).toBe(false), WAIT);
+      expect(await running(job)).toBe(true);
+      expect(existsSync(folder)).toBe(true);
+      expect(sweeps.keptJobs.list()).toEqual([
+        expect.objectContaining({
+          computer: null,
+          label: "nightly photo backup",
+          folder,
+          task: "task-merged",
+          key: "INF-11",
+        }),
+      ]);
+      expect(readStops(taskFolder).keeps).toBeUndefined();
+    } finally {
+      killAll(pids);
+    }
+  });
+
+  /**
+   * The plan's criteria 4 and 6, by the captain's answer that a discarded
+   * task's job is removed: each keep's remove runs once, after the stops,
+   * as a stop does; a failed remove is kept as a stop is; and on a computer
+   * that runs work a close order with no word on keeps removes them too,
+   * while one that says keep answers the job in its report. A folder the
+   * job left read-only in its kept folder is still removed, never stopping
+   * the close (the review of INF-4387).
+   */
+  it("removes a kept job at a discard, after the stops, and keeps a failed remove", async () => {
+    const root = scratchDir("infinitary-kept-discarded-");
+    const crewmatesDir = join(root, "crewmates");
+    const taskFolder = join(crewmatesDir, "task-discarded");
+    mkdirSync(join(taskFolder, TEMP_DIR_NAME), { recursive: true });
+    const order = join(root, "order.log");
+    const pids: number[] = [];
+    try {
+      const command = taskStopsCommand(taskFolder, Date.now);
+      const removed = command.keep({
+        label: "nightly photo backup",
+        check: "true",
+        remove: `kill "$(cat '${join(root, "job.pid")}')" && echo remove >> '${order}'`,
+      }).kept;
+      const failing = command.keep({ label: "hourly sync", check: "true", remove: "exit 3" }).kept;
+      command.add({ label: "scratch machine", command: `echo stop >> '${order}'` });
+      const job = await detached("exec sleep 312", removed?.folder ?? "", join(root, "job.pid"));
+      pids.push(job);
+      // A cache the job made and left read-only, as some tools leave theirs.
+      const cache = join(removed?.folder ?? "", "cache");
+      mkdirSync(cache);
+      writeFileSync(join(cache, "photos.idx"), "index\n");
+      chmodSync(cache, 0o500);
+      const records = new Map<string, TaskRecord>([
+        [
+          "task-discarded",
+          {
+            id: "task-discarded",
+            key: "INF-12",
+            status: "dropped",
+            closedReason: "discarded",
+            startedAt: Date.now() - 60_000,
+            worktreeDir: "",
+            workspaceState: "removed",
+            deviceId: null,
+          } as unknown as TaskRecord,
+        ],
+      ]);
+      const notes: { text: string; data?: Record<string, unknown> }[] = [];
+      const sweeps = new LeftoverPrograms({
+        crewmatesDir,
+        graceMs: 2000,
+        tasks: {
+          get: (id) => records.get(id),
+          note: (_id, text, options) =>
+            notes.push({ text, ...(options.data ? { data: options.data } : {}) }),
+          graph: { carrierOf: (id) => records.get(id), escalatedTo: () => [] },
+        },
+      });
+      await sweeps.begin("task-discarded");
+
+      expect(leftoversOf(notes[0]?.data)).toEqual({
+        stops: [{ label: "scratch machine", outcome: "ran" }],
+        programs: [],
+        holders: "checked",
+        removed: [
+          { label: "hourly sync", outcome: "failed", exitCode: 3 },
+          { label: "nightly photo backup", outcome: "ran" },
+        ],
+        keptInFile: true,
+      });
+      expect(notes[0]?.text).toBe(
+        'Leftovers at close: stop "scratch machine" ran; job "hourly sync" could not be removed (exit 3); job "nightly photo backup" was removed.',
+      );
+      expect(readFileSync(order, "utf8").trim().split("\n")).toEqual(["stop", "remove"]);
+      await vi.waitFor(async () => expect(await running(job)).toBe(false), WAIT);
+      // The removed job takes its kept folder; the failed one keeps its folder and its remove.
+      expect(existsSync(removed?.folder ?? "")).toBe(false);
+      expect(existsSync(failing?.folder ?? "")).toBe(true);
+      const left = JSON.parse(readFileSync(join(taskFolder, KEPT_LEFTOVERS_FILE), "utf8"));
+      expect(left.stops).toEqual([
+        expect.objectContaining({ id: failing?.id, label: "hourly sync", command: "exit 3" }),
+      ]);
+      expect(sweeps.keptJobs.list()).toEqual([]);
+
+      // On a computer that runs work.
+      const tasks = new PlacedTasks(join(root, "work"), join(root, "worktrees"));
+      const there = tasks.ensure("task-there");
+      tasks.writeState("task-there", { ...tasks.state("task-there"), closed: true });
+      const BACKUP = { label: "nightly photo backup", check: "true", remove: "true" };
+      const keptThere = taskStopsCommand(there.root, Date.now).keep(BACKUP).kept;
+      expect(keptThere?.folder.startsWith(join(root, "work", "kept"))).toBe(true);
+      const kept = await placedLeftovers(tasks)("task-there", { keeps: "keep" });
+      expect(kept.kept).toEqual([expect.objectContaining({ ...BACKUP, id: keptThere?.id })]);
+      taskStopsCommand(there.root, Date.now).keep(BACKUP);
+      const unsaid = await placedLeftovers(tasks)("task-there", {});
+      expect(unsaid.removed).toEqual([{ label: BACKUP.label, outcome: "ran" }]);
     } finally {
       killAll(pids);
     }

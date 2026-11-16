@@ -794,6 +794,15 @@ export class AxiChannel {
             ...(cwd ? { cwd } : {}),
           });
         }
+        case "stops.keep": {
+          const { label, check, remove } = (message.input ?? {}) as StopsOpInput["stops.keep"];
+          return stops.keep({
+            label: String(label ?? ""),
+            check: String(check ?? ""),
+            remove: String(remove ?? ""),
+            ...(cwd ? { cwd } : {}),
+          });
+        }
         case "stops.drop": {
           const { id } = (message.input ?? {}) as StopsOpInput["stops.drop"];
           return stops.drop(String(id ?? ""));

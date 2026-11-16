@@ -79134,9 +79134,22 @@ ${FRAME_QUESTION_SCRIPT}
     /** When it was registered, in ms since the epoch. */
     at: number().int().nonnegative()
   });
+  const taskKeepSchema = object({
+    id: string().regex(/^s[1-9][0-9]*$/),
+    label: stopLabelSchema,
+    check: stopCommandSchema,
+    remove: stopCommandSchema,
+    /** The kept folder for the job's files. */
+    folder: string().min(1).max(4096),
+    /** The system account the job runs as: the one the crewmate's shell runs as there. */
+    account: string().max(256),
+    cwd: string().max(4096).optional(),
+    at: number().int().nonnegative()
+  });
   object({
     next: number().int().positive(),
-    stops: array(taskStopSchema)
+    stops: array(taskStopSchema),
+    keeps: array(taskKeepSchema).optional()
   });
   const stopOutcomeSchema = object({
     label: stopLabelSchema,
@@ -79164,13 +79177,25 @@ ${FRAME_QUESTION_SCRIPT}
      * The close kept what it could not finish in the task's folder there
      * (`leftBehindSchema`), so the computer's list says when it is cleared.
      */
-    keptInFile: literal(true).optional()
+    keptInFile: literal(true).optional(),
+    /** The keeps a merged or answered close left running, which the home records (`KeptJobs`). */
+    kept: array(taskKeepSchema.omit({ cwd: true, at: true })).optional(),
+    /** How each keep's remove went at a discard, cancel or failure close, after the stops. */
+    removed: array(stopOutcomeSchema).optional(),
+    /** How many keeps went to `handedTo` with the stops. */
+    handedKeeps: number().int().nonnegative().optional()
   });
   ({
     request: {
       carriedTo: object({ task: string().regex(/^[A-Za-z0-9_-]{1,64}$/), key: string().min(1).max(64) }).optional(),
       /** When the task started, in ms since the epoch: a program running before it is not its leftover. */
-      startedAt: number().int().nonnegative().optional()
+      startedAt: number().int().nonnegative().optional(),
+      /**
+       * What the close does with the task's keeps (`kept-jobs.md`): a merged or
+       * answered close keeps them running, any other runs their removes.
+       * Absent, as from a home without the change, they are removed.
+       */
+      keeps: _enum(["keep", "remove"]).optional()
     },
     response: object({ ok: literal(true), leftovers: leftoversReportSchema.optional() })
   });

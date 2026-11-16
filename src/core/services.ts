@@ -698,6 +698,7 @@ export async function createServices(
     tasks,
     paths,
     devices: workDevices,
+    onThisMac: (deviceId) => devices.onThisMac(deviceId),
     browsers: () => browsersThere,
     profiles: {
       pi: sessionFactories.pi.controlProfile,
@@ -1045,6 +1046,7 @@ export async function createServices(
   // its working copy and temporary folder go (docs/leftover-programs.md).
   const leftoverPrograms = new LeftoverPrograms({
     crewmatesDir: paths.crewmatesDir,
+    keptJobs: placed.keptJobs,
     tasks,
     log: (line) => console.warn(`[leftovers] ${line}`),
   });

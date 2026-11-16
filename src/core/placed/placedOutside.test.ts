@@ -41,10 +41,12 @@ import { CREWMATE_INTEGRATIONS_LINE, INTEGRATIONS_COMMAND } from "../integration
 import { READ_HOUR_MS } from "../integrations/outsideReads";
 import { crewmatePlacedDir, crewmateSessionsDir, crewmateTempDir } from "../paths";
 import { backgroundJobReceipt } from "../pi/bashWords";
+import { CREWMATE_STOPS_LINE } from "../pi/piResources";
 import { CREWMATE_SECRETS_CATALOG_LINE, CREWMATE_SECRETS_LINE } from "../secrets/commandWords";
 import { ProtectedSecrets } from "../secrets/protected";
 import { SecretsSettings } from "../secrets/settings";
 import { seedTask } from "../tasks/seedTask";
+import { KEEP_AS_ANOTHER_USER } from "../tasks/taskStops";
 
 /**
  * A task that runs on a computer that runs work (`tests/helpers/placedWorld.ts`):
@@ -265,6 +267,84 @@ describe("the integrations command on a computer that runs work", () => {
     expect(shellAnswer(api.requests[requests + 1]).exit).toBe(0);
     expect(shellAnswer(api.requests[requests + 1]).output).toContain("GitHub");
     expect(JSON.stringify(api.requests)).not.toContain("runner-installed command reached");
+  });
+});
+
+// INF-4381's approved plan, piece 1, done criteria 6 and 7: a job the captain
+// asked to keep, recorded from the crewmate's shell on a computer that runs
+// work through the real launcher, command process and task channel, is kept
+// there past a merged close and recorded here by that computer; a crewmate
+// running as another user on this Mac is refused, since the job would run as
+// that user.
+describe("a kept job on a computer that runs work", () => {
+  let entry: string;
+  beforeAll(async () => {
+    entry = await bundleAxiProcess();
+  }, 60_000);
+
+  const KEEP = `infinitary-stops-axi keep --label "nightly photo backup" --check 'true' 'echo removed'`;
+
+  it("keeps the job there past a merged close, and records it here by that computer", async () => {
+    const at = await world(undefined, { jobs: true, taskChannel: entry, leftovers: true });
+    // The world joins its computer as another user on this Mac; this case
+    // stands in a separate computer, whose crewmates may keep a job.
+    vi.spyOn(at.pairing(), "onThisMac").mockReturnValue(false);
+    const home = at.home();
+    model([
+      { tools: [shellCommand(KEEP)] },
+      { tools: [shellCommand("infinitary-stops-axi")] },
+      { text: "The backup keeps running." },
+    ]);
+    const requests = api.requests.length;
+    await at.start("t-keep");
+    await expect.poll(() => home.tasks.get("t-keep")?.outcome).toBe("The backup keeps running.");
+    expect(systemOf(api.requests[requests])).toContain(CREWMATE_STOPS_LINE);
+    const folder = join(at.dataDir, "kept", "t-keep-s1");
+    const kept = shellAnswer(api.requests[requests + 1]);
+    expect(kept.exit).toBe(0);
+    expect(kept.output).toContain(folder);
+    expect(existsSync(folder)).toBe(true);
+    const listed = shellAnswer(api.requests[requests + 2]);
+    expect(listed.output).toContain("nightly photo backup");
+
+    home.tasks.close("t-keep", { status: "done", reason: "merged", actor: "host" });
+    await expect
+      .poll(() => home.placed.keptJobs.list())
+      .toEqual([
+        {
+          computer: at.deviceId,
+          account: expect.any(String),
+          label: "nightly photo backup",
+          check: "true",
+          remove: "echo removed",
+          folder,
+          task: "t-keep",
+          key: home.tasks.get("t-keep")?.key,
+          at: expect.any(Number),
+        },
+      ]);
+    expect(
+      home.tasks
+        .timeline("t-keep")
+        .filter((event) => event.text.startsWith("At close:"))
+        .map((event) => event.text),
+    ).toEqual(['At close: job "nightly photo backup" keeps running.']);
+    expect(existsSync(folder)).toBe(true);
+  });
+
+  it("refuses a keep to a crewmate running as another user on this Mac", async () => {
+    const at = await world(undefined, { jobs: true, taskChannel: entry, leftovers: true });
+    const home = at.home();
+    model([{ tools: [shellCommand(KEEP)] }, { text: "The job cannot be kept here." }]);
+    const requests = api.requests.length;
+    await at.start("t-other-user");
+    await expect
+      .poll(() => home.tasks.get("t-other-user")?.outcome)
+      .toBe("The job cannot be kept here.");
+    const refused = shellAnswer(api.requests[requests + 1]);
+    expect(refused.exit).toBe(1);
+    expect(refused.output).toContain(KEEP_AS_ANOTHER_USER);
+    expect(existsSync(join(at.dataDir, "kept"))).toBe(false);
   });
 });
 

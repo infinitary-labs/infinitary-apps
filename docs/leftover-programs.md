@@ -18,6 +18,7 @@ Every record close goes through `TaskClosing.closeAndPurge`, which begins the sw
 The working copy's retirement and the temporary folder's removal (`TaskTempFiles`) wait for the sweep, so nothing that holds a folder is moved away under it.
 
 1. Each registered stop runs once, newest first, in its own process group with the host's environment, for at most a minute; the file is emptied first, so a close asked again runs none, and a stop that failed or did not finish is kept (see "What a close leaves").
+   The task's keeps follow the stops: a merged or answered close leaves each job running, and any other close runs each keep's remove once, as a stop runs (see "A job the captain asked to keep").
 2. The app lists the programs that hold a file open under the working copy or the temporary folder, or work in one of them: through `lsof` on a Mac, `/proc` on Linux, and on Windows each program's working folder and program file as the system lists them (`src/core/placed/folderHolders.ts`).
    Only the names under those folders are kept from what the system lists.
    A reading cut short at its time limit counts as unreadable, never as a list with no holders.
@@ -58,12 +59,36 @@ The pressure notice offers no cleanup action.
 A close with no stops and no holders writes nothing.
 On Windows a holder is a program whose working folder or program file is under the task's folders, read from the system itself; Windows does not list which program holds a file open, so a program that only keeps a file there open is not found.
 
+## A job the captain asked to keep
+
+A job the captain's words ask to keep running after the task, such as a scheduled backup, is the captain's, not scaffolding (the captain's approved plan on INF-4381, direction A).
+Its crewmate sets it up with the system's own scheduler as the account its shell runs as, and records a keep instead of a stop: `keep --label "<the job>" --check '<command that checks it runs>' '<command that removes it>'` (`docs/axi-commands.md`, "The stops command").
+The app never reads the job's own files; the keep carries what the crewmate declared.
+A keep is saved in the same `stops.json`, under `keeps`, with its label, its check and remove commands, the folder the shell was in, the account the shell runs as, when it was recorded, and its kept folder; keeps and stops share one count of ids (`src/core/tasks/taskStops.ts`).
+Recording one answers a kept folder for the job's files, `kept/<task>-<id>` beside the task folders (`<userData>/kept` here, `kept` in the work folder of a computer that runs work), made readable only by the user.
+It is outside the task's working copy and temporary folder, so no close removes it, and a removal of a computer that runs work leaves it, as it leaves the person's other files.
+
+What the close does with a keep follows its close reason (`keepsAtClose`, `src/shared/leftoverPrograms.ts`):
+
+- A close by a merge, a release, an answer or the captain's word (`landed`, `merged`, `released`, `answered`, `settled`, `finished`) leaves the job running and its kept folder in place.
+  The keep leaves the task's file, and the home records the job in `kept/jobs.json` beside its task folders (`KeptJobs`, `src/core/tasks/keptJobs.ts`, its one writer), naming the computer (null for this one), the account, the label, its check and remove, its kept folder, the task and when; retention never removes it.
+  The close's one line names each kept job ("job "<label>" keeps running"), and its report carries the jobs (`kept`).
+- A discard, cancel or failure, or a superseded task with no open successor, runs each keep's remove once, newest first, after the stops and before the programs holding the task's folders are ended, as a stop runs (the captain's answer on INF-4381).
+  A remove that ran cleanly takes the kept folder with it; one that failed or did not finish keeps the folder and is kept in `leftovers.json` as a failed stop is, where a cleanup look can run it again.
+  The line names each remove and how it went, and the report carries them (`removed`).
+- A task carried on by another hands its keeps on with its stops (below).
+
+A crewmate whose task runs as another user on the home's own computer is refused a keep: the job would run as that user, not as the captain, so it says so on its card, and the first mate can start the job as a task under the captain's own account.
+An administrator's step, such as a system-wide unit or letting a job run while the captain is logged out, is one required action on the crewmate's card naming its one command; no password or sign-in is ever asked for.
+A job made before this shipped is not recorded.
+
 ## A task carried on by another
 
-A task closed as carried on by a successor (`carriedOnClose`), or as the earlier attempt of a stronger-model retry, hands its stops to that task, after the successor's own, and runs none of them: what it registered belongs to the work that goes on (`openSuccessor`).
+A task closed as carried on by a successor (`carriedOnClose`), or as the earlier attempt of a stronger-model retry, hands its stops and keeps to that task, after the successor's own, and runs none of them: what it registered belongs to the work that goes on (`openSuccessor`).
+A handed keep keeps its kept folder, and the successor's own close decides it.
 Its working copy and temporary folder still go, so the programs holding them are ended as at any other close, here and on a computer that runs work (the captain's answer on the review of INF-3447's piece 1).
 A successor that is already closed would never run them, so they run at this close instead; one that closes later, even before it started, runs them at its own close.
-The line says how many stops went to which task.
+The line says how many stops and kept jobs went to which task.
 A successor already on another computer cannot run them there, so they run at this close instead.
 Stops kept in a task's folder here run at its close here whatever computer it ran on, so stops handed to a successor before it started on a computer that runs work, or registered before a task moved off this computer, still run.
 
@@ -71,7 +96,10 @@ Stops kept in a task's folder here run at its close here whatever computer it ra
 
 A computer that runs work gives its crewmates the command (the placed spec's `stops`) and keeps their stops in each task's folder there.
 Its close order, `inf:session:close`, runs the same sweep there once the conversation, its shell commands and its task channel have closed, and before the home retires the working copy or removes the temporary folder, which both follow that order.
-The home names the task that carries the work on when it runs on that same computer (`carriedTo`) and when the task started (`startedAt`), and the order's answer carries the report (`leftovers`), which the home writes on the task's timeline once (`PlacedSessions.closeThere`).
+The home names the task that carries the work on when it runs on that same computer (`carriedTo`), when the task started (`startedAt`), and `keeps: "keep"` for a merged or answered close (`kept-jobs.md`), and the order's answer carries the report (`leftovers`), which the home writes on the task's timeline once (`PlacedSessions.closeThere`).
+An order that says nothing on keeps, as from a home without the change or for a task that moved off that computer, removes them.
+The report's kept jobs are recorded at the home under that computer, once per kept folder.
+The placed spec's `keeps` grants the command's `keep` there: the home sends true to a computer that lists the change, and false to one that runs as another user on the home's own computer, whose crewmate hears that refusal; a computer the home sent nothing refuses a keep too.
 Every close order the home sends goes through that one sender: the close of a closed task, the close before a task's working copy there is retired after it moved off that computer (`PlacedCopies.retireMoved`), and the close of a leftover a computer holds for a task the home no longer records there (`PlacedCopies.retireLeftover`).
 The same holders are left alone there: the computer's own run and what it started, a group another task still open there declared, and a program running before the task started.
 A leftover close after the task's record was purged carries no start time, so there every program holding the task's folders is ended.

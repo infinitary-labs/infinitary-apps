@@ -242,6 +242,15 @@ export const placedSpecSchema = z.object({
   load: z.boolean().optional(),
   stops: z.boolean().optional(), // infinitary-stops-axi there (docs/leftover-programs.md)
   /**
+   * Its crewmate may keep a job the captain asked for past the close
+   * (`kept-jobs.md`; docs/leftover-programs.md, "A job the captain asked to
+   * keep"). The home sends it only to a computer that lists the change:
+   * true, or false for another user on the home's own computer, whose
+   * crewmate is refused a keep because the job would run as that user.
+   * Absent, a keep is refused too.
+   */
+  keeps: z.boolean().optional(),
+  /**
    * The task's crewmate lists the captain's secrets through
    * `infinitary-secrets-axi` in its shell there, each list asked of the home
    * (`inf:work:secrets`; docs/secrets.md, "Current command seam"): metadata

@@ -1,9 +1,10 @@
-import { chmodSync, existsSync, lstatSync, readdirSync, renameSync, rmSync } from "node:fs";
+import { existsSync, readdirSync, renameSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { MachineLoginOutcome } from "@shared/accounts";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { MADE_LOGIN_FILE } from "../claude/claudeAuth";
 import { HOME_ADDRESSES_FILE, JoinedHome } from "../devices/joinedHome";
+import { removeAll } from "../removeWhole";
 import {
   type BackgroundContext,
   forgetInstalled,
@@ -241,33 +242,4 @@ async function claudeLogin(
     : "not-signed-out";
   removeAll(left);
   return { outcome };
-}
-
-/**
- * Deletes what Firstmate made, whole; true once it is gone. A folder in it
- * that a build left read-only is made writable to its owner, and the delete
- * tried once more.
- */
-function removeAll(path: string): boolean {
-  try {
-    rmSync(path, { recursive: true, force: true });
-    return true;
-  } catch {
-    // Tried once more below.
-  }
-  try {
-    writable(path);
-    rmSync(path, { recursive: true, force: true });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/** Makes a folder and every folder in it writable to its owner, never following a link. */
-function writable(path: string): void {
-  const stat = lstatSync(path);
-  if (!stat.isDirectory()) return;
-  chmodSync(path, (stat.mode & 0o7777) | 0o700);
-  for (const entry of readdirSync(path)) writable(join(path, entry));
 }

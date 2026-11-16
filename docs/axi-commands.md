@@ -255,9 +255,10 @@ When the shell itself becomes a background job, the helper ends the turn until t
 
 `infinitary-stops-axi` (`src/core/axi/stopCommands.ts`) registers how to stop each thing a crewmate starts that outlives the command that started it (`docs/leftover-programs.md`).
 Every task with a channel on this Mac is granted it, and so is a task on a computer that runs work, where it keeps the stops in the task's folder there.
-The bare command lists the task's stops, `add --label "<what it stops>" '<command that stops it>'` registers one with the shell's working folder, and `drop <id>` drops one the crewmate ran itself.
-A missing label or command, or an id that is not one, exits 2 before reaching the app.
-The app runs what is left when the task closes; those three subcommands run nothing.
+The bare command lists the task's stops and keeps, `add --label "<what it stops>" '<command that stops it>'` registers one with the shell's working folder, and `drop <id>` drops one the crewmate ran itself, or a keep whose job it removed itself.
+`keep --label "<the job>" --check '<command that checks it runs>' '<command that removes it>'` records a job the captain asked to keep running past the close and answers its kept folder (`docs/leftover-programs.md`, "A job the captain asked to keep"); a task run as another user on the home's own computer is refused.
+A missing label, check or command, or an id that is not one, exits 2 before reaching the app.
+The app runs what is left when the task closes; those four subcommands run nothing.
 `left` lists what finished tasks left on this computer (`docs/leftover-programs.md`, "What a close leaves"), with each kept stop's command for the look to judge what it deletes and whether its target is gone, never to show on a card.
 `rerun <task> <stop id>` runs one finished task's kept stop again, and `end <task> <pid>` ends one finished task's kept program only while it still has the start time its close kept; a cleanup look uses them for the captain's picks.
 `drop <task> <stop id>` removes one finished task's kept stop without running it; a cleanup look uses it on its own for a stop whose target it found already gone.

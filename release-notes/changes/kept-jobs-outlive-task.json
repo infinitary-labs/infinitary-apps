@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "kept-jobs-outlive-task",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A scheduled job you ask a crewmate to set up keeps running after its task closes",
+      "body": "When you ask a crewmate for a job that should keep running, such as a nightly backup, it keeps the job's files outside the task's own folders and the job keeps running once you merge or accept the work. You no longer need to keep the task open. If you discard the task, its job is removed with it. The crewmate's card says what keeps running, where, and how to remove it.",
+      "noPicture": "This changes what a task's close leaves running on the computer, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

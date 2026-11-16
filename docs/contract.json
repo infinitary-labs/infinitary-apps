@@ -83570,6 +83570,9 @@
                     "stops": {
                       "type": "boolean"
                     },
+                    "keeps": {
+                      "type": "boolean"
+                    },
                     "secrets": {
                       "type": "boolean"
                     },
@@ -84066,6 +84069,13 @@
                   "type": "integer",
                   "minimum": 0,
                   "maximum": 9007199254740991
+                },
+                "keeps": {
+                  "type": "string",
+                  "enum": [
+                    "keep",
+                    "remove"
+                  ]
                 }
               },
               "required": [
@@ -84173,6 +84183,85 @@
                 "keptInFile": {
                   "type": "boolean",
                   "const": true
+                },
+                "kept": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "pattern": "^s[1-9][0-9]*$"
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120
+                      },
+                      "check": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 4000
+                      },
+                      "remove": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 4000
+                      },
+                      "folder": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 4096
+                      },
+                      "account": {
+                        "type": "string",
+                        "maxLength": 256
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "label",
+                      "check",
+                      "remove",
+                      "folder",
+                      "account"
+                    ]
+                  }
+                },
+                "removed": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120
+                      },
+                      "outcome": {
+                        "type": "string",
+                        "enum": [
+                          "ran",
+                          "failed",
+                          "timed-out"
+                        ]
+                      },
+                      "exitCode": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "label",
+                      "outcome"
+                    ]
+                  }
+                },
+                "handedKeeps": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
                 }
               },
               "required": [

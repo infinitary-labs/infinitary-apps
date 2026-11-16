@@ -27,6 +27,7 @@ import { createPiSessionFactory } from "../../src/core/pi/sessionFactory";
 import type { ModelRuntime } from "../../src/core/pi/types";
 import type { CrewmateTool } from "../../src/core/session/tools";
 import { forkChildProcess } from "../../src/core/sql/forkChildProcess";
+import { placedLeftovers } from "../../src/core/tasks/leftoverPrograms";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { ForgeAuthRequiredError, forgeAuthRequired } from "../../src/core/workspace/forgeAuth";
 import { git } from "../../src/core/workspace/git";
@@ -325,6 +326,13 @@ export async function world(
      * otherwise it keeps none, and its roster says so.
      */
     taskChannel?: string;
+    /**
+     * The computer gives its crewmates the stops command over that task
+     * channel and runs a closed task's stops and keeps at its close order,
+     * as the work mode does (docs/leftover-programs.md, "On a computer that
+     * runs work"); otherwise a close there sweeps nothing.
+     */
+    leftovers?: boolean;
   } = {},
 ) {
   const userData = scratchDir("infinitary-placed-home-");
@@ -436,6 +444,9 @@ export async function world(
               version: "9.9.9-test",
               keysDir: join(dir, "task-channel"),
               evidenceDir: (task) => tasks.folders(task).evidence,
+              ...(options.leftovers
+                ? { taskFolder: (task: string) => tasks.folders(task).root }
+                : {}),
               ...(jobs ? { answering: (shell: string) => jobs.answering(shell) } : {}),
               tell,
               ask,
@@ -474,6 +485,7 @@ export async function world(
             return { backend: "pi", runtime: options.runtime ?? runtime };
           },
           ...(tools ? { tools } : {}),
+          ...(options.leftovers ? { leftovers: placedLeftovers(tasks) } : {}),
           ...(channel
             ? {
                 commands: {

@@ -207,6 +207,15 @@ export type TaskRuntime = {
   withdrawnThisTurn: WakeWithdrawn[];
   /** Watchdog signals (P4): any session event counts as activity. */
   lastEventAt: number;
+  /**
+   * When its model last answered in this runtime: a word or a tool call it
+   * streamed, which only an answering provider sends. The still-down wake
+   * reads it against `failedAt`, so a lane that has worked since its last
+   * failure is never told as still failing (`IdleLadder.checkStillDown`).
+   */
+  answeredAt?: number;
+  /** When a turn of its last failed in this runtime (`turn_failed`). */
+  failedAt?: number;
   turnStartedAt: number;
   /** 0 = active, 1 = quiet feed line sent, 2 = quiet card raised. */
   quietLevel: 0 | 1 | 2;

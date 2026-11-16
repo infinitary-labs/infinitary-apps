@@ -194,7 +194,9 @@ export type IdleLadderHost = {
   tasks: TaskService;
   inbox: InboxStore;
   /** The task's live crewmate, when a runtime holds it. */
-  runtime(taskId: string): { turn: CrewTurn; crewmate: string } | undefined;
+  runtime(
+    taskId: string,
+  ): { turn: CrewTurn; crewmate: string; answeredAt?: number; failedAt?: number } | undefined;
   hasRunningJobs?: (taskId: string) => boolean;
   oldestRunningJob?: (taskId: string) => RunningJob | undefined;
   /** The cards on the stack now. */
@@ -844,7 +846,10 @@ export class IdleLadder {
    * Q1): the task's guidance has been failing at the provider for fifteen
    * minutes. Once per outage - the wake names the outage by when it began
    * (`once`), and the inbox remembers it durably, so a restart does not say
-   * it again. The recovered wake is `endOutage`'s.
+   * it again. The recovered wake is `endOutage`'s. A lane whose model has
+   * answered since its last failure is not still down, though its outage
+   * ends only when that turn does: a retry that is working now, such as
+   * one its computer took up again after a quit there, says nothing.
    */
   private checkStillDown(record: TaskRecord, now: number): void {
     // A lane a cut-off holds is the account's wait, and the account's wakes
@@ -857,7 +862,13 @@ export class IdleLadder {
     if (outage.failures === 0 || outage.since === null) return;
     if (now - outage.since < STILL_DOWN_MS) return;
     if (this.host.inbox.woken(record.id, stillDownOnce(outage.since))) return;
-    const crewmate = this.host.runtime(record.id)?.crewmate;
+    const runtime = this.host.runtime(record.id);
+    if (
+      runtime?.answeredAt !== undefined &&
+      runtime.answeredAt > Math.max(runtime.failedAt ?? 0, outage.since)
+    )
+      return;
+    const crewmate = runtime?.crewmate;
     this.host.notifyOp(
       stillDownWake(
         { ...record, ...(crewmate ? { crewmate } : {}) },

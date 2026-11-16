@@ -1178,6 +1178,40 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(stillDownWakes(ops)).toHaveLength(2);
     });
 
+    // The nightly session audit's finding 5: a computer that runs work quit,
+    // its turn came back as failed, and the retry it took up once it was
+    // back worked for twelve minutes - yet the first mate heard at fifteen
+    // that the task was still failing at the provider.
+    it("a retry its model is answering is never told as still failing", async () => {
+      const harness = await stopped();
+      const { supervisor, crewmate, inbox, ops, taskId } = harness;
+      await supervisor.steer.steerCrewmate(taskId, "use the other library");
+      await settle();
+      const steer = crewmate.promptCalls.at(-1);
+      await failTurn(
+        crewmate,
+        taskId,
+        "The Mac mini quit before this turn finished, so its messages go again.",
+      );
+      const since = inbox.outage(taskId).since ?? 0;
+      expect(inbox.outage(taskId).failures).toBe(1);
+      // The computer is back: the retry goes, and its model answers.
+      await sweepWhenDue(harness, taskId);
+      expect(crewmate.promptCalls.at(-1)).toBe(steer);
+      crewmate.emit({ type: "tool_start", taskId, callId: "call-1", toolName: "bash" });
+      await settle();
+      // Past fifteen minutes the retry is still at work, its outage open.
+      clock.now = since + STILL_DOWN_MS + minutes(1);
+      supervisor.watch.reconcileIdle(clock.now);
+      await settle();
+      expect(inbox.outage(taskId).failures).toBe(1);
+      expect(stillDownWakes(ops)).toEqual([]);
+      // Its turn ends clean, and the outage with it.
+      await endTurn(crewmate, taskId, "Done.");
+      expect(inbox.outage(taskId).failures).toBe(0);
+      expect(stillDownWakes(ops)).toEqual([]);
+    });
+
     it("the outage wakes and the job bound ride the Firstmate's lane as typed facts", async () => {
       let job = { jobId: "poll-1", command: "gh run watch", startedAt: clock.now };
       const harness = await stopped({

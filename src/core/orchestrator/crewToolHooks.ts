@@ -591,17 +591,20 @@ export class CrewToolHooks {
     switch (event.type) {
       case "assistant_delta": {
         task.currentTurnText += event.text;
+        task.answeredAt = this.core.now();
         break;
       }
       case "turn_failed": {
         // Held on the runtime until the prompt resolves; turnComplete turns
         // it into the failure report instead of "(no report)".
+        task.failedAt = this.core.now();
         task.lastTurnError = event.error;
         task.lastTurnCutOff = event.cutOff;
         task.lastTurnContextOverflow = event.contextOverflow;
         break;
       }
       case "tool_start": {
+        task.answeredAt = this.core.now();
         task.openCalls.set(event.callId, { tool: event.toolName, since: this.core.now() });
         break;
       }

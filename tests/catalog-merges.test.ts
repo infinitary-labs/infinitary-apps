@@ -26,12 +26,12 @@ import { scratchDir } from "./helpers/scratchDirs";
 // changes that each add a different message no longer clash when they are
 // combined, and `pnpm check`'s catalog check passes on the combination. Each
 // test builds a throwaway project holding the real catalogs, glossaries and
-// compiler, and combines branches with real git, as the merge queue does.
+// compiler, and combines branches with real git, as a batch does.
 
 const REPO = process.cwd();
 /** Five times the slowest case on the Mac, 3.2 s (docs/test-cohorts.md). */
 const BUDGET_MS = 20_000;
-/** The case that also runs the phone's card generator three times: five times its run on the Linux check, 20.2 s. */
+/** Each case that also runs the phone's card generator three times: five times the slower one's run on the Linux check, 20.2 s. */
 const CARD_BUDGET_MS = 105_000;
 
 /** Two new messages, each in every language, as a change that writes the English must carry them. */
@@ -105,11 +105,21 @@ const PHONE_HOSTS = ["CardHost.generated.js", "PanelHost.generated.js"].map(
 );
 
 /**
- * A host as regenerating it with one more message leaves the line that lists
- * every message: the new name in it.
+ * A host as regenerating it with one more message leaves the list of every
+ * message: the new name on its own line, where `beside` sorts, as a change
+ * adding the message next to `beside` in name order writes it.
  */
-const withMessage = (host: string, id: string) =>
-  host.replace(/^( {2}const MESSAGES = \{ .*) \};$/m, `$1, ${id} };`);
+function withMessage(host: string, id: string, beside: string): string {
+  const lines = host.split("\n");
+  const start = lines.indexOf("  const MESSAGES = {");
+  const end = lines.indexOf("  };", start);
+  const after = lines.findIndex(
+    (line, index) => index > start && index < end && line.trim().replace(/,$/, "") > beside,
+  );
+  expect([start, end, after].every((index) => index > 0)).toBe(true);
+  lines.splice(after, 0, `    ${id},`);
+  return lines.join("\n");
+}
 
 /**
  * A throwaway project holding what the catalog check reads: the compiler,
@@ -163,7 +173,8 @@ function appendTerm(glossary: string, row: string): string {
 /**
  * A change on its own branch from main: it adds one message in every
  * language at the end of its area file and one German glossary term at the
- * end of the table, runs the compiler as the project asks, and commits.
+ * end of the table, runs the compiler as the project asks, and commits;
+ * with `phoneCards`, it also rebuilds the phone's card and panel hosts.
  */
 function change(
   root: string,
@@ -171,6 +182,7 @@ function change(
   id: string,
   words: Record<string, string>,
   term: string,
+  { phoneCards = false } = {},
 ): void {
   git(root, "checkout", "--quiet", "-b", branch, "main");
   for (const [tag, text] of Object.entries(words)) {
@@ -182,9 +194,31 @@ function change(
   write(root, glossary, appendTerm(read(root, glossary), term));
   const compiled = node(root, "scripts/generate-messages.ts");
   expect(compiled.stderr).toBe("");
+  if (phoneCards) {
+    const built = node(root, "scripts/generate-phone-cards.ts");
+    expect(built.stderr).toBe("");
+    for (const host of PHONE_HOSTS) expect(read(root, host)).toContain(`function ${id}()`);
+  }
   git(root, "add", "-A");
   git(root, "commit", "--quiet", "-m", `feat: ${id}`);
 }
+
+/** Merges `branch` into the checked-out branch as the batch combines it, answering git's own output. */
+const merge = (root: string, branch: string) =>
+  spawnSync(
+    "git",
+    [
+      "-c",
+      "user.name=Test",
+      "-c",
+      "user.email=test@example.com",
+      "merge",
+      "--no-ff",
+      "--no-edit",
+      branch,
+    ],
+    { cwd: root, encoding: "utf8" },
+  );
 
 describe("two changes adding different messages", () => {
   it("combine with no clash, and the combination passes the catalog check", {
@@ -211,23 +245,7 @@ describe("two changes adding different messages", () => {
 
     git(root, "checkout", "--quiet", "main");
     git(root, "merge", "--quiet", "--no-ff", "--no-edit", "text-size");
-    const combined = spawnSync(
-      "git",
-      [
-        "-c",
-        "user.name=Test",
-        "-c",
-        "user.email=test@example.com",
-        "merge",
-        "--no-ff",
-        "--no-edit",
-        "queue-paused",
-      ],
-      {
-        cwd: root,
-        encoding: "utf8",
-      },
-    );
+    const combined = merge(root, "queue-paused");
     expect(combined.stdout).not.toContain("CONFLICT");
     expect(combined.status).toBe(0);
 
@@ -242,6 +260,51 @@ describe("two changes adding different messages", () => {
     expect(read(root, COMPILED_PATH)).toContain("export function settingsQueuePaused()");
     expect(read(root, `${GLOSSARY_DIR}/de.md`)).toContain("| paused (the queue) | angehalten | |");
     expect(read(root, `${GLOSSARY_DIR}/de.md`)).toContain("| text size | Textgröße | |");
+  });
+
+  // INF-4334: the phone's card and panel hosts bundle the whole compiled
+  // catalog, and they listed every message on one line, so two changes that
+  // each added a message and rebuilt the hosts clashed in them in a batch.
+  it("that each rebuild the phone's card and panel hosts combine with no clash in them", {
+    timeout: CARD_BUDGET_MS,
+  }, () => {
+    const root = project({ phoneCards: true });
+    expect(node(root, "scripts/generate-messages.ts").stderr).toBe("");
+    git(root, "add", "-A");
+    git(root, "commit", "--quiet", "-m", "base");
+    change(
+      root,
+      "text-size",
+      "settingsAppearanceTextSize",
+      TEXT_SIZE,
+      "| text size | Textgröße | |",
+      { phoneCards: true },
+    );
+    change(
+      root,
+      "queue-paused",
+      "settingsQueuePaused",
+      PAUSED,
+      "| paused (the queue) | angehalten | |",
+      { phoneCards: true },
+    );
+
+    git(root, "checkout", "--quiet", "main");
+    git(root, "merge", "--quiet", "--no-ff", "--no-edit", "text-size");
+    const combined = merge(root, "queue-paused");
+    expect(combined.stdout).not.toContain("CONFLICT");
+    expect(combined.status).toBe(0);
+
+    // The combined hosts are what the generator builds from the combined catalog.
+    expect(node(root, "scripts/generate-messages.ts", "--check").stderr).toBe("");
+    const check = node(root, "scripts/generate-phone-cards.ts", "--check");
+    expect(check.stderr).toBe("");
+    expect(check.status).toBe(0);
+    for (const host of PHONE_HOSTS) {
+      const text = read(root, host);
+      expect(text).toContain("function settingsAppearanceTextSize()");
+      expect(text).toContain("function settingsQueuePaused()");
+    }
   });
 });
 
@@ -352,7 +415,8 @@ describe("a change written before the move", () => {
   // INF-4091: the resolve step staged the phone's card host with three sets of
   // conflict marks and answered that nothing was left. The hosts bundle the
   // whole compiled catalog, so a change that adds a message regenerates them,
-  // and so does main's next change that adds one.
+  // and so does main's next change that adds one. The waiting change's name
+  // goes where main's sorts, so the hosts clash as two neighboring names do.
   it("rebuilds the phone's card and panel hosts the change regenerated", {
     timeout: CARD_BUDGET_MS,
   }, () => {
@@ -360,7 +424,11 @@ describe("a change written before the move", () => {
     beforeTheMove(root);
     waitingChange(root, () => {
       for (const host of PHONE_HOSTS) {
-        const regenerated = withMessage(read(root, host), "settingsQueuePaused");
+        const regenerated = withMessage(
+          read(root, host),
+          "settingsQueuePaused",
+          "settingsAppearanceTextSize",
+        );
         expect(regenerated).not.toBe(read(root, host));
         write(root, host, regenerated);
       }

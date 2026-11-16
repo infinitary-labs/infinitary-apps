@@ -509,14 +509,20 @@ export function compileCatalogs(sources: Record<string, string>, infoPlist?: str
     `export const CATALOG_LANGUAGES = ${JSON.stringify([SOURCE_LANGUAGE, ...languages.map(([tag]) => tag)])} as const;`,
     "",
     ...shared.map(([id, message]) => `${compiledFunction(id, message, languages)}\n`),
+    // One message per line in both tables (INF-4334): the phone's card and panel hosts bundle them as written, so two
+    // changes adding different messages write different lines of a committed host, never the same long line.
     "/** Every message by its name, for words saved as a fact and worded when shown (docs/i18n.md, \"Saved facts\"). */",
-    `export const MESSAGES = { ${shared.map(([id]) => id).join(", ")} } as const;`,
+    "export const MESSAGES = {",
+    ...shared.map(([id]) => `  ${id},`),
+    "} as const;",
     "",
     "/** The name of a message in the catalog. */",
     "export type MessageName = keyof typeof MESSAGES;",
     "",
     "/** What each message fills, its plural count included: a saved fact missing one is shown as saved. */",
-    `export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = ${JSON.stringify(Object.fromEntries(shared.map(([id, message]) => [id, placeholdersOf(message)])))};`,
+    "export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {",
+    ...shared.map(([id, message]) => `  ${JSON.stringify(id)}: ${JSON.stringify(placeholdersOf(message))},`),
+    "};",
     "",
   ].join("\n");
   const panels: Record<string, string> = {};

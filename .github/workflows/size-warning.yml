@@ -1,0 +1,53 @@
+name: size-warning
+
+# The size check's warning line (docs/testing.md, "The size check's warning
+# line"; INF-4496's fix 3). `pnpm check` refuses a code file past the
+# 2,000-line ceiling; this check fails past the 1,800-line warning line, after
+# a change reaches main. Nothing waits on it: no pull request starts it, and
+# the batch, main's release check, the alpha and every release never read it.
+# A red run on main starts one split task through an Automation rule on
+# "A workflow run fails".
+
+on:
+  push:
+    branches: [main]
+    # A change to a code file, or to the check itself.
+    paths:
+      - "**.ts"
+      - "**.tsx"
+      - "**.mts"
+      - "**.cts"
+      - "**.js"
+      - "**.jsx"
+      - "**.mjs"
+      - "**.cjs"
+      - "**.swift"
+      - "**.c"
+      - "**.h"
+      - "**.sh"
+      - "**.css"
+      - .github/workflows/size-warning.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Each push reads main afresh; a newer push replaces an older reading.
+concurrency:
+  group: size-warning-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  size-warning:
+    name: ${{ github.event_name == 'push' && 'Main push' || 'Manual request' }} · Size warning line
+    runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').light || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      # Plain Node type stripping: the script needs no install.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node scripts/file-sizes.ts --warn

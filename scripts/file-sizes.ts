@@ -10,8 +10,16 @@
  * and the design skill's built bundle. Plain Node type stripping, no
  * install; `pnpm check` runs it.
  *
+ * The warning line sits below the ceiling (docs/testing.md, "The size
+ * check's warning line"). `--warn` fails naming each code file past it,
+ * largest first, less the files on `OVER_CEILING`, whose splits the list
+ * already owns; `size-warning.yml` runs it after a change
+ * reaches main, and nothing waits on it, so a file is split before it
+ * reaches the ceiling and holds a merge.
+ *
  *   node scripts/file-sizes.ts          exits 1 naming each file out of step
  *   node scripts/file-sizes.ts --list   every code file over the ceiling, with its lines
+ *   node scripts/file-sizes.ts --warn   exits 1 naming each code file over the warning line
  */
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -21,6 +29,13 @@ import { printErrors } from "./github-errors.ts";
 
 /** The captain's bar: a code file longer than this is too long. */
 export const SIZE_CEILING = 2000;
+
+/**
+ * The warning line, the captain's pick for INF-4496's fix 3 ("1,800
+ * lines"): a code file past it gets a split task before it reaches the
+ * ceiling. It only warns: no merge or release reads it.
+ */
+export const SIZE_WARNING_LINE = 1800;
 
 /** The extensions of the files the check reads; data, lockfiles and pictures are not code. */
 export const CODE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs", ".swift", ".c", ".h", ".sh", ".css"];
@@ -66,6 +81,22 @@ export function sizeProblems(sizes: Record<string, number>, listed: readonly str
   return problems;
 }
 
+/**
+ * Each code file over the warning line and not on the list, largest first
+ * and by path among equals, as one line: the first is the file the next
+ * split takes.
+ */
+export function sizeWarnings(sizes: Record<string, number>, listed: readonly string[]): string[] {
+  const onList = new Set(listed);
+  return Object.entries(sizes)
+    .filter(([path, lines]) => lines > SIZE_WARNING_LINE && !onList.has(path))
+    .sort(([pathA, a], [pathB, b]) => b - a || pathA.localeCompare(pathB))
+    .map(
+      ([path, lines]) =>
+        `${path}: ${lines} lines, over the ${SIZE_WARNING_LINE}-line warning line; split it along its owners before it reaches the ${SIZE_CEILING}-line ceiling`,
+    );
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
   const tracked = execFileSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" }).split("\0").filter(Boolean);
@@ -83,6 +114,12 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   if (process.argv.includes("--list")) {
     for (const [path, lines] of Object.entries(sizes).filter(([, lines]) => lines > SIZE_CEILING).sort(([, a], [, b]) => b - a))
       console.log(`${String(lines).padStart(7)}  ${path}`);
+  } else if (process.argv.includes("--warn")) {
+    const warnings = sizeWarnings(sizes, OVER_CEILING);
+    if (warnings.length) {
+      printErrors(warnings, { title: "Size warning line" });
+      process.exitCode = 1;
+    }
   } else {
     const problems = sizeProblems(sizes, OVER_CEILING);
     if (problems.length) {

@@ -228,6 +228,23 @@ A file that grows past the ceiling is split along its owners in the change that 
 A code file is one with a code extension (TypeScript, JavaScript, Swift, C, shell or CSS), less generated files (`.generated.` in the name), vendored code, fixtures and the design skill's built bundle; data, lockfiles and pictures are not code.
 `node scripts/file-sizes.ts --list` prints every code file over the ceiling with its lines.
 
+### The size check's warning line
+
+The ceiling holds a merge only once a file has passed it, so a file growing hundreds of lines a week is split under pressure in the change that tips it over.
+The warning line, `SIZE_WARNING_LINE` at 1,800 lines, gives that split room before it holds anything (INF-4496, the captain's pick: "1,800 lines").
+`scripts/file-sizes.ts` owns both lines and what counts as a code file.
+
+- **The ceiling.**
+  `pnpm check` refuses a code file over 2,000 lines, as above, so every check that merges or releases holds it.
+- **The warning line.**
+  `node scripts/file-sizes.ts --warn` fails naming each code file over the warning line, largest first, less the files on `OVER_CEILING`, whose splits the list already owns.
+  `size-warning.yml` runs it on each push to main that changes a code file, and by hand.
+  No pull request starts it, and the batch, main's release check, the alpha and every release never read it; `tests/size-warning-workflow.test.ts` holds that.
+- **The split task.**
+  An Automation rule on GitHub's "A workflow run fails", filtered to workflow `size-warning` on branch `main`, files and starts one split task unless one is already open.
+  The task splits the first file the run names, the largest, along its owners, with no test or behavior lost; the next red run starts the next.
+  Splits are restructure work outside INF-2604's pieces, so each asks before it merges.
+
 ## Measuring coverage
 
 `pnpm coverage <file>...` measures which lines, branches and functions of the named files the tests reach, with Vitest's V8 coverage provider (`scripts/coverage.ts`), and prints one table.
@@ -1493,7 +1510,7 @@ A Linux job with no kind, such as main's startup fixtures and the Linux packages
 
 | Kind | Jobs | Its old label |
 | --- | --- | --- |
-| `light` | `verify.yml`'s `request`, and `phone.yml`'s `request` on a request (the phone release's call names hosted `ubuntu-24.04`) | `LINUX_RUNNER` |
+| `light` | `verify.yml`'s `request`, `phone.yml`'s `request` on a request (the phone release's call names hosted `ubuntu-24.04`), and `size-warning.yml`'s `size-warning` | `LINUX_RUNNER` |
 | `ci` | `ci.yml`'s `unit-tests`, `integration-tests` and `probe-tests`, `replay.yml`'s `replay-gate`, and `prompt-budget.yml`'s `prompt-budget` | `LINUX_RUNNER` |
 | `gate` | `journeys.yml`'s `choose-journeys` | `LINUX_RUNNER` with `-gate` |
 | `checks` | `verify.yml`'s `linux-checks` lane and its Linux test groups (`linux-tests`) | `LINUX_RUNNER` |

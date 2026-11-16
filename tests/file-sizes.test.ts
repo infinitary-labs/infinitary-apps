@@ -1,6 +1,13 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { isCodeFile, lineCount, SIZE_CEILING, sizeProblems } from "../scripts/file-sizes";
+import {
+  isCodeFile,
+  lineCount,
+  SIZE_CEILING,
+  SIZE_WARNING_LINE,
+  sizeProblems,
+  sizeWarnings,
+} from "../scripts/file-sizes";
 
 /**
  * The size check (INF-2625's approved plan: "it refuses a file over 2,000
@@ -59,5 +66,40 @@ describe("the size check", () => {
     expect(problems).toHaveLength(2);
     expect(problems[0]).toContain(`${WAKES} is ${SIZE_CEILING} lines, at or under the ceiling`);
     expect(problems[1]).toContain("src/core/orchestrator/gone.ts is listed but is no longer");
+  });
+
+  // INF-4496's fix 3, the captain's pick: "Give the size check a warning line,
+  // as the prompt budget has ... The four files at 2,000 go first", at "1,800
+  // lines". Main's size warning fails naming each file past the line, so its
+  // red run starts a split task before the file holds a merge at the ceiling.
+  describe("its warning line", () => {
+    const SHELL = "src/main/shell.test.ts";
+
+    it("names each unlisted file past the line, largest first and by path among equals", () => {
+      const warnings = sizeWarnings(
+        {
+          [WAITS]: SIZE_WARNING_LINE + 1,
+          [SHELL]: SIZE_CEILING,
+          [WAKES]: SIZE_CEILING,
+          "tests/e2e/mockProvider.ts": SIZE_WARNING_LINE,
+        },
+        [],
+      );
+      expect(warnings.map((line) => line.split(":")[0])).toEqual([WAKES, SHELL, WAITS]);
+      expect(warnings[0]).toMatch(
+        new RegExp(`^${WAKES}: ${SIZE_CEILING} lines, over the ${SIZE_WARNING_LINE}-line`),
+      );
+    });
+
+    it("leaves a listed file to the list that owns its split", () => {
+      expect(sizeWarnings({ [LISTED]: OVER }, [LISTED])).toEqual([]);
+    });
+
+    it("warns below the ceiling, where the size check still passes", () => {
+      const sizes = { [WAITS]: SIZE_WARNING_LINE + 1 };
+      expect(SIZE_WARNING_LINE).toBeLessThan(SIZE_CEILING);
+      expect(sizeProblems(sizes, [])).toEqual([]);
+      expect(sizeWarnings(sizes, [])).toHaveLength(1);
+    });
   });
 });

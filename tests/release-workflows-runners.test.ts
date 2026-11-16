@@ -411,7 +411,13 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
   // mini's Linux guests (docs/testing.md, "Each Linux job's kind").
   const queues: Record<string, string[]> = {
     // INF-3635: a journeys request's replacement of the older one is light work too.
-    light: ["verify.yml:request", "phone.yml:request", "journeys.yml:replace-older-request"],
+    // INF-4496: the size warning line reads line counts with plain Node.
+    light: [
+      "verify.yml:request",
+      "phone.yml:request",
+      "journeys.yml:replace-older-request",
+      "size-warning.yml:size-warning",
+    ],
     ci: [
       "ci.yml:unit-tests",
       "ci.yml:integration-tests",

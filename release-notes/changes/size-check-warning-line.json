@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "size-check-warning-line",
+      "reason": "Project checks only: a non-blocking check on main warns when a code file passes 1,800 lines, so it is split before the 2,000-line size check holds a merge; no app behavior changes."
+    }
+  ]
+}

@@ -184,7 +184,8 @@ import { WorkspaceService } from "./workspace/workspaceService";
 export async function createServices(
   host: HostCapabilities,
   emit: CoreEventSink,
-  options: { computerLanguage?: string } = {},
+  // `paused`: a home stopped mid-move starts no timer, recovery or quota reading (docs/devices.md, "The stop").
+  options: { computerLanguage?: string; paused?: boolean } = {},
 ): Promise<CoreServices> {
   const paths = appPathsFor(host.app.userDataDir);
   // Refuse before account warming, shell probes, counters or any service writes.
@@ -1638,7 +1639,7 @@ export async function createServices(
     notify: (wake) => notifyFirstmate(wake, "scheduled"),
   });
   holdSeat = (accountId) => firstmate.holdSeatFor(accountId);
-  scheduler.start(ticker);
+  if (!options.paused) scheduler.start(ticker);
   // Words from outside go from saved conversations once past their days,
   // or now on the captain's delete (docs/task-retention.md, "Words from
   // outside"). A conversation is written again only between its turns.
@@ -1677,7 +1678,7 @@ export async function createServices(
     log: (line) => console.warn(`[infinitary] ${line}`),
   });
   ticker.register("outside-data", TICK_PERIOD_MS, () => savedOutsideData.sweep());
-  ticker.start();
+  if (!options.paused) ticker.start();
   // R2 wakes: a job exit reaches its owner - the agent through the durable
   // inbox, a crewmate as its next turn. Jobs interrupted by the last quit
   // are reported honestly, once.
@@ -1695,15 +1696,16 @@ export async function createServices(
   // Boot recovery (bootRecovery.ts): safe mode and the jobs the last quit
   // stranded are said once each, then the cut-off, inbox and idle sweeps
   // run, and wakes parked on the retired supervision lane go to the first mate.
-  recoverAtBoot({
-    enteredSafeMode,
-    jobs,
-    tasks,
-    supervisor,
-    inbox,
-    now: ticker.now,
-    broadcastEvent,
-  });
+  if (!options.paused)
+    recoverAtBoot({
+      enteredSafeMode,
+      jobs,
+      tasks,
+      supervisor,
+      inbox,
+      now: ticker.now,
+      broadcastEvent,
+    });
   // A cut-off recorded or cleared is heard now, not at the next tick: a
   // held lane goes on the moment its account serves again, and so does a
   // paused seat.
@@ -1841,7 +1843,7 @@ export async function createServices(
     cardThreads: (sessionId) => supervisor.cards.observeThreads(sessionId),
   });
   eventSeam.attachObserve((event) => observe.onEvent(event));
-  quota.start();
+  if (!options.paused) quota.start();
   const updateChecker = createInstalledUpdateChecker({
     app: host.app,
     ...(host.macUpdates ? { macDriver: host.macUpdates } : {}),

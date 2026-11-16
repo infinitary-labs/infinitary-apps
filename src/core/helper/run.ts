@@ -2,8 +2,10 @@ import { appendFileSync, existsSync, rmSync } from "node:fs";
 import { homedir, type NetworkInterfaceInfo } from "node:os";
 import { dirname, join } from "node:path";
 import type { MachineLoginOutcome } from "@shared/accounts";
+import { CONNECTION_PORT } from "@shared/connection";
 import type { DeviceGrant } from "@shared/devices";
 import { isFileOrderChannel } from "@shared/files";
+import { isHomeMoveOrderChannel } from "@shared/homeMove";
 import { formatDateTime } from "@shared/i18n/format";
 import type { WorkInvokeChannel } from "@shared/ipc";
 import { LEFT_BEHIND_ORDER, leftBehindOrders } from "@shared/leftoverPrograms";
@@ -25,11 +27,14 @@ import {
 } from "@shared/work";
 import { isBrowserOrderChannel } from "@shared/workBrowsers";
 import type { WebSocket } from "ws";
+import { defaultClaudeConfigDir } from "../claude/claudeQuota";
+import { offeredAddresses } from "../connection/addresses";
 import { dialHome } from "../devices/dial";
 import { HomeLink, type HomeLinkState } from "../devices/homeLink";
 import { JoinedHome } from "../devices/joinedHome";
 import { FileReach, protectedPlaces } from "../files/fileReach";
 import type { MoveDeps } from "../folderMove/move";
+import { HOME_ARRIVING_DIR, IncomingHomeMove } from "../homeMove/arriving";
 import type { HostChildSpawner, HostKeychain } from "../host";
 import { hostEnv } from "../hostEnv";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
@@ -232,6 +237,16 @@ export type StartHelperOptions = {
    * can use it. Nothing is signed out when absent.
    */
   signOutClaude?: (record: string) => Promise<MachineLoginOutcome>;
+  /**
+   * Starts the first mate here in the background once its home moves here
+   * (docs/devices.md, "Moving the first mate"), answering whether it
+   * started; a computer that cannot start one takes no move.
+   */
+  startHome?: () => Promise<boolean>;
+  /** Where a first mate here would answer; this computer's own offered addresses unless a test says. */
+  homeAddresses?: () => string[];
+  /** This user's home folder, where a moved first mate's projects and Claude conversations land; the real one unless a test says. */
+  homeFolder?: string;
 };
 
 export type StartHelperOutcome =
@@ -377,6 +392,27 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
       });
     return signIns;
   };
+  // The first mate itself, when its home moves here (docs/devices.md,
+  // "Moving the first mate"): its record lands in the app's own data folder,
+  // beside this work folder.
+  const homeMove = new IncomingHomeMove({
+    homeData: dirname(dataDir),
+    arrivingDir: join(dataDir, HOME_ARRIVING_DIR),
+    homeDir: options.homeFolder ?? homedir(),
+    claudeDir: options.homeFolder
+      ? join(options.homeFolder, ".claude")
+      : defaultClaudeConfigDir(hostEnv()),
+    appVersion: options.appVersion ?? null,
+    addresses:
+      options.homeAddresses ??
+      (() =>
+        offeredAddresses(options.interfaces?.()).map(
+          ({ address }) => `${address}:${CONNECTION_PORT}`,
+        )),
+    background: Boolean(options.startHome),
+    startHome: options.startHome ?? (async () => false),
+    log,
+  });
   // The conversations the home opened here, loaded with the first one: a
   // computer never given work never loads a model's code.
   let conversations: Promise<Conversations> | undefined;
@@ -611,6 +647,16 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
     },
     ...(options.retryMs ? { retryMs: options.retryMs } : {}),
     ...(options.now ? { now: options.now } : {}),
+    // A home a move left behind is never this computer's again (docs/devices.md,
+    // "Moving the first mate"); the move's new addresses come as routes.
+    homeNumber: joinedHome.homeNumber(),
+    onHomeNumber: (homeNumber) => {
+      try {
+        joinedHome.keepHomeNumber(homeNumber);
+      } catch (error) {
+        log(`could not keep the home number: ${String(error)}`);
+      }
+    },
     // A computer that runs work is sent no pushes.
     onPush: () => {},
     // Each welcome, the home may have restarted - within the link's grace,
@@ -645,6 +691,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
         leftBehindOrders[LEFT_BEHIND_ORDER].request.parse(args);
         return leftBehind.list();
       }
+      if (isHomeMoveOrderChannel(channel)) return homeMove.answer(channel, args);
       if (channel === RESOURCE_ORDER) {
         resourceOrders[RESOURCE_ORDER].request.parse(args);
         return resources.read();

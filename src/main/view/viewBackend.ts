@@ -141,6 +141,11 @@ export type ViewBackendOptions = {
   onThisMac: (thisMac: ThisMac) => void;
   /** The other Mac took this one off its list. */
   onRemoved: () => void;
+  /**
+   * The first mate moved to this computer (docs/devices.md, "Moving the
+   * first mate"): the window starts over as this computer's own first mate.
+   */
+  onMovedHere?: () => void;
   /** This Mac's own installed app's update checker. */
   updates: UpdateChecker;
   /**
@@ -243,6 +248,18 @@ export class ViewBackend {
         } catch (error) {
           console.warn(`[view] could not keep where the other computer listens: ${String(error)}`);
         }
+      },
+      // A home a move left behind is never this Mac's again; a move is followed.
+      homeNumber: options.joined.homeNumber(),
+      onHomeNumber: (homeNumber) => {
+        try {
+          this.joined.keepHomeNumber(homeNumber);
+        } catch (error) {
+          console.warn(`[view] could not keep the home number: ${String(error)}`);
+        }
+      },
+      onMoved: (moved) => {
+        if (moved.to === options.record.grant.deviceId) options.onMovedHere?.();
       },
       onPush: (channel, pushed, replayed) => {
         // The first mate's own cards name its computer where they say this computer.

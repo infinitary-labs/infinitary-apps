@@ -259,6 +259,13 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       remove: (deviceId, when) =>
         readableRequest("inf:devices:remove", () => invoke("inf:devices:remove", deviceId, when)),
       keep: (deviceId) => invoke("inf:devices:keep", deviceId),
+      homeMove: {
+        ready: (deviceId) => invoke("inf:home-move:ready", deviceId),
+        start: (deviceId) => invoke("inf:home-move:start", deviceId),
+        cancel: () => invoke("inf:home-move:cancel"),
+        startHere: () => invoke("inf:home-move:start-here"),
+        onProgress: (listener) => subscribe("inf:home-move:progress", listener),
+      },
       tryAgain: (deviceId) =>
         readableRequest("inf:devices:try-again", () => invoke("inf:devices:try-again", deviceId)),
       changeAddress: (deviceId, address) =>

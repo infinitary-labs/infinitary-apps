@@ -17,6 +17,7 @@ Under it one line at `--text-sm` / `--fg-2` saying what happened and what the wi
 While whatever started the command at boot is expected to start it again, the line ends "This window waits for it." and there is no way to start it here.
 Once nothing will start it again, or nothing did in time, the line ends "Start it here to carry on in this window." beside a command, and says Start it here starts it again beside the program the window started.
 The line names how the command ended only as far as its own record says: stopped, ended for its update, could not start, or "stopped without saying why" when it left no record.
+A command that ended to start its first mate again here, after a move to another computer failed or the person started it here again, reads as stopped: never as an update.
 
 **The buttons.**
 At the panel's foot, right-aligned: Quit (ghost), then Start it here (primary, the notice's one accent) once it is offered.

@@ -26,7 +26,7 @@ Under it, a section gap below, is MacBook Pro's own Devices tab, as MacBook Pro 
 Its intro says "Your first mate lives on MacBook Pro.
 Its tasks and conversation stay there.
 From any computer you add you can control it, and any computer you add can run a project's work.
-Running as another user on MacBook Pro only runs work.
+Running as another user on MacBook Pro runs work, and your first mate can move there.
 Like every user on MacBook Pro, it can read the files your home folder lets other users read.", the sentence that holds on each system, since this computer does not know MacBook Pro's.
 MacBook Pro's own row reads "Your first mate lives there", and every sentence MacBook Pro says of itself as "this computer" names MacBook Pro instead.
 

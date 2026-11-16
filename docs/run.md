@@ -53,6 +53,10 @@ When it cannot start, it says why on its error output and exits 1, where the app
 | This account's Infinitary controls a first mate on another computer (`docs/view.md`) | "Infinitary here controls your first mate on another computer, so there is nothing for a command to run here." and "Leave it from Infinitary's window here first, then run this again." |
 | Anything else stopped its start | "Infinitary could not start: " and the reason |
 
+A run whose first mate moved to another computer ends for good (`docs/devices.md`, "Moving the first mate"): it says "Your first mate moved to another computer, so this run ends for good.", forgets its background so nothing starts it again, and exits 0.
+A move that failed after the first mate stopped, or that the captain answered with Start my first mate here again, ends the run with 75 as an update does, so its background starts it again here with nothing lost.
+It says "Your first mate starts again here, so this run ends." and "Start it again if nothing starts it for you.", and records the stop as `restart`, so a window beside it shows its ordinary stop words, never an update's.
+
 ## A settings file
 
 `<app> run --settings <file>` names a file of settings, so whatever starts the command also decides where programs are found (INF-1228's approved plan, piece 4: "With it, the app finds programs where the file says and asks no login shell").

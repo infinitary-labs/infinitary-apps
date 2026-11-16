@@ -198,6 +198,14 @@ HTTP requests do not extend this grace.
 The home pings every device every 30 seconds and drops one that has answered no ping since the previous one (see "Pacing and liveness").
 A frame may be up to `CONNECTION_MAX_FRAME_BYTES` (64 MiB), room for the largest turn the contract admits.
 
+### Holding for a move
+
+While the first mate moves to another computer (`docs/devices.md`, "Moving the first mate"), `hold(why)` holds the connection: a change a view asks is refused with `why`, and a request a computer that runs work asks is left unanswered, so it is asked again of the new home.
+One change passes the hold: `inf:home-move:start-here` (`HOME_MOVE_START_HERE`), the captain's Start my first mate here again, which a window beside a command asks over the local door (`docs/devices.md`, "A destination that never answers").
+The hold lasts until the process ends: a move that did not finish starts the first mate here again by starting the app again, whose connection holds nothing.
+`moved(payload)` then sends every welcomed client, the local door's included, the live frame `inf:home:moved`, and resolves once each was sent or a short wait passed; the connection ends with the old home's process.
+The welcome carries `homeNumber` from `devices/home-number.json`.
+
 ## Pacing and liveness
 
 What the home writes to a device goes through that device's outbox (`src/core/connection/outbox.ts`), never straight to its socket.

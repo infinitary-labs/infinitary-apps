@@ -24,12 +24,20 @@ export type WorkDeviceLink = Pick<HomeConnection, "ask" | "onWorkDevice" | "onVi
   Partial<
     Pick<
       HomeConnection,
-      "settled" | "listening" | "onWorkVersion" | "onListening" | "onAppSent" | "runningVersions"
+      | "settled"
+      | "listening"
+      | "onWorkVersion"
+      | "onListening"
+      | "onAppSent"
+      | "runningVersions"
+      | "hold"
+      | "moved"
     >
   >;
 
 export class WorkDevices {
   private link: WorkDeviceLink | null = null;
+  private holding: string | null = null;
   private stopHearing: (() => void) | null = null;
   private readonly listeners = new Set<(contact: WorkDeviceContact) => void>();
   private readonly reached = new Set<string>();
@@ -49,6 +57,7 @@ export class WorkDevices {
   attach(link: WorkDeviceLink): () => void {
     this.detach();
     this.link = link;
+    if (this.holding !== null) link.hold?.(this.holding);
     const stopWork = link.onWorkDevice((contact) => this.hear(contact));
     const stopViews = link.onViewDevice((contact) => this.see(contact));
     const stopVersion = link.onWorkVersion?.((deviceId, version) => this.heard(deviceId, version));
@@ -119,6 +128,24 @@ export class WorkDevices {
     return () => {
       this.listeningListeners.delete(listener);
     };
+  }
+
+  /**
+   * Refuses every change a device asks while the first mate moves away, with
+   * `why`, or takes them again with null (docs/devices.md, "Moving the first
+   * mate"). A connection attached later holds from its start.
+   */
+  hold(why: string | null): void {
+    this.holding = why;
+    this.link?.hold?.(why);
+  }
+
+  /**
+   * Tells every connected device where the first mate moved; resolves once
+   * each frame is on its way, within a bound.
+   */
+  async tellMoved(payload: unknown): Promise<void> {
+    await this.link?.moved?.(payload);
   }
 
   /** Live versions of every connected device, not just computers taking work. */

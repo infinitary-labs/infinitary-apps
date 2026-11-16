@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join } from "node:path";
 import { writePrivate } from "../devices/identity";
 import {
   bootPlist,
@@ -48,6 +48,12 @@ export type RunAgentContext = {
   /** What the run carries of the window's environment: a development run's stand-ins alone. */
   env: Readonly<Record<string, string>>;
 } & ServiceManager;
+
+/** Where this user's own systemd reads their services. */
+export function userUnitsDir(env: NodeJS.ProcessEnv, homeDir: string): string {
+  const xdg = env.XDG_CONFIG_HOME?.trim();
+  return join(xdg && isAbsolute(xdg) ? xdg : join(homeDir, ".config"), "systemd", "user");
+}
 
 /** The agent's file in the data folder while Start at login is off. */
 export const SESSION_AGENT_FILE = "run-agent.plist";
@@ -196,6 +202,21 @@ export function setRunAgentAtLogin(context: RunAgentContext, enabled: boolean): 
   mkdirSync(dirname(wants), { recursive: true });
   rmSync(wants, { force: true });
   symlinkSync(unitFile(context), wants);
+}
+
+/**
+ * Takes the agent's files away and leaves its run going, for a run whose
+ * first mate moved to another computer (docs/devices.md, "Moving the first
+ * mate"): the run ends by itself with 0, which nothing starts again, and no
+ * login starts one here again.
+ */
+export function forgetRunAgentFiles(
+  context: Pick<RunAgentContext, "label" | "dataDir" | "homeDir" | "unitsDir">,
+): void {
+  rmSync(loginAgentFile(context), { force: true });
+  rmSync(sessionAgentFile(context), { force: true });
+  rmSync(wantedBy(unitFile(context)), { force: true });
+  rmSync(unitFile(context), { force: true });
 }
 
 /**

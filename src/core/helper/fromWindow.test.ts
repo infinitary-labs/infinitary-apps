@@ -1,8 +1,8 @@
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import type { DeviceGrant } from "@shared/devices";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { createKeyIdentity } from "../devices/identity";
+import { createKeyIdentity, loadOrCreateHomeIdentity } from "../devices/identity";
 import { JoinedHome } from "../devices/joinedHome";
 import { windowFromWork, workFromWindow } from "./fromWindow";
 import { lockFolder } from "./lock";
@@ -61,5 +61,16 @@ describe("a Mac's window and its work", () => {
     new JoinedHome(dataDir).join(grantFor("mini"), 1_000);
     expect(windowFromWork(dataDir, null)?.grant.deviceId).toBe("mini");
     expect(windowFromWork(dataDir, "mini")).toBeNull();
+  });
+
+  it('opens no window of the first mate once that first mate moved here (docs/devices.md, "Moving the first mate")', () => {
+    const dataDir = workDir();
+    const moved = loadOrCreateHomeIdentity(join(dirname(dataDir), "devices"));
+    const own = createKeyIdentity("Firstmate device");
+    new JoinedHome(dataDir).join(
+      { ...grantFor("mini"), homeKey: moved.pin, key: own.key, cert: own.cert },
+      1_000,
+    );
+    expect(windowFromWork(dataDir, null)).toBeNull();
   });
 });

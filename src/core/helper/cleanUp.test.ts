@@ -15,6 +15,7 @@ import { claudeOnComputer } from "../../../tests/helpers/computerClaude";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { createKeyIdentity } from "../devices/identity";
 import { JoinedHome } from "../devices/joinedHome";
+import { HOME_ARRIVING_DIR } from "../homeMove/arriving";
 import { git } from "../workspace/git";
 import { type BackgroundContext, readInstalled, startInBackground } from "./background";
 import { cleanUp, LEFT_CLAUDE_LOGIN } from "./cleanUp";
@@ -144,7 +145,7 @@ async function computer() {
     env: {},
     app,
   });
-  for (const folder of ["accounts", "forges", "pi-agent", "tasks", "bundles"])
+  for (const folder of ["accounts", "forges", "pi-agent", "tasks", "bundles", HOME_ARRIVING_DIR])
     mkdirSync(join(dataDir, folder, "inside"), { recursive: true });
   for (const file of ["home.json", "left.json", "work.log", "service.log", "route.json"])
     writeFileSync(join(dataDir, file), "{}\n");

@@ -16,7 +16,7 @@ import {
   remoteLoginRefusalLines,
 } from "@shared/remoteLogin";
 import type { DeviceSignIns } from "@shared/signIns";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import "../accounts/connectChips.css";
 import { useShellStore } from "../app/store";
 import { thisDesktop } from "../design/core/desktop";
@@ -33,6 +33,7 @@ import {
   PasswordQuestion,
 } from "./DevicesAdd";
 import { FirewallLine, LinkPanelView, panelForAnotherComputer, WaysSection } from "./DevicesLinks";
+import { HomeMoveQuestion, useHomeMove } from "./HomeMove";
 import "./devices.css";
 import {
   type Busy,
@@ -583,6 +584,7 @@ export function DevicesTabView(props: DevicesTabViewProps) {
   const { devices, addresses, busy, problem } = props;
   const here = useHereAs();
   const fromAView = useShellStore((s) => isView(s.thisMac));
+  const homeMove = useHomeMove();
   return (
     <div data-devices="">
       <LinkPanelView {...props} />
@@ -609,7 +611,20 @@ export function DevicesTabView(props: DevicesTabViewProps) {
           ) : props.changing === device.id && (device.remoteLogin || device.heldOnLocalNetwork) ? (
             <AddressChange key={device.id} device={device} {...props} />
           ) : (
-            <DeviceRow key={device.id} device={device} {...props} />
+            <Fragment key={device.id}>
+              <DeviceRow
+                device={device}
+                {...props}
+                onAskMoveHome={fromAView ? undefined : homeMove.ask}
+              />
+              {homeMove.asking === device.id && (
+                <HomeMoveQuestion
+                  device={device}
+                  progress={homeMove.progress}
+                  onClose={() => homeMove.ask(null)}
+                />
+              )}
+            </Fragment>
           ),
         )}
         {props.adding

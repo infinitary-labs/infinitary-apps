@@ -10,6 +10,7 @@ import { JoinedHome } from "@core/devices/joinedHome";
 import { dueMove } from "@core/folderMove/due";
 import { startInBackground } from "@core/helper/background";
 import { windowFromWork } from "@core/helper/fromWindow";
+import { forgetRunAgentFiles, userUnitsDir } from "@core/helper/runAgent";
 import { configureSettingsPath, hostPath } from "@core/hostEnv";
 import { type Core, startCore } from "@core/index";
 import { isAllowedOpenExternalUrl } from "@core/openExternal";
@@ -22,7 +23,7 @@ import {
 } from "@core/storage/savedDataCompatibility";
 import { createInstalledUpdateChecker } from "@core/update/updateChecker";
 import { crewWorkHeldThere } from "@core/update/updateHold";
-import { APP_IDENTITIES, OWN_IDENTITY, readSpellings } from "@shared/codeNames";
+import { APP_IDENTITIES, OWN_IDENTITY, readSpellings, runLabelOf } from "@shared/codeNames";
 import { settingFrom } from "@shared/envSettings";
 import { computerLanguagesArgument } from "@shared/fonts";
 import { setComputerLocale, setCurrentLanguage } from "@shared/i18n/current";
@@ -508,19 +509,19 @@ export async function startApp(
     // The installed program was replaced, by its package or by this run's
     // own updater: the run stops its crew as a quit does and ends with the
     // code its starter starts the new version on.
+    // A run that ends to start its first mate again here ends the same
+    // way, with words of its own (docs/devices.md, "Moving the first mate").
     let endedUpdated = false;
-    const endUpdated = () => {
+    const endToStartAgain = (reason: "updated" | "restart") => {
       if (endedUpdated) return;
       endedUpdated = true;
-      process.stdout.write(`${RUN_WORDS.updated.join("\n")}\n`);
+      const lines = reason === "updated" ? RUN_WORDS.updated : RUN_WORDS.restart;
+      process.stdout.write(`${lines.join("\n")}\n`);
       runExitCode = RUN_UPDATED_EXIT;
-      runEnd = {
-        reason: "updated",
-        exitCode: RUN_UPDATED_EXIT,
-        lines: [...RUN_WORDS.updated],
-      };
+      runEnd = { reason, exitCode: RUN_UPDATED_EXIT, lines: [...lines] };
       stopRun();
     };
+    const endUpdated = () => endToStartAgain("updated");
     if (windowless) {
       const observed = (keychain: RunEnvironment["keychain"]) =>
         runEnvironment({
@@ -894,12 +895,36 @@ export async function startApp(
               }
             : {}),
         },
+        // A run whose first mate moved to another computer ends for good:
+        // nothing here starts it again, at login or after (docs/devices.md,
+        // "Moving the first mate"). One whose move failed, or that the
+        // captain started here again, ends for its starter to start again.
+        ...(windowless
+          ? {
+              endRun: (how: "moved" | "restart") => {
+                if (how === "restart") {
+                  endToStartAgain("restart");
+                  return;
+                }
+                forgetRunAgentFiles({
+                  label: runLabelOf(work.place.flavor),
+                  dataDir,
+                  homeDir: homedir(),
+                  unitsDir: userUnitsDir(process.env, homedir()),
+                });
+                process.stdout.write(`${RUN_WORDS.movedAway}\n`);
+                runEnd = { reason: "quit", exitCode: 0, lines: [RUN_WORDS.movedAway] };
+                stopRun();
+              },
+            }
+          : {}),
         // Started by a command, a page the core would open goes to each
         // computer that controls it (docs/run.md, "Control from another computer").
-        startCore: async () => {
+        startCore: async (hooks) => {
           const core = await startCore(voiceHost, {
             startedByCommand: windowless,
             computerLanguage: systemLanguage,
+            ...(hooks?.onHomeMoved ? { onHomeMoved: hooks.onHomeMoved } : {}),
           });
           capabilities.started?.(core);
           return core;

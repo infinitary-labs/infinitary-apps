@@ -10,6 +10,7 @@ import {
 } from "@shared/devices";
 import { type Appearance, appearanceSchema, type Layout, layoutSchema } from "@shared/preferences";
 import { z } from "zod";
+import { HOME_NUMBER_FILE, readHomeNumber, writeHomeNumber } from "./homeNumber";
 import { writePrivate } from "./identity";
 
 /**
@@ -137,7 +138,23 @@ export class JoinedHome {
     const joined: Joined = { version: 1, grant, name: null, joinedAt };
     this.writeHome(joined);
     rmSync(join(this.dir, LEFT_FILE), { force: true });
+    rmSync(join(this.dir, HOME_NUMBER_FILE), { force: true });
     return joined;
+  }
+
+  /**
+   * The highest home number this grant's home said (docs/devices.md,
+   * "Moving the first mate"): a home with a lower one is one a move left
+   * behind, which this computer never takes again. 1 before any said more.
+   */
+  homeNumber(): number {
+    return readHomeNumber(this.dir);
+  }
+
+  /** Keeps a higher home number than the one kept; a lower or equal one changes nothing. */
+  keepHomeNumber(homeNumber: number): void {
+    if (!this.read() || homeNumber <= this.homeNumber()) return;
+    writeHomeNumber(this.dir, homeNumber);
   }
 
   /**
@@ -199,6 +216,7 @@ export class JoinedHome {
     rmSync(join(this.dir, HOME_FILE), { force: true });
     rmSync(join(this.dir, HOME_ADDRESSES_FILE), { force: true });
     rmSync(join(this.dir, LOOK_FILE), { force: true });
+    rmSync(join(this.dir, HOME_NUMBER_FILE), { force: true });
     this.write(LEFT_FILE, {
       version: 1,
       ...note,

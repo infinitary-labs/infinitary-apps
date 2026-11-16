@@ -12580,7 +12580,14 @@ ${events}` : prompt;
     state: _enum(["open", "merged", "closed"]),
     updatedAt: string().optional()
   });
-  const commandEndingSchema = _enum(["quit", "signal", "updated", "start-failed", "crashed"]);
+  const commandEndingSchema = _enum([
+    "quit",
+    "signal",
+    "updated",
+    "restart",
+    "start-failed",
+    "crashed"
+  ]);
   const commandNoticeSchema = strictObject({
     /** `waiting` while its start entry is expected to start it again; `stopped` once Start it here is offered. */
     state: _enum(["waiting", "stopped"]),

@@ -25,6 +25,7 @@ import {
   forgeKeySignInResultSchema,
   forgeKeySignInSchema,
 } from "../forges";
+import { homeMoveReadySchema } from "../homeMove";
 import { joinAtAnswerSchema, joinAtOptionsSchema } from "../joinByAddress";
 import { nearbyMacsViewSchema } from "../nearbyMacs";
 import {
@@ -128,6 +129,40 @@ export const deviceChannels = {
       remoteLoginPasswordQuestionSchema,
       remoteLoginRefusedAnswerSchema,
     ]),
+  },
+  // Moving the first mate to a computer that runs work (docs/devices.md,
+  // "Moving the first mate"): the Ready list, the captain's click, which
+  // answers at once while progress pushes say the rest, Cancel, and starting
+  // the first mate here again when the computer it moves to never answers.
+  "inf:home-move:ready": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().min(1).max(64)]),
+    response: homeMoveReadySchema,
+  },
+  "inf:home-move:start": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().min(1).max(64)]),
+    response: z.strictObject({ ok: z.boolean(), text: z.string().min(1).max(600) }),
+  },
+  "inf:home-move:cancel": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([]),
+    response: z.strictObject({ ok: z.boolean(), text: z.string().min(1).max(600) }),
+  },
+  // The captain's confirmed Start my first mate here again, once the computer
+  // it moves to stayed out of reach (docs/devices.md, "A destination that never answers").
+  "inf:home-move:start-here": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([]),
+    response: z.strictObject({ ok: z.boolean(), text: z.string().min(1).max(600) }),
   },
   // A computer that runs work out of reach is removed when it is back, or
   // now, as the captain chose; with neither it is refused, so he is asked

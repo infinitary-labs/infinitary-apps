@@ -183,7 +183,7 @@ describe("Settings -> Devices", () => {
   it("says beside the way to add one that running as another user can read your home folder's files", () => {
     // macOS opens every home folder to every user on the Mac (FI3-862).
     expect(render()).toContain(
-      "Running as another user on this computer only runs work. Like every user here, it can read files in your home folder.",
+      "Running as another user on this computer runs work, and your first mate can move there. Like every user here, it can read files in your home folder.",
     );
   });
 

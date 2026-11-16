@@ -34,6 +34,8 @@ export type LocalWindowOptions = {
   onLost?: () => void;
   /** The first mate welcomes the window, or no longer does. */
   onContact?: (inReach: boolean) => void;
+  /** The first mate moved to another computer; the shell starts the window over as its window. */
+  onMoved?: () => void;
   /**
    * Each welcome, on a connection the first mate never saw before: a drop
    * it dialed through at once changes no contact, and is still a new one.
@@ -104,6 +106,10 @@ export class LocalWindow {
         this.welcomedOnce = true;
         this.welcome();
         options.onWelcome?.();
+      },
+      // The first mate moved to another computer (docs/devices.md, "Moving the first mate").
+      onMoved: () => {
+        if (!this.closed) options.onMoved?.();
       },
       onState: (state: HomeLinkState) => {
         // Two refusals of the key stop the link for good (docs/view.md,

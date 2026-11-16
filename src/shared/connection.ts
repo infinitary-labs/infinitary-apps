@@ -428,6 +428,13 @@ export const homeFrameSchema = z.union([
     /** Authenticated routing alternatives; absent on an older home. */
     addresses: z.array(dialAddressSchema).optional(),
     /**
+     * Which home of its record this is: 1 until the first mate moves to
+     * another computer, then one more at each move (`home-move`,
+     * docs/devices.md "Moving the first mate"). A device that heard a higher
+     * number refuses this home. Absent on a home from before, read as 1.
+     */
+    homeNumber: z.number().int().positive().optional(),
+    /**
      * For a computer that runs work alone: whether its version may take new
      * work from this home, which needs the same major (`takesWork`,
      * docs/helper.md). Absent for a view.

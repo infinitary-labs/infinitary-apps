@@ -67,6 +67,8 @@ import { cardMediaHandlers } from "./dispatcher/cardMedia";
 import { renameProject } from "./dispatcher/projectRename";
 import type { CoreEventSink } from "./events";
 import { SignInRequiredError, signInRefusal } from "./forge";
+import { homeMoveHandlers } from "./homeMove/handlers";
+import type { OutgoingHomeMove } from "./homeMove/outgoing";
 import type { HostCapabilities } from "./host";
 import { isAllowedOpenExternalUrl } from "./openExternal";
 import { CardChoiceUnavailableError } from "./orchestrator/cardActions";
@@ -193,6 +195,8 @@ export type CoreDispatcherOptions = {
    * Absent for a first mate that runs in the window's own program.
    */
   ownWindow?: OwnWindow;
+  /** Moving the first mate to another computer (`OutgoingHomeMove`); refused when absent. */
+  homeMove?: OutgoingHomeMove;
 };
 
 export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispatch {
@@ -294,25 +298,20 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       capabilities: [...HOME_CAPABILITIES],
       changes: [...CONTRACT_CHANGES.names],
     }),
-
     "inf:converse": async (turn) => {
       // Acceptance (including thread replies) stamps first-run state inside Firstmate.
       await services.firstmate.converse(prepareComposerTurn(turn));
       return { ok: true as const };
     },
-
     "inf:conversation:last-turn": () => services.tasks.capture.lastTurn(),
     "inf:conversation:state": () => ({ busy: services.firstmate.isBusy() }),
-
     "inf:task:abort": async (taskId) => {
       await services.supervisor.sessions.abort(taskId);
       return { ok: true as const };
     },
-
     // The Crewmate tab's composer: the captain's own line, and his ⌃C or Stop.
     "inf:task:steer": (taskId, text) =>
       services.supervisor.steer.steerFromCrewmateTab(taskId, text),
-
     "inf:task:interrupt": (taskId) => services.supervisor.steer.interruptFromCrewmateTab(taskId),
 
     ...taskRowChannels(() => services.supervisor.hostOps, services.tasks),
@@ -1170,6 +1169,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     },
 
     ...secretsHandlers(services),
+    ...homeMoveHandlers(options.homeMove),
     // Integrations (docs/integrations.md): Settings and app_change alike.
     "inf:integrations:list": () => services.integrations.view(),
     "inf:integrations:add": (server) => services.integrations.add("mcp", server),

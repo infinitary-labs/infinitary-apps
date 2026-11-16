@@ -205,6 +205,12 @@
       "group": "Other computers"
     },
     {
+      "name": "homeMove",
+      "path": "src/core/homeMove",
+      "about": "Moving the live first mate to another computer",
+      "group": "Other computers"
+    },
+    {
       "name": "storage",
       "path": "src/core/storage",
       "about": "The SQLite record and its stores",
@@ -1603,6 +1609,46 @@
       "from": "privacy",
       "to": "the system",
       "why": "reads macOS's privacy log"
+    },
+    {
+      "from": "homeMove",
+      "to": "connection",
+      "why": "holds the old home's devices and sends the move's orders"
+    },
+    {
+      "from": "homeMove",
+      "to": "devices",
+      "why": "keeps the home number and adds the old home's window"
+    },
+    {
+      "from": "homeMove",
+      "to": "claude",
+      "why": "moves the first mate's Claude conversations"
+    },
+    {
+      "from": "homeMove",
+      "to": "workspace",
+      "why": "bundles and clones each project with git"
+    },
+    {
+      "from": "dispatcher",
+      "to": "homeMove",
+      "why": "serves the Ready list and the captain's click"
+    },
+    {
+      "from": "helper",
+      "to": "homeMove",
+      "why": "answers the move's orders and starts the first mate"
+    },
+    {
+      "from": "main",
+      "to": "homeMove",
+      "why": "starts the old home again as a window"
+    },
+    {
+      "from": "homeMove",
+      "to": "folderMove",
+      "why": "rewrites the record's paths for the new home"
     }
   ],
   "machines": [
@@ -2026,6 +2072,74 @@
           "to": "withdrawn",
           "why": "every change in it lost its approval",
           "by": "batches"
+        }
+      ]
+    },
+    {
+      "name": "a home move",
+      "in": "homeMove",
+      "about": "One move of the first mate to another computer, which the captain starts in Settings",
+      "states": ["tasks", "copying", "stopping", "arriving", "moved", "failed", "cancelled"],
+      "moves": [
+        {
+          "from": "tasks",
+          "to": "copying",
+          "why": "every started task moved there",
+          "by": "homeMove"
+        },
+        {
+          "from": "tasks",
+          "to": "failed",
+          "why": "a task could not move",
+          "by": "homeMove"
+        },
+        {
+          "from": "tasks",
+          "to": "cancelled",
+          "why": "the captain cancels",
+          "by": "dispatcher"
+        },
+        {
+          "from": "copying",
+          "to": "cancelled",
+          "why": "the captain cancels",
+          "by": "dispatcher"
+        },
+        {
+          "from": "copying",
+          "to": "stopping",
+          "why": "the first pass of the record crossed",
+          "by": "homeMove"
+        },
+        {
+          "from": "copying",
+          "to": "failed",
+          "why": "the record could not cross",
+          "by": "homeMove"
+        },
+        {
+          "from": "stopping",
+          "to": "arriving",
+          "why": "the last changes and the list crossed",
+          "by": "homeMove"
+        },
+        {
+          "from": "stopping",
+          "to": "failed",
+          "why": "the stop failed, and the first mate starts here again",
+          "by": "homeMove"
+        },
+        {
+          "from": "arriving",
+          "to": "moved",
+          "why": "the new home answers with its addresses",
+          "by": "helper"
+        },
+        {
+          "from": "arriving",
+          "to": "failed",
+          "why": "the new home refused, and the first mate starts here again",
+          "by": "helper"
         }
       ]
     }

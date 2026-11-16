@@ -46,6 +46,7 @@ import {
   reachedNetwork,
 } from "../connection/addresses";
 import type { PairedDevice, PairedDevices, PairOutcome } from "../connection/connection";
+import { readHomeNumber, writeHomeNumber } from "./homeNumber";
 import {
   HOST_TRUST_FILE,
   HOST_TRUST_KNOWN_HOSTS,
@@ -54,7 +55,13 @@ import {
   hostTrustSshOptions,
   knownHostsLine,
 } from "./hostTrust";
-import { type KeyIdentity, loadOrCreateHomeIdentity, peerPin, writePrivate } from "./identity";
+import {
+  createKeyIdentity,
+  type KeyIdentity,
+  loadOrCreateHomeIdentity,
+  peerPin,
+  writePrivate,
+} from "./identity";
 import type { Locality } from "./locality";
 import {
   makeOwnKey,
@@ -1270,6 +1277,51 @@ export class DevicePairing implements PairedDevices {
   identity(): KeyIdentity {
     this.home ??= loadOrCreateHomeIdentity(this.dir);
     return this.home;
+  }
+
+  /** Which home of its record this is (`./homeNumber.ts`), said in every welcome. */
+  homeNumber(): number {
+    return readHomeNumber(this.dir);
+  }
+
+  /**
+   * Takes a higher home number for this home, said in every welcome from now
+   * on: a first mate started here again after a move whose destination never
+   * answered (docs/devices.md, "A destination that never answers").
+   */
+  raiseHomeNumber(homeNumber: number): void {
+    if (homeNumber <= readHomeNumber(this.dir)) return;
+    writeHomeNumber(this.dir, homeNumber);
+  }
+
+  /**
+   * The window this computer becomes when the first mate moves away from it
+   * (docs/devices.md, "Moving the first mate"): a Mac on the list, with a
+   * key made here, written before the record crosses so the new home holds
+   * it. Answers its id and key; the grant dials the new home.
+   */
+  addMovedHome(name: string): { deviceId: string; key: string; cert: string } {
+    if (this.unreadable) throw new Error(this.unreadable);
+    const own = createKeyIdentity("Firstmate device");
+    const entry: Entry = {
+      id: randomUUID(),
+      // The old home stays a computer that controls the first mate and runs its work.
+      kind: "mac",
+      name: name.trim().slice(0, 64) || COMPUTER.one,
+      pairedAt: this.now(),
+      onThisMac: false,
+      keyPin: own.pin,
+    };
+    this.save([...this.entries, entry]);
+    this.changed();
+    return { deviceId: entry.id, key: own.key, cert: own.cert };
+  }
+
+  /** Takes back the window `addMovedHome` added, for a move that did not finish. */
+  removeMovedHome(deviceId: string): void {
+    if (!this.entries.some((entry) => entry.id === deviceId)) return;
+    this.save(this.entries.filter((entry) => entry.id !== deviceId));
+    this.changed();
   }
 
   /** Stops the link timers and following the network; the list and the key stay on disk. */

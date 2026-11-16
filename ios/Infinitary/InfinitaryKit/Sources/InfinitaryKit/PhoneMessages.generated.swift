@@ -2245,6 +2245,20 @@ public enum PhoneMessages {
     public static func `settingsDevicesMakeCommand`() -> String { PhoneWords.format("settingsDevicesMakeCommand", []) }
     public static func `settingsDevicesMakeFailed`() -> String { PhoneWords.format("settingsDevicesMakeFailed", []) }
     public static func `settingsDevicesMakeNewOne`() -> String { PhoneWords.format("settingsDevicesMakeNewOne", []) }
+    public static func `settingsDevicesMoveCancel`() -> String { PhoneWords.format("settingsDevicesMoveCancel", []) }
+    public static func `settingsDevicesMoveChecking`(`device`: String) -> String { PhoneWords.format("settingsDevicesMoveChecking", [`device`]) }
+    public static func `settingsDevicesMoveCouldNot`(`device`: String) -> String { PhoneWords.format("settingsDevicesMoveCouldNot", [`device`]) }
+    public static func `settingsDevicesMoveHere`() -> String { PhoneWords.format("settingsDevicesMoveHere", []) }
+    public static func `settingsDevicesMoveHereNamed`(`device`: String) -> String { PhoneWords.format("settingsDevicesMoveHereNamed", [`device`]) }
+    public static func `settingsDevicesMoveKeepWaiting`() -> String { PhoneWords.format("settingsDevicesMoveKeepWaiting", []) }
+    public static func `settingsDevicesMoveNotNow`() -> String { PhoneWords.format("settingsDevicesMoveNotNow", []) }
+    public static func `settingsDevicesMoveNothing`() -> String { PhoneWords.format("settingsDevicesMoveNothing", []) }
+    public static func `settingsDevicesMoveNow`() -> String { PhoneWords.format("settingsDevicesMoveNow", []) }
+    public static func `settingsDevicesMoveQuestion`(`device`: String) -> String { PhoneWords.format("settingsDevicesMoveQuestion", [`device`]) }
+    public static func `settingsDevicesMoveSay`(`device`: String) -> String { PhoneWords.format("settingsDevicesMoveSay", [`device`]) }
+    public static func `settingsDevicesMoveStartHere`() -> String { PhoneWords.format("settingsDevicesMoveStartHere", []) }
+    public static func `settingsDevicesMoveStartHereConfirm`() -> String { PhoneWords.format("settingsDevicesMoveStartHereConfirm", []) }
+    public static func `settingsDevicesMoveStartHereSure`(`device`: String) -> String { PhoneWords.format("settingsDevicesMoveStartHereSure", [`device`]) }
     public static func `settingsDevicesNoNewWork`() -> String { PhoneWords.format("settingsDevicesNoNewWork", []) }
     public static func `settingsDevicesNoSignIns`() -> String { PhoneWords.format("settingsDevicesNoSignIns", []) }
     public static func `settingsDevicesPanelCommandLabel`() -> String { PhoneWords.format("settingsDevicesPanelCommandLabel", []) }
@@ -5536,6 +5550,20 @@ extension PhoneWords {
         "settingsDevicesMakeCommand": [],
         "settingsDevicesMakeFailed": [],
         "settingsDevicesMakeNewOne": [],
+        "settingsDevicesMoveCancel": [],
+        "settingsDevicesMoveChecking": ["device"],
+        "settingsDevicesMoveCouldNot": ["device"],
+        "settingsDevicesMoveHere": [],
+        "settingsDevicesMoveHereNamed": ["device"],
+        "settingsDevicesMoveKeepWaiting": [],
+        "settingsDevicesMoveNotNow": [],
+        "settingsDevicesMoveNothing": [],
+        "settingsDevicesMoveNow": [],
+        "settingsDevicesMoveQuestion": ["device"],
+        "settingsDevicesMoveSay": ["device"],
+        "settingsDevicesMoveStartHere": [],
+        "settingsDevicesMoveStartHereConfirm": [],
+        "settingsDevicesMoveStartHereSure": ["device"],
         "settingsDevicesNoNewWork": [],
         "settingsDevicesNoSignIns": [],
         "settingsDevicesPanelCommandLabel": [],

@@ -27,6 +27,7 @@ import {
   strandedLine,
   wayBack,
 } from "./devicesWords";
+import { offersHomeMove } from "./HomeMove";
 import { PhoneApprovals } from "./PhoneApprovals";
 
 /**
@@ -50,7 +51,12 @@ export function DeviceRow({
   moving,
   onTryAgain,
   onAskChangeAddress,
-}: DevicesTabViewProps & { device: DeviceView }) {
+  onAskMoveHome,
+}: DevicesTabViewProps & {
+  device: DeviceView;
+  /** Opens the Ready list for moving the first mate there; absent in a window of another computer. */
+  onAskMoveHome?: (deviceId: string) => void;
+}) {
   const here = useHereAs();
   const label = deviceLabel(device);
   if (!deviceRunsWork(device.kind)) {
@@ -227,6 +233,17 @@ export function DeviceRow({
           onClick={() => onUpdate(device)}
         >
           {m.settingsDevicesUpdate()}
+        </Button>
+      )}
+      {onAskMoveHome && !left && offersHomeMove(device, settling) && (
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label={m.settingsDevicesMoveHereNamed({ device: label })}
+          data-home-move-ask={device.id}
+          onClick={() => onAskMoveHome(device.id)}
+        >
+          {m.settingsDevicesMoveHere()}
         </Button>
       )}
       {device.removal === "when-back" ? (

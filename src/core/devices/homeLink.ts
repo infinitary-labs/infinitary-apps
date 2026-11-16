@@ -25,12 +25,14 @@ import {
   type DeviceSystem,
   grantRoutes,
 } from "@shared/devices";
+import { HOME_MOVED_LIVE, type HomeMoved, homeMovedSchema } from "@shared/homeMove";
 import { type CoreInvokeChannel, invokeContract, PROTOCOL_VERSION, VIEW_FLOOR } from "@shared/ipc";
 import type { WebSocket } from "ws";
 import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { FramePartsReader } from "../connection/frameParts";
 import { thisDeviceSystem } from "../platform";
 import { dialHome } from "./dial";
+import { FIRST_HOME_NUMBER } from "./homeNumber";
 
 /**
  * A device's side of the connection (docs/connection.md, docs/view.md): it
@@ -193,6 +195,19 @@ export type HomeLinkOptions = {
   onReplayed?: () => void;
   /** Every change to the state above. */
   onState?: (state: HomeLinkState) => void;
+  /**
+   * The highest home number this device has heard (docs/devices.md, "Moving
+   * the first mate"): a welcome from a home with a lower one is refused and
+   * the device dials its other addresses. 1 when absent.
+   */
+  homeNumber?: number;
+  /** A welcome or a move told a higher home number, which the device keeps. */
+  onHomeNumber?: (homeNumber: number) => void;
+  /**
+   * The home moved to another computer (`inf:home:moved`): told after its
+   * new addresses and number were taken, before the device dials there.
+   */
+  onMoved?: (moved: HomeMoved) => void;
   now?: () => number;
   /** Waits between attempts while the home is out of reach; the last repeats. */
   retryMs?: readonly number[];
@@ -241,8 +256,11 @@ type Asked = Pending & {
   everSent: boolean;
 };
 
-/** How one attempt ended: whether the home welcomed it, how its upgrade was refused, how it closed. */
-type Ending = { welcomed: boolean; refusedStatus?: number; closeCode?: number };
+/**
+ * How one attempt ended: whether the home welcomed it, how its upgrade was
+ * refused, how it closed, and whether it was a home left behind by a move.
+ */
+type Ending = { welcomed: boolean; refusedStatus?: number; closeCode?: number; older?: boolean };
 
 export class HomeLink {
   /** The grant it dials with, whose addresses follow each welcome. */
@@ -285,6 +303,8 @@ export class HomeLink {
   private leaving = false;
   private retryTimer: NodeJS.Timeout | undefined;
   private nextId = 1;
+  /** The highest home number heard; a lower one is a home left behind by a move. */
+  private homeNumber: number;
   private readonly pending = new Map<number, Pending>();
   /** Work requests not yet answered, by the id they went under last. */
   private readonly asked = new Set<Asked>();
@@ -299,6 +319,7 @@ export class HomeLink {
     this.retryMs = options.retryMs?.length ? options.retryMs : DEFAULT_RETRY_MS;
     this.pingMs = options.pingMs ?? 10_000;
     this.welcomeTimeoutMs = options.welcomeTimeoutMs ?? HOME_WELCOME_TIMEOUT_MS;
+    this.homeNumber = options.homeNumber ?? FIRST_HOME_NUMBER;
   }
 
   state(): HomeLinkState {
@@ -457,6 +478,7 @@ export class HomeLink {
   private run(socket: WebSocket): Promise<Ending> {
     return new Promise((resolve) => {
       let welcomed = false;
+      let older = false;
       let refusedStatus: number | undefined;
       let answered = true;
       // A long frame comes as parts when this hello listed `frame-parts`.
@@ -521,6 +543,12 @@ export class HomeLink {
         heard();
         if (!welcomed) {
           if (frame.t !== "welcome") return;
+          // A home left behind by a move: never this device's home again.
+          if ((frame.homeNumber ?? FIRST_HOME_NUMBER) < this.homeNumber) {
+            older = true;
+            socket.terminate();
+            return;
+          }
           welcomed = true;
           clearTimeout(timer);
           this.welcome(socket, frame);
@@ -560,6 +588,8 @@ export class HomeLink {
               // As for a push.
             }
           }
+        } else if (frame.t === "live" && ownChannel(frame.channel) === HOME_MOVED_LIVE) {
+          if (this.moved(frame.payload)) socket.close(CONNECTION_CLOSE.closing);
         } else if (frame.t === "live") {
           try {
             this.options.onLive?.(ownChannel(frame.channel), frame.payload);
@@ -590,6 +620,7 @@ export class HomeLink {
         this.refusePending();
         resolve({
           welcomed,
+          ...(older ? { older } : {}),
           ...(refusedStatus === undefined ? {} : { refusedStatus }),
           ...(welcomed ? { closeCode: code } : {}),
         });
@@ -609,6 +640,7 @@ export class HomeLink {
       this.options.speaks ?? OWN_SPELLING,
     );
     this.open = socket;
+    this.heardNumber(frame.homeNumber ?? FIRST_HOME_NUMBER);
     this.followRoutes(frame.addresses);
     this.failures = 0;
     this.refusals = 0;
@@ -650,6 +682,57 @@ export class HomeLink {
     } catch {
       // Kept for this run all the same; the next welcome tells it again.
     }
+  }
+
+  /** Keeps a higher home number than any heard before. */
+  private heardNumber(homeNumber: number): void {
+    if (homeNumber <= this.homeNumber) return;
+    this.homeNumber = homeNumber;
+    try {
+      this.options.onHomeNumber?.(homeNumber);
+    } catch {
+      // Kept for this run all the same; the next welcome tells it again.
+    }
+  }
+
+  /**
+   * The home moved to another computer (`inf:home:moved`): its number and
+   * addresses are kept, and true says to close and dial there. A frame that
+   * names no higher number than this device heard changes nothing.
+   */
+  private moved(payload: unknown): boolean {
+    const read = homeMovedSchema.safeParse(payload);
+    if (!read.success || read.data.homeNumber <= this.homeNumber) return false;
+    const moved = read.data;
+    this.heardNumber(moved.homeNumber);
+    const [at, ...also] = moved.addresses;
+    if (at && this.grant.via !== "ssh") {
+      this.grant = { ...this.grant, at, also };
+      this.reachedAt = at;
+      try {
+        this.options.onRoutes?.({ at, also });
+      } catch {
+        // As for a welcome's routes.
+      }
+    }
+    try {
+      this.options.onMoved?.(moved);
+    } catch {
+      // One listener's failure is not the connection's.
+    }
+    return true;
+  }
+
+  /**
+   * A home left behind by a move answered at the address dialed: the next
+   * dial tries the others first, and that one last.
+   */
+  private passOver(at: string): void {
+    const all = [this.grant.at, ...(this.grant.also ?? [])];
+    const rest = all.filter((each) => each !== at);
+    if (rest.length === 0 || rest.length === all.length) return;
+    const [first, ...others] = rest;
+    if (first) this.grant = { ...this.grant, at: first, also: [...others, at] };
   }
 
   /** One request the home asked: the answer, or why there is none, on the socket it came on. */
@@ -705,7 +788,8 @@ export class HomeLink {
   }
 
   /** What one attempt ended in decides what the device says and when it dials again. */
-  private settle({ welcomed, refusedStatus, closeCode }: Ending): void {
+  private settle({ welcomed, refusedStatus, closeCode, older }: Ending): void {
+    if (older) this.passOver(this.reachedAt);
     if (closeCode === CONNECTION_CLOSE.unpaired) {
       if (this.leaving) this.close();
       else this.removeDevice();

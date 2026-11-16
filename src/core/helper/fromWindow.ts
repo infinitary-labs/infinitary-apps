@@ -1,4 +1,8 @@
+import { X509Certificate } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import type { DeviceGrant } from "@shared/devices";
+import { keyPin } from "../devices/identity";
 import { type Joined, JoinedHome } from "../devices/joinedHome";
 import type { Launcher } from "./background";
 import { FolderBusyError, lockFolder } from "./lock";
@@ -70,11 +74,24 @@ export async function workFromWindow(options: WorkFromWindowOptions): Promise<Wo
 /**
  * The grant a Mac's work keeps, for its window to control the same home
  * with (`Shell`): only a grant of kind `mac`, never one that only runs work,
- * and never the device this app last left or was removed as.
+ * never the device this app last left or was removed as, and never the
+ * first mate this app's own data folder holds, which a move brought here
+ * (docs/devices.md, "Moving the first mate").
  */
 export function windowFromWork(dataDir: string, leftDeviceId: string | null): Joined | null {
   const joined = new JoinedHome(dataDir, () => {}).read();
   if (!joined || joined.grant.kind !== "mac") return null;
   if (joined.grant.deviceId === leftDeviceId) return null;
+  if (ownHomePin(dirname(dataDir)) === joined.grant.homeKey) return null;
   return joined;
+}
+
+/** The pin of the home key a data folder keeps, or null when it keeps none. */
+function ownHomePin(userData: string): string | null {
+  try {
+    const cert = readFileSync(join(userData, "devices", "home-cert.pem"), "utf8");
+    return keyPin(new X509Certificate(cert).publicKey);
+  } catch {
+    return null;
+  }
 }

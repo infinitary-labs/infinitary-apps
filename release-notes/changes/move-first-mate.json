@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "move-first-mate",
+      "kind": "feature",
+      "title": "Move your first mate to another computer while it works",
+      "body": "In Settings → Devices, a computer that runs work for you now offers Move your first mate here. It first lists what will differ there, such as signing in to your subscriptions again, then moves your tasks, projects and record with nothing lost. This computer then controls the first mate there and keeps running work, and your other computers and phone follow it with no new link or code. Secrets stay on this computer, so add them again there.",
+      "area": "devices",
+      "picture": {
+        "dark": "move-first-mate-dark.webp",
+        "light": "move-first-mate-light.webp",
+        "alt": "Settings, Devices, with Move your first mate here on a Mac mini that runs work, and the list of what will differ there before the move, such as signing in to Grok again"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

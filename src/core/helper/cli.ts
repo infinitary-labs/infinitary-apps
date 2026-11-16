@@ -1,6 +1,8 @@
 import { writeFileSync } from "node:fs";
 import { homedir, hostname, userInfo } from "node:os";
+import { dirname } from "node:path";
 import { createInterface } from "node:readline";
+import { runLabelOf } from "@shared/codeNames";
 import { settingFrom } from "@shared/envSettings";
 import { PROTOCOL_VERSION } from "@shared/ipc";
 import { type WorkOutcome, workOutcomeLine } from "@shared/remoteLogin";
@@ -41,6 +43,7 @@ import { fetchedLauncher, type HelperIO, joinHome } from "./join";
 import { moveWork } from "./moveWork";
 import type { HelperPlace } from "./place";
 import { finishRemoval, helperStatus, startHelper, workLog } from "./run";
+import { startRunAgent, userUnitsDir } from "./runAgent";
 import { helperWords } from "./words";
 
 /**
@@ -483,6 +486,7 @@ export async function runCli(args: readonly string[], context: CliContext): Prom
       const findHome = homeFinder(
         place.packaged ? undefined : settingFrom(context.env, "DNS_SD")?.trim() || undefined,
       );
+      const { serviceManager } = context;
       const started = startHelper({
         dataDir,
         say: io.say,
@@ -503,6 +507,24 @@ export async function runCli(args: readonly string[], context: CliContext): Prom
         ...(context.setAsideProcess ? { setAsideProcess: context.setAsideProcess } : {}),
         signOutClaude,
         cleanUp: removing,
+        // The first mate, when its home moves here (docs/devices.md, "Moving
+        // the first mate"): the app's own run starts on the data folder beside
+        // this work folder, in the background, as the window's would.
+        ...(serviceManager
+          ? {
+              startHome: async () =>
+                (await startRunAgent({
+                  label: runLabelOf(place.flavor),
+                  dataDir: dirname(dataDir),
+                  homeDir: homedir(),
+                  uid,
+                  unitsDir: userUnitsDir(context.env, homedir()),
+                  launcher: fetchedLauncher(readInstalled(dataDir).app) ?? context.launcher,
+                  env: context.backgroundEnv,
+                  ...serviceManager,
+                })) === "running",
+            }
+          : {}),
       });
       if (!started.ok) return 1;
       // Updated by its home, the run ends and the background starts the

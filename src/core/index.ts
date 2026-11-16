@@ -2,6 +2,9 @@ import { askedFromAView, askingViewHas } from "./askedFromAView";
 import type { CoreServices } from "./coreServices";
 import { type CoreDispatch, createCoreDispatcher } from "./dispatcher";
 import { CoreEventBus } from "./events";
+import type { HomeHandOver } from "./homeMove/outgoing";
+import { movePending } from "./homeMove/outgoing";
+import { askSignInsAgainAt, homeMoveStaging, outgoingHomeMove } from "./homeMove/wiring";
 import type { HostCapabilities } from "./host";
 import { OwnWindow } from "./ownWindow";
 import type { AppPaths } from "./paths";
@@ -34,6 +37,13 @@ export type Core = {
 };
 
 export type CoreOptions = {
+  /**
+   * The first mate moved to another computer (docs/devices.md, "Moving the
+   * first mate"): this computer opens as a window of the new home with the
+   * grant handed over. Null when the move failed after the first mate
+   * stopped: it starts again here, whole. Absent, the core takes no move.
+   */
+  onHomeMoved?: (handOver: HomeHandOver | null) => void;
   /**
    * The app was started by a command, with no window (docs/run.md): nobody
    * sits at this computer to see a page it opens, so every page it would
@@ -98,13 +108,24 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
       events.emit("inf:app:sign-in-page", { url, id, port: to.port });
     },
   };
+  // A home that stopped for a move and quit before its destination answered
+  // keeps its first mate stopped and asks again (docs/devices.md, "The stop").
+  const paused =
+    options.onHomeMoved !== undefined && movePending(homeMoveStaging(host.app.userDataDir));
   const services = await createServices(host, events.emit, {
     ...(options.computerLanguage ? { computerLanguage: options.computerLanguage } : {}),
+    ...(paused ? { paused } : {}),
   });
+  const homeMove = options.onHomeMoved
+    ? outgoingHomeMove(services, host, events.emit, options.onHomeMoved)
+    : undefined;
+  if (paused) await homeMove?.resume();
+  else askSignInsAgainAt(services, (sink) => events.subscribe(sink));
   const dispatch = createCoreDispatcher({
     services,
     host,
     signInReturns,
+    ...(homeMove ? { homeMove } : {}),
     ...(ownWindow ? { ownWindow } : {}),
     emit: events.emit,
     onActionRecorded: (id, action, value) =>
@@ -117,13 +138,13 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
   if (!ownWindow) recordStartAtLogin(services.paths.userData, host.presence.getStartAtLogin());
   services.projectSetups.bindDispatch(dispatch);
   services.projectChanges.bindDispatch(dispatch);
-  await services.projectChanges.inspectAll();
+  if (!paused) await services.projectChanges.inspectAll();
   // Each project is looked at once for files of the team queue the app once
   // shipped, in the background.
-  void services.teamQueueLeft.lookAll().catch(() => {});
+  if (!paused) void services.teamQueueLeft.lookAll().catch(() => {});
   // Each project's folder is read once against where the project lives, in
   // the background, so the window opens as fast as before (INF-572).
-  void services.supervisor.inPlaceWork.checkFoldersAtStart();
+  if (!paused) void services.supervisor.inPlaceWork.checkFoldersAtStart();
   return {
     services,
     paths: services.paths,

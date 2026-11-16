@@ -1,3 +1,4 @@
+import { escapeHtml } from "@shared/cardBodyMarkup";
 import { type Card, type CardAction, FIRSTMATE_CARD_META } from "@shared/cards";
 import {
   CLAUDE_ACCESS_PAUSE_TITLE,
@@ -513,6 +514,37 @@ export function firstmateFailureCard(body: string): HostCard {
         variant: "primary",
         default: true,
         effect: { kind: "host", op: "retry-firstmate" },
+      },
+    ],
+  });
+}
+
+/**
+ * The card a moved first mate raises for one sign-in the old home had
+ * (docs/devices.md, "What stays"): the move copied none, so it asks for each
+ * here, landing on Subscriptions, or on Projects with that host's sign-in
+ * started.
+ */
+export function signInAgainCard(
+  id: string,
+  signIn: { kind: "provider" | "forge"; id: string; name: string },
+  from: string,
+): HostCard {
+  const name = escapeHtml(signIn.name);
+  return hostCard({
+    id,
+    title: `Sign in to ${signIn.name} on ${HERE.this}`,
+    meta: signIn.name,
+    body: `<p>Your first mate moved here from ${escapeHtml(from)}, which keeps its own sign-ins. Sign in to ${name} here so your first mate and crew can use it.</p>`,
+    actions: [
+      {
+        id: "sign-in",
+        label: `Sign in to ${signIn.name}`,
+        variant: "primary",
+        effect:
+          signIn.kind === "forge"
+            ? { kind: "open", target: "projects", signIn: signIn.id }
+            : { kind: "open", target: "subscriptions" },
       },
     ],
   });

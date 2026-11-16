@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, rmSync, symlinkSync } from "node:fs";
-import { dirname, isAbsolute, join } from "node:path";
+import { dirname, join } from "node:path";
 import { writePrivate } from "@core/devices/identity";
 import {
   bootPlist,
@@ -149,11 +149,7 @@ export type BootResult = { code: number; out: string; error: string };
 /** Where a Mac's launchd reads the system's jobs at boot. */
 export const MAC_DAEMONS_DIR = "/Library/LaunchDaemons";
 
-/** Where this user's own systemd reads their services. */
-export function userUnitsDir(env: NodeJS.ProcessEnv, homeDir: string): string {
-  const xdg = env.XDG_CONFIG_HOME?.trim();
-  return join(xdg && isAbsolute(xdg) ? xdg : join(homeDir, ".config"), "systemd", "user");
-}
+export { userUnitsDir } from "@core/helper/runAgent";
 
 /**
  * The login agent an earlier `infinitary help run` showed how to save by

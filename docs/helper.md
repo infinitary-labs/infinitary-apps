@@ -44,6 +44,7 @@ Until it is made, Infinitary's work is read where it is, in Firstmate 3000's fol
 | `worktrees/<task>/` | One task's working copy, on the task's branch (below, "Its working copies") |
 | `worktree-pool/`, `worktree-trash/` | Warm working copies between tasks, and retired ones being deleted, as the home keeps its own |
 | `default-workspace/` | This computer's own local workspace, for a task with no project |
+| `home-arriving/<move>/` | A first mate moving here: its files, which can hold a copy of its home's key, until it starts here, then only the answer to that move (`docs/devices.md`, "Moving the first mate"); a removal takes it |
 | `bundles/`, `artifacts/` | A task's branch or kept work waiting for the home to read it, and the pieces of an artifact the home is writing here |
 | `pi-agent/` | Pi's own folder for the conversations held here, never `~/.pi` |
 | `accounts/` | This computer's own sign-ins (below): `registry.json` and one 0700 folder per account, written by its `AccountVault`, the same writer the home keeps its own in; a Claude account's folder holds `made-login.json` when Infinitary made that login here |
@@ -135,6 +136,13 @@ The join reads that the link names the home its grant does (the same key), and t
 A refusal from the home leaves everything as it was and loads the background again.
 When the home answers that it removed this computer while it was out of reach (`removed`), the join does what hearing that removal would have done (below, "Removed") - "MacBook Pro removed this computer earlier." and the removal's own lines, keeping a working copy that still holds unmerged work - then joins anew with the same link: it asks its yes unless a command fetched this copy, keeps the copy, uses the link with a new key and sets up the background.
 What that removal could not remove it names, "Infinitary could not remove all it set up here, in …", and joins all the same; joining anew clears the note, so nothing tries again on its own.
+
+### When the first mate moves here
+
+The work mode answers a move's orders from the home it runs work for (`docs/devices.md`, "Moving the first mate"; `IncomingHomeMove`, `src/core/homeMove/arriving.ts`): what it has before a move, each piece of the record, the commit and an abandoned move.
+The record lands in the app's own data folder, the parent of its work folder, and the work mode starts the first mate there in the background with the same agent the run command uses (`startRunAgent`).
+A request the work mode asked the old home while it moved is left unanswered there and asked again of the new home, as after any drop (`HomeLink`), and the new home's record answers it once.
+A computer that cannot start the first mate in the background takes no move.
 
 ## Leaving a home that is gone
 
@@ -1216,7 +1224,7 @@ The client's side of the paste-a-code path works with no terminal; a real code's
 
 ## Removed
 
-Once its home removed it - at once, when it is next in reach of a home that removed it while it was out of reach (`docs/devices.md`, "Remove"), or when a new command from that home says so (above, "Finding the home again") - or once it leaves a home that is gone (above, "Leaving a home that is gone"), it lets every conversation and sign-in go, then removes what Infinitary set up here (`cleanUp`, `src/core/helper/cleanUp.ts`): its sign-ins (`accounts/`, `forges/`), the conversations (`tasks/`, `pi-agent/`, `pi-base/`) and their tasks' command keys (`task-channel/`), its clones and working copies, the pieces in flight (`bundles/`, `artifacts/`, the pool and the trash), the copy of Infinitary in `app/`, and last the background agent, which ends this process when it is the agent's.
+Once its home removed it - at once, when it is next in reach of a home that removed it while it was out of reach (`docs/devices.md`, "Remove"), or when a new command from that home says so (above, "Finding the home again") - or once it leaves a home that is gone (above, "Leaving a home that is gone"), it lets every conversation and sign-in go, then removes what Infinitary set up here (`cleanUp`, `src/core/helper/cleanUp.ts`): its sign-ins (`accounts/`, `forges/`), the conversations (`tasks/`, `pi-agent/`, `pi-base/`) and their tasks' command keys (`task-channel/`), its clones and working copies, the pieces in flight (`bundles/`, `artifacts/`, the pool and the trash), a moving first mate's files (`home-arriving/`), the copy of Infinitary in `app/`, and last the background agent, which ends this process when it is the agent's.
 It touches nothing the person put on this Mac: only `installed.json`'s agent and copy, the data folder's own folders, and the Claude login Infinitary made here.
 
 **The Claude login Infinitary made here** (above, "Its own sign-ins") is signed out with the vendor's own client before its account's folder goes, and a login that was here before Infinitary stays.

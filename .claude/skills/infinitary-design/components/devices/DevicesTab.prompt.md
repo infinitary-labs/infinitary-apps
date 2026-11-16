@@ -10,7 +10,7 @@ Adding a computer is `AddAMac.prompt.md`, signing in on it `SignInOnAMac.prompt.
 **The picture.**
 The first mate lives on one computer.
 Every other computer the person adds can control that first mate while Infinitary is open on it, and can run the work of a project set to run on it.
-Running as another user on this computer only runs work, with sign-ins of its own, and never controls the first mate.
+Running as another user on this computer runs work with sign-ins of its own, and controls the first mate only once the first mate moves there.
 Like every user on the computer, it can read files in the person's home folder outside private folders such as Desktop and Documents, and the tab says so (`AddAMac.prompt.md`).
 Adding a computer changes nothing by itself.
 Every computer on the list can act as the person, the same as this computer, so the person adds only their own computers.
@@ -21,7 +21,7 @@ A computer added before every computer could do both keeps what it could do - on
 A micro label `YOUR DEVICES` (captain's pick), then one `--text-sm --fg-2` line: "Your first mate lives on this computer.
 Its tasks and conversation stay here.
 From any computer you add you can control it, and any computer you add can run a project's work.
-Running as another user on this computer only runs work.
+Running as another user on this computer runs work, and your first mate can move there.
 Like every user here, it can read files in your home folder."
 Then one list box (`--bg-1`, `--line-1` hairline, `--radius-m`), the Projects list's box, with a row per device in `components/machines/MachineRow`'s shape:
 - This computer, first and always: the name "This computer", the mono line "MacBook Pro · your first mate lives here", the summary "Runs notes · Signed in to Codex, Claude and GitHub", its task count, and no Remove.
@@ -189,6 +189,22 @@ There is no code to scan beside a link until the iPhone app exists (captain's pi
   The feed then says "Mac mini had nothing of your first mate's to remove.", never that it removed something there.
 
 Only the captain's own click in this computer's window removes a device; the first mate never does.
+
+**Moving your first mate** (INF-4207 piece 5, captain: "let me move my home from macbook to mac mini").
+A computer that runs work, in reach, on this computer's version and not being updated or removed, carries a small ghost "Move your first mate here" before Remove, its accessible name "Move your first mate to Mac mini".
+Shown only where the first mate lives, never in a window of another computer.
+It opens an aside under the row, the Ready list: the question "Move your first mate to Mac mini?" over one `--fg-2` sentence saying what happens ("Your first mate pauses for a moment while its whole record crosses, then runs on Mac mini.
+This computer then controls it and keeps running work, and your other devices follow on their own.").
+While that computer is checked the aside says "Checking Mac mini…".
+Then one line per gap, a plain list at `--text-sm`: a gap that keeps the move from starting in `--warn`, a note about what differs after it in `--fg-2`; with none, "Nothing stands in the way.".
+The actions are a primary "Move now", disabled while any gap blocks, and a ghost "Not now", focused so Enter never moves.
+Once moving, the aside says each step as one `role="status"` line ("Copying your first mate's record to Mac mini.", with a mono count when it counts) and offers a ghost "Cancel the move" until the first mate stops for the last copy.
+A move that fails or is cancelled says why in the same line, with "Not now" to close the aside.
+When Mac mini is out of reach for three minutes after the first mate stopped for the last copy, the step line says this computer still waits for it, and a secondary "Start my first mate here again" stands under it.
+It never starts anything by itself: it turns the actions into a confirmation in `--warn`, "If Mac mini comes back, it may run your first mate too.
+Your devices stay with this computer and refuse Mac mini.", over a primary "Start it here", and a ghost "Keep waiting" that is focused, so Enter never starts it.
+Start it here starts the first mate on this computer again with its record as it was, and the step line says so.
+Nothing moves the first mate by itself; only this click does.
 
 **Another version.**
 A computer that runs work, connected on another version of Infinitary than this computer's, says so on a line of its own under its summary, `--text-sm --fg-2`: "Has Infinitary 0.1.20, older than this computer's." or "Has Infinitary 0.1.31, newer than this computer's."

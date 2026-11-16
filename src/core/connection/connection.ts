@@ -55,6 +55,7 @@ import {
   deviceNameSchema,
 } from "@shared/devices";
 import { type FmEvent, isStreamedEvent } from "@shared/events";
+import { HOME_MOVE_START_HERE, HOME_MOVED_LIVE } from "@shared/homeMove";
 import {
   CORE_INVOKE_CHANNELS,
   type CoreInvokeChannel,
@@ -131,6 +132,11 @@ export type PairedDevices = {
   any(): boolean;
   /** Current alternatives, supplied only after the device authenticates. */
   offerTargets?(phone?: boolean): string[];
+  /**
+   * Which home of its record this one is (`src/core/devices/homeNumber.ts`),
+   * said in every welcome so a device refuses a home left behind by a move.
+   */
+  homeNumber?(): number;
   /**
    * Called after every change to what is paired, before the change returns;
    * answers its own unsubscribe.
@@ -470,6 +476,20 @@ export type HomeConnection = {
    * its own unsubscribe.
    */
   onAppSent(listener: (deviceId: string, bytes: number) => void): () => void;
+  /**
+   * The first mate is moving to another computer (docs/devices.md, "Moving
+   * the first mate"): from now on work a computer asks is held unanswered
+   * and a change a view asks is refused with `why`; null lets both through
+   * again. A move that did not finish starts the app again instead.
+   */
+  hold(why: string | null): void;
+  /**
+   * The move finished: every welcomed device is told, as a live frame
+   * (`inf:home:moved`), where the new home answers and its number.
+   * Resolves once each was sent or a short wait passed; the connection ends
+   * with the old home's process.
+   */
+  moved(payload: unknown): Promise<void>;
   /** Resolves once listening reflects the latest change to what is paired. */
   settled(): Promise<void>;
   /** Stops listening and following pairing, then drains device closes with a two-second grace. */
@@ -726,6 +746,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
   let closed = false;
   let tail = Promise.resolve();
   let nextAsk = 1;
+  /** Why changes wait while the first mate moves to another computer; null otherwise. */
+  let moving: string | null = null;
   const workListeners = new Set<(contact: WorkDeviceContact) => void>();
   const sentListeners = new Set<(deviceId: string, bytes: number) => void>();
   const tellSent = (deviceId: string, bytes: number) => {
@@ -1110,6 +1132,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           access: client.access,
           ...(name ? { name } : {}),
           ...(devices.offerTargets ? { addresses: devices.offerTargets(true) } : {}),
+          ...(devices.homeNumber ? { homeNumber: devices.homeNumber() } : {}),
           // A computer that runs work takes new work only on this home's own
           // major (docs/helper.md); a view is never sent work.
           ...(role === "work" ? { takesWork: takes } : {}),
@@ -1197,6 +1220,19 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
             : `${channel} is answered only on ${HOME.the}.`,
         });
         return;
+      }
+      // The first mate is moving to another computer (docs/devices.md,
+      // "Moving the first mate"): work asked now is never answered here, so
+      // the computer asks it again of the new home, which answers it once;
+      // a change from a view is refused, and reads still answer. Start my
+      // first mate here again passes: it is how the captain ends a move whose
+      // destination never answers.
+      if (moving) {
+        if (actor.kind === "device") return;
+        if (invokeContract[channel].effect === "change" && channel !== HOME_MOVE_START_HERE) {
+          reply({ ok: false, error: moving });
+          return;
+        }
       }
       if (actor.kind === "device" && !client.takesWork) {
         reply({
@@ -1827,6 +1863,36 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
     onListening: (listener) => {
       listeningListeners.add(listener);
       return () => listeningListeners.delete(listener);
+    },
+    hold: (why) => {
+      moving = why;
+    },
+    moved: async (payload) => {
+      const sent = [...(run?.clients ?? [])]
+        // This computer's own window hears it too: beside a command it opens
+        // as a window of the new home once the command ends.
+        .filter((client) => client.welcomed && !client.closing)
+        .map(
+          (client) =>
+            new Promise<void>((resolve) => {
+              try {
+                client.out.send(
+                  JSON.stringify({
+                    t: "live",
+                    channel: channelIn(HOME_MOVED_LIVE, client.spelling),
+                    payload,
+                  }),
+                  () => resolve(),
+                );
+              } catch {
+                resolve();
+              }
+            }),
+        );
+      await Promise.race([
+        Promise.all(sent),
+        new Promise((resolve) => setTimeout(resolve, 2_000).unref?.()),
+      ]);
     },
     settled: () => tail,
     close: async () => {

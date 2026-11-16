@@ -34,6 +34,9 @@ export const resourcePushes = sharedSubscription(
  */
 const PUSHES: Record<Exclude<CorePushChannel, "inf:event">, ReadApi["onPush"]> = {
   "inf:voice:progress": (_channel, listener) => window.infinitary.voice.onProgress(listener),
+  // Settings -> Devices subscribes directly while a move runs.
+  "inf:home-move:progress": (_channel, listener) =>
+    window.infinitary.devices.homeMove.onProgress(listener),
   "inf:quota": (_channel, listener) => window.infinitary.quota.onSnapshot(listener),
   "inf:models:changed": (_channel, listener) =>
     window.infinitary.models.onChanged(() => listener({ ok: true })),

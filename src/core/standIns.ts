@@ -19,6 +19,8 @@ export type StandIns = {
   earlyLaunchMs?: number;
   /** The grace between the durable inbox's delivery attempts. */
   inboxGraceMs?: number;
+  /** How long a moved first mate's destination stays out of reach before Start here is offered (docs/devices.md). */
+  homeMoveOfferMs?: number;
   /** The rows that move the task board to its delta carrier. */
   taskDeltaRows?: number;
   /** Fixture files the quota sensor reads instead of the live APIs. */
@@ -86,6 +88,7 @@ export function readStandIns(
   const earlyLaunchMs = count(env, "EARLY_LAUNCH_MS");
   const inboxGraceMs = count(env, "INBOX_GRACE_MS");
   const taskDeltaRows = count(env, "TASK_DELTA_ROWS");
+  const homeMoveOfferMs = count(env, "HOME_MOVE_OFFER_MS");
   const loopbackPort = count(env, "CONNECTION_LOOPBACK_PORT");
   const addresses = (settingFrom(env, "STAND_IN_ADDRESSES")?.trim() ?? "")
     .split(",")
@@ -95,6 +98,7 @@ export function readStandIns(
     ...(Number.isFinite(earlyLaunchMs) && earlyLaunchMs > 0 ? { earlyLaunchMs } : {}),
     ...(Number.isFinite(inboxGraceMs) && inboxGraceMs > 0 ? { inboxGraceMs } : {}),
     ...(Number.isFinite(taskDeltaRows) && taskDeltaRows >= 0 ? { taskDeltaRows } : {}),
+    ...(Number.isFinite(homeMoveOfferMs) && homeMoveOfferMs > 0 ? { homeMoveOfferMs } : {}),
     quotaFixtureDir: text(env, "QUOTA_FIXTURE_DIR"),
     quotaEndpoints: {
       claudeUsageUrl: text(env, "CLAUDE_USAGE_URL"),

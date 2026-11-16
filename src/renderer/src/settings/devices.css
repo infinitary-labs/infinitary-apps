@@ -376,3 +376,27 @@ select.fm-runs-on {
   height: auto;
   margin-block: var(--space-3);
 }
+
+/* The Ready list for moving your first mate (components/devices/DevicesTab,
+   "Moving your first mate"): one line per gap, a gap that blocks in warn. */
+.fm-devices-move-gaps {
+  margin: 8px 0 0;
+  padding-inline-start: 18px;
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+}
+
+.fm-devices-move-gaps li + li {
+  margin-top: 4px;
+}
+
+.fm-devices-move-gaps li[data-level="blocks"] {
+  color: var(--warn);
+}
+
+.fm-devices-move-count {
+  margin-inline-start: 8px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+}

@@ -609,6 +609,82 @@ A computer that reaches this Mac through this Mac's own SSH connection never car
 While the connection listens on loopback alone, this Mac is on no network and nothing from another Mac reaches it anywhere, so it never says so of another address; while it listens nowhere, it says nothing.
 Settings -> Devices then says how it comes back (below, "Settings -> Devices").
 
+## Moving the first mate
+
+The captain can move the first mate, while it runs, to a paired computer that runs work, as from a MacBook to a Mac mini.
+Only the captain's click on Move your first mate here, on that computer's row in Settings -> Devices, starts a move; nothing moves the first mate by itself, and the first mate has no tool for it.
+The button stands on a computer that runs work, in reach, on this computer's version and not being updated or removed (design skill `components/devices/DevicesTab`, "Moving your first mate"), and only where the first mate lives, never in a window of another computer.
+The old home runs the move (`OutgoingHomeMove`, `src/core/homeMove/outgoing.ts`) and the computer it moves to answers its orders (`IncomingHomeMove`, `src/core/homeMove/arriving.ts`), over the connection that computer already keeps with it, under the contract change `home-move` (`src/shared/contract-changes/home-move.md`).
+Pairing and its key checks are left as they are: the new home shows the same key, so every device that trusted the old one trusts it.
+
+### The Ready list
+
+Before the click, the button opens the Ready list under the row: each gap on that computer, asked of it with `inf:home:ready` (`homeMoveFactsSchema`, `src/shared/homeMove.ts`).
+A gap that keeps the move from starting shows in `--warn`: that computer is out of reach or runs a version without the change, the two run different versions, a first mate of its own already answers there, it cannot start the first mate in the background, it offers no address another device could reach, it has less than twice the record's size free, or a started task here cannot move now, or cannot move to that computer, and its own reason says why.
+A note says what will differ after the move: started tasks here move there first, that computer's own first mate's record is set aside there, the captain signs in again there to each subscription and host where projects live this computer is signed in to, a computer that reaches the first mate only through this computer's own SSH connection is out of reach after the move until it is added again from there, Secrets stay here, integrations are signed in here only, a project has uncommitted changes, and dictation stays off in this computer's window once it is a window of another computer.
+Move now stays disabled while any gap blocks, and `start` asks the Ready list again before it begins.
+
+### What crosses
+
+The move first sends every started task on this computer to the destination, as a captain's move of each would (`requestComputerMove`), so each keeps its key, branch, files and record; a task that cannot move, or whose move waits on a problem or stops, stops the move before anything else crosses.
+Each project folder outside the data folder, and the local-only repository of tasks with no project (`default-workspace/`), crosses as a git bundle of every branch and tag, with its remotes, and is cloned there under the same place relative to the home folder or data folder, or in `fleet/` when it lay elsewhere; a folder already there is never written over, and the project lands beside it.
+A repository with no branch or tag yet is made empty there; one whose bundle fails stops the move before the stop, so no project is ever cloned without its commits.
+The record crosses as files, each in pieces of `PLACED_COPY_CHUNK_BYTES` with its SHA-256, into `home-arriving/<move>/` in the destination's work folder, which stays that computer's own (`RECORD_ROOTS`, `src/core/homeMove/record.ts`): the database, knowledge, the crew's folders, the first mate's own folders, the device list with this home's key, and the first mate's Claude conversations, which land in Claude's own folder there.
+A task's temporary folder, the database's side files and anything a computer keeps for itself stay behind.
+A database crosses as its own consistent copy, taken with SQLite's backup.
+The record first crosses while the first mate still works; a file written while it crossed crosses again at the stop.
+
+### The stop
+
+Then the old home stops everything it does but its connection: no timer, turn, crewmate or program it started writes the record from here (`quiesce`, `src/core/homeMove/wiring.ts`).
+Its connection holds (`HomeConnection.hold`): a change a view asks is refused with "Your first mate is moving to Mac mini.
+Try again once it has.", and a request a computer that runs work asks is left unanswered, so that computer asks it again of the new home, whose record answers it once.
+The old home adds a window for itself to its device list (`DevicePairing.addMovedHome`), so the new home already holds its key, then sends only what changed since the first pass, and the move's list of files last.
+`inf:home:arrive` then checks every file's size and hash, sets aside what the destination's data folder held of a first mate of its own, its window's grant to another home and its local-only repository, in `moved-away/<move>/`, puts the record in place, rewrites its paths to the destination's folders as the one-time move does (`rewriteDatabases`), clones each project, writes the next home number and starts the first mate in the background (`startRunAgent`).
+It answers the addresses the new home answers at; asked again while it runs or after it answered, it answers the same and places nothing twice.
+Before it changes anything of the destination's own it writes `arriving.json` in the move's folder, saying how far it went; anything that fails from there, the first mate not starting included, is undone before the refusal answers: what it placed goes, and what it set aside comes back.
+What was made again at a path set aside goes aside in turn, in `moved-away/<move>/made-since/`, so the undo deletes nothing.
+An arrive a restart cut short is undone the same way when the old home asks again, unless it had begun to start the first mate: a first mate already answering there is left as it is, one not answering is started again, and a first mate running there is the move arrived.
+An abandon asked again while one runs answers with it, and an arrive asked meanwhile waits for it, so the arrive is settled once.
+A move that fails before the stop leaves the first mate as it was.
+Before it sends `inf:home:arrive`, the old home writes the move's mark, `home-moving/pending.json` in its data folder.
+From then on only the destination's answer decides: while that computer is out of reach the old home waits, saying so, and asks again.
+A refused arrive is followed by `inf:home:abandon`; an abandon not answered, or refused, is asked again, and one that did not drop the move asks the arrive again, which answers the arrival once it is there.
+The old home starts its first mate again only after the destination answered the abandon with nothing of the move left there, and drops the mark then.
+The destination refuses that abandon while its arrive runs, once it arrived and while a first mate it started runs, so two computers never both run the first mate.
+A launch that finds the mark keeps the first mate stopped: the core starts no timer, recovery or quota reading, the connection holds from its start, and the old home asks the destination again as the move would have (`OutgoingHomeMove.resume`).
+The mark goes aside with the record once the old home starts again as a Mac of the new one.
+
+### A destination that never answers
+
+A destination that stays out of reach may never come back, and the old home would wait for it forever.
+Once it has been out of reach for `START_HERE_OFFER_MS` since the old home stopped, the step line in Settings -> Devices offers Start my first mate here again (design skill `components/devices/DevicesTab`, "Moving your first mate").
+It starts nothing by itself: the captain confirms, warned that the other computer may run the first mate too if it comes back.
+The confirmation reaches the old home through the move's hold, which refuses every other change, so a window beside a command can ask it over the local door (`docs/connection.md`, "Holding for a move").
+The old home refuses it while the destination is back in reach or an order to it is on its way, since the destination may then be starting the first mate itself.
+When the destination comes back the wait starts over, and a step without the offer takes the button away until it has been out of reach that long again.
+`OutgoingHomeMove.startHere` then drops the mark and the window it added for itself, takes a home number one above the one the move gave (`DevicePairing.raiseHomeNumber`) and starts the first mate here with the record as it was.
+Every device reaches this computer at that higher number, so a device refuses the destination should it come back running the first mate, as it refuses any home with a lower number.
+Started by a command, the old home's run ends for its starter to start it again, saying so in words of its own (`docs/run.md`).
+A development run may shorten the wait with `INFINITARY_HOME_MOVE_OFFER_MS`, as `tests/e2e/home-move.spec.ts` does; an installed app reads none.
+
+### Every device follows
+
+The old home tells every device it holds, its own window included, with the live frame `inf:home:moved`: the new home's addresses, its number and which device it is.
+A device keeps them and dials there, with no new link or code; one from before the change finds the new home by its announcement, since it shows the same key.
+The home number lives in `devices/home-number.json` at a home and beside the grant in `joined/` at a device (`src/core/devices/homeNumber.ts`): 1 until the first move, one more at each, said in every welcome.
+A device that heard a higher number refuses a home with a lower one, so a first mate a move left behind is never reached again; the phone keeps it the same way (`PhoneHomeMove`, `ios/Infinitary/InfinitaryKit`).
+The old home sets its own record aside in `moved-away/<move>/`, deleting nothing, keeps the grant, and starts again as a Mac of the new home: a window of it that also runs its work (`Shell.homeMoved`, `src/main/shell.ts`).
+Run by a command with no window, the old home's run ends for good and forgets its background (`docs/run.md`).
+On the destination, its window starts again as the home itself, never as a window of the first mate it now keeps (`windowFromWork`, `src/core/helper/fromWindow.ts`).
+
+### What stays
+
+Secrets stay on the old home, sealed by its own keychain; the captain adds them again on the new one.
+The new home uses that computer's own sign-ins: subscriptions, hosts where projects live and integrations are never copied.
+The move's list of files names each subscription and host where projects live the old home was signed in to, and the new home keeps them in `sign-in-again.json` (`src/core/homeMove/signInAgain.ts`).
+It raises a card for each one not signed in there, once, and takes it down when the captain signs in; the file goes once none is left.
+
 ## Through the home's SSH
 
 A computer may reach this Mac only through this Mac's own SSH connection to it, the way the captain chose for a Mac added by its address (FI3-970).
@@ -1006,7 +1082,7 @@ The tab after Usage, built to the agreed design in the design skill's `component
 
 - **Your devices**: "Your first mate lives on this computer.
   From any computer you add you can control it, and any computer you add can run a project's work.
-  Running as another user on this computer only runs work.
+  Running as another user on this computer runs work, and your first mate can move there.
   Like every user here, it can read files in your home folder." over the list; on Linux the last sentence reads "Like every user here, it can read the files your home folder lets other users read.", since Linux keeps no private folders from other users and leaves it to the home folder's own permissions (`anotherUserHere`, `src/shared/deviceNames.ts`).
   This computer first, "Your first mate lives here", with no Remove; then each device by its own name, drawn as text, with Remove.
   A Mac that only controls this first mate (a `view`) reads "a computer · joined today 14:06 · seen just now" with its dot `ok` and "Controlling your first mate now" under it while Infinitary is open there and connected (`controlling` on its row), and "a computer · joined today 14:06 · out of reach since 14:02" with its dot `warn` once its last connection goes.
@@ -1154,6 +1230,8 @@ A link that expires with nothing paired stops the listener.
 - Linux on an Arm chip, and Windows, by their address: no Linux Arm build is published, and Windows would be an adapter of its own (`FAR_SYSTEMS`).
 - The command for another computer from a Linux home to a Mac, and a Mac updated over the connection from a Linux home, unpack the published zip with that Mac's own ditto; no test runs a Linux home with a Mac on its other side.
 - What runs work, and the requests it asks, are `docs/helper.md`.
+- Moving the first mate between two real computers on a shared network: the journey stands in the destination as another folder on this computer, with its work mode in the test's own process.
+- Secrets crossing in a move: they stay on the old home, and the captain adds them again on the new one.
 - A device following this Mac to a new address it neither keeps nor hears announced: when the device is on another network after the address changes, a Mac that controls it still needs Leave and a new link, and another Mac that runs work a new command (above, "Finding the home again"); one added by its address is reached over this Mac's own SSH, and another user on this Mac dials loopback, neither of which moves.
 - Updating, over the connection, a computer joined before `WORK_UPDATE_SINCE`: it knows no update order, so a new command run there once updates it.
 - Checking on a real Mac that a Mac added by its address starts its work at its user's next login; the tests stand in launchd.
@@ -1166,6 +1244,11 @@ A link that expires with nothing paired stops the listener.
 ## Tests
 
 - `src/core/devices/phoneDoor.test.ts`: a phone's fixed commands, run as sshd runs them under each login shell this computer has, with the system's curl: the link the real pairing made, answered only once the connection listens for it, the Mac and Linux data folders, the door's modes and refusals, not open, too old, no link, and the key let in once; and the door's answer to `infinitary link`, a computer's link and a phone's, answered only once the connection listens, its refusals and pairing's reason.
+- `tests/e2e/home-move.spec.ts`: the captain moves the live first mate by keys from Settings -> Devices to a computer that runs work; the old home's process ends, the new home keeps the record at number 2 with the project cloned with its branches, the old home opens as a Mac of the new one, and the computer that runs work follows it (above, "Moving the first mate"); a first mate started by a command moves from the window beside it, the command ending for good and forgetting its background while the window follows as a Mac of the new home with its work; and with a destination that never answers, Start my first mate here again from that window passes the move's hold, ends the command in its own words and starts the first mate here at the next home number ("A destination that never answers").
+- `src/core/homeMove/homeMove.test.ts`: both sides of a move over real files, SQLite and git: the record, a task's key and every branch crossing, a commit asked again answered once, the destination's own record set aside, the Ready list's version, task, sign-in, SSH, Secrets, integrations, uncommitted-project, dictation, own-record and out-of-reach gaps with the blocking ones refusing a start, a computer that cannot take the move asked nothing, no sign-in file crossing, the new home's sign-in cards raised only for what is missing there, a failure after the stop restarting here, and a cancel before it.
+- `tests/browser/devices-tab-home-move-offer.test.tsx`: only a computer in reach on this computer's version offers Move your first mate here, and Move now stays off while a gap on its Ready list blocks the move.
+- `src/core/devices/homeLink.test.ts`, "a device when the first mate moves to another computer": a device follows the move frame and refuses number 1 after it, and a work request left unanswered while the home moves is answered once by the new home.
+- `ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/PhoneHomeMoveTests.swift`: the phone follows the move frame, keeps the highest number and refuses the home left behind.
 - `tests/e2e/link-command.spec.ts` and `src/main/linkCommand.test.ts`: `infinitary link` beside a run, its links joining, and its words with no answer (`docs/run.md`, "Tests").
 
 - `src/shared/devices.test.ts`: the link and the name, and every malformed link refused.

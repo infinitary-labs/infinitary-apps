@@ -54,6 +54,11 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
   "inf:devices:update": `Updates Infinitary on a ${COMPUTER.one} added by its address on the captain's click; device-update only offers the card, and the feed says each step`,
   "inf:devices:try-again": `Tries ${HERE.this}'s own SSH connection to a computer again on the captain's click; nothing is set`,
   "inf:devices:change-address": `Reaches a ${COMPUTER.one} added by its address at another address on the captain's click in Settings, once a look there finds the same computer`,
+  "inf:home-move:start": `Moves the first mate to a ${COMPUTER.one} on the captain's Move now in Settings; the Ready list says each step`,
+  "inf:home-move:cancel":
+    "Takes back the captain's own move before the first mate stops; nothing is set",
+  "inf:home-move:start-here":
+    "Starts the first mate here again on the captain's confirmed click, after the computer it moved to stayed out of reach",
   "inf:devices:sign-in": "Sign-in on a computer that runs work, started by the captain's click",
   "inf:devices:sign-in:answer":
     "Sign-in interaction: what the captain typed goes to that computer once and is kept nowhere",

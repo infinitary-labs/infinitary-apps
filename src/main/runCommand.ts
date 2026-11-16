@@ -45,6 +45,7 @@ export function runOptions(args: readonly string[]): RunOptions | null {
 export const RUN_WORDS = {
   started: "Infinitary is running here with no window, started by a command.",
   stopped: "Infinitary stopped.",
+  movedAway: "Your first mate moved to another computer, so this run ends for good.",
   usage: [
     "Usage: infinitary run [--settings <file>]",
     "Starts Infinitary here with no window, until it is stopped.",
@@ -63,6 +64,10 @@ export const RUN_WORDS = {
   needsDisplay: [
     `Infinitary needs Xvfb to run on a ${COMPUTER.one} with no screen.`,
     "Install Xvfb with your system's software, then run this again.",
+  ],
+  restart: [
+    "Your first mate starts again here, so this run ends.",
+    "Start it again if nothing starts it for you.",
   ],
   updated: [
     "Infinitary here was updated, so this run ends.",
@@ -120,7 +125,7 @@ export const RunMarkerSchema = z.object({
 export type RunMarker = z.infer<typeof RunMarkerSchema>;
 export const RunStopSchema = RunMarkerSchema.extend({
   stoppedAt: z.string().datetime(),
-  reason: z.enum(["quit", "signal", "updated", "start-failed"]),
+  reason: z.enum(["quit", "signal", "updated", "restart", "start-failed"]),
   exitCode: z.number().int().nonnegative(),
   lines: z.array(z.string()),
 });

@@ -128,6 +128,12 @@ export class BesideWindow {
   private startedAt: number | null;
   /** Start it here took the notice down: the window starts over once the command it started welcomes it. */
   private startsOver = false;
+  /**
+   * The first mate moved to another computer (docs/devices.md, "Moving the
+   * first mate"): once its command ends, the window starts over as a window
+   * of the new home, which the command left for it.
+   */
+  private moved = false;
 
   /** Whether this window starts the command itself, so leaving it lets nothing start it again. */
   get startsCommand(): boolean {
@@ -169,6 +175,10 @@ export class BesideWindow {
         if (!this.closed) options.relaunch();
       },
       onWelcome: () => this.back(),
+      onMoved: () => {
+        this.moved = true;
+        this.away();
+      },
       onContact: (inReach) => {
         if (!inReach) this.away();
       },
@@ -497,6 +507,12 @@ export class BesideWindow {
     const { beside, now } = this.options;
     const waitMs = entryWaitMs(beside.restartWaitMs, this.options.localWindow?.readyMs);
     const status = beside.status();
+    if (this.moved && status.running === false) {
+      this.stopReading();
+      this.closed = true;
+      this.options.relaunch();
+      return;
+    }
     let end = runEnd(status, this.joined);
     // The command this window started has not welcomed it yet: an end
     // recorded before it started is an earlier command's, and the window

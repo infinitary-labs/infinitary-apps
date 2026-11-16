@@ -282,6 +282,13 @@ On macOS it dials through macOS's own nc, as every device does (`docs/devices.md
   When the newer one is there, the window asks for this Mac to be updated, and this Mac's own update notice is how.
   A development run may stand in another contract version for the Mac where the first mate lives with `INFINITARY_CONTRACT_VERSION`, and its view floor with `INFINITARY_VIEW_FLOOR`, so a view on the same build reads as too far apart; a packaged app ignores both.
 
+### When the first mate moves
+
+When the first mate moves to another computer, its welcome's home number goes up by one and every window hears `inf:home:moved` with the new home's addresses (`docs/devices.md`, "Moving the first mate").
+The window keeps those addresses and the number beside its grant (`JoinedHome.keepHomeNumber`) and dials the new home with no new link; one that heard a higher number refuses a first mate with a lower one.
+The old home's own window starts again as a window of the new home, and a window on the destination starts again as the home itself.
+Dictation runs only in the window on the first mate's own computer, so a computer that becomes a window of another loses it; the Ready list says so before the click.
+
 ## Live, catching up or out of reach
 
 The top line, at the top bar's left (`RemoteControlLine`), says how fresh what the window shows is (`freshnessOf`, `src/renderer/src/devices/viewWords.ts`):

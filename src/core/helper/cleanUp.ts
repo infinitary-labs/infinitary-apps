@@ -4,6 +4,7 @@ import type { MachineLoginOutcome } from "@shared/accounts";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { MADE_LOGIN_FILE } from "../claude/claudeAuth";
 import { HOME_ADDRESSES_FILE, JoinedHome } from "../devices/joinedHome";
+import { HOME_ARRIVING_DIR } from "../homeMove/arriving";
 import { removeAll } from "../removeWhole";
 import {
   type BackgroundContext,
@@ -58,7 +59,11 @@ import { WorkingCopies } from "./workingCopies";
  */
 export const LEFT_CLAUDE_LOGIN = "claude-login.json";
 
-/** Folders that hold sign-ins, conversations, the pieces of work in flight and the tasks' command keys. */
+/**
+ * Folders that hold sign-ins, conversations, the pieces of work in flight,
+ * the tasks' command keys and a moving first mate's files, which can hold a
+ * copy of its home's key.
+ */
 const ALWAYS = [
   "accounts",
   "forges",
@@ -70,6 +75,7 @@ const ALWAYS = [
   "worktree-pool",
   "worktree-trash",
   "task-channel",
+  HOME_ARRIVING_DIR,
 ] as const;
 
 /** Folders a kept working copy needs: the clones it is a working copy of. */

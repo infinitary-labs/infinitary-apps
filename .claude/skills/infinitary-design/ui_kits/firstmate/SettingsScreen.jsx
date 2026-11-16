@@ -71,7 +71,7 @@ function DevicesTab(){
       <Button variant="secondary" size="sm" onClick={()=>open(panel.kind)}>Make a new one</Button>
     </div>}
     <SectionLabel>Your devices</SectionLabel>
-    <div style={{fontSize:"var(--text-sm)",color:"var(--fg-2)",margin:"-6px 0 12px"}}>Your first mate lives on this computer. From any computer you add you can control it, and any computer you add can run a project’s work. Running as another user on this computer only runs work. Like every user here, it can read files in your home folder.</div>
+    <div style={{fontSize:"var(--text-sm)",color:"var(--fg-2)",margin:"-6px 0 12px"}}>Your first mate lives on this computer. From any computer you add you can control it, and any computer you add can run a project’s work. Running as another user on this computer runs work, and your first mate can move there. Like every user here, it can read files in your home folder.</div>
     <div style={{...box,marginBottom:28}}>
       {rows.map((d,i)=>{
         const edge=i===0?{}:{borderTop:"1px solid var(--line-1)"};

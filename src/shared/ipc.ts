@@ -25,6 +25,7 @@ import {
 import { dictationSettingsSchema } from "./dictation";
 import { fmEventSchema } from "./events";
 import { forgesViewSchema } from "./forges";
+import { homeMoveProgressSchema } from "./homeMove";
 import { integrationsViewSchema } from "./integrations";
 import {
   isPanelCommandId,
@@ -341,6 +342,9 @@ export const pushContract = {
   // Where devices find this Mac, whole, after it reads differently - the
   // captain's choice, or this Mac's network moving (docs/devices.md).
   "inf:devices:addresses": { payload: deviceAddressesSchema, surface: "core" },
+  // Where moving the first mate to another computer stands, whole, at each
+  // change (docs/devices.md, "Moving the first mate").
+  "inf:home-move:progress": { payload: homeMoveProgressSchema, surface: "core" },
   // Macs nearby, whole, whenever the list reads differently while it is looked for.
   "inf:devices:nearby": { payload: nearbyMacsViewSchema, surface: "core" },
   // Each computer that runs work and what it is signed in to, whole, after

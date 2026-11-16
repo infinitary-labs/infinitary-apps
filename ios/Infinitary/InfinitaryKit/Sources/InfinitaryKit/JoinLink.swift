@@ -103,8 +103,11 @@ public struct JoinedMac: Codable, Equatable, Sendable {
     public let pin: String
     public let deviceID: String
     public var name: String
-    public init(addresses: [String], pin: String, deviceID: String, name: String) {
+    /// The highest home number this phone heard (docs/devices.md, "Moving the first mate"); none before a move.
+    public var homeNumber: Int?
+    public init(addresses: [String], pin: String, deviceID: String, name: String, homeNumber: Int? = nil) {
         self.addresses = addresses; self.pin = pin; self.deviceID = deviceID; self.name = name
+        self.homeNumber = homeNumber
     }
 }
 

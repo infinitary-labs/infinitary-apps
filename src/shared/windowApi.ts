@@ -60,6 +60,7 @@ import type {
   ForgeSignInFlow,
   ForgesView,
 } from "./forges";
+import type { HomeMoveProgress, HomeMoveReady } from "./homeMove";
 import type { HomeUpdate } from "./homeUpdate";
 import type {
   IntegrationKind,
@@ -372,6 +373,18 @@ export type FirstmateApi = {
     remove: (deviceId: string, when?: DeviceRemoveWhen) => Promise<DeviceView>;
     /** Keep it: a computer waiting to be removed once it is back stays. */
     keep: (deviceId: string) => Promise<DeviceView>;
+    /** Moving the first mate to a computer that runs work (docs/devices.md, "Moving the first mate"). */
+    homeMove: {
+      /** The Ready list: each gap on that computer before the move. */
+      ready: (deviceId: string) => Promise<HomeMoveReady>;
+      /** The captain's click: answers at once, and progress pushes say the rest. */
+      start: (deviceId: string) => Promise<{ ok: boolean; text: string }>;
+      /** Stops a move that has not stopped the first mate yet. */
+      cancel: () => Promise<{ ok: boolean; text: string }>;
+      /** Starts the first mate here again once the computer it moves to stayed out of reach. */
+      startHere: () => Promise<{ ok: boolean; text: string }>;
+      onProgress: (listener: (progress: HomeMoveProgress) => void) => () => void;
+    };
     /**
      * Try again: this Mac's own SSH connection to the computer, or to every
      * one it stopped trying when none is named, is tried once now.

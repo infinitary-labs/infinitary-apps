@@ -2,11 +2,13 @@ import { userInfo } from "node:os";
 import type { BrowserViewer } from "@core/browser/browserViews";
 import type { HomeConnection } from "@core/connection/connection";
 import { claimLink, dialHome, HomeKeyMismatchError, PairRefusedError } from "@core/devices/dial";
-import type { Joined, JoinedHome } from "@core/devices/joinedHome";
+import { type Joined, JoinedHome } from "@core/devices/joinedHome";
 import type { Launcher } from "@core/helper/background";
 import { windowFromWork, workFromWindow } from "@core/helper/fromWindow";
 import { homeDialOptions } from "@core/helper/route";
 import type { InBackground } from "@core/helper/words";
+import type { HomeHandOver } from "@core/homeMove/outgoing";
+import { HOME_MOVING, setAsideRecord } from "@core/homeMove/record";
 import type { HostNotifications } from "@core/host";
 import type { Core } from "@core/index";
 import type { UpdateChecker } from "@core/update/updateChecker";
@@ -83,8 +85,18 @@ export type ShellOptions = {
       app: string | null;
     }) => Promise<InBackground>;
   };
-  /** Starts this Mac's own core. A process starts it at most once. */
-  startCore: () => Promise<Core>;
+  /**
+   * Starts this Mac's own core. A process starts it at most once.
+   * `onHomeMoved` hears the first mate move to another computer.
+   */
+  startCore: (hooks?: { onHomeMoved?: (handOver: HomeHandOver | null) => void }) => Promise<Core>;
+  /**
+   * A first mate started by a command with no window ends its run once it
+   * moved to another computer (docs/devices.md, "Moving the first mate"):
+   * `moved` for good, with nothing here to start it again, or `restart`
+   * for a move that failed after it stopped. Absent, the app starts again.
+   */
+  endRun?: (how: "moved" | "restart") => void;
   /** Serves a started core to paired devices, and to this computer's window through the local door. */
   startConnection: (core: Core) => HomeConnection;
   /**
@@ -503,7 +515,9 @@ export class Shell {
 
   private async becomeHome(): Promise<void> {
     this.coreStarted = true;
-    const core = await this.options.startCore();
+    const core = await this.options.startCore({
+      onHomeMoved: (handOver) => void this.homeMoved(handOver),
+    });
     const connection = this.options.startConnection(core);
     // This computer's window is a view of its first mate like any other
     // (docs/view.md): its requests and pushes go over the connection,
@@ -670,6 +684,7 @@ export class Shell {
       notifications: this.options.notifications,
       onThisMac: (thisMac) => this.options.broadcast("inf:devices:this-mac", thisMac),
       onRemoved: () => void this.removedThere(),
+      onMovedHere: () => this.options.relaunch(),
       updates: this.options.updates,
       ...(this.options.openPage ? { openPage: this.options.openPage } : {}),
       ...(this.options.returnHost ? { returnHost: this.options.returnHost } : {}),
@@ -701,6 +716,57 @@ export class Shell {
       mode.view.dispose();
       await this.becomeHomeAgain();
     });
+  }
+
+  /**
+   * The first mate moved to another computer (docs/devices.md, "Moving the
+   * first mate"): it stops here, its record goes aside where nothing opens
+   * it again, and this computer opens as a window of the new home with the
+   * grant handed over. A move that failed after it stopped starts it again.
+   */
+  private async homeMoved(handOver: HomeHandOver | null): Promise<void> {
+    const end = (how: "moved" | "restart") => {
+      this.mode = null;
+      if (this.options.endRun) this.options.endRun(how);
+      else this.options.relaunch();
+    };
+    if (!handOver) {
+      await this.stopHome().catch(() => {});
+      end("restart");
+      return;
+    }
+    const userData = this.mode?.kind === "home" ? this.mode.core.paths.userData : null;
+    await this.stopHome().catch((error: unknown) =>
+      console.warn(`[shell] the first mate did not stop cleanly: ${String(error)}`),
+    );
+    try {
+      if (userData) setAsideRecord(userData, handOver.move, [HOME_MOVING]);
+    } catch (error) {
+      console.warn(`[shell] could not set the moved record aside: ${String(error)}`);
+    }
+    const joinedAt = this.now();
+    this.options.joined.join(handOver.grant, joinedAt);
+    this.options.joined.name(handOver.name);
+    this.options.joined.keepHomeNumber(handOver.homeNumber);
+    // It stays a computer that runs work: its work keeps the same grant and
+    // starts in the background, as a Mac that joined does.
+    const work = this.options.work;
+    if (work) {
+      const outcome = await workFromWindow({
+        dataDir: work.dataDir,
+        grant: handOver.grant,
+        name: handOver.name,
+        joinedAt,
+        ...(work.background ? { background: work.background } : {}),
+      }).catch((error: unknown) => {
+        console.warn(`[shell] could not set up ${HERE.this}'s work: ${(error as Error).message}`);
+        return "failed" as const;
+      });
+      if (outcome === "running" || outcome === "at-login" || outcome === "none")
+        new JoinedHome(work.dataDir, () => {}).keepHomeNumber(handOver.homeNumber);
+      else console.warn(`[shell] ${HERE.this}'s work for the moved first mate: ${outcome}`);
+    }
+    end("moved");
   }
 
   private async stopHome(): Promise<void> {

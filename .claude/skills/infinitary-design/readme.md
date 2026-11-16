@@ -110,7 +110,7 @@ The product feeling: **calm, peaceful, confident, futuristic, a bit of space-tra
   Projects already set up never move.
 - **Devices** (captain's picks on FI3-681 and FI3-682, 2026-10-03; pairing's rules are the app's `docs/devices.md`) - the first mate lives on one computer, and the person adds their other computers once.
   Any added computer can control that first mate while Infinitary is open on it - the same cards, feed, Tasks and conversation, keeping no record - and can run the work of a project set to run on it, with sign-ins of its own.
-  Running as another user on this computer only runs work, with sign-ins of its own, and never controls the first mate.
+  Running as another user on this computer runs work with sign-ins of its own, and controls the first mate only once the first mate moves there.
   Like every user on the computer, it can read files in the person's home folder outside private folders such as Desktop and Documents, and every word about it says so.
   Settings → Devices, after Usage, holds one list, **Your devices**: This computer, running as another user, then each computer, each with Remove, beside the link or command panel and the address a link sends a computer to (`components/devices/DevicesTab`).
   A computer joins by a link pasted at its first launch (`components/devices/JoinAnotherMac`), by one command run in Terminal there, or by its address over Remote Login (`components/devices/AddAMac`); a link or command exists only after the captain's own click, works once for ten minutes, and never enters a card, a feed line or a conversation.

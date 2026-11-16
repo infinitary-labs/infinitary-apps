@@ -28,6 +28,7 @@ import {
   WORK_UPDATE_SINCE,
 } from "./contractFeatures";
 import { FILE_ORDER_CHANNELS, fileOrders } from "./files";
+import { HOME_MOVE_CHANGE, HOME_MOVE_ORDER_CHANNELS, homeMoveOrders } from "./homeMove";
 import {
   CORE_INVOKE_CHANNELS,
   CORE_PUSH_CHANNELS,
@@ -266,6 +267,24 @@ export function publishedContract() {
       requests: Object.fromEntries(
         FILE_ORDER_CHANNELS.map((channel) => {
           const declared = fileOrders[channel];
+          return [
+            channel,
+            {
+              effect: declared.effect,
+              request: received(`The ${channel} order`, declared.request),
+              response: sent(`The ${channel} answer`, declared.response),
+            },
+          ];
+        }),
+      ),
+    },
+    // What a home asks the computer it moves to (`src/shared/homeMove.ts`,
+    // docs/devices.md, "Moving the first mate"), from the `home-move` change on.
+    homeMoveOrders: {
+      change: HOME_MOVE_CHANGE,
+      requests: Object.fromEntries(
+        HOME_MOVE_ORDER_CHANNELS.map((channel) => {
+          const declared = homeMoveOrders[channel];
           return [
             channel,
             {

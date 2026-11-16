@@ -1054,6 +1054,10 @@ public struct PhoneNotice: Equatable, Sendable {
                   let seq = frame["seq"] as? Int, seq >= 0,
                   let catchUp = frame["catchUp"] as? String, ["replay", "reload"].contains(catchUp)
             else { throw PhoneError.invalidReply }
+            // A home a move left behind is never this phone's home again: it waits for the new one.
+            let homeNumber = PhoneHomeMove.number(inWelcome: frame)
+            guard PhoneHomeMove.accepts(welcome: homeNumber, known: mac.homeNumber) else { throw PhoneError.wrongMac }
+            if let kept = PhoneHomeMove.kept(mac, welcome: homeNumber) { mac = kept; onMacChanged?(mac) }
             if catchUp == "reload" { self.sequence = seq; primed = false; notified = [:]; awaited = []; caughtUp = false; owed = [] }
             access = frame["access"] as? String == "full" ? "full" : "read"
             homeVersion = frame["protocolVersion"] as? String
@@ -1271,6 +1275,13 @@ public struct PhoneNotice: Equatable, Sendable {
             }
             markReady(channel)
             if dirty.remove(channel) != nil { try await refresh(channel, on: socket) }
+        case "live":
+            // The first mate moved: keep where the new home answers, then end this connection and dial there.
+            if frame["channel"] as? String == PhoneHomeMove.movedChannel,
+               let followed = PhoneHomeMove.followed(mac, payload: frame["payload"]) {
+                mac = followed; onMacChanged?(mac)
+                throw PhoneError.unavailable
+            }
         default: break // Later envelope fields and frame kinds do not widen what this client sends.
         }
     }

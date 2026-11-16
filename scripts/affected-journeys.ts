@@ -122,9 +122,16 @@ const FALLBACKS = [
       "devices-command.spec.ts",
       "devices-address.spec.ts",
       "devices-ssh.spec.ts",
+      // The move of the first mate to a computer that runs work.
+      "home-move.spec.ts",
       // A computer that controls the first mate adds and removes one from its own Devices.
       "run-control.spec.ts",
     ],
+  },
+  {
+    // The move journey drives the move's two ends, even when no word it reads changes.
+    paths: ["src/core/homeMove/"],
+    specs: ["home-move.spec.ts"],
   },
   {
     // The Mac journey drives this controller and shared store, even when no drawn hook changes.

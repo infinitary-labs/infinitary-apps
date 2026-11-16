@@ -1,7 +1,9 @@
+import { cpSync } from "node:fs";
 import { join } from "node:path";
 import { cardSchema } from "@shared/cards";
 import type { Spelling } from "@shared/codeNames";
 import type { DeviceGrant, DeviceView } from "@shared/devices";
+import type { HomeMoved } from "@shared/homeMove";
 import { HOME_CAPABILITIES, PROTOCOL_VERSION, parseInvokeRequest } from "@shared/ipc";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WebSocket } from "ws";
@@ -32,6 +34,7 @@ import {
   type HomeLinkState,
   HomeOutOfReachError,
 } from "./homeLink";
+import { writeHomeNumber } from "./homeNumber";
 import { DevicePairing } from "./pairing";
 
 /**
@@ -57,6 +60,8 @@ function standInCore() {
         capabilities: [...HOME_CAPABILITIES],
       };
     if (channel === "inf:cards:close") return { ok: true };
+    if (channel === "inf:home-move:start-here")
+      return { ok: true, text: "Your first mate starts here again." };
     // A change the home reads against its real contract, as its dispatcher does.
     if (channel === "inf:accounts:add" || channel === "inf:task:run")
       return { added: parseInvokeRequest(channel, args) };
@@ -98,8 +103,9 @@ async function home(
 ) {
   const core = standInCore();
   const left: DeviceView[] = [];
+  const dir = join(scratchDir("infinitary-home-link-"), "devices");
   const pairing = new DevicePairing({
-    dir: join(scratchDir("infinitary-home-link-"), "devices"),
+    dir,
     onProblem: () => {},
     onLeft: (device) => left.push(device),
   });
@@ -131,6 +137,9 @@ async function home(
   return {
     ...core,
     pairing,
+    /** The pairing's folder: the home's key and its list of devices. */
+    dir,
+    at,
     left,
     listen,
     quit,
@@ -170,6 +179,10 @@ function follow(
     protocolVersion?: string;
     /** The contract changes its hello lists. */
     changes?: readonly string[];
+    /** The highest home number it heard, and what it hears of a move. */
+    homeNumber?: number;
+    onHomeNumber?: (homeNumber: number) => void;
+    onMoved?: (moved: HomeMoved) => void;
   } = {},
 ) {
   const states: HomeLinkState[] = [];
@@ -220,6 +233,9 @@ function follow(
     onReplayed: () => replayed.push(pushes.length),
     onState: (state) => states.push(state),
     ...(options.onInvoke ? { onInvoke: options.onInvoke } : {}),
+    ...(options.homeNumber ? { homeNumber: options.homeNumber } : {}),
+    ...(options.onHomeNumber ? { onHomeNumber: options.onHomeNumber } : {}),
+    ...(options.onMoved ? { onMoved: options.onMoved } : {}),
     retryMs: options.retryMs ?? [20],
     pingMs: options.pingMs ?? 60_000,
   });
@@ -633,6 +649,126 @@ describe("the device's side of the connection", () => {
     letDial();
     const socket = await closed;
     expect(socket.readyState).toBe(socket.CLOSED);
+  });
+});
+
+describe("a device when the first mate moves to another computer", () => {
+  /**
+   * The home's record at another port as a move leaves it: the same key and
+   * list of devices, copied, with the next home number.
+   */
+  async function movedHome(from: Awaited<ReturnType<typeof home>>) {
+    const dir = join(scratchDir("infinitary-home-link-moved-"), "devices");
+    cpSync(from.dir, dir, { recursive: true });
+    writeHomeNumber(dir, 2);
+    const pairing = new DevicePairing({ dir, onProblem: () => {} });
+    const port = await claimedPort();
+    const core = standInCore();
+    const connection = startConnection({
+      ...core,
+      devices: pairing,
+      port,
+      name: () => "Mac mini",
+      heartbeatMs: 60_000,
+    });
+    await connection.settled();
+    stops.push(async () => {
+      await connection.close();
+      pairing.dispose();
+    });
+    return { ...core, at: `127.0.0.1:${port}`, connection };
+  }
+
+  it("follows the move frame to the new home and keeps its number, then refuses the home the move left behind", async () => {
+    const pro = await home();
+    const grant = await pro.join();
+    const mini = await movedHome(pro);
+    const numbers: number[] = [];
+    const moves: HomeMoved[] = [];
+    const air = follow(grant, {
+      onHomeNumber: (number) => numbers.push(number),
+      onMoved: (moved) => moves.push(moved),
+    });
+    air.link.start();
+    await air.until(() => air.link.state().contact === "in-reach");
+    expect(air.link.state().name).toBe("MacBook Pro");
+
+    const moved = { homeNumber: 2, addresses: [mini.at], to: "mini", name: "Mac mini" };
+    await pro.connection().moved(moved);
+    await air.until(
+      () => air.link.state().contact === "in-reach" && air.link.state().name === "Mac mini",
+    );
+    expect(numbers).toEqual([2]);
+    expect(moves).toEqual([moved]);
+
+    // A device that heard number 2 dials the old address, where number 1 answers again: it never takes it.
+    await pro.listen();
+    const old = follow({ ...grant, at: pro.at }, { homeNumber: 2 });
+    old.link.start();
+    await old.until(() => old.link.state().contact === "lost");
+    expect(old.states.map((state) => state.contact)).not.toContain("in-reach");
+  });
+
+  it("follows the old home that started the first mate again above the move's number, and refuses the destination if it comes back", async () => {
+    const pro = await home();
+    const grant = await pro.join();
+    // The destination took the record at number 2 and never answered the old home.
+    const mini = await movedHome(pro);
+    const numbers: number[] = [];
+    const air = follow(grant, { onHomeNumber: (number) => numbers.push(number) });
+    air.link.start();
+    await air.until(() => air.link.state().contact === "in-reach");
+    // The captain starts the first mate on the old home again: it takes number 3, never lower.
+    pro.pairing.raiseHomeNumber(3);
+    pro.pairing.raiseHomeNumber(2);
+    await pro.quit();
+    await air.until(() => air.link.state().contact !== "in-reach");
+    await pro.listen();
+    await air.until(() => air.link.state().contact === "in-reach" && numbers.includes(3));
+    expect(air.link.state().name).toBe("MacBook Pro");
+
+    // A device that heard number 3 reaching the destination, at number 2, never takes it.
+    const stray = follow({ ...grant, at: mini.at }, { homeNumber: 3 });
+    stray.link.start();
+    await stray.until(() => stray.link.state().contact === "lost");
+    expect(stray.states.map((state) => state.contact)).not.toContain("in-reach");
+  });
+
+  it("refuses a view's change while the first mate moves, but lets Start my first mate here again through", async () => {
+    const pro = await home();
+    const air = follow(await pro.join());
+    air.link.start();
+    await air.until(() => air.link.state().contact === "in-reach");
+    const holding = "Your first mate is moving to Mac mini. Try again once it has.";
+    pro.connection().hold(holding);
+    await expect(air.link.invoke("inf:cards:close", ["card-1"])).rejects.toThrow(holding);
+    await expect(air.link.invoke("inf:home-move:start-here", [])).resolves.toEqual({
+      ok: true,
+      text: "Your first mate starts here again.",
+    });
+    expect(pro.asked.map((asked) => asked.channel)).toContain("inf:home-move:start-here");
+    expect(pro.asked.map((asked) => asked.channel)).not.toContain("inf:cards:close");
+  });
+
+  it("leaves a work request unanswered while the home moves, and the new home answers it once", async () => {
+    const pro = await home();
+    const grant = await pro.joinWork();
+    const mini = await movedHome(pro);
+    const { link, states, until } = follow(grant);
+    link.start();
+    await until(() => states.at(-1)?.contact === "in-reach");
+
+    pro.connection().hold("Your first mate is moving to Mac mini. Try again once it has.");
+    const request = [{ task: "t1", callId: "call-1", text: "While it moves." }];
+    const answered = link.ask("inf:work:progress", request);
+    await pro.connection().moved({ homeNumber: 2, addresses: [mini.at], to: "mini" });
+    await until(() => mini.asked.length === 1);
+    mini.answerWork();
+    expect(await answered).toEqual({ text: "Noted." });
+    // The old home never ran it: the move's record carries nothing it did after the stop.
+    expect(pro.asked.filter((each) => each.channel === "inf:work:progress")).toEqual([]);
+    expect(mini.asked).toEqual([{ channel: "inf:work:progress", args: request }]);
+    expect(link.waiting()).toBe(0);
   });
 });
 

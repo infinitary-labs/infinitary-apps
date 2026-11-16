@@ -10,8 +10,21 @@ import * as m from "./i18n/messages.generated";
  * Start it here once nothing will, or nothing did in time.
  */
 
-/** How the command ended: as its own record says, or `crashed` when it left none. */
-export const commandEndingSchema = z.enum(["quit", "signal", "updated", "start-failed", "crashed"]);
+/**
+ * How the command ended: as its own record says, or `crashed` when it left
+ * none. `restart` ends it to start its first mate again here, after a move
+ * to another computer failed or the captain started it here again
+ * (docs/devices.md, "Moving the first mate"); its notice speaks as any
+ * other stop does.
+ */
+export const commandEndingSchema = z.enum([
+  "quit",
+  "signal",
+  "updated",
+  "restart",
+  "start-failed",
+  "crashed",
+]);
 export type CommandEnding = z.infer<typeof commandEndingSchema>;
 
 export const commandNoticeSchema = z.strictObject({

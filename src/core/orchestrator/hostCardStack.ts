@@ -17,6 +17,7 @@ import {
   firstmateQuietCard,
   forgeSignInCard,
   hostCard,
+  signInAgainCard,
   systemNoteCard,
 } from "./hostCards";
 
@@ -204,6 +205,16 @@ export class HostCardStack {
       { ...firstmateFailureCard(body), createdAt: existing?.createdAt ?? this.host.now() },
       { revise: existing !== undefined },
     );
+  }
+
+  /** A moved first mate's ask for one sign-in the old home had (`signInAgainCard`). */
+  addSignInAgainCard(
+    id: string,
+    signIn: { kind: "provider" | "forge"; id: string; name: string },
+    from: string,
+  ): void {
+    if (this.cards.has(id)) return;
+    this.put({ ...signInAgainCard(id, signIn, from), createdAt: this.host.now() });
   }
 
   /** An app-raised note card (for example the mic permission primer). */

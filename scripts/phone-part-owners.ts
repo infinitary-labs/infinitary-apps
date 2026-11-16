@@ -60,6 +60,7 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneDiagnostics.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneFormats.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneFrame.swift",
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneHomeMove.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneHomeUpdate.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneIntents.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneLook.swift",

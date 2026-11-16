@@ -292,14 +292,14 @@ function shell(
       listening: () => [],
       localDoor: () => null,
       settled: async () => {},
-      ask: async () => {
-        throw new Error("Nothing is connected.");
-      },
+      ask: () => Promise.reject(new Error("Nothing is connected.")),
       onWorkDevice: () => () => {},
       onViewDevice: () => () => {},
       onWorkVersion: () => () => {},
       onListening: () => () => {},
       onAppSent: () => () => {},
+      hold: () => {},
+      moved: async () => {},
     }),
   );
   const made = new Shell({

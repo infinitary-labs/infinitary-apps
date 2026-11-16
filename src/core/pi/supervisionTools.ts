@@ -21,8 +21,7 @@ export function createSupervisionLogTool(recent: (limit: number) => SupervisionO
     name: "supervision_log",
     label: "Fleet outcome log",
     description:
-      "Read the log of routine fleet events already triaged for you: each task, " +
-      "verdict, and summary, newest first. Use it when asked what happened in the fleet.",
+      "Read triaged routine fleet events: task, verdict and summary, newest first. Use when asked what happened in the fleet.",
     parameters: Type.Object({
       recent: Type.Optional(
         Type.Number({ description: "How many most-recent outcomes to read (default 20)" }),
@@ -85,11 +84,10 @@ export function createFlagDuplicateTool(delegate: DuplicateDelegate) {
     name: "flag_duplicate",
     label: "Flag duplicate card",
     description: [
-      "Record that a card repeats an earlier card, and close it.",
-      "Call it only when the user says a card duplicates another one; pass the duplicate's",
-      "card id and the id of the earlier card it repeats, from the context block or the",
-      "on-screen hint. Never call it on your own initiative or to tidy the stack - close_card",
-      "is for that. It writes a label and closes the duplicate, with no card; a crewmate's card's author is told.",
+      "Record and close a repeated card. Only when the user says it is a duplicate,",
+      "pass the duplicate's card id and the id of the earlier card it repeats from the context block or on-screen hint. Never call on your own initiative",
+      "or to tidy the stack - use close_card. It labels and closes it without a card;",
+      "a crewmate card's author is told.",
     ].join(" "),
     parameters: Type.Object({
       // The description names both ids (the duplicate's card id and the earlier card it repeats).
@@ -157,11 +155,9 @@ export function createFlagMissedEscalationTool(delegate: MissedEscalationDelegat
     name: "flag_missed_escalation",
     label: "Flag missed escalation",
     description: [
-      "Record that a fleet event triaged as routine should have reached the user.",
-      "Call it only after the user says something was missed AND you have checked",
-      "supervision_log and confirmed the event was handled routinely. Never call it",
-      "on a hunch or for an event that did reach the user.",
-      "It writes a label and nothing else: no card, message or task change.",
+      "Record that a routine fleet event should have reached the user. Only when the user says it",
+      "was missed AND supervision_log confirms routine handling; never on a hunch or for an event",
+      "that reached them. It only labels: no card, message or task change.",
     ].join(" "),
     parameters: Type.Object({
       task_id: Type.String({ description: "The task whose routine outcome was the miss" }),

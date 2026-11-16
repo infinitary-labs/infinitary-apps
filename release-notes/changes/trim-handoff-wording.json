@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "trim-handoff-wording",
+      "reason": "Internal: shorter agent instructions preserve the rules and leave more room for conversation."
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "phone-iphone-duo-pages",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Each page of an open iPhone Duo holds its own part of Infinitary",
+      "body": "On an open iPhone Duo, a task you open from Tasks now fills that page in the list's place, with Tasks to go back, while your cards stay on the other page. Open on its side, Tasks, Activity or Panels sits above the fold and your cards and the message box below it; half folded, the card stays on the upright half and the rest moves to the flat half. Settings, the tabs and your computer stay in one row along the top instead of a bar down the side, except on the closed screen held upright. With Split at the fold turned off, the open Duo keeps the iPad layout instead.",
+      "picture": {
+        "dark": "phone-iphone-duo-pages-dark.webp",
+        "light": "phone-iphone-duo-pages-light.webp",
+        "alt": "Infinitary on an open iPhone Duo: a task's record with a Tasks way back fills the left page up to the fold, and a decision card with the message box fills the right page, under one row with Settings, Infinitary and the computer."
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

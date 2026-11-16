@@ -10,8 +10,11 @@ import SwiftUI
 struct PhoneTaskRecord: View {
     let session: ReadOnlySession
     let initial: PhoneTask
-    /// Leaves the record's sheet: Show the card and a card's row take the captain to Home.
+    /// Leaves the record, its sheet or the panel's place: Show the card and a card's row take the captain to Home.
     let leave: () -> Void
+    /// INF-1208's direction C: a record in the panel's place opens a related task's record in that place too, where no
+    /// stack of its own can push one; a sheet pushes it.
+    var open: ((PhoneTask) -> Void)? = nil
     @Environment(PhoneMessageContext.self) private var messageContext
     @State private var detail: PhoneTask?
     @State private var crew: PhoneCrew?
@@ -19,6 +22,8 @@ struct PhoneTaskRecord: View {
     @State private var live: PhoneCrewLive?
     @State private var tab = "info"
     @State private var draft = ""
+    @FocusState private var steerFocused: Bool
+    @Environment(\.phoneRecordInPlace) private var inPlace
     @State private var busy = false
     @State private var pressed: String?
     @State private var problem: String?
@@ -73,6 +78,8 @@ struct PhoneTaskRecord: View {
             .onChange(of: shown) { _, now in following = true; position.scrollTo(edge: now == "crewmate" ? .bottom : .top) }
             foot(crewmate: shown == "crewmate")
         }.background(PhoneTheme.background).navigationBarTitleDisplayMode(.inline)
+            // INF-1208's direction C: each record page asks for the one-row bar, a related task's pushed page included.
+            .phoneOneRowBar()
             // INF-589 item 12: a soft tap once the computer accepts a change from the record.
             .sensoryFeedback(.phone, trigger: sent)
             .onAppear { messageContext.taskID = initial.id }
@@ -205,11 +212,15 @@ struct PhoneTaskRecord: View {
 
     @ViewBuilder private func keyLink(_ key: String) -> some View {
         if let other = session.board?.tasks.first(where: { $0.key == key }) {
-            NavigationLink { PhoneTaskRecord(session: session, initial: other, leave: leave) } label: {
-                Text(key).font(PhoneFont.mono).foregroundStyle(PhoneTheme.accent)
-                    // Each key answers a 44-point touch without spacing the row apart.
-                    .padding(.vertical, 12).contentShape(Rectangle()).padding(.vertical, -12)
-            }.buttonStyle(.plain).accessibilityIdentifier("task-record-key-\(key)")
+            let label = Text(key).font(PhoneFont.mono).foregroundStyle(PhoneTheme.accent)
+                // Each key answers a 44-point touch without spacing the row apart.
+                .padding(.vertical, 12).contentShape(Rectangle()).padding(.vertical, -12)
+            if let open {
+                Button { open(other) } label: { label }.buttonStyle(.plain).accessibilityIdentifier("task-record-key-\(key)")
+            } else {
+                NavigationLink { PhoneTaskRecord(session: session, initial: other, leave: leave) } label: { label }
+                    .buttonStyle(.plain).accessibilityIdentifier("task-record-key-\(key)")
+            }
         } else {
             Text(key).font(PhoneFont.mono).foregroundStyle(PhoneTheme.secondary)
         }
@@ -658,6 +669,8 @@ struct PhoneTaskRecord: View {
             // INF-2553: the steer shows in the transcript at the tap, so the box stays open for the next one.
             TextField(working ? PhoneRecordWords.crewPlaceholderWorking : PhoneRecordWords.crewPlaceholderIdle, text: $draft, axis: .vertical)
                 .lineLimit(1...4).accessibilityLabel(PhoneRecordWords.crewField).accessibilityIdentifier("steer-box")
+                // The captain: steering from a record in the panel's place brings the panel above the fold.
+                .focused($steerFocused).phonePanelField(steerFocused)
             Button {
                 change(.steer(task: task.id, text: draft, before: PhoneIntentLedger.captainSteers(transcript)), .steer,
                        args: [task.id, draft], clearDraft: true, from: "steer-task")
@@ -665,7 +678,10 @@ struct PhoneTaskRecord: View {
                 Label(PhoneMessages.phoneRecordSteer(), systemImage: "arrow.up.circle.fill").labelStyle(.iconOnly)
                     .frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
             }.disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || busy || !session.canChange)
-                .keyboardShortcut(.return, modifiers: .command).accessibilityIdentifier("steer-task")
+                // In the panel's place Home's message box shares the window, so Steer takes the key only while its box
+                // holds focus; a sheet's record keeps it throughout.
+                .keyboardShortcut(steerFocused || !inPlace ? KeyboardShortcut(.return, modifiers: .command) : nil)
+                .accessibilityIdentifier("steer-task")
         }.font(PhoneFont.callout)
             .padding(.leading, PhoneTheme.space4).padding(.trailing, PhoneTheme.space2)
             .background(PhoneTheme.surface, in: Capsule())

@@ -75,6 +75,8 @@ struct PhoneView: View {
                 }
             }
             .background(PhoneTheme.background)
+            // INF-1208's direction C: the one-row bar on a foldable too, in place of iOS 27.1's rail (`PhoneOneRowBar`).
+            .phoneOneRowBar()
             .navigationTitle("Infinitary")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

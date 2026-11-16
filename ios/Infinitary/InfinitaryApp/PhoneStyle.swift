@@ -48,9 +48,14 @@ enum PhoneLayout {
     /// no strip of empty stage between the sidebar and the fold. Folds are the window's division regions in the
     /// workspace's own space, each with Apple's margins.
     static func sidebarWidth(width: CGFloat, folds: [CGRect]) -> CGFloat {
+        foldPage(width: width, folds: folds) ?? min(320, width * 0.32)
+    }
+
+    /// Where the page left of a fold running down the window ends, when that fold stands past the sidebar's usual share;
+    /// none on a window with no such fold. INF-1208's direction C opens a record in the panel's place on that page.
+    static func foldPage(width: CGFloat, folds: [CGRect]) -> CGFloat? {
         let share = min(320, width * 0.32)
-        let fold = folds.filter { $0.height > $0.width && $0.minX > share && $0.maxX < width }.map(\.minX).min()
-        return fold ?? share
+        return folds.filter { $0.height > $0.width && $0.minX > share && $0.maxX < width }.map(\.minX).min()
     }
 }
 
@@ -137,8 +142,10 @@ extension SensoryFeedback {
 
 extension View {
     /// A sheet's title, inline in the app's own type, drawn as the joined computer's name is.
+    /// INF-1208's direction C: every sheet's page with a title asks for the one-row bar from inside its navigation stack,
+    /// where the bar it draws reads the ask.
     func phoneTitle(_ title: String) -> some View {
-        navigationTitle(title).navigationBarTitleDisplayMode(.inline).toolbar {
+        navigationTitle(title).navigationBarTitleDisplayMode(.inline).phoneOneRowBar().toolbar {
             // A longer word in another language shrinks a little before it cuts off.
             ToolbarItem(placement: .principal) {
                 Text(title).font(PhoneFont.headline).lineLimit(1).minimumScaleFactor(0.75).accessibilityAddTraits(.isHeader)

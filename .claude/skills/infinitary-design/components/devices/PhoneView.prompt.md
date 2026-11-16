@@ -125,6 +125,9 @@ The window's room decides, regular in width and height and wider than tall, neve
 On a foldable the stage, its card and the message box keep to the wider side of a fold that runs down the window, never across it.
 There the sidebar reaches the fold, so the sidebar fills the page left of it and Home the page right of it.
 Split at the fold, a switch under Settings → Appearance on a device that folds, starts on; off, the open Duo lays out as an iPad does, its card centred across the fold.
+A Duo open on its side puts the panel on the page above the fold and Home below it; half folded, the card stays on the upright half and the panel and the message box sit on the flat half.
+On a foldable's pages a task's record opens in the Tasks panel's place under a "‹ Tasks" way back, never as a sheet.
+The bar is one row on a foldable too, with no vertical rail, except on a closed screen held upright, where the status bar shares the row.
 Portrait and narrow multitasking return to one column with the strip; the tablet's width and height decide the layout, not its physical orientation alone.
 On any width the card with its pager, the message box, Tasks, Activity and Panels share one centred reading column of 560 points with its gutters, so the message box lines up with the card.
 Activity is newest first on both devices, following the captain's submitted answer over the plan's bottom-up sidebar sentence.

@@ -8,6 +8,7 @@ struct PhoneCrewScene: View {
     @Environment(PhoneMessageContext.self) private var messageContext
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var phase
+    @Environment(\.phoneRecordInPlace) private var recordInPlace
     /// INF-2566: the scene's motion and drawing live on their own render thread; this view only hands it inputs.
     @State private var renderer = PhoneSceneRenderer()
     @State private var rosters = PhoneSceneRoster.Cache()
@@ -94,12 +95,21 @@ struct PhoneCrewScene: View {
         .onReceive(NotificationCenter.default.publisher(for: UITextField.textDidBeginEditingNotification)) { _ in stopBrowsing() }
         .onReceive(NotificationCenter.default.publisher(for: UITextView.textDidBeginEditingNotification)) { _ in stopBrowsing() }
         // INF-1926: a crewmate's summary is the system's standard sheet; Open task swaps it for the task record.
-        .sheet(item: sheet, onDismiss: { if record == nil { messageContext.taskID = nil } }) { shown in
+        .sheet(item: sheet, onDismiss: { if record == nil && !messageContext.recordInPlace { messageContext.taskID = nil } }) { shown in
             switch shown {
             case .summary(let task):
                 PhoneCrewSummary(session: session, task: task, tasks: roster.allTasks,
                                  show: { task in preview = task; previewComputer = PhoneSceneRoster.computerID(task) },
-                                 open: { task in record = task; preview = nil; messageContext.taskID = task.id },
+                                 open: { task in
+                                     // INF-1208's direction C: on a foldable's pages the record opens in the Tasks
+                                     // panel's place, as a panel's own press opens it, never as a sheet over both pages.
+                                     if recordInPlace {
+                                         preview = nil; previewComputer = nil
+                                         messageContext.pointTask = .init(id: task.id, record: true)
+                                     } else {
+                                         record = task; preview = nil; messageContext.taskID = task.id
+                                     }
+                                 },
                                  close: { preview = nil; previewComputer = nil })
                     .presentationDetents([.medium, .large]).presentationDragIndicator(.visible).phoneSheetSurface()
                     .tint(PhoneTheme.accent)

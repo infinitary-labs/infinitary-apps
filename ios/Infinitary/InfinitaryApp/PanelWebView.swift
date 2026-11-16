@@ -40,6 +40,9 @@ import SwiftUI
     private let library: (String) async throws(PhonePanelFailure) -> PhonePanelLibrary
     private let mount = (0..<16).map { _ in String("0123456789abcdef".randomElement()!) }.joined()
     private var view: WKWebView?
+    /// INF-1208's direction C: a field in the page holds the software keyboard, so a foldable's pages bring the panel
+    /// above the fold while it types (`phonePanelField`).
+    private(set) var typing = false
     private var assets: PanelAssets?
     private var loading: Task<Void, Never>?
     private var input: PhoneJSON?
@@ -69,7 +72,8 @@ import SwiftUI
         configuration.setURLSchemeHandler(assets, forURLScheme: "app-frame")
         // Through a weak proxy: WebKit keeps its handler, so the host itself would keep its own page alive after the column lets it go.
         configuration.userContentController.addScriptMessageHandler(PanelHostHandler(self), contentWorld: .page, name: "panelHost")
-        let view = WKWebView(frame: .zero, configuration: configuration)
+        let view = PanelPageView(frame: .zero, configuration: configuration)
+        view.onTyping = { [weak self] typing in self?.typing = typing }
         view.allowsLinkPreview = false
         view.navigationDelegate = self; view.uiDelegate = self
         view.isOpaque = false; view.backgroundColor = .clear; view.scrollView.backgroundColor = .clear
@@ -397,6 +401,42 @@ import SwiftUI
         case "woff2": "font/woff2"
         default: "application/octet-stream"
         }
+    }
+}
+
+/// A panel's page that says when a field in it holds the software keyboard, read as the keyboard comes and goes, as a
+/// card's body does (`CardBodyView`).
+final class PanelPageView: WKWebView {
+    var onTyping: ((Bool) -> Void)?
+    private var typing = false
+    private var keyboardWatch: [NSObjectProtocol] = []
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        keyboardWatch.forEach(NotificationCenter.default.removeObserver)
+        keyboardWatch = []
+        guard window != nil else { readTyping(hides: true); return }
+        for name in [UIResponder.keyboardWillShowNotification, UIResponder.keyboardWillChangeFrameNotification,
+                     UIResponder.keyboardWillHideNotification] {
+            let hides = name == UIResponder.keyboardWillHideNotification
+            keyboardWatch.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.readTyping(hides: hides) }
+            })
+        }
+    }
+    private func readTyping(hides: Bool) {
+        let now = !hides && window != nil && phoneFirstResponder() != nil
+        guard now != typing else { return }
+        typing = now
+        onTyping?(now)
+    }
+}
+
+extension UIView {
+    /// The view in this one's subtree that holds the keyboard's focus, if any.
+    func phoneFirstResponder() -> UIView? {
+        if isFirstResponder { return self }
+        for child in subviews { if let found = child.phoneFirstResponder() { return found } }
+        return nil
     }
 }
 

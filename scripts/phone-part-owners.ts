@@ -48,6 +48,8 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     // The computer's own update under every part's message box and in Settings (MessageComposer.swift).
     "ios/Infinitary/InfinitaryApp/PhoneHomeUpdateViews.swift",
     "ios/Infinitary/InfinitaryApp/PhoneModel.swift",
+    // Home's pages and the one-row bar every tab and sheet asks for (PhoneWorkspace.swift, PhoneStyle.swift).
+    "ios/Infinitary/InfinitaryApp/PhonePages.swift",
     "ios/Infinitary/InfinitaryApp/PhoneQuestionBubble.swift",
     "ios/Infinitary/InfinitaryApp/PhoneSettingsSheet.swift",
     "ios/Infinitary/InfinitaryApp/PhoneStyle.swift",

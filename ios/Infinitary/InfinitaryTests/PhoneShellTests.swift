@@ -179,6 +179,57 @@ import XCTest
         XCTAssertFalse(PhoneLayout.foldsDown([]))
     }
 
+    /// INF-1208's direction C, the captain's pick "Pages: one panel per page, the record in its place, the one-row bar":
+    /// the pages for each pose, with the window and fold measured on the iPhone Duo simulator in Xcode 27.1 once the
+    /// one-row bar replaced the vertical one.
+    func testPagesFollowTheDuosPose() {
+        let fold = CGRect(x: 0, y: 455, width: 669, height: 40)
+        let side = PhoneLayout.Room(size: CGSize(width: 669, height: 951), folds: [fold])
+        // Open on its side: the panel above the fold, Home below it.
+        XCTAssertEqual(PhoneLayout.pages(wide: false, sidebar: 0, horizontal: .regular, vertical: .regular,
+                                         window: side, home: .init()), .panelAbove(fold))
+        // Half folded on its side the fold is active: the card on the upright half, the panel below.
+        var laptop = side
+        laptop.active = [fold]
+        XCTAssertEqual(PhoneLayout.pages(wide: false, sidebar: 0, horizontal: .regular, vertical: .regular,
+                                         window: laptop, home: .init()), .panelBelow(fold))
+        // The captain: typing on Home on its side, open or half folded, the card above the fold and the message box over
+        // the keyboard, the panel waiting under it.
+        XCTAssertEqual(PhoneLayout.pages(wide: false, sidebar: 0, horizontal: .regular, vertical: .regular,
+                                         window: side, home: .init(), typing: true), .typing(fold))
+        XCTAssertEqual(PhoneLayout.pages(wide: false, sidebar: 0, horizontal: .regular, vertical: .regular,
+                                         window: laptop, home: .init(), typing: true), .typing(fold))
+        // The captain: a panel's own field typing swaps the pages, open or half folded: the panel above the fold.
+        XCTAssertEqual(PhoneLayout.pages(wide: false, sidebar: 0, horizontal: .regular, vertical: .regular,
+                                         window: side, home: .init(), panelTyping: true), .panelTyping(fold))
+        XCTAssertEqual(PhoneLayout.pages(wide: false, sidebar: 0, horizontal: .regular, vertical: .regular,
+                                         window: laptop, home: .init(), panelTyping: true), .panelTyping(fold))
+        // Open like a book, 951 by 669: the sidebar reaches the fold at 455, and a record opens on that page.
+        let book = [CGRect(x: 455, y: 0, width: 40, height: 669)]
+        XCTAssertEqual(PhoneLayout.foldPage(width: 951, folds: book), 455)
+        XCTAssertEqual(PhoneLayout.pages(wide: true, sidebar: 455, horizontal: .regular, vertical: .regular,
+                                         window: .init(size: CGSize(width: 951, height: 669), folds: book), home: .init()),
+                       .beside(455))
+        XCTAssertTrue(PhoneLayout.recordInPlace(.beside(455), width: 951, folds: book))
+        // Every split at a fold across the window keeps the record in its place too.
+        XCTAssertTrue(PhoneLayout.recordInPlace(.panelAbove(fold), width: 669, folds: [fold]))
+        // Closed, 466 by 678 with no fold: one column with the strip.
+        XCTAssertEqual(PhoneLayout.pages(wide: false, sidebar: 0, horizontal: .compact, vertical: .regular,
+                                         window: .init(size: CGSize(width: 466, height: 678)), home: .init()), .column)
+        // An iPad upright has no fold and keeps one column; on its side it keeps the sidebar and its sheet for a record.
+        XCTAssertEqual(PhoneLayout.pages(wide: false, sidebar: 0, horizontal: .regular, vertical: .regular,
+                                         window: .init(size: CGSize(width: 834, height: 1210)), home: .init()), .column)
+        XCTAssertNil(PhoneLayout.foldPage(width: 1210, folds: []))
+        // Split at the fold off heeds no fold, so the Duo open on its side keeps one column and a record its sheet.
+        let unsplit = PhoneLayout.Room(size: side.size, folds: PhoneLayout.heeded(folds: side.folds, split: false))
+        XCTAssertEqual(PhoneLayout.pages(wide: false, sidebar: 0, horizontal: .regular, vertical: .regular,
+                                         window: unsplit, home: .init()), .column)
+        XCTAssertFalse(PhoneLayout.recordInPlace(.beside(951 * 0.32), width: 951,
+                                                 folds: PhoneLayout.heeded(folds: book, split: false)))
+        XCTAssertFalse(PhoneLayout.recordInPlace(.beside(320), width: 1210, folds: []))
+        XCTAssertFalse(PhoneLayout.recordInPlace(.column, width: 466, folds: []))
+    }
+
     /// INF-1208's direction A: the probe's own readings of the notices iOS posts when a Duo turns or folds, beside a real
     /// keyboard's. Only a keyboard with height brings Done into Settings' place.
     func testOnlyAKeyboardWithHeightArrives() {

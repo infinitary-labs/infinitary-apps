@@ -548,7 +548,7 @@ final class CardBodyView: WKWebView {
     private var typing = false
     private func readTyping(hides: Bool) {
         if hides { keyboardFrame = nil }
-        let now = !hides && window != nil && firstResponder(in: self) != nil
+        let now = !hides && window != nil && phoneFirstResponder() != nil
         guard now != typing else { return }
         typing = now
         onTyping?(now)
@@ -570,7 +570,7 @@ final class CardBodyView: WKWebView {
         didSet { if focusedBox != oldValue && typing { queueReveal() } }
     }
     private func revealTyping() {
-        guard let window, let typing = firstResponder(in: self) as? UITextInput,
+        guard let window, let typing = phoneFirstResponder() as? UITextInput,
               let range = typing.selectedTextRange, let scroller = enclosingScroller() else { return }
         let caret = typing.caretRect(for: range.end)
         guard !caret.isNull, !caret.isInfinite, caret.height > 0 else { return }
@@ -631,11 +631,6 @@ final class CardBodyView: WKWebView {
         let y = min(max(scroller.contentOffset.y + move, -inset.top), lowest)
         guard abs(y - scroller.contentOffset.y) > 0.5 else { return }
         scroller.setContentOffset(CGPoint(x: scroller.contentOffset.x, y: y), animated: animated)
-    }
-    private func firstResponder(in view: UIView) -> UIView? {
-        if view.isFirstResponder { return view }
-        for child in view.subviews { if let found = firstResponder(in: child) { return found } }
-        return nil
     }
     private func enclosingScroller() -> UIScrollView? {
         var parent = superview

@@ -332,6 +332,8 @@ private struct PhonePanelSection: View {
                 if !folded {
                     PanelWebView(host: host, theme: scheme == .dark ? "dark" : "light")
                         .id(host.generation)
+                        // The captain: typing in a panel's field on a foldable's pages brings the panel above the fold.
+                        .phonePanelField(host.typing)
                         .frame(height: panel.size == "fill" ? fillHeight : host.contentHeight)
                         .opacity(host.stand != .drawn ? 0 : 1)
                         .padding(.bottom, PhoneTheme.space3)

@@ -40,6 +40,12 @@ struct PhoneTasks: View {
     /// INF-2764: whether this list is on screen. The tab controller keeps a tab that is away, so a hidden list keeps
     /// its last reading and reads nothing from the session: a board update while another tab shows rebuilds nothing.
     @Environment(\.phoneTasksShown) private var shown
+    /// INF-1208's direction C: on an open iPhone Duo's page a record takes the list's place, with a way back.
+    @Environment(\.phoneRecordInPlace) private var inPlace
+    /// INF-1208's direction C: whether this list answers a card's task key or a panel's pointing. While records go in
+    /// the panel's place, the Tasks tab kept away leaves them to the sidebar's list, which shows them.
+    @Environment(\.phoneTasksTakesPoints) private var takesPoints
+    private var placed: PhoneTask? { inPlace ? selected : nil }
     @State private var kept = PhoneTasksKept()
 
     /// The list as it reads now, built once per drawing while it shows, and the last one kept while it is hidden.
@@ -113,7 +119,8 @@ struct PhoneTasks: View {
         } action: { _, pulled in
             if pulled && !searchOpen { withAnimation(.snappy) { searchOpen = true } }
         }
-        .background { Button(PhoneMessages.phoneTasksFind()) { openSearch() }.keyboardShortcut("f", modifiers: [.command, .shift]).hidden() }
+        // While a record covers the list in the panel's place, the key finds nothing it can show, so it rests.
+        .background { Button(PhoneMessages.phoneTasksFind()) { openSearch() }.keyboardShortcut("f", modifiers: [.command, .shift]).disabled(placed != nil).hidden() }
         .accessibilityIdentifier("tasks-list")
         .onChange(of: searchFocused) { _, focused in if !focused && query.isEmpty { closeSearch() } }
         .onDisappear { if query.isEmpty { searchOpen = false } }
@@ -135,7 +142,7 @@ struct PhoneTasks: View {
         // INF-1524: a task key pressed on a card opens that task's record here. A key the board read without its closed
         // rows does not list may be work closed this week: those are read, and the key opens once they arrive.
         .onChange(of: "\(messageContext.openTask ?? "")|\(session.board?.closedLeftOut == nil)", initial: true) { _, _ in
-            guard let key = messageContext.openTask else { return }
+            guard takesPoints, let key = messageContext.openTask else { return }
             guard let task = session.board?.tasks.first(where: { $0.key == key }) else {
                 if session.board?.closedLeftOut != nil { session.readClosedRows() }
                 return
@@ -147,7 +154,7 @@ struct PhoneTasks: View {
         // (`openRecord`); closed work the board left out is read first, as for a card's task key.
         .onChange(of: "\(messageContext.pointTask?.id ?? "")|\(messageContext.pointTask?.record == true)|\(session.board?.closedLeftOut == nil)",
                   initial: true) { _, _ in
-            guard let point = messageContext.pointTask else { return }
+            guard takesPoints, let point = messageContext.pointTask else { return }
             guard let task = session.board?.tasks.first(where: { $0.id == point.id }) else {
                 if session.board?.closedLeftOut != nil { session.readClosedRows() } else { messageContext.pointTask = nil }
                 return
@@ -161,7 +168,23 @@ struct PhoneTasks: View {
             Button(PhoneRecordWords.dropCancel, role: .cancel) {}
             Button(ask.confirm, role: ask.op == "drop-task" || ask.op == "stop-task" ? .destructive : nil) { confirm(ask) }
         }
-        .sheet(item: $selected, onDismiss: { messageContext.taskID = nil }) { task in
+        // INF-1208's direction C: in place, the record covers the list, which keeps its scroll and search under it.
+        .opacity(placed == nil ? 1 : 0).allowsHitTesting(placed == nil).accessibilityHidden(placed != nil)
+        .overlay { if let placed { recordInPlace(placed) } }
+        .onChange(of: placed?.id, initial: true) { old, id in
+            guard inPlace || old != nil else { return }
+            messageContext.recordInPlace = id != nil
+            if id == nil, old != nil, selected == nil { messageContext.taskID = nil }
+        }
+        // A record that leaves the window with its panel, as when the Duo closes or an iPad turns upright, is dismissed:
+        // it gives the message box no hint.
+        .onDisappear {
+            guard selected != nil else { return }
+            messageContext.recordInPlace = false
+            messageContext.taskID = nil
+        }
+        .sheet(item: Binding(get: { inPlace ? nil : selected }, set: { if !inPlace { selected = $0 } }),
+               onDismiss: { if !inPlace { messageContext.taskID = nil } }) { task in
             NavigationStack {
                 PhoneTaskRecord(session: session, initial: task, leave: { selected = nil })
                     .toolbar { ToolbarItem(placement: .cancellationAction) { PhoneRecordLeaveButton(record: $selected) } }
@@ -169,10 +192,22 @@ struct PhoneTasks: View {
         }
     }
 
+    /// INF-1208's direction C: the record in the panel's place, under a way back to the list; a related task's key opens
+    /// that task's record here in its stead.
+    private func recordInPlace(_ task: PhoneTask) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            PhoneRecordBackButton { selected = nil }.padding(.horizontal, PhoneTheme.space4)
+            PhoneTaskRecord(session: session, initial: task, leave: { selected = nil },
+                            open: { other in messageContext.taskID = other.id; selected = other })
+        }.id(task.id).background(PhoneTheme.background)
+    }
+
     private var search: some View {
         HStack(spacing: PhoneTheme.space2) {
             TextField(PhoneMessages.phoneTasksSearch(), text: $query).textFieldStyle(.phone)
                 .focused($searchFocused).submitLabel(.search)
+                // The captain: typing in Tasks' search on a foldable's pages brings the panel above the fold.
+                .phonePanelField(searchFocused)
                 .onAppear {
                     guard focusOnOpen else { return }
                     focusOnOpen = false
@@ -602,4 +637,6 @@ extension EnvironmentValues {
     /// Whether the Tasks list is the view on screen; the workspace sets it on the Tasks tab, and the iPad sidebar's
     /// list, drawn only while it shows, keeps the default.
     @Entry var phoneTasksShown = true
+    /// INF-1208's direction C: whether this Tasks list opens what a card's key or a panel points at (`PhoneTasks`).
+    @Entry var phoneTasksTakesPoints = true
 }

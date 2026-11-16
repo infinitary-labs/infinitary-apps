@@ -10,6 +10,7 @@ struct PhonePanelCardPane: View {
     let shown: Bool
     let visible: Bool
     @Environment(\.colorScheme) private var scheme
+    @Environment(PhoneMessageContext.self) private var messageContext
     @State private var room: CGFloat = 0
 
     private var entry: PhonePanelCardEntry? { model.cards.entry(entryID) }
@@ -33,6 +34,13 @@ struct PhonePanelCardPane: View {
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { room = $0 }
         .onChange(of: shown, initial: true) { _, shown in if shown { _ = model.cardHost(entryID) } }
         .onChange(of: visible, initial: true) { _, visible in if visible { model.seen(entryID) } }
+        // INF-1208's direction C: only the shown card speaks for its page's text box, as a computer's card does.
+        .onChange(of: shown && host?.typing == true, initial: shown) { was, typing in
+            if shown || was { messageContext.panelCardTyping = typing }
+        }
+        // Hide and the panel's own close drop the host in the same pass as the card, so the shown pane lets go as it
+        // leaves rather than asking a host that may be gone.
+        .onDisappear { if shown { messageContext.panelCardTyping = false } }
     }
 
     private func head(_ entry: PhonePanelCardEntry) -> some View {

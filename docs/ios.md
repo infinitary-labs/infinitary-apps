@@ -365,6 +365,7 @@ Under Theme, Language names the language the phone speaks, in that language, and
 Tab or the down arrow from Theme reaches the row, Return or Space opens it, and the up arrow goes back to Theme.
 Under Language, on a device that has shown a fold running down its window (an iPhone Duo open like a book), Split at the fold is this device's own switch (`PhoneFoldSplit`), saved beside Theme and never sent to the computer.
 It starts on; off, the layout heeds no fold, so the open Duo lays out as an iPad does: the sidebar at the iPad's share and Home's card centred across the fold (`PhoneLayout.heeded`).
+Off, the pages below never show either: a Duo open on its side keeps one column with the strip, and a record opens as a sheet, as on an iPad.
 Whether the device has shown such a fold is saved too, so the switch stays while the Duo is closed, and a device that never folds never shows it.
 Tab or the down arrow from Language reaches it, Return or Space turns it, and the up arrow goes back to Language.
 The join part's Appearance steps drive it by keys on a simulator launched with `INFINITARY_FOLD_SEEN`, which only a simulator build reads beside `INFINITARY_ISOLATED_PHONE_TEST`, to save that a fold was seen.
@@ -383,13 +384,27 @@ It is a neutral circle the size of send's, drawn on send itself so the two share
 The tabs read Home, Tasks, Activity and Panels, in that order; Panels shows only as "Panels" below says.
 The wide workspace places a sidebar beside the stage, with Tasks, Activity and, when it shows, Panels as a segmented control at its top, opening on Tasks, each scrolling alone, keeps the composer at the stage's foot and shows no strip in the bar.
 The window's room decides it, never the kind of device (`PhoneLayout.wide`, INF-1208's direction A): a window regular in width and height and wider than tall, so an iPad on its side and an iPhone Duo open like a book, which is a phone to the code in every pose.
-A large iPhone on its side is compact in height and keeps the strip, as do portrait, narrow multitasking, a Duo closed and a Duo open on its side; layout measurement excludes the keyboard.
+A large iPhone on its side is compact in height and keeps the strip, as do portrait, narrow multitasking and a Duo closed; layout measurement excludes the keyboard.
 The phone check's journeys follow the same rule: a step that differs by layout reads the layout the app shows from its window's size classes and shape (`phoneShownLayout`, and `phoneTurnedLayout` before a turn, checked once turned), never the kind of device.
 They read the kind of device only for what the iPad itself has: its words, its keyboard's suggestion row and its number-pad popover.
 On a foldable, Home's column of stage, card, pager and message box keeps to the wider side of a fold that runs down it (`PhoneLayout.keepOff`, `phoneKeepsOffTheFold`), so on an open Duo beside the sidebar the card sits right of the fold and the crew scene centres there.
 Where a fold runs down the window past the sidebar's usual share, the sidebar reaches the fold (`PhoneLayout.sidebarWidth`), so on an open Duo it fills the page left of the fold and Home the page right of it, with no strip of empty stage between them.
 Both follow Split at the fold under Settings → Appearance; with it off neither moves, as on an iPad.
-It reads the window's division regions from iOS 27.1, frames that already hold Apple's margins, including an inactive fold, so nothing moves as the hinge bends; a fold across the window, as on a Duo open on its side, moves nothing, and before iOS 27.1 there is no fold to read.
+It reads the window's division regions from iOS 27.1, frames that already hold Apple's margins, including an inactive fold, so nothing moves as the hinge bends, and before iOS 27.1 there is no fold to read.
+A window regular both ways and taller than wide with a fold across it, a Duo open on its side, puts the sidebar's panel on the page above the fold and Home with its message box on the page below (`PhoneLayout.pages`, `PhonePagesLayout`, INF-1208's direction C).
+Home's one column and the column beside the sidebar keep the stack the layout replaced: a card that cannot shrink to its room, such as a panel's own card typing over the keyboard, grows past the column, which stays centred, so an iPhone, an iPad and the closed Duo place it as before.
+Half folded on its side, while the fold is active, the card stays on the upright half and the panel and the message box move to the flat half, where the hands are.
+One layout places every pose, so a turn or a fold moves the card, the draft and the panel without drawing them afresh.
+On a foldable's pages a task's record opens in the Tasks panel's place, with a "Tasks" way back that Command-[ also presses, since the card beside it keeps Shift-Command-M for its minus, instead of as a sheet; another task's key in it opens that record there too, and an iPad keeps its sheet.
+A card's task key, a panel's pointing and the crew scene's Open task reach it through the sidebar's Tasks list, which then answers them alone: the Tasks tab kept away does not (`phoneTasksTakesPoints`).
+A crewmate's summary's Open task opens the record there as well, through the same path as a panel's press (`pointTask`).
+On its side, open or half folded, with the keyboard up for the message box, a card's reply or a text box in a panel's own card on Home (`panelCardTyping`), the card keeps the page above the fold while the panel waits under the keyboard (`PhoneLayout.Pages.typing`).
+Typing in the message box itself, the message box rides over the keyboard, growing upward with its draft and so under the card's pager where the keyboard fills the lower page.
+Wherever the window has a fold, open on its side, half folded or like a book, a card's reply or a text box in a panel's own card steps the message box and its last turn aside, so the card and its pager stay above the keyboard; a card's reply does so on every device (INF-3468), a panel's own card only at a fold.
+While a panel's own field holds the keyboard there, Tasks' search (Shift-Command-F included), the steer box of a record in the panel's place or a text box in one of the captain's panels (`PanelPageView`), the pages swap: the panel takes the page above the fold, and Home's card and message box wait hidden under the keyboard, draft kept and keys at rest, until it closes (`PhoneLayout.Pages.panelTyping`, `phonePanelField`).
+With a record in the panel's place, Command-Return sends the steer only while its box holds focus, and the message box gives up the key while a panel's field holds focus, so the key never sends the other box's words.
+From iOS 27.1 a foldable puts the bar in a vertical rail beside the content; each tab, each sheet's page through `phoneTitle` and each record page asks for the one-row bar instead (`PhoneOneRowBar`), so Settings, the strip or "Infinitary" and the computer stay in one row above the content.
+A window narrow and tall keeps the system's bar, since a Duo's closed screen held upright puts the status bar in that row and leaves too little room for Settings, the strip and the computer.
 A rotation moves the sidebar and the stage with its animation, and nothing else enters or leaves the window inside it (INF-1590): views that did at times left one of its animations started and never stopped, and XCTest's wait for the app to settle then never ended.
 So a turn into landscape brings Home in just before its animation starts, laid out at once and unanimated, because Home put back after that animation came back short by a keyboard inset it took while out of the window.
 Home brought in that way is already laid out at the new size while the window is still upright, so the workspace's fill reaches past its foot and the system's white never shows.
@@ -398,7 +413,7 @@ The bar's strip, and on the way back upright the tab Home gives way to, follow t
 The task key sits inline before the words at micro size, as on the Mac's feed line.
 It exposes the full local timestamp to accessibility.
 `PhoneSymbol` supplies native outline template images for the system's tinted chrome.
-`PhoneStyle` holds the shared looks: `phoneTitle` draws a sheet's title inline in Space Grotesk, the `.phone` field style is the app's field, and `phoneSheetSurface` leaves a sheet on the system's glass on iOS 26 and puts it on the panel color with a hairline at its edge on iOS 18.
+`PhoneStyle` holds the shared looks: `phoneTitle` draws a sheet's title inline in Space Grotesk and asks for the one-row bar on that sheet's page, so a new sheet titled without it keeps iOS 27.1's rail, the `.phone` field style is the app's field, and `phoneSheetSurface` leaves a sheet on the system's glass on iOS 26 and puts it on the panel color with a hairline at its edge on iOS 18.
 The message capsule's glass takes corners concentric with the screen's.
 It also holds `SensoryFeedback.phone`, the one soft tap played when the computer accepts a message, a card's answer or reply, or a task's start, continue, interrupt or steer, and when `returns` counts the computer back; a page turn plays none.
 Join, Leave and Forget ask in alerts, which keep the cancel choice in view; on iOS 26 a confirmation dialog becomes a popover that hides it, and the Join request has no button to anchor to.
@@ -479,7 +494,7 @@ Like the desktop's, it stays short (INF-2528): the status keeps its short reason
 What it leaves out is on the native task record's Info, as the Mac's record shows it: each task it waits on, the reasoning level with its note, and the checks with their counts and any reason they could not all be read.
 `PhoneTaskFacts` in the shared package ports the desktop's facts (`taskFactsOf`, its status, checks and plan), and `PhoneTaskFactsTests` replays the desktop's own readings, recorded by `scripts/generate-phone-scene.ts`.
 The sheet closes the standard way, by a tap beside it, a swipe down or Escape, with no close mark; while it is open the scene stands still where it is, and the crewmate it describes wears the desktop's corner brackets.
-A running part, a blocker, the task a review checks or a part's program shows its own summary in the same sheet, and Open task swaps the sheet for the existing native task record.
+A running part, a blocker, the task a review checks or a part's program shows its own summary in the same sheet, and Open task swaps the sheet for the existing native task record, or on a foldable's pages closes it and opens the record in the Tasks panel's place.
 The computer preview names the computer's work and its state.
 A crowded program fan widens up to the desktop's widest spread and then moves its layer outward, keeping the desktop's projected spacing without shrinking the parts.
 A program seen running keeps its ring on each observed computer between stages, without finished, unstarted or remote-placeholder dots.
@@ -572,11 +587,11 @@ A swipe toward the leading edge on a Backlog row shows the Mac's row Start (`row
 One press starts the task with no ask, as on the Mac, and the row shows Starting at the tap; a Start that cannot run stays dim and the Mac's reason shows under the row.
 A tap on a row held open closes its Start instead of opening the task.
 `PhoneRowMoves` in the shared package ports these rules, their words come from their Mac owners through the generated `PhoneRowMoveWords`, and `PhoneRowMovesTests` replays the Mac board's own readings, recorded by `scripts/generate-phone-scene.ts`.
-The task record follows the Mac's record card (INF-2928 piece 2, the captain's direction A) and opens as a sheet, as before.
+The task record follows the Mac's record card (INF-2928 piece 2, the captain's direction A) and opens as a sheet, as before, except on a foldable's pages, where it opens in the Tasks panel's place.
 Its top row is the Mac's status pill, with the Tasks list's mark and word, then the pill's reason in its tone and the key; the title sits under it.
 While a start is in flight the record says Starting with no wait line under it, as the Mac's host leaves the start wait out.
 Its tabs are the Mac's: Info, Cards with its count, Activity and Crewmate, each shown only when the Mac shows it; a task with only Info shows none.
-Info follows the Mac's order: what needs attention, a charted filing's Why, how a closed task closed, then Part of, Waits on, Holds up and Parts, each key opening that task's record in the same sheet.
+Info follows the Mac's order: what needs attention, a charted filing's Why, how a closed task closed, then Part of, Waits on, Holds up and Parts, each key opening that task's record in the same sheet, or in the panel's place on a foldable's pages.
 The goal follows with the captain's words folded under it, then Project, Now and Progress, the row of facts (Model, Reasoning, the pull request with its checks, Review, Delivery and Runs on) and a closed More with the crewmate, the branch and the task's policies.
 Cards lists every card the task showed, newest first: an open card shows on Home, one put aside comes back first, and a closed one shows as a past card.
 Activity takes the old timeline's place: the task's activity oldest first, the last eight with Show earlier for the rest, each row with its age, its words, the task it came from and the events folded under it.

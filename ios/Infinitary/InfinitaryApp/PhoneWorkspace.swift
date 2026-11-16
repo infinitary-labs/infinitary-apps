@@ -20,12 +20,21 @@ import Observation
     var pointTask: PointTask?
     /// INF-3830 piece 3: a card Home brings forward, the computer's or one of a panel's own (`PhonePanelsModel`).
     var showOnHome: String?
+    /// INF-1208's direction C: Tasks shows a record in the panel's place, so the sidebar's picker makes way for its back.
+    var recordInPlace = false
     /// INF-1524: a card's draft button, for the message box to take its words, unsent.
     var draft: String?
     /// INF-2568: the software keyboard is up, and a card's reply field, or a text box in its body (INF-3427), holds its
     /// focus; a phone on its side then has no room for the pager (`PhoneCards`).
     var keyboardUp = false
     var replyFocused = false
+    /// INF-1208's direction C: the message box holds the keyboard's focus.
+    var composerFocused = false
+    /// INF-1208's direction C: a panel's own text field holds the keyboard's focus on a foldable's pages.
+    var panelFieldFocused = false
+    /// INF-1208's direction C: a text box in a panel's own card on Home holds the keyboard's focus, which places a
+    /// foldable's pages as the message box does; unlike `replyFocused` it moves nothing on an iPhone or an iPad.
+    var panelCardTyping = false
     /// INF-3468, the captain: "hide pager and everything below the card (the main chat input etc) to make more space.
     /// they come back when the keyboard gets collapsed". On an iPhone or an iPad, upright or on its side, while a text box
     /// in the card holds the keyboard, the pager and the message box with its last turn step aside for the card.
@@ -89,7 +98,6 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(PhoneAppearance.self) private var appearance: PhoneAppearance?
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
-    @State private var viewport = CGSize.zero
     @State private var selection = PhoneTab.home
     /// INF-1590: whether the bar and the tab controller show the wide layout, which a rotation reaches once its
     /// animation has ended, and whether one into the wide layout already shows Home (see `PhoneResizeWatch`).
@@ -110,11 +118,34 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
     /// INF-1208's direction A: the window's room decides, so an open iPhone Duo gets the iPad's sidebar (`PhoneLayout`).
     private var wide: Bool { PhoneLayout.wide(horizontal: horizontalSize, vertical: verticalSize, size: viewport) }
     /// INF-1208's direction A: on an open iPhone Duo the sidebar reaches the fold (`PhoneLayout.sidebarWidth`).
-    private var sidebarWidth: CGFloat {
-        PhoneLayout.sidebarWidth(width: viewport.width, folds: PhoneLayout.heeded(folds: folds, split: appearance?.splitAtFold ?? true))
+    private var sidebarWidth: CGFloat { PhoneLayout.sidebarWidth(width: viewport.width, folds: folds) }
+    /// The window's division regions in the workspace's space, read from iOS 27.1, that Split at the fold lets the layout
+    /// heed; none before iOS 27.1, and none while the switch is off, so an open Duo then lays out as an iPad does.
+    private var folds: [CGRect] { heeded(window).folds }
+    private var split: Bool { appearance?.splitAtFold ?? true }
+    /// A reading with its folds dropped while Split at the fold is off: no pages, and a record keeps its sheet.
+    private func heeded(_ reading: PhoneLayout.Room) -> PhoneLayout.Room {
+        PhoneLayout.Room(size: reading.size, folds: PhoneLayout.heeded(folds: reading.folds, split: split),
+                         active: PhoneLayout.heeded(folds: reading.active, split: split))
     }
-    /// The window's division regions in the workspace's space, read from iOS 27.1; none before it.
-    @State private var folds: [CGRect] = []
+    /// The workspace's size, keyboard left out, from the same reading as its folds so the two never disagree.
+    private var viewport: CGSize { window.size }
+    /// INF-1208's direction C: the workspace's size and the folds in its space, every one and the active ones alone, and
+    /// Home's own (`phoneReadsRoom`).
+    @State private var window = PhoneLayout.Room()
+    @State private var room = PhoneLayout.Room()
+    /// INF-1208's direction C: the sidebar beside Home, or a panel above or below a fold that runs across the window.
+    private var pages: PhoneLayout.Pages {
+        PhoneLayout.pages(wide: wide, sidebar: sidebarWidth, horizontal: horizontalSize, vertical: verticalSize,
+                          window: heeded(window), home: heeded(room),
+                          typing: messageContext.keyboardUp && (messageContext.composerFocused || messageContext.replyFocused
+                                                                   || messageContext.panelCardTyping),
+                          panelTyping: messageContext.keyboardUp && messageContext.panelFieldFocused)
+    }
+    /// Whether a panel shows beside Home, so the strip leaves the bar and Home is always shown.
+    private var paged: Bool { pages != .column }
+    /// INF-1208's direction C: on a foldable's page a record opens in the panel's place; an iPad keeps its sheet.
+    private var recordInPlace: Bool { PhoneLayout.recordInPlace(pages, width: viewport.width, folds: folds) }
     private enum Rail: Hashable { case tasks, activity, panels }
     /// The wide layout (an iPad on its side, an open Duo) always shows the stage with its sidebar, without losing the compact tab selection.
     private var shown: PhoneTab { wideBar || homeAhead ? .home : selection }
@@ -131,7 +162,9 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
             tab(.home) { home }
             // INF-944 item 6: Activity is the last tab.
             // INF-2764: the Tasks list kept while another tab shows reads nothing until it shows again.
-            if let tasks { tab(.tasks) { noticed(tasks.background(PhoneTheme.background)).environment(\.phoneTasksShown, shown == .tasks) } }
+            if let tasks { tab(.tasks) { noticed(tasks.background(PhoneTheme.background)).environment(\.phoneTasksShown, shown == .tasks)
+                // INF-1208's direction C: with records in the panel's place, the sidebar's list opens them.
+                .environment(\.phoneTasksTakesPoints, !recordInPlace) } }
             tab(.activity) { noticed(activity.background(PhoneTheme.background).accessibilityIdentifier("activity-list")) }
             if panels.available { tab(.panels) { noticed(PhonePanelsColumn(model: panels).background(PhoneTheme.background)) } }
         }
@@ -173,7 +206,7 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
         .environment(messageContext)
         .environment(panels)
         // The first reading is the layout the workspace opens in, so the bar starts there.
-        .onChange(of: wide, initial: true) { old, wide in if old == wide { wideBar = wide } else { settle(wide) } }
+        .onChange(of: paged, initial: true) { old, paged in if old == paged { wideBar = paged } else { settle(paged) } }
         .onChange(of: shown == .home, initial: true) { _, visible in messageContext.cardsVisible = visible }
         // The message box is Home's alone, so a keyboard typing into it closes with the tab it leaves.
         .onChange(of: shown) { _, tab in if tab != .home { dismissPhoneKeyboard() } }
@@ -187,7 +220,7 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
         .onChange(of: messageContext.showOnHome) { _, id in if id != nil { selection = .home } }
         .onChange(of: messageContext.pointTask) { _, point in
             guard point != nil, tasks != nil else { return }
-            if wide { rail = .tasks } else { selection = .tasks }
+            if paged { rail = .tasks } else { selection = .tasks }
         }
         .onChange(of: messageContext.pastCard) { _, id in
             guard let id else { return }
@@ -197,26 +230,18 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
         // INF-1524: a card's task key opens its record on Tasks, or in the sidebar beside the stage.
         .onChange(of: messageContext.openTask) { _, key in
             guard key != nil, tasks != nil else { return }
-            if wide { rail = .tasks } else { selection = .tasks }
+            if paged { rail = .tasks } else { selection = .tasks }
         }
         .background(alignment: .top) {
             // INF-1590: Home brought in for a turn into landscape is laid out at the new size while the window is still
             // upright, so this fill reaches past the workspace's foot and the root's system white never shows.
             PhoneTheme.background.frame(height: max(viewport.width, viewport.height)).ignoresSafeArea().allowsHitTesting(false)
         }
-        .background {
-            // Measure window space without treating the keyboard as an orientation change.
-            GeometryReader { geometry in
-                Color.clear.onChange(of: geometry.size, initial: true) { _, size in viewport = size }
-                if #available(iOS 27.1, *) {
-                    let found = geometry.reservedRegions(kind: .division, options: .includeInactive).map(\.frame)
-                    Color.clear.onChange(of: found, initial: true) { _, found in
-                        folds = found
-                        // Split at the fold shows in Settings once this device has shown a fold.
-                        if PhoneLayout.foldsDown(found) { appearance?.sawFold() }
-                    }
-                }
-            }.ignoresSafeArea(.keyboard)
+        // Measure window space without treating the keyboard as an orientation change, with its folds in one reading.
+        .phoneReadsRoom($window)
+        .onChange(of: window.folds, initial: true) { _, found in
+            // Split at the fold shows in Settings once this device has shown a fold, whatever the switch reads.
+            if PhoneLayout.foldsDown(found) { appearance?.sawFold() }
         }
         .background {
             PhoneResizeWatch(resizing: resizing) { size in
@@ -246,6 +271,8 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
     private func tab(_ tab: PhoneTab, @ViewBuilder content: () -> some View) -> some View {
         content()
             .safeAreaInset(edge: .top, spacing: 0) { reachLine(tab) }
+            // INF-1208's direction C: the tab controller asks the shown tab about the bar, so each tab asks for one row.
+            .phoneOneRowBar()
             .toolbar(.hidden, for: .tabBar)
             .tag(tab)
     }
@@ -254,36 +281,55 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
     /// iPad the sidebar stands beside both. One place in the tree for either layout keeps one draft (INF-209).
     /// INF-3462: the crew scene is Home's bottom layer, drawn across the window, with all of this over it.
     private var home: some View {
-        HStack(spacing: 0) {
-            if wide {
-                sidebar
-                Rectangle().fill(PhoneTheme.line).frame(width: 1)
-            }
-            VStack(spacing: 0) {
-                noticed(stage.frame(maxWidth: .infinity, maxHeight: .infinity), home: true)
-                if let composer {
-                    composer
-                        .fixedSize(horizontal: false, vertical: true)
-                        // Stepped aside, it answers to its own name, so a reading of the message box never finds it undrawn.
-                        .accessibilityElement(children: .contain)
-                        .accessibilityIdentifier(composerAside ? "phone-composer-aside" : "phone-composer")
-                        .padding(.horizontal, PhoneTheme.space4)
-                        .padding(.bottom, PhoneTheme.space2)
-                        // INF-2568 and INF-3468, the captain: "hide pager and everything below the card (the main chat
-                        // input etc) to make more space". While a text box in a card holds the keyboard, the message box,
-                        // the last turn and its notes step aside, kept in place so the draft stays, and the card keeps
-                        // the message box's 8 points above the keyboard.
-                        .frame(height: composerAside ? 0 : nil, alignment: .top)
-                        .opacity(composerAside ? 0 : 1).allowsHitTesting(!composerAside).accessibilityHidden(composerAside)
-                        .padding(.bottom, composerAside ? PhoneTheme.space2 : 0)
+        // INF-1208's direction C: one layout for every pose, so each part keeps its place in the tree as the window
+        // turns or folds (`PhonePagesLayout`).
+        PhonePagesLayout(pages: pages) {
+            if paged {
+                // Clipped, so a panel squeezed by the keyboard draws nothing past its page.
+                sidebar.clipped().layoutValue(key: PhonePagesRole.self, value: .panel)
+                if case .beside = pages {
+                    Rectangle().fill(PhoneTheme.line).layoutValue(key: PhonePagesRole.self, value: .divider)
                 }
             }
-            // INF-1208's direction A: on an open iPhone Duo the card and the message box keep to one side of its fold.
-            .phoneKeepsOffTheFold()
-        }.phoneSceneBackdrop().background(PhoneTheme.background)
+            noticed(stage.frame(maxWidth: .infinity, maxHeight: .infinity), home: true)
+                // INF-1208's direction A: on an open iPhone Duo the card keeps to one side of its fold.
+                .phoneKeepsOffTheFold()
+                // One element, so its waiting leaves the cards beside the shown one out of accessibility (`phoneWaits`).
+                .accessibilityElement(children: .contain)
+                .phoneWaits(pages.homeWaits)
+                .layoutValue(key: PhonePagesRole.self, value: .stage)
+            if let composer {
+                composer
+                    .fixedSize(horizontal: false, vertical: true)
+                    // Stepped aside, it answers to its own name, so a reading of the message box never finds it undrawn.
+                    .accessibilityElement(children: .contain)
+                    .accessibilityIdentifier(composerAside ? "phone-composer-aside" : "phone-composer")
+                    .padding(.horizontal, PhoneTheme.space4)
+                    .padding(.bottom, PhoneTheme.space2)
+                    // INF-2568 and INF-3468, the captain: "hide pager and everything below the card (the main chat
+                    // input etc) to make more space". While a text box in a card holds the keyboard, the message box,
+                    // the last turn and its notes step aside, kept in place so the draft stays, and the card keeps
+                    // the message box's 8 points above the keyboard.
+                    .frame(height: composerAside ? 0 : nil, alignment: .top)
+                    .opacity(composerAside ? 0 : 1).allowsHitTesting(!composerAside).accessibilityHidden(composerAside)
+                    .padding(.bottom, composerAside ? PhoneTheme.space2 : 0)
+                    // INF-1208's direction A: the message box keeps to the card's side of the fold.
+                    .phoneKeepsOffTheFold()
+                    .phoneWaits(pages.homeWaits)
+                    .layoutValue(key: PhonePagesRole.self, value: .composer)
+            }
+        }.phoneReadsRoom($room).phoneSceneBackdrop().background(PhoneTheme.background)
+            // INF-1208's direction C: the crew scene's Open task brings the record to the Tasks panel's place too.
+            .environment(\.phoneRecordInPlace, recordInPlace)
     }
 
-    private var composerAside: Bool { messageContext.composerAside }
+    /// INF-1208's direction C: on a foldable's pages a text box in a panel's own card steps the message box and its last
+    /// turn aside too, as a computer card's does (INF-3468), so the card keeps the page above the keyboard; an iPad's
+    /// sidebar, with no fold, keeps its message box as before.
+    private var composerAside: Bool {
+        messageContext.composerAside
+            || (paged && !folds.isEmpty && messageContext.keyboardUp && messageContext.panelCardTyping)
+    }
 
     /// INF-1062, the captain's pick: the computer's name left the bar, so one line under it on every tab says the reach
     /// with its time while the computer is not in reach, and nothing while it is. INF-589 item 11: said once.
@@ -333,20 +379,22 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
     // INF-944 item 6: in the tabs' order, opening on Tasks.
     private var sidebar: some View {
         VStack(spacing: 0) {
-            if tasks != nil || panels.available {
+            if (tasks != nil || panels.available) && !(rail == .tasks && messageContext.recordInPlace) {
                 Picker(PhoneMessages.phoneWorkspaceShow(), selection: $rail) {
                     if tasks != nil { Text(PhoneMessages.phoneTabTasks()).tag(Rail.tasks) }
                     Text(PhoneMessages.phoneTabActivity()).tag(Rail.activity)
                     if panels.available { Text(PhoneMessages.phoneTabPanels()).tag(Rail.panels) }
                 }.pickerStyle(.segmented).labelsHidden()
                     .padding([.horizontal, .top], PhoneTheme.space4).padding(.bottom, PhoneTheme.space2)
+                    // INF-1208's direction C: a page wider than the reading column keeps the picker over its lists.
+                    .frame(maxWidth: PhoneColumn.width)
                     .accessibilityIdentifier("sidebar-picker")
             }
-            if let tasks, rail == .tasks { tasks }
+            if let tasks, rail == .tasks { tasks.environment(\.phoneRecordInPlace, recordInPlace) }
             else if rail == .panels, panels.available { PhonePanelsColumn(model: panels) }
             else { activity }
         }
-        .frame(width: sidebarWidth).background(PhoneTheme.panel)
+        .frame(maxWidth: .infinity, minHeight: 0, maxHeight: .infinity).background(PhoneTheme.panel)
         .accessibilityElement(children: .contain).accessibilityIdentifier("phone-sidebar")
     }
 }

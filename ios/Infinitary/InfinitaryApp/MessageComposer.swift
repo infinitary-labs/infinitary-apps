@@ -81,7 +81,10 @@ struct MessageComposer: View {
                             .frame(width: 32, height: 32)
                             .background(canSend ? PhoneTheme.accent : PhoneTheme.muted, in: Circle())
                             .frame(width: 44, height: 48).padding(.trailing, 2).contentShape(Rectangle())
-                    }.keyboardShortcut(.return, modifiers: .command)
+                    }
+                        // INF-1208's direction C: a panel's own field beside Home on a foldable's pages, such as a
+                        // record's steer box, takes Command-Return for its own send while it holds focus.
+                        .keyboardShortcut(messageContext.panelFieldFocused ? nil : KeyboardShortcut(.return, modifiers: .command))
                         .disabled(!canSend)
                         .accessibilityLabel(PhoneMessages.phoneCommonSend())
                         .accessibilityIdentifier("send-message")
@@ -110,6 +113,8 @@ struct MessageComposer: View {
             // INF-589 item 15: the message box lines up with the card above it, inside the gutters the footer keeps.
             .frame(maxWidth: PhoneColumn.inside).frame(maxWidth: .infinity)
             .task(id: selection) { await loadPhotos() }
+            .onChange(of: focused) { _, focused in messageContext.composerFocused = focused }
+            .onDisappear { if focused { messageContext.composerFocused = false } }
             // INF-1524: a card's draft button puts its words at the start of the box, unsent, for the captain to finish.
             .onChange(of: messageContext.draft, initial: true) { _, draft in
                 guard let draft else { return }

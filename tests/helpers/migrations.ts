@@ -119,6 +119,8 @@ export const MIGRATION_71_TABLE =
 /** INF-1296 piece 2's relationship rows, lent to an older schema for today's writer. */
 export const TASK_REFERENCES_TABLE =
   "CREATE TABLE task_references (task_id TEXT NOT NULL, kind TEXT NOT NULL, ref TEXT NOT NULL, target_id TEXT, actor TEXT, recorded_at INTEGER, PRIMARY KEY (task_id, kind));";
+/** A rule's notes (docs/automation.md, "A rule's notes"), undone: its one table. */
+export const REVERSE_SCHEDULE_NOTES = "DROP TABLE IF EXISTS schedule_notes;\n";
 /** INF-3108's record of the close controls it gave back, undone: its one table. */
 export const REVERSE_CLOSE_CONTROL_RESTORE = "DROP TABLE IF EXISTS card_close_control_restore;\n";
 /** INF-3898 piece 2's command mark on a card's resolution, undone: the `cards` column. */

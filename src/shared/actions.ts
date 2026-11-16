@@ -1702,6 +1702,22 @@ const actionLines = {
     readValue: (current) => automationValue(current, true),
     done: (v) => String(v.text),
   },
+  // A rule's notes are the captain's to change in Settings and its runs'
+  // crewmates' by file (docs/automation.md, "A rule's notes"); never the
+  // first mate's.
+  "automation-notes": {
+    area: "automation",
+    tier: "yours",
+    // A notes save changes nothing the list reads back, so it always trails.
+    alwaysTrail: true,
+    change: "inf:automation:notes-save",
+    current: "inf:automation:list",
+    value: z.strictObject({ id: automationIdSchema, text: z.string() }),
+    line: "An automation's notes change only in Settings or by its run's crewmate.",
+    toRequest: (v, current) => [automationRule(current, v.id).id, v.text],
+    readValue: (current) => automationValue(current, true),
+    done: (v) => String(v.text),
+  },
   "automation-delete": {
     area: "automation",
     tier: "judgment",

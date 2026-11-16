@@ -152,8 +152,10 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
       // message attaches to the new task below.
       const attachments = host.asks.currentPictures();
       // The answer waits for the record, never for the start (INF-3060).
+      const origin = host.asks.startOrigin();
       const handle = await supervisor.intake.commission({
         ...input,
+        ...(origin ? { origin } : {}),
         messageFiles: host.asks.current()?.messageFiles ?? [],
         ...(attachments.length > 0 ? { attachments } : {}),
       });

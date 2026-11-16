@@ -1973,6 +1973,16 @@
 "settingsAutomationNoteHandledOn" = "عالجها نائب القبطان في %1$@.";
 "settingsAutomationNoteRetrying" = "لم يتمكن نائب القبطان من استلامها بعد. تجري إعادة المحاولة.";
 "settingsAutomationNoteWaiting" = "لم يعالجها نائب القبطان بعد.";
+"settingsAutomationNotes" = "ملاحظات";
+"settingsAutomationNotesByCrew" = "الإصدار %2$@ · %1$@ · بواسطة أحد أفراد الطاقم";
+"settingsAutomationNotesByYou" = "الإصدار %2$@ · %1$@ · بواسطتك";
+"settingsAutomationNotesClear" = "مسح الملاحظات";
+"settingsAutomationNotesCount" = "%1$@ من %2$@ حرف";
+"settingsAutomationNotesEarlier" = "إصدارات سابقة";
+"settingsAutomationNotesEmpty" = "ممسوحة";
+"settingsAutomationNotesNote" = "ما تعلّمته تشغيلات هذه الأتمتة، لتبدأ التشغيلات التالية أسرع. يحرّرها أحد أفراد الطاقم الذي يبدؤه التشغيل، ويمكنك أنت أيضًا. هي نصائح، وليست تعليمات أبدًا.";
+"settingsAutomationNotesOlder" = "كُتبت قبل آخر تغيير أجريته على هذه الأتمتة.";
+"settingsAutomationNotesSave" = "حفظ الملاحظات";
 "settingsAutomationNothingRun" = "لم يعمل شيء بعد.";
 "settingsAutomationPassed" = "لقد مضى ذلك الوقت بالفعل.";
 "settingsAutomationPastCard" = "بطاقة سابقة: %1$@";

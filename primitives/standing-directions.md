@@ -15,6 +15,7 @@ Directions are instructions to weigh with the work, not data to search: they nev
 - Do not use it for a development practice of a project (how its tests, style, structure or commits work): that is how the project works, so a crewmate writes it into the project's own `AGENTS.md`, or the `CLAUDE.md` it keeps instead (`../docs/knowledge.md`, "Collections and who reads them").
 - Do not use it for a fact about the captain or a saved source: those are [knowledge-graph.md](knowledge-graph.md) entries.
 - Do not use it for a one-off ask, a reminder or a recurring job: a task carries one-off work, and [automation.md](automation.md) carries work that starts at a time or on an event.
+- Do not use it for what one automation rule's runs learned: that is the rule's notes, advice for its own later runs and never a direction ([automation.md](automation.md), "Operations and lifecycle").
 - Do not build a second instruction store (a settings file of preferences, a skill file of rules, a per-feature "remember this" table, a prompt fragment a feature appends to).
   A second store drifts from this one, is not delivered whole to every conversation, and the captain cannot see or retire it in one place.
 - The captain's panel instructions ("always use compact rows in my panels") are ordinary directions scoped to the personal workspace, so every crewmate building a panel or teaching a lesson there receives them.

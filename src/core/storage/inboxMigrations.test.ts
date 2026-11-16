@@ -19,6 +19,7 @@ import {
   REVERSE_MIGRATION_79,
   REVERSE_MIGRATION_80,
   REVERSE_RUNNING_WORK,
+  REVERSE_SCHEDULE_NOTES,
   REVERSE_TASK_REFERENCES,
   REVERSE_TASK_SESSIONS,
   tableNames,
@@ -290,7 +291,8 @@ describe("migration 49 (a wake's durable once-identity, the primitives review P3
     // is the head: undoing it comes first.
     dropViews(reopened);
     reopened.exec(
-      REVERSE_CLOSE_CONTROL_RESTORE +
+      REVERSE_SCHEDULE_NOTES +
+        REVERSE_CLOSE_CONTROL_RESTORE +
         REVERSE_RUNNING_WORK +
         REVERSE_TASK_REFERENCES +
         REVERSE_TASK_SESSIONS +

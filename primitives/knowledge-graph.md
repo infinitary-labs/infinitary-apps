@@ -19,6 +19,7 @@ A finding is evidence to weigh, never an instruction or a permission; saving an 
 - Do not use it for how a project works: durable explanations go into the project's own documents through ordinary project changes; recording knowledge never edits a project file.
 - Do not use it for ongoing instructions: those are [standing-directions.md](standing-directions.md), kept in separate tables.
 - Do not build a parallel memory (a feature's own "facts" table, a notes file, an embeddings index, a per-feature cache of what the captain said); record through this owner and read through its tools and reads.
+  The one exception is an automation rule's notes, a page its own runs write for its later runs and read by no one else ([automation.md](automation.md), "Operations and lifecycle").
 - An understanding request alone is not a saving request; keep secrets, progress, raw dumps and incidental details out.
 
 ## Owner and entry points

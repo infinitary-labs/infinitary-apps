@@ -26,6 +26,7 @@ import type { ReportIntake } from "./reportIntake";
 import type { WakeOpenReview } from "./reportWakes";
 import type { RestartWatch } from "./restartWatch";
 import type { Reviews } from "./reviews";
+import type { RuleNotes } from "./ruleNotes";
 import type { SettleOwners } from "./settleOwners";
 import type { CrewStarts } from "./starts";
 import type { TaskMoves } from "./taskMoves";
@@ -85,6 +86,8 @@ export type CrewCore = {
   readonly settling: SettleOwners;
   readonly updates: CrewUpdates;
 
+  /** A rule's notes as a file, once the Scheduler is bound (docs/automation.md, "A rule's notes"). */
+  ruleNotes(): RuleNotes | undefined;
   /** Whether a task's events skip supervision: a review task itself. */
   bypassesSupervision(taskId: string): boolean;
   /** An emitter withdraws its own card (close_card). */

@@ -4971,6 +4971,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     })
   ]);
   const automationStateSchema = _enum(["draft", "enabled", "paused", "completed"]);
+  strictObject({
+    version: number().int(),
+    text: string(),
+    at: number(),
+    revision: number().int(),
+    by: _enum(["crewmate", "captain"]),
+    task: strictObject({ id: string(), key: string(), title: string() }).optional()
+  });
   const automationRuleSchema = strictObject({
     id: string(),
     /** Absent when nobody named it. */

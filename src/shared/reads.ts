@@ -244,6 +244,23 @@ export const readCatalog = {
     description:
       "One automation rule's recent runs, newest first, each with where its delivery stands.",
   }),
+  // A rule's notes change by the captain's save, whose catalog trail is
+  // read at once, or by a crewmate's report, which the poll reads.
+  "automation.notes": entry({
+    channel: "inf:automation:notes",
+    // Every version unless only the newest is asked for.
+    args: z.strictObject({
+      id: z.string().min(1),
+      versions: z.enum(["current", "all"]).optional(),
+    }),
+    toRequest: (args) => [args.id, args.versions ?? "all"],
+    invalidate: {
+      events: (event) => event.type === "personalized" || event.type === "firstmate_note",
+      pollMs: 30_000,
+    },
+    description:
+      "One automation rule's notes, what its runs learned: the newest version, or every version newest first.",
+  }),
   // Settings → Usage (docs/usage.md): re-read when a model response is
   // recorded or a task changes, so the tab keeps up while it is open.
   "usage.summary": entry({

@@ -52878,6 +52878,164 @@
         ]
       }
     },
+    "inf:automation:notes": {
+      "effect": "read",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "string",
+            "enum": [
+              "current",
+              "all"
+            ]
+          }
+        ],
+        "minItems": 2,
+        "items": false
+      },
+      "response": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "version": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "text": {
+              "type": "string"
+            },
+            "at": {
+              "type": "number"
+            },
+            "revision": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "by": {
+              "type": "string",
+              "enum": [
+                "crewmate",
+                "captain"
+              ]
+            },
+            "task": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "key",
+                "title"
+              ]
+            }
+          },
+          "required": [
+            "version",
+            "text",
+            "at",
+            "revision",
+            "by"
+          ]
+        }
+      }
+    },
+    "inf:automation:notes-save": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "string"
+          }
+        ],
+        "minItems": 2,
+        "items": false
+      },
+      "response": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "text": {
+                "type": "string"
+              },
+              "at": {
+                "type": "number"
+              },
+              "revision": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              "by": {
+                "type": "string",
+                "enum": [
+                  "crewmate",
+                  "captain"
+                ]
+              },
+              "task": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "key": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "key",
+                  "title"
+                ]
+              }
+            },
+            "required": [
+              "version",
+              "text",
+              "at",
+              "revision",
+              "by"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
     "inf:automation:pause-all": {
       "effect": "change",
       "reach": "views",

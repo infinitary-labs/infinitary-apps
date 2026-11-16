@@ -352,6 +352,8 @@ describe("ipc contract", () => {
       "inf:automation:delete",
       "inf:automation:history",
       "inf:automation:list",
+      "inf:automation:notes",
+      "inf:automation:notes-save",
       "inf:automation:pause-all",
       "inf:automation:preview",
       "inf:automation:save",

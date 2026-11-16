@@ -1459,6 +1459,8 @@ export async function createServices(
     },
   });
   waitThroughAutomation(supervisor.cards.putOffs, scheduler, tasks);
+  // A crewmate a rule's run started is handed the rule's notes as a file (docs/automation.md, "A rule's notes").
+  supervisor.bindRuleNotes(scheduler);
   // A drop is looked at once, not at the next minute (docs/integrations.md, "The inbox").
   integrationInbox.wakeThrough({
     dropped: () => scheduler.lookNow(INBOX_ID),

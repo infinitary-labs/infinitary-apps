@@ -196,6 +196,10 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
         readableRequest("inf:automation:save", () => invoke("inf:automation:save", rule)),
       setState: (id, change) =>
         readableRequest("inf:automation:state", () => invoke("inf:automation:state", id, change)),
+      saveNotes: (id, text) =>
+        readableRequest("inf:automation:notes-save", () =>
+          invoke("inf:automation:notes-save", id, text),
+        ),
       pauseAll: () => invoke("inf:automation:pause-all"),
       delete: (id) => invoke("inf:automation:delete", id),
     },

@@ -341,6 +341,13 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/core/storage/scheduleStore.ts": {
     RUN_RETENTION_CAP: physical("the oldest settled runs are deleted for good"),
   },
+  "src/shared/automation.ts": {
+    // The captain's choice on INF-4208: "About 8,000 characters, around 1,200 words".
+    RULE_NOTES_MAX_CHARS: {
+      rests: "consent",
+      way: "a longer page is refused in words naming both sizes; the crewmate or the captain removes lines and saves again",
+    },
+  },
   "src/core/tasks/crewActions.ts": {
     ACTION_TEXT_MAX: physical("clipped with an ellipsis; the session file keeps the whole call"),
     FOLLOWED_MAX: physical("the least recently read file is let go and read again from the start"),

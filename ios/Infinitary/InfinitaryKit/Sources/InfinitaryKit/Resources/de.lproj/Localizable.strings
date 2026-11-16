@@ -1973,6 +1973,16 @@
 "settingsAutomationNoteHandledOn" = "Dein erster Offizier hat es am %1$@ bearbeitet.";
 "settingsAutomationNoteRetrying" = "Dein erster Offizier konnte es noch nicht annehmen. Es wird erneut versucht.";
 "settingsAutomationNoteWaiting" = "Dein erster Offizier hat es noch nicht bearbeitet.";
+"settingsAutomationNotes" = "Notizen";
+"settingsAutomationNotesByCrew" = "Fassung %2$@ · %1$@ · von einem Crewmitglied";
+"settingsAutomationNotesByYou" = "Fassung %2$@ · %1$@ · von dir";
+"settingsAutomationNotesClear" = "Notizen leeren";
+"settingsAutomationNotesCount" = "%1$@ von %2$@ Zeichen";
+"settingsAutomationNotesEarlier" = "Frühere Fassungen";
+"settingsAutomationNotesEmpty" = "Geleert";
+"settingsAutomationNotesNote" = "Was die Läufe dieser Automatisierung gelernt haben, damit spätere Läufe schneller beginnen. Ein Crewmitglied, das ein Lauf startet, bearbeitet sie; du kannst es auch. Sie sind Ratschläge, nie Anweisungen.";
+"settingsAutomationNotesOlder" = "Geschrieben, bevor du diese Automatisierung zuletzt geändert hast.";
+"settingsAutomationNotesSave" = "Notizen sichern";
 "settingsAutomationNothingRun" = "Bisher ist nichts gelaufen.";
 "settingsAutomationPassed" = "Diese Zeit ist schon vorbei.";
 "settingsAutomationPastCard" = "Frühere Karte: %1$@";

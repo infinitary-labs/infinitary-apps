@@ -56,6 +56,7 @@ A copy that does not arrive whole is refused and delivers nothing.
 The delivered copy is named by its sha256 and its own name (`handoverFileName`), at 0600 in `crewmates/<task>/temp/handover/`, and goes when its task closes (`docs/task-retention.md`).
 A second copy of the same file lands under the same name.
 Neither computer keeps its own copy once the file is delivered.
+The app also delivers one file unasked through the same `deliverHandover`: an automation rule's notes, into the hand-over folder of a crewmate the rule's run started (`docs/automation.md`, "A rule's notes").
 A copy left in `file-reach/` when the app stopped goes before the next one, and a set-aside copy nobody read for ten minutes is let go, since the home that asked for it stopped.
 
 ## Files on a card

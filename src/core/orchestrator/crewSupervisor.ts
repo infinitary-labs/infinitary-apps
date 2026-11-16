@@ -73,6 +73,7 @@ import { ReportIntake } from "./reportIntake";
 import type { WakeOpenReview } from "./reportWakes";
 import { RestartWatch } from "./restartWatch";
 import { Reviews } from "./reviews";
+import { RuleNotes, type RuleNotesRules } from "./ruleNotes";
 import { type MergeBehind, SettleFacts } from "./settleCardFacts";
 import { createSettleOwners, type SettleOwners } from "./settleOwners";
 import { contributionStatusLine, hasMergeLine, receiptMergedLine } from "./settleWords";
@@ -176,6 +177,8 @@ export class CrewSupervisor {
   /** The crew's side of a running program: its parts, its asks, its bound and its end. */
   private readonly crewPrograms: CrewPrograms;
   private readonly stopAllowedLinks: () => void;
+  /** A rule's notes as a file: bound once the Scheduler exists, which is built after the crew. */
+  private ruleNotes: RuleNotes | undefined;
 
   constructor(private readonly options: CrewSupervisorOptions) {
     const now = options.now;
@@ -274,6 +277,7 @@ export class CrewSupervisor {
       get costLimits() {
         return supervisor.costLimits;
       },
+      ruleNotes: () => this.ruleNotes,
       bypassesSupervision: (taskId) => this.bypassesSupervision(taskId),
       closeCard: (cardId, actor, reason) => this.closeCard(cardId, actor, reason),
       openReviewOf: (builderId) => this.openReviewOf(builderId),
@@ -512,6 +516,8 @@ export class CrewSupervisor {
         this.sessions.deliverHandover(taskId, path, name, sha256),
       knowledgeFor: (taskId) => this.toolHooks.knowledgeFor(taskId),
       backendOf: (taskId) => this.tasks.get(taskId)?.backend,
+      ruleNotesSection: (taskId) =>
+        this.ruleNotes?.briefSection(taskId) ?? Promise.resolve(undefined),
     });
     this.reviews = new Reviews(options, {
       now: this.now,
@@ -662,6 +668,16 @@ export class CrewSupervisor {
       heldBy: (record) => this.ladder.heldBy(record),
       runtime: (taskId) => this.tasks.get(taskId),
     });
+  }
+
+  /**
+   * A rule's notes reach the crewmates its runs start once the Scheduler,
+   * built after the crew, is bound here (docs/automation.md, "A rule's notes").
+   */
+  bindRuleNotes(rules: RuleNotesRules): void {
+    this.ruleNotes = new RuleNotes(this.options.tasks, rules, (taskId, path, name, sha256) =>
+      this.sessions.deliverHandover(taskId, path, name, sha256),
+    );
   }
 
   setFirstmateHooks(hooks: FirstmateHooks): void {

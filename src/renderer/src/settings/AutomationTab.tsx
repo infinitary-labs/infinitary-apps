@@ -1,10 +1,12 @@
 import {
   AUTOMATION_UNREADABLE,
   type AutomationList,
+  type AutomationNotes,
   type AutomationRule,
   type AutomationRun,
   type AutomationSave,
   type AutomationSpec,
+  RULE_NOTES_MAX_CHARS,
   SCHEDULE_DETAILS,
   scheduleDetailsFor,
 } from "@shared/automation";
@@ -20,11 +22,12 @@ import {
   automationZoneOf,
   automationZoneWords,
 } from "@shared/automationWords";
+import { formatDateTime, formatNumber } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import type { IntegrationsView } from "@shared/integrations";
 import type { ProjectView } from "@shared/tasks";
 import type React from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCommandKeys } from "../app/keyHints";
 import { useShellStore } from "../app/store";
 import { KeyedText } from "../cards/TaskKey";
@@ -669,16 +672,7 @@ function Sheet({
           rows={4}
           placeholder={m.settingsAutomationPromptPlaceholder()}
           onChange={(event) => set("prompt", event.target.value)}
-          style={{
-            fontFamily: "var(--font-ui)",
-            fontSize: "var(--text-base)",
-            color: "var(--fg-1)",
-            background: "var(--surface-input)",
-            border: "1px solid var(--line-1)",
-            borderRadius: "var(--radius-m)",
-            padding: "9px 14px",
-            resize: "vertical",
-          }}
+          style={TEXTAREA_STYLE}
         />
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
           <select
@@ -791,9 +785,214 @@ function Sheet({
             ))}
         </div>
       )}
+      {rule && review === null && <Notes rule={rule} />}
       {rule && <History id={rule.id} />}
     </form>
   );
+}
+
+const TEXTAREA_STYLE: React.CSSProperties = {
+  fontFamily: "var(--font-ui)",
+  fontSize: "var(--text-base)",
+  color: "var(--fg-1)",
+  background: "var(--surface-input)",
+  border: "1px solid var(--line-1)",
+  borderRadius: "var(--radius-m)",
+  padding: "9px 14px",
+  resize: "vertical",
+};
+
+/**
+ * A rule's notes (docs/automation.md, "A rule's notes"): what its runs
+ * learned, which a crewmate a run starts edits as a file. The captain reads,
+ * edits or clears them here, and reads every earlier version. Saving them
+ * makes no new revision of the rule; a page past the limit is never sent.
+ */
+function Notes({ rule }: { rule: AutomationRule }) {
+  const [standing, setStanding] = useState<AutomationNotes | undefined>(undefined);
+  const [text, setText] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  // Whether any version was ever saved, a cleared one included: Earlier versions shows then.
+  const [saved, setSaved] = useState(false);
+  // A crewmate's newer page replaces the field unless the captain is editing it.
+  const shown = useRef("");
+  const show = useCallback((notes: AutomationNotes | undefined) => {
+    // Cleared notes read as none.
+    const page = notes?.text ? notes : undefined;
+    setStanding(page);
+    // The updater runs at render, after `shown` moves on, so it compares with the page shown before.
+    const before = shown.current;
+    setText((current) => (current === before ? (page?.text ?? "") : current));
+    shown.current = page?.text ?? "";
+  }, []);
+  useEffect(
+    () =>
+      appReadExecutor().subscribe(
+        "automation.notes",
+        { id: rule.id, versions: "current" },
+        {
+          onValue: (value) => {
+            const newest = (value as AutomationNotes[])[0];
+            setSaved(newest !== undefined);
+            show(newest);
+          },
+          onError: () => {},
+        },
+      ),
+    [rule.id, show],
+  );
+  const over = text.trim().length > RULE_NOTES_MAX_CHARS;
+  const changed = text.trim() !== (standing?.text ?? "");
+  const save = async (next: string) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const version = await window.infinitary.automation.saveNotes(rule.id, next);
+      // The saved page replaces the field, edited or not.
+      shown.current = text;
+      if (version) setSaved(true);
+      show(version ?? undefined);
+    } catch (caught) {
+      setError(messageOf(caught));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div data-automation-notes style={FIELD_STYLE}>
+      <label htmlFor="automation-notes" style={LABEL_STYLE}>
+        {m.settingsAutomationNotes()}
+      </label>
+      <span style={NOTE_STYLE}>{m.settingsAutomationNotesNote()}</span>
+      {standing && standing.revision < rule.revision && (
+        <span data-automation-notes-older style={NOTE_STYLE}>
+          {m.settingsAutomationNotesOlder()}
+        </span>
+      )}
+      <textarea
+        id="automation-notes"
+        value={text}
+        rows={5}
+        onChange={(event) => setText(event.target.value)}
+        style={TEXTAREA_STYLE}
+      />
+      <span
+        data-automation-notes-count
+        style={{ ...NOTE_STYLE, ...(over ? { color: "var(--danger)" } : {}) }}
+      >
+        {m.settingsAutomationNotesCount({
+          count: formatNumber(text.trim().length),
+          max: formatNumber(RULE_NOTES_MAX_CHARS),
+        })}
+      </span>
+      <SettingError error={error} />
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={busy || over || !changed}
+          onClick={() => void save(text)}
+          data-automation-notes-save
+        >
+          {m.settingsAutomationNotesSave()}
+        </Button>
+        {standing && (
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={busy}
+            onClick={() => void save("")}
+            data-automation-notes-clear
+          >
+            {m.settingsAutomationNotesClear()}
+          </Button>
+        )}
+      </div>
+      {saved && <EarlierNotes id={rule.id} />}
+    </div>
+  );
+}
+
+/**
+ * Every version of a rule's notes, newest first, each naming who wrote it
+ * and when. Read only while it is open: versions are never pruned.
+ */
+function EarlierNotes({ id }: { id: string }) {
+  const [open, setOpen] = useState(false);
+  const [versions, setVersions] = useState<AutomationNotes[]>([]);
+  useEffect(() => {
+    if (!open) return;
+    return appReadExecutor().subscribe(
+      "automation.notes",
+      { id, versions: "all" },
+      {
+        onValue: (value) => setVersions(value as AutomationNotes[]),
+        onError: () => setVersions([]),
+      },
+    );
+  }, [id, open]);
+  return (
+    <details
+      data-automation-notes-earlier
+      style={{ fontSize: "var(--text-sm)" }}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
+      <summary style={{ cursor: "pointer", width: "fit-content", color: "var(--fg-2)" }}>
+        {m.settingsAutomationNotesEarlier()}
+      </summary>
+      {open && (
+        <ul
+          style={{
+            margin: "var(--space-2) 0 0",
+            padding: 0,
+            listStyle: "none",
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--space-3)",
+          }}
+        >
+          {versions.map((version) => (
+            <li
+              key={version.version}
+              data-automation-notes-version={version.version}
+              style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}
+            >
+              <div style={{ color: "var(--fg-3)" }}>
+                {notesVersionWords(version)}
+                {version.task && (
+                  <>
+                    {" · "}
+                    <KeyedText text={`${version.task.key} ${version.task.title}`} />
+                  </>
+                )}
+              </div>
+              {version.text ? (
+                <PromptBox prompt={version.text} />
+              ) : (
+                <div style={{ color: "var(--fg-3)" }}>{m.settingsAutomationNotesEmpty()}</div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </details>
+  );
+}
+
+function notesVersionWords(version: AutomationNotes): string {
+  const words = {
+    version: formatNumber(version.version),
+    date: formatDateTime(version.at, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }),
+  };
+  return version.by === "captain"
+    ? m.settingsAutomationNotesByYou(words)
+    : m.settingsAutomationNotesByCrew(words);
 }
 
 /** The prompt exactly as Firstmate gets it. */

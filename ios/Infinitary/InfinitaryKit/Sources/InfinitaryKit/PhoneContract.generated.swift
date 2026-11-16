@@ -361,6 +361,7 @@ public enum PhoneGoogleWords {
 public enum PhonePanelRequest: String, Sendable, CaseIterable {
     case `automationHistory` = "inf:automation:history"
     case `automationList` = "inf:automation:list"
+    case `automationNotes` = "inf:automation:notes"
     case `cardsList` = "inf:cards:list"
     case `computersResources` = "inf:computers:resources"
     case `crewCounts` = "inf:crew:counts"

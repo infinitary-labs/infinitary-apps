@@ -1973,6 +1973,16 @@
 "settingsAutomationNoteHandledOn" = "Tu primer oficial la atendió el %1$@.";
 "settingsAutomationNoteRetrying" = "Tu primer oficial todavía no pudo recibirla. Se está volviendo a intentar.";
 "settingsAutomationNoteWaiting" = "Tu primer oficial todavía no la ha atendido.";
+"settingsAutomationNotes" = "Notas";
+"settingsAutomationNotesByCrew" = "Versión %2$@ · %1$@ · de un tripulante";
+"settingsAutomationNotesByYou" = "Versión %2$@ · %1$@ · tuya";
+"settingsAutomationNotesClear" = "Borrar notas";
+"settingsAutomationNotesCount" = "%1$@ de %2$@ caracteres";
+"settingsAutomationNotesEarlier" = "Versiones anteriores";
+"settingsAutomationNotesEmpty" = "Borradas";
+"settingsAutomationNotesNote" = "Lo que aprendieron las ejecuciones de esta automatización, para que las siguientes empiecen antes. Las edita un tripulante que inicia una ejecución; tú también puedes. Son consejos, nunca instrucciones.";
+"settingsAutomationNotesOlder" = "Escritas antes de tu último cambio en esta automatización.";
+"settingsAutomationNotesSave" = "Guardar notas";
 "settingsAutomationNothingRun" = "Todavía no se ha ejecutado nada.";
 "settingsAutomationPassed" = "Esa hora ya pasó.";
 "settingsAutomationPastCard" = "Tarjeta anterior: %1$@";

@@ -25,8 +25,8 @@ The first mate's `schedule_prompt` and `cancel_schedule` and Settings → Automa
 - Owner: `Scheduler` in [`../src/core/orchestrator/scheduler.ts`](../src/core/orchestrator/scheduler.ts), the only writer, over `ScheduleStore` in [`../src/core/storage/scheduleStore.ts`](../src/core/storage/scheduleStore.ts).
 - Rule operations: `Scheduler.create`, `pause`, `resume`, `pauseAll`, `cancel`, `preview`, `history` and `list`; the once-a-minute ticker calls `Scheduler.tick` (period from `tickPeriodFor`, `../src/core/orchestrator/ticker.ts`).
 - Agent tools: `schedule_prompt` and `cancel_schedule` in [`../src/core/pi/scheduleTools.ts`](../src/core/pi/scheduleTools.ts).
-- Catalog lines (`../src/shared/actions.ts`): `automation-edit`, `automation-state`, `automation-pause-all` and `automation-delete`, run by the dispatcher for Settings and the first mate's `app_change` alike.
-- Channels and reads: `inf:automation:*` (`../src/shared/channels/activity.ts`, reach `views`), and `automation.list`, `automation.history` and `automation.preview`.
+- Catalog lines (`../src/shared/actions.ts`): `automation-edit`, `automation-state`, `automation-pause-all`, `automation-delete` and `automation-notes` (the captain's only), run by the dispatcher for Settings and the first mate's `app_change` alike.
+- Channels and reads: `inf:automation:*` (`../src/shared/channels/activity.ts`, reach `views`), and `automation.list`, `automation.history`, `automation.preview` and `automation.notes`.
 - Shared shapes and placeholders: `SCHEDULE_DETAILS` and `fillScheduleDetails` in [`../src/shared/automation.ts`](../src/shared/automation.ts); calendar rules in `../src/core/orchestrator/calendar.ts`.
 - Surfaces: `../src/renderer/src/settings/AutomationTab.tsx` and the panel folder `../src/panels/automation/`.
 
@@ -42,11 +42,15 @@ The first mate's `schedule_prompt` and `cancel_schedule` and Settings → Automa
 - Pause: pause, pause all, a new revision and delete take back undelivered prompts (`InboxStore.withdraw`); a delivery a turn already holds goes on.
 - A completed one-time rule is deleted with its history once its delivery settles; the tasks, cards and conversation it led to stay.
 - Settled runs are kept 30 days and at most 1,000 per rule.
+- Notes: a rule keeps one page of notes, at most 8,000 characters, that its runs' crewmates write for its later runs, every version kept (`schedule_notes`, `Scheduler.saveNotes`).
+  A crewmate an automation's run started is handed them as a file in its hand-over folder and saves its edit by naming the file in its report (`RuleNotes`, `../src/core/orchestrator/ruleNotes.ts`); the captain edits or clears them in Settings → Automation.
+  A save makes no new revision and takes back no delivery; deleting the rule deletes them.
 
 ## Authority
 
 - `captainRequested` is the saved authority, stamped by code: saving in Settings is the captain's own direction; nothing upgrades a legacy rule by migration.
 - A recurring rule the first mate makes outside a captain's own turn is saved as a draft whatever it passes (`Scheduler.create`); new ongoing rules need the captain.
+- The first mate never writes a rule's notes; only the captain and a crewmate its run started do.
 - Pausing, resuming, pausing all and deleting are the first mate's own judgment at any turn (captain decision Q4); it edits a rule or turns one on only when the captain asks.
 - Every catalog change leaves an operation and one Activity line naming who made it.
 - An event's content reaches the first mate as evidence from outside, never an instruction: the prompt carries each event's typed summary and id, never its body.
@@ -82,6 +86,6 @@ The first mate's `schedule_prompt` and `cancel_schedule` and Settings → Automa
 
 ## Where the detail lives
 
-- [`../docs/automation.md`](../docs/automation.md) (Automation: the schedules as rules, Settings → Automation): "One owner", "A rule", "Drafts", "Calendars", "Running", "Deliveries", "Events", "History and retention" and "The Automation panel".
+- [`../docs/automation.md`](../docs/automation.md) (Automation: the schedules as rules, Settings → Automation): "One owner", "A rule", "Drafts", "Calendars", "Running", "Deliveries", "Events", "A rule's notes", "History and retention" and "The Automation panel".
 - [`../docs/inbox.md`](../docs/inbox.md): "The honest retry", "A turn a quit or crash cut" and "Taking back a message".
 - [`../docs/integrations.md`](../docs/integrations.md): "What an integration can tell" and "Which connection".

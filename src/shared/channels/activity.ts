@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   automationListSchema,
+  automationNotesSchema,
   automationPreviewSchema,
   automationRuleSchema,
   automationRunSchema,
@@ -88,6 +89,24 @@ export const activityChannels = {
     reach: "views",
     request: z.tuple([z.string().min(1), z.enum(["pause", "resume"])]),
     response: automationRuleSchema,
+  },
+  // A rule's notes: the newest version (`current`) or every version
+  // (`all`), newest first, and the captain's edit or clear, answering the
+  // version it saved (docs/automation.md, "A rule's notes"). Saving makes
+  // no new revision of the rule.
+  "inf:automation:notes": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().min(1), z.enum(["current", "all"])]),
+    response: z.array(automationNotesSchema),
+  },
+  "inf:automation:notes-save": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().min(1), z.string()]),
+    response: automationNotesSchema.nullable(),
   },
   "inf:automation:pause-all": {
     effect: "change",

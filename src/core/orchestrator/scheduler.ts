@@ -1,13 +1,21 @@
 import { randomUUID } from "node:crypto";
-import { type AutomationEventItem, eventsWords, fillScheduleDetails } from "@shared/automation";
+import {
+  type AutomationEventItem,
+  eventsWords,
+  fillScheduleDetails,
+  RULE_NOTES_MAX_CHARS,
+  ruleNotesTooLong,
+} from "@shared/automation";
 import type { FmEvent } from "@shared/events";
 import { formatDateTime } from "@shared/i18n/format";
 import type { DecisionRecord } from "@shared/provenance";
 import { cutText } from "@shared/textCut";
+import { scanKnowledgeThreat } from "../knowledge/threatScan";
 import type { InboxRow } from "../storage/inboxStore";
 import {
   MIN_INTERVAL_MINUTES,
   type RecordedRun,
+  type RuleNotesVersion,
   type RuleState,
   type RunCancelReason,
   type ScheduleRecord,
@@ -188,6 +196,8 @@ export const automationWords = {
   pausedAll: (count: number, recalled = 0) =>
     `Automation paused - ${count} ${count === 1 ? "rule" : "rules"}${recalledText(recalled)}`,
   cancelled: (prompt: string) => `Schedule cancelled - ${cutText(prompt, PROMPT_EXCERPT)}`,
+  notes: (rule: Pick<ScheduleRecord, "name" | "prompt">, cleared: boolean) =>
+    `Automation notes ${cleared ? "cleared" : "saved"} - ${label(rule)}`,
   resynced: (rule: Pick<ScheduleRecord, "name" | "prompt">, integration: string) =>
     `Automation lost its place in ${integration} and listens again from now; nothing was sent for the gap - ${label(rule)}`,
 };
@@ -1110,6 +1120,67 @@ export class Scheduler {
     const record = this.options.store.get(id);
     if (!record) throw new Error("That automation is not here. It may already be deleted.");
     return record;
+  }
+
+  /** One rule, or a refusal saying it is gone. */
+  rule(id: string): ScheduleRecord {
+    return this.require(id);
+  }
+
+  /** A rule's newest notes version, an empty one when they were cleared, or undefined when it has none. */
+  notes(id: string): RuleNotesVersion | undefined {
+    return this.options.store.notes(id);
+  }
+
+  /** Every version of a rule's notes, newest first (docs/automation.md, "A rule's notes"). */
+  notesHistory(id: string): RuleNotesVersion[] {
+    this.require(id);
+    return this.options.store.notesHistory(id);
+  }
+
+  /**
+   * A new version of a rule's notes (docs/automation.md, "A rule's notes"):
+   * the captain's edit or clear in Settings, or the page a crewmate the
+   * rule's run started handed back on its report. It makes no new revision
+   * of the rule and takes back no delivery. A page past the limit is
+   * refused, never cut; a crewmate's is scanned for planted instructions
+   * first. With `expected`, it is saved only while the newest version is
+   * still that one (0 for none), and answers undefined otherwise. A page
+   * the same as the one standing saves nothing and answers it.
+   */
+  saveNotes(
+    id: string,
+    text: string,
+    source: { by: "captain" } | { by: "crewmate"; taskId: string },
+    options: SaysChange & { expected?: number } = {},
+  ): RuleNotesVersion | undefined {
+    const record = this.require(id);
+    const page = text.trim();
+    if (page.length > RULE_NOTES_MAX_CHARS) throw new Error(ruleNotesTooLong(page.length));
+    if (source.by === "crewmate") {
+      const threat = scanKnowledgeThreat(page);
+      if (threat)
+        throw new Error(
+          `These notes were refused: they hold text that looks like ${threat.pattern === "credential" ? "a credential" : threat.pattern === "url-exfil" ? "a link that sends data out" : "an instruction to ignore your instructions"}. Remove it and hand the notes back again.`,
+        );
+    }
+    const standing = this.options.store.notes(id);
+    if (options.expected !== undefined && options.expected !== (standing?.version ?? 0))
+      return undefined;
+    if ((standing?.text ?? "") === page) return standing;
+    const saved = this.options.store.saveNotes(
+      id,
+      {
+        text: page,
+        at: this.now(),
+        revision: record.revision,
+        ...source,
+      },
+      standing?.version ?? 0,
+    );
+    if (saved && source.by === "captain")
+      this.announce(automationWords.notes(record, page === ""), options);
+    return saved;
   }
 
   /** Every rule, whatever its state: what Automation shows. */

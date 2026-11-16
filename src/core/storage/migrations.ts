@@ -1419,6 +1419,23 @@ export const MIGRATIONS: readonly Migration[] = [
   // `RepoRegistry` is the only writer; no published view reads it. Dropping
   // the column reverses it.
   (db) => addColumn(db, "repos", "no_checks_json", "TEXT"),
+  // A rule's notes (docs/automation.md, "A rule's notes"): one page per
+  // automation rule, every version kept, written by the crewmates its runs
+  // start and by the captain in Settings. Empty on every existing install.
+  // `ScheduleStore` is the only writer, for `Scheduler`; no published view
+  // reads it. Dropping the table reverses it.
+  `
+  CREATE TABLE schedule_notes (
+    schedule_id TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    at INTEGER NOT NULL,
+    revision INTEGER NOT NULL,
+    by TEXT NOT NULL,
+    task_id TEXT,
+    PRIMARY KEY (schedule_id, version)
+  );
+  `,
 ];
 
 /**

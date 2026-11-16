@@ -59,6 +59,8 @@ export type CrewBriefHost = {
   knowledgeFor(taskId: string): KnowledgeService | undefined;
   /** The backend a task's running crewmate is on, when one runs. */
   backendOf(taskId: string): string | undefined;
+  /** The notes section of a crewmate an automation's run started (docs/automation.md, "A rule's notes"). */
+  ruleNotesSection?(taskId: string): Promise<string | undefined>;
 };
 
 /**
@@ -280,6 +282,9 @@ export class CrewBrief {
         ),
       );
     }
+    // A rule's notes, handed as a file to the crewmate its run started.
+    const notes = await this.host.ruleNotesSection?.(taskId);
+    if (notes) sections.push([notes]);
     const knowledge = this.host.knowledgeFor(taskId);
     if (knowledge) {
       // Only how much is saved, never a saved word (docs/knowledge.md,

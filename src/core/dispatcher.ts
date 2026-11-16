@@ -11,7 +11,6 @@ import {
   integrationSignInValue,
 } from "@shared/actions";
 import { AUTOMATION_UNREADABLE, type AutomationRule } from "@shared/automation";
-import { automationEventWords } from "@shared/automationWords";
 import type { PastCard } from "@shared/cards";
 import { projectCostChange } from "@shared/costLimit";
 import { CREATE_PANEL_SLOT_ID } from "@shared/createPanelSlot";
@@ -53,6 +52,7 @@ import type { AppPanelGates } from "@shared/surfaces";
 import { resolveWorkComputer } from "@shared/workComputer";
 import type { RunbookView } from "../shared/runbooks";
 import { asAView, askedFromAView } from "./askedFromAView";
+import { automationNotesOf, automationRuleOf } from "./automationViews";
 import { type BrowserViewer, BrowserViews } from "./browser/browserViews";
 import { addedPrivateSite, privateSiteChannels } from "./browser/privateSites";
 import { prepareComposerTurn } from "./composerTurn";
@@ -82,7 +82,7 @@ import { secretsHandlers } from "./secrets/handlers";
 import { plainSettingsChannels } from "./settingsChannels";
 import type { PhoneDiagnosticEvent } from "./sharing/sharingService";
 import { SIGN_IN_RETURN_WORDS, type SignInReturns } from "./signInReturns";
-import { eventCounts, type ScheduleRecord } from "./storage/scheduleStore";
+import { eventCounts } from "./storage/scheduleStore";
 import { readStartAtLogin, recordStartAtLogin } from "./storage/startAtLoginRecord";
 import { ProjectKeyRefusal } from "./tasks/projectKey";
 import { recentFeed } from "./tasks/taskFeed";
@@ -120,27 +120,6 @@ async function refusalAsAnswer<T>(run: () => Promise<T>): Promise<T | RemoteLogi
  * The gates open now, for the app panels that wait on one: Knowledge's while
  * this build keeps knowledge and there is some to show.
  */
-/** A saved rule as Automation shows it (src/shared/automation.ts). */
-function automationRuleOf(scheduler: CoreServices["scheduler"], record: ScheduleRecord) {
-  const listened = scheduler.listening(record);
-  const stopped = scheduler.stopped(record);
-  return {
-    id: record.id,
-    ...(record.name ? { name: record.name } : {}),
-    state: record.state,
-    spec: record.spec,
-    prompt: record.prompt,
-    ...(record.projectId ? { projectId: record.projectId } : {}),
-    revision: record.revision,
-    // An event rule has no next time: it runs when its event arrives.
-    nextFire: record.state === "enabled" && record.spec.kind !== "event" ? record.nextFire : null,
-    lastFired: scheduler.history(record.id)[0]?.firedAt ?? null,
-    captainRequested: record.captainRequested === true,
-    ...(listened ? { when: automationEventWords(listened.label, listened.name) } : {}),
-    ...(stopped ? { stopped } : {}),
-  };
-}
-
 function gatesOf(services: CoreServices): AppPanelGates {
   return {
     knowledge: services.knowledge?.held() ?? false,
@@ -1292,9 +1271,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
 
     "inf:automation:list": () => {
       try {
-        lastRules = services.scheduler
-          .rules()
-          .map((record) => automationRuleOf(services.scheduler, record));
+        lastRules = services.scheduler.rules().map((record) => automationRuleOf(services, record));
         return { state: "ready" as const, rules: lastRules };
       } catch {
         // Unreadable is never empty: the rules last read stay, marked so.
@@ -1350,15 +1327,25 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
             draft: rule.enable !== true,
             say,
           });
-      return automationRuleOf(services.scheduler, record);
+      return automationRuleOf(services, record);
     },
     "inf:automation:state": (id, change) =>
       automationRuleOf(
-        services.scheduler,
+        services,
         change === "pause"
           ? services.scheduler.pause(id, { say })
           : services.scheduler.resume(id, { say }),
       ),
+    "inf:automation:notes": (id, versions) =>
+      (versions === "all"
+        ? services.scheduler.notesHistory(id)
+        : [services.scheduler.notes(id)].filter((notes) => notes !== undefined)
+      ).map((notes) => automationNotesOf(services, notes)),
+    // The captain's own edit or clear; a notes save makes no new revision.
+    "inf:automation:notes-save": (id, text) => {
+      const saved = services.scheduler.saveNotes(id, text, { by: "captain" }, { say });
+      return saved ? automationNotesOf(services, saved) : null;
+    },
     "inf:automation:pause-all": () => ({ paused: services.scheduler.pauseAll({ say }) }),
     "inf:automation:delete": (id) => {
       services.scheduler.cancel(id, { say });

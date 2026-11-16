@@ -20,6 +20,7 @@ import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
 import type { TaskLinkType } from "../storage/taskLinkStore";
 import type { TaskGate, TaskRecord, TaskStartPolicy } from "../storage/taskRecords";
 import { TaskGraphRefusal } from "../tasks/taskGraph";
+import type { SavedOrigin } from "../tasks/taskOrigin";
 import { TaskService } from "../tasks/taskService";
 import type { CardService } from "./cardService";
 import type { InterruptSource, TaskRuntime } from "./crewRuntime";
@@ -212,6 +213,12 @@ export class TaskIntake {
      */
     messageFiles?: readonly MessageFile[];
     attachments?: readonly AttachmentRef[];
+    /**
+     * The automation run, click or report the first mate answered by
+     * starting this work (INF-2326), saved before it starts so its brief
+     * reads it (docs/automation.md, "A rule's notes").
+     */
+    origin?: SavedOrigin;
   }): Promise<{
     taskId: string;
     /** `starting` for a start behind the answer (INF-3060), or `queued` for a wait. */
@@ -368,6 +375,7 @@ export class TaskIntake {
         ...wait,
         ...graph,
       });
+      if (input.origin) this.options.tasks.capture.saveOrigin(taskId, input.origin);
       this.announcePlanSkip(shape);
       const blockers = this.options.tasks.graph.blockers(taskId);
       if (escalation) await this.applyEscalation(escalation, taskId);
@@ -393,6 +401,7 @@ export class TaskIntake {
       shape,
       graph,
     );
+    if (input.origin) this.options.tasks.capture.saveOrigin(taskId, input.origin);
     if (escalation) await this.applyEscalation(escalation, taskId);
     this.announcePlanSkip(shape);
     const started = this.host.startBehind(taskId, {

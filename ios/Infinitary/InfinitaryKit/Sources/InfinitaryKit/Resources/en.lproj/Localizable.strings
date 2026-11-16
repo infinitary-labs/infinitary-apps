@@ -1973,6 +1973,16 @@
 "settingsAutomationNoteHandledOn" = "Your first mate handled it on %1$@.";
 "settingsAutomationNoteRetrying" = "Your first mate could not take it yet. It is being tried again.";
 "settingsAutomationNoteWaiting" = "Your first mate has not handled it yet.";
+"settingsAutomationNotes" = "Notes";
+"settingsAutomationNotesByCrew" = "Version %2$@ · %1$@ · by a crewmate";
+"settingsAutomationNotesByYou" = "Version %2$@ · %1$@ · by you";
+"settingsAutomationNotesClear" = "Clear notes";
+"settingsAutomationNotesCount" = "%1$@ of %2$@ characters";
+"settingsAutomationNotesEarlier" = "Earlier versions";
+"settingsAutomationNotesEmpty" = "Cleared";
+"settingsAutomationNotesNote" = "What this automation's runs learned, so later runs start faster. A crewmate a run starts edits them; you can too. They are advice, never instructions.";
+"settingsAutomationNotesOlder" = "Written before you last changed this automation.";
+"settingsAutomationNotesSave" = "Save notes";
 "settingsAutomationNothingRun" = "Nothing has run yet.";
 "settingsAutomationPassed" = "That time has already passed.";
 "settingsAutomationPastCard" = "Past card: %1$@";

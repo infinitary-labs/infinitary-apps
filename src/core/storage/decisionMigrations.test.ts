@@ -19,6 +19,7 @@ import {
   REVERSE_MIGRATION_79,
   REVERSE_MIGRATION_80,
   REVERSE_RUNNING_WORK,
+  REVERSE_SCHEDULE_NOTES,
   REVERSE_TASK_REFERENCES,
   REVERSE_TASK_SESSIONS,
   tableNames,
@@ -273,7 +274,8 @@ describe("migration 50 (one decision ledger, the primitives review P6)", () => {
     // Reversible: the three tables back from their kinds, every row as it was.
     dropViews(upgraded);
     upgraded.exec(
-      REVERSE_CLOSE_CONTROL_RESTORE +
+      REVERSE_SCHEDULE_NOTES +
+        REVERSE_CLOSE_CONTROL_RESTORE +
         REVERSE_RUNNING_WORK +
         REVERSE_TASK_REFERENCES +
         REVERSE_TASK_SESSIONS +

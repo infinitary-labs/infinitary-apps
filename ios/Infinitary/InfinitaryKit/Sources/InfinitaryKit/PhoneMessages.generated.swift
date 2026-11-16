@@ -2055,6 +2055,16 @@ public enum PhoneMessages {
     public static func `settingsAutomationNoteHandledOn`(`date`: String) -> String { PhoneWords.format("settingsAutomationNoteHandledOn", [`date`]) }
     public static func `settingsAutomationNoteRetrying`() -> String { PhoneWords.format("settingsAutomationNoteRetrying", []) }
     public static func `settingsAutomationNoteWaiting`() -> String { PhoneWords.format("settingsAutomationNoteWaiting", []) }
+    public static func `settingsAutomationNotes`() -> String { PhoneWords.format("settingsAutomationNotes", []) }
+    public static func `settingsAutomationNotesByCrew`(`date`: String, `version`: String) -> String { PhoneWords.format("settingsAutomationNotesByCrew", [`date`, `version`]) }
+    public static func `settingsAutomationNotesByYou`(`date`: String, `version`: String) -> String { PhoneWords.format("settingsAutomationNotesByYou", [`date`, `version`]) }
+    public static func `settingsAutomationNotesClear`() -> String { PhoneWords.format("settingsAutomationNotesClear", []) }
+    public static func `settingsAutomationNotesCount`(`count`: String, `max`: String) -> String { PhoneWords.format("settingsAutomationNotesCount", [`count`, `max`]) }
+    public static func `settingsAutomationNotesEarlier`() -> String { PhoneWords.format("settingsAutomationNotesEarlier", []) }
+    public static func `settingsAutomationNotesEmpty`() -> String { PhoneWords.format("settingsAutomationNotesEmpty", []) }
+    public static func `settingsAutomationNotesNote`() -> String { PhoneWords.format("settingsAutomationNotesNote", []) }
+    public static func `settingsAutomationNotesOlder`() -> String { PhoneWords.format("settingsAutomationNotesOlder", []) }
+    public static func `settingsAutomationNotesSave`() -> String { PhoneWords.format("settingsAutomationNotesSave", []) }
     public static func `settingsAutomationNothingRun`() -> String { PhoneWords.format("settingsAutomationNothingRun", []) }
     public static func `settingsAutomationPassed`() -> String { PhoneWords.format("settingsAutomationPassed", []) }
     public static func `settingsAutomationPastCard`(`title`: String) -> String { PhoneWords.format("settingsAutomationPastCard", [`title`]) }
@@ -5336,6 +5346,16 @@ extension PhoneWords {
         "settingsAutomationNoteHandledOn": ["date"],
         "settingsAutomationNoteRetrying": [],
         "settingsAutomationNoteWaiting": [],
+        "settingsAutomationNotes": [],
+        "settingsAutomationNotesByCrew": ["date", "version"],
+        "settingsAutomationNotesByYou": ["date", "version"],
+        "settingsAutomationNotesClear": [],
+        "settingsAutomationNotesCount": ["count", "max"],
+        "settingsAutomationNotesEarlier": [],
+        "settingsAutomationNotesEmpty": [],
+        "settingsAutomationNotesNote": [],
+        "settingsAutomationNotesOlder": [],
+        "settingsAutomationNotesSave": [],
         "settingsAutomationNothingRun": [],
         "settingsAutomationPassed": [],
         "settingsAutomationPastCard": ["title"],

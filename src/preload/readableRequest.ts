@@ -17,6 +17,10 @@ export const REQUEST_COPY = {
     fallback: "Could not save this automation. Please try again.",
     prefix: "",
   },
+  "inf:automation:notes-save": {
+    fallback: "Could not save these notes. Please try again.",
+    prefix: "",
+  },
   "inf:automation:state": {
     fallback: "Could not change this automation. Please try again.",
     prefix: "",

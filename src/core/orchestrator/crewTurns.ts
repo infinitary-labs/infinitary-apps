@@ -455,15 +455,20 @@ export class CrewTurns {
     // named in it by kept name and size only, never content (INF-992).
     if (declared?.files && declared.files.length > 0) {
       const { files, ...rest } = declared;
-      return verifyHandoverFiles(crewmateHandoverDir(this.core.options.paths, task.id), files).then(
-        () =>
-          this.recordReportBody(
-            task,
-            `${text}\n\n${handedFilesLine(task, files)}`,
-            summary,
-            rest,
-            text,
-          ),
+      const dir = crewmateHandoverDir(this.core.options.paths, task.id);
+      return (
+        verifyHandoverFiles(dir, files)
+          // A rule's notes file among them replaces the rule's notes, or the report is refused.
+          .then(() => this.core.ruleNotes()?.takeBack(task.id, dir, files))
+          .then(() =>
+            this.recordReportBody(
+              task,
+              `${text}\n\n${handedFilesLine(task, files)}`,
+              summary,
+              rest,
+              text,
+            ),
+          )
       );
     }
     return this.recordReportBody(task, text, summary, declared);

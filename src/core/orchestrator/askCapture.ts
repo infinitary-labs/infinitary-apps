@@ -187,6 +187,15 @@ export class AskCapture {
     return read.length === 1 ? read[0]?.origin : undefined;
   }
 
+  /**
+   * The origin a task this action starts will save (`attach`), known before
+   * the task exists: none while a message of the captain's is the action's.
+   * Its start saves it first, so the brief minted at dispatch reads it.
+   */
+  startOrigin(): SavedOrigin | undefined {
+    return this.current() ? undefined : this.actionOrigin();
+  }
+
   current(): AskRecord | undefined {
     const scope = this.actionAsk.getStore();
     const askId = scope ? scope.askId : this.currentAskId;

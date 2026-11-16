@@ -9,10 +9,11 @@ import { DEFAULT_USAGE_QUERY, USAGE_TASK_PAGE } from "./usage";
  * and nothing account-, auth-, or card-shaped is in it.
  */
 describe("the read catalog", () => {
-  it("freezes the names (v0, the three task reads of task-system P3, the preferences of talk-to-personalize Step 1, the open changes of git integration PR 1.2, and the record through SQL of Phase B, Settings → Usage, the knowledge browser, and a card's knowledge references and a task's knowledge used, and the task card's Crewmate tab, and the window's lookup of task keys)", () => {
+  it("freezes the names (v0, the three task reads of task-system P3, the preferences of talk-to-personalize Step 1, the open changes of git integration PR 1.2, and the record through SQL of Phase B, Settings → Usage, the knowledge browser, and a card's knowledge references and a task's knowledge used, and the task card's Crewmate tab, and the window's lookup of task keys, and an automation rule's notes)", () => {
     expect([...READ_NAMES].sort()).toEqual([
       "automation.history",
       "automation.list",
+      "automation.notes",
       "computers.resources",
       "crew.counts",
       "feed.recent",

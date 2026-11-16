@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { SERVED_LOCALE } from "./i18n/format.ts";
+import { SERVED_LOCALE, servedNumber } from "./i18n/format.ts";
 import { fencedListReminder, fencedSpans } from "./outsideData";
 
 /**
@@ -63,6 +63,34 @@ export type AutomationSpec = z.infer<typeof automationSpecSchema>;
  */
 export const automationStateSchema = z.enum(["draft", "enabled", "paused", "completed"]);
 export type AutomationState = z.infer<typeof automationStateSchema>;
+
+/**
+ * The most a rule's notes may hold, in characters (docs/automation.md, "A
+ * rule's notes"): about 1,200 words, the captain's choice. A longer page is
+ * refused, never cut.
+ */
+export const RULE_NOTES_MAX_CHARS = 8000;
+
+/** Why a page of notes was refused for its size, naming both numbers. */
+export function ruleNotesTooLong(length: number): string {
+  return `These notes are ${servedNumber(length)} characters; a rule's notes hold at most ${servedNumber(RULE_NOTES_MAX_CHARS)}. Remove or shorten lines that no longer help, then save them again.`;
+}
+
+/**
+ * One version of a rule's notes: what its runs learned, written by a
+ * crewmate a run started (`task` names its task) or by the captain. An
+ * empty text is a cleared page. `revision` is the rule's revision it was
+ * saved under.
+ */
+export const automationNotesSchema = z.strictObject({
+  version: z.number().int(),
+  text: z.string(),
+  at: z.number(),
+  revision: z.number().int(),
+  by: z.enum(["crewmate", "captain"]),
+  task: z.strictObject({ id: z.string(), key: z.string(), title: z.string() }).optional(),
+});
+export type AutomationNotes = z.infer<typeof automationNotesSchema>;
 
 export const automationRuleSchema = z.strictObject({
   id: z.string(),

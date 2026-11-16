@@ -1973,6 +1973,16 @@
 "settingsAutomationNoteHandledOn" = "Votre second l’a traitée le %1$@.";
 "settingsAutomationNoteRetrying" = "Votre second n’a pas encore pu la prendre. Un nouvel essai est en cours.";
 "settingsAutomationNoteWaiting" = "Votre second ne l’a pas encore traitée.";
+"settingsAutomationNotes" = "Notes";
+"settingsAutomationNotesByCrew" = "Version %2$@ · %1$@ · par un membre d'équipage";
+"settingsAutomationNotesByYou" = "Version %2$@ · %1$@ · par vous";
+"settingsAutomationNotesClear" = "Effacer les notes";
+"settingsAutomationNotesCount" = "%1$@ sur %2$@ caractères";
+"settingsAutomationNotesEarlier" = "Versions précédentes";
+"settingsAutomationNotesEmpty" = "Effacées";
+"settingsAutomationNotesNote" = "Ce que les exécutions de cette automatisation ont appris, pour que les suivantes démarrent plus vite. Un membre d'équipage lancé par une exécution les modifie ; vous aussi. Ce sont des conseils, jamais des instructions.";
+"settingsAutomationNotesOlder" = "Écrites avant votre dernière modification de cette automatisation.";
+"settingsAutomationNotesSave" = "Enregistrer les notes";
 "settingsAutomationNothingRun" = "Rien ne s’est encore exécuté.";
 "settingsAutomationPassed" = "Cette heure est déjà passée.";
 "settingsAutomationPastCard" = "Ancienne carte : %1$@";

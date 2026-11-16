@@ -61,6 +61,22 @@ export type ScheduleRecord = {
 export type RuleState = "draft" | "enabled" | "paused" | "completed";
 
 /**
+ * One version of a rule's notes (docs/automation.md, "A rule's notes"):
+ * what its runs learned, written by a crewmate a run started or by the
+ * captain. An empty text is a cleared page. `revision` is the rule's
+ * revision when it was saved, so notes older than the prompt can say so.
+ */
+export type RuleNotesVersion = {
+  version: number;
+  text: string;
+  at: number;
+  revision: number;
+  by: "crewmate" | "captain";
+  /** The task whose report brought it, for a crewmate's. */
+  taskId?: string;
+};
+
+/**
  * Where a delivery stands, as recorded: `waiting` until a turn handles it
  * or it is recalled. Null on a run recorded before deliveries were
  * followed (migration 80).
@@ -584,6 +600,55 @@ export class ScheduleStore {
     this.db.transaction(() => {
       this.db.prepare("DELETE FROM schedules WHERE id = ?").run(id);
       this.db.prepare("DELETE FROM schedule_runs WHERE schedule_id = ?").run(id);
+      this.db.prepare("DELETE FROM schedule_notes WHERE schedule_id = ?").run(id);
+    })();
+  }
+
+  /** A rule's notes as they stand: its newest version, or undefined when it has none. */
+  notes(scheduleId: string): RuleNotesVersion | undefined {
+    const row = this.db
+      .prepare("SELECT * FROM schedule_notes WHERE schedule_id = ? ORDER BY version DESC LIMIT 1")
+      .get(scheduleId) as NotesRow | undefined;
+    return row ? notesOf(row) : undefined;
+  }
+
+  /** Every version of a rule's notes, newest first. */
+  notesHistory(scheduleId: string): RuleNotesVersion[] {
+    const rows = this.db
+      .prepare("SELECT * FROM schedule_notes WHERE schedule_id = ? ORDER BY version DESC")
+      .all(scheduleId) as NotesRow[];
+    return rows.map(notesOf);
+  }
+
+  /**
+   * A new version of a rule's notes, numbered after the newest. With
+   * `expected`, it is written only while the newest version is still that
+   * one (0 for none), and answers undefined otherwise, so two writers never
+   * overwrite each other unseen.
+   */
+  saveNotes(
+    scheduleId: string,
+    notes: Omit<RuleNotesVersion, "version">,
+    expected?: number,
+  ): RuleNotesVersion | undefined {
+    return this.db.transaction(() => {
+      const current = this.notes(scheduleId)?.version ?? 0;
+      if (expected !== undefined && expected !== current) return undefined;
+      const version = current + 1;
+      this.db
+        .prepare(
+          "INSERT INTO schedule_notes (schedule_id, version, text, at, revision, by, task_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        )
+        .run(
+          scheduleId,
+          version,
+          notes.text,
+          notes.at,
+          notes.revision,
+          notes.by,
+          notes.taskId ?? null,
+        );
+      return { version, ...notes };
     })();
   }
 
@@ -595,7 +660,29 @@ export class ScheduleStore {
   clear(): void {
     this.db.prepare("DELETE FROM schedules").run();
     this.db.prepare("DELETE FROM schedule_runs").run();
+    this.db.prepare("DELETE FROM schedule_notes").run();
   }
+}
+
+type NotesRow = {
+  schedule_id: string;
+  version: number;
+  text: string;
+  at: number;
+  revision: number;
+  by: RuleNotesVersion["by"];
+  task_id: string | null;
+};
+
+function notesOf(row: NotesRow): RuleNotesVersion {
+  return {
+    version: row.version,
+    text: row.text,
+    at: row.at,
+    revision: row.revision,
+    by: row.by,
+    ...(row.task_id !== null ? { taskId: row.task_id } : {}),
+  };
 }
 
 /** A run's delivered events, and how many the event screen skipped when it skipped any. */

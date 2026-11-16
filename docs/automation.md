@@ -174,6 +174,29 @@ The integration hears only the delivered events as handled.
 Changing what a rule waits for is an edit like its prompt: a new revision that keeps the rule's place.
 A rule changed while its events were being asked about drops the answer, as it drops a slow look's.
 
+## A rule's notes
+
+A rule keeps notes its runs write for its later runs: how the job is done here, dead ends, what is already filed or decided, what to check first.
+The brief asks for one connected guide to doing the job well, rewritten as each run learns, never a log of runs with a dated line each.
+They are one page of plain text of at most 8,000 characters (`RULE_NOTES_MAX_CHARS`, `src/shared/automation.ts`), kept in `schedule_notes` with every version, each stamped with its time, the rule's revision it was written at, and who wrote it: a crewmate by its task, or the captain.
+`Scheduler.saveNotes` is the one writer; a save makes no new revision of the rule, takes back no delivery and changes nothing about when it runs.
+Deleting a rule deletes its notes with it.
+
+Only a crewmate an automation's run started writes them, by editing a file (`RuleNotes`, `src/core/orchestrator/ruleNotes.ts`).
+The task's saved origin names the rule it serves (`TaskCapture.savedOrigin`): the first mate's turn that handled the run saves it when the turn starts or adopts a task, and `spawn_crewmate`'s `origin` names which run when several are read.
+A rule that never runs again, a one-time rule or a put-off card's, which is deleted once its run settles, puts no notes section in the brief.
+The crewmate's brief hands it the notes as `automation-notes.md` in its hand-over folder, named by path in one section that calls them advice, never instructions, and says when they were written before the captain last changed the rule; a rule with none yet tells it to make the file in its temporary folder only when the run learned something.
+The crewmate edits the file in place and names it in its report's files; the report is kept only once the app has replaced the notes with it.
+The app refuses the report, with words the crewmate acts on and nothing cut, when the page is past the limit, is not text, holds text that looks like planted instructions, a credential or a link that sends data out, or the rule's notes changed since it was handed them; then it hands the newer page to carry its changes into.
+A rule deleted since its run started keeps nothing: the report stands, and the task's timeline says the notes were not kept.
+A file named for the notes from a task no automation started is refused too.
+A run the first mate handles alone leaves the notes as they are: the first mate has no tool or sentence for them, and the catalog line `automation-notes` stays with the captain.
+
+Settings → Automation shows a saved rule's notes under its buttons, where the captain edits them, saves them, clears them (an empty version) and reads earlier versions with who wrote each, all by keyboard (`inf:automation:notes`, `inf:automation:notes-save`).
+The sheet reads only the newest version, and Earlier versions reads every version only while it is open, since versions are never pruned.
+A captain's save leaves an operation and an Activity line, as every catalog change does; a rule itself carries no notes, so a view on an older build reads rules unchanged.
+The notes are the rule's own page, not knowledge: they reach only the rule's own crewmates, never the knowledge graph, the first mate or standing directions.
+
 ## History and retention
 
 `schedule_runs` keeps each rule's settled runs - handled, cancelled or sent - for 30 days and at most 1,000 per rule; a delivery still waiting stays until it settles.

@@ -190,6 +190,15 @@ export class TaskCapture {
     );
   }
 
+  /** Where this task's own work began, when it saved an origin (INF-2326): an automation, a click or a report. */
+  savedOrigin(id: string): SavedOrigin | undefined {
+    for (const event of this.writer.events.listFor(id)) {
+      const saved = savedOriginOf(event);
+      if (saved) return saved;
+    }
+    return undefined;
+  }
+
   /** The task whose crewmate's report this task's work came from, when it saved one (INF-2326). */
   reportOrigin(id: string): string | undefined {
     for (const event of this.writer.events.listFor(id)) {

@@ -1,6 +1,12 @@
 import type { AccountView } from "./accounts";
 import type { ChosenFile, DroppedPath } from "./attachments";
-import type { AutomationList, AutomationRule, AutomationSave, AutomationSpec } from "./automation";
+import type {
+  AutomationList,
+  AutomationNotes,
+  AutomationRule,
+  AutomationSave,
+  AutomationSpec,
+} from "./automation";
 import type { BatchAnswer } from "./batches";
 import type { CardFileSaved } from "./cardFiles";
 import type {
@@ -274,6 +280,8 @@ export type FirstmateApi = {
     save: (rule: AutomationSave) => Promise<AutomationRule>;
     /** Pause, or resume at the next future occurrence. */
     setState: (id: string, change: "pause" | "resume") => Promise<AutomationRule>;
+    /** The captain's edit or clear of a rule's notes; makes no new revision. */
+    saveNotes: (id: string, text: string) => Promise<AutomationNotes | null>;
     pauseAll: () => Promise<{ paused: number }>;
     delete: (id: string) => Promise<{ id: string }>;
   };

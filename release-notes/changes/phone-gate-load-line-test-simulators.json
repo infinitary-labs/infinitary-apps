@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-gate-load-line-test-simulators",
+      "reason": "Test only: the phone gate's load-line test names how many simulated devices the gate runs, so its expected needs no longer depend on the Mac that runs it; nothing a person sees changes."
+    }
+  ]
+}

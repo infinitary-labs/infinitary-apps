@@ -22,10 +22,10 @@ export const repoRoot = resolve(__dirname, "../..");
 /** The task commands the app puts first on a task shell's PATH. */
 export const axiBin = join(repoRoot, "resources", "axi-bin");
 
-/** What a kind's declaration holds in the line. */
-export const declared = (kind: HeavyRunKind) => ({
-  cpu: HEAVY_RUN_NEEDS[kind].processors,
-  memoryBytes: HEAVY_RUN_NEEDS[kind].memoryMib * 1024 ** 2,
+/** What a kind's declaration holds in the line: its default needs, or the needs a run of it asked. */
+export const declared = (kind: HeavyRunKind, needs = HEAVY_RUN_NEEDS[kind]) => ({
+  cpu: needs.processors,
+  memoryBytes: needs.memoryMib * 1024 ** 2,
 });
 
 /**

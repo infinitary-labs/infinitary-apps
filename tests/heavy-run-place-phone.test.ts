@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { heavyRunWords } from "../scripts/heavy-run-place";
+import { heavyRunWords, phoneRunNeeds } from "../scripts/heavy-run-place";
 import { computerLines, declared, start } from "./helpers/heavyRunLine";
 import { scratchDir } from "./helpers/scratchDirs";
 
@@ -12,8 +12,11 @@ import { scratchDir } from "./helpers/scratchDirs";
  * is on the Mac lane's list (scripts/mac-unit-tests.ts).
  * Fixture: the real task channel, command processes and native wrappers over
  * a disposable line with no reading, so the gate never leaves the line's wait.
- * Failure: a gate that skips the line, declares other needs, starts building
- * before admission, or keeps its place after its group is stopped fails here.
+ * The gate names how many simulated devices it runs at once: left out, it
+ * sizes them to the Mac it runs on (INF-4241 piece 3), and its needs with it.
+ * Failure: a gate that skips the line, declares other needs than the
+ * simulated devices it runs, starts building before admission, or keeps its
+ * place after its group is stopped fails here.
  */
 // The line looks for ended groups on its two-second cadence; the budget
 // covers that boundary and the channel's start.
@@ -27,10 +30,20 @@ describe.runIf(process.platform === "darwin")(
     it("a local phone gate asks with its declared needs before it builds anything, and leaves the line when stopped while it waits", async () => {
       const { shell, runs } = await computerLine();
       const evidence = scratchDir("infinitary-heavy-phone-evidence-");
+      // The iPhone and the iPad, one simulated device each at once.
+      const simulators = 2;
+      const needs = phoneRunNeeds(simulators);
       // A shell's job: the gate leads a process group of its own.
       const gate = start(
         process.execPath,
-        ["scripts/test-phone.ts", "--both", "--evidence", evidence],
+        [
+          "scripts/test-phone.ts",
+          "--both",
+          "--simulators",
+          `${simulators}`,
+          "--evidence",
+          evidence,
+        ],
         { ...shell("phone"), INFINITARY_CHECKS: "local" },
         true,
       );
@@ -38,12 +51,12 @@ describe.runIf(process.platform === "darwin")(
       try {
         await expect
           .poll(runs)
-          .toEqual([{ taskId: "phone", state: "waiting", demand: declared("phone") }]);
+          .toEqual([{ taskId: "phone", state: "waiting", demand: declared("phone", needs) }]);
         // The whole group stops with no chance to close its place, as when the app quits.
         process.kill(group, "SIGKILL");
         await gate.exited;
         await expect.poll(runs).toEqual([]);
-        expect(gate.output()).toContain(heavyRunWords.asking("phone"));
+        expect(gate.output()).toContain(heavyRunWords.asking("phone", needs));
         expect(gate.output()).not.toContain("xcodebuild");
       } finally {
         try {

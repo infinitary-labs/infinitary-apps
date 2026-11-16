@@ -71,6 +71,14 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       step.run?.startsWith("node scripts/release-notes.ts change "),
     );
     expect(notes).toBeDefined();
+    // INF-4500's weekly audit, addition 4 (the captain's choice: "Flag a
+    // contract change that breaks phone views"): the flag reads the change
+    // from its base and never fails the check.
+    const phoneFlag = gate.find((step) =>
+      step.run?.startsWith("node scripts/phone-contract-flag.ts "),
+    );
+    expect(phoneFlag?.run).toBe('node scripts/phone-contract-flag.ts --base "$CHANGE_BASE"');
+    expect(phoneFlag?.["continue-on-error"]).toBeFalsy();
     // INF-2915's plan: the paths step decides the build, the browser tests
     // and the critical path (scripts/pr-paths.ts).
     const paths = gate.find((step) => step.id === "paths");
@@ -105,7 +113,18 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     const skips = gate.find((step) => step.run?.startsWith("node scripts/untagged-skips.ts "));
     const evidence = gate.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
     for (const step of [build, desktop, criticalPath, skips, evidence]) expect(step).toBeDefined();
-    const gated = [base, notes, paths, reach, chromium, browser, adherence, build, desktop];
+    const gated = [
+      base,
+      notes,
+      phoneFlag,
+      paths,
+      reach,
+      chromium,
+      browser,
+      adherence,
+      build,
+      desktop,
+    ];
     gated.push(criticalPath, skips);
     for (const [id, job] of Object.entries(ci.jobs)) {
       expect(job.needs, id).toBeUndefined();
@@ -167,6 +186,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
           ? [
               `base=$(git merge-base ${from} HEAD)\necho "CHANGE_BASE=$base" >> "$GITHUB_ENV"`,
               notes?.run,
+              phoneFlag?.run,
               paths?.run,
               install,
             ]

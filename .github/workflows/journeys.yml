@@ -37,6 +37,10 @@ on:
         description: Run every named journey on the Mac too, not only its tests that need a Mac
         type: boolean
         default: false
+      mac_once:
+        description: Run each edited named journey once on the Mac too, every test, beside the rounds of its tests that need a Mac
+        type: boolean
+        default: false
       starve:
         description: Run the chosen Mac journeys under the load controller (scripts/starve-check.py)
         type: boolean
@@ -279,7 +283,9 @@ jobs:
         env:
           NAMED: ${{ inputs.files }}
           PLATFORMS: ${{ inputs.platforms || 'linux' }}
-          EVERY: ${{ inputs.mac_all && '--every-on-mac' || '' }}
+          # mac_once places every named file on the Mac too, so an edited
+          # journey with no test that needs a Mac still has its Mac round.
+          EVERY: ${{ (inputs.mac_all || inputs.mac_once) && '--every-on-mac' || '' }}
       - uses: actions/upload-artifact@v4
         with:
           name: journey-placement
@@ -360,7 +366,8 @@ jobs:
         name: Build, then run the chosen journeys
         # --no-deps: the desktop lane is the other lanes' teardown and a
         # teardown project ignores the file filter (docs/testing.md). ONLY
-        # keeps the tests tagged MAC_ONLY_TAG; Linux runs the rest. After the
+        # keeps the tests tagged MAC_ONLY_TAG; Linux runs the rest, and with
+        # mac_once each edited file's other tests run once here too. After the
         # rounds pass, each later test of a directly edited file that shares
         # one app runs by itself (scripts/journey-runs.ts, INF-2340).
         # The run ends at 75 minutes and the command at 90 (INF-1083, the
@@ -371,13 +378,17 @@ jobs:
           pnpm build
           if [ "$STARVE" = true ]; then
             # The requested load experiment has its own limit (docs/testing.md, "Journeys on request").
-            python3 scripts/starve-check.py --timeout 900 -- node scripts/journey-runs.ts --base "$BASE" --files "$FILES" --alone-out playwright-report/alone $ALONE_TAG -- $ONLY
+            python3 scripts/starve-check.py --timeout 900 -- node scripts/journey-runs.ts --base "$BASE" --files "$FILES" $ONCE --alone-out playwright-report/alone $ALONE_TAG -- $ONLY
           else
-            node scripts/journey-runs.ts --base "$BASE" --files "$FILES" --alone-out playwright-report/alone $ALONE_TAG -- $ONLY
+            node scripts/journey-runs.ts --base "$BASE" --files "$FILES" $ONCE --alone-out playwright-report/alone $ALONE_TAG -- $ONLY
           fi
         env:
           BASE: ${{ inputs.base || 'origin/main' }}
-          ONLY: ${{ !inputs.mac_all && '--grep @mac-only' || '' }}
+          # With mac_once a named file may hold no test that needs a Mac, so
+          # its tagged rounds pass with none (INF-4500, addition 3).
+          ONLY: ${{ !inputs.mac_all && (inputs.mac_once && '--grep @mac-only --pass-with-no-tests' || '--grep @mac-only') || '' }}
+          # Each edited file's other tests once, after its tagged rounds.
+          ONCE: ${{ inputs.mac_once && !inputs.mac_all && '--edited-once-except @mac-only' || '' }}
           # The edited files' run-alone pass keeps the same tests (INF-2340).
           ALONE_TAG: ${{ !inputs.mac_all && '--alone-tag @mac-only' || '' }}
           STARVE: ${{ inputs.starve }}

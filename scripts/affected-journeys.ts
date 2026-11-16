@@ -14,6 +14,7 @@ import { callsMethod, changedMessages, PRELOAD } from "./window-messages.ts";
  *   node scripts/affected-journeys.ts [--base <ref>] [--head <ref>] [--json]
  *   node scripts/affected-journeys.ts --plan [--ran "<successful run files>"]
  *   node scripts/affected-journeys.ts --named "<journey> <journey>" [--json]
+ *   node scripts/affected-journeys.ts --request [--base <ref>] [--json]
  *
  * prints the spec files, one per line (or a JSON object with the reason for
  * each), and exits 0 whether or not any file is affected. A journey is
@@ -813,6 +814,27 @@ export function select({
   return reasons;
 }
 
+/**
+ * The journeys a task branch requests (docs/testing.md, "What a task branch
+ * requests"; INF-4500's weekly audit, addition 2, the captain's choice
+ * "Journeys that import a changed file"): each journey the change edits, and
+ * each one that directly imports a changed product module (rule 12, a hub
+ * module aside) or a changed scenario under `tests/e2e/scenarios/`. The
+ * rest of the selection waits for the swept batch.
+ */
+export function requested(reasons: Reasons): Reasons {
+  const asks = (why: string) =>
+    why === "the change edits this journey" ||
+    why.startsWith("directly imports ") ||
+    new RegExp(`^imports ${E2E}/scenarios/\\S+, which the change edits$`).test(why);
+  return new Map(
+    [...reasons].flatMap(([spec, whys]) => {
+      const kept = whys.filter(asks);
+      return kept.length ? [[spec, kept] as const] : [];
+    }),
+  );
+}
+
 export function affected(base: string, head: string): Reasons {
   const changed = git(["diff", "--name-only", `${base}...${head}`])
     .split("\n")
@@ -875,9 +897,10 @@ function main(): void {
     const at = args.indexOf(flag);
     return at >= 0 ? (args[at + 1] ?? fallback) : fallback;
   };
-  const reasons = args.includes("--named")
+  const chosen = args.includes("--named")
     ? named(value("--named", ""))
     : affected(value("--base", "origin/main"), value("--head", "HEAD"));
+  const reasons = args.includes("--request") ? requested(chosen) : chosen;
   const files = [...reasons.keys()].sort();
   if (args.includes("--plan") || args.includes("--ran")) {
     const ran = args.includes("--ran") ? declaredJourneys(value("--ran", "")) : [];

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "pr-check-audit-additions",
+      "reason": "Adds checks to how the project's own changes are checked before merge - two lints, a test reach, a phone contract flag and a wider journey request - with no change to the app."
+    }
+  ]
+}

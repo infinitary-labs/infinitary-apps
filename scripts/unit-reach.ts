@@ -31,7 +31,7 @@ export function unitFiles(root: string): string[] {
     .sort();
 }
 
-/** Explicit indirect contracts from the accepted weekly audit (INF-3262). */
+/** Explicit indirect contracts from the accepted weekly audits (INF-3262, INF-4500). */
 const CONTRACT_DEPENDENCIES: ReadonlyArray<{
   owns: (path: string) => boolean;
   readers: readonly string[];
@@ -86,6 +86,15 @@ const CONTRACT_DEPENDENCIES: ReadonlyArray<{
   {
     owns: (path) => path === "src/shared/providers.ts",
     readers: ["src/core/claude/claudeClassifierSession.integration.test.ts"],
+  },
+  // The alpha's build-list test walks the desktop build's imports into
+  // scripts/ and refuses a script the build reaches that the alpha's list of
+  // what it builds from leaves out: a new build script missing from that list
+  // passed its pull request check and failed the alpha cut (INF-4500's weekly
+  // audit, addition 6).
+  {
+    owns: (path) => path.startsWith("scripts/"),
+    readers: ["tests/release-workflows-alpha-cut.test.ts"],
   },
 ];
 

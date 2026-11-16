@@ -127,6 +127,23 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       "",
       "--every-on-mac",
     ]);
+    // INF-4500's weekly audit, addition 3 (the captain's choice: "One Mac
+    // round for each edited journey"): mac_once places every named file on
+    // the Mac, keeps its tagged rounds passing where a file holds no tagged
+    // test, and runs each edited file's other tests once after them.
+    expect(journeys.on.workflow_dispatch.inputs.mac_once?.default).toBe(false);
+    expect(every({ mac_once: true })).toBe("--every-on-mac");
+    expect(only({ files: "secrets", mac_once: true })).toBe(
+      `--grep ${MAC_ONLY_TAG} --pass-with-no-tests`,
+    );
+    const once = (inputs: Record<string, unknown>) =>
+      workflowString(mac?.env?.ONCE ?? "", { inputs });
+    expect([once({}), once({ mac_once: true }), once({ mac_once: true, mac_all: true })]).toEqual([
+      "",
+      `--edited-once-except ${MAC_ONLY_TAG}`,
+      "",
+    ]);
+    for (const command of commands) expect(command).toContain(`--files "$FILES" $ONCE --alone-out`);
 
     const verify = loadYamlFile(".github/workflows/verify.yml") as {
       on: Record<

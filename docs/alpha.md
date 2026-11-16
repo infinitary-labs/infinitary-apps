@@ -466,6 +466,7 @@ A phone build keeps changing things on a release when the release's view floor r
   A build Apple once confirmed stays enough, and the job does not ask Apple whether it is still on TestFlight (the captain's "A past success is enough").
   A major that kept views leaves the build already on TestFlight enough, so the alpha waits for nothing.
   After a major that broke views, the release crewmate dispatches `ios-release.yml` from main first, with the next phone version, and dispatches the alpha once its availability job has passed.
+  The change that moves the major or the view floor is flagged earlier, by its branch check's phone contract flag, and its story carries that phone build as an after-merge step (`docs/testing.md`, "What a pull request runs").
 - **Stable.**
   The phone job asks Apple which phone build is live in the App Store and waits for one that keeps changing things on the stable.
   Until Apple shows that a version of Infinitary was ever released in the App Store, a stable waits for no phone.

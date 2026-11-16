@@ -11,7 +11,8 @@ import { jobCores } from "./job-cores.ts";
  * lints here too): Biome on only the files this branch changed, the adherence
  * lint on its renderer files, every node script `pnpm check` runs (the
  * project lints and the generated-file checks), the release-notes check the
- * pull request runs first, and the whole-project typecheck. Together they take
+ * pull request runs first, the phone contract flag, and the whole-project
+ * typecheck. Together they take
  * seconds, so they run side by side, as many at once as the job has cores, and
  * print in order. It is not gated by CI mode, so the Mac mini can
  * run it; the full lint and the typecheck also stay in the pull request's
@@ -167,6 +168,13 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       args: ["scripts/release-notes.ts", "change", "--base", base],
     });
   else console.log("check:changed: no commit since main yet, so the release-notes check waits");
+  // The phone contract flag, which names the phone build a moved major or
+  // view floor needs before the next alpha; it prints and never fails.
+  steps.push({
+    label: "phone contract",
+    command: "node",
+    args: ["scripts/phone-contract-flag.ts", "--base", base],
+  });
   // Called directly, not through `pnpm typecheck`, which CI mode refuses.
   steps.push({ label: "typecheck", command: "node", args: ["scripts/typecheck.ts", "--pretty"] });
   const results = await sideBySide(steps, jobCores(), run);

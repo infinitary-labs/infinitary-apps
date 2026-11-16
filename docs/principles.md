@@ -97,6 +97,8 @@ The full-check Mac lane runs only the tests that need it, in the run on `main` t
 The captain's later INF-2273 ruling makes edited unit-file proof an explicit local exception: every changed unit file gets ordinary coverage plus two more locally, including portable files, without duplicate PR CI repeat jobs; the pull request's build check runs each edited file once on Linux, as Linux runs every test it can.
 A journey that needs a Mac carries `MAC_ONLY_TAG` (`tests/e2e/tags.ts`): it skips on Linux, or it has a step only a Mac runs.
 A unit test that needs a Mac is a file of the reviewed list in `scripts/mac-unit-tests.ts` (`docs/test-cohorts.md`).
+The captain's INF-4500 choice, "One Mac round for each edited journey", bends the rule for an edited journey only: a request for it runs every test of it once on the Mac as well, since eight later failures in one week were edited journeys that passed on Linux and failed on the Mac.
+The Mac's full-check lane, main's run and every other journey keep the rule.
 
 Three checks hold the rule for journeys, so it does not wear away:
 

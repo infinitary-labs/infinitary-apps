@@ -11,6 +11,7 @@ import {
   JOURNEY_SELECTION_CAP,
   named,
   ownedHooks,
+  requested,
   select,
   selectionCoverage,
   standInAreas,
@@ -1034,5 +1035,38 @@ describe("complete journey selection", () => {
     expect(partial.run).toEqual([...long].sort());
     expect(partial.missing).toEqual(actualSpecs.slice(long.length).sort());
     expect(selectionCoverage(long, actualSpecs, actualSpecs).missing).toEqual([]);
+  });
+
+  // INF-4500's weekly audit, addition 2 (the captain's choice: "Journeys that
+  // import a changed file"): a task branch requests each journey it edits and
+  // each that directly imports a changed product module or scenario. Two of
+  // the week's late failures, on the real journeys and files: INF-4199 changed
+  // src/shared/vocabulary.ts, which request-merge imports, and INF-4343 changed
+  // the agents-reach scenario.
+  it("requests the edited journeys and those that import a changed module or scenario", () => {
+    const readReal = (file: string) => {
+      try {
+        return readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
+      } catch {
+        return undefined;
+      }
+    };
+    const pick = (changed: string[]) => [
+      ...requested(select({ changed, sourceDiff: "", specs: currentSpecs, read: readReal })).keys(),
+    ];
+    expect(pick(["src/shared/vocabulary.ts"])).toContain("tests/e2e/request-merge.spec.ts");
+    expect(pick(["tests/e2e/scenarios/agentsReach.ts"])).toContain(
+      "tests/e2e/agents-reach.spec.ts",
+    );
+    expect(pick(["tests/e2e/secrets.spec.ts"])).toEqual(["tests/e2e/secrets.spec.ts"]);
+    // A journey selected only by a word, a hook or a fallback row waits for the swept batch.
+    const reasons = new Map([
+      [
+        "tests/e2e/request-merge.spec.ts",
+        ["reads data-inf-merge, which the change adds or removes"],
+      ],
+      ["tests/e2e/devices.spec.ts", ["targeted fallback for src/core/devices/remoteLogin.ts"]],
+    ]);
+    expect([...requested(reasons).keys()]).toEqual([]);
   });
 });

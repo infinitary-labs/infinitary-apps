@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { aloneArguments, journeyRounds, runJourneyRounds } from "../scripts/journey-runs.ts";
+import {
+  aloneArguments,
+  editedOnceArguments,
+  journeyRounds,
+  runJourneyRounds,
+} from "../scripts/journey-runs.ts";
+import { MAC_ONLY_TAG } from "./e2e/tags.ts";
 
 // INF-2259 approved hybrid process: ordinary selected proof counts as round
 // one, and directly edited selected journey files need only two more.
@@ -60,6 +66,32 @@ describe("the edited journeys' run-alone pass", () => {
         "src/core/devices/computerUpdate.ts",
         "tests/e2e/latency.check.spec.ts",
       ]),
+    ).toBeUndefined();
+  });
+
+  // INF-4500's weekly audit, addition 3 (the captain's choice: "One Mac round
+  // for each edited journey"): the secrets journey's edits passed Linux and
+  // failed later on the Mac. A request names the edited journey and one that
+  // only imports a changed file; the Mac runs every test of the edited one once.
+  it("runs each edited journey once on the Mac, every test but the tagged ones its rounds ran", () => {
+    const named = ["tests/e2e/secrets.spec.ts", "tests/e2e/now-panel.spec.ts"];
+    const changed = ["tests/e2e/secrets.spec.ts", "src/main/host/darwinKeychain.ts"];
+    expect(editedOnceArguments(named, changed, MAC_ONLY_TAG)).toEqual([
+      "exec",
+      "playwright",
+      "test",
+      "--no-deps",
+      "--retries",
+      "0",
+      "--max-failures",
+      "1",
+      "--grep-invert",
+      MAC_ONLY_TAG,
+      "--pass-with-no-tests",
+      "tests/e2e/secrets.spec.ts",
+    ]);
+    expect(
+      editedOnceArguments(named, ["src/main/host/darwinKeychain.ts"], MAC_ONLY_TAG),
     ).toBeUndefined();
   });
 });

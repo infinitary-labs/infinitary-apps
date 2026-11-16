@@ -229,6 +229,21 @@ describe("local direct unit reach", () => {
     expect(directUnitReach(["src/core/orchestrator/starts.ts", feed], pins, root)).toEqual([]);
   });
 
+  // INF-4500's weekly audit, addition 6, which the captain chose ("The alpha's
+  // build-list test for script changes"): a change gave the message generator
+  // a new shared error printer, which the desktop build reaches, without the
+  // alpha's build list, and the alpha cut failed. Its scripts, as it had them.
+  it("routes the alpha's build-list test to the PR check for a change under scripts/", () => {
+    const buildList = "tests/release-workflows-alpha-cut.test.ts";
+    const scripts = ["scripts/generate-messages.ts", "scripts/github-errors.ts"];
+    expect(directUnitReach(scripts, [buildList], root)).toEqual([buildList]);
+    expect(selectLinuxReach(scripts, root).run).toContain(buildList);
+    // App code outside scripts/ does not select it.
+    expect(directUnitReach(["src/shared/voice.ts"], [buildList], root)).toEqual([]);
+    // An edited build-list test keeps its own three rounds.
+    expect(directUnitReach([...scripts, buildList], [buildList], root)).toEqual([]);
+  });
+
   // Two changes passed their pull request checks and failed the merge batch on
   // a Claude test that reaches them only through another file. Each change's
   // product files, as its pull request had them when the batch ran.

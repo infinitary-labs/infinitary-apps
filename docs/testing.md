@@ -50,7 +50,7 @@ Record the version, selection reasons, files or parts, required platforms or dev
   A data file a module imports, such as a runbook's JSON in `src/core/pi/piResources.ts` or a stylesheet read as text, is part of that module's text, so a test that imports that module directly reads the data directly too (INF-2426).
   Served text, a runbook under `resources/runbooks/` or the generated runbook fallback `src/core/runbooks/fallback.generated.ts`, is carried the same way, so a change to it selects the tests that import `src/core/pi/piResources.ts`, among them the crew prompt's budget test and the prompt contract tests (INF-2925).
   A test naming a folder that holds a runbook, as the runbook loaders' tests do, reads that runbook too.
-  Audited indirect contracts have explicit links in `scripts/unit-reach.ts`: channel definitions select the action and IPC inventories, `src/core/storage/migrations.ts` selects the decision, inbox and keep-open migration tests, `src/core/tasks/taskService.ts` selects the settle boundary test, `src/core/orchestrator/wakes.ts` and its `*Wakes.ts` word modules select the four wake words pins (INF-3614), `src/core/orchestrator/seat.ts` and `src/core/pi/piResources.ts` select the two Claude session contract tests, which pin the seat's prompt and contract stamp through `tests/helpers/sessionContract.ts`, and `src/shared/providers.ts` selects the Claude classifier test, whose scoring process loads it under plain Node.
+  Audited indirect contracts have explicit links in `scripts/unit-reach.ts`: channel definitions select the action and IPC inventories, `src/core/storage/migrations.ts` selects the decision, inbox and keep-open migration tests, `src/core/tasks/taskService.ts` selects the settle boundary test, `src/core/orchestrator/wakes.ts` and its `*Wakes.ts` word modules select the four wake words pins (INF-3614), `src/core/orchestrator/seat.ts` and `src/core/pi/piResources.ts` select the two Claude session contract tests, which pin the seat's prompt and contract stamp through `tests/helpers/sessionContract.ts`, `src/shared/providers.ts` selects the Claude classifier test, whose scoring process loads it under plain Node, and any file under `scripts/` selects the alpha's build-list test, `tests/release-workflows-alpha-cut.test.ts`, which refuses a script the desktop build reaches that the alpha's build list leaves out (INF-4500).
   These links add no readers for unrelated changes and leave edited tests to their local rounds.
   An inventory test declares additional indirect files in an `inventoryFiles` literal array of project-relative file paths in its own test file, as `src/shared/actions.test.ts` does for its settings request schemas.
   A generated file's freshness test that reads its source only through the generator's path constant declares that source the same way, as `src/core/personal/infinitaryEnv.test.ts` does for `src/shared/personal/contracts.ts`.
@@ -253,6 +253,14 @@ Arguments after `--` go to Vitest in place of those, such as `pnpm coverage src/
 It sets no threshold and fails nothing for low coverage: the number is information, never a gate.
 A piece of a restructure measures the files it moves on untouched main, so its guardrail tests cover what the tests do not reach before it moves them.
 
+## Imports plain Node can load
+
+The project's scripts run under plain Node's type stripping, which loads a relative import only by its exact file name: `./catalog` fails there, where the test runner and the typecheck find `./catalog.ts`.
+`pnpm check` runs `node scripts/node-imports.ts`, which refuses a relative import without its file's extension in every file plain Node starts and every file their static imports reach (INF-4500).
+A file plain Node starts is one a `node` command names in `package.json`, a workflow, an action or a shell script, or a script a test starts with the running Node.
+A type-only import and a dynamic `import()` are not followed: Node erases the first, and a script may take the second only under another runner, such as the Vite module runner.
+`tests/node-imports.test.ts` holds it to the project and to a real script with one import's extension dropped.
+
 ## E2E scheduling and launch diagnostics
 
 The renderer and application lanes (`tests/e2e/lanes.ts`, `playwright.config.ts`) share two workers locally unless the caller passes `--workers`.
@@ -446,7 +454,7 @@ Where each journey runs:
 
 | Run | Linux | Mac |
 | --- | --- | --- |
-| A request for journeys (`journeys.yml`) | every named journey when `platforms=linux` or `both` | tagged tests when `platforms=mac` or `both`, or every test with `mac_all` |
+| A request for journeys (`journeys.yml`) | every named journey when `platforms=linux` or `both` | tagged tests when `platforms=mac` or `both`, every test of each edited named journey once more with `mac_once`, or every test with `mac_all` |
 | A requested full check (`verify.yml`) | every journey | every tagged test, or every journey with `all_journeys` |
 | The run on `main` (`main.yml`) | none | every tagged test |
 | The swept batch (`batch-checks.yml`), which an alpha from its merges reuses | every journey | every journey |
@@ -530,7 +538,7 @@ In CI mode these checks refuse to start outside CI and name their route on reque
 | The typecheck | `pnpm typecheck` | the pull request's `typecheck-lint-build` check; before a pull request, `ci.yml` on request |
 | The lint | `pnpm check`, `pnpm lint` and `pnpm lint:adherence` | the pull request's `typecheck-lint-build` check runs `pnpm check`; the adherence lint runs in `pnpm check:changed` and in `ci.yml` on request |
 
-A crewmate runs `pnpm check:changed` (`scripts/check-changed.ts`, INF-2588 fix 1) before every push, on a CI-mode computer or not: Biome on the files its branch changed, the design adherence lint on the changed renderer files, every node script `pnpm check` runs (its project lints and generated-file `--check` scripts, read from `package.json`), the pull request's release-notes check once the branch has a commit, and the whole-project typecheck.
+A crewmate runs `pnpm check:changed` (`scripts/check-changed.ts`, INF-2588 fix 1) before every push, on a CI-mode computer or not: Biome on the files its branch changed, the design adherence lint on the changed renderer files, every node script `pnpm check` runs (its project lints and generated-file `--check` scripts, read from `package.json`), the pull request's release-notes check once the branch has a commit, the phone contract flag ("What a pull request runs"), and the whole-project typecheck.
 They run side by side, as many at once as the job has cores (`scripts/job-cores.ts`), so a lint or a missing release note fails before the push instead of in the pull request's check.
 Started all at once they hold more memory than the two-processor Linux runner has beside the tests it runs.
 Biome is handed every changed file and its own configuration picks which of them it checks, as in the full lint, so the quick check keeps no list of file kinds of its own.
@@ -869,7 +877,8 @@ Status-only TestFlight requests start no phone or signing job.
 
 A change's version runs one check, `ci.yml`'s `typecheck-lint-build`, on the PC's PR line (INF-2915's plan, the captain's direction B with the light profile): each push of a task's branch starts it, and so does a pull request ("A pushed branch").
 Its steps keep what caught problems on pull requests and leave the rest to the swept batch, which runs everything on each approved change before it reaches `main` ("The swept batch").
-Every version runs the release notes check, the typecheck, `pnpm check`, each edited unit or integration test file and the unedited ones that read a changed file, once ("Notes").
+Every version runs the release notes check, the phone contract flag, the typecheck, `pnpm check`, each edited unit or integration test file and the unedited ones that read a changed file, once ("Notes").
+The phone contract flag, `scripts/phone-contract-flag.ts`, compares the contract's major and view floor in `src/shared/ipc.ts` with the change's base, and when either moved it names, as a warning that never fails the check, the phone build the next alpha waits for (`docs/alpha.md`, "The phone goes first"); `pnpm check:changed` prints the same before each push, and the change's story carries that build as an after-merge step (INF-4500).
 Its paths step, `scripts/pr-paths.ts`, reads the change against the merge commit's base parent and decides two things.
 The build and the critical path run unless every changed path is a test (under `tests/`, or a `.test` or `.spec` file), docs (`docs/`, `primitives/` or any Markdown file), a release note or the phone app (`ios/`).
 Every browser test runs only when a path is under `src/renderer/` or `tests/browser/`, or is a browser test helper (`tests/helpers/browser*`); otherwise the reader step runs the browser tests that import or read a changed file, such as those reading `src/shared/cards.ts` ("Notes").
@@ -892,27 +901,32 @@ A push of `main` or of a batch's own branch, `infinitary-batch/<id>`, starts not
 
 ### The weekly audit of the pull request check
 
-An Automation rule (`docs/automation.md`) asks the first mate every week to start a task in the Infinitary project that repeats INF-2915's audit, at the captain's request.
+An Automation rule (`docs/automation.md`) asks the first mate every week to start a task in the Infinitary project that repeats INF-2915's audit, at the captain's request, and since INF-4500 audits the failures that got past the pull request check too.
 The first mate saves the rule as a draft, and the captain turns it on in Settings → Automation:
 
 - Name: Weekly pull request check audit.
-- Schedule: every Monday at 9:00 AM, America/Los_Angeles.
+- Schedule: every Monday at 5:00 AM, America/Los_Angeles.
 - Project: Infinitary.
 - Prompt: "Start a task in Infinitary that runs the weekly audit of the pull request check in docs/testing.md ("The weekly audit of the pull request check") for the week up to {{scheduled time}}.
   It answers on a card and changes no code."
 
 The audit is an answer: its crewmate ships nothing, and its card is the deliverable.
-It runs four steps.
+It runs five steps.
 
 1. **The runs.**
-   It lists `ci.yml`'s pull request runs of the week and their jobs and steps, from where the last audit task ended or seven days back, and the swept batch's and main's runs of the same week.
+   It lists `ci.yml`'s pull request and branch push runs of the week and their jobs and steps, from where the last audit task ended or seven days back, and the swept batch's, main's and the alpha cut's runs of the same week.
 2. **The catches.**
-   For each failed step it reads the failure and counts a catch when a later version of the same pull request passed it or failed it the same way; anything else is the runner's own failure, counted apart.
+   For each failed step it reads the failure and counts a catch when a later version of the same change passed it or failed it the same way; anything else is the runner's own failure, counted apart.
    It counts, per step, its runs, its catches and its median and slow-tail minutes, and the wall time from a push to its last finished check.
 3. **The escapes.**
    It names each failure the swept batch or main found that a pull request step skipped by its paths would have caught, from the failed tests' paths and the change they came in.
-4. **The answer.**
-   Its card compares the counts with the last audit's report, names each step that caught nothing in the week and each escape, and offers any trim, or any step to restore, as a choice for the captain.
+4. **The late failures.**
+   It reads the log of every failed run of the swept batch, main's check and the alpha cut, and gives each one cause: a change's own fault, a flake with its owner, the runner or the host, or something else.
+   For each change's own fault it names the earliest pull request check that could have seen it and the smallest addition there, with what that addition costs per change, and it names the savings other tasks already own rather than proposing them again.
+5. **The answer.**
+   Its card compares the counts with the last audit's report, names each step that caught nothing in the week, each escape and each late failure by its earliest catch, and offers any trim, any step to restore and any addition as a choice for the captain.
+
+The week's runs outgrow the 200 reads a task may make where the project lives, so the audit lists runs by date in pages of 20 or fewer, and reads each failed log through the run reader, which counts no reads against that limit.
 
 ## The critical path
 
@@ -930,13 +944,14 @@ A step that breaks fails the pull request, and is repaired at its owner; weakeni
 ## What a task branch requests
 
 A task branch's checks are the check each push of it runs ("A pushed branch"), the critical path included, and only the requests below (INF-2576, the captain's choices "a, the critical path and the edited journeys only; reached ones wait for the swept batch" and "A, write the rules and add the phone workflow guard").
+INF-4500's weekly audit widened the journey request with the captain's choices "Journeys that import a changed file" and "One Mac round for each edited journey": sixteen later failures in one week were journeys that directly import a changed file, and eight were edited journeys that passed on Linux and failed on the Mac.
 The swept batch runs every journey on Linux and the Mac, and the critical path, on each approved change before it reaches `main` ("The swept batch").
-So a journey the change only reaches is checked there, and a break found there sends the change back to its task.
+So a journey the change only reaches some other way, by a word, a hook, a helper or a fallback row, is checked there, and a break found there sends the change back to its task.
 
 | Check | A task branch requests it when | It requests |
 | --- | --- | --- |
-| Edited journeys | its change edits a journey file | `journeys.yml` with only the edited files, which run three rounds and then alone (`scripts/journey-runs.ts`); `platforms=mac` too only when an edited file holds a tagged test |
-| Reached journeys | never | nothing: they wait for the swept batch; a journey the batch sent the change back for is named again after its repair |
+| Edited and importing journeys | its change edits a journey file, or a journey directly imports a product module or a scenario under `tests/e2e/scenarios/` that the change edits | `journeys.yml` with the files `node scripts/affected-journeys.ts --request --base origin/main` lists: an edited file runs three rounds and then alone, an importing one once (`scripts/journey-runs.ts`); with an edited file, `platforms=both` and `mac_once: true`, so each edited file runs every test once on the Mac too, after the rounds of its tagged tests |
+| Other reached journeys | never | nothing: they wait for the swept batch; a journey the batch sent the change back for is named again after its repair |
 | The Linux sweep | never, outside a named exception ("When to request full verification") | `source-journeys.yml` with `suite: full`, task and reason |
 | The phone check | its change selects the phone gate ("Native phone checks") | `phone.yml` with `affected: "true"`, or named `parts`; every part only with `task` and `reason` |
 | The replay gate | its change touches a replay trigger (`docs/replay-harness.md`, "The gate") | `replay.yml` |
@@ -974,7 +989,7 @@ A failure there is retried the same way, and the whole affected selection then r
 ## Journeys on the pull request
 
 A pull request no longer starts `journeys.yml` (INF-2139, captain: "let's pull journeys and phone checks off PRs now"), and runs only the critical path ("The critical path").
-A crewmate requests only the journeys its change edits, and the journeys its change only reaches wait for the swept batch ("What a task branch requests").
+A crewmate requests the journeys its change edits and those that directly import a file it changes, and the other journeys its change reaches wait for the swept batch ("What a task branch requests").
 `node scripts/affected-journeys.ts --base origin/main` lists the journeys a change reaches, which tells its author what the swept batch will check.
 A whole selection is the swept batch's and main's, never pruned by hand (INF-2394 measure 2): `--plan` reads its route, a sweep above 40 files, and `--ran "<files>"` compares it with the files that ran, exiting nonzero on missing coverage.
 Neither is a task branch's duty, and no listed-versus-run record is kept for one.

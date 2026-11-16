@@ -14,6 +14,22 @@ export function journeyRounds(files: readonly string[], changed: readonly string
   return selected.length === 0 ? [] : [selected, ...(edited.length ? [edited, edited] : [])];
 }
 
+/** INF-4500's weekly audit, addition 3 (the captain's choice: "One Mac round
+ * for each edited journey"): after the rounds of a file's tests that need a
+ * Mac, each directly edited selected file runs once more on the Mac, every
+ * test but those carrying `tag`, which the rounds already ran. A file with
+ * no such test passes; none edited runs nothing.
+ */
+export function editedOnceArguments(
+  files: readonly string[],
+  changed: readonly string[],
+  tag: string,
+): string[] | undefined {
+  const edited = [...new Set(files)].filter((file) => changed.includes(file));
+  if (edited.length === 0) return undefined;
+  return journeyArguments(edited, ["--grep-invert", tag, "--pass-with-no-tests"]);
+}
+
 export function journeyArguments(files: readonly string[], extra: readonly string[] = []): string[] {
   return ["exec", "playwright", "test", "--no-deps", "--retries", "0", "--max-failures", "1", ...extra, ...files];
 }
@@ -63,14 +79,17 @@ function main(): void {
   if (changed === undefined) throw new Error("Cannot read the comparison for edited journey files.");
   const extra = args.includes("--") ? args.slice(args.indexOf("--") + 1) : [];
   const rounds = journeyRounds(files, changed);
+  const onceTag = value("--edited-once-except");
+  const once = onceTag ? editedOnceArguments(files, changed, onceTag) : undefined;
+  const planned = once ? [...rounds, files.filter((file) => changed.includes(file))] : rounds;
   const head = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
   const destination = process.env.PLAYWRIGHT_JSON_OUTPUT_FILE;
   const reports: Record<string, unknown>[] = [];
   const outcomes: { head: string; round: number; files: string[]; exit: number | null; reportPresent: boolean }[] = [];
-  const status = runJourneyRounds(rounds, (selected, round) => {
+  const status = runJourneyRounds(planned, (selected, round) => {
     const report = destination ? `${destination}.round-${round}.json` : undefined;
     console.log(JSON.stringify({ head, platform: process.platform, base: value("--base") || "origin/main", round, files: selected }));
-    const result = spawnSync("pnpm", journeyArguments(selected, extra), {
+    const result = spawnSync("pnpm", round > rounds.length && once ? once : journeyArguments(selected, extra), {
       stdio: "inherit",
       env: { ...process.env, ...(report ? { PLAYWRIGHT_JSON_OUTPUT_FILE: report } : {}) },
     });

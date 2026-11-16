@@ -60,6 +60,19 @@
   "cardFileSave": "保存",
   "cardFileSaved": "「ダウンロード」に {savedAs} として保存しました",
   "cardFileSaving": "保存中",
+  "cardFilesAll": {
+    "plural": "count",
+    "other": "{count}個のファイル"
+  },
+  "cardFilesMore": {
+    "plural": "count",
+    "other": "ほか{count}個のファイル"
+  },
+  "cardFilesPartlySaved": "{total}個中{saved}個を {folder} に保存しました。{name} は保存されませんでした: {why}",
+  "cardFilesSaveAll": "すべて保存",
+  "cardFilesSavedAll": "「ダウンロード」のフォルダ {folder} に保存しました",
+  "cardFilesShowAll": "すべて表示",
+  "cardFilesShowFewer": "表示を減らす",
   "cardHeadingAfter": "変更後",
   "cardHeadingBefore": "変更前",
   "cardHeadingWhatChanged": "変更内容",

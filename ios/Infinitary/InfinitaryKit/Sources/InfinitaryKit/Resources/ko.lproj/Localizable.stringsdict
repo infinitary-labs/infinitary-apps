@@ -87,6 +87,34 @@
       <string>· 작업 %1$ld개를 거쳐</string>
     </dict>
   </dict>
+  <key>cardFilesAll</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>파일 %1$ld개</string>
+    </dict>
+  </dict>
+  <key>cardFilesMore</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>파일 %1$ld개 더</string>
+    </dict>
+  </dict>
   <key>cardNoteQueued</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -673,6 +701,20 @@
       <string>ld</string>
       <key>other</key>
       <string>%2$@ · %3$@ · 작업 %1$ld개 거침</string>
+    </dict>
+  </dict>
+  <key>phoneCardFiles</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>이 카드에 파일이 %1$ld개 있습니다. 컴퓨터에서 저장하세요.</string>
     </dict>
   </dict>
   <key>phoneCardsReplyTooLong</key>

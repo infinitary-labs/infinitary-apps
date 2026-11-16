@@ -258,6 +258,11 @@
 "cardFileSave" = "保存";
 "cardFileSaved" = "「ダウンロード」に %1$@ として保存しました";
 "cardFileSaving" = "保存中";
+"cardFilesPartlySaved" = "%4$@個中%3$@個を %1$@ に保存しました。%2$@ は保存されませんでした: %5$@";
+"cardFilesSaveAll" = "すべて保存";
+"cardFilesSavedAll" = "「ダウンロード」のフォルダ %1$@ に保存しました";
+"cardFilesShowAll" = "すべて表示";
+"cardFilesShowFewer" = "表示を減らす";
 "cardHeadingAfter" = "変更後";
 "cardHeadingBefore" = "変更前";
 "cardHeadingWhatChanged" = "変更内容";

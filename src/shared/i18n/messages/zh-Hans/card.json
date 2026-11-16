@@ -60,6 +60,19 @@
   "cardFileSave": "保存",
   "cardFileSaved": "已保存到“下载”，名为 {savedAs}",
   "cardFileSaving": "正在保存",
+  "cardFilesAll": {
+    "plural": "count",
+    "other": "{count} 个文件"
+  },
+  "cardFilesMore": {
+    "plural": "count",
+    "other": "另外 {count} 个文件"
+  },
+  "cardFilesPartlySaved": "已将 {total} 个中的 {saved} 个保存到 {folder}。{name} 未保存：{why}",
+  "cardFilesSaveAll": "全部保存",
+  "cardFilesSavedAll": "已保存到“下载”中的文件夹 {folder}",
+  "cardFilesShowAll": "显示全部",
+  "cardFilesShowFewer": "收起",
   "cardHeadingAfter": "之后",
   "cardHeadingBefore": "之前",
   "cardHeadingWhatChanged": "改了什么",

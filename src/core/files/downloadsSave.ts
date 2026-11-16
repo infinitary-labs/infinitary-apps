@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { constants, createReadStream } from "node:fs";
 import { copyFile, link, mkdir, open, rm, stat } from "node:fs/promises";
 import { basename, extname, join } from "node:path";
-import type { CardFilePiece, CardFileSaved } from "@shared/cardFiles";
+import type { CardFilePiece, CardFileSaved, CardFilesSaved } from "@shared/cardFiles";
 
 /**
  * Saves a card's file for the captain into Downloads on the computer whose
@@ -121,4 +121,61 @@ export async function saveIntoDownloads(options: {
   } finally {
     await rm(part, { force: true });
   }
+}
+
+/** A folder name from a task's title: one name, without slashes, control characters or a leading dot. */
+export function downloadsFolderName(title: string): string {
+  return (
+    downloadsName(title.replace(/[\\/:]/g, "-"))
+      .slice(0, 120)
+      .trim() || "files"
+  );
+}
+
+/** One file of a card's Save all: its id on the card and how to read it a piece at a time. */
+export type SaveAllFile = { id: string; read: (offset: number) => Promise<CardFilePiece> };
+
+/**
+ * Save all on a card's files (docs/card-authoring.md, "Files for the
+ * captain"): every file into one new folder in Downloads, named for the
+ * task, taking `name (2)` and on when a folder or file of that name is
+ * there, so it never writes into an existing folder. Each file is saved and
+ * checked as a single Save is; one that cannot be saved is named with why,
+ * and the rest are still saved.
+ */
+export async function saveAllIntoDownloads(options: {
+  /** This computer's Downloads folder. */
+  folder: string;
+  /** The task's title, which names the new folder. */
+  name: string;
+  files: readonly SaveAllFile[];
+}): Promise<CardFilesSaved> {
+  const name = downloadsFolderName(options.name);
+  await mkdir(options.folder, { recursive: true });
+  let made: { savedAs: string; path: string } | undefined;
+  for (let n = 1; n <= NUMBERED_NAMES && !made; n++) {
+    const savedAs = n === 1 ? name : `${name} (${n})`;
+    const path = join(options.folder, savedAs);
+    try {
+      await mkdir(path);
+      made = { savedAs, path };
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    }
+  }
+  if (!made) throw new Error(`Downloads already holds too many folders named like ${name}.`);
+  const failed: CardFilesSaved["failed"] = [];
+  let saved = 0;
+  for (const file of options.files) {
+    try {
+      await saveIntoDownloads({ folder: made.path, read: file.read });
+      saved++;
+    } catch (error) {
+      failed.push({
+        id: file.id,
+        why: error instanceof Error && error.message ? error.message : String(error),
+      });
+    }
+  }
+  return { savedAs: made.savedAs, path: made.path, saved, failed };
 }

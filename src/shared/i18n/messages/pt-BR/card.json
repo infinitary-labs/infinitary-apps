@@ -64,6 +64,23 @@
   "cardFileSave": "Salvar",
   "cardFileSaved": "salvo em Downloads como {savedAs}",
   "cardFileSaving": "Salvando",
+  "cardFilesAll": {
+    "plural": "count",
+    "one": "{count} arquivo",
+    "many": "{count} arquivos",
+    "other": "{count} arquivos"
+  },
+  "cardFilesMore": {
+    "plural": "count",
+    "one": "Mais {count} arquivo",
+    "many": "Mais {count} arquivos",
+    "other": "Mais {count} arquivos"
+  },
+  "cardFilesPartlySaved": "{saved} de {total} salvos em {folder}. {name} não foi salvo: {why}",
+  "cardFilesSaveAll": "Salvar tudo",
+  "cardFilesSavedAll": "salvo em Downloads na pasta {folder}",
+  "cardFilesShowAll": "Mostrar tudo",
+  "cardFilesShowFewer": "Mostrar menos",
   "cardHeadingAfter": "Depois",
   "cardHeadingBefore": "Antes",
   "cardHeadingWhatChanged": "O que mudou",

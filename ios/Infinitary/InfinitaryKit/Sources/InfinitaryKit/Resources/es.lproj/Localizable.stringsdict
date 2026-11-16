@@ -111,6 +111,42 @@
       <string>· a través de %1$ld tareas</string>
     </dict>
   </dict>
+  <key>cardFilesAll</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld archivo</string>
+      <key>many</key>
+      <string>%1$ld de archivos</string>
+      <key>other</key>
+      <string>%1$ld archivos</string>
+    </dict>
+  </dict>
+  <key>cardFilesMore</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld archivo más</string>
+      <key>many</key>
+      <string>%1$ld de archivos más</string>
+      <key>other</key>
+      <string>%1$ld archivos más</string>
+    </dict>
+  </dict>
   <key>cardNoteQueued</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -865,6 +901,24 @@
       <string>%2$@ · %3$@ · a través de %1$ld de tareas</string>
       <key>other</key>
       <string>%2$@ · %3$@ · a través de %1$ld tareas</string>
+    </dict>
+  </dict>
+  <key>phoneCardFiles</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Esta tarjeta tiene %1$ld archivo. Guárdalo en una computadora.</string>
+      <key>many</key>
+      <string>Esta tarjeta tiene %1$ld de archivos. Guárdalos en una computadora.</string>
+      <key>other</key>
+      <string>Esta tarjeta tiene %1$ld archivos. Guárdalos en una computadora.</string>
     </dict>
   </dict>
   <key>phoneCardsReplyTooLong</key>

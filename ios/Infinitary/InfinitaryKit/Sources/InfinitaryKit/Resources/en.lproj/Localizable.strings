@@ -258,6 +258,11 @@
 "cardFileSave" = "Save";
 "cardFileSaved" = "saved in Downloads as %1$@";
 "cardFileSaving" = "Saving";
+"cardFilesPartlySaved" = "Saved %3$@ of %4$@ into %1$@. %2$@ was not saved: %5$@";
+"cardFilesSaveAll" = "Save all";
+"cardFilesSavedAll" = "saved in Downloads in the folder %1$@";
+"cardFilesShowAll" = "Show all";
+"cardFilesShowFewer" = "Show fewer";
 "cardHeadingAfter" = "After";
 "cardHeadingBefore" = "Before";
 "cardHeadingWhatChanged" = "What changed";

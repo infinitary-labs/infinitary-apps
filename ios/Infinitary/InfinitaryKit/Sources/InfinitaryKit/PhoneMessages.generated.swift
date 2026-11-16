@@ -269,6 +269,13 @@ public enum PhoneMessages {
     public static func `cardFileSave`() -> String { PhoneWords.format("cardFileSave", []) }
     public static func `cardFileSaved`(`savedAs`: String) -> String { PhoneWords.format("cardFileSaved", [`savedAs`]) }
     public static func `cardFileSaving`() -> String { PhoneWords.format("cardFileSaving", []) }
+    public static func `cardFilesAll`(`count`: Int) -> String { PhoneWords.format("cardFilesAll", [`count`]) }
+    public static func `cardFilesMore`(`count`: Int) -> String { PhoneWords.format("cardFilesMore", [`count`]) }
+    public static func `cardFilesPartlySaved`(`folder`: String, `name`: String, `saved`: String, `total`: String, `why`: String) -> String { PhoneWords.format("cardFilesPartlySaved", [`folder`, `name`, `saved`, `total`, `why`]) }
+    public static func `cardFilesSaveAll`() -> String { PhoneWords.format("cardFilesSaveAll", []) }
+    public static func `cardFilesSavedAll`(`folder`: String) -> String { PhoneWords.format("cardFilesSavedAll", [`folder`]) }
+    public static func `cardFilesShowAll`() -> String { PhoneWords.format("cardFilesShowAll", []) }
+    public static func `cardFilesShowFewer`() -> String { PhoneWords.format("cardFilesShowFewer", []) }
     public static func `cardHeadingAfter`() -> String { PhoneWords.format("cardHeadingAfter", []) }
     public static func `cardHeadingBefore`() -> String { PhoneWords.format("cardHeadingBefore", []) }
     public static func `cardHeadingWhatChanged`() -> String { PhoneWords.format("cardHeadingWhatChanged", []) }
@@ -1218,6 +1225,7 @@ public enum PhoneMessages {
     public static func `phoneAskedPicture`() -> String { PhoneWords.format("phoneAskedPicture", []) }
     public static func `phoneAskedSaid`() -> String { PhoneWords.format("phoneAskedSaid", []) }
     public static func `phoneCardBrowser`() -> String { PhoneWords.format("phoneCardBrowser", []) }
+    public static func `phoneCardFiles`(`count`: Int) -> String { PhoneWords.format("phoneCardFiles", [`count`]) }
     public static func `phoneCardNoAnswer`() -> String { PhoneWords.format("phoneCardNoAnswer", []) }
     public static func `phoneCardOpenBrowser`() -> String { PhoneWords.format("phoneCardOpenBrowser", []) }
     public static func `phoneCardRisk`() -> String { PhoneWords.format("phoneCardRisk", []) }
@@ -3581,6 +3589,13 @@ extension PhoneWords {
         "cardFileSave": [],
         "cardFileSaved": ["savedAs"],
         "cardFileSaving": [],
+        "cardFilesAll": ["count"],
+        "cardFilesMore": ["count"],
+        "cardFilesPartlySaved": ["folder", "name", "saved", "total", "why"],
+        "cardFilesSaveAll": [],
+        "cardFilesSavedAll": ["folder"],
+        "cardFilesShowAll": [],
+        "cardFilesShowFewer": [],
         "cardHeadingAfter": [],
         "cardHeadingBefore": [],
         "cardHeadingWhatChanged": [],
@@ -4530,6 +4545,7 @@ extension PhoneWords {
         "phoneAskedPicture": [],
         "phoneAskedSaid": [],
         "phoneCardBrowser": [],
+        "phoneCardFiles": ["count"],
         "phoneCardNoAnswer": [],
         "phoneCardOpenBrowser": [],
         "phoneCardRisk": [],
@@ -6633,6 +6649,8 @@ extension PhoneWords {
         "automationRunSkipped": "count",
         "cardAfterMergeWait": "count",
         "cardAskedThrough": "count",
+        "cardFilesAll": "count",
+        "cardFilesMore": "count",
         "cardNoteQueued": "count",
         "cardNoteSend": "count",
         "cardRecordFoldMessages": "count",
@@ -6675,6 +6693,7 @@ extension PhoneWords {
         "nowPanelSummaryWorking": "count",
         "phoneAddressSweeping": "count",
         "phoneAskedLabelThrough": "count",
+        "phoneCardFiles": "count",
         "phoneCardsReplyTooLong": "count",
         "phoneChecksCounted": "count",
         "phoneMediaPicturePosition": "count",

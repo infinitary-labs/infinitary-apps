@@ -1132,6 +1132,11 @@ private struct PhoneCardPane: View {
             if card.value["attachment"] != .null {
                 PhoneBrowserStrip(attachment: card.value["attachment"], session: session) { host.notice = PhoneMessages.phoneCardsDoThisOn(computer: session.mac.name) }
             }
+            // INF-4427: a card's files are saved on a computer, so the phone counts them and says where.
+            if !card.isPast, !card.value["files"].list.isEmpty {
+                Text(PhoneMessages.phoneCardFiles(count: card.value["files"].list.count))
+                    .font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("card-files-line")
+            }
             // A computer from before every note had its button still sends only an answer's Done here.
             if !card.isPast, card.value["noteDone"] == .null, let taskID = card.value["answerDone"]["taskId"].text {
                 Button(card.value["answerDone"]["label"].text ?? PhoneCardWords.done) {

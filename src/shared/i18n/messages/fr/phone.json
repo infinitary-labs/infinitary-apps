@@ -64,6 +64,12 @@
   "phoneAskedPicture": "Une image",
   "phoneAskedSaid": "Vous avez dit",
   "phoneCardBrowser": "Navigateur",
+  "phoneCardFiles": {
+    "plural": "count",
+    "one": "Cette carte contient {count} fichier. Enregistrez-le sur un ordinateur.",
+    "many": "Cette carte contient {count} fichiers. Enregistrez-les sur un ordinateur.",
+    "other": "Cette carte contient {count} fichiers. Enregistrez-les sur un ordinateur."
+  },
   "phoneCardNoAnswer": "aucune réponse",
   "phoneCardOpenBrowser": "Ouvrir le navigateur",
   "phoneCardRisk": "Risque",

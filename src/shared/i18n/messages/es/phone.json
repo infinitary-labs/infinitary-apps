@@ -64,6 +64,12 @@
   "phoneAskedPicture": "Una imagen",
   "phoneAskedSaid": "Dijiste",
   "phoneCardBrowser": "Navegador",
+  "phoneCardFiles": {
+    "plural": "count",
+    "one": "Esta tarjeta tiene {count} archivo. Guárdalo en una computadora.",
+    "many": "Esta tarjeta tiene {count} de archivos. Guárdalos en una computadora.",
+    "other": "Esta tarjeta tiene {count} archivos. Guárdalos en una computadora."
+  },
   "phoneCardNoAnswer": "sin respuesta",
   "phoneCardOpenBrowser": "Abrir navegador",
   "phoneCardRisk": "Riesgo",

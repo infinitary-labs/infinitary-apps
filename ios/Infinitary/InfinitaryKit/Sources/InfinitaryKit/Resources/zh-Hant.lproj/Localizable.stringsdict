@@ -87,6 +87,34 @@
       <string>· 經過 %1$ld 項任務</string>
     </dict>
   </dict>
+  <key>cardFilesAll</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%1$ld 個檔案</string>
+    </dict>
+  </dict>
+  <key>cardFilesMore</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>另外 %1$ld 個檔案</string>
+    </dict>
+  </dict>
   <key>cardNoteQueued</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -673,6 +701,20 @@
       <string>ld</string>
       <key>other</key>
       <string>%2$@ · %3$@ · 經過 %1$ld 項任務</string>
+    </dict>
+  </dict>
+  <key>phoneCardFiles</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>此卡片有 %1$ld 個檔案。請在電腦上儲存。</string>
     </dict>
   </dict>
   <key>phoneCardsReplyTooLong</key>

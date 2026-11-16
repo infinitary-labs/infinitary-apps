@@ -60,6 +60,10 @@
   "phoneAskedPicture": "사진",
   "phoneAskedSaid": "내가 말함",
   "phoneCardBrowser": "브라우저",
+  "phoneCardFiles": {
+    "plural": "count",
+    "other": "이 카드에 파일이 {count}개 있습니다. 컴퓨터에서 저장하세요."
+  },
   "phoneCardNoAnswer": "답 없음",
   "phoneCardOpenBrowser": "브라우저 열기",
   "phoneCardRisk": "위험도",

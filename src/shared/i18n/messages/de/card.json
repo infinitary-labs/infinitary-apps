@@ -62,6 +62,21 @@
   "cardFileSave": "Sichern",
   "cardFileSaved": "in „Downloads“ als {savedAs} gesichert",
   "cardFileSaving": "Wird gesichert",
+  "cardFilesAll": {
+    "plural": "count",
+    "one": "{count} Datei",
+    "other": "{count} Dateien"
+  },
+  "cardFilesMore": {
+    "plural": "count",
+    "one": "{count} weitere Datei",
+    "other": "{count} weitere Dateien"
+  },
+  "cardFilesPartlySaved": "{saved} von {total} in {folder} gesichert. {name} wurde nicht gesichert: {why}",
+  "cardFilesSaveAll": "Alle sichern",
+  "cardFilesSavedAll": "in „Downloads“ im Ordner {folder} gesichert",
+  "cardFilesShowAll": "Alle anzeigen",
+  "cardFilesShowFewer": "Weniger anzeigen",
   "cardHeadingAfter": "Nachher",
   "cardHeadingBefore": "Vorher",
   "cardHeadingWhatChanged": "Was sich geändert hat",

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { cardFilePieceSchema, cardFileSavedSchema } from "../cardFiles";
+import { cardFilePieceSchema, cardFileSavedSchema, cardFilesSavedSchema } from "../cardFiles";
 import { cardNotesSchema } from "../cardNotes";
 import {
   CARD_DATA_TYPE,
@@ -220,6 +220,20 @@ export const cardChannels = {
     surface: "host",
     request: z.tuple([z.string().min(1).max(256), z.string().min(1).max(128)]),
     response: cardFileSavedSchema,
+  },
+  // Save all on a card's files: every named file into one new folder in
+  // Downloads on the computer whose window asked, named for the task
+  // (docs/card-authoring.md, "Files for the captain"), each read through
+  // `inf:cards:file` and checked as a single Save is.
+  "inf:cards:save-files": {
+    effect: "change",
+    surface: "host",
+    request: z.tuple([
+      z.string().min(1).max(256),
+      z.array(z.string().min(1).max(128)).min(1),
+      z.string().min(1).max(1024),
+    ]),
+    response: cardFilesSavedSchema,
   },
   // A closed card as the captain last saw it (FI3-579 piece 2): a pure
   // read, null for a card that is open or unknown.

@@ -258,6 +258,11 @@
 "cardFileSave" = "Sichern";
 "cardFileSaved" = "in „Downloads“ als %1$@ gesichert";
 "cardFileSaving" = "Wird gesichert";
+"cardFilesPartlySaved" = "%3$@ von %4$@ in %1$@ gesichert. %2$@ wurde nicht gesichert: %5$@";
+"cardFilesSaveAll" = "Alle sichern";
+"cardFilesSavedAll" = "in „Downloads“ im Ordner %1$@ gesichert";
+"cardFilesShowAll" = "Alle anzeigen";
+"cardFilesShowFewer" = "Weniger anzeigen";
 "cardHeadingAfter" = "Nachher";
 "cardHeadingBefore" = "Vorher";
 "cardHeadingWhatChanged" = "Was sich geändert hat";

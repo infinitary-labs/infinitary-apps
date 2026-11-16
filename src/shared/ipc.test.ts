@@ -261,6 +261,8 @@ describe("ipc contract", () => {
       // A card's file saved into the Downloads of the computer whose window
       // the captain clicked Save in (docs/card-authoring.md, "Files for the captain").
       "inf:cards:save-file",
+      // Save all: every file of a card into one new folder in that computer's Downloads.
+      "inf:cards:save-files",
       "inf:devices:join",
       "inf:devices:join-at",
       "inf:devices:join-held",

@@ -1,6 +1,6 @@
 import { importChosenFile, inspectPath } from "@core/attachments";
 import type { BrowserViewer } from "@core/browser/browserViews";
-import { saveIntoDownloads } from "@core/files/downloadsSave";
+import { saveAllIntoDownloads, saveIntoDownloads } from "@core/files/downloadsSave";
 import type { HostCapabilities } from "@core/index";
 import { isAllowedOpenExternalUrl } from "@core/openExternal";
 import { writePrivateFile } from "@core/secrets/custody";
@@ -200,6 +200,17 @@ export function registerIpc(options: IpcOptions): void {
     saveIntoDownloads({
       folder: app.getPath("downloads"),
       read: (offset) => shell.dispatch("inf:cards:file", [cardId, fileId, offset]),
+    }),
+  );
+  // Save all: every file of the card into one new folder in Downloads, named for the task.
+  handleInvoke("inf:cards:save-files", rendererSource, (_event, cardId, fileIds, name) =>
+    saveAllIntoDownloads({
+      folder: app.getPath("downloads"),
+      name,
+      files: fileIds.map((fileId) => ({
+        id: fileId,
+        read: (offset: number) => shell.dispatch("inf:cards:file", [cardId, fileId, offset]),
+      })),
     }),
   );
 

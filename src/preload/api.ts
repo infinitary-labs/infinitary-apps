@@ -360,6 +360,10 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       log: (fileName) => invoke("inf:cards:log", fileName),
       saveFile: (cardId, fileId) =>
         readableRequest("inf:cards:save-file", () => invoke("inf:cards:save-file", cardId, fileId)),
+      saveFiles: (cardId, fileIds, name) =>
+        readableRequest("inf:cards:save-files", () =>
+          invoke("inf:cards:save-files", cardId, fileIds, name),
+        ),
       reply: (cardId, payload, submission) =>
         readableRequest("inf:cards:reply", () =>
           invoke("inf:cards:reply", cardId, payload, submission),

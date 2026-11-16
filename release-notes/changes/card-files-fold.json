@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "card-files-fold",
+      "kind": "improvement",
+      "title": "A card with many files keeps room for its words",
+      "body": "When a crewmate puts five or more files on its card, the card shows the first three and one row for the rest, so its words keep their room. Show all opens every file, and Save all puts them in one new folder in Downloads named for the task. On the phone, the card says how many files it has and to save them on a computer.",
+      "area": "cards",
+      "picture": {
+        "dark": "card-files-fold-dark.webp",
+        "light": "card-files-fold-light.webp",
+        "alt": "A crewmate's note showing three file rows with Save, then one row reading 13 more files with Show all and Save all, its words in full above"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

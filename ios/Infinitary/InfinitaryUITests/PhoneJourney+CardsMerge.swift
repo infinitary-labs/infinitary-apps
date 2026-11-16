@@ -304,7 +304,8 @@ extension PhoneJourney {
         XCTAssertEqual(state["open"] as? Bool, false)
     }
 
-    /// INF-1879: putting an answer aside never completes it; Done remains available on its record.
+    /// INF-1879: putting an answer aside never completes it; Done remains available on its record. INF-4427: the note's
+    /// files are counted on one line that says to save them on a computer.
     private func verifyAnswerDone() async throws {
         let fixture = try await home("answer-note-fixture")
         let title = try XCTUnwrap(fixture["title"] as? String)
@@ -315,6 +316,10 @@ extension PhoneJourney {
         XCTAssertTrue(noteDone.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertEqual(noteDone.label, "Done")
         XCTAssertTrue(app.webViews.staticTexts[try XCTUnwrap(fixture["answerText"] as? String)].waitForPresence(timeout: 10), app.debugDescription)
+        // INF-4427: the note's two files are counted on one line that says to save them on a computer; no row offers Save.
+        let filesLine = app.staticTexts["card-files-line"]
+        XCTAssertTrue(filesLine.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(filesLine.label, "This card has 2 files. Save them on a computer.")
         reveal(noteDone)
         tapOnPhone(app.buttons["put-aside-card"])
         XCTAssertTrue(cardHeading(title).waitForAbsence(timeout: 10), app.debugDescription)

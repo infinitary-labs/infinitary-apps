@@ -64,6 +64,23 @@
   "cardFileSave": "Enregistrer",
   "cardFileSaved": "enregistré dans Téléchargements sous le nom {savedAs}",
   "cardFileSaving": "Enregistrement",
+  "cardFilesAll": {
+    "plural": "count",
+    "one": "{count} fichier",
+    "many": "{count} fichiers",
+    "other": "{count} fichiers"
+  },
+  "cardFilesMore": {
+    "plural": "count",
+    "one": "{count} autre fichier",
+    "many": "{count} autres fichiers",
+    "other": "{count} autres fichiers"
+  },
+  "cardFilesPartlySaved": "{saved} sur {total} enregistrés dans {folder}. {name} n’a pas été enregistré : {why}",
+  "cardFilesSaveAll": "Tout enregistrer",
+  "cardFilesSavedAll": "enregistré dans Téléchargements, dans le dossier {folder}",
+  "cardFilesShowAll": "Tout afficher",
+  "cardFilesShowFewer": "Afficher moins",
   "cardHeadingAfter": "Après",
   "cardHeadingBefore": "Avant",
   "cardHeadingWhatChanged": "Ce qui a changé",

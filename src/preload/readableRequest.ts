@@ -91,6 +91,7 @@ export const REQUEST_COPY = {
   "inf:cards:act": { fallback: "Could not use this choice. Please try again.", prefix: "" },
   "inf:cards:reply": { fallback: "Could not send this reply. Please try again.", prefix: "" },
   "inf:cards:save-file": { fallback: "Could not save this file. Please try again.", prefix: "" },
+  "inf:cards:save-files": { fallback: "Could not save these files. Please try again.", prefix: "" },
   "inf:quota:refresh": {
     fallback: "Could not refresh your plan's allowance. Please try again.",
     prefix: "Could not refresh your plan's allowance: ",

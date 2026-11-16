@@ -263,13 +263,19 @@ A save never writes over a file: a file of the same content already under the na
 The home reads its own copy from the file's id alone, never from the recorded path, and a copy on a computer that runs work through the file orders (`CardFileReads`, `src/core/files/cardFileReads.ts`; `docs/files.md`, "Files on a card").
 The row then reads "saved in Downloads as" the name it took, or why it was not saved, in the words of the refusal without the window's transport wrapping (`readableRequest`, `src/preload/readableRequest.ts`).
 
+A card with one to four files draws a row for each; one with five or more folds (INF-4427): the first three in the crewmate's order, then one counting row reading how many more files there are and their total size, with Show all and Save all, so the folded strip is never taller than four rows.
+Show all opens every row in a list that scrolls after six rows, and the counting row stays below it, counting every file, with Show fewer and Save all; the toggle keeps the focus.
+The fold is display only: a crewmate may still hand any number of files, and a revision's new list folds again from its own count.
+Save all asks the window's own process (`inf:cards:save-files`, a host channel) to save every file into one new folder in Downloads named for the task's title, or `title (2)` and on when a folder or file of that name is there, so it never writes into an existing folder (`saveAllIntoDownloads`, `src/core/files/downloadsSave.ts`).
+Each file is read and checked as a single Save is; one that cannot be saved is named on the counting row with why, while the rest still land.
+
 A revision passes its files again, and its list replaces the card's; a revision with none draws none.
 Files ride only the crewmate's own task's card, never a contribution to someone else's, and never a saved-story card.
 The first mate's cards carry none.
 A past card draws no Save rows.
 A desktop older than major 16 whose hello does not list `card-files` gets the card without them (`legacyCardSnapshot`, `src/core/connection/connection.ts`), and a computer that runs work sends a card's files to every home it takes work from.
 The crewmate's instructions tell it to hand the captain files on its card only where its computer takes work on the home's own major, and the first mate's sends a file for the captain back to its card only while every computer that runs work does (`computersFor`, `everyComputerTakesCardFiles`, `src/core/orchestrator/taskPlacement.ts`).
-Saving on the phone is not built: the phone ignores the field.
+Saving on the phone is not built: the phone counts a card's files on one line under the body that says to save them on a computer, and draws no rows (`PhoneCards.swift`).
 
 ## The picture check
 

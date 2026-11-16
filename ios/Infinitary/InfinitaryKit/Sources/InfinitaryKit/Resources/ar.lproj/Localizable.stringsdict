@@ -147,6 +147,54 @@
       <string>· عبر %1$ld مهمة</string>
     </dict>
   </dict>
+  <key>cardFilesAll</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%1$ld ملف</string>
+      <key>one</key>
+      <string>ملف واحد</string>
+      <key>two</key>
+      <string>ملفان</string>
+      <key>few</key>
+      <string>%1$ld ملفات</string>
+      <key>many</key>
+      <string>%1$ld ملفًا</string>
+      <key>other</key>
+      <string>%1$ld ملف</string>
+    </dict>
+  </dict>
+  <key>cardFilesMore</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%1$ld ملف آخر</string>
+      <key>one</key>
+      <string>ملف آخر</string>
+      <key>two</key>
+      <string>ملفان آخران</string>
+      <key>few</key>
+      <string>%1$ld ملفات أخرى</string>
+      <key>many</key>
+      <string>%1$ld ملفًا آخر</string>
+      <key>other</key>
+      <string>%1$ld ملف آخر</string>
+    </dict>
+  </dict>
   <key>cardNoteQueued</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -1153,6 +1201,30 @@
       <string>%2$@ · %3$@ · عبر %1$ld مهمةً</string>
       <key>other</key>
       <string>%2$@ · %3$@ · عبر %1$ld مهمة</string>
+    </dict>
+  </dict>
+  <key>phoneCardFiles</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>في هذه البطاقة %1$ld ملف. احفظها على كمبيوتر.</string>
+      <key>one</key>
+      <string>في هذه البطاقة ملف واحد. احفظه على كمبيوتر.</string>
+      <key>two</key>
+      <string>في هذه البطاقة ملفان. احفظهما على كمبيوتر.</string>
+      <key>few</key>
+      <string>في هذه البطاقة %1$ld ملفات. احفظها على كمبيوتر.</string>
+      <key>many</key>
+      <string>في هذه البطاقة %1$ld ملفًا. احفظها على كمبيوتر.</string>
+      <key>other</key>
+      <string>في هذه البطاقة %1$ld ملف. احفظها على كمبيوتر.</string>
     </dict>
   </dict>
   <key>phoneCardsReplyTooLong</key>

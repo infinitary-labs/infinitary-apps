@@ -30,6 +30,42 @@ export const CARD_FILE_LETTER = {
 } as const;
 
 /**
+ * Marker prompt: the crewmate hands the captain the whole repair pack - the
+ * letter and four papers to send with it - which is more files than a card
+ * shows whole, so they fold behind a counting row with Save all (INF-4427).
+ */
+export const CARD_FILES_PACK_PROMPT_MARKER = "hand me the whole repair pack on the card";
+export const CARD_FILES_PACK_TITLE = "The repair pack for the landlord is ready";
+/** The pack in the crewmate's order: the letter first, then what goes with it. */
+export const CARD_FILES_PACK = [
+  CARD_FILE_LETTER,
+  {
+    path: "shots/repair-request-form.txt",
+    name: "repair-request-form.txt",
+    bytes: Buffer.from(
+      "Repair request\nFlat: 4\nWhat: boiler, no heating or hot water\nSince: Monday\n",
+    ),
+  },
+  {
+    path: "shots/boiler-pressure-gauge.txt",
+    name: "boiler-pressure-gauge.txt",
+    bytes: Buffer.from(
+      "Photo note: the boiler's pressure gauge reads 0 bar, below the green band.\n",
+    ),
+  },
+  {
+    path: "shots/tenancy-repairs-clause.txt",
+    name: "tenancy-repairs-clause.txt",
+    bytes: Buffer.from("Clause 7: the landlord keeps the heating and hot water in repair.\n"),
+  },
+  {
+    path: "shots/heating-log.csv",
+    name: "heating-log.csv",
+    bytes: Buffer.from("day,heating\nMonday,off\nTuesday,off\nWednesday,off\n"),
+  },
+] as const;
+
+/**
  * The letter crewmate: write the file, then show the card naming it in
  * `files`; after the card it passes on to the default close-out. It reads
  * the whole conversation, because a write can resume it from a wake.
@@ -52,6 +88,36 @@ export const cardFiles: Scenario =
               title: CARD_FILES_TITLE,
               body: "<p>The letter asks for the boiler to be looked at this week. Save it, then send it from your own mail.</p>",
               files: [CARD_FILE_LETTER.path],
+            },
+          },
+        ],
+      };
+    return undefined;
+  };
+
+/**
+ * The repair pack crewmate: write the five files, then show the card naming
+ * them all in `files`, in the pack's order.
+ */
+export const cardFilesPack: Scenario =
+  () =>
+  ({ body, isFirstmate, wantsStream }) => {
+    if (isFirstmate || !wantsStream || !body.includes(CARD_FILES_PACK_PROMPT_MARKER))
+      return undefined;
+    if (!calledTool(body, "bash"))
+      return {
+        calls: writeFilesCalls(CARD_FILES_PACK.map(({ path, bytes }) => ({ path, bytes }))),
+      };
+    if (shellJobsRunning(body)) return { text: "The pack is still being written." };
+    if (!calledTool(body, "emit_card"))
+      return {
+        calls: [
+          {
+            name: "emit_card",
+            args: {
+              title: CARD_FILES_PACK_TITLE,
+              body: "<p>The letter asks for the boiler to be looked at this week; the four papers back it up. Save them, then send them from your own mail.</p>",
+              files: CARD_FILES_PACK.map((file) => file.path),
             },
           },
         ],

@@ -17,7 +17,7 @@ import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { keepCardFiles } from "../pi/cardFiles";
 import { CardFileReads } from "./cardFileReads";
-import { saveIntoDownloads } from "./downloadsSave";
+import { saveAllIntoDownloads, saveIntoDownloads } from "./downloadsSave";
 import { protectedPlaces } from "./fileReach";
 
 /**
@@ -288,5 +288,73 @@ describe("files for the captain on a card", () => {
     );
     expect(readdirSync(downloads)).toEqual([]);
     expect(existsSync(join(downloads, "letter to the landlord.txt"))).toBe(false);
+  });
+  /**
+   * INF-4427's plan, as the captain approved it: Save all puts every file
+   * "in one new folder in Downloads, named for the task", never into a
+   * folder already there, each file checked as a single Save is, and a file
+   * that cannot be saved is named with why while the rest still land.
+   */
+  it("saves every file into one new Downloads folder named for the task, never into one already there", async () => {
+    const worktree = scratchDir("card-files-all-");
+    const crewmates = scratchDir("card-files-crewmates-");
+    const { data } = draft(worktree);
+    const form = Buffer.from("Name: Sam Okafor\nFlat: 4\nRepair: boiler\n");
+    writeFileSync(join(worktree, "repair form.txt"), form);
+    const photo = Buffer.from("A photo of the boiler's pressure gauge reading zero.\n");
+    writeFileSync(join(worktree, "boiler gauge.txt"), photo);
+    const files = await keepCardFiles(
+      ["letter to the landlord.txt", "repair form.txt", "boiler gauge.txt"],
+      { worktree, dir: join(crewmates, "t1", "cards"), taskId: "t1", protectedPlaces: [] },
+    );
+    const card = cardWith(files);
+    const reads = new CardFileReads({
+      card: () => card,
+      localDir: (taskId) => join(crewmates, taskId, "cards"),
+      router: workComputer().router,
+    });
+    const downloads = scratchDir("card-files-downloads-");
+    // The captain already has a folder of that name, with a file of their own in it.
+    mkdirSync(join(downloads, "Write to the landlord - heating"));
+    writeFileSync(join(downloads, "Write to the landlord - heating", "notes.txt"), "Mine.");
+    const all = files.map((file) => ({
+      id: file.id,
+      read: (offset: number) => reads.piece(card.id, file.id, offset),
+    }));
+    const saved = await saveAllIntoDownloads({
+      folder: downloads,
+      name: "Write to the landlord / heating",
+      files: all,
+    });
+    const folder = join(downloads, "Write to the landlord - heating (2)");
+    expect(saved).toEqual({
+      savedAs: "Write to the landlord - heating (2)",
+      path: folder,
+      saved: 3,
+      failed: [],
+    });
+    expect(readdirSync(folder).sort()).toEqual([
+      "boiler gauge.txt",
+      "letter to the landlord.txt",
+      "repair form.txt",
+    ]);
+    expect(sha256(readFileSync(join(folder, "letter to the landlord.txt")))).toBe(sha256(data));
+    expect(sha256(readFileSync(join(folder, "repair form.txt")))).toBe(sha256(form));
+    expect(readdirSync(join(downloads, "Write to the landlord - heating"))).toEqual(["notes.txt"]);
+
+    // A kept copy that changed is named with why; the other files still land.
+    writeFileSync(files[1]?.path ?? "", "A different form.");
+    const again = await saveAllIntoDownloads({
+      folder: downloads,
+      name: "Write to the landlord / heating",
+      files: all,
+    });
+    expect(again.savedAs).toBe("Write to the landlord - heating (3)");
+    expect(again.saved).toBe(2);
+    expect(again.failed).toEqual([{ id: files[1]?.id, why: expect.stringContaining("changed") }]);
+    expect(readdirSync(again.path).sort()).toEqual([
+      "boiler gauge.txt",
+      "letter to the landlord.txt",
+    ]);
   });
 });

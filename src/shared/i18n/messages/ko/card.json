@@ -60,6 +60,19 @@
   "cardFileSave": "저장",
   "cardFileSaved": "다운로드에 {savedAs}(으)로 저장됨",
   "cardFileSaving": "저장 중",
+  "cardFilesAll": {
+    "plural": "count",
+    "other": "파일 {count}개"
+  },
+  "cardFilesMore": {
+    "plural": "count",
+    "other": "파일 {count}개 더"
+  },
+  "cardFilesPartlySaved": "{total}개 중 {saved}개를 {folder}에 저장했습니다. {name}이(가) 저장되지 않았습니다: {why}",
+  "cardFilesSaveAll": "모두 저장",
+  "cardFilesSavedAll": "다운로드의 {folder} 폴더에 저장됨",
+  "cardFilesShowAll": "모두 보기",
+  "cardFilesShowFewer": "적게 보기",
   "cardHeadingAfter": "이후",
   "cardHeadingBefore": "이전",
   "cardHeadingWhatChanged": "바뀐 점",

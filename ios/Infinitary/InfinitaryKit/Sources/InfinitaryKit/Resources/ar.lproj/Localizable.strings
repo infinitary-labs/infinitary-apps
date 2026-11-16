@@ -258,6 +258,11 @@
 "cardFileSave" = "حفظ";
 "cardFileSaved" = "حُفظ في التنزيلات باسم %1$@";
 "cardFileSaving" = "جارٍ الحفظ";
+"cardFilesPartlySaved" = "حُفظ %3$@ من %4$@ في %1$@. لم يُحفظ %2$@: %5$@";
+"cardFilesSaveAll" = "حفظ الكل";
+"cardFilesSavedAll" = "حُفظ في التنزيلات في المجلد %1$@";
+"cardFilesShowAll" = "عرض الكل";
+"cardFilesShowFewer" = "عرض أقل";
 "cardHeadingAfter" = "بعد";
 "cardHeadingBefore" = "قبل";
 "cardHeadingWhatChanged" = "ما الذي تغيّر";

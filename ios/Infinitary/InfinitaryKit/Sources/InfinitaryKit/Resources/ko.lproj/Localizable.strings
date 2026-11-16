@@ -258,6 +258,11 @@
 "cardFileSave" = "저장";
 "cardFileSaved" = "다운로드에 %1$@(으)로 저장됨";
 "cardFileSaving" = "저장 중";
+"cardFilesPartlySaved" = "%4$@개 중 %3$@개를 %1$@에 저장했습니다. %2$@이(가) 저장되지 않았습니다: %5$@";
+"cardFilesSaveAll" = "모두 저장";
+"cardFilesSavedAll" = "다운로드의 %1$@ 폴더에 저장됨";
+"cardFilesShowAll" = "모두 보기";
+"cardFilesShowFewer" = "적게 보기";
 "cardHeadingAfter" = "이후";
 "cardHeadingBefore" = "이전";
 "cardHeadingWhatChanged" = "바뀐 점";

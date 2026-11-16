@@ -70,6 +70,15 @@
   "phoneAskedPicture": "صورة",
   "phoneAskedSaid": "قلت",
   "phoneCardBrowser": "المتصفح",
+  "phoneCardFiles": {
+    "plural": "count",
+    "zero": "في هذه البطاقة {count} ملف. احفظها على كمبيوتر.",
+    "one": "في هذه البطاقة ملف واحد. احفظه على كمبيوتر.",
+    "two": "في هذه البطاقة ملفان. احفظهما على كمبيوتر.",
+    "few": "في هذه البطاقة {count} ملفات. احفظها على كمبيوتر.",
+    "many": "في هذه البطاقة {count} ملفًا. احفظها على كمبيوتر.",
+    "other": "في هذه البطاقة {count} ملف. احفظها على كمبيوتر."
+  },
   "phoneCardNoAnswer": "بلا إجابة",
   "phoneCardOpenBrowser": "فتح المتصفح",
   "phoneCardRisk": "المخاطر",

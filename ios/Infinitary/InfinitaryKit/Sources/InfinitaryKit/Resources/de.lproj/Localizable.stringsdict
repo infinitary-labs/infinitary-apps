@@ -99,6 +99,38 @@
       <string>· über %1$ld Aufgaben</string>
     </dict>
   </dict>
+  <key>cardFilesAll</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld Datei</string>
+      <key>other</key>
+      <string>%1$ld Dateien</string>
+    </dict>
+  </dict>
+  <key>cardFilesMore</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld weitere Datei</string>
+      <key>other</key>
+      <string>%1$ld weitere Dateien</string>
+    </dict>
+  </dict>
   <key>cardNoteQueued</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -769,6 +801,22 @@
       <string>%2$@ · %3$@ · über %1$ld Aufgabe</string>
       <key>other</key>
       <string>%2$@ · %3$@ · über %1$ld Aufgaben</string>
+    </dict>
+  </dict>
+  <key>phoneCardFiles</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Diese Karte hat %1$ld Datei. Sichere sie auf einem Computer.</string>
+      <key>other</key>
+      <string>Diese Karte hat %1$ld Dateien. Sichere sie auf einem Computer.</string>
     </dict>
   </dict>
   <key>phoneCardsReplyTooLong</key>

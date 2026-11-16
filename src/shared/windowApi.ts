@@ -8,7 +8,7 @@ import type {
   AutomationSpec,
 } from "./automation";
 import type { BatchAnswer } from "./batches";
-import type { CardFileSaved } from "./cardFiles";
+import type { CardFileSaved, CardFilesSaved } from "./cardFiles";
 import type {
   Card,
   CardActionSource,
@@ -520,6 +520,8 @@ export type FirstmateApi = {
      * refusal in words thrown as an error.
      */
     saveFile: (cardId: string, fileId: string) => Promise<CardFileSaved>;
+    /** Save all: every named file into one new Downloads folder named `name` (the task's title). */
+    saveFiles: (cardId: string, fileIds: string[], name: string) => Promise<CardFilesSaved>;
     /**
      * A proof log a merge card names, by its kept file name, for the log
      * reader: its kind and its text as base64 (docs/card-authoring.md "Proof

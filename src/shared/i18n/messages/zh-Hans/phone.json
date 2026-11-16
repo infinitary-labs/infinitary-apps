@@ -60,6 +60,10 @@
   "phoneAskedPicture": "一张图片",
   "phoneAskedSaid": "你说了",
   "phoneCardBrowser": "浏览器",
+  "phoneCardFiles": {
+    "plural": "count",
+    "other": "此卡片有 {count} 个文件。请在电脑上保存。"
+  },
   "phoneCardNoAnswer": "未回答",
   "phoneCardOpenBrowser": "打开浏览器",
   "phoneCardRisk": "风险",

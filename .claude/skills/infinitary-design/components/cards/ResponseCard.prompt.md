@@ -163,6 +163,10 @@ The name gives way with an ellipsis and the whole name on hover; the button neve
 While it saves, the button reads `Saving` and is off; once saved, the line after the size reads `· saved in Downloads as <name>`, the name the file took there, and `Save` stays to save it again.
 When the file cannot be saved, the line reads why in `--fg-2` instead, one line with an ellipsis and the whole sentence on hover, until the next click.
 A click saves into Downloads on the computer whose window was clicked and is never a card action: it runs no effect, answers nothing, stays enabled while the card's buttons wait on a request, and the body's script can neither see nor press it.
+With five or more files the rows fold so they never squeeze the body: the first three in the crewmate's order, then one counting row in the same style - the micro label `FILE`, the count in `--fg-1` (`13 more files`), then in `--fg-3` their total size after `·` (`10.7 MB`), then, pushed right, a small `ghost` Button `Show all` and a small `secondary` Button `Save all`; folded, the strip is never taller than four rows.
+`Show all` opens every row in a list that scrolls after six rows; the counting row stays below it reading every file (`16 files · 14.8 MB`) with `Show fewer` and `Save all`, and the focus stays on the toggle; one to four files show whole, with no counting row.
+`Save all` saves every file into one new folder in Downloads named for the task; while it saves it reads `Saving` and is off; once saved the line reads `saved in Downloads in the folder <name>` in place of the count, the whole line on hover, and when a file could not be saved the line reads how many were saved and which file was not, and why, in `--fg-2`.
+On the phone a card's files are one `--fg-3` caption line under the body that counts them and says to save them on a computer, with no rows.
 A past card does not draw the rows.
 
 **A live attachment.**

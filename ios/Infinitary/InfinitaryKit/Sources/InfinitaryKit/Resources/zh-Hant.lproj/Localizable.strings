@@ -258,6 +258,11 @@
 "cardFileSave" = "儲存";
 "cardFileSaved" = "已儲存到「下載」，名稱為 %1$@";
 "cardFileSaving" = "正在儲存";
+"cardFilesPartlySaved" = "已將 %4$@ 個中的 %3$@ 個儲存到 %1$@。%2$@ 未儲存：%5$@";
+"cardFilesSaveAll" = "全部儲存";
+"cardFilesSavedAll" = "已儲存到「下載」中的檔案夾 %1$@";
+"cardFilesShowAll" = "全部顯示";
+"cardFilesShowFewer" = "顯示較少";
 "cardHeadingAfter" = "變更後";
 "cardHeadingBefore" = "變更前";
 "cardHeadingWhatChanged" = "變更內容";

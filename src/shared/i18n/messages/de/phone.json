@@ -62,6 +62,11 @@
   "phoneAskedPicture": "Ein Bild",
   "phoneAskedSaid": "Du hast gesagt",
   "phoneCardBrowser": "Browser",
+  "phoneCardFiles": {
+    "plural": "count",
+    "one": "Diese Karte hat {count} Datei. Sichere sie auf einem Computer.",
+    "other": "Diese Karte hat {count} Dateien. Sichere sie auf einem Computer."
+  },
   "phoneCardNoAnswer": "keine Antwort",
   "phoneCardOpenBrowser": "Browser öffnen",
   "phoneCardRisk": "Risiko",

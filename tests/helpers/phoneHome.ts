@@ -16,6 +16,7 @@ import { httpSecretBroker } from "@core/secrets/httpBroker";
 import { forkChildProcess } from "@core/sql/forkChildProcess";
 import { seedTask } from "@core/tasks/seedTask";
 import { AFTER_MERGE_LEAD } from "@shared/afterMerge";
+import { cardFileId, cardFileStoredName } from "@shared/cardFiles";
 import { CARD_LEAVE } from "@shared/cardLeave";
 import { cardLogUrl } from "@shared/cardPictures";
 import { ANYTHING_ELSE_ANSWER, type CardMessage, PAST_CARD_WORDS_LEAD } from "@shared/cards";
@@ -1196,6 +1197,15 @@ export async function startPhoneHome(
           });
           const cards = core.services.supervisor.cards;
           const answerText = "The review stays beside the launch checklist.";
+          // INF-4427: two files the crewmate kept for the captain, which the phone counts and leaves to a computer.
+          const files = [
+            { name: "harbour-launch-window.pdf", bytes: 184_320 },
+            { name: "tide-table.csv", bytes: 6_144 },
+          ].map(({ name, bytes }) => {
+            const sha256 = createHash("sha256").update(name).digest("hex");
+            const id = cardFileId(answer.id, sha256);
+            return { id, name, bytes, sha256, path: `/kept/${cardFileStoredName(id)}` };
+          });
           const id = cards.emitCrewmateCard(
             answer.id,
             {
@@ -1204,6 +1214,7 @@ export async function startPhoneHome(
               body: `<p>${answerText}</p>`,
               actions: [],
               answering: true,
+              files,
             },
             "crew",
           );

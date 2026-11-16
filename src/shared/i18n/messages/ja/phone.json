@@ -60,6 +60,10 @@
   "phoneAskedPicture": "画像",
   "phoneAskedSaid": "あなたの発言",
   "phoneCardBrowser": "ブラウザ",
+  "phoneCardFiles": {
+    "plural": "count",
+    "other": "このカードには{count}個のファイルがあります。コンピュータで保存してください。"
+  },
   "phoneCardNoAnswer": "回答なし",
   "phoneCardOpenBrowser": "ブラウザを開く",
   "phoneCardRisk": "リスク",

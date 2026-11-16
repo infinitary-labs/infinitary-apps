@@ -74,3 +74,16 @@ export const cardFileSavedSchema = z.object({
   path: z.string(),
 });
 export type CardFileSaved = z.infer<typeof cardFileSavedSchema>;
+
+/**
+ * Where Save all put a card's files: the new folder's name in the window's
+ * computer's Downloads and its full path, how many files were saved, and
+ * each file that was not, by its id with why.
+ */
+export const cardFilesSavedSchema = z.object({
+  savedAs: z.string(),
+  path: z.string(),
+  saved: z.number().int().nonnegative(),
+  failed: z.array(z.object({ id: z.string(), why: z.string() })),
+});
+export type CardFilesSaved = z.infer<typeof cardFilesSavedSchema>;

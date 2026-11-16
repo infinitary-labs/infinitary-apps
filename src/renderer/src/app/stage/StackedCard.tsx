@@ -571,7 +571,14 @@ export function StackedCard({
                   onKeep={() => void onAction(secretAsk.pass, "chrome", undefined, undefined, card)}
                 />
               )}
-              {card.files?.length ? <CardFiles cardId={card.id} files={card.files} /> : null}
+              {card.files?.length ? (
+                <CardFiles
+                  cardId={card.id}
+                  files={card.files}
+                  // Save all's new Downloads folder is named for the task, or the card when no task is read yet.
+                  folderName={found?.title ?? card.title}
+                />
+              ) : null}
               {card.attachment && <CardAttachment cardId={card.id} attachment={card.attachment} />}
             </>
           ) : undefined

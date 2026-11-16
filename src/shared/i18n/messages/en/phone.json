@@ -62,6 +62,11 @@
   "phoneAskedPicture": "A picture",
   "phoneAskedSaid": "You said",
   "phoneCardBrowser": "Browser",
+  "phoneCardFiles": {
+    "plural": "count",
+    "one": "This card has {count} file. Save it on a computer.",
+    "other": "This card has {count} files. Save them on a computer."
+  },
   "phoneCardNoAnswer": "no answer",
   "phoneCardOpenBrowser": "Open browser",
   "phoneCardRisk": "Risk",

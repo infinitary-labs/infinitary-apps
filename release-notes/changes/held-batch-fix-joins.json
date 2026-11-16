@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "held-batch-fix-joins",
+      "kind": "fix",
+      "area": "projects",
+      "title": "A fix for a held batch joins it, whenever it was approved",
+      "body": "When a batch of your approved changes was held by a failed check, a fix approved before it was named the batch's fix never joined, so the batch and the fix waited on each other. The fix now joins either way, and the changes waiting behind the batch join with it. Try again keeps a fix that has not joined yet, your first mate can try a held batch again without asking you, and its reply now says the batch was tried again instead of showing an error.",
+      "noPicture": "This changes what a held batch carries and how a retry is confirmed, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

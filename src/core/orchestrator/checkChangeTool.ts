@@ -36,7 +36,9 @@ export const BATCH_DECLARATION_WORDS = {
     `Batch declaration refused: ${task} has no reason. Its crewmate reads the reason, so say what its change broke.`,
   notMember: (task: string, members: readonly string[]) =>
     `Batch declaration refused: ${task} is not in the held batch. It carries ${members.join(", ")}.`,
-  fix: "Recorded: this task's change is the held batch's fix. Push it, confirm its story with open_change and show its merge card as usual: once approved, it joins the held batch behind the changes already there, the batch is combined again and its checks run again. Changes approved meanwhile keep waiting in line.",
+  fix: "Recorded: this task's change is the held batch's fix. Push it, confirm its story with open_change and show its merge card as usual: once approved, it joins the held batch behind the changes already there, with every change approved meanwhile behind it, the batch is combined again and its checks run again.",
+  fixApproved:
+    "Recorded: this task's change is the held batch's fix, and its approved version already waits in line, so it joins the held batch now behind the changes already there, with every change approved meanwhile behind it. The batch is combined again and its checks run again; show no new merge card for this version.",
   sentBack: (count: number) =>
     `Sent back ${count === 1 ? "one change" : `${count} changes`}: each lost its approval and its crewmate was told the reason. The rest of the batch is being combined again with the changes that waited in line, and its checks run again.`,
 } as const;
@@ -351,7 +353,11 @@ export class CheckChangeTool {
         `Declared this task's change the fix of the held batch: ${batch.evidence.trim()}`,
         { news: true },
       );
-      return BATCH_DECLARATION_WORDS.fix;
+      const waits = batches.record(repoId);
+      const approved =
+        waits.line.some((entry) => entry.taskId === record.id) ||
+        Boolean(waits.open?.members.some((member) => member.taskId === record.id));
+      return approved ? BATCH_DECLARATION_WORDS.fixApproved : BATCH_DECLARATION_WORDS.fix;
     }
     const changes: { taskId: string; reason: string }[] = [];
     for (const item of back) {

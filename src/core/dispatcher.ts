@@ -1593,6 +1593,10 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
         trail(name, { repo, ...(description ? { description } : {}) }, actor);
       } else if (name === "project-name") {
         trail(name, result as Record<string, unknown>, actor);
+      } else if (name === "project-batch-answer") {
+        // An answer names what was asked, which the held batches read back no longer show.
+        const [repoId, answer] = args as InvokeRequest<"inf:repos:batch-answer">;
+        trail(name, { repoId, answer }, actor);
       } else if (name === "project-runs-on") {
         const repo = result as RepoView;
         const was = (before.get(name) as RepoView[]).find((entry) => entry.id === repo.id);

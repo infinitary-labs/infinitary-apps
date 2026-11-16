@@ -27,7 +27,8 @@ Never run a check again to see whether it passes before this accounting is done.
   Each loses its approval and its own crewmate repairs it; the rest combine again with the changes that waited in line, and the checks run again.
   Name every change at fault in one declaration, so the batch is combined once.
 - **Fix forward.** When the failure is in how the changes meet, or the fix is small and clearly right, make the fix this task's own change and declare it with `check_change` `batch.fix`.
-  Push it, confirm its story with `open_change` and show its merge card as for any change: once approved, it joins the held batch and ends the hold.
+  Push it, confirm its story with `open_change` and show its merge card as for any change: once approved, it joins the held batch with every change waiting in line behind it, and ends the hold.
+  A change already approved at its current version joins as you declare it, with no new merge card.
 - **Run the failed checks again, for a flake.** Only when the accounting shows that no change in the batch caused the failure and the evidence shows it is intermittent.
   Run the failed checks again where the project lives with `github_write`, recording the judgment first with `check_change` `rerun`: on GitHub, `POST /repos/{owner}/{repo}/actions/runs/{run_id}/rerun-failed-jobs`; on GitLab, `POST /projects/{id}/jobs/{job_id}/retry`.
   Once they pass, the batch merges by itself.
@@ -36,4 +37,4 @@ Never run a check again to see whether it passes before this accounting is done.
 
 `batch.evidence` says how the accounting came out, in a sentence or two.
 When you cannot establish the cause, keep the hold, report the failed checks, the accounting so far and what is missing, and ask the first mate to coordinate what you cannot run.
-The captain may answer the hold too, from Settings, with Try again or Send back with a reason: when the batch is no longer held at the version your brief names, read it again before answering.
+The captain may answer the hold too, from Settings, with Try again or Send back with a reason, and the first mate may try it again: when the batch is no longer held at the version your brief names, read it again before answering.

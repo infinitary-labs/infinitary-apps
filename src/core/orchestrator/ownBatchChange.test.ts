@@ -620,6 +620,7 @@ describe("a repair's answer to its project's held batch", () => {
   const PARSER_HEAD = "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678";
   const EXPORT_HEAD = "0f9e8d7c6b5a49382716f5e4d3c2b1a009182736";
   const LEGEND_HEAD = "7e6d5c4b3a2918070f6e5d4c3b2a190817263544";
+  const AXIS_HEAD = "3c2b1a0918f7e6d5c4b3a2918070f6e5d4c3b2a1";
 
   /** Three other tasks' changes in one batch whose checks failed; this task is the repair. */
   async function held() {
@@ -711,6 +712,35 @@ describe("a repair's answer to its project's held batch", () => {
     ).toBe("Batch declaration refused: send batch on its own, not beside absentChecks.");
     expect(at.batches.record(REPO).fixes).toBeUndefined();
     expect(at.open()?.hold).toBeDefined();
+  });
+
+  // Intent: INF-4421's finding, a bug being fixed: a repair's change approved before it was
+  // declared the held batch's fix never joined, and its kept approval left it no new merge
+  // card, so the batch and the fix waited on each other.
+  it("declares its own change the fix after its approval: it joins the held batch at once with the changes waiting in line", async () => {
+    const at = await held();
+    const before = at.forge.batchHead;
+    at.other("axis04", "fix(chart): label the time axis in local time", AXIS_HEAD);
+    await at.confirmed();
+    await at.service.merges.merge(TASK, at.guard());
+    await at.pass();
+    expect(at.open()?.hold).toBeDefined();
+    expect(at.line().map((change) => change.taskId)).toEqual(["axis04", TASK]);
+
+    expect(await at.service.checkTool.checkForCrew(TASK, { batch: { fix: true, evidence } })).toBe(
+      BATCH_DECLARATION_WORDS.fixApproved,
+    );
+    await at.pass();
+    expect(at.open()?.members.map((member) => member.taskId)).toEqual([
+      "parser01",
+      "export02",
+      "legend03",
+      TASK,
+      "axis04",
+    ]);
+    expect(at.open()?.hold).toBeUndefined();
+    expect(at.line()).toEqual([]);
+    expect(at.forge.batchHead).not.toBe(before);
   });
 
   it("declares its own change the batch's fix: once approved it joins the held batch and ends the hold", async () => {

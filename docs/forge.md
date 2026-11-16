@@ -903,11 +903,15 @@ A batch of several reaches the first mate once for each held version, as the `ba
 The first mate starts one repair task with the `batch-repair` skill and no card, unless a task already repairs that batch (`resources/runbooks/batches/skills/batch-repair`).
 The repair accounts for every failed test against every change in the batch, then answers once with `check_change`'s `batch`.
 `sendBack` names each change at fault by its task key, with the reason its crewmate reads: the change loses its approval, its crewmate is told, and the rest combine again with the changes that waited in line.
-`fix` declares the repair's own change the batch's fix: once approved on its own merge card it joins the held batch and ends the hold, while the rest of the line keeps waiting.
+`fix` declares the repair's own change the batch's fix: approved on its own merge card, it joins the held batch and ends the hold, and every change waiting in line joins behind it (`carried`, `src/core/batches/line.ts`).
+The order of approval and declaration does not matter: a change already approved and waiting in line is marked the fix as it is declared and joins on the pass the declaration starts, and one approved later is marked as it goes in line (`Batches.declareFix`, `Batches.enqueue`).
+An approval of the same version again keeps its place.
+A declared fix that has not joined stays declared through every combine of the batch, Try again included, and through a restart; it is forgotten once the batch merges or ends.
 For a flake, the repair runs the failed checks again where the project lives, and checks that run again end the hold by the host's own reading; the flaky test still gets an owner.
 Settings → Projects shows a held batch under the project (`BatchHoldPanel`, `src/renderer/src/settings/`): why it holds and since when, a button that opens its pull request, Try again, and Send back with a reason for the chosen changes, every control reached by keys.
-Try again combines the batch again at a new version, so its checks run again.
-The first mate sends the same answers in the captain's words through `app_change`'s `project-batch-answer`.
+Try again combines the batch again at a new version with every change waiting in line, so its checks run again.
+The first mate sends the same answers through `app_change`'s `project-batch-answer`: Try again on its own judgment, and a send-back only on the captain's own words.
+Its line on the feed names the answer that was asked (`ACTIONS["project-batch-answer"].done`).
 Every answer names the held version it answers (`BatchAnswer`, `inf:repos:batch-answer`), so one for a hold that already ended is refused in words and changes nothing.
 A merge the host refused is never sent again at that version: Try again makes a new one.
 A batch GitHub removed from its own merge queue holds the same way, with GitHub's removal as its reason ("The host's merge queue").

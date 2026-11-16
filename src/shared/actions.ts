@@ -1501,11 +1501,11 @@ const actionLines = {
   },
   "project-batch-answer": {
     area: "projects",
-    tier: "own-words",
+    tier: "judgment",
     change: "inf:repos:batch-answer",
     current: "inf:repos:list",
     value: z.strictObject({ repoId: z.string().min(1), answer: batchAnswerSchema }),
-    line: "Try a project's held batch of the captain's approved changes again, or send changes back from it, each by its taskId with the captain's reason. Only on the captain's own words; head is the held version.",
+    line: "Try a project's held batch of the captain's approved changes again on your own judgment, with every change waiting in line; or send changes back from it, each by its taskId with the captain's reason, only on their own words. head is the held version.",
     toRequest: (v) => [v.repoId, v.answer],
     readValue: (c) => ({
       held: (c as RepoView[])

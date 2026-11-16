@@ -67,6 +67,16 @@ const AXIS: BatchChange = {
   at: 4_000,
 };
 
+/** A repair's own change, declared the held batch's fix. */
+const FIX: BatchChange = {
+  taskId: "t-fix",
+  branch: "fm/task-fix",
+  head: "3c2b1a0918f7e6d5c4b3a2918070f6e5d4c3b2a1",
+  title: "fix(export): read dates through the parser's new form",
+  body: "- The export reads dates as the parser now writes them.",
+  at: 7_000,
+};
+
 const id = (words: string) => createHash("sha1").update(words).digest("hex");
 const passed = (name: string): ForgeCheck => ({ name, state: "success" });
 const failed = (name: string): ForgeCheck => ({ name, state: "failure" });
@@ -1212,34 +1222,105 @@ describe("a held batch", () => {
     expect(home.open()).toEqual(held);
   });
 
-  it("lets a change declared the batch's fix join it once approved and end the hold, while the line waits", async () => {
+  // Intent: the captain's direction that a held batch's fix goes through that batch's own
+  // repair and "the next batch takes everything waiting plus the fix, without asking".
+  it("lets a change declared the batch's fix join it once approved and end the hold, with the line behind it", async () => {
     const home = await heldBatch();
     home.approve(LEGEND);
     await home.pass();
     const held = home.open();
-    const fix: BatchChange = {
-      taskId: "t-fix",
-      branch: "fm/task-fix",
-      head: "3c2b1a0918f7e6d5c4b3a2918070f6e5d4c3b2a1",
-      title: "fix(export): read dates through the parser's new form",
-      body: "- The export reads dates as the parser now writes them.",
-      at: 7_000,
-    };
 
-    expect(await home.batches.declareFix(REPO, "t-fix")).toBeUndefined();
+    expect(await home.batches.declareFix(REPO, FIX.taskId)).toBeUndefined();
     // Declared, not yet approved: the batch stays held as it was.
     await home.pass();
     expect(home.open()).toEqual(held);
 
-    home.approve(fix);
+    home.approve(FIX);
     await home.pass();
-    expect(home.members()).toEqual(["t-parser", "t-export", "t-fix"]);
+    // The fix sits right behind the members, then the changes that waited in line.
+    expect(home.members()).toEqual(["t-parser", "t-export", "t-fix", "t-legend"]);
     expect(home.open().hold).toBeUndefined();
     expect(home.open().head).not.toBe(held.head);
-    expect(home.record().line.map((change) => change.taskId)).toEqual(["t-legend"]);
+    expect(home.record().line).toEqual([]);
     expect(home.record().fixes).toBeUndefined();
     expect([...home.host.pulls.keys()]).toEqual([31]);
-    expect((home.host.pulls.get(31) as StandInPull).title).toBe("chore: merge 3 approved changes");
+    expect((home.host.pulls.get(31) as StandInPull).title).toBe("chore: merge 4 approved changes");
+  });
+
+  // Intent: INF-4421's finding, a bug being fixed: a fix approved two hours before it was
+  // declared never joined its held batch, the same approval again changed nothing, and the
+  // batch and the fix waited on each other.
+  it("lets a change approved before it was declared the fix join the held batch, and an approval repeated changes nothing", async () => {
+    const home = await heldBatch();
+    home.approve(FIX);
+    home.approve(LEGEND);
+    await home.pass();
+    const held = home.open();
+    expect(held.hold).toBeDefined();
+    expect(home.place(FIX)).toEqual({ state: "waiting", place: "line" });
+
+    expect(await home.batches.declareFix(REPO, FIX.taskId)).toBeUndefined();
+    await home.pass();
+    expect(home.members()).toEqual(["t-parser", "t-export", "t-fix", "t-legend"]);
+    expect(home.open().hold).toBeUndefined();
+    expect(home.open().head).not.toBe(held.head);
+    expect(home.record().line).toEqual([]);
+
+    // The kept approval runs again at the same version: it keeps its place in the batch.
+    const joined = home.open();
+    home.approve(FIX);
+    await home.pass();
+    expect(home.open()).toEqual(joined);
+  });
+
+  // Intent: INF-4421's finding, a bug being fixed: Try again rebuilt the held batch from its
+  // own changes and erased the fix declared for it, so the fix never joined.
+  it("keeps a declared fix through Try again, and the fix joins when the batch holds again", async () => {
+    const home = await heldBatch();
+    const first = home.open();
+    expect(await home.batches.declareFix(REPO, FIX.taskId)).toBeUndefined();
+    expect(
+      await home.batches.answer(REPO, { action: "try-again", head: first.head }),
+    ).toBeUndefined();
+    expect(home.members()).toEqual(["t-parser", "t-export"]);
+    expect(home.record().fixes).toEqual([FIX.taskId]);
+
+    // Approved while the batch is checked again: it waits, marked as the fix.
+    home.approve(FIX);
+    await home.pass();
+    expect(home.place(FIX)).toEqual({ state: "waiting", place: "line" });
+    expect(home.record().line).toMatchObject([{ taskId: FIX.taskId, fix: true }]);
+
+    // The app closes and opens again: the declaration and the mark are on the saved record.
+    await home.restart();
+    expect(home.record().fixes).toEqual([FIX.taskId]);
+    expect(home.record().line).toMatchObject([{ taskId: FIX.taskId, fix: true }]);
+
+    // The batch holds again, and the next look takes the fix into it.
+    const second = home.open();
+    home.host.report([failed("unit-tests")]);
+    await home.pass();
+    await home.pass();
+    expect(home.members()).toEqual(["t-parser", "t-export", "t-fix"]);
+    expect(home.open().head).not.toBe(second.head);
+    expect(home.open().hold).toBeUndefined();
+    expect(home.record().fixes).toBeUndefined();
+  });
+
+  it("forgets a declared fix once its batch merges, so it waits in line as any change", async () => {
+    const home = await heldBatch();
+    const first = home.open();
+    expect(await home.batches.declareFix(REPO, FIX.taskId)).toBeUndefined();
+    await home.batches.answer(REPO, { action: "try-again", head: first.head });
+    home.approve(FIX);
+    home.host.report([passed("build"), passed("unit-tests"), passed("lint")]);
+    home.host.ready("clean");
+    await home.pass();
+    expect(home.place(PARSER)).toMatchObject({ state: "merged" });
+    expect(home.record().fixes).toBeUndefined();
+    // The fix forms the next batch on its own, with no mark from the batch it was meant for.
+    expect(home.members()).toEqual(["t-fix"]);
+    expect(home.open().members[0]?.fix).toBeUndefined();
   });
 
   it("refuses a fix declaration when no batch of the project is held", async () => {
@@ -1274,13 +1355,18 @@ describe("a held batch", () => {
     expect(home.heard.pushes).toHaveLength(1);
   });
 
-  it("tries again by combining the batch at a new version, so its checks run again", async () => {
+  // Intent: the captain's direction that a held batch's repair takes everything waiting,
+  // without asking.
+  it("tries again by combining the batch at a new version with the changes waiting in line, so its checks run again", async () => {
     const home = await heldBatch();
+    home.approve(LEGEND);
+    await home.pass();
     const held = home.open();
     expect(
       await home.batches.answer(REPO, { action: "try-again", head: held.head }),
     ).toBeUndefined();
-    expect(home.members()).toEqual(["t-parser", "t-export"]);
+    expect(home.members()).toEqual(["t-parser", "t-export", "t-legend"]);
+    expect(home.record().line).toEqual([]);
     expect(home.open().hold).toBeUndefined();
     expect(home.open().head).not.toBe(held.head);
     expect(home.heard.pushes.at(-1)).toMatchObject({ expected: held.head });

@@ -206,6 +206,96 @@ describe("the core, driven with no Electron in the process", () => {
     }
   });
 
+  // Intent: INF-4421's finding, a bug being fixed: the first mate's Try again on a held batch
+  // rebuilt it and then answered with an error, because its confirmation read the request
+  // from the held batches read back afterwards. The captain's direction lets the first mate
+  // try a held batch again on its own judgment.
+  it("confirms a held batch's answer by what was asked, from the first mate's judgment and from Settings", async () => {
+    const change = createAppTools({
+      dispatch: core.dispatch,
+      actor: () => ({ kind: "firstmate", wake: "other" }),
+    }).find((tool) => tool.name === "app_change");
+    if (!change) throw new Error("Missing app_change");
+    const created = await core.services.repos.setup({ kind: "init", name: "held-batch" });
+    const repoId = created.repo.id;
+    const member = {
+      taskId: "batch-member",
+      branch: "fm/task-batch-member",
+      head: "5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0",
+      title: "fix(parser): read dates with a time zone",
+      body: "",
+      at: 1_000,
+      commit: "1111111111111111111111111111111111111111",
+    };
+    const open = {
+      branch: "infinitary-batch/3fa9c1d2",
+      head: member.commit,
+      base: "9d1c7e2a4b6f8091a3c5e7d9f1b3a5c7e9d1f3b5",
+      number: 31,
+      members: [member],
+      since: 1_000,
+    };
+    const holdAt = (head: string) => {
+      core.services.repos.recordBatch(repoId, {
+        line: [],
+        receipts: [],
+        leftOut: [],
+        open: {
+          ...open,
+          head,
+          hold: { at: 2_000, head, reason: "checks", checks: ["unit-tests"] },
+        },
+      });
+    };
+    // The stand-in for the combine and push the answer runs where the project lives: the hold ends.
+    const answered = vi
+      .spyOn(core.services.batches, "answerOrThrow")
+      .mockImplementation(async (id) => {
+        core.services.repos.recordBatch(id, { line: [], receipts: [], leftOut: [], open });
+        return { ok: true };
+      });
+    const titles = () =>
+      core.services.tasks
+        .list()
+        .filter((task) => task.kind === "operation")
+        .map((task) => task.title);
+    try {
+      holdAt(member.commit);
+      const retried = await change.run({
+        action: "project-batch-answer",
+        value: { repoId, answer: { action: "try-again", head: member.commit } },
+        evidence: "The failed journey passed three reruns; the batch's changes touch none of it.",
+      });
+      // Answered as done, with the held batches as they read now: none.
+      expect(JSON.parse(retried.text)).toEqual({
+        action: "project-batch-answer",
+        current: { held: [] },
+      });
+      expect(titles()).toContain(
+        ACTIONS["project-batch-answer"].done({
+          repoId,
+          answer: { action: "try-again", head: member.commit },
+        }),
+      );
+
+      const head = "2222222222222222222222222222222222222222";
+      holdAt(head);
+      const sendBack = {
+        action: "send-back" as const,
+        head,
+        changes: [{ taskId: member.taskId, reason: "its date test fails" }],
+      };
+      await core.dispatch("inf:repos:batch-answer", [repoId, sendBack]);
+      expect(titles()).toContain(
+        ACTIONS["project-batch-answer"].done({ repoId, answer: sendBack }),
+      );
+      expect(answered).toHaveBeenCalledTimes(2);
+    } finally {
+      answered.mockRestore();
+      core.services.repos.unregister(repoId);
+    }
+  });
+
   it("tells Firstmate every own-words action from the catalog", () => {
     const change = createAppTools({
       dispatch: core.dispatch,
@@ -223,7 +313,6 @@ describe("the core, driven with no Electron in the process", () => {
       "account-keep-going",
       "account-disconnect",
       "projects-folder",
-      "project-batch-answer",
     ]);
   });
 

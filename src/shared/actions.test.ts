@@ -236,6 +236,8 @@ describe("action permissions and channel parity", () => {
     }
     expect(ACTION_NAMES.filter((name) => ACTIONS[name].tier === "judgment")).toEqual([
       "direction",
+      // The captain's word on INF-4421: a held batch's Try again needs no word of theirs.
+      "project-batch-answer",
       "automation-state",
       "automation-pause-all",
       "automation-delete",

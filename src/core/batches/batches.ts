@@ -42,6 +42,7 @@ import {
   fixWaits,
   forms,
   hold,
+  markFix,
   merged,
   pruned,
   release,
@@ -49,6 +50,7 @@ import {
   reworded,
   type Standing,
   standing,
+  unfixed,
   withdraw,
 } from "./line";
 
@@ -187,10 +189,13 @@ export class Batches {
     return place ? batchStatus(place) : undefined;
   }
 
-  /** Put an approved change in line and start a pass. */
+  /**
+   * Put an approved change in line and start a pass. A change a repair
+   * declared the open batch's fix is marked so, whichever came first.
+   */
   async enqueue(repoId: string, change: BatchChange): Promise<void> {
     await this.write(repoId, (record) => {
-      const fix = Boolean(record.open?.hold) && (record.fixes ?? []).includes(change.taskId);
+      const fix = Boolean(record.open) && (record.fixes ?? []).includes(change.taskId);
       return enqueue(record, fix ? { ...change, fix: true } : change);
     });
     void this.pass(repoId);
@@ -228,9 +233,11 @@ export class Batches {
   }
 
   /**
-   * A repair declares its own change the held batch's fix: once approved,
-   * it joins that batch and ends the hold. Refused in words when no batch
-   * of this project is held.
+   * A repair declares its own change the held batch's fix: approved, it
+   * joins that batch with the changes waiting in line and ends the hold.
+   * A change already approved and waiting in line is marked now and joins
+   * on the pass this starts; one approved later is marked as it goes in
+   * line. Refused in words when no batch of this project is held.
    */
   async declareFix(repoId: string, taskId: string): Promise<string | undefined> {
     let refused: string | undefined;
@@ -239,18 +246,21 @@ export class Batches {
         refused = "No batch of this project is held, so there is nothing to fix.";
         return record;
       }
-      return (record.fixes ?? []).includes(taskId)
+      const declared = (record.fixes ?? []).includes(taskId)
         ? record
         : { ...record, fixes: [...(record.fixes ?? []), taskId] };
+      return markFix(declared, taskId);
     });
+    if (!refused) void this.pass(repoId);
     return refused;
   }
 
   /**
-   * A by-hand answer to a held batch, from Settings or a repair. Try again
-   * combines the batch again at a new version, so its checks run again; a
-   * send-back takes each named change out with its reason, and the rest
-   * combine again with the line. Answers the refusal in words, or nothing.
+   * A by-hand answer to a held batch, from Settings, the first mate or a
+   * repair. Try again combines the batch again at a new version with every
+   * change waiting in line, so its checks run again; a send-back takes each
+   * named change out with its reason, and the rest combine again with the
+   * line. Answers the refusal in words, or nothing.
    */
   async answer(repoId: string, answer: BatchAnswer): Promise<string | undefined> {
     return this.serial(repoId, async () => {
@@ -260,7 +270,7 @@ export class Batches {
       if (!repo || !open?.hold || open.hold.head !== answer.head) return BATCH_WORDS.ended;
       const label = this.label(repo, open);
       if (answer.action === "try-again") {
-        await this.recombine(repo, release(record), "none");
+        await this.recombine(repo, release(record), "line");
         this.options.note(BATCH_WORDS.retried(repo.name, label));
         return undefined;
       }
@@ -413,7 +423,8 @@ export class Batches {
         this.options.note(BATCH_WORDS.refused(repo.name, this.label(repo, open), detail));
       return held.record;
     }
-    if (fixWaits(record)) return this.recombine(repo, record, "fixes");
+    // A held batch's approved fix joins it, and the changes waiting in line join with it.
+    if (fixWaits(record)) return this.recombine(repo, record, "line");
     if (this.described.get(repo.id) !== open.head) await this.describe(repo, open, forge);
     const change: ForgeChange = {
       number: pull.number,
@@ -585,8 +596,7 @@ export class Batches {
             ...(mergedSha ? { merged: mergedSha } : {}),
           });
     const label = this.label(repo, open);
-    const { fixes: _fixes, ...next } = merged(record, landed, this.options.now());
-    const saved = this.save(repo.id, next);
+    const saved = this.save(repo.id, unfixed(merged(record, landed, this.options.now())));
     this.options.note(BATCH_WORDS.merged(repo.name, label, open.members.length));
     for (const member of open.members) {
       if (member.number === undefined || !forge.closeWithNote) continue;
@@ -616,19 +626,20 @@ export class Batches {
         url: open.url ?? null,
       });
     await forge.deleteBranch?.(open.branch).catch(() => {});
-    const { open: _open, fixes: _fixes, ...rest } = record;
+    const { open: _open, ...rest } = unfixed(record);
     return this.save(repo.id, rest);
   }
 
   /**
    * Combine onto the freshly fetched default branch and push the batch
-   * branch: a new batch from the whole line, or the open batch again, with
-   * the declared fixes or the line behind it.
+   * branch: a new batch from the whole line, or the open batch again, alone
+   * or with the line behind it. A declared fix that did not join stays
+   * declared, so it joins once approved or once the batch holds again.
    */
   private async recombine(
     repo: RepoView,
     record: BatchRecord,
-    join: "none" | "fixes" | "line",
+    join: "none" | "line",
     /** The batch branch's version as the host holds it now, where that is not the recorded one. */
     pushed?: string,
   ): Promise<BatchRecord> {
@@ -654,8 +665,12 @@ export class Batches {
         head: result.head,
         expected: pushed ?? record.open?.head ?? null,
       });
-    const { fixes: _fixes, ...kept } = release(record);
-    let next = this.save(repo.id, combined(kept, result, { branch, at }));
+    const { fixes, ...kept } = release(record);
+    const after = combined(kept, result, { branch, at });
+    const waiting = (fixes ?? []).filter(
+      (taskId) => !after.open?.members.some((member) => member.taskId === taskId),
+    );
+    let next = this.save(repo.id, waiting.length ? { ...after, fixes: waiting } : after);
     for (const left of result.leftOut)
       this.options.taskNote(left.change.taskId, BATCH_WORDS.leftOut(left.reason));
     if (result.leftOut.length)

@@ -225,33 +225,38 @@ describe("a held batch", () => {
     expect(standing(record, PARSER.taskId, PARSER.head)).toBeUndefined();
   });
 
-  it("ends by a declared fix: only the fix joins, and the rest of the line keeps waiting", () => {
+  // Intent: the captain's direction that a held batch's repair takes "everything waiting
+  // plus the fix, without asking".
+  it("ends by a declared fix: the fix joins right behind the members, and the rest of the line behind it", () => {
     const held = hold(openBatch(), failed).record;
-    const withLine = enqueue(enqueue(held, LEGEND), {
+    const fix = {
       ...LEGEND,
       taskId: "t-fix",
       title: "fix(parser): keep the renamed column for the export",
       at: 4_000,
-      fix: true,
-    });
+      fix: true as const,
+    };
+    const withLine = enqueue(enqueue(held, LEGEND), fix);
     expect(fixWaits(withLine)).toBe(true);
     expect(fixWaits(enqueue(held, LEGEND))).toBe(false);
-    expect(carried(withLine, "fixes").map((change) => change.taskId)).toEqual([
+    expect(carried(withLine, "line").map((change) => change.taskId)).toEqual([
       "t-parser",
       "t-export",
       "t-fix",
+      "t-legend",
     ]);
     const fixed = combined(
       release(withLine),
       combineOf([
         member(PARSER, PARSER_COMMIT),
         member(EXPORT, EXPORT_COMMIT),
-        member(withLine.line[1] as BatchChange, LEGEND_COMMIT),
+        member(fix, LEGEND_COMMIT),
+        member(LEGEND, "4444444444444444444444444444444444444444"),
       ]),
       { branch: "infinitary-batch/7c41", at: 8_000 },
     );
     expect(fixed.open?.hold).toBeUndefined();
-    expect(fixed.line.map((change) => change.taskId)).toEqual(["t-legend"]);
+    expect(fixed.line).toEqual([]);
   });
 
   it("ends when its checks run again", () => {

@@ -88,10 +88,13 @@ export function batchStatus(place: Standing): BatchStatus {
 /**
  * Put an approved change in line, in approval order. An earlier version of
  * the same task leaves the line and the open batch: only the approved
- * version is carried. `fix` marks the change the held batch's declared fix.
+ * version is carried. `fix` marks the change the held batch's declared fix,
+ * also when that version already waits in line: a fix may be declared after
+ * its approval, and the same approval may come again.
  */
 export function enqueue(record: BatchRecord, change: BatchChange): BatchRecord {
-  if (standing(record, change.taskId, change.head)?.state === "waiting") return record;
+  if (standing(record, change.taskId, change.head)?.state === "waiting")
+    return change.fix ? markFix(record, change.taskId) : record;
   const without = withdraw(record, change.taskId);
   return {
     ...without,
@@ -157,6 +160,32 @@ export function forms(record: BatchRecord): boolean {
   return !record.open && record.line.length > 0;
 }
 
+/**
+ * Mark the change a task has waiting in line as the held batch's declared
+ * fix. The same record when it has none there, or it is marked already.
+ */
+export function markFix(record: BatchRecord, taskId: string): BatchRecord {
+  if (!record.line.some((entry) => entry.taskId === taskId && !entry.fix)) return record;
+  return {
+    ...record,
+    line: record.line.map((entry) =>
+      entry.taskId === taskId ? { ...entry, fix: true as const } : entry,
+    ),
+  };
+}
+
+/**
+ * The record with no declared fix left: its batch merged or ended, so the
+ * declarations and the marks they put on changes in line answer nothing now.
+ */
+export function unfixed(record: BatchRecord): BatchRecord {
+  const { fixes: _fixes, ...rest } = record;
+  return {
+    ...rest,
+    line: record.line.map(({ fix: _fix, ...entry }) => entry),
+  };
+}
+
 /** Whether an approved fix waits in line for the held batch. */
 export function fixWaits(record: BatchRecord): boolean {
   return Boolean(record.open?.hold) && record.line.some((entry) => entry.fix);
@@ -164,21 +193,18 @@ export function fixWaits(record: BatchRecord): boolean {
 
 /**
  * The changes the next combine carries, in order. A new batch takes the
- * whole line. An open batch combines its own members again; `withLine`
- * adds the line behind them (after a send-back), and `withFixes` only the
- * declared fixes (a fix ends the hold; the rest of the line keeps waiting).
+ * whole line. An open batch combines its own members again; `line` adds
+ * every change waiting behind them, as a held batch's answer does (a fix
+ * joining, Try again, a send-back): the declared fixes first, so the change
+ * that ends the hold sits right behind the members, then the rest of the
+ * line in approval order.
  */
-export function carried(
-  record: BatchRecord,
-  join: "none" | "fixes" | "line" = "none",
-): BatchChange[] {
+export function carried(record: BatchRecord, join: "none" | "line" = "none"): BatchChange[] {
   if (!record.open) return [...record.line];
   const joining =
     join === "line"
-      ? record.line
-      : join === "fixes"
-        ? record.line.filter((entry) => entry.fix)
-        : [];
+      ? [...record.line.filter((entry) => entry.fix), ...record.line.filter((entry) => !entry.fix)]
+      : [];
   return [...record.open.members.map(asChange), ...joining];
 }
 

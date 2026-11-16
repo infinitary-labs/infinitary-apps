@@ -1,7 +1,16 @@
+import { readFileSync } from "node:fs";
 import { posix } from "node:path";
 import { describe, expect, it } from "vitest";
 import { readCheckFiles, readMainPush } from "../scripts/batch.mjs";
-import { confirmPlan, failedTestFiles, failures } from "../scripts/batch-failures.mjs";
+import {
+  checksState,
+  confirmPlan,
+  failedTestFiles,
+  failures,
+  firstFailure,
+  isCheckJob,
+  laterPlan,
+} from "../scripts/batch-failures.mjs";
 import {
   BATCH_BRANCH,
   BATCH_PULL_CHECKS,
@@ -77,7 +86,10 @@ const passedRun: Scenario = {
     sweep: { result: "success" },
     "critical-path": { result: "success" },
     startup: { result: "success" },
+    "first-failure": { result: "success", outputs: { found: "none", jobs: "", files: "" } },
     confirm: { result: "skipped" },
+    failures: { result: "skipped" },
+    "confirm-later": { result: "skipped" },
   },
 };
 const FAILED_JOB =
@@ -85,7 +97,10 @@ const FAILED_JOB =
 // The file a batch run's sweep named as failed, in its job's own log line.
 const FAILED_FILE = "src/core/freeze/freezeRecorder.integration.test.ts";
 const FAILED_LOG = `2026-11-07T19:12:44.0000000Z  FAIL  |integration| ${FAILED_FILE} > writes the record\n`;
-/** A batch whose sweep failed in one Linux job and whose confirm passed. */
+/**
+ * A batch whose sweep failed in one Linux job, whose confirm took it from the
+ * first failure and passed, and where no job failed later.
+ */
 const confirmedRun: Scenario = {
   github: pullRequest(rehearsal.branch),
   needs: {
@@ -93,8 +108,13 @@ const confirmedRun: Scenario = {
     sweep: { result: "failure" },
     "critical-path": { result: "success" },
     startup: { result: "success" },
-    failures: { result: "success", outputs: { jobs: FAILED_JOB, files: FAILED_FILE } },
+    "first-failure": {
+      result: "success",
+      outputs: { found: "confirm", jobs: FAILED_JOB, files: FAILED_FILE },
+    },
     confirm: { result: "success" },
+    failures: { result: "success", outputs: { left: "nothing", jobs: "", files: "" } },
+    "confirm-later": { result: "skipped" },
   },
 };
 
@@ -216,24 +236,27 @@ describe("batch-checks.yml", () => {
       expect(workflowString(String(step.with?.ref), { inputs })).toBe(rehearsal.head);
   });
 
-  it("confirms on the platform whose job failed", () => {
-    const platforms = (jobs: string) =>
-      workflowValue(
-        String(
-          (checks.jobs.confirm as { strategy: { matrix: { platform: string } } }).strategy.matrix
-            .platform,
-        ),
-        {
-          needs: { failures: { outputs: { jobs } } },
-        },
-      );
-    const mac = "Merge batch · Desktop checks / Merge batch · Parallel journeys (Mac)";
-    expect(platforms(FAILED_JOB)).toEqual(["linux"]);
-    expect(platforms(mac)).toEqual(["mac"]);
-    expect(platforms(`${mac}\n${FAILED_JOB}`)).toEqual(["linux", "mac"]);
+  it("confirms on the platform whose job failed, from the first failure and after it", () => {
+    for (const [id, from] of [
+      ["confirm", "first-failure"],
+      ["confirm-later", "failures"],
+    ] as const) {
+      const platforms = (jobs: string) =>
+        workflowValue(
+          String(
+            (checks.jobs[id] as { strategy: { matrix: { platform: string } } }).strategy.matrix
+              .platform,
+          ),
+          { needs: { [from]: { outputs: { jobs } } } },
+        );
+      const mac = "Merge batch · Desktop checks / Merge batch · Parallel journeys (Mac)";
+      expect(platforms(FAILED_JOB), id).toEqual(["linux"]);
+      expect(platforms(mac), id).toEqual(["mac"]);
+      expect(platforms(`${mac}\n${FAILED_JOB}`), id).toEqual(["linux", "mac"]);
+    }
   });
 
-  it("names the tree in its last job once every check passed, or once the confirm passed", () => {
+  it("names the tree in its last job once every check passed, or once every failed job's files passed their confirm", () => {
     const last = checks.jobs.passed!;
     const ends = (needs: Scenario["needs"], cancelled = false) =>
       workflowValue(
@@ -243,23 +266,102 @@ describe("batch-checks.yml", () => {
       );
     expect(ends(passedRun.needs)).toBe(true);
     expect(ends(confirmedRun.needs)).toBe(true);
-    // A failed check with no confirm, a failed confirm, and a cancelled run name no tree.
+    // A job failed after the first failure, and the later confirm passed on it.
+    const later = {
+      ...confirmedRun.needs,
+      failures: {
+        result: "success",
+        outputs: { left: "confirm", jobs: "later", files: FAILED_FILE },
+      },
+    };
+    expect(ends({ ...later, "confirm-later": { result: "success" } })).toBe(true);
+    // A first-failure job that could not read the run leaves every failed
+    // job to the later confirm.
+    const unread = { ...later, "first-failure": { result: "success", outputs: {} } };
+    expect(
+      ends({ ...unread, confirm: { result: "skipped" }, "confirm-later": { result: "success" } }),
+    ).toBe(true);
+    // A failed check with no confirm, a failed confirm, a later failure left
+    // unconfirmed or no confirm answers, and a cancelled run name no tree.
     expect(ends({ ...confirmedRun.needs, confirm: { result: "skipped" } })).toBe(false);
     expect(ends({ ...confirmedRun.needs, confirm: { result: "failure" } })).toBe(false);
+    expect(ends({ ...later, "confirm-later": { result: "failure" } })).toBe(false);
+    expect(ends({ ...later, "confirm-later": { result: "skipped" } })).toBe(false);
+    expect(
+      ends({
+        ...confirmedRun.needs,
+        failures: { result: "success", outputs: { left: "unanswerable", jobs: "", files: "" } },
+      }),
+    ).toBe(false);
+    expect(
+      ends({
+        ...confirmedRun.needs,
+        "first-failure": {
+          result: "success",
+          outputs: { found: "unanswerable", jobs: "", files: "" },
+        },
+        confirm: { result: "skipped" },
+        failures: { result: "skipped" },
+      }),
+    ).toBe(false);
     expect(ends(passedRun.needs, true)).toBe(false);
     expect(runJobNames("batch-pull-request.yml", passedRun).at(-1)).toBe(PASSED);
     expect(runJobNames("batch-pull-request.yml", confirmedRun)).toEqual(
       expect.arrayContaining([
+        `${BATCH_PULL_CHECKS}Merge batch · Read the first failures`,
         `${BATCH_PULL_CHECKS}Merge batch · Read the failures`,
         `${BATCH_PULL_CHECKS}Merge batch · Confirm failed tests (Linux)`,
         PASSED,
       ]),
     );
-    // The failures are read only after a failed check.
+    // The later failures are read only after a failed check, and not after
+    // a first failure no confirm answers.
     const reads = (needs: Scenario["needs"]) =>
       workflowValue(String(checks.jobs.failures!.if), { needs });
     expect(reads(passedRun.needs)).toBe(false);
     expect(reads(confirmedRun.needs)).toBe(true);
+    expect(
+      reads({
+        ...confirmedRun.needs,
+        "first-failure": { result: "success", outputs: { found: "unanswerable" } },
+      }),
+    ).toBe(false);
+  });
+
+  // INF-4382: the confirm starts from the first failed check, while the
+  // other checks run on, and nothing waits on it but the confirm.
+  it("starts the confirm from the first failure, beside the checks, and cancels nothing", () => {
+    const first = checks.jobs["first-failure"]! as Job & { "continue-on-error"?: boolean };
+    expect(first.needs).toBe("batch");
+    expect(first["continue-on-error"]).toBe(true);
+    expect(checks.jobs.confirm!.needs).toBe("first-failure");
+    for (const id of ["sweep", "critical-path", "startup"])
+      expect(checks.jobs[id]!.needs, id).toBe("batch");
+    const confirms = (found: string) =>
+      workflowValue(String(checks.jobs.confirm!.if), {
+        needs: { "first-failure": { outputs: { found } } },
+      });
+    expect(["confirm", "unanswerable", "none", ""].map(confirms)).toEqual([
+      true,
+      false,
+      false,
+      false,
+    ]);
+    const later = (left: string) =>
+      workflowValue(String(checks.jobs["confirm-later"]!.if), {
+        needs: { failures: { outputs: { left } } },
+      });
+    expect(["confirm", "nothing", "unanswerable", ""].map(later)).toEqual([
+      true,
+      false,
+      false,
+      false,
+    ]);
+    // Each confirm runs the same rounds, keeping a failed round's evidence under a name of its own.
+    for (const id of ["confirm", "confirm-later"])
+      expect(checks.jobs[id]!.steps!.at(-1)!.uses, id).toBe(
+        "./Application Support/firstmate/.github/actions/batch-confirm",
+      );
   });
 });
 
@@ -320,6 +422,32 @@ describe("a failed batch pull request's confirm plan", () => {
     ).toEqual([]);
   });
 
+  it("leaves to the later confirm only the jobs that failed after the first confirm took its own", () => {
+    const later = `${BATCH_PULL_CHECKS}Merge batch · Desktop checks / Merge batch · Desktop journeys (Mac)`;
+    const files = ["tests/e2e/knowledge-references.spec.ts"];
+    expect(laterPlan([{ name: failed, files: [FAILED_FILE] }], [FAILED_JOB])).toEqual({
+      left: "nothing",
+    });
+    expect(
+      laterPlan(
+        [
+          { name: failed, files: [FAILED_FILE] },
+          { name: later, files },
+        ],
+        [FAILED_JOB],
+      ),
+    ).toEqual({ left: "confirm", jobs: later.slice(BATCH_PULL_CHECKS.length), files: files[0] });
+    // Nothing confirmed first: every failed job is the later confirm's.
+    expect(laterPlan([{ name: failed, files: [FAILED_FILE] }], [])).toEqual({
+      left: "confirm",
+      jobs: FAILED_JOB,
+      files: FAILED_FILE,
+    });
+    // A later job named no test file, or no failed job could be read.
+    expect(laterPlan([{ name: later, files: [] }], [FAILED_JOB])).toEqual({ left: "unanswerable" });
+    expect(laterPlan([], [])).toEqual({ left: "unanswerable" });
+  });
+
   it("reads the run's failed jobs and their logs, leaving the confirm's own jobs out", async () => {
     const jobs = jobsOf(confirmedRun, [failed]);
     const confirm = jobs.find((job) => job.name.includes("Confirm failed tests"))!;
@@ -350,7 +478,172 @@ describe("a failed batch pull request's confirm plan", () => {
       },
     });
     expect(asked).toEqual([jobs.find((job) => job.name === failed)!.id]);
-    expect(Object.fromEntries(outputs)).toEqual({ jobs: FAILED_JOB, files: FAILED_FILE });
+    expect(Object.fromEntries(outputs)).toEqual({
+      left: "confirm",
+      jobs: FAILED_JOB,
+      files: FAILED_FILE,
+    });
+    await failures({
+      github,
+      context: { repo, runId: rehearsal.run },
+      core: {
+        notice: () => {},
+        setOutput: (name: string, value: string) => outputs.set(name, value),
+      },
+      confirmed: FAILED_JOB,
+    });
+    expect(Object.fromEntries(outputs)).toEqual({ left: "nothing", jobs: "", files: "" });
+  });
+});
+
+// INF-4382 (the captain: "i thought we send the first failure immediately
+// back. in what case do we wait for the whole run to finish?"): the confirm
+// starts from the first failed check rather than once every check ended.
+// The readings are two batch runs as GitHub listed their jobs once they
+// ended: run 43666102541, whose one failed job ended four and a half
+// minutes before its last check did, and run 43755363255, whose Mac job
+// failed eleven minutes after its first failure. Each failed job's log names
+// the file its run's failures job read from it.
+type RecordedJob = {
+  id: number;
+  name: string;
+  created_at: string;
+  started_at: string;
+  completed_at: string | null;
+  conclusion: string | null;
+};
+const recorded = (run: number) =>
+  JSON.parse(
+    readFileSync(
+      new URL(`./fixtures/batch-failures/batch-run-${run}.json`, import.meta.url),
+      "utf8",
+    ),
+  ) as RecordedJob[];
+/** The run's jobs as GitHub listed them at `time`: created, then queued, running or ended. */
+const readingAt = (jobs: RecordedJob[], time: string) =>
+  jobs
+    .filter((job) => job.created_at <= time)
+    .map((job) => ({
+      id: job.id,
+      name: job.name,
+      status:
+        job.completed_at && job.completed_at <= time
+          ? "completed"
+          : job.started_at <= time
+            ? "in_progress"
+            : "queued",
+      conclusion: job.completed_at && job.completed_at <= time ? job.conclusion : null,
+    }));
+const later = (time: string, seconds: number) =>
+  new Date(Date.parse(time) + seconds * 1000).toISOString().replace(".000Z", "Z");
+const playwrightLog = (file: string) =>
+  `2026-11-15T02:26:50.0000000Z   1 failed\n2026-11-15T02:26:50.0000000Z     [desktop] › ${file}:12:3 › the journey\n`;
+
+/**
+ * The first-failure job on a recorded run: it starts beside the checks and
+ * reads the run every half minute of the run's own time. Answers the time
+ * of the reading it ended at and its outputs.
+ */
+async function replayFirstFailure(jobs: RecordedJob[], logs: Record<number, string>) {
+  const critical = jobs.find((job) => job.name.includes("Critical-path journey /"))!;
+  let time = critical.started_at;
+  let read = time;
+  const outputs = new Map<string, string>();
+  await firstFailure({
+    github: {
+      rest: {
+        actions: {
+          listJobsForWorkflowRun: "jobs",
+          downloadJobLogsForWorkflowRun: async ({ job_id }: { job_id: number }) => ({
+            data: logs[job_id] ?? "",
+          }),
+        },
+      },
+      // The watch's own readings move the clock; the failed jobs' read
+      // after the last of them reads the same moment.
+      paginate: async (_method: string, parameters: { filter?: string }) => {
+        if (parameters.filter !== "latest") return readingAt(jobs, read);
+        read = time;
+        time = later(time, 30);
+        return readingAt(jobs, read);
+      },
+    },
+    context: { repo, runId: 1 },
+    core: {
+      notice: () => {},
+      warning: () => {},
+      setOutput: (name: string, value: string) => outputs.set(name, value),
+    },
+    everySeconds: 0,
+  });
+  return { read, outputs: Object.fromEntries(outputs) };
+}
+
+describe("a batch's confirm from its first failure", () => {
+  const checksOf = (jobs: RecordedJob[]) => jobs.filter((job) => isCheckJob(job));
+  const failedOf = (jobs: RecordedJob[]) =>
+    checksOf(jobs).filter((job) => job.conclusion === "failure");
+
+  it("reads the failure within half a minute of its job ending, before the last check ends", async () => {
+    const jobs = recorded(43_666_102_541);
+    const [failedJob] = failedOf(jobs);
+    const { read, outputs } = await replayFirstFailure(jobs, {
+      [failedJob!.id]: playwrightLog("main-thread-freeze.spec.ts"),
+    });
+    expect(read >= failedJob!.completed_at! && read <= later(failedJob!.completed_at!, 30)).toBe(
+      true,
+    );
+    const lastCheck = checksOf(jobs)
+      .map((job) => job.completed_at!)
+      .sort()
+      .at(-1)!;
+    expect(read < lastCheck).toBe(true);
+    expect(outputs).toEqual({
+      found: "confirm",
+      jobs: failedJob!.name.slice(BATCH_PULL_CHECKS.length),
+      files: "main-thread-freeze.spec.ts",
+    });
+  });
+
+  it("leaves a job that failed later to the later confirm", async () => {
+    const jobs = recorded(43_755_363_255);
+    const failed = failedOf(jobs);
+    const linux = failed.find((job) => job.name.includes("(Linux"))!;
+    const mac = failed.find((job) => job.name.includes("(Mac)"))!;
+    const logs = {
+      [linux.id]: playwrightLog("add-project.spec.ts"),
+      [mac.id]: playwrightLog("now-collapse.spec.ts"),
+    };
+    const { read, outputs } = await replayFirstFailure(jobs, logs);
+    expect(read < mac.completed_at!).toBe(true);
+    expect(outputs.jobs).toBe(linux.name.slice(BATCH_PULL_CHECKS.length));
+    // Once every check ended, the Mac job is all the later confirm runs.
+    expect(
+      laterPlan(
+        failed.map((job) => ({ name: job.name, files: failedTestFiles(logs[job.id]!) })),
+        outputs.jobs!.split("\n"),
+      ),
+    ).toEqual({
+      left: "confirm",
+      jobs: mac.name.slice(BATCH_PULL_CHECKS.length),
+      files: "now-collapse.spec.ts",
+    });
+  });
+
+  it("ends without a confirm once every check ended, never before", async () => {
+    const jobs = recorded(43_666_102_541).map((job) => ({
+      ...job,
+      conclusion: job.conclusion === "failure" ? "success" : job.conclusion,
+    }));
+    const lastCheck = checksOf(jobs)
+      .map((job) => job.completed_at!)
+      .sort()
+      .at(-1)!;
+    const { read, outputs } = await replayFirstFailure(jobs, {});
+    expect(read >= lastCheck && read <= later(lastCheck, 30)).toBe(true);
+    expect(outputs).toEqual({ found: "none", jobs: "", files: "" });
+    // Before the checks' called workflows list their jobs, nothing has ended.
+    expect(checksState(readingAt(jobs, jobs[0]!.started_at))).toBe("running");
   });
 });
 

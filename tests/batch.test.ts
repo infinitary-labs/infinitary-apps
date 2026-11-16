@@ -111,23 +111,31 @@ describe("batch-checks.yml", () => {
 describe("the batch's confirm", () => {
   const batch = workflow(".github/workflows/batch-checks.yml");
 
-  it("confirms on the machines the sweep took", () => {
-    const runsOn = String(batch.jobs.confirm!["runs-on"]);
+  it("confirms on the machines the sweep took, from the first failure and after it", () => {
     const vars = { MAC_QUEUES };
-    expect(workflowString(runsOn, { matrix: { platform: "mac" }, vars })).toBe(
-      "mini-mac-release-split",
-    );
-    expect(workflowString(runsOn, { matrix: { platform: "linux" }, vars })).toBe("ubuntu-24.04");
+    for (const id of ["confirm", "confirm-later"]) {
+      const runsOn = String(batch.jobs[id]!["runs-on"]);
+      expect(workflowString(runsOn, { matrix: { platform: "mac" }, vars }), id).toBe(
+        "mini-mac-release-split",
+      );
+      expect(workflowString(runsOn, { matrix: { platform: "linux" }, vars }), id).toBe(
+        "ubuntu-24.04",
+      );
+    }
   });
 
   // INF-3937: a failure that shows only in the confirm (a batch run's Mac
   // confirm, whose log named a trace, a picture and an error context the
   // machine took with it) has to be readable from the run, as the sweep's
-  // journey jobs keep theirs (docs/testing.md, "The swept batch").
+  // journey jobs keep theirs (docs/testing.md, "The swept batch"). Both
+  // confirms run the batch-confirm action in the checkout it names.
   it("keeps a failed round's result directories on the run, under a name of each platform's own", () => {
-    const job = batch.jobs.confirm as Job & { defaults: { run: { "working-directory": string } } };
-    const rounds = job.steps!.find((step) => step.run?.includes("scripts/batch-confirm.ts"))!;
-    const kept = job.steps!.find((step) => step.uses?.startsWith("actions/upload-artifact@"))!;
+    const action = loadYamlFile(".github/actions/batch-confirm/action.yml") as {
+      runs: { steps: (NonNullable<Job["steps"]>[number] & { "working-directory"?: string })[] };
+    };
+    const steps = action.runs.steps;
+    const rounds = steps.find((step) => step.run?.includes("scripts/batch-confirm.ts"))!;
+    const kept = steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"))!;
     const keeps = (outcome: string) =>
       workflowValue(
         kept.if!,
@@ -142,14 +150,21 @@ describe("the batch's confirm", () => {
     expect(["success", "failure", "skipped"].map(keeps)).toEqual([false, true, false]);
     // Each Playwright run's directory, where a failed journey's trace,
     // picture and error context land, sits inside the kept folder.
-    const runs = `${job.defaults.run["working-directory"]}/${RUNS_DIR}/`;
+    const runs = `${rounds["working-directory"]}/${RUNS_DIR}/`;
     expect(runs.startsWith(String(kept.with!.path)), runs).toBe(true);
-    // The confirm runs in the batch's own run after the sweep, whose Mac
+    for (const id of ["confirm", "confirm-later"]) {
+      const checkout = batch.jobs[id]!.steps!.find((step) => step.with?.path)!;
+      expect(checkout.with!.path, id).toBe(rounds["working-directory"]);
+    }
+    // The confirms run in the batch's own run beside the sweep, whose Mac
     // lanes keep their own failures, and an artifact's name is the run's
     // once.
-    const named = (platform: string) =>
-      workflowString(String(kept.with!.name), { matrix: { platform } });
-    const names = ["linux", "mac"].map(named);
+    const names = ["confirm", "confirm-later"].flatMap((id) => {
+      const call = batch.jobs[id]!.steps!.at(-1)!;
+      return ["linux", "mac"].map((platform) =>
+        workflowString(String(call.with!.artifact), { matrix: { platform } }),
+      );
+    });
     const lanes = workflow(".github/workflows/verify.yml").jobs.lane!.steps!.filter((step) =>
       step.uses?.startsWith("actions/upload-artifact@"),
     );
@@ -162,6 +177,7 @@ describe("the batch's confirm", () => {
       ),
     );
     expect(sweepNames).toContain("e2e-failures-mac");
+    expect(names).toContain("confirm-failures-mac");
     expect(new Set([...names, ...sweepNames]).size).toBe(names.length + new Set(sweepNames).size);
   });
 

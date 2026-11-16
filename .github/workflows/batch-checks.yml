@@ -7,14 +7,17 @@ name: Batch checks
 # and the Linux startup fixtures in jobs of their own. The batch's branch
 # holds its changes, one commit each, so every job checks out that version.
 #
-# When a check fails, the failures job reads each failed job's log for the
-# test files it names (scripts/batch-failures.mjs) and the confirm job runs
-# those files three rounds on the same version, on the platform whose job
-# failed (the captain's pick on INF-3012, "A only: the confirm step"). The
-# last job passes once every check passed, or once the confirm passed, and
-# names the tree of the batch's version and the main version the batch left
-# main at, which main's check and the alpha's proof follow
-# (scripts/batch.mjs, scripts/main-alpha-proof.mjs).
+# When a check fails, the first-failure job reads that failed job's log for
+# the test files it names (scripts/batch-failures.mjs) and the confirm job
+# runs those files three rounds on the same version, on the platform whose
+# job failed (the captain's pick on INF-3012, "A only: the confirm step"),
+# while the other checks run on (INF-4382). Once every check ended, the
+# failures job reads the jobs that failed later, and the later confirm runs
+# their files. The last job passes once every check passed, or once every
+# failed job's files passed their confirm, and names the tree of the
+# batch's version and the main version the batch left main at, which main's
+# check and the alpha's proof follow (scripts/batch.mjs,
+# scripts/main-alpha-proof.mjs).
 #
 # The batch stops at its first code-check failure (the captain's pick on
 # INF-3925): the watch job reads this run until the sweep's code checks end,
@@ -193,14 +196,18 @@ jobs:
           echo "::error title=The code checks failed::${FAILED:-The code checks failed}. Their own error lines say why; the batch stopped its other checks, which show as cancelled."
           exit 1
 
-  # After a failed check: what the confirm runs again, from the failed jobs'
-  # logs. Both outputs are empty when a failed job's log named no test file.
-  failures:
-    needs: [sweep, critical-path, startup]
-    if: ${{ !cancelled() && (needs.sweep.result == 'failure' || needs.critical-path.result == 'failure' || needs.startup.result == 'failure') }}
-    name: ${{ format('{0} · Read the failures', inputs.trigger) }}
+  # From the first failed check: reads the run every half minute until a
+  # check's job fails, then reads each failed job's log for the test files
+  # it names as failed, so the confirm starts while the other checks run on
+  # (INF-4382). It cancels nothing, and it never fails the batch itself: a
+  # job that cannot read the run leaves every failure to the failures job.
+  first-failure:
+    needs: batch
+    name: ${{ format('{0} · Read the first failures', inputs.trigger) }}
     runs-on: ubuntu-24.04
+    continue-on-error: true
     outputs:
+      found: ${{ steps.read.outputs.found }}
       jobs: ${{ steps.read.outputs.jobs }}
       files: ${{ steps.read.outputs.files }}
     steps:
@@ -217,25 +224,23 @@ jobs:
         with:
           script: |
             const {pathToFileURL} = require('node:url');
-            const {failures} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/batch-failures.mjs`).href);
-            await failures({github, context, core});
+            const {firstFailure} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/batch-failures.mjs`).href);
+            await firstFailure({github, context, core});
 
   # The confirm: each failed test file three rounds on the batch's version,
   # on Linux when a Linux job failed and on the Mac when a Mac job did, the
-  # same machines the sweep took (scripts/batch-confirm.ts).
+  # same machines the sweep took (.github/actions/batch-confirm,
+  # scripts/batch-confirm.ts), from the first failed check.
   confirm:
-    needs: failures
-    if: ${{ !cancelled() && needs.failures.outputs.jobs != '' }}
+    needs: first-failure
+    if: ${{ !cancelled() && needs.first-failure.outputs.found == 'confirm' }}
     name: ${{ format('{0} · Confirm failed tests ({1})', inputs.trigger, matrix.platform == 'mac' && 'Mac' || 'Linux') }}
     strategy:
       fail-fast: false
       matrix:
-        platform: ${{ fromJSON(contains(needs.failures.outputs.jobs, '(Mac)') && (contains(needs.failures.outputs.jobs, '(Linux') && '["linux","mac"]' || '["mac"]') || '["linux"]') }}
+        platform: ${{ fromJSON(contains(needs.first-failure.outputs.jobs, '(Mac)') && (contains(needs.first-failure.outputs.jobs, '(Linux') && '["linux","mac"]' || '["mac"]') || '["linux"]') }}
     runs-on: ${{ matrix.platform == 'mac' && (fromJSON(vars.MAC_QUEUES || '{}').release_split || fromJSON(vars.MAC_QUEUES || '{}').split || vars.MAC_RUNNER || 'macos-15') || 'ubuntu-24.04' }}
     timeout-minutes: 60
-    defaults:
-      run:
-        working-directory: Application Support/firstmate
     steps:
       - name: Checkout the keep-awake action
         if: matrix.platform == 'mac'
@@ -251,80 +256,87 @@ jobs:
         with:
           ref: ${{ inputs.head }}
           path: Application Support/firstmate
-      - uses: ./Application Support/firstmate/.github/actions/pnpm
+      - uses: ./Application Support/firstmate/.github/actions/batch-confirm
         with:
-          working-directory: Application Support/firstmate
-      - uses: actions/setup-node@v4
+          files: ${{ needs.first-failure.outputs.files }}
+          platform: ${{ matrix.platform }}
+          artifact: ${{ format('confirm-failures-{0}', matrix.platform) }}
+
+  # Once every check ended: the jobs that failed after the first failure was
+  # read, which the later confirm runs again. Its output `left` is
+  # `nothing` when the confirm took every failed job, `confirm` with the
+  # later jobs and files, or `unanswerable` when a later failed job's log
+  # named no test file. It does not run after a first failure no confirm
+  # answers, which already holds the batch failed.
+  failures:
+    needs: [first-failure, sweep, critical-path, startup]
+    if: ${{ !cancelled() && (needs.sweep.result == 'failure' || needs.critical-path.result == 'failure' || needs.startup.result == 'failure') && needs.first-failure.outputs.found != 'unanswerable' }}
+    name: ${{ format('{0} · Read the failures', inputs.trigger) }}
+    runs-on: ubuntu-24.04
+    outputs:
+      left: ${{ steps.read.outputs.left }}
+      jobs: ${{ steps.read.outputs.jobs }}
+      files: ${{ steps.read.outputs.files }}
+    steps:
+      - uses: actions/checkout@v4
         with:
-          node-version: 24
-          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
-          cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
-      - uses: ./Application Support/firstmate/.github/actions/node-headers
-      - uses: ./Application Support/firstmate/.github/actions/electron-download
-        with:
-          working-directory: Application Support/firstmate
-      - run: pnpm install --frozen-lockfile
+          ref: ${{ inputs.head }}
+          # The failure reader and the job names it reads the run by.
+          sparse-checkout: |
+            scripts/batch-failures.mjs
+            scripts/batch-pull.mjs
+          sparse-checkout-cone-mode: false
+      - id: read
+        uses: actions/github-script@v7
         env:
-          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
-      # A journey among the files needs the built app, and on Linux the
-      # virtual desktop source-journeys.yml prepares.
-      - id: journeys
-        env:
-          FILES: ${{ needs.failures.outputs.files }}
-        run: |
-          case " $FILES " in *.spec.ts\ *) echo "any=true" >> "$GITHUB_OUTPUT" ;; esac
-      - if: steps.journeys.outputs.any == 'true' && matrix.platform == 'linux'
-        uses: ./Application Support/firstmate/.github/actions/linux-desktop
+          CONFIRMED: ${{ needs.first-failure.outputs.jobs }}
         with:
-          working-directory: Application Support/firstmate
-      - if: steps.journeys.outputs.any == 'true'
-        run: pnpm build
-      - if: steps.journeys.outputs.any == 'true' && matrix.platform == 'mac'
-        run: pnpm exec playwright install ffmpeg
-      - if: steps.journeys.outputs.any == 'true'
-        uses: ./Application Support/firstmate/.github/actions/demo-encoder
+          script: |
+            const {pathToFileURL} = require('node:url');
+            const {failures} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/batch-failures.mjs`).href);
+            await failures({github, context, core, confirmed: process.env.CONFIRMED});
+
+  # The later confirm: the same rounds for the jobs that failed after the
+  # first failure was read, under names of their own.
+  confirm-later:
+    needs: failures
+    if: ${{ !cancelled() && needs.failures.outputs.left == 'confirm' }}
+    name: ${{ format('{0} · Confirm failed tests ({1}, later failures)', inputs.trigger, matrix.platform == 'mac' && 'Mac' || 'Linux') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(contains(needs.failures.outputs.jobs, '(Mac)') && (contains(needs.failures.outputs.jobs, '(Linux') && '["linux","mac"]' || '["mac"]') || '["linux"]') }}
+    runs-on: ${{ matrix.platform == 'mac' && (fromJSON(vars.MAC_QUEUES || '{}').release_split || fromJSON(vars.MAC_QUEUES || '{}').split || vars.MAC_RUNNER || 'macos-15') || 'ubuntu-24.04' }}
+    timeout-minutes: 60
+    steps:
+      - name: Checkout the keep-awake action
+        if: matrix.platform == 'mac'
+        uses: actions/checkout@v4
         with:
-          working-directory: Application Support/firstmate
-      - id: rounds
-        name: Run each failed test file three rounds
-        env:
-          FILES: ${{ needs.failures.outputs.files }}
-          PLATFORM: ${{ matrix.platform }}
-          JOURNEYS: ${{ steps.journeys.outputs.any }}
-          SCREEN: 2560x1600x24
-        run: |
-          if [ "$PLATFORM" = mac ]; then
-            cores="$(node scripts/job-cores.ts)"
-            node scripts/batch-confirm.ts --files "$FILES" -- "--workers=$(( cores > 1 ? cores / 2 : 1 ))"
-          elif [ "$JOURNEYS" = true ]; then
-            scripts/on-screen.sh node scripts/batch-confirm.ts --files "$FILES"
-          else
-            node scripts/batch-confirm.ts --files "$FILES"
-          fi
-      # What a failed round leaves for whoever repairs the batch, as
-      # verify.yml's journey jobs keep theirs (docs/testing.md, "The swept
-      # batch"): every result directory under test-results/ - each failed
-      # journey's error context, trace and screenshot, and each round's JSON
-      # result - which the machine would otherwise take with it. A failed
-      # Vitest file leaves none. Each platform keeps its own, under a name
-      # no job of the batch's own run uses. It runs only when the rounds
-      # failed, so it never turns a passing confirm red.
-      - name: Keep the failed journeys' evidence
-        if: ${{ always() && steps.rounds.outcome == 'failure' }}
-        uses: actions/upload-artifact@v4
+          ref: ${{ inputs.head }}
+          sparse-checkout: .github/actions/keep-mac-awake
+          fetch-depth: 1
+      - name: Keep the Mac awake
+        if: matrix.platform == 'mac'
+        uses: ./.github/actions/keep-mac-awake
+      - uses: actions/checkout@v4
         with:
-          name: ${{ format('confirm-failures-{0}', matrix.platform) }}
-          path: Application Support/firstmate/test-results/
-          if-no-files-found: ignore
-          retention-days: 7
+          ref: ${{ inputs.head }}
+          path: Application Support/firstmate
+      - uses: ./Application Support/firstmate/.github/actions/batch-confirm
+        with:
+          files: ${{ needs.failures.outputs.files }}
+          platform: ${{ matrix.platform }}
+          artifact: ${{ format('confirm-later-failures-{0}', matrix.platform) }}
 
   # Passes once the sweep, the critical path and the startup fixtures all
-  # passed, or once the confirm passed, and names the tree they built and
-  # the main version the batch left main at, which main's sort and the
-  # alpha's proof read.
+  # passed, or once every failed job's files passed their confirm: the
+  # first confirm when it ran, and the later one unless the first took
+  # every failed job. It names the tree they built and the main version the
+  # batch left main at, which main's sort and the alpha's proof read.
   passed:
-    needs: [batch, sweep, critical-path, startup, confirm]
-    if: ${{ !cancelled() && (needs.sweep.result == 'success' && needs.critical-path.result == 'success' && needs.startup.result == 'success' || needs.confirm.result == 'success') }}
+    needs: [batch, sweep, critical-path, startup, first-failure, confirm, failures, confirm-later]
+    if: ${{ !cancelled() && (needs.sweep.result == 'success' && needs.critical-path.result == 'success' && needs.startup.result == 'success' || (needs.first-failure.outputs.found != 'confirm' || needs.confirm.result == 'success') && (needs.failures.outputs.left == 'nothing' || needs.confirm-later.result == 'success')) }}
     name: ${{ format('{0} · Batch passed (tree {1}; base {2})', inputs.trigger, needs.batch.outputs.tree, needs.batch.outputs.base) }}
     runs-on: ubuntu-24.04
     steps:

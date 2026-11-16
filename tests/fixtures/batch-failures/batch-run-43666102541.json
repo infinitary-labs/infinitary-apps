@@ -1,0 +1,250 @@
+[
+  {
+    "id": 132665694658,
+    "name": "Merge batch · Batch checks / Merge batch · Read the batch",
+    "created_at": "2026-11-15T02:05:24Z",
+    "started_at": "2026-11-15T02:05:26Z",
+    "completed_at": "2026-11-15T02:05:29Z",
+    "conclusion": "success"
+  },
+  {
+    "id": 132665720003,
+    "name": "Merge batch · Batch checks / Merge batch · Watch the code checks",
+    "created_at": "2026-11-15T02:05:30Z",
+    "started_at": "2026-11-15T02:05:31Z",
+    "completed_at": "2026-11-15T02:11:21Z",
+    "conclusion": "success"
+  },
+  {
+    "id": 132665720066,
+    "name": "Merge batch · Batch checks / Merge batch · Linux startup / Merge batch · Automatic startup checks (Linux)",
+    "created_at": "2026-11-15T02:05:30Z",
+    "started_at": "2026-11-15T02:05:32Z",
+    "completed_at": "2026-11-15T02:06:34Z",
+    "conclusion": "success"
+  },
+  {
+    "id": 132665720202,
+    "name": "Merge batch · Batch checks / Merge batch · Critical-path journey / Merge batch · Selected app journeys (Linux; serial)",
+    "created_at": "2026-11-15T02:05:30Z",
+    "started_at": "2026-11-15T02:05:32Z",
+    "completed_at": "2026-11-15T02:08:15Z",
+    "conclusion": "success"
+  },
+  {
+    "id": 132665720295,
+    "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Check verification request",
+    "created_at": "2026-11-15T02:05:30Z",
+    "started_at": "2026-11-15T02:05:32Z",
+    "completed_at": "2026-11-15T02:05:38Z",
+    "conclusion": "success"
+  },
+  {
+    "id": 132665758829,
+    "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Code checks and build (Linux)",
+    "created_at": "2026-11-15T02:05:39Z",
+    "started_at": "2026-11-15T02:05:40Z",
+    "completed_at": "2026-11-15T02:10:53Z",
+    "conclusion": "success"
+  },
+  {
+    "id": 132665758848,
+    "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Desktop journeys (Mac)",
+    "created_at": "2026-11-15T02:05:39Z",
+    "started_at": "2026-11-15T02:06:02Z",
+    "completed_at": "2026-11-15T02:31:32Z",
+    "conclusion": "success"
+  },
+  {
+    "id": 132665758888,
+    "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Native tests, replay and package (Mac)",
+    "created_at": "2026-11-15T02:05:39Z",
+    "started_at": "2026-11-15T02:09:28Z",
+    "completed_at": "2026-11-15T02:28:22Z",
+    "conclusion": "success"
+  },
+  {
+    "id": 132665759021,
+    "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Unit tests (Linux; group 2/3)",
+    "created_at": "2026-11-15T02:05:39Z",
+    "started_at": "2026-11-15T02:05:41Z",
+    "completed_at": "2026-11-15T02:11:18Z",
+    "conclusion": "success"
+  },
+  {
+    "id": 132665759091,
+    "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Integration tests (Linux; group 1/2)",
+    "created_at": "2026-11-15T02:05:39Z",
+    "started_at": "2026-11-15T02:05:41Z",
+    "completed_at": "2026-11-15T02:20:27Z",
+    "conclusion": "success"
+  },
+  {
+    "id": 132665759149,
+    "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Unit tests (Linux; group 1/3)",
+    "created_at": "2026-11-15T02:05:39Z",
+    "started_at": "2026-11-15T02:05:41Z",
+    "completed_at": "2026-11-15T02:11:29Z",
+    "conclusion": "success"
+  },
+  {
+    "id": 132665759157,
+    "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Parallel journeys (Mac)",
+    "created_at": "2026-11-15T02:05:39Z",
+    "started_at": "2026-11-15T02:09:59Z",
+    "completed_at": "2026-11-15T02:30:43Z",
+    "conclusion": "success"
+  },
+  {
+    "id": 132665759177,
+    "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Unit tests (Linux; group 3/3)",
+    "created_at": "2026-11-15T02:05:39Z",
+    "started_at": "2026-11-15T02:05:40Z",
+    "completed_at": "2026-11-15T02:11:29Z",
+    "conclusion": "success"
+  },
+  {
+    "id": 132665759180,
+    "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Environment checks (Linux; group 1/2)",
+    "created_at": "2026-11-15T02:05:39Z",
+    "started_at": "2026-11-15T02:05:40Z",
+    "completed_at": "2026-11-15T02:09:40Z",
+    "conclusion": "success"
+  },
+  {
+    "id": 132665759222,
+    "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Integration tests (Linux; group 2/2)",
+    "created_at": "2026-11-15T02:05:39Z",
+    "started_at": "2026-11-15T02:05:40Z",
+    "completed_at": "2026-11-15T02:16:21Z",
+    "conclusion": "success"
+  },
+  {
+    "id": 132665759238,
+    "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Browser tests (Linux)",
+    "created_at": "2026-11-15T02:05:39Z",
+    "started_at": "2026-11-15T02:05:40Z",
+    "completed_at": "2026-11-15T02:10:58Z",
+    "conclusion": "success"
+  },
+  {
+    "id": 132665759268,
+    "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Environment checks (Linux; group 2/2)",
+    "created_at": "2026-11-15T02:05:39Z",
+    "started_at": "2026-11-15T02:05:40Z",
+    "completed_at": "2026-11-15T02:08:52Z",
+    "conclusion": "success"
+  },
+  {
+    "id": 132665759325,
+    "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; parallel group 3/6)",
+    "created_at": "2026-11-15T02:05:39Z",
+    "started_at": "2026-11-15T02:05:41Z",
+    "completed_at": "2026-11-15T02:20:01Z",
+    "conclusion": "success"
+  },
+  {
+    "id": 132665759343,
+    "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; parallel group 6/6)",
+    "created_at": "2026-11-15T02:05:39Z",
+    "started_at": "2026-11-15T02:05:40Z",
+    "completed_at": "2026-11-15T02:21:43Z",
+    "conclusion": "success"
+  },
+  {
+    "id": 132665759371,
+    "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; serial group 2/3)",
+    "created_at": "2026-11-15T02:05:39Z",
+    "started_at": "2026-11-15T02:05:40Z",
+    "completed_at": "2026-11-15T02:20:16Z",
+    "conclusion": "success"
+  },
+  {
+    "id": 132665759385,
+    "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; parallel group 4/6)",
+    "created_at": "2026-11-15T02:05:39Z",
+    "started_at": "2026-11-15T02:05:41Z",
+    "completed_at": "2026-11-15T02:20:04Z",
+    "conclusion": "success"
+  },
+  {
+    "id": 132665759394,
+    "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; serial group 1/3)",
+    "created_at": "2026-11-15T02:05:39Z",
+    "started_at": "2026-11-15T02:05:41Z",
+    "completed_at": "2026-11-15T02:28:18Z",
+    "conclusion": "success"
+  },
+  {
+    "id": 132665759417,
+    "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; serial group 3/3)",
+    "created_at": "2026-11-15T02:05:39Z",
+    "started_at": "2026-11-15T02:05:41Z",
+    "completed_at": "2026-11-15T02:26:58Z",
+    "conclusion": "failure"
+  },
+  {
+    "id": 132665759495,
+    "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; parallel group 5/6)",
+    "created_at": "2026-11-15T02:05:39Z",
+    "started_at": "2026-11-15T02:06:35Z",
+    "completed_at": "2026-11-15T02:25:05Z",
+    "conclusion": "success"
+  },
+  {
+    "id": 132665759511,
+    "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; parallel group 1/6)",
+    "created_at": "2026-11-15T02:05:39Z",
+    "started_at": "2026-11-15T02:05:41Z",
+    "completed_at": "2026-11-15T02:26:27Z",
+    "conclusion": "success"
+  },
+  {
+    "id": 132665759524,
+    "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Linux journeys / Merge batch · App journeys (Linux; parallel group 2/6)",
+    "created_at": "2026-11-15T02:05:39Z",
+    "started_at": "2026-11-15T02:05:41Z",
+    "completed_at": "2026-11-15T02:27:13Z",
+    "conclusion": "success"
+  },
+  {
+    "id": 132665760031,
+    "name": "Merge batch · Batch checks / Merge batch · Desktop checks / Merge batch · Signed installer checks",
+    "created_at": "2026-11-15T02:05:39Z",
+    "started_at": "2026-11-15T02:05:39Z",
+    "completed_at": "2026-11-15T02:05:39Z",
+    "conclusion": "skipped"
+  },
+  {
+    "id": 132667186563,
+    "name": "Merge batch · Batch checks / ${{ inputs.trigger }} · Stop after failed code checks (${{ matrix.job }})",
+    "created_at": "2026-11-15T02:11:22Z",
+    "started_at": "2026-11-15T02:11:22Z",
+    "completed_at": "2026-11-15T02:11:21Z",
+    "conclusion": "skipped"
+  },
+  {
+    "id": 132672173307,
+    "name": "Merge batch · Batch checks / Merge batch · Read the failures",
+    "created_at": "2026-11-15T02:31:32Z",
+    "started_at": "2026-11-15T02:31:34Z",
+    "completed_at": "2026-11-15T02:31:41Z",
+    "conclusion": "success"
+  },
+  {
+    "id": 132672212588,
+    "name": "Merge batch · Batch checks / Merge batch · Confirm failed tests (Linux)",
+    "created_at": "2026-11-15T02:31:42Z",
+    "started_at": "2026-11-15T02:31:44Z",
+    "completed_at": "2026-11-15T02:40:40Z",
+    "conclusion": "failure"
+  },
+  {
+    "id": 132674301889,
+    "name": "Merge batch · Batch checks / ${{ inputs.trigger }} · Batch passed (tree ${{ needs.batch.outputs.tree }}; base ${{ needs.batch.outputs.base }})",
+    "created_at": "2026-11-15T02:40:40Z",
+    "started_at": "2026-11-15T02:40:40Z",
+    "completed_at": "2026-11-15T02:40:40Z",
+    "conclusion": "skipped"
+  }
+]

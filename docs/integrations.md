@@ -351,7 +351,7 @@ A task on this Mac is granted the command whenever the host has a command proces
 ## On a computer that runs work
 
 A crewmate on a computer that runs work (`docs/helper.md`) runs the same command in its shell there, and reaches this Mac's integrations: the integrations and their sign-ins stay here, and nothing of a sign-in goes to that computer.
-That computer's task channel carries the command (`ComputerBrowsers`, `src/core/helper/browsers.ts`), and each list, show and call is asked of this Mac (`inf:work:integrations` for list and show, `inf:work:use-integration` for a call; `SessionHost`, `src/core/helper/sessionHost.ts`).
+That computer's task channel carries the command (`ComputerBrowsers`, `src/core/helper/browsers.ts`), and each list, show and call is asked of this Mac (`inf:work:integrations` for list and show, `inf:work:use-integration` for a call; `integrationsAskedOfHome`, `src/core/helper/integrationsThere.ts`, which `SessionHost` gives each task).
 This Mac answers it through `IntegrationsService.forTask` under the same rules as for a task here, so each call follows this Mac's saved approval rule, and an action at Asks you is kept and presented here.
 A call is a change in the conversation's ledger (`docs/helper.md`, "Holding a conversation"): one asked again after a drop is answered from what this Mac kept, and one this Mac began without a kept answer is never run again.
 A command waiting on this Mac answers before its command process is stopped, and a call not yet sent when it stops is never sent later.

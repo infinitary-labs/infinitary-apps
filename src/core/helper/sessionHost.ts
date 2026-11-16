@@ -93,6 +93,7 @@ import { HANDOVER_IN_DIR_NAME, HANDOVER_OUT_DIR_NAME } from "../tasks/handoverFi
 import type { TaskQueryRow } from "../tasks/taskQuery";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import type { MovedFolders } from "../workspace/workMove";
+import { integrationsAskedOfHome } from "./integrationsThere";
 import { keepOrdered, type PersonalCopy } from "./personalCopy";
 import { carryStory, type PlacedMedia, sendCardData, sendPictures } from "./placedStoryMedia";
 import type { PlacedJob, PlacedTaskState, PlacedTasks } from "./placedTasks";
@@ -267,8 +268,6 @@ const FORWARDED_TOOLS = new Set<string>(Object.keys(APP_TOOL_REQUESTS));
 const RETRIES = 2;
 
 const toolTextSchema = workRequests["inf:work:close-card"].response;
-const integrationAnswerSchema = workRequests["inf:work:use-integration"].response;
-type IntegrationWireAnswer = ReturnType<typeof integrationAnswerSchema.parse>;
 const tasksAnswerSchema = workRequests["inf:work:tasks"].response;
 
 type Flush = { seq: number; resolve: () => void };
@@ -1593,15 +1592,6 @@ export class SessionHost {
   }
 
   /**
-   * The integrations a task's command reaches here (docs/integrations.md,
-   * "On a computer that runs work"): each list, show and call is asked of
-   * the home, which answers it with its own integrations and sign-ins under
-   * the task's rules, and keeps the answer, so one asked again after a drop
-   * is answered once. Nothing of a sign-in is here. The command's `signal`
-   * ends a wait it could no longer answer: one never sent then is not sent
-   * when the home returns.
-   */
-  /**
    * The files command here (docs/files.md): each list and copy asked of the
    * home, which reads the file on the computer it is on and delivers the
    * copy into this task's hand-over folder here.
@@ -1623,43 +1613,15 @@ export class SessionHost {
     });
   }
 
+  /** The integrations command here: each list, show and call asked of the home within its deadline. */
   private integrationsOf(held: Held): TaskIntegrations {
-    const ask = async (
-      channel: "inf:work:integrations" | "inf:work:use-integration",
-      input: object,
-      signal?: AbortSignal,
-    ): Promise<IntegrationWireAnswer> =>
-      integrationAnswerSchema.parse(
-        await this.withDeadline(
-          channel,
-          (deadline) => this.call(held, channel, { callId: randomUUID(), input }, deadline),
-          signal,
-        ),
-      );
-    const words = (answer: IntegrationWireAnswer) => ({
-      text: answer.text ?? `${HOME.The} answered nothing.`,
-      ...(answer.refused ? { refused: answer.refused } : {}),
-    });
-    return {
-      list: async (signal) => {
-        const answer = await ask("inf:work:integrations", {}, signal);
-        const rows = answer.data?.integrations;
-        if (!Array.isArray(rows)) throw new Error(words(answer).text);
-        return rows as Record<string, unknown>[];
-      },
-      show: async (name, signal) => {
-        const answer = await ask("inf:work:integrations", { name }, signal);
-        return answer.data ?? words(answer);
-      },
-      call: async (name, action, input, signal, reason) =>
-        words(
-          await ask(
-            "inf:work:use-integration",
-            { name, action, input, ...(reason !== undefined ? { reason } : {}) },
-            signal,
-          ),
-        ),
-    };
+    return integrationsAskedOfHome((channel, input, signal) =>
+      this.withDeadline(
+        channel,
+        (deadline) => this.call(held, channel, { callId: randomUUID(), input }, deadline),
+        signal,
+      ),
+    );
   }
 
   /**

@@ -75,6 +75,8 @@ import {
   writeSentLine,
 } from "./integrationAsks";
 import { approvableOffer, taskPull } from "./mergeAuthorization";
+import { reviewedTaskOf } from "./reviewCard";
+import { reviewHistory } from "./reviewHistory";
 import { holdsMerge, type MergeBehind } from "./settleCardFacts";
 import { askedUnderCardLine } from "./threadWords";
 import type { TypedWake } from "./wakes";
@@ -313,12 +315,14 @@ export class CardActions {
     // waits on its author's close-out.
     const card = this.core.cards.shown(cardId);
     if (!card) return {};
-    const associated = card.taskId
-      ? this.core.options.tasks.get(card.taskId)
+    // A reviewer's question is the builder's to answer once its review closed.
+    const asked = reviewedTaskOf(card, this.core.options.tasks) ?? card.taskId;
+    const associated = asked
+      ? this.core.options.tasks.get(asked)
       : (this.core.options.tasks.capture.openCardTaskFor(card.id) ??
         this.core.options.tasks.capture.taskForCard(card.id));
     const taskUnavailable = Boolean(
-      (card.taskId && !associated) || (associated && TaskService.isClosed(associated)),
+      (asked && !associated) || (associated && TaskService.isClosed(associated)),
     );
     if (!onStage(card) || card.status !== "ready" || taskUnavailable) {
       throw new CardChoiceUnavailableError(taskUnavailable ? "task-closed" : "not-ready");
@@ -778,6 +782,10 @@ export class CardActions {
       if (source === "chrome" && hooks.notifyCaptainChoice)
         hooks.notifyCaptainChoice(wake, decisionTaskId);
       else hooks.notifyOp(wake, "agent", decisionTaskId);
+    } else if (card.taskId && !closedAnswer && card.author === "crewmate" && card.reviewTaskId) {
+      // A reviewer's Review finding card (INF-4338's direction D): the
+      // choice is the builder's to act on, with no first mate turn between.
+      this.reviewChoice(card, card.taskId, source, choice);
     } else if (card.taskId && !closedAnswer && card.author !== "host") {
       // The action round-trip: a declared choice on a crewmate's card
       // reaches its still-running session as a steering message. A host
@@ -973,6 +981,48 @@ export class CardActions {
           type: "firstmate_note",
           text: `Could not deliver the card choice for "${this.taskTitle(taskId)}": ${message}`,
           taskId,
+        });
+      });
+  }
+
+  /**
+   * The captain's choice on a reviewer's own Review finding card goes to the
+   * builder the review reads, with the review history that now holds it;
+   * the builder's next report returns to the reviewer (`Reviews.returnToReview`).
+   */
+  private reviewChoice(
+    card: Card,
+    reviewId: string,
+    source: "chrome" | "frame",
+    choice: WakeChoice,
+  ): void {
+    const review = this.core.options.tasks.get(reviewId);
+    const builder = review?.parentId ? this.core.options.tasks.get(review.parentId) : undefined;
+    if (!builder || TaskService.isClosed(builder)) return;
+    const wake: TypedWake = {
+      facts: {
+        kind: "review-handoff",
+        from: review?.key || reviewId,
+        head: review?.delivery?.headSha ?? "the reviewed version",
+        // After the review closed, no reviewer reads the answer: the builder
+        // delivers a chosen change as a new version.
+        stage: review && TaskService.isClosed(review) ? "decided" : "decision",
+        excerpt: `The captain chose "${choice.label}" on "${card.title}".`,
+        history: reviewHistory(this.core.options.tasks, builder),
+      },
+      once: `review-decision:${card.id}:${card.offerId ?? card.lifecycleId ?? ""}`,
+    };
+    void this.core.steer
+      .steerCrewmate(builder.id, wake, source === "chrome" ? "captain" : "firstmate", {
+        via: "card",
+        cardId: card.id,
+      })
+      .catch((caught: unknown) => {
+        const message = caught instanceof Error ? caught.message : String(caught);
+        this.core.options.broadcastEvent({
+          type: "firstmate_note",
+          text: `Could not deliver the card choice for "${builder.title}": ${message}`,
+          taskId: builder.id,
         });
       });
   }

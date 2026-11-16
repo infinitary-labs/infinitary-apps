@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "reviewer-finding-card",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "A review's questions come from the reviewer, in plain words with a picture",
+      "body": "When an independent review finds something only you can decide, the reviewer that read the change now asks you itself. Each question names what happens now in plain words with a small picture, shows the way it works today and the reviewer's pick, and folds the finding's file and version away. Your choice goes straight to the crewmate building the change.",
+      "picture": {
+        "dark": "reviewer-finding-card-dark.webp",
+        "light": "reviewer-finding-card-light.webp",
+        "alt": "A Review finding card asking whether an empty meter should still say Later, with a small picture of the meter, a Keep the copy choice tagged As built and a Recommended change."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

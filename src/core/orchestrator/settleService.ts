@@ -26,6 +26,7 @@ import {
   keptNote,
   standingAuthorization,
 } from "./mergeAuthorization";
+import { asksAbout } from "./reviewCard";
 import type { SettleOutcome, SettleServiceHost } from "./settleHost";
 import type { SettleLease, SettleLocks } from "./settleLocks";
 import {
@@ -187,7 +188,9 @@ export class SettleService {
         // The first mate's own cards never hold its own merge (INF-242's
         // question 9): a crewmate's question, a write request or a
         // validation question still does.
-        const cards = [...this.host.cards.values()].filter((card) => card.taskId === taskId);
+        const cards = [...this.host.cards.values()].filter((card) =>
+          asksAbout(card, taskId, this.host.tasks),
+        );
         const decisions = cards.filter((card) => card.actions.length);
         // Nor does the task's story note: the merge card of work that merges
         // on its own, held off the stack until this merge has a result
@@ -437,7 +440,7 @@ export class SettleService {
   ): Promise<string | undefined> {
     if (after === "continue") return "its merge card said the task continues after this merge";
     const question = [...this.host.cards.values()].find(
-      (card) => card.taskId === record.id && keepsTaskOpen(card),
+      (card) => asksAbout(card, record.id, this.host.tasks) && keepsTaskOpen(card),
     );
     if (question) return `the card "${question.title}" on this task is still open`;
     // An approved merge of another of its pull requests waits its turn (INF-2746).
@@ -506,7 +509,10 @@ export class SettleService {
         this.host.hasRunningJobs?.(taskId) ||
         current.delivery?.checkBack ||
         [...this.host.cards.values()].some(
-          (card) => card.taskId === taskId && card.actions.length > 0 && !isRoutineMergeCard(card),
+          (card) =>
+            asksAbout(card, taskId, this.host.tasks) &&
+            card.actions.length > 0 &&
+            !isRoutineMergeCard(card),
         ) ||
         this.host.inbox.allFor(taskId).length > 0 ||
         this.host.inbox.inFlight(taskId).length > 0 ||

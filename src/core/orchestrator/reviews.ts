@@ -36,7 +36,7 @@ import {
   standingAuthorization,
 } from "./mergeAuthorization";
 import type { ReviewVerdictFacts } from "./reportWakes";
-import { earlierHistory, reviewHistory } from "./reviewHistory";
+import { earlierHistory, isCaptainAnswer, reviewHistory } from "./reviewHistory";
 import type { SettleOwners } from "./settleOwners";
 import type { TypedWake } from "./wakes";
 import { withBasisVerdict } from "./workShape";
@@ -497,7 +497,29 @@ export class Reviews {
     // The merge stays held either way, so this still fails toward the
     // human.
     if (!typed) {
-      unstated();
+      // While the reviewer's own card is up, a report with no record is its
+      // card's turn or an answer under it, at the version its verdict read.
+      // A declared needs_firstmate still reaches the first mate, and a turn
+      // assigned a newer version that ends with no verdict is unstated.
+      const needsFirstmate = this.options.tasks.lastReportEntries(task.id).at(-1)
+        ?.declared.needsFirstmate;
+      if (needsFirstmate)
+        this.host.notifyOp(
+          {
+            facts: {
+              kind: "report",
+              task: builderTask,
+              crewmate: task.crewmate,
+              excerpt,
+              filed: [],
+              cards: this.host.cards.shownCards(task.id),
+              needsFirstmate,
+            },
+          },
+          "crewmate-report",
+          builder.id,
+        );
+      else if (!this.reviewCardOpen(task.id) || !this.assignedAsRead(review, builder)) unstated();
       return;
     }
     // A verdict belongs to the commit assigned before this turn, not a
@@ -643,23 +665,87 @@ export class Reviews {
         },
         once: `review-fix:${task.id}:${sha}:${typed.revision}`,
       });
+    // A finding for the captain goes back to the reviewer that read the
+    // change, which puts it to them on its own card (INF-4338's direction
+    // D); the first mate is not on that path.
+    const asks = (typed.findings ?? [])
+      .filter((finding) => finding.action === "ask-user")
+      .map(renderFinding);
+    if (asks.length > 0)
+      await this.deliverTo(builder, task.id, {
+        facts: {
+          kind: "review-handoff",
+          from: builder.key || builder.id,
+          head: sha,
+          stage: "card",
+          excerpt: `Your review of "${builder.title}" holds ${asks.length === 1 ? "a finding" : `${asks.length} findings`} for the captain.`,
+          findings: asks,
+          history,
+        },
+        once: `review-card:${task.id}:${sha}:${typed.revision}`,
+      });
     // The first mate makes decisions, not routine deliveries. The complete
     // verdict and its summary remain on the builder's record for its next read.
     if (
       verdict === "blocked" ||
-      typed.findings?.some(
-        (finding) =>
-          finding.action === "ask-user" ||
-          (finding.action === "no-op" && finding.severity !== "info"),
-      )
+      typed.findings?.some((finding) => finding.action === "no-op" && finding.severity !== "info")
     )
       this.host.notifyOp({ facts: verdictFacts }, "crewmate-report", task.id);
   }
 
+  /**
+   * Whether a review's own Review finding card is up (INF-4338's direction
+   * D): a report its reviewer makes while one is, without a review record,
+   * is the card's turn or an answer under it, never an unstated verdict.
+   */
+  private reviewCardOpen(reviewId: string): boolean {
+    for (const card of this.host.cards.values())
+      if (card.taskId === reviewId && card.reviewTaskId) return true;
+    return false;
+  }
+
+  /**
+   * Whether the review's assignment is what its last verdict read: the head
+   * that verdict recorded and the evidence and state revisions its kept
+   * review entry judged. Every reviewer turn moves the assignment
+   * (`refreshReview`), so a card or reply turn takes newer facts without
+   * reading them.
+   */
+  private assignedAsRead(review: TaskRecord, builder: TaskRecord): boolean {
+    const assigned = review.delivery?.validationAssignment;
+    const read = this.lastRead(review, builder);
+    return (
+      review.delivery?.headSha === read.head &&
+      (assigned?.revision ?? 0) === read.revision &&
+      (assigned?.stateRevision ?? 0) === read.stateRevision
+    );
+  }
+
+  /**
+   * The head, evidence revision and state revision this review's last verdict
+   * read, from its own kept entry; before its first verdict, its assignment.
+   */
+  private lastRead(review: TaskRecord, builder: TaskRecord) {
+    const kept = builder.delivery?.liveValidation?.reviews.findLast(
+      (entry) => entry.reviewer === review.id,
+    );
+    const assigned = review.delivery?.validationAssignment;
+    return {
+      head: kept ? kept.head : review.delivery?.headSha,
+      revision: kept ? kept.revision : (assigned?.revision ?? 0),
+      stateRevision: kept ? (kept.stateRevision ?? 0) : (assigned?.stateRevision ?? 0),
+    };
+  }
+
   /** A failed delivery is a decision for the first mate, never a lost verdict. */
   private async deliverToBuilder(builder: TaskRecord, wake: TypedWake): Promise<void> {
+    await this.deliverTo(builder, builder.id, wake);
+  }
+
+  /** A review handoff to the builder or back to its reviewer; a failed one goes to the first mate. */
+  private async deliverTo(builder: TaskRecord, taskId: string, wake: TypedWake): Promise<void> {
     try {
-      await this.host.steer(builder.id, wake);
+      await this.host.steer(taskId, wake);
     } catch (caught) {
       const problem = caught instanceof Error ? caught.message : String(caught);
       this.host.notifyOp(
@@ -687,14 +773,25 @@ export class Reviews {
       .find((child) => child.shape?.kind === "review" && !isRepairAssessment(child.shape));
     if (!review || !builder.delivery?.reviewedAt) return false;
     const facts = await this.reviewFacts(builder);
-    const assigned = review.delivery?.validationAssignment;
     const validation = builder.delivery?.liveValidation;
     const revision = validationRevision(validation);
     const state = validationStateRevision(validation);
+    // The captain's answer on the reviewer's own card since its verdict is
+    // new to the reviewer too, even when the builder changed nothing (an
+    // As built answer): the reviewer reads it at the same version.
+    const read = this.lastRead(review, builder);
+    const answer = this.options.tasks
+      .timeline(review.id)
+      .findLast(
+        (event) => isCaptainAnswer(event) && event.at > (builder.delivery?.reviewedAt ?? 0),
+      );
     if (
-      facts.headSha === review.delivery?.headSha &&
-      revision === (assigned?.revision ?? 0) &&
-      state === (assigned?.stateRevision ?? 0)
+      !answer &&
+      // What the last verdict read: a card or reply turn takes the builder's
+      // newest commit and evidence as its assignment without reading them.
+      facts.headSha === read.head &&
+      revision === read.revision &&
+      state === read.stateRevision
     )
       return false;
     await this.host.steer(review.id, {
@@ -705,7 +802,7 @@ export class Reviews {
         stage: "reread",
         excerpt,
       },
-      once: `review-return:${review.id}:${facts.headSha}:${revision}:${state}`,
+      once: `review-return:${review.id}:${facts.headSha}:${revision}:${state}${answer ? `:${answer.id}` : ""}`,
     });
     return true;
   }

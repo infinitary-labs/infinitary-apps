@@ -24,7 +24,7 @@ import { REVIEWED_TIER_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider
 import { regionShot } from "./pictures";
 import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
-import { captainCardChoice, latestServedTurn, providerMessages } from "./providerRequest";
+import { latestServedTurn, providerMessages } from "./providerRequest";
 import { putInLine, reportLine, startedLine, statusLine, taskLine } from "./rails";
 import { readSavedData } from "./savedData";
 import { captainWords } from "./scenarios/agentsReach";
@@ -36,7 +36,6 @@ import {
   MOCK_REVIEW_CAP_RETRY_LABEL,
   MOCK_REVIEW_FINDINGS_RISK,
   MOCK_REVIEW_KEEP_LABEL,
-  MOCK_REVIEW_KEEP_STEER,
   MOCK_REVIEW_PASS_RISK,
   MOCK_REVIEW_REFINDING,
   MOCK_REVIEWED_BUILDER_REPORT,
@@ -267,15 +266,20 @@ test("a reviewed task's review passes before its completion card, which merges w
   });
 
   // 4. The reviewer's findings: the auto-fix reached the builder as a steer
-  //    (it reports the fix), the ask-user finding is one decision card on
-  //    the builder's task from the Firstmate.
+  //    (it reports the fix), and the reviewer put the ask-user finding to
+  //    the captain on its own decision card (INF-4338's direction D).
   await expect(reportLine(page, review.key).first()).toBeVisible({ timeout: 30_000 });
   await expect(shownCard(page, MOCK_REVIEW_ASK_CARD_TITLE)).toBeVisible({ timeout: 30_000 });
   const findingCard = shownCard(page, MOCK_REVIEW_ASK_CARD_TITLE);
   await expect(findingCard.getByText(REVIEW_FINDING_LABEL, { exact: true })).toBeVisible();
-  // INF-2714: the first mate's card is its own, so its head reads first mate,
-  // never the builder's title; its buttons still act on the builder's task.
-  await expect(findingCard.locator("[data-card-meta]")).toHaveText(
+  // The card is the reviewer's own, on its review task, and draws the
+  // builder's facts; no first mate raised it.
+  expect(
+    (await page.evaluate(() => window.infinitary.cards.list())).find(
+      (card) => card.title === MOCK_REVIEW_ASK_CARD_TITLE,
+    ),
+  ).toMatchObject({ taskId: review.id, author: "crewmate", reviewTaskId: review.id });
+  await expect(findingCard.locator("[data-card-meta]")).not.toHaveText(
     cardMetaWords(FIRSTMATE_CARD_META),
   );
   const findingFacts = factsStrip(cardBody(page, MOCK_REVIEW_ASK_CARD_TITLE));
@@ -375,7 +379,7 @@ test("a reviewed task's review passes before its completion card, which merges w
 
   // 9. Told the review passed, the builder emits its completion card, which
   //    renders the five headings and the host's facts strip with the review
-  //    beside CI. The ask-user card is the Firstmate's and still stands, so
+  //    beside CI. The reviewer's ask-user card outlives its passed review, so
   //    the stack holds two and the new one waits unread until paged to
   //    (WI-18: a new card never steals the shown one).
   await expect(pager(page, 2)).toBeVisible({ timeout: 30_000 });
@@ -403,31 +407,14 @@ test("a reviewed task's review passes before its completion card, which merges w
   // requested merge").
   await expect(facts.mergeLine).toHaveText(MERGE_CLOSES_WORDS.continues);
 
-  // 10. The captain answers the finding first. The click is the Firstmate's
-  //     turn, served as the captain's choice on its card, and the Firstmate
-  //     relays the answer to the builder, which has nothing to change.
+  // 10. The captain answers the finding first. The click reaches the
+  //     builder straight from the reviewer's card, with no first mate turn,
+  //     and the builder has nothing to change.
   if (!mockProvider) throw new Error("this journey runs on the mock provider");
-  const askCard = (await page.evaluate(() => window.infinitary.cards.list())).find(
-    (card) => card.title === MOCK_REVIEW_ASK_CARD_TITLE,
-  );
-  const keep = askCard?.actions.find((action) => action.label === MOCK_REVIEW_KEEP_LABEL);
-  if (!askCard || !keep) throw new Error("the finding card is up with its keep");
-  expect(askCard.taskId).toBe(builder.id);
-  const kept = mockProvider.scriptFirstmateTurn(
-    captainCardChoice(
-      { id: askCard.id, title: askCard.title, taskId: builder.id },
-      { id: keep.id, label: keep.label },
-    ),
-    [{ name: "steer_crewmate", args: { task_id: builder.id, message: MOCK_REVIEW_KEEP_STEER } }],
-  );
   await showCard(page, MOCK_REVIEW_ASK_CARD_TITLE);
   await shownCard(page, MOCK_REVIEW_ASK_CARD_TITLE)
     .getByRole("button", { name: MOCK_REVIEW_KEEP_LABEL })
     .click();
-  // A miss prints the whole outcome: what the Firstmate was served instead.
-  await expect
-    .poll(kept.outcome, { timeout: 30_000 })
-    .toEqual(expect.objectContaining({ state: "closed", results: [expect.any(String)] }));
   await expect(
     reportLine(page, builder.key).filter({ hasText: reportSummary(MOCK_REVIEWED_KEEP_REPORT) }),
   ).toBeVisible({ timeout: 30_000 });
@@ -456,7 +443,8 @@ test("a reviewed task's review passes before its completion card, which merges w
     .toMatchObject({ status: "done", closedReason: "merged" });
 
   // The steers reached the builder's session: the auto-fix finding, the
-  // re-findings, and the captain's answer on the ask-user finding. What
+  // re-findings, and the captain's answer on the ask-user finding, which
+  // came after the review passed and so asks for delivery of any change. What
   // each session's prompt says is piResources.test.ts's, intentBrief.test.ts's
   // and wakes.test.ts's.
   const builderBodies = (mockProvider?.requestBodies() ?? []).filter(
@@ -467,11 +455,12 @@ test("a reviewed task's review passes before its completion card, which merges w
   );
   expect(builderBodies.some((body) => body.includes(MOCK_REVIEW_AUTOFIX_FINDING))).toBe(true);
   expect(builderBodies.some((body) => body.includes(MOCK_REVIEW_REFINDING))).toBe(true);
-  expect(builderBodies.some((body) => body.includes(MOCK_REVIEW_KEEP_STEER))).toBe(true);
+  expect(builderBodies.some((body) => body.includes(REVIEW_HANDOFF_NEXT.decided))).toBe(true);
   expect(builderBodies.some((body) => body.includes(MOCK_CAP_RETRY_STEER))).toBe(false);
 
-  // Session audit finding E: decisions reach the first mate; the passed
-  // review reaches the builder directly without a relay.
+  // Session audit finding E, as INF-4338 narrowed it: the ask-user finding
+  // is the reviewer's own card, so no findings wake reaches the first mate,
+  // and the passed review reaches the builder directly without a relay.
   expect(
     builderBodies.some((body) =>
       providerMessages(body).some(
@@ -487,7 +476,7 @@ test("a reviewed task's review passes before its completion card, which merges w
         wake.includes(`reported on review task ${review.id}`) &&
         wake.endsWith(reviewFindingsNext()),
     ),
-  ).toBe(true);
+  ).toBe(false);
   expect(builderBodies.some((body) => body.includes(REVIEW_HANDOFF_NEXT.ship))).toBe(true);
   expect(
     wakes.some(

@@ -23,6 +23,7 @@ import {
   served,
   sinceLastAsked,
 } from "../providerRequest";
+import { REVIEW_BRIEF_MARKER } from "./reviewedTier";
 
 /**
  * The agent's-reach story (INF-484 ring 4, INF-140), run end to end by
@@ -55,6 +56,13 @@ export const REACH_STOP_HOLDS: OverridableHold[] = ["checks"];
 export const REACH_STOP_STEER =
   "The captain said stop the review and merge it: his words pass the checks at this version, and end the review. Emit your completion card now; no re-review.";
 export const REACH_STOP_CARD_TITLE = "The meter fix merges at the reviewed version";
+/**
+ * The first mate's relay of those words to the reviewer whose own Review
+ * finding card they answer (INF-4338's direction D): only a card's author
+ * withdraws it, so the first mate asks the reviewer, naming the card.
+ */
+export const REACH_WITHDRAW_STEER =
+  "The captain answered your question in his own words: stop the review and merge it. Withdraw your card";
 const REACH_STOP_REPORT =
   "Emitted the completion card at the reviewed version on the captain's words; no re-review asked.";
 
@@ -263,6 +271,21 @@ function crewmateMove({ body, hasToolResults }: ScenarioRequest): ScenarioAnswer
   //    steer are both due as the turn starts, the lane serves them as one
   //    message, which still asks for the reading (INF-3627).
   const turn = sinceLastAsked(body, onlyCheckNotices);
+  // 1. The reviewer, told the captain answered its card in his own words,
+  //    withdraws that card and reads nothing again.
+  if (body.includes(REVIEW_BRIEF_MARKER) && turn.user.includes(REACH_WITHDRAW_STEER)) {
+    if (turn.results.length > 0) return { text: "" };
+    const cardId = turn.user.match(/Withdraw your card ([\w-]+)/)?.[1];
+    if (!cardId) throw new Error("The withdraw steer names the reviewer's card.");
+    return {
+      calls: [
+        {
+          name: "close_card",
+          args: { card_id: cardId, reason: "The captain answered it in his own words." },
+        },
+      ],
+    };
+  }
   if (body.includes(REVIEWED_TIER_PROMPT_MARKER) && turn.user.includes(REACH_READ_STEER)) {
     const { results } = turn;
     const reading = results.findLast((result) => /^facts: /m.test(result));

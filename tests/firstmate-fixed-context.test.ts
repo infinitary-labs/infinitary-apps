@@ -233,9 +233,10 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     says: "Info findings never block and need no steer.",
   },
   {
-    rule: "an ask-user finding is settled by the user's words or one card per round",
+    // INF-4338's direction D: the reviewer raises the card, the first mate none.
+    rule: "an ask-user finding is its reviewer's to put to the captain",
     home: { wake: "findings" },
-    says: "Decide an ask-user finding yourself when the user's own words already settle it; the rest are ONE decision card per round on the builder's task, with the step you would take as its default.",
+    says: "An ask-user finding is its reviewer's to put to the captain on its own Review finding card, whose answer the host sends to the builder: raise no card for it.",
   },
   {
     // INF-125 also binds a pending review to current proof/state, not just code.

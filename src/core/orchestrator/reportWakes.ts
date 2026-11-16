@@ -24,7 +24,7 @@ export type ReportFacts =
       kind: "review-handoff";
       from: string;
       head: string;
-      stage: "fix" | "proof" | "ship" | "reread";
+      stage: "fix" | "proof" | "ship" | "reread" | "card" | "decision" | "decided";
       excerpt: string;
       findings?: string[];
       history?: ReviewHistoryEntry[];
@@ -191,11 +191,26 @@ export type ReviewVerdictFacts = {
 export const REVIEWER_IDLE_NEXT =
   "The host returns changed heads, evidence revisions and validation state directly to the reviewer. Do not repeat that handoff; an idle reviewer needs no stand-by and no status.";
 
-/** What a findings or blocked verdict asks of the Firstmate next. */
+/**
+ * What a findings or blocked verdict asks of the Firstmate next. An
+ * ask-user finding is its reviewer's to put to the captain (INF-4338's
+ * direction D): the first mate hears a verdict only when it is blocked or
+ * holds a no-op finding that blocks, and raises no review finding card.
+ */
 export function reviewFindingsNext(): string {
   const relay = "The host owns auto-fix handoffs to the builder. Do not relay findings again.";
-  return `${relay} Info findings never block and need no steer. Decide an ask-user finding yourself when the user's own words already settle it; the rest are ONE decision card per round on the builder's task, with the step you would take as its default. Pass review_task_id naming this review. Start the title with Review of the builder's key; name the change in the first line. For each finding, show its number, severity, file and reviewed version above the reviewer's verbatim words. Every finding's question always includes an option for what the code does now, marked data-inf-current, which the app tags As built. Every option shows the reviewer's rough size. Mark data-inf-recommended on the reviewer's recommended way, named as the reviewer's pick with its reason. Where you would pick differently, say so on that option under your own name, with your reason and where it comes from; when the reviewer recommends none, mark nothing or mark your own pick, named as yours. Show a builder's view only when the builder gave one, on its option, under the builder's name. ${REVIEWER_IDLE_NEXT}`;
+  return `${relay} Info findings never block and need no steer. An ask-user finding is its reviewer's to put to the captain on its own Review finding card, whose answer the host sends to the builder: raise no card for it. Settle a blocked review, or a no-op finding that blocks, with the reviewer or the builder; ask the captain on a card only when it needs their choice. ${REVIEWER_IDLE_NEXT}`;
 }
+
+/**
+ * The reviewer's own Review finding card (INF-4338's direction D): served
+ * only to a reviewer whose verdict holds a finding for the captain, never
+ * in every review brief. The reviewer read the change, so it draws the
+ * problem a person would see and answers replies under the card; the
+ * finding as recorded folds, with its file and version.
+ */
+export const REVIEW_CARD_RULES =
+  "Put the findings above to the captain on ONE decision card for this round with emit_card: the app labels it Review finding beside the builder's facts and sends the captain's choice straight to the builder. Leave off the card, and settle yourself, a finding the user's own words or the decisions above already answer. If your Review finding card from an earlier round is still open, revise it in place under its id, keeping each question still waiting on it, instead of raising a second card. Start the title with Review of the builder's key. The first line, one sentence with nothing else before the first question, names the change in plain words, how many choices wait and whether people using the project will notice. For each finding, a fieldset whose legend asks the question in plain words, with no file or code name, beside a plain seriousness tag in <span class=\"inf-muted\">: Serious for an error, Worth fixing for a warning, Minor otherwise. Under the legend, one figure of what happens now, drawn from the change you read on one concrete example a person using the project would see, with at most one sentence beside it. Then one option per way in a dozen words at most, its rough size after the words: one is what the code does now, marked data-inf-current, which the app tags As built - add Leave it as built when no listed way is - and data-inf-recommended marks your pick. One line under the options names your pick and its reason in a dozen words or fewer; a builder's view, only when the builder gave one, takes its own line under the builder's name. Last, a details whose summary is The finding as recorded, holding its seriousness, file, reviewed version and your finding's text as recorded. A reply under the card comes to you: answer it from the change you read. Once the card is up, report without a new review record, then stay idle.";
 
 /** What a builder's report asks of its open review, which last returned findings or blocked. */
 export const REVIEW_NEW_HEAD_NEXT =
@@ -390,13 +405,18 @@ export const REVIEW_HANDOFF_NEXT = {
     "The code passed. Run live proof once after this code review, then report without pushing. The host returns the proof to this reviewer. If this reviewer already read it and found it short, repair the reported gap and rerun only affected proof. If the only missing proof requires a pushed branch, push and finish it beside the checks before the merge card. Resource consent and every captain decision still apply.",
   ship: "The review passed. Follow your brief's delivery for the reviewed version, then show its completion card. A local-only change needs no push or pull request. Do not bring it up to date merely because the default branch moved. Passing review grants no merge consent.",
   reread:
-    "Read the builder's changed head, evidence revision or validation state assigned to this turn. A code pass already recorded at this head makes this a proof read only. Read only the difference after an earlier code pass. The review history carries the captain's latest decisions. Report your typed review; the host delivers it directly to the builder. Escalate only a decision or a handoff you cannot complete.",
+    "Read the builder's changed head, evidence revision or validation state assigned to this turn, and the captain's newest answer on your Review finding card in the history. A code pass already recorded at this head makes this a proof read only. Read only the difference after an earlier code pass. The review history carries the captain's latest decisions. Report your typed review; the host delivers it directly to the builder. Escalate only a decision or a handoff you cannot complete.",
+  card: REVIEW_CARD_RULES,
+  decision:
+    "The captain answered your reviewer's question; the history carries the answer word for word, and it governs. Make the change it chose, if it chose one, under the review's fix rules; commit and report without pushing. The host returns your report to your reviewer, who reads the answer and any new head. Do not ask the first mate to relay it.",
+  decided:
+    "The captain answered your reviewer's question after its review closed; the history carries the answer word for word, and it governs. If it chose a change, make it under the review's fix rules, commit it, then push and follow your brief's delivery for the new version: a new merge card, with a new review as your rigor asks. If it kept the code as built, nothing more is needed. Do not ask the first mate to relay it.",
 } as const;
 
 /** A report, a review and a requested response, worded. */
 export const REPORT_WORDS: KindWords<ReportFacts> = {
   "review-handoff": (facts) => {
-    return `Host handoff from ${facts.from} at ${facts.head}: ${facts.excerpt}${facts.findings?.length ? `\nAuto-fix findings:\n${facts.findings.map((line) => `- ${line}`).join("\n")}` : ""}${facts.history?.length ? `\n${renderReviewHistory(facts.history)}\n` : ""}\n${REVIEW_HANDOFF_NEXT[facts.stage]}`;
+    return `Host handoff from ${facts.from} at ${facts.head}: ${facts.excerpt}${facts.findings?.length ? `\n${facts.stage === "card" ? "Findings for the captain" : "Auto-fix findings"}:\n${facts.findings.map((line) => `- ${line}`).join("\n")}` : ""}${facts.history?.length ? `\n${renderReviewHistory(facts.history)}\n` : ""}\n${REVIEW_HANDOFF_NEXT[facts.stage]}`;
   },
   "requested-response": (facts) =>
     `${REQUESTED_RESPONSE_OPENING}${facts.responseId} to request ${facts.requestId} for task ${facts.taskId}, submitted by task ${facts.contributorTask} (${facts.status}). Request: ${facts.question}\nResponse: ${facts.excerpt}\nThis is a saved response, independent of later reports and continuing work. Handling acknowledges delivery, not correctness. Answer the captain on the original card when this request concerns their question.`,

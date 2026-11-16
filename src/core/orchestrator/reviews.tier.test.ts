@@ -36,7 +36,9 @@ import { hostEnv } from "../hostEnv";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { CardChoiceUnavailableError } from "./cardActions";
+import type { CrewmateSpec } from "./crewSession";
 import { POLICY_GUIDANCE_HEADING } from "./noticeWakes";
+import { REVIEW_HANDOFF_NEXT } from "./reportWakes";
 import { renderWake } from "./wakes";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
@@ -975,6 +977,199 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       );
       expect(tasks.get(taskId)?.delivery?.reviewSha).toBe(head);
       expect(tasks.get(taskId)?.delivery?.reviewRounds).toBeUndefined();
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  /** Everything a crewmate was told: its prompts and the steers into a running turn. */
+  const receivedBy = (crew: ReturnType<typeof fakeCrewmate>) =>
+    [...crew.promptCalls, ...vi.mocked(crew.steer).mock.calls.map(([text]) => text)].join("\n");
+
+  // INF-4338's review: while a reviewer's own card is up, its report with no
+  // review record is silent only when it declares nothing and its assignment
+  // is the version its verdict read; and a fix the builder committed while a
+  // card or reply turn took that newer version as its assignment still goes
+  // back to the reviewer.
+  it("routes a reviewer's reports under its own card and returns a fix committed during a card turn", async () => {
+    const repo = gitRepo();
+    try {
+      const builder = fakeCrewmate();
+      const reviewer = fakeCrewmate();
+      const { supervisor, tasks, repos, ops, workspace, specs } = setup(builder, {
+        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+        crewmates: [reviewer],
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId: builderId } = await supervisor.intake.commission({
+        title: "Fix the meter test",
+        intent: intentOf("fix it"),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      await reportTurn(builder, builderId, "The meter copy is committed.");
+      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
+      const { taskId: reviewId } = await supervisor.intake.commission({
+        title: "Review",
+        intent: intentOf("fix it"),
+        shape: { review_of: builderId },
+      });
+      await tick();
+      await reviewTurn({ tasks, specs }, reviewer, 1, reviewId, "One finding for the captain.", {
+        code: "findings",
+        findings: [
+          {
+            id: "F1",
+            severity: "warning",
+            file: "src/meter.ts",
+            line: 40,
+            text: "the copy says Later",
+            action: "ask-user",
+          },
+        ],
+        risk: { level: "low", why: "one line." },
+      });
+      (specs[1] as CrewmateSpec).onCard?.({
+        id: "review-meter",
+        title: "Keep the Later copy?",
+        body: "<p>Keep the Later copy?</p>",
+        actions: [
+          { id: "keep", label: "Keep the copy", default: true },
+          { id: "change", label: "Change it" },
+        ],
+      });
+      const cardId =
+        supervisor.cards.snapshot().find((card) => card.title === "Keep the Later copy?")?.id ?? "";
+      const beforeCard = ops.length;
+      await reportTurn(reviewer, reviewId, "The card is up.");
+      expect(ops.slice(beforeCard)).toEqual([]);
+
+      // A reply turn under the card that declares needs_firstmate still reaches the first mate.
+      supervisor.cardActions.replyToCard(cardId, "Is this the meter's copy?");
+      await tick();
+      const ask = "Choose whether the copy question belongs to another task.";
+      await (specs[1] as CrewmateSpec).onReport?.(ask, undefined, { needsFirstmate: ask });
+      await reportTurn(reviewer, reviewId, ask);
+      expect(ops.slice(beforeCard)).toEqual([expect.stringContaining(ask)]);
+
+      // The builder records a proof run; a reply turn under the card then takes
+      // that evidence revision as its assignment without reading it.
+      const kept = tasks.get(builderId)?.delivery?.liveValidation;
+      const run = noSurfaceProof(HEAD, reviewId).runs[0];
+      if (!kept || !run)
+        throw new Error("The review's verdict is kept, and the fixture has its run.");
+      seedDelivery(tasks, builderId, {
+        liveValidation: {
+          ...kept,
+          runs: [...kept.runs, { ...run, revision: kept.runs.length + 1 }],
+        },
+      });
+      supervisor.cardActions.replyToCard(cardId, "Does the empty meter show it?");
+      await tick();
+      const beforeRun = ops.length;
+      await reportTurn(reviewer, reviewId, "Answered under the card.");
+      expect(ops.slice(beforeRun)).toEqual([
+        expect.stringContaining("with no typed review record"),
+      ]);
+      await supervisor.steer.steerCrewmate(builderId, "Report the proof you recorded.");
+      await tick();
+      const beforeReturn = reviewer.promptCalls.length;
+      await reportTurn(builder, builderId, "Recorded the proof run.");
+      expect(reviewer.promptCalls).toHaveLength(beforeReturn + 1);
+      expect(reviewer.promptCalls.at(-1)).toContain(REVIEW_HANDOFF_NEXT.reread);
+      await reportTurn(reviewer, reviewId, "Read the run; no verdict yet.");
+
+      // The builder commits a fix; a reply turn under the card then takes that
+      // version as its assignment without reviewing it.
+      const fixed = "fedcba9876543210fedcba9876543210fedcba98";
+      vi.mocked(workspace.branchHead).mockResolvedValue(fixed);
+      supervisor.cardActions.replyToCard(cardId, "Where does Later show?");
+      await tick();
+      expect(tasks.get(reviewId)?.delivery?.headSha).toBe(fixed);
+      // That turn ends with no verdict at a version its verdict never read: unstated.
+      const beforeReply = ops.length;
+      await reportTurn(reviewer, reviewId, "Answered under the card.");
+      expect(ops.slice(beforeReply)).toEqual([
+        expect.stringContaining("with no typed review record"),
+      ]);
+      // The builder's report of the fix goes back to the reviewer at that version.
+      await supervisor.steer.steerCrewmate(builderId, "Report the copy fix you committed.");
+      await tick();
+      const prompts = reviewer.promptCalls.length;
+      await reportTurn(builder, builderId, "Committed the copy fix.");
+      expect(reviewer.promptCalls).toHaveLength(prompts + 1);
+      expect(reviewer.promptCalls.at(-1)).toContain(REVIEW_HANDOFF_NEXT.reread);
+      expect(reviewer.promptCalls.at(-1)).toContain(fixed);
+
+      // The review passes with the card still up; the captain's choice after
+      // that tells the builder to deliver a chosen change as a new version.
+      seedDelivery(tasks, builderId, { liveValidation: noSurfaceProof(fixed, reviewId) });
+      seedDelivery(tasks, reviewId, {
+        validationAssignment: { head: fixed, revision: 1, scenarioRevision: 1, effects: [] },
+      });
+      await reviewTurn({ tasks, specs }, reviewer, 1, reviewId, "No findings.", {
+        code: "clear",
+        risk: { level: "low", why: "one line." },
+      });
+      expect(tasks.get(reviewId)).toMatchObject({ status: "done", closedReason: "finished" });
+      const beforeChoice = ops.length;
+      supervisor.cardActions.act(cardId, "change");
+      await tick();
+      expect(ops.slice(beforeChoice)).toEqual([]);
+      // The builder is in its delivery turn, so the choice is steered into it.
+      const decided = receivedBy(builder).split("Host handoff from").at(-1) ?? "";
+      expect(decided).toContain('The captain chose "Change it" on "Keep the Later copy?".');
+      expect(decided).toContain(REVIEW_HANDOFF_NEXT.decided);
+      expect(receivedBy(builder)).not.toContain(REVIEW_HANDOFF_NEXT.decision);
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  // INF-4338's review (F11): a fresh review's first read is compared with its
+  // own assignment, never the version an earlier review's verdict read.
+  it("hands a fresh review no second read of the version it is already reading", async () => {
+    const repo = gitRepo();
+    try {
+      const builder = fakeCrewmate();
+      const reviewer = fakeCrewmate();
+      const { supervisor, tasks, repos, workspace, inbox } = setup(builder, {
+        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+        crewmates: [reviewer],
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId: builderId } = await supervisor.intake.commission({
+        title: "Fix the meter test",
+        intent: intentOf("fix it"),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      await reportTurn(builder, builderId, "The meter copy is committed.");
+      // An earlier review's verdict read an older version.
+      seedDelivery(tasks, builderId, {
+        reviewVerdict: "pass",
+        reviewSha: "fedcba9876543210fedcba9876543210fedcba98",
+        reviewedAt: Date.now() - 60_000,
+      });
+      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
+      const { taskId: reviewId } = await supervisor.intake.commission({
+        title: "Review",
+        intent: intentOf("fix it"),
+        shape: { review_of: builderId },
+      });
+      await tick();
+      const prompts = reviewer.promptCalls.length;
+      await supervisor.steer.steerCrewmate(builderId, "Report the checks on the pushed version.");
+      await tick();
+      await reportTurn(builder, builderId, "The checks passed on the pushed version.");
+      expect(reviewer.promptCalls).toHaveLength(prompts);
+      // A handoff to a reviewer still in its turn waits in its inbox.
+      expect(JSON.stringify(inbox.allFor(reviewId))).not.toContain('"stage":"reread"');
+      expect(receivedBy(reviewer)).not.toContain(REVIEW_HANDOFF_NEXT.reread);
     } finally {
       repo.dispose();
     }

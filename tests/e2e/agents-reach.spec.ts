@@ -65,6 +65,7 @@ import {
   REACH_STOP_HOLDS,
   REACH_STOP_STEER,
   REACH_STOP_WORDS,
+  REACH_WITHDRAW_STEER,
 } from "./scenarios/agentsReach";
 import {
   MOCK_REVIEW_ASK_CARD_TITLE,
@@ -321,7 +322,8 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
     await regionShot(shownCard(page, MOCK_REVIEW_ASK_CARD_TITLE), out("1-review-cap-card.png"));
 
     // The captain's own words, typed: the first mate declares the override
-    // they pass, retires its cap card and relays them to the builder.
+    // they pass, asks the reviewer to withdraw its card (only a card's author
+    // withdraws it, INF-4338) and relays them to the builder.
     const reviewerSteers = (await detail(review.id)).events.filter(
       (event) => event.kind === "steered",
     ).length;
@@ -334,8 +336,8 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
         args: { task: builder.id, override: { holds: REACH_STOP_HOLDS, until: "version" } },
       },
       {
-        name: "close_card",
-        args: { card_id: capCard.id, reason: "The captain answered it in his own words." },
+        name: "steer_crewmate",
+        args: { task_id: review.id, message: `${REACH_WITHDRAW_STEER} ${capCard.id}.` },
       },
       { name: "steer_crewmate", args: { task_id: builder.id, message: REACH_STOP_STEER } },
     ]);
@@ -407,9 +409,10 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
     const after = await detail(builder.id);
     expect(after.events.filter((event) => event.kind === "review")).toHaveLength(reviewRows);
     expect(after.events.some((event) => event.kind === "cap_reset")).toBe(false);
+    // The reviewer was steered once, to withdraw its card, and read nothing again.
     expect(
       (await detail(review.id)).events.filter((event) => event.kind === "steered"),
-    ).toHaveLength(reviewerSteers);
+    ).toHaveLength(reviewerSteers + 1);
     await page.screenshot({ path: out("1-merged.png") });
 
     // The merged task's record: its Activity holds the override row.

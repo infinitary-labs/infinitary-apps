@@ -468,7 +468,7 @@ describe("renderWake", () => {
         },
       });
     // The findings are relayed verbatim with the fix rules, ask-user ones
-    // decided or carded, the reviewer left idle. Since INF-1876 the wake
+    // left to the reviewer's own card (INF-4338), the reviewer left idle. Since INF-1876 the wake
     // reads no care: what a builder was briefed is the care runbook's.
     // INF-203 F2: changed proof facts also justify re-review, without a dummy commit.
     // Each wake's whole words are the first mate words table's.
@@ -476,7 +476,7 @@ describe("renderWake", () => {
       `with verdict findings: verdict: findings F1 racy - auto-fix F2 copy - ask-user ${reviewFindingsNext()}`,
     );
     expect(reviewFindingsNext()).toContain(
-      "Decide an ask-user finding yourself when the user's own words already settle it; the rest are ONE decision card per round on the builder's task",
+      "An ask-user finding is its reviewer's to put to the captain on its own Review finding card",
     );
     expect(reviewFindingsNext().endsWith(REVIEWER_IDLE_NEXT)).toBe(true);
     // The typed findings ride the wake as lines after the excerpt (INF-1875).

@@ -9,6 +9,7 @@ import { acceptedValidation } from "@shared/liveValidation";
 import { REVIEW_EARLIER_WORDS, REVIEW_WORDS } from "@shared/vocabulary";
 import { describe, expect, it, vi } from "vitest";
 import {
+  askedOn,
   completionBody,
   fakeCrewmate,
   fakeCrewTimersEachTest,
@@ -34,7 +35,13 @@ import { readChangeReading } from "../workspace/workspaceService";
 import type { CrewmateSpec } from "./crewSession";
 import { IDLE_NUDGE_TEXT } from "./idleWakes";
 import { REVIEW_FIX_RULES, renderRigorSection } from "./intentBrief";
-import { earlierPassText, REVIEWER_IDLE_NEXT, reviewFindingsNext } from "./reportWakes";
+import {
+  earlierPassText,
+  REVIEW_CARD_RULES,
+  REVIEW_HANDOFF_NEXT,
+  REVIEWER_IDLE_NEXT,
+  reviewFindingsNext,
+} from "./reportWakes";
 import { renderReviewHistory } from "./reviewHistory";
 import { renderWake } from "./wakes";
 
@@ -719,7 +726,6 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
           risk: { level: "medium", why: "one production line moves." },
         },
       );
-      expect(tasks.get(reviewId)).toMatchObject({ status: "active", activity: "idle" });
       expect(tasks.get(builderId)?.delivery).toMatchObject({
         reviewVerdict: "findings",
         reviewSha: HEAD,
@@ -728,14 +734,16 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       const recorded = tasks.get(builderId);
       expect(recorded && tasks.graph.verdictReviewOf(recorded)?.id).toBe(reviewId);
-      const findingsWake = ops.find((line) => line.includes("with verdict findings"));
-      expect(findingsWake).toContain(`reported on review task ${reviewId}`);
-      expect(findingsWake).toContain(`the review of task ${builderId} "Fix the meter test"`);
-      expect(findingsWake).toContain("F1 error src/meter.test.ts:12");
-      // What comes next rides the wake (FI3-566 cut C; INF-1876): the fix
-      // rules and the auto-fix finding, relayed verbatim; the brief names
-      // the care and nothing of what it asks.
-      expect(findingsWake?.endsWith(` ${reviewFindingsNext()}`)).toBe(true);
+      // INF-4338's direction D: the ask-user finding goes back to the
+      // reviewer that read the change, with the card rules, and the first
+      // mate hears nothing of it. The auto-fix finding goes to the builder
+      // with the fix rules; the brief names the care and nothing it asks.
+      expect(ops.filter((line) => line.includes("with verdict findings"))).toEqual([]);
+      const cardAsk = reviewer.promptCalls.at(-1) ?? "";
+      expect(cardAsk).toContain(
+        `Findings for the captain:\n- F2 warning src/meter.ts:40 the copy says Later - ask-user\n${REVIEW_CARD_RULES}`,
+      );
+      expect(received(builder)).toContain("F1 error src/meter.test.ts:12");
       expect(builder.promptCalls[0]).toContain(renderRigorSection("reviewed"));
       expect(inbox.allFor("supervision")).toHaveLength(0);
       expect(supervisor.facts.crewStatus(builderId)[0]?.review).toBe(
@@ -743,45 +751,72 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       );
       expect(tasks.graph.blockerRefusal(builderId)).toBeUndefined();
 
-      // F2: a report with no changed facts takes the ordinary sort, even
-      // with a decision card already up. The host already delivered F1;
-      // neither the report nor the fixture repeats that delivery.
-      expect(received(builder)).toContain("F1 error src/meter.test.ts:12");
-      (specs[0] as CrewmateSpec).onCard?.({
-        title: "Keep the Later copy?",
-        body: "<p>F2 warning src/meter.ts:40: the copy says Later.</p><p>Keep it or change it.</p>",
+      // The reviewer's decision is its Review finding card: on its own
+      // task, labeled by the app, with the builder's facts strip. Its
+      // report while the card is up, with no review record, wakes no one.
+      const beforeCard = ops.length;
+      const findingInput = {
+        id: "review-meter",
+        title: "Review of the meter fix",
+        body: "<p>Keep the Later copy?</p>",
         actions: [
           { id: "keep", label: "Keep the copy", default: true },
           { id: "change", label: "Change it" },
         ],
-      });
-      await tick();
+      };
+      (specs[1] as CrewmateSpec).onCard?.(findingInput);
+      await reportTurn(reviewer, reviewId, "The card is up.");
       const findingCard = supervisor.cards
         .snapshot()
-        .find((entry) => entry.title === "Keep the Later copy?");
-      expect(findingCard).toBeDefined();
+        .find((entry) => entry.title === "Review of the meter fix");
+      expect(findingCard).toMatchObject({
+        taskId: reviewId,
+        author: "crewmate",
+        reviewTaskId: reviewId,
+      });
+      expect(findingCard?.body).toContain(
+        `<span class="inf-foot-k">Review</span> <span class="${SETTLE_FACT_VALUE_CLASS}">${REVIEW_WORDS.findings}</span>`,
+      );
+      expect(ops.slice(beforeCard)).toEqual([]);
+      expect(tasks.get(reviewId)).toMatchObject({ status: "active", activity: "idle" });
+
+      // A reply under the card reaches the reviewer, which answers it there.
+      supervisor.cardActions.replyToCard(findingCard?.id ?? "", "Where does Later show?");
+      await tick();
+      expect(reviewer.promptCalls.at(-1)).toContain("Where does Later show?");
+      (specs[1] as CrewmateSpec).onCard?.({
+        ...findingInput,
+        reply: "On the empty meter, before its first reading.",
+        answersMessage: askedOn(supervisor, findingCard?.id ?? ""),
+      });
+      await reportTurn(reviewer, reviewId, "Answered under the card.");
+      expect(ops.slice(beforeCard)).toEqual([]);
+
+      // A builder report with no changed facts takes the ordinary sort.
       const beforeFix = ops.length;
       const dispute = "The committed version is unchanged; F1 needs an interpretation.";
       await reportTurn(builder, builderId, dispute);
       expect(ops.slice(beforeFix)).toEqual([expect.stringContaining(dispute)]);
       // An unchanged report cannot commission another review turn.
-      expect(reviewer.promptCalls).toHaveLength(1);
-      // The click returns to the builder as a message, and that turn ends
-      // quietly: the builder is idle again after the decision.
+      expect(reviewer.promptCalls).toHaveLength(3);
+      // The click goes to the builder with the review history, and no
+      // first mate turn sits between.
+      const beforeChoice = ops.length;
       supervisor.cardActions.act(findingCard?.id ?? "", "keep");
       await tick();
-      expect(builder.promptCalls.at(-1)).toBe(
-        'Card "Keep the Later copy?": the user chose "Keep the copy" (keep).',
+      expect(ops.slice(beforeChoice)).toEqual([]);
+      const decision = builder.promptCalls.at(-1) ?? "";
+      expect(decision).toContain('The captain chose "Keep the copy" on "Review of the meter fix".');
+      expect(decision).toContain(
+        `- The captain chose "keep" on card "Review of the meter fix" (${findingCard?.id}).`,
       );
-      builder.emit({ type: "turn_end", taskId: builderId });
-      builder.finishPrompt();
-      await tick();
-
-      // The captain's decision can require a review at the same version;
-      // this is not a routine new-head relay. Its pass closes the reader.
-      await supervisor.steer.steerCrewmate(reviewId, `re-review at head ${HEAD}`);
-      await tick();
-      expect(reviewer.promptCalls.at(-1)).toContain("re-review at head");
+      expect(decision).toContain(REVIEW_HANDOFF_NEXT.decision);
+      // The answer keeps the code as built: the builder's unchanged report
+      // goes to the reviewer, which reads the answer at the same version.
+      await reportTurn(builder, builderId, "The captain kept the copy; nothing to change.");
+      expect(ops.slice(beforeChoice)).toEqual([]);
+      expect(reviewer.promptCalls).toHaveLength(4);
+      expect(reviewer.promptCalls.at(-1)).toContain(REVIEW_HANDOFF_NEXT.reread);
       seedDelivery(tasks, builderId, {
         liveValidation: noSurfaceProof(tasks.get(reviewId)!.delivery!.headSha!, reviewId),
       });

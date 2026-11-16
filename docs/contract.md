@@ -168,7 +168,7 @@ The host owns confirmation effects and observers, and old cards remain unchanged
 A card's live attachment has a second kind, `page`, a page from its task's project (`docs/task-browser.md`, "A page from the project").
 It is opened with the `inf:cards:open-page` request, which every view asks from `browser-from-any-view` on, declared by a placed card's optional `browserPage`, and marked on the open browser fact by the optional `own`.
 
-A card may carry `reviewTaskId`, and the home refuses the card unless that names an independent review of the card's task, before Review finding is drawn.
+A card may carry `reviewTaskId`: the home sets it on an independent reviewer's own decision card on its review task, and refuses a first mate card unless it names an independent review of the card's task, before Review finding is drawn.
 First mate cards about a task carry the task's title in their meta line.
 
 Cards and record card rows may carry `minimized`, and task rows the desktop presentation-only `minimizedCardId`.

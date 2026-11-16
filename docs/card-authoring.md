@@ -1240,11 +1240,12 @@ A declaration grants no execution permission; a successful merge creates durable
 
 ## Review finding attribution
 
-The first mate passes `review_task_id` when relaying an independent review's findings on its builder's `task_id` (INF-63, accepted direction B).
-The host refuses a missing or unrelated review, stores the resolved review task id and draws Review finding beside the card's kind.
-The card is the first mate's own, so its head says first mate with no task key, as every card the first mate writes does (INF-2714); it names the builder's task in its words.
-Review-finding cards show the host's task facts beside the buttons, including the verdict, reviewed version and risk, even while the review stays open.
-The native phone reader shows the same label and the same first mate head without running the body or offering buttons.
+An independent reviewer puts its ask-user findings to the captain on its own decision card (INF-4338, direction D); the host labels any decision card from an independent review Review finding.
+Its head names the review task, as every crewmate card's does, and the card draws the builder's task facts beside the buttons, including the verdict, reviewed version and risk, even while the review stays open.
+The captain's choice goes to the builder the review reads, and a reply under the card goes to the reviewer.
+The question is the builder's: it outlives the review's passing close, keeps the builder's merge from closing the task while it stands, and leaves with the builder.
+The first mate may still pass `review_task_id` with its builder's `task_id` when it puts a blocked review to the captain (INF-63, accepted direction B); the host refuses a missing or unrelated review, and the card is the first mate's own, headed first mate with no task key (INF-2714).
+The native phone reader shows the same label without running the body or offering buttons.
 
 ## Put a card aside
 

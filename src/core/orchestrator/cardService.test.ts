@@ -1046,4 +1046,29 @@ describe("CardService", () => {
     expect(resolved?.data).toEqual({ cardId: id, action: "left", observation: choice?.id });
     expect(cards.captainResolutionsSince(0, 5)[0]).not.toHaveProperty("answers");
   });
+
+  // INF-4338's direction D: the reviewer raises the Review finding card on its
+  // own review task, and the question is the builder's - it outlives the
+  // review's passing close and leaves with the builder.
+  it("keeps a reviewer's question past its review's close, and retires it with the builder", () => {
+    const { tasks, make } = setup();
+    seedTask(tasks, { id: "builder", title: "Fix the meter", status: "running" });
+    seedTask(tasks, {
+      id: "review",
+      title: "Review: Fix the meter",
+      status: "running",
+      parentId: "builder",
+      shape: { kind: "review", kind_source: "host:review", basis: "builder" },
+    });
+    const cards = make();
+    const id = cards.emitCrewmateCard("review", { ...decision, asking: true }, "m");
+    expect(cards.get(id)).toMatchObject({ taskId: "review", reviewTaskId: "review" });
+
+    cards.retireTaskCards("review", "finished", { keepNotes: true });
+    expect(cards.get(id)).toBeDefined();
+
+    cards.retireTaskCards("builder", "merged", { keepNotes: true });
+    expect(cards.get(id)).toBeUndefined();
+    cards.dispose();
+  });
 });

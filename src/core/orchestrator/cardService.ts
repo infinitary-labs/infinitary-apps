@@ -54,6 +54,7 @@ import { HostCardStack } from "./hostCardStack";
 import { PutOffs } from "./putOffs";
 import type { WakeCard } from "./reportWakes";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
+import { asksAbout, reviewedTaskOf } from "./reviewCard";
 import { type MergeBehind, settleCardFacts } from "./settleCardFacts";
 import { type OpenMergeAction, openMergeActionIn } from "./settleHost";
 import { withMergeLine } from "./settleWords";
@@ -255,8 +256,9 @@ export class CardService {
     let changed = false;
     const fellBehind = new Map<string, MergeBehind>();
     const refreshed = (card: Card): Card => {
-      if (!card.taskId || (taskIds && !taskIds.includes(card.taskId))) return card;
-      const taskId = card.taskId;
+      // A reviewer's own Review finding card draws its builder's facts (INF-4338).
+      const taskId = reviewedTaskOf(card, this.host.tasks) ?? card.taskId;
+      if (!taskId || (taskIds && !taskIds.includes(taskId))) return card;
       const line = this.host.mergedLine?.(card);
       if (line) {
         const body = withMergeLine(card.body, line);
@@ -1502,7 +1504,8 @@ export class CardService {
    */
   private othersOpen(taskId: string, except: string | undefined): boolean {
     for (const card of this.cards.values())
-      if (card.taskId === taskId && card.id !== except && keepsTaskOpen(card)) return true;
+      if (asksAbout(card, taskId, this.host.tasks) && card.id !== except && keepsTaskOpen(card))
+        return true;
     return this.host.otherChangeOpen?.(taskId) === true;
   }
 
@@ -1608,7 +1611,11 @@ export class CardService {
    */
   retireTaskCards(taskId: string, reason: string, options: { keepNotes?: boolean } = {}): void {
     for (const [cardId, card] of [...this.cards]) {
-      if (card.taskId !== taskId) continue;
+      // A reviewer's question outlives its review's close: it is the
+      // builder's to answer, and leaves when the builder does (INF-4338).
+      const asks = reviewedTaskOf(card, this.host.tasks);
+      if (card.taskId !== taskId && asks !== taskId) continue;
+      if (card.taskId === taskId && asks && options.keepNotes) continue;
       if (options.keepNotes && card.author !== "host" && card.actions.length === 0) {
         // The crewmate is gone: a note still waiting on it reaches the stage
         // once the close wrote its outcome on it (`releaseNotes`).

@@ -68,7 +68,9 @@ const ASK_FINDING: ReviewFinding = {
   action: "ask-user",
 };
 export const MOCK_REVIEW_AUTOFIX_FINDING = renderFinding(AUTOFIX_FINDING);
-export const MOCK_REVIEW_ASK_FINDING = renderFinding(ASK_FINDING);
+const MOCK_REVIEW_ASK_FINDING = renderFinding(ASK_FINDING);
+// The card rules hold quoted markup, which the request body carries escaped.
+const CARD_RULES_IN_BODY = JSON.stringify(REVIEW_HANDOFF_NEXT.card).slice(1, -1);
 export const MOCK_REVIEW_FINDINGS_REPORT =
   "Two findings: the flush is awaited after the read, and the empty-state copy says Later.";
 export const MOCK_REVIEW_FINDINGS_RISK = {
@@ -82,12 +84,28 @@ export const MOCK_REVIEWED_FIX_REPORT =
   "Fixed F1: the flush is awaited before the read; pushed a new head and the checks passed again.";
 export const MOCK_REVIEW_ASK_CARD_TITLE = "Keep the Later copy?";
 /**
- * The captain's answer on the ask-user finding: keep the copy. The spec
- * scripts the first mate's turn on that click (`scriptFirstmateTurn`), which
- * relays it to the builder; the builder has nothing to change and says so.
+ * The reviewer's own Review finding card on its ask-user finding, in the
+ * shape its handoff asks for: the question in plain words, what happens
+ * now, one line per way, its pick, and the finding as recorded folded.
+ */
+const MOCK_REVIEW_ASK_CARD_BODY =
+  "<p>The meter now reads on time; one choice waits for you, and people will notice it.</p>" +
+  "<fieldset data-inf-options-only><legend>Should an empty meter still say Later? Worth fixing</legend>" +
+  '<figure aria-label="An empty meter reads Later"><svg viewBox="0 0 240 72" width="240">' +
+  '<rect x="1" y="1" width="238" height="70" rx="8" fill="var(--bg-2)" stroke="var(--line-1)"/>' +
+  '<text x="16" y="28" fill="var(--fg-2)">Meter</text>' +
+  '<text x="16" y="54" font-size="14" fill="var(--accent)">Later</text>' +
+  "</svg><figcaption>Now an empty meter says Later, the word you retired.</figcaption></figure>" +
+  '<label><input type="radio" name="later-copy" value="keep" data-inf-current> Keep the copy, nothing to change</label>' +
+  '<label><input type="radio" name="later-copy" value="change" data-inf-recommended> Say Nothing yet, one line</label>' +
+  "<p>The reviewer picks Nothing yet, because you retired Later.</p></fieldset>" +
+  `<details><summary>The finding as recorded</summary><p>${MOCK_REVIEW_ASK_FINDING}</p></details>`;
+/**
+ * The captain's answer on the ask-user finding: keep the copy. The click
+ * reaches the builder straight from the reviewer's card, with no first mate
+ * turn; the builder has nothing to change and says so.
  */
 export const MOCK_REVIEW_KEEP_LABEL = "Keep the copy";
-export const MOCK_REVIEW_KEEP_STEER = "The captain keeps the Later copy: F2 needs no change.";
 export const MOCK_REVIEWED_KEEP_REPORT =
   "Noted the captain's answer on F2: the Later copy stays, so nothing changes.";
 export const MOCK_REVIEWED_CARD_TITLE = "The meter test is steady, reviewed";
@@ -214,33 +232,6 @@ function firstmateMove({
   }
   // The captain's answer on the cap card is no branch here: the
   // spec scripts it (`scriptFirstmateTurn`) from the card it reads.
-  // The reviewer's findings: the auto-fix is a steer to the builder,
-  // the ask-user finding one decision card on the builder's task.
-  if (
-    latestUserTail.includes("with verdict findings") &&
-    latestUserTail.includes(MOCK_REVIEW_ASK_FINDING)
-  ) {
-    const builderId = latestUserTail.match(/the review of task ([\w-]+)/)?.[1] ?? "missing";
-    return {
-      calls: [
-        {
-          name: "emit_card",
-          args: {
-            task_id: builderId,
-            review_task_id: latestUserTail.match(/on review task ([\w-]+)/)?.[1] ?? "missing",
-            title: MOCK_REVIEW_ASK_CARD_TITLE,
-            body:
-              `<p>${MOCK_REVIEW_ASK_FINDING}</p>` +
-              "<ul><li>The reviewer challenges a deliberate choice; your words did not settle it.</li></ul>",
-            actions: [
-              { id: "keep-copy", label: MOCK_REVIEW_KEEP_LABEL, default: true },
-              { id: "change-copy", label: "Change it" },
-            ],
-          },
-        },
-      ],
-    };
-  }
   return undefined;
 }
 
@@ -267,6 +258,29 @@ function crewmateMove({
         ),
     );
     const rereviews = assignedHeads.size - 1;
+    // Its ask-user finding comes back for it to put to the captain on its
+    // own Review finding card (INF-4338): it raises the card and ends its
+    // turn with no new review record.
+    if (latestUserTail.includes(CARD_RULES_IN_BODY)) {
+      if (hasToolResults) return { text: "" };
+      return {
+        calls: [
+          {
+            name: "emit_card",
+            args: {
+              id: "review-later-copy",
+              title: MOCK_REVIEW_ASK_CARD_TITLE,
+              body: MOCK_REVIEW_ASK_CARD_BODY,
+              asking: true,
+              actions: [
+                { id: "keep-copy", label: MOCK_REVIEW_KEEP_LABEL, default: true },
+                { id: "change-copy", label: "Change it" },
+              ],
+            },
+          },
+        ],
+      };
+    }
     if (!latestUserTail.includes(REVIEW_HANDOFF_NEXT.reread))
       return reviewAnswer(body, hasToolResults, MOCK_REVIEW_FINDINGS_REPORT, {
         code: "findings",
@@ -330,12 +344,19 @@ function crewmateMove({
   }
   // The direct handoff carries earlier findings as history too; only the
   // current round, before that history, determines this scripted repair.
+  // The captain's answer on the reviewer's card comes straight from the
+  // card (INF-4338), here after the review passed: keeping the copy changes
+  // nothing.
+  if (
+    latestUserTail.includes(REVIEW_HANDOFF_NEXT.decision) ||
+    latestUserTail.includes(REVIEW_HANDOFF_NEXT.decided)
+  )
+    return { text: MOCK_REVIEWED_KEEP_REPORT };
   const currentFindings = latestUserTail.split(DECIDED_SO_FAR)[0] ?? "";
   if (currentFindings.includes(MOCK_REVIEW_AUTOFIX_FINDING))
     return { text: MOCK_REVIEWED_FIX_REPORT };
   if (currentFindings.includes(MOCK_REVIEW_REFINDING)) return { text: MOCK_REVIEWED_REFIX_REPORT };
   if (latestUserTail.includes(MOCK_CAP_RETRY_STEER)) return { text: MOCK_REVIEWED_RETRY_REPORT };
-  if (latestUserTail.includes(MOCK_REVIEW_KEEP_STEER)) return { text: MOCK_REVIEWED_KEEP_REPORT };
   // INF-125: this lifecycle fixture changes only commit history, not a running product.
   if (!calledTool(body, "report")) {
     return {

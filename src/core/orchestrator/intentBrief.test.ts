@@ -329,7 +329,7 @@ describe("renderReviewBrief (delivery rigor phase 2, review-before-PR)", () => {
     expect(brief).toContain("git diff <default>...0123456789abcdef0123456789abcdef01234567");
     expect(brief).not.toContain("git diff <default>...fm/task-abc12345");
     expect(brief).toContain(
-      "The verdict report is the whole deliverable of this internal review; emit no outcome card.",
+      "The verdict report is the whole deliverable of this internal review; emit no card until the host hands findings back for you to put to the captain.",
     );
     expect(brief).toContain(
       'Changed-file checklist at 0123456789abcdef0123456789abcdef01234567 (committed paths against the default branch):\n- "src/meter.ts"\n- "tests/meter.test.ts"',

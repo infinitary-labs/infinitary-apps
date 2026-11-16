@@ -53,6 +53,17 @@ export type ReviewHistoryReader = {
 /** A card resolution that is not an answer: the captain put the card away without choosing. */
 const NOT_AN_ANSWER = new Set(["dismissed", "closed"]);
 
+/** Whether a timeline event is the captain's choice on a card, not a card put away. */
+export function isCaptainAnswer(event: TaskEvent): boolean {
+  const action = event.data?.action;
+  return (
+    event.kind === "card_resolved" &&
+    event.actor === "captain" &&
+    typeof action === "string" &&
+    !NOT_AN_ANSWER.has(action)
+  );
+}
+
 /**
  * The review history of a builder, oldest first: every review round the
  * host recorded from its reviews, with the typed findings each reported,
@@ -97,16 +108,17 @@ export function reviewHistory(
     }
   }
   const titles = new Map<string, string>();
-  for (const event of own) {
+  // A reviewer's own Review finding card sits on its review (INF-4338's
+  // direction D), so its answers and replies are on the review's timeline.
+  for (const event of [...own, ...reviews.flatMap((review) => reader.timeline(review.id))]) {
     if (event.kind === "card_raised" && event.ref) {
       const title = /card "(.*)"/.exec(event.text)?.[1];
       if (title) titles.set(event.ref, title);
     }
-    if (event.kind === "card_resolved" && event.actor === "captain") {
-      const action = event.data?.action;
+    if (isCaptainAnswer(event)) {
+      const action = event.data?.action as string;
       const card = event.data?.cardId;
-      if (typeof action !== "string" || typeof card !== "string" || NOT_AN_ANSWER.has(action))
-        continue;
+      if (typeof card !== "string") continue;
       entries.push({
         kind: "answer",
         at: event.at,

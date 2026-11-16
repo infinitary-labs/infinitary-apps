@@ -60,7 +60,39 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         },
       },
       words:
-        "Host handoff from INF-2761 at 4be7c1d90a2f: The committed repair is ready.\nRead the builder's changed head, evidence revision or validation state assigned to this turn. A code pass already recorded at this head makes this a proof read only. Read only the difference after an earlier code pass. The review history carries the captain's latest decisions. Report your typed review; the host delivers it directly to the builder. Escalate only a decision or a handoff you cannot complete.",
+        "Host handoff from INF-2761 at 4be7c1d90a2f: The committed repair is ready.\nRead the builder's changed head, evidence revision or validation state assigned to this turn, and the captain's newest answer on your Review finding card in the history. A code pass already recorded at this head makes this a proof read only. Read only the difference after an earlier code pass. The review history carries the captain's latest decisions. Report your typed review; the host delivers it directly to the builder. Escalate only a decision or a handoff you cannot complete.",
+    },
+    {
+      // INF-4338: the captain's choice on the reviewer's own card reaches the
+      // builder with no first mate turn.
+      name: "the captain's answer on a Review finding card goes to the builder",
+      wake: {
+        facts: {
+          kind: "review-handoff",
+          from: "INF-2761",
+          head: "4be7c1d90a2f",
+          stage: "decision",
+          excerpt: 'The captain chose "Keep the copy" on "Keep the Later copy?".',
+        },
+      },
+      words:
+        'Host handoff from INF-2761 at 4be7c1d90a2f: The captain chose "Keep the copy" on "Keep the Later copy?".\nThe captain answered your reviewer\'s question; the history carries the answer word for word, and it governs. Make the change it chose, if it chose one, under the review\'s fix rules; commit and report without pushing. The host returns your report to your reviewer, who reads the answer and any new head. Do not ask the first mate to relay it.',
+    },
+    {
+      // INF-4338's review: after the review closed, no reviewer reads the
+      // answer, so the builder delivers a chosen change as a new version.
+      name: "the captain's answer after the review closed asks the builder to deliver",
+      wake: {
+        facts: {
+          kind: "review-handoff",
+          from: "INF-2761",
+          head: "4be7c1d90a2f",
+          stage: "decided",
+          excerpt: 'The captain chose "Change it" on "Keep the Later copy?".',
+        },
+      },
+      words:
+        'Host handoff from INF-2761 at 4be7c1d90a2f: The captain chose "Change it" on "Keep the Later copy?".\nThe captain answered your reviewer\'s question after its review closed; the history carries the answer word for word, and it governs. If it chose a change, make it under the review\'s fix rules, commit it, then push and follow your brief\'s delivery for the new version: a new merge card, with a new review as your rigor asks. If it kept the code as built, nothing more is needed. Do not ask the first mate to relay it.',
     },
   ],
   // INF-1109: completion is metadata, never new permission; an unknown effect must not repeat.

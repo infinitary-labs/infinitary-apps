@@ -43,6 +43,8 @@ function cardPriority(input: Pick<EmittedCardInput, "actions">): number {
 /** Who emits a card and what it says of itself beside its declared words. */
 type EmitContext = {
   taskId?: string;
+  /** The task whose facts a review's card draws: the builder it reviews. */
+  factsOf?: string;
   author: "crewmate" | "firstmate";
   meta: string;
   model?: string;
@@ -73,8 +75,19 @@ export class CardEmits {
     model?: string,
     place?: string,
   ): string {
-    return this.upsertEmitted(input, {
+    // An independent reviewer's decision is its Review finding card
+    // (INF-4338's direction D): the app labels it and draws the builder's
+    // facts on it, and its choice goes to the builder (`CardActions.act`).
+    const review = this.host.tasks.get(taskId);
+    const builderId =
+      review?.shape?.kind === "review" &&
+      review.shape.kind_source === "host:review" &&
+      input.actions.length > 0
+        ? review.parentId
+        : null;
+    return this.upsertEmitted(builderId ? { ...input, reviewTaskId: taskId } : input, {
       taskId,
+      ...(builderId ? { factsOf: builderId } : {}),
       author: "crewmate",
       meta,
       ...(model ? { model } : {}),
@@ -302,10 +315,11 @@ export class CardEmits {
         `Task ${task.id}'s saved change story is not published at its newest revision, so a merge button cannot carry it yet. Steer the crewmate to publish its story, or to emit its own merge card. The card is unchanged.`,
       );
     }
-    if (input.reviewTaskId) {
+    // A crewmate's review link is the host's own (`emitCrewmateCard`); the
+    // first mate's names a review it must check.
+    if (input.reviewTaskId && context.author === "firstmate") {
       const review = this.host.tasks.resolve(input.reviewTaskId);
       if (
-        context.author !== "firstmate" ||
         !task ||
         review?.shape?.kind !== "review" ||
         review.shape.kind_source !== "host:review" ||
@@ -319,7 +333,7 @@ export class CardEmits {
     }
     // A settle card carries the facts the host holds about its task, and a
     // merge card what the crew filed under its name (`emittedSettleFacts`).
-    const taskId = context.taskId;
+    const taskId = context.factsOf ?? context.taskId;
     if (taskId) {
       input = emittedSettleFacts(input, {
         facts: () => this.host.settleFacts(taskId),

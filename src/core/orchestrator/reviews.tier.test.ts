@@ -704,16 +704,31 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(
         rows.every((row) => row.attribs.type === "checkbox" && !("checked" in row.attribs)),
       ).toBe(true);
+      // INF-4497 finding 3: the rows are one required question, so the card
+      // holds its main button until one is ticked.
+      expect(rows.every((row) => "required" in row.attribs)).toBe(true);
       expect(
         DomUtils.findOne((node) => "data-inf-check-all" in node.attribs, body.children),
       ).toBeTruthy();
       expect(DomUtils.textContent(body)).toContain("Main runs only the newest merge");
+      // INF-4497 finding 3: accepting with nothing ticked is refused and
+      // records no decision; every gap still waits on the same card.
+      expect(() =>
+        supervisor.cardActions.act(cardId, "accept", "chrome", {
+          answers: [{ name: VALIDATION_GAPS_FIELD, values: [], changed: false }],
+        }),
+      ).toThrow("Tick at least one check");
+      expect(
+        tasks.get(taskId)?.delivery?.liveValidation?.permissions.map((item) => item.state),
+      ).toEqual(["requested", "requested", "requested", "requested"]);
+      expect(tasks.timeline(taskId).some((event) => event.kind === "card_resolved")).toBe(false);
       supervisor.cardActions.act(cardId, "accept", "chrome", {
         answers: [{ name: VALIDATION_GAPS_FIELD, values: [ids[0]!, ids[2]!], changed: true }],
       });
       expect(
         tasks.get(taskId)?.delivery?.liveValidation?.permissions.map((item) => item.state),
       ).toEqual(["approved", "declined", "approved", "declined"]);
+      expect(tasks.timeline(taskId).some((event) => event.kind === "card_resolved")).toBe(true);
     } finally {
       repo.dispose();
     }

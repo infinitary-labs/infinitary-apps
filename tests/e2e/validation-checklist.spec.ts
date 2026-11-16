@@ -24,7 +24,8 @@ import { focusOn, pressKey } from "./windowKeys";
  * INF-1824, the captain's accepted plan: a review's gaps from one version
  * arrive on one card as a checklist. Each row starts unticked, Check all
  * ticks every row, and the approval accepts exactly the ticked rows and
- * keeps the rest held, all from the keyboard.
+ * keeps the rest held, all from the keyboard. Accept waits until a row is
+ * ticked (INF-4497 finding 3).
  *
  * Real: the repository and the task's working copy, the validation record
  * and its one writer, the host-drawn checklist, the card frame's answers and
@@ -89,11 +90,20 @@ test("a version's gaps share one checklist card, and the keys accept exactly the
   await pressKey(checkAll, "Space");
   for (const [, action] of GAP_CHECKS) await expect(frame.getByLabel(action)).not.toBeChecked();
 
+  // INF-4497 finding 3: with no row ticked the card holds Accept, and
+  // pressing it moves to the first row instead of answering the card.
+  const accept = page.getByRole("button", { name: GAP_CHECKLIST_ACCEPT.label, exact: true });
+  await expect(accept).toHaveAttribute("aria-disabled", "true");
+  await focusOn(accept);
+  await accept.press("Enter");
+  await expect(frame.getByLabel(GAP_CHECKS[0][1])).toBeFocused();
+  await expect(shownCard(page, GAP_CHECKLIST_TITLE)).toBeVisible();
+
   // The captain ticks the first and third rows by keys, then accepts.
   const ticked = [GAP_CHECKS[0], GAP_CHECKS[2]];
   for (const [, action] of ticked) await pressKey(frame.getByLabel(action), "Space");
   for (const [, action] of ticked) await expect(frame.getByLabel(action)).toBeChecked();
-  const accept = page.getByRole("button", { name: GAP_CHECKLIST_ACCEPT.label, exact: true });
+  await expect(accept).not.toHaveAttribute("aria-disabled", "true");
   await focusOn(accept);
   await accept.press("Enter");
   await expectNoCard(page, GAP_CHECKLIST_TITLE);

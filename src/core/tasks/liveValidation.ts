@@ -331,6 +331,28 @@ export function recordValidation(
 
 export class StaleValidationDecisionError extends Error {}
 
+/**
+ * INF-4497 finding 3: whether a click is the approval of a checklist of
+ * several gaps with none of its rows ticked. Such a click accepts nothing,
+ * so the card refuses it rather than recording every gap declined.
+ */
+export function checklistApprovesNothing(
+  state: LiveValidation,
+  input: { card: string; offer: string; action: string; ticked: readonly string[] },
+): boolean {
+  const asked = state.permissions.filter(
+    (permission) =>
+      permission.state === "requested" &&
+      permission.decision?.card === input.card &&
+      permission.decision.offer === input.offer,
+  );
+  return (
+    asked.length > 1 &&
+    asked.some((permission) => permission.decision?.action === input.action) &&
+    !asked.some((permission) => input.ticked.includes(permission.request.id))
+  );
+}
+
 /** Only the captain's exact chrome action calls this, inside the card resolution transaction. */
 export function decideValidation(
   state: LiveValidation,

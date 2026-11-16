@@ -58,7 +58,7 @@ import type { BrowserReturned } from "../browser/taskBrowsers";
 import type { IntegrationAskTaken } from "../integrations";
 import { type MessageFile, withPastedFiles } from "../overflow";
 import { currentChange } from "../storage/changeProjection";
-import { StaleValidationDecisionError } from "../tasks/liveValidation";
+import { checklistApprovesNothing, StaleValidationDecisionError } from "../tasks/liveValidation";
 import { TaskGraphRefusal } from "../tasks/taskGraph";
 import { TaskService } from "../tasks/taskService";
 import type { CardActionUndone, WakeChoice } from "./captainWakes";
@@ -99,7 +99,8 @@ export class CardChoiceUnavailableError extends Error {
       | "undeclared"
       | "action-changed"
       | "merge-behind"
-      | "merge-redrawn" = "not-ready",
+      | "merge-redrawn"
+      | "nothing-ticked" = "not-ready",
     behind?: MergeBehind,
   ) {
     super(
@@ -107,13 +108,15 @@ export class CardChoiceUnavailableError extends Error {
         ? mergeBehindRefusal(behind)
         : reason === "merge-redrawn"
           ? "This card changed while you were reading it, so I did not merge. Read it again before you choose."
-          : reason === "action-changed"
-            ? "This action changed or still waits for other work. Read its current card before confirming."
-            : reason === "undeclared"
-              ? "This choice is not offered on this card. Choose one of its available options."
-              : reason === "task-closed"
-                ? "This choice is not available. Its task is no longer open."
-                : "This choice is not ready. Wait for the card to return.",
+          : reason === "nothing-ticked"
+            ? "Tick at least one check to accept it, or choose another option."
+            : reason === "action-changed"
+              ? "This action changed or still waits for other work. Read its current card before confirming."
+              : reason === "undeclared"
+                ? "This choice is not offered on this card. Choose one of its available options."
+                : reason === "task-closed"
+                  ? "This choice is not available. Its task is no longer open."
+                  : "This choice is not ready. Wait for the card to return.",
     );
   }
 }
@@ -511,6 +514,21 @@ export class CardActions {
       ) {
         this.core.cards.showOpenCard(card.id);
         throw new CardChoiceUnavailableError("action-changed");
+      }
+      // INF-4497 finding 3: approving a checklist with no row ticked accepts
+      // nothing, so it is refused and records no decision; the card stays.
+      if (
+        associated?.delivery?.liveValidation &&
+        card.offerId &&
+        checklistApprovesNothing(associated.delivery.liveValidation, {
+          card: card.id,
+          offer: card.offerId,
+          action: actionId,
+          ticked: answers?.find((answer) => answer.name === VALIDATION_GAPS_FIELD)?.values ?? [],
+        })
+      ) {
+        this.core.cards.showOpenCard(card.id);
+        throw new CardChoiceUnavailableError("nothing-ticked");
       }
     }
     // INF-3170 piece 2: the captain's own click on a crewmate's marked yes

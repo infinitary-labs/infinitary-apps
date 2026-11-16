@@ -859,6 +859,7 @@ The builder addresses the captain as “you” in the gap record and its card, n
 The host appends a send-style panel whose open line names the approval button and untested scenario, followed by the exception's scope and that it records no live pass and merges nothing.
 For several gaps the panel is one checklist instead: a fieldset of checkbox rows, one per gap, each starting unticked, with a Check all control, all reachable by Tab and Space.
 The approval action accepts exactly the ticked rows and keeps the rest held; a checklist names only gaps of one version, and its card carries no script or field of its own, so the ticks are the captain's alone.
+The rows are one required question, so the card holds its main button until a row is ticked, and the core refuses the approval action with no row ticked and records no decision, whichever button carries it.
 A closed “The recorded gap” disclosure holds the version, missing capability, reason, alternatives and remedies, with each alternative and remedy in its own list item.
 The Validation action panel for effects stays fully open and unchanged.
 Only the captain can permit proceeding without this proof; neither the builder nor reviewer grants an exception.

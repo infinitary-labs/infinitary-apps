@@ -1568,13 +1568,15 @@ export class CrewmateCards {
     if (permissions.length > 1) {
       // INF-1824: one checklist for a version's gaps. Rows start unticked;
       // the click accepts exactly the ticked rows and keeps the rest held.
+      // Its rows are one required question (INF-4497 finding 3), so the
+      // card holds its main button until a row is ticked.
       return [
         '<section class="inf-call inf-call-gap" data-inf-call="gap">',
         `<fieldset data-inf-options-only><legend>${escapeCardText(approvalLabel)} lets the ticked checks go ahead without live proof and keeps the rest held</legend>`,
         '<label><input type="checkbox" data-inf-check-all> Check all</label>',
         ...permissions.map(
           (gap) =>
-            `<div><label><input type="checkbox" name="${VALIDATION_GAPS_FIELD}" value="${escapeCardText(gap.request.id)}"> ${escapeCardText(gap.scenario.action)}</label>${gapDetails(gap)}</div>`,
+            `<div><label><input type="checkbox" name="${VALIDATION_GAPS_FIELD}" value="${escapeCardText(gap.request.id)}" required> ${escapeCardText(gap.scenario.action)}</label>${gapDetails(gap)}</div>`,
         ),
         "</fieldset>",
         `<p class="inf-muted">${lasting}</p>`,

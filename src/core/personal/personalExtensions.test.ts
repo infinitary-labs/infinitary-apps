@@ -1420,7 +1420,18 @@ describe("PersonalExtensions shows a runbook's panels", () => {
         reads: ["tasks.board"],
         error: null,
       });
-      expect(view("desk-reading")?.frame?.version).toMatch(/^[0-9a-f]{16}$/);
+      const version = view("desk-reading")?.frame?.version ?? "";
+      expect(version).toMatch(/^[0-9a-f]{16}$/);
+      // Its compiled files go to a frame through the added-panel door, as a
+      // view of another Mac and the phone ask for them.
+      const served = service.framePanelDir("installed", "desk-reading", version);
+      expect(served && existsSync(served)).toBe(true);
+      // The panels switch takes it back with every other panel, files included.
+      await service.setEnabled(false);
+      expect(service.snapshot()).toEqual({ extensions: [] });
+      expect(service.framePanelDir("installed", "desk-reading", version)).toBeNull();
+      await service.setEnabled(true);
+      expect(view("desk-reading")?.frame?.version).toBe(version);
       // A panel inside a runbook runs no code of its own in the app.
       expect(view("desk-coded")?.frame).toBeNull();
       expect(view("desk-coded")?.error?.message).toContain("inside a runbook");

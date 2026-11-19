@@ -2,6 +2,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import {
+  RUNBOOK_PANELS_WORDS,
   runbookAddedLine,
   runbookConsentTitle,
   runbookRemovedLine,
@@ -10,7 +11,7 @@ import { ACTIONS } from "../../src/shared/actions";
 import { runbookManifestSchema } from "../../src/shared/runbooks";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
-import { cardBody } from "./frames";
+import { cardBody, panelBody } from "./frames";
 import { launchApp } from "./launch";
 import { promptInput } from "./prompt";
 import { servedInstructions } from "./providerRequest";
@@ -28,6 +29,9 @@ import { pressKey } from "./windowKeys";
 // isolated HOME/userData, scripted first mate, persisted switches and served prompt.
 // Completion: only the captain's keyboard consent installs; one line names the replacement;
 // the runbook survives restart and removal withdraws its guidance. No external account.
+// The runbook also lists a panel (the real panel-cards fixture): its add card names it, and the
+// same click shows it on the rail under the replaced built-in's id until removal takes it away
+// (the captain's choice that an added runbook's panels are agreed on its own add card).
 test("add a runbook only on consent, keep its replacement and remove it by talking", async () => {
   const source = join(scratchDir("inf-runbook-source-"), "studio-workflows");
   mkdirSync(source, { recursive: true });
@@ -43,6 +47,11 @@ test("add a runbook only on consent, keep its replacement and remove it by talki
     version: "1.0.0",
     replaces: workflows.id,
     skills: "skills",
+    panels: ["reading"],
+  });
+  const panelId = `${workflows.id}-reading`;
+  cpSync(join(process.cwd(), "tests/fixtures/panel-cards/reading-list"), join(source, "reading"), {
+    recursive: true,
   });
   writeFileSync(join(source, "runbook.json"), JSON.stringify(manifest));
   const guide = readFileSync(join(base, "sequences", workflows.firstmate ?? ""), "utf8").replace(
@@ -63,6 +72,8 @@ test("add a runbook only on consent, keep its replacement and remove it by talki
     await promptInput(at.page).press("Enter");
     await expect(shownCard(at.page, title)).toBeVisible();
     await expect(cardBody(at.page, title).locator("body")).toContainText(`${workflows.name} off`);
+    await expect(cardBody(at.page, title).locator("body")).toContainText(RUNBOOK_PANELS_WORDS);
+    await expect(cardBody(at.page, title).locator("li b")).toHaveText("Reading list");
     expect(
       (await at.page.evaluate(() => window.infinitary.settings.getRunbooks())).some(
         (book) => book.id === manifest.id,
@@ -83,9 +94,13 @@ test("add a runbook only on consent, keep its replacement and remove it by talki
     expect(existsSync(join(userDataDir, "plugins", manifest.id, manifest.firstmate ?? ""))).toBe(
       true,
     );
+    // The click that added the runbook agreed to its panel, which shows under the runbook's name.
+    await expect(panelBody(at.page, panelId).locator("[data-fixture]")).toBeVisible();
     expect(
-      (await at.page.evaluate(() => window.infinitary.plugins.personal.list())).extensions,
-    ).toEqual([]);
+      (await at.page.evaluate(() => window.infinitary.plugins.personal.list())).extensions.map(
+        (extension) => [extension.id, extension.runbook, extension.error],
+      ),
+    ).toEqual([[panelId, manifest.id, null]]);
     await at.page.getByRole("button", { name: "Settings", exact: true }).click();
     await at.page.getByRole("tab", { name: "Runbooks", exact: true }).click();
     await expect(settingRow(at.page, `runbook-${manifest.id}`).getByRole("switch")).toHaveAttribute(
@@ -140,6 +155,7 @@ test("add a runbook only on consent, keep its replacement and remove it by talki
       ),
     ).toBe(false);
     expect(existsSync(join(userDataDir, "plugins", manifest.id))).toBe(false);
+    await expect(at.page.locator(`[data-side-panel="${panelId}"]`)).toHaveCount(0);
   } finally {
     await at.close();
   }

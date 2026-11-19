@@ -554,13 +554,13 @@ describe("the signed channel workflow", () => {
         const ran = ranSteps(channel, false, false, direct).map(
           (candidate) => candidate.id ?? candidate.name,
         );
-        // INF-2498's plan, piece 2: the record takes the zip first, every
-        // place is read, then every place is uploaded to at once; the virtual
+        // INF-2498's plan, piece 2: every place is read, the record takes
+        // the zip first, then every place is uploaded to at once; the virtual
         // Mac fetches back and checks every copy before any switch, every
         // place's at once (INF-4347's review).
         const publication = [
-          "private",
           "adopt",
+          "private",
           "upload",
           "files",
           "expected",
@@ -616,8 +616,8 @@ describe("the signed channel workflow", () => {
       ).toEqual([
         "visibility",
         "recorded",
-        "private",
         "adopt",
+        "private",
         "upload",
         "fetch-back",
         "tap",

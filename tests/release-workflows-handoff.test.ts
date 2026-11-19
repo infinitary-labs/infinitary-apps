@@ -1058,8 +1058,8 @@ describe("the signed channel workflow", () => {
 
     // The captain's choice on INF-5244's review: testers get only checked
     // bytes, so a retry whose rebuilt installer differs from the one a place
-    // already holds stops before anything but the record's zip is written.
-    it("refuses a held Windows installer that is not the one this run's Windows check built, before any upload", () => {
+    // already holds stops before anything is written, the record's zip included.
+    it("refuses a held Windows installer that is not the one this run's Windows check built, before any write", () => {
       const places = standInGh(source);
       const produced = produce({ record: places });
       const consumed = consume(produced);
@@ -1070,15 +1070,14 @@ describe("the signed channel workflow", () => {
       expect(uploaded.results.adopt?.stderr).toMatch(
         /cloudflare holds Infinitary-.*-windows-x64-setup\.exe with sha256 [0-9a-f]{64}, not the [0-9a-f]{64} this run's Windows check built and checked/,
       );
+      expect(uploaded.results.private).toBeUndefined();
       expect(uploaded.results.upload).toBeUndefined();
-      expect(Object.keys(places.published(recordRepository, tag) ?? {}).sort()).toEqual(
-        [zipName, `${zipName}.sha256`].sort(),
-      );
+      expect(places.published(recordRepository, tag)).toBeNull();
       expect(releaseFiles(places, tapRepository, tapTag)).toBeNull();
       expect(Object.keys(cloudflare(consumed))).toEqual([`releases/v${version}/${windowsName}`]);
     });
 
-    it("refuses before any upload when two places hold different bytes", () => {
+    it("refuses before any write when two places hold different bytes", () => {
       const places = standInGh(source);
       places.seed(recordRepository, tag, source, { [deb]: "deb from one attempt" });
       places.seed(tapRepository, tapTag, "f".repeat(40), { [deb]: "deb from another" });
@@ -1087,11 +1086,10 @@ describe("the signed channel workflow", () => {
       const uploaded = uploadAfterChecks(produced, consumed, places);
       expect(uploaded.results.adopt?.status).not.toBe(0);
       expect(uploaded.results.adopt?.stderr).toMatch(/Two places hold different bytes/);
+      expect(uploaded.results.private).toBeUndefined();
       expect(uploaded.results.upload).toBeUndefined();
-      // Only the record's zip went first; no other place took anything.
-      expect(Object.keys(places.published(recordRepository, tag) ?? {}).sort()).toEqual(
-        [deb, zipName, `${zipName}.sha256`].sort(),
-      );
+      // Not even the record's zip went: no place took anything.
+      expect(Object.keys(places.published(recordRepository, tag) ?? {})).toEqual([deb]);
       expect(Object.keys(releaseFiles(places, tapRepository, tapTag) ?? {})).toEqual([deb]);
       expect(releaseFiles(places, oldTapRepository, oldTapTag)).toBeNull();
       expect(cloudflare(consumed)).toEqual({});
@@ -1142,7 +1140,9 @@ describe("the signed channel workflow", () => {
       expect(uploaded.results.private?.status).not.toBe(0);
       expect(uploaded.results.private?.stderr).toMatch(/The record changed since signing/);
       expect(uploaded.outputs.private).toEqual({});
-      expect(uploaded.results.adopt).toBeUndefined();
+      // Every place was only read before the record refused.
+      expect(uploaded.results.adopt?.status).toBe(0);
+      expect(uploaded.results.upload).toBeUndefined();
       expect(places.published(recordRepository, tag)).toEqual({
         [zipName]: "another run",
         [`${zipName}.sha256`]: other,

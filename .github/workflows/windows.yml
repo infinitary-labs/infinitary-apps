@@ -311,22 +311,23 @@ jobs:
           path: ${{ runner.temp }}/windows-installer
       # Against the build job's own output, never only the artifact's list,
       # so the installer this machine runs is the one whose checksum the
-      # release's upload job publishes (docs/windows.md).
-      - name: Check the installer against the build's list
+      # release's upload job publishes (docs/windows.md). The artifact must
+      # hold only that installer and its list, and the one file checked here
+      # is the one run, by its full path, so no other file can stand in.
+      # Then as a person's double-click runs it, silently: one click installs
+      # for this person and opens the app through its Start menu entry.
+      - name: Check the installer against the build's list and install it
         working-directory: ${{ runner.temp }}/windows-installer
         env:
           SUMS: ${{ needs.build.outputs.sums }}
         run: |
-          if ((Get-Content SHA256SUMS -Raw).Trim() -ne $env:SUMS.Trim()) { throw "the artifact's SHA256SUMS is not the one the build reported" }
           $sum, $file = $env:SUMS.Trim() -split '\s+\*?', 2
-          if ((Get-FileHash -Algorithm SHA256 $file).Hash.ToLower() -ne $sum) { throw "$file differs from the build's" }
-      # As a person's double-click runs it, silently: one click installs for
-      # this person and opens the app through its Start menu entry.
-      - name: Install
-        working-directory: ${{ runner.temp }}/windows-installer
-        run: |
-          $setup = Get-ChildItem *-setup.exe | Select-Object -First 1
-          $p = Start-Process $setup.FullName -ArgumentList '/S', '--force-run' -PassThru -Wait
+          $names = @(Get-ChildItem -Force -Name)
+          if ($names.Count -ne 2 -or $names -notcontains 'SHA256SUMS' -or $names -notcontains $file) { throw "the artifact holds $($names -join ', '), not only SHA256SUMS and $file" }
+          if ((Get-Content SHA256SUMS -Raw).Trim() -ne $env:SUMS.Trim()) { throw "the artifact's SHA256SUMS is not the one the build reported" }
+          $setup = (Get-Item -LiteralPath $file).FullName
+          if ((Get-FileHash -Algorithm SHA256 -LiteralPath $setup).Hash.ToLower() -ne $sum) { throw "$file differs from the build's" }
+          $p = Start-Process -FilePath $setup -ArgumentList '/S', '--force-run' -PassThru -Wait
           if ($p.ExitCode -ne 0) { throw "the installer ended with $($p.ExitCode)" }
       - name: Check the installed app
         env:

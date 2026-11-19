@@ -1650,53 +1650,14 @@ jobs:
             --packages "$RUNNER_TEMP/linux-packages" --out "$RUNNER_TEMP/linux-release"
           cat "$RUNNER_TEMP/linux-release/SHA256SUMS"
 
-      # The record, the first effect, and only the zip. The private release
-      # is the record: its tag must name the source commit, and its zip, if
-      # already there - a retry, whose rebuild never reproduces the same
-      # bytes - is the artifact every place gets. The signing job read the
-      # record before it built the disk image and handed over that zip, so
-      # adoption here must name the same bytes; a record that changed since -
-      # another run of this version - fails here before anything else
-      # uploads (scripts/publish-release-asset.sh).
-      - name: Record the zip first
-        id: private
-        if: ${{ needs.resolve.outputs.dry_run == 'false' }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ARTIFACT: ${{ steps.handoff-check.outputs.zip }}
-          ARTIFACT_SHA256: ${{ needs.release.outputs.sha256 }}
-          TITLE: infinitary ${{ needs.resolve.outputs.version }}
-          TARGET: ${{ needs.resolve.outputs.source_commit }}
-          LATEST: ${{ needs.resolve.outputs.prerelease == 'true' && 'false' || '' }}
-        run: |
-          set -euo pipefail
-          WORK="$RUNNER_TEMP/private-release"
-          rm -rf "$WORK" && mkdir -p "$WORK"
-          export WORK NOTES_FILE="$WORK/notes.md"
-          {
-            cat packaging/alpha-notice.txt
-            printf '\nOn Mac, open the disk image and drag Infinitary into Applications. Open that copy, then choose Stable or Alpha in Settings → General. Use Update and restart for later versions; Homebrew is not needed.\n'
-            printf '\nHomebrew installation remains supported. Homebrew copies keep updating through Homebrew; disk-image copies use in-app updates. See docs/mac-installation.md to switch installation methods while keeping saved work.\n'
-            printf '\nLinux downloads and the universal ZIP for paired computers are included below. Check downloads against their checksum files.\n'
-            [[ -z "$WINDOWS_NAME" ]] || printf '\nOn Windows 11 (x64), %s is an unsigned early build: Windows warns before it runs, and a PC with Smart App Control on blocks it until the signed build.\n' "$WINDOWS_NAME"
-          } > "$NOTES_FILE"
-          # The stable's record keeps these (docs/release-notes.md "Who writes what").
-          [[ -z "$HIGHLIGHTS" ]] || printf '\nHighlights picked, lead first: %s\n' "$HIGHLIGHTS" >> "$NOTES_FILE"
-          [[ -z "$PROMOTED_FROM" ]] || printf '\nPromoted from alpha %s: the same code, rebuilt as stable.\n' "$PROMOTED_FROM" >> "$NOTES_FILE"
-          printf '\nBuilt from source commit %s.\n' "$SOURCE_COMMIT" >> "$NOTES_FILE"
-          GITHUB_OUTPUT="$WORK/zip.out" scripts/publish-release-asset.sh adopt "$GITHUB_REPOSITORY" "$TAG_NAME" "$ARTIFACT"
-          RECORDED_SHA="$(sed -n 's/^sha256=//p' "$WORK/zip.out")"
-          [[ "$RECORDED_SHA" == "$ARTIFACT_SHA256" ]] || {
-            echo "::error title=The record changed since signing::$TAG_NAME records $ZIP_NAME with sha256 $RECORDED_SHA, not the $ARTIFACT_SHA256 the signing job handed over. Another run of this version recorded it after the signing job read the record; dispatch again to sign from it." >&2
-            exit 1
-          }
-          cat "$WORK/zip.out" >> "$GITHUB_OUTPUT"
-
-      # Every place read before any upload, each with its own key, so a retry
-      # keeps published bytes wherever the last attempt stopped: a disk image
-      # or Linux package any place already holds is adopted, and every place
-      # gets exactly it; two places holding different bytes fail the release
-      # here, before anything uploads. The recipes and SHA256SUMS are then
+      # Every place read before any write, the record's zip included, each
+      # with its own key, so a retry keeps published bytes wherever the last
+      # attempt stopped: a disk image, Windows installer or Linux package any
+      # place already holds is adopted, and every place gets exactly it; two
+      # places holding different bytes, or a held Windows installer that is
+      # not the checked one, fail the release here, before anything is
+      # written. It only reads, so the record's zip stays the first effect.
+      # The recipes and SHA256SUMS are then
       # rendered again from exactly the packages adopted, so they name their
       # bytes. Cloudflare is read through its storage interface, never the
       # public address, whose cache could keep a missing file's answer.
@@ -1821,6 +1782,48 @@ jobs:
           CHOSEN_WINDOWS=""
           [[ -z "$WINDOWS_NAME" ]] || CHOSEN_WINDOWS="$CHOSEN/$WINDOWS_NAME"
           echo "windows=$CHOSEN_WINDOWS" >> "$GITHUB_OUTPUT"
+
+      # The record, the first effect, and only the zip. The private release
+      # is the record: its tag must name the source commit, and its zip, if
+      # already there - a retry, whose rebuild never reproduces the same
+      # bytes - is the artifact every place gets. The signing job read the
+      # record before it built the disk image and handed over that zip, so
+      # adoption here must name the same bytes; a record that changed since -
+      # another run of this version - fails here before anything else
+      # uploads (scripts/publish-release-asset.sh).
+      - name: Record the zip first
+        id: private
+        if: ${{ needs.resolve.outputs.dry_run == 'false' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ARTIFACT: ${{ steps.handoff-check.outputs.zip }}
+          ARTIFACT_SHA256: ${{ needs.release.outputs.sha256 }}
+          TITLE: infinitary ${{ needs.resolve.outputs.version }}
+          TARGET: ${{ needs.resolve.outputs.source_commit }}
+          LATEST: ${{ needs.resolve.outputs.prerelease == 'true' && 'false' || '' }}
+        run: |
+          set -euo pipefail
+          WORK="$RUNNER_TEMP/private-release"
+          rm -rf "$WORK" && mkdir -p "$WORK"
+          export WORK NOTES_FILE="$WORK/notes.md"
+          {
+            cat packaging/alpha-notice.txt
+            printf '\nOn Mac, open the disk image and drag Infinitary into Applications. Open that copy, then choose Stable or Alpha in Settings → General. Use Update and restart for later versions; Homebrew is not needed.\n'
+            printf '\nHomebrew installation remains supported. Homebrew copies keep updating through Homebrew; disk-image copies use in-app updates. See docs/mac-installation.md to switch installation methods while keeping saved work.\n'
+            printf '\nLinux downloads and the universal ZIP for paired computers are included below. Check downloads against their checksum files.\n'
+            [[ -z "$WINDOWS_NAME" ]] || printf '\nOn Windows 11 (x64), %s is an unsigned early build: Windows warns before it runs, and a PC with Smart App Control on blocks it until the signed build.\n' "$WINDOWS_NAME"
+          } > "$NOTES_FILE"
+          # The stable's record keeps these (docs/release-notes.md "Who writes what").
+          [[ -z "$HIGHLIGHTS" ]] || printf '\nHighlights picked, lead first: %s\n' "$HIGHLIGHTS" >> "$NOTES_FILE"
+          [[ -z "$PROMOTED_FROM" ]] || printf '\nPromoted from alpha %s: the same code, rebuilt as stable.\n' "$PROMOTED_FROM" >> "$NOTES_FILE"
+          printf '\nBuilt from source commit %s.\n' "$SOURCE_COMMIT" >> "$NOTES_FILE"
+          GITHUB_OUTPUT="$WORK/zip.out" scripts/publish-release-asset.sh adopt "$GITHUB_REPOSITORY" "$TAG_NAME" "$ARTIFACT"
+          RECORDED_SHA="$(sed -n 's/^sha256=//p' "$WORK/zip.out")"
+          [[ "$RECORDED_SHA" == "$ARTIFACT_SHA256" ]] || {
+            echo "::error title=The record changed since signing::$TAG_NAME records $ZIP_NAME with sha256 $RECORDED_SHA, not the $ARTIFACT_SHA256 the signing job handed over. Another run of this version recorded it after the signing job read the record; dispatch again to sign from it." >&2
+            exit 1
+          }
+          cat "$WORK/zip.out" >> "$GITHUB_OUTPUT"
 
       # Every place at once, each with its own key: the disk image, an
       # alpha's Windows installer and the Linux files beside the record's

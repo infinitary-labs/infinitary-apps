@@ -449,6 +449,9 @@ export const personalExtensionViewSchema = z.object({
 });
 export type PersonalExtensionView = z.infer<typeof personalExtensionViewSchema>;
 
+/** The most runbook panels a snapshot lists as left off; the rest are named in the panel log alone. */
+export const PERSONAL_REFUSED_MAX = 500;
+
 export const personalSnapshotSchema = z.object({
   extensions: z.array(personalExtensionViewSchema),
   /**
@@ -472,7 +475,7 @@ export const personalSnapshotSchema = z.object({
         why: z.string().min(1).max(500),
       }),
     )
-    .max(500)
+    .max(PERSONAL_REFUSED_MAX)
     .optional(),
 });
 export type PersonalSnapshot = z.infer<typeof personalSnapshotSchema>;

@@ -48,6 +48,12 @@ export type RunbookPanelEntry = {
   grants: "own" | "unasked" | PluginCapabilities;
 };
 
+/** A runbook panel left off, as the snapshot's `refused` list names it, each field within its bound. */
+export function runbookRefusal(panel: RunbookPanelEntry, why: string) {
+  const cut = (text: string) => text.slice(0, 100);
+  return { id: cut(panel.id), runbook: cut(panel.runbook.id), by: cut(panel.runbook.name), why };
+}
+
 /**
  * What the captain agreed to for one folder of an added runbook, from its
  * record's own entries only, so a folder named like an object's built-in

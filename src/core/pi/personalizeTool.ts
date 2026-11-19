@@ -217,6 +217,37 @@ function pausedWords(paused: NonNullable<PersonalExtensionView["paused"]>): stri
   return `; background work paused: its server.ts is written for panel API ${paused.api} and this app serves ${paused.serves.join(" or ")}${paused.asked ? "; the captain pressed Update panel" : ""}`;
 }
 
+/** Whose a listed surface is: the app's, the captain's own, one he added, or a runbook's, and who it is by. */
+export function surfaceOwner(
+  surface: SurfaceView,
+  personal: PersonalSnapshot,
+): { owner: "app" | "captain" | "added" | "runbook"; by?: string } {
+  if (surface.kind === "app") return { owner: "app" };
+  if (surface.kind === "personal") return { owner: "captain" };
+  const fromRunbook = personal.extensions.some(
+    (extension) => extension.id === surface.id && extension.runbook,
+  );
+  return { owner: fromRunbook ? "runbook" : "added", ...(surface.by ? { by: surface.by } : {}) };
+}
+
+/**
+ * The runbooks' panels left off the rails (docs/runbooks.md, "Panels"), as
+ * many as the surfaces list names, each beside the panel that holds its id,
+ * and how many more there are.
+ */
+export function refusedRunbookPanels(personal: PersonalSnapshot): {
+  rows: { id: string; runbook: string; why: string }[];
+  more: number;
+} {
+  const all = personal.refused ?? [];
+  return {
+    rows: all
+      .slice(0, SURFACES_CONTEXT_LIMIT)
+      .map((refusal) => ({ id: refusal.id, runbook: refusal.by, why: refusal.why })),
+    more: Math.max(0, all.length - SURFACES_CONTEXT_LIMIT),
+  };
+}
+
 /**
  * The bounded "your surfaces" section of the Firstmate's context block:
  * the theme, every app panel, the personal panels up to a cap, in the
@@ -239,21 +270,20 @@ export function renderSurfacesSection(
   const shown = surfaces.filter((surface) => surface.kind === "app" || listed.has(surface.id));
   const more = yours.length - Math.min(yours.length, SURFACES_CONTEXT_LIMIT);
   const off = panelsOffLine(preferences.panels);
+  const refused = refusedRunbookPanels(personal);
   return [
     `your surfaces (app_change panel and personalize remove act on these ids; theme: ${preferences.appearance.theme}):`,
     ...shown.map((surface) => {
       const where = `${surface.placement.x} rail, ${surface.placement.y}${surface.place ? `, ${surface.place} of ${surface.of}` : ""}`;
       const state = surfaceState(surface, mounts);
-      const fromRunbook =
-        surface.kind === "installed" &&
-        personal.extensions.some((extension) => extension.id === surface.id && extension.runbook);
+      const { owner, by } = surfaceOwner(surface, personal);
       const mark =
-        surface.kind === "personal"
+        owner === "captain"
           ? " (yours)"
-          : fromRunbook
-            ? ` (from the runbook ${surface.by})`
-            : surface.kind === "installed"
-              ? ` (added, by ${surface.by})`
+          : owner === "runbook"
+            ? ` (from the runbook ${by})`
+            : owner === "added"
+              ? ` (added, by ${by})`
               : "";
       const paused =
         surface.kind === "personal"
@@ -262,10 +292,10 @@ export function renderSurfacesSection(
       return `- ${surface.id} "${surface.title}"${mark}: ${where}; ${state}${paused ? pausedWords(paused) : ""}`;
     }),
     ...(more > 0 ? [`- and ${more} more personal panel${more === 1 ? "" : "s"}`] : []),
-    // A runbook's panel left off, beside the panel that holds its id (docs/runbooks.md, "Panels").
-    ...(personal.refused ?? []).map(
-      (refusal) => `- ${refusal.id} (from the runbook ${refusal.by}): not shown: ${refusal.why}`,
+    ...refused.rows.map(
+      (row) => `- ${row.id} (from the runbook ${row.runbook}): not shown: ${row.why}`,
     ),
+    ...(refused.more > 0 ? [`- and ${refused.more} more runbook panels not shown`] : []),
     ...(off ? [off] : []),
   ];
 }

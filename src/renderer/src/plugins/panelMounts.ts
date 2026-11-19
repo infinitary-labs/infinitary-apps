@@ -12,6 +12,7 @@ import {
 import {
   mountKindOf,
   PANEL_MOUNT_WHY_MAX,
+  PANEL_MOUNTS_MAX,
   type PanelMount,
   type PanelMountKind,
   type PanelMounts,
@@ -164,8 +165,10 @@ export function readPanelMounts(facts: MountFacts): PanelMount[] {
     });
   }
   // A runbook's panel the core left off is named beside any panel that
-  // holds its id, by its runbook, so the answer says why it is missing.
-  for (const refusal of facts.runbookRefusals ?? []) {
+  // holds its id, by its runbook, so the answer says why it is missing, in
+  // the room the answer has left after every other panel and the slot.
+  const room = Math.max(0, PANEL_MOUNTS_MAX - mounts.length - 1);
+  for (const refusal of (facts.runbookRefusals ?? []).slice(0, room)) {
     mounts.push({
       id: refusal.id,
       kind: "installed",

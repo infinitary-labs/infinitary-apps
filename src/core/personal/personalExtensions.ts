@@ -17,6 +17,7 @@ import {
   PANEL_READ_NAMES,
   type PanelIntegrationsRequest,
   type PanelIntegrationsResponse,
+  PERSONAL_REFUSED_MAX,
   PERSONAL_STORE_MAX_BYTES,
   type PersonalError,
   type PersonalExtensionView,
@@ -70,6 +71,7 @@ import {
   type InstalledPluginEntry,
   type InstalledRoot,
   type RunbookPanelEntry,
+  runbookRefusal,
 } from "./framedPanels";
 import {
   changedExtensionIds,
@@ -1323,12 +1325,7 @@ export class PersonalExtensions {
     // Left off, with the reason in the panel log once and in the window's
     // list of refused panels (docs/runbooks.md, "Panels").
     const refuse = (panel: RunbookPanelEntry, kind: string, why: string) => {
-      refused.push({
-        id: panel.id.slice(0, 100),
-        runbook: panel.runbook.id.slice(0, 100),
-        by: panel.runbook.name.slice(0, 100),
-        why,
-      });
+      if (refused.length < PERSONAL_REFUSED_MAX) refused.push(runbookRefusal(panel, why));
       this.logOnce(
         `${kind}:${panel.runbook.id}:${panel.id}`,
         `personal: ${panel.runbook.name}'s panel ${panel.id} is not shown: ${why}`,

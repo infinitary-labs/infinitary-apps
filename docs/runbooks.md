@@ -65,6 +65,7 @@ That id is for the rails, the layout and commands; a runbook's panel keeps its s
 They are drawn in a frame like an added panel, with source `installed`, the runbook's name as `by` and its id as `runbook`, and run no code of their own in the app: a `server.ts` mounts nothing.
 A panel of your own or an added one keeps its id; a runbook's panel with a taken id, or a folder name that cannot name a panel, is left off, named once in the panel log, and listed with its reason among the window's refused panels (the snapshot's `refused` list), on a row of its own beside the panel that keeps the id.
 A runbook's panel the core will not serve, such as one with background code or one nobody agreed to, is answered refused with that reason too.
+The first mate's surfaces name each runbook's panel by its runbook and list the ones left off, a view of another Mac lists them among its refused panels too, and a list past its bound (`PERSONAL_REFUSED_MAX`, `PANEL_MOUNTS_MAX`) leaves out refused runbook panels, never a drawn one.
 A personal runbook's panel is served what its manifest asks, as your own panels are.
 An added runbook's panels are agreed on its own add card: the card lists each panel with what it reads, uses and keeps, and Add it records those grants on the runbook's record (`plugins.panels_json`).
 A panel whose files on disk ask for more than was agreed, or one with no recorded agreement, mounts nothing and says to add its runbook again.

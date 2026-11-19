@@ -1,5 +1,10 @@
 import type { PersonalExtensionView, PersonalSnapshot } from "@shared/personal/manifest";
-import type { PanelMount, PanelMounts } from "@shared/personal/mounts";
+import {
+  PANEL_MOUNTS_MAX,
+  type PanelMount,
+  type PanelMounts,
+  panelMountsSchema,
+} from "@shared/personal/mounts";
 import { DEFAULT_LAYOUT, type Layout } from "@shared/preferences";
 import { READ_NAMES } from "@shared/reads";
 import { afterEach, describe, expect, it } from "vitest";
@@ -155,6 +160,31 @@ describe("the window's answer about its panels", () => {
       ]);
     });
   }
+
+  it("keeps every other panel's row and the slot in a full answer, leaving out the runbook panels past its room", () => {
+    const host = new PluginHost({ reads: new Set(READ_NAMES) });
+    builtin = registerBuiltinPlugin(host);
+    plugins = new PersonalPlugins(host, () => {});
+    const snapshot: PersonalSnapshot = {
+      extensions: [view({ id: "desk-reading" })],
+      refused: Array.from({ length: PANEL_MOUNTS_MAX }, (_, index) => ({
+        id: `desk-${index}`,
+        runbook: "desk",
+        by: "Reading desk",
+        why: "another panel has that id",
+      })),
+    };
+    plugins.apply(snapshot);
+    const mounts = answer(host, snapshot);
+    // The answer still parses, so the window's whole answer is sent.
+    expect(panelMountsSchema.safeParse({ panels: mounts }).success).toBe(true);
+    expect(mounts).toHaveLength(PANEL_MOUNTS_MAX);
+    const others = mounts.filter((mount) => !mount.runbook);
+    expect(others.map((mount) => mount.id)).toEqual(
+      expect.arrayContaining(["activity", "desk-reading", "create-panel"]),
+    );
+    expect(mounts.filter((mount) => mount.runbook)).toHaveLength(PANEL_MOUNTS_MAX - others.length);
+  });
 
   it("names a runbook's panel the core would not serve refused, with the core's reason", () => {
     const host = new PluginHost({ reads: new Set(READ_NAMES) });

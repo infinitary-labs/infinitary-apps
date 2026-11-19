@@ -94535,6 +94535,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       })
     ).optional()
   });
+  const PERSONAL_REFUSED_MAX = 500;
   object({
     extensions: array(personalExtensionViewSchema),
     /**
@@ -94556,7 +94557,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         by: string().max(100),
         why: string().min(1).max(500)
       })
-    ).max(500).optional()
+    ).max(PERSONAL_REFUSED_MAX).optional()
   });
   object({
     extensionId: personalIdSchema,

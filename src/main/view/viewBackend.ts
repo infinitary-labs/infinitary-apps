@@ -118,7 +118,9 @@ export const VIEW_PUSHES: ReadonlySet<PushChannel> = new Set<PushChannel>([
 /** A panel being built shows only in a window on the first mate's own computer. */
 function withoutDrafts(payload: unknown): unknown {
   const snapshot = personalSnapshotSchema.safeParse(payload);
-  return snapshot.success ? { extensions: snapshot.data.extensions } : payload;
+  if (!snapshot.success) return payload;
+  const { drafts: _drafts, ...shown } = snapshot.data;
+  return shown;
 }
 
 /** Channels answered from this Mac's own look. */

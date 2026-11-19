@@ -99019,6 +99019,7 @@ ${FRAME_KEYBOARD_SCRIPT}
       })
     ).optional()
   });
+  const PERSONAL_REFUSED_MAX = 500;
   object({
     extensions: array(personalExtensionViewSchema),
     /**
@@ -99040,7 +99041,7 @@ ${FRAME_KEYBOARD_SCRIPT}
         by: string().max(100),
         why: string().min(1).max(500)
       })
-    ).max(500).optional()
+    ).max(PERSONAL_REFUSED_MAX).optional()
   });
   object({
     extensionId: personalIdSchema,

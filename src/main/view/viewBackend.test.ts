@@ -6,6 +6,7 @@ import type { UpdateChecker } from "@core/update/updateChecker";
 import { withAnythingElse } from "@shared/cards";
 import { customApiConnectInputSchema } from "@shared/customApi";
 import { PROTOCOL_VERSION } from "@shared/ipc";
+import type { PersonalSnapshot } from "@shared/personal/manifest";
 import { DEFAULT_SHELL_PREFERENCES, type ShellPreferences } from "@shared/preferences";
 import { afterEach, expect, it, vi } from "vitest";
 import type { WebSocket } from "ws";
@@ -190,6 +191,7 @@ it("hands a streamed reply piece and a computers' reading the home sent live to 
  */
 function viewWithHeldLook() {
   const sent: ShellPreferences[] = [];
+  const panels: unknown[] = [];
   let hear: HomeLinkOptions["onPush"] = () => {};
   let answerLook = () => {};
   let refuseLook = (_error: Error) => {};
@@ -218,6 +220,7 @@ function viewWithHeldLook() {
     },
     broadcast: (channel, payload) => {
       if (channel === "inf:shell:preferences") sent.push(payload as ShellPreferences);
+      if (channel === "inf:plugins:personal") panels.push(payload);
     },
     notifications: { supported: () => false, focused: () => true, show: () => {} },
     onThisMac: () => {},
@@ -258,8 +261,27 @@ function viewWithHeldLook() {
     answerLook,
     /** The other Mac's panels switch, pushed as it changes there. */
     hearPanels: () => hear("inf:shell:preferences", saved, false),
+    panels,
+    /** The other Mac's panel snapshot, pushed live or replayed on reconnecting. */
+    hearSnapshot: (snapshot: PersonalSnapshot, replayed: boolean) =>
+      hear("inf:plugins:personal", snapshot, replayed),
   };
 }
+
+// docs/runbooks.md, "Panels": a runbook's panel the first mate left off is listed in this Mac's
+// window too, while a panel being built there still shows only on its own computer.
+it("passes the other Mac's refused runbook panels to this window and keeps its drafts back", () => {
+  const { panels, hearSnapshot } = viewWithHeldLook();
+  const refused = [
+    { id: "desk-reading", runbook: "desk", by: "Reading desk", why: "another panel has that id" },
+  ];
+  for (const replayed of [false, true])
+    hearSnapshot({ extensions: [], drafts: [], refused }, replayed);
+  expect(panels).toEqual([
+    { extensions: [], refused },
+    { extensions: [], refused },
+  ]);
+});
 
 // docs/view.md, "The switch and the layout": this Mac takes the other Mac's saved look once, and a
 // panels switch pushed before that look answers waits for it, so the window is never drawn in the

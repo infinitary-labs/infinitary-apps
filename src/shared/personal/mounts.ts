@@ -70,7 +70,10 @@ export const panelMountSchema = z.object({
 });
 export type PanelMount = z.infer<typeof panelMountSchema>;
 
+/** The most panels one answer names; refused runbook panels past it are left out, never a drawn one. */
+export const PANEL_MOUNTS_MAX = 500;
+
 export const panelMountsSchema = z.object({
-  panels: z.array(panelMountSchema).max(500),
+  panels: z.array(panelMountSchema).max(PANEL_MOUNTS_MAX),
 });
 export type PanelMounts = z.infer<typeof panelMountsSchema>;

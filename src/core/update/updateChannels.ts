@@ -388,6 +388,9 @@ export function parseUpdateTargets(payload: unknown, tap: TapNames = TAP): Updat
 export const BUILDS_FILE = TAP.buildsFile;
 export const BUILDS_URL = buildsUrlOf(TAP);
 
+/** The Windows installer's kind under `windows`, then its chip (docs/alpha.md "Updates on Windows"). */
+export const WINDOWS_INSTALLER = "exe";
+
 /** How each Linux build installs (docs/linux-packages.md). */
 export const LINUX_PACKAGES = ["deb", "rpm", "appimage", "arch", "nix"] as const;
 export type LinuxPackage = (typeof LINUX_PACKAGES)[number];

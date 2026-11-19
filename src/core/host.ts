@@ -571,6 +571,12 @@ export type HostCapabilities = {
    */
   relaunch?: (execPath?: string) => void;
   /**
+   * Ends this program for a Windows installer, which opens the new copy
+   * itself (docs/alpha.md "Updates on Windows"): a window quits, and a
+   * command ends with 75 as for any update. Absent on a host that cannot.
+   */
+  endForInstaller?: () => void;
+  /**
    * Opens this computer's window beside a first mate a command started, as a
    * click on the app does (docs/run.md, "Opened while it runs"), so a paired
    * view's update has a window to install it. Absent where none can open.

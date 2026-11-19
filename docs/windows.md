@@ -1,9 +1,9 @@
 # Windows
 
 Infinitary on Windows is one unsigned installer for x64 PCs, built and checked by `.github/workflows/windows.yml`.
-Every alpha publishes it as an unsigned early build for testers ("Published on every alpha" below); a stable carries none, nothing signs it yet, and no update reaches it.
-The installed app offers no update either: it never reads the release source, and the Version row says Infinitary does not update itself on Windows yet (`createInstalledUpdateChecker` in `src/core/update/updateChecker.ts`).
-Windows on Arm, signing, updates and a stable Windows build are later pieces of the Windows plan.
+Every alpha publishes it as an unsigned early build for testers ("Published on every alpha" below); a stable carries none yet, and nothing signs it.
+The installed app updates itself in one click from the installer its channel's release carries, checked against the published SHA-256 (`docs/alpha.md`, "Updates on Windows"); a channel whose release carries no Windows installer offers no update.
+Windows on Arm, signing and a stable Windows build are later pieces of the Windows plan.
 The earlier hosted investigation and what it observed are `docs/windows-feasibility.md`.
 
 ## What is built
@@ -48,7 +48,8 @@ Moving to a newer Git for Windows changes the version, file, address, SHA-256 an
 Infinitary at its first launch on a Windows PC joins a first mate on a Mac, a Linux computer or another Windows PC by a pasted link or by that computer's address (`docs/view.md`, "Joining"), and both controls it and runs its work, as a Mac that joined by its window does (`systemRunsWork` in `src/shared/devices.ts`).
 Its work runs while its person is signed in to Windows, started by their own Task Scheduler with no administrator (`docs/helper.md`, "In the background").
 A second Windows account on a Windows home runs that home's work too, by a line for PowerShell (`docs/devices.md`, "Joining by a command").
-No update reaches a Windows PC (above), so its home sends it none and its row on Settings -> Devices says to install the newer Infinitary on that PC.
+Its home sends it no update, so its row on Settings -> Devices says to install the newer Infinitary on that PC.
+Its window names a newer version of its own copy and installs nothing, since the installer would end the work it runs mid-run (`docs/alpha.md`, "Updates on Windows").
 It says who it is by its user's security identifier, which Windows' own `whoami` reads, since a Windows user has no number (`docs/devices.md`, "Joining").
 Windows refuses to replace a file another program holds open, as one may the moment the file appears, so a join that knows the home's name already, as the window's work setup does, puts the grant the PC keeps (`home.json`) in place with that name in one write (`JoinedHome.join`, `src/core/devices/joinedHome.ts`), and a join keeps the home's name and where the PC runs, heard in its one welcome, in one write too (`JoinedHome.heard`).
 A command's join still puts the grant in place, or a changed address on it, before its dial hears the home, and a run keeps the addresses, the name and where it runs from one welcome each in a write of its own, so each of those writes can still meet a program holding the file.

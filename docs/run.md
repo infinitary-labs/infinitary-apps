@@ -178,6 +178,7 @@ A development run may stand in the program with `INFINITARY_RUN_PROGRAM` and how
 
 An update the command's own first mate installs ends the same way (INF-3660's plan, the captain's answer update=window-installs): its updater saves the crew's work, replaces the program, and where the app with its window would start itself again, the command says the same two lines and exits 75, for whatever started it to start the new version (`endUpdated`, `src/main/app.ts`).
 A command never starts itself again: it would come back as a window.
+On Windows the installer runs only once the command has ended, and opens the new copy's window, which starts the command again (`docs/alpha.md`, "Updates on Windows").
 On a Mac whose installed app updates itself, only a program in the person's own session can replace the copy, so the window opened beside the command installs it while the command holds the crew's saved work, and the command ends with 75 once the window says the copy is replaced (`docs/alpha.md`, "Saving work before an update").
 A window that started the command lets its agent go then, so the agent does not start the old copy again before the installer replaces it, and the new copy's window starts the command.
 
@@ -350,7 +351,7 @@ On Windows the start entry is a task in this user's own Task Scheduler, under th
 The task as registered is kept in the data folder as `run-task.xml`, the file `schtasks` reads, so whether it is in place and whether it starts at sign-in are read from that file without asking Task Scheduler, whose answers are in the computer's own language.
 It runs only while the user is signed in: it stops when they sign out, and nothing runs while the computer waits at its sign-in screen, which the command says.
 It starts the run now unless another Infinitary holds the data folder, and otherwise says it starts at the next sign-in.
-Task Scheduler never starts a run again after it ends, so an update's 75 and a crash wait for the next sign-in or the window, which offers Start it here at once (`entryRestarts`).
+Task Scheduler never starts a run again after it ends, so a crash, or an update's 75 from a package installed by hand, waits for the next sign-in or the window, which offers Start it here at once (`entryRestarts`); after the app's own update the installer opens that window.
 `--settings <file>` and its refusal are as on Linux.
 `--off` deletes the task and leaves a run going alone, since Task Scheduler's own end of a task ends its program at once, with no clean stop.
 For the same reason nothing on Windows signals the run: a stop is asked by writing `run-stop.json` in the data folder, which the run reads once a second and honours only when it was written after the run started (`requestRunStop`, `watchRunStop`).

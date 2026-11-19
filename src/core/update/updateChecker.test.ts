@@ -4,8 +4,9 @@ import type { UpdateChannel } from "@shared/update";
 import { UPDATE_LATER, UPDATE_NOTICES, UPDATE_PROBLEMS } from "@shared/updateWords";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { thisDeviceSystem } from "../platform";
 import { ACTIVE_MARK_HEADER } from "./activeMark";
-import { type LinuxInstallPlan, PACKAGE_TYPE_FILE, UpdateInstallProblem } from "./linuxInstall";
+import { type LinuxInstallPlan, PACKAGE_TYPE_FILE } from "./linuxInstall";
 import type { MacUpdateDriver } from "./macUpdates";
 import { publicBuildsUrl } from "./releaseSource";
 import {
@@ -23,7 +24,9 @@ import {
   createUpdateChecker,
   pickNewestStableRelease,
 } from "./updateChecker";
+import { UpdateInstallProblem } from "./updateDownload";
 import { type CrewWorkForUpdate, createUpdateSaving } from "./updateWork";
+import type { WindowsInstallPlan } from "./windowsInstall";
 
 const TARGETS_URL =
   "https://raw.githubusercontent.com/infinitary-labs/homebrew-tap/HEAD/infinitary-updates.json";
@@ -452,29 +455,57 @@ describe("the installed app's checker", () => {
     expect(requests).toEqual([TARGETS_URL]);
   });
 
-  // The captain's choice for the first Windows installer: "Offer no update on
-  // Windows, and add a test". Its installer is in no release, so a Windows
-  // copy never reads the release source or offers the Mac's command.
-  it("offers a Windows copy no update and reads no release source", async () => {
+  // INF-4258: an installed Windows copy reads the builds file for its
+  // installer. A window controlling another computer is handed no way to
+  // end for the installer, since it also runs that computer's work: it names
+  // the version and the downloads page, and installs nothing.
+  it("offers a Windows window controlling another computer its version and no install", async () => {
     const requests: string[] = [];
+    const version = "0.1.25-alpha.10";
+    const chip = thisDeviceSystem("win32").chip ?? process.arch;
+    const release = target(version);
     const updates = createInstalledUpdateChecker({
       app: { version: "0.1.24", packaged: true, userDataDir: alphaRoot(), platform: "win32" },
       openExternal: () => {},
       env: {},
       fetchImpl: (async (url: string | URL | Request) => {
         requests.push(String(url));
-        return new Response(JSON.stringify(targets({ alpha: target("0.1.25-alpha.10") }).body));
+        return Response.json({
+          schemaVersion: 1,
+          channels: {
+            alpha: {
+              version,
+              releaseUrl: release.releaseUrl,
+              sourceCommit: release.sourceCommit,
+              // Keyed by the chip this run reads, so the reader finds an installer.
+              systems: {
+                windows: {
+                  [chip]: {
+                    exe: {
+                      url: buildDownloadUrl(version, `Infinitary-${version}-windows-x64-setup.exe`),
+                      sha256: "b".repeat(64),
+                    },
+                  },
+                },
+              },
+            },
+          },
+        });
       }) as typeof fetch,
     });
     const status = await updates.checkNow();
     expect(status).toMatchObject({
-      updateAvailable: false,
-      latestVersion: null,
+      latestVersion: version,
+      updateAvailable: true,
+      releaseUrl: release.releaseUrl,
       upgradeCommand: "",
-      problem: UPDATE_PROBLEMS.windows,
     });
-    expect(await updates.install()).toEqual({ ok: false, problem: UPDATE_PROBLEMS.windows });
-    expect(requests).toEqual([]);
+    expect(status.install).toBeUndefined();
+    expect(requests).toEqual([publicBuildsUrl]);
+    expect(await updates.install()).toEqual({
+      ok: false,
+      problem: "There is no update this app can install itself.",
+    });
   });
 
   // The old-cask switch (FI3-1780's rename, step 10; FI3-1729: "Infinitary
@@ -817,5 +848,144 @@ describe("the update check's active mark", () => {
     await homebrew.updates.checkNow();
     expect(homebrew.marks).toEqual([]);
     expect(homebrew.sent).toEqual([`${targetsUrlOf(FIRSTMATE_TAP)} null`]);
+  });
+});
+
+// INF-4258, as INF-5230's plan re-scoped INF-4243's piece 7: Windows takes
+// one-click updates on the alpha and stable channels from the builds file,
+// under windows, x64 and exe, each channel its own version's installer.
+describe("updates on Windows", () => {
+  const BUILDS = "https://builds.example.invalid/infinitary-builds.json";
+  const setupOf = (version: string) => ({
+    url: buildDownloadUrl(version, `Infinitary-${version}-windows-x64-setup.exe`),
+    sha256: "d".repeat(64),
+  });
+  /** One channel's entry, as the release writes it: the Mac and Linux builds beside Windows'. */
+  function entry(version: string, withWindows = true) {
+    const release = target(version);
+    return {
+      version,
+      releaseUrl: release.releaseUrl,
+      sourceCommit: release.sourceCommit,
+      systems: {
+        macos: {
+          arm64: {
+            zip: {
+              url: buildDownloadUrl(version, `Infinitary-${version}-universal.zip`),
+              sha256: "a".repeat(64),
+            },
+          },
+        },
+        linux: {
+          x64: {
+            deb: {
+              url: buildDownloadUrl(version, `infinitary-${version}-linux-amd64.deb`),
+              sha256: "b".repeat(64),
+            },
+          },
+        },
+        ...(withWindows ? { windows: { x64: { exe: setupOf(version) } } } : {}),
+      },
+    };
+  }
+
+  function windows(channel: UpdateChannel, channels: Record<string, unknown>) {
+    const installed: WindowsInstallPlan[] = [];
+    const work = {
+      save: vi.fn<CrewWorkForUpdate["save"]>(async () => "saved"),
+      release: vi.fn<CrewWorkForUpdate["release"]>(),
+      resuming: vi.fn<CrewWorkForUpdate["resuming"]>(() => []),
+    };
+    const order: string[] = [];
+    const updates = createUpdateChecker({
+      currentVersion: "0.8.3-alpha.1",
+      channel: () => channel,
+      windows: { chip: "x64" },
+      buildsUrl: BUILDS,
+      fetchImpl: (async () => Response.json({ schemaVersion: 1, channels })) as typeof fetch,
+      openExternal: () => {},
+      installWindows: async (plan, beforeReplace) => {
+        await beforeReplace?.();
+        order.push("installer");
+        installed.push(plan);
+      },
+      saving: createUpdateSaving({
+        ...work,
+        save: async (options) => {
+          order.push("saved");
+          return work.save(options);
+        },
+      }),
+    });
+    return { updates, installed, order, work };
+  }
+
+  it("installs alpha's installer in one click, after the crew's work is saved", async () => {
+    const f = windows("alpha", { stable: entry("0.8.2"), alpha: entry("0.8.3-alpha.4") });
+    const status = await f.updates.getStatus();
+    expect(status).toMatchObject({
+      latestVersion: "0.8.3-alpha.4",
+      updateAvailable: true,
+      upgradeCommand: "",
+      install: { asksPassword: false, restarts: true },
+    });
+    expect(await f.updates.install()).toEqual({ ok: true });
+    expect(f.order).toEqual(["saved", "installer"]);
+    expect(f.installed).toEqual([
+      { version: "0.8.3-alpha.4", channel: "alpha", download: setupOf("0.8.3-alpha.4") },
+    ]);
+  });
+
+  it("installs stable's own installer on stable, never alpha's newer one", async () => {
+    const f = windows("stable", { stable: entry("0.8.4"), alpha: entry("0.8.5-alpha.1") });
+    expect((await f.updates.getStatus()).latestVersion).toBe("0.8.4");
+    expect(await f.updates.install()).toEqual({ ok: true });
+    expect(f.installed).toEqual([
+      { version: "0.8.4", channel: "stable", download: setupOf("0.8.4") },
+    ]);
+  });
+
+  it("offers nothing, and keeps working, when the channel's version has no Windows installer", async () => {
+    const f = windows("alpha", { alpha: entry("0.8.3-alpha.4", false) });
+    const status = await f.updates.checkNow();
+    expect(status).toMatchObject({
+      updateAvailable: false,
+      latestVersion: null,
+      notice: UPDATE_NOTICES.none,
+    });
+    expect(status.install).toBeUndefined();
+    expect(status.problem).toBeUndefined();
+    expect(await f.updates.install()).toEqual({
+      ok: false,
+      problem: "There is no update this app can install itself.",
+    });
+    expect(f.installed).toEqual([]);
+  });
+
+  it("lets the saved work carry on when the download is refused", async () => {
+    const f = windows("alpha", { alpha: entry("0.8.3-alpha.4") });
+    const refusing = createUpdateChecker({
+      currentVersion: "0.8.3-alpha.1",
+      channel: () => "alpha",
+      windows: { chip: "x64" },
+      buildsUrl: BUILDS,
+      fetchImpl: (async () =>
+        Response.json({
+          schemaVersion: 1,
+          channels: { alpha: entry("0.8.3-alpha.4") },
+        })) as typeof fetch,
+      openExternal: () => {},
+      installWindows: async (_plan, beforeReplace) => {
+        await beforeReplace?.();
+        throw new UpdateInstallProblem("The installer could not start, so nothing was installed.");
+      },
+      saving: createUpdateSaving(f.work),
+    });
+    await refusing.getStatus();
+    expect(await refusing.install()).toEqual({
+      ok: false,
+      problem: "The installer could not start, so nothing was installed.",
+    });
+    expect(f.work.release).toHaveBeenCalledTimes(1);
   });
 });

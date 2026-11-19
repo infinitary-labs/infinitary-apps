@@ -3012,6 +3012,7 @@
 "settingsRunbooksMakeYourOwn" = "Make your own";
 "settingsRunbooksOpenFailed" = "Could not open this folder. Please try again.";
 "settingsRunbooksOpenFolder" = "Open folder";
+"settingsRunbooksPanels" = "While it is on, it shows %1$@ on your rails.";
 "settingsRunbooksView" = "View";
 "settingsRunbooksViewLabel" = "View %1$@";
 "settingsRunbooksYours" = "Yours";

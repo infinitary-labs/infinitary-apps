@@ -3012,6 +3012,7 @@
 "settingsRunbooksMakeYourOwn" = "اصنع دليلك";
 "settingsRunbooksOpenFailed" = "تعذّر فتح هذا المجلد. حاول مرة أخرى.";
 "settingsRunbooksOpenFolder" = "فتح المجلد";
+"settingsRunbooksPanels" = "أثناء تشغيله، يعرض %1$@ على أشرطتك.";
 "settingsRunbooksView" = "عرض";
 "settingsRunbooksViewLabel" = "عرض %1$@";
 "settingsRunbooksYours" = "أدلتك";

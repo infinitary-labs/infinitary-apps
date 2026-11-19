@@ -5,7 +5,8 @@ import type { AppDatabase } from "../storage/db";
  * The installed-plugin record (one plugin vehicle, Phase A item 2;
  * migration 43): the ONE writer of the `plugins` table. A row says where a
  * panel or guidance runbook came from, what it was pinned to, and - the part that matters -
- * the capabilities the captain CONSENTED to. The host serves a plugin those
+ * the capabilities the captain CONSENTED to, and for a runbook what each
+ * of its panels may do. The host serves a plugin those
  * and nothing else, whatever the files on disk later ask for.
  *
  * `pending` is an install or an update the installer has staged and put
@@ -28,6 +29,8 @@ export type StagedPlugin = {
   version: string;
   title: string;
   capabilities: PluginCapabilities;
+  /** A runbook's panels and what each asks, by folder, as its add card names them. */
+  panels?: Record<string, PluginCapabilities>;
   stagedAt: number;
 };
 
@@ -41,6 +44,11 @@ export type PluginRecord = {
   version: string | null;
   /** What the captain agreed to; null while it was never added. */
   capabilities: PluginCapabilities | null;
+  /**
+   * What the captain agreed each of an added runbook's panels may do, by
+   * folder; null for a panel, or a runbook added before its card asked.
+   */
+  panels: Record<string, PluginCapabilities> | null;
   installedAt: number | null;
   updatedAt: number;
   pending: StagedPlugin | null;
@@ -55,6 +63,7 @@ type Row = {
   name: string | null;
   version: string | null;
   capabilities_json: string | null;
+  panels_json: string | null;
   installed_at: number | null;
   updated_at: number;
   pending_json: string | null;
@@ -109,12 +118,12 @@ export class PluginRecords {
     const at = this.now();
     this.db
       .prepare(
-        `INSERT INTO plugins (id, kind, source, spec, pinned, name, version, capabilities_json, installed_at, updated_at, pending_json)
-         VALUES (@id, @kind, @source, @spec, @pinned, @name, @version, @capabilities, @at, @at, NULL)
+        `INSERT INTO plugins (id, kind, source, spec, pinned, name, version, capabilities_json, panels_json, installed_at, updated_at, pending_json)
+         VALUES (@id, @kind, @source, @spec, @pinned, @name, @version, @capabilities, @panels, @at, @at, NULL)
          ON CONFLICT (id) DO UPDATE SET
            kind = excluded.kind, source = excluded.source, spec = excluded.spec, pinned = excluded.pinned,
            name = excluded.name, version = excluded.version,
-           capabilities_json = excluded.capabilities_json,
+           capabilities_json = excluded.capabilities_json, panels_json = excluded.panels_json,
            installed_at = COALESCE(plugins.installed_at, excluded.installed_at),
            updated_at = excluded.updated_at, pending_json = NULL`,
       )
@@ -127,6 +136,7 @@ export class PluginRecords {
         name: staged.name,
         version: staged.version,
         capabilities: JSON.stringify(staged.capabilities),
+        panels: staged.panels ? JSON.stringify(staged.panels) : null,
         at,
       });
     return this.get(id) as PluginRecord;
@@ -159,6 +169,9 @@ function fromRow(row: Row): PluginRecord {
     version: row.version,
     capabilities: row.capabilities_json
       ? (JSON.parse(row.capabilities_json) as PluginCapabilities)
+      : null,
+    panels: row.panels_json
+      ? (JSON.parse(row.panels_json) as Record<string, PluginCapabilities>)
       : null,
     installedAt: row.installed_at,
     updatedAt: row.updated_at,

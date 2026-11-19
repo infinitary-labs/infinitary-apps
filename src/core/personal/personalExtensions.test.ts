@@ -1368,3 +1368,86 @@ describe("PersonalExtensions and the host-owned switch (Step 5)", () => {
     }
   });
 });
+
+describe("PersonalExtensions shows a runbook's panels", () => {
+  // The captain's ask that runbooks can include panels (docs/runbooks.md,
+  // "Panels"): a runbook that is on shows the panels its manifest lists, with
+  // the grants its source allows, and they go when it is turned off.
+  it("mounts an on runbook's panels under its name, lets your own panel keep its id, and mounts nothing unagreed or with code", async () => {
+    const h = await harness();
+    const books = join(h.workspaceDir, "..", "runbooks");
+    const place = (folder: string, files: Record<string, string>) => {
+      for (const [file, text] of Object.entries(files)) {
+        mkdirSync(join(books, folder, file, ".."), { recursive: true });
+        writeFileSync(join(books, folder, file), text);
+      }
+      return join(books, folder);
+    };
+    const reading = place("desk/reading", {
+      "manifest.json": JSON.stringify({ title: "Reading", reads: ["tasks.board"] }),
+      "panel.tsx": PANEL,
+    });
+    const coded = place("desk/coded", {
+      "manifest.json": JSON.stringify({ title: "Coded" }),
+      "panel.tsx": PANEL,
+      "server.ts": "export default {};",
+    });
+    const desk = { id: "desk", name: "Reading desk" };
+    type Grants = "own" | "unasked";
+    let panels: { id: string; dir: string; runbook: typeof desk; grants: Grants }[] = [
+      { id: "desk-reading", dir: reading, runbook: desk, grants: "own" },
+      { id: "desk-coded", dir: coded, runbook: desk, grants: "own" },
+    ];
+    const lines: string[] = [];
+    const service = await PersonalExtensions.start({
+      ...h,
+      watch: false,
+      log: (line) => lines.push(line),
+      installed: {
+        dir: join(h.workspaceDir, "..", "plugins"),
+        cacheRoot: join(h.workspaceDir, "..", "installed-cache"),
+        list: () => [],
+        runbooks: () => panels,
+      },
+    });
+    try {
+      const view = (id: string) => service.snapshot().extensions.find((e) => e.id === id);
+      expect(view("desk-reading")).toMatchObject({
+        source: "installed",
+        runbook: "desk",
+        by: "Reading desk",
+        title: "Reading",
+        reads: ["tasks.board"],
+        error: null,
+      });
+      expect(view("desk-reading")?.frame?.version).toMatch(/^[0-9a-f]{16}$/);
+      // A panel inside a runbook runs no code of its own in the app.
+      expect(view("desk-coded")?.frame).toBeNull();
+      expect(view("desk-coded")?.error?.message).toContain("inside a runbook");
+
+      // A panel of your own with the same id keeps it; the runbook's is logged once.
+      h.write("desk-reading/panel.tsx", PANEL);
+      await service.refresh();
+      await service.refresh();
+      expect(view("desk-reading")).toMatchObject({ source: "yours", error: null });
+      expect(view("desk-reading")?.runbook).toBeUndefined();
+      expect(lines.filter((line) => line.includes("another panel has that id"))).toEqual([
+        "personal: Reading desk's panel desk-reading is not shown: another panel has that id",
+      ]);
+      rmSync(join(h.workspaceDir, "desk-reading"), { recursive: true });
+
+      // An added runbook's panel nobody agreed to mounts nothing and says why.
+      panels = [{ id: "desk-reading", dir: reading, runbook: desk, grants: "unasked" }];
+      await service.refresh();
+      expect(view("desk-reading")?.frame).toBeNull();
+      expect(view("desk-reading")?.error?.message).toContain("has not agreed to this panel");
+
+      // Turned off, the runbook lists no panels, and they go.
+      panels = [];
+      await service.refresh();
+      expect(service.snapshot().extensions.filter((e) => e.runbook)).toEqual([]);
+    } finally {
+      service.dispose();
+    }
+  });
+});

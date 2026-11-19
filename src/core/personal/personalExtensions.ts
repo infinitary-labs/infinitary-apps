@@ -28,15 +28,12 @@ import {
   PLUGIN_HOST_SUPPORT,
   type PluginSource,
   personalDraftPanelId,
+  personalIdSchema,
   personalManifestSchema,
   presenceSatisfied,
 } from "@shared/personal/manifest";
 import { mountKindOf, type PanelMount, type PanelMountKind } from "@shared/personal/mounts";
-import {
-  canonicalCapabilities,
-  type PluginCapabilities,
-  unservableGrants,
-} from "@shared/plugins/manifest";
+import { type PluginCapabilities, unservableGrants } from "@shared/plugins/manifest";
 import { panelCardsProblem, withoutPanelCards } from "@shared/plugins/panelCards";
 import type { NamingRule } from "@shared/runbooks";
 import {
@@ -57,7 +54,6 @@ import {
   stoppedLine,
 } from "../panels/panelRuntimes";
 import type { PanelRuntimeKind, PanelStop } from "../panels/panelStops";
-import { checkPluginTree } from "../plugins/pluginInstaller";
 import { formatPanelLint, lintPanelSources, type PanelLintFinding } from "../plugins/pluginLint";
 import type { TaskRecord } from "../storage/taskRecords";
 import { APP_GIT_IDENTITY, git, isGitRepo } from "../workspace/git";
@@ -69,6 +65,12 @@ import {
   PersonalCompileError,
 } from "./compiler";
 import { errorText } from "./errorText";
+import {
+  checkFramed,
+  type InstalledPluginEntry,
+  type InstalledRoot,
+  type RunbookPanelEntry,
+} from "./framedPanels";
 import {
   changedExtensionIds,
   committedTrees,
@@ -244,22 +246,6 @@ export type PanelUpdateAsk = {
 /** The panel APIs a `server.ts` may be written for; an older one is refused before it runs. */
 export const SERVED_PANEL_APIS: readonly number[] = [2];
 
-/** One plugin the captain added, as its record says: its name and what he agreed to. */
-export type InstalledPluginEntry = {
-  id: string;
-  name: string;
-  capabilities: PluginCapabilities;
-};
-
-export type InstalledRoot = {
-  /** `userData/plugins`: one directory per added plugin. */
-  dir: string;
-  /** Where an added panel is compiled; never served in-process. */
-  cacheRoot: string;
-  /** The record's list; a directory it does not name is never mounted. */
-  list: () => InstalledPluginEntry[];
-};
-
 /** What a live turn's commit did, for the task's timeline. */
 export type LiveTurnCommit = {
   committed: boolean;
@@ -315,8 +301,10 @@ export const PLACE_WAIT_MS = 10_000;
 type Loaded = {
   id: string;
   source: PluginSource;
-  /** An added plugin's name; null for the captain's own. */
+  /** An added plugin's name, or the runbook's a panel comes with; null for the captain's own. */
   by: string | null;
+  /** The runbook it comes with (docs/runbooks.md, "Panels"); null for every other panel. */
+  runbook: string | null;
   /** What it is served: its manifest's for the captain's own, the consent for an added one. */
   granted: PluginCapabilities;
   /** An added plugin's compiled panel version, for the frame realm. */
@@ -1314,14 +1302,48 @@ export class PersonalExtensions {
     const installed = (this.options.installed?.list() ?? []).filter(
       (entry) => !yours.has(entry.id),
     );
+    // The third root (docs/runbooks.md, "Panels"): an id a panel above
+    // already holds stays that panel's, and the runbook's is left out.
+    const taken = new Set([...yours, ...installed.map((plugin) => plugin.id)]);
+    const fromRunbooks: RunbookPanelEntry[] = [];
+    for (const panel of this.options.installed?.runbooks?.() ?? []) {
+      if (!personalIdSchema.safeParse(panel.id).success) {
+        this.logOnce(
+          `id:${panel.runbook.id}:${panel.id}`,
+          `personal: ${panel.runbook.name}'s panel ${panel.id} is not shown: its folder's name cannot name a panel`,
+        );
+        continue;
+      }
+      if (taken.has(panel.id)) {
+        this.logOnce(
+          `taken:${panel.runbook.id}:${panel.id}`,
+          `personal: ${panel.runbook.name}'s panel ${panel.id} is not shown: another panel has that id`,
+        );
+        continue;
+      }
+      taken.add(panel.id);
+      fromRunbooks.push(panel);
+    }
     for (const [id, entry] of this.loaded) {
-      if (entry.source === "installed" && !installed.some((plugin) => plugin.id === id)) {
+      if (
+        entry.source === "installed" &&
+        !installed.some((plugin) => plugin.id === id) &&
+        !fromRunbooks.some((panel) => panel.id === id)
+      ) {
         this.loaded.delete(id);
       }
     }
     for (const plugin of installed) {
       if (this.disposed || !this.enabled || generation !== this.generation) return;
       await this.loadInstalled(plugin, generation);
+    }
+    for (const panel of fromRunbooks) {
+      if (this.disposed || !this.enabled || generation !== this.generation) return;
+      await this.loadFramed(
+        { id: panel.id, dir: panel.dir, by: panel.runbook.name, runbook: panel.runbook.id },
+        panel.grants,
+        generation,
+      );
     }
     if (!this.enabled || generation !== this.generation) return;
     this.lastFingerprint = await this.workspaceFingerprint();
@@ -1439,9 +1461,14 @@ export class PersonalExtensions {
       return;
     }
     const key = `${id}:${createHash("sha256").update(text).digest("hex")}`;
+    this.logOnce(key, `personal: ${olderServerApiLine(id)}`);
+  }
+
+  /** One line in the panel log the first time its key comes up. */
+  private logOnce(key: string, line: string): void {
     if (this.refusalsLogged.has(key)) return;
     this.refusalsLogged.add(key);
-    this.log(`personal: ${olderServerApiLine(id)}`);
+    this.log(line);
   }
 
   /**
@@ -1480,6 +1507,7 @@ export class PersonalExtensions {
       id,
       source: "yours",
       by: null,
+      runbook: null,
       granted: {},
       frameVersion: null,
       views: [],
@@ -1588,12 +1616,32 @@ export class PersonalExtensions {
   private async loadInstalled(plugin: InstalledPluginEntry, generation: number): Promise<void> {
     const installed = this.options.installed;
     if (!installed) return;
-    const dir = join(installed.dir, plugin.id);
+    await this.loadFramed(
+      { id: plugin.id, dir: join(installed.dir, plugin.id), by: plugin.name, runbook: null },
+      plugin.capabilities,
+      generation,
+    );
+  }
+
+  /**
+   * One panel served as an added one is: an added plugin, or a panel of a
+   * runbook that is on (docs/runbooks.md, "Panels"). `own` serves what its
+   * manifest asks, as a runbook of the captain's own does; `unasked` mounts
+   * nothing.
+   */
+  private async loadFramed(
+    panel: { id: string; dir: string; by: string; runbook: string | null },
+    grants: PluginCapabilities | "own" | "unasked",
+    generation: number,
+  ): Promise<void> {
+    const installed = this.options.installed;
+    if (!installed) return;
     const next: Loaded = {
-      id: plugin.id,
+      id: panel.id,
       source: "installed",
-      by: plugin.name,
-      granted: plugin.capabilities,
+      by: panel.by.slice(0, 40),
+      runbook: panel.runbook,
+      granted: typeof grants === "string" ? {} : grants,
       frameVersion: null,
       views: [],
       manifest: {},
@@ -1603,29 +1651,12 @@ export class PersonalExtensions {
       stopped: null,
       paused: null,
       error: null,
-      slice: plugin.id,
+      slice: panel.id,
       builder: null,
     };
-    const checked = await checkPluginTree(dir, plugin.id, installed.cacheRoot);
-    if ("refusal" in checked) {
-      next.error = { stage: "manifest", message: `${plugin.id}: ${checked.refusal}` };
-    } else if (
-      canonicalCapabilities(checked.capabilities) !== canonicalCapabilities(plugin.capabilities)
-    ) {
-      // The files on disk changed after the captain agreed: he is asked
-      // again by adding it again, never by the host reading the new ask.
-      next.manifest = { title: checked.manifest.title ?? plugin.id };
-      next.error = {
-        stage: "manifest",
-        message: `${plugin.id}: its files now ask for something different from what the captain agreed to; add it again to ask them`,
-      };
-    } else {
-      next.manifest = checked.manifest;
-      next.frameVersion = checked.panelVersion;
-      next.views = checked.views;
-    }
+    Object.assign(next, await checkFramed(panel, grants, installed.cacheRoot));
     if (!this.enabled || this.disposed || generation !== this.generation) return;
-    this.loaded.set(plugin.id, next);
+    this.loaded.set(panel.id, next);
   }
 
   /**
@@ -1780,6 +1811,7 @@ export class PersonalExtensions {
       id: entry.id,
       source: entry.source,
       by: entry.by,
+      ...(entry.runbook ? { runbook: entry.runbook } : {}),
       title: entry.manifest.title ?? entry.id,
       placement: entry.manifest.placement ?? { ...DEFAULT_PERSONAL_PLACEMENT },
       order: entry.manifest.order ?? DEFAULT_PERSONAL_ORDER,

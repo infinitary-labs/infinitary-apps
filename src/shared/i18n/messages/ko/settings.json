@@ -991,6 +991,7 @@
   "settingsRunbooksMakeYourOwn": "직접 만들기",
   "settingsRunbooksOpenFailed": "이 폴더를 열 수 없었어요. 다시 시도해 주세요.",
   "settingsRunbooksOpenFolder": "폴더 열기",
+  "settingsRunbooksPanels": "켜져 있는 동안 레일에 보여 주는 패널: {panels}",
   "settingsRunbooksView": "보기",
   "settingsRunbooksViewLabel": "{name} 보기",
   "settingsRunbooksYours": "내 런북",

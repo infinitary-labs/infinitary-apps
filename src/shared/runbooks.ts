@@ -88,9 +88,31 @@ export const runbookViewSchema = z.strictObject({
   path: z.string().optional(),
   source: z.enum(["builtin", "installed", "personal"]).optional(),
   error: z.string().optional(),
+  /**
+   * The panels it shows on the rail while it is on (docs/runbooks.md,
+   * "Panels"), each by its panel id and title; absent when it lists none.
+   */
+  panels: z.array(z.strictObject({ id: z.string(), title: z.string() })).optional(),
 });
 export type RunbookView = z.infer<typeof runbookViewSchema>;
 export const runbookStateSchema = z.record(z.string(), z.boolean());
+
+/**
+ * A runbook panel's id (docs/runbooks.md, "Panels"): its runbook's and its
+ * folder's names. A runbook that replaces a built-in names it by the
+ * built-in's id, so a copy keeps the captain's place for the built-in's panel.
+ */
+export function runbookPanelId(
+  manifest: Pick<RunbookManifest, "id" | "replaces">,
+  folder: string,
+): string {
+  const name =
+    folder
+      .replace(/[/\\]+$/, "")
+      .split(/[/\\]/)
+      .pop() ?? folder;
+  return `${manifest.replaces ?? manifest.id}-${name}`;
+}
 
 /** A manifest's crew sections in order: one section, or several each with its own selector. */
 export function crewSectionsOf(manifest: Pick<RunbookManifest, "crew">): RunbookSection[] {

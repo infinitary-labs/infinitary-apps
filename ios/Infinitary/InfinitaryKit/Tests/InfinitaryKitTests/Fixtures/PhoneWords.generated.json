@@ -2331,6 +2331,7 @@
   {"said":{"m":"settingsRunbooksMakeYourOwn"},"words":"Make your own"},
   {"said":{"m":"settingsRunbooksOpenFailed"},"words":"Could not open this folder. Please try again."},
   {"said":{"m":"settingsRunbooksOpenFolder"},"words":"Open folder"},
+  {"said":{"m":"settingsRunbooksPanels","a":{"panels":"‹panels›"}},"words":"While it is on, it shows ‹panels› on your rails."},
   {"said":{"m":"settingsRunbooksView"},"words":"View"},
   {"said":{"m":"settingsRunbooksViewLabel","a":{"name":"‹name›"}},"words":"View ‹name›"},
   {"said":{"m":"settingsRunbooksYours"},"words":"Yours"},

@@ -471,7 +471,7 @@ The host stamps `source` (`yours` | `installed`) from the root it found the plug
 An added plugin is served only what the captain consented to: a tree on disk asking for anything else, or holding a `server.ts`, mounts nothing, with the reason named.
 
 **Install by talking** (item 3): `install_plugin` (the first mate's 25th tool) -> `PluginInstaller` (`src/core/plugins/`): fetch as plain files (npm `pack --ignore-scripts`, git with hooks off, or a folder; links refused; pinned) -> `checkPluginTree`, the same check the scan runs (the manifest, no server code, the tidy-up's refusals, a compile for the frame realm) -> one host consent card (`card-plugin-<id>`, host ops `add-plugin` / `decline-plugin` only the captain's click on card chrome runs; only Don't add declines, while the minus keeps the staged offer pending) -> one feed line.
-A top-level `runbook.json` instead takes guidance admission through the same installer and consent effects, with no panel mounted; `docs/runbooks.md` owns that contract.
+A top-level `runbook.json` instead takes guidance admission through the same installer and consent effects, and its card agrees to the panels the runbook lists, shown while it is on; `docs/runbooks.md` ("Panels") owns that contract.
 An update asks again only on a capability diff; `personalize remove` uninstalls.
 
 **One switch** (item 5): the `panels` preference and safe mode take back both roots in the same tick.

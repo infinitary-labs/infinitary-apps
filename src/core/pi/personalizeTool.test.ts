@@ -182,6 +182,34 @@ describe("personalize", () => {
     );
   });
 
+  it("names a runbook's panel as its runbook's and leaves its removal to the runbook's switch", async () => {
+    // Intent: the captain's ask that runbooks can include panels; such a panel
+    // goes when its runbook is turned off, never through an uninstall by panel id.
+    const desk = {
+      ...extension("desk-reading", "Reading"),
+      source: "installed" as const,
+      by: "Reading desk",
+      runbook: "desk",
+    };
+    const { run, removed } = setup({ personal: { extensions: [desk] } });
+    expect(await run({ action: "remove", surface: "desk-reading" })).toBe(
+      "Reading comes with the runbook Reading desk: turning that runbook off in Settings, under Runbooks, takes it away.",
+    );
+    expect(removed).toEqual([]);
+    const lines = renderSurfacesSection(
+      {
+        appearance: { theme: "light" },
+        layout: DEFAULT_LAYOUT,
+        panels: { enabled: true, offReason: null },
+      },
+      { extensions: [desk] },
+      STABLE,
+    );
+    expect(lines.find((line) => line.includes("desk-reading"))).toContain(
+      "(from the runbook Reading desk)",
+    );
+  });
+
   it("keeps remove to the captain's own turn without changing theme", async () => {
     const { run, removed, settings } = setup({
       captainTurn: false,

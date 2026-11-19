@@ -3137,6 +3137,7 @@ public enum PhoneMessages {
     public static func `settingsRunbooksMakeYourOwn`() -> String { PhoneWords.format("settingsRunbooksMakeYourOwn", []) }
     public static func `settingsRunbooksOpenFailed`() -> String { PhoneWords.format("settingsRunbooksOpenFailed", []) }
     public static func `settingsRunbooksOpenFolder`() -> String { PhoneWords.format("settingsRunbooksOpenFolder", []) }
+    public static func `settingsRunbooksPanels`(`panels`: String) -> String { PhoneWords.format("settingsRunbooksPanels", [`panels`]) }
     public static func `settingsRunbooksView`() -> String { PhoneWords.format("settingsRunbooksView", []) }
     public static func `settingsRunbooksViewLabel`(`name`: String) -> String { PhoneWords.format("settingsRunbooksViewLabel", [`name`]) }
     public static func `settingsRunbooksYours`() -> String { PhoneWords.format("settingsRunbooksYours", []) }
@@ -6963,6 +6964,7 @@ extension PhoneWords {
         "settingsRunbooksMakeYourOwn": [],
         "settingsRunbooksOpenFailed": [],
         "settingsRunbooksOpenFolder": [],
+        "settingsRunbooksPanels": ["panels"],
         "settingsRunbooksView": [],
         "settingsRunbooksViewLabel": ["name"],
         "settingsRunbooksYours": [],

@@ -49,6 +49,13 @@ A runbook may also name a `parts` folder for HTML parts and pictures.
 Use only plain Markdown, text, JSON, HTML, CSS and picture files, with no symbolic links, executable source or paths outside the runbook.
 Do not install a panel just because a runbook carries parts.
 
+## Show panels while the runbook is on
+
+A runbook may list panel folders in `panels`, such as `"panels": ["batches"]` for `runbooks/<id>/batches/`.
+Each folder is a panel written as the `personal-panel` skill says, with a `manifest.json` and `panel.tsx`, and no `server.ts`: a runbook's panel runs no code of its own in the app.
+While the runbook is on, its panels show on the rails as `<id>-<folder>`, or under the built-in's id for a copy that names `replaces`; turning it off takes them away.
+Keep panel folders apart from the guidance, skills and parts folders.
+
 ## Name commits and pull requests
 
 How commits and pull requests are named comes only from a runbook; the app holds no rule of its own.

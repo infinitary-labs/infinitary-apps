@@ -3012,6 +3012,7 @@
 "settingsRunbooksMakeYourOwn" = "自己製作";
 "settingsRunbooksOpenFailed" = "無法開啟這個資料夾。請再試一次。";
 "settingsRunbooksOpenFolder" = "開啟資料夾";
+"settingsRunbooksPanels" = "開啟時，會在側欄上顯示 %1$@。";
 "settingsRunbooksView" = "檢視";
 "settingsRunbooksViewLabel" = "檢視 %1$@";
 "settingsRunbooksYours" = "你的";

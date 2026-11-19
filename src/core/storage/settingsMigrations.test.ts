@@ -599,6 +599,8 @@ it("INF-1482 keeps installed panels through the runbook-kind upgrade, restart an
   });
   new PluginRecords(reopened).delete("studio-workflows");
   reopened.exec("ALTER TABLE plugins DROP COLUMN kind;");
+  // A runbook's agreed panel grants came in a later migration; reversing to before both drops it too.
+  reopened.exec("ALTER TABLE plugins DROP COLUMN panels_json;");
   expect(columnNames(reopened, "plugins")).toEqual(columns);
   expect(reopened.prepare("SELECT * FROM plugins").all()).toEqual(before);
   reopened.close();

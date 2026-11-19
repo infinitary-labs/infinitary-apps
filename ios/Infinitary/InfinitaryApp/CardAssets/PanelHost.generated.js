@@ -67832,6 +67832,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Open folder`;
   }
+  function settingsRunbooksPanels(input2) {
+    const panels = input2.panels;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أثناء تشغيله، يعرض ${panels} على أشرطتك.`;
+      case "de":
+        return `Solange er an ist, zeigt er ${panels} auf deinen Leisten.`;
+      case "es":
+        return `Mientras está activo, muestra ${panels} en tus barras.`;
+      case "fr":
+        return `Tant qu’elle est activée, elle affiche ${panels} dans vos colonnes.`;
+      case "ja":
+        return `オンの間、パネル列に ${panels} を表示します。`;
+      case "ko":
+        return `켜져 있는 동안 레일에 보여 주는 패널: ${panels}`;
+      case "pt-BR":
+        return `Enquanto estiver ativado, mostra ${panels} nas suas barras laterais.`;
+      case "zh-Hans":
+        return `开启时，会在侧栏上显示 ${panels}。`;
+      case "zh-Hant":
+        return `開啟時，會在側欄上顯示 ${panels}。`;
+      case "en-XA":
+        return `[Ŵĥîļé îţ îš öñ, îţ šĥöŵš ${panels} öñ ýöûŕ ŕáîļš. ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮While it is on, it shows ‬${panels}‮ on your rails.‬`;
+    }
+    return `While it is on, it shows ${panels} on your rails.`;
+  }
   function settingsRunbooksView() {
     switch (currentLanguage()) {
       case "ar":
@@ -89191,6 +89219,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsRunbooksMakeYourOwn,
     settingsRunbooksOpenFailed,
     settingsRunbooksOpenFolder,
+    settingsRunbooksPanels,
     settingsRunbooksView,
     settingsRunbooksViewLabel,
     settingsRunbooksYours,
@@ -92006,6 +92035,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsRunbooksMakeYourOwn": [],
     "settingsRunbooksOpenFailed": [],
     "settingsRunbooksOpenFolder": [],
+    "settingsRunbooksPanels": ["panels"],
     "settingsRunbooksView": [],
     "settingsRunbooksViewLabel": ["name"],
     "settingsRunbooksYours": [],
@@ -94397,8 +94427,16 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     id: personalIdSchema,
     /** Where it came from, stamped by the host (Phase A item 1). */
     source: _enum(PLUGIN_SOURCES),
-    /** An installed plugin's `name`: the attribution on its header. Null for the captain's own. */
+    /**
+     * An installed plugin's `name`, or the name of the runbook a panel comes
+     * with: the attribution on its header. Null for the captain's own.
+     */
     by: string().min(1).max(40).nullable(),
+    /**
+     * The id of the runbook it comes with (docs/runbooks.md, "Panels"): it is
+     * served as an added panel and leaves when that runbook is turned off.
+     */
+    runbook: string().min(1).max(100).optional(),
     title: string().min(1).max(40),
     placement: personalPlacementSchema,
     order: number().int(),

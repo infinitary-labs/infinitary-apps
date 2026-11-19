@@ -3012,6 +3012,7 @@
 "settingsRunbooksMakeYourOwn" = "Crea los tuyos";
 "settingsRunbooksOpenFailed" = "No se pudo abrir esta carpeta. Inténtalo de nuevo.";
 "settingsRunbooksOpenFolder" = "Abrir carpeta";
+"settingsRunbooksPanels" = "Mientras está activo, muestra %1$@ en tus barras.";
 "settingsRunbooksView" = "Ver";
 "settingsRunbooksViewLabel" = "Ver %1$@";
 "settingsRunbooksYours" = "Tuyos";

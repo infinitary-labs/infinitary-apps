@@ -25,7 +25,7 @@ import { appPathsFor } from "../paths";
 import { PersonalExtensions } from "../personal/personalExtensions";
 import { PersonalStore } from "../personal/personalStore";
 import { Runbooks, stageRunbookSkills } from "../runbooks/runbooks";
-import { runbookAddedLine, runbookRemovedLine } from "../runbooks/words";
+import { RUNBOOK_PANELS_WORDS, runbookAddedLine, runbookRemovedLine } from "../runbooks/words";
 import { CardStore } from "../storage/cardStore";
 import { InboxStore } from "../storage/inboxStore";
 import { SettingsStore } from "../storage/settingsStore";
@@ -98,6 +98,16 @@ async function harness() {
               ? [{ id: record.id, name: record.name, capabilities: record.capabilities }]
               : [],
           ),
+      runbooks: () =>
+        books.panels().map((panel) => ({
+          id: panel.id,
+          dir: panel.dir,
+          runbook: { id: panel.runbook.id, name: panel.runbook.name },
+          grants:
+            panel.runbook.source === "personal"
+              ? ("own" as const)
+              : (records.get(panel.runbook.id)?.panels?.[panel.folder] ?? ("unasked" as const)),
+        })),
     },
   });
   const installer = new PluginInstaller({
@@ -889,7 +899,7 @@ describe("adding runbooks through the panel installer's consent", () => {
     }
   });
   for (const source of ["path", "git", "npm"] as const) {
-    it(`pins a ${source} runbook, serves nothing before consent, and retains a separate panel door`, async () => {
+    it(`pins a ${source} runbook, serves nothing before consent, and shows its agreed panel only while on, and keeps a separate panel door`, async () => {
       const h = await harness();
       const id = "studio-workflows";
       const title = "Studio workflows";
@@ -950,6 +960,10 @@ describe("adding runbooks through the panel installer's consent", () => {
         const card = h.cards().find((card) => card.id === consentCardId(id));
         expect(card?.body).toContain("Common workflows off");
         expect(card?.body).toContain("runs nothing");
+        // The add card names the panel the runbook shows while it is on, and what it reads.
+        expect(card?.body).toContain(RUNBOOK_PANELS_WORDS);
+        expect(card?.body).toContain("<b>Token watch</b>");
+        expect(h.installed()).toEqual([]);
         expect(() => h.supervisor.cardActions.act(consentCardId(id), "add", "frame")).toThrow(
           "only from the card controls",
         );
@@ -969,7 +983,29 @@ describe("adding runbooks through the panel installer's consent", () => {
         expect(h.books.list().find((book) => book.id === "sequences")?.enabled).toBe(false);
         expect(h.books.firstmate().text).toContain("# Studio workflows");
         expect(h.feed()).toEqual([runbookAddedLine(title, "Studio", "Common workflows")]);
+        // The click that adds the runbook agrees to its panel: the record keeps
+        // the grant, and the panel shows under the name of the runbook it replaces.
+        const granted = h.records.get(id)?.panels?.["panels/token-watch"];
+        expect(granted?.reads).toEqual(["tasks.board"]);
+        expect(h.installed().map((panel) => [panel.id, panel.runbook, panel.error])).toEqual([
+          ["sequences-token-watch", id, null],
+        ]);
+        h.books.set(id, false);
+        await h.personal.refresh();
         expect(h.installed()).toEqual([]);
+        h.books.set(id, true);
+        await h.personal.refresh();
+        // A panel whose files changed after the click mounts nothing.
+        writeFileSync(
+          join(h.paths.pluginsDir, id, "panels/token-watch/manifest.json"),
+          manifest({ sql: ["v_usage_v1", "v_tasks_v1"] }),
+        );
+        await h.personal.refresh();
+        expect(h.installed().map((panel) => [panel.id, Boolean(panel.error)])).toEqual([
+          ["sequences-token-watch", true],
+        ]);
+        writeFileSync(join(h.paths.pluginsDir, id, "panels/token-watch/manifest.json"), manifest());
+        await h.personal.refresh();
         h.books.set("lessons", false);
         for (const place of ["project", "personal"] as const) {
           const skills = h.books.crew({
@@ -997,22 +1033,25 @@ describe("adding runbooks through the panel installer's consent", () => {
           () => [join(h.paths.pluginsDir, id)],
         );
         expect(reopened.firstmate()).toEqual(h.books.firstmate());
-        // A panel only mounts after the captain separately asks and consents.
+        // The same folder can still be added as a panel of its own, on its own card.
         await h.installer.install({
           source: "path",
           spec: join(h.paths.pluginsDir, id, "panels/token-watch"),
         });
-        expect(h.installed()).toEqual([]);
+        expect(h.installed().map((panel) => panel.id)).toEqual(["sequences-token-watch"]);
         h.supervisor.cardActions.act(consentCardId("token-watch"), "add");
         await h.settled();
-        expect(h.installed().map((panel) => panel.id)).toEqual(["token-watch"]);
+        expect(h.installed().map((panel) => panel.id)).toEqual([
+          "sequences-token-watch",
+          "token-watch",
+        ]);
         expect(await h.installer.install({ source: "path", spec: id, action: "remove" })).toContain(
           "removed",
         );
         expect(h.books.list().some((book) => book.id === id)).toBe(false);
         expect(h.books.firstmate().text).not.toContain("# Studio workflows");
         expect(h.feed().at(-1)).toBe(runbookRemovedLine(title, "Studio"));
-        // Removing guidance does not withdraw separately granted panel consent.
+        // Removing the runbook takes its panel away, and not one added on its own.
         expect(h.installed().map((panel) => panel.id)).toEqual(["token-watch"]);
       } finally {
         h.personal.dispose();

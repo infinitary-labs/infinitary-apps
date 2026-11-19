@@ -244,12 +244,17 @@ export function renderSurfacesSection(
     ...shown.map((surface) => {
       const where = `${surface.placement.x} rail, ${surface.placement.y}${surface.place ? `, ${surface.place} of ${surface.of}` : ""}`;
       const state = surfaceState(surface, mounts);
+      const fromRunbook =
+        surface.kind === "installed" &&
+        personal.extensions.some((extension) => extension.id === surface.id && extension.runbook);
       const mark =
         surface.kind === "personal"
           ? " (yours)"
-          : surface.kind === "installed"
-            ? ` (added, by ${surface.by})`
-            : "";
+          : fromRunbook
+            ? ` (from the runbook ${surface.by})`
+            : surface.kind === "installed"
+              ? ` (added, by ${surface.by})`
+              : "";
       const paused =
         surface.kind === "personal"
           ? personal.extensions.find((extension) => extension.id === surface.id)?.paused
@@ -305,6 +310,13 @@ async function runRemove(delegate: PersonalizeDelegate, params: Params): Promise
     delegate.preferences.setPanelHidden(surface.id, true);
     delegate.broadcastEvent({ type: "personalized", text: appPanelHiddenLine(surface.title) });
     return `${surface.title} is an app panel, so it is hidden rather than removed; app_change panel with visible true brings it back.`;
+  }
+  if (
+    surface.kind === "installed" &&
+    delegate.personal().extensions.some((entry) => entry.id === surface.id && entry.runbook)
+  ) {
+    // A runbook's panel leaves with its runbook (docs/runbooks.md, "Panels").
+    return `${surface.title} comes with the runbook ${surface.by}: turning that runbook off in Settings, under Runbooks, takes it away.`;
   }
   if (surface.kind === "installed") {
     const taken = await delegate.uninstallPlugin(surface.id);

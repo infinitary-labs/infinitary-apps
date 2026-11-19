@@ -3012,6 +3012,7 @@
 "settingsRunbooksMakeYourOwn" = "Créer les vôtres";
 "settingsRunbooksOpenFailed" = "Impossible d’ouvrir ce dossier. Veuillez réessayer.";
 "settingsRunbooksOpenFolder" = "Ouvrir le dossier";
+"settingsRunbooksPanels" = "Tant qu’elle est activée, elle affiche %1$@ dans vos colonnes.";
 "settingsRunbooksView" = "Voir";
 "settingsRunbooksViewLabel" = "Voir %1$@";
 "settingsRunbooksYours" = "Les vôtres";

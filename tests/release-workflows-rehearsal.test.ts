@@ -531,6 +531,13 @@ describe("the signed channel workflow", () => {
       DIST_DMG: "${{ steps.rehearsal-files.outputs.dmg }}",
     });
     expect(ids.indexOf("rehearsal-files")).toBeLessThan(ids.indexOf("tap-rehearsal"));
+    // INF-5230's piece 1: an alpha's rehearsal checks and lists its Windows
+    // installer, and writes its feeds with it; a stable carries none.
+    expect(ids.includes("windows-file")).toBe(channel === "alpha");
+    expect(step("feed-rehearsal").env?.DIST_WINDOWS).toBe(
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
+      "${{ steps.rehearsal-files.outputs.windows }}",
+    );
     // The feed rehearsal may read a not-yet-public repository, but cannot publish.
     expect(step("feed-rehearsal").run).toContain("scripts/publish-feeds.sh rehearsal");
     // electron-builder never publishes on its own either.

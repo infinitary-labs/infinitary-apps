@@ -49,12 +49,13 @@ for PLACE in "$@"; do
 done
 
 # Each copy and its sidecar from a place's folder, keyless, checked against
-# the sidecar and the upload job's list; the disk image only where named.
+# the sidecar and the upload job's list; the disk image and an alpha's
+# Windows installer only where named, since no tap carries them.
 keyless() {
   local whose="$1" base="$2" dir="$3" image="$4" NAME
   rm -rf "$dir" && mkdir -p "$dir"
   while read -r _ NAME; do
-    [[ "$image" == with-image || "$NAME" != "$DMG_NAME" ]] || continue
+    [[ "$image" == with-image || ("$NAME" != "$DMG_NAME" && "$NAME" != *.exe) ]] || continue
     "$FETCH" "$base/$NAME" "$dir/$NAME"
     "$FETCH" "$base/$NAME.sha256" "$dir/$NAME.sha256"
     (cd "$dir" && shasum -a 256 -c "$NAME.sha256")

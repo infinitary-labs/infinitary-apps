@@ -661,21 +661,35 @@ describe("the signed channel workflow", () => {
      * The upload job's own steps after it accepted the handoff, in order, as
      * Actions runs them: each step whose condition holds, with the job's and
      * its own environment, until one fails or `until` ran. The linux job's
-     * packages are laid out as their artifact download leaves them. The
-     * record and both taps are a stand-in `gh`'s, and Cloudflare is the
-     * disposable storage file the publication command's own test uses.
+     * packages are laid out as their artifact download leaves them, and so
+     * is an alpha's Windows installer, with the windows job's sums as its
+     * output carries them. The record and both taps are a stand-in `gh`'s,
+     * and Cloudflare is the disposable storage file the publication
+     * command's own test uses.
      */
     const uploadAfterChecks = (
       produced: ReturnType<typeof produce>,
       consumed: ReturnType<typeof consume>,
       places: ReturnType<typeof standInGh>,
-      options: { until?: string; packages?: Record<string, Buffer | string> } = {},
+      options: {
+        until?: string;
+        packages?: Record<string, Buffer | string>;
+        /** The installer the artifact holds, when it differs from the one the windows job built. */
+        windows?: Buffer | string;
+      } = {},
     ) => {
       const temp = consumed.temp;
       const packages = join(temp, "linux-packages");
       mkdirSync(packages);
       for (const name of linuxPackages)
         writeFileSync(join(packages, name), options.packages?.[name] ?? bytes);
+      const windowsSums = `${shaOf(windowsBytes)} *${windowsName}`;
+      if (produced.resolve.channel === "alpha") {
+        const download = join(temp, "windows-download");
+        mkdirSync(download);
+        writeFileSync(join(download, windowsName), options.windows ?? windowsBytes);
+        writeFileSync(join(download, "SHA256SUMS"), `${windowsSums}\n`);
+      }
       const outputs: Record<string, Record<string, string>> = {
         "handoff-check": accepted(consumed),
       };
@@ -684,7 +698,11 @@ describe("the signed channel workflow", () => {
         const id = candidate.id;
         if (!id || !candidate.run || id === "handoff-check") continue;
         const contexts = {
-          needs: { resolve: { outputs: produced.resolve }, release: { outputs: produced.job } },
+          needs: {
+            resolve: { outputs: produced.resolve },
+            release: { outputs: produced.job },
+            windows: { outputs: { sums: windowsSums } },
+          },
           steps: Object.fromEntries(
             Object.entries(outputs).map(([name, value]) => [name, { outputs: value }]),
           ),
@@ -751,6 +769,9 @@ describe("the signed channel workflow", () => {
     const tapRepository = release.env.TAP_REPO ?? "";
     const oldTapRepository = release.env.OLD_TAP_REPO ?? "";
     const deb = `infinitary-${version}-linux-amd64.deb`;
+    // INF-5230's piece 1: the Windows installer the alpha's Windows check built and tested.
+    const windowsName = `Infinitary-${version}-windows-x64-setup.exe`;
+    const windowsBytes = Buffer.concat([bytes, Buffer.from("windows")]);
     const linuxPackages = [
       deb,
       `infinitary-${version}-linux-x86_64.rpm`,
@@ -789,13 +810,15 @@ describe("the signed channel workflow", () => {
       });
       // The list the virtual Mac checks every copy against.
       const files = JSON.parse(outputs.files?.files ?? "{}") as Record<string, string>;
-      expect(Object.keys(files).slice(0, 2)).toEqual([zipName, dmgName]);
+      expect(Object.keys(files).slice(0, 3)).toEqual([zipName, dmgName, windowsName]);
       expect(files[zipName]).toBe(produced.job.sha256);
       expect(files[dmgName]).toBe(sha(produced.dmg));
+      expect(files[windowsName]).toBe(shaOf(windowsBytes));
       expect(Object.keys(files)).toEqual(expect.arrayContaining([...linuxPackages, "SHA256SUMS"]));
       // Every place holds exactly those bytes: the record and Cloudflare the
-      // disk image too, the taps the zip and the Linux files.
-      const { [dmgName]: _image, ...tapFiles } = files;
+      // disk image and the Windows installer too, the taps the zip and the
+      // Linux files.
+      const { [dmgName]: _image, [windowsName]: _installer, ...tapFiles } = files;
       expect(held(releaseFiles(places, recordRepository, tag))).toEqual(files);
       expect(held(releaseFiles(places, tapRepository, tapTag))).toEqual(tapFiles);
       expect(held(releaseFiles(places, oldTapRepository, oldTapTag))).toEqual(tapFiles);
@@ -1037,13 +1060,29 @@ describe("the signed channel workflow", () => {
       const consumed = consume(produced);
       const uploaded = uploadAfterChecks(produced, consumed, places);
       const outputs = succeeded(uploaded);
-      expect(Object.keys(uploaded.results)).toEqual(["linux-files", "files"]);
+      expect(Object.keys(uploaded.results)).toEqual(["windows-file", "linux-files", "files"]);
       expect(places.calls()).toEqual([]);
       expect(cloudflare(consumed)).toEqual({});
       const files = JSON.parse(outputs.files?.files ?? "{}") as Record<string, string>;
       expect(files[zipName]).toBe(produced.job.sha256);
       expect(files[dmgName]).toBe(sha(produced.dmg));
+      expect(files[windowsName]).toBe(shaOf(windowsBytes));
       expect(Object.keys(files)).toEqual(expect.arrayContaining([...linuxPackages, "SHA256SUMS"]));
+    });
+
+    // INF-5230's piece 1: only the installer the Windows check built and tested publishes.
+    it("refuses a Windows installer that is not the one the windows job built, before any upload", () => {
+      const places = standInGh(source);
+      const produced = produce({ record: places });
+      const consumed = consume(produced);
+      const uploaded = uploadAfterChecks(produced, consumed, places, { windows: "altered" });
+      expect(uploaded.results["windows-file"]?.status).not.toBe(0);
+      expect(uploaded.results["windows-file"]?.stderr).toMatch(
+        /Infinitary-.*-windows-x64-setup\.exe has sha256 [0-9a-f]{64}, not the [0-9a-f]{64} the windows job built and checked/,
+      );
+      expect(uploaded.results.private).toBeUndefined();
+      expect(places.published(recordRepository, tag)).toBeNull();
+      expect(cloudflare(consumed)).toEqual({});
     });
 
     it("refuses a record that changed after the signing job read it, before uploading anything", () => {
@@ -1245,6 +1284,8 @@ describe("the publication job's fetch-back", () => {
     files = {
       [zipName]: Buffer.from("the signed zip"),
       [dmgName]: Buffer.from("the disk image"),
+      // INF-5230's piece 1: an alpha's Windows installer, on the record and Cloudflare only.
+      [`Infinitary-${version}-windows-x64-setup.exe`]: Buffer.from("the Windows installer"),
       ...Object.fromEntries(linuxNames.map((name) => [name, readFileSync(join(linux, name))])),
     };
     // The upload job's list and the Linux names, as the job's earlier step writes them.
@@ -1318,10 +1359,13 @@ describe("the publication job's fetch-back", () => {
     return { status, output, outcomes, gated: gated(), linux: join(temp, "linux-release") };
   }
 
-  /** The files a place holds: the disk image only on the record and Cloudflare. */
+  /** The files a place holds: the disk image and Windows installer only on the record and Cloudflare. */
   const heldBy = (place: Place) =>
     Object.keys(files).filter(
-      (name) => place === "record" || place === "cloudflare" || name !== dmgName,
+      (name) =>
+        place === "record" ||
+        place === "cloudflare" ||
+        (name !== dmgName && !name.endsWith(".exe")),
     );
 
   /** Each Mac gate that ran, with the folder it read, whatever order the places ran in. */
@@ -1366,6 +1410,11 @@ describe("the publication job's fetch-back", () => {
         expect(asked).toContain(`${places[place]}/${name}`);
         expect(asked).toContain(`${places[place]}/${name}.sha256`);
       }
+    // No tap carries the Windows installer, so neither tap's check asks for it.
+    for (const place of ["tap", "old-tap"] as const)
+      expect(
+        asked.filter((path) => path.startsWith(`${places[place]}/`) && /\.exe/.test(path)),
+      ).toEqual([]);
     expect(output.match(new RegExp(`${zipName.replaceAll(".", "\\.")}: OK`, "g"))).toHaveLength(4);
     // The Mac gates ran on what came back from each place but Firstmate 3000's.
     expect(gatesRun(gated)).toEqual(everyGate);

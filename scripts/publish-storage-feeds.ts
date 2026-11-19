@@ -33,7 +33,9 @@ const required = (name: string) => {
 };
 const summary = execFileSync(process.execPath, ["scripts/release-feeds.ts", "--directory", directory,
   "--version", required("VERSION"), "--channel", required("CHANNEL"), "--source-commit", required("SOURCE_COMMIT"),
-  "--zip", required("DIST_ZIP"), "--dmg", required("DIST_DMG"), "--linux", required("LINUX_MANIFEST")], { encoding: "utf8", stdio: ["ignore", "pipe", "inherit"] });
+  "--zip", required("DIST_ZIP"), "--dmg", required("DIST_DMG"), "--linux", required("LINUX_MANIFEST"),
+  // An alpha's Windows installer, when the release publishes one (docs/windows.md).
+  ...(environment.DIST_WINDOWS ? ["--windows", environment.DIST_WINDOWS] : [])], { encoding: "utf8", stdio: ["ignore", "pipe", "inherit"] });
 writeFileSync(join(work, "summary.json"), summary);
 process.stdout.write(summary);
 if (storage) {

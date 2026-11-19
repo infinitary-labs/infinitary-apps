@@ -88,7 +88,8 @@ The selected Cloudflare snapshot serves `feeds/latest-mac.yml` for Stable and `f
 The same snapshot carries schema-1 `infinitary-updates.json`, `infinitary-builds.json`, and `versions/<version>.json` with immutable ZIP and disk-image identities.
 `releaseFeedFiles` reuses the existing forward-only target and builds producers and validates URLs against the configured destination.
 
-The builds file carries `macos` → `arm64` and `x64` → `zip` and `dmg`, and `linux` → `x64` → `deb`, `rpm`, `appimage`, `arch` and `nix`.
+The builds file carries `macos` → `arm64` and `x64` → `zip` and `dmg`, `linux` → `x64` → `deb`, `rpm`, `appimage`, `arch` and `nix`, and, on an alpha, `windows` → `x64` → `exe`, the unsigned installer its Windows check tested (`docs/windows.md`, "Published on every alpha").
+The feed writer runs the app's own builds reader on the next file and refuses one it would not accept, before the feed switches.
 Every build names a file on that version's release and its SHA-256.
 Both channels naming one version must agree on channel-neutral bytes; the Arch and Nix recipes may differ because their package names encode the channel.
 Linux and paired-device readers use the configured source; exact historical paired-device versions may still resolve through the old tap and its checksum sidecars.
@@ -220,8 +221,9 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   The gate starts the app in a process group of its own; afterwards it asks the app to quit and waits for it, stops outright whatever of that group, or whatever names the profile, is still running, reaps the app, and removes the profile only once nothing can write into it.
   Every launch runs the workflow's own copy of the gate and its probe: the signing job puts them in place of the source's once the app is packaged, and the publication job and the old-cask check before they launch anything, so a stable promoting an older alpha launches through the current gate while its app stays the alpha's.
 - **The Windows check on every alpha.**
-  The `windows` job calls `windows.yml` at the alpha's version on its one source commit: it builds the unsigned internal Windows installer and installs and runs it on a fresh Windows 11 virtual machine (`docs/windows.md`, "The checks").
-  An alpha's upload and publication wait for it to succeed; a stable promotion skips it, and nothing uploads or publishes the installer.
+  The `windows` job calls `windows.yml` at the alpha's version on its one source commit: it builds the unsigned Windows installer and installs and runs it on a fresh Windows 11 virtual machine (`docs/windows.md`, "The checks").
+  An alpha's upload and publication wait for it to succeed; a stable promotion skips it.
+  The upload job checks its own copy of the `windows-installer` artifact against the windows job's `sums` output and uploads it beside the zip to the record and Cloudflare, never a tap; the publication job fetches it back from both before the builds file names it (`docs/windows.md`, "Published on every alpha").
 - **Linux in every release.**
   The `linux` job calls `linux-packages.yml` at the release's version on its one source commit, with the notes job's catalog, for both channels, a stable promotion included: it builds the Linux packages and installs and opens each on a clean copy of its system (`docs/linux-packages.md`) while verify runs.
   The upload job waits for it and checks its own copy of the artifact against the linux job's `SHA256SUMS` before anything renders or uploads (`docs/linux-packages.md`, "The checks").

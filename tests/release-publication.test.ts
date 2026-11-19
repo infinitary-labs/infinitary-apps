@@ -19,6 +19,7 @@ import {
   buildUpdateTarget,
   CASK_TOKENS,
   FIRSTMATE_TAP,
+  parseBuilds,
   parseUpdateTargets,
   type UpdateTarget,
   type UpdateTargets,
@@ -865,9 +866,16 @@ describe("the Homebrew-free feed publication", () => {
     // The publisher consumes already-verified opaque bytes; the signed workflow owns their format.
     const bytes = readFileSync(join(root, "packaging/build/icon.png"));
     let attempt = 0;
-    const publish = (version: string, mode: "live" | "rehearsal" = "live", changedDmg = false) => {
+    const publish = (
+      version: string,
+      mode: "live" | "rehearsal" = "live",
+      changedDmg = false,
+      windows = false,
+    ) => {
       const folder = join(dir, `artifacts-${++attempt}`);
       mkdirSync(folder);
+      const installer = join(folder, `Infinitary-${version}-windows-x64-setup.exe`);
+      if (windows) writeFileSync(installer, bytes);
       const zip = join(folder, `Infinitary-${version}-universal.zip`);
       const dmg = join(folder, `Infinitary-${version}-mac-universal.dmg`);
       writeFileSync(zip, bytes);
@@ -899,6 +907,7 @@ describe("the Homebrew-free feed publication", () => {
           SOURCE_COMMIT: before,
           DIST_ZIP: zip,
           DIST_DMG: dmg,
+          ...(windows ? { DIST_WINDOWS: installer } : {}),
           LINUX_MANIFEST: linux,
         },
       };
@@ -919,6 +928,7 @@ describe("the Homebrew-free feed publication", () => {
         ? JSON.parse(readFileSync(join(dir, "storage.json"), "utf8"))
         : {};
     const head = () => stored()["feeds/current.json"]?.etag;
+    const object = (key: string) => stored()[key];
     const read = (name: string) => {
       const store = stored();
       const pointer = JSON.parse(
@@ -926,7 +936,7 @@ describe("the Homebrew-free feed publication", () => {
       );
       return JSON.parse(Buffer.from(store[`${pointer.prefix}${name}`].bytes, "base64").toString());
     };
-    return { dir, bare, git, before, publish, head, read };
+    return { dir, bare, git, before, publish, head, read, object };
   }
 
   it("rehearses without a storage write, then publishes alpha, promoted stable and next alpha while leaving main alone", () => {
@@ -969,5 +979,32 @@ describe("the Homebrew-free feed publication", () => {
     expect(older.status).not.toBe(0);
     expect(older.stderr).toContain("never moves backwards");
     expect(f.head()).toBe(head);
+  });
+
+  // INF-5230's piece 1: an alpha publishes the Windows installer its Windows check tested.
+  it("uploads an alpha's Windows installer beside the other downloads and names it in the builds file", () => {
+    const f = fixture();
+    const rehearsal = f.publish("0.5.0-alpha.9", "rehearsal", false, true);
+    expect(rehearsal.status, rehearsal.stderr).toBe(0);
+    expect(existsSync(join(f.dir, "storage.json"))).toBe(false);
+    const rehearsed = JSON.parse(
+      readFileSync(join(rehearsal.work, "feeds", PUBLIC_RELEASE_NAMES.buildsFile), "utf8"),
+    );
+    const name = "Infinitary-0.5.0-alpha.9-windows-x64-setup.exe";
+    const key = `releases/v0.5.0-alpha.9/${name}`;
+    expect(rehearsed.channels.alpha.systems.windows.x64.exe.url).toBe(
+      `${releaseSource.downloadBase}${key}`,
+    );
+    const live = f.publish("0.5.0-alpha.9", "live", false, true);
+    expect(live.status, live.stderr).toBe(0);
+    const exe = f.read(PUBLIC_RELEASE_NAMES.buildsFile).channels.alpha.systems.windows.x64.exe;
+    expect(exe).toEqual(rehearsed.channels.alpha.systems.windows.x64.exe);
+    expect(exe.sha256).toBe(sha256Of(Buffer.from(f.object(key).bytes, "base64")));
+    expect(Buffer.from(f.object(`${key}.sha256`).bytes, "base64").toString()).toBe(
+      `${exe.sha256}  ${name}\n`,
+    );
+    expect(
+      parseBuilds(f.read(PUBLIC_RELEASE_NAMES.buildsFile), PUBLIC_RELEASE_NAMES),
+    ).not.toBeNull();
   });
 });

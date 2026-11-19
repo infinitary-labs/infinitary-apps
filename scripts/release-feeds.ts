@@ -16,7 +16,7 @@ function readOptional(path: string): unknown | undefined {
   return existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : undefined;
 }
 const { values } = parseArgs({ options: Object.fromEntries(
-  ["directory", "zip", "dmg", "linux", "version", "source-commit", "channel"].map(name => [name, { type: "string" as const }]),
+  ["directory", "zip", "dmg", "windows", "linux", "version", "source-commit", "channel"].map(name => [name, { type: "string" as const }]),
 ) });
 function required(name: string): string {
   const value = values[name];
@@ -30,10 +30,15 @@ if (channel !== "stable" && channel !== "alpha") throw new Error("Invalid releas
 const zip = resolve(required("zip"));
 const dmg = resolve(required("dmg"));
 const directory = resolve(required("directory"));
+// An alpha's Windows installer, when the release publishes one (docs/windows.md).
+const windows = typeof values.windows === "string" && values.windows ? resolve(values.windows) : undefined;
 const manifest: ReleaseManifest = {
   schemaVersion: 1, version, sourceCommit: required("source-commit"),
   zip: { asset: basename(zip), size: statSync(zip).size, sha256: await digest(zip, "sha256", "hex"), sha512: await digest(zip, "sha512", "base64") },
   dmg: { asset: basename(dmg), size: statSync(dmg).size, sha256: await digest(dmg, "sha256", "hex") },
+  ...(windows && {
+    windows: { asset: basename(windows), size: statSync(windows).size, sha256: await digest(windows, "sha256", "hex") },
+  }),
 };
 const publication: Publication = {
   channel, version, sourceCommit: manifest.sourceCommit, assetName: manifest.zip.asset, sha256: manifest.zip.sha256,

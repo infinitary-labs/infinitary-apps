@@ -680,9 +680,10 @@ jobs:
   # The Windows installer of every alpha (docs/windows.md; the captain's pick
   # on INF-4243, "on every alpha"): built at the release's version from its
   # one source commit and checked on a fresh Windows 11 virtual machine
-  # before anything publishes. It publishes nothing itself: the installer is
-  # an unsigned internal check build until Windows signing and publication
-  # join the release.
+  # before anything publishes. It publishes nothing itself: the upload job
+  # publishes the installer this check tested, an unsigned early build for
+  # testers until Windows signing joins the release, and the builds file
+  # names it under windows/x64.
   windows:
     needs: [resolve, notes]
     if: ${{ needs.resolve.outputs.channel == 'alpha' }}
@@ -786,6 +787,8 @@ jobs:
       RELEASE_REPOSITORY: ${{ needs.resolve.outputs.release_repository }}
       DMG_NAME: Infinitary-${{ needs.resolve.outputs.version }}-mac-universal.dmg
       ZIP_NAME: ${{ needs.resolve.outputs.zip_name }}
+      # An alpha's Windows installer (docs/windows.md); a stable carries none.
+      WINDOWS_NAME: ${{ needs.resolve.outputs.channel == 'alpha' && format('Infinitary-{0}-windows-x64-setup.exe', needs.resolve.outputs.version) || '' }}
       DOWNLOAD_URL: ${{ needs.resolve.outputs.download_base }}releases/${{ needs.resolve.outputs.tag_name }}/${{ needs.resolve.outputs.zip_name }}
       CASK_TOKEN: ${{ needs.resolve.outputs.cask_token }}
       PRERELEASE: ${{ needs.resolve.outputs.prerelease }}
@@ -1426,6 +1429,8 @@ jobs:
       TAG_NAME: ${{ needs.resolve.outputs.tag_name }}
       DMG_NAME: Infinitary-${{ needs.resolve.outputs.version }}-mac-universal.dmg
       ZIP_NAME: ${{ needs.resolve.outputs.zip_name }}
+      # An alpha's Windows installer (docs/windows.md); a stable carries none.
+      WINDOWS_NAME: ${{ needs.resolve.outputs.channel == 'alpha' && format('Infinitary-{0}-windows-x64-setup.exe', needs.resolve.outputs.version) || '' }}
       CASK_TOKEN: ${{ needs.resolve.outputs.cask_token }}
       PRERELEASE: ${{ needs.resolve.outputs.prerelease }}
       PROMOTED_FROM: ${{ needs.resolve.outputs.promoted_from }}
@@ -1574,6 +1579,50 @@ jobs:
           sums: ${{ needs.linux.outputs.sums }}
           path: ${{ runner.temp }}/linux-packages
 
+      # An alpha's Windows installer, the one the windows job built and its
+      # fresh Windows 11 check installed and ran (docs/windows.md): checked
+      # against the build's own line of SHA256SUMS, carried as a job output so
+      # it never trusts a list from the same download, before anything
+      # publishes it. A stable carries none.
+      - name: Fetch the Windows installer
+        if: ${{ needs.resolve.outputs.channel == 'alpha' }}
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: windows-installer
+          path: ${{ runner.temp }}/windows-download
+      - name: Check the Windows installer
+        id: windows-file
+        if: ${{ needs.resolve.outputs.channel == 'alpha' }}
+        env:
+          SUMS: ${{ needs.windows.outputs.sums }}
+        run: |
+          node --input-type=module <<'JS'
+          import { createHash } from 'node:crypto';
+          import { appendFileSync, lstatSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
+          import { join } from 'node:path';
+          const env = process.env;
+          const fail = (message) => { throw new Error(`Refusing the Windows installer: ${message}`); };
+          // sha256sum's line, in text or binary mode: "<sha256>  <name>" or "<sha256> *<name>".
+          const line = /^([0-9a-f]{64}) [ *](.+)$/.exec((env.SUMS ?? '').trim());
+          if (!line) fail(`the windows job's sums ${JSON.stringify(env.SUMS)} name no installer`);
+          const [, sha256, name] = line;
+          if (name !== env.WINDOWS_NAME) fail(`the windows job built ${name}, not ${env.WINDOWS_NAME}`);
+          const from = join(env.RUNNER_TEMP, 'windows-download');
+          const found = readdirSync(from).sort();
+          if (JSON.stringify(found) !== JSON.stringify(['SHA256SUMS', name].sort())) fail(`the artifact holds ${JSON.stringify(found)}`);
+          if (!lstatSync(join(from, name)).isFile()) fail(`${name} is not a regular file`);
+          if (readFileSync(join(from, 'SHA256SUMS'), 'utf8').trim() !== env.SUMS.trim()) fail('its SHA256SUMS is not the one the windows job reported');
+          const actual = createHash('sha256').update(readFileSync(join(from, name))).digest('hex');
+          if (actual !== sha256) fail(`${name} has sha256 ${actual}, not the ${sha256} the windows job built and checked`);
+          const out = join(env.RUNNER_TEMP, 'windows-release');
+          rmSync(out, { recursive: true, force: true });
+          mkdirSync(out, { recursive: true });
+          renameSync(join(from, name), join(out, name));
+          rmSync(from, { recursive: true, force: true });
+          appendFileSync(env.GITHUB_OUTPUT, `path=${join(out, name)}\nsha256=${sha256}\n`);
+          console.log(`${sha256}  ${name}`);
+          JS
+
       # The release's Linux files as they publish (docs/alpha.md "Builds by
       # system and chip"): the three packages, each channel's Arch recipe and
       # Nix package rendered from the Ubuntu package, SHA256SUMS, and the
@@ -1618,6 +1667,7 @@ jobs:
             printf '\nOn Mac, open the disk image and drag Infinitary into Applications. Open that copy, then choose Stable or Alpha in Settings → General. Use Update and restart for later versions; Homebrew is not needed.\n'
             printf '\nHomebrew installation remains supported. Homebrew copies keep updating through Homebrew; disk-image copies use in-app updates. See docs/mac-installation.md to switch installation methods while keeping saved work.\n'
             printf '\nLinux downloads and the universal ZIP for paired computers are included below. Check downloads against their checksum files.\n'
+            [[ -z "$WINDOWS_NAME" ]] || printf '\nOn Windows 11 (x64), %s is an unsigned early build: Windows warns before it runs, and a PC with Smart App Control on blocks it until the signed build.\n' "$WINDOWS_NAME"
           } > "$NOTES_FILE"
           # The stable's record keeps these (docs/release-notes.md "Who writes what").
           [[ -z "$HIGHLIGHTS" ]] || printf '\nHighlights picked, lead first: %s\n' "$HIGHLIGHTS" >> "$NOTES_FILE"
@@ -1655,6 +1705,7 @@ jobs:
           PUBLIC_TAG: ${{ needs.resolve.outputs.public_tag }}
           OLD_PUBLIC_TAG: ${{ needs.resolve.outputs.old_public_tag }}
           DMG: ${{ steps.handoff-check.outputs.dmg }}
+          WINDOWS: ${{ steps.windows-file.outputs.path }}
           RECIPE_HOST: ${{ needs.release.outputs.direct == 'true' && 'downloads' || 'tap' }}
         run: |
           set -euo pipefail
@@ -1662,8 +1713,9 @@ jobs:
           CHOSEN="$RUNNER_TEMP/chosen-files"
           HELD="$RUNNER_TEMP/held-files"
           rm -rf "$CHOSEN" "$HELD" && mkdir -p "$CHOSEN" "$HELD"
-          # This attempt's disk image and packages, until a place holds others.
+          # This attempt's disk image, Windows installer and packages, until a place holds others.
           [[ "$DIRECT" != true ]] || cp "$DMG" "$CHOSEN/"
+          [[ -z "$WINDOWS_NAME" ]] || cp "$WINDOWS" "$CHOSEN/"
           for ENDING in .deb .rpm .AppImage; do
             FILE="$(find "$LINUX" -maxdepth 1 -name "*$ENDING" | head -n 1)"
             cp "$FILE" "$CHOSEN/"
@@ -1744,11 +1796,14 @@ jobs:
           CHOSEN_DMG=""
           [[ "$DIRECT" != true ]] || CHOSEN_DMG="$CHOSEN/$DMG_NAME"
           echo "dmg=$CHOSEN_DMG" >> "$GITHUB_OUTPUT"
+          CHOSEN_WINDOWS=""
+          [[ -z "$WINDOWS_NAME" ]] || CHOSEN_WINDOWS="$CHOSEN/$WINDOWS_NAME"
+          echo "windows=$CHOSEN_WINDOWS" >> "$GITHUB_OUTPUT"
 
-      # Every place at once, each with its own key: the disk image and the
-      # Linux files beside the record's zip; the zip, disk image and Linux
-      # files on Cloudflare (scripts/publish-downloads.ts); and the zip and
-      # Linux files as a release on each tap, where the casks fetch them,
+      # Every place at once, each with its own key: the disk image, an
+      # alpha's Windows installer and the Linux files beside the record's
+      # zip; all of them on Cloudflare (scripts/publish-downloads.ts); and
+      # the zip and Linux files as a release on each tap, where the casks fetch them,
       # since the product repository is private through the beta gate. Every
       # copy must be byte-identical to any already there
       # (scripts/publish-release-asset.sh match, and Cloudflare's
@@ -1773,6 +1828,7 @@ jobs:
           ZIP: ${{ steps.private.outputs.zip }}
           ZIP_SHA256: ${{ steps.private.outputs.sha256 }}
           DMG: ${{ steps.adopt.outputs.dmg }}
+          WINDOWS: ${{ steps.adopt.outputs.windows }}
           TAP_TITLE: Infinitary ${{ needs.resolve.outputs.version }} (private alpha${{ needs.resolve.outputs.channel == 'alpha' && ', alpha channel' || '' }})
           OLD_TAP_TITLE: Infinitary ${{ needs.resolve.outputs.version }} for Firstmate 3000's ${{ needs.resolve.outputs.channel }} cask
         run: |
@@ -1789,10 +1845,11 @@ jobs:
           record() {
             export GH_TOKEN="$RECORD_TOKEN"
             [[ -z "$DMG" ]] || put record "$GITHUB_REPOSITORY" "$TAG_NAME" "$DMG"
+            [[ -z "$WINDOWS" ]] || put record "$GITHUB_REPOSITORY" "$TAG_NAME" "$WINDOWS"
             while IFS= read -r NAME; do put record "$GITHUB_REPOSITORY" "$TAG_NAME" "$LINUX/$NAME"; done < "$LINUX/assets.txt"
           }
           cloudflare() {
-            DIST_ZIP="$ZIP" DIST_DMG="$DMG" LINUX_DIRECTORY="$LINUX" node scripts/publish-downloads.ts
+            DIST_ZIP="$ZIP" DIST_DMG="$DMG" DIST_WINDOWS="$WINDOWS" LINUX_DIRECTORY="$LINUX" node scripts/publish-downloads.ts
           }
           tap() {
             export GH_TOKEN="$TAP_TOKEN" TITLE="$TAP_TITLE" TARGET=main LATEST=false NOTES_FILE="$WORK/tap-notes.md"
@@ -1847,12 +1904,14 @@ jobs:
 
       # What every place now holds - in a dry run, what each would - for the
       # virtual Mac to check each copy against: every file's name and sha256,
-      # the zip and disk image first, then the Linux files in publishing order.
+      # the zip, disk image and Windows installer first, then the Linux files
+      # in publishing order.
       - name: List what every place holds
         id: files
         env:
           ZIP: ${{ steps.private.outputs.zip || steps.handoff-check.outputs.zip }}
           DMG: ${{ steps.adopt.outputs.dmg || steps.handoff-check.outputs.dmg }}
+          WINDOWS: ${{ steps.adopt.outputs.windows || steps.windows-file.outputs.path }}
         run: |
           node --input-type=module <<'JS' >> "$GITHUB_OUTPUT"
           import { createHash } from 'node:crypto';
@@ -1861,7 +1920,7 @@ jobs:
           const env = process.env;
           const linux = join(env.RUNNER_TEMP, 'linux-release');
           const names = readFileSync(join(linux, 'assets.txt'), 'utf8').trim().split('\n');
-          const paths = [env.ZIP, ...(env.DMG ? [env.DMG] : []), ...names.map((name) => join(linux, name))];
+          const paths = [env.ZIP, ...(env.DMG ? [env.DMG] : []), ...(env.WINDOWS ? [env.WINDOWS] : []), ...names.map((name) => join(linux, name))];
           const files = {};
           for (const path of paths) {
             const hash = createHash('sha256');
@@ -1885,6 +1944,7 @@ jobs:
             handoff-check=${{ steps.handoff-check.outcome }}
             linux-files=${{ steps.linux-files.outcome }}
             recorded=${{ steps.private.outcome }}
+            windows-file=${{ steps.windows-file.outcome }}
             adopt=${{ steps.adopt.outcome }}
             upload=${{ steps.upload.outcome }}
             files=${{ steps.files.outcome }}
@@ -1936,6 +1996,8 @@ jobs:
       RELEASE_REPOSITORY: ${{ needs.resolve.outputs.release_repository }}
       DMG_NAME: Infinitary-${{ needs.resolve.outputs.version }}-mac-universal.dmg
       ZIP_NAME: ${{ needs.resolve.outputs.zip_name }}
+      # An alpha's Windows installer (docs/windows.md); a stable carries none.
+      WINDOWS_NAME: ${{ needs.resolve.outputs.channel == 'alpha' && format('Infinitary-{0}-windows-x64-setup.exe', needs.resolve.outputs.version) || '' }}
       DOWNLOAD_URL: ${{ needs.resolve.outputs.download_base }}releases/${{ needs.resolve.outputs.tag_name }}/${{ needs.resolve.outputs.zip_name }}
       CASK_TOKEN: ${{ needs.resolve.outputs.cask_token }}
       PRERELEASE: ${{ needs.resolve.outputs.prerelease }}
@@ -2036,7 +2098,9 @@ jobs:
           if (files[env.ZIP_NAME] !== env.ZIP_SHA256) fail(`its ${env.ZIP_NAME} is ${files[env.ZIP_NAME]}, not the ${env.ZIP_SHA256} the signing job checked`);
           const wantsDmg = env.DRY_RUN === 'true' || env.DIRECT === 'true';
           if ((env.DMG_NAME in files) !== wantsDmg) fail(`it ${wantsDmg ? 'lacks' : 'holds'} ${env.DMG_NAME}`);
-          const linux = Object.keys(files).filter((name) => name !== env.ZIP_NAME && name !== env.DMG_NAME);
+          const windows = Object.keys(files).filter((name) => name.endsWith('.exe'));
+          if (JSON.stringify(windows) !== JSON.stringify(env.WINDOWS_NAME ? [env.WINDOWS_NAME] : [])) fail(`it holds Windows installers ${JSON.stringify(windows)}`);
+          const linux = Object.keys(files).filter((name) => name !== env.ZIP_NAME && name !== env.DMG_NAME && name !== env.WINDOWS_NAME);
           if (!linux.includes('SHA256SUMS')) fail('it holds no Linux files');
           const dir = join(env.RUNNER_TEMP, 'expected');
           mkdirSync(dir, { recursive: true });
@@ -2121,6 +2185,7 @@ jobs:
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         run: |
           DIST_ZIP="$RUNNER_TEMP/public-verify/$ZIP_NAME" DIST_DMG="$RUNNER_TEMP/public-verify/$DMG_NAME" \
+          DIST_WINDOWS="${WINDOWS_NAME:+$RUNNER_TEMP/public-verify/$WINDOWS_NAME}" \
           LINUX_MANIFEST="$RUNNER_TEMP/linux-release/manifest.json" WORK="$RUNNER_TEMP/release-feeds" \
             scripts/publish-feeds.sh live
 
@@ -2143,6 +2208,13 @@ jobs:
           sums: ${{ needs.linux.outputs.sums }}
           path: ${{ runner.temp }}/linux-packages
 
+      - name: Fetch the Windows installer
+        if: ${{ needs.resolve.outputs.dry_run == 'true' && needs.resolve.outputs.channel == 'alpha' }}
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: windows-installer
+          path: ${{ runner.temp }}/windows-download
+
       - name: Check the files a release would upload
         id: rehearsal-files
         if: ${{ needs.resolve.outputs.dry_run == 'true' }}
@@ -2153,6 +2225,7 @@ jobs:
           DIR="$RUNNER_TEMP/rehearsal-files"
           rm -rf "$DIR" && mkdir -p "$DIR"
           cp "$RUNNER_TEMP/handoff-download/zip/$ZIP_NAME" "$RUNNER_TEMP/handoff-download/dmg/$DMG_NAME" "$DIR/"
+          [[ -z "$WINDOWS_NAME" ]] || cp "$RUNNER_TEMP/windows-download/$WINDOWS_NAME" "$DIR/"
           LINUX="$RUNNER_TEMP/linux-release"
           rm -rf "$LINUX"
           node scripts/linux-recipes.ts release --version "$VERSION" \
@@ -2163,6 +2236,7 @@ jobs:
           {
             echo "zip=$DIR/$ZIP_NAME"
             echo "dmg=$DIR/$DMG_NAME"
+            echo "windows=${WINDOWS_NAME:+$DIR/$WINDOWS_NAME}"
           } >> "$GITHUB_OUTPUT"
 
       # The tap commit a real release would make, from the live tap's
@@ -2211,6 +2285,7 @@ jobs:
         env:
           DIST_ZIP: ${{ steps.rehearsal-files.outputs.zip }}
           DIST_DMG: ${{ steps.rehearsal-files.outputs.dmg }}
+          DIST_WINDOWS: ${{ steps.rehearsal-files.outputs.windows }}
         run: |
           LINUX_MANIFEST="$RUNNER_TEMP/linux-release/manifest.json" WORK="$RUNNER_TEMP/release-feeds" \
             scripts/publish-feeds.sh rehearsal

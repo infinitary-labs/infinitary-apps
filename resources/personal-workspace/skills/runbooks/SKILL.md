@@ -46,7 +46,7 @@ An empty array matches nothing.
 An optional top-level `projects` array restricts the whole runbook, including skills, to those project ids.
 Never narrow the reach when the captain asked for every crewmate.
 A runbook may also name a `parts` folder for HTML parts and pictures.
-Use only plain Markdown, text, JSON, HTML, CSS and picture files, with no symbolic links, executable source or paths outside the runbook.
+Use only plain Markdown, text, JSON, HTML, CSS and picture files, with no symbolic links, executable source or paths outside the runbook; the one exception is a panel folder listed in `panels`, below, which holds a panel's own source.
 Do not install a panel just because a runbook carries parts.
 
 ## Show panels while the runbook is on

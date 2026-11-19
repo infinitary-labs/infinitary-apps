@@ -6,9 +6,10 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { panelBody } from "./frames";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
+import { shownPanelCard } from "./panelCards";
 import { regionShot, windowShot } from "./pictures";
 import { settingRow } from "./settings";
-import { commandSearch, focusOn, pressKey, pressWindowKey } from "./windowKeys";
+import { commandSearch, focusOn, pressKey, pressWindowKey, runFromSearch } from "./windowKeys";
 
 /**
  * A runbook of the captain's own shows its panels while it is on
@@ -16,10 +17,13 @@ import { commandSearch, focusOn, pressKey, pressWindowKey } from "./windowKeys";
  * panels). The throwaway workspace holds a runbook whose manifest lists one
  * panel folder, the panel-cards fixture with a command. The journey turns
  * the runbook on in Settings → Runbooks by keys, finds its panel on the rail
- * and its command in command search, then turns it off and finds both gone.
+ * and its command in command search, runs the command to put the panel's
+ * card up, then turns it off and finds the panel, its card and its command
+ * gone.
  * Data: the real panel-cards fixture and a runbook written as a person's own;
  * no account, network or shared resource. Completion signals: the switch's
- * checked state, the panel's frame drawing its fixture, and the command row.
+ * checked state, the panel's frame drawing its fixture, the card on the
+ * stack, and the command row.
  */
 
 const RUNBOOK = "reading-desk";
@@ -79,6 +83,10 @@ test("a runbook of your own shows its panel only while it is on", async ({}, tes
     await search.field.fill("reading");
     await expect(search.row(panelCommandId(PANEL, "open"))).toBeVisible();
     await page.keyboard.press("Escape");
+    // Its command puts the panel's card up on the stack.
+    const card = shownPanelCard(page, PANEL, "reader");
+    await runFromSearch(app, page, panelCommandId(PANEL, "open"));
+    await expect(card).toBeVisible();
 
     await pressWindowKey(app, ",", ["meta"]);
     await focusOn(tab);
@@ -88,6 +96,8 @@ test("a runbook of your own shows its panel only while it is on", async ({}, tes
     await expect(control).toHaveAttribute("aria-checked", "false");
     await page.keyboard.press("Escape");
     await expect(panel).toHaveCount(0);
+    // The card it put up goes with it.
+    await expect(card).toHaveCount(0);
     await pressWindowKey(app, "k", ["meta"]);
     await search.field.fill("reading");
     await expect(search.row(panelCommandId(PANEL, "open"))).toHaveCount(0);

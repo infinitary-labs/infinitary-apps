@@ -24,6 +24,7 @@ import {
   runbookManifestSchema,
   runbookMatches,
   runbookPanelId,
+  runbookPanelSlice,
 } from "../../shared/runbooks";
 import { skillFolders } from "../session/projectResources";
 import type { SettingsStore } from "../storage/settingsStore";
@@ -68,6 +69,8 @@ export type RunbookPanel = {
   id: string;
   /** The folder as the runbook's manifest names it. */
   folder: string;
+  /** Where its saved data is kept (`runbookPanelSlice`). */
+  slice: string;
   dir: string;
   runbook: { id: string; name: string; source: "installed" | "personal" };
 };
@@ -123,17 +126,13 @@ export class Runbooks {
    * runbook's panels are not read here.
    */
   panels(): RunbookPanel[] {
-    const on = new Set(
-      this.list()
-        .filter((entry) => entry.enabled)
-        .map((entry) => entry.id),
-    );
-    return this.entries.flatMap(({ manifest, dir, source }) =>
-      source === "builtin" || !on.has(manifest.id)
+    return this.enabled().flatMap(({ manifest, dir, source }) =>
+      source === "builtin"
         ? []
         : (manifest.panels ?? []).map((folder) => ({
             id: runbookPanelId(manifest, folder),
             folder,
+            slice: runbookPanelSlice(manifest.id, folder),
             dir: contained(dir, folder),
             runbook: { id: manifest.id, name: manifest.name, source },
           })),
@@ -333,16 +332,15 @@ export class Runbooks {
       }
     }
   }
+  /** The runbooks that are on, from one scan and one read of the switches. */
+  private enabled(): Entry[] {
+    const states = this.settings.getRunbookStates();
+    return this.entries.filter(({ manifest }) => states[manifest.id] ?? !manifest.startsOff);
+  }
   private active(project?: string): Entry[] {
-    const on = new Set(
-      this.list()
-        .filter((entry) => entry.enabled)
-        .map((entry) => entry.id),
-    );
-    return this.entries.filter(
+    return this.enabled().filter(
       ({ manifest }) =>
-        on.has(manifest.id) &&
-        (!manifest.projects || (project !== undefined && manifest.projects.includes(project))),
+        !manifest.projects || (project !== undefined && manifest.projects.includes(project)),
     );
   }
   firstmate(): { text: string; sha: string } {

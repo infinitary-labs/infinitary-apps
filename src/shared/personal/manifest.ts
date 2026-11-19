@@ -458,6 +458,21 @@ export const personalSnapshotSchema = z.object({
    * report. Absent while nothing is being built.
    */
   drafts: z.array(personalExtensionViewSchema).optional(),
+  /**
+   * The runbooks' panels left off the rails (docs/runbooks.md, "Panels"):
+   * each by its id, its runbook's name and why, such as another panel
+   * holding its id. Absent when none is.
+   */
+  refused: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(100),
+        by: z.string().max(100),
+        why: z.string().min(1).max(500),
+      }),
+    )
+    .max(500)
+    .optional(),
 });
 export type PersonalSnapshot = z.infer<typeof personalSnapshotSchema>;
 

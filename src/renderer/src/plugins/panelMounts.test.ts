@@ -55,6 +55,7 @@ function answer(host: PluginHost, snapshot: PersonalSnapshot, layout: Layout = D
     panels: host.sidePanels.list(),
     layout,
     views: snapshot.extensions,
+    runbookRefusals: snapshot.refused,
     refusals: railRefusals.list(),
     bodies: panelBodies.list(),
     said: (id) => panelRail.get(id),
@@ -111,6 +112,25 @@ describe("the window's answer about its panels", () => {
     expect(of(answer(host, renamed), "my-activity", "personal")).toMatchObject({
       state: "drawn",
       rail: "left",
+    });
+  });
+
+  it("names a runbook's panel the core refused for a taken id, beside the panel of yours that keeps it", () => {
+    const host = new PluginHost({ reads: new Set(READ_NAMES) });
+    plugins = new PersonalPlugins(host, () => {});
+    // docs/runbooks.md, "Panels": your own panel keeps an id a runbook's
+    // panel also takes, and the runbook's is listed refused with its reason.
+    const snapshot: PersonalSnapshot = {
+      extensions: [view({ id: "desk-reading" })],
+      refused: [{ id: "desk-reading", by: "Reading desk", why: "another panel has that id" }],
+    };
+    plugins.apply(snapshot);
+    const mounts = answer(host, snapshot);
+    expect(of(mounts, "desk-reading", "personal")?.state).not.toBe("refused");
+    expect(of(mounts, "desk-reading", "installed")).toMatchObject({
+      state: "refused",
+      rail: null,
+      why: "Reading desk's panel: another panel has that id",
     });
   });
 

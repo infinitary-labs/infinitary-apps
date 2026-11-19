@@ -40,11 +40,25 @@ export type InstalledRoot = {
  */
 export type RunbookPanelEntry = {
   id: string;
+  /** Where its saved data is kept: its runbook's, never its shown id (`runbookPanelSlice`). */
+  slice: string;
   dir: string;
   /** The runbook it comes with, by id and name. */
   runbook: { id: string; name: string };
   grants: "own" | "unasked" | PluginCapabilities;
 };
+
+/**
+ * What the captain agreed to for one folder of an added runbook, from its
+ * record's own entries only, so a folder named like an object's built-in
+ * member reads as not agreed rather than as a grant.
+ */
+export function agreedGrant(
+  panels: Record<string, PluginCapabilities> | null | undefined,
+  folder: string,
+): PluginCapabilities | "unasked" {
+  return panels && Object.hasOwn(panels, folder) ? (panels[folder] ?? "unasked") : "unasked";
+}
 
 /** What one check of a served-as-added panel found, for the panel service's entry. */
 export type FramedCheck = {
@@ -70,7 +84,9 @@ export async function checkFramed(
 ): Promise<FramedCheck> {
   const result: FramedCheck = {
     manifest: {},
-    granted: typeof grants === "string" ? {} : grants,
+    // Nothing is granted until the check passes: a refused panel hears no
+    // integration event and writes nothing through one.
+    granted: {},
     frameVersion: null,
     views: [],
     error: null,

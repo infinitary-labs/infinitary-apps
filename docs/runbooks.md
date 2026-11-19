@@ -59,10 +59,11 @@ The shared source fetcher's tree and byte bounds apply before admission; npm lif
 
 A manifest may list relative panel folders in `panels`, and a runbook that is on shows them on the rails; turning it off takes them away.
 Guidance and skill roots cannot overlap these panel folders.
-A runbook's panel has the id `<runbook>-<folder name>`, where a runbook that replaces a built-in uses the built-in's id, so a copy keeps its panels' saved data.
+A runbook's panel has the id `<runbook>-<folder name>`, where a runbook that replaces a built-in uses the built-in's id, so a copy keeps your place for the built-in's panel.
+That id is for the rails, the layout and commands; a runbook's panel keeps its saved data and its integration asks under its own runbook's id and folder (`runbookPanelSlice`), so a panel that shares its shown id never reads or loses its data.
 `Runbooks.panels()` lists the on runbooks' panels, and `PersonalExtensions` adds them as a third root beside your panels and added ones (`src/core/personal/framedPanels.ts`).
 They are drawn in a frame like an added panel, with source `installed`, the runbook's name as `by` and its id as `runbook`, and run no code of their own in the app: a `server.ts` mounts nothing.
-A panel of your own or an added one keeps its id; a runbook's panel with a taken id, or a folder name that cannot name a panel, is left off and named once in the panel log.
+A panel of your own or an added one keeps its id; a runbook's panel with a taken id, or a folder name that cannot name a panel, is left off, named once in the panel log, and listed with its reason among the window's refused panels (the snapshot's `refused` list).
 A personal runbook's panel is served what its manifest asks, as your own panels are.
 An added runbook's panels are agreed on its own add card: the card lists each panel with what it reads, uses and keeps, and Add it records those grants on the runbook's record (`plugins.panels_json`).
 A panel whose files on disk ask for more than was agreed, or one with no recorded agreement, mounts nothing and says to add its runbook again.

@@ -120,6 +120,18 @@ extension PhoneJourney {
         _ = try await home("panel-shy-hide")
         XCTAssertTrue(panelsTab.waitForAbsence(timeout: 30), "The tab leaves once its only panel says it does not show")
         _ = try await home("panel-shy-remove")
+
+        // docs/runbooks.md, "Panels": a runbook of the captain's own that is on shows its panel here too, under the
+        // runbook's name, and turned off on the computer, its panel and the tab leave.
+        _ = try await home("panel-runbook-on")
+        XCTAssertTrue(panelsTab.waitForPresence(timeout: 30), app.debugDescription)
+        try await pressPhoneKey("4", modifiers: .command, in: app)
+        let desk = app.buttons["panel-header-phone-desk-reading"]
+        XCTAssertTrue(desk.waitForPresence(timeout: 20), app.debugDescription)
+        XCTAssertTrue(app.webViews.staticTexts["The calm interface"].waitForPresence(timeout: 60), app.debugDescription)
+        picture("panels-runbook")
+        _ = try await home("panel-runbook-off")
+        XCTAssertTrue(panelsTab.waitForAbsence(timeout: 30), "The tab leaves once the runbook is off")
     }
 
     /// INF-3830 piece 3, done when "A panel's title-row buttons draw beside its fold and work", "A card a panel puts up

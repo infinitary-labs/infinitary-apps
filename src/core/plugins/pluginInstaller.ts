@@ -19,7 +19,7 @@ import {
   unservableGrants,
 } from "@shared/plugins/manifest";
 import { panelCardsProblem } from "@shared/plugins/panelCards";
-import { runbookManifestSchema, runbookPanelId } from "@shared/runbooks";
+import { runbookManifestSchema, runbookPanelId, runbookPanelSlice } from "@shared/runbooks";
 import { READ_WORDS, viewWords } from "@shared/vocabulary";
 import { compilePersonalModule, PERSONAL_ENTRY_FILES } from "../personal/compiler";
 import { errorText } from "../personal/errorText";
@@ -464,9 +464,9 @@ export class PluginInstaller {
     const record = this.options.records.get(id);
     if (!record?.installedAt) return { removed: false };
     const title = await readTitle(join(this.options.pluginsDir, id), id, record.kind);
-    // A runbook's panels keep their data under their own ids; it goes with them.
+    // A runbook's panels keep their data under the runbook's own name; it goes with them.
     const slices =
-      record.kind === "runbook" ? await runbookPanelIds(join(this.options.pluginsDir, id)) : [];
+      record.kind === "runbook" ? await runbookPanelSlices(join(this.options.pluginsDir, id)) : [];
     await rm(join(this.options.pluginsDir, id), { recursive: true, force: true });
     await rm(join(this.options.stagingDir, id), { recursive: true, force: true });
     this.options.cards.withdraw(consentCardId(id), "removed");
@@ -706,15 +706,17 @@ async function readTitle(dir: string, id: string, kind = "panel"): Promise<strin
   }
 }
 
-/** The ids an added runbook's panels are shown under, as its manifest lists them. */
-async function runbookPanelIds(dir: string): Promise<string[]> {
+/**
+ * Where an added runbook's panels keep their saved data, as its manifest
+ * lists them: each its own runbook's, so removing it never clears a panel
+ * that only shares a shown id.
+ */
+async function runbookPanelSlices(dir: string): Promise<string[]> {
   try {
     const manifest = runbookManifestSchema.parse(
       JSON.parse(await readFile(join(dir, "runbook.json"), "utf8")),
     );
-    // A replacement's panels share the built-in's ids, and its data stays with them.
-    if (manifest.replaces) return [];
-    return (manifest.panels ?? []).map((folder) => runbookPanelId(manifest, folder));
+    return (manifest.panels ?? []).map((folder) => runbookPanelSlice(manifest.id, folder));
   } catch {
     return [];
   }

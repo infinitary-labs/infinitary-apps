@@ -114,6 +114,16 @@ export function runbookPanelId(
   return `${manifest.replaces ?? manifest.id}-${name}`;
 }
 
+/**
+ * Where a runbook's panel keeps its saved data: its own runbook's id and
+ * folder, never the id it shows under, so a panel holding that id, or a copy
+ * of the same runbook, never reads or loses another's data. The colon is
+ * outside every panel id.
+ */
+export function runbookPanelSlice(runbookId: string, folder: string): string {
+  return `${runbookId}:${folder}`;
+}
+
 /** A manifest's crew sections in order: one section, or several each with its own selector. */
 export function crewSectionsOf(manifest: Pick<RunbookManifest, "crew">): RunbookSection[] {
   if (!manifest.crew) return [];

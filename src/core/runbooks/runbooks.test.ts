@@ -321,6 +321,7 @@ describe("runbooks over existing prompt and skill doors", () => {
       {
         id: "sequences-desk",
         folder: "desk",
+        slice: "my-workflows:desk",
         dir: join(path, "desk"),
         runbook: { id: "my-workflows", name: "My workflows", source: "personal" },
       },

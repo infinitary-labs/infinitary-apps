@@ -22,6 +22,7 @@ import { fakeBinding, fakeSessionFactory } from "../../../tests/helpers/fakeSess
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { CrewSupervisor } from "../orchestrator/crewSupervisor";
 import { appPathsFor } from "../paths";
+import { agreedGrant } from "../personal/framedPanels";
 import { PersonalExtensions } from "../personal/personalExtensions";
 import { PersonalStore } from "../personal/personalStore";
 import { Runbooks, stageRunbookSkills } from "../runbooks/runbooks";
@@ -101,12 +102,13 @@ async function harness() {
       runbooks: () =>
         books.panels().map((panel) => ({
           id: panel.id,
+          slice: panel.slice,
           dir: panel.dir,
           runbook: { id: panel.runbook.id, name: panel.runbook.name },
           grants:
             panel.runbook.source === "personal"
               ? ("own" as const)
-              : (records.get(panel.runbook.id)?.panels?.[panel.folder] ?? ("unasked" as const)),
+              : agreedGrant(records.get(panel.runbook.id)?.panels, panel.folder),
         })),
     },
   });
@@ -478,10 +480,11 @@ describe("PluginInstaller", () => {
       await h.settled();
       const dir = join(h.paths.pluginsDir, "token-watch");
 
-      // The files on disk now ask for more than he agreed to: nothing mounts.
+      // The files on disk now ask for more than he agreed to: nothing mounts,
+      // and the refused panel holds none of what it was agreed before.
       writeFileSync(join(dir, "manifest.json"), manifest({ sql: ["v_usage_v1", "v_tasks_v1"] }));
       await h.personal.refresh();
-      expect(h.installed()[0]).toMatchObject({ present: false, frame: null, sql: ["v_usage_v1"] });
+      expect(h.installed()[0]).toMatchObject({ present: false, frame: null, sql: [] });
       expect(h.installed()[0]?.error?.message).toContain(
         "now ask for something different from what the captain agreed to",
       );
@@ -987,6 +990,9 @@ describe("adding runbooks through the panel installer's consent", () => {
         // the grant, and the panel shows under the name of the runbook it replaces.
         const granted = h.records.get(id)?.panels?.["panels/token-watch"];
         expect(granted?.reads).toEqual(["tasks.board"]);
+        // Only the record's own entries count: a folder named like an
+        // object's built-in member was never agreed to.
+        expect(agreedGrant(h.records.get(id)?.panels, "constructor")).toBe("unasked");
         expect(h.installed().map((panel) => [panel.id, panel.runbook, panel.error])).toEqual([
           ["sequences-token-watch", id, null],
         ]);
@@ -1045,9 +1051,17 @@ describe("adding runbooks through the panel installer's consent", () => {
           "sequences-token-watch",
           "token-watch",
         ]);
+        // Each panel's data lives under its own owner: the runbook's under its
+        // runbook, apart from a panel of your own named like its shown id.
+        h.store.set(`${id}:panels/token-watch`, "seen", 1);
+        h.store.set("token-watch", "seen", 2);
+        h.store.set("sequences-token-watch", "seen", 3);
         expect(await h.installer.install({ source: "path", spec: id, action: "remove" })).toContain(
           "removed",
         );
+        expect(h.store.get(`${id}:panels/token-watch`, "seen")).toBeUndefined();
+        expect(h.store.get("token-watch", "seen")).toBe(2);
+        expect(h.store.get("sequences-token-watch", "seen")).toBe(3);
         expect(h.books.list().some((book) => book.id === id)).toBe(false);
         expect(h.books.firstmate().text).not.toContain("# Studio workflows");
         expect(h.feed().at(-1)).toBe(runbookRemovedLine(title, "Studio"));

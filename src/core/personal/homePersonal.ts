@@ -21,6 +21,7 @@ import type { SqlService } from "../sql/sqlService";
 import type { AppDatabase } from "../storage/db";
 import type { TaskService } from "../tasks/taskService";
 import type { RepoRegistry } from "../workspace/repoRegistry";
+import { agreedGrant } from "./framedPanels";
 import { carryPanelInstructions } from "./panelInstructions";
 import { PanelMountsHolder } from "./panelMounts";
 import { PersonalExtensions } from "./personalExtensions";
@@ -186,12 +187,13 @@ export async function startHomePersonal(options: {
       runbooks: () =>
         runbooks.panels().map((panel) => ({
           id: panel.id,
+          slice: panel.slice,
           dir: panel.dir,
           runbook: { id: panel.runbook.id, name: panel.runbook.name },
           grants:
             panel.runbook.source === "personal"
               ? "own"
-              : (pluginRecords.get(panel.runbook.id)?.panels?.[panel.folder] ?? "unasked"),
+              : agreedGrant(pluginRecords.get(panel.runbook.id)?.panels, panel.folder),
         })),
     },
   });

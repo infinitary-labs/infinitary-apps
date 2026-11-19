@@ -22,7 +22,7 @@ A one-off answer the captain reads once is a card ([cards-and-consent.md](cards-
 ## Owner and entry points
 
 - Registration: `PluginHost.registerPlugin(manifest, bindings, options)` in [`../src/renderer/src/plugins/host.ts`](../src/renderer/src/plugins/host.ts), the single door for every card kind, settings section and side panel; `placeSidePanels` applies the captain's one saved arrangement of every panel's slot and order, read and written through [`../src/shared/panelArrangement.ts`](../src/shared/panelArrangement.ts) (INF-2344).
-- Panel folders: `PersonalExtensions` in [`../src/core/personal/personalExtensions.ts`](../src/core/personal/personalExtensions.ts) seeds, scans, compiles, serves and removes the captain's own panels and installed ones, and pushes one snapshot on `inf:plugins:personal`.
+- Panel folders: `PersonalExtensions` in [`../src/core/personal/personalExtensions.ts`](../src/core/personal/personalExtensions.ts) seeds, scans, compiles, serves and removes the captain's own panels, installed ones and the panels of runbooks that are on (`../docs/runbooks.md`, "Panels"; checked in [`../src/core/personal/framedPanels.ts`](../src/core/personal/framedPanels.ts)), and pushes one snapshot on `inf:plugins:personal`.
 - The compiler: `compilePersonalModule` and `PersonalCompileError` in [`../src/core/personal/compiler.ts`](../src/core/personal/compiler.ts).
 - The contract a panel is written against: `PanelProps`, `ServerContext` and `PersonalManifest` in [`../src/shared/personal/contracts.ts`](../src/shared/personal/contracts.ts) (type-only; it generates the workspace's `infinitary-env.d.ts`); the manifest schema and `PLUGIN_HOST_SUPPORT` in [`../src/shared/personal/manifest.ts`](../src/shared/personal/manifest.ts).
 - Mounting: `PersonalPlugins` in [`../src/renderer/src/personal/personalPlugins.ts`](../src/renderer/src/personal/personalPlugins.ts) (every source, in a frame through `FramedPanelBody`) and the frame realm in [`../src/renderer/src/frameRealm/`](../src/renderer/src/frameRealm/) (`framePanelProps`), mounted by `FrameMountRegistry.mountPanel`.
@@ -40,7 +40,7 @@ A personal panel lives in `userData/fleet/personal/<id>/` and is built by a crew
 The compiler output is content-addressed, so a new hash is the version, the hot reload (a new frame) and the core's cache bust.
 A captain's own `server.ts` runs in a process of its own, owned by the core's `PanelRuntimes` for every source: actions are callable by name, its store answers asynchronously one ask at a time, background tasks run on its own timers clamped up to `MIN_BACKGROUND_INTERVAL_MS`, a run in flight is skipped rather than overlapped, and a throw is logged with the timer kept.
 A panel whose loop goes silent past `PANEL_SILENCE_MS`, or whose process ends, is stopped alone and stays stopped until the captain's Retry (`docs/personal-panels.md`, "Background work runs apart" and "A stopped panel").
-`personalize remove` takes a panel out in one commit (or uninstalls an installed one), and the `panels` switch and safe mode take back both roots in the same tick.
+`personalize remove` takes a panel out in one commit (or uninstalls an installed one); a runbook's panel goes with its runbook's switch instead, and the `panels` switch and safe mode take back all three roots in the same tick.
 
 ## Authority
 
@@ -48,6 +48,7 @@ Personal panels and plugins (`docs/ui-plugins.md`, `docs/personal-panels.md`): o
 The trust difference between sources is intentional.
 The captain's own panel draws in a frame of its own like every panel, and may have a `server.ts`, trusted like the crewmate that wrote it, which runs in its own process; a hang in either stops only that panel.
 An installed panel runs only in a sandboxed frame at its own host with a pinned lib, is served only the reads, views, storage and moves the captain consented to on the host's consent card (`card-plugin-<id>`), and a tree holding `server.ts` mounts nothing.
+A runbook's panel is drawn the same way: a personal runbook's is served what its manifest asks, an added runbook's only what the captain agreed to on that runbook's add card, and neither runs a `server.ts`; it keeps its saved data under its own runbook's name (`runbookPanelSlice`), never the id it shows under.
 A panel of either source reaches a service outside your projects only through the integrations its manifest names, each action under its rule in Settings, with one ask per panel and action at a time and a host line with Ask again meanwhile ([`../docs/integrations.md`](../docs/integrations.md), "How a panel reaches them").
 An installed panel's consent card lists each integration it names with its actions, events and why, and an update that names more asks again.
 The retired `net` and `secrets` keys are refused for every source, saying to name an integration instead.

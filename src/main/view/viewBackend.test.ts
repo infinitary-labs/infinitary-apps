@@ -199,6 +199,8 @@ function viewWithHeldLook() {
     answerLook = resolve;
     refuseLook = reject;
   });
+  // A test that never asks for the look still closes the view; its refusal reaches only askers.
+  looked.catch(() => {});
   const saved: ShellPreferences = {
     ...DEFAULT_SHELL_PREFERENCES,
     appearance: { ...DEFAULT_SHELL_PREFERENCES.appearance, theme: "light", size: 125 },

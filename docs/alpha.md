@@ -12,7 +12,7 @@ The selected download destination is `downloads.getinfinitary.com`; its Cloudfla
 The workflow keeps each immutable signed `v<version>` record on the active source repository using its own token.
 The source moves to the public development repository `infinitary-apps` at the cutover below; the preparation changes do not switch publication.
 Bucket-scoped R2 credentials publish the public copy only after storage is configured.
-Without those settings, the approved fallback keeps Homebrew and Linux publishing through the taps and skips disk images and direct feeds.
+Without those settings, the approved fallback keeps a stable's Homebrew and Linux publishing through the taps and skips disk images and direct feeds; a live alpha refuses to publish, since its Windows installer reaches testers only through download storage.
 
 Each release carries the finalized universal ZIP, a signed and notarized disk image, and the Linux files, with checksum sidecars.
 The ZIP remains the native updater's payload and the download paired computers use.
@@ -334,6 +334,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   `scripts/publish-storage-feeds.ts` retains previous files, verifies the new snapshot publicly, and conditionally switches `feeds/current.json` last.
   See “Download storage” below for the object and credential contract.
   The publication job runs the workflow's own copies of these scripts and the code they load, never the release source's, so a release built from an older commit still writes every entry the workflow publishes.
+  The download origin stays the source's: each feed step lays the source's `packaging/release-source.json` beside the workflow's writer, so the feeds name the origin the upload wrote to and the fetch-back read.
   An alpha moves only alpha; a stable moves stable and also alpha when newer than alpha's current target.
   A late older publication, inconsistent manifest, invalid existing file, or changed bytes at a published version is refused.
   A concurrent pointer write is refused rather than overwriting the other publication; read the new snapshot before publishing again.
@@ -367,7 +368,8 @@ The site keeps its private-alpha landing page and never links to `/alpha-downloa
 The storage and serving Worker belong to `infinitary-infra`; creating or deploying them is separate from merging this release code.
 Repository variable `R2_BUCKET` and secrets `R2_ENDPOINT` (`https://<account-id>.r2.cloudflarestorage.com`), `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` activate direct publication.
 The endpoint stays secret because it contains the Cloudflare account identifier; the two upload keys are bucket-scoped.
-With all four absent, a live release skips the disk image and direct feeds but still publishes Homebrew and Linux to both activated taps.
+With all four absent, a live stable skips the disk image and direct feeds but still publishes Homebrew and Linux to both activated taps.
+A live alpha with all four absent refuses before anything is signed or written: its Windows installer reaches testers only through download storage (`docs/windows.md`).
 Its Linux recipes use the tap's download URLs in that mode (`RECIPE_HOST=tap`), never the not-yet-configured storage address.
 A partial configuration fails before publication.
 Upload credentials are passed only through the recipient's environment and signed HTTPS request headers; they are never placed on a command line or printed.

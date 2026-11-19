@@ -834,6 +834,9 @@ jobs:
 
       # INF-1613: private source never blocks the public Homebrew/Linux path.
       # Direct installers activate only after the storage setup supplies every setting.
+      # An alpha needs them: its Windows installer reaches testers only through
+      # download storage, never a tap (docs/windows.md), so a live alpha
+      # without storage stops here, before anything is signed or written.
       - name: Select configured direct downloads
         id: visibility
         if: ${{ needs.resolve.outputs.dry_run == 'false' }}
@@ -847,6 +850,10 @@ jobs:
           if [[ -n "$R2_ENDPOINT" && -n "$R2_BUCKET" && "$HAS_ACCESS_KEY" == true && "$HAS_SECRET_KEY" == true ]]; then
             echo 'direct=true' >> "$GITHUB_OUTPUT"
           elif [[ -z "$R2_ENDPOINT" && -z "$R2_BUCKET" && "$HAS_ACCESS_KEY" == false && "$HAS_SECRET_KEY" == false ]]; then
+            if [[ "$CHANNEL" == alpha ]]; then
+              echo 'Download storage is not configured; an alpha publishes its Windows installer only there, so it refuses to publish without it.' >&2
+              exit 1
+            fi
             echo 'direct=false' >> "$GITHUB_OUTPUT"
             echo 'Direct installers are not configured; publishing Homebrew and Linux only.' >> "$GITHUB_STEP_SUMMARY"
           else
@@ -1562,7 +1569,6 @@ jobs:
             scripts/linux-package-sums.ts
             scripts/publish-downloads.ts
             scripts/release-storage.mjs
-            packaging/release-source.json
       - name: Wait until GitHub takes the job's token
         if: ${{ !cancelled() && steps.tooling.outcome == 'failure' }}
         env:
@@ -2035,7 +2041,10 @@ jobs:
       # fetcher, which waits out a host that is not answering (INF-3224). The
       # feeds are written by the workflow's own feed writer, live and in a
       # rehearsal, so a release from an older commit names every file the
-      # workflow published, an alpha's Windows installer included.
+      # workflow published, an alpha's Windows installer included. Each feed
+      # step lays the source's release-source.json beside that writer first:
+      # the destination is the source's, the one its app reads, the upload
+      # wrote to and the fetch-back checked.
       - id: tooling
         name: Check out the workflow's own launch gate and package check
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -2060,7 +2069,6 @@ jobs:
             scripts/moduleRunner.ts
             src/core/update/
             src/shared/
-            packaging/release-source.json
             packaging/mac-installation.json
       - name: Wait until GitHub takes the job's token
         if: ${{ !cancelled() && steps.tooling.outcome == 'failure' }}
@@ -2201,6 +2209,8 @@ jobs:
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         run: |
+          set -euo pipefail
+          cp packaging/release-source.json .release-tooling/packaging/
           DIST_ZIP="$RUNNER_TEMP/public-verify/$ZIP_NAME" DIST_DMG="$RUNNER_TEMP/public-verify/$DMG_NAME" \
           DIST_WINDOWS="${WINDOWS_NAME:+$RUNNER_TEMP/public-verify/$WINDOWS_NAME}" \
           LINUX_MANIFEST="$RUNNER_TEMP/linux-release/manifest.json" WORK="$RUNNER_TEMP/release-feeds" \
@@ -2304,6 +2314,8 @@ jobs:
           DIST_DMG: ${{ steps.rehearsal-files.outputs.dmg }}
           DIST_WINDOWS: ${{ steps.rehearsal-files.outputs.windows }}
         run: |
+          set -euo pipefail
+          cp packaging/release-source.json .release-tooling/packaging/
           LINUX_MANIFEST="$RUNNER_TEMP/linux-release/manifest.json" WORK="$RUNNER_TEMP/release-feeds" \
             .release-tooling/scripts/publish-feeds.sh rehearsal
 

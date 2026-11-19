@@ -717,8 +717,9 @@ describe("the signed channel workflow", () => {
     const fetcher = ["scripts/fetch-without-credential.sh", "scripts/fetch-back-copies.sh"];
     // Its feeds are written by the workflow's own feed writer and what it
     // loads, so a release from an older commit names every file the workflow
-    // published (INF-5230's review; tests/release-publication.test.ts runs it
-    // from this checkout).
+    // published; the destination it names is the source's own, laid beside
+    // it by each feed step (INF-5230's review; tests/release-publication.test.ts
+    // runs it from this checkout).
     const feeds = [
       "scripts/publish-feeds.sh",
       "scripts/publish-storage-feeds.ts",
@@ -727,7 +728,6 @@ describe("the signed channel workflow", () => {
       "scripts/moduleRunner.ts",
       "src/core/update/",
       "src/shared/",
-      "packaging/release-source.json",
       "packaging/mac-installation.json",
     ];
     for (const [job, jobSteps, tooling] of [

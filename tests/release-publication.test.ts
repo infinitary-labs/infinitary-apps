@@ -830,37 +830,64 @@ describe("a release's published assets", () => {
   });
 });
 
+type WorkflowStep = { id?: string; run?: string; with?: Record<string, unknown> };
+const releaseWorkflow = () =>
+  loadYamlFile(".github/workflows/release.yml") as {
+    jobs: Record<string, { steps: WorkflowStep[] }>;
+  };
+
 /**
- * A release job's workspace for an older source commit, one that predates
- * every publisher: the source holds none of the release scripts, and the
- * workflow's own copies sit where the upload and publish jobs' tooling
- * checkouts put them, with only the files those checkouts name. A manual or
+ * One release job's workspace for an older source commit, one that predates
+ * every publisher: the source holds only its release-source.json and none of
+ * the release scripts, and the workflow's own copies sit where that job's
+ * tooling checkout puts them, with only the files it names. A manual or
  * recovery alpha builds such an older commit, and its Windows installer must
  * still reach Cloudflare and the builds file (INF-5230's piece 1).
  */
-function olderSourceWorkspace(dir: string): string {
-  const workflow = loadYamlFile(".github/workflows/release.yml") as {
-    jobs: Record<string, { steps: Array<{ with?: Record<string, unknown> }> }>;
-  };
-  const workspace = join(dir, "workspace");
+function olderSourceWorkspace(
+  dir: string,
+  job: "upload" | "publish",
+  downloadBase = releaseSource.downloadBase,
+): string {
+  const workspace = join(dir, `${job}-workspace`);
   const tooling = join(workspace, ".release-tooling");
-  for (const job of ["upload", "publish"]) {
-    const checkout = workflow.jobs[job]?.steps.find(
-      (step) => step.with?.path === ".release-tooling",
-    );
-    expect(checkout?.with?.["sparse-checkout-cone-mode"], job).toBe(false);
-    for (const pattern of String(checkout?.with?.["sparse-checkout"]).trim().split("\n"))
-      cpSync(join(root, pattern), join(tooling, pattern), { recursive: true });
-  }
+  const checkout = releaseWorkflow().jobs[job]?.steps.find(
+    (step) => step.with?.path === ".release-tooling",
+  );
+  expect(checkout?.with?.["sparse-checkout-cone-mode"], job).toBe(false);
+  for (const pattern of String(checkout?.with?.["sparse-checkout"]).trim().split("\n"))
+    cpSync(join(root, pattern), join(tooling, pattern), { recursive: true });
+  mkdirSync(join(workspace, "packaging"), { recursive: true });
+  const configuration = JSON.parse(
+    readFileSync(join(root, "packaging/release-source.json"), "utf8"),
+  );
+  writeFileSync(
+    join(workspace, "packaging/release-source.json"),
+    JSON.stringify({ ...configuration, downloadBase }),
+  );
   // The source's own installed packages, which the job installs before it publishes.
   symlinkSync(join(root, "node_modules"), join(workspace, "node_modules"));
   cpSync(join(root, "package.json"), join(workspace, "package.json"));
   return workspace;
 }
 
+/** The command a job's step runs, as release.yml declares it. */
+function declaredRun(job: string, id: string): string {
+  const run = releaseWorkflow().jobs[job]?.steps.find((step) => step.id === id)?.run;
+  if (!run) throw new Error(`release.yml's ${job} job has no ${id} step`);
+  return run;
+}
+
+/** The upload step's Cloudflare upload, its own command among the places it writes at once. */
+function cloudflareUpload(): string {
+  const command = /\bcloudflare\(\) \{\n([^\n]+)\n\s*\}/.exec(declaredRun("upload", "upload"))?.[1];
+  if (!command) throw new Error("release.yml's upload step has no Cloudflare upload");
+  return command;
+}
+
 // INF-640: replacement feeds publish without Homebrew; exact artifacts precede one atomic commit.
 describe("the Homebrew-free feed publication", () => {
-  function fixture() {
+  function fixture(downloadBase?: string) {
     const dir = scratchDir("infinitary-feed-publication-");
     mkdirSync(join(dir, "home"));
     const bare = join(dir, "downloads.git");
@@ -894,7 +921,8 @@ describe("the Homebrew-free feed publication", () => {
     git("-C", seed, "commit", "-qm", "chore: seed the download source");
     git("-C", seed, "push", "-q", "origin", "HEAD:main");
     const before = git("--git-dir", bare, "rev-parse", "main");
-    const workspace = olderSourceWorkspace(dir);
+    const uploadWorkspace = olderSourceWorkspace(dir, "upload", downloadBase);
+    const publishWorkspace = olderSourceWorkspace(dir, "publish", downloadBase);
     // The publisher consumes already-verified opaque bytes; the signed workflow owns their format.
     const bytes = readFileSync(join(root, "packaging/build/icon.png"));
     let attempt = 0;
@@ -904,58 +932,70 @@ describe("the Homebrew-free feed publication", () => {
       changedDmg = false,
       windows = false,
     ) => {
-      const folder = join(dir, `artifacts-${++attempt}`);
-      mkdirSync(folder);
-      const installer = join(folder, `Infinitary-${version}-windows-x64-setup.exe`);
+      // The publication job's own folders: the copies it fetched back from
+      // Cloudflare, the Linux release laid out again, and a fresh feed folder.
+      const temp = join(dir, `attempt-${++attempt}`);
+      const folder = join(temp, "public-verify");
+      mkdirSync(folder, { recursive: true });
+      const windowsName = `Infinitary-${version}-windows-x64-setup.exe`;
+      const installer = join(folder, windowsName);
       if (windows) writeFileSync(installer, bytes);
-      const zip = join(folder, `Infinitary-${version}-universal.zip`);
-      const dmg = join(folder, `Infinitary-${version}-mac-universal.dmg`);
+      const zipName = `Infinitary-${version}-universal.zip`;
+      const dmgName = `Infinitary-${version}-mac-universal.dmg`;
+      const zip = join(folder, zipName);
+      const dmg = join(folder, dmgName);
       writeFileSync(zip, bytes);
       writeFileSync(dmg, changedDmg ? Buffer.concat([bytes, Buffer.from("changed")]) : bytes);
       const file = { asset: `infinitary-${version}-linux-amd64.deb`, sha256: sha256Of(bytes) };
       writeFileSync(join(folder, file.asset), bytes);
       writeFileSync(join(folder, "assets.txt"), `${file.asset}\n`);
-      const linux = join(folder, "linux.json");
+      mkdirSync(join(temp, "linux-release"));
       writeFileSync(
-        linux,
+        join(temp, "linux-release", "manifest.json"),
         JSON.stringify({ alpha: { x64: { deb: file } }, stable: { x64: { deb: file } } }),
       );
-      const work = join(dir, `publication-${attempt}`);
-      const options = {
-        cwd: workspace,
-        encoding: "utf8" as const,
-        env: {
-          ...env,
-          NODE_OPTIONS: `--import=${pathToFileURL(join(root, "tests/helpers/releaseStoragePreload.mjs")).href}`,
-          RELEASE_STORAGE_FIXTURE: join(dir, "storage.json"),
-          R2_ENDPOINT: "https://r2.example.test",
-          R2_BUCKET: "installers",
-          R2_ACCESS_KEY_ID: "disposable",
-          R2_SECRET_ACCESS_KEY: "disposable-not-a-secret",
-          LINUX_DIRECTORY: folder,
-          WORK: work,
-          VERSION: version,
-          CHANNEL: version.includes("-alpha.") ? "alpha" : "stable",
-          SOURCE_COMMIT: before,
-          DIST_ZIP: zip,
-          DIST_DMG: dmg,
-          ...(windows ? { DIST_WINDOWS: installer } : {}),
-          LINUX_MANIFEST: linux,
-        },
+      const work = join(temp, "release-feeds");
+      const environment = {
+        ...env,
+        NODE_OPTIONS: `--import=${pathToFileURL(join(root, "tests/helpers/releaseStoragePreload.mjs")).href}`,
+        RELEASE_STORAGE_FIXTURE: join(dir, "storage.json"),
+        R2_ENDPOINT: "https://r2.example.test",
+        R2_BUCKET: "installers",
+        R2_ACCESS_KEY_ID: "disposable",
+        R2_SECRET_ACCESS_KEY: "disposable-not-a-secret",
+        RUNNER_TEMP: temp,
+        VERSION: version,
+        CHANNEL: version.includes("-alpha.") ? "alpha" : "stable",
+        SOURCE_COMMIT: before,
+        ZIP_NAME: zipName,
+        DMG_NAME: dmgName,
+        WINDOWS_NAME: windows ? windowsName : "",
       };
+      // Each publisher runs as its job's step declares it, in that job's workspace.
+      const step = (workspace: string, command: string, more: Record<string, string> = {}) =>
+        spawnSync("bash", ["--noprofile", "--norc", "-e", "-c", command], {
+          cwd: workspace,
+          encoding: "utf8" as const,
+          env: { ...environment, ...more },
+        });
       if (mode === "live") {
-        const upload = spawnSync(
-          process.execPath,
-          [join(workspace, ".release-tooling/scripts/publish-downloads.ts")],
-          options,
-        );
+        // The upload job hands its Cloudflare upload the files it chose.
+        const upload = step(uploadWorkspace, cloudflareUpload(), {
+          ZIP: zip,
+          DMG: dmg,
+          WINDOWS: windows ? installer : "",
+          LINUX: folder,
+        });
         if (upload.status !== 0) return { ...upload, work };
       }
-      const result = spawnSync(
-        "bash",
-        [join(workspace, ".release-tooling/scripts/publish-feeds.sh"), mode],
-        options,
-      );
+      const result =
+        mode === "live"
+          ? step(publishWorkspace, declaredRun("publish", "feeds"))
+          : step(publishWorkspace, declaredRun("publish", "feed-rehearsal"), {
+              DIST_ZIP: zip,
+              DIST_DMG: dmg,
+              DIST_WINDOWS: windows ? installer : "",
+            });
       expect(existsSync(brewCalled)).toBe(false);
       return { ...result, work };
     };
@@ -1042,5 +1082,24 @@ describe("the Homebrew-free feed publication", () => {
     expect(
       parseBuilds(f.read(PUBLIC_RELEASE_NAMES.buildsFile), PUBLIC_RELEASE_NAMES),
     ).not.toBeNull();
+  });
+
+  // INF-640: an updater and the publication it reads use one destination.
+  // The workflow's own feed writer names the release source's download
+  // origin, the one its upload wrote to and its fetch-back read, even when
+  // the workflow's revision selects another (INF-5230's review).
+  it("names the release source's download origin in the feeds the workflow's own writer rehearses", () => {
+    const origin = "https://future-downloads.example/";
+    const f = fixture(origin);
+    const rehearsal = f.publish("0.5.0-alpha.9", "rehearsal", false, true);
+    expect(rehearsal.status, rehearsal.stderr).toBe(0);
+    const builds = JSON.parse(
+      readFileSync(join(rehearsal.work, "feeds", PUBLIC_RELEASE_NAMES.buildsFile), "utf8"),
+    );
+    const prefix = `${origin}releases/v0.5.0-alpha.9/`;
+    expect(builds.channels.alpha.systems.windows.x64.exe.url).toBe(
+      `${prefix}Infinitary-0.5.0-alpha.9-windows-x64-setup.exe`,
+    );
+    expect(builds.channels.alpha.systems.macos.arm64.zip.url.startsWith(prefix)).toBe(true);
   });
 });

@@ -12,9 +12,10 @@ if (!work) throw new Error("Missing WORK");
 const directory = join(work, "feeds");
 mkdirSync(directory, { recursive: true });
 if (readdirSync(directory).length) throw new Error("Use a fresh WORK folder for each publication attempt");
-// The release workflow runs its own copy, whatever the release's source commit
-// holds, so it reads the configuration and the feed writer beside itself (docs/alpha.md).
-const configuration = JSON.parse(readFileSync(new URL("../packaging/release-source.json", import.meta.url), "utf8"));
+// The release workflow runs its own copy and the feed writer beside it, but the
+// destination stays the release source's, the one its app reads, the fetch-back
+// checks and the workflow lays beside the feed writer (docs/alpha.md).
+const configuration = JSON.parse(readFileSync("packaging/release-source.json", "utf8"));
 // A rehearsal never reads a credential, creates a storage client, or sends a write.
 const storage = mode === "live" ? ReleaseStorage.fromEnvironment() : undefined;
 const previous = storage ? await storage.read("feeds/current.json") : null;

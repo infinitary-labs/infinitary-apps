@@ -4,9 +4,9 @@ import { basename, join } from "node:path";
 import { publicDigest, ReleaseStorage } from "./release-storage.mjs";
 
 // INF-1620: finalized private-record bytes become immutable downloads before any feed moves.
-// The release workflow runs its own copy, whatever the release's source commit
-// holds, so it reads the configuration beside itself (docs/alpha.md).
-const configuration = JSON.parse(readFileSync(new URL("../packaging/release-source.json", import.meta.url), "utf8"));
+// The release workflow runs its own copy, but the destination stays the release
+// source's, the one its app reads and the fetch-back checks (docs/alpha.md).
+const configuration = JSON.parse(readFileSync("packaging/release-source.json", "utf8"));
 const version = process.env.VERSION;
 if (!/^\d+\.\d+\.\d+(?:-alpha\.\d+)?$/.test(version ?? "")) throw new Error("Invalid release version");
 const storage = ReleaseStorage.fromEnvironment();

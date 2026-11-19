@@ -517,37 +517,45 @@ describe("the Linux packages", () => {
   });
 });
 
-// INF-1613's submitted unblock answer: absent storage never stops tap releases;
-// partial configuration is an error, not an accidental silent installer opt-out.
-it("selects Homebrew/Linux-only before storage setup and refuses partial R2 configuration", () => {
+// INF-1613's submitted unblock answer: absent storage never stops a stable's tap
+// release; partial configuration is an error, not an accidental silent installer
+// opt-out. An alpha's Windows installer reaches testers only through storage
+// (INF-5230's plan), so a live alpha without it refuses before anything is signed.
+it("selects Homebrew/Linux-only for a stable before storage setup, refuses an alpha without storage and partial R2 configuration", () => {
   const workflow = loadYamlFile(".github/workflows/release.yml") as {
     jobs: { release: { steps: { id?: string; run?: string }[] } };
   };
   const command = workflow.jobs.release.steps.find((step) => step.id === "visibility")?.run;
   if (!command) throw new Error("Missing download activation command");
-  for (const configuration of ["absent", "complete", "partial"]) {
-    const folder = scratchDir("infinitary-r2-activation-");
-    const output = join(folder, "output");
-    const result = spawnSync("bash", ["-e", "-c", command], {
-      encoding: "utf8",
-      env: {
-        PATH: process.env.PATH,
-        R2_ENDPOINT: configuration === "absent" ? "" : "https://account.r2.cloudflarestorage.com",
-        R2_BUCKET: configuration === "absent" ? "" : "installers",
-        HAS_ACCESS_KEY: configuration === "absent" ? "false" : "true",
-        HAS_SECRET_KEY: configuration === "complete" ? "true" : "false",
-        GITHUB_OUTPUT: output,
-        GITHUB_STEP_SUMMARY: join(folder, "summary"),
-      },
-    });
-    if (configuration === "partial") {
-      expect(result.status).not.toBe(0);
-      expect(result.stderr).toContain("Incomplete download storage configuration");
-    } else {
-      expect(result.status, result.stderr).toBe(0);
-      expect(readFileSync(output, "utf8")).toBe(`direct=${configuration === "complete"}\n`);
+  for (const channel of ["stable", "alpha"])
+    for (const configuration of ["absent", "complete", "partial"]) {
+      const folder = scratchDir("infinitary-r2-activation-");
+      const output = join(folder, "output");
+      const result = spawnSync("bash", ["-e", "-c", command], {
+        encoding: "utf8",
+        env: {
+          PATH: process.env.PATH,
+          CHANNEL: channel,
+          R2_ENDPOINT: configuration === "absent" ? "" : "https://account.r2.cloudflarestorage.com",
+          R2_BUCKET: configuration === "absent" ? "" : "installers",
+          HAS_ACCESS_KEY: configuration === "absent" ? "false" : "true",
+          HAS_SECRET_KEY: configuration === "complete" ? "true" : "false",
+          GITHUB_OUTPUT: output,
+          GITHUB_STEP_SUMMARY: join(folder, "summary"),
+        },
+      });
+      if (configuration === "partial") {
+        expect(result.status).not.toBe(0);
+        expect(result.stderr).toContain("Incomplete download storage configuration");
+      } else if (configuration === "absent" && channel === "alpha") {
+        expect(result.status).not.toBe(0);
+        expect(result.stderr).toContain("Download storage is not configured");
+        expect(existsSync(output)).toBe(false);
+      } else {
+        expect(result.status, result.stderr).toBe(0);
+        expect(readFileSync(output, "utf8")).toBe(`direct=${configuration === "complete"}\n`);
+      }
     }
-  }
 });
 
 // The trial release in the new project found the signing step's credentials

@@ -1717,6 +1717,7 @@ jobs:
           OLD_PUBLIC_TAG: ${{ needs.resolve.outputs.old_public_tag }}
           DMG: ${{ steps.handoff-check.outputs.dmg }}
           WINDOWS: ${{ steps.windows-file.outputs.path }}
+          WINDOWS_SHA256: ${{ steps.windows-file.outputs.sha256 }}
           RECIPE_HOST: ${{ needs.release.outputs.direct == 'true' && 'downloads' || 'tap' }}
         run: |
           set -euo pipefail
@@ -1796,6 +1797,16 @@ jobs:
           }
           JS
             settle cloudflare
+          fi
+          # A Windows installer a place already holds publishes only when it
+          # is the one this run's Windows check built and checked: testers get
+          # only checked bytes, so a retry whose rebuild differs stops here.
+          if [[ -n "$WINDOWS_NAME" && -f "$HELD/$WINDOWS_NAME.kept" ]]; then
+            read -r kept_sha kept_place < "$HELD/$WINDOWS_NAME.kept"
+            if [[ "$kept_sha" != "$WINDOWS_SHA256" ]]; then
+              echo "::error title=A held Windows installer is not the checked one::$kept_place holds $WINDOWS_NAME with sha256 $kept_sha, not the $WINDOWS_SHA256 this run's Windows check built and checked. Published bytes never change, so nothing was uploaded." >&2
+              DISAGREE=true
+            fi
           fi
           rm -rf "$HELD"
           [[ "$DISAGREE" == false ]] || exit 1

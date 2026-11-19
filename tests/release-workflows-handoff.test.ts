@@ -752,7 +752,10 @@ describe("the signed channel workflow", () => {
             ).map(([key, value]) => [key, Buffer.from(value.bytes, "base64")]),
           )
         : {};
-    const seedCloudflare = (consumed: ReturnType<typeof consume>, files: Record<string, string>) =>
+    const seedCloudflare = (
+      consumed: ReturnType<typeof consume>,
+      files: Record<string, string | Buffer>,
+    ) =>
       writeFileSync(
         storageOf(consumed),
         JSON.stringify(
@@ -999,16 +1002,17 @@ describe("the signed channel workflow", () => {
       places.seed(tapRepository, tapTag, "f".repeat(40), { [deb]: "deb published first" });
       const produced = produce({ record: places });
       const consumed = consume(produced);
-      // The last attempt put its disk image and its Windows installer on
-      // Cloudflare only, then stopped.
+      // The last attempt put its disk image and its Windows installer, the
+      // one this run's Windows check built and checked, on Cloudflare only,
+      // then stopped.
       seedCloudflare(consumed, {
         [dmgName]: "image published first",
-        [windowsName]: "installer published first",
+        [windowsName]: windowsBytes,
       });
       const outputs = succeeded(uploadAfterChecks(produced, consumed, places));
       const files = JSON.parse(outputs.files?.files ?? "{}") as Record<string, string>;
       expect(files[dmgName]).toBe(shaOf("image published first"));
-      expect(files[windowsName]).toBe(shaOf("installer published first"));
+      expect(files[windowsName]).toBe(shaOf(windowsBytes));
       expect(held(releaseFiles(places, recordRepository, tag))[windowsName]).toBe(
         files[windowsName],
       );
@@ -1050,6 +1054,28 @@ describe("the signed channel workflow", () => {
         return count;
       };
       expect(copies(retry.temp)).toEqual(copies(first.temp));
+    });
+
+    // The captain's choice on INF-5244's review: testers get only checked
+    // bytes, so a retry whose rebuilt installer differs from the one a place
+    // already holds stops before anything but the record's zip is written.
+    it("refuses a held Windows installer that is not the one this run's Windows check built, before any upload", () => {
+      const places = standInGh(source);
+      const produced = produce({ record: places });
+      const consumed = consume(produced);
+      seedCloudflare(consumed, { [windowsName]: "installer from an earlier build" });
+      const uploaded = uploadAfterChecks(produced, consumed, places);
+      expect(uploaded.results["windows-file"]?.status).toBe(0);
+      expect(uploaded.results.adopt?.status).not.toBe(0);
+      expect(uploaded.results.adopt?.stderr).toMatch(
+        /cloudflare holds Infinitary-.*-windows-x64-setup\.exe with sha256 [0-9a-f]{64}, not the [0-9a-f]{64} this run's Windows check built and checked/,
+      );
+      expect(uploaded.results.upload).toBeUndefined();
+      expect(Object.keys(places.published(recordRepository, tag) ?? {}).sort()).toEqual(
+        [zipName, `${zipName}.sha256`].sort(),
+      );
+      expect(releaseFiles(places, tapRepository, tapTag)).toBeNull();
+      expect(Object.keys(cloudflare(consumed))).toEqual([`releases/v${version}/${windowsName}`]);
     });
 
     it("refuses before any upload when two places hold different bytes", () => {

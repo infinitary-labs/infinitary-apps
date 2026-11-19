@@ -309,13 +309,17 @@ jobs:
         with:
           name: windows-installer
           path: ${{ runner.temp }}/windows-installer
+      # Against the build job's own output, never only the artifact's list,
+      # so the installer this machine runs is the one whose checksum the
+      # release's upload job publishes (docs/windows.md).
       - name: Check the installer against the build's list
         working-directory: ${{ runner.temp }}/windows-installer
+        env:
+          SUMS: ${{ needs.build.outputs.sums }}
         run: |
-          foreach ($line in Get-Content SHA256SUMS) {
-            $sum, $file = $line -split '\s+\*?', 2
-            if ((Get-FileHash -Algorithm SHA256 $file).Hash.ToLower() -ne $sum) { throw "$file differs from the build's" }
-          }
+          if ((Get-Content SHA256SUMS -Raw).Trim() -ne $env:SUMS.Trim()) { throw "the artifact's SHA256SUMS is not the one the build reported" }
+          $sum, $file = $env:SUMS.Trim() -split '\s+\*?', 2
+          if ((Get-FileHash -Algorithm SHA256 $file).Hash.ToLower() -ne $sum) { throw "$file differs from the build's" }
       # As a person's double-click runs it, silently: one click installs for
       # this person and opens the app through its Start menu entry.
       - name: Install

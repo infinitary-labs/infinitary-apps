@@ -103,7 +103,7 @@ The machine must have a standard person signed in at its desktop with Explorer r
 The portable Git sits in the job's temporary folder and on its own steps' search path only, so the app, opened through Explorer, never sees it.
 Its PowerShell steps run in Windows PowerShell 5.1, the one Windows ships, since the machine has no PowerShell 7.
 The machine has no Python or compiler either, so the job installs the project's packages without their build scripts and compiles only the message catalogs the journey reads; the journey runs the installed app, never a build of its own.
-The job checks the installer against the build's `SHA256SUMS`, runs it silently as a double-click does (`/S --force-run`), and runs `tests/windows/installed-windows.spec.ts` with `playwright.windows.config.ts`.
+The job checks the installer against the `sums` line the build job reported, not only the artifact's own `SHA256SUMS`, runs it silently as a double-click does (`/S --force-run`), and runs `tests/windows/installed-windows.spec.ts` with `playwright.windows.config.ts`.
 The job's git never asks for a sign-in, since a prompt on the machine's desktop waits for a press nobody makes, and the journey's config keeps Playwright from reading git, which on a batch's pull request run would fetch the base commit without credentials.
 The job uploads its evidence even when its timeout cancels it.
 That journey checks, in order:
@@ -140,7 +140,8 @@ An outside contributor's pull request that reaches Windows-relevant files builds
 ## Published on every alpha
 
 An alpha publishes the installer its own Windows check built, installed and ran, and no other: `release.yml`'s upload job downloads the `windows-installer` artifact and refuses it unless its bytes match the `sums` line the windows job handed over.
-It goes beside the alpha's other downloads, under the same rules: on the release record and on Cloudflare under `releases/v<version>/`, each with a `.sha256` sidecar, never on a Homebrew tap, and a retry adopts the bytes a place already holds.
+It goes beside the alpha's other downloads, under the same rules: on the release record and on Cloudflare under `releases/v<version>/`, each with a `.sha256` sidecar, never on a Homebrew tap.
+A retry keeps an installer a place already holds only when its bytes are the ones this run's Windows check built and checked; any other copy stops the upload before anything but the record's zip is written, so testers only ever get checked bytes.
 The publication job fetches it back from the record and, without a credential, from Cloudflare, and checks each copy against the upload job's list before any feed moves.
 The builds file then names it at `channels.alpha.systems.windows.x64.exe` ("Builds by system and chip" in `docs/alpha.md`), and the feed writer runs the app's own builds reader on the next file before the feed switches, so a Windows entry can never make an installed copy refuse the whole file.
 Both the Cloudflare upload and the feed writer are the workflow's own copies, never the release source's, so an alpha cut from an older commit publishes and names its installer too; the download origin they use is still the release source's, the one the fetch-back reads.

@@ -58,7 +58,9 @@ export function mountOf(
   id: string,
   kind: PanelMountKind,
 ): PanelMount | undefined {
-  return mounts.panels.find((panel) => panel.id === id && panel.kind === kind);
+  return mounts.panels.find(
+    (panel) => panel.id === id && panel.kind === kind && panel.runbook === undefined,
+  );
 }
 
 /** One panel as the window answered for it, in a crewmate's words. */

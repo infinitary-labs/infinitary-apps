@@ -262,6 +262,10 @@ export function renderSurfacesSection(
       return `- ${surface.id} "${surface.title}"${mark}: ${where}; ${state}${paused ? pausedWords(paused) : ""}`;
     }),
     ...(more > 0 ? [`- and ${more} more personal panel${more === 1 ? "" : "s"}`] : []),
+    // A runbook's panel left off, beside the panel that holds its id (docs/runbooks.md, "Panels").
+    ...(personal.refused ?? []).map(
+      (refusal) => `- ${refusal.id} (from the runbook ${refusal.by}): not shown: ${refusal.why}`,
+    ),
     ...(off ? [off] : []),
   ];
 }

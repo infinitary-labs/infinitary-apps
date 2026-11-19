@@ -1012,6 +1012,18 @@ describe("adding runbooks through the panel installer's consent", () => {
         ]);
         writeFileSync(join(h.paths.pluginsDir, id, "panels/token-watch/manifest.json"), manifest());
         await h.personal.refresh();
+        // Files changed to name another runbook are refused, never read under its grants.
+        const book = join(h.paths.pluginsDir, id, "runbook.json");
+        const agreed = readFileSync(book, "utf8");
+        writeFileSync(book, JSON.stringify({ ...JSON.parse(agreed), id: "other-workflows" }));
+        await h.personal.refresh();
+        expect(h.books.panels()).toEqual([]);
+        expect(
+          h.books.list().find((entry) => entry.path === join(h.paths.pluginsDir, id))?.error,
+        ).toBe("This runbook's files now name another runbook. Add it again.");
+        expect(h.installed()).toEqual([]);
+        writeFileSync(book, agreed);
+        await h.personal.refresh();
         h.books.set("lessons", false);
         for (const place of ["project", "personal"] as const) {
           const skills = h.books.crew({
@@ -1054,12 +1066,15 @@ describe("adding runbooks through the panel installer's consent", () => {
         // Each panel's data lives under its own owner: the runbook's under its
         // runbook, apart from a panel of your own named like its shown id.
         h.store.set(`${id}:panels/token-watch`, "seen", 1);
+        // A folder its files no longer list is still its own.
+        h.store.set(`${id}:panels/gone`, "seen", 4);
         h.store.set("token-watch", "seen", 2);
         h.store.set("sequences-token-watch", "seen", 3);
         expect(await h.installer.install({ source: "path", spec: id, action: "remove" })).toContain(
           "removed",
         );
         expect(h.store.get(`${id}:panels/token-watch`, "seen")).toBeUndefined();
+        expect(h.store.get(`${id}:panels/gone`, "seen")).toBeUndefined();
         expect(h.store.get("token-watch", "seen")).toBe(2);
         expect(h.store.get("sequences-token-watch", "seen")).toBe(3);
         expect(h.books.list().some((book) => book.id === id)).toBe(false);

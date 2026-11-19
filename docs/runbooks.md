@@ -63,12 +63,14 @@ A runbook's panel has the id `<runbook>-<folder name>`, where a runbook that rep
 That id is for the rails, the layout and commands; a runbook's panel keeps its saved data and its integration asks under its own runbook's id and folder (`runbookPanelSlice`), so a panel that shares its shown id never reads or loses its data.
 `Runbooks.panels()` lists the on runbooks' panels, and `PersonalExtensions` adds them as a third root beside your panels and added ones (`src/core/personal/framedPanels.ts`).
 They are drawn in a frame like an added panel, with source `installed`, the runbook's name as `by` and its id as `runbook`, and run no code of their own in the app: a `server.ts` mounts nothing.
-A panel of your own or an added one keeps its id; a runbook's panel with a taken id, or a folder name that cannot name a panel, is left off, named once in the panel log, and listed with its reason among the window's refused panels (the snapshot's `refused` list).
+A panel of your own or an added one keeps its id; a runbook's panel with a taken id, or a folder name that cannot name a panel, is left off, named once in the panel log, and listed with its reason among the window's refused panels (the snapshot's `refused` list), on a row of its own beside the panel that keeps the id.
+A runbook's panel the core will not serve, such as one with background code or one nobody agreed to, is answered refused with that reason too.
 A personal runbook's panel is served what its manifest asks, as your own panels are.
 An added runbook's panels are agreed on its own add card: the card lists each panel with what it reads, uses and keeps, and Add it records those grants on the runbook's record (`plugins.panels_json`).
 A panel whose files on disk ask for more than was agreed, or one with no recorded agreement, mounts nothing and says to add its runbook again.
 Settings → Runbooks names a runbook's panels under its switch.
-Removing an added runbook clears its panels' saved data; asking the first mate to remove a runbook's panel answers that its runbook's switch takes it away.
+An added runbook is read only under its record's id: files changed to name another runbook are listed as not available, never served under that one's agreement.
+Removing an added runbook clears every slice of saved data its id owns, whatever its files list now; asking the first mate to remove a runbook's panel answers that its runbook's switch takes it away.
 The same folder can still be added as a panel of its own through the installer's separate panel card, with its own record, grant and lifecycle.
 
 ## Making a new runbook

@@ -95,6 +95,9 @@ function mountOf(panel: SidePanelContribution, facts: MountFacts): PanelMount {
       : facts.views.find((entry) => entry.id === panel.id && mountKindOf(entry.source) === kind);
   const rail: RailSide = effectivePlacement(facts.layout, panel.id, panel.preferredPlacement).x;
   const base = { id: panel.id, kind, version: versionOf(view), rail };
+  // A runbook's panel the core would not serve is refused, with its reason.
+  if (view?.runbook && view.error)
+    return { ...base, state: "refused", why: cut(view.error.message) };
   if (isPanelHidden(facts.layout, panel.id)) return { ...base, state: "hidden", why: null };
   if (panel.source.get() === null) return { ...base, state: "off", why: cut(emptyWhy(view)) };
   const said = facts.said(panel.id);
@@ -160,8 +163,8 @@ export function readPanelMounts(facts: MountFacts): PanelMount[] {
       why: cut(refusal.why),
     });
   }
-  // A runbook's panel the core left off is named even when another panel
-  // holds its id and is drawn, so the answer says why it is missing.
+  // A runbook's panel the core left off is named beside any panel that
+  // holds its id, by its runbook, so the answer says why it is missing.
   for (const refusal of facts.runbookRefusals ?? []) {
     mounts.push({
       id: refusal.id,
@@ -171,6 +174,7 @@ export function readPanelMounts(facts: MountFacts): PanelMount[] {
       rail: null,
       // i18n-exempt: served to the crew (why a panel is not drawn)
       why: cut(`${refusal.by}'s panel: ${refusal.why}`),
+      runbook: refusal.runbook,
     });
   }
   const slotRail = effectivePlacement(

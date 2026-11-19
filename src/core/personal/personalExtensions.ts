@@ -1323,7 +1323,12 @@ export class PersonalExtensions {
     // Left off, with the reason in the panel log once and in the window's
     // list of refused panels (docs/runbooks.md, "Panels").
     const refuse = (panel: RunbookPanelEntry, kind: string, why: string) => {
-      refused.push({ id: panel.id.slice(0, 100), by: panel.runbook.name.slice(0, 100), why });
+      refused.push({
+        id: panel.id.slice(0, 100),
+        runbook: panel.runbook.id.slice(0, 100),
+        by: panel.runbook.name.slice(0, 100),
+        why,
+      });
       this.logOnce(
         `${kind}:${panel.runbook.id}:${panel.id}`,
         `personal: ${panel.runbook.name}'s panel ${panel.id} is not shown: ${why}`,

@@ -224,6 +224,58 @@ describe("personalize", () => {
 });
 
 describe("the your-surfaces section", () => {
+  // docs/runbooks.md, "Panels": a runbook's panel left off for a taken id is
+  // named beside the panel that keeps it, never as it.
+  it("names a runbook's panel left off beside the panel that holds its id", () => {
+    const lines = renderSurfacesSection(
+      {
+        appearance: { theme: "light" },
+        layout: { collapsedPanels: {}, hiddenPanels: {}, placements: {} },
+        panels: { enabled: true, offReason: null },
+      },
+      {
+        extensions: [
+          { ...extension("desk-reading", "My reading"), source: "installed", by: "Studio" },
+        ],
+        refused: [
+          {
+            id: "desk-reading",
+            runbook: "desk",
+            by: "Reading desk",
+            why: "another panel has that id",
+          },
+        ],
+      },
+      STABLE,
+      {
+        // The window lists the runbook's refused row first; the panel of
+        // yours that keeps the id still answers for itself.
+        panels: [
+          {
+            id: "desk-reading",
+            kind: "installed",
+            version: null,
+            state: "refused",
+            rail: null,
+            why: "Reading desk's panel: another panel has that id",
+            runbook: "desk",
+          },
+          {
+            id: "desk-reading",
+            kind: "installed",
+            version: "v1",
+            state: "drawn",
+            rail: "right",
+            why: null,
+          },
+        ],
+      },
+    );
+    expect(lines.filter((line) => line.startsWith("- desk-reading"))).toEqual([
+      expect.stringMatching(/"My reading" \(added, by .*\):.*drawn/),
+      "- desk-reading (from the runbook Reading desk): not shown: another panel has that id",
+    ]);
+  });
   it("lists the app panels and the personal panels up to the cap", () => {
     // The second of the captain's panels is named after the app's Activity,
     // so the window refused it while the app's own Activity is drawn.

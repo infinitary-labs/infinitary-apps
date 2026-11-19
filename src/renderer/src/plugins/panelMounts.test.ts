@@ -115,22 +115,69 @@ describe("the window's answer about its panels", () => {
     });
   });
 
-  it("names a runbook's panel the core refused for a taken id, beside the panel of yours that keeps it", () => {
+  // docs/runbooks.md, "Panels": a panel that holds an id a runbook's panel
+  // also takes keeps it, and the runbook's is listed refused beside it.
+  for (const source of ["yours", "installed"] as const) {
+    it(`names a runbook's panel the core refused for a taken id beside the ${source} panel that keeps it`, () => {
+      const host = new PluginHost({ reads: new Set(READ_NAMES) });
+      plugins = new PersonalPlugins(host, () => {});
+      const refusal = {
+        id: "desk-reading",
+        runbook: "desk",
+        by: "Reading desk",
+        why: "another panel has that id",
+      };
+      const snapshot: PersonalSnapshot = {
+        extensions: [view({ id: "desk-reading", source })],
+        refused: [refusal],
+      };
+      plugins.apply(snapshot);
+      const mounts = answer(host, snapshot);
+      const kind = source === "yours" ? "personal" : "installed";
+      // The panel that keeps the id answers for itself on its own row.
+      const kept = mounts.filter(
+        (mount) => mount.id === "desk-reading" && mount.kind === kind && !mount.runbook,
+      );
+      expect(kept).toHaveLength(1);
+      expect(kept[0]?.state).not.toBe("refused");
+      expect(
+        mounts.filter((mount) => mount.id === "desk-reading" && mount.runbook === "desk"),
+      ).toEqual([
+        {
+          id: "desk-reading",
+          kind: "installed",
+          version: null,
+          state: "refused",
+          rail: null,
+          why: "Reading desk's panel: another panel has that id",
+          runbook: "desk",
+        },
+      ]);
+    });
+  }
+
+  it("names a runbook's panel the core would not serve refused, with the core's reason", () => {
     const host = new PluginHost({ reads: new Set(READ_NAMES) });
     plugins = new PersonalPlugins(host, () => {});
-    // docs/runbooks.md, "Panels": your own panel keeps an id a runbook's
-    // panel also takes, and the runbook's is listed refused with its reason.
+    // The reason the core's check gives a runbook panel that ships server code, passed through as it is.
+    const why =
+      "it ships server code (server.ts), and a panel inside a runbook may not run code of its own in the app.";
     const snapshot: PersonalSnapshot = {
-      extensions: [view({ id: "desk-reading" })],
-      refused: [{ id: "desk-reading", by: "Reading desk", why: "another panel has that id" }],
+      extensions: [
+        view({
+          id: "desk-coded",
+          source: "installed",
+          runbook: "desk",
+          by: "Reading desk",
+          frame: null,
+          error: { stage: "server", message: why },
+        }),
+      ],
     };
     plugins.apply(snapshot);
-    const mounts = answer(host, snapshot);
-    expect(of(mounts, "desk-reading", "personal")?.state).not.toBe("refused");
-    expect(of(mounts, "desk-reading", "installed")).toMatchObject({
+    expect(of(answer(host, snapshot), "desk-coded", "installed")).toMatchObject({
       state: "refused",
-      rail: null,
-      why: "Reading desk's panel: another panel has that id",
+      why,
     });
   });
 

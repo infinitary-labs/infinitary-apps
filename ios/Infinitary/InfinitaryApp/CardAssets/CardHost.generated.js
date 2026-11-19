@@ -99030,12 +99030,13 @@ ${FRAME_KEYBOARD_SCRIPT}
     drafts: array(personalExtensionViewSchema).optional(),
     /**
      * The runbooks' panels left off the rails (docs/runbooks.md, "Panels"):
-     * each by its id, its runbook's name and why, such as another panel
-     * holding its id. Absent when none is.
+     * each by its id, its runbook's id and name, and why, such as another
+     * panel holding its id. Absent when none is.
      */
     refused: array(
       object({
         id: string().min(1).max(100),
+        runbook: string().min(1).max(100),
         by: string().max(100),
         why: string().min(1).max(500)
       })

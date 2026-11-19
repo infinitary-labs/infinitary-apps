@@ -1455,7 +1455,12 @@ describe("PersonalExtensions shows a runbook's panels", () => {
       ]);
       // The window's refused list names it too, beside your panel.
       expect(service.snapshot().refused).toEqual([
-        { id: "desk-reading", by: "Reading desk", why: "another panel has that id" },
+        {
+          id: "desk-reading",
+          runbook: "desk",
+          by: "Reading desk",
+          why: "another panel has that id",
+        },
       ]);
       rmSync(join(h.workspaceDir, "desk-reading"), { recursive: true });
 

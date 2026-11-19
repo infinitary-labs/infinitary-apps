@@ -61,6 +61,12 @@ export const panelMountSchema = z.object({
   rail: z.enum(["left", "right"]).nullable(),
   /** Why it is not drawn, in the window's words; null when it is. */
   why: z.string().max(PANEL_MOUNT_WHY_MAX).nullable(),
+  /**
+   * The runbook whose panel the core left off the rails (docs/runbooks.md,
+   * "Panels"), such as for an id another panel holds: listed beside, never
+   * as, a panel with the same id. Absent on every other row.
+   */
+  runbook: z.string().min(1).max(100).optional(),
 });
 export type PanelMount = z.infer<typeof panelMountSchema>;
 

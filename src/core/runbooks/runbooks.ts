@@ -158,6 +158,10 @@ export class Runbooks {
     for (const { dir, source } of folders) {
       try {
         const manifest = checkRunbookFiles(dir);
+        // An added runbook is its record's, whose folder bears its id: files
+        // changed to name another never borrow that one's grants or data.
+        if (source === "installed" && manifest.id !== basename(dir))
+          throw new Error("This runbook's files now name another runbook. Add it again.");
         if (entries.some((entry) => entry.manifest.id === manifest.id)) continue;
         entries.push({ manifest, dir, source });
       } catch (error) {

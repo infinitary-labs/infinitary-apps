@@ -88,7 +88,7 @@ A Windows PC that keeps a copy offers Take over while the home is out of reach, 
 
 ## The checks
 
-`windows.yml` has two jobs.
+`windows.yml` has two jobs, and a third on request ("The update check" below).
 `build` runs on the PC's Windows places, a fresh standard account removed when the job ends (`vars.WINDOWS_RUNNER`, default `shell-pc-windows`).
 It installs, builds and packages the installer, and keeps it on the run with its `SHA256SUMS` as the `windows-installer` artifact, and hands its line of `SHA256SUMS` to a calling workflow as the `sums` output; only an alpha's upload job publishes it.
 Both jobs first unpack Git for Windows' portable build, pinned by its SHA-256, and put it first on their own steps' search path, so the job's bash, git and curl are that release's: the places' own Git 2.45.2 has a curl that refuses a plain download (exit 43), and the fresh machine has no Git.
@@ -151,3 +151,22 @@ A rehearsal checks and lists the installer and writes it into its rehearsed buil
 A stable promotion builds no Windows installer: when it hands its version to alpha, alpha's entry names no Windows build until the next alpha.
 The alpha's release notes call it an unsigned early build: Windows warns before it runs, and a PC with Smart App Control on blocks it until the signed build.
 This gives the downloads page the entry it reads; the page lists the installer once its own change is deployed.
+
+## The update check
+
+A request with `update_check` checks the app's own update (`docs/alpha.md`, "Updates on Windows") on the clean machine instead of the installer check.
+It runs only on request: nothing a batch or an alpha runs asks for it.
+`build` first points the checkout's release source at the machine's own feed, `https://localhost:8443/` (`scripts/windows-update-source.ts`, `tests/windows/updateVersions.ts`), builds once, and packages two unsigned test versions per channel from that one build, telling them apart only by their version: `0.0.1-alpha.1` and `0.0.1-alpha.2` for alpha, `0.0.1` and `0.0.2` for stable.
+Their release source names no published place, so nothing they find or download comes from a real release, and they stay on the run as the installer does.
+`update` is a matrix of one fresh machine per channel, set up as `check`'s is; it installs the channel's older version as a double-click does and runs `tests/windows/windows-update.spec.ts`.
+The journey serves the feed itself on the machine's loopback addresses (`tests/windows/updateFeed.ts`), with a certificate it makes in this person's own store and trusts for them alone in Trusted People, and sets `NODE_USE_SYSTEM_CA=1` in their environment, where the command Task Scheduler starts reads it; it takes both away when it ends.
+It checks, in order:
+
+1. Git for Windows installs on the person's yes, as in the installer check, and the window, opened again on the person's own data folder, starts the command through Task Scheduler.
+2. The window signs in to the stand-in provider, turns a setting away from its default and asks the first mate for a task.
+3. The feed offers the newer version with another file's checksum: Update and restart installs nothing, says the download did not match its published checksum, and leaves no installer in the data folder.
+4. The feed offers it with a download that stops a quarter of the way: Update and restart installs nothing and says the download stopped.
+5. The feed offers it as published: the window's Update and restart saves the command's work, the command ends, the installer replaces the copy, and the new copy's window opens through the Start menu entry and starts the command again.
+6. Opened again, the new copy names the newer version on the same channel, with the same task, setting and sign-in, the same Task Scheduler entry, one removal entry for this person, and no installer left in the data folder.
+
+Its pictures and readings go to the `windows-update-evidence-<channel>` artifact.

@@ -39,6 +39,11 @@ on:
         required: false
         type: string
         default: '1'
+      update_check:
+        description: Build two unsigned test versions per channel that read their releases from the clean machine's own feed, and check the app's own update between them there instead of the installer check (docs/windows.md, "The update check")
+        required: false
+        type: boolean
+        default: false
   workflow_call:
     inputs:
       trigger:
@@ -172,6 +177,11 @@ jobs:
       - uses: ./.github/actions/electron-download
       - run: pnpm install --frozen-lockfile
         timeout-minutes: 20
+      # The update check's test versions read their releases from the clean
+      # machine's own feed; nothing this run builds then is published.
+      - name: Point the test versions at the clean machine's feed
+        if: ${{ inputs.update_check }}
+        run: node scripts/windows-update-source.ts
       - run: pnpm build
         env:
           INFINITARY_RELEASE_VERSION: ${{ inputs.version }}
@@ -192,6 +202,7 @@ jobs:
       # (.github/actions/electron-download/zips.mjs), as the Linux packages do.
       - name: Build the installer
         id: installer
+        if: ${{ !inputs.update_check }}
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
@@ -204,6 +215,20 @@ jobs:
           (cd windows-installer && sha256sum *.exe | tee SHA256SUMS)
           [[ "$(wc -l < windows-installer/SHA256SUMS)" -eq 1 ]] || { echo 'expected exactly one installer' >&2; exit 1; }
           echo "sums=$(cat windows-installer/SHA256SUMS)" >> "$GITHUB_OUTPUT"
+      # Each test version from the one build above, only its version told apart.
+      - name: Build the update check's test versions
+        if: ${{ inputs.update_check }}
+        run: |
+          node .github/actions/electron-download/zips.mjs win32 x64
+          mkdir -p windows-installer
+          for version in $(node scripts/windows-update-source.ts); do
+            rm -rf dist
+            pnpm exec electron-builder --win --config electron-builder.win.yml --publish never \
+              -c.extraMetadata.version="$version" \
+              -c.electronDownload.cache="$electron_config_cache" -c.electronDownload.isVerifyChecksum=false
+            cp dist/*-setup.exe windows-installer/
+          done
+          (cd windows-installer && sha256sum *.exe | tee SHA256SUMS)
       - name: Keep electron-builder's tools
         if: ${{ !cancelled() }}
         uses: ./.github/actions/electron-builder-tools
@@ -220,7 +245,7 @@ jobs:
     name: ${{ format('{0} · Install and run the Windows app (fresh Windows 11{1})', (inputs.trigger || 'Manual request'), (strategy.job-total > 1 && format('; round {0} of {1}', matrix.round, strategy.job-total) || '')) }}
     needs: build
     # The PC's clean machine never takes a hosted run's installer.
-    if: ${{ !inputs.hosted }}
+    if: ${{ !inputs.hosted && !inputs.update_check }}
     # One virtual machine per round, side by side on the one installer; a
     # failed round never cancels the others, so every round reports.
     strategy:
@@ -334,13 +359,104 @@ jobs:
           INFINITARY_INSTALLED_EVIDENCE: ${{ runner.temp }}/windows-evidence
           INFINITARY_INSTALLED_VERSION: ${{ needs.build.outputs.version }}
           INFINITARY_WINDOWS_HOME_LINK: ${{ inputs.home_link }}
-        run: pnpm exec playwright test --config playwright.windows.config.ts
+        run: pnpm exec playwright test --config playwright.windows.config.ts tests/windows/installed-windows.spec.ts
       # Kept even when the job's timeout cancels it, so a hang leaves its
       # pictures and trace.
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: ${{ always() }}
         with:
           name: ${{ format('windows-evidence-round-{0}', matrix.round) }}
+          path: |
+            ${{ runner.temp }}/windows-evidence
+            test-results/windows
+          if-no-files-found: ignore
+          retention-days: 7
+
+  update:
+    name: ${{ format('{0} · Update the Windows app on {1} (fresh Windows 11)', (inputs.trigger || 'Manual request'), matrix.channel) }}
+    needs: build
+    # On request only (docs/windows.md, "The update check"): each channel's
+    # older test version installed on its own fresh Windows 11 machine,
+    # updated by the app itself from the machine's own feed.
+    if: ${{ !inputs.hosted && inputs.update_check }}
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [alpha, stable]
+    runs-on: ${{ vars.WINDOWS_CLEAN_RUNNER || 'shell-pc-win11' }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: powershell
+    env:
+      GIT_TERMINAL_PROMPT: '0'
+      GCM_INTERACTIVE: never
+      GIT_CONFIG_COUNT: '1'
+      GIT_CONFIG_KEY_0: credential.helper
+      GIT_CONFIG_VALUE_0: ''
+    steps:
+      - name: Git Bash for the job's own steps
+        run: |
+          $ProgressPreference = 'SilentlyContinue'
+          $archive = Join-Path $env:RUNNER_TEMP 'PortableGit.7z.exe'
+          Invoke-WebRequest -UseBasicParsing -Uri $env:PORTABLE_GIT -OutFile $archive
+          if ((Get-FileHash -Algorithm SHA256 $archive).Hash.ToLower() -ne $env:PORTABLE_GIT_SHA256) { throw 'the portable Git download differs from its release' }
+          $dir = Join-Path $env:RUNNER_TEMP 'job-git'
+          $p = Start-Process $archive -ArgumentList '-y', "-o$dir" -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "the portable Git unpacked with $($p.ExitCode)" }
+          Add-Content $env:GITHUB_PATH (Join-Path $dir 'cmd')
+          Add-Content $env:GITHUB_PATH (Join-Path $dir 'bin')
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
+      - uses: ./.github/actions/pnpm
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - uses: ./.github/actions/electron-download
+      # The journey reads the same release source the test versions carry.
+      - run: |
+          pnpm install --frozen-lockfile --ignore-scripts
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/check-installed-packages.ts
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/generate-messages.ts --compiled
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/windows-update-source.ts
+        timeout-minutes: 20
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: windows-installer
+          path: ${{ runner.temp }}/windows-installer
+      - name: Check the installers against the build's list
+        working-directory: ${{ runner.temp }}/windows-installer
+        run: |
+          foreach ($line in Get-Content SHA256SUMS) {
+            $sum, $file = $line -split '\s+\*?', 2
+            if ((Get-FileHash -Algorithm SHA256 $file).Hash.ToLower() -ne $sum) { throw "$file differs from the build's" }
+          }
+      # The channel's older test version, as a person's double-click runs it.
+      - name: Install the older version
+        working-directory: ${{ runner.temp }}/windows-installer
+        env:
+          CHANNEL: ${{ matrix.channel }}
+        run: |
+          $older = node (Join-Path $env:GITHUB_WORKSPACE 'scripts/windows-update-source.ts') older $env:CHANNEL
+          if ($LASTEXITCODE -ne 0 -or -not $older) { throw "no older $env:CHANNEL test version" }
+          $setup = Join-Path (Get-Location) "Infinitary-$older-windows-x64-setup.exe"
+          $p = Start-Process $setup -ArgumentList '/S', '--force-run' -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "the installer ended with $($p.ExitCode)" }
+      - name: Update the installed app
+        env:
+          INFINITARY_INSTALLED_EVIDENCE: ${{ runner.temp }}/windows-evidence
+          INFINITARY_UPDATE_CHANNEL: ${{ matrix.channel }}
+          INFINITARY_UPDATE_INSTALLERS: ${{ runner.temp }}/windows-installer
+        run: pnpm exec playwright test --config playwright.windows.config.ts tests/windows/windows-update.spec.ts
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: ${{ always() }}
+        with:
+          name: ${{ format('windows-update-evidence-{0}', matrix.channel) }}
           path: |
             ${{ runner.temp }}/windows-evidence
             test-results/windows

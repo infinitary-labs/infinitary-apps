@@ -539,7 +539,9 @@ describe("the signed channel workflow", () => {
       "${{ steps.rehearsal-files.outputs.windows }}",
     );
     // The feed rehearsal may read a not-yet-public repository, but cannot publish.
-    expect(step("feed-rehearsal").run).toContain("scripts/publish-feeds.sh rehearsal");
+    expect(step("feed-rehearsal").run).toContain(
+      ".release-tooling/scripts/publish-feeds.sh rehearsal",
+    );
     // electron-builder never publishes on its own either.
     expect(step("package").run).toContain("--publish never");
   });
@@ -713,9 +715,24 @@ describe("the signed channel workflow", () => {
     // Its fetch-back's checks are the workflow's own too, with every place's
     // at once (INF-4347's review).
     const fetcher = ["scripts/fetch-without-credential.sh", "scripts/fetch-back-copies.sh"];
+    // Its feeds are written by the workflow's own feed writer and what it
+    // loads, so a release from an older commit names every file the workflow
+    // published (INF-5230's review; tests/release-publication.test.ts runs it
+    // from this checkout).
+    const feeds = [
+      "scripts/publish-feeds.sh",
+      "scripts/publish-storage-feeds.ts",
+      "scripts/release-feeds.ts",
+      "scripts/release-storage.mjs",
+      "scripts/moduleRunner.ts",
+      "src/core/update/",
+      "src/shared/",
+      "packaging/release-source.json",
+      "packaging/mac-installation.json",
+    ];
     for (const [job, jobSteps, tooling] of [
       ["release", signingSteps, [...gate, notarizer, zipsReader]],
-      ["publish", publishSteps, [...gate, ...packageCheck, ...downloads, ...fetcher]],
+      ["publish", publishSteps, [...gate, ...packageCheck, ...downloads, ...fetcher, ...feeds]],
     ] as const) {
       const fetched = jobSteps.findIndex(
         (candidate) => candidate.with?.path === ".release-tooling",

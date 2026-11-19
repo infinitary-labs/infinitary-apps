@@ -143,7 +143,8 @@ An alpha publishes the installer its own Windows check built, installed and ran,
 It goes beside the alpha's other downloads, under the same rules: on the release record and on Cloudflare under `releases/v<version>/`, each with a `.sha256` sidecar, never on a Homebrew tap, and a retry adopts the bytes a place already holds.
 The publication job fetches it back from the record and, without a credential, from Cloudflare, and checks each copy against the upload job's list before any feed moves.
 The builds file then names it at `channels.alpha.systems.windows.x64.exe` ("Builds by system and chip" in `docs/alpha.md`), and the feed writer runs the app's own builds reader on the next file before the feed switches, so a Windows entry can never make an installed copy refuse the whole file.
-A rehearsal checks and lists the installer and writes it into its rehearsed builds file, and uploads nothing.
+Both the Cloudflare upload and the feed writer are the workflow's own copies, never the release source's, so an alpha cut from an older commit publishes and names its installer too.
+A rehearsal checks and lists the installer and writes it into its rehearsed builds file, and publishes no release download; like any rehearsal it still keeps its run's artifacts and sends the Mac app and disk image to Apple for notarization.
 A stable promotion builds no Windows installer: when it hands its version to alpha, alpha's entry names no Windows build until the next alpha.
 The alpha's release notes call it an unsigned early build: Windows warns before it runs, and a PC with Smart App Control on blocks it until the signed build.
-The downloads page lists it from the builds file.
+This gives the downloads page the entry it reads; the page lists the installer once its own change is deployed.

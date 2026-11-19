@@ -665,7 +665,8 @@ describe("the signed channel workflow", () => {
      * is an alpha's Windows installer, with the windows job's sums as its
      * output carries them. The record and both taps are a stand-in `gh`'s,
      * and Cloudflare is the disposable storage file the publication
-     * command's own test uses.
+     * command's own test uses. The job's tooling checkout is laid out from
+     * the files it names, and its steps run that copy where they name it.
      */
     const uploadAfterChecks = (
       produced: ReturnType<typeof produce>,
@@ -690,6 +691,10 @@ describe("the signed channel workflow", () => {
         writeFileSync(join(download, windowsName), options.windows ?? windowsBytes);
         writeFileSync(join(download, "SHA256SUMS"), `${windowsSums}\n`);
       }
+      const tooling = join(temp, "workflow-tooling");
+      const checkout = uploadSteps.find((candidate) => candidate.with?.path === ".release-tooling");
+      for (const pattern of String(checkout?.with?.["sparse-checkout"]).trim().split("\n"))
+        cpSync(join(root, pattern), join(tooling, pattern), { recursive: true });
       const outputs: Record<string, Record<string, string>> = {
         "handoff-check": accepted(consumed),
       };
@@ -712,10 +717,11 @@ describe("the signed channel workflow", () => {
         if (candidate.if && workflowValue(candidate.if, contexts) !== true) continue;
         const output = join(temp, `${id}-output`);
         writeFileSync(output, "");
-        results[id] = run(candidate.run, {
+        results[id] = run(candidate.run.replaceAll(".release-tooling/", '"$TOOLING"/'), {
           ...release.env,
           ...jobEnv("upload", produced.resolve),
           ...stepEnv(candidate, contexts),
+          TOOLING: tooling,
           PATH: `${places.bin}:${process.env.PATH}`,
           RUNNER_TEMP: temp,
           GITHUB_OUTPUT: output,
@@ -981,9 +987,9 @@ describe("the signed channel workflow", () => {
     });
 
     // Published bytes never change, wherever the last attempt stopped: a
-    // disk image or Linux package any place holds is the one every place
+    // disk image, Windows installer or Linux package any place holds is the one every place
     // gets, and the recipes beside it are rendered from it.
-    it("keeps the disk image and Linux packages any place already holds on a retry", () => {
+    it("keeps the disk image, Windows installer and Linux packages any place already holds on a retry", () => {
       const places = standInGh(source);
       places.seed(recordRepository, tag, source, {
         [zipName]: "published first",
@@ -993,11 +999,22 @@ describe("the signed channel workflow", () => {
       places.seed(tapRepository, tapTag, "f".repeat(40), { [deb]: "deb published first" });
       const produced = produce({ record: places });
       const consumed = consume(produced);
-      // The last attempt put its disk image on Cloudflare only, then stopped.
-      seedCloudflare(consumed, { [dmgName]: "image published first" });
+      // The last attempt put its disk image and its Windows installer on
+      // Cloudflare only, then stopped.
+      seedCloudflare(consumed, {
+        [dmgName]: "image published first",
+        [windowsName]: "installer published first",
+      });
       const outputs = succeeded(uploadAfterChecks(produced, consumed, places));
       const files = JSON.parse(outputs.files?.files ?? "{}") as Record<string, string>;
       expect(files[dmgName]).toBe(shaOf("image published first"));
+      expect(files[windowsName]).toBe(shaOf("installer published first"));
+      expect(held(releaseFiles(places, recordRepository, tag))[windowsName]).toBe(
+        files[windowsName],
+      );
+      expect(shaOf(cloudflare(consumed)[`releases/v${version}/${windowsName}`] ?? "")).toBe(
+        files[windowsName],
+      );
       expect(files[deb]).toBe(shaOf("deb published first"));
       expect(files[zipName]).toBe(shaOf("published first"));
       expect(held(releaseFiles(places, recordRepository, tag))[dmgName]).toBe(files[dmgName]);

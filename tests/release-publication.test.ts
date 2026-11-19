@@ -2,11 +2,13 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   chmodSync,
+  cpSync,
   existsSync,
   mkdirSync,
   readdirSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
@@ -25,6 +27,7 @@ import {
   type UpdateTargets,
 } from "../src/core/update/updateChannels";
 import { declaredStepOnly } from "./helpers/olderCask";
+import { loadYamlFile } from "./helpers/releaseWorkflows";
 import { scratchDir } from "./helpers/scratchDirs";
 import { baseEnv, standInGh } from "./helpers/standInGh";
 
@@ -827,6 +830,34 @@ describe("a release's published assets", () => {
   });
 });
 
+/**
+ * A release job's workspace for an older source commit, one that predates
+ * every publisher: the source holds none of the release scripts, and the
+ * workflow's own copies sit where the upload and publish jobs' tooling
+ * checkouts put them, with only the files those checkouts name. A manual or
+ * recovery alpha builds such an older commit, and its Windows installer must
+ * still reach Cloudflare and the builds file (INF-5230's piece 1).
+ */
+function olderSourceWorkspace(dir: string): string {
+  const workflow = loadYamlFile(".github/workflows/release.yml") as {
+    jobs: Record<string, { steps: Array<{ with?: Record<string, unknown> }> }>;
+  };
+  const workspace = join(dir, "workspace");
+  const tooling = join(workspace, ".release-tooling");
+  for (const job of ["upload", "publish"]) {
+    const checkout = workflow.jobs[job]?.steps.find(
+      (step) => step.with?.path === ".release-tooling",
+    );
+    expect(checkout?.with?.["sparse-checkout-cone-mode"], job).toBe(false);
+    for (const pattern of String(checkout?.with?.["sparse-checkout"]).trim().split("\n"))
+      cpSync(join(root, pattern), join(tooling, pattern), { recursive: true });
+  }
+  // The source's own installed packages, which the job installs before it publishes.
+  symlinkSync(join(root, "node_modules"), join(workspace, "node_modules"));
+  cpSync(join(root, "package.json"), join(workspace, "package.json"));
+  return workspace;
+}
+
 // INF-640: replacement feeds publish without Homebrew; exact artifacts precede one atomic commit.
 describe("the Homebrew-free feed publication", () => {
   function fixture() {
@@ -863,6 +894,7 @@ describe("the Homebrew-free feed publication", () => {
     git("-C", seed, "commit", "-qm", "chore: seed the download source");
     git("-C", seed, "push", "-q", "origin", "HEAD:main");
     const before = git("--git-dir", bare, "rev-parse", "main");
+    const workspace = olderSourceWorkspace(dir);
     // The publisher consumes already-verified opaque bytes; the signed workflow owns their format.
     const bytes = readFileSync(join(root, "packaging/build/icon.png"));
     let attempt = 0;
@@ -890,7 +922,7 @@ describe("the Homebrew-free feed publication", () => {
       );
       const work = join(dir, `publication-${attempt}`);
       const options = {
-        cwd: root,
+        cwd: workspace,
         encoding: "utf8" as const,
         env: {
           ...env,
@@ -914,12 +946,16 @@ describe("the Homebrew-free feed publication", () => {
       if (mode === "live") {
         const upload = spawnSync(
           process.execPath,
-          [join(root, "scripts/publish-downloads.ts")],
+          [join(workspace, ".release-tooling/scripts/publish-downloads.ts")],
           options,
         );
         if (upload.status !== 0) return { ...upload, work };
       }
-      const result = spawnSync("bash", [join(root, "scripts/publish-feeds.sh"), mode], options);
+      const result = spawnSync(
+        "bash",
+        [join(workspace, ".release-tooling/scripts/publish-feeds.sh"), mode],
+        options,
+      );
       expect(existsSync(brewCalled)).toBe(false);
       return { ...result, work };
     };

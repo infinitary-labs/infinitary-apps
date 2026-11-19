@@ -333,6 +333,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   After every public download passes fetch-back, `scripts/release-feeds.ts` writes the moved channels' standard updater metadata, targets, builds, and immutable per-version manifest into one immutable R2 snapshot.
   `scripts/publish-storage-feeds.ts` retains previous files, verifies the new snapshot publicly, and conditionally switches `feeds/current.json` last.
   See “Download storage” below for the object and credential contract.
+  The publication job runs the workflow's own copies of these scripts and the code they load, never the release source's, so a release built from an older commit still writes every entry the workflow publishes.
   An alpha moves only alpha; a stable moves stable and also alpha when newer than alpha's current target.
   A late older publication, inconsistent manifest, invalid existing file, or changed bytes at a published version is refused.
   A concurrent pointer write is refused rather than overwriting the other publication; read the new snapshot before publishing again.
@@ -371,7 +372,7 @@ Its Linux recipes use the tap's download URLs in that mode (`RECIPE_HOST=tap`), 
 A partial configuration fails before publication.
 Upload credentials are passed only through the recipient's environment and signed HTTPS request headers; they are never placed on a command line or printed.
 
-`scripts/publish-downloads.ts` uploads the finalized release-record bytes to `releases/v<version>/<asset>` and adds a SHA-256 sidecar for every asset.
+`scripts/publish-downloads.ts`, the workflow's own copy as with the feed writer, uploads the finalized release-record bytes to `releases/v<version>/<asset>` and adds a SHA-256 sidecar for every asset.
 The S3-compatible uploader signs each payload's SHA-256 and uses `If-None-Match: *`; an existing object is accepted only after its digest agrees, never overwritten.
 An upload that R2 answers with a server error, timeout or request to slow down (HTTP 5xx, 408 or 429), or whose connection is lost, says nothing about the object, so it is tried again 30 seconds later, for up to 30 minutes a write, each wait named in the log by the object's key alone.
 The condition makes that safe: a later try either creates the object or is refused because an earlier try took it, and then the digest of the copy R2 holds still has to agree.

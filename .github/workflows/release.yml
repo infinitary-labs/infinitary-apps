@@ -1545,7 +1545,9 @@ jobs:
 
       # The package check is the workflow's own, as the launch gate is
       # (INF-1768): a stable checks out an older alpha's commit, which may
-      # predate it.
+      # predate it. So is the Cloudflare upload, so a release from an older
+      # commit uploads every file the workflow publishes, an alpha's Windows
+      # installer included.
       - id: tooling
         name: Check out the workflow's own package check
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -1558,6 +1560,9 @@ jobs:
           sparse-checkout: |
             .github/actions/linux-packages/
             scripts/linux-package-sums.ts
+            scripts/publish-downloads.ts
+            scripts/release-storage.mjs
+            packaging/release-source.json
       - name: Wait until GitHub takes the job's token
         if: ${{ !cancelled() && steps.tooling.outcome == 'failure' }}
         env:
@@ -1849,7 +1854,7 @@ jobs:
             while IFS= read -r NAME; do put record "$GITHUB_REPOSITORY" "$TAG_NAME" "$LINUX/$NAME"; done < "$LINUX/assets.txt"
           }
           cloudflare() {
-            DIST_ZIP="$ZIP" DIST_DMG="$DMG" DIST_WINDOWS="$WINDOWS" LINUX_DIRECTORY="$LINUX" node scripts/publish-downloads.ts
+            DIST_ZIP="$ZIP" DIST_DMG="$DMG" DIST_WINDOWS="$WINDOWS" LINUX_DIRECTORY="$LINUX" node .release-tooling/scripts/publish-downloads.ts
           }
           tap() {
             export GH_TOKEN="$TAP_TOKEN" TITLE="$TAP_TITLE" TARGET=main LATEST=false NOTES_FILE="$WORK/tap-notes.md"
@@ -2027,7 +2032,10 @@ jobs:
       # every fetch-back launches the app through it. Nothing is packaged here.
       # A rehearsal's Linux fetch takes the workflow's own package check too,
       # as the upload job does, and every keyless fetch-back the workflow's own
-      # fetcher, which waits out a host that is not answering (INF-3224).
+      # fetcher, which waits out a host that is not answering (INF-3224). The
+      # feeds are written by the workflow's own feed writer, live and in a
+      # rehearsal, so a release from an older commit names every file the
+      # workflow published, an alpha's Windows installer included.
       - id: tooling
         name: Check out the workflow's own launch gate and package check
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -2045,6 +2053,15 @@ jobs:
             .github/actions/electron-download/
             scripts/fetch-without-credential.sh
             scripts/fetch-back-copies.sh
+            scripts/publish-feeds.sh
+            scripts/publish-storage-feeds.ts
+            scripts/release-feeds.ts
+            scripts/release-storage.mjs
+            scripts/moduleRunner.ts
+            src/core/update/
+            src/shared/
+            packaging/release-source.json
+            packaging/mac-installation.json
       - name: Wait until GitHub takes the job's token
         if: ${{ !cancelled() && steps.tooling.outcome == 'failure' }}
         env:
@@ -2187,7 +2204,7 @@ jobs:
           DIST_ZIP="$RUNNER_TEMP/public-verify/$ZIP_NAME" DIST_DMG="$RUNNER_TEMP/public-verify/$DMG_NAME" \
           DIST_WINDOWS="${WINDOWS_NAME:+$RUNNER_TEMP/public-verify/$WINDOWS_NAME}" \
           LINUX_MANIFEST="$RUNNER_TEMP/linux-release/manifest.json" WORK="$RUNNER_TEMP/release-feeds" \
-            scripts/publish-feeds.sh live
+            .release-tooling/scripts/publish-feeds.sh live
 
       # A rehearsal's copies are the run's own: the signing job's checked
       # files and the linux job's packages, each checked against what the
@@ -2288,7 +2305,7 @@ jobs:
           DIST_WINDOWS: ${{ steps.rehearsal-files.outputs.windows }}
         run: |
           LINUX_MANIFEST="$RUNNER_TEMP/linux-release/manifest.json" WORK="$RUNNER_TEMP/release-feeds" \
-            scripts/publish-feeds.sh rehearsal
+            .release-tooling/scripts/publish-feeds.sh rehearsal
 
       - name: Keep the rehearsed release metadata
         if: ${{ needs.resolve.outputs.dry_run == 'true' }}

@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { parsePointer, publicDigest, publishSnapshot, ReleaseStorage } from "./release-storage.mjs";
 
 const mode = process.argv[2];
@@ -11,7 +12,9 @@ if (!work) throw new Error("Missing WORK");
 const directory = join(work, "feeds");
 mkdirSync(directory, { recursive: true });
 if (readdirSync(directory).length) throw new Error("Use a fresh WORK folder for each publication attempt");
-const configuration = JSON.parse(readFileSync("packaging/release-source.json", "utf8"));
+// The release workflow runs its own copy, whatever the release's source commit
+// holds, so it reads the configuration and the feed writer beside itself (docs/alpha.md).
+const configuration = JSON.parse(readFileSync(new URL("../packaging/release-source.json", import.meta.url), "utf8"));
 // A rehearsal never reads a credential, creates a storage client, or sends a write.
 const storage = mode === "live" ? ReleaseStorage.fromEnvironment() : undefined;
 const previous = storage ? await storage.read("feeds/current.json") : null;
@@ -31,7 +34,7 @@ const required = (name: string) => {
   if (!value) throw new Error(`Missing ${name}`);
   return value;
 };
-const summary = execFileSync(process.execPath, ["scripts/release-feeds.ts", "--directory", directory,
+const summary = execFileSync(process.execPath, [fileURLToPath(new URL("release-feeds.ts", import.meta.url)), "--directory", directory,
   "--version", required("VERSION"), "--channel", required("CHANNEL"), "--source-commit", required("SOURCE_COMMIT"),
   "--zip", required("DIST_ZIP"), "--dmg", required("DIST_DMG"), "--linux", required("LINUX_MANIFEST"),
   // An alpha's Windows installer, when the release publishes one (docs/windows.md).

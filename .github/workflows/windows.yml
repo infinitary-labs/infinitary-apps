@@ -215,19 +215,24 @@ jobs:
           (cd windows-installer && sha256sum *.exe | tee SHA256SUMS)
           [[ "$(wc -l < windows-installer/SHA256SUMS)" -eq 1 ]] || { echo 'expected exactly one installer' >&2; exit 1; }
           echo "sums=$(cat windows-installer/SHA256SUMS)" >> "$GITHUB_OUTPUT"
-      # Each test version from the one build above, only its version told apart.
+      # Each test version from the one build above, only its version told
+      # apart. The installers wait outside the project until the last is
+      # built, so no later version packs an earlier one's installer.
       - name: Build the update check's test versions
         if: ${{ inputs.update_check }}
         run: |
           node .github/actions/electron-download/zips.mjs win32 x64
-          mkdir -p windows-installer
+          built="$RUNNER_TEMP/update-installers"
+          mkdir -p "$built"
           for version in $(node scripts/windows-update-source.ts); do
             rm -rf dist
             pnpm exec electron-builder --win --config electron-builder.win.yml --publish never \
               -c.extraMetadata.version="$version" \
               -c.electronDownload.cache="$electron_config_cache" -c.electronDownload.isVerifyChecksum=false
-            cp dist/*-setup.exe windows-installer/
+            cp dist/*-setup.exe "$built/"
           done
+          rm -rf windows-installer
+          mv "$built" windows-installer
           (cd windows-installer && sha256sum *.exe | tee SHA256SUMS)
       - name: Keep electron-builder's tools
         if: ${{ !cancelled() }}

@@ -297,6 +297,17 @@ fetch(process.argv[1]).then((r) => String(r.status), (e) => String(e.cause?.code
     };
     const showPanel = async (picture: string) => {
       const indicator = page().getByRole("button", { name: `Update available: ${newer}` });
+      // The window reads the offer when it opens and once an hour, so a check
+      // asked of the command alone reaches it only when the command's own first
+      // check came before the window opened. Settings -> General's Version row
+      // reads it as it opens, as a person opening it would.
+      if (!(await indicator.isVisible())) {
+        await page().getByRole("button", { name: "Settings", exact: true }).click();
+        await page().getByRole("tab", { name: "General", exact: true }).click();
+        await expect(page().locator('[data-setting="version"]')).toBeVisible();
+        await page().keyboard.press("Escape");
+        await expect(indicator).toBeVisible();
+      }
       if (!(await page().locator("[data-update-channel]").isVisible())) await indicator.click();
       const panel = page().locator("[data-update-channel]");
       await expect(panel).toBeVisible();

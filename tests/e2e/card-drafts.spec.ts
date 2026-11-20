@@ -154,8 +154,12 @@ test("a card's unsent picks and words follow the captain between windows and acr
     });
 
     await test.step("the first mate's computer keeps them across its own restart", async () => {
+      const line = (air as LaunchedApp).page.locator("[data-remote-control]");
       await pro.close();
+      // The joined Mac hears the first mate's computer go, so its later "live" is the link that came back.
+      await expect(line).toHaveAttribute("data-freshness", "out-of-reach");
       pro = await launchApp({ userDataDir: homeDir, reuseMockProvider: provider, env: PRO_ENV });
+      await expect(line).toHaveAttribute("data-freshness", "live", { timeout: 30_000 });
       await showCard(pro.page, TITLE);
       await expect(harbour(pro.page, "South Basin")).toBeChecked();
       await expect(tide(pro.page)).toBeChecked();

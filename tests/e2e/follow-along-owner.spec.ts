@@ -7,7 +7,7 @@ import { RUN_MARKER, RunMarkerSchema } from "../../src/main/runCommand";
 import { runLabelOf } from "../../src/shared/codeNames";
 import { scratchDir } from "../helpers/scratchDirs";
 import { endCommands, run, runEnv } from "./commandRun";
-import { GITHUB_STUB_KEY, seedGitHubSignIn } from "./githubStub";
+import { GITHUB_STUB_KEY, type GitHubStub, seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { type LaunchedApp, launchApp } from "./launch";
 import { type ServiceManagerStandIn, serviceManagerStandIn } from "./serviceManagerStandIn";
 
@@ -103,6 +103,7 @@ test("a window follows along beside the command its agent started, and never sto
     return joined.grant.deviceId;
   };
   let air: LaunchedApp | undefined;
+  let enterprise: GitHubStub | undefined;
   try {
     await test.step("reopened beside a command started by hand with a grant waiting, the window stays and the command keeps running", async () => {
       const userDataDir = scratchDir("infinitary-follow-hand-");
@@ -263,11 +264,14 @@ test("a window follows along beside the command its agent started, and never sto
       standIn = serviceManagerStandIn(homeDir);
       // A GitHub Enterprise sign-in saved here before any database, which only its file's presence answers.
       seedGitHubSignIn(userDataDir, GITHUB_STUB_KEY, "git.example.com");
+      // Its host stands in on loopback, so the command's check of that sign-in reaches nothing outside.
+      enterprise = await startGitHubStub({ host: "git.example.com" });
       await addedByAddress(join(userDataDir, "work"));
       air = await launchApp({
         userDataDir,
         homeDir,
         env: {
+          ...enterprise.env,
           ...standIn.env,
           INFINITARY_WINDOW_STARTS_RUN: "1",
           INFINITARY_DEVICE_NAME: "Mac mini",
@@ -291,6 +295,7 @@ test("a window follows along beside the command its agent started, and never sto
     });
   } finally {
     await air?.close();
+    await enterprise?.close();
     await pro.close();
   }
 });

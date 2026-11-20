@@ -171,6 +171,21 @@ describe("the command the window starts, on a Mac", () => {
     await stopRunAgent(context, { forget: true });
     expect(runAgentInPlace(context)).toBe(false);
   });
+
+  // The review of INF-5409: launchd runs only this agent's own runs, so letting the agent go for a
+  // join ends its job whichever run it holds now: one it started again during the join stops too,
+  // never left holding the data folder beside the view. A run started by hand is never the job's.
+  it("ends the agent's job for a join though the run it holds is not the one the window named", async () => {
+    const { context, asked } = mac();
+    await startRunAgent(context);
+    asked.length = 0;
+    await stopRunAgent(context, {
+      forget: true,
+      run: { pid: 4242, startedAt: "2026-10-25T17:00:00.000Z" },
+    });
+    expect(asked).toEqual([["bootout", `gui/502/${LABEL}`]]);
+    expect(runAgentInPlace(context)).toBe(false);
+  });
 });
 
 describe("the command the window starts, on Linux", () => {
@@ -272,6 +287,22 @@ describe("the command the window starts, on Linux", () => {
     await stopRunAgent(context, { forget: true });
     expect(existsSync(unit)).toBe(false);
     expect(existsSync(wantedBy(unit))).toBe(false);
+    expect(asked).toEqual([
+      ["--user", "daemon-reload"],
+      ["--user", "stop", LABEL],
+    ]);
+  });
+
+  // The review of INF-5409: the user service runs only this agent's own runs, so a join ends it
+  // whichever run it holds now, one systemd started again during the join included.
+  it("stops the agent's service for a join though the run it holds is not the one the window named", async () => {
+    const { context, asked } = linux();
+    await startRunAgent(context);
+    asked.length = 0;
+    await stopRunAgent(context, {
+      forget: true,
+      run: { pid: 4242, startedAt: "2026-10-25T17:00:00.000Z" },
+    });
     expect(asked).toEqual([
       ["--user", "daemon-reload"],
       ["--user", "stop", LABEL],

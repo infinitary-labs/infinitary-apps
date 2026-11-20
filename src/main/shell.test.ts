@@ -1219,6 +1219,8 @@ describe("a Mac that controls another and runs its work", () => {
     await mini.shell.start();
     expect(mini.shell.thisMac().role).toBe("view");
     expect(mini.joined.read()?.grant.deviceId).toBe(grant.deviceId);
+    // Its SSH connections and core still stop after the connection failed to close.
+    expect(mini.own.stopSsh).toHaveBeenCalledTimes(1);
     expect(mini.own.dispose).toHaveBeenCalledTimes(1);
   });
 

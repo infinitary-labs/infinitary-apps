@@ -231,7 +231,7 @@ On a Mac the file in `~/Library/LaunchAgents` is the agent `start-at-boot` write
 A login item the window had before moves to the command the first time the window starts beside it, and the window's own is turned off.
 
 **Joining another computer** from beside the command: the command's first mate is this computer's own, so joining stops it and lets the agent go, its files and the Linux service with it, and the window becomes a view of the other computer (`Shell.join`, `src/main/shell.ts`).
-It is offered only while the command running is the one the window's agent started, and stops only that run; beside a command started by hand it is not offered (`docs/view.md`, "Following along").
+It is offered only while the command running is the one the window's agent started, and stops that run, and on a Mac or Linux the agent's job with any run it started again meanwhile, never a run started by hand; beside a command started by hand it is not offered (`docs/view.md`, "Following along").
 Joining by its address works there too, as an installed app's first launch offers it (INF-1827, INF-4935): the command's first mate keeps this computer's SSH trust and Infinitary's own key, so the window asks it each step with `inf:devices:link-at`, and it signs in to the other computer and answers the link to the window's program alone, never its page (`BesideWindow.linkAt`, `PROGRAM_ONLY_CHANNELS`).
 The window then joins with the held link as a pasted one joins, stopping the command as above.
 A command from before that request does not list the `join-by-address-beside` change, and the window says it could not ask that computer for a link.

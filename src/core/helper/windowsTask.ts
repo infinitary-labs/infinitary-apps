@@ -401,7 +401,10 @@ export function watchRunStop(
     } catch {
       return null;
     }
-    rmSync(file, { force: true });
+    // A request that cannot be taken away still counts; the next reading meets it again.
+    try {
+      rmSync(file, { force: true });
+    } catch {}
     return typeof request === "object" && request !== null
       ? (request as Record<string, unknown>)
       : null;

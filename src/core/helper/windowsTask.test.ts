@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -210,6 +210,29 @@ describe("a stop asked of the run on Windows", () => {
         }
       }
   });
+
+  // The review of INF-5409: a stop file that cannot be taken away cancels no other request, and
+  // reading it throws nothing as the run starts.
+  it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+    "stops for Stop's request though neither request can be taken away",
+    () => {
+      const dataDir = scratchDir("windows-stop-");
+      requestRunStop(dataDir);
+      requestRunStop(dataDir, new Date(), { pid: 4242, startedAt: "2026-10-25T17:05:00.000Z" });
+      // A folder whose files cannot be removed, as a file another program holds open on Windows.
+      chmodSync(dataDir, 0o500);
+      let stops = 0;
+      try {
+        watchRunStop(dataDir, new Date(Date.now() - 1_000), () => (stops += 1), 10, {
+          pid: 5151,
+          startedAt: "2026-10-25T17:05:00.000Z",
+        })();
+        expect(stops).toBe(1);
+      } finally {
+        chmodSync(dataDir, 0o700);
+      }
+    },
+  );
 
   it("leaves a run alone for a request older than its own start, and takes that request away", async () => {
     const dataDir = scratchDir("windows-stop-");

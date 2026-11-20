@@ -116,8 +116,11 @@ const FOLLOW_EVERY_MS = 5_000;
 /** How often the open aside reads this computer again, so it follows its addresses and Remote Login. */
 const SET_UP_RENEW_MS = 5_000;
 
-/** What the window promises once its first mate's computer adds this one (`useFollowAdded`). */
-type AfterAdd = "waits" | "keeps" | "stays";
+/**
+ * What the window promises once its first mate's computer adds this one
+ * (`useFollowAdded`); `unknown` promises nothing until the shell answers.
+ */
+type AfterAdd = "waits" | "keeps" | "stays" | "unknown";
 
 /**
  * Following along at first launch (docs/view.md, "Joining"): while this
@@ -128,7 +131,8 @@ type AfterAdd = "waits" | "keeps" | "stays";
  * (`FirstRunView.untouched`) and, beside a command, only from one this
  * window's starter owns; otherwise this window keeps its own first mate,
  * and beside a command started elsewhere it cannot join at all. Until the
- * shell answers, joining is unknown and not offered; the window keeps
+ * shell answers, joining is unknown and not offered, and the status
+ * promises nothing; the window keeps
  * asking, so the answer follows a command that ends or is replaced. A
  * profile with something done is asked too, so the shell keeps that answer
  * after a restart.
@@ -161,8 +165,13 @@ function useFollowAdded(
       clearInterval(every);
     };
   }, [can]);
-  const afterAdd: AfterAdd =
-    answer && !answer.joins ? "stays" : untouched && (answer?.follows ?? true) ? "waits" : "keeps";
+  const afterAdd: AfterAdd = !answer
+    ? "unknown"
+    : !answer.joins
+      ? "stays"
+      : untouched && answer.follows
+        ? "waits"
+        : "keeps";
   return { afterAdd, joins: answer?.joins ?? null };
 }
 
@@ -746,11 +755,13 @@ function SetUpStep(props: JoinAnotherMacViewProps & { here: SetUpHere | null }) 
         </>
       )}
       <p className="fm-join-sub fm-join-waiting" role="status">
-        {props.afterAdd === "waits"
-          ? m.devicesJoinSetUpWaiting()
-          : props.afterAdd === "stays"
-            ? m.devicesJoinSetUpStays()
-            : m.devicesJoinSetUpKept()}
+        {props.afterAdd === "unknown"
+          ? null
+          : props.afterAdd === "waits"
+            ? m.devicesJoinSetUpWaiting()
+            : props.afterAdd === "stays"
+              ? m.devicesJoinSetUpStays()
+              : m.devicesJoinSetUpKept()}
       </p>
       <div className="fm-join-buttons">
         <Button

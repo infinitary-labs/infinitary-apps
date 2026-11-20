@@ -697,10 +697,7 @@ export class Shell {
     if (mode?.kind === "home") {
       mode.detach();
       mode.window?.close();
-      // Devices hear the home quit through its SSH connections, which go after.
-      await mode.connection.close();
-      await mode.stopSsh();
-      await mode.core.dispose();
+      await closeHome(mode);
     }
   }
 
@@ -1137,13 +1134,7 @@ export class Shell {
     this.mode = null;
     mode.detach();
     mode.window?.close();
-    // Its core stops even when its connection or SSH does not close cleanly.
-    try {
-      await mode.connection.close();
-      await mode.stopSsh();
-    } finally {
-      await mode.core.dispose();
-    }
+    await closeHome(mode);
   }
 
   /**
@@ -1193,4 +1184,29 @@ function joinRefusal(error: unknown): Exclude<JoinOutcome, { ok: true }>["refuse
     }
   }
   return "unreachable";
+}
+
+/**
+ * Closes a home in order - its connection, then its SSH connections, through
+ * which devices hear it quit, then its core - running every step even when an
+ * earlier one fails, and rejecting with the first failure once all have run.
+ */
+async function closeHome(mode: {
+  connection: { close: () => Promise<void> };
+  stopSsh: () => Promise<void>;
+  core: { dispose: () => Promise<void> };
+}): Promise<void> {
+  let failed: { error: unknown } | undefined;
+  for (const step of [
+    () => mode.connection.close(),
+    () => mode.stopSsh(),
+    () => mode.core.dispose(),
+  ]) {
+    try {
+      await step();
+    } catch (error) {
+      failed ??= { error };
+    }
+  }
+  if (failed) throw failed.error;
 }

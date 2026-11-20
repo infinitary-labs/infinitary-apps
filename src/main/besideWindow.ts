@@ -496,8 +496,11 @@ export class BesideWindow {
    * The window joins a first mate on another computer: it closes, and the
    * command's first mate stops with nothing set to start it again; with
    * `only`, the window stops just that run, the one it joined or followed
-   * along from, and a stop asked through the folder names its process, so a
-   * run started by hand in its place keeps going.
+   * along from, and a stop asked through the folder or a signal names its
+   * process and start, so a run started by hand in its place keeps going. On
+   * a Mac or Linux the agent's launchd job or user service is let go too,
+   * which ends whichever run that job holds, one it started again during the
+   * join included: it only ever runs the agent's own runs.
    */
   async leave(only?: OwnedRun): Promise<void> {
     this.close();

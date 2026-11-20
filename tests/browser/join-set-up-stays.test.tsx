@@ -11,7 +11,8 @@ import { openSize, openWindow } from "./window";
  * stop nor leave, promises neither that it opens the first mate's computer by itself nor Paste its
  * link or Join by its address, though nothing was done here: the shell's answer says so, and both
  * join chips are unavailable from the mouse and the keyboard, with the line that says why. Before
- * the shell's first answer neither is offered either, and a later answer that a join works offers
+ * the shell's first answer neither is offered either, and the set-up aside promises nothing, and a
+ * later answer that a join works offers
  * both again. The
  * untouched profile's view is join-set-up.test.tsx.
  */
@@ -24,7 +25,8 @@ test("beside a first mate started outside the window, an untouched first launch 
   bridge.answer("inf:devices:follow-added", () => first.promise);
   await openSize();
   await openWindow(bridge);
-  const setUp = await shown("[data-join-set-up-chip]");
+  const setUp = () => shown("[data-join-set-up-chip]");
+  await setUp();
   const chips = () =>
     [
       document.querySelector<HTMLButtonElement>("[data-join-chip]"),
@@ -33,6 +35,20 @@ test("beside a first mate started outside the window, an untouched first launch 
   // Unknown is not allowed: neither join is offered, and no line says why yet.
   expect(chips()).toEqual([true, true]);
   expect(document.querySelector("[data-join-stays]")).toBeNull();
+  // The open aside promises neither a switch nor that this computer keeps its own first mate.
+  {
+    await userEvent.click(await setUp());
+    const aside = await shown("[data-join-set-up]");
+    await shown("[data-join-set-up-address]");
+    expect(aside.querySelector(".fm-join-waiting[role=status]")?.textContent).toBe("");
+    for (const promise of [
+      m.devicesJoinSetUpWaiting(),
+      m.devicesJoinSetUpKept(),
+      m.devicesJoinSetUpStays(),
+    ])
+      expect(aside.textContent).not.toContain(promise);
+    await userEvent.click(button(aside, m.devicesJoinCancel()));
+  }
   // The shell runs beside a command this window did not start: it neither follows nor joins.
   bridge.answer("inf:devices:follow-added", { followed: false, follows: false, joins: false });
   first.resolve({ followed: false, follows: false, joins: false });
@@ -43,10 +59,10 @@ test("beside a first mate started outside the window, an untouched first launch 
   const paste = document.querySelector<HTMLButtonElement>("[data-join-chip]");
   const byAddress = document.querySelector<HTMLButtonElement>("[data-join-address-chip]");
   expect([paste?.disabled, byAddress?.disabled]).toEqual([true, true]);
-  setUp.focus();
+  (await setUp()).focus();
   await userEvent.tab();
   expect([paste, byAddress]).not.toContain(document.activeElement);
-  await userEvent.click(setUp);
+  await userEvent.click(await setUp());
   const aside = await shown("[data-join-set-up]");
   await expect
     .poll(() => aside.querySelector(".fm-join-waiting[role=status]")?.textContent)

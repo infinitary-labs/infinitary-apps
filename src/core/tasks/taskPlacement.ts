@@ -252,7 +252,9 @@ export class TaskPlacement {
   /**
    * The approved version of an earlier part this task's working copy starts
    * on (`shape.built_on`, docs/task-graph.md, "A part that starts at
-   * approval"), written once at its start. Quiet, like the placement wait.
+   * approval"), written at its start and moved to a newer approved version
+   * of that part once the task's version builds on it ("Following the part
+   * under it", `followBase`). Quiet, like the placement wait.
    */
   setBuiltOn(id: string, builtOn: NonNullable<WorkShape["built_on"]>): void {
     const run = this.writer.write(() => {

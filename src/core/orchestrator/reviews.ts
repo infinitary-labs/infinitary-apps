@@ -23,6 +23,7 @@ import type { RouteResult } from "../routing/router";
 import type { MergeRepairAssessment, TaskRecord } from "../storage/taskRecords";
 import { alreadyAllowed } from "../tasks/alreadyAllowed";
 import { TaskService } from "../tasks/taskService";
+import { followBase } from "./baseFollow";
 import type { CardService } from "./cardService";
 import { briefCarriesPictures } from "./crewBrief";
 import type { TaskRuntime } from "./crewRuntime";
@@ -107,7 +108,7 @@ export class Reviews {
     let changeReading: string | undefined;
     let evidenceDir: string;
     // The approved version the builder started on, named only where the read used it.
-    const builtOn = this.options.tasks.graph.startedOn(builder);
+    let builtOn = this.options.tasks.graph.startedOn(builder);
     let builtOnHead: string | undefined;
     // The default branch read in place of origin's, named only where that computer read one.
     let base: string | undefined;
@@ -128,6 +129,11 @@ export class Reviews {
       headSha = builder.branch
         ? await this.options.workspace.branchHead(builder.repoDir, builder.branch)
         : null;
+      // A head that holds a newer approved version of the part under it reads from that version.
+      if (headSha && builtOn) {
+        await followBase(this.options.tasks, builder.id, headSha);
+        builtOn = this.options.tasks.graph.startedOn(this.options.tasks.get(builder.id));
+      }
       // Only while the head still builds on it and took in nothing newer from the default branch.
       builtOnHead =
         headSha && builtOn

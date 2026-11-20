@@ -89,7 +89,7 @@ export const REMOVAL_ANSWER_DESCRIPTION = [
 /** The conflictRepair parameter's own words: the rule a Claude crewmate must see is here. */
 export const CONFLICT_REPAIR_DESCRIPTION = [
   "After the host refuses their merge click, approval is kept: declare each push's impact on the approved work.",
-  "fromHead is the approved head or last accepted repair; toHead the pushed head; newBase its default branch commit.",
+  "fromHead is the approved head or last accepted repair; toHead the pushed head; newBase its default branch commit, or for a change built on another task's approved version, that task's newest approved version.",
   "none keeps approval: after checks pass the host republishes the unchanged story at the repaired version, then merges; end your turn without a card. changed-work ends approval: show a new merge card. unknown holds merge; after your turn an independent crewmate assesses the repair and its verdict decides. Do not declare it again.",
   "changedPaths names every path now differing from the approved change. Few lines or only conflicted files is not proof: compare behavior.",
 ].join(" ");

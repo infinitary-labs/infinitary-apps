@@ -78,6 +78,30 @@ export type DeliveryFacts =
       base: { key: string; title: string; head: string };
     }
   | {
+      /**
+       * The earlier part whose approved version this task started on is
+       * approved at a newer version (docs/task-graph.md, "Following the part
+       * under it"): its one steer per newer version, naming both, so the
+       * part replays only its own commits.
+       */
+      kind: "base-moved";
+      base: { key: string; title: string; branch: string };
+      /** The version the task's recorded base names now. */
+      from: string;
+      /** The earlier part's newest approved version. */
+      to: string;
+    }
+  | {
+      /**
+       * The earlier part whose approved version this task started on closed
+       * without merging (docs/task-graph.md, "Following the part under it"):
+       * its one steer, which sends the part to the first mate.
+       */
+      kind: "base-closed-unmerged";
+      base: { key: string; title: string; head: string };
+      closed: "done" | "dropped";
+    }
+  | {
       /** Work an active task waited on closed (FI3-250): its one steer. */
       kind: "dependency-closed";
       /** The work that closed, by its key and title, and its pull request when it had one. */
@@ -562,6 +586,56 @@ export function baseApprovalEndedWake(base: {
   };
 }
 
+/**
+ * The one steer to a part built on an earlier part's approved version once
+ * that part is approved at a newer version (docs/task-graph.md, "Following
+ * the part under it"), once for each newer version.
+ */
+export function baseMovedWake(base: {
+  id: string;
+  key: string;
+  title: string;
+  /** The earlier part's pushed branch, where its newer version is fetched from. */
+  branch: string;
+  /** The version the part's recorded base names now. */
+  from: string;
+  /** The earlier part's newest approved version. */
+  to: string;
+}): TypedWake {
+  return {
+    facts: {
+      kind: "base-moved",
+      base: { key: base.key || base.id, title: base.title, branch: base.branch },
+      from: base.from,
+      to: base.to,
+    },
+    once: `base-moved:${base.id}:${base.to}`,
+  };
+}
+
+/**
+ * The one steer to a part built on an earlier part's approved version once
+ * that part closed without merging (docs/task-graph.md, "Following the part
+ * under it"): its branch carries work that will not merge.
+ */
+export function baseClosedUnmergedWake(base: {
+  id: string;
+  key: string;
+  title: string;
+  /** The approved version the part's recorded base names. */
+  head: string;
+  closed: "done" | "dropped";
+}): TypedWake {
+  return {
+    facts: {
+      kind: "base-closed-unmerged",
+      base: { key: base.key || base.id, title: base.title, head: base.head },
+      closed: base.closed,
+    },
+    once: `base-closed-unmerged:${base.id}`,
+  };
+}
+
 /** The name a closed dependency's steer goes out once for: the work that closed. */
 export function dependencyClosedOnce(task: { id: string }): string {
   return `dependency-closed:${task.id}`;
@@ -790,6 +864,12 @@ export const DELIVERY_WORDS: KindWords<DeliveryFacts> = {
   "dependency-closed": (facts) => renderDependencyClosed(facts),
   "base-approval-ended": (facts) =>
     `${facts.base.key} "${facts.base.title}", whose approved version ${facts.base.head} your working copy started on, is no longer approved to merge. Your own merge waits: it joins a batch only once ${facts.base.key} is approved again, right behind its change or after it merged. Keep working on your own change; if ${facts.base.key} is approved again at another version, bring your branch onto that version before your merge card. Nothing else is needed from you for this.`,
+  // i18n-exempt: served to the crewmate as its steer, stays English
+  "base-moved": (facts) =>
+    `${facts.base.key} "${facts.base.title}" is now approved to merge at ${facts.to}, a newer version than ${facts.from}, the one your branch builds on. Bring your branch onto ${facts.to} with only your own commits (git fetch origin ${facts.base.branch}, then git rebase --onto ${facts.to} ${facts.from}), check your change again and push. If the captain's merge approval of your change stands, declare that push with check_change conflictRepair, giving ${facts.to} as newBase; otherwise show your merge card again at the new version. A merge card at a version that does not hold ${facts.to} is refused, and the batch would leave such a version out.`,
+  // i18n-exempt: served to the crewmate as its steer, stays English
+  "base-closed-unmerged": (facts) =>
+    `${facts.base.key} "${facts.base.title}" closed without merging (${facts.closed}), and your branch builds on its approved version ${facts.base.head}, so your branch carries work that will not merge and the batch leaves your change out while it does. Stop building on it and report to the first mate with needs_firstmate, naming ${facts.base.key}: it decides whether your task goes on rebuilt without that work, waits for the work that replaces ${facts.base.key}, or is dropped. Put up no merge card until it answers.`,
   "wait-moved": (facts) =>
     `${facts.replaced.key} "${facts.replaced.title}", which you heard was dropped, goes on in ${facts.dependency.key} "${facts.dependency.title}", so your task waits on ${facts.dependency.key} now and its close steers you. If you carried on without that work, check what your task still needs from it.`,
   "merge-line": (facts) =>

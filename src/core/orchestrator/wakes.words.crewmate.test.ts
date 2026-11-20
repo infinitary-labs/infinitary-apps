@@ -854,6 +854,43 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         'INF-4232 "Move each crewmate to its fleet computer", whose approved version 4be7c1d90a2f4be7c1d90a2f4be7c1d90a2f4be7 your working copy started on, is no longer approved to merge. Your own merge waits: it joins a batch only once INF-4232 is approved again, right behind its change or after it merged. Keep working on your own change; if INF-4232 is approved again at another version, bring your branch onto that version before your merge card. Nothing else is needed from you for this.',
     },
   ],
+  "base-moved": [
+    {
+      name: "the part a part started on is approved at a newer version (INF-5269 part 3)",
+      wake: {
+        facts: {
+          kind: "base-moved",
+          base: {
+            key: "INF-5187",
+            title: "Bitbucket 1: the forge",
+            branch: "inf/bitbucket-forge-5187",
+          },
+          from: "4be7c1d90a2f4be7c1d90a2f4be7c1d90a2f4be7",
+          to: "9d3a6e2b7c1f9d3a6e2b7c1f9d3a6e2b7c1f9d3a",
+        },
+      },
+      words:
+        'INF-5187 "Bitbucket 1: the forge" is now approved to merge at 9d3a6e2b7c1f9d3a6e2b7c1f9d3a6e2b7c1f9d3a, a newer version than 4be7c1d90a2f4be7c1d90a2f4be7c1d90a2f4be7, the one your branch builds on. Bring your branch onto 9d3a6e2b7c1f9d3a6e2b7c1f9d3a6e2b7c1f9d3a with only your own commits (git fetch origin inf/bitbucket-forge-5187, then git rebase --onto 9d3a6e2b7c1f9d3a6e2b7c1f9d3a6e2b7c1f9d3a 4be7c1d90a2f4be7c1d90a2f4be7c1d90a2f4be7), check your change again and push. If the captain\'s merge approval of your change stands, declare that push with check_change conflictRepair, giving 9d3a6e2b7c1f9d3a6e2b7c1f9d3a6e2b7c1f9d3a as newBase; otherwise show your merge card again at the new version. A merge card at a version that does not hold 9d3a6e2b7c1f9d3a6e2b7c1f9d3a6e2b7c1f9d3a is refused, and the batch would leave such a version out.',
+    },
+  ],
+  "base-closed-unmerged": [
+    {
+      name: "the part a part started on closed without merging (INF-5269 part 3)",
+      wake: {
+        facts: {
+          kind: "base-closed-unmerged",
+          base: {
+            key: "INF-5187",
+            title: "Bitbucket 1: the forge",
+            head: "4be7c1d90a2f4be7c1d90a2f4be7c1d90a2f4be7",
+          },
+          closed: "dropped",
+        },
+      },
+      words:
+        'INF-5187 "Bitbucket 1: the forge" closed without merging (dropped), and your branch builds on its approved version 4be7c1d90a2f4be7c1d90a2f4be7c1d90a2f4be7, so your branch carries work that will not merge and the batch leaves your change out while it does. Stop building on it and report to the first mate with needs_firstmate, naming INF-5187: it decides whether your task goes on rebuilt without that work, waits for the work that replaces INF-5187, or is dropped. Put up no merge card until it answers.',
+    },
+  ],
   "dependency-closed": [
     {
       name: "a baseline wait done",

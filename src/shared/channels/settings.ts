@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { appCostLimitViewSchema, costLimitSchema } from "../costLimit";
 import { dictationSettingsSchema } from "../dictation";
+import { panelSettingNamesSchema } from "../panelSettingNames";
 import {
   appearanceSchema,
   layoutMoveSchema,
@@ -64,6 +65,15 @@ export const settingsChannels = {
     reach: "home",
     request: z.tuple([appearanceSchema]),
     response: appearanceSchema,
+  },
+  // The settings a panel reads (`settings.current`, primitives/live-reads.md):
+  // each named line's panel value, by name, and never a line without one.
+  "inf:settings:current": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([panelSettingNamesSchema]),
+    response: z.record(z.string(), z.record(z.string(), z.unknown())),
   },
   "inf:settings:layout:get": {
     effect: "read",

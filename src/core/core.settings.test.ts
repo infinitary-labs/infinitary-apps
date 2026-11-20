@@ -5,6 +5,7 @@ import { SCHEDULE_DETAILS } from "@shared/automation";
 import type { FmEvent } from "@shared/events";
 import { feedLineFrom } from "@shared/feed";
 import { type KeymapSnapshot, keymapSnapshot } from "@shared/keymap";
+import { PANEL_SETTING_NAMES } from "@shared/panelSettingNames";
 import { remoteLoginWords } from "@shared/remoteLogin";
 import { afterAll, beforeAll, describe, expect, it, onTestFinished, vi } from "vitest";
 import { fakeHost, quotaFixture } from "../../tests/helpers/bootedCore";
@@ -121,6 +122,48 @@ describe("the core, driven with no Electron in the process", () => {
     ).rejects.toThrow("malformed request");
     await core.dispatch("inf:settings:dictation:set", [{ enabled: true, key: "AltRight" }]);
     detach();
+  });
+
+  // INF-5326's approved piece 4: a panel reads the settings the action
+  // catalog gives a panel value, cut to that value, and no other line.
+  it("answers a panel's settings read with each line's panel value, refusing a line without one", async () => {
+    const look = await core.dispatch("inf:settings:appearance:get", []);
+    const layout = await core.dispatch("inf:settings:layout:get", []);
+    await core.dispatch("inf:settings:appearance:set", [
+      {
+        ...look,
+        theme: "light",
+        ambientMusic: true,
+        ambientPaused: true,
+        ambientStyle: "quiet-cove",
+        ambientVolume: 25,
+      },
+    ]);
+    // A hidden panel rides the same preferences the panels switch reads.
+    await core.dispatch("inf:settings:layout:set", [
+      { ...layout, hiddenPanels: { ...layout.hiddenPanels, activity: true } },
+    ]);
+    const read = await core.dispatch("inf:settings:current", [
+      ["ambient-music", "theme", "panels-switch"],
+    ]);
+    expect(read).toEqual({
+      "ambient-music": { on: true, paused: true, style: "quiet-cove", volume: 25 },
+      theme: { theme: "light" },
+      "panels-switch": {
+        enabled: (await core.dispatch("inf:shell:preferences", [])).panels.enabled,
+      },
+    });
+    // Every readable line at once carries none of the rest of what it read.
+    const all = await core.dispatch("inf:settings:current", [[...PANEL_SETTING_NAMES]]);
+    expect(Object.keys(all)).toEqual([...PANEL_SETTING_NAMES]);
+    expect(JSON.stringify(all)).not.toContain("activity");
+    // A line with no panel value is refused, and so is one the catalog lacks.
+    for (const name of ["project-settings", "firstmate-account", "dictation", "nothing-at-all"])
+      await expect(core.dispatch("inf:settings:current", [[name]])).rejects.toThrow(
+        "malformed request",
+      );
+    await core.dispatch("inf:settings:appearance:set", [look]);
+    await core.dispatch("inf:settings:layout:set", [layout]);
   });
 
   // INF-3112's approved second piece: the captain can change the app and

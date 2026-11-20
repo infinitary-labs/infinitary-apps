@@ -128,6 +128,10 @@ again on every change, and returns the unsubscribe; a name the manifest did not 
 throws. Values are read-only and typed in `infinitary-env.d.ts` (`PanelReadValue`). A server
 module has no reads.
 
+`settings.current` reads the captain's app settings a panel may show, by name: declare it in `reads`, then call `reads.subscribe("settings.current", { names: ["ambient-music", "theme"] }, listener)`.
+Each name delivers its value (`PanelSettingValues`): `ambient-music` is `{ on, paused, style, volume }`, `theme` is `{ theme }`, and `font`, `window-wash`, `window-size`, `crew-model-names`, `notifications`, `cost-limit`, `personal-resources` and `panels-switch` read the same way.
+Any other setting is unreadable, and naming one throws: settings that name projects, computers, accounts or sign-ins never reach a panel.
+
 `computers.resources` is the shared live CPU and RAM read: declare it in `reads`, then call `reads.subscribe("computers.resources", listener)`.
 Its `computers` array names the home with `computerId: null` and each paired work computer by id and label.
 A fresh `reading` carries `ageMs`, `memoryUsedBytes` when the reading has a figure, and an `observation` with CPU idle fraction, logical CPU count, installed memory and Mac pressure.

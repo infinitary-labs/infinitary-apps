@@ -108,6 +108,7 @@ export const PANEL_READ_NAMES = [
   "knowledge.findings",
   "knowledge.entry",
   "knowledge.direction",
+  "settings.current",
 ] as const;
 export const panelReadNameSchema: z.ZodType<PanelReadName> = z.enum(PANEL_READ_NAMES);
 

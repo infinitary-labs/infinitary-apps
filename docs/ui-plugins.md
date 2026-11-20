@@ -408,6 +408,7 @@ A card's `maxHeight` keeps its top clear of the 52px top bar at the shortest win
 **The views** (`src/core/storage/views.ts`, their one writer) are the contract; the tables keep migrating underneath.
 Ten in v1: `v_version_v1`, `v_tasks_v1`, `v_task_events_v1`, `v_usage_v1`, `v_feed_v1`, `v_quota_windows_v1`, `v_routing_v1`, `v_placements_v1`, `v_projects_v1`, `v_repos_v1`.
 Not published: cards and their threads, memories, settings, the inbox, captain asks, jobs, schedules - and no view carries an account id or a path.
+Settings reach a panel through the typed read `settings.current` instead, never a view: each action catalog line with a panel value, cut to that value (`PANEL_SETTINGS`, `src/shared/panelSettings.ts`; primitives/live-reads.md).
 The honesty the typed reads carried lives in the columns (B4 b): a count nobody recorded stays null, `v_quota_windows_v1` carries `status`, `stale`, `measured_at` and a nullable `percent_remaining`, the first mate's own usage is keyed `FIRSTMATE`, an account is named by its label from the latest quota reading.
 `v_feed_v1`'s lines are authored by the feed's own function (`taskFeedLine`, registered as the SQL functions `fm_feed_text` / `fm_feed_kind` on every connection that reads the views), so it says exactly what `feed.recent` says (`views.test.ts` compares them).
 Migration 42 created them; every later migration drops them first and re-creates them last, and every open reconciles them against `views.ts`, so an edit there reaches an existing database.

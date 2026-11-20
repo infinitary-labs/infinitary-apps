@@ -400,6 +400,7 @@ public enum PhonePanelRequest: String, Sendable, CaseIterable {
     case `projectsList` = "inf:projects:list"
     case `quotaSnapshot` = "inf:quota:snapshot"
     case `reposList` = "inf:repos:list"
+    case `settingsCurrent` = "inf:settings:current"
     case `shellPreferences` = "inf:shell:preferences"
     case `sqlQuery` = "inf:sql:query"
     case `tasksBoard` = "inf:tasks:board"

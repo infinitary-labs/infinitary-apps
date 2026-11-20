@@ -17,6 +17,7 @@ Do not keep a presentation preference in `localStorage` or the shell store alone
 Conversation, card clicks, sign-in interaction and a crewmate's own work are not settings; they stay outside the table as named `ACTION_EXCEPTIONS` in `src/shared/actionCoverage.ts`.
 Task, card and panel-removal abilities keep their own execution paths ([tasks.md](tasks.md), [cards-and-consent.md](cards-and-consent.md), [panels.md](panels.md)).
 Panels and plugins gain no change ability through the catalog.
+A panel reads a line only through its panel value (`PANEL_SETTINGS`, `src/shared/panelSettings.ts`, served as `settings.current`, [live-reads.md](live-reads.md)); a new line names its panel value or a ground for having none, or the catalog does not compile.
 Keyboard commands are a separate catalog (`KEYBOARD_COMMANDS` in `src/shared/keyboard.ts`, `docs/keyboard.md`) with their own resolver and handlers, not this dispatcher; a key that changes a setting makes the same catalog change as the control it mirrors (the size keys make the `window-size` change the Size picker makes).
 
 ## Owner and entry points

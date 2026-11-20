@@ -84,7 +84,8 @@ declare module "@infinitary/contracts" {
     | "knowledge.findings"
     | "knowledge.entry"
     | "knowledge.directions"
-    | "knowledge.direction";
+    | "knowledge.direction"
+    | "settings.current";
 
   /**
    * Physical-system observations, not task limits or available scheduling capacity.
@@ -815,6 +816,37 @@ declare module "@infinitary/contracts" {
     | { state: "missing" }
     | PanelKnowledgeUnavailable;
 
+  // --- the app's settings ---------------------------------------------------------
+
+  /**
+   * The app settings a panel may read through \`settings.current\`, by their
+   * action catalog names, each with the value it delivers. Any other setting
+   * is unreadable: asking for it throws.
+   */
+  export type PanelSettingValues = {
+    theme: { theme: "dark" | "light" };
+    /** Each place's chosen font family; a place left out uses Infinitary's own. */
+    font: { fonts: { app?: string; reading?: string; code?: string } };
+    "window-wash": { strength: number };
+    "window-size": { size: number };
+    "crew-model-names": { visible: boolean };
+    /** Whether the ambient music is on, paused by the captain, its style and its volume in percent. */
+    "ambient-music": { on: boolean; paused: boolean; style: string; volume: number };
+    notifications: { enabled: boolean };
+    /** The app's per-task cost limit, in estimated US dollars, or none. */
+    "cost-limit": { limit: { usd: number } | { none: true } };
+    "personal-resources": { enabled: boolean };
+    /** Whether the captain's own panels are on. */
+    "panels-switch": { enabled: boolean };
+  };
+
+  export type PanelSettingName = keyof PanelSettingValues;
+
+  /** What \`settings.current\` delivers: each named setting's value, by name. */
+  export type PanelSettings<N extends PanelSettingName = PanelSettingName> = {
+    [K in N]: PanelSettingValues[K];
+  };
+
   /** The value each read delivers. */
   export type PanelReadValue<N extends PanelReadName> = N extends "computers.resources"
     ? PanelComputerResources
@@ -846,7 +878,9 @@ declare module "@infinitary/contracts" {
                               ? PanelKnowledgeDirections
                               : N extends "knowledge.direction"
                                 ? PanelKnowledgeDirectionRead
-                                : PanelFeedLine[];
+                                : N extends "settings.current"
+                                  ? PanelSettings
+                                  : PanelFeedLine[];
 
   // --- the app's own record, through SQL -------------------------------------
 
@@ -924,6 +958,9 @@ declare module "@infinitary/contracts" {
    * \`subscribe("tasks.search", { query }, listener)\` finds closed work the
    * board no longer lists by a key or the words of a title.
    *
+   * \`subscribe("settings.current", { names }, listener)\` reads the named app
+   * settings (\`PanelSettingValues\`), again whenever one changes.
+   *
    * \`subscribe("sql", query, listener)\` runs a read-only query over the views
    * the manifest's \`sql\` names, and runs it again whenever the app's record
    * changed; an unchanged answer is not delivered twice. A manifest with no
@@ -942,6 +979,7 @@ declare module "@infinitary/contracts" {
           | "knowledge.entry"
           | "knowledge.directions"
           | "knowledge.direction"
+          | "settings.current"
         >,
       >(
         name: N,
@@ -996,6 +1034,11 @@ declare module "@infinitary/contracts" {
         name: "knowledge.direction",
         args: { id: string; page?: number },
         listener: (value: PanelKnowledgeDirectionRead) => void,
+      ): () => void;
+      <N extends PanelSettingName>(
+        name: "settings.current",
+        args: { names: N[] },
+        listener: (value: PanelSettings<N>) => void,
       ): () => void;
       (name: "sql", query: SqlQuery, listener: (answer: SqlAnswer) => void): () => void;
     };

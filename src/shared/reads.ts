@@ -14,6 +14,7 @@ import {
   knowledgeRefsArgsSchema,
   knowledgeUsesArgsSchema,
 } from "./knowledge";
+import { panelSettingNamesSchema } from "./panelSettingNames";
 import { RESOURCE_DEMAND_RENEW_MS } from "./resources";
 import { sameSqlAnswer, sqlQuerySchema } from "./sql";
 import { applyTaskBoardDelta, type TaskBoard, type TaskBoardDelta } from "./tasks";
@@ -609,6 +610,22 @@ export const readCatalog = {
     invalidate: { valueFromPush: "inf:shell:preferences" },
     description:
       "The theme, the rail layout, and the panels switch the host applies for the captain.",
+  }),
+  // The app settings a panel may read (primitives/live-reads.md,
+  // "settings.current"): each named action catalog line's panel value, and
+  // never a line without one. A look change pushes the whole preferences;
+  // every other catalog change leaves a `personalized` line.
+  "settings.current": entry({
+    channel: "inf:settings:current",
+    args: z.strictObject({ names: panelSettingNamesSchema }),
+    toRequest: (args) => [args.names],
+    invalidate: {
+      pushes: ["inf:shell:preferences"],
+      events: (event) => event.type === "personalized",
+      sameValue: (current, next) => JSON.stringify(current) === JSON.stringify(next),
+    },
+    description:
+      "The current value of each named app setting a panel may read: look, sound and a few switches.",
   }),
   // The record, through SQL (plugin data surface, Phase B; src/shared/sql.ts):
   // a read-only query over the published views the plugin's grant names -

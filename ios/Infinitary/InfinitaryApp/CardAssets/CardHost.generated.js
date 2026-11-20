@@ -98808,7 +98808,8 @@ ${FRAME_KEYBOARD_SCRIPT}
     "knowledge.directions",
     "knowledge.findings",
     "knowledge.entry",
-    "knowledge.direction"
+    "knowledge.direction",
+    "settings.current"
   ];
   const panelReadNameSchema = _enum(PANEL_READ_NAMES);
   const storeValueSchema = lazy(

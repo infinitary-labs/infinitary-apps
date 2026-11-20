@@ -356,7 +356,8 @@ describe("Settings -> Devices", () => {
       m.settingsDevicesAddByCommand(),
       m.settingsDevicesAddByCommandWhen(),
     ])
-      expect(ways).toContain(renderToStaticMarkup(<>{words}</>));
+      // The words as the page escapes them, read from a lone span's markup.
+      expect(ways).toContain(renderToStaticMarkup(<span>{words}</span>).slice(6, -7));
     // A package update keeps its own words, with no other ways.
     expect(
       render({ askingAddress: true, packageUpdate: { ...AIR, kind: "mac", name: "Ubuntu" } }),

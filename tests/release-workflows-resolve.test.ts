@@ -108,8 +108,10 @@ describe("signed release workflow", () => {
       APP_STORE_CONNECT_API_KEY: [phone, "release:asc-key"],
       GITHUB_TOKEN: [
         "release:recorded",
-        "upload:private",
+        // The read-only adopt check runs before the first write, the
+        // record's zip (docs/alpha.md).
         "upload:adopt",
+        "upload:private",
         "upload:upload",
         "publish:fetch-back",
       ],

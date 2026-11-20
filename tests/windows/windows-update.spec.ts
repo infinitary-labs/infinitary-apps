@@ -81,11 +81,12 @@ function electronFromCache(): string {
     }
   ).devDependencies.electron;
   const name = `electron-v${version}-win32-x64.zip`;
-  const zip = cache
-    ? readdirSync(cache, { recursive: true, encoding: "utf8" }).find((entry) =>
-        entry.endsWith(name),
-      )
-    : undefined;
+  const zip =
+    cache && existsSync(cache)
+      ? readdirSync(cache, { recursive: true, encoding: "utf8" }).find((entry) =>
+          entry.endsWith(name),
+        )
+      : undefined;
   if (!zip) return "";
   const into = scratchDir("infinitary-update-electron-");
   ps(`Expand-Archive -LiteralPath $env:ZIP -DestinationPath $env:INTO -Force; $true`, {

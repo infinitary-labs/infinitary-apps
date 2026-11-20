@@ -148,7 +148,9 @@ export async function startUpdateFeed(options: {
  * The feed's certificate, made in this person's own certificate store and
  * trusted for this person alone as a root (their own Trusted Root
  * Certification Authorities, which needs no administrator), with its PFX for
- * the feed. Node reads the Windows store when `NODE_USE_SYSTEM_CA` is 1,
+ * the feed. Like the Mac's update check's, it is its own authority
+ * (basic constraints CA true, allowed to sign certificates) naming localhost
+ * and both loopback addresses. Node reads the Windows store when `NODE_USE_SYSTEM_CA` is 1,
  * which `trustSystemStore` sets in this person's environment, where Task
  * Scheduler's command reads it. Every Node reads this person's roots there;
  * the Node inside Electron reads no certificate this person trusts only as
@@ -163,7 +165,7 @@ export async function makeFeedCertificate(
   const thumbprint = ps<string>(
     `
     $ErrorActionPreference = 'Stop'
-    $c = New-SelfSignedCertificate -DnsName 'localhost' -CertStoreLocation Cert:\\CurrentUser\\My -NotAfter (Get-Date).AddDays(2) -KeyExportPolicy Exportable -FriendlyName 'Infinitary update check feed'
+    $c = New-SelfSignedCertificate -Subject 'CN=localhost' -TextExtension @('2.5.29.19={critical}{text}ca=1', '2.5.29.17={text}DNS=localhost&IPAddress=127.0.0.1&IPAddress=::1') -KeyUsage CertSign, DigitalSignature, KeyEncipherment -CertStoreLocation Cert:\\CurrentUser\\My -NotAfter (Get-Date).AddDays(2) -KeyExportPolicy Exportable -FriendlyName 'Infinitary update check feed'
     $null = Export-PfxCertificate -Cert $c -FilePath $env:FEED_PFX -Password (ConvertTo-SecureString $env:FEED_PASS -AsPlainText -Force)
     $c.Thumbprint`,
     { FEED_PFX: pfxFile, FEED_PASS: passphrase },

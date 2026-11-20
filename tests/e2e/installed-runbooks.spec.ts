@@ -2,9 +2,9 @@ import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import {
-  RUNBOOK_PANELS_WORDS,
   runbookAddedLine,
   runbookConsentTitle,
+  runbookPanelsWords,
   runbookRemovedLine,
 } from "../../src/core/runbooks/words";
 import { ACTIONS } from "../../src/shared/actions";
@@ -72,7 +72,7 @@ test("add a runbook only on consent, keep its replacement and remove it by talki
     await promptInput(at.page).press("Enter");
     await expect(shownCard(at.page, title)).toBeVisible();
     await expect(cardBody(at.page, title).locator("body")).toContainText(`${workflows.name} off`);
-    await expect(cardBody(at.page, title).locator("body")).toContainText(RUNBOOK_PANELS_WORDS);
+    await expect(cardBody(at.page, title).locator("body")).toContainText(runbookPanelsWords());
     await expect(cardBody(at.page, title).locator("li b")).toHaveText("Reading list");
     expect(
       (await at.page.evaluate(() => window.infinitary.settings.getRunbooks())).some(

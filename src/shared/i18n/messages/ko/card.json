@@ -192,6 +192,7 @@
   "cardRevisionLinksUnavailable": "변경 링크를 쓸 수 없음",
   "cardRevisionMore": "{count}개 더",
   "cardRevisionShowFewer": "적게 보기",
+  "cardRunbookAddPanels": "켜져 있는 동안 이 패널들도 레일에 보여 줍니다. 추가하면 이 패널들에도 동의하게 됩니다.",
   "cardSavedResetCrewWaits": "저장된 재설정을 사용하지 않으면 선원들의 작업은 더 약한 모델로 바뀌거나 사용량이 재설정될 때까지 기다려요.",
   "cardSavedResetCrewWaitsThere": "저장된 재설정을 사용하지 않으면 {where} 선원들의 작업은 더 약한 모델로 바뀌거나 사용량이 재설정될 때까지 기다려요.",
   "cardSavedResetsNow": {

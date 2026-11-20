@@ -16460,6 +16460,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Show fewer`;
   }
+  function cardRunbookAddPanels() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أثناء تشغيله، يعرض أيضًا هذه اللوحات على شريطك. إضافته موافقة عليها أيضًا.`;
+      case "de":
+        return `Solange er an ist, zeigt er auch diese Panels auf deiner Leiste. Wenn du ihn hinzufügst, stimmst du ihnen ebenfalls zu.`;
+      case "es":
+        return `Mientras está activo, también muestra estos paneles en tu barra. Al agregarlo, también los aceptas.`;
+      case "fr":
+        return `Tant qu’elle est activée, elle affiche aussi ces panneaux dans votre colonne. L’ajouter vaut aussi accord pour eux.`;
+      case "ja":
+        return `オンの間、これらのパネルもパネル列に表示します。追加すると、これらのパネルにも同意したことになります。`;
+      case "ko":
+        return `켜져 있는 동안 이 패널들도 레일에 보여 줍니다. 추가하면 이 패널들에도 동의하게 됩니다.`;
+      case "pt-BR":
+        return `Enquanto estiver ativado, também mostra estes painéis na sua barra lateral. Ao adicioná-lo, você também concorda com eles.`;
+      case "zh-Hans":
+        return `开启时，它还会在侧栏上显示这些面板。添加它即表示你也同意这些面板。`;
+      case "zh-Hant":
+        return `開啟時，它還會在側欄上顯示這些面板。新增它即表示你也同意這些面板。`;
+      case "en-XA":
+        return `[Ŵĥîļé îţ îš öñ, îţ áļšö šĥöŵš ţĥéšé þáñéļš öñ ýöûŕ ŕáîļ. Åððîñĝ îţ áĝŕééš ţö ţĥéɱ ţöö. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮While it is on, it also shows these panels on your rail. Adding it agrees to them too.‬`;
+    }
+    return `While it is on, it also shows these panels on your rail. Adding it agrees to them too.`;
+  }
   function cardSavedResetCrewWaits() {
     switch (currentLanguage()) {
       case "ar":
@@ -87476,6 +87503,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardRevisionLinksUnavailable,
     cardRevisionMore,
     cardRevisionShowFewer,
+    cardRunbookAddPanels,
     cardSavedResetCrewWaits,
     cardSavedResetCrewWaitsThere,
     cardSavedResetsNow,
@@ -90292,6 +90320,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardRevisionLinksUnavailable": [],
     "cardRevisionMore": ["count"],
     "cardRevisionShowFewer": [],
+    "cardRunbookAddPanels": [],
     "cardSavedResetCrewWaits": [],
     "cardSavedResetCrewWaitsThere": ["where"],
     "cardSavedResetsNow": ["account", "count"],

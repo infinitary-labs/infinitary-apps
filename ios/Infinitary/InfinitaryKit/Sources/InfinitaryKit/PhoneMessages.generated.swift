@@ -395,6 +395,7 @@ public enum PhoneMessages {
     public static func `cardRevisionLinksUnavailable`() -> String { PhoneWords.format("cardRevisionLinksUnavailable", []) }
     public static func `cardRevisionMore`(`count`: String) -> String { PhoneWords.format("cardRevisionMore", [`count`]) }
     public static func `cardRevisionShowFewer`() -> String { PhoneWords.format("cardRevisionShowFewer", []) }
+    public static func `cardRunbookAddPanels`() -> String { PhoneWords.format("cardRunbookAddPanels", []) }
     public static func `cardSavedResetCrewWaits`() -> String { PhoneWords.format("cardSavedResetCrewWaits", []) }
     public static func `cardSavedResetCrewWaitsThere`(`where`: String) -> String { PhoneWords.format("cardSavedResetCrewWaitsThere", [`where`]) }
     public static func `cardSavedResetsNow`(`account`: String, `count`: Int) -> String { PhoneWords.format("cardSavedResetsNow", [`account`, `count`]) }
@@ -4222,6 +4223,7 @@ extension PhoneWords {
         "cardRevisionLinksUnavailable": [],
         "cardRevisionMore": ["count"],
         "cardRevisionShowFewer": [],
+        "cardRunbookAddPanels": [],
         "cardSavedResetCrewWaits": [],
         "cardSavedResetCrewWaitsThere": ["where"],
         "cardSavedResetsNow": ["account", "count"],

@@ -1328,15 +1328,18 @@ export class PersonalExtensions {
       if (refused.length < PERSONAL_REFUSED_MAX) refused.push(runbookRefusal(panel, why));
       this.logOnce(
         `${kind}:${panel.runbook.id}:${panel.id}`,
+        // i18n-exempt: a log line, not shown to a person
         `personal: ${panel.runbook.name}'s panel ${panel.id} is not shown: ${why}`,
       );
     };
     for (const panel of this.options.installed?.runbooks?.() ?? []) {
       if (!personalIdSchema.safeParse(panel.id).success) {
+        // i18n-exempt: why a panel is missing, served to the agent in its surfaces section
         refuse(panel, "id", "its folder's name cannot name a panel");
         continue;
       }
       if (taken.has(panel.id)) {
+        // i18n-exempt: why a panel is missing, served to the agent in its surfaces section
         refuse(panel, "taken", "another panel has that id");
         continue;
       }

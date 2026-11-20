@@ -29,9 +29,9 @@ import type { PersonalStore } from "../personal/personalStore";
 import { checkRunbookFiles } from "../runbooks/runbookFiles";
 import type { Runbooks } from "../runbooks/runbooks";
 import {
-  RUNBOOK_PANELS_WORDS,
   runbookAddedLine,
   runbookConsentTitle,
+  runbookPanelsWords,
   runbookRemovedLine,
 } from "../runbooks/words";
 import {
@@ -322,12 +322,14 @@ export class PluginInstaller {
       for (const panel of manifest.panels ?? []) {
         const panelId = runbookPanelId(manifest, panel);
         if (!PERSONAL_ID_PATTERN.test(panelId) || panelId.length > PERSONAL_ID_MAX_LENGTH)
+          // i18n-exempt: a tool answer served to the agent, not shown to a person
           return `Not added: its panel folder "${panel}" cannot name a panel (lowercase letters, digits and single dashes, at most ${PERSONAL_ID_MAX_LENGTH} characters with the runbook's id).`;
         const cache = join(this.options.checkCacheDir, randomUUID());
         const checked = await checkPluginTree(join(fetched.dir, panel), panelId, cache, {
           inRunbook: true,
         }).finally(() => rm(cache, { recursive: true, force: true }));
         if ("refusal" in checked)
+          // i18n-exempt: a tool answer served to the agent, not shown to a person
           return `Not added: a panel inside the runbook was refused: ${checked.refusal}`;
         panels[panel] = checked.capabilities;
         panelLines.push(
@@ -364,7 +366,7 @@ export class PluginInstaller {
             ? `<p>Adding it turns ${escapeHtml(replacement)} off. You can turn that built-in runbook back on.</p>`
             : "") +
           (panelLines.length
-            ? `<p>${escapeHtml(RUNBOOK_PANELS_WORDS)}</p><ul>${panelLines.join("")}</ul>`
+            ? `<p>${escapeHtml(runbookPanelsWords())}</p><ul>${panelLines.join("")}</ul>`
             : ""),
         actions: [
           {
@@ -522,6 +524,7 @@ export async function checkPluginTree(
   }
   if (await isFile(join(dir, PERSONAL_ENTRY_FILES.server))) {
     return {
+      // i18n-exempt: a refusal served to the agent, not shown to a person
       refusal: options.inRunbook
         ? "it ships server code (server.ts), and a panel inside a runbook may not run code of its own in the app."
         : "it ships server code (server.ts), and a panel added from elsewhere may not run code of its own in the app.",

@@ -373,6 +373,7 @@
 "cardRevisionLinksUnavailable" = "改动链接不可用";
 "cardRevisionMore" = "还有 %1$@ 个";
 "cardRevisionShowFewer" = "收起";
+"cardRunbookAddPanels" = "开启时，它还会在侧栏上显示这些面板。添加它即表示你也同意这些面板。";
 "cardSavedResetCrewWaits" = "除非你使用一次已保存的重置，否则船员的工作会改用较弱的模型，或等到额度重置。";
 "cardSavedResetCrewWaitsThere" = "除非你使用一次已保存的重置，否则%1$@的船员工作会改用较弱的模型，或等到额度重置。";
 "cardSavedResetsOpenPage" = "在 %1$@ 打开用量页面";

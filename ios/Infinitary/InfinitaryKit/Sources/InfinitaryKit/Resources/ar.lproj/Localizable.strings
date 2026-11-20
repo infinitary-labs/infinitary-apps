@@ -373,6 +373,7 @@
 "cardRevisionLinksUnavailable" = "روابط التغيير غير متاحة";
 "cardRevisionMore" = "%1$@ أخرى";
 "cardRevisionShowFewer" = "عرض أقل";
+"cardRunbookAddPanels" = "أثناء تشغيله، يعرض أيضًا هذه اللوحات على شريطك. إضافته موافقة عليها أيضًا.";
 "cardSavedResetCrewWaits" = "ينتقل عمل الطاقم إلى نموذج أضعف أو ينتظر حتى يُعاد تعيين رصيده، ما لم تستخدم إعادة تعيين محفوظة.";
 "cardSavedResetCrewWaitsThere" = "ينتقل عمل الطاقم %1$@ إلى نموذج أضعف أو ينتظر حتى يُعاد تعيين رصيده، ما لم تستخدم إعادة تعيين محفوظة.";
 "cardSavedResetsOpenPage" = "افتح صفحة الاستخدام على %1$@";

@@ -119,6 +119,7 @@ export async function checkFramed(
     result.manifest = { title: checked.manifest.title ?? panel.id };
     result.error = {
       stage: "manifest",
+      // i18n-exempt: a panel error served to the agent, not shown to a person
       message: `${panel.id}: its files now ask for something different from what the captain agreed to; add ${panel.runbook ? "its runbook" : "it"} again to ask them`,
     };
   } else {

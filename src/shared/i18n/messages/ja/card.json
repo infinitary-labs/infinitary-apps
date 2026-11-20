@@ -192,6 +192,7 @@
   "cardRevisionLinksUnavailable": "変更箇所へのリンクは利用できません",
   "cardRevisionMore": "ほか{count}件",
   "cardRevisionShowFewer": "表示を減らす",
+  "cardRunbookAddPanels": "オンの間、これらのパネルもパネル列に表示します。追加すると、これらのパネルにも同意したことになります。",
   "cardSavedResetCrewWaits": "保存済みのリセットを使わない限り、乗組員の作業は弱いモデルに切り替わるか、利用枠がリセットされるまで待ちます。",
   "cardSavedResetCrewWaitsThere": "保存済みのリセットを使わない限り、{where}の乗組員の作業は弱いモデルに切り替わるか、利用枠がリセットされるまで待ちます。",
   "cardSavedResetsNow": {

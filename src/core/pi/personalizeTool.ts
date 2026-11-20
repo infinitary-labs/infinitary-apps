@@ -281,7 +281,8 @@ export function renderSurfacesSection(
         owner === "captain"
           ? " (yours)"
           : owner === "runbook"
-            ? ` (from the runbook ${by})`
+            ? // i18n-exempt: served to the agent in its surfaces section, not shown to a person
+              ` (from the runbook ${by})`
             : owner === "added"
               ? ` (added, by ${by})`
               : "";
@@ -292,9 +293,11 @@ export function renderSurfacesSection(
       return `- ${surface.id} "${surface.title}"${mark}: ${where}; ${state}${paused ? pausedWords(paused) : ""}`;
     }),
     ...(more > 0 ? [`- and ${more} more personal panel${more === 1 ? "" : "s"}`] : []),
+    // i18n-exempt: served to the agent in its surfaces section, not shown to a person
     ...refused.rows.map(
       (row) => `- ${row.id} (from the runbook ${row.runbook}): not shown: ${row.why}`,
     ),
+    // i18n-exempt: served to the agent in its surfaces section, not shown to a person
     ...(refused.more > 0 ? [`- and ${refused.more} more runbook panels not shown`] : []),
     ...(off ? [off] : []),
   ];
@@ -350,6 +353,7 @@ async function runRemove(delegate: PersonalizeDelegate, params: Params): Promise
     delegate.personal().extensions.some((entry) => entry.id === surface.id && entry.runbook)
   ) {
     // A runbook's panel leaves with its runbook (docs/runbooks.md, "Panels").
+    // i18n-exempt: a tool answer served to the agent, not shown to a person
     return `${surface.title} comes with the runbook ${surface.by}: turning that runbook off in Settings, under Runbooks, takes it away.`;
   }
   if (surface.kind === "installed") {

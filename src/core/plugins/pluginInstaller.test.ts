@@ -26,7 +26,7 @@ import { agreedGrant } from "../personal/framedPanels";
 import { PersonalExtensions } from "../personal/personalExtensions";
 import { PersonalStore } from "../personal/personalStore";
 import { Runbooks, stageRunbookSkills } from "../runbooks/runbooks";
-import { RUNBOOK_PANELS_WORDS, runbookAddedLine, runbookRemovedLine } from "../runbooks/words";
+import { runbookAddedLine, runbookPanelsWords, runbookRemovedLine } from "../runbooks/words";
 import { CardStore } from "../storage/cardStore";
 import { InboxStore } from "../storage/inboxStore";
 import { SettingsStore } from "../storage/settingsStore";
@@ -964,7 +964,7 @@ describe("adding runbooks through the panel installer's consent", () => {
         expect(card?.body).toContain("Common workflows off");
         expect(card?.body).toContain("runs nothing");
         // The add card names the panel the runbook shows while it is on, and what it reads.
-        expect(card?.body).toContain(RUNBOOK_PANELS_WORDS);
+        expect(card?.body).toContain(runbookPanelsWords());
         expect(card?.body).toContain("<b>Token watch</b>");
         expect(h.installed()).toEqual([]);
         expect(() => h.supervisor.cardActions.act(consentCardId(id), "add", "frame")).toThrow(

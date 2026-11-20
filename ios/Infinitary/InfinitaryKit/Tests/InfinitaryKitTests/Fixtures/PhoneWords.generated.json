@@ -423,6 +423,7 @@
   {"said":{"m":"cardRevisionLinksUnavailable"},"words":"Change links unavailable"},
   {"said":{"m":"cardRevisionMore","a":{"count":"‹count›"}},"words":"‹count› more"},
   {"said":{"m":"cardRevisionShowFewer"},"words":"Show fewer"},
+  {"said":{"m":"cardRunbookAddPanels"},"words":"While it is on, it also shows these panels on your rail. Adding it agrees to them too."},
   {"said":{"m":"cardSavedResetCrewWaits"},"words":"Crew work drops to a weaker model or waits until its allowance resets, unless you use a saved reset."},
   {"said":{"m":"cardSavedResetCrewWaitsThere","a":{"where":"‹where›"}},"words":"Crew work ‹where› drops to a weaker model or waits until its allowance resets, unless you use a saved reset."},
   {"said":{"m":"cardSavedResetsNow","a":{"account":"‹account›","count":0}},"words":"‹account› has 0 saved resets you can use now to refill its allowance."},

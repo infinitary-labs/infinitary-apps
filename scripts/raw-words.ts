@@ -699,7 +699,7 @@ export const RAW_WORDS_LEDGER: Readonly<Record<string, number>> = {
   "src/core/plugins/consentWords.ts": 8,
   "src/core/plugins/homePlugins.ts": 1,
   "src/core/plugins/mediatedFetch.ts": 1,
-  "src/core/plugins/pluginInstaller.ts": 49,
+  "src/core/plugins/pluginInstaller.ts": 47,
   "src/core/plugins/pluginLint.ts": 10,
   "src/core/plugins/pluginRecords.ts": 8,
   "src/core/plugins/pluginSource.ts": 1,

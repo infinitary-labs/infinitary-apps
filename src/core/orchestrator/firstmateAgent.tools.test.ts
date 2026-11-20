@@ -902,6 +902,19 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
       `Updated ${release.key}: needs_merge [].`,
     );
     expect((await read())?.needs_merge).toBeUndefined();
+
+    // The review's finding: a wait the release needs merged is added with its merge need in
+    // one call, as the core guidance says, so no approval can start it between the two.
+    await text("create_task", { title: "Notes", goal: "Notes", user_words: "write the notes" });
+    const notes = tasks.byKey("SCR-4")!;
+    expect(
+      await text("update_task", {
+        task: release.key,
+        blocked_by: [notes.key],
+        needs_merge: [notes.key],
+      }),
+    ).toBe(`Updated ${release.key}: needs_merge ${notes.key}, waits for ${notes.key}.`);
+    expect(await read()).toMatchObject({ needs_merge: [notes.key] });
   });
 
   // INF-2062: the captain asked that pausing a task moves it back to the backlog, never a steer to stay idle.

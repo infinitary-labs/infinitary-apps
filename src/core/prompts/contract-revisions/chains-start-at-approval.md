@@ -11,7 +11,9 @@ What the first mate is now told:
 - The tasks reader shows `needs_merge` in a task's row and its by-key read.
 - `link_tasks`'s blocks, the core's rule for recording waits, and the refusal when a task cannot start yet say that on batched pull requests the start comes at the other task's merge approval unless `needs_merge` names it.
 - The report wake that names work held on a task says that on batched pull requests work built on that task stops waiting once it is approved to merge, and merges after it.
-- A merge wait moves with its wait when either task is replaced or an after-merge step carries the wait on.
+- The core rule and `link_tasks` say to add a wait the waiter needs merged with `update_task` `blocked_by` and `needs_merge` in one call, since a link alone can start it at once.
+- A merge wait moves with its wait when either task is replaced or an after-merge step carries the wait on, and goes when its wait is removed.
+- A start mark chooses only while it names an unfinished wait; afterwards the default rule picks among the rest.
 - The sequences guide's feature section says how to choose: a later piece of the same work needs only the earlier piece's code; a task that needs the earlier one live on the default branch needs its merge.
 
 Homes: the rule is said once, on `create_task`'s `needs_merge`; `update_task` points to it, and the guide says how to choose.

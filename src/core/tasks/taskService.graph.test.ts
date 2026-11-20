@@ -364,6 +364,38 @@ describe("the task graph (task-system P2)", () => {
       expect(tasks.graph.listReady().map((r) => r.id)).toEqual([]);
     });
 
+    // The review's finding: a merge need goes with the wait it names, so adding that wait
+    // back later starts the release at the approval, as any dependency does.
+    it("takes a removed wait out of the merge waits, so adding it back starts at approval", () => {
+      const { tasks, work } = setup();
+      const first = work("first", { startPolicy: "on-request" });
+      const release = work("release", {
+        blockedBy: ["first"],
+        shape: { ...BATCHED, kind: "implement", needs_merge: [first.key] },
+      });
+      expect(tasks.graph.unlink(first.id, release.id, "blocks", "firstmate")).toBe(true);
+      expect(tasks.get(release.id)?.shape?.needs_merge).toBeUndefined();
+      tasks.graph.link(first.id, release.id, "blocks", "firstmate");
+      approve(tasks, first.id);
+      expect(tasks.graph.listReady().map((r) => r.id)).toEqual([release.id]);
+    });
+
+    // The captain's default-on rule: a start mark whose wait merged no longer chooses, and
+    // the part starts at the approval of its other wait.
+    it("follows the default rule once the wait its start mark names has merged", () => {
+      const { tasks, work } = setup();
+      const first = work("first", { startPolicy: "on-request" });
+      const second = work("second", { startPolicy: "on-request" });
+      work("later", {
+        blockedBy: ["first", "second"],
+        shape: { ...BATCHED, kind: "implement", start_at_approval: "first" },
+      });
+      tasks.close(first.id, { status: "done", reason: "merged", actor: "host" });
+      approve(tasks, second.id);
+      expect(tasks.graph.listReady().map((r) => r.id)).toEqual(["later"]);
+      expect(tasks.graph.approvedBase(tasks.get("later")!)?.task.id).toBe(second.id);
+    });
+
     it("keeps waiting while another prerequisite is unfinished", () => {
       const { tasks, work } = setup();
       const first = work("first", { startPolicy: "on-request" });

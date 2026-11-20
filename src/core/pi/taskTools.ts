@@ -745,7 +745,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
     description: [
       "Record a typed edge between tasks (ids or keys). blocks: `to` neither starts nor merges",
       "until `from` closes; on batched pull requests `to` starts at `from`'s merge approval unless",
-      "its needs_merge names `from`, and a cycle is refused as text. related: work neither task is waiting on.",
+      "its needs_merge names `from` (add such a wait with update_task blocked_by and needs_merge together), and a cycle is refused as text. related: work neither task is waiting on.",
       "discovered-from: `from` was found while doing `to`. replaced-by: `to` does `from`'s work now;",
       "link every move of work to another task (drop, takeover, fresh task): `from`'s waits",
       "and those on it move to `to`. remove true unlinks.",

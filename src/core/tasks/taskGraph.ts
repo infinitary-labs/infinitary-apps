@@ -588,7 +588,7 @@ export class TaskGraph {
    * to merge, whatever else the task waits on. Only on batched pull
    * requests, where the batch line holds the later part's merge behind it;
    * elsewhere every wait holds until the merge. The one `start_at_approval`
-   * names when the first mate marked one; otherwise each unfinished wait in
+   * names while it is still an unfinished wait; otherwise each unfinished wait in
    * the task's own project, the one whose recorded base carries the most
    * of the others first. A wait `needs_merge` names never starts it.
    * `among` keeps only that one wait: the part a started task was built on.
@@ -600,21 +600,23 @@ export class TaskGraph {
     const full = this.writer.store.get(record.id);
     if (!full || this.tasks.policiesOf(full)?.delivery.value !== "queue-pr") return undefined;
     const needs = this.needsMerge(record);
+    const waits = this.blocksIn(
+      record.id,
+      statusesWhere((blocker) => !TaskService.blockerCleared(blocker)),
+    ).map(({ task }) => task);
+    // A start mark chooses only while it names a wait still unfinished; once
+    // that work merged or the wait went, the default rule picks among the rest.
     const ref = record.shape?.start_at_approval;
-    const named = ref ? this.tasks.resolve(ref) : undefined;
+    const resolved = ref ? this.tasks.resolve(ref) : undefined;
+    const named = waits.find((task) => task.id === resolved?.id);
     const candidates = (
-      ref
-        ? named && (!among || among.id === named.id)
+      named
+        ? !among || among.id === named.id
           ? [named]
           : []
         : among
           ? [among]
-          : this.blocksIn(
-              record.id,
-              statusesWhere((blocker) => !TaskService.blockerCleared(blocker)),
-            )
-              .map(({ task }) => task)
-              .filter((task) => task.repoId === full.repoId)
+          : waits.filter((task) => task.repoId === full.repoId)
     ).filter(
       (task) =>
         !needs.has(task.id) &&
@@ -1017,6 +1019,7 @@ export class TaskGraph {
           updatedAt: at,
         });
       }
+      if (edgeRemoved && type === "blocks") this.dropNeedsMerge(toId, fromId);
       if (removed) {
         this.writer.touch(fromId);
         const from = this.writer.store.get(fromId);
@@ -1148,24 +1151,37 @@ export class TaskGraph {
    * an approval the filer ruled out.
    */
   private moveNeedsMerge(link: TaskLink, next: { fromId: string; toId: string }): void {
-    const named = (record: TaskRecord | undefined, id: string) =>
-      (record?.shape?.needs_merge ?? []).filter((ref) => this.tasks.resolve(ref)?.id === id);
-    const waiter = this.writer.store.get(link.toId);
-    const declared = named(waiter, link.fromId);
-    if (!waiter || declared.length === 0) return;
-    const rest = (waiter.shape?.needs_merge ?? []).filter((ref) => !declared.includes(ref));
-    this.writer.patch(waiter.id, {
-      shape: withShapeKey(waiter.shape, "needs_merge", rest.length ? rest : undefined),
-    });
+    if (!this.dropNeedsMerge(link.toId, link.fromId)) return;
     const target = this.writer.store.get(next.toId);
     const blocker = this.writer.store.get(next.fromId);
-    if (!target || !blocker || named(target, blocker.id).length > 0) return;
+    if (!target || !blocker || this.namedInNeedsMerge(target, blocker.id).length > 0) return;
     this.writer.patch(target.id, {
       shape: withShapeKey(target.shape, "needs_merge", [
         ...(target.shape?.needs_merge ?? []),
         keyOrId(blocker),
       ]),
     });
+  }
+
+  /** The references in `record`'s needs_merge that name `id`. */
+  private namedInNeedsMerge(record: TaskRecord | undefined, id: string): string[] {
+    return (record?.shape?.needs_merge ?? []).filter((ref) => this.tasks.resolve(ref)?.id === id);
+  }
+
+  /**
+   * Takes `blockerId` out of the waiter's needs_merge, in the write that
+   * removes or moves that wait, so a merge requirement never outlives its
+   * wait. Says whether the waiter had named it.
+   */
+  private dropNeedsMerge(waiterId: string, blockerId: string): boolean {
+    const waiter = this.writer.store.get(waiterId);
+    const declared = this.namedInNeedsMerge(waiter, blockerId);
+    if (!waiter || declared.length === 0) return false;
+    const rest = (waiter.shape?.needs_merge ?? []).filter((ref) => !declared.includes(ref));
+    this.writer.patch(waiter.id, {
+      shape: withShapeKey(waiter.shape, "needs_merge", rest.length ? rest : undefined),
+    });
+    return true;
   }
 
   insertLink(

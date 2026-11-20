@@ -8,7 +8,6 @@ import { startMockProvider } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
 import { promptInput } from "./prompt";
 import { showCard, shownCard } from "./stack";
-import { pressKey } from "./windowKeys";
 
 /**
  * An app open on another computer follows the version of the computer it
@@ -74,6 +73,25 @@ async function step(row: Locator, said: string, words: string): Promise<void> {
   await expect(line).toHaveText(words);
 }
 
+/**
+ * The app's own installer got the first mate's computer's exact version:
+ * the stand-in install, which never answers, holds it installing.
+ */
+async function installing(view: LaunchedApp, version: string): Promise<void> {
+  await expect
+    .poll(() => view.page.evaluate(() => window.infinitary.update.status()), { timeout: 60_000 })
+    .toMatchObject({ phase: "installing", latestVersion: version });
+}
+
+/** Moves the focus by Tab alone until it rests on `target`, as a person reaches it. */
+async function tabTo(page: Page, target: Locator): Promise<void> {
+  for (let presses = 0; presses < 40; presses++) {
+    if (await target.evaluate((element) => element === document.activeElement)) return;
+    await page.keyboard.press("Tab");
+  }
+  throw new Error("Tab never reached the control");
+}
+
 /** Words typed here and not sent, while the first mate's computer is away. */
 async function wordsLeft(page: Page): Promise<void> {
   const input = promptInput(page);
@@ -108,6 +126,7 @@ test("an app on another computer gets the first mate's computer's version by its
     // Nobody uses the app: it gets the version and starts again on it by itself.
     let row = await viewRow(home);
     await step(row, "restarting", m.devicesAppRestarting({ version }));
+    await installing(view, version);
     await regionShot(row, test.info().outputPath("by-itself.png"));
 
     // Someone left words unsent there: it waits, and starts again once they are gone.
@@ -121,6 +140,10 @@ test("an app on another computer gets the first mate's computer's version by its
     opened.push(home);
     row = await viewRow(home);
     await step(row, "waiting", m.devicesAppWaiting({ version }));
+    // Ready, and nothing installs while the words wait there.
+    expect((await view.page.evaluate(() => window.infinitary.update.status())).phase).not.toBe(
+      "installing",
+    );
     const update = row.getByRole("button", { name: m.devicesUpdateAppNamed({ device: VIEW }) });
     await expect(update).toHaveText(m.devicesUpdateApp());
     await regionShot(row, test.info().outputPath("waiting.png"));
@@ -131,6 +154,7 @@ test("an app on another computer gets the first mate's computer's version by its
     }
     await promptInput(view.page).fill("");
     await step(row, "restarting", m.devicesAppRestarting({ version }));
+    await installing(view, version);
 
     // Words unsent again: Update app on the row, by keys, starts it at once.
     await view.close();
@@ -142,11 +166,13 @@ test("an app on another computer gets the first mate's computer's version by its
     opened.push(home);
     row = await viewRow(home);
     await step(row, "waiting", m.devicesAppWaiting({ version }));
-    await pressKey(
+    await tabTo(
+      home.page,
       row.getByRole("button", { name: m.devicesUpdateAppNamed({ device: VIEW }) }),
-      "Enter",
     );
+    await home.page.keyboard.press("Enter");
     await step(row, "restarting", m.devicesAppRestarting({ version }));
+    await installing(view, version);
     if (kept) await regionShot(row, join(kept, "app-update-pressed-row.png"));
     // The words there were never sent anywhere: they wait in its composer.
     await expect(promptInput(view.page)).toHaveValue("check the harbour lights");

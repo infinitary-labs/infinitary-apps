@@ -1,5 +1,5 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { basename, join, posix } from "node:path";
+import { readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { basename, join, posix, sep } from "node:path";
 import { skillFolders } from "../session/projectResources";
 import { type ResolveClaudeSettings, resolveSettings } from "./claudeAccess";
 
@@ -123,6 +123,21 @@ const isFile = (path: string) => {
   }
 };
 
+/**
+ * Whether `path`, its links followed, stays inside the plugin folder `root`,
+ * its links followed too: a link to a file inside the plugin is its own,
+ * one that leads outside it never reaches a crewmate or another computer.
+ */
+export function insidePlugin(root: string, path: string): boolean {
+  try {
+    const real = realpathSync(root);
+    const at = realpathSync(path);
+    return at === real || at.startsWith(real + sep);
+  } catch {
+    return false;
+  }
+}
+
 /** A plugin's top-level entries that travel with its skills: everything but its left-out parts. */
 export function carriedPluginEntries(root: string): string[] {
   try {
@@ -161,7 +176,8 @@ export function claudePluginAt(
     const skills = isFile(join(path, "SKILL.md"))
       ? [{ name: basename(path), dir: path }]
       : skillFolders([path]);
-    for (const skill of skills) if (!found.has(skill.name)) found.set(skill.name, skill.dir);
+    for (const skill of skills)
+      if (!found.has(skill.name) && insidePlugin(root, skill.dir)) found.set(skill.name, skill.dir);
   }
   if (found.size === 0 && isFile(join(root, "SKILL.md"))) found.set(name, root);
   if (found.size === 0) return undefined;

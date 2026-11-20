@@ -1,4 +1,12 @@
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { installClaudePlugin, pluginSettings } from "../../../tests/helpers/claudePluginHome";
@@ -149,5 +157,33 @@ describe("the personal set a computer keeps", () => {
     const updated = personalSetFiles(home, setting).files;
     expect(updated.map((file) => file.path)).toEqual(sent.files.map((file) => file.path));
     expect(personalFingerprint(updated)).not.toBe(personalFingerprint(sent.files));
+  });
+
+  // A plugin's links reach only its own files: nothing outside it reaches another computer.
+  it("leaves out a plugin's links that lead outside it, and keeps its links to its own files", async () => {
+    const home = scratchDir("infinitary-personal-plugin-links-");
+    const plugin = installClaudePlugin(home, { name: "claude-security" });
+    const elsewhere = join(home, "elsewhere");
+    mkdirSync(join(elsewhere, "leaked"), { recursive: true });
+    writeFileSync(join(elsewhere, "keys.txt"), "not the plugin's\n");
+    writeFileSync(
+      join(elsewhere, "leaked", "SKILL.md"),
+      "---\nname: leaked\ndescription: Leaked.\n---\n",
+    );
+    symlinkSync(join(elsewhere, "keys.txt"), join(plugin.root, "keys.txt"));
+    symlinkSync(elsewhere, join(plugin.root, "references"));
+    symlinkSync(join(elsewhere, "keys.txt"), join(plugin.root, "scripts", "keys.txt"));
+    symlinkSync(join(elsewhere, "leaked"), join(plugin.root, "skills", "leaked"));
+    symlinkSync(join(plugin.root, "scripts", "render_report.py"), join(plugin.root, "report.py"));
+    const setting = await readEnabledClaudePlugins(pluginSettings({ [plugin.id]: true }));
+    const inside = `.claude/plugins/${plugin.id}`;
+    const paths = personalSetFiles(home, setting).files.map((file) => file.path);
+    expect(paths).toContain(`${inside}/report.py`);
+    expect(paths).toContain(`${inside}/scripts/render_report.py`);
+    for (const path of paths) expect(path).not.toMatch(/keys\.txt|references|leaked/);
+    const listed = personalResources(home, new Set(), { enabled: setting }).plugins;
+    expect(listed.flatMap((each) => each.skills.map((skill) => skill.name))).toEqual([
+      "claude-security",
+    ]);
   });
 });

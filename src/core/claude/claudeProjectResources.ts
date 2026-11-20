@@ -15,7 +15,7 @@ import {
   projectSkillFolders,
 } from "../session/projectResources";
 import type { SessionSpec } from "../session/session";
-import { type ClaudePlugin, carriedPluginEntries } from "./claudePlugins";
+import { type ClaudePlugin, carriedPluginEntries, insidePlugin } from "./claudePlugins";
 
 /**
  * A Claude crewmate's share of its working copy's own instructions and
@@ -132,6 +132,12 @@ export async function stageClaudePlugins(
     for (const entry of carriedPluginEntries(plugin.root)) {
       if (entry === "skills") continue;
       const from = join(plugin.root, entry);
+      // A link that leads outside the plugin is not its own.
+      if (!insidePlugin(plugin.root, from)) {
+        // i18n-exempt: a line in the session's own log, for a developer.
+        note(`the plugin ${plugin.id}'s ${entry} was not staged: it leads outside the plugin`);
+        continue;
+      }
       // An entry that cannot be read, such as a dangling link, is left out
       // alone, as the personal set leaves it out, never the plugin's skills.
       try {

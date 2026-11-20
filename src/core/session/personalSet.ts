@@ -5,6 +5,7 @@ import { CONNECTION_MAX_FRAME_BYTES } from "@shared/connection";
 import {
   carriedPluginEntries,
   type EnabledClaudePlugins,
+  insidePlugin,
   PLUGIN_MANIFEST,
   PLUGIN_SET_ROOT,
 } from "../claude/claudePlugins";
@@ -56,7 +57,8 @@ type Listed = { path: string; abs: string; exec: boolean; stamp: string; size: n
  * Every regular file under a folder, following links, by its path from
  * `base`, listed by its size alone; once the listing passes `budget` bytes it
  * stops and answers `undefined`, so a skill too large to send (one holding
- * its own packages, say) is never read whole.
+ * its own packages, say) is never read whole. With `within`, a plugin's
+ * folder, an entry whose link leads outside it is left out.
  */
 function list(
   dir: string,
@@ -66,6 +68,7 @@ function list(
   seen: Set<string> = new Set(),
   skip: ReadonlySet<string> = NEVER_SENT,
   prefix = "",
+  within?: string,
 ): number | undefined {
   let real: string;
   try {
@@ -86,6 +89,7 @@ function list(
   for (const name of names) {
     if (skip.has(name)) continue;
     const path = join(dir, name);
+    if (within !== undefined && !insidePlugin(within, path)) continue;
     let stat: ReturnType<typeof statSync>;
     try {
       stat = statSync(path);
@@ -93,7 +97,7 @@ function list(
       continue;
     }
     if (stat.isDirectory()) {
-      const inside = list(path, base, out, budget - bytes, seen, skip, prefix);
+      const inside = list(path, base, out, budget - bytes, seen, skip, prefix, within);
       if (inside === undefined) return undefined;
       bytes += inside;
     } else if (stat.isFile()) {
@@ -129,6 +133,7 @@ function listPlugin(
   let bytes = 0;
   for (const entry of own) {
     const path = join(plugin.root, entry);
+    if (!insidePlugin(plugin.root, path)) continue;
     let stat: ReturnType<typeof statSync>;
     try {
       stat = statSync(path);
@@ -144,6 +149,7 @@ function listPlugin(
         seen,
         NEVER_SENT_FROM_PLUGINS,
         prefix,
+        plugin.root,
       );
       if (inside === undefined) return undefined;
       bytes += inside;

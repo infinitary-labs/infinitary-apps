@@ -59,3 +59,45 @@ describe("the personal set sent to a computer that keeps no plugins", () => {
     expect(sync.keptOn("older")?.version).not.toBe(sync.keptOn("newer")?.version);
   });
 });
+
+// The personal resources switch is the person's opt-in: once it is off, nothing more is sent.
+describe("the personal set when the switch turns off while it is read", () => {
+  it("sends nothing to the computer", async () => {
+    const home = scratchDir("infinitary-personal-sync-off-");
+    const plugin = installClaudePlugin(home, { name: "claude-security" });
+    let on = true;
+    const personal = new HomePersonalSet({
+      enabled: () => on,
+      saved: { get: () => undefined, set: () => {} },
+      now: () => 7,
+      home,
+      plugins: async () => {
+        const setting = await readEnabledClaudePlugins(pluginSettings({ [plugin.id]: true }));
+        on = false;
+        return setting;
+      },
+    });
+    const sent: unknown[] = [];
+    const sync = new PersonalSync({
+      devices: {
+        inReach: () => true,
+        version: () => ({
+          contract: "16.0.0",
+          takesWork: true,
+          changes: [PERSONAL_SYNC, PERSONAL_PLUGINS],
+        }),
+        ask: (async (_id: string, _channel: string, [set]: [PersonalKeep]) => {
+          sent.push(set);
+          return { personal: { version: set.version, since: set.since } };
+        }) as never,
+      },
+      personal,
+      log: (line) => {
+        throw new Error(line);
+      },
+    });
+    sync.heard("computer", undefined);
+    await sync.bring("computer");
+    expect(sent).toEqual([]);
+  });
+});

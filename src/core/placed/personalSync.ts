@@ -92,6 +92,10 @@ export class PersonalSync {
     const now = await this.options.personal.current(plugins);
     if (this.kept.get(deviceId)?.version === now.version.version) return;
     const { version, files } = await this.options.personal.read(plugins);
+    // The switch may have turned off, or the computer gone or taken this
+    // version, while the set was read.
+    if (!this.options.personal.enabled() || !this.options.devices.inReach(deviceId)) return;
+    if (!this.kept.has(deviceId) || this.kept.get(deviceId)?.version === version.version) return;
     const answer = keepAnswerSchema.parse(
       await this.options.devices.ask(deviceId, "inf:session:personal", [
         {

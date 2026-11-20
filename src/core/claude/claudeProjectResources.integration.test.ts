@@ -421,6 +421,14 @@ it("lists a turned-on plugin's skills under its name with its own files reachabl
   );
   // A dangling link in the plugin's folder costs only itself.
   symlinkSync(join(plugin.root, "removed-notes"), join(plugin.root, "notes"));
+  // Links that lead outside the plugin are not its own: neither a folder nor a skill is served.
+  put(join(crewmate.home, "elsewhere", "keys.txt"), "not the plugin's\n");
+  put(
+    join(crewmate.home, "elsewhere", "leaked", "SKILL.md"),
+    "---\nname: leaked\ndescription: Planted leaked.\n---\n",
+  );
+  symlinkSync(join(crewmate.home, "elsewhere"), join(plugin.root, "references"));
+  symlinkSync(join(crewmate.home, "elsewhere", "leaked"), join(plugin.root, "skills", "leaked"));
   crewmate.spec.personalResources = true;
   loadsASkillThenRuns("claude-security:claude-security", "true");
   const first = api.requests.length;
@@ -430,7 +438,7 @@ it("lists a turned-on plugin's skills under its name with its own files reachabl
   await session.closed();
   const [opening, loaded] = api.requests.slice(first);
   expect(opening?.raw).toContain("claude-security:claude-security");
-  for (const part of ["scan-verifier", 'claude-security:scan\\"', "scanner"])
+  for (const part of ["scan-verifier", 'claude-security:scan\\"', "scanner", "Planted leaked"])
     expect(opening?.raw, part).not.toContain(part);
   const script = /[^"\s]*\/scripts\/render_report\.py/.exec(loaded?.raw ?? "")?.[0];
   expect(script).toBeDefined();
@@ -438,6 +446,7 @@ it("lists a turned-on plugin's skills under its name with its own files reachabl
   expect(readFileSync(script as string, "utf8")).toBe("print('report')\n");
   for (const name of ["plugin-hook", "plugin-mcp"])
     expect(existsSync(crewmate.ran(name)), name).toBe(false);
+  expect(crewmate.logs.some((line) => line.includes("references was not staged"))).toBe(true);
   console.info("Claude plugin skill loaded:", loaded?.raw?.slice(0, 2000));
 });
 

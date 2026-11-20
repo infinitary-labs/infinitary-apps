@@ -166,12 +166,31 @@ export async function makeFeedCertificate(
     `
     $ErrorActionPreference = 'Stop'
     $c = New-SelfSignedCertificate -Subject 'CN=localhost' -TextExtension @('2.5.29.19={critical}{text}ca=1', '2.5.29.17={text}DNS=localhost&IPAddress=127.0.0.1&IPAddress=::1') -KeyUsage CertSign, DigitalSignature, KeyEncipherment -CertStoreLocation Cert:\\CurrentUser\\My -NotAfter (Get-Date).AddDays(2) -KeyExportPolicy Exportable -FriendlyName 'Infinitary update check feed'
-    $null = Export-PfxCertificate -Cert $c -FilePath $env:FEED_PFX -Password (ConvertTo-SecureString $env:FEED_PASS -AsPlainText -Force)
     $c.Thumbprint`,
-    { FEED_PFX: pfxFile, FEED_PASS: passphrase },
   );
-  await changeOwnRoots("add", thumbprint, wait, treeFile);
-  return { thumbprint, pfx: readFileSync(pfxFile) };
+  // From here the certificate is in this person's store: a step that fails
+  // takes it out of every store it reached before the failure goes on.
+  try {
+    ps(
+      `
+      $ErrorActionPreference = 'Stop'
+      $null = Export-PfxCertificate -Cert (Get-Item ('Cert:\\CurrentUser\\My\\' + $env:THUMB)) -FilePath $env:FEED_PFX -Password (ConvertTo-SecureString $env:FEED_PASS -AsPlainText -Force)
+      $true`,
+      { THUMB: thumbprint, FEED_PFX: pfxFile, FEED_PASS: passphrase },
+    );
+    await changeOwnRoots("add", thumbprint, wait, treeFile);
+    return { thumbprint, pfx: readFileSync(pfxFile) };
+  } catch (caught) {
+    try {
+      await removeFeedCertificate(thumbprint, wait);
+    } catch (left) {
+      throw new AggregateError(
+        [caught, left],
+        `making the feed's certificate failed, and taking it away again failed too: ${String(left)}`,
+      );
+    }
+    throw caught;
+  }
 }
 
 /**
@@ -218,11 +237,22 @@ async function changeOwnRoots(
     );
 }
 
-/** Sets `NODE_USE_SYSTEM_CA=1` in this person's environment, as the person's own setting. */
-export function trustSystemStore(on: boolean): void {
-  ps(`[Environment]::SetEnvironmentVariable('NODE_USE_SYSTEM_CA', $env:VALUE, 'User'); $true`, {
-    VALUE: on ? "1" : "",
-  });
+/**
+ * Sets `NODE_USE_SYSTEM_CA=1` in this person's environment, as the person's
+ * own setting, and answers what puts back the value it had before, or takes
+ * it away when it had none.
+ */
+export function trustSystemStore(): () => void {
+  const before = ps<string | null>(
+    `[Environment]::GetEnvironmentVariable('NODE_USE_SYSTEM_CA', 'User')`,
+  );
+  const set = (value: string | null) =>
+    ps(
+      `[Environment]::SetEnvironmentVariable('NODE_USE_SYSTEM_CA', $(if ($env:REMOVE -eq '1') { $null } else { $env:VALUE }), 'User'); $true`,
+      { VALUE: value ?? "", REMOVE: value === null ? "1" : "" },
+    );
+  set("1");
+  return () => set(before);
 }
 
 /** Takes the feed's certificate out of every store `makeFeedCertificate` put it in. */

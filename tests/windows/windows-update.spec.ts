@@ -5,8 +5,9 @@ import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { expect, type Page, test } from "@playwright/test";
 import { runLabelOf } from "@shared/codeNames";
+import type { TaskDetail } from "@shared/tasks";
 import type { UpdateChannel } from "@shared/update";
-import { UPDATE_WORDS } from "@shared/updateWords";
+import { UPDATE_WORDS, updateResumedWords } from "@shared/updateWords";
 import { publicBuildsUrl } from "../../src/core/update/releaseSource";
 import { UPDATE_CHANNEL_MARKER } from "../../src/core/update/updateChannels";
 import { WINDOWS_UPDATES_FOLDER } from "../../src/core/update/windowsInstall";
@@ -15,7 +16,13 @@ import { GIT_SETUP_WORDS } from "../../src/main/windowsGitSetup";
 import { SPAWN_PROMPT_MARKER } from "../e2e/mockProvider";
 import { heroShotShowing } from "../e2e/pictures";
 import { promptInput } from "../e2e/prompt";
+import { providerMessages } from "../e2e/providerRequest";
 import { taskKey } from "../e2e/rails";
+import {
+  MOCK_UPDATE_RESUME_REPORT,
+  UPDATE_RESUME_MARKER,
+  updateResume,
+} from "../e2e/scenarios/updateResume";
 import { scratchDir } from "../helpers/scratchDirs";
 import { type InstalledApp, launchInstalled } from "../installed/installedApp";
 import {
@@ -47,12 +54,14 @@ import {
  * release source is this machine's own feed, and installed the older one
  * the way a person's double-click does. The journey gives the PC Git for
  * Windows on the person's yes, so the window starts the command through
- * Task Scheduler as it does every day, signs in, starts a task and changes
- * a setting. Then the feed offers the newer version three ways: with a
- * checksum the download does not match, which installs nothing; with a
- * download that stops partway, which installs nothing; and as published,
- * which the window's Update and restart installs, the new copy opening
- * with the same tasks, setting, sign-in and Task Scheduler entry.
+ * Task Scheduler as it does every day, signs in, changes a setting and
+ * starts a task whose crewmate's turn is still running. Then the feed
+ * offers the newer version three ways, each pressed on Settings -> General's
+ * Version row: with a checksum the download does not match, which installs
+ * nothing; with a download that stops partway, which Try again installs
+ * nothing from either; and as published, which Try again installs once the
+ * turn is saved, the new copy opening with the same tasks, setting, sign-in
+ * and Task Scheduler entry and carrying the turn on.
  */
 
 const channel = process.env.INFINITARY_UPDATE_CHANNEL as UpdateChannel | undefined;
@@ -94,7 +103,11 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
   let executable = "";
   let feed: UpdateFeed | undefined;
   let thumbprint = "";
+  let restoreTrust: (() => void) | undefined;
+  const nodeTrustBefore = process.env.NODE_USE_SYSTEM_CA;
   let launched: InstalledApp | undefined;
+  // What the journey could not take back of its changes to this person's machine.
+  const left: string[] = [];
 
   try {
     await test.step(`the older ${channel} test version installed for this person and opened`, async () => {
@@ -157,7 +170,7 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
       );
       thumbprint = made.thumbprint;
       // Before the window starts the command: Task Scheduler gives it this person's environment.
-      trustSystemStore(true);
+      restoreTrust = trustSystemStore();
       // A window a person opens after the change carries it too, as
       // Explorer takes in the changed environment; this check opens its
       // window from its own.
@@ -197,8 +210,12 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
     const signIn = join(dataDir, "auth", "models.json");
     let signInBefore = "";
     let key = "";
-    await test.step("the older copy's window starts the command, signs in, starts a task and changes a setting", async () => {
-      launched = await launchInstalled({ ownDataDir: dataDir, signIn: true });
+    await test.step("the older copy's window starts the command, signs in, changes a setting and starts a task whose turn is still running", async () => {
+      launched = await launchInstalled({
+        ownDataDir: dataDir,
+        signIn: true,
+        scenarios: [updateResume],
+      });
       const { page } = launched;
       await expect.poll(() => runTask(label)?.state, { timeout: 120_000 }).toBe("Running");
       await expect.poll(() => runProcesses().length, { timeout: 60_000 }).toBe(1);
@@ -210,13 +227,15 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
       await page.evaluate((enabled) => window.infinitary.settings.setNotifications(enabled), !was);
       notifications.before = !was;
       // A task, asked of the first mate as a person asks.
-      const title = `Update check task ${channel}`;
+      const title = `${UPDATE_RESUME_MARKER} on ${channel}`;
       const input = promptInput(page);
       await input.click();
       await input.fill(`${SPAWN_PROMPT_MARKER} ${title}`);
       await input.press("Enter");
       key = await taskKey(page, title);
       keep("task-before.txt", key);
+      // Its crewmate's model is still working: the stand-in holds the turn open.
+      await expect.poll(() => launched?.mockProvider.heldRequests(), { timeout: 120_000 }).toBe(1);
     });
 
     const page = () => (launched as InstalledApp).page;
@@ -232,82 +251,103 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
       });
       return status;
     };
-    const installNothing = async (mode: UpdateFeed["mode"], problem: string, picture: string) => {
-      if (!feed) throw new Error("no feed");
-      feed.mode = mode;
-      await offered();
-      const answer = await page().evaluate(() => window.infinitary.update.install());
-      keep(`${picture}.json`, JSON.stringify(answer, null, 2));
-      expect(answer).toMatchObject({ ok: false, problem });
-      // Nothing was handed over: the older copy still answers, and keeps no installer.
+    /**
+     * Settings -> General's Version row, opened as a person opens it. The
+     * window reads the offer when it opens, once an hour and as this row
+     * opens, so a check asked of the command alone reaches the window here.
+     */
+    const versionRow = async () => {
+      const row = page().locator('[data-setting="version"]').locator("..");
+      if (!(await row.isVisible())) {
+        await page().getByRole("button", { name: "Settings", exact: true }).click();
+        await page().getByRole("tab", { name: "General", exact: true }).click();
+      }
+      await expect(row).toBeVisible();
+      return row;
+    };
+    /** The older copy goes on as it was: its window and its command, at the older version, with no installer kept and its crewmate's turn still running. */
+    const olderGoesOn = async () => {
+      const windowPid = launched?.process.pid ?? 0;
+      expect(stillRunning([windowPid])).toEqual([windowPid]);
+      expect(runProcesses()).toHaveLength(1);
       expect((await updateStatus(page())).currentVersion).toBe(older);
       expect(installedVersion()).toBe(older);
       expect(existsSync(join(dataDir, WINDOWS_UPDATES_FOLDER))).toBe(false);
-      await showPanel(picture);
+      expect(launched?.mockProvider.heldRequests()).toBe(1);
     };
-    const showPanel = async (picture: string) => {
-      const indicator = page().getByRole("button", { name: `Update available: ${newer}` });
-      // The window reads the offer when it opens and once an hour, so a check
-      // asked of the command alone reaches it only when the command's own first
-      // check came before the window opened. Settings -> General's Version row
-      // reads it as it opens, as a person opening it would.
-      if (!(await indicator.isVisible())) {
-        await page().getByRole("button", { name: "Settings", exact: true }).click();
-        await page().getByRole("tab", { name: "General", exact: true }).click();
-        await expect(page().locator('[data-setting="version"]')).toBeVisible();
-        await page().keyboard.press("Escape");
-        await expect(indicator).toBeVisible();
-      }
-      if (!(await page().locator("[data-update-channel]").isVisible())) await indicator.click();
-      const panel = page().locator("[data-update-channel]");
-      await expect(panel).toBeVisible();
-      if (evidence) await panel.screenshot({ path: join(evidence, `${picture}.png`) });
-      return panel;
+    /** Presses the row's `button` while the feed serves `mode`, which installs nothing and says `problem`. */
+    const installsNothing = async (
+      mode: UpdateFeed["mode"],
+      button: string,
+      problem: string,
+      picture: string,
+    ) => {
+      if (!feed) throw new Error("no feed");
+      feed.mode = mode;
+      const row = await versionRow();
+      await row.getByRole("button", { name: button, exact: true }).click();
+      await expect(row.locator("[data-update-line]")).toContainText(problem, {
+        timeout: 5 * 60_000,
+      });
+      await expect(
+        row.getByRole("button", { name: UPDATE_WORDS.retry, exact: true }),
+      ).toBeEnabled();
+      await olderGoesOn();
+      if (evidence) await row.screenshot({ path: join(evidence, `${picture}.png`) });
     };
 
-    await test.step("a download that does not match its published checksum installs nothing", async () => {
-      await installNothing(
-        "wrong-checksum",
-        "The download did not match its published checksum, so nothing was installed.",
-        "wrong-checksum",
-      );
-    });
-
-    await test.step("a download that stops partway installs nothing", async () => {
-      await installNothing(
-        "interrupted",
-        "The download stopped before it finished. Try again.",
-        "interrupted-download",
-      );
-    });
-
-    await test.step("Update and restart installs the newer version, and its window opens again", async () => {
+    await test.step("Settings -> General's Version row offers the newer version", async () => {
       if (!feed) throw new Error("no feed");
       feed.mode = "published";
       await offered();
-      const panel = await showPanel("update-offered");
+      const row = await versionRow();
+      await expect(
+        row.getByRole("button", { name: UPDATE_WORDS.restart, exact: true }),
+      ).toBeEnabled();
       if (evidence) {
-        // The release note's picture pair: the offer as a Windows copy now
+        await row.screenshot({ path: join(evidence, "update-offered.png") });
+        // The release note's picture pair: the row as a Windows copy now
         // draws it, in both themes, the saved theme back after.
         const saved = await page().evaluate(() => window.infinitary.settings.getAppearance());
         await heroShotShowing(
           page(),
-          { region: panel, name: "windows-updates-itself", dir: evidence },
+          { region: row, name: "windows-updates-itself", dir: evidence },
           async (theme) => {
             const next = theme ?? saved.theme;
             await page().evaluate(
               (appearance) => window.infinitary.settings.setAppearance(appearance),
-              {
-                ...saved,
-                theme: next,
-              },
+              { ...saved, theme: next },
             );
             await expect.poll(() => page().evaluate(() => document.body.dataset.theme)).toBe(next);
           },
         );
       }
+    });
+
+    await test.step("a download that does not match its published checksum installs nothing, and the older copy goes on", async () => {
+      await installsNothing(
+        "wrong-checksum",
+        UPDATE_WORDS.restart,
+        "The download did not match its published checksum, so nothing was installed.",
+        "wrong-checksum",
+      );
+    });
+
+    await test.step("Try again, with a download that stops partway, installs nothing, and the older copy goes on", async () => {
+      await installsNothing(
+        "interrupted",
+        UPDATE_WORDS.retry,
+        "The download stopped before it finished. Try again.",
+        "interrupted-download",
+      );
+    });
+
+    await test.step("Try again, with the published download, saves the running turn, installs the newer version, and the new copy carries the turn on", async () => {
+      if (!feed) throw new Error("no feed");
+      feed.mode = "published";
+      const row = await versionRow();
       const windowPid = launched?.process.pid;
-      await panel.getByRole("button", { name: UPDATE_WORDS.restart }).click();
+      await row.getByRole("button", { name: UPDATE_WORDS.retry, exact: true }).click();
       // The command saves its crew's work and ends, the installer replaces
       // the copy and opens the new window through the Start menu entry.
       // Every process of the hand-over seen while the copy is replaced, kept
@@ -374,6 +414,19 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
       // The new window starts the command again through the same entry.
       await expect.poll(() => runTask(label)?.state, { timeout: 120_000 }).toBe("Running");
       if (evidence) screenshot(join(evidence, "new-window.png"));
+      // The new copy's command carries on the turn the update stopped, in its
+      // own conversation, opening with the words of a turn an update saved;
+      // a turn a quit or a crash cut opens with other words.
+      const lastWords = (body: string) => providerMessages(body).at(-1);
+      const resumed = () =>
+        (launched?.mockProvider.requestBodies() ?? []).filter((body) => {
+          const last = lastWords(body);
+          return last?.role === "user" && last.text.includes(updateResumedWords());
+        });
+      await expect.poll(() => resumed().length, { timeout: 180_000 }).toBe(1);
+      const delivery = resumed()[0] ?? "";
+      keep("resumed-turn.txt", lastWords(delivery)?.text ?? "");
+      expect(delivery).toContain(UPDATE_RESUME_MARKER);
     });
 
     await test.step("the new copy keeps the tasks, the setting, the sign-in and the Task Scheduler entry", async () => {
@@ -400,7 +453,17 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
       );
       expect(readFileSync(signIn, "utf8")).toBe(signInBefore);
       const board = await after.evaluate(() => window.infinitary.tasks.board());
-      expect(board.tasks.map((task) => task.key)).toContain(key);
+      const id = board.tasks.find((task) => task.key === key)?.id ?? "";
+      expect(id).not.toBe("");
+      // The turn the update stopped finished in the new copy.
+      const outcome = async () =>
+        (
+          (await after.evaluate(
+            (task) => window.infinitary.tasks.detail(task),
+            id,
+          )) as TaskDetail | null
+        )?.outcome ?? "";
+      await expect.poll(outcome, { timeout: 60_000 }).toContain(MOCK_UPDATE_RESUME_REPORT);
       const task = runTask(label);
       keep("run-task-after.json", JSON.stringify(task, null, 2));
       expect(task?.execute.toLowerCase()).toBe(executable.toLowerCase());
@@ -415,9 +478,28 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
   } finally {
     if (feed) keep("feed-requests.json", JSON.stringify(feed.asked, null, 2));
     await launched?.close().catch(() => undefined);
-    await feed?.close().catch(() => undefined);
-    if (thumbprint) await removeFeedCertificate(thumbprint, within).catch(() => undefined);
-    trustSystemStore(false);
-    delete process.env.NODE_USE_SYSTEM_CA;
+    // Each change to this person's machine is taken back, and one that
+    // could not be is said: kept beside a failure's own error, and failing
+    // a journey that passed, below.
+    const undo = async (what: string, step: () => unknown) => {
+      try {
+        await step();
+      } catch (error) {
+        left.push(`${what}: ${String(error)}`);
+      }
+    };
+    await undo("closing the feed", () => feed?.close());
+    if (thumbprint)
+      await undo("taking the feed's certificate away", () =>
+        removeFeedCertificate(thumbprint, within),
+      );
+    if (restoreTrust) await undo("putting NODE_USE_SYSTEM_CA back", restoreTrust);
+    if (nodeTrustBefore === undefined) delete process.env.NODE_USE_SYSTEM_CA;
+    else process.env.NODE_USE_SYSTEM_CA = nodeTrustBefore;
+    if (left.length > 0) {
+      keep("cleanup-failures.txt", left.join("\n"));
+      console.error(`the update check could not undo what it changed: ${left.join("; ")}`);
+    }
   }
+  expect(left, "every change the journey made to this person's machine was taken back").toEqual([]);
 });

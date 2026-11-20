@@ -35,7 +35,7 @@ on:
         type: string
         default: ''
       rounds:
-        description: How many check rounds to run side by side on the one installer this run builds (default 1)
+        description: How many check rounds to run on the one installer this run builds, side by side, or for the update check one per channel in order (default 1)
         required: false
         type: string
         default: '1'
@@ -64,7 +64,7 @@ on:
         type: boolean
         default: false
       rounds:
-        description: How many check rounds to run side by side on the one installer this run builds (default 1)
+        description: How many check rounds to run on the one installer this run builds, side by side, or for the update check one per channel in order (default 1)
         required: false
         type: string
         default: '1'
@@ -381,18 +381,28 @@ jobs:
           retention-days: 7
 
   update:
-    name: ${{ format('{0} · Update the Windows app on {1} (fresh Windows 11)', (inputs.trigger || 'Manual request'), matrix.channel) }}
+    name: ${{ format('{0} · Update the Windows app on {1} (fresh Windows 11{2})', (inputs.trigger || 'Manual request'), matrix.channel, (strategy.job-total > 2 && format('; round {0}', matrix.round) || '')) }}
     needs: build
     # On request only (docs/windows.md, "The update check"): each channel's
     # older test version installed on its own fresh Windows 11 machine,
-    # updated by the app itself from the machine's own feed.
+    # updated by the app itself from the machine's own feed. Each round is a
+    # fresh machine on the same test installers; rounds start in order, two
+    # machines at a time, and a later round runs only once every earlier
+    # round of its channel passed.
     if: ${{ !inputs.hosted && inputs.update_check }}
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
+        round: ${{ fromJSON(needs.build.outputs.rounds) }}
         channel: [alpha, stable]
     runs-on: ${{ vars.WINDOWS_CLEAN_RUNNER || 'shell-pc-win11' }}
-    timeout-minutes: 60
+    # A later round may first wait for its channel's earlier round.
+    timeout-minutes: ${{ matrix.round > 1 && 120 || 60 }}
+    # Reading the run's own jobs, for a later round's wait.
+    permissions:
+      contents: read
+      actions: read
     defaults:
       run:
         shell: powershell
@@ -403,6 +413,29 @@ jobs:
       GIT_CONFIG_KEY_0: credential.helper
       GIT_CONFIG_VALUE_0: ''
     steps:
+      # A later round runs only after every earlier round of its channel
+      # passed, and stops at once when one did not.
+      - name: Wait for this channel's earlier rounds
+        if: ${{ matrix.round > 1 }}
+        timeout-minutes: 60
+        env:
+          TOKEN: ${{ github.token }}
+          CHANNEL: ${{ matrix.channel }}
+          ROUND: ${{ matrix.round }}
+        run: |
+          $headers = @{ Authorization = "Bearer $env:TOKEN"; Accept = 'application/vnd.github+json' }
+          $url = "$env:GITHUB_API_URL/repos/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID/attempts/$env:GITHUB_RUN_ATTEMPT/jobs?per_page=100"
+          $round = [int]$env:ROUND
+          while ($true) {
+            $earlier = @((Invoke-RestMethod -Headers $headers -Uri $url).jobs | Where-Object {
+              $_.name -match "Update the Windows app on $env:CHANNEL \(fresh Windows 11; round (\d+)\)" -and [int]$Matches[1] -lt $round
+            })
+            $failed = @($earlier | Where-Object { $_.status -eq 'completed' -and $_.conclusion -ne 'success' })
+            if ($failed.Count -gt 0) { throw "$($failed[0].name) did not pass, so this round does not run" }
+            $passed = @($earlier | Where-Object { $_.status -eq 'completed' })
+            if ($passed.Count -ge $round - 1) { break }
+            Start-Sleep -Seconds 30
+          }
       - name: Git Bash for the job's own steps
         run: |
           $ProgressPreference = 'SilentlyContinue'
@@ -464,7 +497,7 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: ${{ always() }}
         with:
-          name: ${{ format('windows-update-evidence-{0}', matrix.channel) }}
+          name: ${{ format('windows-update-evidence-{0}{1}', matrix.channel, (strategy.job-total > 2 && format('-round-{0}', matrix.round) || '')) }}
           path: |
             ${{ runner.temp }}/windows-evidence
             test-results/windows

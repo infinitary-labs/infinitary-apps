@@ -39,7 +39,8 @@ const WINDOWS_INPUTS = [
  * The other jobs install and check what it built and change nothing in it.
  */
 export function buildJob(workflow: string): string {
-  const lines = workflow.split("\n");
+  // A Windows checkout turns each line ending into CRLF; the key reads the text as git keeps it.
+  const lines = workflow.split(/\r?\n/);
   const start = lines.indexOf("  build:");
   if (start < 0) throw new Error(`${WORKFLOW} has no build job`);
   const end = lines.findIndex((line, at) => at > start && /^ {2}[\w-]+:\s*$/.test(line));

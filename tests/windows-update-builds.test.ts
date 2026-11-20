@@ -65,6 +65,10 @@ describe("the inputs the update check's test installers are built from", () => {
     expect(inputsKey(edited(path), WORKFLOW)).toBe(key);
   });
 
+  it("are the same from a Windows checkout, whose lines end in CRLF", () => {
+    expect(inputsKey(FILES, WORKFLOW.replaceAll("\n", "\r\n"))).toBe(key);
+  });
+
   it("are the same after a change to the update job alone", () => {
     expect(inputsKey(FILES, workflowWith("update", "echo update"))).toBe(key);
   });

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-reply-typing",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Typing a reply on your iPhone or iPad can't press a card's choices by mistake",
+      "body": "While you type a reply under a card on your iPhone or iPad, its choices and a note's Done or Got it dim in place. A tap on one then only puts the keyboard down, so a tap meant for send can't decide the card; tap again to choose, with your words.",
+      "noPicture": "The change is on iPhone and iPad, and release pictures are taken from the Mac window, which this change leaves as it was.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

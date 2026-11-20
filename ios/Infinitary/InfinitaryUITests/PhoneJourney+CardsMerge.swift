@@ -215,12 +215,17 @@ extension PhoneJourney {
         // On iPhone the merge card's head and foot outgrow its stage, so the whole card scrolls between them.
         let reply = app.textFields["card-reply"]
         reveal(reply); focusForPhoneTyping(reply, in: app); reply.typeText(words)
-        // The focused field holds the scroll while the keyboard is up, so Done hides it, keeping the words, before the head is reached.
-        if app.keyboards.firstMatch.exists {
-            let done = app.buttons["dismiss-phone-keyboard"]
-            XCTAssertTrue(done.waitForPresence(timeout: 10), app.debugDescription); tapOnPhone(done)
-            XCTAssertTrue(app.keyboards.firstMatch.waitForAbsence(timeout: 10), app.debugDescription)
-        }
+        // INF-5448's plan: while the reply types, the choices rest quiet under the field (INF-3468), and a tap on one only puts
+        // the keyboard down, keeping the words and the card. Both appearances supply the release note's hero pair.
+        XCTAssertTrue(app.keyboards.firstMatch.exists, app.debugDescription)
+        let typingLater = app.buttons["card-action-later"]
+        XCTAssertTrue(waitForPhonePress(typingLater), "Later is not in view under the typing reply\n\(app.debugDescription)")
+        try await appearances("reply-typing-quiet", showing: typingLater)
+        tapOnPhone(typingLater)
+        XCTAssertTrue(app.keyboards.firstMatch.waitForAbsence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(cardHeading(title).exists, "A tap while the reply typed decided the card\n\(app.debugDescription)")
+        XCTAssertEqual(reply.value as? String, words, "The words stay in the field")
+        picture("reply-typing-ended-choice")
         // INF-1879: the one minus retains typed words without a warning or an ending.
         XCTAssertFalse(app.buttons["close-card"].exists)
         let putAside = app.buttons["put-aside-card"]

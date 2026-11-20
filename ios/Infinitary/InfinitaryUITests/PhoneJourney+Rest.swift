@@ -580,14 +580,21 @@ extension PhoneJourney {
         let words = try XCTUnwrap(fixture["noteWords"] as? String)
         let reply = app.textFields["card-reply"]
         reveal(reply); focusForPhoneTyping(reply, in: app); reply.typeText(words)
-        if app.keyboards.firstMatch.exists {
-            let done = app.buttons["dismiss-phone-keyboard"]
-            XCTAssertTrue(done.waitForPresence(timeout: 10), app.debugDescription); tapOnPhone(done)
-            XCTAssertTrue(app.keyboards.firstMatch.waitForAbsence(timeout: 10), app.debugDescription)
-        }
         // INF-2794: the note's own Got it reads it into the past; the corner would only put it aside.
         let gotIt = app.buttons["note-done"]
         XCTAssertTrue(gotIt.waitForPresence(timeout: 10), app.debugDescription)
+        // INF-5448's plan: while the reply types, its Got it rests in view under the field (INF-3468), quiet, and a tap on it
+        // only puts the keyboard down: the note stays and nothing is sent.
+        if app.keyboards.firstMatch.exists {
+            XCTAssertTrue(waitForPhonePress(gotIt), "Got it is not in view under the typing reply\n\(app.debugDescription)")
+            picture("reply-typing-choice-quiet")
+            tapOnPhone(gotIt)
+            XCTAssertTrue(app.keyboards.firstMatch.waitForAbsence(timeout: 10), app.debugDescription)
+            picture("reply-typing-ended")
+            XCTAssertFalse(gotIt.waitForAbsence(timeout: 2), "A tap while the reply typed read the note\n\(app.debugDescription)")
+            XCTAssertEqual((reply.value as? String), words, "The words stay in the field")
+        }
+        // The next tap reads the note, carrying the words.
         reveal(gotIt)
         tapOnPhone(gotIt)
         let read = try await home("context-read")

@@ -717,6 +717,18 @@ private struct PhoneCardPane: View {
     private var updatedBehind: Bool { showsBack && side.faceOffer != nil && side.faceOffer != offer }
     private var reachable: Bool { session.contact == "in-reach" }
     private var replyWords: String { reply.trimmingCharacters(in: .whitespacesAndNewlines) }
+    /// INF-5448's plan, the captain's Approve and build ("Dim in place and take no press until you stop typing"): the reply
+    /// types while its field has the keyboard and holds words or a photo. The choices and a note's Done or Got it then draw
+    /// quiet in place, and a tap on one only puts the keyboard down, so a tap meant for send never decides the card.
+    private var replyTyping: Bool {
+        replyFocus != nil && messageContext.keyboardUp && (!replyWords.isEmpty || !photos.isEmpty)
+    }
+    /// A choice's tap while the reply types: the keyboard goes down, the choices light, and nothing is sent or chosen.
+    private func endsTypingInstead() -> Bool {
+        guard replyTyping else { return false }
+        replyFocus = nil; dismissPhoneKeyboard()
+        return true
+    }
     private var canSendReply: Bool { !host.changing && session.canChange && host.drawn && replyFits }
     /// The words, photos or notes alone, which the send checks again once its change has begun and the card counts as changing.
     private var replyFits: Bool {
@@ -1346,13 +1358,13 @@ private struct PhoneCardPane: View {
             // INF-2794: every live note's one button, Done or Got it, where a decision's default sits.
             if card.actions.isEmpty, !card.isPast, let label = card.value["noteDone"]["label"].text {
                 PhoneChoiceRow {
-                    Button { pressNote() } label: {
+                    Button { if !endsTypingInstead() { pressNote() } } label: {
                         HStack(spacing: 6) {
                             Text(label)
                             if pending == Self.noteDoneID { ProgressView().controlSize(.mini).accessibilityLabel(PhoneMessages.phoneCommonSending()) }
                         }
                     }
-                    .buttonStyle(PhoneChoiceStyle(.primary))
+                    .buttonStyle(PhoneChoiceStyle(replyTyping ? .muted : .primary))
                     .disabled(host.changing || !session.canChange)
                     .accessibilityHint(rest(card.value["noteDone"]["restWords"].text ?? ""))
                     .accessibilityIdentifier("note-done")
@@ -1366,13 +1378,13 @@ private struct PhoneCardPane: View {
                         answersCount(Int(count)).layoutValue(key: PhoneChoiceRow.Leading.self, value: true)
                     }
                     ForEach(Array(footerOrder.enumerated()), id: \.offset) { _, action in
-                        Button { choose(action) } label: {
+                        Button { if !endsTypingInstead() { choose(action) } } label: {
                             HStack(spacing: 6) {
                                 Text(card.label(of: action) ?? PhoneMessages.phoneCardsChooseFallback())
                                 if pending != nil && pending == action["id"].text { ProgressView().controlSize(.mini).accessibilityLabel(PhoneMessages.phoneCommonSending()) }
                             }
                         }
-                        .buttonStyle(PhoneChoiceStyle(footerKind(action), chosen: chosenID == action["id"]))
+                        .buttonStyle(PhoneChoiceStyle(replyTyping ? .muted : footerKind(action), chosen: chosenID == action["id"]))
                         .disabled(card.isPast || host.changing || !session.canChange || !host.revealed)
                         .accessibilityValue(chosenID == action["id"] ? PhoneMessages.phoneCardsChosen() : "")
                         .accessibilityIdentifier("card-action-\(action["id"].text ?? "")")

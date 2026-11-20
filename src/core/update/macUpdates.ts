@@ -41,8 +41,9 @@ export type MacUpdateDriver = {
    * before native staging starts and again once staged, before shutdown;
    * false keeps the copy running and nothing quits. The install answers
    * `unstaged` when it was asked before staging, and `staged` once staged:
-   * Squirrel applies a staged update at the next start, and a later install
-   * quits with no staging. A release that quits never answers.
+   * Squirrel applies a staged update at the next start, a later install of
+   * that version quits with no staging, and one of another version stages
+   * it in its place. A release that quits never answers.
    */
   install: (stillWanted?: () => boolean) => Promise<void | MacInstallKept>;
 };
@@ -337,7 +338,9 @@ export function createMacUpdateChecker(options: {
     if (!options.driver.checkVersion) return { ok: false, reason: "installation" };
     // A version already followed is ready again, staged too: installing it again downloads nothing.
     if (following === version && (downloaded === version || phase === "ready")) return { ok: true };
-    if (isInstalling() || phase === "ready") return { ok: false, failed: ALREADY_INSTALLING };
+    if (isInstalling()) return { ok: false, failed: ALREADY_INSTALLING };
+    // Another version staged and kept running is no longer the target: the driver stages this
+    // one in its place before it quits, and until then the staged one applies at the next start.
     // A channel read or download under way is let go: the followed version is the offer.
     const consent = ++generation;
     checking = undefined;
@@ -411,10 +414,14 @@ export function createMacUpdateChecker(options: {
     return install(stillWanted);
   }
 
-  /** Stops following a version: the next read is the channel's own again. */
+  /**
+   * Stops following a version: the next read is the channel's own again. A
+   * version staged and kept running is no longer offered; until another is
+   * staged in its place it applies at the next start, as the driver says.
+   */
   function unfollow(): void {
-    // A version being replaced, or staged for it, stays; its download in the background goes.
-    if (!following || phase === "installing" || phase === "ready") return;
+    // A version being replaced stays; its download in the background goes.
+    if (!following || phase === "installing") return;
     generation++;
     download?.abort();
     download = undefined;

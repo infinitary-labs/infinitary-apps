@@ -72,7 +72,8 @@ export function createMacUpdateDriver(prepareRestart: () => Promise<void>): MacU
   let updater: MacUpdater | undefined;
   let exact: ReturnType<typeof versionProvider> | undefined;
   let checked: UpdateCheckResult | null = null;
-  let nativeReady = false;
+  /** The version Squirrel staged; it applies at the next start until another is staged in its place. */
+  let nativeReady: string | undefined;
   let queue: Promise<unknown> = Promise.resolve();
   // The library shares the checked offer with downloadUpdate. Serialize checks so an older
   // channel request can never replace a newer request's provider or download target.
@@ -210,7 +211,9 @@ export function createMacUpdateDriver(prepareRestart: () => Promise<void>): MacU
       const current = await engine();
       // With autoInstallOnAppQuit=false, the library has only downloaded and checksummed the
       // ZIP. Native staging (including signature verification) starts only after consent.
-      if (!nativeReady)
+      // The version downloaded last, which the core checked is the one it installs.
+      const target = checked?.updateInfo.version;
+      if (!target || nativeReady !== target)
         await new Promise<void>((resolve, reject) => {
           const cleanup = () => {
             autoUpdater.removeListener("error", failed);
@@ -221,7 +224,7 @@ export function createMacUpdateDriver(prepareRestart: () => Promise<void>): MacU
             reject(error);
           };
           const ready = () => {
-            nativeReady = true;
+            nativeReady = target;
             cleanup();
             resolve();
           };
@@ -235,7 +238,8 @@ export function createMacUpdateDriver(prepareRestart: () => Promise<void>): MacU
           }
         });
       // Asked again once staged, before shutdown: someone who came back while Squirrel staged
-      // keeps the app running. The staged fact stays, so a later install quits with no staging.
+      // keeps the app running. The staged version stays, so a later install of it quits with
+      // no staging, and one of another version stages that one in its place.
       if (stillWanted && !stillWanted()) return "staged";
       // Squirrel's quitAndInstall must not outrun the app's asynchronous task/session shutdown.
       try {

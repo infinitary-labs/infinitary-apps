@@ -758,13 +758,35 @@ describe("following the version of the computer this copy controls", () => {
     expect(await f.follow("0.8.4")).toEqual({ ok: true });
     expect(await f.installFollowed("0.8.4", () => true)).toMatchObject({ ok: false, later: true });
     expect((await f.checker.getStatus()).phase).toBe("ready");
-    // Staged for the next start, so it stays the version followed.
-    f.checker.unfollow?.();
     expect(await f.follow("0.8.4")).toEqual({ ok: true });
     expect(await f.installFollowed("0.8.4", () => true)).toEqual({ ok: true });
     expect(f.checkVersion).toHaveBeenCalledTimes(1);
     expect(f.driver.download).toHaveBeenCalledTimes(1);
     expect(f.driver.install).toHaveBeenCalledTimes(2);
+  });
+
+  it("follows the home's newer version after staging an older one and staying open, and installs only the newer", async () => {
+    const f = following("0.8.3");
+    f.driver.install.mockResolvedValueOnce("staged");
+    expect(await f.follow("0.8.4")).toEqual({ ok: true });
+    expect((await f.installFollowed("0.8.4", () => true)).ok).toBe(false);
+    // The home moved on: the staged version is no longer the target, and is never installed.
+    expect(await f.follow("0.8.5")).toEqual({ ok: true });
+    expect(f.driver.download.mock.calls.map((call) => call[0].version)).toEqual(["0.8.4", "0.8.5"]);
+    expect((await f.installFollowed("0.8.4", () => true)).ok).toBe(false);
+    expect(await f.installFollowed("0.8.5", () => true)).toEqual({ ok: true });
+    expect(f.driver.install).toHaveBeenCalledTimes(2);
+  });
+
+  it("offers the channel's own newest again once it stops following a version it staged", async () => {
+    const f = following("0.8.3");
+    f.driver.install.mockResolvedValueOnce("staged");
+    expect(await f.follow("0.8.4")).toEqual({ ok: true });
+    expect((await f.installFollowed("0.8.4", () => true)).ok).toBe(false);
+    f.checker.unfollow?.();
+    f.driver.check.mockResolvedValueOnce(offer("0.8.5"));
+    expect(await f.checker.getStatus()).toMatchObject({ phase: "idle", latestVersion: "0.8.5" });
+    expect((await f.installFollowed("0.8.4", () => true)).ok).toBe(false);
   });
 
   it("tries the staged version again after a shutdown that failed, with no download", async () => {

@@ -257,6 +257,31 @@ describe("Mac updater native effects", () => {
     expect(shutdown).toHaveBeenCalledOnce();
     expect(state.quit).toHaveBeenCalledOnce();
   });
+  it("stages a newer version in place of one staged and kept running, then quits on it", async () => {
+    const shutdown = vi.fn(async () => {});
+    const driver = createMacUpdateDriver(shutdown);
+    await driver.check("alpha");
+    vi.mocked(autoUpdater.checkForUpdates).mockImplementation(() => {
+      autoUpdater.emit("update-downloaded");
+    });
+    let nobodyHere = true;
+    const kept = driver.install(() => {
+      const answer = nobodyHere;
+      nobodyHere = false;
+      return answer;
+    });
+    expect(await kept).toBe("staged");
+    // A newer version is read and downloaded: the one staged is not it.
+    state.checked.mockResolvedValue({
+      isUpdateAvailable: true,
+      updateInfo: { version: "0.5.0-alpha.11" },
+      cancellationToken: { cancel: state.cancel },
+    });
+    await driver.check("alpha");
+    await driver.install(() => true);
+    expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(2);
+    expect(state.quit).toHaveBeenCalledOnce();
+  });
   it("does not stage twice when shutdown must be tried again", async () => {
     const shutdown = vi.fn().mockRejectedValueOnce(new Error("busy")).mockResolvedValue(undefined);
     const driver = createMacUpdateDriver(shutdown);

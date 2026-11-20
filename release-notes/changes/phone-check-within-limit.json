@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-check-within-limit",
+      "reason": "Internal: the phone check runs its parts that choose a photo last and adds the library photo just before them, answers a text size the part already has without waiting for its witness, collects no Xcode diagnostics after a failed test, and has 90 minutes rather than 60, so a full check fits within its limit on the Mac mini; nothing in the app changes."
+    }
+  ]
+}

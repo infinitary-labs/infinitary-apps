@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "decision-case-owns-its-projects",
+      "reason": "Internal test repair: the core test case where a task-less decision opens a decision task registers both projects its scripted card offers, so it passes when run alone instead of borrowing a project an earlier case adds. No user-facing behavior changes."
+    }
+  ]
+}

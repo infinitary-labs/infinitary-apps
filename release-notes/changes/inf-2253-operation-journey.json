@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "inf-2253-operation-journey",
+      "reason": "Repairs the operation journey's stale tool expectation for the approved workflow-run diagnosis capability; product behavior is unchanged."
+    }
+  ]
+}

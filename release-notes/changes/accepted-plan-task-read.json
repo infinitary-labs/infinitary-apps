@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "accepted-plan-task-read",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Your first mate reads accepted plans directly",
+      "body": "The first mate reads the full plan and your answers itself, without assigning a separate task to copy them. Approved pieces go into Queued and start automatically when their blockers merge. Moving a piece back to Backlog keeps it waiting for your word.",
+      "noPicture": "This changes plan recovery and task coordination, not a dedicated view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

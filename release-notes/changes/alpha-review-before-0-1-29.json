@@ -1,0 +1,13 @@
+{
+  "exclusions": [
+    {
+      "id": "stale-docs-claims",
+      "reason": "Corrects stale claims in lasting docs. Nothing in the app changes.",
+      "covers": ["5c57a87c63869a84cd9fb0c8ebfcec8718518449"]
+    },
+    {
+      "id": "alpha-review-before-0-1-29",
+      "reason": "Release review before the next alpha: ranks three highlights and rewrites four notes into plain language. Nothing in the app changes."
+    }
+  ]
+}

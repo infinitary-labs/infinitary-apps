@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "ambient-control-fixes",
+      "kind": "fix",
+      "area": "settings",
+      "title": "Ambient music volume stays open, and ⌥⌘P pauses it",
+      "body": "Moving the pointer from the sound button to its volume slider no longer closes the slider. The four bars now rise and fall clearly with the music at any volume. Press ⌥⌘P (Ctrl+Alt+P on Windows and Linux) to pause or resume the music, and Settings now says the music is procedurally generated as it plays.",
+      "picture": {
+        "dark": "ambient-control-fixes-dark.webp",
+        "light": "ambient-control-fixes-light.webp",
+        "alt": "The open ambient volume slider beside the sound button, whose label reads Pause ambient music ⌥⌘P"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "references-brief-paragraphs",
+      "reason": "A crewmate granted saved references now reads its import instructions as their own paragraph after the knowledge lines, instead of run into the previous sentence. Only the layout of the crewmate's own instructions changes; nothing it does, and nothing the app shows beyond that brief's line breaks, is different."
+    }
+  ]
+}

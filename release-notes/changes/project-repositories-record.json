@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "project-repositories-record",
+      "reason": "Saved data now records which project each repository belongs to, and the readers follow it; every project still holds one repository, so nothing a person sees changes until a project can hold several."
+    }
+  ]
+}

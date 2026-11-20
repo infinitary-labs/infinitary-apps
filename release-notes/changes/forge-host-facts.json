@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "forge-host-facts",
+      "reason": "Refactor: shared code reads each forge host's facts from one table instead of comparing a host kind to GitLab; GitHub and GitLab behave exactly as before, so nothing a person sees changes."
+    }
+  ]
+}

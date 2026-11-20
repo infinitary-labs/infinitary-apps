@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "crew-allowance-band",
+      "kind": "improvement",
+      "title": "Crew work goes to the subscription with the most allowance to spare",
+      "body": "When Firstmate picks a model for crew work, a subscription with 10% or less of its allowance left now goes after every subscription with more left, so a nearly used plan is protected. A task's record explains its model under Why this model: the reason it was chosen, and the subscriptions it was compared with and how much each had left.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "crew-allowance-band-dark.webp",
+        "light": "crew-allowance-band-light.webp",
+        "alt": "A task record's Why this model explains that Claude was picked over Codex, which had 10% or less left"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

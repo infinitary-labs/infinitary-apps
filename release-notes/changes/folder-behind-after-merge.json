@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "folder-behind-after-merge",
+      "kind": "fix",
+      "title": "A folder a merge left behind gets a task that brings it up to date",
+      "body": "When Infinitary merges a change but cannot bring your project's folder up to date, for example because it has edits that are not committed, the merged task's Activity says why, and a task named Bring the folder up to date starts on its own. Its crewmate works in the folder itself, sets your edits aside rather than dropping them, and asks you before anything of yours would have to go. The task closes by itself once the folder is up to date.",
+      "area": "tasks",
+      "noPicture": "It shows only after a merge leaves a folder behind, as an Activity line and an ordinary task in Tasks, with no new screen.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

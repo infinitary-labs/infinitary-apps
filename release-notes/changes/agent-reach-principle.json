@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "agent-reach-principle",
+      "reason": "Adds the build principle \"Build the agent's reach, never its verdicts\" to docs/principles.md, its pointer in AGENTS.md and the four-kinds question in docs/delivery-rigor.md; how the project itself is developed, documentation only, nothing a person notices."
+    }
+  ]
+}

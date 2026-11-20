@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "your-panels-under-dictation",
+      "kind": "improvement",
+      "title": "Your panels sits under Dictation in Settings",
+      "body": "On Settings → General, Your panels now follows the Dictation row. The other rows stay where they were.",
+      "area": "settings",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

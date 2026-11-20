@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "update-check-active-mark",
+      "kind": "improvement",
+      "area": "settings",
+      "title": "Sharing says what the update check tells us",
+      "body": "Whatever the Diagnostics switch says, the first update check each day, and the first each month, now also says it is the first, so Infinitary Labs can count how many computers use Infinitary. It carries no ID, and Settings, General, Sharing says so under the switch. A copy installed with Homebrew does not send it.",
+      "picture": {
+        "dark": "update-check-active-mark-dark.webp",
+        "light": "update-check-active-mark-light.webp",
+        "alt": "Settings, General, Sharing: under the Diagnostics switch, a line says the update check tells Infinitary Labs whether this computer already checked today and this month, with no ID"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

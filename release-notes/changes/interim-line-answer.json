@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "interim-line-answer",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A crewmate's answer ends the wait after its progress line",
+      "body": "When a crewmate posted a short line under your reply saying what it was working on, its real answer could be kept as a plain comment, so the card kept saying the crewmate had not answered and its task kept saying \"A reply is queued\". The answer now ends the wait. A card already stuck this way ends its wait with the crewmate's next answer.",
+      "noPicture": "The thread looks as it always should once answered; the fix removes a waiting line that stayed after the answer, which an after picture can show only by its absence.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

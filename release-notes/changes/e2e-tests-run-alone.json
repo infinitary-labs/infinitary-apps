@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "e2e-tests-run-alone",
+      "reason": "Twenty-three end-to-end tests that leaned on what an earlier test in their file made now set up their own start or join the test they continue, and the full Mac verification runs each later test of a file that shares one app by itself so the next such test fails there. Test and CI code only; nothing a person notices changes."
+    }
+  ]
+}

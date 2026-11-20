@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crew-supervisor-placement",
+      "reason": "Internal: the crew supervisor's placement code - where a task runs, its waits for a computer and their words, and its routing and binding there - moves into its own owner, with every caller reaching it directly and its guardrail tests renamed beside it; nothing a person sees changes."
+    }
+  ]
+}

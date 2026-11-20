@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "remote-card-risk",
+      "kind": "fix",
+      "highlight": 1,
+      "title": "Cards from another computer keep their risk chart",
+      "body": "A crewmate working on another computer now keeps all seven risk ratings on its merge card. Its questions and design-only choices also arrive unchanged, and it can prepare a merge review for another pull request in your project.",
+      "area": "cards",
+      "picture": {
+        "dark": "remote-card-risk-dark.webp",
+        "light": "remote-card-risk-light.webp",
+        "alt": "The title and upper body of a sample completion card, with its seven-dot risk chart at the top right."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

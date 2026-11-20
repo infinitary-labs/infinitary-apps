@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "project-move",
+      "kind": "feature",
+      "title": "Move repositories into another project",
+      "body": "Ask Firstmate to move one or more repositories into another project, or into a project of their own. When you name the exact move, it happens at once. When Firstmate suggests one, a card shows where each repository goes and which tasks follow, and nothing moves until you click Apply move. Each repository keeps its name, folder and settings, and every task keeps its key. A project left empty joins the other one whole, with its automations, and its key is never given out again. To combine two projects, move the repositories of one into the other.",
+      "area": "projects",
+      "picture": {
+        "dark": "project-move-dark.webp",
+        "light": "project-move-light.webp",
+        "alt": "The move card asking to move ledger-business and ledger-infra into ledger-app, with each repository's project now and after the click, the open tasks that join, and the Apply move button"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

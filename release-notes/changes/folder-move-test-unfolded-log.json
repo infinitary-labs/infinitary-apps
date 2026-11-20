@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "folder-move-test-unfolded-log",
+      "reason": "Test-only repair: the data-folder move test now holds its older folder's write-ahead log unfolded while it builds the database, so the migrations growing past SQLite's automatic checkpoint size no longer put the work into the main file before the test checks it is absent. No app behavior changes."
+    }
+  ]
+}

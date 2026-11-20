@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "computer-load-override-read",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Computer readings no longer scan every task",
+      "body": "Checking a work computer's load no longer reads your entire task history every two seconds, removing one source of pauses in keys, panels and computer readings.",
+      "noPicture": "This removes background work without changing the Computers panel's appearance.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

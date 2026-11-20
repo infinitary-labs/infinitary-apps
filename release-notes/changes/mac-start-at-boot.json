@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "mac-start-at-boot",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Start Infinitary when a Mac starts, before anyone logs in",
+      "body": "On a Mac, infinitary start-at-boot now prepares Infinitary to start with no window whenever the Mac starts, as your user, so your first mate and crew keep working with nobody logged in. It prints the one line an administrator runs to turn it on, and it starts from the next time the Mac starts. infinitary start-at-boot --off undoes it. infinitary status now reports the lock of your own login Keychain.",
+      "noPicture": "The command's own lines appear in a terminal, with no change to the app's windows.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

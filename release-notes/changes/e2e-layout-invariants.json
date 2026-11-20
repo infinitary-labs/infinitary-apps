@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "e2e-layout-invariants",
+      "reason": "Test-only cleanup: reject layout-state hooks and copied pixel expectations, share a containment/overlap invariant, and retain functional journeys instead of placement and styling checks. No product behavior changes."
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+// A disposable simulator needs an application identifier to exercise its own Keychain.
+// Embed the simulator's entitlement section with the linker, not codesign.
+// This never reads signing identities, changes a keychain search list or signs an archive.
+CODE_SIGNING_ALLOWED = NO
+PHONE_TEST_ENTITLEMENTS = -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __entitlements -Xlinker "$(SRCROOT)/Simulator.entitlements"
+// INF-4794: the notification part reads the app's push key from their shared keychain group.
+PHONE_TEST_NOTIFICATIONS_ENTITLEMENTS = -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __entitlements -Xlinker "$(SRCROOT)/SimulatorNotifications.entitlements"

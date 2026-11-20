@@ -1,0 +1,8 @@
+{
+  "policyAsksFirst": "先询问",
+  "policyCareBound": "本地合并使用默认把关；拉取请求仍然要求谨慎把关。",
+  "policyHelper": "请让你的大副为此任务更改这些设置。",
+  "policySourceParent": "上层任务",
+  "policySourceProject": "项目设置",
+  "policySourceTask": "此任务"
+}

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "task-load",
+      "kind": "feature",
+      "area": "tasks",
+      "title": "Heavy runs wait for available resources",
+      "body": "Your crew can declare a heavy run's processor and memory needs. Its task shows the wait and the running declaration separately from measured use, without stopping work already running.",
+      "picture": {
+        "dark": "task-load-dark.webp",
+        "light": "task-load-light.webp",
+        "alt": "Cropped upper task record with separate Use and Run rows: measured processor use and resident memory above the running declaration"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

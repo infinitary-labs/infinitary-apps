@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "reviewed-journey-answers-finding-before-merge",
+      "reason": "Internal test repair: the reviewed-care journey now answers the first mate's open review question before it merges, since a merge closes its task only when nothing else on it is open. Nothing in the app changes."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "late-key-offer",
+      "reason": "Keys used when not typing have not shipped in a release yet: a plain key pressed right after another outside typing no longer loses its offer, and the feature's own note already covers what a person sees."
+    }
+  ]
+}

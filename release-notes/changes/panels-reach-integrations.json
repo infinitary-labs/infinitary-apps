@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "panels-reach-integrations",
+      "kind": "feature",
+      "area": "settings",
+      "title": "Your panels reach your integrations the way the first mate does",
+      "body": "A panel can now read from GitHub, your calendar or any other connection in Settings → Integrations, under the same rule each action already has there. When an action asks you, the panel's request shows the same approval card the first mate's does, naming the panel and why it asks, and a line above the panel offers Ask again after Not now. A panel you add from elsewhere lists the integrations it uses on the card that asks you to add it, and asks again when an update uses more. Panels no longer name web addresses or keys of their own.",
+      "picture": {
+        "dark": "panels-reach-integrations-dark.webp",
+        "light": "panels-reach-integrations-light.webp",
+        "alt": "A panel on the right rail whose line says it asks to count items and its approval card is up, beside an Ask again button, with the approval card open at the left"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

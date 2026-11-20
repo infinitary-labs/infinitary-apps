@@ -1,0 +1,30 @@
+// An end-to-end spec finds a feed line by what happened and whose it is -
+// `data-feed-event` and `data-feed-key`, through `reportLine` and its
+// siblings in tests/e2e/rails.ts - or, for a line no task wrote, by the
+// words its writer composes, imported (`feedLineOf(page, event)`, an
+// action's `done` words, a composer called with the spec's own data),
+// never by words typed into the spec (docs/testing.md, "The e2e assertion
+// contract"). A feed line's sentence is its writer's to change and its unit
+// tests' to pin (`feed.test.ts`, `taskFeed.test.ts`): every rewording broke
+// the specs that re-typed it. So this rule refuses a string, a template or
+// a regular expression - or a `new RegExp` built from one - as the text a
+// spec hands `feedLine`. Runs inside `pnpm check` through biome.json's
+// plugins, as an error since every spec moved.
+
+language js
+
+`feedLine($page, $text)` where {
+  $text <: or {
+    JsStringLiteralExpression(),
+    JsTemplateExpression(),
+    JsRegexLiteralExpression(),
+    `new RegExp($source, $...)` where {
+      $source <: or {
+        JsStringLiteralExpression(),
+        JsTemplateExpression()
+      }
+    }
+  },
+  $filename <: r".*tests/e2e/.*",
+  register_diagnostic(span=$text, message="A feed line's composed words are its writer's to change and its unit tests' to pin. Find a task's line by its hooks - reportLine(page, key) and its siblings in tests/e2e/rails.ts - and a line no task wrote by its writer's own words, imported: feedLineOf(page, event), an action's done words or the composer called with this spec's data (docs/testing.md, the e2e assertion contract).", severity="error")
+}

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "work-computers-update-themselves",
+      "kind": "improvement",
+      "title": "Your other computers update by themselves",
+      "body": "When this computer has a newer Infinitary, a computer that runs work for it now gets the same version as soon as it connects, with nothing for you to click. Its running work pauses for a moment and carries on after. You still get a card to update it when Infinitary needs something from you there, such as a password, or when an update does not go through.",
+      "area": "devices",
+      "noPicture": "Nothing new appears on screen: the card that asked to update the computer no longer comes up when the app can update it by itself.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "named-model-work-says-model-that-took-it",
+      "kind": "fix",
+      "title": "Firstmate says which model took work you named a model for",
+      "body": "When you ask for new work on a particular model, Firstmate now learns which model took it. If the model you named could not take the work, Firstmate hears that too, so it no longer tells you the work runs on a model it does not.",
+      "area": "firstmate",
+      "noPicture": "Nothing on screen changes: the difference is in what Firstmate tells you about the model.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

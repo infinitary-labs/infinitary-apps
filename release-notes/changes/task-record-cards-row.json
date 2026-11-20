@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "task-record-cards-row",
+      "kind": "improvement",
+      "title": "Find a closed card again on its task",
+      "body": "A task's record now has a Cards row that lists every card the task showed, newest first, with how each one ended. Open a closed card to read it again, with its figures and your choice, and nothing on it can be clicked. Closing a card also says in the Activity feed that it stays on the task's record.",
+      "area": "tasks",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

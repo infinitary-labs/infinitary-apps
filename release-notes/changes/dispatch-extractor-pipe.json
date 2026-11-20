@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "dispatch-extractor-pipe",
+      "reason": "The dispatch corpus extractor, an offline development command, now writes every record when its output is piped to another command; no person using the app notices."
+    }
+  ]
+}

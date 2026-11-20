@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "old-cask-switch-rehearsal",
+      "reason": "A test of the Infinitary rename's step 10: the old-cask switch's casks under a real Homebrew in scratch state, with the hero pair of the now-infinitary note. Nothing a person sees changes beyond that note."
+    }
+  ]
+}

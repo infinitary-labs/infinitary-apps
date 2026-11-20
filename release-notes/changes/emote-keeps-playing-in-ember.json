@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "emote-keeps-playing-in-ember",
+      "kind": "improvement",
+      "title": "Your first mate finishes its animation when it starts working",
+      "body": "When your first mate starts working, or you send a message, while it plays one of its little animations, it now finishes the animation instead of cutting it short. The animation turns ember while it plays, the same color that shows your first mate is working, and then it goes on working. This works on iPhone and iPad too.",
+      "area": "firstmate",
+      "picture": {
+        "dark": "emote-keeps-playing-in-ember-dark.webp",
+        "light": "emote-keeps-playing-in-ember-light.webp",
+        "alt": "Your first mate drawn as Saturn in ember while its working line shows under the captain's message"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

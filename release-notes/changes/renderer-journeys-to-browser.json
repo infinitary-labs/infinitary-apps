@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "renderer-journeys-to-browser",
+      "reason": "Internal test work: three renderer-lane journeys and two crew ring cases move to the browser test layer, which now clears its page between files and runs on every pull request; nothing a person sees changes."
+    }
+  ]
+}

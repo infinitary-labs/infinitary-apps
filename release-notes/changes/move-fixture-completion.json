@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "move-fixture-completion",
+      "reason": "Internal test repair: move fixtures distinguish completed work from reopening deferred until the next launch; app behavior is unchanged."
+    }
+  ]
+}

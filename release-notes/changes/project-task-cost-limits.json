@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "project-task-cost-limits",
+      "kind": "improvement",
+      "area": "tasks",
+      "title": "See task spend and choose a project's cost limit",
+      "body": "Each task's record shows its estimated spend against its limit, including all its parts. In Settings → Projects, follow the app's limit, set a project's own amount or choose no limit. You can also ask your first mate to change the app's limit or a project's limit.",
+      "picture": {
+        "dark": "project-task-cost-limits-dark.webp",
+        "light": "project-task-cost-limits-light.webp",
+        "alt": "The Cost limit row in project settings offers Follow app, Own amount and No limit"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

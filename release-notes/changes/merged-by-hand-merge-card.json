@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "merged-by-hand-merge-card",
+      "kind": "fix",
+      "title": "A task whose pull request you merged yourself can close as merged",
+      "body": "When you merged a task's pull request on GitHub or GitLab yourself before clicking Merge, its crewmate could not put up the merge card it was told to, and the task stayed open. The crewmate now shows the merge card with the story the pull request merged with. Merge sends nothing again and closes the task as merged.",
+      "area": "tasks",
+      "noPicture": "The merge card looks as before; the fix lets it go up for a pull request that already merged, and the task closes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

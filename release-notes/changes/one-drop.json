@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "one-drop",
+      "kind": "fix",
+      "title": "Discard and Drop task follow the same rules",
+      "body": "Discard on a card and Drop task on a task's record now end a task the same way. A task with open parts can be dropped, and its parts stay planned. Its pull request closes before the task closes, and its unfinished work is saved. If that work cannot be saved, the working copy stays, and discarding the closed task again removes it.",
+      "area": "tasks",
+      "picture": {
+        "dark": "one-drop-dark.webp",
+        "light": "one-drop-light.webp",
+        "alt": "A task's record asking to drop a task, saying its part stays planned"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,287 @@
+{
+  "suites": [
+    {
+      "title": "devices.spec.ts",
+      "file": "devices.spec.ts",
+      "line": 0,
+      "column": 0,
+      "specs": [
+        {
+          "title": "a Mac whose user runs another Firstmate's work: Add it asks once, Cancel changes nothing, and Leave it and add, from the keyboard, adds it",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "status": "expected",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "passed",
+                  "duration": 7179,
+                  "errors": [],
+                  "annotations": []
+                }
+              ]
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-c9329ad021a1680a7732",
+          "file": "devices.spec.ts",
+          "line": 709,
+          "column": 1
+        },
+        {
+          "title": "a Mac a command added downloads its update with progress from the keyboard: download",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "needs macOS zip tools",
+                  "location": {
+                    "file": "/home/runner/work/infinitary/infinitary/Application Support/firstmate/tests/e2e/devices.spec.ts",
+                    "line": 930,
+                    "column": 10
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "status": "skipped",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "skipped",
+                  "duration": 1,
+                  "errors": [],
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "needs macOS zip tools",
+                      "location": {
+                        "file": "/home/runner/work/infinitary/infinitary/Application Support/firstmate/tests/e2e/devices.spec.ts",
+                        "line": 930,
+                        "column": 10
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-0fbcee60cd0230c26dad",
+          "file": "devices.spec.ts",
+          "line": 929,
+          "column": 3
+        },
+        {
+          "title": "a Mac a command added downloads its update with progress from the keyboard: fallback",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "needs macOS zip tools",
+                  "location": {
+                    "file": "/home/runner/work/infinitary/infinitary/Application Support/firstmate/tests/e2e/devices.spec.ts",
+                    "line": 930,
+                    "column": 10
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "status": "skipped",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "needs macOS zip tools",
+                      "location": {
+                        "file": "/home/runner/work/infinitary/infinitary/Application Support/firstmate/tests/e2e/devices.spec.ts",
+                        "line": 930,
+                        "column": 10
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-bedf4f451d9f4d061000",
+          "file": "devices.spec.ts",
+          "line": 929,
+          "column": 3
+        },
+        {
+          "title": "an addressed Mac downloads with progress from the keyboard: add",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "needs macOS zip tools and isolated SSH",
+                  "location": {
+                    "file": "/home/runner/work/infinitary/infinitary/Application Support/firstmate/tests/e2e/devices.spec.ts",
+                    "line": 1899,
+                    "column": 10
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "status": "skipped",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "needs macOS zip tools and isolated SSH",
+                      "location": {
+                        "file": "/home/runner/work/infinitary/infinitary/Application Support/firstmate/tests/e2e/devices.spec.ts",
+                        "line": 1899,
+                        "column": 10
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-ed7aa03f06ed0a17d412",
+          "file": "devices.spec.ts",
+          "line": 1898,
+          "column": 3
+        },
+        {
+          "title": "an addressed Mac downloads with progress from the keyboard: update",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "needs macOS zip tools and isolated SSH",
+                  "location": {
+                    "file": "/home/runner/work/infinitary/infinitary/Application Support/firstmate/tests/e2e/devices.spec.ts",
+                    "line": 1899,
+                    "column": 10
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "status": "skipped",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "needs macOS zip tools and isolated SSH",
+                      "location": {
+                        "file": "/home/runner/work/infinitary/infinitary/Application Support/firstmate/tests/e2e/devices.spec.ts",
+                        "line": 1899,
+                        "column": 10
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-e6a2c08981644c3917a3",
+          "file": "devices.spec.ts",
+          "line": 1898,
+          "column": 3
+        },
+        {
+          "title": "an addressed Mac downloads with progress from the keyboard: fallback",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [
+                {
+                  "type": "skip",
+                  "description": "needs macOS zip tools and isolated SSH",
+                  "location": {
+                    "file": "/home/runner/work/infinitary/infinitary/Application Support/firstmate/tests/e2e/devices.spec.ts",
+                    "line": 1899,
+                    "column": 10
+                  }
+                }
+              ],
+              "expectedStatus": "skipped",
+              "projectId": "desktop",
+              "projectName": "desktop",
+              "status": "skipped",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "skipped",
+                  "duration": 0,
+                  "errors": [],
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "description": "needs macOS zip tools and isolated SSH",
+                      "location": {
+                        "file": "/home/runner/work/infinitary/infinitary/Application Support/firstmate/tests/e2e/devices.spec.ts",
+                        "line": 1899,
+                        "column": 10
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "id": "441c969b5ac029ba9e26-2a9a4960e7fd58761c4d",
+          "file": "devices.spec.ts",
+          "line": 1898,
+          "column": 3
+        }
+      ],
+      "suites": []
+    }
+  ],
+  "stats": {
+    "expected": 1,
+    "skipped": 5,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

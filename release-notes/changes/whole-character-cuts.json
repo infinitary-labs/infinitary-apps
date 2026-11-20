@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "whole-character-cuts",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "An emoji in a crewmate's message no longer stops the first mate from answering",
+      "body": "When a crewmate's message had an emoji where the app shortens it, the first mate could stop answering until the message aged out. The app now shortens text only between whole characters, so the first mate keeps answering, and shortened task titles and other text no longer end in a broken symbol.",
+      "noPicture": "Nothing on screen changes; the first mate answers where it failed before.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

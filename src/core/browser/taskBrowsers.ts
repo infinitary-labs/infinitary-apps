@@ -1,0 +1,1694 @@
+import { randomUUID } from "node:crypto";
+import { HERE } from "@shared/deviceNames";
+import { listsPrivateSite } from "@shared/privateSites";
+import {
+  FRESH_LOOK_WORDS,
+  type OfferedSignIn,
+  SAVED_SIGN_INS_PER_BROWSER,
+  type SavedSignIn,
+  TASK_BROWSER_PAGE,
+  TASK_BROWSER_PAGES_MAX,
+  type TaskBrowserAskAnswer,
+  type TaskBrowserCommandResult,
+  type TaskBrowserFact,
+  type TaskBrowserHandle,
+  type TaskBrowserInput,
+  type TaskBrowserRequest,
+  type TaskBrowserReturn,
+  type TaskBrowserSize,
+  type TaskBrowserStop,
+} from "@shared/taskBrowser";
+import {
+  FORM_RESEND,
+  type HostBrowserAsk,
+  type HostBrowserFrame,
+  type HostBrowserPage,
+  type HostBrowserViewport,
+  type HostFileChooser,
+  type HostLoadOutcome,
+  type HostPageEvents,
+  type HostPopup,
+  type HostTaskBrowser,
+} from "../host";
+import { hideKeys } from "../keyFormats";
+import {
+  addressOf,
+  type Browser,
+  type BrowsersCore,
+  bareAddress,
+  type HandBack,
+  loadOwn,
+  NUMBER_WORDS,
+  type PageAsk,
+  type PageEntry,
+  Queues,
+  quoted,
+  shown,
+  signedIn,
+  siteNamed,
+  siteOf,
+} from "./browserRecord";
+import { browserCommand } from "./commandWords";
+import {
+  type ConnectionGuardHandle,
+  type ConnectionGuardOptions,
+  type GuardLookup,
+  startConnectionGuard,
+} from "./connectionGuard";
+import {
+  type BrowserActInput,
+  type BrowserAnswer,
+  type BrowserCaptureInput,
+  type BrowserCloseInput,
+  type BrowserInspectInput,
+  type BrowserNavigateInput,
+  CrewmateCommands,
+  refused,
+} from "./crewmateCommands";
+import { checkOpenable, decideRequest, originKey } from "./destinations";
+import { PageDiagnostics } from "./diagnostics";
+import { saveDownload } from "./evidenceFiles";
+import { RefBook } from "./outline";
+import { PageActions } from "./pageActions";
+import { clip, PageNotices, refusalWords } from "./pageNotices";
+import { type ProjectServer, serveProjectFolder } from "./projectServer";
+import { isPageNoise } from "./reading";
+import { SavedSignInGrants, type SignInStore } from "./savedSignInGrants";
+import { signInSite } from "./webSignIns";
+
+/**
+ * Each task's own browser (docs/task-browser.md): the one owner of every
+ * task browser page this Mac runs, keyed by the task that opened it.
+ *
+ * A crewmate opens its task's browser on a public website or a page a
+ * project serves on this Mac, reads it as an outline with refs, acts on it
+ * with real input, photographs it into its evidence folder, and closes it.
+ * The browser stays open across the crewmate's turns until it closes it,
+ * its task closes, it sits unused for half an hour, or the app quits;
+ * whatever stopped it is told to the crewmate once, and the next open is a
+ * fresh browser with nothing signed in. At most `TASK_BROWSERS_MAX` run at
+ * once: the next one is refused in words, never made room for by stopping
+ * another.
+ *
+ * Policy lives here, effects in the host (`HostTaskBrowser`): which request
+ * a page may make (`destinations.ts`), which address its connections may
+ * reach (each browser's own connection guard, `connectionGuard.ts`), what
+ * the crewmate reads (`outline.ts`), and every refusal's words. One command
+ * runs at a time per task, each within a bound, so a stuck page answers in
+ * words rather than holding the crewmate's turn. Its owners each hold one
+ * typed view of it (`BrowsersCore`, `browserRecord.ts`): the crewmate's
+ * commands (`crewmateCommands.ts`), its actions on a page
+ * (`pageActions.ts`), the signed-in sites it allows and the kept profile
+ * they live in (`savedSignInGrants.ts`), what a browser keeps to tell its crewmate
+ * (`pageNotices.ts`) and the files it writes (`evidenceFiles.ts`).
+ *
+ * The captain reads each task's browser here too (docs/task-browser.md,
+ * "The view"): its fact - the site, what the crewmate did last, or why it
+ * stopped - and, while the view is shown, pictures of the page. Watching
+ * keeps a browser from stopping for being unused. The captain may stop a
+ * browser and open a stopped one again, fresh; its crewmate is told once.
+ * Each fact names its browser by this run's `session` and the browser's
+ * generation, which a card's attachment keeps (docs/task-browser.md, "From
+ * a card").
+ *
+ * The captain may take control of a browser and hand it back
+ * (docs/task-browser.md, "Taking control"), and a crewmate may ask him to
+ * ("Asking for help"). While he holds it, its crewmate's commands refuse,
+ * nothing the page says is kept for the crewmate, nothing he types is kept
+ * anywhere, and it never stops for being unused. Returning it forgets every
+ * ref and wakes the crewmate once, through its task's inbox.
+ *
+ * A page may open a second page - a sign-in, a bank's check - which opens
+ * inside the same browser (docs/task-browser.md, "A second page"): the
+ * crewmate's commands move to it, and the captain's view names each page
+ * by its own site. Once the captain has handed a browser back it may hold
+ * his sign-in, so it keeps only what the task needs ("A signed-in page"):
+ * a picture needs the crewmate's reason, a page's error words and the
+ * details of its addresses are not passed on.
+ *
+ * The captain may save a site's sign-in on this Mac while handing a browser
+ * back, and let a later task's browser use it from its request card
+ * (docs/task-browser.md, "Signed-in sites"). A browser starts with none:
+ * the captain's one click copies that one site's cookies and page storage
+ * in and hands the page back, and the browser copies them back into the
+ * save when it stops.
+ * Removing a saved sign-in signs out every browser using it.
+ */
+
+/** Task browsers this Mac runs at once. */
+const TASK_BROWSERS_MAX = 4;
+/** A browser no command touched for this long stops, and says so on its task's record. */
+export const TASK_BROWSER_IDLE_MS = 30 * 60 * 1000;
+
+/**
+ * The captain's Reload on a page that answers a form (docs/task-browser.md,
+ * "A final submission"): the browser never sends a form twice.
+ */
+export const FORM_RESEND_CAPTAIN_WORDS =
+  "This page is the answer to a form that was sent, so reloading it would send the form again. The browser never sends a form twice: use the site's own links to see what became of it.";
+
+/** The page's place as the crewmate names it, from 1. */
+const PAGE_WORDS = ["", "first", "second"];
+
+/**
+ * One task's browser, as its crewmate's command reaches it
+ * (`src/core/axi/browserCommands.ts`, through the task's channel).
+ */
+export type CrewmateBrowser = {
+  navigate: (input: BrowserNavigateInput) => Promise<BrowserAnswer>;
+  inspect: (input: BrowserInspectInput) => Promise<BrowserAnswer>;
+  act: (input: BrowserActInput) => Promise<BrowserAnswer>;
+  capture: (input: BrowserCaptureInput) => Promise<BrowserAnswer>;
+  close: (input?: BrowserCloseInput) => Promise<BrowserAnswer>;
+  /** Every page the browser holds, or that no browser is open; reads nothing on a page. */
+  pages: () => Promise<BrowserAnswer>;
+};
+
+export type TaskBrowsersOptions = {
+  host: HostTaskBrowser;
+  /** Where a task's pictures go: its evidence folder, outside the working copy. */
+  evidenceDir: (taskId: string) => string;
+  /**
+   * The task's working copy: the only folder its crewmate may attach a file
+   * from when a page asks for one (docs/task-browser.md, "A page that asks
+   * for a file"). With none, it attaches nothing.
+   */
+  workingCopy?: (taskId: string) => string | undefined;
+  /** One line on the task's own timeline. */
+  note?: (taskId: string, text: string) => void;
+  /** A task's browser changed for the captain: it opened, moved, acted or stopped. */
+  onChange?: (taskId: string) => void;
+  /**
+   * The captain returned a task's browser: its crewmate's one wake, named
+   * by `once` so the inbox queues it once (docs/task-browser.md, "Taking
+   * control").
+   */
+  onReturned?: (taskId: string, returned: BrowserReturned) => void;
+  max?: number;
+  idleMs?: number;
+  /** Runs `fn` after `ms` and answers its cancel; injected so a test drives the clock. */
+  timer?: (ms: number, fn: () => void) => () => void;
+  /** This run's name; a fresh one when absent. */
+  session?: string;
+  /** Starts a browser's connection guard; the real one on loopback when absent. */
+  guard?: (options: ConnectionGuardOptions) => Promise<ConnectionGuardHandle>;
+  /** How a guard resolves a name; the system's resolver when absent. */
+  lookup?: GuardLookup;
+  /** The signed-in sites this computer keeps; with none, nothing is kept or offered. */
+  signIns?: SignInStore;
+  /**
+   * The captain's private sites list (docs/task-browser.md, "Private
+   * sites"): the home's own, or the one it lends a computer that runs work,
+   * read as a task's browser opens and at each of its crewmate's opens.
+   * With none, no private site is reached.
+   */
+  privateSites?: (taskId: string) => readonly string[] | Promise<readonly string[]>;
+  /** The time, injected so a test drives which cookies are still alive. */
+  now?: () => number;
+  /** Serves a project folder for a page the captain opens; the real loopback server when absent. */
+  serve?: (folder: string) => Promise<ProjectServer>;
+};
+
+/**
+ * A page from a task's project the captain opens in its browser
+ * (docs/task-browser.md, "A page from the project"): the project folder and
+ * the HTML file's path inside it.
+ */
+export type ProjectPage = { folder: string; path: string };
+
+/** The captain handed a task's browser back: what its crewmate's one wake says. */
+export type BrowserReturned = {
+  /** The page's host and port, as the captain read it. */
+  site: string;
+  /** What the crewmate said it would do once control came back, when it asked. */
+  after?: string;
+  /** The captain let it use the signed-in site, rather than signing in. */
+  saved?: true;
+  /** This return's own name: the run, the browser and how many returns it has had. */
+  once: string;
+};
+
+/** A watcher's sink: one picture of the page each time it changes. */
+export type BrowserFrameSink = (frame: HostBrowserFrame) => void;
+
+const defaultTimer = (ms: number, fn: () => void): (() => void) => {
+  const handle = setTimeout(fn, ms);
+  handle.unref?.();
+  return () => clearTimeout(handle);
+};
+
+function sameSize(a: HostBrowserViewport, b: HostBrowserViewport): boolean {
+  return a.width === b.width && a.height === b.height;
+}
+
+/** Whether a browser's crewmate opened a loopback origin at this host and port. */
+function reachesOrigin(browser: Browser, host: string, port: number): boolean {
+  // A name the address parser refuses is no origin anyone opened.
+  return ["http:", "https:"].some((scheme) => {
+    const url = URL.parse(`${scheme}//${host}:${port}`);
+    return url !== null && browser.origins.has(originKey(url));
+  });
+}
+
+export class TaskBrowsers {
+  private readonly browsers = new Map<string, Browser>();
+  /** Why a task's last browser stopped, told to its crewmate once. */
+  private readonly stopped = new Map<string, string>();
+  /** A task's last browser, stopped, as the captain reads it until the app quits. */
+  private readonly ended = new Map<string, Extract<TaskBrowserFact, { state: "stopped" }>>();
+  /** The project folder a task's stopped browser served, so Open again serves it afresh. */
+  private readonly endedServers = new Map<
+    string,
+    Pick<ProjectServer, "folder" | "origin"> & { captains?: true }
+  >();
+  /** How many browsers each task has had in this run: the next one's generation follows. */
+  private readonly generations = new Map<string, number>();
+  /**
+   * The last ref book each task's browsers numbered in this run: the next
+   * page read takes the next number, so a ref from any earlier page, the
+   * other page or an earlier browser never names an element on this one.
+   */
+  private readonly books = new Map<string, number>();
+  /**
+   * This run of the task browsers, new each time the app starts: with a
+   * generation it names one browser, so a card emitted before a restart
+   * never points at a browser opened after it.
+   */
+  readonly session: string;
+  /** The captain's views of each task's browser, open or not. */
+  private readonly watchers = new Map<string, Set<BrowserFrameSink>>();
+  /**
+   * The room a maximized view gives each task's page, with the view that
+   * asked: its pages lay out at it, open now or later, until that view
+   * restores or stops watching.
+   */
+  private readonly viewSizes = new Map<string, { sink: BrowserFrameSink; size: TaskBrowserSize }>();
+  /** Browsers with a resize waiting: it takes the newest size when it runs. */
+  private readonly resizing = new WeakSet<Browser>();
+  /** One command at a time per task, in the order they came. */
+  private readonly queues = new Queues<string>();
+  /**
+   * A click at a control's place, or a resize, one at a time per browser:
+   * neither starts while the other runs, so a page never moves between a
+   * command finding a control and pressing it.
+   */
+  private readonly steady = new Queues<Browser>();
+  private readonly max: number;
+  private readonly idleMs: number;
+  private readonly timer: (ms: number, fn: () => void) => () => void;
+  private readonly commands: CrewmateCommands;
+  private readonly actions: PageActions;
+  private readonly grants: SavedSignInGrants;
+  /** The private sites list as last read: what the guard and the policy check a name against. */
+  private sites: readonly string[] = [];
+  /**
+   * The kept profile's one connection guard (docs/task-browser.md,
+   * "Signed-in sites"): every kept page shares the engine's one profile,
+   * so they share its way to the internet. It starts with the first kept
+   * page and closes as the app quits.
+   */
+  private keptGuard?: Promise<ConnectionGuardHandle | undefined>;
+
+  constructor(private readonly options: TaskBrowsersOptions) {
+    this.max = options.max ?? TASK_BROWSERS_MAX;
+    this.idleMs = options.idleMs ?? TASK_BROWSER_IDLE_MS;
+    this.timer = options.timer ?? defaultTimer;
+    this.session = options.session ?? randomUUID();
+    // The core exists before its owners; they read each other through it once built.
+    const core: BrowsersCore = {
+      options,
+      session: this.session,
+      browsers: this.browsers,
+      stopped: this.stopped,
+      max: this.max,
+      timer: this.timer,
+      lastBook: (taskId) => this.books.get(taskId) ?? 0,
+      fact: (taskId) => this.fact(taskId),
+      isHandled: (browser, handle) => this.isHandled(browser, handle),
+      start: (taskId, url, opened, startOptions) => this.start(taskId, url, opened, startOptions),
+      moveProfile: (taskId, browser, kept, url) => this.moveProfile(taskId, browser, kept, url),
+      stop: (taskId, why) => this.stop(taskId, why),
+      select: (taskId, browser, entry) => this.select(taskId, browser, entry),
+      dropPage: (taskId, browser, entry) => this.dropPage(taskId, browser, entry),
+      touch: (taskId, browser) => this.touch(taskId, browser),
+      handBackBooks: (taskId, browser) => this.handBackBooks(taskId, browser),
+      handBack: (taskId, browser, back) => this.handBack(taskId, browser, back),
+      serial: (taskId, run) => this.queues.run(taskId, run),
+      listed: (hostname) => listsPrivateSite(this.sites, hostname),
+      readSites: (taskId) => this.readSites(taskId),
+      steadily: (browser, run) => this.steady.run(browser, run),
+      get commands() {
+        return commands;
+      },
+      get grants() {
+        return grants;
+      },
+    };
+    const commands = new CrewmateCommands(core);
+    const grants = new SavedSignInGrants(core);
+    this.commands = commands;
+    this.actions = new PageActions(core);
+    this.grants = grants;
+  }
+
+  /**
+   * Read the private sites list again; an unreadable one keeps the last read,
+   * which a computer that runs work starts empty, so it refuses as before.
+   */
+  private async readSites(taskId: string): Promise<void> {
+    if (!this.options.privateSites) return;
+    try {
+      this.sites = [...(await this.options.privateSites(taskId))];
+    } catch {
+      // The home out of reach, or one without the list: the last read stands.
+    }
+  }
+
+  /**
+   * The captain changed the private sites list: the guard and the policy
+   * check every name against it from now on, and a connection a removed
+   * site's listing let through ends at once.
+   */
+  privateSitesChanged(sites: readonly string[]): void {
+    this.sites = [...sites];
+    for (const browser of this.browsers.values()) browser.guard?.recheck?.();
+    void this.keptGuard?.then((guard) => guard?.recheck?.());
+  }
+
+  /** How many task browsers run now. */
+  get openCount(): number {
+    return this.browsers.size;
+  }
+
+  isOpen(taskId: string): boolean {
+    return this.browsers.has(taskId);
+  }
+
+  /** One task's browser as the captain reads it; absent while it never had one. */
+  fact(taskId: string): TaskBrowserFact | undefined {
+    const browser = this.browsers.get(taskId);
+    if (!browser) return this.ended.get(taskId);
+    const url = addressOf(browser, browser.current);
+    const many = browser.pages.length > 1;
+    return {
+      state: "open",
+      site: siteOf(url),
+      url,
+      title: browser.current.page.title().trim(),
+      ...(many
+        ? {
+            pages: browser.pages.map((entry) => ({
+              site: siteOf(addressOf(browser, entry)),
+              title: entry.page.title().trim(),
+            })),
+            page: browser.pages.indexOf(browser.current) + 1,
+          }
+        : {}),
+      ...(browser.did ? { did: browser.did } : {}),
+      ...(browser.control !== "crewmate" ? { control: browser.control } : {}),
+      ...(browser.request ? { request: browser.request } : {}),
+      ...(browser.returns > 0 ? { returned: true as const } : {}),
+      ...(browser.captains ? { own: true as const } : {}),
+      ...(browser.saved.size > 0
+        ? { saved: [...browser.saved.keys()].slice(-SAVED_SIGN_INS_PER_BROWSER) }
+        : {}),
+      ...(browser.kept ? { kept: true as const } : {}),
+      ...this.grants.ruleOf(browser),
+      // What a request card would offer, read before the card pauses the browser.
+      ...(browser.control === "crewmate" || browser.control === "waiting"
+        ? this.grants.offerOf(browser)
+        : {}),
+      ...(browser.control === "captain" && browser.asking
+        ? {
+            ask: {
+              id: browser.asking.id,
+              kind: browser.asking.kind,
+              site: browser.asking.site,
+              ...(browser.asking.shown ? { allowed: true as const } : {}),
+            },
+          }
+        : {}),
+      ...(browser.control === "captain" && browser.told ? { told: browser.told } : {}),
+      session: this.session,
+      generation: browser.generation,
+    };
+  }
+
+  /**
+   * Whether a task's browser is in the captain's hands: paused for his
+   * help, being taken, or his. Its return is the crewmate's next wake, so
+   * the idle ladder reads the task as his turn.
+   */
+  withCaptain(taskId: string): boolean {
+    const control = this.browsers.get(taskId)?.control;
+    return control !== undefined && control !== "crewmate";
+  }
+
+  /**
+   * The captain watches a task's browser: `sink` gets a picture of its page
+   * now and each time it changes, across a stop and an Open again, until
+   * the answered unwatch. While anyone watches, the browser does not stop
+   * for being unused; its half hour starts again when the last view goes.
+   */
+  watch(taskId: string, sink: BrowserFrameSink): () => void {
+    let sinks = this.watchers.get(taskId);
+    if (!sinks) {
+      sinks = new Set();
+      this.watchers.set(taskId, sinks);
+    }
+    sinks.add(sink);
+    const browser = this.browsers.get(taskId);
+    if (browser) {
+      browser.cancelIdle?.();
+      browser.cancelIdle = undefined;
+      this.startWatching(taskId, browser);
+    }
+    let watching = true;
+    return () => {
+      if (!watching) return;
+      watching = false;
+      const current = this.watchers.get(taskId);
+      current?.delete(sink);
+      // A maximized view that goes gives the page back its own size.
+      if (this.viewSizes.get(taskId)?.sink === sink) {
+        this.viewSizes.delete(taskId);
+        this.resizePages(taskId);
+      }
+      if (current && current.size > 0) return;
+      this.watchers.delete(taskId);
+      const open = this.browsers.get(taskId);
+      if (!open) return;
+      open.stopWatching?.();
+      open.stopWatching = undefined;
+      this.touch(taskId, open);
+    };
+  }
+
+  /**
+   * The captain's maximized view gives the page its room (docs/task-browser.md,
+   * "The view"): every page of the task's browser lays out at `size`, and so
+   * does a browser or page that opens while the view stays maximized; null,
+   * once the view is restored, gives the pages back the check's own size, as
+   * the view's unwatch does. Only a view that watches the task may ask. The
+   * resize waits only for a click in progress, so it never moves the page
+   * between a command finding a control and pressing it; a read, a wait or a
+   * load goes on at the new size.
+   */
+  sizeView(taskId: string, sink: BrowserFrameSink, size: TaskBrowserSize | null): void {
+    if (!this.watchers.get(taskId)?.has(sink)) return;
+    if (size) {
+      this.viewSizes.set(taskId, { sink, size: { width: size.width, height: size.height } });
+    } else if (this.viewSizes.get(taskId)?.sink === sink) {
+      this.viewSizes.delete(taskId);
+    } else {
+      return;
+    }
+    this.resizePages(taskId);
+  }
+
+  /** The captain's Stop browser: its pages, history and site data go at once. */
+  stopByCaptain(taskId: string): TaskBrowserCommandResult {
+    if (!this.browsers.has(taskId)) {
+      return { ok: false, text: "This task's browser is not running." };
+    }
+    this.stop(taskId, "captain");
+    this.stopped.set(taskId, "was stopped by the captain");
+    this.options.note?.(taskId, "you stopped its browser");
+    return { ok: true };
+  }
+
+  /**
+   * The captain's Open again: a fresh browser, with nothing signed in, at
+   * the page the stopped one was on. Its crewmate is told once.
+   */
+  reopen(taskId: string): Promise<TaskBrowserCommandResult> {
+    return this.queues.run(taskId, () => this.reopenNow(taskId));
+  }
+
+  /**
+   * The browser one task's crewmate drives. Each command asks, as it starts,
+   * whether the captain holds the browser, so a command queued behind the
+   * one running when he took it refuses too.
+   */
+  forTask(taskId: string): CrewmateBrowser {
+    const commands = this.commands;
+    return {
+      navigate: (input) =>
+        this.queues.run(taskId, async () => this.held(taskId) ?? commands.navigate(taskId, input)),
+      inspect: (input) =>
+        this.queues.run(taskId, async () => this.held(taskId) ?? commands.inspect(taskId, input)),
+      act: (input) =>
+        this.queues.run(taskId, async () => this.held(taskId) ?? this.actions.act(taskId, input)),
+      capture: (input) =>
+        this.queues.run(taskId, async () => this.held(taskId) ?? commands.capture(taskId, input)),
+      // A crewmate whose request still waits may withdraw it, keeping the browser, or stop it.
+      close: (input) =>
+        this.queues.run(
+          taskId,
+          async () =>
+            this.held(taskId, { waiting: false }) ??
+            (input?.withdraw ? this.withdraw(taskId) : commands.close(taskId, input?.page)),
+        ),
+      pages: () => this.queues.run(taskId, async () => this.held(taskId) ?? commands.pages(taskId)),
+    };
+  }
+
+  // ---- the handoff -------------------------------------------------------
+
+  /**
+   * The crewmate asks the captain to take over (docs/task-browser.md,
+   * "Asking for help"), as its card declares: why, and what it does after.
+   * Refused in words unless its browser is open on the site it names and
+   * the captain does not hold it already. Its new commands refuse at once
+   * and the one running finishes before this answers, so the card goes up
+   * on a paused browser; the answer names that browser for the card.
+   */
+  async requestHelp(
+    taskId: string,
+    request: TaskBrowserRequest & { site: string },
+  ): Promise<{ ok: true; handle: TaskBrowserHandle } | { ok: false; text: string }> {
+    const browser = this.browsers.get(taskId);
+    if (!browser) {
+      return {
+        ok: false,
+        text: `this task has no open browser to hand over. Open one with ${browserCommand("open <url>")} first.`,
+      };
+    }
+    if (browser.control === "taking" || browser.control === "captain") {
+      return { ok: false, text: "the captain already has control of this task's browser." };
+    }
+    const site = siteOf(addressOf(browser, browser.current));
+    if (siteNamed(request.site) !== site.toLowerCase()) {
+      return {
+        ok: false,
+        text: `browser_handoff names ${request.site}, but this task's browser is on ${site}. Name the site it is on.`,
+      };
+    }
+    const asked = browser.control === "crewmate";
+    browser.control = "waiting";
+    browser.request = {
+      reason: request.reason,
+      after: request.after,
+      ...(request.signIn ? { signIn: true as const } : {}),
+    };
+    browser.cancelIdle?.();
+    browser.cancelIdle = undefined;
+    if (asked) this.options.note?.(taskId, `asked you to take over its browser at ${site}`);
+    this.options.onChange?.(taskId);
+    await this.queues.run(taskId, async () => undefined);
+    return { ok: true, handle: { session: this.session, generation: browser.generation } };
+  }
+
+  /**
+   * The crewmate takes back its waiting request (docs/task-browser.md,
+   * "Asking for help"): the browser is its own again, every page, sign-in
+   * and ref as it was, and its unused half hour starts again. Refused once
+   * the captain has taken control (`held`), and said plainly when nothing
+   * waits. Its card is its own to close.
+   */
+  private withdraw(taskId: string): BrowserAnswer {
+    const browser = this.browsers.get(taskId);
+    if (!browser) return refused("No browser is open for this task, so no request waits.");
+    if (browser.control !== "waiting") {
+      return refused(
+        "No request for the captain's help waits on this browser: it is yours to use as it is.",
+      );
+    }
+    const site = siteOf(addressOf(browser, browser.current));
+    browser.control = "crewmate";
+    browser.request = undefined;
+    this.touch(taskId, browser);
+    this.options.note?.(taskId, `withdrew its request for you to take over its browser at ${site}`);
+    this.options.onChange?.(taskId);
+    return {
+      text: `Withdrew your request: the browser is yours again at ${site}, with its pages, history and sign-ins as they were. Close your request card with close_card if it is still up, and run ${browserCommand("snapshot")} to read the page.`,
+    };
+  }
+
+  /**
+   * The captain's Take control (docs/task-browser.md, "Taking control"):
+   * the crewmate's new commands refuse at once, the one running finishes
+   * or fails within its bound, and then the page is his. `handle` names the
+   * browser he was shown; a newer or older one is refused.
+   */
+  async takeControl(taskId: string, handle?: TaskBrowserHandle): Promise<TaskBrowserCommandResult> {
+    const browser = this.browsers.get(taskId);
+    if (!browser || !this.isHandled(browser, handle)) {
+      return { ok: false, text: "This browser is no longer running, so there is nothing to take." };
+    }
+    if (browser.control === "captain") return { ok: true };
+    if (browser.control !== "taking") {
+      browser.control = "taking";
+      browser.cancelIdle?.();
+      browser.cancelIdle = undefined;
+      this.options.onChange?.(taskId);
+    }
+    return this.queues.run(taskId, async () => {
+      if (this.browsers.get(taskId) !== browser) {
+        return { ok: false, text: "This browser stopped before you had control." };
+      }
+      if (browser.control === "captain") return { ok: true };
+      browser.control = "captain";
+      browser.told = undefined;
+      this.forget(browser);
+      // A sign-in the crewmate asked for happens in the kept profile, where it stays.
+      if (browser.request?.signIn && !browser.kept)
+        await this.grants.openForSignIn(taskId, browser);
+      if (this.browsers.get(taskId) !== browser) {
+        return { ok: false, text: "This browser stopped before you had control." };
+      }
+      this.options.note?.(taskId, "you took control of its browser");
+      this.options.onChange?.(taskId);
+      return { ok: true };
+    });
+  }
+
+  /**
+   * The captain's Return control: a load he started finishes first, then
+   * every ref goes, nothing from his time is kept, and the crewmate is woken
+   * once to take a fresh look. It grants the task the page as it is, never
+   * authority to spend.
+   */
+  async returnControl(
+    taskId: string,
+    handle: TaskBrowserHandle,
+    options: TaskBrowserReturn = {},
+  ): Promise<TaskBrowserCommandResult> {
+    const browser = this.browsers.get(taskId);
+    if (!browser || !this.isHandled(browser, handle)) {
+      return {
+        ok: false,
+        text: "This browser is no longer running, so there is nothing to return.",
+      };
+    }
+    if (browser.control !== "captain") {
+      return { ok: false, text: "You do not have control of this browser." };
+    }
+    // A browser his own click started has no crewmate to go back to.
+    if (browser.captains) {
+      this.stop(taskId, "captain");
+      this.options.note?.(taskId, "you closed the page you opened in its browser");
+      return { ok: true };
+    }
+    const shownSite = options.site ?? signInSite(siteOf(addressOf(browser, browser.current)));
+    return this.queues.run(taskId, async () => {
+      if (this.browsers.get(taskId) !== browser || browser.control !== "captain") {
+        return { ok: false, text: "This browser stopped before control went back." };
+      }
+      // A reload or a sign-in's redirect the captain started is his: the
+      // crewmate's first look is of the page it ends on.
+      await browser.current.page.settle().catch(() => undefined);
+      if (this.browsers.get(taskId) !== browser) {
+        return { ok: false, text: "This browser stopped before control went back." };
+      }
+      // From the kept profile, the site signed in to stays, by the captain's rule.
+      const warning = browser.kept
+        ? await this.grants.keep(browser, shownSite, options.automatic === true)
+        : undefined;
+      // Whatever a site was let use while the captain held it goes back at the return.
+      await this.endAsks(browser);
+      if (this.browsers.get(taskId) !== browser) {
+        return { ok: false, text: "This browser stopped before control went back." };
+      }
+      const after = browser.request?.after;
+      browser.control = "crewmate";
+      browser.request = undefined;
+      browser.returns += 1;
+      this.handBack(taskId, browser, {
+        notice:
+          "The captain returned control of this browser: this is a fresh look at the page as it is now, and refs from before are gone.",
+        note: "you returned control of its browser",
+        returned: {
+          site: siteOf(addressOf(browser, browser.current)),
+          ...(after ? { after } : {}),
+          once: `browser-returned:${this.session}:${browser.generation}:${browser.returns}`,
+        },
+      });
+      return { ok: true, ...(warning ? { warning } : {}) };
+    });
+  }
+
+  /**
+   * The captain's own input while he has control: sent to the page as it
+   * came and recorded nowhere - no line, no fact, no notice. Refused in
+   * words while he does not hold it.
+   */
+  async captainInput(taskId: string, input: TaskBrowserInput): Promise<TaskBrowserCommandResult> {
+    const browser = this.browsers.get(taskId);
+    if (browser?.control !== "captain") {
+      return { ok: false, text: "You do not have control of this browser." };
+    }
+    try {
+      if (input.kind === "page") {
+        const entry = browser.pages[input.page - 1];
+        if (!entry) return { ok: false, text: "That page is no longer open." };
+        this.select(taskId, browser, entry);
+        return { ok: true };
+      }
+      const page = browser.current.page;
+      if (input.kind === "go") {
+        const outcome = await (input.go === "reload" ? page.reload() : page.history(input.go));
+        if (!outcome.ok && outcome.code === FORM_RESEND) {
+          return { ok: false, text: FORM_RESEND_CAPTAIN_WORDS };
+        }
+      } else {
+        await page.input(input);
+      }
+      return { ok: true };
+    } catch {
+      return { ok: false, text: "The page did not take that." };
+    }
+  }
+
+  /**
+   * Where the captain sits when taking, drives or answers the task's
+   * browser (docs/task-browser.md, "A site's asks"): at the computer it runs
+   * on, or away from it. Only there can Chrome show the captain a passkey's prompt.
+   */
+  captainAt(taskId: string, here: boolean): void {
+    const browser = this.browsers.get(taskId);
+    if (browser) browser.here = here;
+  }
+
+  /**
+   * The captain's answer to what the page asks the captain now (docs/task-browser.md,
+   * "A site's asks"): Allow once lets the page's call run, its permission
+   * granted for that site until the captain returns control; Not now ends it as not
+   * allowed. A passkey waits for Use passkey, which lets it run in Chrome and
+   * brings Chrome's window forward for the system's prompt, or Not now; once
+   * let run, Show Chrome window brings that window forward again. Refused in
+   * words for an ask that is no longer there.
+   */
+  async answerAsk(
+    taskId: string,
+    handle: TaskBrowserHandle,
+    id: number,
+    answer: TaskBrowserAskAnswer,
+  ): Promise<TaskBrowserCommandResult> {
+    const browser = this.browsers.get(taskId);
+    if (!browser || !this.isHandled(browser, handle)) {
+      return { ok: false, text: "This browser is no longer running." };
+    }
+    if (browser.control !== "captain") {
+      return { ok: false, text: "You do not have control of this browser." };
+    }
+    const asking = browser.asking;
+    if (!asking || asking.id !== id) {
+      return { ok: false, text: "The page no longer asks for that." };
+    }
+    if (asking.kind === "passkey") {
+      if (answer === "not-now" && !asking.shown) {
+        asking.answer?.(false);
+        return { ok: true };
+      }
+      // Use passkey (sent as show, which a view without ask-first offers too), or Allow once.
+      if (answer === "not-now" || !asking.entry.page.showWindow) {
+        return { ok: false, text: "Answer the passkey's prompt in Chrome's own window." };
+      }
+      if (!asking.shown) {
+        asking.shown = true;
+        asking.answer?.(true);
+        this.options.onChange?.(taskId);
+      }
+      await asking.entry.page.showWindow(true).catch(() => undefined);
+      return { ok: true };
+    }
+    if (answer === "show") return { ok: false, text: "That page asks for no passkey." };
+    asking.answer?.(answer === "allow");
+    return { ok: true };
+  }
+
+  /**
+   * One ask of a page (docs/task-browser.md, "A site's asks"). While the
+   * crewmate drives, every ask is no, and a passkey's is told to it. While
+   * the captain holds the browser, a permission waits for the captain's Allow once or
+   * Not now, one ask at a time; a passkey is asked only in Chrome with the captain at
+   * its computer, where Use passkey lets Chrome ask in its own window, and is otherwise told
+   * no at once and told to the captain, so the site offers its other ways.
+   * Chrome's window goes back to the Dock when the request ends, whatever
+   * brought it out.
+   */
+  private async pageAsked(
+    taskId: string,
+    browser: Browser,
+    entry: PageEntry,
+    ask: HostBrowserAsk,
+  ): Promise<boolean> {
+    if (this.browsers.get(taskId) !== browser) return false;
+    const holds = browser.control === "captain";
+    const chrome = entry.page.showWindow !== undefined;
+    if (ask.kind === "platform") return holds && chrome && browser.here === true;
+    if (!holds) {
+      if (ask.kind === "passkey") {
+        const words = refusalWords({ kind: "passkey", url: ask.url });
+        if (!browser.notices.refusals.includes(words)) browser.notices.keep("refusals", words);
+      }
+      return false;
+    }
+    const site = siteOf(ask.url);
+    if (ask.kind === "passkey" && !(chrome && browser.here === true)) {
+      browser.told = { kind: "passkey", site, where: chrome ? "away" : "engine" };
+      this.options.onChange?.(taskId);
+      return false;
+    }
+    // One ask at a time: a second while the first waits is no.
+    if (browser.asking) return false;
+    browser.asks = (browser.asks ?? 0) + 1;
+    const asking: PageAsk = { id: browser.asks, kind: ask.kind, site, entry };
+    const settle = (): void => {
+      if (browser.asking !== asking) return;
+      browser.asking = undefined;
+      if (this.browsers.get(taskId) === browser) this.options.onChange?.(taskId);
+    };
+    browser.asking = asking;
+    browser.told = undefined;
+    this.options.onChange?.(taskId);
+    if (ask.kind === "passkey") {
+      // Use passkey lets it run and Chrome's own prompt answers it; its window
+      // goes back to the Dock when it ends, even one that came out by itself.
+      return new Promise<boolean>((resolve) => {
+        asking.answer = (allow) => {
+          asking.answer = undefined;
+          if (!allow) settle();
+          resolve(allow);
+        };
+        void ask.ended.then(() => {
+          asking.answer?.(false);
+          settle();
+          void entry.page.showWindow?.(false).catch(() => undefined);
+        });
+      });
+    }
+    return new Promise<boolean>((resolve) => {
+      asking.answer = (allow) => {
+        settle();
+        resolve(allow);
+      };
+      void ask.ended.then(() => asking.answer?.(false));
+    });
+  }
+
+  /**
+   * The captain lets the browser go: an ask still waiting is no, every
+   * Chrome window of its pages goes back to the Dock - a passkey's, or one
+   * Chrome brought out by itself - and every permission a site was let use
+   * is taken back.
+   */
+  private async endAsks(browser: Browser): Promise<void> {
+    const asking = browser.asking;
+    browser.asking = undefined;
+    browser.told = undefined;
+    asking?.answer?.(false);
+    await Promise.all(
+      browser.pages.map((entry) =>
+        Promise.all([
+          entry.page.showWindow?.(false).catch(() => undefined),
+          entry.page.revokeAsks().catch(() => undefined),
+        ]),
+      ),
+    );
+  }
+
+  // ---- a page from the project -------------------------------------------
+
+  /**
+   * The captain's click on a page from the task's project
+   * (docs/task-browser.md, "A page from the project"): the page opens in the
+   * task's own browser with him in control. A browser its crewmate has open
+   * is taken first, as Take control takes it; with none open - stopped,
+   * never opened, or its task closed - a fresh one starts that is his from
+   * the start. The project folder is served on a loopback address of its own
+   * whose origin the browser registers, and that server closes with it. The
+   * answer names the browser, for the view to open on.
+   */
+  async openPage(
+    taskId: string,
+    page: ProjectPage,
+  ): Promise<{ ok: true; handle: TaskBrowserHandle } | { ok: false; text: string }> {
+    const open = this.browsers.get(taskId);
+    if (open) {
+      const taken = await this.takeControl(taskId);
+      if (!taken.ok) return taken;
+      return this.queues.run(taskId, () => this.loadPage(taskId, open, page));
+    }
+    return this.queues.run(taskId, async () => {
+      if (this.browsers.has(taskId)) {
+        return { ok: false, text: "This task's browser opened meanwhile; press the button again." };
+      }
+      if (this.browsers.size >= this.max) {
+        return {
+          ok: false,
+          text: `${NUMBER_WORDS[this.max] ?? this.max} task browsers are already open on ${HERE.this}. Stop one, then press the button again.`,
+        };
+      }
+      const server = await this.serveFolder(page.folder);
+      if (!server) return { ok: false, text: `${HERE.This} could not serve this project's files.` };
+      const browser = await this.start(
+        taskId,
+        `${server.origin}/${page.path}`,
+        `you opened ${page.path} from its project in its browser`,
+        { captains: true },
+      );
+      if (!browser) {
+        server.close();
+        return {
+          ok: false,
+          text: `${HERE.This} could not open a browser for this task right now.`,
+        };
+      }
+      return this.loadPage(taskId, browser, page, server);
+    });
+  }
+
+  /** Serves a project folder, or nothing when the server could not start. */
+  private async serveFolder(folder: string): Promise<ProjectServer | undefined> {
+    try {
+      return await (this.options.serve ?? serveProjectFolder)(folder);
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** Loads a project page in a browser the captain holds, serving its folder. */
+  private async loadPage(
+    taskId: string,
+    browser: Browser,
+    page: ProjectPage,
+    given?: ProjectServer,
+  ): Promise<{ ok: true; handle: TaskBrowserHandle } | { ok: false; text: string }> {
+    if (this.browsers.get(taskId) !== browser || browser.control !== "captain") {
+      given?.close();
+      return { ok: false, text: "This task's browser stopped before the page opened." };
+    }
+    let server = given;
+    if (!server) {
+      if (browser.server?.folder === page.folder) server = browser.server;
+      else server = await this.serveFolder(page.folder);
+    }
+    if (!server) return { ok: false, text: `${HERE.This} could not serve this project's files.` };
+    if (browser.server !== server) {
+      browser.server?.close();
+      browser.server = server;
+    }
+    browser.origins.add(originKey(new URL(server.origin)));
+    const url = `${server.origin}/${page.path}`;
+    browser.firstUrl = url;
+    const entry = browser.current;
+    await loadOwn(entry, entry.page.load(url));
+    this.options.onChange?.(taskId);
+    return { ok: true, handle: { session: this.session, generation: browser.generation } };
+  }
+
+  // ---- signed-in sites (`savedSignInGrants.ts`) ----------------------------
+
+  /** The signed-in sites this computer keeps, by site, as Settings lists them. */
+  savedSignIns(): SavedSignIn[] {
+    return this.grants.list();
+  }
+
+  /** The signed-in site a request card may offer for the site the task's browser is on. */
+  savedSignInFor(taskId: string, site: string): OfferedSignIn | undefined {
+    return this.grants.offerFor(taskId, site);
+  }
+
+  /** The crewmate said the signed-in site its browser was given did not sign the page in. */
+  markSavedSignInFailed(taskId: string, site: string): boolean {
+    return this.grants.markFailed(taskId, site);
+  }
+
+  /** The captain's rule for a signed-in site: later tasks use it without asking, or ask him. */
+  allowAutomaticSignIn(site: string, id: string, automatic: boolean): TaskBrowserCommandResult {
+    return this.grants.allowAutomatic(site, id, automatic);
+  }
+
+  /** The captain's click on a request card's signed-in site. */
+  grantSavedSignIn(taskId: string, handle: TaskBrowserHandle): Promise<TaskBrowserCommandResult> {
+    return this.grants.grant(taskId, handle);
+  }
+
+  /** The captain's Remove in Settings: the kept profile signs the site out. */
+  removeSavedSignIn(site: string): Promise<TaskBrowserCommandResult> {
+    return this.grants.remove(site);
+  }
+
+  /** The captain's Remove all in Settings: this computer signs out of every site (docs/task-browser.md, "Signed-in sites"). */
+  removeAllSavedSignIns(): Promise<TaskBrowserCommandResult> {
+    return this.grants.removeAll();
+  }
+
+  /** A command's refusal while the captain holds the browser, or nothing. */
+  private held(taskId: string, options?: { waiting: boolean }): BrowserAnswer | undefined {
+    const control = this.browsers.get(taskId)?.control;
+    if (control === undefined || control === "crewmate") return undefined;
+    if (control === "waiting") {
+      if (options?.waiting === false) return undefined;
+      return refused(
+        `You asked the captain to take over this task's browser, so it is paused: your browser commands refuse until the captain takes control and returns it, and then you are woken once to take a fresh look. Do other work that does not need the browser, or end your turn. ${browserCommand("withdraw")} takes the request back and keeps the browser as it is; ${browserCommand("stop")} takes it back and stops the browser.`,
+      );
+    }
+    return refused(
+      "The captain has control of this task's browser: you cannot see or use the page until the captain returns it, and then you are woken once to take a fresh look. Do other work that does not need the browser, or end your turn.",
+    );
+  }
+
+  /** Whether the captain's handle names this browser; no handle is the one there is. */
+  private isHandled(browser: Browser, handle: TaskBrowserHandle | undefined): boolean {
+    return (
+      handle === undefined ||
+      (handle.session === this.session && handle.generation === browser.generation)
+    );
+  }
+
+  /** Nothing the page said, or where it moved, while the captain held it reaches the crewmate. */
+  private forget(browser: Browser): void {
+    browser.notices.forget();
+    for (const entry of browser.pages) {
+      entry.diagnostics.clear();
+      entry.moved = undefined;
+      entry.answered = undefined;
+    }
+  }
+
+  /**
+   * The browser goes back to its crewmate: every page starts a new ref
+   * book, nothing from the captain's time is kept, its next read is its
+   * fresh look, and it is woken once (docs/task-browser.md, "Taking
+   * control" and "Signed-in sites").
+   */
+  private handBack(taskId: string, browser: Browser, back: HandBack): void {
+    this.handBackBooks(taskId, browser);
+    this.forget(browser);
+    browser.did = FRESH_LOOK_WORDS;
+    browser.freshLook = true;
+    browser.notices.notice = back.notice;
+    this.touch(taskId, browser);
+    this.options.note?.(taskId, back.note);
+    this.options.onChange?.(taskId);
+    this.options.onReturned?.(taskId, back.returned);
+  }
+
+  /** The task closed: its browser goes, with nothing kept and nothing to tell. */
+  closeTask(taskId: string, options: { gone?: boolean } = {}): void {
+    // A page from the project the captain opened is his own: the task's
+    // close leaves it running, and only the task's removal stops it.
+    if (this.browsers.get(taskId)?.captains && !options.gone) return;
+    if (this.browsers.has(taskId)) this.stop(taskId, "task-closed");
+    else {
+      const ended = this.ended.get(taskId);
+      if (ended && ended.stopped !== "task-closed") {
+        this.ended.set(taskId, { ...ended, stopped: "task-closed" });
+        this.options.onChange?.(taskId);
+      }
+    }
+    this.stopped.delete(taskId);
+  }
+
+  /** The app quits: every task browser goes. */
+  closeAll(): void {
+    for (const taskId of [...this.browsers.keys()]) this.stop(taskId);
+    const guard = this.keptGuard;
+    this.keptGuard = undefined;
+    void guard?.then((handle) => handle?.close());
+  }
+
+  // ---- lifecycle ---------------------------------------------------------
+
+  /**
+   * A fresh browser for the task, about to load `url`; `opened` is its
+   * timeline line. With `kept` its first page opens in the kept profile.
+   */
+  private async start(
+    taskId: string,
+    url: string,
+    opened: string,
+    options: { captains?: boolean; kept?: boolean } = {},
+  ): Promise<Browser | undefined> {
+    const first = this.newEntry(taskId);
+    const browser: Browser = {
+      pages: [first],
+      size: this.pageSize(taskId),
+      current: first,
+      guard: undefined as unknown as ConnectionGuardHandle,
+      firstUrl: url,
+      generation: (this.generations.get(taskId) ?? 0) + 1,
+      booksFrom: (this.books.get(taskId) ?? 0) + 1,
+      origins: new Set(),
+      // While the captain holds the page, what it says is his and is kept for nobody.
+      notices: new PageNotices(() => browser.control === "captain"),
+      // His own from the start, before anything hears it opened.
+      control: options.captains ? "captain" : "crewmate",
+      returns: 0,
+      saved: new Map(),
+      ...(options.captains ? { captains: true as const } : {}),
+    };
+    const notices = browser.notices;
+    try {
+      browser.guard = await (this.options.guard ?? startConnectionGuard)({
+        onRefused: (refusal) => {
+          if (browser.control === "captain") return;
+          notices.tunnels.set(refusal.host, refusal);
+          notices.block(refusal.host, refusal.noRoute ? "no-route" : refusal.kind);
+        },
+        ...(this.options.lookup ? { lookup: this.options.lookup } : {}),
+        listed: (host) => listsPrivateSite(this.sites, host),
+        // An engine that sends loopback here reaches only the origins its
+        // crewmate opened, a live-reload socket on the same port included.
+        local: (host, port) => reachesOrigin(browser, host, port),
+      });
+    } catch {
+      return undefined;
+    }
+    const page = await this.openPageIn(taskId, browser, first, options.kept === true);
+    if (!page) {
+      browser.guard.close();
+      return undefined;
+    }
+    first.page = page;
+    if (options.kept) browser.kept = true;
+    this.generations.set(taskId, browser.generation);
+    this.browsers.set(taskId, browser);
+    // A view maximized or restored while it opened: the page follows.
+    if (!sameSize(browser.size, this.pageSize(taskId))) this.resizePages(taskId);
+    this.ended.delete(taskId);
+    this.options.note?.(taskId, opened);
+    // A view already watching this task sees the new page from its start.
+    if (this.watchers.has(taskId)) this.startWatching(taskId, browser);
+    this.options.onChange?.(taskId);
+    return browser;
+  }
+
+  /** A page entry not yet opened, with its own new ref book. */
+  private newEntry(taskId: string): PageEntry {
+    return {
+      diagnostics: new PageDiagnostics(),
+      page: undefined as unknown as HostBrowserPage,
+      refs: this.newBook(taskId),
+      loading: false,
+    };
+  }
+
+  /**
+   * The kept profile's connection guard, started with the first kept page
+   * (docs/task-browser.md, "Signed-in sites"). A loopback origin is reached
+   * when a kept browser's crewmate opened it, and a refusal is told to each
+   * kept browser its crewmate holds.
+   */
+  private keptGuardFor(): Promise<ConnectionGuardHandle | undefined> {
+    const kept = (): Browser[] => [...this.browsers.values()].filter((browser) => browser.kept);
+    this.keptGuard ??= (this.options.guard ?? startConnectionGuard)({
+      onRefused: (refusal) => {
+        for (const browser of kept()) {
+          if (browser.control === "captain") continue;
+          browser.notices.tunnels.set(refusal.host, refusal);
+          browser.notices.block(refusal.host, refusal.noRoute ? "no-route" : refusal.kind);
+        }
+      },
+      ...(this.options.lookup ? { lookup: this.options.lookup } : {}),
+      listed: (host) => listsPrivateSite(this.sites, host),
+      local: (host, port) => kept().some((browser) => reachesOrigin(browser, host, port)),
+    }).catch(() => {
+      this.keptGuard = undefined;
+      return undefined;
+    });
+    return this.keptGuard;
+  }
+
+  /**
+   * Open one of the browser's first pages: in its own empty context behind
+   * its own guard, or in the kept profile behind the kept guard. Nothing
+   * when the engine or the guard could not.
+   */
+  private async openPageIn(
+    taskId: string,
+    browser: Browser,
+    entry: PageEntry,
+    kept: boolean,
+  ): Promise<HostBrowserPage | undefined> {
+    const guard = kept ? await this.keptGuardFor() : browser.guard;
+    if (!guard) return undefined;
+    const notices = browser.notices;
+    try {
+      return await this.options.host.open({
+        viewport: { ...browser.size },
+        proxy: {
+          host: guard.host,
+          port: guard.port,
+          username: guard.username,
+          password: guard.password,
+        },
+        ...(kept ? { kept: true as const } : {}),
+        allow: ({ url, topLevel }) => {
+          const decision = decideRequest(url, browser.origins, (host) =>
+            listsPrivateSite(this.sites, host),
+          );
+          if (!decision.allowed) {
+            if (browser.control !== "captain") notices.block(decision.host, decision.kind);
+            return false;
+          }
+          // A page of the kept profile goes only to the sites its task may use there.
+          if (kept && topLevel && !this.grants.keptMayOpen(taskId, browser, url)) return false;
+          return true;
+        },
+        // A site's every picture may fail its certificate: it is said once.
+        onRefused: (refusal) => {
+          const words = refusalWords(refusal);
+          if (!notices.refusals.includes(words)) notices.keep("refusals", words);
+        },
+        onDownload: (offer) =>
+          saveDownload(this.options.evidenceDir(taskId), offer, notices, {
+            saved: (line) => this.options.note?.(taskId, line),
+            ended: () => {
+              if (this.browsers.get(taskId) === browser) this.options.onChange?.(taskId);
+            },
+          }),
+        ...this.pageEvents(taskId, browser, entry),
+      });
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * The browser's pages reopen in the other profile at `url`
+   * (docs/task-browser.md, "Signed-in sites"): into the kept profile, or
+   * out of it into a fresh empty context of its own. Its pages there close,
+   * its refs start again, and its allowance, generation and holder stay.
+   * The load's outcome, or nothing when the new page could not open; the
+   * browser then stays as it was.
+   */
+  private async moveProfile(
+    taskId: string,
+    browser: Browser,
+    kept: boolean,
+    url: string,
+  ): Promise<HostLoadOutcome | undefined> {
+    const entry = this.newEntry(taskId);
+    const page = await this.openPageIn(taskId, browser, entry, kept);
+    if (!page) return undefined;
+    if (this.browsers.get(taskId) !== browser) {
+      page.close();
+      return undefined;
+    }
+    entry.page = page;
+    const before = browser.pages;
+    browser.pages = [entry];
+    browser.current = entry;
+    browser.firstUrl = url;
+    if (kept) browser.kept = true;
+    else {
+      browser.kept = undefined;
+      browser.passed = undefined;
+    }
+    browser.stopWatching?.();
+    browser.stopWatching = undefined;
+    if (this.watchers.has(taskId)) this.startWatching(taskId, browser);
+    // A second page first; the first page's close ends an empty context's site data.
+    for (const old of [...before].reverse()) {
+      try {
+        old.page.close();
+      } catch {
+        // A page that is already gone has nothing left to close.
+      }
+    }
+    const outcome = await loadOwn(entry, page.load(url)).catch(
+      (): HostLoadOutcome => ({ ok: false, code: "ERR_FAILED" }),
+    );
+    this.options.onChange?.(taskId);
+    return outcome;
+  }
+
+  /**
+   * A page the captain holds asked for a file: the app's own picker opens
+   * over the app's window, and the page gets what the captain picks. On a
+   * computer with no window of the app's, the request waits for the
+   * crewmate, which may attach a file from its working copy.
+   */
+  private async captainFiles(
+    taskId: string,
+    browser: Browser,
+    entry: PageEntry,
+    chooser: HostFileChooser,
+  ): Promise<void> {
+    const choose = this.options.host.chooseFiles;
+    if (!choose) {
+      entry.chooser = chooser;
+      this.options.note?.(
+        taskId,
+        "its page asked for a file, which you cannot attach to a browser on another computer; return control and its crewmate can attach one from its working copy",
+      );
+      return;
+    }
+    const paths = await choose({ multiple: chooser.multiple }).catch(() => []);
+    if (paths.length === 0 || this.browsers.get(taskId) !== browser) return;
+    if (!browser.pages.includes(entry)) return;
+    await entry.page
+      .setFiles(chooser.target, chooser.multiple ? paths : paths.slice(0, 1))
+      .catch(() => undefined);
+  }
+
+  /** One page's doings, kept for the crewmate's next answer unless the captain holds the page. */
+  private pageEvents(taskId: string, browser: Browser, entry: PageEntry): HostPageEvents {
+    const live = (): boolean => this.browsers.get(taskId) === browser;
+    const notices = browser.notices;
+    return {
+      onNavigated: (url) => {
+        entry.refs = this.newBook(taskId);
+        entry.answered = undefined;
+        // A new document has none of the old one's file fields.
+        entry.chooser = undefined;
+        entry.lastUrl = url;
+        if (!entry.loading && browser.control !== "captain") entry.moved = url;
+        // A sign-in page the captain passes through in the kept profile is the task's to open too.
+        if (browser.kept && browser.control === "captain") this.grants.passedThrough(browser, url);
+        if (live()) this.options.onChange?.(taskId);
+      },
+      onConsole: (level, text) => {
+        if (live() && browser.control === "crewmate")
+          entry.diagnostics.log(level, text, signedIn(browser));
+      },
+      onNetwork: (event) => {
+        if (live() && browser.control === "crewmate") entry.diagnostics.request(event);
+      },
+      // A key hidden before the message is cut, so no piece of one is left to read.
+      onDialog: (kind, message) =>
+        notices.keep(
+          "dialogs",
+          `${kind} ${quoted(clip(signedIn(browser) ? hideKeys(message) : message))}`,
+        ),
+      onFileChooser: (chooser) => {
+        if (!live()) return;
+        if (browser.control === "captain" || browser.control === "taking") {
+          void this.captainFiles(taskId, browser, entry, chooser);
+          return;
+        }
+        // The crewmate's next answer says so, until it attaches a file or the page moves.
+        entry.chooser = chooser;
+      },
+      onPicker: (kind) =>
+        notices.keep(
+          "dialogs",
+          kind === "print"
+            ? `print: this browser never prints; photograph the page with ${browserCommand("screenshot")} instead`
+            : "color picker: this browser never shows one",
+        ),
+      onPopup: (url) => this.popup(taskId, browser, url),
+      onPageError: (text) => {
+        // A refused request or connection logs its own error; the summary already says it.
+        // A signed-out site's own navigation payload 404 is noise, not the page's.
+        if (/ERR_BLOCKED_BY_CLIENT|ERR_TUNNEL_CONNECTION_FAILED/.test(text)) return;
+        if (isPageNoise(text)) return;
+        notices.keep("errors", text);
+      },
+      onGone: (reason) => {
+        if (!live()) return;
+        if (entry === browser.pages[0]) {
+          this.stop(taskId, "gone");
+          this.stopped.set(taskId, `stopped working (${reason})`);
+          this.options.note?.(taskId, "its browser stopped working and was closed");
+          return;
+        }
+        this.leave(taskId, browser, entry, "stopped working and was closed");
+        try {
+          entry.page.close();
+        } catch {
+          // A page that is already gone has nothing left to close.
+        }
+      },
+      onClosed: () => {
+        if (live()) this.leave(taskId, browser, entry, "closed itself");
+      },
+      onAsk: (ask) => this.pageAsked(taskId, browser, entry, ask),
+    };
+  }
+
+  /**
+   * A page asked to open another window: it opens as this browser's next
+   * page while there is room and it goes somewhere a page may, and the
+   * crewmate's commands move to it; otherwise it is refused and said so.
+   */
+  private popup(taskId: string, browser: Browser, url: string): HostPopup | undefined {
+    if (this.browsers.get(taskId) !== browser) return undefined;
+    if (browser.pages.length >= TASK_BROWSER_PAGES_MAX) {
+      browser.notices.keep("popups", url ? shown(browser, url) : "a blank page");
+      return undefined;
+    }
+    if (url && url !== "about:blank") {
+      const decision = decideRequest(url, browser.origins, (host) =>
+        listsPrivateSite(this.sites, host),
+      );
+      if (!decision.allowed) {
+        if (browser.control !== "captain") browser.notices.block(decision.host, decision.kind);
+        return undefined;
+      }
+      if (browser.kept && !this.grants.allows(browser, url)) {
+        browser.notices.keep("popups", shown(browser, url));
+        return undefined;
+      }
+    }
+    const entry: PageEntry = {
+      diagnostics: new PageDiagnostics(),
+      page: undefined as unknown as HostBrowserPage,
+      refs: this.newBook(taskId),
+      loading: false,
+      ...(url && url !== "about:blank" ? { lastUrl: url } : {}),
+    };
+    const viewport = { ...browser.size };
+    return {
+      events: this.pageEvents(taskId, browser, entry),
+      viewport,
+      opened: (page) => {
+        if (
+          this.browsers.get(taskId) !== browser ||
+          browser.pages.length >= TASK_BROWSER_PAGES_MAX
+        ) {
+          page.close();
+          return;
+        }
+        entry.page = page;
+        browser.pages.push(entry);
+        // A resize while it opened went to the pages it found; this one follows.
+        if (!sameSize(viewport, browser.size)) {
+          void page.resize({ ...browser.size }).catch(() => undefined);
+        }
+        const place = browser.pages.length;
+        const site = url && url !== "about:blank" ? ` at ${siteOf(url)}` : "";
+        browser.notices.keep(
+          "pageNotes",
+          `The page opened a ${PAGE_WORDS[place] ?? "new"} page${site}, page ${place}, and your commands act on it now. ${browserCommand("selectpage 1")} goes back to the first page; ${browserCommand(`closepage ${place}`)} closes this one.`,
+        );
+        this.select(taskId, browser, entry);
+        this.options.onChange?.(taskId);
+      },
+    };
+  }
+
+  /** A page another page opened goes: closed by itself, stopped, or by the crewmate. */
+  private leave(taskId: string, browser: Browser, entry: PageEntry, how: string): void {
+    const place = browser.pages.indexOf(entry) + 1;
+    if (place <= 1) return;
+    const current = browser.current === entry;
+    const site = siteOf(addressOf(browser, entry));
+    this.dropPage(taskId, browser, entry);
+    browser.notices.keep(
+      "pageNotes",
+      `Page ${place} (${site}) ${how}${current ? "; your commands act on page 1 again" : ""}.`,
+    );
+  }
+
+  /** Take a page another page opened off the browser; the first page goes only with it. */
+  private dropPage(taskId: string, browser: Browser, entry: PageEntry): void {
+    const index = browser.pages.indexOf(entry);
+    if (index <= 0) return;
+    browser.pages.splice(index, 1);
+    if (browser.current === entry) this.select(taskId, browser, browser.pages[0] as PageEntry);
+    this.options.onChange?.(taskId);
+  }
+
+  /** The page the crewmate's commands, the captain's input and every view go to. */
+  private select(taskId: string, browser: Browser, entry: PageEntry): void {
+    if (browser.current === entry) return;
+    browser.current = entry;
+    browser.stopWatching?.();
+    browser.stopWatching = undefined;
+    if (this.watchers.has(taskId)) this.startWatching(taskId, browser);
+    this.options.onChange?.(taskId);
+  }
+
+  /**
+   * The browser goes: its pages, history and site data, and its connection
+   * guard. With a reason the captain keeps reading why, and Open again
+   * starts from its last page; without one (the app quits) nothing is kept.
+   */
+  private stop(taskId: string, why?: TaskBrowserStop): void {
+    const browser = this.browsers.get(taskId);
+    if (!browser) return;
+    const fact = why ? this.fact(taskId) : undefined;
+    this.browsers.delete(taskId);
+    browser.cancelIdle?.();
+    browser.stopWatching?.();
+    browser.stopWatching = undefined;
+    if (browser.server) {
+      browser.server.close();
+      if (why) {
+        this.endedServers.set(taskId, {
+          folder: browser.server.folder,
+          origin: browser.server.origin,
+          ...(browser.captains ? { captains: true as const } : {}),
+        });
+      }
+    } else if (why) this.endedServers.delete(taskId);
+    // A second page first; the first page's close ends an empty context's
+    // site data, while a kept page's close leaves the kept profile as it is.
+    for (const entry of [...browser.pages].reverse()) {
+      try {
+        entry.page.close();
+      } catch {
+        // A page that is already gone has nothing left to close.
+      }
+    }
+    browser.guard.close();
+    if (why && fact) {
+      this.ended.set(taskId, {
+        state: "stopped",
+        site: fact.site,
+        // Open again starts fresh, so it carries nothing of a sign-in's address.
+        url: signedIn(browser) ? bareAddress(fact.url) : fact.url,
+        stopped: why,
+        at: Date.now(),
+        session: this.session,
+        generation: browser.generation,
+      });
+      this.options.onChange?.(taskId);
+    }
+  }
+
+  /** Pictures of the task's current page to everyone watching it, once per page. */
+  private startWatching(taskId: string, browser: Browser): void {
+    if (browser.stopWatching) return;
+    const entry = browser.current;
+    browser.stopWatching = entry.page.watch((frame) => {
+      if (this.browsers.get(taskId) !== browser || browser.current !== entry) return;
+      for (const sink of this.watchers.get(taskId) ?? []) sink(frame);
+    });
+  }
+
+  private async reopenNow(taskId: string): Promise<TaskBrowserCommandResult> {
+    if (this.browsers.has(taskId)) return { ok: true };
+    const ended = this.ended.get(taskId);
+    if (!ended || ended.stopped === "task-closed") {
+      return { ok: false, text: "This task has no browser to open again." };
+    }
+    // A page from the project opens again from a fresh server for its folder.
+    const served = this.endedServers.get(taskId);
+    const server =
+      served && ended.url.startsWith(`${served.origin}/`)
+        ? await this.serveFolder(served.folder)
+        : undefined;
+    if (served && ended.url.startsWith(`${served.origin}/`) && !server) {
+      return { ok: false, text: `${HERE.This} could not serve this project's files.` };
+    }
+    const address =
+      served && server ? `${server.origin}${ended.url.slice(served.origin.length)}` : ended.url;
+    await this.readSites(taskId);
+    const check = checkOpenable(address, (host) => listsPrivateSite(this.sites, host));
+    if (!check.ok) {
+      server?.close();
+      return { ok: false, text: check.reason };
+    }
+    if (this.browsers.size >= this.max) {
+      server?.close();
+      return {
+        ok: false,
+        text: `${NUMBER_WORDS[this.max] ?? this.max} task browsers are already open on ${HERE.this}. Stop one, then open this again.`,
+      };
+    }
+    const why = this.stopped.get(taskId);
+    const browser = await this.start(
+      taskId,
+      check.url.href,
+      `you opened its browser again at ${check.url.origin}`,
+      // A browser his own click started opens again as his.
+      { captains: Boolean(server && served?.captains) },
+    );
+    if (!browser) {
+      server?.close();
+      return { ok: false, text: `${HERE.This} could not open a browser for this task right now.` };
+    }
+    this.stopped.delete(taskId);
+    if (server) browser.server = server;
+    if (check.origin) browser.origins.add(check.origin);
+    browser.notices.notice = `${why ? `Your earlier browser ${why}. ` : ""}The captain opened this task's browser again at ${check.url.href}: a fresh one, with nothing signed in.`;
+    this.touch(taskId, browser);
+    const entry = browser.current;
+    const outcome = await loadOwn(entry, entry.page.load(check.url.href));
+    if (!outcome.ok) entry.moved = undefined;
+    this.options.onChange?.(taskId);
+    return { ok: true };
+  }
+
+  /**
+   * A command touched the browser: its half hour starts again, unless the
+   * captain watches it or holds it - a browser in his hands never stops for
+   * being unused.
+   */
+  private touch(taskId: string, browser: Browser): void {
+    browser.cancelIdle?.();
+    browser.cancelIdle = undefined;
+    if (this.watchers.has(taskId) || browser.control !== "crewmate") return;
+    browser.cancelIdle = this.timer(this.idleMs, () => {
+      if (this.browsers.get(taskId) !== browser) return;
+      this.stop(taskId, "idle");
+      const minutes = Math.round(this.idleMs / 60_000);
+      this.stopped.set(taskId, `was stopped after ${minutes} minutes unused`);
+      this.options.note?.(taskId, `its browser stopped after ${minutes} minutes unused`);
+    });
+  }
+
+  // ---- helpers -----------------------------------------------------------
+
+  /** The size a task's pages lay out at: its maximized view's room, or the check's own. */
+  private pageSize(taskId: string): HostBrowserViewport {
+    const size = this.viewSizes.get(taskId)?.size ?? TASK_BROWSER_PAGE;
+    return { width: size.width, height: size.height };
+  }
+
+  /**
+   * Lay the task's pages out at the size its view asks for now, once a
+   * click in progress has landed. One resize waits at a time, and it takes
+   * the newest size when it runs. A task with no browser has nothing to
+   * resize: its next one opens at the size.
+   */
+  private resizePages(taskId: string): void {
+    const browser = this.browsers.get(taskId);
+    if (!browser || this.resizing.has(browser)) return;
+    this.resizing.add(browser);
+    void this.steady.run(browser, async () => {
+      this.resizing.delete(browser);
+      if (this.browsers.get(taskId) !== browser) return;
+      const size = this.pageSize(taskId);
+      if (sameSize(browser.size, size)) return;
+      browser.size = size;
+      await Promise.all(
+        browser.pages.map((entry) => entry.page.resize({ ...size }).catch(() => undefined)),
+      );
+    });
+  }
+
+  /** A new page's book of refs, numbered after every book its task has had in this run. */
+  private newBook(taskId: string): RefBook {
+    return new RefBook(() => {
+      const next = (this.books.get(taskId) ?? 0) + 1;
+      this.books.set(taskId, next);
+      return next;
+    });
+  }
+
+  /** The captain handed the browser back: every page starts a new book, and older refs are refused. */
+  private handBackBooks(taskId: string, browser: Browser): void {
+    browser.handedBackFrom = (this.books.get(taskId) ?? 0) + 1;
+    for (const entry of browser.pages) {
+      entry.refs = this.newBook(taskId);
+      entry.answered = undefined;
+    }
+  }
+}

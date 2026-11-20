@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "window-shot-at-every-size",
+      "reason": "Test tooling only: a whole-window picture in the hermetic launcher shows the whole window at every Size, and a demo recording's readiness check no longer leaks a cropped frame into the recording at 110-150%."
+    }
+  ]
+}

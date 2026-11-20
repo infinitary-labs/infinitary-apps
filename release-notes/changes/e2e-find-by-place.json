@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "e2e-find-by-place",
+      "reason": "End-to-end tests find a card, the pager and a feed line by their place instead of page-wide words, and a lint refuses new page-wide lookups. Shown words stay the same; no shipped behavior changed."
+    }
+  ]
+}

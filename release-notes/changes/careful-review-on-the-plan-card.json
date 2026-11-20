@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "careful-review-on-the-plan-card",
+      "kind": "feature",
+      "area": "cards",
+      "title": "Choose on a plan which parts get a careful review",
+      "body": "A plan with more than one part now lists every part with a tick box for a careful review. The parts your crewmate recommends arrive ticked, with a reason beside each, and you can untick any of them. When you approve the plan, each ticked part is built as a careful change and the rest at your project's usual care.",
+      "noPicture": "Your crewmate writes this question on its own plan card; no view of the app changes.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

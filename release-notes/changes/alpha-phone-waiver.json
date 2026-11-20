@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "alpha-phone-waiver",
+      "reason": "Release work: automatic alpha cuts temporarily ignore main's phone check until INF-2101 and INF-2305 merge, with no change to the app."
+    }
+  ]
+}

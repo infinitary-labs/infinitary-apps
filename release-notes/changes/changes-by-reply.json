@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "changes-by-reply",
+      "kind": "removal",
+      "title": "Ask for changes to a card by replying",
+      "body": "Cards no longer offer a Revise or Explain more button. Every button on a card now closes it. Ask for changes by replying under the card, and your answers go with the reply. Plans offer Approve and build beside a way to wait. A card already on your stack keeps its button until its author revises it.",
+      "area": "cards",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

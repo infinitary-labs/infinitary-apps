@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "add-by-address",
+      "reason": "Internal, behind the development-only multi-machine gate: adding a Mac by its address over Remote Login with the captain's own SSH key, updating Firstmate there, and removing what Firstmate set up there while it is out of reach. An installed app shows and offers none of it."
+    }
+  ]
+}

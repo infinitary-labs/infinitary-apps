@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "prerequisite-merge-guidance",
+      "kind": "fix",
+      "title": "A waiting task keeps your words when the work before it merges",
+      "body": "When a task waits for another task's pull request and that pull request merges, the words sent to the waiting task are kept for its crewmate, even if that crewmate has not started yet.",
+      "area": "tasks",
+      "noPicture": "This corrects saved instruction retention during background delivery; no screen or control changes.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

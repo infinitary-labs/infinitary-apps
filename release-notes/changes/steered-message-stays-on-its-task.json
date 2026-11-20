@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "steered-message-stays-on-its-task",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A message sent while the first mate reads a report stays with its task",
+      "body": "When you asked to finish a task while the first mate was reading that task's report, the task closed but your message could also show up as a separate question. It now stays with the task it was about.",
+      "noPicture": "This changes which task a message is filed under, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

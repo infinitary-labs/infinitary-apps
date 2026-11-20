@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "knowledge-directions-journey-focus-waits",
+      "reason": "Internal test repair: the knowledge directions journey now waits for the knowledge browser to put the keyboard where it opens and on an opened row's inspector before its next key, as the other knowledge journeys do, so the browser's own focus no longer takes the History key's focus back. Nothing a person notices changes."
+    }
+  ]
+}

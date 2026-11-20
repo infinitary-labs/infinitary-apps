@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "plan-tasks-titled-by-what-they-do",
+      "kind": "fix",
+      "title": "A plan's tasks are titled by what each one does",
+      "body": "When your first mate splits a plan into tasks, it now titles each task by what that part does, such as \"Show each task's cost on its tile\".",
+      "area": "tasks",
+      "noPicture": "The Tasks list looks the same; only the words your first mate picks for each title change.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

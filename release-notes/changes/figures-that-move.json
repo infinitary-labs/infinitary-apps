@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "figures-that-move",
+      "kind": "feature",
+      "title": "A figure on a card can move when that explains it better",
+      "body": "A figure that explains a change over time, such as a queue or events in order, now plays when you press its button. A figure that shows a value you might change, such as a width or a moment, has one control that redraws it. Every other figure stays still, nothing moves until you press or drag, and with reduced motion each move happens at once. A revised card still marks what changed beside a moving figure.",
+      "highlight": 3,
+      "area": "cards",
+      "noPicture": "A still picture cannot show a figure moving on a press, and only cards written after this change carry one.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

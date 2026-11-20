@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "shipped-queue-older-branch",
+      "reason": "Development check only: the local shipped-queue history check compares a branch with where it started from the default branch, so an unchanged older branch passes while rewritten or dropped versions still fail. The shipped queue's files and the app are unchanged."
+    }
+  ]
+}

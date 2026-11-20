@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-subset-repeats-ci",
+      "reason": "Internal: a branch's affected phone check now repeats an edited phone part twice more on the iPhone even when it selects only some parts, which changes only how the project checks itself."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "public-ci-boundaries",
+      "reason": "Internal CI admission and release credential boundaries; no change to the app."
+    }
+  ]
+}

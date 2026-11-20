@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "placed-home-quota-latest",
+      "reason": "Test-only repair: the placed-work test home's quota stand-in now answers the latest allowance reading routing reads, with no app behavior change."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-linux-waits-for-phone",
+      "reason": "The release workflow's Linux packages and desktop checks now wait for the phone release check, so a failed phone check stops them; release workflow work only, nothing a person sees changes."
+    }
+  ]
+}

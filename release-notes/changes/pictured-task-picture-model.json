@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "pictured-task-picture-model",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A task you send with pictures starts on a model that can read them",
+      "body": "When a task comes with your pictures, a crewmate now starts on a model that can read pictures, and moving the task to another model keeps it on one. Before, it could start on a model that reads only text, such as a custom connection without Reads pictures, and the task failed at once. When no model at the task's level can read pictures, the app now says so instead of saying that level's allowance ran out.",
+      "noPicture": "This changes which model a task starts on, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

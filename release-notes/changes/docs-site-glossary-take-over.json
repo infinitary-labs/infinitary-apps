@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "docs-site-glossary-take-over",
+      "reason": "Adds a Glossary page to the documentation site and sections on keeping a copy and taking over to its Your other computers page; nothing in the app changes."
+    }
+  ]
+}

@@ -1,0 +1,190 @@
+{
+  "repository": "infinitary-labs/infinitary",
+  "lastRun": 26,
+  "builds": [
+    {
+      "build": "26.1",
+      "contract": {
+        "major": 16,
+        "floor": 15
+      },
+      "confirmed": true
+    },
+    {
+      "build": "25.1",
+      "contract": {
+        "major": 16,
+        "floor": 15
+      },
+      "confirmed": true
+    },
+    {
+      "build": "24.1",
+      "contract": {
+        "major": 16,
+        "floor": 15
+      },
+      "confirmed": true
+    },
+    {
+      "build": "23.1",
+      "contract": {
+        "major": 16,
+        "floor": 15
+      },
+      "confirmed": false
+    },
+    {
+      "build": "22.1",
+      "contract": {
+        "major": 16,
+        "floor": 15
+      },
+      "confirmed": false
+    },
+    {
+      "build": "21.1",
+      "contract": {
+        "major": 15,
+        "floor": 15
+      },
+      "confirmed": true
+    },
+    {
+      "build": "20.1",
+      "contract": {
+        "major": 15,
+        "floor": 15
+      },
+      "confirmed": false
+    },
+    {
+      "build": "19.1",
+      "contract": {
+        "major": 15,
+        "floor": 15
+      },
+      "confirmed": true
+    },
+    {
+      "build": "18.1",
+      "contract": {
+        "major": 15,
+        "floor": 15
+      },
+      "confirmed": false
+    },
+    {
+      "build": "17.1",
+      "contract": {
+        "major": 15,
+        "floor": 15
+      },
+      "confirmed": true
+    },
+    {
+      "build": "16.1",
+      "contract": {
+        "major": 14,
+        "floor": 14
+      },
+      "confirmed": true
+    },
+    {
+      "build": "15.1",
+      "contract": {
+        "major": 14,
+        "floor": 14
+      },
+      "confirmed": true
+    },
+    {
+      "build": "14.1",
+      "contract": {
+        "major": 13,
+        "floor": 13
+      },
+      "confirmed": true
+    },
+    {
+      "build": "13.1",
+      "contract": {
+        "major": 13,
+        "floor": 13
+      },
+      "confirmed": true
+    },
+    {
+      "build": "12.1",
+      "contract": {
+        "major": 13,
+        "floor": 13
+      },
+      "confirmed": false
+    },
+    {
+      "build": "11.1",
+      "contract": {
+        "major": 13,
+        "floor": 13
+      },
+      "confirmed": false
+    },
+    {
+      "build": "7.1",
+      "contract": {
+        "major": 12,
+        "floor": 11
+      },
+      "confirmed": true
+    },
+    {
+      "build": "6.1",
+      "contract": {
+        "major": 11,
+        "floor": null
+      },
+      "confirmed": true
+    },
+    {
+      "build": "5.1",
+      "contract": {
+        "major": 11,
+        "floor": null
+      },
+      "confirmed": true
+    },
+    {
+      "build": "4.1",
+      "contract": {
+        "major": 11,
+        "floor": null
+      },
+      "confirmed": true
+    },
+    {
+      "build": "3.1",
+      "contract": {
+        "major": 11,
+        "floor": null
+      },
+      "confirmed": true
+    },
+    {
+      "build": "2.1",
+      "contract": {
+        "major": 8,
+        "floor": null
+      },
+      "confirmed": true
+    },
+    {
+      "build": "1.1",
+      "contract": {
+        "major": 8,
+        "floor": null
+      },
+      "confirmed": false
+    }
+  ]
+}

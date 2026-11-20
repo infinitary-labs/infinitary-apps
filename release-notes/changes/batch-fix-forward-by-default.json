@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "batch-fix-forward-by-default",
+      "kind": "improvement",
+      "area": "projects",
+      "title": "A held batch keeps its changes when only their tests are out of date",
+      "body": "On a project with batched pull requests, the crewmate repairing a held batch now fixes it forward by default once it has found the cause. When a change works as intended but left a test, its data or a generated file out of date, the repair updates them in its own fix, so the change stays in its batch instead of waiting for a later one. A change goes back to its crewmate only when its own code needs to change, the fix needs a decision, or the fix is not small.",
+      "noPicture": "This changes how a held batch's repair answers; no screen looks different.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

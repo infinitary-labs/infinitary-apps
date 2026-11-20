@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-repair",
+      "reason": "The project's own batch check now ends a paused batch when a labeled fix is approved, prints how to compose a swept batch locally, and can bisect a batch's changes on a failed file; how this repository's checks run, nothing in the app a person notices."
+    }
+  ]
+}

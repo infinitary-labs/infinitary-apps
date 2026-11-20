@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "plan-part-at-approval",
+      "kind": "feature",
+      "area": "crewmates",
+      "title": "A plan's next part can start as soon as you approve the part before it",
+      "body": "When a plan's later part needs an earlier part's work, it can now start the moment you approve that earlier part's merge, on the version you approved, instead of waiting for it to merge. If that approval ends before the merge, the later part's crewmate is told, and its own merge waits until the earlier part is in.",
+      "noPicture": "This changes when a planned part starts and where its merge waits, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

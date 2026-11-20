@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "linux-jobs-on-the-pc",
+      "reason": "Internal CI: every Linux job reads LINUX_RUNNER, journey overflow packs into at most five jobs, and the Electron sandbox setup runs on self-hosted machines too; nothing in the app changes."
+    }
+  ]
+}

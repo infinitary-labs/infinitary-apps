@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-simulator-logs-artifact",
+      "reason": "Internal CI: the phone check keeps each part's live simulator log in its own phone-simulator-logs artifact, so the phone-logs artifact of a full check fits the crew's 64 MiB artifact download again; nothing in the app changes."
+    }
+  ]
+}

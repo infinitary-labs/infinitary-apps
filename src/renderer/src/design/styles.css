@@ -1,0 +1,558 @@
+@import "./tokens/fonts.css";
+@import "./tokens/colors.css";
+@import "./tokens/typography.css";
+@import "./tokens/spacing.css";
+@import "../../../../.claude/skills/infinitary-design/tokens/rails.css";
+@import "./tokens/effects.css";
+@import "./reveals.css";
+
+/* The stage lifts with the composer's growth (docs/composer.md): the
+   Firstmate and the card ease to their place, and land at once when the
+   person has asked for less motion. */
+:root {
+  /* The composer's growth over one line, with the last turn's share while
+     one shows, written by HomePrompt. */
+  --prompt-rise: 0px;
+  /* The composer's growth over one line alone, written by HomePrompt. */
+  --prompt-growth: 0px;
+  /* The room the last turn takes above the input while one shows. */
+  --last-turn-lane: 0px;
+  /* The notices' height under the input, written by HomePrompt. */
+  --prompt-notices: 0px;
+  --stage-lift-duration: var(--dur-fast);
+  /* How much shorter the page is than 864px, the lowest page that can give
+     all 144px of the stage's air back and still keep it (docs/renderer.md,
+     "Short windows"). The stage's air gives way by that much, up to the
+     144px it can spare, so a card keeps the room it has in an 864px page
+     down to a 720px one: a 1280 by 720 window, or a 1440 by 900 one at 125%. */
+  --stage-squeeze: clamp(0px, 864px - 100vh, 144px);
+  /* The shares, all spent together: the 46px between the top bar and the
+     stack, the 14px between the pager and the whisper, and 84 of the 96px
+     under the input. */
+  --stage-yield-top: calc(var(--stage-squeeze) * 46 / 144);
+  --stage-yield-lane: calc(var(--stage-squeeze) * 14 / 144);
+  /* How high above the floor the collapsed side panel headers that share
+     the input's columns reach, written by HomePrompt (app/promptFoot.ts). */
+  --prompt-panels: 0px;
+  /* The input's foot above the floor: --space-9 less its share, but never
+     less than the notices hanging under it need. */
+  --prompt-floor-base: max(
+    calc(var(--space-9) - var(--stage-squeeze) * 84 / 144),
+    calc(var(--prompt-notices) + var(--space-2))
+  );
+  /* With no card up, the foot stands on those headers instead of being
+     drawn over them (docs/renderer.md, "Collapsed headers under the input"). */
+  --prompt-floor: max(var(--prompt-floor-base), var(--prompt-panels));
+}
+/* While a card is up the card keeps its room: the foot stays where the
+   window and the notices put it, and the collapsed headers it would stand
+   on step aside until the stack closes, keeping their place on the rail
+   with their pages running. HomePrompt marks when the foot would stand on
+   them (`data-prompt-on-panels`). */
+html[data-card-stack-open] {
+  --prompt-floor: var(--prompt-floor-base);
+}
+html[data-card-stack-open][data-prompt-on-panels]
+  [data-rail]
+  > :is(
+    [data-side-panel][data-side-panel-collapsed][data-side-panel-placement-y="bottom"],
+    [data-rail-more]
+  ) {
+  visibility: hidden;
+}
+/* Registered as lengths so HomePrompt reads them back in px: the composer's
+   growth gives up what the headers lift its foot by (app/promptFoot.ts). */
+@property --prompt-floor-base {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+@property --prompt-floor {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+/* The window is translucent on macOS (docs/translucent-window.md): a shown
+   window is the system material, the preload marks the document, and the
+   body paints --material-tint over it instead of the opaque void. When the
+   person has asked macOS to reduce transparency, the void comes back. */
+html[data-window-material="translucent"] body {
+  /* The strength is the tint's actual opacity; an unset wash is clear (0%). */
+  background: color-mix(in srgb, var(--material-tint) var(--wash-strength, 0%), transparent);
+  transition: background-color var(--dur-med) var(--ease-out);
+}
+/* While Settings shows, the same one tint rises to at least 65%, so its rows
+   and quiet labels read on any desktop; a wash already stronger is kept, and
+   leaving Settings fades it back (docs/translucent-window.md, "Settings on
+   the glass"). Reduce transparency's opaque void below still wins. */
+@media (prefers-reduced-transparency: no-preference) {
+  html[data-window-material="translucent"]:has([data-screen-label="Settings"]) body {
+    background: color-mix(
+      in srgb,
+      var(--material-tint) max(var(--wash-strength, 0%), 65%),
+      transparent
+    );
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  html[data-window-material="translucent"] body {
+    background: var(--bg-0);
+  }
+}
+
+/* Focus (design skill: --focus-ring, never a browser-default outline;
+   docs/keyboard.md, "Seeing where focus is"). Every control the keyboard
+   reaches draws the ring; inputs keep their own focus style because it
+   outranks this rule. Message textareas turn off their own shadow: their
+   surrounding shell draws the ring. The shown card takes focus whole as
+   one of the window's parts (app/regions.ts), so its ring follows the
+   card's corners. */
+:where(:focus-visible) {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+[data-stage-entry="shown"] {
+  border-radius: var(--radius-l);
+}
+/* A card's body takes focus as the place to read it (Go to the card's
+   body). The card clips what lies outside its body, so the body draws the
+   ring, glow and all, inside its own edge. */
+[data-card-body]:focus-visible {
+  box-shadow: var(--focus-ring-inset);
+}
+/* A pill's radio is unseen, so the pill draws the ring for it. */
+[data-grouped-pill]:has(> input:focus-visible) {
+  box-shadow: var(--focus-ring);
+}
+
+/* Side rails: two dock columns framing the home stage. A rail is a flex
+   column of host-framed panels at one fixed width token; an EMPTY rail is
+   zero-width and paints nothing (no border, no header, no affordance), so a
+   window with nothing docked is pixel-identical to one without rails. Not
+   resizable. The stage insets over one motion token; it is never covered. */
+/* The two docked widths are REGISTERED as lengths because the thread
+   ladder reads them (`app/shellLayout.ts`). An unregistered custom property
+   computes to its own token stream, so `--rail-docked-left: var(--rail-width)`
+   reads back through getComputedStyle as the literal `max(300px, 20vw)` and
+   parses as NaN; declared `<length>`, it resolves to an absolute px at
+   computed-value time, which is what the ladder's arithmetic is in. */
+@property --rail-docked-left {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+@property --rail-docked-right {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
+html {
+  --rail-docked-left: 0px;
+  --rail-docked-right: 0px;
+  --occupied-rail-left: var(--rail-docked-left);
+  --occupied-rail-right: var(--rail-docked-right);
+}
+/* The rails stay where a person docked them in a right-to-left language
+   too: the left rail on the left, the right rail on the right, though the
+   stage between them runs right to left (docs/i18n.md, "Right to left"). */
+[dir="rtl"] [data-rail-row] {
+  flex-direction: row-reverse;
+}
+/* A key's chord reads in the order it is pressed, ⌘ then L, in either
+   direction. */
+[dir="rtl"] kbd,
+[dir="rtl"] [data-button-key] > span {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+/* Expanded panels reserve card clearance. Collapsed headers stay on their
+   rail, but do not narrow the window-centered card or thread pair. The
+   create-your-own-panel slot reserves it as an expanded panel does, so a
+   wide card never covers it. */
+html:has(
+  [data-rail="left"]
+    > :is([data-side-panel]:not([data-side-panel-collapsed]), [data-create-panel-slot]):not(
+      [hidden]
+    )
+) {
+  --rail-docked-left: var(--rail-width);
+}
+html:has([data-rail="right"] > [data-side-panel]:not([hidden]):not([data-side-panel-collapsed])) {
+  --rail-docked-right: var(--rail-width);
+}
+
+/* The fold (cards-as-threads phase 1, the captain's tweak 2): while a
+   card's thread is open beside it and the pair would leave the card under
+   400px, the docked rails give their width back and the stage becomes the
+   whole window. Collapsed headers reserve no card clearance. The rails keep
+   their panels, so --rail-docked-* still says what expanded panels ask for and the
+   ladder that folded them can un-fold them; only the effective width goes.
+   The panels return when the thread closes. The main message folds them
+   the same way, with or without a card, where they would leave it under
+   its narrowest width (app/promptGeometry.ts, `promptFoldsRails`), and
+   they return when the window or a smaller Size gives the room back. */
+html[data-rails-folded] {
+  --occupied-rail-left: 0px;
+  --occupied-rail-right: 0px;
+}
+html[data-rails-folded]
+  [data-rail]:has(
+    > :is([data-side-panel], [data-create-panel-slot], [data-rail-more]):not([hidden])
+  ) {
+  width: 0;
+  padding: 0;
+  /* Its panels are out of sight, so out of reach of F6 and Tab as well:
+     hidden once the rail has slid shut, and shown again at once when it
+     opens (the rail's own transition leaves visibility out). */
+  visibility: hidden;
+  transition:
+    width var(--dur-med) var(--ease-out),
+    padding var(--dur-med) var(--ease-out),
+    visibility 0s linear var(--dur-med);
+}
+[data-rail] {
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  width: var(--rail-width);
+  pointer-events: auto;
+  min-width: 0;
+  padding: var(--space-8) var(--space-3) max(var(--space-4), env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow: hidden;
+  resize: none;
+  transition:
+    width var(--dur-med) var(--ease-out),
+    padding var(--dur-med) var(--ease-out);
+}
+[data-rail]:not(
+  :has(> :is([data-side-panel], [data-create-panel-slot], [data-rail-more]):not([hidden]))
+) {
+  width: 0;
+  padding: 0;
+}
+/* An expanded panel beside the input (docs/renderer.md, "Expanded panels
+   beside the input"): where the input shares the columns of a rail with
+   an expanded panel (`data-rail-lifted`, app/promptFoot.ts), that rail
+   ends --space-4 above the input's top less the last turn's whole 108px
+   lane (LAST_TURN_LANE, app/promptGeometry.ts), kept whether a turn shows
+   or not, so a message coming or fading never moves it. It eases there
+   with the rail's padding, and follows the composer's growth at once. */
+[data-rail][data-rail-lifted] {
+  padding-bottom: calc(var(--prompt-floor) + var(--prompt-height) + 108px + var(--space-4));
+  margin-bottom: var(--prompt-growth);
+}
+/* A maximized card (design skill ResponseCard, "Maximize") folds the rails
+   as above and puts them and the main message aside: hidden, so nothing in
+   them takes the pointer, a key or focus, while their panels keep running
+   and the main message keeps its words. Restore brings them back as they
+   were. */
+html[data-card-maximized] [data-rail],
+html[data-card-maximized] [data-prompt-dock],
+html[data-card-maximized] [data-prompt-notices] {
+  visibility: hidden;
+}
+[data-side-panel] {
+  flex: 0 1 auto;
+  min-height: 0;
+  width: calc(var(--rail-width) - var(--space-3) * 2);
+}
+/* A collapsed panel must keep its whole header when a sibling overflows.
+   Only expanded panels give up height and scroll their bodies. */
+[data-side-panel][data-side-panel-collapsed] {
+  flex-shrink: 0;
+}
+/* Expanded panels share the rail evenly, each capped at its own content,
+   so a short panel keeps all of its rows and a long one scrolls in what is
+   left. Shrinking in proportion to content height instead pushed a short
+   docked panel out of the window beside a long board. A `fill` panel below
+   sets its own flex and takes what the others leave. */
+[data-side-panel]:not([data-side-panel-collapsed], [data-side-panel-size="fill"]) {
+  flex: 1 1 0;
+  max-height: max-content;
+}
+[data-side-panel-placement-y="bottom"] {
+  margin-top: auto;
+}
+/* Dock the bottom group together: only its first shown panel takes the
+   spare height. Hidden panels must not claim the group's leading margin. */
+[data-side-panel-placement-y="bottom"]:not([hidden]) ~ [data-side-panel-placement-y="bottom"] {
+  margin-top: 0;
+}
+
+/* A panel a crewmate is building (docs/personal-panels.md, "Built apart"):
+   drawn as a rail draws it, at rail width and up to a rail's height, but
+   out of the window and out of sight, for the crewmate's capture alone. */
+[data-panel-draft] {
+  position: fixed;
+  top: 0;
+  inset-inline-end: 100%;
+  box-sizing: border-box;
+  width: var(--rail-width);
+  height: 100vh;
+  padding: var(--space-8) var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  visibility: hidden;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* The create-your-own-panel slot (docs/first-launch.md; design skill
+   components/panel/Panel.prompt.md): an empty outline a panel wide at the
+   top of the left rail, with no title row, chevron or attribution. It
+   fades in over --dur-med, a cut under reduced motion; hover lifts it and
+   makes the outline solid. Hide sits in its top right corner. */
+[data-create-panel-slot] {
+  position: relative;
+  flex: 0 0 auto;
+  width: calc(var(--rail-width) - var(--space-3) * 2);
+  height: calc(var(--space-8) + var(--space-5));
+  animation: in-place-fade var(--dur-med) var(--ease-out);
+}
+[data-create-panel-slot-ask] {
+  appearance: none;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 0 var(--space-6);
+  border: 1px dashed var(--line-2);
+  border-radius: var(--radius-l);
+  background: transparent;
+  font: inherit;
+  line-height: var(--leading-tight);
+  text-align: center;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+[data-create-panel-slot-ask]:hover {
+  background: var(--bg-2);
+  border-style: solid;
+}
+[data-create-panel-slot-hide] {
+  position: absolute;
+  top: var(--space-1);
+  inset-inline-end: var(--space-1);
+  display: flex;
+}
+
+/* A `fill` panel takes the rail height its siblings leave; collapsed, it
+   hugs its header like any other. Its body is a flex column so a frame
+   inside can take the whole of it. */
+[data-side-panel][data-side-panel-size="fill"]:not([data-side-panel-collapsed]) {
+  flex: 1 1 auto;
+}
+[data-side-panel][data-side-panel-size="fill"] > [data-side-panel-body] {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Placeholder text stays centered in the empty voice input, but the field
+   itself is left-aligned so the caret blinks on the left, not the center. */
+[data-voice-input-field]::placeholder {
+  text-align: center;
+}
+
+/* Stage reveals never own geometry, the pager, or close-out. Keyed surfaces
+   restart on interruption; the shared reduced-motion token makes this a cut.
+   A card on an empty stage fades, rises and grows into place. */
+[data-stage-reveal="entrance"] {
+  animation: stage-reveal var(--dur-arrive) var(--ease-out);
+}
+@keyframes stage-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(var(--move-arrive)) scale(var(--scale-arrive));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* A destination-width measurement must not see rails halfway through their
+   fold. Empty-stage docking keeps its existing easing. */
+html[data-card-stack-open] [data-rail] {
+  transition: none;
+}
+/* The shell holds the shown entry's displayed height; natural measurement
+   releases it once before paint. Only the shown entry follows the shell: a
+   successor being prepared lays out at its own natural height, and a
+   leaving drawing keeps the rectangle it was shown in (docs/renderer.md).
+   While waiting and unseen, the incoming entry also lays out naturally: the
+   shell still holds the previous rectangle, but must not clip the incoming
+   body below its scroller and prevent that frame from drawing. Once the
+   stage reveals it (including expiry), it follows the held shell again,
+   so late body growth cannot move a control during a pointer press. */
+[data-card-presentation] {
+  position: relative;
+  max-height: 100%;
+}
+[data-stage-entry="outgoing"] [data-card-surface],
+[data-stage-entry="outgoing"] [data-card-pair],
+[data-stage-entry="outgoing"] [data-response-card] {
+  height: 100%;
+}
+[data-card-presentation]:not([data-card-geometry="natural"]) > [data-stage-entry="shown"],
+[data-card-presentation]:not([data-card-geometry="natural"])
+  > [data-stage-entry="shown"]
+  [data-card-surface],
+[data-card-presentation]:not([data-card-geometry="natural"])
+  > [data-stage-entry="shown"]
+  [data-card-pair],
+[data-card-presentation]:not([data-card-geometry="natural"])
+  > [data-stage-entry="shown"]
+  [data-response-card] {
+  height: 100%;
+}
+[data-card-presentation]:is(
+    [data-card-geometry="natural"],
+    [data-card-geometry="waiting"]:not([data-card-revealed])
+  )
+  > [data-stage-entry="shown"],
+[data-card-presentation]:is(
+    [data-card-geometry="natural"],
+    [data-card-geometry="waiting"]:not([data-card-revealed])
+  )
+  > [data-stage-entry="shown"]
+  [data-card-surface],
+[data-card-presentation]:is(
+    [data-card-geometry="natural"],
+    [data-card-geometry="waiting"]:not([data-card-revealed])
+  )
+  > [data-stage-entry="shown"]
+  [data-card-pair],
+[data-card-presentation]:is(
+    [data-card-geometry="natural"],
+    [data-card-geometry="waiting"]:not([data-card-revealed])
+  )
+  > [data-stage-entry="shown"]
+  [data-response-card] {
+  height: auto;
+}
+[data-frame-drawn][data-frame-reveal] {
+  animation: card-first-draw var(--dur-fast) var(--ease-out);
+}
+@keyframes card-first-draw {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-frame-drawn][data-frame-reveal] {
+    animation-duration: var(--dur-fade);
+  }
+}
+
+/* A panel that reads newest last lays its body out from the end; its page keeps its height. */
+[data-side-panel-newest-last] [data-side-panel-body] iframe {
+  flex-shrink: 0;
+}
+
+/* Moving a panel (design skill components/panel/Panel.prompt.md, "Moving a
+   panel"; plugins/panelDrag.ts): every header is a handle with the grab
+   cursor, its buttons keeping their own. While a panel is held the whole
+   window reads grabbing, nothing selects, frames let the pointer pass, the
+   held panel stays in place faint, a ghost of its header follows the
+   pointer, and the one place it would land is lit: a 2px accent line, or
+   the outline of an empty group. A rail with no panels shows its two
+   groups as dashed outlines only while a panel is held. The drop is a cut. */
+[data-panel-handle] {
+  cursor: grab;
+}
+html[data-panel-dragging] {
+  cursor: grabbing;
+  user-select: none;
+}
+/* Held, every element under the pointer reads grabbing, a button included. */
+html[data-panel-dragging] :is(*, *:hover) {
+  cursor: inherit;
+}
+html[data-panel-dragging] iframe {
+  pointer-events: none;
+}
+[data-panel-drag-source] {
+  opacity: 0.4;
+}
+[data-panel-drag-ghost] {
+  position: fixed;
+  top: 0;
+  inset-inline-start: 0;
+  z-index: 1000;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-4);
+  background: var(--bg-2);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-2);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--fg-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+[data-panel-drop-line] {
+  position: fixed;
+  z-index: 999;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+  pointer-events: none;
+}
+[data-panel-drop-zone] {
+  position: fixed;
+  z-index: 998;
+  box-sizing: border-box;
+  border: 1px dashed var(--line-2);
+  border-radius: var(--radius-l);
+  pointer-events: none;
+}
+[data-panel-drop-zone][data-lit] {
+  border: 1px solid var(--accent);
+}
+[data-panel-drop-line][hidden],
+[data-panel-drop-zone][hidden] {
+  display: none;
+}
+
+/* One header-sized reachable door for panels that cannot fit. */
+[data-rail-more] {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 0 0 var(--rail-header-height);
+  min-width: 0;
+  margin-top: auto;
+  padding: 0 var(--space-2);
+}
+[data-rail-more-titles] {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+[data-side-panel-placement-y="bottom"]:not([hidden]) ~ [data-rail-more] {
+  margin-top: 0;
+}

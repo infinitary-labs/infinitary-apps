@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "queued-update-adds-prerequisites",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A queued update records a prerequisite it names",
+      "body": "When your first mate queues work and names a prerequisite that is not linked yet, that wait is recorded in the same step. A list that does not repeat every existing wait no longer stops the update, and an existing wait is not removed.",
+      "noPicture": "The wait is recorded on the task. No screen of its own changes.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

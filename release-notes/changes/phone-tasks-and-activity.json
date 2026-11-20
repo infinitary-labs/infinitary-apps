@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "phone-tasks-and-activity",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Tasks and Activity on iPhone and iPad read like the Mac's",
+      "body": "The Tasks list has the Mac's small group labels with their counts, and each task fits on one line with its project at the end. Pull the list down, or press Shift-Command-F, to search it. A task's Start or Continue is a wide button at the bottom of its record, with Interrupt beside it, and your message to its crewmate sends from a rounded box. Activity shows each task's key before its words, and a task's timeline runs down a thin line with each time at the right.",
+      "picture": {
+        "dark": "phone-tasks-and-activity-dark.png",
+        "light": "phone-tasks-and-activity-light.png",
+        "alt": "The Tasks list on an iPhone: small uppercase group labels with counts, and each task on one line with its status mark, key, title and project"
+      },
+      "provenance": { "origin": "change", "covers": [] }
+    }
+  ],
+  "exclusions": []
+}

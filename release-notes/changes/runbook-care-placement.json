@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "runbook-care-placement",
+      "reason": "Keeps main's new Care levels runbook after Testing rules as the captain chose; the Runbooks settings note covers this same panel."
+    }
+  ]
+}

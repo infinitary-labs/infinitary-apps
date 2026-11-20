@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "seated-part-keeps-outside-wait-arrow",
+      "reason": "Fixes a regression in the unreleased task-with-parts constellation: a seated part dropped its wait arrow to a task outside its parent. No published release had the defect, so a person sees no change from the last release."
+    }
+  ]
+}

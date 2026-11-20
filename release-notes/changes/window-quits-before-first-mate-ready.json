@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "window-quits-before-first-mate-ready",
+      "kind": "fix",
+      "area": "other",
+      "title": "Infinitary's window quits at once when you close it before your first mate is ready",
+      "body": "If you opened Infinitary's window while your first mate was still starting, clicked into the window and then quit before your first mate was ready, the window could keep running and keep your computer busy until it was forced to stop. It now quits right away.",
+      "noPicture": "This changes whether a closed window's program ends, which no view shows.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "board-without-closed",
+      "kind": "improvement",
+      "area": "tasks",
+      "title": "Your tasks come back sooner after your phone or another Mac reconnects",
+      "body": "When your iPhone, iPad or a Mac viewing another one reconnects, it first reads your open work and leaves out this week's finished tasks, which is most of the list. Done still shows how many there are, and opening Done or searching reads them.",
+      "noPicture": "The lists look the same; the change is how much is read before they show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

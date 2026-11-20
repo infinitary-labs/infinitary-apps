@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "waiting-crewmate-names-its-wait",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "A waiting crewmate says what it waits on, and circles that task",
+      "body": "A started crewmate that waits on another task's crewmate now circles it, even when queued work waits on it in turn. Its task now says which task it waits on and when that wait was recorded, where that time is known.",
+      "picture": {
+        "dark": "waiting-crewmate-names-its-wait-dark.webp",
+        "light": "waiting-crewmate-names-its-wait-light.webp",
+        "alt": "A task tile for \"Draw the harbour map legend\" reading \"Idle · Waiting on SCR-1\" and, under it, \"Wait recorded 2:13 PM\""
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

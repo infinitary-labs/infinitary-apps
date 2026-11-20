@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "fill-panel-journey-rail-at-rest",
+      "reason": "Test-only repair: the fractional-height panel journey waits for the rail's easing to end before it measures, so a busy run no longer reads a frame that is still shrinking; no app behavior changes."
+    }
+  ]
+}

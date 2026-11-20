@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "phone-card-first",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Cards get more room on an open foldable iPhone",
+      "body": "With Split at the fold on, the side panel folds when a card is open. Show panels beside Settings brings it back and keeps it visible as you move between cards. Touch the card to tuck away the last reply, or the message box to see it again.",
+      "picture": {
+        "dark": "phone-card-first-dark.webp",
+        "light": "phone-card-first-light.webp",
+        "alt": "On an open foldable iPhone, a decision card fills the screen from edge to edge, with Show panels beside Settings in the top bar."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

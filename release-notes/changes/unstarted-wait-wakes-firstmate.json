@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "unstarted-wait-wakes-firstmate",
+      "kind": "fix",
+      "title": "A task no longer waits in silence on work nobody started",
+      "body": "When a task cannot finish until another planned task is done, and nobody has started that task, Firstmate now hears about it from the waiting task's report. It starts the other task, has the waiting task make the fix itself when that is smaller, or asks you. Before, the wait could sit unnoticed until you asked.",
+      "area": "crewmates",
+      "noPicture": "Nothing on screen changes: Firstmate now hears about the wait.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

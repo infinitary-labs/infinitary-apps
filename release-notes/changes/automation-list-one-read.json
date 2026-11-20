@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "automation-list-one-read",
+      "reason": "Internal: the Automation list, which the window reads every 30 seconds, reads what is connected once for all its event rules instead of twice per rule, so the read no longer holds the app's main thread for about a tenth of a second with a dozen or more event rules. The freeze recorder caught these pauses; they were too short for most people to notice."
+    }
+  ]
+}

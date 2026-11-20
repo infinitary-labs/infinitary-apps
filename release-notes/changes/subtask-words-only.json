@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "subtask-words-only",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A check your first mate starts carries only your words for it",
+      "body": "When your first mate starts a check or another step on its own, the crewmate no longer reads your words about other work as its ask, such as a request to merge a different task without asking. Its instructions say you gave no words for it and its goal stands in. When the step belongs under a task you gave standing permission on, it sees that permission labeled as belonging to that task, and your first mate passes your words on to each step they cover.",
+      "noPicture": "This changes what a crewmate is told when it starts, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

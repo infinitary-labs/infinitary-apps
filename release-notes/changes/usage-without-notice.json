@@ -1,0 +1,22 @@
+{
+  "entries": [
+    {
+      "id": "usage-without-notice",
+      "kind": "removal",
+      "title": "Usage no longer opens with a coverage notice",
+      "body": "Settings → Usage goes straight from Period and Work to its totals. The panel above them that explained recorded models, estimates and token coverage is gone; the totals, a model's details and the recent tasks still say when they leave something out.",
+      "area": "settings",
+      "noPicture": "What changed is a panel that is no longer there, so there is nothing new to show.",
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "settings-bottom-space",
+      "kind": "fix",
+      "title": "Long Settings tabs keep space at the bottom",
+      "body": "A Settings tab taller than the window, such as General or Usage, now ends with the same space below its last row as a shorter tab, rather than stopping at the window's edge.",
+      "area": "settings",
+      "noPicture": "A small spacing fix at the end of a scrolled tab; a release review takes a picture if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

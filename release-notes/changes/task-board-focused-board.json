@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-board-focused-board",
+      "kind": "improvement",
+      "title": "The task board stays short, however many tasks you have",
+      "body": "The board now shows the work underway: Waiting on you above Queued, Working and this week's Done, five at a time. Your backlog, all of this week's done tasks and dropped tasks open as lists of twenty a page, and every count is the whole list's. Find also lists matching done tasks from before this week, apart from this week's.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-board-focused-board-dark.webp",
+        "light": "task-board-focused-board-light.webp",
+        "alt": "The task board with Waiting on you above Queued, Working and Done columns, and Board, Backlog and Done buttons with their counts"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

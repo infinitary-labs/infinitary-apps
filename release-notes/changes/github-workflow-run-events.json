@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "github-workflow-run-events",
+      "kind": "feature",
+      "area": "settings",
+      "title": "Start an automation when a GitHub workflow run fails or finishes",
+      "body": "An automation can now listen to GitHub: choose When something happens, then A workflow run fails or A workflow run finishes, and name the repository, and if you like the workflow and branch. Each run is told once, with its workflow, branch, version, the failed jobs and steps, and the newest passing run, and your first mate does what your automation's words ask. A crewmate working on such a run can also reserve one rerun of it.",
+      "picture": {
+        "dark": "github-workflow-run-events-dark.webp",
+        "light": "github-workflow-run-events-light.webp",
+        "alt": "Settings, Automation, a new automation set to When something happens and A workflow run fails in GitHub, with repository, workflow and branch fields filled in."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

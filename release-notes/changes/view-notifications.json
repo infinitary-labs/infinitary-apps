@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "view-notifications",
+      "reason": "Development only, behind the multi-machine gate: an app controlling Firstmate on another Mac posts that Mac's card notifications while its own window is in the background, following that Mac's Notifications switch. An installed app never becomes a view, so it shows none of it."
+    }
+  ]
+}

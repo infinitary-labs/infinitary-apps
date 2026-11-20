@@ -1,0 +1,118 @@
+/* Settings' tabs: one column on the left of the page (design skill
+   components/core/SettingsTabs.prompt.md). It sticks to the top of the
+   page while the section scrolls; each tab is a row the column's width,
+   quiet at rest, lifted under the pointer, and the chosen one filled with
+   the page's one accent as a bar on its left edge. */
+[data-settings-tabs] {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+[data-settings-tab] {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 32px;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius-s);
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--settings-quiet-fg, var(--fg-3));
+  text-align: start;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+[data-settings-tab]:hover {
+  color: var(--fg-2);
+  background: var(--bg-1);
+}
+[data-settings-tab][aria-selected="true"] {
+  color: var(--fg-1);
+  background: var(--bg-2);
+}
+[data-settings-tab][aria-selected="true"]::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  inset-inline-start: 0;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+}
+[data-settings-tab-label] {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Settings → Panels (design skill components/core/PanelsSettings.prompt.md):
+   one column a rail wide or wider for each rail, side by side while both
+   fit; each group a list in a hairline box, its rows parted by hairlines. */
+[data-panels-rails] {
+  grid-template-columns: repeat(auto-fit, minmax(var(--rail-width), 1fr));
+}
+[data-panels-group] {
+  border: 1px solid var(--line-1);
+}
+[data-panels-row] + [data-panels-row] {
+  border-top: 1px solid var(--line-1);
+}
+
+/* A Settings row (settingRows.tsx's SettingRow): its own box, a --bg-1 fill
+   in a hairline, on every opaque window. */
+[data-setting-row] {
+  background: var(--bg-1);
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-m);
+}
+
+/* Settings on the see-through window (docs/translucent-window.md, "Settings
+   on the glass"; design skill components/core/SettingsTabs.prompt.md). The
+   opaque fills were drawn for the old black page and read as black slabs over
+   the desktop, so here every box Settings draws takes --bg-1 or --bg-2 at 55%
+   and picks up the hue behind it, quiet text lifts from --fg-3 to --fg-2, and
+   neighboring rows join into one box per section, parted by hairlines.
+   Opaque windows, Reduce transparency included, keep the rules above. */
+@media (prefers-reduced-transparency: no-preference) {
+  html[data-window-material="translucent"] [data-settings-column] {
+    --settings-quiet-fg: var(--fg-2);
+    /* Read here, under the theme, so the section below mixes the theme's own value. */
+    --settings-solid-bg-1: var(--bg-1);
+    --settings-solid-bg-2: var(--bg-2);
+  }
+  html[data-window-material="translucent"] [data-settings-section] {
+    --bg-1: color-mix(in srgb, var(--settings-solid-bg-1) 55%, transparent);
+    --bg-2: color-mix(in srgb, var(--settings-solid-bg-2) 55%, transparent);
+  }
+  html[data-window-material="translucent"] [data-settings-tab]:hover {
+    background: color-mix(in srgb, var(--settings-solid-bg-1) 35%, transparent);
+  }
+  html[data-window-material="translucent"] [data-settings-tab][aria-selected="true"] {
+    background: color-mix(in srgb, var(--settings-solid-bg-1) 55%, transparent);
+  }
+  /* One box per section: a row followed by another row gives up its bottom
+     corners, and the next row gives up its top corners and its own top
+     hairline, then closes the stack's row gap (ROW_GAP), so the first row's
+     bottom hairline parts them. */
+  html[data-window-material="translucent"] [data-setting-row]:has(+ [data-setting-row]) {
+    border-end-start-radius: 0;
+    border-end-end-radius: 0;
+  }
+  html[data-window-material="translucent"] [data-setting-row] + [data-setting-row] {
+    margin-top: calc(-1 * var(--space-3));
+    border-top: none;
+    border-start-start-radius: 0;
+    border-start-end-radius: 0;
+  }
+}

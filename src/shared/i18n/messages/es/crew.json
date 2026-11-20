@@ -1,0 +1,21 @@
+{
+  "crewAPart": "Una parte",
+  "crewFirstmateLabel": "Primer oficial - {state}",
+  "crewModelNames": "Nombres de los modelos de la tripulación",
+  "crewNextComputers": "Computadoras siguientes",
+  "crewOrbitLabel": "Tripulación - {working} trabajando, {idle} en reposo",
+  "crewOutOfReach": "Fuera de alcance",
+  "crewPartsCount": "terminadas: {finished}, en ejecución: {running}, en espera: {waiting}",
+  "crewPreviousComputers": "Computadoras anteriores",
+  "crewProgramsAndParts": "Programas y sus partes",
+  "crewStateIdle": "En reposo",
+  "crewStateWorking": "Trabajando",
+  "crewSummaryAnotherTask": "otra tarea",
+  "crewSummaryBlockedBy": "Bloqueada por",
+  "crewSummaryPartOf": "Parte de",
+  "crewSummaryParts": "Partes",
+  "crewSummaryReviewing": "Revisando",
+  "crewSummaryRunning": "En ejecución",
+  "crewUnavailableComputer": "Computadora no disponible",
+  "crewWorkComputers": "Computadoras de trabajo"
+}

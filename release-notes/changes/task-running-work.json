@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "task-running-work",
+      "reason": "Internal: a task's running work and its delivery, merging and care settings are each kept as their own record instead of on the task's row and inside its settings; every task's record, its conversations and the first mate's reads show the same as before."
+    }
+  ]
+}

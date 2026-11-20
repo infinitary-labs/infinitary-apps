@@ -1,0 +1,370 @@
+import { z } from "zod";
+import { type BatchDeclaration, batchDeclarationSchema } from "./batches";
+
+/** Agent-declared diagnosis; the host never infers ownership from report prose. */
+export type CheckDiagnosis = {
+  headSha: string;
+  check: string;
+  classification: "own-regression" | "baseline-blocked" | "suspected-flake" | "unknown";
+  /** Logs and reproduction/comparison evidence, not merely a wait instruction. */
+  evidence: string;
+  dependencyTask?: string;
+  /**
+   * Whether the failed test's own code is added or edited by this change
+   * (INF-840): such a test is never a suspected flake, so suspected-flake
+   * needs it declared false.
+   */
+  changedTest?: boolean;
+};
+
+export type CheckRepair = {
+  id: string;
+  sourceHead: string;
+  headSha: string;
+  check: string;
+  evidence: string;
+};
+
+export type CheckRerun = {
+  headSha: string;
+  check: string;
+  evidence: string;
+  /**
+   * Set by the host when the reservation is for a workflow run's failed job
+   * rather than the pull request's current version (INF-688): only a rerun
+   * of this run dates it.
+   */
+  runId?: number;
+  /** Set by the host when the gateway sent the rerun: the one reservation is spent. */
+  startedAt?: number;
+};
+
+/**
+ * A workflow run as the crewmate's short read or the run watch last read it
+ * (INF-688): its version, the attempt read, and that attempt's failed job
+ * names. A job named here is an observed failing head/check with or without
+ * a pull request, and stays current until a newer reading of the run stops
+ * listing it.
+ */
+export type ObservedRun = {
+  runId: number;
+  headSha: string;
+  attempt: number;
+  failed: string[];
+};
+
+/**
+ * How a crewmate judges what a repair of its approved change did to that
+ * work (FI3-304, guard = builder; INF-493): `none` leaves it as approved and
+ * keeps the captain's merge approval, whatever the repair was; `changed-work`
+ * ends it; `unknown` holds it until an independent assessment decides
+ * (FI3-663). The impact is the crewmate's to declare and the host records
+ * it; the host never sorts the repair into a kind.
+ */
+export const MERGE_REPAIR_IMPACTS = ["none", "changed-work", "unknown"] as const;
+export type MergeRepairImpact = (typeof MERGE_REPAIR_IMPACTS)[number];
+
+/**
+ * `none`'s name before INF-493, which still means it wherever it arrives:
+ * the work request a computer sends its home carries it, so the published
+ * contract keeps its shape and two builds understand each other, and an
+ * older crewmate's tools, an assessment asked before then or a saved repair
+ * may still say it.
+ */
+export const LEGACY_NO_IMPACT = "conflict-only";
+
+/** The impact a declaration or an assessment names, `none`'s older name read as `none`. */
+export function repairImpact(value: unknown): MergeRepairImpact | undefined {
+  if (value === LEGACY_NO_IMPACT) return "none";
+  return MERGE_REPAIR_IMPACTS.find((impact) => impact === value);
+}
+
+/** An impact as the work request to the home carries it: `none` by its older name. */
+export function wireRepairImpact(
+  impact: MergeRepairDeclaration["impact"],
+): Exclude<MergeRepairDeclaration["impact"], "none"> {
+  return impact === "none" ? LEGACY_NO_IMPACT : impact;
+}
+
+/**
+ * How the host establishes an independent repair assessment's kind
+ * (`kind_source`, FI3-663): a review-kind read of one repair of an approved
+ * change, never a review of the change itself.
+ */
+export const REPAIR_ASSESSMENT_SOURCE = "host:repair-assessment";
+
+/** Whether a task's shape is an independent repair assessment rather than a code review. */
+export function isRepairAssessment(
+  shape: { kind?: string; kind_source?: string } | null | undefined,
+): boolean {
+  return shape?.kind === "review" && shape.kind_source === REPAIR_ASSESSMENT_SOURCE;
+}
+
+/**
+ * A repair of an approved change, declared at its new head: the transition,
+ * the base it sits on, the crewmate's judgment of its impact and its
+ * evidence. Any new head is a repair - bringing the change up to date, a
+ * reworded commit, a fix for what refused the merge. The host checks the
+ * closed facts (lineage, ancestry, the paths it touches); the judgment of
+ * semantic equivalence is the crewmate's.
+ */
+export type MergeRepairDeclaration = {
+  /** The head the repair started from: the approved head or the last accepted repair. */
+  fromHead: string;
+  /** The pushed head after the repair. */
+  toHead: string;
+  /** The default branch's commit the repaired change sits on: newer work it took in, or the base it already had. */
+  newBase: string;
+  /** Saved repairs and older senders may name `none` as `conflict-only` (`LEGACY_NO_IMPACT`). */
+  impact: MergeRepairImpact | typeof LEGACY_NO_IMPACT;
+  /** Paths the repair changed beyond the approved change, or that it no longer touches. */
+  changedPaths: string[];
+  /** How the approved behavior was compared with the repaired change. */
+  evidence: string;
+  /** The validation run at toHead. */
+  validation: string;
+};
+
+/**
+ * How a crewmate judges the captain's newer words while his kept merge
+ * approval stands (FI3-662): `none` leaves the approved work as it was, so
+ * the merge goes on; `changed-work` ends the approval.
+ */
+export const MERGE_GUIDANCE_IMPACTS = ["none", "changed-work"] as const;
+export type MergeGuidanceImpact = (typeof MERGE_GUIDANCE_IMPACTS)[number];
+
+/**
+ * The crewmate's declaration about the captain's guidance that holds a kept
+ * merge: the newest mark it read (the host numbers each guidance on the
+ * message it steers), its judgment, and why. Marks it never read stay held.
+ */
+export type MergeGuidanceDeclaration = {
+  mark: number;
+  impact: MergeGuidanceImpact;
+  evidence: string;
+};
+
+/**
+ * Evidence-backed flake and repair settlement judgments remain crew-owned.
+ * So does `answered`, the crewmate's answer to the host's own merge queue
+ * removing this exact version: it judged that nothing is left to change
+ * there, so the kept approval sends the version to that queue once more
+ * (docs/forge.md, "The host's merge queue").
+ */
+export const CHECK_DECLARATION_VERDICTS = ["flake", "settled", "answered"] as const;
+
+export type CheckDeclaration = {
+  headSha: string;
+  verdict: (typeof CHECK_DECLARATION_VERDICTS)[number];
+  evidence: string;
+  check?: string;
+  repairId?: string;
+  outcome?: "passed" | "failed" | "superseded" | "void";
+};
+
+/**
+ * Append-only history. Saved ready/red declarations remain readable history,
+ * never current authority: a merge offer itself expresses the crew's judgment.
+ */
+export type CheckDeclarationEntry =
+  | ((CheckDeclaration | (Omit<CheckDeclaration, "verdict"> & { verdict: "ready" | "red" })) & {
+      kind?: "verdict";
+      at: number;
+    })
+  | (CheckDiagnosis & { kind: "diagnosis"; at: number })
+  | (CheckRepair & { kind: "repair"; at: number })
+  | (CheckRerun & { kind: "rerun"; at: number });
+
+/** Optional declarations on the existing check_change seam, shared by both seats. */
+export type CheckChangeInput = {
+  /**
+   * The change the reading is of, by the id the task's change record carries
+   * (INF-1873). A task reads only its own change; another's id is refused.
+   */
+  change?: string;
+  declaration?: CheckDeclaration;
+  diagnosis?: CheckDiagnosis;
+  repair?: CheckRepair;
+  /** Record the crew's evidenced rerun judgment. */
+  rerun?: CheckRerun;
+  /** A repair of a change the captain already approved to merge (FI3-304). */
+  conflictRepair?: MergeRepairDeclaration;
+  /** What the captain's newer words do to the change his kept approval covers (FI3-662). */
+  captainGuidance?: MergeGuidanceDeclaration;
+  /**
+   * Prepare a merge review of this pull request in the task's project
+   * (FI3-1543). The answer's review id is what `request_merge` references.
+   * Preparing it grants no approval and merges nothing.
+   */
+  pull?: number;
+  /**
+   * This exact head intentionally has no checks. The host stores it on the
+   * review; an empty or unreadable check list alone never qualifies.
+   */
+  absentChecks?: { headSha: string; evidence: string; localGate: string; project?: boolean };
+  /**
+   * Prepare `pull` as a merge past the branch rules (FI3-1571 piece 2): the
+   * version the crewmate read and the method. GitHub only; only the
+   * captain's click on its card sends it.
+   */
+  skipRules?: { headSha: string; method: "squash" };
+  /**
+   * An answer to the held batch of approved changes in the task's project
+   * (docs/forge.md, "Batches of your own"), from the task repairing it:
+   * this task's own change is the batch's fix, or changes are sent back,
+   * each named by its task and with its reason.
+   */
+  batch?: BatchDeclaration;
+};
+
+/**
+ * The workflow run whose newest reading still lists `check` failed at
+ * `headSha` (INF-688): the one whose reading changed last when several do.
+ * A run counts only at the change's current version, or while the task has
+ * no pull request version at all, so a new version ends what an older run
+ * showed, as it does for a pull request's checks.
+ */
+export function failingRun(
+  delivery: { headSha?: string; ciRepair?: CheckRepairLedger } | null | undefined,
+  failed: { headSha: string; check: string },
+): ObservedRun | undefined {
+  if (delivery?.headSha !== undefined && delivery.headSha !== failed.headSha) return undefined;
+  return delivery?.ciRepair?.runs?.findLast(
+    (run) => run.headSha === failed.headSha && run.failed.includes(failed.check),
+  );
+}
+
+/** One declaration history, raw observations, and compatibility projections for existing readers. */
+export type CheckRepairLedger = {
+  declarations?: CheckDeclarationEntry[];
+  /** Pre-upgrade failed-version counts are history, not declared repair attempts. */
+  legacyFailedVersions?: number;
+  failures: { headSha: string; checks: string[] }[];
+  /** Workflow runs read with failed jobs, newest change last; absent before INF-688. */
+  runs?: ObservedRun[];
+  /** `at`: when the host recorded it (absent on rows from before FI3-250). */
+  diagnoses: (CheckDiagnosis & { at?: number })[];
+  /**
+   * `superseded`: the change moved past the attempt's version before the host
+   * ran any check there, and no branch is at it for a run to start on (INF-1185),
+   * so it can never have a result and spends nothing (INF-988).
+   * `void`: the project's host holds no commit at the declared version, as for a
+   * mistyped id, so no check can ever run there; it spends nothing, and a
+   * declaration with its id replaces it (INF-1184).
+   * `carried`: the versions an open attempt was declared at before the
+   * crewmate carried it forward to the change's newer version (INF-1488),
+   * oldest first, each with the evidence declared there and when it moved:
+   * its repaired check never started at any of them.
+   */
+  repairs: (CheckRepair & {
+    outcome?: "passed" | "failed" | "superseded" | "void";
+    carried?: { headSha: string; evidence: string; at: number }[];
+  })[];
+  rerun?: CheckRerun;
+};
+
+/**
+ * The crewmate's answer at `headSha` to the host's own merge queue removing
+ * that version (docs/forge.md, "The host's merge queue"): one declared after
+ * the app read the removal at `removedAt`, so each answer sends the version
+ * to that queue once more and a later removal there needs a new one.
+ */
+export function removalAnswer(
+  delivery: { ciRepair?: CheckRepairLedger } | null | undefined,
+  headSha: string,
+  removedAt: number,
+): (CheckDeclaration & { at: number }) | undefined {
+  const answer = delivery?.ciRepair?.declarations?.findLast(
+    (entry) =>
+      (entry.kind === undefined || entry.kind === "verdict") &&
+      entry.verdict === "answered" &&
+      entry.headSha === headSha &&
+      entry.at > removedAt,
+  );
+  return answer as (CheckDeclaration & { at: number }) | undefined;
+}
+
+/**
+ * Whether every check the reading at the current version found failed
+ * carries the crewmate's diagnosis at that version (INF-1891, the captain's
+ * choice: the merge card goes up once the crew diagnoses a failure, with
+ * Merge anyway, as stable 0.6.1 did). False with no recorded failure.
+ */
+export function everyFailureDiagnosed(delivery: {
+  headSha?: string;
+  ciRepair?: CheckRepairLedger;
+}): boolean {
+  const { headSha, ciRepair } = delivery;
+  if (!headSha || !ciRepair) return false;
+  const failed = ciRepair.failures.find((reading) => reading.headSha === headSha)?.checks ?? [];
+  if (failed.length === 0) return false;
+  return failed.every((check) =>
+    ciRepair.diagnoses.some((d) => d.headSha === headSha && d.check === check),
+  );
+}
+
+/** check_change's declarations, as the crewmate's tool takes them and the work channel carries them. */
+export const checkChangeInputSchema = z.object({
+  change: z.string().optional(),
+  declaration: z
+    .object({
+      headSha: z.string(),
+      verdict: z.enum(CHECK_DECLARATION_VERDICTS),
+      evidence: z.string(),
+      check: z.string().optional(),
+      repairId: z.string().optional(),
+      outcome: z.enum(["passed", "failed", "superseded", "void"]).optional(),
+    })
+    .optional(),
+  pull: z.number().int().min(1).optional(),
+  absentChecks: z
+    .object({
+      headSha: z.string(),
+      evidence: z.string(),
+      localGate: z.string(),
+      project: z.boolean().optional(),
+    })
+    .optional(),
+  skipRules: z.object({ headSha: z.string(), method: z.literal("squash") }).optional(),
+  batch: batchDeclarationSchema.optional(),
+  diagnosis: z
+    .object({
+      headSha: z.string(),
+      check: z.string(),
+      classification: z.enum(["own-regression", "baseline-blocked", "suspected-flake", "unknown"]),
+      evidence: z.string(),
+      dependencyTask: z.string().optional(),
+      changedTest: z.boolean().optional(),
+    })
+    .optional(),
+  repair: z
+    .object({
+      id: z.string(),
+      sourceHead: z.string(),
+      headSha: z.string(),
+      check: z.string(),
+      evidence: z.string(),
+    })
+    .optional(),
+  rerun: z.object({ headSha: z.string(), check: z.string(), evidence: z.string() }).optional(),
+  conflictRepair: z
+    .object({
+      fromHead: z.string(),
+      toHead: z.string(),
+      newBase: z.string(),
+      // `none` travels by its older name, so this shape is the one every
+      // build on this contract admits (`wireRepairImpact`, INF-493).
+      impact: z.enum([LEGACY_NO_IMPACT, "changed-work", "unknown"]),
+      changedPaths: z.array(z.string()),
+      evidence: z.string(),
+      validation: z.string(),
+    })
+    .optional(),
+  captainGuidance: z
+    .object({
+      mark: z.number().int().min(1),
+      impact: z.enum(MERGE_GUIDANCE_IMPACTS),
+      evidence: z.string(),
+    })
+    .optional(),
+});

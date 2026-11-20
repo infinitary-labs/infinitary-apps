@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "highlights-closed-card-tasks-pictures",
+      "reason": "Ranks three notes as this alpha's highlights: read a closed card again, rest on a Tasks row, and before-and-after pictures on merge cards. Earlier highlight ranks are cleared so an older installation's full list leads with these. No shipped behavior changed."
+    }
+  ]
+}

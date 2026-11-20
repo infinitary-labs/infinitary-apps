@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "standby-copies",
+      "kind": "feature",
+      "title": "Keep a live copy of your first mate on your other computers",
+      "body": "In Settings → Devices, a computer that runs work for you now offers Keep a copy here. It takes one full copy of your first mate's record, then each change right after this computer saves it, and its row shows whether the copy is in sync, catching up, or how old it is while that computer is away. Ready to take over lists what a move there would still need. That computer only keeps the copy and never acts on it; moving your first mate there still carries the whole record.",
+      "area": "devices",
+      "picture": {
+        "dark": "standby-copies-dark.webp",
+        "light": "standby-copies-light.webp",
+        "alt": "Settings, Devices, with two computers that run work, a Mac mini and a Mac Studio, each reading Copy in sync"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

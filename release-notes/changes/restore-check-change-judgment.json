@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "restore-check-change-judgment",
+      "reason": "Restores internal crew guidance and trims first mate tool wording without changing merge rules or the interface."
+    }
+  ]
+}

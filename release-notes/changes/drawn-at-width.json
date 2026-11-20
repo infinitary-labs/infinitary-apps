@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "drawn-at-width",
+      "reason": "Internal: a card's frame now counts a drawing reported during a Linux scrollbar flash once the frame is back at that width, instead of dropping it; it steadies the journey that waits for the completion card's facts strip, and no visible change was observed."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "self-source-fixtures",
+      "reason": "Keeps test fixtures and draft terms out of the installer’s source archive without changing the release workflow."
+    }
+  ]
+}

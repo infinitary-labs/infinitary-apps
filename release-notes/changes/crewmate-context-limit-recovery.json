@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "crewmate-context-limit-recovery",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate whose conversation gets too long carries on in a new one",
+      "body": "When a crewmate's conversation reached its model's limit, every turn failed again and the same messages were sent again each time. Now the crewmate continues once in a new conversation with its brief and its task's record. If that fails too, it stops retrying and your first mate is told the task needs action.",
+      "noPicture": "This changes how a failed turn recovers over time, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

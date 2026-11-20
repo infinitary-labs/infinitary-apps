@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "collapse-card-thread",
+      "kind": "feature",
+      "title": "Fold a card's thread back into the card",
+      "body": "Collapse thread, at the top of a card's thread, folds it back into the card, and ⌘\\ does the same. The newest message and the count sit above the reply box: click them, or press ⌘\\ again, to open the thread beside the card. A new message opens it on its own.",
+      "area": "cards",
+      "picture": {
+        "dark": "collapse-card-thread-dark.webp",
+        "light": "collapse-card-thread-light.webp",
+        "alt": "A card with its thread folded in: the newest message and the message count sit above the reply box."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

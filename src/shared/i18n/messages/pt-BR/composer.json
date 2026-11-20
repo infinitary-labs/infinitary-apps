@@ -1,0 +1,9 @@
+{
+  "composerLines": {
+    "plural": "count",
+    "one": "{count} linha",
+    "many": "{count} linhas",
+    "other": "{count} linhas"
+  },
+  "composerWordsOnly": "Só palavras podem ir até o Infinitary ser atualizado. Remova as imagens e os arquivos para enviar isto."
+}

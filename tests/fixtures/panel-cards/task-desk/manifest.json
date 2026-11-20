@@ -1,0 +1,12 @@
+{
+  "api": 1,
+  "title": "Task desk",
+  "placement": { "x": "right", "y": "top" },
+  "presence": { "code": true },
+  "reads": ["tasks.board", "tasks.detail"],
+  "moves": true,
+  "cards": {
+    "desk": { "view": "desk", "title": "Desk", "width": "regular" }
+  },
+  "header": [{ "id": "open", "icon": "open", "label": "Open the desk", "emits": "desk" }]
+}

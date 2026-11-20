@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "keyboard-parts-and-lists",
+      "kind": "feature",
+      "title": "Move around Firstmate with F6 and the arrow keys",
+      "body": "F6 and ⇧F6 go between the parts of the window: your panels, the shown card and your message, or Settings' tabs and the open section, even from inside a card. In Tasks the arrow keys move through the list, a task's summary opens beside the row you're on, and Enter opens it. In Settings, ← and → change tabs. A soft ring shows where the keyboard is, and you can change F6 in Settings → Keyboard.",
+      "area": "tasks",
+      "picture": {
+        "dark": "keyboard-parts-and-lists-dark.webp",
+        "light": "keyboard-parts-and-lists-light.webp",
+        "alt": "The Tasks list with the keyboard on a row, its ring drawn round it and the task's summary open beside it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

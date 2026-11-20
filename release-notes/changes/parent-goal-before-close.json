@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "parent-goal-before-close",
+      "kind": "fix",
+      "title": "Work with several parts no longer closes before its last part is filed",
+      "body": "When you approve a plan with several pieces, Firstmate files every piece at once, including the last one. A task that groups several parts stays open while Firstmate answers the news that its last part closed, and Firstmate checks the task's goal against its parts first, so a missing piece is filed instead of the work closing as finished.",
+      "area": "firstmate",
+      "noPicture": "This changes which tasks Firstmate files and when a grouping task closes, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "linux-packages-on-request",
+      "reason": "The Linux package check no longer starts on every push to a pull request; a change that edits how the packages are made requests it once, at its final version. This is a CI change only; the shipped app is unchanged."
+    }
+  ]
+}

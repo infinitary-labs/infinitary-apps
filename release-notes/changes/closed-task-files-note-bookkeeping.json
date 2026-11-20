@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "closed-task-files-note-bookkeeping",
+      "reason": "Declares the unreleased leftover-files cleanup's timeline note as bookkeeping, as every note writer now must, so main type-checks again. The cleanup's own note covers what a person sees."
+    }
+  ]
+}

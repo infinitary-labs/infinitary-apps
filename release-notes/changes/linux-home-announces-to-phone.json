@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "linux-home-announces-to-phone",
+      "kind": "improvement",
+      "title": "Your phone finds Infinitary on Linux on your network",
+      "body": "Infinitary on Linux now announces itself on your network while a phone is on its list or a code to connect a phone is open, as it does on a Mac. Nearby on your phone lists it, and a paired phone finds it again when its address changes. It uses the same network tools that list the computers nearby on Linux. The phone app is not in the App Store yet.",
+      "area": "devices",
+      "noPicture": "Nothing on the computer's screen changes; the computer announces itself on the network, and the phone's Nearby list looks as it does for a Mac.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

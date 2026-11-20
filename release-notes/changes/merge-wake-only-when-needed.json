@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "merge-wake-only-when-needed",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "A merge you click calls in your first mate only when something needs it",
+      "body": "When a change you chose to merge goes in, the feed says so and your first mate is not called in. It is still called in when the merge fails, and when the merge leaves waiting work that only a start can begin. Before, every merge called in your first mate, which mostly answered that nothing was needed and spent your plan's allowance.",
+      "noPicture": "Nothing on screen changes; the feed line for a merge stays the same and your first mate simply takes no turn for it.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

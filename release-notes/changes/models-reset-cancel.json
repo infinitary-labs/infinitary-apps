@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "models-reset-cancel",
+      "kind": "fix",
+      "title": "You can cancel Reset to starting levels",
+      "body": "In Settings, Intelligence, pressing Reset to starting levels on the Models card asked you to confirm with no way back. Cancel now sits beside Confirm reset, so you can keep your levels as they are.",
+      "area": "settings",
+      "picture": {
+        "dark": "models-reset-cancel-dark.webp",
+        "light": "models-reset-cancel-light.webp",
+        "alt": "The foot of the Models card in Settings, Intelligence, with Confirm reset, Cancel and the note that always use choices are untouched, under the Decisions group."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

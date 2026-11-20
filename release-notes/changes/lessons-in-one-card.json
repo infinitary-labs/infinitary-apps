@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "lessons-in-one-card",
+      "kind": "feature",
+      "highlight": 1,
+      "title": "Learn a subject one lesson card at a time",
+      "body": "Ask Firstmate to teach you a subject, such as chess or fractions. A teacher starts by asking what you want to be able to do, then each round is one card that checks your answers right away, offers hints, and shows how it goes at the end. Choose Stop for today and your progress is saved and waiting when you come back.",
+      "area": "cards",
+      "picture": {
+        "dark": "lessons-in-one-card-dark.webp",
+        "light": "lessons-in-one-card-light.webp",
+        "alt": "A lesson card with progress dots, a chess board, three answer choices and a hint button"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

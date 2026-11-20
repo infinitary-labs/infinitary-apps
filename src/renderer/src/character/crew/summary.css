@@ -1,0 +1,186 @@
+/* The crewmate summary (FI3-398; laid out again in FI3-427 and FI3-439):
+   one instrument-style panel beside the crewmate the pointer is on. It sits
+   in a layer whose origin is the formation's centre and which is not scaled
+   with the crowded formation, so its type stays at size. The status, the
+   task title and the project wrap in full. The other facts stay one line,
+   and a longer one ends in an ellipsis; the footnote under the model may
+   take a second line. Read-only, so it never takes the pointer. */
+.fm-crew-summary-layer {
+  position: absolute;
+  left: 50%; /* physical: the stage centre the orbit is measured from */
+  top: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+/* A Tasks row's summary (FI3-565 piece 3): the same panel and hairline, in
+   a window-wide layer above the rails and the cards, placed in window
+   coordinates beside the row. */
+.fm-row-summary-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+:is(.fm-crew-summary-layer, .fm-row-summary-layer) > * {
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0;
+}
+:is(.fm-crew-summary-layer, .fm-row-summary-layer):not([data-placed]) {
+  visibility: hidden;
+}
+/* Corner brackets round the crewmate being read. */
+.fm-crew-target i {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border: 0 solid var(--fg-3);
+}
+.fm-crew-target i:nth-child(1) {
+  inset-inline-start: 0;
+  top: 0;
+  border-width: 1px 0 0 1px;
+}
+.fm-crew-target i:nth-child(2) {
+  inset-inline-end: 0;
+  top: 0;
+  border-width: 1px 1px 0 0;
+}
+.fm-crew-target i:nth-child(3) {
+  inset-inline-start: 0;
+  bottom: 0;
+  border-width: 0 0 1px 1px;
+}
+.fm-crew-target i:nth-child(4) {
+  inset-inline-end: 0;
+  bottom: 0;
+  border-width: 0 1px 1px 0;
+}
+.fm-crew-summary-line {
+  height: 0;
+  border-top: 1px solid var(--line-2);
+  transform-origin: 0 0;
+}
+.fm-crew-summary {
+  box-sizing: border-box;
+  width: max-content;
+  max-width: var(--crew-summary-max);
+  padding: var(--space-3) 14px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-s);
+  background: var(--bg-2);
+  color: var(--fg-2);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  line-height: 1.35;
+}
+/* Its rows are the shared task facts (design/core/taskFacts.css). Status,
+   task and project wrap; the other facts stay one line. */
+.fm-crew-summary > div {
+  white-space: nowrap;
+}
+/* The blocker keys are the one part of the summary that takes a press.
+   The rest stays out of the pointer, as before. */
+.fm-crew-summary .blocked {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+  margin: -4px 0 10px;
+  white-space: normal;
+}
+.fm-crew-summary .blocked .label {
+  color: var(--fg-3);
+  font-size: var(--text-xs);
+}
+.fm-crew-summary .blocked [data-task-key] {
+  pointer-events: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+.fm-crew-summary .head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: 10px;
+}
+.fm-crew-summary .state,
+.fm-crew-summary [data-task-fact="task"],
+.fm-crew-summary [data-task-fact="project"] {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  overflow-wrap: anywhere;
+}
+.fm-crew-summary .key {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+}
+.fm-crew-summary [data-task-mark] {
+  align-self: center;
+}
+/* A pinned task's filled pin, beside its key (INF-3634). */
+.fm-crew-summary .pin {
+  flex: none;
+  align-self: center;
+  display: inline-flex;
+  color: var(--fg-3);
+}
+.fm-crew-summary :is(.note, .current) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fm-crew-summary .state {
+  min-width: 0;
+  flex: 1 1 12em;
+}
+/* A program's parts on its ring's summary (INF-1037): the counts, one bar
+   with each state's share - finished in --fg-3, running in the accent,
+   waiting as an outline - and each running part's key, which takes a
+   press as a blocker key does, with the computer it runs on. */
+.fm-crew-summary .parts {
+  margin: -4px 0 10px;
+}
+.fm-crew-summary .parts-bar {
+  display: flex;
+  gap: 2px;
+  height: 3px;
+  margin: 5px 0 0 76px;
+}
+.fm-crew-summary .parts-bar i {
+  flex-basis: 0;
+  min-width: 3px;
+  border-radius: 2px;
+}
+.fm-crew-summary .parts-bar [data-part="finished"] {
+  background: var(--fg-3);
+}
+.fm-crew-summary .parts-bar [data-part="running"] {
+  background: var(--accent);
+}
+.fm-crew-summary .parts-bar [data-part="waiting"] {
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+.fm-crew-summary .parts .parts-bar + .row {
+  margin-top: 6px;
+}
+.fm-crew-summary .parts .running {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 10px;
+  row-gap: 2px;
+  white-space: normal;
+}
+.fm-crew-summary .parts [data-task-key] {
+  pointer-events: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+.fm-crew-summary .parts .where {
+  color: var(--fg-3);
+  font-size: var(--text-xs);
+}

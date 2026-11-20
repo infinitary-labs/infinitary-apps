@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "merge-api-guard",
+      "kind": "fix",
+      "area": "projects",
+      "title": "Crewmates merge only through your merge card",
+      "body": "A crewmate can no longer merge a pull request in its project, or change or delete your default branch, on its own on GitHub or GitLab. It brings you the merge card instead. Its work on other branches is unaffected.",
+      "noPicture": "This changes which direct API writes are refused, without changing any visible view.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

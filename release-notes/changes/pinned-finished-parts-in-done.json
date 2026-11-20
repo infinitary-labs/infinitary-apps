@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "pinned-finished-parts-in-done",
+      "kind": "fix",
+      "title": "Pinned tasks no longer bring their finished parts along",
+      "body": "In the Tasks panel, a pinned task's parts that are already done now stay under done · 7d instead of crowding Pinned. Its open parts, and any part you pinned yourself, still list under it. The iPhone and iPad Tasks tab does the same.",
+      "area": "tasks",
+      "picture": {
+        "dark": "pinned-finished-parts-in-done-dark.webp",
+        "light": "pinned-finished-parts-in-done-light.webp",
+        "alt": "The Tasks panel with a pinned task and its two open parts under Pinned, and its two finished parts listed under done · 7d"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

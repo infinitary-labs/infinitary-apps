@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-cadence-load-clock",
+      "reason": "Test-only repair: the phone's display cadence samples give their callbacks 20 seconds on the shared load clock instead of the wall clock, so a busy CI computer no longer fails them while missing screen updates still do; nothing a person sees changes."
+    }
+  ]
+}

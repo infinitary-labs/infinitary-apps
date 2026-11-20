@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "first-mate-reads-settings",
+      "kind": "feature",
+      "area": "firstmate",
+      "title": "Your first mate reads more of Settings",
+      "body": "Your first mate can now answer from what Settings shows: your model usage and the recent tasks that used it, an automation's recent runs and its next run times, jobs kept running, whether an update is waiting, your computers' load, your keyboard keys, and whether another computer keeps a copy or is ready to take over. It looks these up on demand and changes nothing; your keys stay yours to change.",
+      "noPicture": "This changes what the first mate can answer in its replies, not any view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

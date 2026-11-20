@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "unpaired-guardrail-own-port",
+      "reason": "Internal test repair: the unpaired-device guardrail probes its own test app's connection port, so an installed app on this Mac no longer fails it. No user-facing behavior changes."
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "tasks": [],
+  "cards": [
+    {
+      "id": "card-fm-older-0",
+      "task_id": null,
+      "title": "Earlier question 0",
+      "body": "<p>Decide later.</p>",
+      "kind": "decision",
+      "actions_json": "[{\"id\":\"agree\",\"label\":\"Agree the plan\",\"default\":true},{\"id\":\"defer\",\"label\":\"Leave it waiting\"}]",
+      "created_at": 1744016400000,
+      "resolved_at": 1744016440000,
+      "chosen_action": "defer"
+    },
+    {
+      "id": "card-fm-older-1",
+      "task_id": null,
+      "title": "Earlier question 1",
+      "body": "<p>Decide later.</p>",
+      "kind": "decision",
+      "actions_json": "[{\"id\":\"agree\",\"label\":\"Agree the plan\",\"default\":true},{\"id\":\"defer\",\"label\":\"Leave it waiting\"}]",
+      "created_at": 1744016400000,
+      "resolved_at": 1744016530000,
+      "chosen_action": "defer"
+    },
+    {
+      "id": "card-8c300001-rain-outlook-plan",
+      "task_id": "8c300001",
+      "title": "Plan: put the rain outlook above the hourly table",
+      "body": "<p>Place the rain outlook above the table at both text sizes. Keep the hourly rows in order.</p>",
+      "kind": "decision",
+      "actions_json": "[{\"id\":\"agree\",\"label\":\"Agree the plan\",\"default\":true},{\"id\":\"defer\",\"label\":\"Leave it waiting\"}]",
+      "created_at": 1744016420000,
+      "resolved_at": 1744016570000,
+      "chosen_action": "agree"
+    }
+  ],
+  "card_messages": [
+    {
+      "id": 1,
+      "card_id": "card-8c300001-rain-outlook-plan",
+      "who": "captain",
+      "text": "Does the placement also work with the large text setting?",
+      "at": 1744016490000
+    }
+  ]
+}

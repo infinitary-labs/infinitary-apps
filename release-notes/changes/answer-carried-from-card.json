@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "answer-carried-from-card",
+      "reason": "Internal: the first mate's own close of an answer task, carried on by the work the captain's reply under that answer's card started, no longer stops at the open-decisions hold and needs no recorded override; the task closes as it did after the override, so nothing a person sees changes beyond one fewer override line on the feed."
+    }
+  ]
+}

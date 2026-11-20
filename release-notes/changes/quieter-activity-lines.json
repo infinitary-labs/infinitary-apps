@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "quieter-activity-lines",
+      "kind": "improvement",
+      "area": "other",
+      "title": "Activity shows one line for a memory warning, and none for a sign-in no project uses",
+      "body": "A memory warning used to fill Activity with a row for every task, most of them using nothing. It is now one line naming the computer and the task using the most memory. A host your projects do not live on, such as GitLab when you only use GitHub, no longer writes a line each time it briefly cannot be reached.",
+      "noPicture": "The memory line appears only while macOS reports memory pressure with tasks running, which the app's isolated test launch cannot stage.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

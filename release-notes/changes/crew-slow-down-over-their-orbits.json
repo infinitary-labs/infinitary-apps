@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "crew-slow-down-over-their-orbits",
+      "kind": "fix",
+      "title": "The crew slow down only when the pointer is over them",
+      "body": "Moving the pointer over your first mate's crew still slows them down so you can point at one. Empty space above and below the crew, and around another computer's crew, no longer slows anything.",
+      "area": "crewmates",
+      "noPicture": "Where the pointer slows the crew is motion; a still picture of the stage looks the same before and after.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

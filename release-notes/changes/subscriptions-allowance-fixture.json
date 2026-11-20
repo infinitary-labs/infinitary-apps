@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "subscriptions-allowance-fixture",
+      "reason": "Repairs the subscriptions journey's Claude credential fixture without changing product behavior or weakening its assertions."
+    }
+  ]
+}

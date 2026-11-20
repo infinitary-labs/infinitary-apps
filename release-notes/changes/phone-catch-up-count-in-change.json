@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "phone-catch-up-count-in-change",
+      "reason": "The phone catch-up check now counts each change to the shown board and cards inside the change itself, so its wait never reads the data ahead of its own count; nothing in the app changes."
+    }
+  ]
+}

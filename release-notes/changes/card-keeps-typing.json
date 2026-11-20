@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "card-keeps-typing",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A card you are typing in stays in front when another card arrives",
+      "body": "While you type in a card's text box, on your Mac, iPhone or iPad, a new card that would normally come to the front now waits as a new card one page away. The card you are typing in stays on screen and keeps your cursor and keyboard, so your next letters land where you were typing.",
+      "noPicture": "Nothing looks different: the card you are typing in simply stays where it was.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

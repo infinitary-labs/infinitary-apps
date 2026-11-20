@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "automatic-crew-model-choice",
+      "kind": "improvement",
+      "area": "subscriptions",
+      "title": "Infinitary chooses a crewmate’s model automatically",
+      "body": "Name a model for a task or pin models you want Infinitary to try first. If you had switched off Dynamic routing, your saved pins stay inactive until you restore them in Settings → Intelligence → Models. Your projects that ran at home still do. To let Infinitary choose the computer again, choose Automatic in Settings → Projects → Runs on.",
+      "picture": {
+        "dark": "automatic-crew-model-choice-dark.webp",
+        "light": "automatic-crew-model-choice-light.webp",
+        "alt": "Intelligence Settings explains automatic model choice under Models, beside the first mate’s separate model choice."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

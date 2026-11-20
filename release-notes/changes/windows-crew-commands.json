@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "windows-crew-commands",
+      "reason": "Windows is not a supported platform: crewmates' commands there run in Git Bash and the task commands are copies instead of links, so a Windows checkout builds. Mac and Linux behave as before."
+    }
+  ]
+}

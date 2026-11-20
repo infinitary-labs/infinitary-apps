@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "batches-of-your-own",
+      "kind": "feature",
+      "area": "projects",
+      "title": "Your approved changes merge together as one batch pull request",
+      "body": "A project set to batched pull requests no longer needs a queue set up in it. Each change you approve waits in line, and Infinitary combines the line into one batch pull request on GitHub or GitLab, one commit for each change, then merges it once its checks pass. If a batch's checks fail, nothing in it merges and your first mate has a crewmate repair it. Settings → Projects shows the held batch, where you can try it again or send a change back with a reason. A project that already carries a team's queue keeps it.",
+      "picture": {
+        "dark": "batches-of-your-own-dark.webp",
+        "light": "batches-of-your-own-light.webp",
+        "alt": "Settings, Projects, Where changes go set to batched pull requests, above a Batch held panel that names the failed check, with Try again, Open #102, two changes to choose and Send back with a reason"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

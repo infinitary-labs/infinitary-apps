@@ -1,0 +1,130 @@
+diff --git a/dist/api/bedrock-converse-stream.js b/dist/api/bedrock-converse-stream.js
+index 1bb93966f2a85ef4d95d1a73e2b7f65941e4860c..6af04528465c9aa6c20cd922b33b1de1ab7553a3 100644
+--- a/dist/api/bedrock-converse-stream.js
++++ b/dist/api/bedrock-converse-stream.js	
+@@ -49,9 +49,11 @@ export const stream = (model, context, options = {}) => {
+         // over ambient AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY. The SDK default
+         // chain already prefers a configured profile over env keys, but only when
+         // `credentials` is not set on the client config. See #6957.
++        // Explicit account auth never reads a bearer key, endpoint, or skip-auth flag from the process.
++        const scoped = options.env?.AWS_BEDROCK_SCOPED_AUTH === "1";
+         const optionsProfile = options.profile || options.env?.AWS_PROFILE;
+         const config = {
+-            profile: optionsProfile || getProviderEnvValue("AWS_PROFILE", options.env),
++            profile: optionsProfile || (!scoped ? getProviderEnvValue("AWS_PROFILE", options.env) : undefined),
+             customUserAgent: bedrockUserAgent(options.identity),
+         };
+         const configuredRegion = getConfiguredBedrockRegion(options);
+@@ -61,14 +63,14 @@ export const stream = (model, context, options = {}) => {
+         // Only pin standard AWS Bedrock runtime endpoints when no region or ambient AWS_PROFILE is configured.
+         // This preserves custom endpoints (VPC/proxy) from #3402 without forcing built-in
+         // catalog defaults such as us-east-1 to override AWS_REGION/AWS_PROFILE.
+-        if (useExplicitEndpoint) {
++        if (scoped || useExplicitEndpoint) {
+             config.endpoint = model.baseUrl;
+         }
+         // Resolve bearer token for Bedrock API key auth.
+-        const skipAuth = getProviderEnvValue("AWS_BEDROCK_SKIP_AUTH", options.env) === "1";
++        const skipAuth = !scoped && getProviderEnvValue("AWS_BEDROCK_SKIP_AUTH", options.env) === "1";
+         const bearerToken = options.bearerToken ||
+             options.apiKey ||
+-            getProviderEnvValue("AWS_BEARER_TOKEN_BEDROCK", options.env) ||
++            (!scoped && getProviderEnvValue("AWS_BEARER_TOKEN_BEDROCK", options.env)) ||
+             undefined;
+         const useBearerToken = bearerToken !== undefined && !skipAuth;
+         // in Node.js/Bun environment only
+@@ -96,7 +98,8 @@ export const stream = (model, context, options = {}) => {
+                     secretAccessKey: "dummy-secret-key",
+                 };
+             }
+-            const credentials = getConfiguredBedrockCredentials(options.env);
++            const credentials = !scoped ? getConfiguredBedrockCredentials(options.env) : undefined;
++            if (scoped && options.credentials) config.credentials = options.credentials;
+             if (!skipAuth && credentials && !optionsProfile) {
+                 config.credentials = credentials;
+             }
+@@ -110,7 +113,7 @@ export const stream = (model, context, options = {}) => {
+                     httpsAgent: new HttpsProxyAgent(proxyUrl),
+                 });
+             }
+-            else if (getProviderEnvValue("AWS_BEDROCK_FORCE_HTTP1", options.env) === "1") {
++            else if ((scoped ? options.env?.AWS_BEDROCK_FORCE_HTTP1 : getProviderEnvValue("AWS_BEDROCK_FORCE_HTTP1", options.env)) === "1") {
+                 // Some custom endpoints require HTTP/1.1 instead of HTTP/2
+                 config.requestHandler = new NodeHttpHandler();
+             }
+@@ -128,6 +131,14 @@ export const stream = (model, context, options = {}) => {
+         // Kept outside the try so the catch can still correlate a mid-stream failure:
+         // exceptions delivered as stream events carry no HTTP metadata of their own.
+         let responseRequestId;
++        let streamErrorCode;
+         try {
+             const supportsStrictMode = model.compat?.supportsStrictMode ?? false;
+             const client = new BedrockRuntimeClient(config);
++            // The SDK has its own ambient bearer provider; a preference alone permits fallback.
++            if (scoped) {
++                const scheme = useBearerToken ? "smithy.api#httpBearerAuth" : "aws.auth#sigv4";
++                client.config.httpAuthSchemes = client.config.httpAuthSchemes.filter(
++                    ({ schemeId }) => schemeId === scheme,
++                );
++            }
+@@ -225,18 +236,23 @@ export const stream = (model, context, options = {}) => {
+                     handleMetadata(item.metadata, model, output);
+                 }
+                 else if (item.internalServerException) {
++                    streamErrorCode = "InternalServerException";
+                     throw item.internalServerException;
+                 }
+                 else if (item.modelStreamErrorException) {
++                    streamErrorCode = "ModelStreamErrorException";
+                     throw item.modelStreamErrorException;
+                 }
+                 else if (item.validationException) {
++                    streamErrorCode = "ValidationException";
+                     throw item.validationException;
+                 }
+                 else if (item.throttlingException) {
++                    streamErrorCode = "ThrottlingException";
+                     throw item.throttlingException;
+                 }
+                 else if (item.serviceUnavailableException) {
++                    streamErrorCode = "ServiceUnavailableException";
+                     throw item.serviceUnavailableException;
+                 }
+             }
+@@ -259,7 +275,7 @@ export const stream = (model, context, options = {}) => {
+             output.stopReason = options.signal?.aborted ? "aborted" : "error";
+             output.errorMessage = formatBedrockError(error);
+             if (output.stopReason === "error") {
+-                appendBedrockFailureDiagnostic(output, error, responseRequestId);
++                appendBedrockFailureDiagnostic(output, error, responseRequestId, streamErrorCode);
+             }
+             stream.push({ type: "error", reason: output.stopReason, error: output });
+             stream.end();
+@@ -332,15 +348,15 @@ function extractBedrockErrorCode(error) {
+ }
+ /**
+  * Structured metadata alongside `errorMessage`, which stays byte-identical because `isRetryableAssistantError`
+- * matches against it. Unknown fields are omitted, never guessed: a modeled mid-stream exception reaches us as
+- * a bare object literal, leaving only `fallbackRequestId`. `details` only, as the throw is not always `Error`.
++ * matches against it. Modeled stream exceptions carry the name of their event discriminator.
+  */
+-function appendBedrockFailureDiagnostic(output, error, fallbackRequestId) {
++function appendBedrockFailureDiagnostic(output, error, fallbackRequestId, streamErrorCode) {
+     const metadata = error?.$metadata;
+     const details = {};
++    if (error?.bedrockStage === "credential_resolution") details.stage = error.bedrockStage;
+     if (typeof metadata?.httpStatusCode === "number")
+         details.status = metadata.httpStatusCode;
+-    const errorCode = extractBedrockErrorCode(error);
++    const errorCode = streamErrorCode ?? extractBedrockErrorCode(error);
+     if (errorCode !== undefined)
+         details.errorCode = errorCode;
+     const requestId = normalizeDiagnosticValue(metadata?.requestId) ?? fallbackRequestId;
+@@ -426,6 +442,7 @@ export const streamSimple = (model, context, options) => {
+     const base = {
+         ...buildBaseOptions(model, context, options, undefined),
+         toolChoice: options?.toolChoice,
++        credentials: options?.credentials,
+     };
+     if (!options?.reasoning) {
+         return stream(model, context, { ...base, reasoning: undefined });

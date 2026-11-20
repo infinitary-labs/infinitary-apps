@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "pin-published-0-1-28-manifests",
+      "reason": "Pins the published manifests for 0.1.28-alpha.23, 0.1.28-alpha.26 and 0.1.28, and names who pins a manifest after each publication. Nothing in the app changes."
+    }
+  ]
+}

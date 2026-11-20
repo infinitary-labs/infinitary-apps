@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "pnpm-from-actions-cache",
+      "reason": "The project's own checks now take pnpm from the Actions cache instead of installing it from npm's registry on every job, so a registry timeout no longer fails a check before it starts; nothing in the app changes."
+    }
+  ]
+}

@@ -1,0 +1,188 @@
+import { describe, expect, it } from "vitest";
+import { ProcessAttribution, processesFromPs, processResources } from "./processResources";
+import { ProcessRoots } from "./processRoots";
+
+// INF-1621 piece 1: metadata fields from this Mac's ps reading, not %CPU or arguments.
+const PS = `    1     0     1   2:01.03  23008 Tue Oct 27 11:03:29 2026
+  118     1   118   1:17.87  45040 Tue Oct 27 11:03:36 2026
+  119     1   119   0:01.46   6320 Tue Oct 27 11:03:36 2026
+`;
+
+describe("accepted load plan: explicit task process shares", () => {
+  it("reads cumulative time and resident bytes, and refuses a malformed table", () => {
+    const rows = processesFromPs(PS);
+    expect(rows?.[0]?.cpuMs).toBe(121030);
+    expect(rows?.[1]?.residentBytes).toBe(45040 * 1024);
+    expect(processesFromPs(`${PS}truncated row`)).toBeNull();
+    expect(processesFromPs(PS.replace("2:01.03", "1-02:01:03"))?.[0]?.cpuMs).toBe(
+      (86400 + 2 * 3600 + 63) * 1000,
+    );
+  });
+
+  // INF-2228: a retained zombie PID is not evidence of a living payload launch.
+  it("keeps birth identity separate from a recorded exited process state", () => {
+    // Disposable fork retained with waitid(WNOWAIT), captured by this Mac's ps.
+    const row = processesFromPs("81662 81648 81644 0:00.00 0 Sun Nov 1 19:09:50 2026 Z")?.[0];
+    expect(row).toMatchObject({ pid: 81662, started: "Sun Nov 1 19:09:50 2026", exited: true });
+    expect(processesFromPs(PS)?.every((process) => process.exited === undefined)).toBe(true);
+  });
+
+  it("attributes each process once, with explicit nested roots overriding an ancestor", () => {
+    const rows = processesFromPs(PS)!;
+    const attribution = new ProcessAttribution();
+    const owners = attribution.owners(
+      rows,
+      new Map([
+        [1, "outer"],
+        [118, "inner"],
+      ]),
+    );
+    const facts = processResources(rows, rows, owners, 250);
+    expect(facts.status).toBe("sampled");
+    if (facts.status !== "sampled") throw new Error("Expected measured processes");
+    expect(facts.tasks.find((task) => task.taskId === "inner")).toEqual({
+      taskId: "inner",
+      processCount: 1,
+      residentBytes: 45040 * 1024,
+      cpuCores: 0,
+    });
+    expect(
+      facts.tasks.reduce((sum, task) => sum + task.processCount, facts.other.processCount),
+    ).toBe(rows.length);
+    expect(
+      facts.tasks.reduce((sum, task) => sum + task.residentBytes, facts.other.residentBytes),
+    ).toBe(rows.reduce((sum, row) => sum + row.residentBytes, 0));
+  });
+
+  // INF-1621 piece 2: a declared group is not an everlasting claim on its leader's PID.
+  it("attributes a registered group without claiming an unrelated process that reuses its leader PID", () => {
+    const rows = processesFromPs(PS) ?? [];
+    const [launchd, leader, other] = rows;
+    if (!launchd || !leader || !other) throw new Error("The recorded process table is incomplete");
+    const roots = new ProcessRoots();
+    const release = roots.addGroup(leader.group, "declared", leader.started);
+    expect(
+      new ProcessAttribution().owners(rows, roots.read(), roots.readGroups()).get(leader.pid),
+    ).toBe("declared");
+    const reusedInOtherGroup = { ...other, pid: leader.pid };
+    expect(
+      new ProcessAttribution()
+        .owners([reusedInOtherGroup], roots.read(), roots.readGroups())
+        .has(leader.pid),
+    ).toBe(false);
+    const reusedGroup = { ...leader, started: launchd.started };
+    expect(
+      new ProcessAttribution()
+        .owners([reusedGroup], roots.read(), roots.readGroups())
+        .has(leader.pid),
+    ).toBe(false);
+    const nested = roots.add(leader.pid, "nested");
+    expect(
+      new ProcessAttribution().owners(rows, roots.read(), roots.readGroups()).get(leader.pid),
+    ).toBe("nested");
+    nested();
+    release();
+    expect(roots.readGroups().size).toBe(0);
+  });
+
+  // INF-4072 finding 3: a running task's test programs, left behind when their shell
+  // ended, held 59 GB that the memory warning blamed on programs no task owns.
+  it("counts a program reparented out of every task tree against the task whose folder it works in", () => {
+    // A vitest left running after its shell exited, reparented to launchd, and its worker.
+    const rows =
+      processesFromPs(`${PS}  4211     1  4211   9:12.40 20480000 Thu Nov 12 16:21:07 2026
+  4215  4211  4211  31:02.11 18874368 Thu Nov 12 16:21:08 2026
+`) ?? [];
+    // The worker's folder is not the task's; its parent's is.
+    const folders = new Map([
+      [4211, "running-task"],
+      [119, "running-task"],
+    ]);
+    const owners = new ProcessAttribution().owners(
+      rows,
+      new Map([[118, "shell-task"]]),
+      new Map(),
+      folders,
+    );
+    expect(owners.get(4211)).toBe("running-task");
+    expect(owners.get(4215)).toBe("running-task");
+    // A registered root decides before any folder does.
+    const rooted = new ProcessAttribution().owners(
+      rows,
+      new Map([[119, "rooted"]]),
+      new Map(),
+      folders,
+    );
+    expect(rooted.get(119)).toBe("rooted");
+    const facts = processResources(rows, rows, owners, 250);
+    if (facts.status !== "sampled") throw new Error("Expected measured processes");
+    expect(facts.tasks.find((task) => task.taskId === "running-task")?.residentBytes).toBe(
+      (20480000 + 18874368 + 6320) * 1024,
+    );
+    // Without the folder fact the same programs fall to everything else.
+    const unread = processResources(
+      rows,
+      rows,
+      new ProcessAttribution().owners(rows, new Map()),
+      250,
+    );
+    if (unread.status !== "sampled") throw new Error("Expected measured processes");
+    expect(unread.tasks).toEqual([]);
+  });
+
+  it("keeps known orphans but drops ownership on PID reuse and leaves new CPU counters unknown", () => {
+    const rows = processesFromPs(PS)!;
+    const attribution = new ProcessAttribution();
+    attribution.owners(rows, new Map([[1, "task"]]));
+    const orphan = rows.slice(1).map((row) => ({ ...row, parent: 0 }));
+    expect(attribution.owners(orphan, new Map()).get(118)).toBe("task");
+    const reused = orphan.map((row) => ({ ...row, started: "Tue Oct 27 12:03:36 2026" }));
+    expect(attribution.owners(reused, new Map()).size).toBe(0);
+    // Born seconds before the first reading yet missing from it: its time is not this window's.
+    const facts = processResources(
+      [],
+      rows,
+      new Map([[118, "task"]]),
+      250,
+      Date.parse("Tue Oct 27 11:03:40 2026"),
+    );
+    if (facts.status !== "sampled") throw new Error("Expected measured processes");
+    expect(facts.tasks[0]?.cpuCores).toBeUndefined();
+    expect(facts.tasks[0]?.residentBytes).toBe(45040 * 1024);
+  });
+
+  // INF-2123, the captain's "why most cards show processor use unavailable": a wait
+  // loop's new process keeps the task's figure, counted from that process's start.
+  it("counts a process born inside the window, or reborn under its number, from its start", () => {
+    const first = processesFromPs(PS)!;
+    const firstAt = Date.parse("Tue Oct 27 11:05:00 2026") + 400;
+    const later =
+      processesFromPs(`${PS.replace("1:17.87", "1:18.37")}  120   118   118   0:00.30   1200 Tue Oct 27 11:05:00 2026
+`)!;
+    const owners = new Map([
+      [118, "task"],
+      [120, "task"],
+    ]);
+    const counted = processResources(first, later, owners, 2000, firstAt);
+    if (counted.status !== "sampled") throw new Error("Expected measured processes");
+    // 0.50 s from the old process's growth and 0.30 s from the new one's whole life.
+    expect(counted.tasks[0]?.cpuCores).toBeCloseTo(0.4);
+    const reborn = later.map((row) =>
+      row.pid === 119
+        ? {
+            ...row,
+            cpuMs: 200,
+            started: "Tue Oct 27 11:05:01 2026",
+            bornMs: Date.parse("Tue Oct 27 11:05:01 2026"),
+          }
+        : row,
+    );
+    const rebornFacts = processResources(first, reborn, new Map([[119, "reborn"]]), 2000, firstAt);
+    if (rebornFacts.status !== "sampled") throw new Error("Expected measured processes");
+    expect(rebornFacts.tasks.find((task) => task.taskId === "reborn")?.cpuCores).toBeCloseTo(0.1);
+    // With no first reading time, nothing says the process is new to this window.
+    const untimed = processResources(first, later, owners, 2000);
+    if (untimed.status !== "sampled") throw new Error("Expected measured processes");
+    expect(untimed.tasks[0]?.cpuCores).toBeUndefined();
+  });
+});

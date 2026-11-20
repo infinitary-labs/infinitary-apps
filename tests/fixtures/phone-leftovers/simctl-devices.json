@@ -1,0 +1,42 @@
+{
+  "devices": {
+    "com.apple.CoreSimulator.SimRuntime.iOS-26-4": [
+      {
+        "lastBootedAt": "2026-10-23T02:16:01Z",
+        "dataPath": "/Users/captain/Library/Developer/CoreSimulator/Devices/F8542934-1C5B-4DE3-9E44-AFE2087F7CF0/data",
+        "dataPathSize": 2831663104,
+        "logPath": "/Users/captain/Library/Logs/CoreSimulator/F8542934-1C5B-4DE3-9E44-AFE2087F7CF0",
+        "udid": "F8542934-1C5B-4DE3-9E44-AFE2087F7CF0",
+        "isAvailable": true,
+        "logPathSize": 196608,
+        "deviceTypeIdentifier": "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro",
+        "state": "Shutdown",
+        "name": "Infinitary lab"
+      },
+      {
+        "dataPath": "/Users/captain/Library/Developer/CoreSimulator/Devices/32ADB0DE-C4F5-4E4E-8A90-37952DA9B29B/data",
+        "dataPathSize": 18337792,
+        "logPath": "/Users/captain/Library/Logs/CoreSimulator/32ADB0DE-C4F5-4E4E-8A90-37952DA9B29B",
+        "udid": "32ADB0DE-C4F5-4E4E-8A90-37952DA9B29B",
+        "isAvailable": true,
+        "deviceTypeIdentifier": "com.apple.CoreSimulator.SimDeviceType.iPhone-16",
+        "state": "Shutdown",
+        "name": "Infinitary isolated test"
+      }
+    ],
+    "com.apple.CoreSimulator.SimRuntime.iOS-26-1": [
+      {
+        "lastBootedAt": "2026-08-29T21:01:44Z",
+        "dataPath": "/Users/captain/Library/Developer/CoreSimulator/Devices/5385A7B3-16EC-4A11-AA75-15F15D3B21B8/data",
+        "dataPathSize": 1143570432,
+        "logPath": "/Users/captain/Library/Logs/CoreSimulator/5385A7B3-16EC-4A11-AA75-15F15D3B21B8",
+        "udid": "5385A7B3-16EC-4A11-AA75-15F15D3B21B8",
+        "isAvailable": true,
+        "logPathSize": 69632,
+        "deviceTypeIdentifier": "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro",
+        "state": "Shutdown",
+        "name": "iPhone 17 Pro"
+      }
+    ]
+  }
+}

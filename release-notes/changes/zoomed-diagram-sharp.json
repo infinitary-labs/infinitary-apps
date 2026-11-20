@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "zoomed-diagram-sharp",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Card diagrams stay sharp when you zoom back out on iPhone and iPad",
+      "body": "A card's diagram opened full screen on your iPhone or iPad no longer shows blurred or doubled lines and words after you pinch in and back out. Every zoom now draws only the sharp copy.",
+      "picture": {
+        "dark": "zoomed-diagram-sharp-dark.webp",
+        "light": "zoomed-diagram-sharp-light.webp",
+        "alt": "A timeline diagram zoomed in on an iPhone, its time, line, dot and words drawn with clean edges"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

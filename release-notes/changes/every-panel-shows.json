@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "every-panel-shows",
+      "kind": "fix",
+      "title": "A fourth panel on one side now shows",
+      "body": "Each side of the window held three panels and quietly left out the next one, so a panel of yours could go missing, and asking your first mate to move a panel to a full side was refused. Both sides now show every panel placed on them, and open panels share the height and scroll.",
+      "area": "firstmate",
+      "picture": {
+        "dark": "every-panel-shows-dark.webp",
+        "light": "every-panel-shows-light.webp",
+        "alt": "The right side of the window with a Tokyo clock panel showing under the Reports panel"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

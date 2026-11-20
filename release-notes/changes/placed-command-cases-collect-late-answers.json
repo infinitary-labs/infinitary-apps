@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "placed-command-cases-collect-late-answers",
+      "reason": "Test-only: the integrations, files and Gmail cases on a computer that runs work share one scripted crewmate that collects an answer outlasting the shell's limit, as a crewmate would, so the integrations cases no longer require every answer within the first shell's limit."
+    }
+  ]
+}

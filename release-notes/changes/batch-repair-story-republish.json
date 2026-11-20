@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "batch-repair-story-republish",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "An approved change brought up to date goes back in line by itself",
+      "body": "When a change you approved is brought up to date without changing what you approved, it goes back in line for its next merge once its checks pass. It no longer waits for its crewmate to show its story again.",
+      "noPicture": "Nothing on screen changes: the change rejoins the line sooner, with the same story you approved.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

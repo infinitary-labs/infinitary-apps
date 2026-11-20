@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "ask-id-rule-once",
+      "reason": "Internal trim of the first mate's served instructions back under their size budget; nothing a person sees changes."
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-browser-private-sites",
+      "kind": "feature",
+      "area": "tasks",
+      "title": "Let a crewmate's browser open private sites you allow",
+      "body": "Settings → General → Private sites lists the sites on an office, home or VPN network that a crewmate's browser may open, on every computer that runs your work. Add a name such as wiki.corp.example, or a suffix such as .corp.example.com for every name under it. When a crewmate needs a site that is not listed, your first mate asks you on a card, and your Allow adds it. A listed site opens over https or http, by its name only, and never reaches a program that listens only inside this computer, or cloud metadata addresses.",
+      "picture": {
+        "dark": "task-browser-private-sites-dark.webp",
+        "light": "task-browser-private-sites-light.webp",
+        "alt": "Settings, General, Private sites, listing wiki.corp.example and .corp.example.com, each with Remove, above a field to add another"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

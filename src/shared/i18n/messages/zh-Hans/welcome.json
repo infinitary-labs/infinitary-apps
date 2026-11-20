@@ -1,0 +1,21 @@
+{
+  "welcomeActivity": "船员们在后台工作，并在这里汇报。",
+  "welcomeBack": "上一步",
+  "welcomeBox": "在这张卡片下方的消息框里，输入你想完成的事。",
+  "welcomeCard": "我会用这样的卡片带回答案和选项。",
+  "welcomeEnd": "就这些。要开始，请点击下方的一个开头语。",
+  "welcomeFigure": "你的窗口，每按一次介绍一个部分：消息框、卡片、动态和任务",
+  "welcomeLabelActivity": "动态",
+  "welcomeLabelBox": "消息框",
+  "welcomeLabelTasks": "任务",
+  "welcomeNext": "下一步",
+  "welcomeStarterClone": "克隆一个项目",
+  "welcomeStarterCloneWords": "克隆这个地址的项目：",
+  "welcomeStarterFolder": "在我电脑上的一个文件夹里工作",
+  "welcomeStarterFolderWords": "在这个文件夹里工作：",
+  "welcomeStarterNew": "新建一个项目",
+  "welcomeStarterNewWords": "新建一个项目，名称是：",
+  "welcomeStartersLead": "要开始，请点击一个开头语，然后把句子补完：",
+  "welcomeTasks": "每个请求都会在这里留下记录。",
+  "welcomeTitle": "我们如何协作"
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "e2e-stand-in-words",
+      "reason": "Test-only: end-to-end journeys read the words their scenarios, stubs and stand-ins author from those owners instead of typing them, and the typed-words lint refuses a copy. Nothing in the app changed."
+    }
+  ]
+}

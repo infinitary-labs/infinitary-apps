@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-copy-checks-at-once",
+      "reason": "The release workflow's publication job now fetches back and checks every place's download copies at once instead of one after another; only how a release is checked changes, and nothing a person sees in the app changes."
+    }
+  ]
+}

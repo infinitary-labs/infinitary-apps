@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "card-maximize",
+      "kind": "feature",
+      "title": "Maximize a card to read it in the whole window",
+      "body": "Press the arrows beside a card's Close to make it nearly fill the window, with its thread beside it. The side panels and the main message step aside until you press Restore or Esc. You come back to the same card, with your answers, reply and reading place as you left them.",
+      "highlight": 3,
+      "area": "cards",
+      "picture": {
+        "dark": "card-maximize-dark.webp",
+        "light": "card-maximize-light.webp",
+        "alt": "A decision card and its thread nearly filling the window, with Restore card beside Close"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

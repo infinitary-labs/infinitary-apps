@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "quick-check-runs-pr-lints",
+      "reason": "Internal: the quick check before a push also runs the pull request check's lint scripts and its release-notes check, so those fail locally; nothing a person sees changes."
+    }
+  ]
+}

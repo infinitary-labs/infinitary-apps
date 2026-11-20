@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "ubuntu-address-without-systemd",
+      "kind": "fix",
+      "title": "Adding an Ubuntu computer by its address finishes setting it up",
+      "body": "Adding an Ubuntu 24.04 or 26.04 computer by its address in Settings → Devices installed Infinitary there, then said it could not set it up and that nothing changed. The add now finishes and the computer joins your devices. Where systemd does not run, such as in a container, the install no longer stops there, and two lines name the one command an administrator runs so its work keeps running after that account logs out.",
+      "area": "devices",
+      "picture": {
+        "dark": "ubuntu-address-without-systemd-dark.webp",
+        "light": "ubuntu-address-without-systemd-light.webp",
+        "alt": "Activity after adding ubuntu-box by its address: it joined and starts running work at the next login, then two warning lines begin the note about keeping it running after logout and the sudo loginctl enable-linger line"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

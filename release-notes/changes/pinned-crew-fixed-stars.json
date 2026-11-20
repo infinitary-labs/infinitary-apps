@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "pinned-crew-fixed-stars",
+      "kind": "feature",
+      "area": "crewmates",
+      "title": "Pinned tasks' crewmates hang as stars on the stage",
+      "body": "A crewmate whose task you pin leaves its orbit and holds a fixed place in the sky above and to the left of your first mate, with a soft glint of its own light and a thin line joining it to the other pinned crewmates. It stays put while the others travel, and unpinning sends it back to the orbit. Pointing at it shows the filled pin beside its task's key. The iPhone and iPad app draws the same stars.",
+      "picture": {
+        "dark": "pinned-crew-fixed-stars-dark.webp",
+        "light": "pinned-crew-fixed-stars-light.webp",
+        "alt": "The first mate with seven crewmates on its orbit and four pinned crewmates hanging apart in the upper-left sky, each with a four-rayed glint, joined by thin lines."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

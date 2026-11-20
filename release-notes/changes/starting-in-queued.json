@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "starting-in-queued",
+      "kind": "improvement",
+      "title": "Starting tasks show under Queued",
+      "body": "A task you just started now sits under Queued, reading Starting, in the Tasks panel and on the task board. It moves to Working when its crewmate begins.",
+      "area": "tasks",
+      "noPicture": "Starting lasts only until the crewmate begins, so a still of it would not hold steady.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

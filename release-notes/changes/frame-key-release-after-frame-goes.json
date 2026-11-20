@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "frame-key-release-after-frame-goes",
+      "reason": "Test-only: the keyboard journey lets go of a key that opens Settings only after the frame it was pressed in is gone, so the press no longer waits for an answer from a removed frame; no app behavior changes."
+    }
+  ]
+}

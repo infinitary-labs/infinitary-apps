@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "computer-placement-policy",
+      "reason": "Internal typed placement requirements and side-effect-free candidate evaluation; no automatic starts, saved defaults, controls or resource feed change yet."
+    }
+  ]
+}

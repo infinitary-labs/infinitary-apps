@@ -1,0 +1,504 @@
+import CryptoKit
+import Foundation
+import Observation
+import Security
+import XCTest
+@testable import InfinitaryKit
+
+/// INF-4326 (INF-4241's speed-ups): these checks drive no screen, and wait out real links and silences on real timers,
+/// so they run on the Mac itself, beside the simulated devices, in the phone gate's weak-link part. The phone's identity
+/// is the one thing a Mac cannot keep as a phone does: here it is a throwaway P-256 key and its certificate, made once
+/// for the process and read with `kSecImportToMemoryOnly`, so it is kept in memory and never in the Mac's keychain.
+@MainActor enum WeakLinkPhone {
+    private static var made: PhoneIdentity?
+
+    static func identity() throws -> PhoneIdentity {
+        if let made { return made }
+        let key = P256.Signing.PrivateKey()
+        let certificate = try PhoneIdentity.certificate(key: key)
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("infinitary-weak-link-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let der = SecCertificateCopyData(certificate) as Data
+        let pem = "-----BEGIN CERTIFICATE-----\n\(der.base64EncodedString(options: .lineLength64Characters))\n-----END CERTIFICATE-----\n"
+        try key.pemRepresentation.write(to: folder.appendingPathComponent("key.pem"), atomically: true, encoding: .utf8)
+        try pem.write(to: folder.appendingPathComponent("certificate.pem"), atomically: true, encoding: .utf8)
+        // Security has no PKCS #12 writer, so openssl bundles the two; the bundle's passphrase rides its environment.
+        let passphrase = UUID().uuidString
+        let bundle = Process()
+        bundle.executableURL = URL(fileURLWithPath: "/usr/bin/openssl")
+        bundle.currentDirectoryURL = folder
+        bundle.arguments = ["pkcs12", "-export", "-inkey", "key.pem", "-in", "certificate.pem", "-out", "phone.p12",
+                            "-passout", "env:WEAK_LINK_PASSPHRASE"]
+        bundle.environment = ["WEAK_LINK_PASSPHRASE": passphrase]
+        try bundle.run()
+        bundle.waitUntilExit()
+        guard bundle.terminationStatus == 0 else { throw PhoneError.refused("openssl could not bundle the test phone's identity") }
+        let p12 = try Data(contentsOf: folder.appendingPathComponent("phone.p12"))
+        var items: CFArray?
+        let status = SecPKCS12Import(p12 as CFData, [kSecImportExportPassphrase as String: passphrase,
+                                                     kSecImportToMemoryOnly as String: true] as CFDictionary, &items)
+        guard status == errSecSuccess, let item = (items as? [[String: Any]])?.first,
+              let found = item[kSecImportItemIdentity as String] else { throw PhoneError.refused("The test phone's identity was not read: \(status)") }
+        let identity = found as! SecIdentity
+        var read: SecCertificate?
+        guard SecIdentityCopyCertificate(identity, &read) == errSecSuccess, let read else { throw PhoneError.refused("The test phone's identity has no certificate") }
+        let phone = PhoneIdentity(identity: identity, certificate: read)
+        made = phone
+        return phone
+    }
+}
+
+/// INF-2668, the captain: "i feel the ios app’s connection to the home has been flaky sometimes. it would flip between
+/// out of reach and reaching a few times. this is especially prominent when the network condition is not strong like
+/// when i’m out on mobile." Each test is one of the seven checks of INF-2666's direction B, or INF-2669's large catch-up,
+/// run against the disposable real-core home through its relay, which shapes the path as a weak cell does. Every
+/// connection dials the relay only.
+@MainActor final class PhoneWeakLinkTests: XCTestCase {
+    /// The checks need the disposable home the phone gate starts for this part; a plain `swift test` of the package
+    /// has none.
+    override func setUp() async throws {
+        try XCTSkipIf(ProcessInfo.processInfo.environment["PHONE_TEST_HOME"] == nil,
+                      "The weak-link checks run in the phone gate's weak-link part, against its disposable home")
+    }
+
+    private func home(_ command: String, _ body: [String: Any]? = nil, method: String = "POST") async throws -> [String: Any] {
+        let control = try XCTUnwrap(ProcessInfo.processInfo.environment["PHONE_TEST_HOME"])
+        var request = URLRequest(url: try XCTUnwrap(URL(string: control + "/" + command)))
+        request.httpMethod = method
+        if let body { request.httpBody = try JSONSerialization.data(withJSONObject: body) }
+        let (data, response) = try await URLSession.shared.data(for: request)
+        XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, String(decoding: data, as: UTF8.self))
+        return try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+    }
+
+    /// The relay's connections so far, each with the bytes it carried down to the phone, and the ones it refused.
+    private func readings() async throws -> (dials: [[String: Any]], refused: Int) {
+        let read = try await home("relay-readings", method: "GET")
+        return (try XCTUnwrap(read["dials"] as? [[String: Any]]), try XCTUnwrap(read["refused"] as? Int))
+    }
+
+    /// How many of the first reads - the cards, the feed and the task board - the home has answered so far.
+    private func answered() async throws -> [String: Int] {
+        let state = try await home("routing-state", method: "GET")
+        let readings = try XCTUnwrap(state["readings"] as? [String: Int])
+        return readings.filter { ["cards", "feed", "boards"].contains($0.key) }
+    }
+
+    private func shape(bytesPerSec: Int, delayMs: Int) async throws {
+        _ = try await home("relay-shape", ["bytesPerSec": bytesPerSec, "delayMs": delayMs])
+    }
+
+    /// A phone joined to a fresh home whose welcome names no address of its own, so every dial goes through the relay.
+    private func joined() async throws -> ReadOnlySession {
+        _ = try await home("remove")
+        _ = try await home("routing-reset")
+        _ = try await home("routing-legacy")
+        let relay = try await home("relay-thaw")
+        let through = try XCTUnwrap(relay["address"] as? String)
+        let invitation = try await home("link")
+        let link = try JoinLink(XCTUnwrap(invitation["link"] as? String))
+        let phone = try WeakLinkPhone.identity()
+        let transport = PinnedTransport(pin: link.pin, phone: phone, purpose: .pairing)
+        defer { transport.close() }
+        let mac = try await transport.pair(link, name: "Weak link test phone")
+        return ReadOnlySession(mac: JoinedMac(addresses: [through], pin: mac.pin, deviceID: mac.deviceID, name: mac.name),
+                               phone: phone)
+    }
+
+    private func finish(_ session: ReadOnlySession) async throws {
+        session.stop()
+        _ = try await home("relay-thaw")
+        _ = try await home("remove")
+    }
+
+    /// Every change of the words, the connection and the buzz count, polled as the screens would see them.
+    @MainActor final class Watch {
+        struct Seen { let at: Double; let reach: String; let contact: String; let returns: Int }
+        private(set) var seen: [Seen] = []
+        private var poll: Task<Void, Never>?
+        let started = ContinuousClock.now
+        var now: Double { Double((ContinuousClock.now - started).components.attoseconds) / 1e18
+            + Double((ContinuousClock.now - started).components.seconds) }
+
+        init(_ session: ReadOnlySession) {
+            poll = Task { @MainActor [weak self] in
+                while !Task.isCancelled, let self {
+                    let last = self.seen.last
+                    if last?.reach != session.reach || last?.contact != session.contact || last?.returns != session.returns {
+                        self.seen.append(Seen(at: self.now, reach: session.reach, contact: session.contact, returns: session.returns))
+                    }
+                    try? await Task.sleep(for: .milliseconds(10))
+                }
+            }
+        }
+        deinit { poll?.cancel() }
+
+        /// How many times the words turned to `words` at or after `since`.
+        func said(_ words: String, since: Double = 0) -> Int {
+            zip([nil] + seen.map(Optional.some), seen).filter { before, now in
+                now.at >= since && now.reach == words && before?.reach != words
+            }.count
+        }
+
+        /// Waits until `condition` holds, failing after `seconds`.
+        func until(_ seconds: Double, _ what: String, _ condition: () -> Bool) async throws {
+            let deadline = now + seconds
+            while !condition() {
+                if now > deadline { XCTFail("Not within \(seconds) s: \(what)"); throw PhoneError.unavailable }
+                try await Task.sleep(for: .milliseconds(20))
+            }
+        }
+
+        /// When, on this watch's clock, the phone last heard the computer.
+        func quietSince(_ session: ReadOnlySession) throws -> Double {
+            now - Date().timeIntervalSince(try XCTUnwrap(session.heardAt))
+        }
+
+        func hold(_ seconds: Double) async throws { try await Task.sleep(for: .milliseconds(Int(seconds * 1000))) }
+    }
+
+    /// The route read beside In reach, looked at on the main actor's first turn after each change of the connection:
+    /// the earliest a screen, such as the computer sheet, can draw the two together.
+    @MainActor final class RouteWatch {
+        private(set) var inReach: [String?] = []
+
+        init(_ session: ReadOnlySession) { follow(session) }
+
+        private func follow(_ session: ReadOnlySession) {
+            withObservationTracking { _ = session.contact } onChange: { [weak self] in
+                Task { @MainActor in self?.look(session) }
+            }
+        }
+
+        private func look(_ session: ReadOnlySession) {
+            if session.contact == "in-reach" { inReach.append(session.reachedAddress) }
+            follow(session)
+        }
+    }
+
+    private func inReach(_ session: ReadOnlySession, _ watch: Watch, within seconds: Double) async throws {
+        try await watch.until(seconds, "in reach") { session.contact == "in-reach" }
+    }
+
+    /// Waits for the phone to be in reach on the relay's `dials`th connection: a redial can take milliseconds.
+    private func inReach(_ session: ReadOnlySession, _ watch: Watch, on dials: Int, within seconds: Double) async throws {
+        let deadline = watch.now + seconds
+        while true {
+            let count = try await readings().dials.count
+            if count >= dials, session.contact == "in-reach" { return }
+            if watch.now > deadline { XCTFail("Not in reach on connection \(dials) within \(seconds) s"); throw PhoneError.unavailable }
+            try await Task.sleep(for: .milliseconds(50))
+        }
+    }
+
+    /// INF-2666 measured a 1 KB/s link with 300 ms delay flipping between Out of reach and Reaching every 8 to 10 s,
+    /// never in reach, since its catch-up could not finish inside a fixed 10 s. The link carries this home's whole
+    /// catch-up in about 40 s: 1 KB/s for a small record, faster for a grown one. A catch-up of several answers that
+    /// outlasts the computer's own ping window is `testALargeCatchUpOnASlowLinkArrivesOnOneConnection`, and one answer
+    /// that outlasts the phone's wait for a message is `testALongAnswerOnASlowLinkArrivesOnOneConnection`.
+    func testASlowLinkReachesInReachAndStays() async throws {
+        let measuring = try await joined()
+        // INF-2975: a wait that fails throws before `finish`, and a session left running redials into the next check's
+        // dial count, so each connection this check opens stops even when it fails.
+        addTeardownBlock { await measuring.stop() }
+        let sizing = Watch(measuring)
+        measuring.start()
+        try await inReach(measuring, sizing, within: 30)
+        let measured = try await readings().dials
+        let size = try XCTUnwrap(measured.first?["down"] as? Int)
+        measuring.stop()
+        _ = try await home("relay-thaw")
+        // A phone with nothing read yet, so its catch-up is the whole record again.
+        let session = ReadOnlySession(mac: measuring.mac, phone: try WeakLinkPhone.identity())
+        addTeardownBlock { await session.stop() }
+        try await shape(bytesPerSec: max(1_000, size / 40), delayMs: 300)
+        let watch = Watch(session)
+        session.start()
+        try await inReach(session, watch, within: 60)
+        try await watch.hold(30)
+        XCTAssertEqual(session.contact, "in-reach")
+        XCTAssertEqual(watch.said("lost"), 0, "Out of reach never shows while the slow path stays up")
+        let dials = try await readings().dials
+        XCTAssertEqual(dials.count, 1, "One dial carried the whole catch-up of \(size) bytes")
+        try await finish(session)
+    }
+
+    /// INF-2669: the computer pings every 30 s and cut a phone whose answer had not come by the next ping, and its ping
+    /// waited behind the catch-up on the same link, so at 1 KB/s a catch-up over about a minute was cut 60 s in and
+    /// started over. It now writes in pieces, each followed by a ping a phone still receiving answers, and lets only a
+    /// few seconds' worth go ahead of the answers, so the phone's own pings are answered during the catch-up too. Away
+    /// from a computer whose card list grows by about 80 KB, the phone misses four card lists and the task board pushed
+    /// with each, both as large as the home's record has grown. A replay sends only the newest card list and board
+    /// whole (INF-3750's option C), so the link carries what the replay sends in about 85 s, at 1 KB/s or faster: a
+    /// slower link outlasts the phone's dial before the welcome. The newest list alone outlasts the phone's answer
+    /// wait and still arrives, in parts (INF-2832).
+    func testALargeCatchUpOnASlowLinkArrivesOnOneConnection() async throws {
+        let session = try await joined()
+        // The heavy cards and this connection leave the home shared with the other checks, even when this one fails.
+        addTeardownBlock {
+            await session.stop()
+            guard let control = ProcessInfo.processInfo.environment["PHONE_TEST_HOME"],
+                  let url = URL(string: control + "/away-cleanup") else { return }
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            _ = try? await URLSession.shared.data(for: request)
+        }
+        session.start()
+        let first = Watch(session)
+        try await inReach(session, first, within: 30)
+        // In reach comes before the board's first read (INF-3750); once it is read too, every first read has answered,
+        // so the next welcome replays rather than reading again.
+        try await first.until(30, "the first board") { session.board != nil }
+        session.stop()
+        let away = try await home("heavy-away")
+        let cards = try XCTUnwrap(away["cards"] as? [String])
+        let replay = try XCTUnwrap(away["replayBytes"] as? Int)
+        try await shape(bytesPerSec: max(1_000, replay / 85), delayMs: 300)
+        let before = try await readings().dials.count
+        let watch = Watch(session)
+        session.start()
+        // A replaying welcome is in reach at once; the cards show once the whole replay is read.
+        try await watch.until(180, "the cards from while away") { cards.allSatisfy(Set(session.cards.map(\.id)).contains) }
+        let took = watch.now
+        let dials = try await readings().dials
+        XCTAssertEqual(dials.count, before + 1, "One connection carried the whole catch-up")
+        let down = try XCTUnwrap(dials.last?["down"] as? Int)
+        XCTAssertGreaterThan(took, 60, "The catch-up outlasted two of the computer's pings: \(down) bytes in \(Int(took)) s")
+        XCTAssertEqual(session.contact, "in-reach")
+        XCTAssertEqual(watch.said("lost"), 0, "Out of reach never shows while the catch-up arrives")
+        _ = try await home("away-cleanup")
+        try await finish(session)
+    }
+
+    /// INF-2832: the phone hears a message only once it has arrived whole, and gives up on a read when nothing has
+    /// arrived for `ReadOnlySession.answerWait`, so a reload whose card list took longer than that on a slow link was
+    /// cut about 47 s in, every time, and never came in reach. The computer now sends a long frame in parts, each a
+    /// whole message (`frame-parts`), so the phone hears every part. A card list of over 80 KB is read whole here, on
+    /// a link that carries it in about a minute: 1 KB/s and a little more for a list the shared home has grown.
+    func testALongAnswerOnASlowLinkArrivesOnOneConnection() async throws {
+        let session = try await joined()
+        // The heavy card and this connection leave the home shared with the other checks, even when this one fails.
+        addTeardownBlock {
+            await session.stop()
+            guard let control = ProcessInfo.processInfo.environment["PHONE_TEST_HOME"],
+                  let url = URL(string: control + "/away-cleanup") else { return }
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            _ = try? await URLSession.shared.data(for: request)
+        }
+        let heavy = try await home("heavy-card")
+        let card = try XCTUnwrap(heavy["card"] as? String)
+        let list = try XCTUnwrap(heavy["listBytes"] as? Int)
+        let reload = try XCTUnwrap(heavy["reloadBytes"] as? Int)
+        let rate = max(1_000, list / 60)
+        try await shape(bytesPerSec: rate, delayMs: 300)
+        let before = try await readings().dials.count
+        let watch = Watch(session)
+        session.start()
+        // The cards show once the card list is read; In reach waits for every other first read too.
+        try await watch.until(Double(reload / rate) * 2 + 60, "the long card list, in reach") {
+            session.contact == "in-reach" && session.cards.contains { $0.id == card }
+        }
+        let took = watch.now
+        let dials = try await readings().dials
+        XCTAssertEqual(dials.count, before + 1, "One connection carried the whole reload")
+        XCTAssertGreaterThan(took, 50, "The card list outlasted the phone's wait for one message: \(list) bytes in \(Int(took)) s")
+        XCTAssertNil(session.lastCut, "Nothing cut the connection")
+        XCTAssertEqual(watch.said("lost"), 0, "Out of reach never shows while the card list arrives")
+        _ = try await home("away-cleanup")
+        try await finish(session)
+    }
+
+    /// INF-2832: a computer that answers the phone's pings but never a read, and sends nothing else, is stuck. Hearing
+    /// every part of a long answer changes nothing for it: the phone still cuts it `ReadOnlySession.answerWait` after
+    /// the read, though its pings were answered all along, and dials again.
+    func testAReadNeverAnsweredIsStillCut() async throws {
+        let session = try await joined()
+        addTeardownBlock {
+            await session.stop()
+            guard let control = ProcessInfo.processInfo.environment["PHONE_TEST_HOME"],
+                  let url = URL(string: control + "/release-card-action") else { return }
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            _ = try? await URLSession.shared.data(for: request)
+        }
+        let watch = Watch(session)
+        session.start()
+        try await inReach(session, watch, within: 30)
+        _ = try await home("hold-card-action", ["channel": PhoneCardRequest.past.rawValue])
+        let asked = watch.now
+        let read = Task { try? await session.ask(.past, [.string("no-such-held-card")]) }
+        _ = try await home("card-action-held")
+        var heardBeforeCut: Date?
+        try await watch.until(60, "the stuck read's connection was cut") {
+            if session.lastCut == nil { heardBeforeCut = session.heardAt }
+            return session.lastCut != nil
+        }
+        let (cut, cutAt) = (watch.now, Date())
+        _ = try await home("release-card-action")
+        read.cancel()
+        let wait = Double(ReadOnlySession.answerWait.components.seconds)
+        XCTAssertEqual(session.lastCut, .quiet, "The stuck read, not a failed link, cut the connection")
+        XCTAssertGreaterThanOrEqual(cut - asked, wait, "Not before the read's wait")
+        XCTAssertLessThan(cut - asked, wait + 10, "Soon after it")
+        let quiet = cutAt.timeIntervalSince(try XCTUnwrap(heardBeforeCut))
+        XCTAssertLessThan(quiet, Double(ReadOnlySession.pingEvery.components.seconds) + 5,
+                          "The computer answered the phone's pings until the cut: quiet for \(Int(quiet)) s")
+        try await inReach(session, watch, within: 15)
+        try await finish(session)
+    }
+
+    /// INF-2666 measured a record standing in for the captain's, in reach on a good link, then weakened to 4 KB/s and
+    /// dropped: six dials, each cut 10 s in, for the whole weak spell, though the welcome replayed nothing missed. The
+    /// home's own record is used here, since cards seeded into it would stay for the journeys sharing the home. The
+    /// home counts the first reads it answers, so the redial is seen reading none of them again; its bytes stay under
+    /// the first dial's, whose own size follows how light the first reads are (INF-3764's board without closed rows).
+    func testADropOnAWeakLinkComesBackFromTheReplay() async throws {
+        let session = try await joined()
+        let watch = Watch(session)
+        session.start()
+        try await inReach(session, watch, within: 30)
+        // The home goes on sending what its seeding started after the phone is in reach; drop once it has gone quiet.
+        var first = -1
+        for _ in 0..<40 {
+            let now = try await readings().dials
+            let down = try XCTUnwrap(now.first?["down"] as? Int)
+            if down == first { break }
+            first = down
+            try await watch.hold(1)
+        }
+        let firstReads = try await answered()
+        try await shape(bytesPerSec: 4_000, delayMs: 300)
+        let dropped = watch.now
+        _ = try await home("relay-drop")
+        try await inReach(session, watch, on: 2, within: 30)
+        try await watch.hold(10)
+        let dials = try await readings().dials
+        XCTAssertEqual(dials.count, 2, "One redial")
+        let againReads = try await answered()
+        XCTAssertEqual(againReads, firstReads, "The replaying welcome read nothing again")
+        let again = try XCTUnwrap(dials.last?["down"] as? Int)
+        XCTAssertLessThan(again, first, "The replaying welcome read nothing again: \(again) bytes after \(first)")
+        XCTAssertLessThanOrEqual(watch.said("reaching", since: dropped), 1, "Reaching shows at most once")
+        XCTAssertEqual(watch.said("lost", since: dropped), 0)
+        XCTAssertEqual(session.contact, "in-reach")
+        try await finish(session)
+    }
+
+    /// INF-2666 measured a 3 s stall with a network change during it: the 2 s check cut the live connection, the line
+    /// said Reaching for a second, and the phone buzzed. The network change is `start()` on the running session.
+    func testAStallWithANetworkChangeKeepsTheConnection() async throws {
+        let session = try await joined()
+        let watch = Watch(session)
+        session.start()
+        try await inReach(session, watch, within: 30)
+        let since = watch.now
+        _ = try await home("relay-stall", ["ms": 3_000])
+        try await watch.hold(0.1)
+        session.start()
+        try await watch.hold(6)
+        let dials = try await readings().dials
+        XCTAssertEqual(dials.count, 1, "The kept connection stayed")
+        XCTAssertNil(session.lastCut)
+        XCTAssertTrue(watch.seen.filter { $0.at >= since }.allSatisfy { $0.reach == "in-reach" }, "The line says nothing")
+        XCTAssertEqual(session.returns, 0)
+        try await finish(session)
+    }
+
+    /// A reopen's check keeps a connection that goes on receiving, but an answer already on its way when the ping left
+    /// says nothing about the path after it. Phone check run 41980677158 caught the reopen check skipping its doubt for
+    /// such an answer, so a dead path waited for the silence cut instead of being replaced once the check ran out.
+    /// Phone check run 42354120938 read In reach on the replacement with the frozen connection's route: the phone said
+    /// In reach, then sent its catch-up's reads before it recorded the route it reached.
+    func testAnAnswerAlreadyOnItsWayDoesNotKeepADeadPath() async throws {
+        let session = try await joined()
+        let relay = try await home("relay-thaw")
+        let direct = try XCTUnwrap(relay["at"] as? String)
+        let watch = Watch(session)
+        session.start()
+        try await inReach(session, watch, within: 30)
+        let routes = RouteWatch(session)
+        session.found(addresses: [direct])
+        // Two seconds each way: the read reaches the home after two and its answer is on the way down for the next two.
+        // The freeze at three leaves a second on either side, so a busy Mac's late timer still freezes the connection
+        // after the read arrived and before its answer does, which the reopen's five-second check outlasts.
+        try await shape(bytesPerSec: 0, delayMs: 2_000)
+        let asked = Task { try? await session.read(.past, [.string("no-such-weak-link-card")]) }
+        try await watch.hold(3)
+        _ = try await home("relay-freeze")
+        let frozen = Date()
+        session.start()
+        try await watch.until(30, "the reopen's check replaced the frozen connection") { session.lastCut != nil }
+        XCTAssertGreaterThan(try XCTUnwrap(session.heardAt), frozen, "The answer on its way arrived after the reopen's ping")
+        XCTAssertEqual(session.lastCut, .unanswered, "The reopen's check, not the silence, cut the frozen connection")
+        try await inReach(session, watch, within: 15)
+        XCTAssertEqual(session.reachedAddress, direct)
+        try await watch.until(1, "the route read beside In reach") { !routes.inReach.isEmpty }
+        XCTAssertEqual(Set(routes.inReach), [direct], "In reach shows with the route it reached, never the frozen one")
+        asked.cancel()
+        try await finish(session)
+    }
+
+    /// INF-2666 measured a 50 s outage: 12 dials meanwhile, at most 5 s apart. Out of reach is named once the
+    /// computer was quiet for the captain's 20 s, and its return buzzes, since the line said Out of reach.
+    func testAnOutageDialsSeldomAndFindsTheReturn() async throws {
+        let session = try await joined()
+        let watch = Watch(session)
+        session.start()
+        try await inReach(session, watch, within: 30)
+        let before = try await readings()
+        _ = try await home("relay-offline")
+        let gone = watch.now
+        let quiet = try watch.quietSince(session)
+        try await watch.hold(50)
+        let during = try await readings()
+        let tries = during.dials.count - before.dials.count + during.refused - before.refused
+        XCTAssertLessThanOrEqual(tries, 6, "At most 6 dials in 50 s")
+        let named = try XCTUnwrap(watch.seen.first { $0.at > gone && $0.reach == "lost" }, "Out of reach was named")
+        XCTAssertEqual(named.at - quiet, 20, accuracy: 1.5, "Named once the computer was quiet for the captain's 20 s")
+        _ = try await home("relay-online")
+        try await inReach(session, watch, within: 15)
+        XCTAssertEqual(session.returns, 1, "One buzz, for a return after Out of reach")
+        try await finish(session)
+    }
+
+    /// INF-2666 measured a drop that redials in 10 ms: too fast to read, yet the phone buzzed for it.
+    func testAnInstantRedialSaysAndBuzzesNothing() async throws {
+        let session = try await joined()
+        let watch = Watch(session)
+        session.start()
+        try await inReach(session, watch, within: 30)
+        let dropped = watch.now
+        _ = try await home("relay-drop")
+        try await inReach(session, watch, on: 2, within: 10)
+        try await watch.hold(2)
+        let dials = try await readings().dials
+        XCTAssertEqual(dials.count, 2)
+        XCTAssertTrue(watch.seen.filter { $0.at >= dropped }.allSatisfy { $0.reach == "in-reach" }, "The line says nothing")
+        XCTAssertEqual(session.returns, 0, "Nothing buzzes")
+        try await finish(session)
+    }
+
+    /// A dead path is still noticed: a 32 s silence is cut after the captain's 20 s, named, and redialed.
+    func testALongSilenceIsStillCutAndRedialed() async throws {
+        let session = try await joined()
+        let watch = Watch(session)
+        session.start()
+        try await inReach(session, watch, within: 30)
+        _ = try await home("relay-stall", ["ms": 32_000])
+        let stalled = watch.now
+        let quiet = try watch.quietSince(session)
+        try await watch.until(60, "in reach again after the silence") {
+            session.contact == "in-reach" && watch.seen.contains { $0.at > stalled && $0.contact != "in-reach" }
+        }
+        XCTAssertEqual(session.lastCut, .quiet, "Silence cut the connection")
+        let left = try XCTUnwrap(watch.seen.first { $0.at > stalled && $0.contact != "in-reach" })
+        XCTAssertEqual(left.at - quiet, 20, accuracy: 1.5, "Cut once the computer was quiet for the captain's 20 s")
+        let named = try XCTUnwrap(watch.seen.first { $0.at > stalled && $0.reach != "in-reach" }, "The line named it")
+        XCTAssertLessThan(named.at - stalled, 30, "within half a minute")
+        let dials = try await readings().dials
+        XCTAssertGreaterThanOrEqual(dials.count, 2, "Redialed")
+        try await finish(session)
+    }
+}

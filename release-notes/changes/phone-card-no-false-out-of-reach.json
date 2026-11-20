@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-card-no-false-out-of-reach",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A card on iPhone no longer says your computer is out of reach while it is in reach",
+      "body": "After a brief drop in the connection, a card on iPhone or iPad could keep saying your computer was out of reach even once it was back and the computer button said In reach. The card now reads its thread again without the warning.",
+      "noPicture": "The fix removes a warning that stayed after a short drop; a still of the card without it shows an ordinary card.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "start-at-boot-without-systemd",
+      "kind": "fix",
+      "area": "devices",
+      "title": "On Linux, start at boot no longer promises a start it cannot set up",
+      "body": "On a Linux computer where Infinitary cannot set up automatic startup, such as a container, infinitary start-at-boot now says it cannot start at boot there and sets nothing up. Before, it said Infinitary would start at your next login and printed an administrator line that could not help. Where it cannot tell whether startup works, it says so and asks you to run it again where you are logged in. infinitary help run lists other ways to start Infinitary.",
+      "noPicture": "The command's own lines appear in a terminal, with no change to the app's windows.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

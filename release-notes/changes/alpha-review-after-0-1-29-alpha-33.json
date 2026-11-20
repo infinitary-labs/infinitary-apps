@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "alpha-review-after-0-1-29-alpha-33",
+      "reason": "Release review after 0.1.29-alpha.33: ranks the Usage tab as the lead highlight, then reading release notes again and choosing Firstmate's account, rewrites those three notes into plain language, and re-takes the release notes hero pair as an installed build so no development-only tab shows. Nothing in the app changes. Multi-machine support and the task browser stay unannounced."
+    }
+  ]
+}

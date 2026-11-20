@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "browser-request-folds-narrow",
+      "kind": "improvement",
+      "area": "tasks",
+      "title": "A crewmate's browser page keeps its width beside its request",
+      "body": "The request a crewmate leaves beside its browser page no longer narrows the page: the page keeps its full width and the request sits next to it. On a small window the request folds to a single line under the page showing its latest message. Press Command-backslash, or click the line, to open or fold it.",
+      "picture": {
+        "dark": "browser-request-folds-narrow-dark.webp",
+        "light": "browser-request-folds-narrow-light.webp",
+        "alt": "A crewmate's browser page on a small window with its request folded to one line under the page, showing the crewmate's latest answer"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

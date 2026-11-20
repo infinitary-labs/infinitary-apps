@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "validation-records-any-care",
+      "reason": "Internal: a crewmate's validation record is kept at every care level instead of refused below Careful, so a crewmate wastes no turn on a refusal and a raise to Careful keeps its plan; nothing a person sees changes."
+    }
+  ]
+}

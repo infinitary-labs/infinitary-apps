@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "another-user-dials-loopback",
+      "reason": "Work run as another macOS user on this Mac stays in reach of Firstmate when this Mac's network address changes; part of the development-only multi-machine feature, which remains unavailable in released apps."
+    }
+  ]
+}

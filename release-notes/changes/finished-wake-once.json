@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "finished-wake-once",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Your first mate hears a crewmate's work is finished once, not after every reply",
+      "body": "When a crewmate's answer is done and you keep replying under its card, only that crewmate is called in for each reply. Your first mate hears that the work is finished once, after you close the card, and closes the task then. Before, every reply also called in your first mate, which spent your plan's allowance for nothing.",
+      "noPicture": "Nothing on screen changes; your first mate is simply not called in for each reply.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journey-cleanup-waits-for-killed-child",
+      "reason": "Test-only repair: the work-mode journeys' cleanup waits for a killed child the system still lists to finish ending, instead of failing it after two seconds. The app itself does not change."
+    }
+  ]
+}

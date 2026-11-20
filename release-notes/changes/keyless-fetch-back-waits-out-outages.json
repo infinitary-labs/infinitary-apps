@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "keyless-fetch-back-waits-out-outages",
+      "reason": "Release workflow only: the publication job's keyless fetch-backs wait out a download host that is not answering instead of failing the alpha, and still fail on any answer about the file; the app and the files it publishes are unchanged."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "dropped-dependency-waits",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Dropped work no longer interrupts a waiting crewmate",
+      "body": "A crewmate waiting on another task no longer gets repeated check-ins because an older dependency was dropped. Your first mate can also remove that recorded wait without losing the evidence of failed checks.",
+      "noPicture": "This changes how the app follows task dependencies, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

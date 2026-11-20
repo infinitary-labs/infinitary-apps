@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "mit-licensing-and-notices",
+      "reason": "Licensing, source documentation and package metadata only; no change to app behavior."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journey-diagnostics-skill-links",
+      "reason": "Journey diagnostics stop copying crew session links that dangled and broke Mac packaging in checks; no product behavior changes."
+    }
+  ]
+}

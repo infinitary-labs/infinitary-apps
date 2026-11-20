@@ -1,0 +1,16 @@
+{
+  "entries": [{
+    "id": "start-dropped-work-again",
+    "kind": "fix",
+    "area": "tasks",
+    "title": "Start dropped work again",
+    "body": "A dropped task now offers Start again. It creates a new task with the old reports and saved work, and moves tasks waiting on it to the replacement. The old record stays closed.",
+    "picture": {
+      "dark": "start-dropped-work-again-dark.webp",
+      "light": "start-dropped-work-again-light.webp",
+      "alt": "The dropped task's record offers Start again at the bottom right."
+    },
+    "provenance": { "origin": "change" }
+  }],
+  "exclusions": []
+}

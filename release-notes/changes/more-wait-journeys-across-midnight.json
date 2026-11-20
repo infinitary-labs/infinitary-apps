@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "more-wait-journeys-across-midnight",
+      "reason": "Test-only: the queued, waiting crewmate, closed blockers and record controls journeys record their waits a day earlier, so the wait times they expect match the app's minute clock at any time of day, including across midnight; the app is unchanged."
+    }
+  ]
+}

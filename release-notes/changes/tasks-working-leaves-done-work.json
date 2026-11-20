@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "tasks-working-leaves-done-work",
+      "kind": "fix",
+      "title": "Working in Tasks lists only work still going",
+      "body": "The Working group in the Tasks panel no longer lists finished tasks, such as a review or a plan that is already done, under the task they belong to. Those tasks now show under Done · 7d, and Working keeps a task beside its parent and its other open parts.",
+      "area": "tasks",
+      "picture": {
+        "dark": "tasks-working-leaves-done-work-dark.webp",
+        "light": "tasks-working-leaves-done-work-light.webp",
+        "alt": "The Tasks panel with Working listing two working tasks, their parent and a held part, and five finished reviews and parts under Done · 7d"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

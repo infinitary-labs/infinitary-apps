@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "phone-task-record-matches-the-mac",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Task records on iPhone and iPad read like the ones on your Mac",
+      "body": "On iPhone and iPad, a task's record now follows your Mac's: its status and key at the top, and the Info, Cards, Activity and Crewmate tabs. Info starts with what needs your attention, then the tasks it belongs to or waits on, which you can tap, the goal and facts such as the model, the pull request and its checks. The buttons at the bottom are your Mac's: Drop task asks once, and Show the card takes you to that card on Home. The Crewmate tab shows how long the crewmate has worked, with Stop, and a finished task offers no message box.",
+      "noPicture": "The phone check pictures the record on iPhone and iPad upright, while a hero picture is a landscape pair cropped from the desktop app's window.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

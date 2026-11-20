@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "phone-cards-and-the-foot",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Lighter cards and message box on iPhone and iPad",
+      "body": "A new card or a reply now shows as a small pill under the title: tap it to open the card, or swipe it away. The Cards tab shows how many cards you have not read, and past cards are listed in the card count's menu. Replying to a card and messaging your first mate use the same rounded box with the send arrow inside it, and the message box floats above the tabs with your last exchange just above it.",
+      "picture": {
+        "dark": "phone-cards-and-the-foot-dark.png",
+        "light": "phone-cards-and-the-foot-light.png",
+        "alt": "Infinitary on iPhone shows the card count between two arrows with a dot for an unread card ahead, the last exchange as two quoted lines, a rounded message box with the send arrow inside it, and the Cards tab carrying a count of 2 unread cards."
+      },
+      "provenance": { "origin": "change", "covers": [] }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "claude-fable-5-2",
+      "kind": "improvement",
+      "title": "Claude Fable 5.2 joins your models",
+      "body": "Claude Fable 5.2 is the new premium starter for Claude. Your saved model placements stay as you chose them.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "claude-fable-5-2-dark.webp",
+        "light": "claude-fable-5-2-light.webp",
+        "alt": "Claude Fable 5.2 in the premium intelligence level in Settings."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

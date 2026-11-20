@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "copy-ask-across-settled-link",
+      "kind": "fix",
+      "title": "Taking over asks every other computer keeping a copy, even one it has only just reached",
+      "body": "When two computers that keep a copy reach each other at the same moment, a question one asks the other is answered over the connection they keep. Before, the question could fail as if the other computer were out of reach, so a takeover could start from an older copy or miss that another computer had already taken over.",
+      "area": "devices",
+      "noPicture": "This changes how two computers keeping a copy answer each other, not any view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

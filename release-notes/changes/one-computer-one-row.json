@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "one-computer-one-row",
+      "kind": "fix",
+      "area": "devices",
+      "title": "A Mac that controls your first mate and runs its work keeps one row",
+      "body": "Adding a Mac again by its address, after its window joined with a link, now finishes the same row in Settings → Devices, with its name, projects and sign-ins. A Mac already listed twice folds into the row that runs its work on its own, and the projects and tasks set to run on the other row follow. Removing the row a window uses no longer sends that window back to its first screen while the Mac still runs your work: it carries on and says so.",
+      "picture": {
+        "dark": "one-computer-one-row-dark.webp",
+        "light": "one-computer-one-row-light.webp",
+        "alt": "Settings → Devices on a Mac that controls another Mac's first mate, saying it keeps one row for this Mac now and this window carries on with it"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

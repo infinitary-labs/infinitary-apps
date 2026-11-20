@@ -1,0 +1,13 @@
+{
+  "mergedAt": "دُمج في {at}",
+  "mergedChangeOn": "دُمج {change} على {place}",
+  "mergedChangeOnHost": "دُمج {change} على مستضيف المشروع",
+  "mergedChangeWhereItLives": "دُمج {change} حيث يُستضاف المشروع",
+  "mergedInCommit": "دُمج في الإيداع {commit}",
+  "mergedInPull": "دُمج في طلب السحب {change}",
+  "mergedOn": "دُمج على {place}",
+  "mergedOnItsOwnAt": "دُمج تلقائيًا في {at}",
+  "mergedWhereItLives": "دُمج حيث يُستضاف المشروع",
+  "mergedWithBatchOn": "دُمج مع الدفعة {change} على {place}",
+  "mergedWithBatchWhereItLives": "دُمج مع الدفعة {change} حيث يُستضاف المشروع"
+}

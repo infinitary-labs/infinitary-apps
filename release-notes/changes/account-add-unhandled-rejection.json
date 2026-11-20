@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "account-add-unhandled-rejection",
+      "reason": "A refused account add, and a refused allowance refresh after an add or sign-in, no longer leave an unhandled rejection in the window's console; the person already saw the add's own reason, so nothing they see changes."
+    }
+  ]
+}

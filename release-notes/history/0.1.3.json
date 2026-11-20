@@ -1,0 +1,35 @@
+{
+  "entries": [
+    {
+      "id": "bf-bc56d29e8",
+      "kind": "feature",
+      "title": "Drop Kimi and Copilot and label API-key sign-in",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "bc56d29e8e57583ebec3345466a2daf83c8e45ed"
+        ]
+      }
+    },
+    {
+      "id": "bf-90ce05f40",
+      "kind": "fix",
+      "title": "Bump Pi SDK to 0.87.1 so Codex lists GPT-6",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "90ce05f40f8c23e4361cbfc5497d9cca70afc5c2"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-3-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.3: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "b00ed664bfdd4360de66df19cecf77c96a902e87"
+      ]
+    }
+  ]
+}

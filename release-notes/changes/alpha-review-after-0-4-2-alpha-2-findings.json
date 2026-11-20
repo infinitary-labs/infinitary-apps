@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "alpha-review-after-0-4-2-alpha-2-findings",
+      "reason": "Applies review INF-245 to the release review of the alpha after 0.4.2-alpha.2: notes about work on another computer say it takes effect once that computer is updated, the video note says the card showed only pictures, and the move note names a task's care and local merge. Nothing in the app changes."
+    }
+  ]
+}

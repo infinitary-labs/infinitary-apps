@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "first-mate-starts-reading-less",
+      "kind": "improvement",
+      "area": "firstmate",
+      "title": "Your first mate starts sooner on a long history",
+      "body": "When your first mate started, the app read every task you ever had, some of them twice, and waited for other work it could do later. It now reads only what the start needs and does the rest alongside. With about eight thousand tasks, the first mate is ready about nine tenths of a second sooner when your computer has not opened the record recently, and about a third of a second sooner when it has. Infinitary started by a command, with no window, starts three quarters of a second to a second sooner. The first start after this update spends a moment preparing the record once.",
+      "noPicture": "This shortens the wait before the first mate answers; no view looks different.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

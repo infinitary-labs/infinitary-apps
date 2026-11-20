@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "card-pager-ring",
+      "kind": "feature",
+      "title": "N new takes you to your new cards, and the arrows go round",
+      "body": "The N new count beside your cards is now a button: each press shows the next new card, most important first, and Option-Shift-Command-] does the same from the keyboard. The arrows, their keys and the phone's swipes now go round, so the next arrow on your last card shows your first, and the back arrow on your first shows your last. A dot on either arrow says new cards wait that way. The phone app works the same way, and its N new count now looks like the desktop's.",
+      "area": "cards",
+      "picture": {
+        "dark": "card-pager-ring-dark.webp",
+        "light": "card-pager-ring-light.webp",
+        "alt": "The last of four cards, with a dot on the back arrow and a 2 new count beside the pager"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

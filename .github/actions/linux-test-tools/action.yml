@@ -1,0 +1,13 @@
+name: Prepare Linux integration test tools
+description: Provide the real file utility used by the universal packaging test.
+inputs:
+  working-directory:
+    description: Checkout containing the package installation helper.
+    default: .
+runs:
+  using: composite
+  steps:
+    - name: Ensure file is available
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: command -v file || timeout 600 scripts/apt-install.sh --no-install-recommends file

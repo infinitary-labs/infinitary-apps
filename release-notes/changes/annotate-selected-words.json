@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "annotate-selected-words",
+      "kind": "improvement",
+      "title": "Notes on a card are quicker to start, keep and send",
+      "body": "Selecting words in a card now shows a small Annotate button and leaves Copy alone; click it or press Enter to start a note with the cursor already in its comment. Clicking away keeps what you typed as a queued note, clicking a note's underlined words opens it again with Remove beside Cancel and Queue, and while notes wait the send button reads Send 2 notes.",
+      "area": "cards",
+      "picture": {
+        "dark": "annotate-selected-words-dark.webp",
+        "light": "annotate-selected-words-light.webp",
+        "alt": "A card with two queued notes underlined in its text, one note reopened from its words showing its comment with Remove, Cancel and Queue, and the thread's send button reading Send 2 notes"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

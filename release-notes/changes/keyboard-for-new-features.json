@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "keyboard-for-new-features",
+      "reason": "A standing instruction that a new feature works from the keyboard, in the files a crewmate reads. No shipped behavior changed."
+    }
+  ]
+}

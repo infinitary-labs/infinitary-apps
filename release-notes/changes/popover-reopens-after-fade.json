@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "popover-reopens-after-fade",
+      "kind": "fix",
+      "title": "A card's × asks about your unsent picks on the first press, even right after its question closed",
+      "body": "When a card has picks you have not sent, its × asks before closing it. Pressing × just as that question finished fading away showed nothing: the next press closed the hidden question, and only a third press showed it. Now the first press shows the question. The same fix applies to the update panel, the ⋯ menus and command search.",
+      "area": "cards",
+      "noPicture": "The question looks as it always did; the fix is to a press at one moment of its fade-out, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

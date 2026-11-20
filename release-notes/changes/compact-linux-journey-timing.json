@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "compact-linux-journey-timing",
+      "reason": "Internal CI reporting: compact Linux journey timing artifacts are separate from existing pictures and traces; no app behavior changes."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "remote-turn-after-quit",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Crewmates respond again after their computer restarts",
+      "body": "A crewmate that reported before its computer quit no longer stays working indefinitely. You can steer it, interrupt it or start it again from the backlog.",
+      "noPicture": "This fixes recovery across computer restarts without changing a view.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

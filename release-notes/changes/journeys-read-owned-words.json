@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "journeys-read-owned-words",
+      "reason": "Test-only: end-to-end journeys now read the words they expect from the product modules that own them instead of typing them. Nothing in the app changed."
+    }
+  ]
+}

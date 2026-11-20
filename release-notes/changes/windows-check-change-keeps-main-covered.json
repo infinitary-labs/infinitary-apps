@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "windows-check-change-keeps-main-covered",
+      "reason": "Internal check scheduling: a change to the Windows check alone no longer reruns main's full check; nothing a person sees changes."
+    }
+  ]
+}

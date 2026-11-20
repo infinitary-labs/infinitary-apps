@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "captain-language",
+      "reason": "The first mate and crewmates are told the captain's language and keep the project's language for commits, and the merge card check accepts translated headings; the app speaks only English until the first translations ship, so nothing a person sees changes yet."
+    }
+  ]
+}

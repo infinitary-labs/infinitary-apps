@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "region-picture-waits-for-opened-section",
+      "reason": "Test only: the journeys' motion wait now also waits for an opened section's own reveal, which Chromium lists among no animations, so a picture taken just after a section opens is no longer measured while the reveal still slides it down; nothing a person sees changes."
+    }
+  ]
+}

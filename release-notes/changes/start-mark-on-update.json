@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "start-mark-on-update",
+      "reason": "Internal: the first mate can mark or unmark an already filed part to start at the approval of the part it waits on, and the tasks reader shows that mark; no screen changes, and chains start no differently until a later part changes when a dependency starts."
+    }
+  ]
+}

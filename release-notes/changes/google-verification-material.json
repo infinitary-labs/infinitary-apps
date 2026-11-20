@@ -1,0 +1,23 @@
+{
+  "entries": [
+    {
+      "id": "google-private-alpha",
+      "kind": "feature",
+      "title": "Connect Google for private testing",
+      "body": "Google is now available in Settings → Integrations for Gmail and Calendar. Mail and calendar changes ask for your approval. Google still warns that Infinitary is unverified, and some accounts cannot connect.",
+      "area": "settings",
+      "picture": {
+        "dark": "google-private-alpha-dark.webp",
+        "light": "google-private-alpha-light.webp",
+        "alt": "Settings → Integrations offers Google beside GitHub and MCP server."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "google-verification-material",
+      "reason": "Internal privacy, permission, demonstration and CASA drafts; not a published policy, completed submission or verification approval."
+    }
+  ]
+}

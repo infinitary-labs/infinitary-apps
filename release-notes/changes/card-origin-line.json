@@ -1,0 +1,26 @@
+{
+  "entries": [
+    {
+      "id": "card-origin-line",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "A card says where its work came from",
+      "body": "The line under a card's title now quotes the message that started the work, even when the card belongs to a later part, a retry or a follow-up. It never quotes a merge click or a message you sent to several tasks. Work an automation filed says which automation ran it, and work filed from a card says what you chose and what you wrote. When your words sit on another task, the line says how many tasks away.",
+      "picture": {
+        "dark": "card-origin-line-dark.webp",
+        "light": "card-origin-line-light.webp",
+        "alt": "A card whose line under the title reads Run by an automation and names the Nightly product audit"
+      },
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "card-words-terms-and-effect",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Cards explain your project's own terms and say what a change does",
+      "body": "When a card uses a name your project's code or people made up, it explains it in a few plain words or uses plain words instead. A card about a change says near its start whether people using your project will notice it, or whether it only changes how the project is built, checked or documented.",
+      "noPicture": "This changes the words your first mate and crew write on cards, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

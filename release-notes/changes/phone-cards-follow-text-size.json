@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "phone-cards-follow-text-size",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Cards on iPhone and iPad follow your Text Size",
+      "body": "A card's words on your iPhone or iPad now read at the phone's own size, and grow when you make text larger in iOS, up to its largest standard size; panels do too. Words inside a card's diagram keep their size. To make text larger in Infinitary alone, use Text Size in Control Center. Settings → Appearance says so under Theme.",
+      "picture": {
+        "dark": "phone-cards-follow-text-size-dark.webp",
+        "light": "phone-cards-follow-text-size-light.webp",
+        "alt": "A note card on an iPhone at the default Text Size, its body words drawn at the phone's 17-point size under its title"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

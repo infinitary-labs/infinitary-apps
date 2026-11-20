@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-localization-counts",
+      "reason": "Reconciles the localization check's initial file counts without changing app behavior."
+    }
+  ]
+}

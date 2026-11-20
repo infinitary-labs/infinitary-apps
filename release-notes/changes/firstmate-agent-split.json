@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "firstmate-agent-split",
+      "reason": "Internal: the first mate agent and its test are split into smaller files by owner, with repeated code folded into shared helpers and unused names removed; nothing a person sees changes."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "app-wiring-split",
+      "reason": "Internal: the app wiring splits into wiring modules by owner, with its development stand-ins read in one place; nothing a person sees changes."
+    }
+  ]
+}

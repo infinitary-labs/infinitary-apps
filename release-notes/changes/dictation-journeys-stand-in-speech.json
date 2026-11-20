@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "dictation-journeys-stand-in-speech",
+      "reason": "The end-to-end launcher now stands in the voice helper's speech library on every run, so the dictation journeys find dictation offered on a Linux arm64 computer under a virtual screen too. No shipped behavior changed."
+    }
+  ]
+}

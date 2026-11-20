@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-reveal-below-the-bar",
+      "reason": "Test infrastructure: the phone check scrolls a card's words below the top bar before it presses them, so a press on an iPhone on its side no longer lands on the bar, with no change to the app."
+    }
+  ]
+}

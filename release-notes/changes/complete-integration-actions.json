@@ -1,0 +1,11 @@
+{
+  "entries": [{
+    "id": "complete-integration-actions",
+    "kind": "fix",
+    "title": "An integration keeps every action its server offers",
+    "body": "Adding an integration whose server offers a long list of actions no longer fails. Checking an existing integration again keeps all its actions when the list grows, with the same approval rules.",
+    "area": "settings",
+    "noPicture": "The repair preserves the existing action list and controls; the change is complete discovery and invocation, not their appearance.",
+    "provenance": { "origin": "change" }
+  }]
+}

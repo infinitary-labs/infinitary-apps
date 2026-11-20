@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "merge-reminder-last-look",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate's reminder no longer stops an approved merge",
+      "body": "A timed reminder to check a merge again no longer stops a merge the app approved. Real waits still stop it. If the last check refuses a merge, the task records the reason, tells the first mate once and waits longer before trying again.",
+      "noPicture": "The change is in when an approved merge runs and how a refusal is recorded, not a screen layout.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,356 @@
+name: linux-packages
+
+# The Linux packages, built and checked (docs/linux-packages.md): an Ubuntu
+# package, a Fedora package and an AppImage for x64, the Arch recipe for
+# Arch and Omarchy, and the Nix package for NixOS. Each is installed on a
+# clean copy of its system, opened with Chromium's sandbox on, and runs a
+# crew turn with the system's git (scripts/check-linux-package.sh). The
+# packages stay on the run; nothing here uploads them anywhere else.
+#
+# It runs on request, for the captain to try or for a task whose change
+# edits how the packages are made, and inside every release (release.yml), at
+# the release's version from its one source commit: there the publication
+# job records and publishes exactly the files this run checked.
+# INF-2834's chosen fix: no pull request starts it, since every push re-ran
+# every package check. A task requests it once, at its final version, as it
+# requests its edited journeys (docs/testing.md, "What a task branch
+# requests"); docs/linux-packages.md, "The checks", lists the files that call
+# for it.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag or SHA to package (default - the selected ref)
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      trigger:
+        description: What started the caller's run, which every job name here leads with (scripts/ci-job-names.mjs)
+        type: string
+        default: ''
+      ref:
+        description: The release's source commit
+        required: true
+        type: string
+      version:
+        description: The release's logical version, X.Y.Z or X.Y.Z-alpha.N, which the packages carry and report
+        required: true
+        type: string
+      release_runner:
+        description: Publishing release package queue; empty keeps hosted routing
+        required: false
+        type: string
+        default: ""
+      hosted:
+        description: Run on GitHub's hosted Ubuntu, whatever LINUX_RUNNER says (docs/testing.md, "A release's hosted machines")
+        required: false
+        type: boolean
+        default: false
+    outputs:
+      sums:
+        description: >-
+          The build's SHA256SUMS, which a release's upload job and rehearsal
+          check their own download of the linux-packages artifact against
+          (.github/actions/linux-packages)
+        value: ${{ jobs.build.outputs.sums }}
+
+# Inside a release the packages belong to that run and are never cancelled
+# from outside it; otherwise a newer run of the same ref replaces an older.
+concurrency:
+  group: linux-packages-${{ github.workflow == 'release' && github.run_id || inputs.ref || github.ref }}
+  cancel-in-progress: ${{ github.workflow != 'release' }}
+
+permissions:
+  contents: read
+
+jobs:
+  # Each job's name leads with what started the run, or the caller's trigger
+  # (scripts/ci-job-names.mjs).
+  build:
+    name: ${{ format('{0} · Build Linux packages', (inputs.trigger || 'Manual request')) }}
+    # Every job runs where LINUX_RUNNER sends it (ci.yml says how), and on
+    # GitHub's hosted Ubuntu when it is unset or a release calls it without a release queue.
+    runs-on: ${{ inputs.release_runner || inputs.hosted && 'ubuntu-24.04' || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      # The list every check job compares its downloaded copy with, carried
+      # here so that comparison never trusts a list from the same download.
+      sums: ${{ steps.files.outputs.sums }}
+    steps:
+      # A refused checkout waits until GitHub takes the job's token again,
+      # then runs once more (docs/testing.md, "GitHub refusing a job's token").
+      - id: checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        continue-on-error: true
+        with: &build-checkout
+          ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: &wait-for-token |
+          # Asks the address the checkout's fetch reads, with the job's token
+          # as the checkout sends it, every 15 seconds for up to 10 minutes,
+          # then lets the checkout try once more. A failure GitHub's token
+          # did not cause, such as a missing commit, is tried again at once.
+          url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/info/refs?service=git-upload-pack"
+          patience="${CHECKOUT_PATIENCE_SECONDS:-600}"
+          pause="${CHECKOUT_PAUSE_SECONDS:-15}"
+          started=$SECONDS
+          while :; do
+            # The token reaches curl on its input, never on its command line.
+            answer="$(printf 'user = "x-access-token:%s"\n' "$TOKEN" |
+              curl --silent --location --output /dev/null --write-out '%{http_code}' \
+                --connect-timeout 30 --max-time 60 --config - --url "$url")" || true
+            if [[ "$answer" == 2?? ]]; then exit 0; fi
+            waited=$((SECONDS - started))
+            if ((waited >= patience)); then
+              echo "::warning title=GitHub still refuses the job's token::It answered $answer after ${waited}s; the checkout tries once more."
+              exit 0
+            fi
+            echo "GitHub answered $answer to the job's token after ${waited}s; asking again in ${pause}s"
+            sleep "$pause"
+          done
+      - name: Check out again
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: *build-checkout
+      # Every local action here comes from the workflow's own commit and runs
+      # against the source above: a stable builds its alpha's commit, which
+      # may predate an action this workflow uses (docs/linux-packages.md,
+      # "The checks"), with the fetch script the pnpm download runs beside
+      # them. It goes after the source, whose checkout would clear it.
+      - id: tooling
+        name: Check out the workflow's own actions
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        continue-on-error: true
+        with: &build-tooling
+          ref: ${{ github.sha }}
+          path: .release-tooling
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            .github/actions/
+            scripts/fetch-without-credential.sh
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.tooling.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Check out the workflow's own actions again
+        if: ${{ !cancelled() && steps.tooling.outcome == 'failure' }}
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: *build-tooling
+      - uses: ./.release-tooling/.github/actions/pnpm
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
+      # electron-builder makes the Fedora package with the system's rpmbuild.
+      # The machine's own automatic updates may hold apt's locks; the helper
+      # takes over from them (docs/testing.md, "The runner's automatic updates").
+      - run: scripts/apt-install.sh rpm
+        timeout-minutes: 10
+      - uses: ./.release-tooling/.github/actions/node-headers
+      - uses: ./.release-tooling/.github/actions/electron-download
+      - run: pnpm install --frozen-lockfile
+        # Scope Node headers to this install, never to Electron rebuilds.
+        env:
+          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
+      # A release's build carries the same diagnostics settings as its Mac
+      # build (docs/sharing.md); a package made to try carries none.
+      - run: pnpm build
+        env:
+          INFINITARY_UMAMI_HOST: ${{ inputs.version && (vars.INFINITARY_UMAMI_HOST || vars.FM3000_UMAMI_HOST) || '' }}
+          INFINITARY_UMAMI_WEBSITE_ID: ${{ inputs.version && (vars.INFINITARY_UMAMI_WEBSITE_ID || vars.FM3000_UMAMI_WEBSITE_ID) || '' }}
+          # The self-map names the version the running app reports; a
+          # package made to try reports the repository's.
+          INFINITARY_RELEASE_VERSION: ${{ inputs.version }}
+      # A release packages the notes job's verified catalog and its hero
+      # pictures, as its Mac build does, never the development placeholder
+      # `pnpm build` leaves (docs/release-notes.md).
+      - name: Fetch the verified release notes catalog
+        if: ${{ inputs.version }}
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: release-notes-catalog
+          path: ${{ runner.temp }}/release-notes
+      - name: Place the release notes catalog
+        if: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          cp "$RUNNER_TEMP/release-notes/release-notes.json" packaging/generated/release-notes.json
+          rm -rf packaging/generated/release-notes
+          mkdir -p packaging/generated/release-notes/pictures
+          # An artifact keeps no empty folder: a release with no pictured highlight has none.
+          if [[ -d "$RUNNER_TEMP/release-notes/release-notes/pictures" ]]; then
+            cp -R "$RUNNER_TEMP/release-notes/release-notes/pictures/." packaging/generated/release-notes/pictures/
+          fi
+      - id: version
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: echo "version=${RELEASE_VERSION:-$(node -p 'require("./package.json").version')}" >> "$GITHUB_OUTPUT"
+      # The AppImage tools, 7-Zip and fpm electron-builder downloads from
+      # GitHub's release server, from the Actions cache (docs/testing.md,
+      # "Downloads from GitHub's release server").
+      - uses: ./.release-tooling/.github/actions/electron-builder-tools
+      # The logical version rides in the packaged package.json, which the
+      # running app reports, as the Mac release's does.
+      #
+      # electron-builder downloads Electron's zip, and its SHASUMS256.txt,
+      # from GitHub's release server, past the one the install keeps in the
+      # Electron download step's cache: the alpha run 42464772458 failed on
+      # a 504 there. The workflow's own zip reader checks the cached zip
+      # against Electron's bundled checksums first
+      # (.github/actions/electron-download/zips.mjs), so electron-builder
+      # reads it there and downloads no checksum file.
+      - name: Build the Ubuntu package, the Fedora package and the AppImage
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          node .release-tooling/.github/actions/electron-download/zips.mjs linux x64
+          pnpm exec electron-builder --linux --config electron-builder.linux.yml --publish never \
+            -c.extraMetadata.version="$VERSION" \
+            -c.electronDownload.cache="$electron_config_cache" -c.electronDownload.isVerifyChecksum=false
+      # Whatever the build did, so a build that failed partway keeps the tools it fetched.
+      - name: Keep electron-builder's tools
+        if: ${{ !cancelled() }}
+        uses: ./.release-tooling/.github/actions/electron-builder-tools
+        with:
+          save: 'true'
+      - name: Verify the packaged release notes
+        if: ${{ inputs.version }}
+        env:
+          VERSION: ${{ inputs.version }}
+          SOURCE_COMMIT: ${{ inputs.ref }}
+        run: node scripts/release-notes.ts verify-package --catalog dist/linux-unpacked/resources/release-notes.json --version "$VERSION" --source "$SOURCE_COMMIT"
+      # SHA256SUMS lists every file a check job installs or builds from.
+      - name: Render the Arch recipe and the Nix package from the Ubuntu package
+        id: files
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir -p linux-packages
+          cp dist/*.deb dist/*.rpm dist/*.AppImage linux-packages/
+          node scripts/linux-recipes.ts render --version "$VERSION" \
+            --deb "$(ls linux-packages/*.deb)" --out linux-packages
+          (cd linux-packages && sha256sum *.deb *.rpm *.AppImage aur/PKGBUILD nix/package.nix > SHA256SUMS && cat SHA256SUMS)
+          { echo 'sums<<SUMS'; cat linux-packages/SHA256SUMS; echo SUMS; } >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: linux-packages
+          path: linux-packages/
+          if-no-files-found: error
+          # A request's packages serve only its own run; a release's stay 3
+          # days for a release that resumes.
+          retention-days: ${{ inputs.version && 3 || 1 }}
+
+  check:
+    name: ${{ format('{0} · Install and run {1}', (inputs.trigger || 'Manual request'), matrix.label) }}
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { system: ubuntu-host, runner: ubuntu-24.04, label: "package (Ubuntu 24.04 host)" }
+          - { system: ubuntu-host, runner: ubuntu-26.04, label: "package (Ubuntu 26.04 host)" }
+          - { system: ubuntu, runner: ubuntu-24.04, image: "ubuntu:24.04", label: "package (Ubuntu 24.04 container)" }
+          - { system: ubuntu, runner: ubuntu-24.04, image: "ubuntu:26.04", label: "package (Ubuntu 26.04 container)" }
+          - { system: fedora, runner: ubuntu-24.04, image: "fedora:latest", label: "package (Fedora; latest image)" }
+          - { system: arch, runner: ubuntu-24.04, image: "archlinux:latest", label: "package (Arch; latest image)" }
+          - { system: appimage, runner: ubuntu-24.04, image: "fedora:latest", label: "AppImage (Fedora; latest image)" }
+          - { system: nix, runner: ubuntu-24.04, label: "package (Nix on Ubuntu 24.04)" }
+    # The Ubuntu 26.04 leg runs on the PC's 26.04 job image, the
+    # LINUX_RUNNER label with -2604 (shell-pc-linux-2604); inside a release
+    # each leg takes the release queue when named, else its hosted machine.
+    runs-on: ${{ inputs.release_runner && (matrix.runner == 'ubuntu-26.04' && format('{0}-2604', inputs.release_runner) || inputs.release_runner) || !inputs.hosted && vars.LINUX_RUNNER && (matrix.runner == 'ubuntu-26.04' && format('{0}-2604', vars.LINUX_RUNNER) || vars.LINUX_RUNNER) || matrix.runner }}
+    steps:
+      - id: checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        continue-on-error: true
+        with: &check-checkout
+          ref: ${{ inputs.ref || github.ref }}
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Check out again
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: *check-checkout
+      # The workflow's own actions, as in the build job, with the scripts the
+      # pnpm download and the package check run beside them.
+      - id: tooling
+        name: Check out the workflow's own actions
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        continue-on-error: true
+        with: &check-tooling
+          ref: ${{ github.sha }}
+          path: .release-tooling
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            .github/actions/
+            scripts/fetch-without-credential.sh
+            scripts/linux-package-sums.ts
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.tooling.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Check out the workflow's own actions again
+        if: ${{ !cancelled() && steps.tooling.outcome == 'failure' }}
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: *check-tooling
+      - uses: ./.release-tooling/.github/actions/pnpm
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
+      - uses: ./.release-tooling/.github/actions/node-headers
+      - uses: ./.release-tooling/.github/actions/electron-download
+      - run: pnpm install --frozen-lockfile
+        # Scope Node headers to this install, never to Electron rebuilds.
+        env:
+          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
+      # The packages, checked against the build's own SHA256SUMS before
+      # anything installs them; a damaged copy is fetched once more
+      # (.github/actions/linux-packages, the workflow's own copy).
+      - uses: ./.release-tooling/.github/actions/linux-packages
+        with:
+          sums: ${{ needs.build.outputs.sums }}
+          path: ${{ runner.temp }}/linux-packages
+      # Without apt's recommended packages: ImageMagick's, Ghostscript and its
+      # fonts, are 25 MB the AppImage check's one screenshot never uses, and a
+      # slow mirror can stretch them past the step's limit (docs/testing.md,
+      # "The runner's automatic updates").
+      - name: Install the virtual screen
+        timeout-minutes: 10
+        run: scripts/apt-install.sh --no-install-recommends xvfb xdotool imagemagick
+      - if: matrix.system == 'nix'
+        uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086
+      - name: Install, open and run a crew turn
+        run: |
+          Xvfb :99 -screen 0 1920x1200x24 -ac &
+          export DISPLAY=:99
+          for _ in $(seq 1 20); do xdotool getmouselocation >/dev/null 2>&1 && break; sleep 0.5; done
+          scripts/check-linux-package.sh "$SYSTEM" "$RUNNER_TEMP/linux-packages" "$RUNNER_TEMP/evidence"
+        env:
+          SYSTEM: ${{ matrix.system }}
+          IMAGE: ${{ matrix.image }}
+          NIXPKGS: https://channels.nixos.org/nixos-26.05/nixexprs.tar.xz
+          VERSION: ${{ needs.build.outputs.version }}
+      - name: Keep the pictures and results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: linux-package-check-${{ matrix.system }}-${{ strategy.job-index }}
+          path: |
+            ${{ runner.temp }}/evidence/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14

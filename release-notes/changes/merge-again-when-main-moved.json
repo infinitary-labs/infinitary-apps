@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "merge-again-when-main-moved",
+      "kind": "fix",
+      "area": "projects",
+      "title": "An approved merge goes through on its own when other work merged first",
+      "body": "When GitHub turned down an approved merge because other work had just merged into the main branch, the merge waited about ten minutes for its crewmate to look, even though nothing needed fixing. The app now tries again on its own as soon as GitHub has caught up. A crewmate is asked only when the change really conflicts with the newer work.",
+      "noPicture": "The merge goes through sooner with no new view or control; only how long it waits changes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

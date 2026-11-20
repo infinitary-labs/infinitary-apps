@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "wait-chain-quiet",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A task waiting on work that is moving no longer looks stuck",
+      "body": "A task that waits on another task, which in turn waits for work already underway, now stays quiet until that work finishes: no stuck alert, no nudge to its crewmate and no message to your first mate. Once the work it waits on needs someone to start it, your first mate hears it and asks you. A crewmate can now name the tasks it waits on, and the app links them for you. A crewmate that says it is finished, with no card of its own up, is no longer nudged; your first mate is reminded to close the task. A check run a crewmate starts is watched even when starting it gave back no run number.",
+      "noPicture": "This changes when the app nudges a crewmate, tells the first mate or raises the stuck alert, not any view.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

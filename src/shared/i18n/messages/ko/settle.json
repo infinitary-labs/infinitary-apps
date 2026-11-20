@@ -1,0 +1,12 @@
+{
+  "settleCannotMerge": "병합할 수 없어요: {problem}",
+  "settleCouldNotDiscard": "폐기하지 못했어요: {problem}",
+  "settleDiscardedPullOpen": "폐기했어요. 끌어오기 요청은 프로젝트가 있는 곳에 아직 열려 있어요: {problem}",
+  "settleDiscardedPullOpenThen": "폐기했어요. 끌어오기 요청은 프로젝트가 있는 곳에 아직 열려 있어요: {problem}. {followup}",
+  "settleDiscarding": "폐기 중",
+  "settleDiscardingAfterTurn": "선원이 하던 일을 마치면 폐기해요",
+  "settleMerging": "병합 중",
+  "settleMergingAfterTurn": "선원이 하던 일을 마치면 병합해요",
+  "settleMergingChange": "{change} 병합 중",
+  "settleMergingChangeAfterTurn": "선원이 하던 일을 마치면 {change}을(를) 병합해요"
+}

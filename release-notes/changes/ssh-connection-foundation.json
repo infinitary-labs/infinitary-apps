@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "ssh-connection-foundation",
+      "reason": "Internal, behind the development-only multi-machine gate: a device dials its home at an address or through a private socket with the same keys, a Mac added by its address is found to be this Mac or another before its link exists, and the state for a computer the home reaches over its own SSH is kept. An installed app offers none of it."
+    }
+  ]
+}

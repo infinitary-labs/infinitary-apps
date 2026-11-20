@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "proxy-alias-check-line",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Adding a computer by an address your SSH reaches through a proxy works",
+      "body": "When your SSH settings reach an address through a proxy or a jump host, adding that computer by its address now shows its check line instead of saying it could not reach it. Infinitary reads the computer's key through the same proxy and signs in to nothing there before you say yes.",
+      "noPicture": "The add shows the same check line it already shows for any other computer; no view changes.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "panel-tasks-press-after-expand",
+      "reason": "A journey's wait before a native press into a side panel it just expanded now waits for the panel's own page to draw first; tests and their docs only, with no app behavior change."
+    }
+  ]
+}

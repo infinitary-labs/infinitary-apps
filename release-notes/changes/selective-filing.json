@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "selective-filing",
+      "kind": "improvement",
+      "title": "Fewer follow-up tasks pile up while crewmates work",
+      "body": "Crewmates now file a task only for a problem they can show or a real risk to your data, accounts or merges. Ideas that would only be nice to have stay in their reports, and Firstmate brings them to you together when they deserve your choice. When a merged change already does what another planned task asked, Firstmate closes that task.",
+      "area": "tasks",
+      "noPicture": "Nothing on screen changes: fewer tasks are filed and covered ones close over time.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

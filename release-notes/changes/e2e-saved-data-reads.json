@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "e2e-saved-data-reads",
+      "reason": "Journeys read the app's saved data through the one read-only reader, and the writer lint refuses a spec's own read-only open; tests and their docs only, with no app behavior change."
+    }
+  ]
+}

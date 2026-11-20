@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "task-browser-mixed-addresses",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A crewmate's browser opens sites that also have a private address",
+      "body": "A site whose name answers with both public and private addresses, as some do on a company VPN, now opens in a crewmate's browser through its public addresses; the private ones are never used. When the browser refuses a site, the crewmate now reads which address it led to and what kind of network that is, such as an office or VPN network, and that no setting allows private sites yet.",
+      "noPicture": "The change is in the words a crewmate reads and in which addresses its browser connects to; nothing on screen changes.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

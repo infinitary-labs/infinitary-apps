@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "alpha-notes-tooling-shared-modules",
+      "reason": "Release work: an alpha's release-notes check and catalog now check out the shared modules the notes tool imports, so a cut no longer stops before anything is built; nothing a person sees in the app changes."
+    }
+  ]
+}

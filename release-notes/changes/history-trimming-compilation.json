@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "history-trimming-compilation",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Smoother work on long-running tasks",
+      "body": "Infinitary does less history-trimming work when saving guidance, reducing brief pauses on long-running tasks.",
+      "noPicture": "This reduces synchronous history-trimming work without changing a visible view.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

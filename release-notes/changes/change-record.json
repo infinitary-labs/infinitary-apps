@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "change-record",
+      "reason": "Internal: the app now keeps a typed record of the change each open task carries, projected from facts it already saved; nothing a person sees changes."
+    }
+  ]
+}

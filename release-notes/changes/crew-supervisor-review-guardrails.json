@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crew-supervisor-review-guardrails",
+      "reason": "Internal: tests pin the crew supervisor's repair assessments, review verdicts and placed review reads before they move out of the supervisor; only tests change and nothing a person sees changes."
+    }
+  ]
+}

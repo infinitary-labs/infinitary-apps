@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-reads-your-mac",
+      "reason": "The A phone button in Devices, its code to scan and the phone app reading a Mac's cards and Activity. Installed builds hide the button until the phone app is on TestFlight (phone-chip-waits-for-testflight), so nobody on a release notices it; its note comes back when the button does."
+    }
+  ]
+}

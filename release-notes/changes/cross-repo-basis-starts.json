@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "cross-repo-basis-starts",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Work built on a task in another repository now starts",
+      "body": "A task built on earlier work from a different repository no longer refuses to start. It starts from its own repository's code with the earlier task's reports and card, and its crewmate is told where that earlier work lives.",
+      "noPicture": "The change is in what a crewmate is told when its task starts; nothing on screen changes.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

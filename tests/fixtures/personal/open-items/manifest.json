@@ -1,0 +1,6 @@
+{
+  "title": "Open items",
+  "api": 2,
+  "placement": { "x": "right", "y": "top" },
+  "presence": { "store": "items", "when": "nonEmpty" }
+}

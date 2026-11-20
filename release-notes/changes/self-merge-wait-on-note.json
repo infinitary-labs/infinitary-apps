@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "self-merge-wait-on-note",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Work that merges on its own no longer stalls before its merge",
+      "body": "When a crewmate finished work that merges on its own and said it was waiting for you to read its note, your first mate's merge was turned away as if a question for you were still open. That note only shows once the merge is done, so the work sat unmerged. Your first mate now merges it, and the note shows as usual once it has.",
+      "noPicture": "The change is that a merge goes through instead of being turned away; no card or view looks different.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

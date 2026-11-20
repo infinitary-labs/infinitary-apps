@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "trim-prompt-budget-merge-rules",
+      "reason": "Shortens the instructions served to agents without changing a visible view."
+    }
+  ]
+}

@@ -1,0 +1,515 @@
+[
+  {
+    "name": "no arrangement, each where it asks",
+    "layout": {
+      "collapsedPanels": {},
+      "hiddenPanels": {},
+      "placements": {}
+    },
+    "panels": [
+      {
+        "id": "open-prs",
+        "preferred": {
+          "x": "left",
+          "y": "top"
+        },
+        "order": 100
+      },
+      {
+        "id": "quota-glance",
+        "preferred": {
+          "x": "right",
+          "y": "top"
+        },
+        "order": 20
+      },
+      {
+        "id": "crew-reports",
+        "preferred": {
+          "x": "left",
+          "y": "top"
+        },
+        "order": 100
+      },
+      {
+        "id": "tokyo-clock",
+        "preferred": {
+          "x": "left",
+          "y": "bottom"
+        },
+        "order": 5
+      },
+      {
+        "id": "token-watch",
+        "preferred": {
+          "x": "right",
+          "y": "bottom"
+        },
+        "order": 50
+      },
+      {
+        "id": "token-watch-2",
+        "preferred": {
+          "x": "right",
+          "y": "bottom"
+        },
+        "order": 50
+      },
+      {
+        "id": "now-playing",
+        "preferred": {
+          "x": "left",
+          "y": "bottom"
+        },
+        "order": 7
+      }
+    ],
+    "column": [
+      "crew-reports",
+      "open-prs",
+      "tokyo-clock",
+      "now-playing",
+      "quota-glance",
+      "token-watch",
+      "token-watch-2"
+    ]
+  },
+  {
+    "name": "no arrangement, a saved placement moves one",
+    "layout": {
+      "collapsedPanels": {},
+      "hiddenPanels": {},
+      "placements": {
+        "open-prs": {
+          "x": "right",
+          "y": "bottom"
+        }
+      }
+    },
+    "panels": [
+      {
+        "id": "open-prs",
+        "preferred": {
+          "x": "left",
+          "y": "top"
+        },
+        "order": 100
+      },
+      {
+        "id": "quota-glance",
+        "preferred": {
+          "x": "right",
+          "y": "top"
+        },
+        "order": 20
+      },
+      {
+        "id": "crew-reports",
+        "preferred": {
+          "x": "left",
+          "y": "top"
+        },
+        "order": 100
+      },
+      {
+        "id": "tokyo-clock",
+        "preferred": {
+          "x": "left",
+          "y": "bottom"
+        },
+        "order": 5
+      },
+      {
+        "id": "token-watch",
+        "preferred": {
+          "x": "right",
+          "y": "bottom"
+        },
+        "order": 50
+      },
+      {
+        "id": "token-watch-2",
+        "preferred": {
+          "x": "right",
+          "y": "bottom"
+        },
+        "order": 50
+      },
+      {
+        "id": "now-playing",
+        "preferred": {
+          "x": "left",
+          "y": "bottom"
+        },
+        "order": 7
+      }
+    ],
+    "column": [
+      "crew-reports",
+      "tokyo-clock",
+      "now-playing",
+      "quota-glance",
+      "token-watch",
+      "token-watch-2",
+      "open-prs"
+    ]
+  },
+  {
+    "name": "no arrangement, More picks rank top and bottom",
+    "layout": {
+      "collapsedPanels": {},
+      "hiddenPanels": {},
+      "placements": {},
+      "panelOrder": [
+        "crew-reports",
+        "now-playing",
+        "tokyo-clock"
+      ]
+    },
+    "panels": [
+      {
+        "id": "open-prs",
+        "preferred": {
+          "x": "left",
+          "y": "top"
+        },
+        "order": 100
+      },
+      {
+        "id": "quota-glance",
+        "preferred": {
+          "x": "right",
+          "y": "top"
+        },
+        "order": 20
+      },
+      {
+        "id": "crew-reports",
+        "preferred": {
+          "x": "left",
+          "y": "top"
+        },
+        "order": 100
+      },
+      {
+        "id": "tokyo-clock",
+        "preferred": {
+          "x": "left",
+          "y": "bottom"
+        },
+        "order": 5
+      },
+      {
+        "id": "token-watch",
+        "preferred": {
+          "x": "right",
+          "y": "bottom"
+        },
+        "order": 50
+      },
+      {
+        "id": "token-watch-2",
+        "preferred": {
+          "x": "right",
+          "y": "bottom"
+        },
+        "order": 50
+      },
+      {
+        "id": "now-playing",
+        "preferred": {
+          "x": "left",
+          "y": "bottom"
+        },
+        "order": 7
+      }
+    ],
+    "column": [
+      "crew-reports",
+      "open-prs",
+      "tokyo-clock",
+      "now-playing",
+      "quota-glance",
+      "token-watch",
+      "token-watch-2"
+    ]
+  },
+  {
+    "name": "an arrangement lists them all",
+    "layout": {
+      "collapsedPanels": {},
+      "hiddenPanels": {},
+      "placements": {},
+      "arrangement": {
+        "left": {
+          "top": [
+            "tokyo-clock",
+            "open-prs"
+          ],
+          "bottom": [
+            "crew-reports"
+          ]
+        },
+        "right": {
+          "top": [
+            "token-watch",
+            "quota-glance"
+          ],
+          "bottom": [
+            "now-playing",
+            "token-watch-2"
+          ]
+        }
+      }
+    },
+    "panels": [
+      {
+        "id": "open-prs",
+        "preferred": {
+          "x": "left",
+          "y": "top"
+        },
+        "order": 100
+      },
+      {
+        "id": "quota-glance",
+        "preferred": {
+          "x": "right",
+          "y": "top"
+        },
+        "order": 20
+      },
+      {
+        "id": "crew-reports",
+        "preferred": {
+          "x": "left",
+          "y": "top"
+        },
+        "order": 100
+      },
+      {
+        "id": "tokyo-clock",
+        "preferred": {
+          "x": "left",
+          "y": "bottom"
+        },
+        "order": 5
+      },
+      {
+        "id": "token-watch",
+        "preferred": {
+          "x": "right",
+          "y": "bottom"
+        },
+        "order": 50
+      },
+      {
+        "id": "token-watch-2",
+        "preferred": {
+          "x": "right",
+          "y": "bottom"
+        },
+        "order": 50
+      },
+      {
+        "id": "now-playing",
+        "preferred": {
+          "x": "left",
+          "y": "bottom"
+        },
+        "order": 7
+      }
+    ],
+    "column": [
+      "tokyo-clock",
+      "open-prs",
+      "crew-reports",
+      "token-watch",
+      "quota-glance",
+      "now-playing",
+      "token-watch-2"
+    ]
+  },
+  {
+    "name": "an arrangement, new panels land at each slot's middle",
+    "layout": {
+      "collapsedPanels": {},
+      "hiddenPanels": {},
+      "placements": {},
+      "arrangement": {
+        "left": {
+          "top": [
+            "tasks",
+            "open-prs"
+          ],
+          "bottom": [
+            "activity"
+          ]
+        },
+        "right": {
+          "top": [],
+          "bottom": [
+            "token-watch"
+          ]
+        }
+      }
+    },
+    "panels": [
+      {
+        "id": "open-prs",
+        "preferred": {
+          "x": "left",
+          "y": "top"
+        },
+        "order": 100
+      },
+      {
+        "id": "quota-glance",
+        "preferred": {
+          "x": "right",
+          "y": "top"
+        },
+        "order": 20
+      },
+      {
+        "id": "crew-reports",
+        "preferred": {
+          "x": "left",
+          "y": "top"
+        },
+        "order": 100
+      },
+      {
+        "id": "tokyo-clock",
+        "preferred": {
+          "x": "left",
+          "y": "bottom"
+        },
+        "order": 5
+      },
+      {
+        "id": "token-watch",
+        "preferred": {
+          "x": "right",
+          "y": "bottom"
+        },
+        "order": 50
+      },
+      {
+        "id": "token-watch-2",
+        "preferred": {
+          "x": "right",
+          "y": "bottom"
+        },
+        "order": 50
+      },
+      {
+        "id": "now-playing",
+        "preferred": {
+          "x": "left",
+          "y": "bottom"
+        },
+        "order": 7
+      }
+    ],
+    "column": [
+      "open-prs",
+      "crew-reports",
+      "tokyo-clock",
+      "now-playing",
+      "quota-glance",
+      "token-watch-2",
+      "token-watch"
+    ]
+  },
+  {
+    "name": "an arrangement lists one panel twice",
+    "layout": {
+      "collapsedPanels": {},
+      "hiddenPanels": {},
+      "placements": {},
+      "arrangement": {
+        "left": {
+          "top": [
+            "open-prs",
+            "quota-glance"
+          ],
+          "bottom": [
+            "open-prs"
+          ]
+        },
+        "right": {
+          "top": [],
+          "bottom": []
+        }
+      }
+    },
+    "panels": [
+      {
+        "id": "open-prs",
+        "preferred": {
+          "x": "left",
+          "y": "top"
+        },
+        "order": 100
+      },
+      {
+        "id": "quota-glance",
+        "preferred": {
+          "x": "right",
+          "y": "top"
+        },
+        "order": 20
+      },
+      {
+        "id": "crew-reports",
+        "preferred": {
+          "x": "left",
+          "y": "top"
+        },
+        "order": 100
+      },
+      {
+        "id": "tokyo-clock",
+        "preferred": {
+          "x": "left",
+          "y": "bottom"
+        },
+        "order": 5
+      },
+      {
+        "id": "token-watch",
+        "preferred": {
+          "x": "right",
+          "y": "bottom"
+        },
+        "order": 50
+      },
+      {
+        "id": "token-watch-2",
+        "preferred": {
+          "x": "right",
+          "y": "bottom"
+        },
+        "order": 50
+      },
+      {
+        "id": "now-playing",
+        "preferred": {
+          "x": "left",
+          "y": "bottom"
+        },
+        "order": 7
+      }
+    ],
+    "column": [
+      "open-prs",
+      "quota-glance",
+      "crew-reports",
+      "tokyo-clock",
+      "now-playing",
+      "token-watch",
+      "token-watch-2"
+    ]
+  }
+]

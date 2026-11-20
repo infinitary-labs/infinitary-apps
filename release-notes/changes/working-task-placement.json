@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "working-task-placement",
+      "kind": "fix",
+      "title": "Working tasks stay under Working",
+      "body": "Putting a card aside no longer moves a task to Waiting on you while its crewmate works or owes you a reply. Ready choices still stay visible, and opening the working task brings its card back.",
+      "area": "tasks",
+      "picture": {
+        "dark": "working-task-placement-dark.webp",
+        "light": "working-task-placement-light.webp",
+        "alt": "Tasks shows the launch reply under Working and a separate ready choice under Waiting on you."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

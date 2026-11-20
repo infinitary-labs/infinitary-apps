@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "panel-key-reminder",
+      "kind": "improvement",
+      "title": "Clicking a task board control shows its key too",
+      "body": "When you click Backlog, Done · 7d, Dropped or a task's ⋯ on the task board, the bottom of the window now shows the key you gave that command, as it already did for the window's own buttons. Pressing the key once stops it, and the switch in Settings, Keyboard turns it off. Panels you make show their own commands' keys the same way.",
+      "area": "tasks",
+      "picture": {
+        "dark": "panel-key-reminder-dark.webp",
+        "light": "panel-key-reminder-light.webp",
+        "alt": "After a click on the task board's Backlog, the bottom of the window shows its key F8 and Show the backlog"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

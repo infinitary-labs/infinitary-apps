@@ -1,0 +1,11 @@
+Test Suite 'Selected tests' started at 2026-11-04 23:16:00.403.
+Test Suite 'InfinitaryUITests.xctest' started at 2026-11-04 23:16:00.403.
+Test Suite 'PhoneJourney' started at 2026-11-04 23:16:00.403.
+Test Case '-[InfinitaryUITests.PhoneJourney testJoinAndRead]' started.
+Test Case '-[InfinitaryUITests.PhoneJourney testJoinAndRead]' passed (93.243 seconds).
+Test Suite 'PhoneJourney' passed at 2026-11-04 23:17:33.651.
+	 Executed 1 test, with 0 failures (0 unexpected) in 93.243 (93.248) seconds
+Test Suite 'InfinitaryUITests.xctest' passed at 2026-11-04 23:17:33.651.
+	 Executed 1 test, with 0 failures (0 unexpected) in 93.243 (93.248) seconds
+Test Suite 'Selected tests' passed at 2026-11-04 23:17:33.652.
+	 Executed 1 test, with 0 failures (0 unexpected) in 93.243 (93.249) seconds

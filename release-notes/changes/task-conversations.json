@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "task-conversations",
+      "kind": "improvement",
+      "area": "tasks",
+      "title": "Your crew can find earlier task conversations",
+      "body": "Your crew can look up a task's conversations, including those before a move or a fresh start. A stronger-model attempt names the earlier task so its conversations can be found too.",
+      "noPicture": "This changes the crew's task lookup, not an application view.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

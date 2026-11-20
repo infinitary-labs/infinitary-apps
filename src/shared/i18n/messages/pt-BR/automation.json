@@ -1,0 +1,39 @@
+{
+  "automationEventsSkipped": "Eventos ignorados",
+  "automationPanelActiveCount": {
+    "plural": "count",
+    "one": "{count} ativa",
+    "many": "{count} ativas",
+    "other": "{count} ativas"
+  },
+  "automationPanelEmpty": "Nenhuma automação ainda",
+  "automationPanelKeptCount": {
+    "plural": "count",
+    "one": "{count} mantida",
+    "many": "{count} mantidas",
+    "other": "{count} mantidas"
+  },
+  "automationPanelKeptHeading": "Continua rodando",
+  "automationPanelKeptRow": "{label} · {computer} · Abrir nos Ajustes",
+  "automationPanelListLabel": "Automações",
+  "automationPanelPausedCount": {
+    "plural": "count",
+    "one": "{count} pausada",
+    "many": "{count} pausadas",
+    "other": "{count} pausadas"
+  },
+  "automationPanelUnreadableSummary": "não pode ser lida",
+  "automationRunAlsoSkipped": "{count} ignorados",
+  "automationRunFound": "Encontrado: {words}",
+  "automationRunSkipped": {
+    "plural": "count",
+    "one": "{count} evento, {date}",
+    "many": "{count} eventos, {date}",
+    "other": "{count} eventos, {date}"
+  },
+  "automationRunSkippedState": "Ignorado",
+  "automationScreenedNote": "Não enviado ao seu imediato: o modelo de decisão leu estes eventos como claramente fora da condição Somente se desta automação.",
+  "automationWaitsFor": "Somente se",
+  "automationWaitsForNote": "Seu imediato só age nos eventos que atendem a isto. Enquanto o filtro de eventos estiver ativado nos Ajustes, um evento que claramente não atende a isto não chega ao seu imediato e continua no histórico desta automação.",
+  "automationWaitsForPlaceholder": "Todo evento"
+}

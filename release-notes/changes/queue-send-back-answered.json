@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "queue-send-back-answered",
+      "kind": "fix",
+      "title": "A change your project's queue sent back goes back in without a new card",
+      "body": "When your project's queue sends a change back after you approved it, and its crewmate finds nothing left to fix on that version, the crewmate now puts it back in the queue under your approval. You see a line in Activity instead of a second merge card that no button could clear.",
+      "area": "crewmates",
+      "noPicture": "The change removes a card and adds one Activity line after a queue answer, which no single picture shows apart from an ordinary Activity list.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

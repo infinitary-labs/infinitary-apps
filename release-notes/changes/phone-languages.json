@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "phone-languages",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Infinitary on iPhone and iPad speaks your language",
+      "body": "Infinitary on iPhone and iPad now speaks the same languages as on your Mac: Arabic, Chinese (Simplified and Traditional), English, French, German, Japanese, Korean, Portuguese (Brazil) and Spanish. It follows your phone's language, and Settings → Appearance → Language opens Infinitary's page in iOS Settings to choose another. In Arabic the app reads right to left. Your crew still writes in your Mac's language.",
+      "picture": {
+        "dark": "phone-languages-dark.webp",
+        "light": "phone-languages-light.webp",
+        "alt": "Settings → Appearance on iPhone in Arabic, laid out right to left: the theme choice, then the Language heading, a line saying it is set on Infinitary's page in iOS Settings, and a row naming Arabic with its arrow pointing left."
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

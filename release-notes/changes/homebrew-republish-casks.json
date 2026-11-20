@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "homebrew-republish-casks",
+      "reason": "Release distribution: a workflow republishes both Homebrew casks at their published versions when how they are written changes, so older Homebrew can upgrade; no app screen changes."
+    }
+  ]
+}

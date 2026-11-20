@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "test-workers-memory-bound",
+      "reason": "Developer tooling only: the project's unit tests start no more workers at once than the computer's memory holds, so a run no longer exhausts a small Linux check machine's memory and loses a test file midway. Nothing in the app changes."
+    }
+  ]
+}

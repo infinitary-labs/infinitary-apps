@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "keychain-reap-test-mark",
+      "reason": "Test repair only: the saved-password reader's reap test waits on a mark it watches as a file, not a folder's watch, which macOS can hold or drop. Nothing a person uses changes."
+    }
+  ]
+}

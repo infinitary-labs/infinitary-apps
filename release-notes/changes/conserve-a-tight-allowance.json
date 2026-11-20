@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "conserve-a-tight-allowance",
+      "kind": "improvement",
+      "title": "Crewmates move off an allowance that would run out before it resets",
+      "body": "When one of your subscriptions is on track to run out before its next reset, new crewmates now start on another subscription at the same level that will last, even when the first has more weekly allowance left to use. Your own model choices, and crewmates already working, stay as they are.",
+      "area": "subscriptions",
+      "noPicture": "This changes which model a new crewmate starts on, not any view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

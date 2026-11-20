@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "personal-runbooks-answer-wait",
+      "reason": "The personal runbooks journey now waits for the first mate's answer to each ask before reading what was served, instead of the character looking idle, which a relaunched first mate shows before its turn starts. Only how the project is checked changes."
+    }
+  ]
+}

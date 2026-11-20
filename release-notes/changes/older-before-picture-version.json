@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "older-before-picture-version",
+      "reason": "Internal: a crewmate's change story may keep a Before picture taken on an earlier version under that version, with its reason, beside the story's unchanged comparison base; the published story looks the same and nothing a person sees changes."
+    }
+  ]
+}

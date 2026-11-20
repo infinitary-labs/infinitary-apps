@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "click-opens-window-when-background-busy",
+      "kind": "fix",
+      "area": "other",
+      "title": "Infinitary opens when you click it, even while the background work is stuck",
+      "body": "On a Mac, clicking Infinitary in the Dock, Spotlight or Finder could open nothing when the program that keeps your crew working in the background was busy or stuck. That program now runs as a separate part of the app, so a click always opens the window. A background program started by an earlier version still catches clicks until it stops, for example after a restart of your Mac.",
+      "noPicture": "The window that opens is the usual one; what changed is which part of the app a click reaches.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

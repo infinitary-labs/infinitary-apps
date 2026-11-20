@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "bitbucket-sign-in",
+      "kind": "feature",
+      "title": "Sign in to Bitbucket and add its projects",
+      "body": "Settings → Integrations now offers Bitbucket. Paste an API token you make on your Atlassian account, and the form lists the scopes to tick. Add project then lists the repositories of the Bitbucket workspaces you belong to, newest first, says so when it could not check them all, and clones the one you pick with that sign-in. A computer that runs work can keep its own Bitbucket sign-in too. Your crew still sends a Bitbucket project's work up as a branch; pull requests there come later.",
+      "area": "projects",
+      "picture": {
+        "dark": "bitbucket-sign-in-dark.webp",
+        "light": "bitbucket-sign-in-light.webp",
+        "alt": "Settings → Integrations with the Bitbucket form open under the chips: the scopes to tick, the bitbucket.org address, a Make a key on id.atlassian.com button and an empty key field."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

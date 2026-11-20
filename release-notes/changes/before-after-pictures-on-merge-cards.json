@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "before-after-pictures-on-merge-cards",
+      "kind": "improvement",
+      "title": "Merge cards show before and after pictures of what changed",
+      "body": "When a crewmate offers a change you can see, its card now shows a picture of each changed view as it was and as it is now, as many as the change needs. Something new carries a New tag and needs no picture of before. A change with nothing to see says why in one sentence.",
+      "highlight": 3,
+      "area": "cards",
+      "picture": {
+        "dark": "before-after-pictures-on-merge-cards-dark.webp",
+        "light": "before-after-pictures-on-merge-cards-light.webp",
+        "alt": "A crewmate's merge card with a picture under Before and a picture marked New under After"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

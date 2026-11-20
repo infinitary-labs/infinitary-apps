@@ -1,0 +1,12 @@
+{
+  "settleCannotMerge": "無法合併：{problem}",
+  "settleCouldNotDiscard": "無法捨棄：{problem}",
+  "settleDiscardedPullOpen": "已捨棄。它的 pull request 在專案所在處仍是開啟的：{problem}",
+  "settleDiscardedPullOpenThen": "已捨棄。它的 pull request 在專案所在處仍是開啟的：{problem}。{followup}",
+  "settleDiscarding": "正在捨棄",
+  "settleDiscardingAfterTurn": "等負責的船員做完手邊的事，就會捨棄",
+  "settleMerging": "正在合併",
+  "settleMergingAfterTurn": "等負責的船員做完手邊的事，就會合併",
+  "settleMergingChange": "正在合併 {change}",
+  "settleMergingChangeAfterTurn": "等負責的船員做完手邊的事，就合併 {change}"
+}

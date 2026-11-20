@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "queue-end-sent-back-run",
+      "kind": "fix",
+      "area": "projects",
+      "title": "A failed batch ends sooner when a change is sent back",
+      "body": "When a change is sent back from a batch that already has a failed check, the queue now ends that run and checks the remaining changes in the next batch immediately. This applies to newly set up queues and queue updates on GitHub and GitLab.",
+      "noPicture": "This changes when a project's batch checks end, not any screen in the app.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

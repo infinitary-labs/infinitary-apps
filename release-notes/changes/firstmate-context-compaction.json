@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "firstmate-context-compaction",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Your first mate keeps answering long conversations",
+      "body": "Your first mate now summarizes long conversations automatically at 300,000 tokens, or earlier on smaller models. If a conversation still exceeds the model's limit, it continues in a new conversation with recent context instead of repeatedly failing on hello. Your own Claude settings no longer turn this off inside Infinitary.",
+      "noPicture": "This changes automatic conversation summarization and recovery, not a distinct screen or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

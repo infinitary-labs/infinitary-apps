@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "preview-checks-other-version",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate's preview no longer calls a new version's checks passed",
+      "body": "After a crewmate pushes a new version of its pull request, the preview you see when you point at the crewmate says its checks are not read for this version, as the task card does, until the app reads them again. Before, it showed the earlier version's result, such as passed. The same holds on iPhone and iPad.",
+      "picture": {
+        "dark": "preview-checks-other-version-dark.webp",
+        "light": "preview-checks-other-version-light.webp",
+        "alt": "A crewmate's preview ends with the model Nano Banana Pro, then pull request #612 with an empty dot and the words not read for this version."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

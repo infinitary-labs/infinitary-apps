@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "startup-queue-kind",
+      "reason": "Internal: the pull request's Linux startup check can be sent to the PC's pull request line through the repository's queue setting; nothing a person sees in the app changes."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "activity-line-keeps-focus",
+      "kind": "fix",
+      "title": "The collapsed Activity line keeps your keyboard place when a newer line arrives",
+      "body": "When you reach the line in a collapsed Activity panel's header with the keyboard, a newer line now takes your place there instead of sending you back to the message box, so pressing Enter still opens the panel.",
+      "area": "settings",
+      "noPicture": "Where the keyboard's place stays while one line replaces another cannot show in a still picture.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

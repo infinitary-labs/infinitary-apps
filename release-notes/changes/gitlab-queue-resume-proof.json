@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "gitlab-queue-resume-proof",
+      "reason": "Test-only repair: explicitly order the GitLab queue journey's Resume confirmation and pause refresh without changing app behavior or weakening either assertion."
+    }
+  ]
+}

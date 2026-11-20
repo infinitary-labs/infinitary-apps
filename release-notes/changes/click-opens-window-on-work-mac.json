@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "click-opens-window-on-work-mac",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Infinitary opens when you click it on a Mac that does crew work for another computer",
+      "body": "On a Mac that does crew work for your first mate on another computer, clicking Infinitary in the Dock, Spotlight or Finder could open nothing. It now opens the window, which shows your first mate on that other computer. If no window opens right after this update, restart the Mac once.",
+      "noPicture": "The window that opens is the usual one; what changed is that a click now opens it.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

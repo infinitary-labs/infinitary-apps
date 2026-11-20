@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "validation-resource-consent",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Checks can ask to use your sign-in",
+      "body": "When a check needs your sign-in or another sensitive or costly resource, your crewmate asks you on a card instead of ruling it out. Your approval covers that sign-in for the rest of the task. Keychain and signing access ask first too.",
+      "noPicture": "This changes the crew's instructions, not a fixed screen or control.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

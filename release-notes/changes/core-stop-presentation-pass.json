@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "core-stop-presentation-pass",
+      "reason": "Internal: the core's stop now stops the board's presentation pass too, so a write that lands after the app quits, such as a background job's exit or a closed task's temporary-folder sweep, runs no pass and logs nothing; this fixes an integration test file that failed after every test passed, and nothing a person sees changes."
+    }
+  ]
+}

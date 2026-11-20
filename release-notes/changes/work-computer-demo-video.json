@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "work-computer-demo-video",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A video from another computer can go on a card",
+      "body": "A crewmate working on another computer could not put a video on its card, so the card showed only pictures. Once that computer is updated, a video that plays can go on the card.",
+      "noPicture": "The card plays a video the same way it always has; this only lets a crewmate on another computer attach one.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

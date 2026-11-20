@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "branch-check-arm64-guests",
+      "reason": "How the project checks its own changes: the branch check's browser tests find a card's frame and its reveal highlight reliably on an arm64 Linux runner, and the testing guide names the branch check's second place; nothing in the app changes."
+    }
+  ]
+}

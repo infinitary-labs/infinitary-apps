@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "hold-started-task",
+      "kind": "improvement",
+      "title": "A task that only waits is held, not flagged as stuck",
+      "body": "When a started task waits on something a message cannot speed, such as a long run on another computer, Firstmate can now hold it until a set time. While it is held, no reminders go out and no stuck-task card asks you about it, unless you replied to the task and it has not answered yet. If it is still held at that time, the crewmate carries on where it stopped; any new turn of the task ends the hold sooner. The task's Info shows what it waits for and when the hold ends.",
+      "area": "tasks",
+      "picture": {
+        "dark": "hold-started-task-dark.webp",
+        "light": "hold-started-task-light.webp",
+        "alt": "A task's Info naming what the held task waits for and the time its hold ends"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

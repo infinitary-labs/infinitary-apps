@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "calmer-settings",
+      "kind": "improvement",
+      "title": "Settings looks calmer on a Mac",
+      "body": "On a Mac, where the desktop shows through the window, Settings dims the background while it is open, so its rows no longer stand out as dark slabs. Each section's rows now sit together in one softer box, parted by thin lines, and the quieter labels are easier to read on any wallpaper. Leaving Settings brings the window back to your chosen wash.",
+      "area": "settings",
+      "picture": {
+        "dark": "calmer-settings-dark.webp",
+        "light": "calmer-settings-light.webp",
+        "alt": "Settings, General, with its six rows grouped in one softly filled box parted by thin lines, beside the list of tabs"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

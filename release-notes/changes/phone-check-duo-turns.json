@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-check-duo-turns",
+      "reason": "Test infrastructure: the phone check turns the open iPhone Duo onto its side and back several times and checks that Home's card keeps its place and width, with no change to the app."
+    }
+  ]
+}

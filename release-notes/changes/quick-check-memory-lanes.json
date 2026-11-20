@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "quick-check-memory-lanes",
+      "reason": "Developer tooling only: the quick check run before a push starts no more steps at once than the computer's memory holds, so it no longer runs a small Linux check machine out of memory. Nothing in the app changes."
+    }
+  ]
+}

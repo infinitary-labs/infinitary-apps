@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "version-row-never-waits",
+      "kind": "fix",
+      "area": "settings",
+      "title": "Settings always shows the version you are running",
+      "body": "The Version row in Settings could stay on Reading the version… after a short break in the window's connection to your first mate. It now names the version you are running as soon as it opens, and the window asks again for your release notes, and for whether Devices and Secrets are offered, each time that connection comes back.",
+      "noPicture": "Once the notes are read the row looks as it did; it only stops showing Reading the version… while they are not.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

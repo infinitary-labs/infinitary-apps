@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "no-shell-merge",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Asking for a merge past your branch rules brings up the card for your click",
+      "body": "When you ask your first mate for a merge past your project's branch rules, such as an admin merge on GitHub, your crewmate now puts up the card that names each rule it skips, and the merge goes when you click it. Before, a crewmate could merge it another way, without that card. A merge command you write out yourself still runs as you wrote it, without the card.",
+      "noPicture": "The card that comes up is the existing merge card that skips the branch rules; only how the crew reaches it changes.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

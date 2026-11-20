@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "phone-pager-pick-lands",
+      "kind": "fix",
+      "area": "devices",
+      "title": "A card picked from the count's menu on your iPhone or iPad always shows",
+      "body": "On your iPhone and iPad, a quick tap on a card in the menu under the card count sometimes did nothing and left the menu open, most often just after a new card arrived. The tap now shows that card every time.",
+      "noPicture": "The count and its menu look as they did; only a tap that was lost now shows its card.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+// The hand-labelled sample for intelligence-bucket routing S3. Every row is
+// a real `spawn_crewmate` from the captain's Sep 4 and Sep 14 dogfood
+// evenings (`tests/fixtures/replay/*-real`), labelled by reading the goal
+// against the work-kind vocabulary, with one tie-break rule
+// applied throughout: the kind follows the DELIVERABLE the goal asks for.
+// Bounded fact lookup is retrieval; causal explanation is research even
+// about a bug. A correction is fix even when it also asks why. `chore` is kept for work with no product decision in it.
+// `key` is sha256(title\ngoal\nuser_words) truncated to 12, so a label can
+// never drift onto another row. Re-list the corpus with `pnpm score:kinds --dry`.
+{"key":"4dd2545d4f5f","kind":"research","note":"Diagnose Merge PR buttons - a factual code-path report, no change asked for"}
+{"key":"cedf095eb2a8","kind":"research","note":"Check if PR 58 merged - report the state and why the card vanished"}
+{"key":"ad97190457bd","kind":"plan","note":"Instant feedback on card actions - a written proposal applied as a principle"}
+{"key":"c2933ab1245c","kind":"research","note":"Why duplicate PR 58 cards - explain, and whether the fix is in the running app"}
+{"key":"aa9629623d8b","kind":"chore","note":"Merge the PRs the fake buttons missed - mechanical, no design in it"}
+{"key":"d83051d5aa3d","kind":"fix","note":"Stop reports being truncated - correcting behaviour that is wrong"}
+{"key":"5cb065f61025","kind":"fix","note":"Claude session quota reads 0% - find why AND fix it"}
+{"key":"3d255c25e549","kind":"fix","note":"Firstmate drifts off centre with one rail open - wrong behaviour"}
+{"key":"40129a5e2237","kind":"implement","note":"Remove the crew panel - a deliberate product change to the shell"}
+{"key":"59de244b05e2","kind":"chore","note":"Minimum rail width - a layout constant, cosmetic"}
+{"key":"c25cedc80933","kind":"chore","note":"Widen the settings page - cosmetic"}
+{"key":"e378fbb0c51c","kind":"implement","note":"Add a catalog model to a bucket from Settings - a capability that does not exist"}
+{"key":"2f4714471dd4","kind":"research","note":"Explain why the duplicate merge card came back - explanation only"}
+{"key":"2987def9929e","kind":"fix","note":"Explain AND fix the re-emitted merge cards - the deliverable is the correction"}
+{"key":"42291b567612","kind":"retrieval","note":"FI3-1238: bounded definition lookup in code, no cause or behavior experiment requested"}
+{"key":"7fcb02d43484","kind":"retrieval","note":"FI3-1238: retrieve the recorded chronology and current blocked status of one task, not diagnose its cause"}
+{"key":"f124ac1a95d2","kind":"plan","note":"Review every task status and recommend a rename - comparing options"}
+{"key":"babb2a433086","kind":"fix","note":"Orphan fm/task-* branches break the retry - find the cause and fix it durably"}
+{"key":"b83005e52019","kind":"fix","note":"Cards do not grow with their content - wrong behaviour"}
+{"key":"c11a68d3aaae","kind":"chore","note":"Rebase PR 88, resolve, green, merge - mechanical"}
+{"key":"e05a41395339","kind":"fix","note":"Merge PR buttons still fake on main - determine why and fix"}

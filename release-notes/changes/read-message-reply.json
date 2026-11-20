@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "read-message-reply",
+      "reason": "Release review: fixes which reply the new chat bubbles above the message box show, before any release carried those bubbles, so nobody reading the next note has seen the earlier behavior. last-turn-above-input describes the bubbles as they ship. The rest of the change records internally which message a reply answers."
+    }
+  ]
+}

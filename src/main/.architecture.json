@@ -1,0 +1,162 @@
+{
+  "name": "main",
+  "about": "The main process: app.ts and the files beside it start the core and wire these folders to the window and the system.",
+  "parts": [
+    {
+      "name": "host",
+      "path": "src/main/host",
+      "about": "What the core asks of the shell: the Keychain, the task browser, processes and updates"
+    },
+    {
+      "name": "ipc",
+      "path": "src/main/ipc",
+      "about": "Answers the window's channel messages"
+    },
+    {
+      "name": "security",
+      "path": "src/main/security",
+      "about": "Locks down the window: its content rules, navigation and permissions"
+    },
+    {
+      "name": "frames",
+      "path": "src/main/frames",
+      "about": "Serves the frames that cards and panels draw in"
+    },
+    {
+      "name": "view",
+      "path": "src/main/view",
+      "about": "The window as a view of this Mac or another, over the connection"
+    },
+    {
+      "name": "voice",
+      "path": "src/main/voice",
+      "about": "Speech to text in its own process, and the voice model"
+    }
+  ],
+  "outside": [
+    {
+      "name": "core",
+      "path": "src/core",
+      "about": "Everything the app does with no window"
+    },
+    {
+      "name": "shared",
+      "path": "src/shared",
+      "about": "Shapes, channels and words every side reads"
+    },
+    {
+      "name": "renderer",
+      "path": "src/renderer",
+      "about": "What the window draws"
+    },
+    {
+      "name": "panels",
+      "path": "src/panels",
+      "about": "The app's own side panels"
+    },
+    {
+      "name": "the system",
+      "about": "The Keychain, notifications, the login item and the microphone"
+    },
+    {
+      "name": "Hugging Face",
+      "about": "Where the voice model downloads from"
+    },
+    {
+      "name": "Installed browsers",
+      "about": "Google Chrome first, then Microsoft Edge, before the built-in engine"
+    }
+  ],
+  "links": [
+    {
+      "from": "ipc",
+      "to": "security",
+      "why": "checks a message comes from the app's own window"
+    },
+    {
+      "from": "ipc",
+      "to": "voice",
+      "why": "asks for microphone access"
+    },
+    {
+      "from": "ipc",
+      "to": "core",
+      "why": "imports chosen files, opens links and keeps private files"
+    },
+    {
+      "from": "ipc",
+      "to": "shared",
+      "why": "reads the channel list"
+    },
+    {
+      "from": "host",
+      "to": "core",
+      "why": "implements the core's host and runs its utility processes"
+    },
+    {
+      "from": "host",
+      "to": "shared",
+      "why": "reads data folder names and memory shapes"
+    },
+    {
+      "from": "host",
+      "to": "the system",
+      "why": "uses the Keychain, notifications and the login item"
+    },
+    {
+      "from": "view",
+      "to": "core",
+      "why": "carries the window's requests over the connection"
+    },
+    {
+      "from": "view",
+      "to": "shared",
+      "why": "reads channel and card shapes"
+    },
+    {
+      "from": "voice",
+      "to": "core",
+      "why": "reads the platform"
+    },
+    {
+      "from": "voice",
+      "to": "shared",
+      "why": "reads the recognizer's shapes"
+    },
+    {
+      "from": "voice",
+      "to": "Hugging Face",
+      "why": "downloads the voice model"
+    },
+    {
+      "from": "voice",
+      "to": "the system",
+      "why": "listens through the microphone"
+    },
+    {
+      "from": "frames",
+      "to": "shared",
+      "why": "builds frame documents and their content rules"
+    },
+    {
+      "from": "frames",
+      "to": "renderer",
+      "why": "serves the frame realm's built library"
+    },
+    {
+      "from": "frames",
+      "to": "panels",
+      "why": "serves the app's panels in the frame library"
+    },
+    {
+      "from": "security",
+      "to": "shared",
+      "why": "builds the content rules"
+    },
+    {
+      "from": "host",
+      "to": "Installed browsers",
+      "why": "opens task browsers with a private pipe and isolated profiles"
+    }
+  ]
+}

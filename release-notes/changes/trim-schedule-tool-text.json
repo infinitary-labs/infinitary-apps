@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "trim-schedule-tool-text",
+      "reason": "Internal wording trim of the first mate's served schedule tool text to keep it within its size budget; nothing a person sees changes."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "refuse-circular-waits",
+      "reason": "Release review: the app refuses a task wait that would close a loop, in a reply only Firstmate and crewmates read, and combining the work is an instruction to Firstmate. The case is rare and has no result a person notices on its own."
+    }
+  ]
+}

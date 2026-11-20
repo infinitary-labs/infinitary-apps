@@ -1,0 +1,142 @@
+A crewmate — a 3D wireframe solid, clearly simpler than the 4D first mate (dimensional hierarchy = org hierarchy).
+The tetrahedron, the simplest solid, is the base crewmate; a stronger model is a richer solid.
+```jsx
+<Crewmate status="working" size={24}/>
+```
+Solid by intelligence slot (captain's board verdict, 2026-09-23): the slot the crewmate is served on picks its solid, every one inscribed in the same sphere and still 3D - **tetrahedron** (low, 4 corners), **octahedron** (medium, 6), **icosahedron** (high, 12), **geodesic sphere** (premium: the icosahedron with each face split in four, 42 corners and 120 wires, a node only on its 12 original corners).
+A crewmate whose slot is unknown is the tetrahedron - it claims no more than the app knows.
+Denser solids draw finer (lower alpha, thinner lines, smaller nodes) so the ring stays calm.
+The slot is never a hue, a label, a mark, a size or a motion: status keeps the only color, and a still frame (reduced motion) carries the solid.
+This JSX mock paints only the tetrahedron; the app's `src/renderer/src/character/crew/crewmate.ts` is the reference.
+In the home view and Tasks panel, status means host-evidenced continuing work (`docs/crew-orbits.md`), not only a running model turn.
+Paused or unobserved work stays cool with an honest reason on the Tasks dot; the card-thread Working badge remains turn-only.
+Status is color: `working` heats the wires to ember (`--wire-hot`) and spins faster; `idle` is ice cyan (`--wire-accent`), recessive by alpha and a slow drift, never a second hue.
+Never paint an idle crewmate grey or `--wire-dim` — that reads as dormant, and it contradicts the row it sits beside.
+A background wait is still `working`, banked (captain's INF-676 direction A and INF-1777 plan): idle strength and pace with no tick or halo, inside a thin dashed `--wire-accent` ring whose arc travels round like the fact strip's running checks, whole and still under reduced motion.
+The dashes keep it apart from the Waiting on you beacon's full ring.
+The wires say where the wait is: `--wire-hot` (ember) while it waits on local work it left running, such as a background command, `--wire-accent` (ice cyan) while it waits on checks outside; no new hue (`docs/crew-orbits.md`, "Continuing-work posture").
+Waiting on the captain (its task under Waiting on you) keeps its working or idle look and wears the beacon (captain's INF-1543 direction A): the Tasks row's Waiting on you ring, a thin `--wire-accent` circle at 0.9 of the glyph under a soft accent halo, breathing slowly (3.2 s) between 0.25 and 0.85 with a 6% swell, whole and still at mid light under reduced motion; the same on the phone, and no new hue.
+A pinned task's crewmate (listed under Pinned) hangs as a fixed star (captain's INF-3634 plan): it leaves its orbit for a place in a loose constellation in the upper-left sky, clear of the orbit, joined to its pinned neighbours by a faint hairline, and wears the glint - a soft glow and four thin tapered rays behind its solid in its own light lifted toward white, twinkling slowly and steady under reduced motion; its summary shows the filled pin beside the key, no new hue, and the same on the phone (`docs/crew-orbits.md`, "Fixed stars").
+
+In orbit (home view, captain-approved 2026-09-14; the app's `src/renderer/src/character/crew/` is the reference): each live crewmate is one solid on an inclined ring around the first mate (radius 190px, tilt 0.58, glyph 30px, one revolution per 64s), sent out as a spark that swirls 1.1rad out of the inner cell and unfolds on its slot over 720ms.
+Color follows the first mate's own heat ramp: a working crewmate blends ice cyan to ember (`--wire-hot`) with a white-hot filament and a halo in its own heat; an idle one stays a dim ice cyan.
+Color is never the only cue - working is a fast double spin and pulsing nodes ON the ring, idle a slow tumble and bob 6% farther out.
+Reports and steers are packets on the crewmate's line, a finished crewmate folds home into the first mate, a dropped one dims and drifts off, and each of its finished model requests is a token flicker on its own wires - the first mate's filament rule (readme), same curve.
+Model names sit immediately above their own solids: normal-case `--text-xs` (11px), `--fg-2`, 4px gap and 128px maximum width, with an ellipsis rather than smaller type.
+Pointing at a name, or focusing it from the keyboard, points at its crewmate and opens that crewmate's summary, which carries the full display name (below).
+Crowded formation fitting scales positions and glyphs, not label text.
+Known OpenRouter maker prefixes are omitted using the model’s namespace and an exact prefix map, never by splitting arbitrary names at a colon.
+Unknown/custom names retain their wording.
+Settings → Appearance → Crew model names defaults on and persists through restart; it affects only these labels, never the first mate or tier solids.
+Show these names only while exactly one orbit is active and it holds eight crew or fewer; hide all names past that, then restore them if the switch is still on.
+A name fades in by opacity alone over `--dur-med` (`--ease-out`) whenever it shows, a reroute's new name included, and over an even `--dur-fade` under reduced motion; hiding is immediate.
+Automatic hiding never writes the stored choice.
+The strip and feed still carry activity.
+Reduced motion: every crewmate appears settled on its slot, one still frame.
+
+The black hole's rush (captain, 2026-10-01, tuned on the playable preview): while the first mate plays its pretend black hole, every crewmate races its orbit at up to 36 times its travel speed - ramping up over 1.6s from the wind-up, holding, and settling back over 2s from the unwind (or from the moment the black hole is cut short), smoothstep both ways, never a cut.
+Each orbit keeps its direction, so the two orbits race in opposite directions, and the crew stay evenly spaced on their slots.
+A crewmate's own spin takes a quarter of the boost, so its solid still reads.
+While racing, an orbiting crewmate trails a speed streak along its own path: its own light lifted a quarter toward white-hot, thinning and fading over the arc swept in the last 0.06s (at most 1.5rad).
+Arrivals, departures, packets and every other cue keep their pace; the pointer's slowdown and pause apply to the rush; reduced motion plays none of it.
+
+During a live adversarial review the reviewer crewmate circles the builder on the waiting crewmate's circle, 64 px at 24° per second; the builder's own solid is unchanged.
+This cue does not resize the crew's orbital planes or change the other shape states.
+
+Naming the colors (captain, FI3-436, 2026-10-01; docs/first-launch.md "The crewmate's state words"): for someone new, a crewmate on the home stage says what its color means once.
+"Working" sits 4px under the solid while it is ember and "Idle" once it is cyan: `--text-xs`, `--fg-2`, normal case, never the state's color (the color stays on the solid alone).
+Each word is taught once per profile, only on a profile that has never had a crewmate, and counts only when it has been seen in full: 6s at full strength (fade in `--dur-med`, out `--dur-slow`) with the home stage uncovered and the window not hidden.
+A showing needs a crewmate settled on its orbit (never spawning or leaving) that has held its state for 1s, hides while that crewmate's summary is open, and the earliest crewmate in the state carries it.
+Any interruption (the crewmate closes or leaves, its color changes, a card covers the stage, the summary opens on it, the window is hidden) cancels the showing and teaches nothing, so a crewmate idle for an instant before closing shows no word.
+No tour, legend, setting or dismiss control; colors, motion, the summary and the Tasks dots do not change.
+Under reduced motion the fade is opacity only.
+
+While the window is focused on one project, or a rest lights a project's pill in the top bar's row, every crewmate of another project keeps a quarter of its light, its name and state word with it (`components/core/ProjectFocus`).
+It keeps its slot, speed, colour and solid; nothing hides or moves for it, and the light eases over `--dur-med` each way, a cut under reduced motion.
+
+Reading a crewmate (captain, FI3-398, 2026-10-01; replaces "inspecting never pauses or changes the animation"): the character and its crew read ONE stage clock, so they slow and stop together and stay one coherent picture.
+While the pointer is over the formation - on or inside an occupied orbit as painted, or within 28px of one or of a crewmate - the whole stage eases to a tenth of its speed; while the pointer is on a crewmate it pauses completely; away from the formation, with nobody out, under a card, or with the window out of focus it runs at full speed.
+The zone follows each orbit's own tilted ellipse, and each other computer's cluster's, so empty air above and below the crew never slows the stage (captain, INF-56: "right now it seems my mouse is nowhere near the animation but it would already trigger the slow motion").
+Every change eases (about a third of a second down, 0.7s back up), never a cut.
+A pointer resting inside the formation for 3s, on no crewmate, lets the stage go and its next move slows it again; one resting on a crewmate holds the pause for as long as it stays.
+During the pause every structure stops - crew and character alike - but the first mate's eyes keep blinking and following the pointer: that is what tells a paused stage from a stopped app.
+A crewmate drifting under a still pointer triggers nothing; only pointer movement acquires one (within half its glyph plus 8px, never less than 18px; it lets go at 1.6x that).
+
+The summary is one small instrument panel beside the crewmate, on the side away from the first mate (under or over it where that side has no room; never under a rail's panel, the top bar or the input), a beat (130ms) after the pointer lands: `--bg-2`, a `--line-2` hairline border, `--radius-s` corners, no glow; corner brackets (`--fg-3`) round the crewmate and a `--line-2` hairline joining them to the panel.
+It slides `--move-summary` (8px) out from the crewmate and fades in over `--dur-quick` while its hairline draws; resting on another crewmate while it shows, or just after it went, moves it there at once; it fades out over `--dur-summary-out` (100ms) when the pointer leaves the crewmate, on Esc, under a card, or when the crewmate itself is gone (Motion in the readme; a cut under reduced motion).
+The layout is the captain's pick (FI3-427, 2026-10-01: side labels, 360px, a reason of two lines at most; the model's cells are FI3-439's, the fact strip FI3-1159's), padded 12px by 14px.
+The first row is the task key (mono, `--fg-3`), the shared task status mark and word, followed by its short reason, the Tasks row's and never a wait's wording or time (`components/now/NowPanel`, Shared task status; INF-2528), on one baseline.
+10px under it comes one row per fact, 6px apart: its uppercase micro label (`--text-xs`, `--tracking-label`, `--fg-3`) in a 66px side column and its line beside it on the same baseline - TASK, the title (`--fg-1`, medium); NOW, the crewmate's own newest doing with its age (mono; `components/now/NowPanel`, Shared task facts) at the panel's right edge; PROGRESS, the count and the current item of the plan the crewmate reported, with one dot per item on a line under it and a short label under each dot (`components/now/NowPanel`, Shared task facts; FI3-734), absent until it reports one.
+Then 10px lower, under a `--line-1` hairline with 10px above and below it, the fact strip as one row (INF-2528, the captain's direction B: "the preview should remain concise and only the most critical information. more details should be shown in the task card"): two cells `--space-4` apart, each an uppercase micro label with its one-line value 5px under it.
+MODEL holds the full display name; DIFFICULTY holds the task's own level as the `SlotBadge` Settings → Models draws (bars and the level's own color); PULL REQUEST (BRANCH on a plain Git host) holds the change by its label (`#813`), plain text here because the summary never takes the pointer, then the merge card's 10px dot and the checks as one state with its time (`running for 11m`, `passed in 14m`, `failed after 9m`, `not read yet`); before the task has a change the cell is CHECKS, a run it started by hand (`running for 3h 06m`, `cancelled after 4m`).
+The row never wraps: a long model name gives way first, down to its label's width, then a long branch name, each ending in an ellipsis with the whole name on hover, while the badge and the checks keep their width and no label runs into the next; an independent review's dot and verdict with its risk takes a second row, `--space-2` under it.
+A check the app cannot read keeps the warning dot and says `cannot read all checks`; its reason is the record's.
+A value the record cannot say leaves its cell out; the strip is absent until the task has a model, a change or a checks reading.
+The reasoning, its footnote, the check counts, how long ago the checks finished and each watch's next read are the task record's alone.
+These are the shared task facts (`components/now/NowPanel`, Shared task facts): the task record shows the same values with the details above, and places its full strip just above its action bar.
+A level is never a bare word in the panel: it is the badge.
+The status, the task title and the project wrap in full.
+The other facts stay one line: the panel is as wide as its longest line up to 360px - wide enough that every state the app can show reads whole beside its key - and a longer note ends in an ellipsis while the age stays whole.
+The status, the task title and the project may wrap; the status to two lines at most.
+Its type is never scaled with a fitted formation.
+It is read-only and has no buttons, so its change is plain text, never a link; a click on the crewmate (or its name) opens the same task record its Tasks row opens, which has the full text.
+It works at every crew size and on every orbit, whether or not names show.
+Resting on a Tasks row opens the same summary for that row's task, placed beside the row (`components/now/NowPanel`, Row hover).
+That rest also puts the summary's corner brackets (`--fg-3`) round the task's crewmate on the stage, at once, with no summary or hairline: the stage neither slows nor pauses (the 2026-10-01 ruling), and the brackets follow the crewmate as it moves.
+The same brackets mark it for a rest on a task key or tile of its task; the crewmate the pointer is on draws its own with its summary, and the stage's rest on a crewmate lights that task's row, tile and keys in turn (`components/now/NowPanel`, "The lit row").
+Reduced motion: the scene is already still, so only the summary applies.
+
+Keep small (≤32px); crewmates never become a focal point.
+Prefer CrewStrip for overviews.
+
+Approved growing ring (INF-1179, captain, 2026-10-24): one orbit on the 42° plane widens from 150 px a notch with every arrival to 256 px at 24 crew.
+The 25th opens a second orbit inside it, tilted 65°, spinning the other way at −14 against +8 degrees per second, growing from 150 px to 210 px over its own 24; the first holds at its cap.
+Never open a third orbit: past 48, an arrival joins the orbit with fewer crew and both pack tighter.
+When a member of the first orbit leaves, the oldest member of the second glides out to refill it with only necessary moves; the second shrinks and closes once empty, and a fast boundary bounce never undoes the move.
+Exact radii, orientations, phases and lifecycle rules are in `docs/crew-orbits.md`; `orbitalPlanes.ts` owns the constants.
+Draw far-to-near and never add permanent orbit paths or plane-specific colors.
+Projected crossings are intentional; these unequal signed speeds are stylized choreography.
+At the minimum window height, fit the formation above the activity line and input as one uniformly scaled group.
+The original single ring remains an explicit historical model mode only.
+
+Waiting on another crewmate (captain's FI3-1680 choice): an idle dependency wait with one visible same-computer blocker orbits that blocker, not the first mate.
+The circle is 64 scene pixels out, before the stage's existing fit, and travels at 24 degrees per second on the stage clock.
+Its plane is spanned by the blocker's radial spoke and the main plane's normal, so the two planes stay at 90 degrees and the spoke turns with the blocker.
+At most three companions take that circle.
+Near the scene's edge the circle shrinks just enough to stay inside the scene, and regrows as the blocker moves away, so a waiter never drops back to its slot for part of a loop (captain's INF-1532 choice A).
+A chain, a second blocker, a larger group, or a blocker that is itself past the scene's edge stays on its own slot instead.
+Only another crewmate waiting on the waiter makes a chain; queued work waiting on it has no crewmate and never keeps it on its slot (INF-38).
+No caption for a wait is drawn beneath the crewmate (captain, INF-38: "the center animation should be kept as clean as possible"); the tile and the summary name it, and the Tasks row says `waiting` (`../now/NowPanel.prompt.md`, "Naming a wait").
+Circling or on its slot, the waiting crewmate draws a quiet arrow to its blocker at all times, arrowhead at the blocker, and a reviewer draws one to the builder it reviews (captain, INF-304).
+Each kind keeps its own color (captain, INF-556): a wait is the quiet gray (`--fg-3` at 0.28, 1 px) and lights in the accent; a review is the working ember (`--wire-hot`) at the same strength, at rest and lit.
+A wait or a review between crewmates on different computers is a solid arrow across the stage in its kind's color; nobody moves for it.
+As two related glyphs close in on screen the arrow's clearance gives way, so a short arrow still shows.
+Crew cross and pass close to one another freely; nothing moves a crewmate aside to keep it clear of another.
+A missing blocker, or one with no crewmate yet, is a named link in the summary, never an invented crewmate and never a move.
+Continuing, paused and unknown work keep their slots, colors, solids, labels and review cues.
+Only visible main-orbit occupants take angular seats (INF-1375, approved A), including visible program rings but excluding crew on relationship circles and program branches.
+Logical orbit membership still controls allocation and growth; a fallback crew member counts wherever it is drawn.
+Clearing the wait opens a seat in the widest visible gap on the same orbit and the offset glides home on the existing springs.
+Survivors keep their circular order, and Reduce Motion snaps to the resolved layout.
+Reduced motion paints one settled frame.
+Row inspection does not pause the stage; pointing at the glyph still does.
+
+A task split into parts (captain's INF-799 choice, the branching constellation): the parent is a small hollow ring on the first orbit, travelling with it, and only its running parts draw, each as its crewmate on a branch (INF-1037); a finished, unstarted or dropped part draws nothing.
+A running part hangs from the ring, or from a running part it still waits on under a released wait.
+Layers grow outward from the ring, 60 px for the first and each later one 0.82 of the one before, each layer spread evenly across 70 degrees and ordered by its parents' angles so a chain stays straight.
+Crewmates keep their full size and a glyph's width (25 px) apart: a crowded layer widens its fan up to 180 degrees, then moves outward; the whole graph scales about the ring when a node would leave the stage.
+With parts running on several computers, each computer's group draws its own copy of the ring with the crewmates running there.
+A branch has the wait arrow's weight (`--fg-3` at 0.28, 1 px, no arrowhead) and lights in the accent at 0.7 and 1.4 px while a result rides it.
+A working or idle part keeps its own solid, heat, label and spark, seated at its node without reserving an invisible main-orbit seat.
+A part's report climbs its branches to the ring, which lights as it lands.
+Pointing at the ring opens its summary with the program's parts under its head: a PARTS row with the counts ("20 finished, 5 running, 0 waiting"), under it a 3 px bar of each state's share (finished `--fg-3`, running `--accent`, waiting a `--line-2` outline, 2 px apart), and a RUNNING row with each running part's key (mono, `--text-xs`, opens its record) and, in `--fg-3`, the computer it runs on.
+When the parent closes done the tree folds into its ring, which falls home into the first mate as the one result home; a dropped parent fades where it stands.
+A parent with a crewmate of its own keeps today's look, and only branches the graph recorded are drawn.
+Reduced motion paints one settled frame.
+
+## Batch gate
+
+A pending batch status on the current offered version replaces the checks dashes with the batch gate: two round-capped `--wire-accent` arcs, each 110 degrees, at 0.8 of the glyph, 1.2 px wide and 0.6 alpha.
+The crewmate keeps its seat, banked strength and idle pace, with no tick or halo.
+Waiting and paused batches hold the gate still, open above and below; an active batch turns it at 0.5 rad/s, and reduced motion holds the gate still.
+The phone draws the same gate from the desktop tuning.

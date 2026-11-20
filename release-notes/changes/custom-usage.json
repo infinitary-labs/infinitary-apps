@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "custom-usage",
+      "kind": "fix",
+      "title": "Custom connections no longer disappear from Usage",
+      "body": "Usage records custom model replies even when the server reports no token counts. Models with matching IDs in the app's catalog use its listed prices; other models keep estimates unavailable. Saved Chat Completions models need a fresh check before use.",
+      "area": "settings",
+      "picture": {
+        "dark": "custom-usage-dark.webp",
+        "light": "custom-usage-light.webp",
+        "alt": "Usage lists a catalog-matched custom model with an estimate and two custom connections with unavailable estimates"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

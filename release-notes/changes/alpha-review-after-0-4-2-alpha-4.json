@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "alpha-review-after-0-4-2-alpha-4",
+      "reason": "Release review for the alpha after 0.4.2-alpha.4: ranks opening a task from its card, the ⌘1 choice and the protocol 9 update as highlights; retakes the open-a-task hero pair to match ⌘1; rewrites the protocol 9 and routing notes in plain words. Nothing in the app changes."
+    }
+  ]
+}

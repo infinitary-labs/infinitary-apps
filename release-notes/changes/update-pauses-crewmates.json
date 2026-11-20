@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "update-pauses-crewmates",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Updating a computer pauses its crewmates and carries them on",
+      "body": "When you update Infinitary on a computer that runs work, its crewmates pause first and carry on once it is back. No turn fails, and you no longer ask your first mate to pause or resume them. A crewmate that was working when Infinitary closed on this Mac also carries on when it opens again.",
+      "noPicture": "Nothing on screen changes: the crew pauses and carries on by itself, and the feed says so in one line.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

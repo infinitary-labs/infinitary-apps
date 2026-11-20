@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "placed-late-events-answer",
+      "reason": "A stopped conversation host on a computer that runs work now ignores a late answer to its events, so it never writes its saved turn over the run that started next from the same folder (INF-151). The shipped helper refuses such answers when it closes its link, before the next run can start, so no shipped behavior a person notices changed."
+    }
+  ]
+}

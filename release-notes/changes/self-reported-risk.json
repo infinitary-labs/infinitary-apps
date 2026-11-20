@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "self-reported-risk",
+      "reason": "Release review: the risk chart's measured-facts line was removed before any release carried the chart, so nobody reading the next note has seen it. merge-card-risk-chart describes the chart as it ships, with only the crewmate's reasons; its hero pair is re-taken without the removed line."
+    }
+  ]
+}

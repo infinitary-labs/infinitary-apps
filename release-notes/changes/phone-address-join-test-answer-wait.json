@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-address-join-test-answer-wait",
+      "reason": "The phone's address join test waits for the phone to take each sign-in answer instead of guessing by the main actor's order, so a resumed answer that returns late no longer fails it; nothing a person sees changes."
+    }
+  ]
+}

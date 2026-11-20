@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "run-control-knowledge-open-button",
+      "reason": "The run-control journey presses Enter on the Knowledge panel's open button again, after waiting for the panel to show once Settings closes; a test-only change with nothing a person notices."
+    }
+  ]
+}

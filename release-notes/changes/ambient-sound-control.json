@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "ambient-sound-control",
+      "kind": "feature",
+      "area": "settings",
+      "title": "Pause ambient music beside Settings",
+      "body": "When ambient music is enabled, pause or resume it from the main window. Rest the pointer on the sound button or Tab to it to adjust volume. The bars follow the music and move less at lower volume, and a pause lasts after you reopen Infinitary.",
+      "picture": {
+        "dark": "ambient-sound-control-dark.webp",
+        "light": "ambient-sound-control-light.webp",
+        "alt": "The four-bar ambient music button beside the Settings gear"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

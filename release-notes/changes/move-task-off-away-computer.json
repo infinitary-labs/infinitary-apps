@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "move-task-off-away-computer",
+      "kind": "feature",
+      "area": "crewmates",
+      "title": "Move a task off a computer that is out of reach",
+      "body": "When the computer a task runs on is off or out of reach, Move to a computer now still works. It first says which commit the task continues from, the newest your main computer brought home, and what stays behind on the other computer. Move without it carries on with the same task, its cards and its branch on the computer you pick, in a new conversation told what may be missing. When the other computer is back, it stops working on the task and saves its unmerged work on your main computer. Its copy there goes once the task moves back to it or closes.",
+      "picture": {
+        "dark": "move-task-off-away-computer-dark.webp",
+        "light": "move-task-off-away-computer-light.webp",
+        "alt": "A task's record whose computer is out of reach, with Move to a computer open, this computer picked, the line saying which commit it continues from and what stays behind, and a Move without it button"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

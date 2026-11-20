@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "clone-install-files",
+      "reason": "How the project itself is developed: installing dependencies in a working copy of this project clones the app's git and the ONNX runtime files on APFS instead of copying them. The app a person runs is built from the same files and does not change."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "derived-fixed-context-boundary",
+      "reason": "The first mate's instruction budget is derived from its window, and a repeated rule is said once. Nothing a person sees or receives changes."
+    }
+  ]
+}

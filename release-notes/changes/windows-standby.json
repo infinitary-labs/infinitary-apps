@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "windows-standby",
+      "reason": "Internal: a Windows PC keeps a copy of the first mate's record, closing every file before it puts a newer copy in place, and takes over confirmed with Windows Hello or the Windows password; no Windows build is published, so nothing a person downloads changes, and a Mac or Linux copy behaves as before."
+    }
+  ]
+}

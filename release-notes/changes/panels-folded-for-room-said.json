@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "panels-folded-for-room-said",
+      "kind": "fix",
+      "title": "Your first mate knows when a panel is folded or in More",
+      "body": "When your window is too short for every panel, the first mate now knows which panels are folded to their headers and which are in a rail's More row, instead of calling them shown. A crewmate building a panel for you hears the same and tells you where it sits.",
+      "area": "firstmate",
+      "noPicture": "Nothing on screen changes: the first mate and crewmates now say where a folded panel sits.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-gate-part-times",
+      "reason": "The phone check's gate writes each part's minutes again after a full run; this changes only how the project is checked, with nothing a person using the app notices."
+    }
+  ]
+}

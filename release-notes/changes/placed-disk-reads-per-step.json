@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "placed-disk-reads-per-step",
+      "reason": "Test-only: a contract case counts every disk read the home makes over one step of a placed Claude turn and holds it the same at 25 and 100 ended calls."
+    }
+  ]
+}

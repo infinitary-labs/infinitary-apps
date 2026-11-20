@@ -1,0 +1,51 @@
+{
+  "crewmateApp": "來自程式",
+  "crewmateBrief": "任務說明",
+  "crewmateCard": "卡片",
+  "crewmateChange": "Pull request",
+  "crewmateClosed": "這項任務已關閉；對話內容保持當時執行的樣子。",
+  "crewmateCompacted": "它的對話已縮短以便容納。",
+  "crewmateCut": {
+    "plural": "count",
+    "other": "還有 {count} 個字元未顯示。"
+  },
+  "crewmateEarlier": {
+    "plural": "count",
+    "other": "先前有 {count} 行未顯示。"
+  },
+  "crewmateEmpty": "還沒有可顯示的對話內容。",
+  "crewmateFailed": "它這一輪失敗了：",
+  "crewmateField": "給船員的訊息",
+  "crewmateFirstmate": "大副",
+  "crewmateFold": "收合",
+  "crewmateIdle": "閒置",
+  "crewmateInterruptHint": "可中斷",
+  "crewmateMoreLines": {
+    "plural": "count",
+    "other": "+{count} 行"
+  },
+  "crewmateNoOutput": "沒有輸出",
+  "crewmateNoResult": "沒有結果",
+  "crewmateOpen": "展開",
+  "crewmatePaused": "已暫停 · 瀏覽器由你操作",
+  "crewmatePicture": "船員的呼叫所回傳的圖片",
+  "crewmatePictureLarger": "放大顯示",
+  "crewmatePictureSmaller": "縮小顯示",
+  "crewmatePlaceholderIdle": "告訴船員接下來要做什麼",
+  "crewmatePlaceholderWorking": "對船員說些話；它會在下一步聽到",
+  "crewmatePlan": "計畫",
+  "crewmateProgress": "進度",
+  "crewmateQueued": "已排入佇列",
+  "crewmateReport": "回報",
+  "crewmateRunning": "執行中…",
+  "crewmateSendsTo": "給船員",
+  "crewmateShowCard": "顯示卡片",
+  "crewmateStop": "停止",
+  "crewmateStoppedApp": "它這一輪已被停止。",
+  "crewmateStoppedCaptain": "你停止了它這一輪。",
+  "crewmateStoppedFirstmate": "你的大副停止了它這一輪。",
+  "crewmateStopping": "正在停止…",
+  "crewmateUnreadable": "無法讀取這位船員的對話。",
+  "crewmateWaiting": "等你處理",
+  "crewmateWorking": "處理中…"
+}

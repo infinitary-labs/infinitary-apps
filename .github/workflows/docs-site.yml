@@ -1,0 +1,72 @@
+name: docs-site
+
+# The docs site's check (docs/docs-site.md, "The check"): each pushed task
+# branch and pull request that touches the site, or the design system files
+# it reads, builds it from its own package and lockfile and opens every page
+# in a browser that may reach only the site itself, then runs the publish
+# checks' tests and a publish rehearsal. It holds no secret and publishes
+# nothing (docs-site-publish.yml publishes, from main); the app's own check (ci.yml) skips its build for a
+# change that touches only the site (scripts/pr-paths.ts), and main's
+# desktop release check never starts for one (main.yml).
+on:
+  push:
+    branches:
+      - "inf/**"
+      - "fm/task-*"
+    paths:
+      - "docs-site/**"
+      - ".claude/skills/infinitary-design/tokens/colors.css"
+      - ".claude/skills/infinitary-design/tokens/fonts.css"
+      - ".claude/skills/infinitary-design/assets/fonts/**"
+      - ".claude/skills/infinitary-design/assets/app-icon.svg"
+      - ".github/workflows/docs-site.yml"
+      - "scripts/docs-site-whats-new.ts"
+      - "release-notes/archive.json"
+      - "release-notes/releases/**"
+  pull_request:
+    paths:
+      - "docs-site/**"
+      - ".claude/skills/infinitary-design/tokens/colors.css"
+      - ".claude/skills/infinitary-design/tokens/fonts.css"
+      - ".claude/skills/infinitary-design/assets/fonts/**"
+      - ".claude/skills/infinitary-design/assets/app-icon.svg"
+      - ".github/workflows/docs-site.yml"
+      - "scripts/docs-site-whats-new.ts"
+      - "release-notes/archive.json"
+      - "release-notes/releases/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-site-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Its name leads with what started it (scripts/ci-job-names.mjs).
+  build-and-check:
+    name: ${{ github.event_name == 'pull_request' && 'Pull request · Docs site build and check (Linux)' || 'Branch push · Docs site build and check (Linux)' }}
+    # An outside contributor's pull request takes hosted Ubuntu before the
+    # variables (docs/public-ci.md, "Outside contributors").
+    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').light || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
+    timeout-minutes: 15
+    steps:
+      # What's new is written from every stable release's tag, so the
+      # checkout carries full history and tags (scripts/docs-site-whats-new.ts).
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/pnpm
+        with:
+          working-directory: docs-site
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - run: pnpm --dir docs-site install --frozen-lockfile
+      - run: pnpm --dir docs-site build
+      - run: pnpm --dir docs-site test
+      - run: pnpm --dir docs-site rehearse
+      - uses: ./.github/actions/browser-chromium
+        with:
+          working-directory: docs-site
+      - run: pnpm --dir docs-site check

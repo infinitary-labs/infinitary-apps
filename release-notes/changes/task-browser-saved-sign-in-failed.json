@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-browser-saved-sign-in-failed",
+      "kind": "improvement",
+      "title": "A saved sign-in that did not work stops leading",
+      "body": "When a website turns a saved sign-in away, the task's crewmate now says so on its next card, and Infinitary remembers it on that saved sign-in. The next time a task asks you to sign in to that site, Sign in myself is the default, and Use my saved sign-in stays beside it with a note that it did not work last time. Saving the sign-in again clears the note.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-browser-saved-sign-in-failed-dark.webp",
+        "light": "task-browser-saved-sign-in-failed-light.webp",
+        "alt": "A request to sign in to a site with Sign in myself as the default and Use my saved sign-in beside it, marked did not work last time"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

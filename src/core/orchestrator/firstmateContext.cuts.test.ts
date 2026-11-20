@@ -1,0 +1,113 @@
+// A user's report (INF-3734): after 0.7.0 the first mate stopped answering,
+// with "TypeError: Cannot encode string value containing an unpaired surrogate
+// U+D83E" repeating from contextText -> FirstmateContext.forTurn. A crewmate's
+// thread message had the 🧪 emoji across the 120-character excerpt cut, the
+// cut kept half of it and the TOON encoder refused the whole context. The fix
+// asked for: cut text by whole characters wherever it gets truncated. Each
+// case here puts an emoji across one of the context's own cuts and expects the
+// turn to reach the model with the emoji either whole or left out.
+import { describe, expect, it, vi } from "vitest";
+import {
+  crewCard,
+  fakeClockEachTest,
+  setup,
+  toolsOf,
+} from "../../../tests/helpers/firstmateHarness";
+
+fakeClockEachTest();
+
+/** `lead` padded to `at` code units, then 🧪 (U+1F9EA, two code units), then `tail`. */
+function emojiAt(lead: string, at: number, tail: string): string {
+  const text = `${lead.padEnd(at, ".")}🧪${tail}`;
+  expect(text.indexOf("🧪")).toBe(at);
+  return text;
+}
+
+/** No high surrogate without its low half after it, and no low half without its high half before it. */
+function lonelySurrogates(text: string): number {
+  return (
+    text.match(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g) ?? []
+  ).length;
+}
+
+const TASK = { id: "t1", title: "Check the reader", status: "idle" as const };
+
+describe("the first mate's context cuts text by whole characters", () => {
+  it("serves a turn when a thread message has an emoji across its 120-character excerpt (the reported case)", async () => {
+    const message = emojiAt(
+      "Ran the focused checks on the reader and the writer; both pass on this version.",
+      119,
+      " the replay gate, then the journey.",
+    );
+    const { agent, session, supervisor } = setup({
+      seedTasks: [TASK],
+      seedCards: [crewCard("card-t1-1", "t1", "Reader checked", "<p>Checked.</p>")],
+    });
+    supervisor.cards.replyFromCrewmate("t1", { cardId: "card-t1-1", text: message });
+    await agent.converse("anything new?");
+    expect(session.prompts).toHaveLength(1);
+    const prompt = session.prompts[0] ?? "";
+    expect(prompt).toContain("thread activity since your last turn");
+    expect(prompt).toContain(message.slice(0, 119));
+    expect(lonelySurrogates(prompt)).toBe(0);
+  });
+
+  it("serves a turn when an open card's body has an emoji across its 200-character digest", async () => {
+    const text = emojiAt(
+      "The reader and the writer both pass on this version",
+      199,
+      " next the gate.",
+    );
+    const { agent, session } = setup({
+      seedTasks: [TASK],
+      seedCards: [crewCard("card-t1-1", "t1", "Reader checked", `<p>${text}</p>`)],
+    });
+    await agent.converse("anything new?");
+    expect(session.prompts).toHaveLength(1);
+    expect(session.prompts[0]).toContain(`${text.slice(0, 199)}…`);
+    expect(lonelySurrogates(session.prompts[0] ?? "")).toBe(0);
+  });
+
+  it("serves a turn when the card on screen has an emoji across its 80-character hint", async () => {
+    // The hint quotes the raw body, markup included, so "<p>" counts toward the 80.
+    const text = emojiAt("The reader passes", 76, ` more${" and a long tail".repeat(20)}`);
+    const { agent, session } = setup({
+      seedTasks: [TASK],
+      seedCards: [crewCard("card-t1-1", "t1", "Reader checked", `<p>${text}</p>`)],
+    });
+    await agent.converse({ text: "what does this mean?", visibleCardId: "card-t1-1" });
+    expect(session.prompts).toHaveLength(1);
+    expect(session.prompts[0]).toContain(`maybe on screen, a hint only`);
+    expect(session.prompts[0]).toContain(`<p>${text.slice(0, 76)}…`);
+    expect(lonelySurrogates(session.prompts[0] ?? "")).toBe(0);
+  });
+
+  it("serves a turn when a crewmate's check-back reason has an emoji across its 300-character cut", async () => {
+    const { agent, session, supervisor, crewSpecs, crewSessions, tasks } = setup({});
+    const { taskId } = await supervisor.intake.commission({
+      title: "Run the suite",
+      intent: { goal: "run the suite", userWords: "run the suite" },
+    });
+    await vi.waitFor(() => expect(crewSpecs).toHaveLength(1));
+    const waitingFor = emojiAt(
+      "The unit tests, then the native gate, then the replay gate",
+      299,
+      " journeys",
+    );
+    const report = toolsOf(crewSpecs).get("report");
+    const receipt = await report?.execute("call-1", {
+      text: "Tests run in the background.",
+      summary: "Tests run in the background.",
+      check_back: { minutes: 20, waiting_for: waitingFor },
+    });
+    expect(receipt?.content[0]?.text).toMatch(/^Reported\./);
+    crewSessions[0]?.emit({ type: "turn_end", taskId });
+    crewSessions[0]?.settle();
+    await vi.waitFor(() => expect(tasks.get(taskId)?.delivery?.checkBack).toBeDefined());
+    const kept = tasks.get(taskId)?.delivery?.checkBack?.waitingFor ?? "";
+    expect(kept).toBe(waitingFor.slice(0, 299));
+    await agent.converse("how is it going?");
+    expect(session.prompts).toHaveLength(1);
+    expect(lonelySurrogates(session.prompts[0] ?? "")).toBe(0);
+  });
+});

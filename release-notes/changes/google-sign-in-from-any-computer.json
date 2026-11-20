@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "google-sign-in-from-any-computer",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Sign in to Google from any computer that controls your first mate",
+      "body": "Settings → Integrations on another computer you paired now finishes connecting Google there: Google's page opens in that computer's browser, and Infinitary passes Google's answer back to your first mate's computer, where the sign-in stays. If that computer cannot take the answer itself, Settings asks you to paste the address your browser ended on.",
+      "picture": {
+        "dark": "google-sign-in-from-any-computer-dark.webp",
+        "light": "google-sign-in-from-any-computer-light.webp",
+        "alt": "Settings, Integrations, waiting for Google, with a field for the address the browser ended on and a button to send it to Mac mini"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

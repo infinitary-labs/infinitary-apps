@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "restore-work-lost-in-panels-merge",
+      "reason": "Restores three earlier changes that the panels change removed by mistake: single-play GIF demos, the pinned 0.1.30-alpha.38 manifest and the cut-off hold on a computer that runs work. Their own notes and exclusions describe them; this commit only puts them back."
+    }
+  ]
+}

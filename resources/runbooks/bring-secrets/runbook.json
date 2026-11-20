@@ -1,0 +1,6 @@
+{
+  "id": "bring-secrets",
+  "name": "Moving secrets in",
+  "description": "How a crewmate moves secrets from another tool, such as Automic Vault, a .env file or the macOS Keychain, into Secrets without any agent seeing a value. Read only during a move.",
+  "skills": "skills"
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "drop-task-closes-its-record",
+      "kind": "fix",
+      "title": "Drop task closes the task's card",
+      "body": "When you drop a task from its card, the card now closes once the task is dropped, as it does when you press Start. It used to stay open, showing the task as Dropped. The dropped task keeps its history. Search for it in the Tasks panel to open its card again, where Start again starts it once more unless another task replaced it.",
+      "area": "tasks",
+      "noPicture": "The change is the card leaving the screen after a drop, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

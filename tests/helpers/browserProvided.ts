@@ -1,0 +1,90 @@
+import type { PushPayload } from "@shared/ipc";
+import type { TaskBoard } from "@shared/tasks";
+
+/**
+ * What the browser project's Node side gives its pages (docs/testing.md,
+ * "The browser layer"): the fresh home's answers and the stories its core
+ * played, provided by its global setup (./browserFreshHome.ts), and the
+ * commands a page may ask of itself (./browserCommands.ts), a seeded home's
+ * answers among them. Both sides read these types.
+ */
+
+/**
+ * Each core read channel's answer, as a fresh or seeded home gives it:
+ * `plain` for reads that take no arguments, `asked` for the reads with
+ * arguments the setup or seed names, by channel and then by the request as
+ * JSON.
+ */
+export type FreshHomeAnswers = {
+  plain: Record<string, unknown>;
+  asked: Record<string, Record<string, unknown>>;
+};
+
+/** One push main forwards to the window, as the core emitted it. */
+export type StoryPush =
+  | { channel: "inf:event"; payload: PushPayload<"inf:event"> }
+  | { channel: "inf:tasks"; payload: PushPayload<"inf:tasks"> }
+  | { channel: "inf:tasks:delta"; payload: PushPayload<"inf:tasks:delta"> };
+
+/**
+ * A crewmate sent out and then cancelled, as the fresh home's core played it
+ * (./browserFreshHome.ts): each board the window reads on the way, and the
+ * pushes between them in the order the core sent them.
+ */
+export type CrewStory = {
+  /** The fresh home's board, with no crew. */
+  fresh: TaskBoard;
+  /** Sent as one crewmate goes out and goes idle. */
+  arrive: StoryPush[];
+  /** The board with that idle crewmate. */
+  crewed: TaskBoard;
+  /** Sent as it is cancelled. */
+  cancel: StoryPush[];
+  /** The board after, its task dropped. */
+  dropped: TaskBoard;
+};
+
+/** The media a person's system sets for motion. */
+export type ReducedMotion = "reduce" | "no-preference";
+
+/** Where one layout probe box stands, in CSS pixels, and whether its control is gone (`layoutReadings`). */
+export type LayoutProbe = { left: number; top: number; controlRemoved?: boolean };
+
+/** What the layout helper read of one probe: its losses, and whether `expectClearOf` accepted it. */
+export type LayoutReading = { losses: string[]; accepted: boolean };
+
+/**
+ * The command process's beat for the page's load clock: whether the run
+ * grades budgets, and the share of a processor its computer's load leaves.
+ */
+export type LoadReading = { grades: boolean; share: number };
+
+/** One reading of the first mate idle wait: the label it read last, and whether it resolved. */
+export type IdleReading = { read: string | null; resolved: boolean };
+
+declare module "vitest" {
+  interface ProvidedContext {
+    freshHome: FreshHomeAnswers;
+    crewStory: CrewStory;
+  }
+}
+
+declare module "vitest/browser" {
+  interface BrowserCommands {
+    emulateReducedMotion(reducedMotion: ReducedMotion): Promise<void>;
+    evaluateInFrame(
+      frame: string | { title: string },
+      source: string,
+      argument?: unknown,
+    ): Promise<unknown>;
+    holdTouchInFrame(frame: string, selector: string, holdMs: number): Promise<void>;
+    clearCookies(): Promise<void>;
+    collectGarbage(): Promise<void>;
+    seededHome(input?: unknown): Promise<FreshHomeAnswers>;
+    layoutReadings(probes: LayoutProbe[]): Promise<LayoutReading[]>;
+    firstmateIdleReadings(): Promise<IdleReading[]>;
+    loadReading(): Promise<LoadReading>;
+    holdCommandProcess(milliseconds: number): Promise<void>;
+    holdBootLine(milliseconds: number): Promise<void>;
+  }
+}

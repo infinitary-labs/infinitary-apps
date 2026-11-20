@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "computer-account-settings",
+      "kind": "improvement",
+      "title": "Prefer, rename and pause a computer's own accounts",
+      "body": "An account that a computer running your work signed in to on its own now has the same menu as your own accounts in Settings, Intelligence: prefer it for crew work, rename it, or pause it, and each is kept on that computer. Your first mate can do the same, disconnect it, or sign that computer out of GitHub when you ask. Refresh now asks that computer to read its allowance at once. A computer that has not updated Infinitary yet shows these items dimmed, with a note to update it first.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "computer-account-settings-dark.webp",
+        "light": "computer-account-settings-light.webp",
+        "alt": "Settings, Intelligence: the OpenRouter account of a computer that runs work as Builder has its menu open, offering Prefer for crew work, Rename, Pause and Disconnect."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

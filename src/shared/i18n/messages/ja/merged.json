@@ -1,0 +1,13 @@
+{
+  "mergedAt": "{at} にマージ",
+  "mergedChangeOn": "{place} で {change} をマージしました",
+  "mergedChangeOnHost": "プロジェクトのホストで {change} をマージしました",
+  "mergedChangeWhereItLives": "プロジェクトの保管先で {change} をマージしました",
+  "mergedInCommit": "コミット {commit} でマージしました",
+  "mergedInPull": "プルリクエスト {change} でマージしました",
+  "mergedOn": "{place} でマージしました",
+  "mergedOnItsOwnAt": "{at} に自動でマージ",
+  "mergedWhereItLives": "プロジェクトの保管先でマージしました",
+  "mergedWithBatchOn": "{place} で一括プルリクエスト {change} と一緒にマージしました",
+  "mergedWithBatchWhereItLives": "プロジェクトの保管先で一括プルリクエスト {change} と一緒にマージしました"
+}

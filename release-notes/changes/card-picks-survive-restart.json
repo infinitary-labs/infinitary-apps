@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "card-picks-survive-restart",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A card keeps your picks when Infinitary restarts",
+      "body": "If you pick answers on a card and Infinitary restarts before you choose, after an update for example, the card now comes back with your picks. This includes a card you put aside. They stay on this computer until the card closes. Words typed in the card's own message box are still cleared by a restart.",
+      "noPicture": "Nothing on screen looks different: the card comes back with the picks you made before the restart instead of empty.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

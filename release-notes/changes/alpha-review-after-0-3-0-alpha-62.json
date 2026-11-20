@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "alpha-review-after-0-3-0-alpha-62",
+      "reason": "Release review after alpha 0.3.0-alpha.62: ranks checking a project before Firstmate adds it, the Automation panel and checking an automation before it runs as highlights. Nothing in the app changes."
+    }
+  ]
+}

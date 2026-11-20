@@ -1,0 +1,155 @@
+<!-- The record's three tabs in one document (INF-2261), the shown one named
+     by `data-view`. Info: the window draws the attention sentence, the goal,
+     the shared task facts and the row of facts above this body, which ends
+     the tab with one closed More row painted like the panel Disclosure
+     primitive (micro label, a dim preview of what it holds, caret). Cards:
+     every card the task showed. Activity: the timeline, whose report lines
+     open to their whole text (FI3-901). The host owns identity, state, close,
+     the tabs and the action bar, which carries every button and no sentence
+     of its own. Disclosure nodes stay mounted across pushes to preserve
+     focus and open state. -->
+<style>
+  /* The frame reaches 6px past the card's edges (RecordCard), so a row's hover
+     tint can too while every label starts on that edge (FI3-1159). */
+  body { padding: 0 6px; }
+  [data-record] [hidden] { display: none; }
+  /* Never quite empty, so the host measures a drawn body on every tab. */
+  [data-record-content] { display: flex; flex-direction: column; gap: var(--space-3); min-height: 1px; }
+  /* Only the shown tab's part of the record (INF-2261). */
+  [data-record][data-view="info"] [data-record-view]:not([data-record-view="info"]),
+  [data-record][data-view="cards"] [data-record-view]:not([data-record-view="cards"]),
+  [data-record][data-view="activity"] [data-record-view]:not([data-record-view="activity"]) { display: none; }
+  /* What the closed More row holds, dim, beside its label. */
+  .preview { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg-3); font-size: var(--text-sm); }
+  .label { font-size: var(--text-xs); font-weight: 500; letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--fg-3); margin: 0; }
+  .why { display: flex; flex-direction: column; gap: var(--space-1); }
+  .verdict { color: var(--fg-3); font-size: var(--text-sm); margin: 0; }
+  a { color: var(--accent); text-decoration: none; overflow-wrap: anywhere; }
+  a:hover { text-decoration: underline; text-underline-offset: 2px; }
+  a[href]:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-s); }
+  [data-validation-rows] table { width: 100%; table-layout: fixed; }
+  [data-validation-rows] th, [data-validation-rows] td { vertical-align: top; overflow-wrap: anywhere; }
+  [data-validation-rows] th:nth-child(1) { width: 32%; }
+  [data-validation-rows] th:nth-child(2) { width: 20%; }
+  [data-validation-rows] .words { margin: 0; }
+  [data-validation-rows] pre { white-space: pre-wrap; overflow-wrap: anywhere; font: var(--text-sm) var(--font-mono); }
+  [data-validation-rows] figure { margin: var(--space-2) 0; }
+  [data-validation-rows] figcaption { color: var(--fg-3); font-size: var(--text-sm); }
+  [data-validation-rows] img { display: block; max-width: 100%; height: auto; }
+  .rows { display: flex; flex-direction: column; gap: 2px; }
+  details.row, details.earlier { margin: 0; border: 0; border-radius: 0; padding: 0; background: none; }
+  details.row > summary::before, details.earlier > summary::before { content: none; display: none; }
+  /* Even vertical padding keeps the caret on the row's center, like the Disclosure primitive's. */
+  details.row > summary { display: flex; align-items: center; gap: var(--space-2); margin: 0 -6px; padding: 4px 6px; border-radius: var(--radius-s); cursor: pointer; list-style: none; color: var(--fg-3); font-weight: 400; }
+  details.row > summary::-webkit-details-marker { display: none; }
+  details.row > summary::marker { content: ""; }
+  details.row > summary:hover { background: var(--bg-2); }
+  details.row > summary:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
+  .count { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--fg-3); }
+  .caret { margin-left: auto; display: inline-flex; color: var(--fg-3); transition: transform var(--dur-fast) var(--ease-out); }
+  .caret svg { fill: none; }
+  details.row[open] > summary .caret { transform: rotate(90deg); }
+  .row-body { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-2) 0; }
+  .goal { color: var(--fg-1); margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .event { display: grid; grid-template-columns: 32px minmax(0, 1fr); column-gap: var(--space-2); font-size: var(--text-sm); overflow-wrap: anywhere; }
+  .mono { font-family: var(--font-mono); font-size: var(--text-xs); color: var(--fg-3); }
+  /* An Activity line that opens to what folded under it and to its whole text (a report, or the answer or result that closed the task). */
+  details.event { display: block; margin: 0; border: 0; border-radius: 0; padding: 0; background: none; }
+  details.event > summary::before { content: none; display: none; }
+  details.event > summary { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; column-gap: var(--space-2); align-items: baseline; margin: -2px -6px; padding: 2px 6px; border-radius: var(--radius-s); cursor: pointer; list-style: none; color: inherit; font-weight: 400; }
+  details.event > summary::-webkit-details-marker { display: none; }
+  details.event > summary::marker { content: ""; }
+  details.event > summary:hover { background: var(--bg-2); }
+  details.event > summary:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
+  details.event > summary .end { align-self: center; display: inline-flex; align-items: center; gap: var(--space-1); }
+  details.event[open] > summary .caret { transform: rotate(90deg); }
+  /* A minor event folded under the row it led to: the line's grid, its words quieter. */
+  .event.folded { margin-top: var(--space-1); }
+  .event.folded .text { color: var(--fg-3); }
+  /* A line another task wrote: that task's key at the end, linked like every key here. */
+  .event.linked { grid-template-columns: 32px minmax(0, 1fr) auto; }
+  .event.linked-source { grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; }
+  .event.linked-source > details { min-width: 0; }
+  .event .from { align-self: baseline; font-family: var(--font-mono); font-size: var(--text-xs); color: var(--fg-3); white-space: nowrap; }
+  /* A task key the bridge linked (FI3-1271): in the words it reads as a link; in
+     Activity's lines and the Details, which are lists, it keeps their own type and
+     color, underlined, and turns accent while it is rested on. */
+  a[data-inf-task] { text-decoration: underline; text-underline-offset: 2px; }
+  a[data-inf-task]:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; }
+  .event a[data-inf-task], .facts a[data-inf-task] { color: inherit; }
+  .event a[data-inf-task]:is(:hover, :focus-visible, [data-inf-lit]), .facts a[data-inf-task]:is(:hover, :focus-visible, [data-inf-lit]) { color: var(--accent); background: none; }
+  .whole { margin: var(--space-1) 0 var(--space-1) calc(32px + var(--space-2)); color: var(--fg-2); white-space: pre-wrap; overflow-wrap: anywhere; }
+  details.source-details { margin-left: calc(32px + var(--space-2)); }
+  .source-details pre { margin: var(--space-1) 0; color: var(--fg-2); font: var(--text-xs) var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .cards { display: flex; flex-direction: column; gap: var(--space-1); }
+  .card-line { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; column-gap: var(--space-2); align-items: baseline; font-size: var(--text-sm); }
+  .card-line .how { font-size: var(--text-xs); color: var(--fg-3); white-space: nowrap; }
+  .card-link { appearance: none; border: 0; background: none; padding: 0; margin: 0; font: inherit; color: var(--accent); text-align: left; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .card-link:hover { text-decoration: underline; text-underline-offset: 2px; }
+  .card-link:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-s); }
+  /* Knowledge used: what the work declared it relied on, each by the revision it used. */
+  .uses { display: flex; flex-direction: column; gap: var(--space-2); }
+  .use-line { display: grid; grid-template-columns: minmax(0, 1fr); row-gap: 2px; font-size: var(--text-sm); }
+  .use-line .how { font-size: var(--text-xs); color: var(--fg-3); }
+  .use-line .why { color: var(--fg-3); overflow-wrap: anywhere; }
+  .timeline { display: flex; flex-direction: column; gap: var(--space-1); }
+  details.earlier > summary { list-style: none; color: var(--accent); font-size: var(--text-sm); font-weight: 400; cursor: pointer; width: fit-content; }
+  details.earlier > summary::-webkit-details-marker { display: none; }
+  details.earlier > summary::marker { content: ""; }
+  details.earlier > summary:hover { text-decoration: underline; text-underline-offset: 2px; }
+  details.row[open] > summary, details.earlier[open] > summary { margin-bottom: 0; }
+  details.earlier[open] > summary { display: none; }
+  details.earlier > .timeline { margin-bottom: var(--space-1); }
+  .facts { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--space-3); row-gap: var(--space-1); font-size: var(--text-sm); }
+  .facts dt { color: var(--fg-3); }
+  .policy-source { margin-left: var(--space-2); color: var(--fg-3); }
+  .policy-helper { margin: var(--space-2) 0 0; color: var(--fg-3); font-size: var(--text-sm); }
+  .policy-helper:empty { display: none; }
+  .facts dd { margin: 0; color: var(--fg-2); overflow-wrap: anywhere; }
+  .facts dd.code { font-family: var(--font-mono); font-size: var(--text-xs); align-self: center; }
+  [data-record-note] { color: var(--fg-3); font-size: var(--text-sm); margin: 0; }
+  /* The exact time behind an age, on rest: the app's own label (the design skill's IconButton),
+     drawn in this page. A keyboard stop of its own, an age rings like the rest of the page. */
+  [data-record-age] { justify-self: start; }
+  [data-record-age]:focus-visible { border-radius: var(--radius-s); }
+  [data-record-label] { position: fixed; left: 0; top: 0; z-index: 2000; box-sizing: border-box; width: max-content; max-width: min(360px, calc(100vw - 16px)); padding: 2px 8px; border: 1px solid var(--line-2); border-radius: var(--radius-s); background: var(--bg-3); color: var(--fg-1); font-family: var(--font-ui); font-size: var(--text-sm); line-height: 1.4; overflow-wrap: anywhere; pointer-events: none; box-shadow: var(--shadow-1); animation: record-label-in var(--dur-fast) var(--ease-out); }
+  [data-record-label][hidden] { display: none; }
+  @keyframes record-label-in { from { opacity: 0; transform: translateY(-2px); } }
+</style>
+<div data-record data-task-id="__TASK_ID__" data-knowledge="__KNOWLEDGE__" data-record-words="__RECORD_WORDS__" data-view="info">
+  <!-- Stay zero-height until the first detail read; the host reveals the
+       pane only once the populated body has been measured. -->
+  <p data-record-note hidden></p>
+  <div data-record-content hidden>
+    <section class="cards" data-record-section="cards" data-record-view="cards" hidden>
+      <div class="cards" data-record-cards></div>
+    </section>
+    <section class="activity" data-record-section="timeline" data-record-view="activity" hidden>
+      <details class="earlier" data-record-earlier hidden><summary data-record-earlier-label></summary><div class="timeline" data-record-history></div></details>
+      <div class="timeline" data-record-timeline></div>
+    </section>
+    <div class="rows" data-record-view="info">
+      <details class="row" data-record-section="details" hidden>
+        <summary><span class="label" data-record-word="recordLabelMore"></span><span class="preview" data-record-more-preview></span><span class="caret"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></span></summary>
+        <div class="row-body">
+          <dl class="facts" data-record-facts></dl>
+          <p class="policy-helper" data-policy-helper></p>
+          <details class="row" data-record-section="knowledge" hidden>
+            <summary><span class="label" data-record-word="recordLabelKnowledgeUsed"></span><span class="count" data-record-knowledge-count></span><span class="caret"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></span></summary>
+            <div class="row-body">
+              <p class="verdict" data-record-word="recordKnowledgeUsedNote"></p>
+              <div class="uses" data-record-knowledge></div>
+              <p class="verdict" data-record-knowledge-more hidden></p>
+            </div>
+          </details>
+          <section data-record-section="validation" hidden>
+            <h3 class="label" data-record-word="recordLabelLiveValidation">Live validation</h3>
+            <p class="goal" data-validation-label></p>
+            <p class="verdict" data-validation-reason></p>
+            <div class="rows" data-validation-rows></div>
+          </section>
+        </div>
+      </details>
+    </div>
+  </div>
+</div>

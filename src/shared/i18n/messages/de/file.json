@@ -1,0 +1,13 @@
+{
+  "fileAdd": "Dateien hinzufügen",
+  "fileCancel": "Vorbereitung von {name} abbrechen",
+  "fileDropHere": "Dateien hier ablegen, um sie hinzuzufügen",
+  "filePathsAnnounce": {
+    "plural": "count",
+    "one": "{count} Dateipfad als Text hinzugefügt",
+    "other": "{count} Dateipfade als Text hinzugefügt"
+  },
+  "filePreparing": "Wird vorbereitet",
+  "fileReady": "Bereit",
+  "fileReadyAnnounce": "{name} ist bereit"
+}

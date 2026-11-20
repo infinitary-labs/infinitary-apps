@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "freeze-recorder",
+      "kind": "feature",
+      "highlight": 2,
+      "area": "firstmate",
+      "title": "Alpha builds note when the app stops answering",
+      "body": "In an alpha build, Infinitary keeps a short record on your computer each time it stops answering your clicks and keys for a moment: when, for how long, and which part of the app was busy. It never leaves your computer. If Infinitary's own source is one of your projects, your first mate tells you about a new one and offers a task to fix it.",
+      "noPicture": "Nothing on screen changes; the record is a file on your computer, and the first mate's offer is an ordinary card.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

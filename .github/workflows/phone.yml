@@ -1,0 +1,525 @@
+name: phone
+
+# INF-2202: unsigned phone checks run only on the configured vBoxx phone queue.
+# INF-663 (captain: "add a nightly phone check"): a default request on a branch
+# runs both device gates whatever changed, with no release step.
+# INF-2139 (captain: "let's pull journeys and phone checks off PRs now"): a pull
+# request no longer starts this workflow, and INF-2539 removed its pull-request
+# paths: the part chooser with its part-times lookup and the replaced-run checks.
+# INF-2492: main.yml no longer calls it; ios-release.yml calls it at its resolved
+# source, which runs every part of both device gates, as a default request does.
+# INF-2582 direction A (the captain's "A: wait once and trim the soak" and "iPhone only;
+# iPad waits for the release check"): the iPhone's job runs all three passes of a request, a branch
+# runs its reached parts on the iPhone alone, and the phone
+# release calls this once per device, so each device takes its own phone Mac.
+# INF-4241 piece 9 amends the branch rule (the captain's "The middle rule: today's rule, plus the short Duo
+# and iPad passes when the change edits the phone app's screens"): a change to a hand-written Swift file in
+# the phone app's folder also runs every part the iPad's and the Duo's rows name, each on its own device.
+# INF-2970's fix 1: a request runs its iPad and iPhone parts as two jobs, one per device, so
+# each takes its own phone Mac at once instead of one after the other on one; the edited-part
+# passes stay in the iPhone's job, on its build and simulator, as INF-2582 chose.
+# Approved phone-check cuts: Linux chooses the parts and device matrix before a Mac is taken.
+# Manual requests run the screenless weak-link suite on one device; release calls stay unchanged.
+# INF-3205: a request may name one device, as a call does, so a replacement proof runs that
+# device's job alone at the branch's current version with the same part selection.
+# INF-4071 (the captain's "Only the change's own edits"): a re-run after a pass names that version as
+# last_pass, and only the files the change's own edits since then reach choose its parts.
+# INF-4241 piece 6 (the captain's direction B): PHONE_PARTS in scripts/phone-test-plan.ts names the devices
+# beyond the iPhone each part runs on. The device list below, the device input and each device's artifacts
+# follow it (tests/phone-ci.test.ts holds them to it), and the gate runs a part only on the devices its
+# row names, so a call or a request for every part runs on the iPad only the parts about the iPad.
+# INF-4241 piece 8: the iPhone Duo is a third device, checked in the four flat sizes its hinge gives
+# it. A call that names no device, as the phone release's does, and a request of every part on every
+# device run one job, matrix device "every", whose gate runs every device's lanes from one build on
+# one phone Mac and keeps one part-times.json; a narrower request keeps a job a device.
+on:
+  workflow_call:
+    inputs:
+      trigger:
+        description: What started the caller's run, which every job name here leads with (scripts/ci-job-names.mjs)
+        type: string
+        default: ''
+      source_commit:
+        description: Exact resolved source for unsigned release checks; empty uses the caller source
+        type: string
+        default: ''
+      device:
+        description: The one device this call checks, ipad, duo or iphone; empty checks every device in one job
+        type: string
+        default: ''
+  workflow_dispatch:
+    inputs:
+      affected:
+        description: Run only parts touched by this branch (unknown scope runs all)
+        type: boolean
+        default: false
+      base:
+        description: Comparison ref for affected requests
+        type: string
+        default: origin/main
+      last_pass:
+        description: The full commit id whose affected request last passed on this branch; only the change's own edits since then choose the parts
+        type: string
+        default: ''
+      parts:
+        description: Parts to run, separated by spaces (empty runs all)
+        type: string
+      device:
+        description: The one device this request checks, ipad, duo or iphone; empty checks every device
+        type: string
+        default: ''
+      starve:
+        description: Reproduce scheduling starvation on each part's owned descendants
+        type: boolean
+        default: false
+      waits:
+        description: Run only native wait-clock tests, without product journeys
+        type: boolean
+        default: false
+      # INF-4241: the phone check's own tool tests, which the rest part skips; a change to those tools requests them.
+      tools:
+        description: Run only the tests of the phone check's own tools, without product journeys
+        type: boolean
+        default: false
+      perf:
+        description: Hold native waits to their wall budgets on a quiet run
+        type: boolean
+        default: false
+      recording:
+        description: "Capture the existing simulator journeys as silent demo recordings"
+        required: false
+        type: boolean
+        default: false
+      guest_observer:
+        description: "Observe the cards launch in a separate guest process without changing the journey"
+        type: boolean
+        default: false
+      evidence_run:
+        description: "Export native scene attachments from an existing phone run without starting simulators"
+        required: false
+        type: string
+      task:
+        description: Requesting task (required for every part on a branch)
+        type: string
+      reason:
+        description: Why this branch needs every part, not its touched or named parts (required for every part on a branch)
+        type: string
+
+permissions:
+  contents: read
+
+# INF-3380 (the captain's direction A, "the workflow files cancel the older run themselves"):
+# a first-attempt request on a task branch shares a group with the branch's requests of the
+# same selection, so the next one cancels the older run, waiting or running. Another selection,
+# such as INF-3205's one-device replacement proof, runs beside it. Main, a rerun and every call
+# (github.workflow is then the caller's name; the phone release's two device calls among them)
+# keep a group of their own run, attempt and device. Cancelling, never queueing, keeps INF-487's
+# fix: no run waits behind another run in the group, only for a free phone guest.
+concurrency:
+  group: ${{ github.workflow == 'phone' && github.ref != 'refs/heads/main' && github.run_attempt == '1' && format('phone-request-{0}-device={1}-affected={2}-base={3}-parts={4}-waits={5}-starve={6}-perf={7}-recording={8}-observer={9}-evidence={10}-since={11}-tools={12}', github.ref, inputs.device, inputs.affected, inputs.base, inputs.parts, inputs.waits, inputs.starve, inputs.perf, inputs.recording, inputs.guest_observer, inputs.evidence_run, inputs.last_pass, inputs.tools) || format('phone-run-{0}-{1}-{2}', github.run_id, github.run_attempt, inputs.device) }}
+  cancel-in-progress: ${{ github.workflow == 'phone' }}
+
+jobs:
+  # INF-2576 (the captain's choice "A, write the rules and add the phone workflow guard"): a
+  # request on a branch that would run every part names its task and reason, as a full Linux
+  # sweep does, and is refused on a light Linux machine before it waits for a phone guest
+  # (docs/testing.md, "What a task branch requests"). A call and every narrower request pass.
+  # INF-3205: every route refuses a device other than the ones here, before a phone Mac is taken.
+  request:
+    name: ${{ format('{0} · Check phone check request', inputs.trigger || 'Manual request') }}
+    # The phone release's call, which passes its resolved source, runs it on GitHub's hosted Ubuntu.
+    runs-on: ${{ inputs.source_commit != '' && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').light || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
+    outputs:
+      devices: ${{ steps.request-select.outputs.devices }}
+      parts: ${{ steps.request-select.outputs.parts }}
+      ipad_parts: ${{ steps.request-select.outputs.ipad_parts }}
+      duo_parts: ${{ steps.request-select.outputs.duo_parts }}
+      iphone_parts: ${{ steps.request-select.outputs.iphone_parts }}
+      repeat_parts: ${{ steps.request-select.outputs.repeat_parts }}
+      repeat_tests: ${{ steps.request-select.outputs.repeat_tests }}
+      full: ${{ steps.request-select.outputs.full }}
+    steps:
+      - name: Validate and record the manual phone request
+        env:
+          MANUAL: ${{ github.event_name == 'workflow_dispatch' && inputs.evidence_run == '' }}
+          BRANCH: ${{ github.ref != 'refs/heads/main' }}
+          EVERY_PART: ${{ !inputs.affected && inputs.parts == '' && !inputs.waits && !inputs.tools }}
+          AFFECTED: ${{ inputs.affected }}
+          PARTS: ${{ inputs.parts }}
+          DEVICE: ${{ inputs.device }}
+          LAST_PASS: ${{ inputs.last_pass }}
+          TASK: ${{ inputs.task }}
+          REASON: ${{ inputs.reason }}
+        run: |
+          case "$DEVICE" in
+            ''|duo|ipad|iphone) ;;
+            *) echo "Unknown phone device: $DEVICE; send ipad, duo, iphone or nothing for every device"; exit 1 ;;
+          esac
+          if [ "$MANUAL" != true ]; then exit 0; fi
+          if [ -n "$LAST_PASS" ]; then
+            [[ "$LAST_PASS" =~ ^[0-9a-f]{40}$ ]] || { echo "The last pass must be a full commit id: $LAST_PASS"; exit 1; }
+            [ "$AFFECTED" = true ] && [ -z "$PARTS" ] || { echo 'A last pass narrows an affected request only; send affected "true" and no parts'; exit 1; }
+          fi
+          if [ "$BRANCH" = true ] && [ "$EVERY_PART" = true ]; then
+            [ -n "$TASK" ] && [ -n "$REASON" ] || {
+              echo 'A branch request for every phone part requires a task and reason; send affected "true" or name parts instead'; exit 1;
+            }
+          fi
+          printf 'Phone request: every_part=%s affected=%s parts=%s device=%s%s task=%s reason=%s\n' "$EVERY_PART" "$AFFECTED" "$PARTS" "${DEVICE:-every}" "${LAST_PASS:+ last_pass=$LAST_PASS}" "$TASK" "$REASON" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.waits && !inputs.tools && inputs.evidence_run == ''
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.waits && !inputs.tools && inputs.evidence_run == ''
+        with:
+          node-version: 24
+      # INF-4071: a last pass that bringing the branch up to date left on no branch is fetched by its id. The sign-in
+      # stays in this step's environment; the checkout above keeps none.
+      - name: Fetch the last passing version
+        if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.waits && !inputs.tools && inputs.evidence_run == '' && inputs.last_pass != ''
+        env:
+          LAST_PASS: ${{ inputs.last_pass }}
+          TOKEN: ${{ github.token }}
+        run: |
+          git cat-file -e "$LAST_PASS^{commit}" 2>/dev/null && exit 0
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)" \
+            fetch --no-tags --quiet origin "$LAST_PASS" || echo "The last pass $LAST_PASS could not be fetched; the whole change is compared."
+      - id: request-select
+        name: Choose affected parts for a crewmate request
+        if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.waits && !inputs.tools && inputs.evidence_run == ''
+        run: |
+          coverage=(); if [ "$AFFECTED" != true ] || [ -n "$REQUESTED_PARTS" ]; then coverage=(--coverage "$REQUESTED_PARTS"); fi
+          since=(); if [ -n "$LAST_PASS" ]; then since=(--since "$LAST_PASS"); fi
+          node scripts/affected-phone.ts --request --base "$BASE_REF" --head HEAD --device "$DEVICE" "${coverage[@]}" "${since[@]}" --placement "$RUNNER_TEMP/phone-placement.json" >> "$GITHUB_OUTPUT"
+        env:
+          BASE_REF: ${{ inputs.base || 'origin/main' }}
+          LAST_PASS: ${{ inputs.last_pass }}
+          DEVICE: ${{ inputs.device }}
+          AFFECTED: ${{ inputs.affected }}
+          REQUESTED_PARTS: ${{ inputs.parts }}
+      - name: Keep the chosen and left parts
+        if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.waits && !inputs.tools && inputs.evidence_run == ''
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: phone-placement
+          path: ${{ runner.temp }}/phone-placement.json
+          if-no-files-found: error
+          retention-days: 14
+  # Each job's name leads with the caller's trigger (scripts/ci-job-names.mjs).
+  native-phone:
+    needs: request
+    name: ${{ inputs.evidence_run != '' && 'Manual request · Phone checks not requested' || format(inputs.waits && '{0} · Wait-clock tests ({1})' || inputs.tools && '{0} · Tool tests ({1})' || '{0} · Phone checks ({1})', inputs.trigger || 'Manual request', matrix.device == 'ipad' && 'iPad' || matrix.device == 'duo' && 'iPhone Duo' || matrix.device == 'every' && 'every device' || 'iPhone') }}
+    if: inputs.evidence_run == '' && needs.request.outputs.devices != '[]'
+    # INF-2970's fix 1: one job per device, each on its own phone Mac; a call or a request may
+    # name its one device (INF-3205). INF-4241 piece 8: a call that names none, and a request of every
+    # part on every device, run one job of every device from one build.
+    # One device failing never cancels another, so each reports its own parts.
+    strategy:
+      fail-fast: false
+      matrix:
+        device: ${{ fromJSON(needs.request.outputs.devices || (inputs.device && format('["{0}"]', inputs.device) || '["every"]')) }}
+    # Required: no override or local fallback. The fleet serves this label only
+    # from the two vBoxx VMs; a missing mapping supplies no runnable destination.
+    runs-on: ${{ fromJSON(vars.MAC_QUEUES).phone }}
+    # Each run, attempt and device waits only for a free vBoxx place, not another run's group.
+    concurrency:
+      group: ${{ format('phone-{0}-{1}-{2}', github.run_id, github.run_attempt, matrix.device) }}
+      queue: max
+      cancel-in-progress: false
+    # Retain the job limit for setup, checks, cleanup and evidence upload: 165 minutes for the
+    # ordinary pass, and 90 more for each of the two edited-part passes, which ran as jobs of
+    # 165 minutes each before INF-2582. The device gate has its own limit, 90 minutes a pass.
+    timeout-minutes: 345
+    defaults:
+      run:
+        working-directory: Application Support/firstmate
+    steps:
+      - name: Checkout the keep-awake action
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.source_commit || github.sha }}
+          sparse-checkout: .github/actions/keep-mac-awake
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Keep the Mac awake
+        uses: ./.github/actions/keep-mac-awake
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.source_commit || github.sha }}
+          path: Application Support/firstmate
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      # The Linux request job already chose parts before any phone Mac is reserved.
+      - id: request-select
+        name: Read the chosen parts
+        if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.parts && !inputs.waits && !inputs.tools && inputs.evidence_run == ''
+        run: |
+          printf 'parts=%s\nipad_parts=%s\nduo_parts=%s\niphone_parts=%s\nrepeat_parts=%s\nfull=%s\n' "$PARTS" "$IPAD_PARTS" "$DUO_PARTS" "$IPHONE_PARTS" "$REPEAT_PARTS" "$FULL" >> "$GITHUB_OUTPUT"
+        env:
+          PARTS: ${{ needs.request.outputs.parts }}
+          IPAD_PARTS: ${{ needs.request.outputs.ipad_parts }}
+          DUO_PARTS: ${{ needs.request.outputs.duo_parts }}
+          IPHONE_PARTS: ${{ needs.request.outputs.iphone_parts }}
+          REPEAT_PARTS: ${{ needs.request.outputs.repeat_parts }}
+          FULL: ${{ needs.request.outputs.full }}
+      - id: scope
+        name: Decide whether the device gate runs
+        run: echo "gate=$GATE" >> "$GITHUB_OUTPUT"
+        env:
+          GATE: ${{ !inputs.affected || inputs.parts != '' || (matrix.device == 'ipad' && steps.request-select.outputs.ipad_parts != '') || (matrix.device == 'duo' && steps.request-select.outputs.duo_parts != '') || (matrix.device != 'ipad' && matrix.device != 'duo' && steps.request-select.outputs.parts != '') }}
+      # Install directly in the placed guest, never in a nested local clone.
+      - uses: ./Application Support/firstmate/.github/actions/pnpm
+        if: ${{ steps.scope.outputs.gate == 'true' }}
+        with:
+          working-directory: Application Support/firstmate
+      # A phone Mac starts fresh for each job, so the install below would fetch Electron and
+      # the app's git from GitHub's release server every time; this restores them from the
+      # Actions cache first (docs/testing.md, "Downloads from GitHub's release server").
+      - if: ${{ steps.scope.outputs.gate == 'true' }}
+        uses: ./Application Support/firstmate/.github/actions/electron-download
+        with:
+          working-directory: Application Support/firstmate
+      - name: Install without reading this Mac's signing material
+        if: ${{ steps.scope.outputs.gate == 'true' }}
+        run: |
+          store="$(pnpm store path --silent)"
+          install_home="$RUNNER_TEMP/phone-install-home"
+          mkdir -p "$install_home"
+          HOME="$install_home" CFFIXED_USER_HOME="$install_home" \
+            INFINITARY_LOCAL_CODESIGN_DIR="$install_home/local-codesign" \
+            pnpm install --frozen-lockfile --store-dir "$store"
+      # INF-2125 piece 3: the Swift packages' repositories, which the package tests and the app build
+      # fetch. Only main saves them, since a run on a branch reads main's saves and never another
+      # branch's (INF-724); a changed lockfile restores main's newest and fetches the rest.
+      - id: swift-packages
+        name: Restore main's Swift packages
+        if: ${{ steps.scope.outputs.gate == 'true' }}
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: ${{ runner.temp }}/swift-packages
+          key: swift-packages-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('Application Support/firstmate/ios/Infinitary/InfinitaryKit/Package.resolved', 'Application Support/firstmate/ios/Infinitary/Infinitary.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: swift-packages-${{ runner.os }}-${{ runner.arch }}-
+      # test-phone owns a fresh HOME, real fixture and simulators, and disables signing.
+      # It checks Swift trust, native recovery and the published client; pnpm check checks generated files.
+      # INF-662: one gate checks and builds once, its device on one simulator it starts
+      # once (INF-1438) and each part on its own test home; any failing part fails it.
+      # INF-2970's fix 1: each phone Mac runs its job's one device, or every device in the one job
+      # of a full check (INF-4241 piece 8). Release calls run every part each device's rows of
+      # PHONE_PARTS name (INF-4241 piece 6), the Duo's with the hinge its row names;
+      # affected requests use reached parts. INF-4241 piece 3 (INF-4308, the captain's "Build on two
+      # at once"): the gate runs as many simulated devices of that device as the Mac's processors and
+      # memory hold, two on a 10-core, 9 GB compute VM, and shares the parts among them by their
+      # recorded times (scripts/phone-part-times.json); INF-2101's one at a time came from 4-core VMs.
+      # INF-2582 direction A, as INF-4241 piece 9 amends it: on an affected request a part the change only
+      # reaches runs on the iPhone, a part whose test code changed runs on every device its row names, and
+      # a change to the phone app's screens adds the iPad's and the Duo's short passes; an edited part then
+      # runs twice more in the iPhone job's same step (INF-2732), on the build and simulator it started,
+      # so each device's job waits for a phone Mac once, however few parts it selects (INF-2811). Each pass keeps the 90 minutes INF-2052 gave the gate.
+      # INF-1343: a complete branch selection stops at its first failed part, so a failing check
+      # frees its Mac at once, and so does any request with edited-part passes, whose failed pass
+      # stops the later ones (INF-2811); other proper-subset requests and the phone release keep
+      # full discovery.
+      # INF-2052 (the captain's choice "Raise the limit for running the parts from 60 to 90 minutes"):
+      # a full check with the Mac mini to itself passed in 59 minutes before INF-2052's other changes;
+      # two full checks at once, one per virtual Mac, starved each other past their parts' 20-minute
+      # allowances, one of them past these 90 minutes too (runs 41236951239 and 41236954773).
+      # INF-4496's fix 2: a rerun of this failed job runs only the passes its run's earlier attempts did not pass, at the
+      # same version, so the rerun is the retry and its pass turns the run green with no whole-job rerun. A failed
+      # attempt keeps every pass the run has passed so far under a key of its own; a rerun restores the newest.
+      - id: earlier-passes
+        name: Restore the passes of this run's earlier attempts
+        if: ${{ steps.scope.outputs.gate == 'true' && github.run_attempt != '1' }}
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: ${{ runner.temp }}/phone-passes
+          key: ${{ format('phone-passes-{0}-{1}-{2}', github.run_id, matrix.device, github.run_attempt) }}
+          restore-keys: ${{ format('phone-passes-{0}-{1}-', github.run_id, matrix.device) }}
+      - id: both
+        name: Read and recover on iPhone and iPad
+        # The iPad and the Duo run each part once; the iPhone also runs the edited parts' two more passes.
+        timeout-minutes: ${{ matrix.device != 'ipad' && matrix.device != 'duo' && steps.request-select.outputs.repeat_parts != '' && 270 || 90 }}
+        if: ${{ steps.scope.outputs.gate == 'true' }}
+        run: |
+          parts=()
+          # INF-4241 piece 9: the iPad's or the Duo's own job beside the iPhone's runs the parts the chooser named for
+          # it, which hold that device's short pass when the change edits the phone app's screens.
+          list="$PHONE_PARTS"; iphone_only="$PHONE_IPHONE_PARTS"
+          if [ -n "$PHONE_DEVICE_PARTS" ]; then list="$PHONE_DEVICE_PARTS"; iphone_only=""; fi
+          for part in $list; do
+            case " $iphone_only " in
+              *" $part "*) parts+=(--iphone-part "$part") ;;
+              *) parts+=(--part "$part") ;;
+            esac
+          done
+          # A complete selection on both devices runs every part, and keeps their times.
+          if [ "$PHONE_FULL" = true ] && [ -z "$PHONE_IPHONE_PARTS" ]; then parts=(); fi
+          # The gate leaves the iPhone-only parts and the further passes off the iPad itself.
+          for part in $PHONE_REPEAT_PARTS; do parts+=(--repeat-part "$part"); done
+          if [ -n "$PHONE_REPEAT_TESTS" ]; then parts+=(--repeat-tests "$PHONE_REPEAT_TESTS"); fi
+          evidence="$RUNNER_TEMP/phone"
+          case "$PHONE_DEVICE" in
+            every) device=(--every-device) ;;
+            ipad|duo|iphone) device=(--device "$PHONE_DEVICE"); evidence="$evidence/$PHONE_DEVICE" ;;
+            *) echo "Unknown phone device: $PHONE_DEVICE" >&2; exit 1 ;;
+          esac
+          node scripts/test-phone.ts "${device[@]}" "${parts[@]}" --passes "$PHONE_PASSES" --evidence "$evidence"
+        env:
+          PHONE_DEVICE: ${{ matrix.device }}
+          PHONE_PASSES: ${{ runner.temp }}/phone-passes/passes.json
+          PHONE_FULL: ${{ steps.request-select.outputs.full }}
+          PHONE_PARTS: ${{ inputs.parts || steps.request-select.outputs.parts }}
+          PHONE_IPHONE_PARTS: ${{ needs.request.outputs.iphone_parts }}
+          PHONE_DEVICE_PARTS: ${{ matrix.device == 'ipad' && steps.request-select.outputs.ipad_parts || matrix.device == 'duo' && steps.request-select.outputs.duo_parts || '' }}
+          PHONE_REPEAT_PARTS: ${{ steps.request-select.outputs.repeat_parts }}
+          PHONE_REPEAT_TESTS: ${{ needs.request.outputs.repeat_tests }}
+          INFINITARY_PHONE_WAITS_ONLY: ${{ inputs.waits && '1' || '0' }}
+          INFINITARY_PHONE_TOOLS_ONLY: ${{ inputs.tools && '1' || '0' }}
+          INFINITARY_STARVE_CHECK: ${{ inputs.starve && '1' || '0' }}
+          INFINITARY_PERF_BUDGETS: ${{ inputs.perf && '1' || '0' }}
+          PHONE_RECORDING: ${{ inputs.recording && '1' || '' }}
+          INFINITARY_PHONE_GUEST_OBSERVER: ${{ inputs.guest_observer && '1' || '0' }}
+          INFINITARY_PHONE_STOP_EARLY: ${{ (steps.request-select.outputs.full == 'true' || steps.request-select.outputs.repeat_parts != '') && '1' || '0' }}
+          INFINITARY_PHONE_PACKAGE_CACHE: ${{ runner.temp }}/swift-packages
+      # A failed attempt keeps the run's passes for a rerun of this job; a save that fails never fails the check.
+      - name: Keep the passes for a rerun of this job
+        if: ${{ always() && steps.both.outcome == 'failure' }}
+        continue-on-error: true
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: ${{ runner.temp }}/phone-passes
+          key: ${{ format('phone-passes-{0}-{1}-{2}', github.run_id, matrix.device, github.run_attempt) }}
+      - name: Save the Swift packages from main
+        # The gate fetched them once it started, passing or failing; a save that fails never fails main's check.
+        if: ${{ always() && github.ref == 'refs/heads/main' && steps.swift-packages.outputs.cache-hit != 'true' && (steps.both.outcome == 'success' || steps.both.outcome == 'failure') }}
+        continue-on-error: true
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: ${{ runner.temp }}/swift-packages
+          key: ${{ steps.swift-packages.outputs.cache-primary-key }}
+      # Keep diagnostics independently of screenshot-heavy xcresult bundles,
+      # so a failed gate can be diagnosed within the workflow reader's limits.
+      # A full gate's part times ride along (part-times.json, scripts/test-phone.ts).
+      # INF-2053: each part's live simulator log (tests/helpers/phoneLogs.ts) runs to tens of
+      # megabytes, and a full gate's twelve took these logs past the app's 64 MiB artifact
+      # download; they are kept whole in an artifact of their own below.
+      - name: Keep the small native command logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: phone-logs-${{ matrix.device }}
+          path: |
+            ${{ runner.temp }}/phone/**/*.log
+            ${{ runner.temp }}/phone/**/part-times.json
+            !${{ runner.temp }}/phone/**/simulator-live.log
+          if-no-files-found: ignore
+          retention-days: 3
+      - name: Keep the simulator logs as their own artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: phone-simulator-logs-${{ matrix.device }}
+          path: ${{ runner.temp }}/phone/**/simulator-live.log
+          if-no-files-found: ignore
+          retention-days: 3
+      # INF-1062: the pictures alone, exported from each result bundle with the names the
+      # journeys gave them, so a crewmate reads the gate's pictures within the app's artifact
+      # limit; phone-results, with every bundle whole, has outgrown it.
+      - name: Keep the pictures
+        if: always()
+        run: |
+          [ -d "$RUNNER_TEMP/phone" ] || exit 0
+          out="$RUNNER_TEMP/phone-pictures"
+          while IFS= read -r bundle; do
+            part="${bundle#"$RUNNER_TEMP/phone/"}"; part="${part%/phone.xcresult}"
+            mkdir -p "$out/$part"
+            xcrun xcresulttool export attachments --path "$bundle" --output-path "$out/$part" \
+              || echo "No pictures exported from $bundle"
+          done < <(find "$RUNNER_TEMP/phone" -type d -name phone.xcresult)
+      - name: Keep the pictures as their own artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: phone-pictures-${{ matrix.device }}
+          path: ${{ runner.temp }}/phone-pictures
+          if-no-files-found: ignore
+          retention-days: 3
+      # INF-1343 (the captain's "Upload the 530 MB phone results only when a check fails"): the whole
+      # result bundles are for diagnosing a failure; a recording run keeps them for its clips, which
+      # the evidence_run export reads. The logs and pictures above stay on every run. A failure's
+      # bundles are kept 1 day, a recording run's 3 days for its export.
+      - name: Keep native results and connection readings
+        if: failure() || inputs.recording
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: phone-results-${{ matrix.device }}
+          path: ${{ runner.temp }}/phone/
+          if-no-files-found: ignore
+          retention-days: ${{ inputs.recording && 3 || 1 }}
+  # INF-1066: result bundles can exceed the workflow reader's download bound.
+  # Export selected evidence on the Xcode host without a simulator, build, sign-in or signing.
+  scene-evidence:
+    if: inputs.evidence_run != ''
+    name: ${{ format('{0} · Export phone pictures', inputs.trigger || 'Manual request') }}
+    runs-on: ${{ fromJSON(vars.MAC_QUEUES || '{}').light || vars.MAC_RUNNER || 'mini-mac' }}
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      # Each device job keeps its own phone-results (INF-2582, INF-2970's fix 1).
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: phone-results*
+          merge-multiple: true
+          run-id: ${{ inputs.evidence_run }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/scene-source
+      - name: Export native scene attachments
+        env:
+          SOURCE: ${{ runner.temp }}/scene-source
+          DEST: ${{ runner.temp }}/scene-evidence
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, shutil, subprocess
+          source, dest = pathlib.Path(os.environ['SOURCE']), pathlib.Path(os.environ['DEST'])
+          dest.mkdir(parents=True, exist_ok=True)
+          for bundle in source.rglob('*.xcresult'):
+              part = bundle.parent.name
+              if part not in ('rest', 'character'):
+                  continue
+              device = bundle.parent.parent.name
+              exported = source / ('exported-' + device + '-' + part)
+              subprocess.run(['xcrun', 'xcresulttool', 'export', 'attachments', '--path', str(bundle), '--output-path', str(exported)], check=True)
+              manifest = json.loads((exported / 'manifest.json').read_text())
+              def keep(value):
+                  if isinstance(value, list):
+                      for child in value: keep(child)
+                  elif isinstance(value, dict):
+                      file = value.get('exportedFileName')
+                      name = value.get('suggestedHumanReadableName', '')
+                      if file and name.startswith('native-scene-'):
+                          src = exported / pathlib.Path(file).name
+                          shutil.copyfile(src, dest / (device + '-' + part + '-' + pathlib.Path(name).stem + '-' + src.name))
+                      for child in value.values():
+                          if isinstance(child, (dict, list)): keep(child)
+              keep(manifest)
+              shutil.copyfile(exported / 'manifest.json', dest / (device + '-' + part + '-manifest.json'))
+          for clip in source.rglob('*.mp4'):
+              if clip.stem.removesuffix('-raw') not in ('native-scene-pan', 'native-scene-keyboard', 'conversation', 'character'):
+                  continue
+              device, part = clip.parent.parent.name, clip.parent.name
+              shutil.copyfile(clip, dest / (device + '-' + part + '-' + clip.name))
+              poster = clip.with_name(clip.stem + '-poster.png')
+              if poster.exists(): shutil.copyfile(poster, dest / (device + '-' + part + '-' + poster.name))
+          shutil.rmtree(source)
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: native-scene-evidence
+          path: ${{ runner.temp }}/scene-evidence
+          retention-days: 14
+          if-no-files-found: error

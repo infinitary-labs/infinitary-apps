@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "options-name-real-tradeoffs",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Plan cards ask only decisions where each answer gives something up",
+      "body": "A plan card now states the plan its crewmate would build and asks you only the decisions where you give something up whichever answer you pick, instead of always offering two or three directions. Every option on a card says what you get with it and what it costs, and an option that gets you nothing the recommended one does not already give is left off.",
+      "noPicture": "This changes what plan cards ask and how options are worded, not how any view is drawn.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

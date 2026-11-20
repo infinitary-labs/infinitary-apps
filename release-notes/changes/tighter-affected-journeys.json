@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "tighter-affected-journeys",
+      "reason": "CI only: a pull request's Mac check selects fewer journey files. The release's full Mac check is unchanged, and nothing a person sees changes."
+    }
+  ]
+}

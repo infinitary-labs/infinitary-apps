@@ -1,0 +1,12 @@
+{
+  "settleCannotMerge": "Zusammenführen nicht möglich: {problem}",
+  "settleCouldNotDiscard": "Verwerfen nicht möglich: {problem}",
+  "settleDiscardedPullOpen": "Verworfen. Sein Pull Request ist dort, wo das Projekt liegt, noch offen: {problem}",
+  "settleDiscardedPullOpenThen": "Verworfen. Sein Pull Request ist dort, wo das Projekt liegt, noch offen: {problem}. {followup}",
+  "settleDiscarding": "Wird verworfen",
+  "settleDiscardingAfterTurn": "Wird verworfen, sobald sein Crewmitglied mit seiner aktuellen Arbeit fertig ist",
+  "settleMerging": "Wird zusammengeführt",
+  "settleMergingAfterTurn": "Wird zusammengeführt, sobald sein Crewmitglied mit seiner aktuellen Arbeit fertig ist",
+  "settleMergingChange": "{change} wird zusammengeführt",
+  "settleMergingChangeAfterTurn": "{change} wird zusammengeführt, sobald sein Crewmitglied mit seiner aktuellen Arbeit fertig ist"
+}

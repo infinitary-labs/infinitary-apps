@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-older-profile-journey",
+      "reason": "Test-only: the older-profile journey's delivery test moved unchanged into its own file; no product behavior changes."
+    }
+  ]
+}

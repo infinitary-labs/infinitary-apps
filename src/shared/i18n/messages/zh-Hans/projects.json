@@ -1,0 +1,41 @@
+{
+  "projectsHost": "项目的托管平台",
+  "projectsMoveAfterNew": "单独的项目（{key}）",
+  "projectsMoveAfterRevive": "重新成为单独的项目（{key}）",
+  "projectsMoveApply": "应用移动",
+  "projectsMoveAsks": {
+    "plural": "count",
+    "other": "你的大副请求移动下列仓库。点击“应用移动”之前，不会移动任何内容。"
+  },
+  "projectsMoveAutomations": {
+    "plural": "count",
+    "other": "与移出列表的项目相关的 {count} 项自动化，之后改为与 {project} 相关。"
+  },
+  "projectsMoveColumnAfter": "点击之后",
+  "projectsMoveColumnNow": "当前项目",
+  "projectsMoveColumnRepository": "仓库",
+  "projectsMoveDirections": "为 {project} 中任一仓库保存的指引，之后会作用于其中每个仓库，包括这些仓库。",
+  "projectsMoveFinishedTasks": {
+    "plural": "count",
+    "other": "{count} 项已完成的任务随之移动，编号不变。"
+  },
+  "projectsMoveKeeps": "每个仓库都保留名称、文件夹和设置。",
+  "projectsMoveLeaves": {
+    "plural": "count",
+    "other": "以下 {count} 个项目将移出项目列表，以后谁都不能再使用它们的任务编号前缀："
+  },
+  "projectsMoveListMore": {
+    "plural": "count",
+    "other": "{first} 及其他 {count} 个"
+  },
+  "projectsMoveListTwo": "{first} 和 {second}",
+  "projectsMoveNoOpenTask": "没有未完成的任务移动。",
+  "projectsMoveNoTask": "没有任务移动。",
+  "projectsMoveNotNow": "暂不",
+  "projectsMoveOpenTasks": {
+    "plural": "count",
+    "other": "{count} 项未完成的任务加入 {project}，编号不变："
+  },
+  "projectsMoveTitleInto": "把 {repositories} 移入 {project}？",
+  "projectsMoveTitleOwn": "把 {repositories} 移入一个单独的项目？"
+}

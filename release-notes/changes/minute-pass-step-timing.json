@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "minute-pass-step-timing",
+      "reason": "Alpha builds' freeze recorder now times each step of the once-a-minute pass and the work it sets off, and tags each recorded stall with the step running; it is diagnosis kept on this computer and changes nothing a person sees or what the pass does."
+    }
+  ]
+}

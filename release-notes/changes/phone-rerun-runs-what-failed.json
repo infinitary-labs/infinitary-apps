@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-rerun-runs-what-failed",
+      "reason": "Project check workflow only: a rerun of a failed phone check job runs only the parts that did not pass in that run, so its pass turns the run green; nothing in the app changes."
+    }
+  ]
+}

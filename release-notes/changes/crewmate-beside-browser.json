@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "crewmate-beside-browser",
+      "kind": "feature",
+      "title": "Message the crewmate without leaving the browser",
+      "body": "When no card is docked beside a task’s browser, one line shows the crewmate’s latest words. Open it to read the conversation and send a message without leaving the page or giving back control.",
+      "area": "tasks",
+      "picture": {
+        "dark": "crewmate-beside-browser-dark.webp",
+        "light": "crewmate-beside-browser-light.webp",
+        "alt": "A sign-up page beside its crewmate’s latest report and message box"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

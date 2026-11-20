@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "waited-on-closing-lines-stay-quiet",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "The first mate is no longer woken by a crewmate's closing line while its work still runs",
+      "body": "When other work waits on a task, a crewmate's closing line at the end of a turn no longer wakes the first mate while that task's checks or jobs are still running. The line stays on the task, and a report from the crewmate still reaches the first mate at once. Less of your plan's allowance goes to turns with nothing to do.",
+      "noPicture": "This changes when the first mate is woken, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

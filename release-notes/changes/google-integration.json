@@ -1,0 +1,13 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "google-integration",
+      "reason": "Internal until Infinitary has its own Google client: a released build offers no Google sign-in until Infinitary registers its client with Google and passes Google's verification and security assessment, so nobody can use Gmail through the app yet; the release that turns it on carries the note."
+    },
+    {
+      "id": "integration-change-dropped",
+      "reason": "What a crewmate hears when an MCP server's change it asked for loses its connection after the server took it: it now reads that the outcome is unknown and is never told to make the change again; a person sees no new screen or control."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "phone-approvals-switch-after-stop",
+      "kind": "fix",
+      "title": "Your phone's Approves secret uses switch turns off when your Mac stops it",
+      "body": "When your Mac stopped secret approvals from your iPhone or iPad together with another device's, the phone's switch in Settings → Devices could stay on until you opened Settings again. Now it turns off as soon as your Mac stops it.",
+      "area": "devices",
+      "noPicture": "The switch keeps its look; it now reads off when it should, which one picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

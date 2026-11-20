@@ -1,0 +1,6 @@
+{
+  "attribute": "com.getinfinitary.installation",
+  "path": "Contents/Info.plist",
+  "direct": "1:direct",
+  "homebrewPrefix": "1:homebrew:"
+}

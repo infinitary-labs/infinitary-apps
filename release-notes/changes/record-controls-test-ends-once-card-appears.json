@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "record-controls-test-ends-once-card-appears",
+      "reason": "Test only: the record controls journey's Show the card test now ends once the decision card has appeared. The card takes focus as it appears, so a card still appearing could take the focus the next test's Tasks row press needed, and no record opened. No shipped behavior changed."
+    }
+  ]
+}

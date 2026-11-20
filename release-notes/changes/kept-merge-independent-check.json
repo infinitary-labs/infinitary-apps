@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "kept-merge-independent-check",
+      "kind": "improvement",
+      "title": "A second crewmate checks an approved merge when its crewmate is unsure",
+      "body": "If a crewmate brings a change you approved up to date with your project and cannot tell whether that changed the work, a second crewmate compares the two. The merge goes ahead only if nothing but the update changed; otherwise you are asked again on a new card.",
+      "area": "cards",
+      "noPicture": "The only thing on screen is one Activity line and a short-lived crewmate; the change is who decides when a merge goes ahead.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+// Journeys assert what a person can do, not the renderer's chosen layout.
+// A role/identity hook locates a control; these hooks only publish styling
+// decisions. Exercise the control or use layout.ts's loss invariants instead.
+language js
+
+or {
+  JsStringLiteralExpression() as $hook,
+  JsTemplateExpression() as $hook,
+  JsRegexLiteralExpression() as $hook
+} where {
+  $hook <: or {
+    includes "data-rails-folded",
+    includes "data-card-width",
+    includes "data-stage-rate",
+    includes "data-side-panel-size"
+  },
+  $filename <: r".*tests/e2e/.*",
+  register_diagnostic(span=$hook, message="A layout-state hook repeats a rendering decision, not a user result. Exercise the control or check containment and overlap through tests/e2e/layout.ts; exact layout belongs in focused tests (docs/testing.md, the e2e assertion contract).", severity="error")
+}

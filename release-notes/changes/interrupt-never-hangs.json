@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "interrupt-never-hangs",
+      "kind": "fix",
+      "title": "Interrupting a crewmate no longer waits forever",
+      "body": "When a Claude crewmate stops responding, interrupting or dropping its task used to wait until someone ended it by hand. Infinitary now stops that crewmate within about a minute, so the interrupt or the drop goes through.",
+      "area": "crewmates",
+      "noPicture": "Nothing on screen changes: an interrupt or a drop that used to wait now finishes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

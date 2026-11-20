@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "tap-latest-badge-held",
+      "reason": "Release work: a stable's public release on the shared Homebrew tap now leaves the tap's Latest badge on the release it was on, as the alpha runbook promises. The app, its installs and its update offers are unchanged."
+    }
+  ]
+}

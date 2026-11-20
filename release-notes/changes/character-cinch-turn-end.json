@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "character-cinch-turn-end",
+      "reason": "The shortening journey waits for the first mate's turn to end before reading what the window heard, instead of reading at the answer card, which the first mate shows before its turn ends; nothing a person sees changes."
+    }
+  ]
+}

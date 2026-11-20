@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "delete-gmail-calendar-content-other-computers",
+      "kind": "improvement",
+      "title": "Gmail and Calendar content goes from the computers that run your work too",
+      "body": "When another computer runs your crew's work, what a crewmate read there from Gmail and Calendar now gets the same note after 30 days. Delete Gmail and Calendar content in Settings → General replaces it there too, and its answer counts those conversations. A computer that is out of reach or not updated yet is named in the answer, and its conversations follow once it is back or updated.",
+      "area": "settings",
+      "picture": {
+        "dark": "delete-gmail-calendar-content-other-computers-dark.webp",
+        "light": "delete-gmail-calendar-content-other-computers-light.webp",
+        "alt": "Settings → General with the Delete Gmail and Calendar content row under Purge task data: it now replaces what the crew read on this computer and on the computers that run your work."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

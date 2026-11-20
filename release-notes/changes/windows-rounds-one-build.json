@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "windows-rounds-one-build",
+      "reason": "CI only: the Windows installer check builds the installer once and runs its requested rounds side by side."
+    }
+  ]
+}

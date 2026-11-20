@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "docs-site-no-transform",
+      "reason": "Stops Cloudflare adding its analytics script to the docs site's pages and has the publish run's live check catch a changed page; nothing in the app changes."
+    }
+  ]
+}

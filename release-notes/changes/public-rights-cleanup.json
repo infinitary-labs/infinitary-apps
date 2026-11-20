@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "public-rights-cleanup",
+      "reason": "Internal: before the source goes public, NOTICE states the predecessor's ownership and the attestation markers' grant, the bundled SDK's license ships beside the app's licenses, outside project names leave comments, docs and test data, test readings are recomputed and the work guide is reworded; nothing a person sees changes."
+    }
+  ]
+}

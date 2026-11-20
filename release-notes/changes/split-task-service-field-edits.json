@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-task-service-field-edits",
+      "reason": "Refactor: the task service's field edits moved into their own file to stay under the size warning line; nothing a person sees changes."
+    }
+  ]
+}

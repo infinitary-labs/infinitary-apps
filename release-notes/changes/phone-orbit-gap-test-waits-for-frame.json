@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-orbit-gap-test-waits-for-frame",
+      "reason": "The phone's relationship circle test now waits for the frame the crew scene's render thread published instead of a fixed count of display ticks; test only, nothing a person sees changes."
+    }
+  ]
+}

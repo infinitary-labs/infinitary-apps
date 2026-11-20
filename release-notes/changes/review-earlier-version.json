@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "review-earlier-version",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A review that read an earlier version no longer shows as a plain pass",
+      "body": "When a review passed and the change moved on afterwards, the merge card and a task's details now say the review passed at an earlier version, with an orange dot and the version it read, instead of a green pass. A review whose first try failed now reads the newest version when it starts again, so it no longer gets stuck on the version it was first given.",
+      "noPicture": "The review cell only changes when a pass is older than the version on offer, which needs a review and a later push that no shared journey stages for a hero picture.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

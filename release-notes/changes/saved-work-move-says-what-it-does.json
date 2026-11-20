@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "saved-work-move-says-what-it-does",
+      "kind": "improvement",
+      "area": "updates",
+      "title": "Bringing your saved work over from Firstmate 3000 says what it is doing",
+      "body": "The window that brings your saved work over from Firstmate 3000 now shows its four steps with the current one lit, what it is copying, such as the working copy of one task, the files done of the total, the time so far and about how long the step has left. It also says why the move takes this long. Quit, continue later stops the move with nothing changed, and it starts again the next time you open Infinitary.",
+      "picture": {
+        "dark": "saved-work-move-says-what-it-does-dark.png",
+        "light": "saved-work-move-says-what-it-does-light.png",
+        "alt": "The move window copying the working copy of one task, 2 of 5, under its four steps with Copying lit, a bar, the files done of the total, the time so far and the time left"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

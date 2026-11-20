@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "local-direct-unit-reach",
+      "reason": "Internal local test selection: run direct unit importers and path readers once before merge, without additional CI jobs."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-pool-isolation",
+      "reason": "Internal workflow contract and developer manuals protect the existing rented-Mac phone queue; no routing or app behavior changes."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "phone-slow-catch-up",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Infinitary on your iPhone and iPad keeps catching up on a slow connection",
+      "body": "On a very slow connection, such as weak mobile data, your computer no longer drops Infinitary on your iPhone or iPad about a minute into sending what it missed, which made it start over. Your computer now sends in small pieces and hears after each one that it arrived, so a long catch-up keeps going on the same connection until it is read.",
+      "noPicture": "The change is in a connection staying up while it catches up, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

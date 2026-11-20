@@ -1,0 +1,1407 @@
+[
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Read the batch",
+    "status": "completed",
+    "conclusion": "success",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      { "name": "Run actions/github-script@v7", "conclusion": "success" },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Watch the code checks",
+    "status": "completed",
+    "conclusion": "success",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      { "name": "Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Run actions/github-script@v7", "conclusion": "success" },
+      { "name": "Post Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Linux startup / Merge batch \u00b7 Automatic startup checks (Linux)",
+    "status": "completed",
+    "conclusion": "success",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      { "name": "Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Run actions/setup-node@v4", "conclusion": "success" },
+      { "name": "Run ./.github/actions/linux-startup", "conclusion": "success" },
+      { "name": "Post Run actions/setup-node@v4", "conclusion": "success" },
+      { "name": "Post Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Desktop checks / Merge batch \u00b7 Check verification request",
+    "status": "completed",
+    "conclusion": "success",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      { "name": "Validate and record the manual request", "conclusion": "success" },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Critical-path journey / Merge batch \u00b7 Selected app journeys (Linux; serial)",
+    "status": "completed",
+    "conclusion": "success",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      { "name": "Record the timing observation start", "conclusion": "success" },
+      { "name": "Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Record the manual Linux request", "conclusion": "skipped" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/pnpm",
+        "conclusion": "success"
+      },
+      { "name": "Run actions/setup-node@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/node-headers",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm install --frozen-lockfile", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/linux-desktop",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/demo-encoder",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm build", "conclusion": "success" },
+      { "name": "Run the journeys with the sandbox on", "conclusion": "success" },
+      {
+        "name": "Refuse a test that skipped on Linux without the Mac tag",
+        "conclusion": "success"
+      },
+      { "name": "Checkout the workflow's timing exporter", "conclusion": "success" },
+      { "name": "Export compact Linux timing", "conclusion": "success" },
+      { "name": "Keep compact Linux timing separately", "conclusion": "success" },
+      { "name": "Keep the Linux window and the journeys' results", "conclusion": "skipped" },
+      { "name": "Keep a passing run's result and evidence", "conclusion": "success" },
+      { "name": "Keep the run-alone result", "conclusion": "success" },
+      { "name": "Summarize the run-alone pass", "conclusion": "success" },
+      { "name": "Post Checkout the workflow's timing exporter", "conclusion": "success" },
+      {
+        "name": "Post Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Post Run actions/setup-node@v4", "conclusion": "success" },
+      { "name": "Post Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Desktop checks / Merge batch \u00b7 Native tests, replay and package (Mac)",
+    "status": "completed",
+    "conclusion": "cancelled",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      { "name": "Set up runner", "conclusion": "success" },
+      { "name": "Checkout the keep-awake action", "conclusion": "success" },
+      { "name": "Keep the Mac awake", "conclusion": "success" },
+      { "name": "Run actions/checkout@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/pnpm",
+        "conclusion": "success"
+      },
+      { "name": "Run actions/setup-node@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/node-headers",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm install --frozen-lockfile", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/prove-node-headers",
+        "conclusion": "skipped"
+      },
+      { "name": "Run pnpm typecheck", "conclusion": "skipped" },
+      { "name": "Run pnpm check", "conclusion": "skipped" },
+      { "name": "Run pnpm lint:adherence", "conclusion": "skipped" },
+      { "name": "Read the temporary volume's filesystem type", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/browser-chromium",
+        "conclusion": "success"
+      },
+      { "name": "Run mac_tests=\"$(node scripts/mac-unit-tests.ts)\"", "conclusion": "cancelled" },
+      { "name": "Run pnpm build", "conclusion": "skipped" },
+      { "name": "Run pnpm exec playwright install ffmpeg", "conclusion": "skipped" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/demo-encoder",
+        "conclusion": "skipped"
+      },
+      { "name": "Read the dev Electron's signature", "conclusion": "skipped" },
+      { "name": "Run this job's journeys", "conclusion": "skipped" },
+      { "name": "Keep the e2e result", "conclusion": "skipped" },
+      { "name": "Keep the failed journeys' evidence", "conclusion": "skipped" },
+      { "name": "Keep the recorded demos", "conclusion": "skipped" },
+      {
+        "name": "Run grep -lE \"tag: .*PERF_TAG\" tests/e2e/*.spec.ts | xargs pnpm exec playwright test --no-deps",
+        "conclusion": "skipped"
+      },
+      { "name": "Run claude_bin=\"$(command -v claude || true)\"", "conclusion": "skipped" },
+      { "name": "Run pnpm replay:gate", "conclusion": "skipped" },
+      { "name": "Run actions/upload-artifact@v4", "conclusion": "success" },
+      { "name": "Run pnpm codesign:local", "conclusion": "skipped" },
+      { "name": "Package the universal app", "conclusion": "skipped" },
+      { "name": "Run pnpm codesign:verify", "conclusion": "skipped" },
+      {
+        "name": "Run scripts/check-user-data-dir.sh \"dist/mac-universal/Infinitary Dev.app\" infinitary-dev",
+        "conclusion": "skipped"
+      },
+      {
+        "name": "Run scripts/check-bundled-git.sh \"dist/mac-universal/Infinitary Dev.app\"",
+        "conclusion": "skipped"
+      },
+      {
+        "name": "Run scripts/check-helper.sh \"dist/mac-universal/Infinitary Dev.app\"",
+        "conclusion": "skipped"
+      },
+      { "name": "Summarize", "conclusion": "success" },
+      {
+        "name": "Post Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Post Run actions/setup-node@v4", "conclusion": "skipped" },
+      { "name": "Post Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Post Checkout the keep-awake action", "conclusion": "success" },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Desktop checks / Merge batch \u00b7 Code checks and build (Linux)",
+    "status": "completed",
+    "conclusion": "failure",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      { "name": "Checkout the keep-awake action", "conclusion": "skipped" },
+      { "name": "Keep the Mac awake", "conclusion": "skipped" },
+      { "name": "Run actions/checkout@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/pnpm",
+        "conclusion": "success"
+      },
+      { "name": "Run actions/setup-node@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/node-headers",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm install --frozen-lockfile", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/prove-node-headers",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm typecheck", "conclusion": "success" },
+      { "name": "Run pnpm check", "conclusion": "failure" },
+      { "name": "Run pnpm lint:adherence", "conclusion": "success" },
+      { "name": "Read the temporary volume's filesystem type", "conclusion": "skipped" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/browser-chromium",
+        "conclusion": "skipped"
+      },
+      { "name": "Run mac_tests=\"$(node scripts/mac-unit-tests.ts)\"", "conclusion": "skipped" },
+      { "name": "Run pnpm build", "conclusion": "success" },
+      { "name": "Run pnpm exec playwright install ffmpeg", "conclusion": "skipped" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/demo-encoder",
+        "conclusion": "skipped"
+      },
+      { "name": "Read the dev Electron's signature", "conclusion": "skipped" },
+      { "name": "Run this job's journeys", "conclusion": "skipped" },
+      { "name": "Keep the e2e result", "conclusion": "skipped" },
+      { "name": "Keep the failed journeys' evidence", "conclusion": "skipped" },
+      { "name": "Keep the recorded demos", "conclusion": "skipped" },
+      {
+        "name": "Run grep -lE \"tag: .*PERF_TAG\" tests/e2e/*.spec.ts | xargs pnpm exec playwright test --no-deps",
+        "conclusion": "skipped"
+      },
+      { "name": "Run claude_bin=\"$(command -v claude || true)\"", "conclusion": "skipped" },
+      { "name": "Run pnpm replay:gate", "conclusion": "skipped" },
+      { "name": "Run actions/upload-artifact@v4", "conclusion": "skipped" },
+      { "name": "Run pnpm codesign:local", "conclusion": "skipped" },
+      { "name": "Package the universal app", "conclusion": "skipped" },
+      { "name": "Run pnpm codesign:verify", "conclusion": "skipped" },
+      {
+        "name": "Run scripts/check-user-data-dir.sh \"dist/mac-universal/Infinitary Dev.app\" infinitary-dev",
+        "conclusion": "skipped"
+      },
+      {
+        "name": "Run scripts/check-bundled-git.sh \"dist/mac-universal/Infinitary Dev.app\"",
+        "conclusion": "skipped"
+      },
+      {
+        "name": "Run scripts/check-helper.sh \"dist/mac-universal/Infinitary Dev.app\"",
+        "conclusion": "skipped"
+      },
+      { "name": "Summarize", "conclusion": "skipped" },
+      {
+        "name": "Post Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Post Run actions/setup-node@v4", "conclusion": "skipped" },
+      { "name": "Post Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Desktop checks / Merge batch \u00b7 Parallel journeys (Mac)",
+    "status": "completed",
+    "conclusion": "cancelled",
+    "steps": []
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Desktop checks / Merge batch \u00b7 Desktop journeys (Mac)",
+    "status": "completed",
+    "conclusion": "cancelled",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      { "name": "Set up runner", "conclusion": "success" },
+      { "name": "Checkout the keep-awake action", "conclusion": "success" },
+      { "name": "Keep the Mac awake", "conclusion": "success" },
+      { "name": "Run actions/checkout@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/pnpm",
+        "conclusion": "success"
+      },
+      { "name": "Run actions/setup-node@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/node-headers",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm install --frozen-lockfile", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/prove-node-headers",
+        "conclusion": "skipped"
+      },
+      { "name": "Run pnpm typecheck", "conclusion": "skipped" },
+      { "name": "Run pnpm check", "conclusion": "skipped" },
+      { "name": "Run pnpm lint:adherence", "conclusion": "skipped" },
+      { "name": "Read the temporary volume's filesystem type", "conclusion": "skipped" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/browser-chromium",
+        "conclusion": "skipped"
+      },
+      { "name": "Run mac_tests=\"$(node scripts/mac-unit-tests.ts)\"", "conclusion": "skipped" },
+      { "name": "Run pnpm build", "conclusion": "success" },
+      { "name": "Run pnpm exec playwright install ffmpeg", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/demo-encoder",
+        "conclusion": "success"
+      },
+      { "name": "Read the dev Electron's signature", "conclusion": "success" },
+      { "name": "Run this job's journeys", "conclusion": "cancelled" },
+      { "name": "Keep the e2e result", "conclusion": "success" },
+      { "name": "Keep the failed journeys' evidence", "conclusion": "skipped" },
+      { "name": "Keep the recorded demos", "conclusion": "success" },
+      {
+        "name": "Run grep -lE \"tag: .*PERF_TAG\" tests/e2e/*.spec.ts | xargs pnpm exec playwright test --no-deps",
+        "conclusion": "skipped"
+      },
+      { "name": "Run claude_bin=\"$(command -v claude || true)\"", "conclusion": "skipped" },
+      { "name": "Run pnpm replay:gate", "conclusion": "skipped" },
+      { "name": "Run actions/upload-artifact@v4", "conclusion": "skipped" },
+      { "name": "Run pnpm codesign:local", "conclusion": "skipped" },
+      { "name": "Package the universal app", "conclusion": "skipped" },
+      { "name": "Run pnpm codesign:verify", "conclusion": "skipped" },
+      {
+        "name": "Run scripts/check-user-data-dir.sh \"dist/mac-universal/Infinitary Dev.app\" infinitary-dev",
+        "conclusion": "skipped"
+      },
+      {
+        "name": "Run scripts/check-bundled-git.sh \"dist/mac-universal/Infinitary Dev.app\"",
+        "conclusion": "skipped"
+      },
+      {
+        "name": "Run scripts/check-helper.sh \"dist/mac-universal/Infinitary Dev.app\"",
+        "conclusion": "skipped"
+      },
+      { "name": "Summarize", "conclusion": "success" },
+      {
+        "name": "Post Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Post Run actions/setup-node@v4", "conclusion": "skipped" },
+      { "name": "Post Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Post Checkout the keep-awake action", "conclusion": "success" },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Desktop checks / Merge batch \u00b7 Unit tests (Linux; group 2/3)",
+    "status": "completed",
+    "conclusion": "cancelled",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      { "name": "Run actions/checkout@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/pnpm",
+        "conclusion": "success"
+      },
+      { "name": "Run actions/setup-node@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/node-headers",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm install --frozen-lockfile", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/browser-chromium",
+        "conclusion": "skipped"
+      },
+      { "name": "Run pnpm test $PROJECTS --shard=\"$SHARD/$SHARDS\"", "conclusion": "cancelled" },
+      { "name": "Keep the test times", "conclusion": "success" },
+      {
+        "name": "Post Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Post Run actions/setup-node@v4", "conclusion": "skipped" },
+      { "name": "Post Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Desktop checks / Merge batch \u00b7 Browser tests (Linux)",
+    "status": "completed",
+    "conclusion": "cancelled",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      { "name": "Run actions/checkout@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/pnpm",
+        "conclusion": "success"
+      },
+      { "name": "Run actions/setup-node@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/node-headers",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm install --frozen-lockfile", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/browser-chromium",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm test $PROJECTS --shard=\"$SHARD/$SHARDS\"", "conclusion": "cancelled" },
+      { "name": "Keep the test times", "conclusion": "success" },
+      {
+        "name": "Post Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Post Run actions/setup-node@v4", "conclusion": "skipped" },
+      { "name": "Post Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Desktop checks / Merge batch \u00b7 Unit tests (Linux; group 3/3)",
+    "status": "completed",
+    "conclusion": "cancelled",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      { "name": "Run actions/checkout@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/pnpm",
+        "conclusion": "success"
+      },
+      { "name": "Run actions/setup-node@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/node-headers",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm install --frozen-lockfile", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/browser-chromium",
+        "conclusion": "skipped"
+      },
+      { "name": "Run pnpm test $PROJECTS --shard=\"$SHARD/$SHARDS\"", "conclusion": "cancelled" },
+      { "name": "Keep the test times", "conclusion": "success" },
+      {
+        "name": "Post Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Post Run actions/setup-node@v4", "conclusion": "skipped" },
+      { "name": "Post Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Desktop checks / Merge batch \u00b7 Environment checks (Linux; group 1/2)",
+    "status": "completed",
+    "conclusion": "cancelled",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      { "name": "Run actions/checkout@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/pnpm",
+        "conclusion": "success"
+      },
+      { "name": "Run actions/setup-node@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/node-headers",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm install --frozen-lockfile", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/browser-chromium",
+        "conclusion": "skipped"
+      },
+      { "name": "Run pnpm test $PROJECTS --shard=\"$SHARD/$SHARDS\"", "conclusion": "cancelled" },
+      { "name": "Keep the test times", "conclusion": "success" },
+      {
+        "name": "Post Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Post Run actions/setup-node@v4", "conclusion": "skipped" },
+      { "name": "Post Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Desktop checks / Merge batch \u00b7 Unit tests (Linux; group 1/3)",
+    "status": "completed",
+    "conclusion": "cancelled",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      { "name": "Run actions/checkout@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/pnpm",
+        "conclusion": "success"
+      },
+      { "name": "Run actions/setup-node@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/node-headers",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm install --frozen-lockfile", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/browser-chromium",
+        "conclusion": "skipped"
+      },
+      { "name": "Run pnpm test $PROJECTS --shard=\"$SHARD/$SHARDS\"", "conclusion": "cancelled" },
+      { "name": "Keep the test times", "conclusion": "success" },
+      {
+        "name": "Post Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Post Run actions/setup-node@v4", "conclusion": "skipped" },
+      { "name": "Post Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Desktop checks / Merge batch \u00b7 Integration tests (Linux; group 1/2)",
+    "status": "completed",
+    "conclusion": "cancelled",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      { "name": "Run actions/checkout@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/pnpm",
+        "conclusion": "success"
+      },
+      { "name": "Run actions/setup-node@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/node-headers",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm install --frozen-lockfile", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/browser-chromium",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm test $PROJECTS --shard=\"$SHARD/$SHARDS\"", "conclusion": "cancelled" },
+      { "name": "Keep the test times", "conclusion": "success" },
+      {
+        "name": "Post Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Post Run actions/setup-node@v4", "conclusion": "skipped" },
+      { "name": "Post Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Desktop checks / Merge batch \u00b7 Environment checks (Linux; group 2/2)",
+    "status": "completed",
+    "conclusion": "success",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      { "name": "Run actions/checkout@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/pnpm",
+        "conclusion": "success"
+      },
+      { "name": "Run actions/setup-node@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/node-headers",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm install --frozen-lockfile", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/browser-chromium",
+        "conclusion": "skipped"
+      },
+      { "name": "Run pnpm test $PROJECTS --shard=\"$SHARD/$SHARDS\"", "conclusion": "success" },
+      { "name": "Keep the test times", "conclusion": "success" },
+      {
+        "name": "Post Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Post Run actions/setup-node@v4", "conclusion": "success" },
+      { "name": "Post Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Desktop checks / Merge batch \u00b7 Integration tests (Linux; group 2/2)",
+    "status": "completed",
+    "conclusion": "cancelled",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      { "name": "Run actions/checkout@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/pnpm",
+        "conclusion": "success"
+      },
+      { "name": "Run actions/setup-node@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/node-headers",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm install --frozen-lockfile", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/browser-chromium",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm test $PROJECTS --shard=\"$SHARD/$SHARDS\"", "conclusion": "cancelled" },
+      { "name": "Keep the test times", "conclusion": "success" },
+      {
+        "name": "Post Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Post Run actions/setup-node@v4", "conclusion": "skipped" },
+      { "name": "Post Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Desktop checks / Merge batch \u00b7 Linux journeys / Merge batch \u00b7 App journeys (Linux; parallel group 4/6)",
+    "status": "completed",
+    "conclusion": "cancelled",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      { "name": "Record the timing observation start", "conclusion": "success" },
+      { "name": "Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Record the manual Linux request", "conclusion": "skipped" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/pnpm",
+        "conclusion": "success"
+      },
+      { "name": "Run actions/setup-node@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/node-headers",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm install --frozen-lockfile", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/linux-desktop",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/demo-encoder",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm build", "conclusion": "success" },
+      { "name": "Run the journeys with the sandbox on", "conclusion": "cancelled" },
+      {
+        "name": "Refuse a test that skipped on Linux without the Mac tag",
+        "conclusion": "skipped"
+      },
+      { "name": "Checkout the workflow's timing exporter", "conclusion": "success" },
+      { "name": "Export compact Linux timing", "conclusion": "success" },
+      { "name": "Keep compact Linux timing separately", "conclusion": "success" },
+      { "name": "Keep the Linux window and the journeys' results", "conclusion": "success" },
+      { "name": "Keep a passing run's result and evidence", "conclusion": "skipped" },
+      { "name": "Keep the run-alone result", "conclusion": "skipped" },
+      { "name": "Summarize the run-alone pass", "conclusion": "skipped" },
+      { "name": "Post Checkout the workflow's timing exporter", "conclusion": "success" },
+      {
+        "name": "Post Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Post Run actions/setup-node@v4", "conclusion": "skipped" },
+      { "name": "Post Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Desktop checks / Merge batch \u00b7 Linux journeys / Merge batch \u00b7 App journeys (Linux; serial group 2/3)",
+    "status": "completed",
+    "conclusion": "cancelled",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      { "name": "Record the timing observation start", "conclusion": "success" },
+      { "name": "Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Record the manual Linux request", "conclusion": "skipped" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/pnpm",
+        "conclusion": "success"
+      },
+      { "name": "Run actions/setup-node@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/node-headers",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm install --frozen-lockfile", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/linux-desktop",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/demo-encoder",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm build", "conclusion": "success" },
+      { "name": "Run the journeys with the sandbox on", "conclusion": "cancelled" },
+      {
+        "name": "Refuse a test that skipped on Linux without the Mac tag",
+        "conclusion": "skipped"
+      },
+      { "name": "Checkout the workflow's timing exporter", "conclusion": "success" },
+      { "name": "Export compact Linux timing", "conclusion": "success" },
+      { "name": "Keep compact Linux timing separately", "conclusion": "success" },
+      { "name": "Keep the Linux window and the journeys' results", "conclusion": "success" },
+      { "name": "Keep a passing run's result and evidence", "conclusion": "skipped" },
+      { "name": "Keep the run-alone result", "conclusion": "skipped" },
+      { "name": "Summarize the run-alone pass", "conclusion": "skipped" },
+      { "name": "Post Checkout the workflow's timing exporter", "conclusion": "success" },
+      {
+        "name": "Post Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Post Run actions/setup-node@v4", "conclusion": "skipped" },
+      { "name": "Post Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Desktop checks / Merge batch \u00b7 Linux journeys / Merge batch \u00b7 App journeys (Linux; serial group 1/3)",
+    "status": "completed",
+    "conclusion": "cancelled",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      { "name": "Record the timing observation start", "conclusion": "success" },
+      { "name": "Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Record the manual Linux request", "conclusion": "skipped" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/pnpm",
+        "conclusion": "success"
+      },
+      { "name": "Run actions/setup-node@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/node-headers",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm install --frozen-lockfile", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/linux-desktop",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/demo-encoder",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm build", "conclusion": "success" },
+      { "name": "Run the journeys with the sandbox on", "conclusion": "cancelled" },
+      {
+        "name": "Refuse a test that skipped on Linux without the Mac tag",
+        "conclusion": "skipped"
+      },
+      { "name": "Checkout the workflow's timing exporter", "conclusion": "success" },
+      { "name": "Export compact Linux timing", "conclusion": "success" },
+      { "name": "Keep compact Linux timing separately", "conclusion": "success" },
+      { "name": "Keep the Linux window and the journeys' results", "conclusion": "success" },
+      { "name": "Keep a passing run's result and evidence", "conclusion": "skipped" },
+      { "name": "Keep the run-alone result", "conclusion": "skipped" },
+      { "name": "Summarize the run-alone pass", "conclusion": "skipped" },
+      { "name": "Post Checkout the workflow's timing exporter", "conclusion": "success" },
+      {
+        "name": "Post Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Post Run actions/setup-node@v4", "conclusion": "skipped" },
+      { "name": "Post Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Desktop checks / Merge batch \u00b7 Linux journeys / Merge batch \u00b7 App journeys (Linux; serial group 3/3)",
+    "status": "completed",
+    "conclusion": "cancelled",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      { "name": "Record the timing observation start", "conclusion": "success" },
+      { "name": "Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Record the manual Linux request", "conclusion": "skipped" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/pnpm",
+        "conclusion": "success"
+      },
+      { "name": "Run actions/setup-node@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/node-headers",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm install --frozen-lockfile", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/linux-desktop",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/demo-encoder",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm build", "conclusion": "success" },
+      { "name": "Run the journeys with the sandbox on", "conclusion": "cancelled" },
+      {
+        "name": "Refuse a test that skipped on Linux without the Mac tag",
+        "conclusion": "skipped"
+      },
+      { "name": "Checkout the workflow's timing exporter", "conclusion": "success" },
+      { "name": "Export compact Linux timing", "conclusion": "success" },
+      { "name": "Keep compact Linux timing separately", "conclusion": "success" },
+      { "name": "Keep the Linux window and the journeys' results", "conclusion": "success" },
+      { "name": "Keep a passing run's result and evidence", "conclusion": "skipped" },
+      { "name": "Keep the run-alone result", "conclusion": "skipped" },
+      { "name": "Summarize the run-alone pass", "conclusion": "skipped" },
+      { "name": "Post Checkout the workflow's timing exporter", "conclusion": "success" },
+      {
+        "name": "Post Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Post Run actions/setup-node@v4", "conclusion": "skipped" },
+      { "name": "Post Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Desktop checks / Merge batch \u00b7 Linux journeys / Merge batch \u00b7 App journeys (Linux; parallel group 5/6)",
+    "status": "completed",
+    "conclusion": "cancelled",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      { "name": "Record the timing observation start", "conclusion": "success" },
+      { "name": "Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Record the manual Linux request", "conclusion": "skipped" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/pnpm",
+        "conclusion": "success"
+      },
+      { "name": "Run actions/setup-node@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/node-headers",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm install --frozen-lockfile", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/linux-desktop",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/demo-encoder",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm build", "conclusion": "success" },
+      { "name": "Run the journeys with the sandbox on", "conclusion": "cancelled" },
+      {
+        "name": "Refuse a test that skipped on Linux without the Mac tag",
+        "conclusion": "skipped"
+      },
+      { "name": "Checkout the workflow's timing exporter", "conclusion": "success" },
+      { "name": "Export compact Linux timing", "conclusion": "success" },
+      { "name": "Keep compact Linux timing separately", "conclusion": "success" },
+      { "name": "Keep the Linux window and the journeys' results", "conclusion": "success" },
+      { "name": "Keep a passing run's result and evidence", "conclusion": "skipped" },
+      { "name": "Keep the run-alone result", "conclusion": "skipped" },
+      { "name": "Summarize the run-alone pass", "conclusion": "skipped" },
+      { "name": "Post Checkout the workflow's timing exporter", "conclusion": "success" },
+      {
+        "name": "Post Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Post Run actions/setup-node@v4", "conclusion": "skipped" },
+      { "name": "Post Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Desktop checks / Merge batch \u00b7 Linux journeys / Merge batch \u00b7 App journeys (Linux; parallel group 1/6)",
+    "status": "completed",
+    "conclusion": "cancelled",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      { "name": "Record the timing observation start", "conclusion": "success" },
+      { "name": "Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Record the manual Linux request", "conclusion": "skipped" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/pnpm",
+        "conclusion": "success"
+      },
+      { "name": "Run actions/setup-node@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/node-headers",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm install --frozen-lockfile", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/linux-desktop",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/demo-encoder",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm build", "conclusion": "success" },
+      { "name": "Run the journeys with the sandbox on", "conclusion": "cancelled" },
+      {
+        "name": "Refuse a test that skipped on Linux without the Mac tag",
+        "conclusion": "skipped"
+      },
+      { "name": "Checkout the workflow's timing exporter", "conclusion": "success" },
+      { "name": "Export compact Linux timing", "conclusion": "success" },
+      { "name": "Keep compact Linux timing separately", "conclusion": "success" },
+      { "name": "Keep the Linux window and the journeys' results", "conclusion": "success" },
+      { "name": "Keep a passing run's result and evidence", "conclusion": "skipped" },
+      { "name": "Keep the run-alone result", "conclusion": "skipped" },
+      { "name": "Summarize the run-alone pass", "conclusion": "skipped" },
+      { "name": "Post Checkout the workflow's timing exporter", "conclusion": "success" },
+      {
+        "name": "Post Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Post Run actions/setup-node@v4", "conclusion": "skipped" },
+      { "name": "Post Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Desktop checks / Merge batch \u00b7 Linux journeys / Merge batch \u00b7 App journeys (Linux; parallel group 6/6)",
+    "status": "completed",
+    "conclusion": "cancelled",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      { "name": "Record the timing observation start", "conclusion": "success" },
+      { "name": "Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Record the manual Linux request", "conclusion": "skipped" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/pnpm",
+        "conclusion": "success"
+      },
+      { "name": "Run actions/setup-node@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/node-headers",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm install --frozen-lockfile", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/linux-desktop",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/demo-encoder",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm build", "conclusion": "success" },
+      { "name": "Run the journeys with the sandbox on", "conclusion": "cancelled" },
+      {
+        "name": "Refuse a test that skipped on Linux without the Mac tag",
+        "conclusion": "skipped"
+      },
+      { "name": "Checkout the workflow's timing exporter", "conclusion": "success" },
+      { "name": "Export compact Linux timing", "conclusion": "success" },
+      { "name": "Keep compact Linux timing separately", "conclusion": "success" },
+      { "name": "Keep the Linux window and the journeys' results", "conclusion": "success" },
+      { "name": "Keep a passing run's result and evidence", "conclusion": "skipped" },
+      { "name": "Keep the run-alone result", "conclusion": "skipped" },
+      { "name": "Summarize the run-alone pass", "conclusion": "skipped" },
+      { "name": "Post Checkout the workflow's timing exporter", "conclusion": "success" },
+      {
+        "name": "Post Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Post Run actions/setup-node@v4", "conclusion": "skipped" },
+      { "name": "Post Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Desktop checks / Merge batch \u00b7 Linux journeys / Merge batch \u00b7 App journeys (Linux; parallel group 3/6)",
+    "status": "completed",
+    "conclusion": "cancelled",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      { "name": "Record the timing observation start", "conclusion": "success" },
+      { "name": "Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Record the manual Linux request", "conclusion": "skipped" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/pnpm",
+        "conclusion": "success"
+      },
+      { "name": "Run actions/setup-node@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/node-headers",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm install --frozen-lockfile", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/linux-desktop",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/demo-encoder",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm build", "conclusion": "success" },
+      { "name": "Run the journeys with the sandbox on", "conclusion": "cancelled" },
+      {
+        "name": "Refuse a test that skipped on Linux without the Mac tag",
+        "conclusion": "skipped"
+      },
+      { "name": "Checkout the workflow's timing exporter", "conclusion": "success" },
+      { "name": "Export compact Linux timing", "conclusion": "success" },
+      { "name": "Keep compact Linux timing separately", "conclusion": "success" },
+      { "name": "Keep the Linux window and the journeys' results", "conclusion": "success" },
+      { "name": "Keep a passing run's result and evidence", "conclusion": "skipped" },
+      { "name": "Keep the run-alone result", "conclusion": "skipped" },
+      { "name": "Summarize the run-alone pass", "conclusion": "skipped" },
+      { "name": "Post Checkout the workflow's timing exporter", "conclusion": "success" },
+      {
+        "name": "Post Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Post Run actions/setup-node@v4", "conclusion": "skipped" },
+      { "name": "Post Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Desktop checks / Merge batch \u00b7 Linux journeys / Merge batch \u00b7 App journeys (Linux; parallel group 2/6)",
+    "status": "completed",
+    "conclusion": "cancelled",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      { "name": "Record the timing observation start", "conclusion": "success" },
+      { "name": "Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Record the manual Linux request", "conclusion": "skipped" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/pnpm",
+        "conclusion": "success"
+      },
+      { "name": "Run actions/setup-node@v4", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/node-headers",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm install --frozen-lockfile", "conclusion": "success" },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/linux-desktop",
+        "conclusion": "success"
+      },
+      {
+        "name": "Run ./Application Support/firstmate/.github/actions/demo-encoder",
+        "conclusion": "success"
+      },
+      { "name": "Run pnpm build", "conclusion": "success" },
+      { "name": "Run the journeys with the sandbox on", "conclusion": "cancelled" },
+      {
+        "name": "Refuse a test that skipped on Linux without the Mac tag",
+        "conclusion": "skipped"
+      },
+      { "name": "Checkout the workflow's timing exporter", "conclusion": "success" },
+      { "name": "Export compact Linux timing", "conclusion": "success" },
+      { "name": "Keep compact Linux timing separately", "conclusion": "success" },
+      { "name": "Keep the Linux window and the journeys' results", "conclusion": "success" },
+      { "name": "Keep a passing run's result and evidence", "conclusion": "skipped" },
+      { "name": "Keep the run-alone result", "conclusion": "skipped" },
+      { "name": "Summarize the run-alone pass", "conclusion": "skipped" },
+      { "name": "Post Checkout the workflow's timing exporter", "conclusion": "success" },
+      {
+        "name": "Post Run ./Application Support/firstmate/.github/actions/electron-download",
+        "conclusion": "success"
+      },
+      { "name": "Post Run actions/setup-node@v4", "conclusion": "skipped" },
+      { "name": "Post Run actions/checkout@v4", "conclusion": "success" },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Desktop checks / Merge batch \u00b7 Signed installer checks",
+    "status": "completed",
+    "conclusion": "skipped",
+    "steps": []
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Stop after failed code checks (verify-tests-Environment checks-2)",
+    "status": "completed",
+    "conclusion": "failure",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      {
+        "name": "Run echo \"::error::The code checks failed, so this batch stopped its $JOB job.\"",
+        "conclusion": "failure"
+      },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Stop after failed code checks (verify-lane-mac)",
+    "status": "completed",
+    "conclusion": "failure",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      {
+        "name": "Run echo \"::error::The code checks failed, so this batch stopped its $JOB job.\"",
+        "conclusion": "failure"
+      },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Stop after failed code checks (journeys-full-source-desktop-3)",
+    "status": "completed",
+    "conclusion": "failure",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      {
+        "name": "Run echo \"::error::The code checks failed, so this batch stopped its $JOB job.\"",
+        "conclusion": "failure"
+      },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Stop after failed code checks (journeys-full-source-desktop-2)",
+    "status": "completed",
+    "conclusion": "failure",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      {
+        "name": "Run echo \"::error::The code checks failed, so this batch stopped its $JOB job.\"",
+        "conclusion": "failure"
+      },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Stop after failed code checks (journeys-full-source-parallel-2)",
+    "status": "completed",
+    "conclusion": "failure",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      {
+        "name": "Run echo \"::error::The code checks failed, so this batch stopped its $JOB job.\"",
+        "conclusion": "failure"
+      },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Stop after failed code checks (verify-tests-Browser tests-1)",
+    "status": "completed",
+    "conclusion": "failure",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      {
+        "name": "Run echo \"::error::The code checks failed, so this batch stopped its $JOB job.\"",
+        "conclusion": "failure"
+      },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Stop after failed code checks (journeys-full-source-parallel-5)",
+    "status": "completed",
+    "conclusion": "failure",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      {
+        "name": "Run echo \"::error::The code checks failed, so this batch stopped its $JOB job.\"",
+        "conclusion": "failure"
+      },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Stop after failed code checks (verify-tests-Unit tests-2)",
+    "status": "completed",
+    "conclusion": "failure",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      {
+        "name": "Run echo \"::error::The code checks failed, so this batch stopped its $JOB job.\"",
+        "conclusion": "failure"
+      },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Stop after failed code checks (verify-tests-Unit tests-3)",
+    "status": "completed",
+    "conclusion": "failure",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      {
+        "name": "Run echo \"::error::The code checks failed, so this batch stopped its $JOB job.\"",
+        "conclusion": "failure"
+      },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Stop after failed code checks (verify-lane-parallel)",
+    "status": "completed",
+    "conclusion": "failure",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      {
+        "name": "Run echo \"::error::The code checks failed, so this batch stopped its $JOB job.\"",
+        "conclusion": "failure"
+      },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Stop after failed code checks (verify-lane-desktop)",
+    "status": "completed",
+    "conclusion": "failure",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      {
+        "name": "Run echo \"::error::The code checks failed, so this batch stopped its $JOB job.\"",
+        "conclusion": "failure"
+      },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Stop after failed code checks (journeys-full-source-parallel-6)",
+    "status": "completed",
+    "conclusion": "failure",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      {
+        "name": "Run echo \"::error::The code checks failed, so this batch stopped its $JOB job.\"",
+        "conclusion": "failure"
+      },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Stop after failed code checks (verify-tests-Integration tests-1)",
+    "status": "completed",
+    "conclusion": "failure",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      {
+        "name": "Run echo \"::error::The code checks failed, so this batch stopped its $JOB job.\"",
+        "conclusion": "failure"
+      },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Stop after failed code checks (verify-tests-Unit tests-1)",
+    "status": "completed",
+    "conclusion": "failure",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      {
+        "name": "Run echo \"::error::The code checks failed, so this batch stopped its $JOB job.\"",
+        "conclusion": "failure"
+      },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Stop after failed code checks (verify-tests-Integration tests-2)",
+    "status": "completed",
+    "conclusion": "failure",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      {
+        "name": "Run echo \"::error::The code checks failed, so this batch stopped its $JOB job.\"",
+        "conclusion": "failure"
+      },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Stop after failed code checks (journeys-full-source-desktop-1)",
+    "status": "completed",
+    "conclusion": "failure",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      {
+        "name": "Run echo \"::error::The code checks failed, so this batch stopped its $JOB job.\"",
+        "conclusion": "failure"
+      },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Stop after failed code checks (journeys-full-source-parallel-3)",
+    "status": "completed",
+    "conclusion": "failure",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      {
+        "name": "Run echo \"::error::The code checks failed, so this batch stopped its $JOB job.\"",
+        "conclusion": "failure"
+      },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Stop after failed code checks (journeys-full-source-parallel-1)",
+    "status": "completed",
+    "conclusion": "failure",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      {
+        "name": "Run echo \"::error::The code checks failed, so this batch stopped its $JOB job.\"",
+        "conclusion": "failure"
+      },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Stop after failed code checks (verify-tests-Environment checks-1)",
+    "status": "completed",
+    "conclusion": "failure",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      {
+        "name": "Run echo \"::error::The code checks failed, so this batch stopped its $JOB job.\"",
+        "conclusion": "failure"
+      },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / Merge batch \u00b7 Stop after failed code checks (journeys-full-source-parallel-4)",
+    "status": "completed",
+    "conclusion": "failure",
+    "steps": [
+      { "name": "Set up job", "conclusion": "success" },
+      {
+        "name": "Run echo \"::error::The code checks failed, so this batch stopped its $JOB job.\"",
+        "conclusion": "failure"
+      },
+      { "name": "Complete job", "conclusion": "success" }
+    ]
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / ${{ inputs.trigger }} \u00b7 Read the failures",
+    "status": "completed",
+    "conclusion": "skipped",
+    "steps": []
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / ${{ inputs.trigger }} \u00b7 Confirm failed tests (${{ (((matrix.platform == 'mac') && 'Mac') || 'Linux') }})",
+    "status": "completed",
+    "conclusion": "skipped",
+    "steps": []
+  },
+  {
+    "name": "Merge batch \u00b7 Batch checks / ${{ inputs.trigger }} \u00b7 Batch passed (tree ${{ needs.batch.outputs.tree }}; base ${{ needs.batch.outputs.base }})",
+    "status": "completed",
+    "conclusion": "skipped",
+    "steps": []
+  }
+]

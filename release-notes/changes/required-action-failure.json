@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "required-action-failure",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Report a failed action on its own card",
+      "body": "Paste the output on a required-action card and choose It failed beside its completion button to ask your first mate for help there. Your first mate can answer on the same card without replacing its instructions. Confirmation pauses while you wait for that answer; reporting a failure never completes the action.",
+      "picture": {
+        "dark": "required-action-failure-dark.webp",
+        "light": "required-action-failure-light.webp",
+        "alt": "A required-action card with Not now, It failed and the completion button together below its reply field."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

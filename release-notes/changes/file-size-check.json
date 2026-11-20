@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "file-size-check",
+      "reason": "Internal: a check refuses a code file over 2,000 lines unless it is on a list that only shrinks, and a development script measures test coverage of named files; nothing a person sees changes."
+    }
+  ]
+}

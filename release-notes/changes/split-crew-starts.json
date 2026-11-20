@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-crew-starts",
+      "reason": "The code that settles a start and holds a task on its reasoning level moved unchanged into its own files; nothing a person sees changes."
+    }
+  ]
+}

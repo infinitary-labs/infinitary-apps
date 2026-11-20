@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "automation-panel-open-settings",
+      "kind": "improvement",
+      "area": "settings",
+      "title": "The Automation panel opens your full list of automations",
+      "body": "While the Automation panel is expanded, its header has an open button, like the one on Knowledge. It takes you to Settings, where every automation is listed.",
+      "picture": {
+        "dark": "automation-panel-open-settings-dark.webp",
+        "light": "automation-panel-open-settings-light.webp",
+        "alt": "The expanded Automation panel with its open button beside the collapse arrow, above three automations"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

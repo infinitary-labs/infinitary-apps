@@ -1,0 +1,12 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "alpha-review-1942",
+      "reason": "Release review only: rank this alpha's new highlights and clarify the existing notes for Automatic placement and long-conversation recovery; no application behavior changes.",
+      "covers": [
+        "ebc21c42a829666cf03897b7670ed926be3d0bdd"
+      ]
+    }
+  ]
+}

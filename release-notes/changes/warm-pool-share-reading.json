@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "warm-pool-share-reading",
+      "reason": "Test-only repair: the saved-work move's warm pool test measures each spare working copy's own rise of the progress bar, which stays exact when the Mac's copier credits both copies before either finishes, without changing app behavior or weakening the assertion."
+    }
+  ]
+}

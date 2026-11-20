@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "github-merge-queue",
+      "kind": "feature",
+      "area": "projects",
+      "title": "Merges work on a GitHub branch that uses a merge queue",
+      "body": "When a project's main branch on GitHub uses a merge queue, Merge the pull request now hands your approved pull request to that queue instead of being refused. Activity says the pull request is waiting in the merge queue, your merge is kept, and the task closes on its own once GitHub merges it. If GitHub removes the pull request from the queue, your first mate has its crewmate look into why. A batch pull request goes to the queue the same way, and a branch without a merge queue merges as before.",
+      "picture": {
+        "dark": "github-merge-queue-dark.webp",
+        "light": "github-merge-queue-light.webp",
+        "alt": "Activity with a task's line cut short, and beside it the line in full: Waiting for the merge queue: GitHub took this version into your project's merge queue. Your merge is kept. GitHub merges it after the queue's checks pass. Cropped from the window's lower left, so the message box is cut off"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

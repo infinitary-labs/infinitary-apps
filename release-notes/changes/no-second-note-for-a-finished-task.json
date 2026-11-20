@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "no-second-note-for-a-finished-task",
+      "kind": "fix",
+      "title": "One card about a finished task, and a finished answer is no longer called dropped",
+      "body": "After you close a crewmate's card about finished work, your first mate no longer adds a second note saying the task merged, was released or was dropped. A finished investigation whose answer your first mate passed on now closes as answered, where it was announced as dropped.",
+      "area": "cards",
+      "noPicture": "The change is a card that no longer appears and a task that closes with a different word, so there is nothing new to see.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

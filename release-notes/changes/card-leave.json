@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "card-leave",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Putting a card away never ends its task",
+      "body": "Every card now has one minus that only puts it away. Plans keep their choices and drafts, and permission requests wait for an explicit answer. Answer notes have a separate Done button, also available in the task’s record after the note is put away. Time alone never ends the task.",
+      "picture": {
+        "dark": "card-leave-dark.webp",
+        "light": "card-leave-light.webp",
+        "alt": "An answer note has one minimize minus after Maximize and a separate Done button below its answer"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

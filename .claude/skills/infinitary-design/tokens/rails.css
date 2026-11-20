@@ -1,0 +1,5 @@
+/* Panel.prompt.md owns the four-row minimum and one-header More row. */
+:root {
+  --rail-body-min-height: 124px;
+  --rail-header-height: calc(var(--space-5) + var(--space-2) * 2);
+}

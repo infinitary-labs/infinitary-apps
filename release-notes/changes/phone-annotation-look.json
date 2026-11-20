@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "phone-annotation-look",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Notes on a card look tidier on your iPhone and iPad",
+      "body": "On your iPhone and iPad, the note you write about a part of a card now opens right under that part, inside the card, and stays in view above the keyboard. Queued and sent notes share one simple look, the part you point at is marked the same way as on your Mac, and nothing spills past the card's edges.",
+      "picture": {
+        "dark": "phone-annotation-look-dark.webp",
+        "light": "phone-annotation-look-light.webp",
+        "alt": "A card on an iPhone with two notes queued: each noted part carries a thin blue mark, and the notes below share one row style"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

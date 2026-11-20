@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "phone-before-release-notes",
+      "reason": "This changes release workflow ordering, not the app's behavior."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "windows-folder-links",
+      "reason": "Internal: a Claude crewmate's skills are linked with junctions on Windows, where folder symlinks need Developer Mode; no Windows build is published, so nothing a person downloads changes."
+    }
+  ]
+}

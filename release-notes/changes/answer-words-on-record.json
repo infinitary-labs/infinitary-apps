@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "answer-words-on-record",
+      "kind": "fix",
+      "title": "An answer on a card reads as words in its task",
+      "body": "When Firstmate answers a question on a card, the task's Activity now opens to the answer in plain words, a line for each paragraph and list item, instead of the code behind the card. The Cards row still opens the card itself.",
+      "area": "tasks",
+      "picture": {
+        "dark": "answer-words-on-record-dark.webp",
+        "light": "answer-words-on-record-light.webp",
+        "alt": "A question's task with the line that closed it opened, showing the answer's paragraphs and numbered steps as plain words"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

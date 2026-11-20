@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "custom-model-small-window-recovers",
+      "kind": "fix",
+      "title": "Firstmate keeps answering on a custom model with a small context window",
+      "body": "When a long conversation grows past what your custom model can hold, Firstmate now shortens it to fit and carries on, instead of showing the same \"exceeds the context window\" problem on every message.",
+      "area": "firstmate",
+      "noPicture": "This change shortens the saved conversation behind the scenes, with no changed visual surface.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

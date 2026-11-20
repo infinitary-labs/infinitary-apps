@@ -1,0 +1,11 @@
+{
+  "entries": [{
+    "id": "covered-validation-actions",
+    "kind": "improvement",
+    "title": "Covered checks no longer ask you again",
+    "body": "When your standing direction, task reply, or earlier yes covers a check-only push or check run, Infinitary can start the reviewed action without another card. Actions you have not covered still ask, and merge approvals stay separate.",
+    "area": "cards",
+    "noPicture": "The change skips a consent card rather than adding a new screen.",
+    "provenance": { "origin": "change" }
+  }]
+}

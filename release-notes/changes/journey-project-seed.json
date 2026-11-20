@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journey-project-seed",
+      "reason": "Test-only: journeys seed their projects through one fixture held to the project registry's own saved row, with no app behavior change."
+    }
+  ]
+}

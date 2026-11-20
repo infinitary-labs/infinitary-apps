@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "linux-joins-by-link",
+      "reason": "Piece 8 of the accepted Linux plan, which keeps its pieces to internal exclusions: a Linux computer joins a Mac or Linux home by a link, its work kept by a systemd user service on a display of its own, a Linux home says when its firewall may keep devices out, and the background behind one seam for launchd and systemd. The Linux release note tells people about the Linux app."
+    }
+  ]
+}

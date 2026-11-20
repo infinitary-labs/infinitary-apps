@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "reviewer-question-waits-on-you",
+      "kind": "fix",
+      "title": "A careful change waiting on its reviewer's question shows as waiting on you",
+      "body": "When the reviewer of a careful change asks you a question on its card, the change now sits under Waiting on you until you answer. Before, it could show as working, and your first mate was woken, or the change moved to the backlog, as if it had stopped.",
+      "area": "tasks",
+      "picture": {
+        "dark": "reviewer-question-waits-on-you-dark.webp",
+        "light": "reviewer-question-waits-on-you-light.webp",
+        "alt": "The Tasks panel with a change and its review both under Waiting on you while the reviewer's question card is up"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "memory-reading-test-footprint",
+      "reason": "Test only: the memory reading test's stand-in footprint now covers the heap and held native memory, so it passes in a test worker that already holds much memory; nothing a person sees changes."
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+// An end-to-end spec asserts the loss a layout would cause, not its pixels.
+// Measured boxes compare with one another through layout.ts. Exact sizes,
+// tolerances, gaps and token-derived expectations belong in focused tests.
+language js
+
+`$call.$matcher($expected, $...)` as $whole where {
+  or {
+    and {
+      $matcher <: or {
+        "toEqual",
+        "toStrictEqual",
+        "toMatchObject"
+      },
+      $expected <: `{ $props }`,
+      $props <: some `$key: $value` where {
+        $key <: r"^(?:x|y|left|right|top|bottom|width|height)$",
+        $value <: r"^(?:-?[1-9]\d+(?:\.\d+)?)$"
+      },
+      $filename <: r".*tests/e2e/.*",
+      register_diagnostic(span=$expected, message="A box equal to a hard-coded rect restates one window's measurements. Assert containment, no overflow or no overlap through tests/e2e/layout.ts; exact geometry belongs in focused tests.", severity="error")
+    },
+    and {
+      $matcher <: or {
+        "toBe",
+        "toEqual",
+        "toStrictEqual",
+        "toBeCloseTo",
+        "toBeLessThan",
+        "toBeLessThanOrEqual",
+        "toBeGreaterThan",
+        "toBeGreaterThanOrEqual"
+      },
+      $expected <: or {
+        and { or {
+          includes "0",
+          includes "1",
+          includes "2",
+          includes "3",
+          includes "4",
+          includes "5",
+          includes "6",
+          includes "7",
+          includes "8",
+          includes "9"
+        },
+        or {
+          r"^(?:-?(?:\d{2,}|\d{1,3}(?:_\d{3})+)(?:\.\d+)?)$",
+          r"^(?:\[\s*-?\d{2,}(?:\.\d+)?(?:\s*,\s*-?\d+(?:\.\d+)?)*\s*,?\s*\])$",
+          r"(?s).*(?:\+|-)\s*\d{2,}(?:\.\d+)?$"
+        } },
+        r"^[A-Z][A-Z_]+(?:\.[a-zA-Z0-9_]+)*$"
+      },
+      $call <: r"(?is)^(?:.*(?:width|height|\bleft\b|\bright\b|\btop\b|\bbottom\b|\.x\b|\.y\b|rect|box|figure|stage|rail|frame|size|offset|client|scroll|gap).*)$",
+      not $call <: r"(?s).*new Set\(.*",
+      not $call <: r"(?s).*\.natural(?:Width|Height).*",
+      $filename <: r".*tests/e2e/.*",
+      register_diagnostic(span=$expected, message="A measured length or tolerance repeats layout pixels, even when imported from the product. Assert containment, no overflow or no overlap through tests/e2e/layout.ts; exact geometry belongs in focused tests.", severity="error")
+    },
+    and {
+      $matcher <: "abs",
+      $whole <: `Math.abs($gap)`,
+      $gap <: r"(?is).*(?:width|height|\bleft\b|\bright\b|\btop\b|\bbottom\b|\.x\b|\.y\b|rect|box|figure|stage|rail|frame|size|offset|client|scroll|gap).*",
+      $filename <: r".*tests/e2e/.*",
+      register_diagnostic(span=$gap, message="A measured gap reconstructed with Math.abs repeats layout arithmetic. Assert containment, no overflow or no overlap through tests/e2e/layout.ts; exact geometry belongs in focused tests.", severity="error")
+    },
+    and {
+      $matcher <: "toHaveCSS",
+      $whole <: `$css.toHaveCSS($property, $pixels, $...)`,
+      $pixels <: includes "px",
+      $pixels <: r"(?s).*[0-9]px.*",
+      $filename <: r".*tests/e2e/.*",
+      register_diagnostic(span=$pixels, message="A pixel toHaveCSS expectation repeats a stylesheet size. Exercise the control or check containment and overlap through tests/e2e/layout.ts; exact styling belongs in focused tests.", severity="error")
+    }
+  }
+}

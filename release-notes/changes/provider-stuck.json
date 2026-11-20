@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "provider-stuck",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "A crewmate stuck at its provider stops retrying and your first mate steps in",
+      "body": "When a provider refuses a crewmate's request the same way three times in a row, the app stops retrying, keeps the crewmate's message and marks the task Stuck at its provider. Your first mate then steers it, restarts it in a fresh conversation or moves it to another model. While the app retries a failing provider, Activity shows one line for the outage that says the app tries again on its own, and the task reads Retrying at its provider.",
+      "picture": {
+        "dark": "provider-stuck-dark.webp",
+        "light": "provider-stuck-light.webp",
+        "alt": "A task's record says Stuck at its provider and explains that the app stopped retrying and the first mate is choosing what to do"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

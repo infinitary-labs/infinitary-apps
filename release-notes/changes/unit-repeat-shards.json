@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "unit-repeat-shards",
+      "reason": "Internal CI repair: split changed test files through Vitest's existing shards so broad changes complete ten repetitions within each unchanged step deadline, without retries or fewer tests. The app is unchanged."
+    }
+  ]
+}

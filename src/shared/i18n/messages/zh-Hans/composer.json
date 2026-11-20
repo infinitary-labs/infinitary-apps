@@ -1,0 +1,7 @@
+{
+  "composerLines": {
+    "plural": "count",
+    "other": "{count} 行"
+  },
+  "composerWordsOnly": "在 Infinitary 更新之前只能发送文字。请移除图片和文件后再发送。"
+}

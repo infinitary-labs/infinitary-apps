@@ -1,0 +1,70 @@
+name: Linux automatic startup
+
+# Called by the batch checks on each batch pull request's version
+# (batch-checks.yml), by main.yml's full check for files no batch built
+# (INF-2441, INF-3052), and by verify.yml's Linux-only request (a change sent
+# back from its batch), never started by a push of its own.
+on:
+  workflow_call:
+    inputs:
+      trigger:
+        description: What started the caller's run, which every job name here leads with (scripts/ci-job-names.mjs)
+        type: string
+        required: true
+      ref:
+        description: The commit to check
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-facts:
+    name: ${{ format('{0} · Automatic startup checks (Linux)', inputs.trigger) }}
+    # GitHub's hosted Ubuntu for every caller (docs/testing.md, "A release's
+    # hosted machines"), a fresh machine with systemd and Docker.
+    runs-on: ubuntu-24.04
+    steps:
+      # A refused checkout waits until GitHub takes the job's token again,
+      # then runs once more (docs/testing.md, "GitHub refusing a job's token").
+      - id: checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        continue-on-error: true
+        with: &runtime-facts-checkout
+          ref: ${{ inputs.ref }}
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: &wait-for-token |
+          # Asks the address the checkout's fetch reads, with the job's token
+          # as the checkout sends it, every 15 seconds for up to 10 minutes,
+          # then lets the checkout try once more. A failure GitHub's token
+          # did not cause, such as a missing commit, is tried again at once.
+          url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/info/refs?service=git-upload-pack"
+          patience="${CHECKOUT_PATIENCE_SECONDS:-600}"
+          pause="${CHECKOUT_PAUSE_SECONDS:-15}"
+          started=$SECONDS
+          while :; do
+            # The token reaches curl on its input, never on its command line.
+            answer="$(printf 'user = "x-access-token:%s"\n' "$TOKEN" |
+              curl --silent --location --output /dev/null --write-out '%{http_code}' \
+                --connect-timeout 30 --max-time 60 --config - --url "$url")" || true
+            if [[ "$answer" == 2?? ]]; then exit 0; fi
+            waited=$((SECONDS - started))
+            if ((waited >= patience)); then
+              echo "::warning title=GitHub still refuses the job's token::It answered $answer after ${waited}s; the checkout tries once more."
+              exit 0
+            fi
+            echo "GitHub answered $answer to the job's token after ${waited}s; asking again in ${pause}s"
+            sleep "$pause"
+          done
+      - name: Check out again
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: *runtime-facts-checkout
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - uses: ./.github/actions/linux-startup

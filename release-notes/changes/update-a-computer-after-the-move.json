@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "update-a-computer-after-the-move",
+      "kind": "fix",
+      "title": "A computer you update after the move to Infinitary now starts",
+      "body": "A computer that runs your work could stay out of reach after it updated, because its saved work never finished moving into Infinitary's folder. It now moves, and Devices no longer says the computer could not start while that move is under way. A computer you added by its address now shows connecting, not out of reach, while it connects again after an update.",
+      "area": "devices",
+      "picture": {
+        "dark": "update-a-computer-after-the-move-dark.webp",
+        "light": "update-a-computer-after-the-move-light.webp",
+        "alt": "Settings, Devices: a computer whose connection is being made reads connecting on its right, where it used to read out of reach"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

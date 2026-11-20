@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "data-folder-check-cleanup",
+      "reason": "Release work: the data-folder check stops the app and every process it started, and removes its throwaway home only once nothing can write into it."
+    }
+  ]
+}

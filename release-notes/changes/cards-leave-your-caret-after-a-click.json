@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "cards-leave-your-caret-after-a-click",
+      "kind": "fix",
+      "title": "A card or panel no longer takes the caret back after you use it",
+      "body": "For a few seconds after you clicked or typed in a card or an added panel, its script could pull the caret back out of your message, so your next keys landed in the card. Your caret and keys now stay in your message from the moment you go back to it.",
+      "area": "cards",
+      "noPicture": "Nothing new is drawn: the caret stays in the message you went back to, as it looked before the card's script ran.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

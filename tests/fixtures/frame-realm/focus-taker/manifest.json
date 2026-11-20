@@ -1,0 +1,8 @@
+{
+  "name": "Focus taker",
+  "version": "1.0.0",
+  "title": "Focus taker",
+  "placement": { "x": "right", "y": "top" },
+  "size": "content",
+  "order": 10
+}

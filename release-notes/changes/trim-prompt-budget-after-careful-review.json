@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "trim-prompt-budget-after-careful-review",
+      "reason": "Shorter wording in the text the first mate and crewmates are served, bringing both fixed prompts back under their budgets with every rule still said; nothing a person sees changes."
+    }
+  ]
+}

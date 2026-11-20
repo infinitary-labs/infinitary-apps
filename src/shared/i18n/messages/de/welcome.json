@@ -1,0 +1,21 @@
+{
+  "welcomeActivity": "Crewmitglieder erledigen die Arbeit im Hintergrund und berichten hier.",
+  "welcomeBack": "Zurück",
+  "welcomeBox": "Schreib in das Nachrichtenfeld unter dieser Karte, was erledigt werden soll.",
+  "welcomeCard": "Antworten und Entscheidungen bringe ich dir als Karten wie diese.",
+  "welcomeEnd": "Das ist schon alles. Drück zum Anfangen unten auf einen Einstieg.",
+  "welcomeFigure": "Dein Fenster, ein Teil pro Klick: das Nachrichtenfeld, eine Karte, Aktivität und Aufgaben",
+  "welcomeLabelActivity": "Aktivität",
+  "welcomeLabelBox": "das Nachrichtenfeld",
+  "welcomeLabelTasks": "Aufgaben",
+  "welcomeNext": "Weiter",
+  "welcomeStarterClone": "Ein Projekt klonen",
+  "welcomeStarterCloneWords": "Klone das Projekt unter ",
+  "welcomeStarterFolder": "In einem Ordner auf meinem Computer arbeiten",
+  "welcomeStarterFolderWords": "Arbeite im Ordner ",
+  "welcomeStarterNew": "Ein neues Projekt starten",
+  "welcomeStarterNewWords": "Starte ein neues Projekt namens ",
+  "welcomeStartersLead": "Drück zum Anfangen auf einen und vervollständige den Satz:",
+  "welcomeTasks": "Jede Bitte bekommt hier ein Protokoll.",
+  "welcomeTitle": "So arbeiten wir"
+}

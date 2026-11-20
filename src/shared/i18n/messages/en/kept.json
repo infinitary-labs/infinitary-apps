@@ -1,0 +1,17 @@
+{
+  "keptCap": "Cannot merge yet: it is waiting for your answer about its repair attempts. Your merge is kept for after that.",
+  "keptChecks": "Your merge waits: the checks have not all passed. Your approval is kept. If a fix changes the work, its crewmate asks you again; otherwise the merge runs when its checks pass.",
+  "keptChecksFailed": "Your merge waits for a fix: its checks failed. A fix brings a new version with fresh checks: when it changed the work, its crewmate asks you again on a new card; otherwise your merge runs once they pass.",
+  "keptConflict": "Cannot merge yet: it conflicts with newer work in the project. Your merge is kept and runs once its crewmate has brought it up to date and its checks pass.",
+  "keptDraft": "Cannot merge yet: its pull request is a draft. Your merge is kept and runs once it is ready for review.",
+  "keptEvidence": "Cannot merge yet: its crewmate could not tell whether its last change kept the work you approved, so another crewmate is checking. Your merge is kept and runs if that check finds the work is still what you approved.",
+  "keptGuidance": "Cannot merge yet: its crewmate has not said whether your newer words change the work you approved. Your merge is kept and runs once it says they do not.",
+  "keptHostQueue": "Waiting for the merge queue: {place} took this version into your project's merge queue. Your merge is kept. {place} merges it after the queue's checks pass.",
+  "keptHostRemoved": "Cannot merge yet: {place} removed this version from your project's merge queue without merging it. Your merge is kept. A fixed version from its crewmate goes to the queue again.",
+  "keptProtected": "Cannot merge yet: {place} holds it for a required review or another rule on the main branch. Your merge is kept and runs once {place} allows it.",
+  "keptQueueOwn": "Waiting for the batch check: this version merges with your other approved changes, as one batch pull request. Your merge is kept. The app merges the batch after its checks pass.",
+  "keptRefused": "Cannot merge yet: {place} refused it. Your merge is kept and runs again once its crewmate has fixed the cause.",
+  "keptRepair": "Cannot merge yet: it changed after the card you approved. Your merge is kept and runs once its crewmate shows the work is still what you approved.",
+  "keptSignIn": "Cannot merge yet: the app's {place} sign-in is needed. Your merge is kept and runs once you sign in again.",
+  "keptUnclear": "Cannot merge yet: {place} did not give a clear answer. Your merge is kept and the app tries again shortly."
+}

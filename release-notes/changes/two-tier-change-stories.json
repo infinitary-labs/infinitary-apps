@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "two-tier-change-stories",
+      "kind": "improvement",
+      "title": "Merge cards and pull requests are easier to scan",
+      "body": "New merge cards and pull requests keep their explanation short, put each view’s before and after pictures together, and show a checklist of what was checked. Longer evidence stays folded, and code versions no longer appear in the story. Both keep the same pull request title.",
+      "area": "cards",
+      "picture": {
+        "dark": "two-tier-change-stories-dark.webp",
+        "light": "two-tier-change-stories-light.webp",
+        "alt": "A short story with change bullets, two reply-view pictures side by side, a checked result and a folded evidence section"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

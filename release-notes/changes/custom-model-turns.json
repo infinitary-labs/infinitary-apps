@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "custom-model-turns",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "Models with no allowance reading take turns in a level",
+      "body": "When you place two or more custom connection or OpenRouter models in the same level and no subscription there can serve, crewmates now take turns between them instead of always starting on the first one. Each start goes to the model picked least recently, and the turn carries over when you restart the app. Your subscriptions still come first, and a model you name or set to Always use still wins.",
+      "noPicture": "Which model a crewmate starts on changes over several starts; no view or control looks different apart from one sentence under Why this model.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

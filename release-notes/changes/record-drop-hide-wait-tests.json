@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "record-drop-hide-wait-tests",
+      "reason": "Test-only fix: the record controls journey that hides a record while Drop task asks now waits until the stage draws that record nowhere before opening it again, since opening it sooner showed the held drawing with its question still open, and checks the reopened bar is at rest before pressing. No shipped behavior changes."
+    }
+  ]
+}

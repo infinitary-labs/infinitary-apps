@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "firstmate-turn-resolution-read",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "No pause when the first mate starts a turn after a busy few hours",
+      "body": "After you have answered many cards, the app no longer stops answering for a moment while the first mate reads what you chose before its next turn.",
+      "noPicture": "This removes a pause in the app's own work without changing any screen or control.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

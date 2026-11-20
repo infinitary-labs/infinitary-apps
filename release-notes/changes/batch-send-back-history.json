@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "batch-send-back-history",
+      "kind": "improvement",
+      "title": "A change sent back from its batch keeps your approval and its history",
+      "body": "When a batch of your approved changes sends one back, your approval of it stays. Its crewmate learns why, how many times it was sent back before and which checks never ran on it, and runs those on its repair before the repair goes back in line or comes back to you. A repair that leaves the change as you approved it joins the next batch without asking you again; one that changes the work comes back to you. Its merge card says how many times it was sent back, with each reason one click away.",
+      "area": "cards",
+      "picture": {
+        "dark": "batch-send-back-history-dark.webp",
+        "light": "batch-send-back-history-light.webp",
+        "alt": "A merge card whose Batch check says sent back once, with the reason it was sent back from pull request #102 and the checks that never ran there"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

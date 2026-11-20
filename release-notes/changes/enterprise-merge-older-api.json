@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "enterprise-merge-older-api",
+      "kind": "fix",
+      "area": "projects",
+      "title": "Merge works on older GitHub Enterprise servers",
+      "body": "Pressing Merge on a merge card for a project on an older GitHub Enterprise server now squash merges the pull request. Before, the server turned the merge down and the card showed only \"Bad Request\". When GitHub turns a request down that way, the app now also shows the reason GitHub gave.",
+      "noPicture": "This changes how the app asks GitHub to merge, not how the merge card looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

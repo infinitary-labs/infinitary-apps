@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "batched-pull-requests-off-by-default",
+      "kind": "improvement",
+      "area": "projects",
+      "title": "Batched pull requests stay out of the way until you turn them on",
+      "body": "Where changes go in Settings, Projects now offers a local merge and pull requests. To merge your approved changes together as one batch pull request, turn on Batched pull requests in Settings, Runbooks, and the choice appears for each project. If a project already uses batched pull requests, nothing changes for you: the runbook stays on, and it cannot be turned off until no project uses it.",
+      "picture": {
+        "dark": "batched-pull-requests-off-by-default-dark.webp",
+        "light": "batched-pull-requests-off-by-default-light.webp",
+        "alt": "Where changes go in Settings, Projects offers Local merge and Pull requests, with no batch choice while Batched pull requests is off"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "custom-api-certificate-signature",
+      "kind": "fix",
+      "area": "subscriptions",
+      "title": "A custom connection names a certificate it cannot verify",
+      "body": "When a server on your organization's network shows a certificate that your organization's certificate did not sign, Save now says the certificate could not be verified. It used to say the server could not be reached. The connection is still refused.",
+      "picture": {
+        "dark": "custom-api-certificate-signature-dark.webp",
+        "light": "custom-api-certificate-signature-light.webp",
+        "alt": "A custom connection's address on a private network, with the red line \"…'s certificate could not be verified. Add your organization's certificate below.\" under it, above the key, the protocol and the Organization certificates box"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

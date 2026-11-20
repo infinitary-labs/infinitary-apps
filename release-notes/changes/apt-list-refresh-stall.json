@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "apt-list-refresh-stall",
+      "reason": "The Linux check machines end a stalled package-list refresh and start it again instead of waiting out the install step's limit; it changes only how the project's checks prepare their machines, not the app."
+    }
+  ]
+}

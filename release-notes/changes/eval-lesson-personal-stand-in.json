@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "eval-lesson-personal-stand-in",
+      "reason": "Developer-only evaluation tooling: the isolated evaluation host binds a personal-workspace stand-in so a lesson start runs instead of stopping the evaluation. Nothing in the shipped app changed."
+    }
+  ]
+}

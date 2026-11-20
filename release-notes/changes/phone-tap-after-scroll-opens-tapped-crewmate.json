@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-tap-after-scroll-opens-tapped-crewmate",
+      "kind": "fix",
+      "area": "devices",
+      "title": "On iPhone and iPad, a tap after scrolling the crew opens the crewmate you tapped",
+      "body": "Tapping a crewmate right after scrolling the crew on Home could open another crewmate's summary: the one near where your scroll began. A tap now opens the crewmate under your finger as it landed, even while the crew keep moving.",
+      "noPicture": "The change is which crewmate a tap opens right after a scroll, a sequence of touches that a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

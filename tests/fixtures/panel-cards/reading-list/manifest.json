@@ -1,0 +1,21 @@
+{
+  "api": 1,
+  "title": "Reading list",
+  "placement": { "x": "right", "y": "top" },
+  "cards": {
+    "reader": {
+      "view": "reader",
+      "title": "Reading",
+      "width": "regular",
+      "data": { "place": "list" }
+    }
+  },
+  "header": [
+    { "id": "open", "icon": "open", "label": "Open reading", "emits": "reader" },
+    { "id": "search", "icon": "search", "label": "Search the list" }
+  ],
+  "commands": [
+    { "id": "open", "label": "Open reading", "emits": "reader", "key": "⌘E" },
+    { "id": "find", "label": "Find a piece", "presses": "search" }
+  ]
+}

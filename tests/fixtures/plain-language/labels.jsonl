@@ -1,0 +1,112 @@
+// The hand-scored plain-language sample (roadmap 1.5, the plain-language
+// pass; design skill `copy/Vocabulary.prompt.md`). Every row is one card
+// from the authored fleet recordings, reconstructions, or Claude-served
+// recording under `tests/fixtures/replay/`, read against the vocabulary's
+// one rule: a card is plain when
+// the sentence around every technical name would still be understood
+// without it, and a never-say word stands only where the person chose the
+// thing, where it is the thing itself in mono, or inside <details>. The
+// pre-pass that listed candidate words was an aid; each label is a reading.
+// `key` is sha256(title\nbody) truncated to 12, so a label can never drift
+// onto another card, and a card with no row is unknown - out of the
+// denominator, never a negative (`plain_language_share`,
+// `scripts/interaction-metrics.ts`). Label new public-safe recordings the
+// same way, one row per distinct title and body.
+// A card the app authors that no recording holds yet is labelled from the
+// end-to-end spec that shows it (git integration PR 1.3): its row names
+// that spec in `from`, and the spec reads the card off the running app and
+// fails when its words no longer match a row - so a copy change to the
+// card is read again by hand before it ships. Only the app's own words are
+// labelled this way; a card a spec scripts for its mock model measures
+// nothing about the app.
+// Each recorded card's row carries a second reading (contract 4.58,
+// FI3-542): `clear` is true when the card's open prose - outside <details>,
+// figures and code - follows the five sentence habits `CARD_AUTHORING`
+// states, and false when one is broken; `clear_note` names what broke. A
+// habit is broken by a sentence over 25 words (text in quotes or in
+// parentheses, a number and an identifier each count as one word) or one
+// holding three or more facts; by one thing under two names or one name for
+// two things; by a passive that hides who did the work when the author or
+// the reader's next step is the doer (a state such as "is merged" is not
+// one); by a figure of speech; or by three or more actions chained in one
+// sentence instead of a numbered list. The word count was an aid; each
+// label is a reading. `clear_copy_share` scores it, and a row with no
+// `clear` is out of its denominator.
+// A recorded card whose body names a pull request carries a third reading
+// (FI3-1307): `pr_links` is true when every pull request the body names -
+// by its number or by its address - is a link that opens that pull
+// request's page, and false when one is text or a link that opens nothing;
+// `pr_links_note` names which. A card whose body names none carries no
+// `pr_links`, and neither does one whose title alone names one: a title
+// holds no link. An action id that spells a number (`merge-pr55`) names no
+// pull request. `pr_link_share` scores it.
+// Two more readings follow the two rules for a card's words (INF-2326,
+// the vocabulary's "Two rules for a card's words"). `terms` is true when
+// every term the project itself coined - a name from its code (a function,
+// a field, a status value) or one its people made up for an idea (settle
+// action, briefing consult) - is explained in a few plain words where the
+// card first uses it, or replaced by them; false when one is not; absent
+// when the open prose uses none. A name shown on screen (the Now panel, a
+// Merge PR button), a task key, a file path and the words the vocabulary's
+// table already covers are not read here: they are the first reading's.
+// `affects` is true when a card that offers, plans, proposes or reports a
+// change it made says, in its title or first few sentences, what people
+// using the project will notice or that only the build, the checks or the
+// documents change; false when it does not; absent on every other card.
+// `terms_note` and `affects_note` say which term or which opening. No word
+// list or term finder was used. `term_explained_share` and
+// `change_effect_share` score them.
+// Two more readings follow the decision rules INF-2715 added to
+// `CARD_AUTHORING`. `sections` is true when a decision across several
+// sections - findings, proposals or options - asks each question in the
+// section it is about, and a choice among sections right after their
+// comparison; false when it gathers them in one list away from what they ask
+// about; absent on every other card. `task_words` is true when a card that
+// files, queues or starts a task says file only for work left in the
+// backlog, gives work that starts by itself its moment, and, when it proposes
+// new tasks, lets the captain file or start each; false when "file" names
+// work that starts, or such a decision offers neither; absent on every other
+// card. `sections_note` and `task_words_note` say which placement or which
+// words. `section_question_share` and `task_verb_share` score them.
+{"key": "c00c0ef8c1c9", "plain": true, "note": "re-read under the adopted wording: crewmates; those are now the outside words", "clear": true, "clear_note": ""}
+{"key": "98a4f99fa7ae", "plain": false, "note": "worktrees", "clear": true, "clear_note": "", "terms": false, "terms_note": "hygiene is not explained"}
+{"key": "1a8893c57f2e", "plain": false, "note": "crewmate, escalations, supervision", "clear": true, "clear_note": "", "terms": false, "terms_note": "wake path is not explained"}
+{"key": "65042f10a1ba", "plain": false, "note": "worktree", "clear": true, "clear_note": "", "terms": true, "terms_note": "delivered is explained at first use"}
+{"key": "4cb1e2cbfd25", "plain": true, "note": "re-read under the adopted wording: branch, commits, PR; those are now the outside words", "clear": true, "clear_note": "", "pr_links": false, "pr_links_note": "PR 95 is text", "terms": false, "terms_note": "delivered is not explained"}
+{"key": "a2dfa464b566", "plain": true, "note": "the close path decides from the record alone - no table word, 'model' is allowed", "clear": false, "clear_note": "a figure of speech: no model in the loop"}
+{"key": "cb7d4b03b441", "plain": false, "note": "crewmate, worktree", "clear": true, "clear_note": "", "terms": false, "terms_note": "closeRecord is not explained"}
+{"key": "9553cece238c", "plain": false, "note": "worktree", "clear": true, "clear_note": "", "terms": false, "terms_note": "retirement is not explained"}
+{"key": "37e67ea9dcf2", "plain": false, "note": "worktree", "clear": true, "clear_note": "", "terms": false, "terms_note": "retirement is not explained"}
+{"key": "dd9ab0cfd9df", "plain": false, "note": "PR", "clear": false, "clear_note": "eleven steps of 42 words each", "terms": false, "terms_note": "close path and board query are not explained", "affects": false, "affects_note": "says one PR for one behavior, never what people would notice"}
+{"key": "4761979a9e8a", "plain": true, "note": "dropped and delivered are the record's own status words, the thing itself; no table word", "clear": true, "clear_note": "", "terms": false, "terms_note": "delivered and dropped are not explained", "affects": false, "affects_note": "names the stored status, not what people would notice"}
+{"key": "d970e8bc8d0c", "plain": true, "note": "re-read under the adopted wording: PR, merged; those are now the outside words", "clear": true, "clear_note": ""}
+{"key": "4be18af73d75", "plain": false, "note": "PR, CI is green", "clear": true, "clear_note": "", "pr_links": false, "pr_links_note": "the address of PR 55 is plain text, not a link", "affects": true, "affects_note": "the title names a test-only change"}
+{"key": "6bf3602c41fb", "plain": false, "note": "re-read under the adopted wording: CI or green stands in for the checks, so it stays not plain", "clear": true, "clear_note": "", "pr_links": false, "pr_links_note": "the address of PR 56 is plain text, not a link", "affects": true, "affects_note": "the title names the visible card fix"}
+{"key": "18b45fed251c", "plain": false, "note": "re-read under the adopted wording: CI or green stands in for the checks, so it stays not plain", "clear": true, "clear_note": "", "pr_links": false, "pr_links_note": "the address of PR 57 is plain text, not a link", "affects": true, "affects_note": "the title names the visible click feedback"}
+{"key": "6d046ca40674", "plain": false, "note": "merge, steer, dispatches", "clear": false, "clear_note": "four facts in one sentence", "terms": false, "terms_note": "act() and the merge-pr id are not explained"}
+{"key": "b68edddbd930", "plain": false, "note": "merge, steer, dispatches", "clear": false, "clear_note": "four facts in one sentence", "terms": false, "terms_note": "act() and the merge-pr id are not explained"}
+{"key": "b31df8635062", "plain": true, "note": "re-read under the adopted wording: merge; those are now the outside words", "clear": false, "clear_note": "three facts in one sentence"}
+{"key": "4a0f8567b910", "plain": true, "note": "the app's own card when GitHub stops accepting the sign-in, with nothing waiting: GitHub is the host the person chose; sign-in, your first mate, pull requests, kept on this computer", "from": "tests/e2e/forge-signin.spec.ts"}
+{"key": "2a1d07ba7c03", "plain": true, "note": "release, sign-in test and crewmate carry their plain meaning; no word from the table", "clear": true, "clear_note": ""}
+{"key": "6a71e5af3d0c", "plain": true, "note": "Names the measurement or decision directly.", "clear": true, "clear_note": ""}
+{"key": "69f569af2710", "plain": true, "note": "Names the measurement or decision directly.", "clear": true, "clear_note": ""}
+{"key": "1b862e1d8e12", "plain": true, "note": "Names the measurement or decision directly.", "clear": true, "clear_note": ""}
+{"key": "352d59431eb3", "plain": true, "note": "Names the measurement or decision directly.", "clear": true, "clear_note": ""}
+{"key": "7990f3c80c75", "plain": true, "note": "Names the measurement or decision directly.", "clear": true, "clear_note": ""}
+{"key": "38f44e617f49", "plain": true, "note": "Names the measurement or decision directly.", "clear": true, "clear_note": ""}
+{"key": "7af00a5bdfb2", "plain": true, "note": "Names the measurement or decision directly.", "clear": true, "clear_note": ""}
+{"key": "045abbf65779", "plain": true, "note": "Names the measurement or decision directly.", "clear": true, "clear_note": ""}
+{"key": "5657437c902c", "plain": true, "note": "Names the measurement or decision directly.", "clear": true, "clear_note": ""}
+{"key": "a79abba3113d", "plain": true, "note": "Names the measurement or decision directly.", "clear": true, "clear_note": ""}
+{"key": "1427182d39f3", "plain": true, "note": "Names the measurement or decision directly.", "clear": true, "clear_note": ""}
+{"key": "89339cae633d", "plain": true, "note": "Names the measurement or decision directly.", "clear": true, "clear_note": ""}
+{"key": "34eb34b0f841", "plain": true, "note": "Names the measurement or decision directly.", "clear": true, "clear_note": ""}
+{"key": "92aeb4c1be21", "plain": true, "note": "Names the measurement or decision directly.", "clear": true, "clear_note": ""}
+{"key": "f44d995b5922", "plain": true, "note": "Explains the greenhouse reading in plain words.", "clear": true, "clear_note": "", "terms": true, "terms_note": "Soak window is explained where it first appears.", "affects": true, "affects_note": "The first sentence limits the change to testing.", "sections": true, "sections_note": "The choice follows the comparison of both lines.", "task_words": true, "task_words_note": "Start means run now; leave means keep it waiting."}
+{"key": "2f2c294e8f63", "plain": true, "note": "Explains the greenhouse reading in plain words.", "clear": true, "clear_note": "", "pr_links": true, "pr_links_note": "The example links to the named public pull request.", "affects": true, "affects_note": "The chart change is named in the first sentence."}
+{"key": "3f121fe2846c", "plain": true, "note": "Explains the greenhouse reading in plain words.", "clear": true, "clear_note": ""}
+{"key": "60941c485097", "plain": true, "note": "Explains the greenhouse reading in plain words.", "clear": true, "clear_note": ""}
+{"key": "7fa663ffa3c4", "plain": true, "note": "Explains the greenhouse reading in plain words.", "clear": true, "clear_note": ""}
+{"key": "f88fb1869b65", "plain": true, "note": "Explains the greenhouse reading in plain words.", "clear": true, "clear_note": ""}
+{"key": "e1b09dd88320", "plain": true, "note": "Names the measurement directly.", "clear": true, "clear_note": ""}
+{"key": "b6672365ca65", "plain": true, "note": "Names the measurement directly.", "clear": true, "clear_note": ""}

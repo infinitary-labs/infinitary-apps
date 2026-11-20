@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "stable-highlights-picked-on-a-card",
+      "reason": "Release tooling: a stable promotion now takes the three highlights the captain picks on its card as a release input, writes them into the stable's notes catalog as its only ranks, and keeps them in the stable's record; the app and what it shows are unchanged, so there is nothing a person notices in the app itself."
+    }
+  ]
+}

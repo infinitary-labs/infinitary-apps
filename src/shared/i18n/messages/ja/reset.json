@@ -1,0 +1,5 @@
+{
+  "resetKeysAsk": "すべてのキーを {preset} プリセットの割り当てに戻しますか？",
+  "resetKeysConfirm": "すべてのキーをリセット",
+  "resetKeysDetail": "キーボード設定で変更したショートカットは、すべて {preset} プリセットの割り当てに戻ります。"
+}

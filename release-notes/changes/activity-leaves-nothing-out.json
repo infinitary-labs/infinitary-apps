@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "activity-leaves-nothing-out",
+      "kind": "improvement",
+      "title": "A task's Activity leaves nothing out",
+      "body": "A task's Activity now lists what the app did for it, such as your approval to merge or a merge that could not run. Your reply under a card reads as your own words. Smaller events fold under the line they led to, and the line opens to show them.",
+      "area": "tasks",
+      "picture": {
+        "dark": "activity-leaves-nothing-out-dark.webp",
+        "light": "activity-leaves-nothing-out-light.webp",
+        "alt": "A task's Activity with a report line opened to the update folded under it, and a reply under a card in the captain's own words"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

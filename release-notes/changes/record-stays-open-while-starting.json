@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "record-stays-open-while-starting",
+      "kind": "fix",
+      "title": "A task record stays open when its crewmate begins",
+      "body": "A task record you open while the task reads Starting no longer closes by itself when the crewmate begins. Only a record whose own Start you pressed closes then.",
+      "area": "tasks",
+      "noPicture": "The change is a record that stays on screen instead of leaving; a still shows only the record.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

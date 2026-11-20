@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "installed-runbooks",
+      "kind": "feature",
+      "title": "Add runbooks made elsewhere",
+      "body": "Ask your first mate to add a runbook from a folder, git or npm. A consent card names its guidance and any built-in runbook it replaces. Adding it makes its skills available across your projects and personal workspace. Runbooks carry guidance, HTML parts and pictures, not scripts; panels inside need their own consent. Ask your first mate to remove an added runbook when you no longer want it.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "installed-runbooks-dark.webp",
+        "light": "installed-runbooks-light.webp",
+        "alt": "A consent card names Studio workflows, says it runs nothing, and explains that adding it turns Common workflows off"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

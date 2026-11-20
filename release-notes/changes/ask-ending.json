@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "ask-ending",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Every message you send ends on a card that answers it",
+      "body": "When work you asked for ends with no card that answers you, the crewmate is asked for one, then your first mate, and only then does the app tell you nothing answered. Once you have accepted an answer, a later merge or drop updates that card instead of adding a second note, and work handed to a new task answers on the new task's card.",
+      "noPicture": "This changes when cards go up and which card a later outcome updates, not a view or control of its own.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "phone-thread-minus",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Put a card aside while reading its thread on iPhone and iPad",
+      "body": "On iPhone and iPad, a card turned over to its thread now has the same minimize button at the end of its head as the card itself, so you can put the card aside without turning it back first. It does exactly what the card's own button does, and Shift-Command-M from a keyboard presses it too.",
+      "noPicture": "The phone check pictures the card's thread on iPhone and iPad upright, while a hero picture is a landscape pair cropped from the desktop app's window.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

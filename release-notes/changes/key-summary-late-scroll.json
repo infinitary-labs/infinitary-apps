@@ -1,0 +1,21 @@
+{
+  "entries": [
+    {
+      "id": "key-summary-after-keyboard-scroll",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A task key you reach with the keyboard opens its summary",
+      "body": "Moving onto a task key with Tab or Shift+Tab, when the card scrolled to show it, could leave the key lit with no summary beside it while your computer was busy. The summary now opens there as it does with the pointer.",
+      "noPicture": "A busy computer delayed the scroll's report past the key's own; once fixed, the screen looks as it always should, with the summary beside the key.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "stage-cuts-short-a-left-reveal",
+      "reason": "A new selection now stops the previous card's entrance even after the card it replaced has left, so the stage prepares the next card; in practice that entrance ends within a third of a second either way, so nothing a person sees changes."
+    }
+  ]
+}

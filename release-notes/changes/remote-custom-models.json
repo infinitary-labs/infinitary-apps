@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "remote-custom-models",
+      "kind": "fix",
+      "title": "Custom models added on another computer run tasks there",
+      "body": "A task that uses a custom model you added on another computer now runs on that computer's own connection, and keeps going after your Mac restarts. If that computer no longer has the connection, the task stops instead of moving to another server.",
+      "area": "devices",
+      "noPicture": "This fixes connection binding and restart adoption without changing a view.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

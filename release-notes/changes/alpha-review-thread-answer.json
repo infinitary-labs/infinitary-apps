@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "thread-answer-in-thread",
+      "kind": "fix",
+      "title": "A question asked under a card is answered under that card",
+      "body": "When you ask a question in a card's thread, the answer now arrives in that same thread as soon as the research is done, instead of on a separate card.",
+      "area": "cards",
+      "noPicture": "Where an answer appears depends on a live exchange and does not show in a still picture.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": ["d761fc746e466d74862b2f35ef2df44001629d02"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-certificate-cleanup",
+      "reason": "Internal TestFlight release automation: list-only certificate cleanup, with no application change."
+    }
+  ]
+}

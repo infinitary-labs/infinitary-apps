@@ -1,0 +1,13 @@
+// Hand-labelled captain choices for the plan-to-build handoff
+// (docs/replay-harness.md, "The plan-to-build handoff"). One row per choice a
+// recorded session under tests/fixtures/replay/ shows the captain making,
+// filed under the recorded card id and the action chosen. `builds` says
+// whether that choice authorized building: the plan it closed, or the
+// builder its card was about. It is a person's reading of the captain's ask
+// and the card as offered (docs/card-authoring.md, "The handoff"), never a
+// rule over the card's words; `note` says why. The replay scores the
+// Firstmate's answer against it: exactly one builder grounded on the plan
+// for a build approval, none for any other choice. A choice with no row is
+// not scored.
+{"card":"card-8c300001-rain-outlook-plan","choice":"agree","builds":true,"note":"The recorded agreement authorized the forecast layout work, but no builder started."}
+{"card":"card-fm-start-rain-outlook","choice":"start-implementation","builds":true,"note":"The recorded start choice explicitly authorizes the saved forecast layout build."}

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "command-mac-moves-to-ssh",
+      "reason": "Internal, behind the development-only multi-machine gate: Add it at a Mac's address finds a Mac a command added, stranded after this Mac's address changed, as the same computer and keeps it on this Mac's own SSH connection from then on. An installed app offers none of it."
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "failed-checks-say-why",
+      "reason": "This change makes the project's own checks name their failure in GitHub's summary and makes a stopped merge batch show one failed job instead of twenty; it changes how the project is checked, not the app."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "load-supervisor-build-temp",
+      "reason": "Build: the load supervisor's compile gives Apple's clang a temp folder of its own and removes it, so the Mac unit run in release verification no longer finds the empty folders a two-chip build leaves behind; nothing a person notices."
+    }
+  ]
+}

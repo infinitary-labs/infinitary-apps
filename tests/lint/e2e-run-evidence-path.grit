@@ -1,0 +1,19 @@
+// An end-to-end spec saves its pictures and JSON through
+// `test.info().outputPath`, into its run's own directory (docs/testing.md,
+// "Per-run e2e evidence"), never to a fixed path in `test-results/`, which
+// every run of the working copy shares: a second run overwrites the first's.
+// tests/e2e/runEvidence.ts owns the layout and is exempt. Runs inside
+// `pnpm check` through biome.json's plugins.
+
+language js
+
+or {
+  JsStringLiteralExpression() as $literal,
+  JsTemplateExpression() as $literal
+} where {
+  $literal <: includes "test-results",
+  $literal <: r"(?s)[\"'`](?:\./)?test-results(?:[\"'`]|/.*)",
+  $filename <: r".*tests/e2e/.*",
+  not $filename <: r".*tests/e2e/runEvidence\.ts",
+  register_diagnostic(span=$literal, message="A fixed path in test-results/ is shared by every run of the working copy, so a second run overwrites this one's evidence. Save it with test.info().outputPath(name), in the run's own directory (docs/testing.md, \"Per-run e2e evidence\").", severity="error")
+}

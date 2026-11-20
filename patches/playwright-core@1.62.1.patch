@@ -1,0 +1,206 @@
+diff --git a/lib/coreBundle.js b/lib/coreBundle.js
+index d9041dd0f009072511a7d808dec83121ff29e127..a68c6b866973cc78c2194cd57ab6c2d32a033a02 100644
+--- a/lib/coreBundle.js
++++ b/lib/coreBundle.js	
+@@ -4255,6 +4255,21 @@ function timeOrigin() {
+ function monotonicTime() {
+   return Math.floor((performance.now() + _timeShift) * 1e3) / 1e3;
+ }
++// Infinitary (INF-1083): on an ordinary run, tests/helpers/budgets.ts installs a
++// load clock in each test worker, and every wait deadline reads it here: it counts
++// only the time the worker got to run, and each timer ends by its wall cap. Without
++// it (a graded run, or the runner's own process), deadlines read the wall clock.
++function deadlineTime() {
++  const clock = globalThis[Symbol.for("infinitary.loadClock")];
++  return clock ? clock.now() : monotonicTime();
++}
++function deadlineTimer(fire, deadline) {
++  const clock = globalThis[Symbol.for("infinitary.loadClock")];
++  if (clock)
++    return clock.timer(fire, deadline);
++  const timer = setTimeout(fire, deadline - monotonicTime());
++  return { cancel: () => clearTimeout(timer) };
++}
+ var _timeOrigin, _timeShift, DEFAULT_PLAYWRIGHT_TIMEOUT, DEFAULT_PLAYWRIGHT_LAUNCH_TIMEOUT;
+ var init_time = __esm({
+   "packages/isomorphic/time.ts"() {
+@@ -4276,30 +4291,43 @@ async function raceAgainstDeadline(cb, deadline) {
+     new Promise((resolve) => {
+       if (!deadline)
+         return;
+-      timer = setTimeout(() => resolve({ timedOut: true }), deadline - monotonicTime());
++      timer = deadlineTimer(() => resolve({ timedOut: true }), deadline);
+     })
+   ]).finally(() => {
+-    clearTimeout(timer);
++    timer?.cancel();
+   });
+ }
+ async function pollAgainstDeadline(callback, deadline, [...pollIntervals] = [100, 250, 500, 1e3]) {
+   const lastPollInterval = pollIntervals.pop() ?? 1e3;
+   let lastResult;
+   const wrappedCallback = () => Promise.resolve().then(callback);
+-  while (true) {
+-    const time = monotonicTime();
+-    if (deadline && time >= deadline)
+-      break;
+-    const received = await raceAgainstDeadline(wrappedCallback, deadline);
+-    if (received.timedOut)
+-      break;
+-    lastResult = received.result.result;
+-    if (!received.result.continuePolling)
+-      return { result: lastResult, timedOut: false };
+-    const interval = pollIntervals.shift() ?? lastPollInterval;
+-    if (deadline && deadline <= monotonicTime() + interval)
+-      break;
+-    await new Promise((x) => setTimeout(x, interval));
++  // One deadline timer bounds the whole poll, so its wall cap counts from the start.
++  let timer;
++  let expired = false;
++  const timedOut = new Promise((resolve) => {
++    if (deadline)
++      timer = deadlineTimer(() => {
++        expired = true;
++        resolve({ timedOut: true });
++      }, deadline);
++  });
++  try {
++    while (true) {
++      if (expired || deadline && deadlineTime() >= deadline)
++        break;
++      const received = await Promise.race([wrappedCallback().then((result2) => ({ result: result2, timedOut: false })), timedOut]);
++      if (received.timedOut)
++        break;
++      lastResult = received.result.result;
++      if (!received.result.continuePolling)
++        return { result: lastResult, timedOut: false };
++      const interval = pollIntervals.shift() ?? lastPollInterval;
++      if (deadline && deadline <= deadlineTime() + interval)
++        break;
++      await new Promise((x) => setTimeout(x, interval));
++    }
++  } finally {
++    timer?.cancel();
+   }
+   return { timedOut: true, result: lastResult };
+ }
+@@ -6448,6 +6476,8 @@ __export(isomorphic_exports, {
+   longestCommonSubstring: () => longestCommonSubstring,
+   methodMetainfo: () => methodMetainfo,
+   monotonicTime: () => monotonicTime,
++  deadlineTime: () => deadlineTime,
++  deadlineTimer: () => deadlineTimer,
+   msToString: () => msToString,
+   nextActionByStartTime: () => nextActionByStartTime,
+   noColors: () => noColors,
+@@ -12088,7 +12118,7 @@ var init_progress = __esm({
+         await this._donePromise;
+       }
+       async run(task, timeout) {
+-        const deadline = timeout ? monotonicTime() + timeout : 0;
++        const deadline = timeout ? deadlineTime() + timeout : 0;
+         assert(this._state === "before");
+         this._state = "running";
+         let timer;
+@@ -12098,7 +12128,7 @@ var init_progress = __esm({
+           timeout: timeout ?? 0,
+           deadline,
+           disableTimeout: () => {
+-            clearTimeout(timer);
++            timer?.cancel();
+           },
+           log: (message) => {
+             if (this._state === "running")
+@@ -12133,7 +12163,7 @@ var init_progress = __esm({
+         };
+         if (deadline) {
+           const timeoutError = new TimeoutError(`Timeout ${timeout}ms exceeded.`);
+-          timer = setTimeout(() => {
++          timer = deadlineTimer(() => {
+             if (this.metadata.pauseStartTime && !this.metadata.pauseEndTime)
+               return;
+             if (this._state === "running") {
+@@ -12141,7 +12171,7 @@ var init_progress = __esm({
+               this._forceAbortPromise.reject(timeoutError);
+               this._controller.abort(timeoutError);
+             }
+-          }, deadline - monotonicTime());
++          }, deadline);
+         }
+         try {
+           if (this._pendingAbortError)
+@@ -12153,7 +12183,7 @@ var init_progress = __esm({
+           this._state = { error };
+           throw error;
+         } finally {
+-          clearTimeout(timer);
++          timer?.cancel();
+           this._donePromise.resolve();
+         }
+       }
+@@ -33856,7 +33886,7 @@ async function generateFrameSelectorInParent(prgoress, parent, frame) {
+       return selector;
+     } catch (e) {
+     }
+-  }, monotonicTime() + 2e3);
++  }, deadlineTime() + 2e3);
+   if (!result2.timedOut && result2.result)
+     return result2.result;
+   if (frame.name())
+@@ -34797,6 +34827,7 @@ var init_crConnection = __esm({
+             callback.resolve(object.result);
+           }
+         } else if (object.id && object.error?.code === -32001) {
++        } else if (object.id && this._crashed) {
+         } else {
+           assert(!object.id, object?.error?.message || void 0);
+           Promise.resolve().then(() => {
+@@ -57994,14 +58025,14 @@ var init_locator = __esm({
+       }
+       async _withElement(task, options) {
+         const timeout = this._frame._timeout({ timeout: options.timeout }).timeout;
+-        const deadline = timeout ? monotonicTime() + timeout : 0;
++        const deadline = timeout ? deadlineTime() + timeout : 0;
+         return await this._frame._wrapApiCall(async () => {
+           const result2 = await this._frame._channel.waitForSelector({ selector: this._selector, strict: true, state: "attached" }, { signal: options.signal, timeout });
+           const handle = ElementHandle2.fromNullable(result2.element);
+           if (!handle)
+             throw new Error(`Could not resolve ${this._selector} to DOM Element`);
+           try {
+-            return await task(handle, deadline ? deadline - monotonicTime() : 0);
++            return await task(handle, deadline ? deadline - deadlineTime() : 0);
+           } finally {
+             await handle.dispose();
+           }
+@@ -58410,10 +58441,11 @@ var init_waiter = __esm({
+           this._rejectOn(promise, () => signal.removeEventListener("abort", listener));
+         }
+         if (timeout) {
+-          const { promise, dispose } = waitForTimeout(timeout);
++          let timer;
++          const promise = new Promise((resolve) => timer = deadlineTimer(resolve, deadlineTime() + timeout));
+           this._rejectOn(promise.then(() => {
+             throw new TimeoutError2(timeoutMessage);
+-          }), dispose);
++          }), () => timer.cancel());
+         }
+       }
+       rejectImmediately(error) {
+@@ -62373,7 +62405,7 @@ var init_browser2 = __esm({
+ 
+ // packages/playwright-core/src/client/connect.ts
+ async function connectToBrowser(playwright2, params2) {
+-  const deadline = params2.timeout ? monotonicTime() + params2.timeout : 0;
++  const deadline = params2.timeout ? deadlineTime() + params2.timeout : 0;
+   const nameParam = params2.browserName ? { "x-playwright-browser": params2.browserName } : {};
+   const headers = { ...nameParam, ...params2.headers };
+   const connectParams = {
+@@ -62584,7 +62616,7 @@ var init_android2 = __esm({
+       }
+       async connect(endpoint, options = {}) {
+         return await this._wrapApiCall(async () => {
+-          const deadline = options.timeout ? monotonicTime() + options.timeout : 0;
++          const deadline = options.timeout ? deadlineTime() + options.timeout : 0;
+           const headers = { "x-playwright-browser": "android", ...options.headers };
+           const connectParams = { endpoint, headers, slowMo: options.slowMo };
+           const connection = await connectToEndpoint(this._connection, connectParams, { signal: void 0, timeout: options.timeout || 0 });

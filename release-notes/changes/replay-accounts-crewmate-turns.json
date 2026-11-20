@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "replay-accounts-crewmate-turns",
+      "reason": "The development-only replay harness now plays each recorded crewmate turn against the input it answered and names why each turn it never plays did not; nothing in the app changes."
+    }
+  ]
+}

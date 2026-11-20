@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "reviewer-choice",
+      "kind": "feature",
+      "title": "Reviews run on the model your directions name",
+      "body": "When an independent review starts and no model was named for it, your decision model reads your standing directions and runs the review on the model they call for, or on the usual pick when none does. If that model is out of allowance or cannot read the change's pictures, the usual pick reviews and the review's timeline says why; when a direction says to wait for it, your first mate asks you first. Choose a model for reviews is on unless you switch it off under Decisions.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "reviewer-choice-dark.webp",
+        "light": "reviewer-choice-light.webp",
+        "alt": "The Decisions group with Jev answering, and a Uses list where Choose a model for reviews sits switched on between Choose a computer for new work and Screen automation events"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

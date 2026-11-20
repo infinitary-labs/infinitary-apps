@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "remote-sign-in-flows",
+      "area": "devices",
+      "kind": "fix",
+      "provenance": {
+        "origin": "change"
+      },
+      "title": "Keep a sign-in available when switching Settings tabs",
+      "body": "A sign-in on another computer keeps its code, prompt and Cancel when you return to Settings. If that computer reconnects, the interrupted sign-in ends so you can start again. When the first mate needs an update, your account and project-host rows stay available; only sign-in starts are disabled.",
+      "noPicture": "The primary fix is recovery across tab switches and reconnects, which needs a recording; existing account-management rows keep their usual appearance."
+    }
+  ]
+}

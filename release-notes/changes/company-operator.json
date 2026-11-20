@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "company-operator",
+      "kind": "improvement",
+      "area": "other",
+      "title": "Infinitary names its company operator",
+      "body": "The alpha notice and Linux package details now name Infinitary Labs, Inc. Contact the company at help@getinfinitary.com.",
+      "noPicture": "This changes release and package text, not an app view.",
+      "provenance": { "origin": "change", "covers": [] }
+    }
+  ],
+  "exclusions": []
+}

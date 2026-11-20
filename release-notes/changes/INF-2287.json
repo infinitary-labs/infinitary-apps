@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "inf-2287",
+      "reason": "Repair Claude-seat integration tests to await observed inputs and completed turns instead of assuming a clock tick finishes asynchronous work; no app behavior changes."
+    }
+  ]
+}

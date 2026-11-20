@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "custom-api-compacts-before-context-limit",
+      "kind": "fix",
+      "title": "Long conversations on a custom model shorten themselves instead of stopping",
+      "body": "A long conversation or crewmate task on a custom API provider's model no longer stops with a message that the request exceeds the model's context limit. Firstmate now shortens the conversation and carries on, as it does with every other model.",
+      "area": "subscriptions",
+      "noPicture": "Nothing new on screen: a long conversation now simply carries on.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

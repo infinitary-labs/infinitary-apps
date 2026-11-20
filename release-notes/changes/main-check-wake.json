@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "main-check-wake",
+      "reason": "Internal delivery: a pull request waiting because a check also fails on the default branch is asked to recheck when that branch's own run of the check passes, instead of waiting until the other task closes. The app shows nothing new."
+    }
+  ]
+}

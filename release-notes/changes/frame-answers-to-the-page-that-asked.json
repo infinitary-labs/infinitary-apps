@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "frame-answers-to-the-page-that-asked",
+      "kind": "fix",
+      "title": "A redrawn card gets only its own answers",
+      "body": "When a card was redrawn while something on it still waited on the app, the new card could get the earlier answer and show the wrong result. Each card and panel now gets only the answers to what it asked.",
+      "area": "cards",
+      "noPicture": "The fault showed only in a card redrawn mid-wait, and the right result looks like any other card.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

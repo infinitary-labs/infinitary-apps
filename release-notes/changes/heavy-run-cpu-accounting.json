@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "heavy-run-cpu-accounting",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A lone heavy run no longer waits for a quieter computer",
+      "body": "Further heavy runs wait for room without counting a running program's processor use twice. Processor readings now cover the time between refreshes.",
+      "noPicture": "This changes background admission and sampling without changing any screen or control.",
+      "provenance": {
+        "origin": "change",
+        "covers": []
+      }
+    }
+  ],
+  "exclusions": []
+}

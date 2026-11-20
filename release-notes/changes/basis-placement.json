@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "automatic-beside-basis",
+      "kind": "improvement",
+      "title": "Keep Automatic tasks beside the work they build on",
+      "body": "When model choices are tied, Automatic now prefers the computer that ran the earlier task this work builds on, if it can take the work. Your explicit computer choice still wins. The task record says when the earlier work decided where the new task starts.",
+      "area": "devices",
+      "noPicture": "The rule changes start-time placement rather than a screen layout; the existing task record explains a basis-influenced choice in words.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

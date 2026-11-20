@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "claude-partition-allowance",
+      "kind": "fix",
+      "title": "Claude's allowance shows fresh readings again",
+      "body": "When Claude Code has saved your Claude sign-in on this Mac, the Claude row shows its session and weekly readings again, instead of saying macOS would not let Firstmate read the sign-in.",
+      "area": "subscriptions",
+      "highlight": 3,
+      "picture": {
+        "dark": "claude-partition-allowance-dark.webp",
+        "light": "claude-partition-allowance-light.webp",
+        "alt": "Claude's allowance row shows fresh session and weekly readings."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

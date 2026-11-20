@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "takeover-branch-story",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate taking over a pushed branch opens it with its story",
+      "body": "When you ask a crewmate to take over a branch that is already pushed, it can now open that branch's pull request with the story it prepared, instead of being turned down and asked to prepare the story again. If the merge card cannot come up yet, the crewmate is told to switch to that branch first.",
+      "noPicture": "Nothing on screen looks different; what changed is that the crewmate can open the branch it was handed.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

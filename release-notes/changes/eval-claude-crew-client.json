@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "eval-claude-crew-client",
+      "reason": "Developer evaluation tooling: a live signed-in Claude evaluation now checks that it runs under the Claude crewmate's own client, refusing to start or stopping otherwise, and its procedure says how the crewmate holds its turn. Nothing in the app changed."
+    }
+  ]
+}

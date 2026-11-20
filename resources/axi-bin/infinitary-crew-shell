@@ -1,0 +1,67 @@
+#!/bin/sh
+# What a Claude crewmate's client runs each of its shell commands through
+# (CLAUDE_CODE_SHELL_PREFIX; docs/axi-commands.md, "Never the crew's").
+#
+# The client starts each command's shell in a process group of its own and
+# hands this program the whole command as its last argument. This program
+# tells the app's task channel its own process number, so the app keeps that
+# group for the task: a program the command leaves running with & or nohup
+# stays in it after the shell ends, and the app refuses it the captain's
+# command until the task closes. Then it runs the command in the shell the
+# client was told to use (CLAUDE_CODE_SHELL). On Windows, where no group is
+# started, the app makes this program lead a job instead, which the command
+# and everything it starts are in. If the app cannot be told, the command
+# still runs. Only shell builtins and the system's curl run here; the
+# key travels as a header read from its file, never on a command line.
+
+for command do :; done
+if [ "$#" -eq 0 ]; then
+  printf 'error: infinitary-crew-shell runs a command its client hands it\ncode: VALIDATION_ERROR\n' >&2
+  exit 2
+fi
+
+# Git Bash numbers its programs itself; the app reads Windows' own number.
+# There the client sets no shell for this program, so it runs Git Bash's bash.
+pid=$$
+shell=${CLAUDE_CODE_SHELL:-/bin/sh}
+windows=
+if [ -r "/proc/$$/winpid" ]; then
+  read -r pid < "/proc/$$/winpid"
+  shell=${CLAUDE_CODE_SHELL:-/usr/bin/bash}
+  windows=1
+fi
+
+address=${INFINITARY_AXI_ADDRESS:-}
+key=${INFINITARY_AXI_KEY:-}
+# Only this Mac's loopback and a port number.
+case $address in
+  127.0.0.1:*) port=${address#127.0.0.1:} ;;
+  *) port= ;;
+esac
+case $port in
+  '' | *[!0-9]*) ;;
+  *)
+    if [ -r "$key" ]; then
+      curl=/usr/bin/curl
+      [ -x "$curl" ] || curl=curl
+      # -q first: no ~/.curlrc may add options to this request. The app
+      # answers once it has read the process table, which it gives up on
+      # after 5 s (RESOURCE_READ_TIMEOUT_MS); this waits twice that for an
+      # app that does not answer, then runs the command anyway.
+      "$curl" -q --silent --noproxy '*' --max-time 10 --output /dev/null \
+        -H @"$key" \
+        --data-urlencode "tool=infinitary-crew-shell" \
+        --data-urlencode "pid=$pid" \
+        "http://$address/run" 2>/dev/null
+    fi
+    ;;
+esac
+
+# On Windows this program leads the command's job, and Git Bash's exec would
+# end its Windows process and free its number while the command runs, so it
+# runs the command as its child and answers with the command's status.
+if [ -n "$windows" ]; then
+  "$shell" -c "$command"
+  exit $?
+fi
+exec "$shell" -c "$command"

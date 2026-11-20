@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "cold-card-dismissal",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Less work when choosing or closing an answer card",
+      "body": "Choosing or closing an answer card reads less saved task data while keeping its answer attached to your messages.",
+      "noPicture": "This reduces background task reads without changing the card's appearance or controls.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

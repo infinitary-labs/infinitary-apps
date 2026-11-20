@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "check-runs-every-step",
+      "reason": "The project's full lint now runs every step after one fails and names each failed step at the end, so one failure no longer hides the checks after it; only the project's own checks change, so nothing a person sees changes."
+    }
+  ]
+}

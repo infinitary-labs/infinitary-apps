@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-ipad-one-run",
+      "reason": "Internal: a branch's phone check runs each edited phone part three times on the iPhone and once on the iPad, which changes only how the project checks itself."
+    }
+  ]
+}

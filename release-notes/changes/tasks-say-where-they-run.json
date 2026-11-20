@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "tasks-say-where-they-run",
+      "kind": "feature",
+      "highlight": 2,
+      "area": "tasks",
+      "title": "Tasks say when the computer they run on is out of reach",
+      "body": "A task that runs on another of your computers shows that computer after its project, as \"website · on Mac mini\". While that computer is out of reach, the task's dot turns orange, its row ends with \"out of reach\", and its summary and record say \"Mac mini is out of reach\".",
+      "picture": {
+        "dark": "tasks-say-where-they-run-dark.webp",
+        "light": "tasks-say-where-they-run-light.webp",
+        "alt": "The Tasks panel with \"Fix the footer\" and \"Add the contact form\" marked in orange and ending \"out of reach\", and beside it the summary of \"Fix the footer\": \"Idle · Mac mini is out of reach\" and the project \"website · on Mac mini\""
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

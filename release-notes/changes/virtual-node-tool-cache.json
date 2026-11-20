@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "virtual-node-tool-cache",
+      "reason": "Internal CI only: virtual Mac images prefill the runner's Node tool cache to avoid per-job downloads. No product change."
+    }
+  ]
+}

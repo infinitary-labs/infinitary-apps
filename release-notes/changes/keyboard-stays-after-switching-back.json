@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "keyboard-stays-after-switching-back",
+      "kind": "fix",
+      "title": "The keyboard stays where you left it",
+      "body": "When you switch back to the app while working in the task board, a card or a panel, the keyboard is still on the tile or field you left. Before, it could be lost when a decision waited behind the board, and the arrow keys did nothing until you clicked.",
+      "area": "tasks",
+      "noPicture": "The fix is where the keyboard's focus goes when the window comes forward, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

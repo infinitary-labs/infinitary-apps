@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "phone-concise-task-preview",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "A shorter crewmate preview on iPhone and iPad",
+      "body": "On iPhone and iPad, tapping a crewmate shows the same short preview as on your Mac: the tasks it waits on by name, and one last row with the model and its intelligence level, then the pull request with its checks as one state, such as running for 11m. Open task now shows what the preview leaves out: when each wait was recorded, the reasoning level, and the check counts with any reason they could not all be read.",
+      "picture": {
+        "dark": "phone-concise-task-preview-dark.webp",
+        "light": "phone-concise-task-preview-light.webp",
+        "alt": "A crewmate's preview on iPhone ends in one row: the model mock-1 with its Med intelligence badge, then pull request #57 with its checks running."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

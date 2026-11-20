@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "settings-languages-projects-devices",
+      "kind": "improvement",
+      "title": "Projects and Devices in your language",
+      "body": "The Projects and Devices tabs of Settings, with adding a project, the merge queue's setup, where work runs and the sign-ins each computer holds, now show their words in the language you chose in Settings → Appearance.",
+      "area": "settings",
+      "picture": {
+        "dark": "settings-languages-projects-devices-dark.webp",
+        "light": "settings-languages-projects-devices-light.webp",
+        "alt": "Settings → Projects in Japanese, with the projects description, the add-project buttons and the new-projects folder row translated"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

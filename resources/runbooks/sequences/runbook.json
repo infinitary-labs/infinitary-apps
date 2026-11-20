@@ -1,0 +1,6 @@
+{
+  "id": "sequences",
+  "name": "Common workflows",
+  "description": "How the first mate approaches planning, building, fixing and research.",
+  "firstmate": "guide.md"
+}

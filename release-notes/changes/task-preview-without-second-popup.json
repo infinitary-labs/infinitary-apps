@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-preview-without-second-popup",
+      "kind": "improvement",
+      "title": "A task preview shows the full title and project",
+      "body": "Resting on a task shows its full title, project and status in the preview. The extra popup that repeated those words is gone.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-preview-without-second-popup-dark.webp",
+        "light": "task-preview-without-second-popup-light.webp",
+        "alt": "A task preview with the full title on two lines and a project row"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

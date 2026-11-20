@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "views-keep-working-across-versions",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Your phone keeps working when your computer updates first",
+      "body": "Infinitary on your phone, or on another computer that controls this one, now keeps answering cards, sending messages and controlling tasks when your computer runs a newer Infinitary, as long as nothing the two share has changed. When one of them does need an update, the line under the message box says which: this phone or your computer.",
+      "noPicture": "The desktop app's screens look the same; the change is which versions work together and the phone's one line naming the side to update.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

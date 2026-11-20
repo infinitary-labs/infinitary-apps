@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-firstmate-agent-options",
+      "reason": "The first mate agent's option types move without changing behavior or any app view."
+    }
+  ]
+}

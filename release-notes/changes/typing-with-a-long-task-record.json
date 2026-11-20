@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "typing-with-a-long-task-record",
+      "reason": "Release review: this fix finishes the same smooth-typing result that typing-during-crew-activity describes, and both ship in the same alpha, so that one note now covers thousands of finished tasks too rather than a second note repeating it."
+    }
+  ]
+}

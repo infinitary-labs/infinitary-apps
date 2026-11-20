@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "kept-merge-click",
+      "kind": "improvement",
+      "title": "Your merge click survives a conflict",
+      "body": "When your merge is refused because newer work overlaps, the app keeps your click. Once the change is brought up to date and its checks pass, it merges without asking you again.",
+      "area": "cards",
+      "noPicture": "Nothing new on screen: the merge happens later without asking again.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

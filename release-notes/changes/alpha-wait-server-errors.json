@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "alpha-wait-server-errors",
+      "reason": "Main's check now asks GitHub again after a server error while it looks for alpha cuts to wait for, and asks for smaller lists of runs; only how the project is checked changes."
+    }
+  ]
+}

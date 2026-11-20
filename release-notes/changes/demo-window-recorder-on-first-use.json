@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "demo-window-recorder-on-first-use",
+      "reason": "The test helper that records a demo of the app now installs the recorder it needs on first use, so the two demo journeys pass on the Mac that runs the release checks instead of timing out. Test tooling only; nothing a person notices changes."
+    }
+  ]
+}

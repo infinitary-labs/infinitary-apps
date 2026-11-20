@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "steady-continuation-copy-test",
+      "reason": "A unit test of a conversation held on another computer now waits for the final copy of its record to be armed after a continuation ends, so it stops failing on a loaded CI runner. No shipped behavior changed."
+    }
+  ]
+}

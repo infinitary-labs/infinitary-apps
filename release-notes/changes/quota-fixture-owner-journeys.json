@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "quota-fixture-owner-journeys",
+      "reason": "Nine journeys now seed their allowance readings through the one quota fixture owner, which checks them against the reader's format, and a lint refuses a hand-written reading; only the tests change, so nothing a person sees changes."
+    }
+  ]
+}

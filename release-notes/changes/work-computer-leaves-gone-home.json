@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "work-computer-leaves-gone-home",
+      "reason": "A computer that runs work, its home gone for good, leaves it on its own yes when a new home's command asks, keeping unmerged work; part of the development-only multi-machine feature, which remains unavailable in released apps."
+    }
+  ]
+}

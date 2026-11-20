@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-photos-failed-or-stalled",
+      "reason": "Internal CI only: the phone check's wait for the simulator's Photos now restarts Photos when it fails to open its library and restarts the simulator's scheduler when it leaves Photos' call unanswered, instead of waiting out the whole ceiling. No product change."
+    }
+  ]
+}

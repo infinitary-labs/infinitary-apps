@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "homebrew-legacy-marker",
+      "reason": "Release distribution compatibility: both Homebrew casks retain channel markers on older Homebrew; no app screen changes."
+    }
+  ]
+}

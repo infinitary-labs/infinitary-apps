@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "runbook-keyboard-readiness",
+      "reason": "The Runbooks keyboard journey waits for folder-opening controls to become ready before moving focus; no product behavior changes."
+    }
+  ]
+}

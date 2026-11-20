@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "catalog-dispatch-split",
+      "reason": "Internal: the code that checks, runs and records each app catalog change moves unchanged out of the core dispatcher into its own file; nothing a person sees changes."
+    }
+  ]
+}

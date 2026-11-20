@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "still-crew-another-display",
+      "kind": "fix",
+      "title": "The still crewmates stay sharp on another display",
+      "body": "When your Mac's Reduce motion setting is on, the crewmates around Firstmate are one still picture. Moving the window to a display that is sharper or less sharp now redraws that picture for the new display, with every crewmate where it was. Before, it stretched the old picture, so the crewmates looked blurry.",
+      "area": "crewmates",
+      "noPicture": "A picture cannot show a move between displays, and the sharp crewmates look as they always did.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

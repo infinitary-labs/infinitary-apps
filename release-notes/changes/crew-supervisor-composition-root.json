@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crew-supervisor-composition-root",
+      "reason": "Internal: the crew supervisor's task starts, watch, card actions, host operations, crew facts and crewmate tool hooks move into owners of their own over the shared crew core, so the supervisor becomes the composition root and leaves the size list, with callers reaching the owners directly and guardrail tests renamed beside them; nothing a person sees changes."
+    }
+  ]
+}

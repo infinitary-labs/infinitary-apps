@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "finding-start-project",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Findings start in their own project",
+      "body": "Starting a task found while working on another project now carries the findings without trying to copy that project's code. The task keeps its original number and starts in its own project instead of returning to Backlog with a different-project refusal. Recovering unfinished work and explicitly continuing an earlier branch still work as before.",
+      "noPicture": "This fixes preparation of a task's instructions on another computer, without changing the panel's appearance.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

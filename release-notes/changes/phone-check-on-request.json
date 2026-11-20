@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "phone-check-on-request",
+      "reason": "Lets the iPhone and iPad check run on request on main, such as nightly, and keeps a failed early check from skipping the simulator tests. CI only; no shipped behavior changed."
+    }
+  ]
+}

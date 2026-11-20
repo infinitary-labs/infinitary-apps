@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "task-browser-control",
+      "reason": "Internal, behind the development-only task browser gate: the captain can take control of a task's browser and hand it back, and a crewmate can ask him to on an ordinary decision card; an installed app shows none of it."
+    }
+  ]
+}

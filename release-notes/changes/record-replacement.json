@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "record-replacement",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Task records open without a long pause",
+      "body": "Opening a working task after a shorter card no longer waits several seconds. The record draws its contents before it appears.",
+      "noPicture": "This fixes the wait while opening a record, not its appearance.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

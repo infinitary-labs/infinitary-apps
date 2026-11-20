@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "task-board-moves-focus-handoff",
+      "reason": "Test-only: the task-board moves journey completes the prepared card's window-focus handoff before sending its first key, without retries or sleeps. Product behavior is unchanged."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "merged-outside-closes",
+      "kind": "fix",
+      "title": "A task whose pull request you merged on GitHub yourself now closes as merged",
+      "body": "When you merge a task's pull request on GitHub instead of from the app, the task now shows its pull request as merged outside the app rather than \"no pull request yet\". Firstmate can close it as merged, and so can the merge button on its card, without merging anything again. Before, the only way to close such a task was to discard it.",
+      "area": "tasks",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

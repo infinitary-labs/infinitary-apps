@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "freeze-recorder-startup",
+      "reason": "The freeze recorder, not yet in any alpha, enabled its debugger only after the app's code loaded, which held the main thread about half a second at startup; it now arms before the code loads. Nobody has run the stall it removes."
+    }
+  ]
+}

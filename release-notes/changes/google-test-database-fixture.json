@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "google-test-database-fixture",
+      "reason": "Internal test fixture change: Google integration tests reuse the migrated SQLite schema without sharing test data."
+    }
+  ]
+}

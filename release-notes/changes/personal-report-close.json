@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "personal-report-close",
+      "kind": "fix",
+      "title": "Personal workspace notes no longer keep finished work open",
+      "body": "Work in your personal workspace finishes when its report arrives and nothing is waiting on you. The note stays. A question, or a wait on you, still keeps that work open.",
+      "area": "tasks",
+      "noPicture": "This changes when the task closes, not how its notes or panels look.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

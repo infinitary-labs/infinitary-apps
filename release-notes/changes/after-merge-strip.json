@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "after-merge-strip",
+      "kind": "improvement",
+      "title": "A merge card's after-merge steps scroll with its body",
+      "body": "What happens after a merge now sits at the top of the merge card's body and scrolls away as you read, instead of a box that stayed above the reply field and squeezed the card. Your own steps come first under a label in the warning color, then the steps the crew starts. The phone shows both the same way.",
+      "area": "cards",
+      "picture": {
+        "dark": "after-merge-strip-dark.webp",
+        "light": "after-merge-strip-light.webp",
+        "alt": "A merge card whose body opens with one panel: your step under an orange label, then the two steps the crew starts, with the reply field and Merge below"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

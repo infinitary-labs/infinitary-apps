@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "new-picture-tag-on-figure",
+      "kind": "fix",
+      "title": "New pictures on finished-work cards always show their New tag",
+      "body": "A picture of something new on a finished-work card always carries its New tag, so it never reads as a missing before picture.",
+      "area": "cards",
+      "noPicture": "The New tag looks as it did; the fix is that a crewmate can no longer post a new picture without it.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

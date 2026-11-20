@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "integration-tests-pruned-to-intent",
+      "reason": "Deletes 68 integration and probe test cases that assert no ask, standing ruling or fixed bug of the captain, or repeat a fact another test owns, and rewrites 2 hand-typed pins to read their source. No shipped behavior changed."
+    }
+  ]
+}

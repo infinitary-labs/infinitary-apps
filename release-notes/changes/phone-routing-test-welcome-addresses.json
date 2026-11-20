@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-routing-test-welcome-addresses",
+      "reason": "Test-only repair: the phone check's disposable test home lets its routing controls choose the addresses a welcome offers again, with no app behavior change."
+    }
+  ]
+}

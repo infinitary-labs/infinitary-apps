@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "quiet-messages-mark-at-rest",
+      "reason": "Internal: the quiet-messages journey reads the last turn's resting mark color only after its fade back to cyan has ended; the app is unchanged."
+    }
+  ]
+}

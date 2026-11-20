@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "check-facts-value-reader",
+      "reason": "Repair the check-facts journey's shared value reader after recorded watch schedules joined the Checks cell; product rendering and check truthfulness are unchanged."
+    }
+  ]
+}

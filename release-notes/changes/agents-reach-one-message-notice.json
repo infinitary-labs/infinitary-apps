@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "agents-reach-one-message-notice",
+      "reason": "The agents-reach journey's scripted builder reads past a message only when it holds nothing but the check watch's notices, so a notice served beside the reading request in one message still gets its proof; a test-only change with nothing a person notices."
+    }
+  ]
+}

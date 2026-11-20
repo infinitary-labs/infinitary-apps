@@ -1,0 +1,244 @@
+/*
+ * The last turn above the input (docs/composer.md "The last turn"), drawn as
+ * the Chat layout the captain approved on INF-1770's plan: the last two
+ * rounds, each the captain's words in a soft grey bubble on the right and,
+ * under them, the Firstmate's reply as plain type beside its mark on the
+ * left. The older round sits above at half strength. Type is --text-sm on
+ * 18 px lines: the captain's row is 22 px with its bubble, the reply's
+ * 20 px, 2 px apart, so a round is 44 px; rounds are 10 px apart and the
+ * newest 10 px above the input's top edge, in the slot hung from that edge,
+ * so it never moves the input. Each line is one line, cut after its last
+ * whole word with an ellipsis (LastTurn's useWholeWords narrows .words to
+ * it). The captain's words are plain text: no pointer, underline or
+ * focus ring. A reply line is a button (docs/composer.md "The reply note"):
+ * the pointer, a Tab stop and the focus ring, and no other chrome, so it
+ * still reads as a line of type.
+ *
+ * A round enters with a 6 px rise over --dur-med; on a new message the
+ * rounds that stay glide up over --dur-med (LastTurn's glide), the newest
+ * eases to the older round's strength, and the round pushed out leaves over
+ * --dur-fast. The working words leave over --dur-fast and the reply rises
+ * in over --dur-med. After its reading time the older round dissolves in
+ * place over --dur-slow, with no movement, and the slot stays. Under
+ * reduced motion the durations are zero, so every move is a cut, and the
+ * working mark turns ember and stands still.
+ */
+
+[data-last-turn] {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 10px;
+  height: 44px;
+  margin: 0 14px 10px;
+  color: var(--fg-1);
+  font-size: var(--text-sm);
+  line-height: 18px;
+  pointer-events: none;
+}
+[data-last-turn][data-last-turn-rounds="2"] {
+  height: 98px;
+}
+/* While the lines are up, the slot takes the pointer so resting on them pauses the fade. */
+[data-last-turn][data-last-turn-fade="shown"],
+[data-last-turn][data-last-turn-fade="fading"] {
+  pointer-events: auto;
+}
+/* The round a new message pushes out leaves from where it stood. */
+[data-last-turn] > [data-outgoing] {
+  position: absolute;
+  inset-inline-start: 0;
+  inset-inline-end: 0;
+}
+
+[data-last-turn-pair] {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition:
+    opacity var(--dur-med) var(--ease-out),
+    transform var(--dur-med) var(--ease-out);
+}
+@starting-style {
+  [data-last-turn-pair] {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+/* The older round, at the strength the captain chose. */
+[data-last-turn-pair][data-older] {
+  opacity: 0.5;
+}
+[data-last-turn-pair][data-leaving] {
+  opacity: 0;
+  transform: translateY(-4px);
+  transition-duration: var(--dur-fast);
+}
+/* The older round dissolves in place after its reading time. No movement,
+   and reduced motion cuts --dur-slow to zero, so the dissolve is a cut. */
+[data-last-turn-pair][data-fading] {
+  opacity: 0;
+  transform: none;
+  pointer-events: none;
+  transition: opacity var(--dur-slow) var(--ease-out);
+}
+
+[data-last-turn] .row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+[data-last-turn] .row.you {
+  justify-content: flex-end;
+  height: 22px;
+}
+/* A message the captain's own command sent names it beside his bubble, quiet. */
+[data-last-turn] .row.you .through {
+  flex: none;
+  margin-inline-end: 8px;
+  color: var(--fg-3);
+  font-size: var(--text-xs);
+  line-height: 18px;
+  white-space: nowrap;
+}
+[data-last-turn] .row.mate {
+  gap: 8px;
+  height: 20px;
+}
+
+[data-last-turn-bubble] {
+  /* It takes the pointer so a cut line shows its whole text on rest; the
+     captain's line is plain text, and the reply line a button (below). */
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 18px;
+  color: var(--fg-1);
+  font-size: var(--text-sm);
+  line-height: 18px;
+  cursor: default;
+  pointer-events: auto;
+}
+/* The captain's words in a soft grey bubble, its tail corner toward the input's end. */
+[data-last-turn-bubble="you"] {
+  box-sizing: border-box;
+  max-width: 75%;
+  height: 22px;
+  padding: 2px 10px;
+  border-radius: 11px 11px 4px 11px;
+  background: color-mix(in srgb, var(--fg-1) 8%, transparent);
+}
+/* INF-1968's C: newest ordinary words stay quiet until that round is read.
+   Only colors change, immediately; the resting mark stays cyan. */
+[data-last-turn-pair]:not([data-older]) {
+  --last-turn-words: color-mix(in srgb, var(--fg-2) 75%, var(--fg-3));
+  --last-turn-bubble: color-mix(in srgb, var(--fg-1) 4%, transparent);
+}
+[data-last-turn-pair]:not([data-older]):hover,
+[data-last-turn-pair]:not([data-older]):has(button[data-last-turn-bubble]:focus) {
+  --last-turn-words: var(--fg-1);
+  --last-turn-bubble: color-mix(in srgb, var(--fg-1) 8%, transparent);
+}
+[data-last-turn-pair]:not([data-older]) [data-last-turn-bubble="you"],
+[data-last-turn-pair]:not([data-older]) [data-last-turn-bubble][data-state="reply"] {
+  color: var(--last-turn-words);
+}
+[data-last-turn-pair]:not([data-older]) [data-last-turn-bubble="you"] {
+  background: var(--last-turn-bubble);
+}
+
+/* Reading the older round lifts only its own half-strength treatment. */
+[data-last-turn-pair][data-older]:hover,
+[data-last-turn-pair][data-older]:has(button[data-last-turn-bubble]:focus) {
+  opacity: 1;
+}
+
+/* The reply line as a button: the same line of type, with the pointer. */
+button[data-last-turn-bubble] {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: none;
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: inherit;
+  cursor: pointer;
+}
+
+/* The first mate's mark: the app's hexagon in --accent. While the Firstmate
+   works it turns ember (--hot, the app's working color) over --dur-fast and
+   spins (LastTurn's MateMark); it fades back to cyan over --dur-med. */
+[data-last-turn] .mark {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--accent);
+  transition: color var(--dur-med) linear;
+}
+[data-last-turn] .mark[data-working] {
+  color: var(--hot);
+  transition-duration: var(--dur-fast);
+}
+[data-last-turn] .mark .o {
+  stroke: currentColor;
+}
+[data-last-turn] .mark .i {
+  stroke: currentColor;
+  opacity: 0.45;
+}
+[data-last-turn] .mark .d {
+  fill: currentColor;
+}
+/* The reply line beside the mark. */
+[data-last-turn] .line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 80%;
+}
+
+[data-last-turn] .said {
+  display: inline-flex;
+  min-width: 0;
+}
+[data-last-turn] .words {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+[data-last-turn-bubble="firstmate"] .said {
+  transition:
+    opacity var(--dur-med) var(--ease-out),
+    transform var(--dur-med) var(--ease-out);
+}
+@starting-style {
+  [data-last-turn-bubble="firstmate"] .said {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+[data-last-turn-bubble="firstmate"] .said[data-leaving] {
+  opacity: 0;
+  transition-duration: var(--dur-fast);
+}
+[data-last-turn-bubble][data-state="working"] .words {
+  color: var(--fg-3);
+}
+[data-last-turn-bubble][data-state="problem"] .words {
+  color: var(--danger);
+}
+
+/* The reply's polite status: read, never seen. */
+[data-last-turn] .status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "muted-model-providers",
+      "kind": "fix",
+      "title": "Provider names have one consistent style in Models",
+      "body": "Claude and Grok now use the same muted provider style as Codex in every crew level and Not in use. Model names and your selections stay unchanged.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "muted-model-providers-dark.webp",
+        "light": "muted-model-providers-light.webp",
+        "alt": "The premium crew level shows muted Claude and Codex provider names beside their model names"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

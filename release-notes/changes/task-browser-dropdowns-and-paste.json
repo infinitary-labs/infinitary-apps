@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-browser-dropdowns-and-paste",
+      "kind": "fix",
+      "title": "Dropdowns open and paste works in a task's browser",
+      "body": "When you take control of a task's browser, a click on a dropdown now opens its list on the page, and you can pick an option. The list is drawn inside the page, so dropdowns can look a little different from other browsers. Pasting (⌘V on a Mac, Ctrl+V on Linux) now puts in the words you copied on your own computer, even when the task runs on another computer, and the other editing keys work from a Linux computer too.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-browser-dropdowns-and-paste-dark.webp",
+        "light": "task-browser-dropdowns-and-paste-light.webp",
+        "alt": "A task's browser under your control with a page's dropdown list open, showing its options"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

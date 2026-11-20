@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "update-check-restart-reattach",
+      "reason": "The release's update check lets the restarted app start its page before stopping it, waits for every app process to end before launching again, and keeps what the app was doing when a launch shows no page; it changes only how releases are checked, so nothing a person sees changes."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "windows-join-home",
+      "reason": "Internal: a Windows PC joins another computer's first mate from its window, finds it through Windows' own network browsing and joins by an address with Windows' own SSH, and a Windows home warns about its firewall; no Windows build is published, so nothing a person downloads changes, and Mac and Linux joins behave as before."
+    }
+  ]
+}

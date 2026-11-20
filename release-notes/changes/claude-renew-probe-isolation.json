@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "claude-renew-probe-isolation",
+      "reason": "Test-only safety fix: ordinary renewal-probe runs use a recording client, real-client probes require explicit opt-in on disposable Linux, and store assertions inspect the client's selected file store. Production sign-in behavior is unchanged."
+    }
+  ]
+}

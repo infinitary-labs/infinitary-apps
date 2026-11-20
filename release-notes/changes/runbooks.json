@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "runbooks",
+      "kind": "feature",
+      "title": "Choose the runbooks your first mate and crew follow",
+      "highlight": 1,
+      "body": "Runbooks collect guidance with a switch of its own. Settings → Intelligence now lists Common workflows, Programs, Casual projects, Lessons, Testing rules, and Commit and PR naming, all on by default. Turn each off there or ask your first mate. Turning Common workflows off keeps Programs available. Testing guidance reaches only crewmates planning, reproducing, building, fixing or doing small code chores on a project, not research or your personal workspace.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "runbooks-dark.webp",
+        "light": "runbooks-light.webp",
+        "alt": "Settings lists the six runbooks with an individual switch, all turned on"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "remove-now-nothing-there",
+      "kind": "fix",
+      "title": "Removing a Mac that left says nothing was there to remove",
+      "body": "When you remove a Mac that now runs work for another Firstmate, the activity feed says it had nothing of this Firstmate's to remove. It no longer says Firstmate removed what it set up there, since nothing there was touched.",
+      "area": "devices",
+      "picture": {
+        "dark": "remove-now-nothing-there-dark.webp",
+        "light": "remove-now-nothing-there-light.webp",
+        "alt": "The activity feed after Remove now on a Mac that left for another Firstmate, saying it had nothing of this Firstmate's to remove"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

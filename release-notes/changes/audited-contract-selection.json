@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "audited-contract-selection",
+      "reason": "Internal: focused pull request checks select six existing indirect contract tests when their explicit owners change; app behavior is unchanged."
+    }
+  ]
+}

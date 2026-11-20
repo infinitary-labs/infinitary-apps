@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "startup-paths-skip",
+      "reason": "Internal: the pull request's Linux startup check skips its fixtures when every changed path is docs, primitives, Markdown, release notes or a workflow other than ci.yml; nothing a person sees in the app changes."
+    }
+  ]
+}

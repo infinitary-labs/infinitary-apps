@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "browser-test-layer",
+      "reason": "Internal test work: a browser test project that draws the window in Chromium behind a shared fake of the window bridge, with three journeys moved to it; the window's API moved to its own file unchanged, and nothing a person sees changes."
+    }
+  ]
+}

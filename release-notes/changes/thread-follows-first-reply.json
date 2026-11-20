@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "thread-follows-first-reply",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A card's thread shows the answer to your first reply",
+      "body": "When your first reply opened the thread beside a card with a long explanation, the thread could stop just above the bottom, so the answer that came next stayed out of sight behind a ↓ 1 new arrow. The thread now stays at the bottom until you scroll up yourself.",
+      "noPicture": "The fixed thread looks like any thread at its bottom; the fix only keeps it from stopping short as the first reply opens it.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

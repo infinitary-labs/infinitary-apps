@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "firstmate-quit-stops-attach",
+      "reason": "The core's quit now stops and waits for a first mate attachment already under way, so it makes no folder and opens no session after the quit; it showed up as a test fixture's scratch folder put back after cleanup, and nothing a person sees changes."
+    }
+  ]
+}

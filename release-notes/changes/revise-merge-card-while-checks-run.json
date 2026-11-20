@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "revise-merge-card-while-checks-run",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "A merge card updates while its checks run",
+      "body": "When you ask a crewmate for a change after its merge card is up, it now updates that card right away, even while the checks run again. Merge then reads Merge when checks pass, and a click waits for them. Before, the card kept its old words until the checks passed.",
+      "noPicture": "The card looks the same; what changed is that its new words reach you while the checks run.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

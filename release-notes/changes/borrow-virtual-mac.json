@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "borrow-virtual-mac",
+      "reason": "Development-only virtual Mac borrowing scripts, placement tests and documentation; no app or served-text change."
+    }
+  ]
+}

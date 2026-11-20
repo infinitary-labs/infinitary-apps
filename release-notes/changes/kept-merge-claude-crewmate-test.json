@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "kept-merge-claude-crewmate-test",
+      "reason": "Tests only: the end-to-end check that one merge click survives GitHub's conflict refusal now also runs with a crewmate on Claude. Nothing in the shipped app changed."
+    }
+  ]
+}

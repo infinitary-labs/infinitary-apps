@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "computer-own-sign-ins",
+      "reason": "Internal, behind the development-only multi-machine gate: a computer that runs work signs in to its own subscriptions from Settings -> Intelligence and Firstmate's card, and an installed app shows and offers none of it."
+    }
+  ]
+}

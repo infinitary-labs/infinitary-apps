@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "always-reply-in-thread",
+      "kind": "fix",
+      "title": "Every reply under a card now gets a short answer",
+      "body": "When you reply under a card, the agent now always answers in the thread with a short message, even when it also changes the card.",
+      "area": "cards",
+      "noPicture": "The answer is one more line in a thread; a release review takes a picture if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

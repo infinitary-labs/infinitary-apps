@@ -1,0 +1,13 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "alpha-submit-basis-review-1942",
+      "reason": "Release review only: review the launch-greet readiness and processor-reading fixture repairs, clarify the intervening program-completion note, and maintain coverage after the required candidate update. No additional product or test changes.",
+      "covers": [
+        "3c2ca1e3f7bab2937ec5ad9037a5289fa7255909",
+        "50df20acf5867c74618833de6a64b1456f07f405"
+      ]
+    }
+  ]
+}

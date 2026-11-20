@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "review-option-sizes",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Review questions say how big each option is and who recommends it",
+      "body": "When a review leaves a finding for you to decide, each option now carries a rough size of the work it takes, from the reviewer. The Recommended option says it is the reviewer's pick and why. If the first mate or the builder sees it differently, the card says so under their name, with their reason.",
+      "noPicture": "The card draws the same tags as before; what changed is the words the reviewer and the first mate put on each option.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journey-project-seed-one-writer",
+      "reason": "Internal: the end-to-end journeys seed a project row through the same shared fixture writer the unit tests use, instead of their own copy of the insert; nothing a person sees changes."
+    }
+  ]
+}

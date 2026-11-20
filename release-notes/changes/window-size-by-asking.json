@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "window-size-by-asking",
+      "kind": "improvement",
+      "title": "Ask Firstmate to make the window larger or smaller",
+      "body": "Firstmate can now set the window's size to 100, 110, 125 or 150 percent when you ask. Every change of size, whether from Settings, ⌘+ and ⌘−, the View menu or Firstmate, now leaves a line in Activity that says who made it.",
+      "area": "firstmate",
+      "noPicture": "The window looks as it did at each size; what is new is that Firstmate can choose the size and that each change leaves an Activity line.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "projectsHost": "el sitio que aloja el proyecto",
+  "projectsMoveAfterNew": "Un proyecto propio ({key})",
+  "projectsMoveAfterRevive": "De nuevo su propio proyecto ({key})",
+  "projectsMoveApply": "Aplicar traslado",
+  "projectsMoveAsks": {
+    "plural": "count",
+    "one": "Tu primer oficial pide mover este repositorio. Nada se mueve hasta que hagas clic en «Aplicar traslado».",
+    "many": "Tu primer oficial pide mover estos repositorios. Nada se mueve hasta que hagas clic en «Aplicar traslado».",
+    "other": "Tu primer oficial pide mover estos repositorios. Nada se mueve hasta que hagas clic en «Aplicar traslado»."
+  },
+  "projectsMoveAutomations": {
+    "plural": "count",
+    "one": "{count} automatización sobre los proyectos que salen de la lista pasa a ser sobre {project}.",
+    "many": "{count} de automatizaciones sobre los proyectos que salen de la lista pasan a ser sobre {project}.",
+    "other": "{count} automatizaciones sobre los proyectos que salen de la lista pasan a ser sobre {project}."
+  },
+  "projectsMoveColumnAfter": "Tras tu clic",
+  "projectsMoveColumnNow": "Proyecto ahora",
+  "projectsMoveColumnRepository": "Repositorio",
+  "projectsMoveDirections": "Las directrices guardadas para cualquier repositorio de {project} llegan entonces a todos ellos, incluidos estos.",
+  "projectsMoveFinishedTasks": {
+    "plural": "count",
+    "one": "{count} tarea terminada también se mueve, con su clave.",
+    "many": "{count} de tareas terminadas también se mueven, con sus claves.",
+    "other": "{count} tareas terminadas también se mueven, con sus claves."
+  },
+  "projectsMoveKeeps": "Cada uno conserva su nombre, su carpeta y sus ajustes.",
+  "projectsMoveLeaves": {
+    "plural": "count",
+    "one": "Este proyecto sale de la lista de proyectos y nadie podrá volver a usar su clave:",
+    "many": "Estos {count} de proyectos salen de la lista de proyectos y nadie podrá volver a usar sus claves:",
+    "other": "Estos {count} proyectos salen de la lista de proyectos y nadie podrá volver a usar sus claves:"
+  },
+  "projectsMoveListMore": {
+    "plural": "count",
+    "one": "{first} y {count} más",
+    "many": "{first} y {count} más",
+    "other": "{first} y {count} más"
+  },
+  "projectsMoveListTwo": "{first} y {second}",
+  "projectsMoveNoOpenTask": "No se mueve ninguna tarea abierta.",
+  "projectsMoveNoTask": "No se mueve ninguna tarea.",
+  "projectsMoveNotNow": "Ahora no",
+  "projectsMoveOpenTasks": {
+    "plural": "count",
+    "one": "{count} tarea abierta se une a {project}, con su clave:",
+    "many": "{count} de tareas abiertas se unen a {project}, con sus claves:",
+    "other": "{count} tareas abiertas se unen a {project}, con sus claves:"
+  },
+  "projectsMoveTitleInto": "¿Mover {repositories} a {project}?",
+  "projectsMoveTitleOwn": "¿Mover {repositories} a un proyecto propio?"
+}

@@ -1,0 +1,12 @@
+{
+  "settleCannotMerge": "تعذّر الدمج: {problem}",
+  "settleCouldNotDiscard": "تعذّر التجاهل: {problem}",
+  "settleDiscardedPullOpen": "تم التجاهل. لا يزال طلب السحب الخاص بها مفتوحًا حيث يُستضاف المشروع: {problem}",
+  "settleDiscardedPullOpenThen": "تم التجاهل. لا يزال طلب السحب الخاص بها مفتوحًا حيث يُستضاف المشروع: {problem}. {followup}",
+  "settleDiscarding": "جارٍ التجاهل",
+  "settleDiscardingAfterTurn": "سيتم التجاهل بعد أن ينهي فرد الطاقم ما يفعله",
+  "settleMerging": "جارٍ الدمج",
+  "settleMergingAfterTurn": "سيتم الدمج بعد أن ينهي فرد الطاقم ما يفعله",
+  "settleMergingChange": "جارٍ دمج {change}",
+  "settleMergingChangeAfterTurn": "سيُدمج {change} بعد أن ينهي فرد الطاقم ما يفعله"
+}

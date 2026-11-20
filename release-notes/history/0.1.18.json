@@ -1,0 +1,25 @@
+{
+  "entries": [
+    {
+      "id": "bf-1d9b4ace3",
+      "kind": "fix",
+      "title": "Keep a Claude crewmate's cut-turn usage when a close, escalation, purge or quit stops it",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "1d9b4ace35d58de6a00a7b2b65f04eac00074cce"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-18-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.18: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "9b9a546c05d8ca1b2de6360babee26516be539ed",
+        "a63f4108e28bb94286d7cce47d96ca17f1556d5f"
+      ]
+    }
+  ]
+}

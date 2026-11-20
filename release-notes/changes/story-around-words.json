@@ -1,0 +1,11 @@
+{
+  "entries": [{
+    "id": "story-around-words",
+    "kind": "fix",
+    "area": "crewmates",
+    "title": "Crewmates can correct the words around a pull request's story",
+    "body": "When you ask, a crewmate can fix the words above or below the change story on an open pull request, such as an outdated summary or a breaking-change note. The story itself stays exactly as published. If someone changed those words after the crewmate read them, nothing is changed and the crewmate sees the current words.",
+    "noPicture": "This changes what a crewmate can write where your project lives, not a view in the app.",
+    "provenance": { "origin": "change" }
+  }]
+}

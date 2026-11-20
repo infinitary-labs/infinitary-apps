@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "computer-by-name",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "The first mate can start work on a computer by name",
+      "body": "When you ask for work on a named computer, the first mate can now use that name directly, without a refused request and another lookup. Computers with the same name still need a specific choice.",
+      "noPicture": "Nothing on screen changes; named computer requests now reach the same placement as requests using its identifier.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

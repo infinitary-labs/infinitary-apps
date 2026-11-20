@@ -1,0 +1,5 @@
+{
+  "integrationsSignInAgain": "ページをもう一度開く",
+  "integrationsSignInCancel": "キャンセル",
+  "integrationsSignInWaiting": "ブラウザで {name} へのサインインを完了してください。"
+}

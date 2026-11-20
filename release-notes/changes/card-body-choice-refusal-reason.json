@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-body-choice-refusal-reason",
+      "reason": "Restores a card body's own button hearing why its choice was refused, which the livelier-motion change dropped after the last alpha. No published release had the fault, so nothing changes for a person."
+    }
+  ]
+}

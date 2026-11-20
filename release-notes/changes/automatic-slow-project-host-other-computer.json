@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "automatic-slow-project-host-other-computer",
+      "kind": "fix",
+      "title": "Automatic keeps what it read about your other computers when your project's host is slow",
+      "body": "When the place your project lives was slow to answer one of your other computers, Automatic threw away everything that computer had said about itself, and a ready task waited with every check of it marked unknown. Now that computer answers in time with what it read, so the waiting task names only the project-access check that could not finish.",
+      "area": "devices",
+      "noPicture": "The waiting task's message keeps its look; for the other computer it now lists one reason instead of five.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

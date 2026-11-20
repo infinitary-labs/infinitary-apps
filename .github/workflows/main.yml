@@ -1,0 +1,229 @@
+name: main
+
+# Main's desktop release check (INF-2146, the captain's approved plan, direction
+# B): every push to main starts this run, which runs the full check only for
+# files no merge batch built (INF-3052; its sort job says how). It checks the
+# desktop app's release (INF-2498, the captain: "the main check should be
+# clarified to be specifically about the desktop app's release"): its passing
+# run is what the desktop app's alpha is cut from. The workflow's name, main,
+# stays, since the Automation rule reads it; its job names lead with their
+# trigger, and the alpha's proof reader and stable promotion read them through
+# scripts/ci-job-names.mjs. It replaces the nightly full check. Main runs no old
+# journey set (INF-2480, the captain: "old set at the release check only, from
+# the first piece on"): its full check is the Linux checks and the Mac lanes
+# with only the tests that need a Mac, and every alpha runs every journey on
+# Linux and the Mac itself, unless the swept batch already ran them on its
+# files (release.yml, docs/alpha.md "Cutting an alpha").
+# Main runs no phone check (INF-2492, the
+# captain: "remove phone check from main altogether. we run all phone check
+# parts at release"): ios-release.yml runs every part on iPhone and iPad
+# before each TestFlight upload.
+#
+# Runs queue and never cancel one another: with cancel-in-progress false
+# GitHub keeps the running run, holds at most one waiting run, and drops an
+# older waiting run when a newer push arrives, so a burst of merges is checked
+# once at its newest version. Its first job waits while the previous run's
+# alpha is cut, in the alpha run's concurrency group on no machine
+# (alpha-wait.yml), so merges keep queueing until the cut ends, and a run
+# that waited while main moved cancels itself for the waiting one.
+# The newest passing run of this workflow is main's green mark
+# (docs/testing.md, "Main's desktop release check"); nothing else records it.
+
+# Phone-only and docs-only pushes do not start this workflow (INF-2492).
+# The shared font notice and generated contract are desktop inputs; see
+# docs/testing.md, "Main's desktop release check", for the path exceptions.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "**"
+      - "!ios/**"
+      # The desktop packager ships this shared font notice too.
+      - "ios/Infinitary/InfinitaryApp/Fonts/Font-licenses.txt"
+      - "!docs/**"
+      # Generated from the code (pnpm generate:contract), so not a doc.
+      - "docs/contract.json"
+      - "!primitives/**"
+      - "!release-notes/changes/**"
+      # The docs site builds nothing of the app (docs-site.yml checks it).
+      - "!docs-site/**"
+
+concurrency:
+  group: main-full-check
+  cancel-in-progress: false
+
+# What the called checks ask for: verify.yml reads runs, and alpha-wait.yml
+# reads release runs and may cancel this run.
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  # INF-2465: no check starts while the previous check's alpha is cut, and
+  # merges made meanwhile are checked together (alpha-wait.yml says how).
+  # Each job's name leads with what started the run, and every called
+  # workflow gets it too (scripts/ci-job-names.mjs): a check started by hand
+  # is a manual request, never a main push.
+  alpha-wait:
+    name: ${{ format('{0} · Alpha cut wait', (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request')) }}
+    uses: ./.github/workflows/alpha-wait.yml
+    with:
+      trigger: ${{ (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request') }}
+  # Sorts the push first (docs/testing.md, "The swept batch"): files that are
+  # exactly a passed batch's are already checked, so the full check is
+  # skipped, whether the batch passed outright or on its confirm; only files
+  # no batch built get the full check (the captain's pick on INF-3052, "A:
+  # keep a fallback full check on main for versions no batch built"). A batch
+  # is one pull request, merged in one push, so the push that merges it holds
+  # its files. They are a passed batch's when the pull request's own run
+  # passed on exactly them and the batch changed no file under .github/ that
+  # run reads, since it reads them from the pull request itself; a changed
+  # check file it never reads, such as release.yml, chose nothing of it.
+  sort:
+    name: ${{ format('{0} · Compare with checked batches', (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request')) }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+      actions: read
+    outputs:
+      kind: ${{ steps.sort.outputs.kind }}
+      batch: ${{ steps.sort.outputs.batch }}
+    steps:
+      # GitHub can refuse a job's token for minutes, past actions/checkout's
+      # own three tries in about 40 seconds, so every checkout of main's check
+      # and of a release may fail: the step after it waits until GitHub takes
+      # the token again, and the same checkout runs once more
+      # (docs/testing.md, "GitHub refusing a job's token").
+      - id: checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        continue-on-error: true
+        with: &sort-checkout
+          # The sort, its reader of a batch pull request's own run, and the
+          # check files that run reads.
+          sparse-checkout: |
+            scripts/batch.mjs
+            scripts/batch-pull.mjs
+            .github/
+          sparse-checkout-cone-mode: false
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: &wait-for-token |
+          # Asks the address the checkout's fetch reads, with the job's token
+          # as the checkout sends it, every 15 seconds for up to 10 minutes,
+          # then lets the checkout try once more. A failure GitHub's token
+          # did not cause, such as a missing commit, is tried again at once.
+          url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/info/refs?service=git-upload-pack"
+          patience="${CHECKOUT_PATIENCE_SECONDS:-600}"
+          pause="${CHECKOUT_PAUSE_SECONDS:-15}"
+          started=$SECONDS
+          while :; do
+            # The token reaches curl on its input, never on its command line.
+            answer="$(printf 'user = "x-access-token:%s"\n' "$TOKEN" |
+              curl --silent --location --output /dev/null --write-out '%{http_code}' \
+                --connect-timeout 30 --max-time 60 --config - --url "$url")" || true
+            if [[ "$answer" == 2?? ]]; then exit 0; fi
+            waited=$((SECONDS - started))
+            if ((waited >= patience)); then
+              echo "::warning title=GitHub still refuses the job's token::It answered $answer after ${waited}s; the checkout tries once more."
+              exit 0
+            fi
+            echo "GitHub answered $answer to the job's token after ${waited}s; asking again in ${pause}s"
+            sleep "$pause"
+          done
+      - name: Check out again
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: *sort-checkout
+      - id: sort
+        name: Compare the push with its batch
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        env:
+          TREE: ${{ github.event.head_commit.tree_id }}
+        with:
+          script: |
+            const {pathToFileURL} = require('node:url');
+            const batch = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/batch.mjs`).href);
+            let sorted = {kind: 'full'};
+            if (context.eventName === 'push') {
+              try {
+                const tree = process.env.TREE || (await github.rest.repos.getCommit({...context.repo, ref: context.sha})).data.commit.tree.sha;
+                const checkFiles = await batch.readCheckFiles(process.env.GITHUB_WORKSPACE);
+                sorted = await batch.readMainPush(github, context.repo, {sha: context.sha, tree, checkFiles});
+              } catch (error) {
+                core.warning(`The push could not be sorted, so the full check runs: ${error.message}`);
+              }
+            }
+            core.setOutput('kind', sorted.kind);
+            core.setOutput('batch', String(sorted.run ?? ''));
+  # A push whose files are a passed batch's. The alpha's proof follows its
+  # name to the batch run (scripts/main-alpha-proof.mjs).
+  covered:
+    needs: [alpha-wait, sort]
+    if: needs.sort.outputs.kind == 'covered'
+    name: ${{ format('{0} · Covered by batch run {1}', (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request'), needs.sort.outputs.batch) }}
+    runs-on: ubuntu-24.04
+    steps:
+      - env:
+          BATCH: ${{ needs.sort.outputs.batch }}
+        run: echo "Batch run $BATCH swept exactly these files."
+  # The full check's checks part: the Linux checks, and the Mac lanes with
+  # only the journeys tagged MAC_ONLY_TAG. The rest of the journeys run at the
+  # release (INF-2480).
+  verify:
+    needs: [alpha-wait, sort]
+    if: ${{ !cancelled() && needs.sort.outputs.kind != 'covered' }}
+    name: ${{ format('{0} · Desktop checks', (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request')) }}
+    uses: ./.github/workflows/verify.yml
+    with:
+      trigger: ${{ (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request') }}
+      ref: ${{ github.sha }}
+      profile: stable
+      part: checks
+      all_journeys: false
+      # Main's Linux jobs run on GitHub's hosted machines
+      # (docs/testing.md, "Main's desktop release check").
+      hosted: true
+  # The Linux automatic startup fixtures, beside the full check, on GitHub's
+  # hosted Ubuntu; a covered push's batch ran them (batch-checks.yml).
+  startup:
+    needs: [alpha-wait, sort]
+    if: ${{ !cancelled() && needs.sort.outputs.kind != 'covered' }}
+    name: ${{ format('{0} · Linux startup', (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request')) }}
+    uses: ./.github/workflows/linux-startup.yml
+    with:
+      trigger: ${{ (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request') }}
+      ref: ${{ github.sha }}
+  # The alpha cut from this run (docs/alpha.md, "Cutting an alpha"): once
+  # every check above passed, the last job starts release.yml by dispatch,
+  # naming this run. The release names itself after this run, waits for it to
+  # end and reads its proof (scripts/main-alpha-proof.mjs). A check started
+  # by hand cuts no alpha.
+  alpha:
+    needs: [alpha-wait, sort, covered, verify, startup]
+    if: ${{ !cancelled() && !failure() && github.event_name != 'workflow_dispatch' && (needs.sort.outputs.kind == 'full' || needs.sort.outputs.kind == 'covered') }}
+    name: ${{ format('{0} · Start the alpha cut', (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request')) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      actions: write
+    steps:
+      - name: Start the alpha cut from this run
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              ...context.repo,
+              workflow_id: 'release.yml',
+              ref: 'main',
+              inputs: {
+                channel: 'alpha',
+                candidate: context.sha,
+                main_run: String(context.runId),
+                main_run_number: String(context.runNumber),
+              },
+            });
+            await core.summary.addHeading('Alpha cut started').addRaw(`release.yml runs as "Alpha from main run ${context.runNumber}", cutting an alpha from ${context.sha} once this run ends.`).write();

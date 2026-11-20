@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "knowledge-gate-retention-scope",
+      "reason": "Test-only repair: the knowledge-gate journey now expects the full retention scope, including Gmail and Calendar content, from its existing owners. Product behavior is unchanged."
+    }
+  ]
+}

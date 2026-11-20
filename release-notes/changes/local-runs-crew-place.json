@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "local-runs-crew-place",
+      "reason": "Internal: a crewmate's local phone gate and journey runs wait in the Mac mini's placement line for a crew place, and start at once where no placement service runs; how the project itself is developed, nothing in the app changes."
+    }
+  ]
+}

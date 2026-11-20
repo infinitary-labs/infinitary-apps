@@ -1,0 +1,9 @@
+{
+  "version": "0.1.0",
+  "channel": "stable",
+  "sourceCommit": "feb003611d07d3bd98fd0a2d85b59d490a2574cb",
+  "date": "2026-09-22",
+  "promotedFrom": null,
+  "entryIds": [],
+  "incomplete": "The first stable release. Release notes did not exist before it, so its earlier history is not recoverable and is listed as incomplete, not as empty."
+}

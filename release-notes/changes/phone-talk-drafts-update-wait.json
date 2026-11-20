@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-talk-drafts-update-wait",
+      "reason": "Test only: the phone's drafts journey waits for the computer's cleared update to reach the phone before it taps the message box, and the phone check gives each simulated device its own copy of the test plan, so two passes of one part never share a test home; no change to the app."
+    }
+  ]
+}

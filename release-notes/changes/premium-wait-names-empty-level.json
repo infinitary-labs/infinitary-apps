@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "premium-wait-names-empty-level",
+      "kind": "fix",
+      "title": "Firstmate says why premium work waits when no model is at premium",
+      "body": "With no model at premium, work that asks for premium waits. Firstmate said it waited for the premium allowance to come back. It now says the work waits until you add a model at premium, or until you choose to run it lower.",
+      "area": "firstmate",
+      "noPicture": "Nothing on screen changes: Firstmate gives a different reason in its own words.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

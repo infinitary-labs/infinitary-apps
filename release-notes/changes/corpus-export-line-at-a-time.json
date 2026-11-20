@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "corpus-export-line-at-a-time",
+      "reason": "The developer-only corpus export writes each JSONL file one record at a time, so a large record's dispatch file no longer overruns Node's string limit; the app itself does not change."
+    }
+  ]
+}

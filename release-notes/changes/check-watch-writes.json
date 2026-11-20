@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "check-watch-writes",
+      "kind": "fix",
+      "title": "Watching a crewmate's checks no longer holds up the app",
+      "body": "While the app watched a run of checks for a crewmate, each minute's reading saved the task's whole record two or three times, and the app could pause while it did. Each reading now saves once, writing only the parts that changed, and an update that changes nothing is skipped. Check times and the crewmate's wake-ups stay as they were.",
+      "area": "tasks",
+      "noPicture": "Nothing on screen looks different: the app pauses less while it watches checks.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "batched-merge-card",
+      "kind": "fix",
+      "title": "Merge cards go up in a project that merges your changes together",
+      "body": "In a project that merges your approved changes together in one batch, a crewmate could not put up its merge card the usual way, even after its checks passed, so the card came late or not at all. The merge card now goes up once the checks pass.",
+      "area": "tasks",
+      "noPicture": "The merge card looks as before; the fix lets it go up in a batched project.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "inventory-file-declarations",
+      "reason": "Checks only: the action inventory names its indirect settings-schema files so the existing pull request selector runs it when they change. No shipped app behavior changes."
+    }
+  ]
+}

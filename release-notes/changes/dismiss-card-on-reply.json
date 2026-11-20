@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "dismiss-card-on-reply",
+      "kind": "improvement",
+      "highlight": 3,
+      "title": "A reply sets the card aside until its answer",
+      "body": "When other cards are up, replying under a card now takes it out of the stack instead of putting it at the back. It returns marked new when its author answers. Your only card stays beside its thread, as does a card that asked to stay in front.",
+      "area": "cards",
+      "noPicture": "The change is a reply's departure and return over time; the cards themselves look the same.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

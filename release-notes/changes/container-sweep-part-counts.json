@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "container-sweep-part-counts",
+      "reason": "Internal: the check that runs after every close and every minute counts planned parents' parts before reading them, a few milliseconds less work each time; nothing a person sees changes on its own."
+    }
+  ]
+}

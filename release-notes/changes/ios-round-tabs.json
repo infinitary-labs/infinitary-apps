@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "ios-round-tabs",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Round tabs and a roomier message box on your iPhone and iPad",
+      "body": "The lit tab at the top is now a circle, and Settings and the computer button are round beside it. A card you put aside is no longer a Minimized button on Home: Tasks lists it under Waiting on you, and a tap brings it back. The computer sheet opens at half height with Leave in its own section. Under the message box, dots show while your first mate works, a finished reply fades after you have had time to read it, and a tap on the reply opens it whole. The message box is taller, with a round send button.",
+      "picture": {
+        "dark": "ios-round-tabs-dark.png",
+        "light": "ios-round-tabs-light.png",
+        "alt": "The phone's top bar: a round Settings button, the house, checklist and pulse icons with the house lit in a circle, and a round computer button, above a card titled Choose the harbour."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

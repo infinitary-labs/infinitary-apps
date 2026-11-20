@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "phone-card-answers",
+      "kind": "feature",
+      "title": "Answer cards on your phone",
+      "body": "The early phone app now lets you answer questions, choose buttons, reply and close cards. You can open pictures and recordings, and read your submitted answers on past cards. Past cards name who made each choice. Choices made while your computer is out of reach are never sent later.",
+      "area": "devices",
+      "picture": {
+        "dark": "phone-card-answers-dark.webp",
+        "light": "phone-card-answers-light.webp",
+        "alt": "An Infinitary card on iPad shows a harbour question, two choices, native action buttons, a close control and a reply field"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

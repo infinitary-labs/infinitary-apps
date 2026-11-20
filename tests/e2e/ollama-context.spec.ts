@@ -1,0 +1,229 @@
+import { expect, type Locator, test } from "@playwright/test";
+import { FIRSTMATE_FAILURE_TITLE } from "../../src/core/orchestrator/hostCards";
+import {
+  DEFAULT_LOCAL_ORCHESTRATOR_SETTING,
+  localSeatDescription,
+} from "../../src/shared/localOrchestrator";
+import { startOllamaFixture } from "../fixtures/ollamaServer";
+import { nativeCall } from "../helpers/scriptedCalls";
+import { waitForFirstmateIdle } from "./crew";
+import { cardBody } from "./frames";
+import { askFirstmate } from "./lastTurn";
+import { launchApp } from "./launch";
+import { mockProviderOverrideModelsJson } from "./mockModels";
+import { expectNoCard, noteDone, shownCard } from "./stack";
+
+/**
+ * The hidden alias never reaches a person: no name the app asked the
+ * server to create shows, nor the prefix those names share, read from the
+ * names themselves (`aliasFor` in ollamaProfile.ts) up to their content hash.
+ */
+async function expectNoAliasName(region: Locator, asked: readonly string[]): Promise<void> {
+  expect(asked).not.toEqual([]);
+  for (const alias of asked) {
+    const name = alias.split(":")[0] ?? alias;
+    const prefix = name.slice(0, name.lastIndexOf("-") + 1);
+    expect(prefix).not.toBe("");
+    await expect(region).not.toContainText(name);
+    await expect(region).not.toContainText(prefix);
+  }
+}
+
+test("selecting a base Ollama model creates a hidden alias and serves a visible card", async () => {
+  const model = await startOllamaFixture((request) =>
+    request.messages.at(-1)?.role === "tool"
+      ? { content: "Answered." }
+      : {
+          thinking: "I should answer on a card.",
+          tool_calls: [
+            nativeCall("answer-call", {
+              name: "emit_card",
+              args: {
+                id: "arithmetic",
+                title: "Four",
+                body: "<p>2 + 2 is 4.</p>",
+              },
+            }),
+          ],
+        },
+  );
+  const url = `http://127.0.0.1:${model.port}/v1`;
+  const app = await launchApp({
+    modelsJson: mockProviderOverrideModelsJson,
+    env: {
+      INFINITARY_LOCAL_ORCHESTRATOR_URL: url,
+      INFINITARY_LOCAL_ORCHESTRATOR_MODEL: "fixture",
+    },
+  });
+  try {
+    const input = app.page.getByRole("textbox", { name: "Task prompt" });
+    await input.fill("what is 2 + 2?");
+    await input.press("Enter");
+    await expect(cardBody(app.page, "Four").getByText("2 + 2 is 4.")).toBeVisible();
+    expect(model.aliases.size).toBe(1);
+    expect(
+      model.requests.every(
+        (r) => model.aliases.has(r.model) && r.truncate === false && r.shift === false,
+      ),
+    ).toBe(true);
+    expect(model.requests[0]?.tools?.some((tool) => tool.function.name === "emit_card")).toBe(true);
+    await expectNoCard(app.page, FIRSTMATE_FAILURE_TITLE);
+    await app.page.getByRole("button", { name: "Settings", exact: true }).click();
+    await app.page.getByRole("tab", { name: "General", exact: true }).click();
+    await expect(app.page.locator("[data-local-seat]")).toContainText(
+      localSeatDescription({
+        available: true,
+        setting: DEFAULT_LOCAL_ORCHESTRATOR_SETTING,
+        active: { model: "fixture", host: new URL(url).host, source: "environment" },
+        problem: null,
+      }),
+    );
+    await expectNoAliasName(app.page.locator("body"), model.asked);
+  } finally {
+    await app.close();
+    await model.close();
+  }
+});
+
+// A settings change ends on its answer card too: the captain's answer to
+// INF-1610's round-1 question 2, "No, a card goes up every time"
+// (docs/task-capture.md "How a message ends").
+test("Retry replays the ask, and a successful operation ends on its answer card", async () => {
+  let phase: "fail" | "answer" | "operate" = "fail";
+  const model = await startOllamaFixture((request) => {
+    if (phase === "fail") return { content: "4." };
+    if (request.messages.at(-1)?.role === "tool") return { content: "Done." };
+    return {
+      tool_calls:
+        phase === "answer"
+          ? [
+              nativeCall(`call-${phase}`, {
+                name: "emit_card",
+                args: { title: "Four", body: "<p>4</p>" },
+              }),
+            ]
+          : [
+              nativeCall(`call-${phase}`, {
+                name: "app_change",
+                args: {
+                  action: "theme",
+                  value: { theme: "light" },
+                  evidence: "switch to the light theme",
+                },
+              }),
+              nativeCall(`call-${phase}-card`, {
+                name: "emit_card",
+                args: {
+                  title: "The light theme is on",
+                  body: "<p>The app now uses the light theme.</p>",
+                  answering: true,
+                },
+              }),
+            ],
+    };
+  });
+  const app = await launchApp({
+    modelsJson: mockProviderOverrideModelsJson,
+    env: {
+      INFINITARY_LOCAL_ORCHESTRATOR_URL: `http://127.0.0.1:${model.port}/v1`,
+      INFINITARY_LOCAL_ORCHESTRATOR_MODEL: "fixture",
+    },
+  });
+  try {
+    const input = app.page.getByRole("textbox", { name: "Task prompt" });
+    await input.fill("what is 2 + 2?");
+    await input.press("Enter");
+    await expect(shownCard(app.page, FIRSTMATE_FAILURE_TITLE)).toBeVisible();
+    phase = "answer";
+    await app.page.getByRole("button", { name: "Retry", exact: true }).click();
+    await expect(cardBody(app.page, "Four").getByText("4", { exact: true })).toBeVisible();
+    // The answer card hides the Firstmate's frame; its turn has still ended.
+    await waitForFirstmateIdle(app.page);
+    await expectNoCard(app.page, FIRSTMATE_FAILURE_TITLE);
+    await noteDone(app.page).click();
+    phase = "operate";
+    await askFirstmate(app.page, "switch to the light theme");
+    await expect(app.page.locator("body")).toHaveAttribute("data-theme", "light");
+    // Its answer is the one card on the stack: no notice beside it.
+    await expect(shownCard(app.page, "The light theme is on")).toBeVisible();
+    await waitForFirstmateIdle(app.page);
+    await expect(app.page.locator("[data-card-layer]")).toHaveCount(1);
+    expect(model.aliases.size).toBe(1);
+  } finally {
+    await app.close();
+    await model.close();
+  }
+});
+
+for (const mode of [
+  "creation",
+  "no-answer",
+  "thinking-only",
+  "parser",
+  "refused-card",
+  "bad-action",
+  "length",
+  "overflow",
+] as const) {
+  test(`a local ${mode} failure is a visible retry card, not a silent turn`, async () => {
+    const model = await startOllamaFixture((request) => {
+      if (mode === "length") return { thinking: "unfinished", reason: "length" };
+      if (mode === "overflow") return { error: "context_length_exceeded: input too long" };
+      if (mode === "thinking-only") return { thinking: "The answer is four." };
+      if (mode === "parser")
+        return { error: "XML syntax error on line 12: element <parameter> closed by </function>" };
+      if (mode === "refused-card" && request.messages.at(-1)?.role !== "tool")
+        return {
+          tool_calls: [
+            // A card naming a task that does not exist is refused; a bare note
+            // is now the first mate's own answer and passes (INF-2714).
+            nativeCall("bad-card", {
+              name: "emit_card",
+              args: { title: "Four", body: "<p>4</p>", task_id: "missing" },
+            }),
+          ],
+        };
+      if (mode === "bad-action" && request.messages.at(-1)?.role !== "tool")
+        return {
+          tool_calls: [
+            nativeCall("bad-steer", {
+              name: "steer_crewmate",
+              args: { task_id: "missing", message: "go" },
+            }),
+          ],
+        };
+      return { content: "4." };
+    });
+    if (mode === "creation") model.denyCreate();
+    const app = await launchApp({
+      modelsJson: mockProviderOverrideModelsJson,
+      env: {
+        INFINITARY_LOCAL_ORCHESTRATOR_URL: `http://127.0.0.1:${model.port}/v1`,
+        INFINITARY_LOCAL_ORCHESTRATOR_MODEL: "fixture",
+      },
+    });
+    try {
+      const input = app.page.getByRole("textbox", { name: "Task prompt" });
+      await input.fill("what is 2 + 2?");
+      await input.press("Enter");
+      await expect(shownCard(app.page, FIRSTMATE_FAILURE_TITLE)).toBeVisible();
+      await expect(app.page.getByRole("button", { name: "Retry", exact: true })).toBeVisible();
+      const body = cardBody(app.page, FIRSTMATE_FAILURE_TITLE);
+      await expect(body.locator("body")).toContainText(
+        mode === "creation"
+          ? "prepare the local model"
+          : mode === "length"
+            ? "ran out of room"
+            : mode === "overflow"
+              ? "could not shorten"
+              : mode === "parser"
+                ? "unreadable action"
+                : "without showing an answer",
+      );
+      await expectNoAliasName(body.locator("body"), model.asked);
+    } finally {
+      await app.close();
+      await model.close();
+    }
+  });
+}

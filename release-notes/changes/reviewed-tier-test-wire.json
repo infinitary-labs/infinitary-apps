@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "reviewed-tier-test-wire",
+      "reason": "Internal tests: the reviewed-tier scenario test names the stand-in request's wire field it now requires, so main's typecheck passes again."
+    }
+  ]
+}

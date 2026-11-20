@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "card-pull-request-links",
+      "kind": "improvement",
+      "title": "Pull request numbers on Firstmate's and the crew's cards open the pull request",
+      "body": "When Firstmate or a crewmate knows a pull request's address, it now writes the pull request number on its card as a link. Click it to open that pull request. It looks like the pull request link on a task's card and on a card that merges: in the accent color, underlined while the pointer rests on it.",
+      "area": "cards",
+      "picture": {
+        "dark": "card-pull-request-links-dark.webp",
+        "light": "card-pull-request-links-light.webp",
+        "alt": "A note from Firstmate saying two pull requests merged, with PR #58 and PR #61 drawn as links in the accent color"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

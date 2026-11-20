@@ -1,0 +1,21 @@
+{
+  "crewAPart": "جزء",
+  "crewFirstmateLabel": "نائب القبطان - {state}",
+  "crewModelNames": "أسماء نماذج الطاقم",
+  "crewNextComputers": "الحواسيب التالية",
+  "crewOrbitLabel": "الطاقم - {working} قيد العمل، {idle} خامل",
+  "crewOutOfReach": "خارج المتناول",
+  "crewPartsCount": "{finished} منتهٍ، {running} قيد التشغيل، {waiting} بالانتظار",
+  "crewPreviousComputers": "الحواسيب السابقة",
+  "crewProgramsAndParts": "البرامج وأجزاؤها",
+  "crewStateIdle": "خامل",
+  "crewStateWorking": "يعمل",
+  "crewSummaryAnotherTask": "مهمة أخرى",
+  "crewSummaryBlockedBy": "تعيقها",
+  "crewSummaryPartOf": "جزء من",
+  "crewSummaryParts": "الأجزاء",
+  "crewSummaryReviewing": "يراجع",
+  "crewSummaryRunning": "قيد التشغيل",
+  "crewUnavailableComputer": "حاسوب غير متاح",
+  "crewWorkComputers": "حواسيب العمل"
+}

@@ -1,0 +1,118 @@
+/* The first-launch gate on the stage (docs/first-launch.md): a caption under
+   the character, above the disabled input. The block centres in that band,
+   follows the room notices need, and dissolves over --dur-slow on close. */
+
+.fm-gate {
+  /* A window overlay like the card layer: the character and the input are
+     window-centred, so the caption must be too - never the stage's centre,
+     which an unpaired rail shifts. The width still follows the stage. */
+  position: fixed;
+  left: 50%; /* physical: centred on the window, which mirrors to itself */
+  /* A refused notice can lift the input. Keep setup above it, with at
+     least one scrollable band even in the smallest window. */
+  top: min(
+    calc(50% + 56px),
+    calc(
+      100% -
+      var(--prompt-floor) -
+      var(--last-turn-lane) -
+      var(--prompt-height) -
+      var(--space-2) -
+      var(--space-9)
+    )
+  );
+  /* The last turn hangs above the input (--last-turn-lane); the band
+     ends above it so the caption never draws under those words. */
+  bottom: calc(var(--prompt-floor) + var(--last-turn-lane) + var(--prompt-height) + var(--space-2));
+  transform: translateX(-50%);
+  width: min(900px, calc(100cqw - 2 * var(--space-4)));
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  pointer-events: auto;
+  /* The band is bounded: content that does not fit scrolls inside it and
+     never reaches the input below. */
+  overflow-y: auto;
+  scrollbar-width: thin;
+  transition: opacity var(--dur-slow) var(--ease-out);
+}
+
+/* Centred while it fits, top-aligned once it scrolls. */
+.fm-gate-inner {
+  margin: auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.fm-gate[data-open="false"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.fm-gate-display {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-light);
+  letter-spacing: var(--tracking-display);
+  line-height: var(--leading-tight);
+  color: var(--fg-1);
+}
+
+.fm-gate-sub {
+  margin: 0;
+  max-width: 62ch;
+  font-size: var(--text-base);
+  color: var(--fg-2);
+}
+
+/* A connection's fresh check: what it covers and costs, then the action. */
+.fm-gate-check {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.fm-gate-error {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--danger);
+}
+
+/* Short windows keep the Mac choice and a fresh check's cost visible in
+   the scrolling band. Other subscription guidance can yield to the chips. */
+@media (max-height: 719px) {
+  .fm-gate-inner,
+  .fm-gate-check {
+    gap: var(--space-2);
+  }
+  .fm-gate-sub:not([data-connecting], [data-fresh-check-line], [data-mac-choice]) {
+    display: none;
+  }
+}
+
+/* A sign-in step (INF-838) takes the held input's room as well: the input
+   is disabled while the gate is up, so the step's frame sits over it at the
+   band's foot rather than scrolling. A short window gives the step the
+   display line's room too; the step's own first line says what to do. */
+.fm-gate[data-sign-in-step] {
+  bottom: calc(var(--prompt-floor) + var(--last-turn-lane));
+}
+
+.fm-gate[data-sign-in-step] .fm-gate-inner {
+  margin: auto auto 0;
+}
+
+/* The held input steps aside for the step and returns with the chips. */
+html:has(.fm-gate[data-sign-in-step][data-open="true"]) [data-prompt-dock] {
+  visibility: hidden;
+}
+
+@media (max-height: 719px) {
+  .fm-gate[data-sign-in-step] .fm-gate-display {
+    display: none;
+  }
+}

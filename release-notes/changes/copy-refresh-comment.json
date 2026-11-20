@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "copy-refresh-comment",
+      "reason": "Corrects a source comment so the copy order's refresh field says protocol 8.15, matching the shared gate and the project's documents. Nothing a person sees changes."
+    }
+  ]
+}

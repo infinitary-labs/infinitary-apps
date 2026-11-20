@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "model-move-on-work-computers",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "A task on another of your computers can move to another model",
+      "body": "A started task that runs on another of your computers can now move to another model in place, among the subscriptions that computer is signed in to. The sign-in card's Move works for such a task, and your first mate can move a task stuck at its provider there, as it already could on this Mac. The task keeps its key, branch and working copy on that computer.",
+      "noPicture": "The sign-in card and its Move button look the same as they already do for a task on this Mac; only the tasks they appear for changed.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

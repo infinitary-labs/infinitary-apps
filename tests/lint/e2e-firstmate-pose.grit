@@ -1,0 +1,26 @@
+// An end-to-end spec waits for the first mate by what it waits for - its
+// answer to a message the spec sent (`askFirstmate`, tests/e2e/lastTurn.ts)
+// or its turn over (`waitForFirstmateIdle`, tests/e2e/crew.ts) - never by
+// the character's pose name ("First mate - idle"), which reads idle before a
+// turn has started as well as after it ended, and the idle wait already
+// sees through a card that hides the character (docs/testing.md, "The e2e
+// assertion contract"). The helper's home, its own spec and phase1-shell,
+// whose subject is the pose, are exempt. Runs inside `pnpm check` through
+// biome.json's plugins, as an error since every spec moved.
+
+language js
+
+or {
+  JsStringLiteralExpression() as $literal,
+  JsTemplateExpression() as $literal,
+  JsRegexLiteralExpression() as $literal
+} where {
+  $literal <: or {
+    includes "First mate - ",
+    includes "Firstmate - "
+  },
+  $literal <: r"(?s).*(?:First mate|Firstmate) - (?:[a-z]|\$\{).*",
+  $filename <: r".*tests/e2e/.*",
+  not $filename <: r".*tests/e2e/(?:crew\.ts|phase1-shell\.spec\.ts)",
+  register_diagnostic(span=$literal, message="The first mate's pose reads idle before a turn has started as well as after it ended. Wait for its answer with askFirstmate(page, text) (tests/e2e/lastTurn.ts), or for its turn to end with waitForFirstmateIdle(page) (tests/e2e/crew.ts) (docs/testing.md, the e2e assertion contract).", severity="error")
+}

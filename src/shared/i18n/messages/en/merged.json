@@ -1,0 +1,13 @@
+{
+  "mergedAt": "Merged at {at}",
+  "mergedChangeOn": "Merged {change} on {place}",
+  "mergedChangeOnHost": "Merged {change} on the project's host",
+  "mergedChangeWhereItLives": "Merged {change} where the project lives",
+  "mergedInCommit": "Merged in commit {commit}",
+  "mergedInPull": "Merged in pull request {change}",
+  "mergedOn": "Merged on {place}",
+  "mergedOnItsOwnAt": "Merged on its own at {at}",
+  "mergedWhereItLives": "Merged where the project lives",
+  "mergedWithBatchOn": "Merged with batch {change} on {place}",
+  "mergedWithBatchWhereItLives": "Merged with batch {change} where the project lives"
+}

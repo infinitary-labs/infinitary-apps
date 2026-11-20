@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "answer-card-stays",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A note from Firstmate stays up after its task finishes",
+      "body": "When a task finishes, a note Firstmate put up about it now stays until you close it. If Firstmate still has a question for you on a task that answered something, that task stays open until you answer it.",
+      "picture": {
+        "dark": "answer-card-stays-dark.webp",
+        "light": "answer-card-stays-light.webp",
+        "alt": "A Firstmate note, Own vs rent: owning Macs wins for steady use, still open with its reply field"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

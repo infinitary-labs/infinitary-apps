@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "newer-check-run-decides",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A newer run of the same checks decides whether they passed",
+      "body": "When checks on GitHub failed and a newer run of the same checks then passed on the same version, the app still counted the older failure, so it refused your merge click with \"the checks failed\". The newest run of the same checks now decides each of them, as a rerun of a single check already did.",
+      "noPicture": "The merge card looks as before; in this case its checks now read as passed and the merge goes through.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

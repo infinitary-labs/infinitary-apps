@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "phone-clears-seen-card-notifications",
+      "kind": "feature",
+      "area": "cards",
+      "title": "Notifications for cards you already saw leave your iPhone and iPad",
+      "body": "When Infinitary on your iPhone or iPad reaches your computer, it now removes notifications for cards you have already seen, on your computer or on the phone. It removes them again whenever you see another card while it stays connected. Notifications for cards you have not seen yet stay.",
+      "noPicture": "This removes entries from the phone's own notification list, which no Infinitary view shows and a simulator cannot receive.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

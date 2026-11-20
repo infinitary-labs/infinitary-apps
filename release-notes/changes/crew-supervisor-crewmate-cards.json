@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crew-supervisor-crewmate-cards",
+      "reason": "Internal: the crew supervisor's crewmate card code - a crewmate's emit_card, the completion card the host finishes, its browser and page buttons and its hand-off - and the integration calls it holds for the captain move into owners of their own, with every caller reaching them directly and their guardrail tests renamed beside them; nothing a person sees changes."
+    }
+  ]
+}

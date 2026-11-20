@@ -1,0 +1,349 @@
+name: Source desktop journeys
+
+# The app built from source on a desktop (docs/testing.md, "The Linux source
+# desktop"): with suite full every journey in the suite, split across Linux
+# machines, before every alpha and on demand (verify.yml); with suite affected
+# the journeys a change reaches (journeys.yml's request, ci.yml's critical
+# path). The run-alone pass runs with the proof of edited journeys (suite
+# affected, scripts/journey-runs.ts), never in the full suite (INF-2340), and
+# over every spec file only on request (suite alone). Packaging comes later.
+# Every job runs on the label the repository variable LINUX_RUNNER names, as
+# ci.yml's do, and on GitHub's hosted ubuntu-24.04 when it is unset, or on
+# GitHub's hosted machines when the caller asks (hosted); the journeys kind's
+# queue in LINUX_QUEUES comes before LINUX_RUNNER, except for a part holding a
+# journey whose far computer is this one (far-linux); the PC's job image
+# supplies its own pnpm store, so only hosted jobs restore setup-node's cache.
+on:
+  # Linux-only full-suite or fresh-state proof, without Mac or packaging work.
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: Full nine-group Linux suite or four fresh-state shards
+        type: choice
+        options: [alone, full]
+        default: alone
+      ref:
+        description: Exact source commit (required for full); empty uses the selected ref for alone
+        type: string
+      task:
+        description: Requesting task (required for full)
+        type: string
+      reason:
+        description: Why this Linux sweep is needed (required for full)
+        type: string
+  workflow_call:
+    inputs:
+      trigger:
+        description: What started the caller's run, which every job name here leads with (scripts/ci-job-names.mjs)
+        type: string
+        default: ''
+      part:
+        description: This selected group's one-based place among the request's Linux groups, as 2/3, for its job name
+        type: string
+        default: ""
+      ref:
+        required: false
+        type: string
+      hosted:
+        description: Run on GitHub's hosted Ubuntu, whatever LINUX_RUNNER says (a call from main.yml or release.yml)
+        required: false
+        type: boolean
+        default: false
+      artifact-suffix:
+        type: string
+        default: source
+      files:
+        description: Space-separated affected journey files
+        type: string
+        default: ""
+      repeat-base:
+        description: Nonempty for selected development proof; edited files run three total rounds
+        type: string
+        default: ""
+      lane:
+        description: Lane of affected files (parallel or desktop)
+        type: string
+        default: parallel
+      far-linux:
+        description: The files hold a journey whose far computer is this one, which needs an SSH server and an x64 chip, so it keeps LINUX_RUNNER's places even when LINUX_QUEUES names the journeys kind (tests/e2e/lanes.ts)
+        type: boolean
+        default: false
+      suite:
+        description: affected (files in one lane, with edited files' run-alone pass), full (nine journey groups), or alone (four run-alone shards)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  source-desktop:
+    # Affected files keep their lane; the full suite is the parallel lanes
+    # in six groups and the serial desktop lane in three, one job a group,
+    # so a failure names its own part of the suite; the desktop lane still
+    # runs alone on its machine (tests/e2e/lanes.ts). The groups are of
+    # about equal measured time, not equal counts of files
+    # (scripts/journey-groups.ts, INF-2987), and nine of them keep the
+    # swept batch's hosted jobs within the twenty GitHub runs at once. A requested
+    # run-alone pass over every spec file splits four ways (docs/testing.md
+    # "Each test owns its prerequisites"), each share on a machine of its own.
+    # The name leads with the caller's trigger (scripts/ci-job-names.mjs); a
+    # desktop lane runs one test at a time, so it reads as a serial group.
+    # Each group's own, which a merge batch's stop enters to cancel it once
+    # the code checks failed (scripts/batch-stop.mjs). The suite and the
+    # artifact suffix keep two calls in one run apart.
+    concurrency:
+      group: ${{ format('batch-stop-{0}-{1}-journeys-{2}-{3}-{4}-{5}', github.run_id, github.run_attempt, inputs.suite, inputs.artifact-suffix, matrix.lane, matrix.shard) }}
+    name: ${{ inputs.suite == 'alone' && format('{0} · Fresh-start app journeys (Linux; group {1}/4)', inputs.trigger || 'Manual request', matrix.shard) || inputs.suite == 'full' && format('{0} · App journeys (Linux; {1} group {2}/{3})', inputs.trigger || 'Manual request', (matrix.lane == 'desktop' && 'serial' || matrix.lane), matrix.shard, matrix.groups) || format('{0} · Selected app journeys (Linux; {1}{2})', inputs.trigger || 'Manual request', (matrix.lane == 'desktop' && 'serial' || matrix.lane), inputs.part && format('; part {0}', inputs.part) || '') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(inputs.suite == 'full' && '[{"lane":"parallel","shard":1,"groups":6},{"lane":"parallel","shard":2,"groups":6},{"lane":"parallel","shard":3,"groups":6},{"lane":"parallel","shard":4,"groups":6},{"lane":"parallel","shard":5,"groups":6},{"lane":"parallel","shard":6,"groups":6},{"lane":"desktop","shard":1,"groups":3},{"lane":"desktop","shard":2,"groups":3},{"lane":"desktop","shard":3,"groups":3}]' || inputs.suite == 'alone' && '[{"lane":"alone","shard":1,"groups":4},{"lane":"alone","shard":2,"groups":4},{"lane":"alone","shard":3,"groups":4},{"lane":"alone","shard":4,"groups":4}]' || format('[{{"lane":"{0}","shard":1,"groups":1}}]', inputs.lane)) }}
+    runs-on: ${{ inputs.hosted && 'ubuntu-24.04' || !inputs.far-linux && fromJSON(vars.LINUX_QUEUES || '{}').journeys || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
+    defaults:
+      run:
+        working-directory: Application Support/firstmate
+    steps:
+      - name: Record the timing observation start
+        working-directory: ${{ runner.temp }}
+        run: echo "TIMING_JOB_START=$(date +%s)" >> "$GITHUB_ENV"
+      # A refused checkout waits until GitHub takes the job's token again,
+      # then runs once more (docs/testing.md, "GitHub refusing a job's token").
+      - id: checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        continue-on-error: true
+        with: &source-desktop-checkout
+          ref: ${{ inputs.ref || github.ref }}
+          path: Application Support/firstmate
+          fetch-depth: 0
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        working-directory: ${{ runner.temp }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: &wait-for-token |
+          # Asks the address the checkout's fetch reads, with the job's token
+          # as the checkout sends it, every 15 seconds for up to 10 minutes,
+          # then lets the checkout try once more. A failure GitHub's token
+          # did not cause, such as a missing commit, is tried again at once.
+          url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/info/refs?service=git-upload-pack"
+          patience="${CHECKOUT_PATIENCE_SECONDS:-600}"
+          pause="${CHECKOUT_PAUSE_SECONDS:-15}"
+          started=$SECONDS
+          while :; do
+            # The token reaches curl on its input, never on its command line.
+            answer="$(printf 'user = "x-access-token:%s"\n' "$TOKEN" |
+              curl --silent --location --output /dev/null --write-out '%{http_code}' \
+                --connect-timeout 30 --max-time 60 --config - --url "$url")" || true
+            if [[ "$answer" == 2?? ]]; then exit 0; fi
+            waited=$((SECONDS - started))
+            if ((waited >= patience)); then
+              echo "::warning title=GitHub still refuses the job's token::It answered $answer after ${waited}s; the checkout tries once more."
+              exit 0
+            fi
+            echo "GitHub answered $answer to the job's token after ${waited}s; asking again in ${pause}s"
+            sleep "$pause"
+          done
+      - name: Check out again
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: *source-desktop-checkout
+      - name: Record the manual Linux request
+        if: github.event_name == 'workflow_dispatch' && github.workflow == 'Source desktop journeys'
+        env:
+          SUITE: ${{ inputs.suite }}
+          SOURCE: ${{ inputs.ref }}
+          TASK: ${{ inputs.task }}
+          REASON: ${{ inputs.reason }}
+        run: |
+          if [ "$SUITE" = full ]; then
+            [[ "$SOURCE" =~ ^[0-9a-f]{40}$ ]] && [ "$SOURCE" = "$(git rev-parse HEAD)" ] && [ -n "$TASK" ] && [ -n "$REASON" ] || {
+              echo 'Full Linux requests require an exact source commit, task and reason'; exit 1;
+            }
+          fi
+          printf 'Linux request: suite=%s source=%s task=%s reason=%s\n' "$SUITE" "$(git rev-parse HEAD)" "$TASK" "$REASON" >> "$GITHUB_STEP_SUMMARY"
+      - uses: ./Application Support/firstmate/.github/actions/pnpm
+        with:
+          working-directory: Application Support/firstmate
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
+          cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
+      - uses: ./Application Support/firstmate/.github/actions/node-headers
+      - uses: ./Application Support/firstmate/.github/actions/electron-download
+        with:
+          working-directory: Application Support/firstmate
+      - run: pnpm install --frozen-lockfile
+        # Scope Node headers to this install, never to Electron rebuilds.
+        env:
+          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
+      # The virtual display, desktop libraries, Electron's sandbox helper and
+      # Playwright's FFmpeg, as ci.yml's critical path prepares them.
+      - uses: ./Application Support/firstmate/.github/actions/linux-desktop
+        with:
+          working-directory: Application Support/firstmate
+      # The pinned encoder a demo journey records with, from the Actions cache.
+      - uses: ./Application Support/firstmate/.github/actions/demo-encoder
+        with:
+          working-directory: Application Support/firstmate
+      - run: pnpm build
+      # Linux runs every journey it can (docs/testing.md, "Tests that need a
+      # Mac"): the keyboard journeys press Ctrl where a Mac presses Command
+      # (docs/keyboard.md, "Keys on each system"), and the voice journeys hold
+      # right Ctrl with the stand-in model (docs/architecture.md section 8,
+      # "Where speech runs").
+      # The full suite is every journey: a parallel job runs its share of the
+      # styles, renderer and application lanes, a desktop job its share of
+      # the serial desktop lane, each with --no-deps so neither lane waits
+      # as the other's teardown. The virtual screen holds the largest window
+      # a journey asks for. With no window manager the window under the
+      # pointer takes the keyboard, so the pointer waits on the screen's last
+      # pixel, where no window reaches, and no window gains or loses focus
+      # as a journey resizes it. Xvfb runs with -noreset: otherwise it
+      # resets as its last client leaves - xdotool, before any app opens -
+      # and puts the pointer back at the screen's centre. Every app window
+      # opens centred, so a pointer there sits in each one, and parallel
+      # journeys' windows opening over one another hand it to the window
+      # under test, off what its journey rests on. The step stops unless
+      # the pointer is on the last pixel. Affected files end with the run-alone
+      # pass over the directly edited ones (scripts/journey-runs.ts), and a
+      # requested run-alone job runs each later test of every spec file that
+      # shares one app by itself (scripts/e2e-alone.ts); the Mac-only ones
+      # skip here and run alone in journeys.yml's Mac job.
+      - name: Run the journeys with the sandbox on
+        id: journeys
+        # Affected journeys end at 75 minutes and their command at 90
+        # (INF-1083, the captain's check limits, as journeys.yml).
+        timeout-minutes: ${{ inputs.suite == 'affected' && 90 || 360 }}
+        run: |
+          echo "TIMING_TEST_START=$(date +%s)" >> "$GITHUB_ENV"
+          on_screen() { scripts/on-screen.sh "$@"; }
+          if [ "$SUITE" = affected ]; then
+            test -n "$FILES"
+            if [ "$LANE" = desktop ]; then
+              on_screen node scripts/journey-runs.ts --base "$REPEAT_BASE" --files "$FILES" --alone-out playwright-report/alone -- --project=desktop
+            else
+              on_screen node scripts/journey-runs.ts --base "$REPEAT_BASE" --files "$FILES" --alone-out playwright-report/alone -- --project=renderer --project=application
+            fi
+          elif [ "$LANE" = alone ]; then
+            on_screen node scripts/e2e-alone.ts --shard "$SHARD/4" --out playwright-report/alone
+          elif [ "$SUITE" = full ] && [ "$LANE" = parallel ]; then
+            on_screen node scripts/journey-groups.ts --platform linux --lane parallel --group "$SHARD/$GROUP_COUNT" -- --no-deps --project=styles --project=renderer --project=application
+          elif [ "$SUITE" = full ] && [ "$LANE" = desktop ]; then
+            on_screen node scripts/journey-groups.ts --platform linux --lane desktop --group "$SHARD/$GROUP_COUNT" -- --no-deps --project=desktop
+          else
+            echo "No journeys for suite $SUITE in lane $LANE" >&2
+            exit 1
+          fi
+        env:
+          INFINITARY_SOURCE_EVIDENCE: ${{ runner.temp }}/source-desktop-evidence
+          PLAYWRIGHT_JSON_OUTPUT_FILE: playwright-report/source-results.json
+          SUITE: ${{ inputs.suite }}
+          REPEAT_BASE: ${{ inputs.repeat-base || 'origin/main' }}
+          FILES: ${{ inputs.files }}
+          INFINITARY_E2E_RUN_MINUTES: ${{ inputs.suite == 'affected' && 75 || '' }}
+          LANE: ${{ matrix.lane }}
+          SHARD: ${{ matrix.shard }}
+          GROUP_COUNT: ${{ matrix.groups }}
+          SCREEN: 2560x1600x24
+      # Linux runs every test it can (docs/testing.md, "Tests that need a
+      # Mac"): a test that skipped here without MAC_ONLY_TAG runs on no Mac
+      # either, so the job fails on it, whether its journeys passed or failed.
+      - name: Refuse a test that skipped on Linux without the Mac tag
+        if: ${{ !cancelled() && matrix.lane != 'alone' }}
+        run: node scripts/untagged-skips.ts playwright-report/source-results.json
+      # Run-alone owns a separate per-selection report; do not mistake its last
+      # child process for the complete job. Ordinary lanes use their existing JSON.
+      # Local reusable workflows share their caller's commit. Keep the exporter
+      # at that immutable workflow revision, separate from inputs.ref: a reviewed
+      # release candidate can predate this helper. Its cwd and report stay the
+      # candidate's, so paths and TIMING_REVISION still describe the tested code.
+      - id: timing-checkout
+        name: Checkout the workflow's timing exporter
+        if: always() && matrix.lane != 'alone'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        continue-on-error: true
+        with: &source-desktop-timing-checkout
+          ref: ${{ github.workflow_sha }}
+          path: workflow-timing
+          sparse-checkout: scripts/journey-timing.ts
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.timing-checkout.outcome == 'failure' }}
+        working-directory: ${{ runner.temp }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Checkout the workflow's timing exporter again
+        if: ${{ !cancelled() && steps.timing-checkout.outcome == 'failure' }}
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: *source-desktop-timing-checkout
+      - name: Export compact Linux timing
+        if: always() && matrix.lane != 'alone'
+        run: |
+          TIMING_REVISION="$(git rev-parse HEAD)"
+          export TIMING_REVISION
+          node "$GITHUB_WORKSPACE/workflow-timing/scripts/journey-timing.ts" playwright-report/source-results.json "$RUNNER_TEMP/journey-timing.json"
+        env:
+          SUITE: ${{ inputs.suite }}
+          FILES: ${{ inputs.files }}
+          LANE: ${{ matrix.lane }}
+          # The group and the count of its lane's groups, as its job name says.
+          SHARD: ${{ inputs.suite == 'full' && format('{0}/{1}', matrix.shard, matrix.groups) || matrix.shard }}
+          ARTIFACT_SUFFIX: ${{ inputs.artifact-suffix }}
+          TEST_OUTCOME: ${{ steps.journeys.outcome }}
+      - name: Keep compact Linux timing separately
+        if: always() && matrix.lane != 'alone'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: journey-timing-${{ runner.os }}-${{ inputs.artifact-suffix }}-${{ matrix.lane }}-${{ matrix.shard }}
+          path: ${{ runner.temp }}/journey-timing.json
+          if-no-files-found: ignore
+          retention-days: 14
+      # A run whose journeys did not pass keeps the window and everything the
+      # journeys left; a passing run keeps its result file, recorded demos
+      # and explicitly captured picture evidence, under the same name.
+      - name: Keep the Linux window and the journeys' results
+        if: always() && steps.journeys.outcome != 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: source-desktop-${{ runner.os }}${{ (inputs.suite == 'full' || inputs.suite == 'alone') && format('-{0}-{1}', matrix.lane, matrix.shard) || format('-{0}-{1}', inputs.artifact-suffix, matrix.lane) }}
+          path: |
+            ${{ runner.temp }}/source-desktop-evidence/
+            Application Support/firstmate/playwright-report/source-results.json
+            Application Support/firstmate/test-results/
+          if-no-files-found: ignore
+          retention-days: 3
+      - name: Keep a passing run's result and evidence
+        if: always() && steps.journeys.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: source-desktop-${{ runner.os }}${{ (inputs.suite == 'full' || inputs.suite == 'alone') && format('-{0}-{1}', matrix.lane, matrix.shard) || format('-{0}-{1}', inputs.artifact-suffix, matrix.lane) }}
+          path: |
+            Application Support/firstmate/playwright-report/source-results.json
+            Application Support/firstmate/test-results/runs/*/*/demo/
+            Application Support/firstmate/test-results/runs/*/*/evidence/
+          if-no-files-found: ignore
+          retention-days: 3
+      - name: Keep the run-alone result
+        if: always() && (matrix.lane == 'alone' || inputs.suite == 'affected')
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ${{ matrix.lane == 'alone' && format('e2e-alone-{0}', matrix.shard) || format('e2e-alone-{0}-{1}', inputs.artifact-suffix, matrix.lane) }}
+          path: Application Support/firstmate/playwright-report/alone/
+          if-no-files-found: ignore
+          retention-days: 14
+      # The run's page lists the run-alone pass's counts and each test that
+      # failed alone, and an affected job's only when it edited a journey that
+      # shares one app. A report, never a gate.
+      - name: Summarize the run-alone pass
+        if: always() && (matrix.lane == 'alone' || inputs.suite == 'affected')
+        continue-on-error: true
+        run: |
+          if [ "$LANE" = alone ] || [ -f playwright-report/alone/alone-results.json ]; then
+            node scripts/e2e-alone.ts --summarize playwright-report/alone | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+        env:
+          LANE: ${{ matrix.lane }}

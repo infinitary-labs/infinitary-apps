@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "find-in-card",
+      "kind": "feature",
+      "title": "Find words in a card with ⌘F",
+      "body": "Press ⌘F, or the magnifying glass beside Maximize, to find words in the card you are reading, a card you read again, or a task's record. Type and every match lights up in the title, the card's words, its folded sections and its thread, counted one by one. Enter or ⌘G goes to the next match and Shift+Enter or ⇧⌘G to the previous one; a folded section opens to show its match. Case, accents and curly quotes don't matter, and Esc closes the field. On Linux and Windows the keys are Ctrl+F and Ctrl+G by default; under a key preset without them, press the magnifying glass and use Enter.",
+      "area": "cards",
+      "picture": {
+        "dark": "find-in-card-dark.webp",
+        "light": "find-in-card-light.webp",
+        "alt": "A decision card with its find field open in the head, counting 1 of 4 for keyboard, the title's match lit and the others in the card and its thread marked"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

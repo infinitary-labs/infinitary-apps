@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "shell-stand-in-off-the-network",
+      "reason": "The shell tests' stand-in for another Mac offers only its own loopback port, so two of its tests no longer depend on the network of the computer that runs them. Nothing a person using the app notices."
+    }
+  ]
+}

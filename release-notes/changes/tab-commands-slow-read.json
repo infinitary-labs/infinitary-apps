@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "tab-commands-slow-read",
+      "reason": "Next tab and Previous tab in command search read the shown view's tabs even before its data arrives; only seen on a slow machine just after a tab swap."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "reply-box-steady-height",
+      "kind": "fix",
+      "title": "The reply box under a card keeps its height as you type",
+      "body": "Typing the first character in the reply box under a card no longer makes it grow slightly and shift the card. Each extra line now adds exactly one line of height.",
+      "area": "cards",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

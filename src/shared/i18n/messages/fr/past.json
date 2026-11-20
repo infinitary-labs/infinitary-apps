@@ -1,0 +1,12 @@
+{
+  "pastEndingAnOption": "une option",
+  "pastEndingAuthorWithdrawal": "Retirée par son auteur",
+  "pastEndingCrewmateChose": "Son équipier a choisi {label}",
+  "pastEndingDismissed": "Fermée sans choix",
+  "pastEndingDuplicate": "Fermée comme doublon",
+  "pastEndingFirstmateChose": "Votre second a choisi {label}",
+  "pastEndingHostWithdrawal": "Retirée par l’app",
+  "pastEndingTaskRetired": "Retirée à la fin de la tâche",
+  "pastEndingUnknown": "Fermée",
+  "pastEndingYouChose": "Vous avez choisi {label}"
+}

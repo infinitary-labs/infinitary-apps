@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "paged-back-card-keeps-place",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A long card you page back to opens where you were reading",
+      "body": "Paging to the next card and back sometimes left a long card a little above the place you had scrolled to, and it kept that place on later visits. It now returns to where you left it.",
+      "noPicture": "The card looked right on most visits before too; the occasional misplaced visit cannot be caught in a still picture.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

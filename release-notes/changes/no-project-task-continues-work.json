@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "no-project-task-continues-work",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A task without a project that continues earlier work starts from it",
+      "body": "When the first mate starts a task without a project to continue another such task's committed work, its working copy now starts at that task's last commit. Before, it started from the empty workspace, so the earlier work was missing even though the crewmate was told it was there.",
+      "noPicture": "This changes which commit a new working copy starts at, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

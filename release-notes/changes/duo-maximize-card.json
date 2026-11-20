@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "duo-maximize-card",
+      "kind": "feature",
+      "area": "cards",
+      "title": "Give a card the whole screen on an open iPhone Duo or an iPad on its side",
+      "body": "Where a side panel shares the screen with your card, the card now has Maximize card beside its minus, as on the Mac. One tap gives the card the whole screen, and Restore card brings the side panel and the message box back. The card stays maximized from card to card, after you turn or fold the phone, and after a relaunch. On a Duo open like a book, the message box now sits under the side panel, so the card beside it gets more height.",
+      "picture": {
+        "dark": "duo-maximize-card-dark.webp",
+        "light": "duo-maximize-card-light.webp",
+        "alt": "A decision card maximized across both pages of an iPhone Duo open like a book, its Restore card arrows beside its minus"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

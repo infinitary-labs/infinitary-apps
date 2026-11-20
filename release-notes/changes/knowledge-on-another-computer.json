@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "knowledge-on-another-computer",
+      "kind": "feature",
+      "title": "Crewmates on your other computers use your knowledge",
+      "body": "A crewmate whose task runs on another computer, or as another user on this Mac, now reads your saved knowledge and saves a source you asked it to keep, as a crewmate here does. It is shown the same matching entries when it starts, gets its project's directions on every turn, and what it relied on shows on its task.",
+      "area": "crewmates",
+      "noPicture": "What changes is what a crewmate on another computer reads and records; the knowledge views on this Mac look as they did.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

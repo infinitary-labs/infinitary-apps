@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "review-carefully-never-silent",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Review carefully no longer stops without a word",
+      "body": "Pressing Review carefully on a merge card now starts the review even for a task that was filed without your words, checking the change against the task's goal instead. When the review still cannot start, your first mate hears why right away and starts it or tells you what stands in the way.",
+      "noPicture": "The button and card look the same; what changes is that the review starts, or the first mate acts on the reason it could not.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "custom-model-output-limit",
+      "kind": "fix",
+      "title": "Custom connections read each model's output limit",
+      "body": "Fetch from server now reads each model's output limit from more kinds of model list, as well as its context size, so those models can be saved and checked without typing it in.",
+      "area": "subscriptions",
+      "noPicture": "This fills a field that stayed empty before; the settings page looks the same.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

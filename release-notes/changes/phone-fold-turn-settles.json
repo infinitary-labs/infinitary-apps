@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-fold-turn-settles",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Turning an open foldable iPhone keeps Infinitary working and the message box whole",
+      "body": "On a foldable iPhone with Split at the fold on, turning the open phone from on its side to upright like a book could freeze Infinitary until iOS closed it, and the message box under the side panel shrank to about half its width after each such turn. Now each turn settles at once, and the message box keeps its full width in every pose.",
+      "noPicture": "Each pose keeps the look it had before any turn; the fix only stops a turn from freezing the app or narrowing the message box.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "careful-live-validation",
+      "kind": "improvement",
+      "title": "Careful changes are shown working and reviewed before you merge",
+      "body": "When a change is Careful, its crewmate now shows the change working for real, and an independent reviewer checks that proof before the merge card comes to you. The merge card shows what was shown and what could not be, with the rest in the task's record. A required result nobody could show waits for your decision and never counts as passed. A check that would leave something other people can see asks you first.",
+      "area": "tasks",
+      "picture": {
+        "dark": "careful-live-validation-dark.webp",
+        "light": "careful-live-validation-light.webp",
+        "alt": "A merge card shows the keyboard result, the controlled review and scripted-model limits, and a closed How it was checked section."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

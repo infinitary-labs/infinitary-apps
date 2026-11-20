@@ -1,0 +1,17 @@
+// No duration budget in an end-to-end spec outside tests/e2e/perf.ts
+// (captain's B1, 2026-09-24): an e2e timing claim is an order or a count on
+// the page's own clock, and a budget is reported every run and graded only
+// on a perf run. Runs inside `pnpm check` through biome.json's plugins.
+
+language js
+
+`$subject.$matcher($limit)` where {
+  $matcher <: or {
+    "toBeLessThan",
+    "toBeLessThanOrEqual"
+  },
+  $limit <: r"[A-Z0-9_]*_MS",
+  $filename <: r".*tests/e2e/.*",
+  not $filename <: r".*tests/e2e/perf\.ts",
+  register_diagnostic(span=$limit, message="A duration budget in an end-to-end spec measures the host, not the app. Assert an order or the work on the page's own clock, or report the number through tests/e2e/perf.ts (graded only on a perf run).")
+}

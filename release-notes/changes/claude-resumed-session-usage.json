@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "claude-resumed-session-usage",
+      "kind": "fix",
+      "area": "settings",
+      "title": "Claude usage no longer counts a conversation's earlier spending again when it picks up",
+      "body": "When a Claude first mate or crewmate picked its conversation up again, such as after a pause or a restart of the app, its next turn was recorded with everything that conversation had spent before. Each turn now records only its own tokens and cost, so Usage shows what was actually spent.",
+      "noPicture": "This fixes the amounts recorded for each turn without changing the Usage page or its controls.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

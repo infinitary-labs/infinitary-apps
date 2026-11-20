@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "second-computer-add-card",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Asking the first mate to add another computer offers a new card",
+      "body": "After you answered the first mate's card for adding one computer, asking it to add another was refused. It now offers a new card each time you ask, also after you said Not now, and the same holds for its cards to update, remove or sign in a computer.",
+      "noPicture": "The add card looks as it did; the fix is that it appears for the next computer instead of a refusal.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

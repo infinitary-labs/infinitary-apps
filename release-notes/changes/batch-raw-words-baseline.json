@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-raw-words-baseline",
+      "reason": "Splits the internal phone registration storage and refreshes the localization check's initial counts without changing app behavior."
+    }
+  ]
+}

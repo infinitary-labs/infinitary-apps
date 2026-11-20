@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "linux-queues",
+      "reason": "CI routing only: a LINUX_QUEUES variable for moving Linux jobs to other runners, the pnpm cache chosen by the runner's kind, and the Linux startup fixtures in their own pull request job."
+    }
+  ]
+}

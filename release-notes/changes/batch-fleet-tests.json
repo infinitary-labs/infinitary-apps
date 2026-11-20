@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "batch-fleet-tests",
+      "reason": "The batch check routes its Linux test groups to the configured fleet; app behavior does not change."
+    }
+  ]
+}

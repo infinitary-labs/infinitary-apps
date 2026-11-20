@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journey-selection-window-messages",
+      "reason": "Internal CI selection: a change to a message between the app's window and its core selects the journeys that call it. No shipped behavior changes."
+    }
+  ]
+}

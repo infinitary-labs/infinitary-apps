@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "claude-sign-in-runs-login",
+      "kind": "fix",
+      "title": "Claude's Sign in signs you in again",
+      "body": "When Claude refuses its saved sign-in, Sign in now opens Claude's own sign-in in your browser and uses the new one, instead of trying the refused sign-in again. Once you finish, the allowance shows and Sign in goes away.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "claude-sign-in-runs-login-dark.webp",
+        "light": "claude-sign-in-runs-login-light.webp",
+        "alt": "Intelligence settings with the Claude account signed in again, showing its session and weekly allowance meters instead of Sign in."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

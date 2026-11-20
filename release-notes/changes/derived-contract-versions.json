@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "derived-contract-versions",
+      "reason": "Changes how the project numbers the Firstmate's contract and keeps its version history, and reflows the project's own documentation to one sentence per line, so that changes made at the same time stop colliding. The Firstmate is served the same words and tools, and nothing a person sees in the app changes."
+    }
+  ]
+}

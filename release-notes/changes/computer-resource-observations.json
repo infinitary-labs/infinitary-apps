@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "computer-resource-observations",
+      "reason": "Internal read-only CPU and memory observation plumbing; project settings, task placement and visible controls remain unchanged."
+    }
+  ]
+}

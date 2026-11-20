@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "computer-choice",
+      "kind": "feature",
+      "title": "New work starts on the computer your directions name",
+      "body": "When more than one of your computers can run a new task, your decision model reads your standing directions and picks where it starts, or waits for that computer to have room. Follow-up tasks also start beside the work they came from. If no direction says which computer to use, the usual rules choose. Choose a computer for new work is on unless you switch it off under Decisions.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "computer-choice-dark.webp",
+        "light": "computer-choice-light.webp",
+        "alt": "The Decisions group with Jev answering, and a Uses list where Choose a computer for new work sits switched on between Propose standing direction and Screen automation events"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

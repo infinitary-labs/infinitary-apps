@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "personal-commits-one-at-a-time",
+      "kind": "fix",
+      "title": "Quick lesson choices save without a question from your first mate",
+      "body": "Choosing Next round or Stop for today while a lesson card was still arriving could leave that turn's progress unsaved, and your first mate stopped to ask about it. Each turn's save now waits for the one before it, so quick choices save quietly. Building your own panels gets the same fix.",
+      "area": "cards",
+      "noPicture": "Nothing on screen changes; the fix removes a question your first mate asked after a save failed.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

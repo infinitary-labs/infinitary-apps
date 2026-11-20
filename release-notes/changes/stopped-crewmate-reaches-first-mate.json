@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "stopped-crewmate-reaches-first-mate",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate that stops needing you always reaches your first mate",
+      "body": "When a crewmate on Claude, or on another of your computers, stopped with something only you could give, such as a sign-in or a decision, and put up no card, your first mate could hear nothing about it for twenty minutes. Now your first mate hears at once and can ask you. The same goes for a crewmate that says it is waiting on you while none of its cards is on your screen.",
+      "noPicture": "Nothing on screen changes: the first mate hears the crewmate's report as soon as it stops.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

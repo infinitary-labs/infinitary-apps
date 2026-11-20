@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "highlight-choice",
+      "reason": "Documentation only: the release review now prefers a high-exposure new feature when choosing highlights. Nothing in the shipped app changed."
+    }
+  ]
+}

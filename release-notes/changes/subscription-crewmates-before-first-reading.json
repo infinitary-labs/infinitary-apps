@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "subscription-crewmates-before-first-reading",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Crewmates start before your allowance is first read",
+      "body": "When a subscription such as Claude was your only sign-in, a task your first mate started just after Infinitary opened, before your allowance had been read, could not start. It now starts on the model you placed for that kind of work.",
+      "noPicture": "The fix changes whether a crewmate starts in the moments after launch; what a person sees is an ordinary crewmate at work.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

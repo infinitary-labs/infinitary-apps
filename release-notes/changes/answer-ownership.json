@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "answer-ownership",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Crewmates show their own answers",
+      "body": "A crewmate now shows its own findings and choices on its own card, so your replies reach the crewmate who looked into them.",
+      "noPicture": "The change is who presents and answers the card, not a new visual layout.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

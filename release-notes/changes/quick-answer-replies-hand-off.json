@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "quick-answer-replies-hand-off",
+      "kind": "fix",
+      "title": "Follow-up questions on a quick answer get solved, not one more fact",
+      "body": "When you reply to a quick answer with something its sources cannot settle, such as how to do something or what is usual, it now says in a sentence what it found, may add one line from general knowledge marked as not checked, and hands your question to your first mate, which starts the deeper work right away. Before, each reply got one more line from the records until you asked for a stronger crewmate yourself.",
+      "area": "crewmates",
+      "noPicture": "This change is in what crewmates and the first mate are told, so no view changes.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

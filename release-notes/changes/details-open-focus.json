@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "details-open-focus",
+      "reason": "Internal: an opened section's contents no longer wait for the fade's first frame before they can take focus; on screen that wait lasted one frame, which only a test's or a script's key could meet, and the fade itself looks the same."
+    }
+  ]
+}

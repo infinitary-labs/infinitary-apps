@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "claude-firstmate-current-tool-wording",
+      "kind": "fix",
+      "title": "After an update, Firstmate on Claude works the new version's way",
+      "body": "When an update changes how Firstmate does something, such as showing you a card, Firstmate on Claude now starts a new conversation that knows what came before, and the activity feed says so. Before, it could keep working the old way until its next new conversation.",
+      "area": "firstmate",
+      "noPicture": "The only trace on screen is the activity feed's existing line saying Firstmate carries on in a new conversation; the change is in what a reopened Firstmate is told.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

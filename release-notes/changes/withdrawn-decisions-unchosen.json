@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "withdrawn-decisions-unchosen",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "The first mate sees when a crewmate takes back its own question",
+      "body": "When a crewmate takes back a question it asked you, the first mate now sees that you pressed none of its buttons, beside anything the crewmate says about your answer. A crewmate's claim that you approved it can be caught before work goes ahead on it, and the task's record shows who ended each question.",
+      "noPicture": "The fix changes what the first mate knows about a crewmate's question and shows no different view.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

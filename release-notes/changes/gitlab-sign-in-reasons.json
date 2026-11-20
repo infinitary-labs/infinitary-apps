@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "gitlab-sign-in-reasons",
+      "kind": "fix",
+      "title": "GitLab browser sign-in says what to change",
+      "body": "The GitLab setup steps now include turning on Device authorization grant, which GitLab leaves off on a new application. When GitLab refuses to start a sign-in, Settings says why, such as that setting being off or an Application ID GitLab does not know.",
+      "area": "projects",
+      "picture": {
+        "dark": "gitlab-sign-in-reasons-dark.webp",
+        "light": "gitlab-sign-in-reasons-light.webp",
+        "alt": "GitLab browser sign-in setup listing the Device authorization grant step, with a message saying gitlab.com does not allow this application to sign in with a code"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

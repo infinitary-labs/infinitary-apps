@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "computer-github-cli-sign-in",
+      "kind": "feature",
+      "title": "Another computer can sign in to GitHub through its own GitHub CLI",
+      "body": "A computer that runs work for you can now use the GitHub sign-in that GitHub CLI already holds on it, as this computer can. In Settings → Projects, choose Sign in on that computer's GitHub row, then Use GitHub CLI under the code. Its row then says it signs in through GitHub CLI.",
+      "area": "settings",
+      "picture": {
+        "dark": "computer-github-cli-sign-in-dark.webp",
+        "light": "computer-github-cli-sign-in-light.webp",
+        "alt": "Settings, Projects, with a computer's GitHub sign-in code and, under it, a line offering Use GitHub CLI on that computer"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

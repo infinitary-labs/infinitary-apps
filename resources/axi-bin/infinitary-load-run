@@ -1,0 +1,192 @@
+#!/bin/bash
+# The native half of infinitary-load-axi. No program or environment crosses
+# the task channel: the admitted group execs the caller's original argv here.
+# Bash's job-control group works without a terminal on macOS and Linux.
+
+# The receipt worker never creates the payload. Its supervisor cancels it when
+# that payload finishes, including a pending request or cadence wait.
+if [ "${1:-}" = _receipt ]; then
+  hold=$2; leader=$3; payload=$4
+  launcher=${0%/*}/infinitary-load-axi
+  request=
+  answerFile=
+  canceled=
+  finish_receipt() {
+    trap '' TERM INT HUP
+    if [ -n "$request" ]; then kill "$request" 2>/dev/null; wait "$request" 2>/dev/null; fi
+    [ -z "$answerFile" ] || rm -f "$answerFile"
+    exit 0
+  }
+  cancel_receipt() {
+    canceled=1
+    [ "$request" = starting ] || finish_receipt
+  }
+  trap cancel_receipt TERM INT HUP
+  trap finish_receipt EXIT
+  answerFile=$(mktemp) || exit 1
+  birth=
+  if [ -r "/proc/$payload/stat" ]; then
+    IFS= read -r stat < "/proc/$payload/stat"
+    stat=${stat##*)}
+    set -f
+    fields=($stat)
+    if [ -n "${fields[19]:-}" ]; then birth=linux:${fields[19]}; fi
+  else
+    birth=$(LC_ALL=C TZ=UTC /bin/ps -p "$payload" -o lstart= 2>/dev/null)
+    birth="${birth#"${birth%%[![:space:]]*}"}"
+    birth="${birth%"${birth##*[![:space:]]}"}"
+    [ -z "$birth" ] || birth=utc:$birth
+  fi
+  [ -n "$birth" ] || exit 0
+  while kill -0 "$payload" 2>/dev/null; do
+    request=starting
+    INFINITARY_SHELL_CAP_MS= FM3000_SHELL_CAP_MS= INFINITARY_SHELL_ID= \
+      /bin/sh "$launcher" receipt --hold "$hold" --pid "$leader" --payload "$payload" --started "$birth" >"$answerFile" 2>&1 &
+    request=$!
+    [ -z "$canceled" ] || finish_receipt
+    wait "$request"
+    code=$?
+    request=
+    [ "$code" -ne 0 ] || exit 0
+    failure=; delay=
+    while IFS=' ' read -r key value; do
+      case $key in code:) failure=$value ;; retrySeconds:) delay=$value ;; esac
+    done < "$answerFile"
+    [ "$failure" = RECEIPT_UNAVAILABLE ] || exit 0
+    if [ -n "$delay" ]; then
+      case $delay in *[!0-9]*|0) exit 0 ;; esac
+      request=starting
+      sleep "$delay" & request=$!
+      [ -z "$canceled" ] || finish_receipt
+      wait "$request"; request=
+    fi
+  done
+  exit 0
+fi
+
+invalid() {
+  printf 'error: %s\ncode: VALIDATION_ERROR\n' "$1" >&2
+  exit 2
+}
+usage() {
+  printf 'infinitary-load-axi run --processors <number> --memory-mib <number> -- <program> [arguments]\n'
+  printf 'Declare the whole run’s needs. It waits in this computer’s line, then runs unchanged.\n'
+}
+
+group=
+if [ "${1:-}" = _group ]; then group=1; shift; fi
+[ "${1:-}" = run ] || invalid 'Use run before the resource declarations.'
+shift
+cpu=
+memory=
+separator=
+while [ "$#" -gt 0 ]; do
+  case $1 in
+    --help|-h) usage; exit 0 ;;
+    --processors)
+      [ "$#" -ge 2 ] && [ -z "$cpu" ] || invalid 'Name processors once, with a value.'
+      cpu=$2; shift 2 ;;
+    --memory-mib)
+      [ "$#" -ge 2 ] && [ -z "$memory" ] || invalid 'Name memory once, in MiB.'
+      memory=$2; shift 2 ;;
+    --) separator=1; shift; break ;;
+    *) invalid 'Name processors and memory, then -- and the program.' ;;
+  esac
+done
+[ -n "$cpu" ] && [ -n "$memory" ] && [ -n "$separator" ] && [ "$#" -gt 0 ] || invalid 'Name processors, memory and the program after --.'
+
+# A nested wrapper stays in the already admitted group. The app checks its
+# identity and refuses a demand larger than the outer declaration.
+if [ -z "$group" ] && [ -z "${INFINITARY_LOAD_HOLD:-}" ]; then
+  set -m
+  /bin/bash "$0" _group run --processors "$cpu" --memory-mib "$memory" -- "$@" <&0 &
+  child=$!
+  set +m
+  trap 'kill -INT -- -"$child" 2>/dev/null' INT
+  trap 'kill -TERM -- -"$child" 2>/dev/null' TERM
+  trap 'kill -HUP -- -"$child" 2>/dev/null' HUP
+  while :; do
+    wait "$child"
+    code=$?
+    kill -0 "$child" 2>/dev/null || exit "$code"
+  done
+fi
+
+launcher=${0%/*}/infinitary-load-axi
+# Git Bash numbers its programs itself; the app reads Windows' own number, and
+# makes this program lead a Windows job in place of the group above.
+# Windows also reads no parent for this program, so it names its caller: the
+# wrapper that started it, whose end takes a waiting run out of the line.
+self=$$
+windows=
+caller=()
+if [ -r "/proc/$$/winpid" ]; then
+  read -r self < "/proc/$$/winpid"
+  windows=1
+  if [ -n "$group" ] && [ -r "/proc/$PPID/winpid" ]; then
+    read -r outer < "/proc/$PPID/winpid"
+    caller=(--caller "$outer")
+  fi
+fi
+last=
+retryDelay=
+while :; do
+  parent=()
+  if [ -n "${INFINITARY_LOAD_HOLD:-}" ]; then parent=(--parent "$INFINITARY_LOAD_HOLD"); fi
+  # The wrapper itself is the waiting job. Each short request must return its
+  # own answer rather than park one for an unrelated command in this task.
+  # /bin/sh starts the launcher rather than its path: macOS 26 keeps a 1 KB
+  # kernel buffer each time a script starts another script by path.
+  answer=$(INFINITARY_SHELL_CAP_MS= FM3000_SHELL_CAP_MS= INFINITARY_SHELL_ID= \
+    /bin/sh "$launcher" claim --pid "$self" --processors "$cpu" --memory-mib "$memory" "${parent[@]}" "${caller[@]}" 2>&1)
+  code=$?
+  state=
+  hold=
+  delay=
+  failure=
+  while IFS=' ' read -r key value; do
+    case $key in
+      state:) state=$value ;;
+      hold:) hold=$value ;;
+      retrySeconds:) delay=$value ;;
+      code:) failure=$value ;;
+    esac
+  done <<< "$answer"
+  if [ "$code" -ne 0 ]; then
+    # Only the claim's typed interruption is recoverable. Keep this group and
+    # its declaration; a late host reply cannot launch the payload from here.
+    if [ "$failure" != CLAIM_UNAVAILABLE ]; then printf '%s\n' "$answer" >&2; exit "$code"; fi
+    if [ "$answer" != "$last" ]; then printf '%s\n' "$answer" >&2; last=$answer; fi
+    if [ -n "$delay" ]; then retryDelay=$delay; fi
+    # A first transport timeout has already waited out curl's bound and may
+    # not yet have received the app's cadence. Later polls reuse that cadence.
+    if [ -n "$retryDelay" ]; then
+      case $retryDelay in *[!0-9]*|0) invalid 'The app answered without its reading cadence.' ;; esac
+      sleep "$retryDelay"
+    fi
+    continue
+  fi
+  case $state in
+    running)
+      [ -n "$hold" ] || invalid 'The app answered without the run’s hold.'
+      if [ -n "${INFINITARY_LOAD_HOLD:-}" ]; then exec -- "$@"; fi
+      export INFINITARY_LOAD_HOLD=$hold
+      # Windows has no native supervisor or launch receipt: the program runs
+      # in this job as this leader's child. Git Bash's exec of one of its own
+      # programs would end this Windows process, which the app reads as the
+      # run's end, so the leader waits and answers with the program's status.
+      if [ -n "$windows" ]; then "$@"; exit $?; fi
+      supervisor=${0%/*}/../load-bin/infinitary-load-supervisor
+      [ -x "$supervisor" ] || supervisor=${0%/*}/../../vendor/load-bin/infinitary-load-supervisor
+      [ -x "$supervisor" ] || invalid 'The native run supervisor is missing; nothing started.'
+      exec "$supervisor" "$0" "$hold" "$@"
+      ;;
+    waiting)
+      if [ "$answer" != "$last" ]; then printf '%s\n' "$answer" >&2; last=$answer; fi
+      case $delay in ''|*[!0-9]*|0) invalid 'The app answered without its reading cadence.' ;; esac
+      retryDelay=$delay
+      sleep "$delay"
+      ;;
+    *) invalid 'The app did not answer admission; nothing started.' ;;
+  esac
+done

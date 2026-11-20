@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "two-core-linux-probes",
+      "reason": "The test runner schedules one probe file at a time on small Linux machines, so the real child processes those tests launch compete with fewer other checks. No app behavior changes."
+    }
+  ]
+}

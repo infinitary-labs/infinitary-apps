@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "claude-built-in-picker",
+      "kind": "fix",
+      "area": "settings",
+      "title": "Claude Fable 5.2 stays in your models after a quick start",
+      "body": "When Claude answered before your account's own list had loaded, Models could lose Claude Fable 5.2 until the next day and show a plain Claude Fable in its place. Infinitary now keeps its own list, with Claude Fable 5.2 in your premium level, until your account's list is read, and names earlier Claude models by their version, such as Claude Fable 5.1.",
+      "noPicture": "The Models board looks the same as it does before any read; the fix keeps the right models on it.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

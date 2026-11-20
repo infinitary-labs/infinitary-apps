@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "mac-jobs-own-pnpm-folder",
+      "reason": "CI only: the four workflow jobs that can run on the Mac runner install pnpm into their own temporary folder, so two jobs running at once on its two slots no longer delete each other's pnpm and package store. No shipped product surface changes."
+    }
+  ]
+}

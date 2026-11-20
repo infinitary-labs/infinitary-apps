@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "heavy-checks-ci-mode",
+      "reason": "Internal: how the project itself is developed. A computer with git config infinitary.checks = ci runs journeys, the phone check and the replay gate only through CI, with two new on-request workflows; the app is unchanged."
+    }
+  ]
+}

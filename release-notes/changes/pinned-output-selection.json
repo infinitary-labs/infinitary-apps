@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "pinned-output-selection",
+      "reason": "Internal: the pull request check also runs the tests that pin the published contract, the start and queue feed lines and every wake's words when their sources change; app behavior is unchanged."
+    }
+  ]
+}

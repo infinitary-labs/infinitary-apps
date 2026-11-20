@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "prompt-budget-two-lines",
+      "reason": "Changes only how the project checks the size of the first mate's and crewmates' fixed prompts: the tests fail only far past the budget, and a separate check on main asks for a trim. Nothing in the app changes."
+    }
+  ]
+}

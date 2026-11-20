@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "firstmate-one-mac",
+      "kind": "fix",
+      "title": "See which Mac keeps Firstmate before setting it up",
+      "body": "First launch explains that Firstmate lives on one Mac and suggests choosing one that stays on. Connecting another Mac now says where Firstmate's tasks and conversation stay.",
+      "area": "devices",
+      "picture": {
+        "dark": "firstmate-one-mac-dark.webp",
+        "light": "firstmate-one-mac-light.webp",
+        "alt": "First launch explains that this Mac keeps Firstmate's tasks and conversation, or can connect to Firstmate on another Mac."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

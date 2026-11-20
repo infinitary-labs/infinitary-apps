@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "automatic-starts-on-a-mac-in-use",
+      "kind": "fix",
+      "highlight": 1,
+      "area": "projects",
+      "title": "Automatic starts tasks on a Mac in use",
+      "body": "A Mac in ordinary use no longer reads as full. A new task in a project set to Automatic now starts on this computer when it has room, instead of waiting for a compatible computer with room to start.",
+      "picture": {
+        "dark": "automatic-starts-on-a-mac-in-use-dark.webp",
+        "light": "automatic-starts-on-a-mac-in-use-light.webp",
+        "alt": "Task Details show Runs on This computer and say Automatic chose This computer because it had room to start."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

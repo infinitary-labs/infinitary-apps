@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journey-workers-memory-bound",
+      "reason": "Project checks only: a journey run in CI starts no more test workers than its machine's memory holds at their estimated share, which lowers the memory pressure that stalled the app windows its journeys drive on a small Linux check machine. No app behavior change."
+    }
+  ]
+}

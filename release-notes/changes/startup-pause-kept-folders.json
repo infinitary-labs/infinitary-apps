@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "startup-pause-kept-folders",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Infinitary answers right away after it starts, however many tasks finished on your other computers",
+      "body": "In the seconds after Infinitary started, it could stop answering clicks and typing for more than a second at a time while it checked the folders of tasks that finished on your other computers. That check is now quick, so the app answers as soon as it opens.",
+      "noPicture": "This removes a pause in how fast the app answers, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

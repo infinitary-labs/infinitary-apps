@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "loaded-mac-journey-stand-ins",
+      "reason": "Test-only: the app-git and older-profile stand-ins wait out a slow shell job past the host's check-back ask, and the idle-ladder journey derives its stall card's duration from the card's record."
+    }
+  ]
+}

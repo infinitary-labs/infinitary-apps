@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "repetition-outcome",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Repeated work that succeeded is no longer called a failure",
+      "body": "When a crewmate gets the same answer to the same request three times, your first mate now knows whether those requests worked or failed. It no longer tells you, or the crewmate, to stop retrying an error that never happened.",
+      "noPicture": "This changes what the first mate is told about repeated requests, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

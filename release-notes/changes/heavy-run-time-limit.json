@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "heavy-run-time-limit",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A Claude crewmate's long build is no longer stopped while it waits its turn",
+      "body": "When a computer is busy, a crewmate's heavy build or check waits in line before it starts. On Claude, that wait counted against the run's time limit of at most 2 hours, so a run could be stopped before it began and lose its place in line. A Claude crewmate now starts such a run with a limit of up to 3 days.",
+      "noPicture": "Nothing on screen changes; the fix keeps a waiting run from being stopped.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "report-quoting-translations",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate's report that quotes translations is kept",
+      "body": "A crewmate that quoted words in several languages, such as a Japanese and an Arabic translation beside English, had its report set aside and its turn counted as failed. Those reports now reach your first mate. A report with a single garbled word, mixing unrelated alphabets, is still set aside.",
+      "noPicture": "This changes which crewmate reports are accepted, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

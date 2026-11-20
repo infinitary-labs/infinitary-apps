@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "waiting-message-stays-open",
+      "reason": "Record-only fix: a captain message still waiting on the lane for its own Firstmate turn is no longer filed as a hidden failed question by a restart or by a later message refused before any turn. Answered questions stay off the board and the reply bubble already followed the turn that read it, so nothing on screen changes."
+    }
+  ]
+}

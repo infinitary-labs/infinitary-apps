@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "wait-window-starved-order",
+      "reason": "Test-only repair of an intermittent check: the frozen-run test proves a starved poll ended by its wall cap from the load time the poll counted, instead of a wall-clock bound that also timed vitest's own failure report. No app behavior change."
+    }
+  ]
+}

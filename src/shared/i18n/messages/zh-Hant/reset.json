@@ -1,0 +1,5 @@
+{
+  "resetKeysAsk": "要把每個按鍵重設為「{preset}」配置的設定嗎？",
+  "resetKeysConfirm": "重設所有按鍵",
+  "resetKeysDetail": "你在鍵盤設定中改過的每個快速鍵，都會回到「{preset}」配置給它的按鍵。"
+}

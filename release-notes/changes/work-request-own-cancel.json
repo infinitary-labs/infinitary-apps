@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "work-request-own-cancel",
+      "reason": "A work computer's request now carries its own cancellation and whether it may be asked again. Nothing on screen changes."
+    }
+  ]
+}

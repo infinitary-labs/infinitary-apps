@@ -1,0 +1,268 @@
+{
+  "entries": [
+    {
+      "id": "bf-9abc231e2",
+      "kind": "feature",
+      "title": "A typed cut-off is a fact on the account (W1 S7)",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "9abc231e288e3bb446fa78773fbcc1c39e91d151"
+        ]
+      }
+    },
+    {
+      "id": "bf-bb15027a5",
+      "kind": "feature",
+      "title": "The kind classifier can run on the Claude login (W1 S10)",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "bb15027a5224d141d0b94d534f50b860e6d14420"
+        ]
+      }
+    },
+    {
+      "id": "bf-1862c84fb",
+      "kind": "feature",
+      "title": "The Firstmate seat on Claude, dark (W1 S6)",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "1862c84fb75435f8c26a6e50e5d2f6a8a0b80d7b"
+        ]
+      }
+    },
+    {
+      "id": "bf-0c70b25c9",
+      "kind": "feature",
+      "title": "Typed Claude signals, shared by crew and seat (W1 S3)",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "0c70b25c948f26965e8953787322f77a3e27d6e8"
+        ]
+      }
+    },
+    {
+      "id": "bf-929ec8dc3",
+      "kind": "feature",
+      "title": "A cut-off Claude login holds its crew lanes, told once (W1 S8)",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "929ec8dc3d303227b419ed3116dafa4d0fabcc2c"
+        ]
+      }
+    },
+    {
+      "id": "bf-f85571413",
+      "kind": "feature",
+      "title": "Honest retry, durable idle ladder, and a bound on background jobs",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "f85571413fe4a41b62a2d50d5cf2f6b5c9db87c2"
+        ]
+      }
+    },
+    {
+      "id": "bf-a6a19d763",
+      "kind": "feature",
+      "title": "The gate becomes a witness, and every card with actions places it",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "a6a19d7631e074e27358f6788f7dbd49ef861f91"
+        ]
+      }
+    },
+    {
+      "id": "bf-87661dee7",
+      "kind": "feature",
+      "title": "A typed wake envelope, and the idle ladder's wakes ride it",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "87661dee76119819b37cc94cd47ec27f6a4d9e70"
+        ]
+      }
+    },
+    {
+      "id": "bf-4945889ec",
+      "kind": "feature",
+      "title": "Every remaining wake rides the typed envelope, through one drain",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "4945889eca5e99a726cfea8a7af63c007dd800f3"
+        ]
+      }
+    },
+    {
+      "id": "bf-618c5d7a6",
+      "kind": "feature",
+      "title": "The outage wakes and the job bound ride the typed envelope, once per fact durably",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "618c5d7a62bdd63c91b9a845a66538c3cb8ae471"
+        ]
+      }
+    },
+    {
+      "id": "bf-75587abaa",
+      "kind": "feature",
+      "title": "The round caps' wakes ride the typed envelope",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "75587abaa1db857573eba8ac1525ad36ecca26c0"
+        ]
+      }
+    },
+    {
+      "id": "bf-a79d31253",
+      "kind": "feature",
+      "title": "One ticker - one interval, one injectable clock",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "a79d31253ce368652bf8116eabe8d1d1092c6cca"
+        ]
+      }
+    },
+    {
+      "id": "bf-e35635fde",
+      "kind": "feature",
+      "title": "Claude-served Firstmate sessions replay through one reader (W1 S11)",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "e35635fdeb729645fbe3e9d268f9dfbd0c0677e7"
+        ]
+      }
+    },
+    {
+      "id": "bf-531d11cf5",
+      "kind": "feature",
+      "title": "A cut-off pauses the seat through the ladder, and every move asks (W1 S9)",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "531d11cf5acd0a36ade59b014b102030ce192362"
+        ]
+      }
+    },
+    {
+      "id": "bf-9e7440862",
+      "kind": "feature",
+      "title": "The flip - Claude seats the Firstmate, every cut-off rehearsed (W1 S12)",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "9e7440862aba52fe30444aeb8f0480875b810817"
+        ]
+      }
+    },
+    {
+      "id": "bf-c894303d7",
+      "kind": "feature",
+      "title": "Set reasoning effort defaults",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "c894303d7485d60a93a14baa2f4e4f5cce2b6871"
+        ]
+      }
+    },
+    {
+      "id": "bf-5a1dbba39",
+      "kind": "feature",
+      "title": "Derive the basis verdict and read the review join off the parent edge",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "5a1dbba391bec8d26e69f1009030e3f716c4af59"
+        ]
+      }
+    },
+    {
+      "id": "bf-a14756bbd",
+      "kind": "feature",
+      "title": "Every Firstmate tool rule reaches a Claude seat (W1 S2, contract 4.13)",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "a14756bbd4196684c6f0e8b39cc4d4026d49a884"
+        ]
+      }
+    },
+    {
+      "id": "bf-d0fa48740",
+      "kind": "feature",
+      "title": "One crewmate tool spec for both runtimes, grouped spawn parameters (P7)",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "d0fa48740c48241e8a4a5d23c2ec6b9241113dcf"
+        ]
+      }
+    },
+    {
+      "id": "bf-0dbce687b",
+      "kind": "fix",
+      "title": "The stall card on a capped task says it needs the captain's call",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "0dbce687b9776d902788ef67a0fb2cceaeda6439"
+        ]
+      }
+    },
+    {
+      "id": "bf-9ab2b61fa",
+      "kind": "fix",
+      "title": "Date every GitHub sign-in health change in a durable log",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "9ab2b61fac0052c87efd5a7152e8f028be97a3d1"
+        ]
+      }
+    },
+    {
+      "id": "bf-1ef4bccfd",
+      "kind": "fix",
+      "title": "Keep and use the refresh token of a short-lived GitHub sign-in",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "1ef4bccfd39f716c418885679da0d8b4bc3d67af"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-11-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.11: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "87b374effca28302d77fd70e36a2ee803b92be6c",
+        "bef41250c37274eb7dfc3df15d12d7eb2b95bc5f",
+        "4cf9add4a8d84db96a648e86dd3cbbc7753dc7a8",
+        "aebe415207c07ca4606ba9581c8ff8248752cb6a",
+        "508dc555ada1f928142c71a64dda199a798449c7",
+        "df5cc4e6623254586002e1d663c51174596c70a1",
+        "46f7ad892b9f0ab3d403dde42871e929782f28ee",
+        "d205c542e129a47bf45636318bb2be9d1280e228",
+        "348f6323ff1064ef2e3249a7c8d185ecc84bb063",
+        "14b3755685b9f34ed372abfbea0902b902e1cc4b",
+        "4d5d61c8a32d8d5c119f21bc1cf66bd2f32391a5",
+        "69fe4b359226fc227083395ff1b308f6e822131e",
+        "c572acb76caba2ba80497eac7bdfd1507a9ef76a",
+        "47e32c93fc1025e75ff8b8b941ff466c89080803"
+      ]
+    }
+  ]
+}

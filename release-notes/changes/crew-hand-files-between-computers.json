@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "crew-hand-files-between-computers",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Crewmates ask for what is on your other computers",
+      "body": "Every crewmate knows which of your computers runs work and which one its task runs on. When it needs a file or a program on another computer, it asks your first mate, which starts a task there instead of asking you. A task there can hand files to the waiting task, and their content is never shown or written down anywhere. Handed files are removed when the task closes.",
+      "noPicture": "Nothing on screen changes: crewmates and your first mate coordinate across computers in their own words.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

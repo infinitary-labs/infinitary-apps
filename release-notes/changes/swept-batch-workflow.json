@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "swept-batch-workflow",
+      "reason": "Adds the project's own batch check (batch.yml), main's check sorting each push against it and the alpha proof accepting a swept batch; how this repository's checks run, nothing in the app a person notices."
+    }
+  ]
+}

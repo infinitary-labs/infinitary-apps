@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "unified-task-history",
+      "kind": "improvement",
+      "highlight": 3,
+      "title": "Read task history in one place",
+      "body": "Open Activity to read a task's reports, earlier cards, replies, choices and retained work together. Each line shows who recorded it and opens the saved words without repeating an action. Brief changes and conversations use plain words, with recorded details one click deeper.",
+      "area": "tasks",
+      "picture": {
+        "dark": "unified-task-history-dark.webp",
+        "light": "unified-task-history-light.webp",
+        "alt": "An expanded Activity line shows the earlier offer's saved words, recorded author and choices."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

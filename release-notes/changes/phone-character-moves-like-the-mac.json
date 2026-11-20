@@ -1,0 +1,21 @@
+{
+  "entries": [
+    {
+      "id": "phone-character-moves-like-the-mac",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Your first mate moves on iPhone and iPad as it does on the Mac",
+      "body": "On iPhone and iPad your first mate now drifts, blinks and looks around at rest, and glows hot with a halo while it works, just as on the Mac. It greets you when the app opens or joins a computer, and nods when your first mate nods on the Mac.",
+      "picture": {
+        "dark": "phone-character-moves-like-the-mac-dark.png",
+        "light": "phone-character-moves-like-the-mac-light.png",
+        "alt": "Infinitary on iPhone shows the first mate at work above \"No cards to read yet.\": an amber tesseract with glowing wires, a soft halo and two white-hot eyes."
+      },
+      "provenance": {
+        "origin": "change",
+        "covers": []
+      }
+    }
+  ],
+  "exclusions": []
+}

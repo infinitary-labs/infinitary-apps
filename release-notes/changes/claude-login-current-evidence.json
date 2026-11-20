@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "claude-login-current-evidence",
+      "kind": "fix",
+      "title": "Claude recognizes a newly saved sign-in",
+      "body": "A new Claude sign-in no longer appears unfinished just because it was saved quickly. Infinitary checks the current sign-in rather than an older reading.",
+      "area": "subscriptions",
+      "noPicture": "This corrects the background comparison of saved sign-ins without changing the interface or its wording.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

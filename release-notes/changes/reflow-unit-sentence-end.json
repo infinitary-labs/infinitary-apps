@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "reflow-unit-sentence-end",
+      "reason": "The docs' one-sentence-per-line tool now ends a sentence at a one-letter unit after a number, such as 15 s., which repairs main's unit tests and re-splits one documentation line; no app behavior changes."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "per-change-fleet-lookups",
+      "reason": "Internal: naming one model reads only that model's row instead of the whole Settings model list, and a task change re-sends computer readings only when crew work starts or a declared run moves; names and readings shown are unchanged."
+    }
+  ]
+}

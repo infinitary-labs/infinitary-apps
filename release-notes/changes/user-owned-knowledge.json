@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "user-owned-knowledge",
+      "kind": "improvement",
+      "title": "Alpha only: knowledge keeps what you save",
+      "body": "In alpha builds, knowledge keeps what you tell Firstmate about yourself, and an article or other source you ask to save. A crewmate reads that source, keeps its link and a short excerpt, and fits it in with what you already saved. How a project works stays in the project. Stable releases do not have knowledge.",
+      "area": "firstmate",
+      "noPicture": "The change is what gets saved when you ask, not a new screen.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

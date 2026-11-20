@@ -1,0 +1,16 @@
+<!-- @dsCard group="Components" viewport="700x520" name="Voice input" subtitle="Idle (keybind hint) → multi-line → recording (waveform + abandon/accept/submit), draft kept" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css"><script src="../../vendor/react.development.js"></script><script src="../../vendor/react-dom.development.js"></script><script src="../../vendor/babel.min.js"></script><script src="../../_ds_bundle.js"></script></head><body style="margin:0;padding:20px;background:var(--bg-0)"><div id="root"></div><script type="text/babel">
+const NS=window.InfinitaryDesignSystem_94f559;
+const {VoiceInput}=NS;
+function Demo(){
+  const [draft,setDraft]=React.useState("Fix the flaky test.\n\nSteps:\n1. run it\n2. look at the log");
+  return <div style={{display:"flex",flexDirection:"column",gap:20,alignItems:"center",paddingTop:8}}>
+    <VoiceInput mode="idle" width={560}/>
+    <VoiceInput mode="idle" width={560} value={draft} onChange={(e)=>setDraft(e.target.value)}/>
+    <VoiceInput mode="recording" level={0.7} width={560}/>
+    <VoiceInput mode="recording" level={0.7} width={560} value={"Look at the retry helper,\nthen tell me"}/>
+    <span style={{fontFamily:"var(--font-mono)",fontSize:11,color:"var(--fg-3)"}}>one line · multi-line (foot row) · recording · recording with a draft</span>
+  </div>;
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<Demo/>);
+</script></body></html>

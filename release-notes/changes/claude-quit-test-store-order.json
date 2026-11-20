@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "claude-quit-test-store-order",
+      "reason": "Test-only repair: the Claude quit integration test checks the client's store once the released session has closed, instead of assuming the client exited within the quit's two-second wait; no app behavior changes."
+    }
+  ]
+}

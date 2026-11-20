@@ -1,0 +1,82 @@
+diff --git a/dist/chunk-artifact.js b/dist/chunk-artifact.js
+index 0877a7d249825cd2ff81eef4ff30c23eb60e6294..4d7529995ec0260e747b21d0e09b09340beba807 100644
+--- a/dist/chunk-artifact.js
++++ b/dist/chunk-artifact.js	
+@@ -2258,6 +2258,24 @@ async function runWithSuite(suite, fn) {
+ 	await fn();
+ 	collectorContext.currentSuite = prev;
+ }
++// Infinitary (INF-4644): the browser runner gives each user event, such as a click,
++// the time its test has left, read as `_currentTaskStartTime` plus the limit, less
++// this same wall clock's reading. On the load clock the start reads later by every
++// moment that did not count, so an event gets the load time its test has left, as
++// the test's own limit counts it, rather than the wall time left on a busy computer.
++function publishTaskStart(runner, startTime, clock, loadStart) {
++	if (!clock) {
++		runner._currentTaskStartTime = startTime;
++		return;
++	}
++	Object.defineProperty(runner, "_currentTaskStartTime", {
++		configurable: true,
++		enumerable: true,
++		get: () => now$2() - (clock.now() - loadStart),
++		// The limit's end sets a plain value again.
++		set: (value) => Object.defineProperty(runner, "_currentTaskStartTime", { configurable: true, enumerable: true, writable: true, value })
++	});
++}
+ function withTimeout(fn, timeout, isHook = false, stackTraceError, onTimeout) {
+ 	if (timeout <= 0 || timeout === Number.POSITIVE_INFINITY) {
+ 		return fn;
+@@ -2265,17 +2283,26 @@ function withTimeout(fn, timeout, isHook = false, stackTraceError, onTimeout) {
+ 	const { setTimeout, clearTimeout } = getSafeTimers();
+ 	// this function name is used to filter error in test/cli/test/fails.test.ts
+ 	return (function runWithTimeout(...args) {
++		// Infinitary (INF-1083): on an ordinary run, tests/helpers/budgets.ts starts a
++		// load clock in each worker, and a test's or hook's time limit counts only the
++		// time the worker got to run, ending by its wall cap. A graded run
++		// (INFINITARY_PERF_BUDGETS=1) starts none and keeps the wall clock. Read as the
++		// limit starts, not when the hook registers: a setup file listed before the one
++		// that starts the clock registers its hooks before the clock exists.
++		const clock = globalThis[Symbol.for("infinitary.unitLoadClock")];
+ 		const startTime = now$2();
++		const loadStart = clock?.now();
+ 		const runner = getRunner();
+-		runner._currentTaskStartTime = startTime;
++		publishTaskStart(runner, startTime, clock, loadStart);
+ 		runner._currentTaskTimeout = timeout;
+ 		return new Promise((resolve_, reject_) => {
+-			const timer = setTimeout(() => {
++			const timer = clock ? clock.timer(rejectTimeoutError, loadStart + timeout).unref() : setTimeout(() => {
+ 				clearTimeout(timer);
+ 				rejectTimeoutError();
+ 			}, timeout);
++			const cancel = () => clock ? timer.cancel() : clearTimeout(timer);
+ 			// `unref` might not exist in browser
+-			timer.unref?.();
++			if (!clock) timer.unref?.();
+ 			function rejectTimeoutError() {
+ 				const error = makeTimeoutError(isHook, timeout, stackTraceError);
+ 				onTimeout?.(args, error);
+@@ -2284,11 +2311,11 @@ function withTimeout(fn, timeout, isHook = false, stackTraceError, onTimeout) {
+ 			function resolve(result) {
+ 				runner._currentTaskStartTime = undefined;
+ 				runner._currentTaskTimeout = undefined;
+-				clearTimeout(timer);
++				cancel();
+ 				// if test/hook took too long in microtask, setTimeout won't be triggered,
+ 				// but we still need to fail the test, see
+ 				// https://github.com/vitest-dev/vitest/issues/2920
+-				if (now$2() - startTime >= timeout) {
++				if ((clock ? clock.now() - loadStart : now$2() - startTime) >= timeout) {
+ 					rejectTimeoutError();
+ 					return;
+ 				}
+@@ -2297,7 +2324,7 @@ function withTimeout(fn, timeout, isHook = false, stackTraceError, onTimeout) {
+ 			function reject(error) {
+ 				runner._currentTaskStartTime = undefined;
+ 				runner._currentTaskTimeout = undefined;
+-				clearTimeout(timer);
++				cancel();
+ 				reject_(error);
+ 			}
+ 			// sync test/hook will be caught by try/catch

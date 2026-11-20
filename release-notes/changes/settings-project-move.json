@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "settings-project-move",
+      "kind": "feature",
+      "title": "Move a repository from Settings",
+      "body": "A repository's page in Settings → Projects now has a Move line just above Remove. Choose another project, or a project of its own, click Move and confirm. The repository keeps its name, folder and settings, and its tasks keep their keys, just as when your first mate moves it. It works from the keyboard too.",
+      "area": "projects",
+      "picture": {
+        "dark": "settings-project-move-dark.webp",
+        "light": "settings-project-move-light.webp",
+        "alt": "A repository's settings in Settings → Projects, with the new Move line above Remove: wallet chosen as the project to move harbour-charts into, beside a Move button"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

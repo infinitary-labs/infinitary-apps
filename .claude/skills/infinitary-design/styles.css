@@ -1,0 +1,137 @@
+@import "./tokens/fonts.css";
+@import "./tokens/colors.css";
+@import "./tokens/typography.css";
+@import "./tokens/spacing.css";
+@import "./tokens/effects.css";
+
+/* Activity feed: thin left-edge thumb on the rail + top dissolve. */
+[data-activity-feed] {
+  --feed-fade: 40px;
+  --feed-thumb: 3px;
+}
+[data-activity-feed]::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: var(--feed-fade);
+  background: linear-gradient(to bottom, var(--bg-0), transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+[data-activity-feed-scroller]::-webkit-scrollbar {
+  width: var(--feed-thumb);
+  height: var(--feed-thumb);
+}
+[data-activity-feed-scroller]::-webkit-scrollbar-track {
+  background: transparent;
+}
+[data-activity-feed-scroller]::-webkit-scrollbar-thumb {
+  background: var(--fg-3);
+}
+[data-activity-feed-scroller]::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+[data-activity-feed-scroller]::-webkit-scrollbar-corner {
+  background: transparent;
+}
+@supports not selector(::-webkit-scrollbar) {
+  [data-activity-feed-scroller] {
+    scrollbar-width: thin;
+    scrollbar-color: var(--fg-3) transparent;
+  }
+}
+
+/* Semantic HTML card-body specimen styles on design tokens. */
+.fm-card-md {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--fg-2);
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+}
+.fm-card-md p,
+.fm-card-md ul,
+.fm-card-md ol,
+.fm-card-md h2,
+.fm-card-md h3,
+.fm-card-md pre {
+  margin: 0;
+}
+.fm-card-md h2,
+.fm-card-md h3 {
+  color: var(--fg-1);
+  font-weight: 500;
+  letter-spacing: var(--tracking-display);
+  line-height: var(--leading-tight);
+}
+.fm-card-md h2 {
+  font-size: var(--text-md);
+}
+.fm-card-md h3 {
+  font-size: var(--text-base);
+}
+.fm-card-md ul,
+.fm-card-md ol {
+  padding-left: var(--space-4);
+}
+.fm-card-md li {
+  margin: 0;
+}
+.fm-card-md li + li {
+  margin-top: var(--space-1);
+}
+.fm-card-md code,
+.fm-card-md pre {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--fg-1);
+}
+.fm-card-md a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.fm-card-md a:hover {
+  color: var(--accent-strong);
+}
+.fm-card-md strong {
+  color: var(--fg-1);
+  font-weight: 500;
+}
+
+/* Side rails: two dock columns framing the home stage. A rail is a flex
+   column of host-framed panels at one fixed width token; an EMPTY rail is
+   zero-width and paints nothing (no border, no header, no affordance), so a
+   window with nothing docked is pixel-identical to one without rails. Not
+   resizable. The stage insets over one motion token; it is never covered. */
+[data-rail] {
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  width: var(--rail-width);
+  min-width: 0;
+  padding: var(--space-8) var(--space-3) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow: hidden;
+  resize: none;
+  transition:
+    width var(--dur-med) var(--ease-out),
+    padding var(--dur-med) var(--ease-out);
+}
+[data-rail]:empty {
+  width: 0;
+  padding: 0;
+}
+[data-side-panel] {
+  flex: 0 1 auto;
+  min-height: 0;
+  width: calc(var(--rail-width) - var(--space-3) * 2);
+}
+/* Collapsed headers keep their height; expanded siblings take the space left. */
+[data-side-panel][data-side-panel-collapsed] {
+  flex-shrink: 0;
+}

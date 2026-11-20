@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "collapsed-panels-stay-visible",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A collapsed panel stays in view beside a long list",
+      "body": "When a long list such as Tasks fills a side rail, a collapsed panel on the same rail, such as Knowledge in alpha builds, keeps its full height. The long list takes the space that is left and scrolls.",
+      "picture": {
+        "dark": "collapsed-panels-stay-visible-dark.webp",
+        "light": "collapsed-panels-stay-visible-light.webp",
+        "alt": "The collapsed Knowledge panel fully visible below the scrolling Tasks list"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

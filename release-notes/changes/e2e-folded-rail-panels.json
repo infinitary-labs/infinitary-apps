@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "e2e-folded-rail-panels",
+      "reason": "Test-only repair: journeys read a side panel's frame as it stands while the rails are folded, since a panel out of sight never draws; no product behavior changes."
+    }
+  ]
+}

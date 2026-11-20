@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-check-own-scale-set",
+      "reason": "CI only: the pull request phone check can ask the Mac mini's placement service for a virtual Mac of its own, so it starts on the next free virtual place once the phone queue releases it. Nothing in the app changes."
+    }
+  ]
+}

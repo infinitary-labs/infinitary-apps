@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "hosted-linux-release-runners",
+      "reason": "Moves the Linux jobs of the continuous run on main and of every release onto GitHub's hosted machines. Only where the project's own checks run changes; nothing in the app changes."
+    }
+  ]
+}

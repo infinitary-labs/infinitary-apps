@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "idle-nudge-step-answer",
+      "reason": "The idle reminder to a crewmate running a declared internal step asks for its answer and tells it the step takes no completion card, instead of asking every crewmate for one; a change to what a crewmate is told, with no result a person sees beyond the card it no longer invites."
+    }
+  ]
+}

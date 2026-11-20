@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "workflow-evidence-stand-in-connections",
+      "reason": "Test-only fix: the workflow evidence tests' stand-in server keeps idle connections open until the test closes them, so a stalled test runner no longer resets a request the forge sent on a reused connection; no app behavior change."
+    }
+  ]
+}

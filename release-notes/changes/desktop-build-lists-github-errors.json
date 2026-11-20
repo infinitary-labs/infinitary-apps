@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "desktop-build-lists-github-errors",
+      "reason": "The list of files that decide whether a change cuts an alpha now names the shared error-printing script the message generator imports; release tooling only, no app behavior change."
+    }
+  ]
+}

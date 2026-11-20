@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "gap-checklist-accept-waits-for-a-tick",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A checklist of checks that cannot run waits for a tick before you accept",
+      "body": "When a crewmate asks you to let several checks go ahead without live proof, the card's accept button now waits until you tick at least one of them, and pressing it early takes you to the first row. Before, accepting with nothing ticked kept every check held and the crewmate had to ask again on a new card.",
+      "picture": {
+        "dark": "gap-checklist-accept-waits-for-a-tick-dark.webp",
+        "light": "gap-checklist-accept-waits-for-a-tick-light.webp",
+        "alt": "A card listing checks that cannot run, with every box unticked, 0 of 1 answered, and its Accept the checked gaps button dimmed"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

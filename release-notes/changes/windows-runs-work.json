@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "windows-runs-work",
+      "reason": "Internal: a Windows PC runs its home's work while its person is signed in, through their own Task Scheduler, a second Windows account on a Windows home runs work by a PowerShell line, and a Windows PC's Devices row says to update it on that PC; no Windows build is published, so nothing a person downloads changes, and Mac and Linux computers behave as before."
+    }
+  ]
+}

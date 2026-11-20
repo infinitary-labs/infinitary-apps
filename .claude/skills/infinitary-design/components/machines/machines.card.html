@@ -1,0 +1,15 @@
+<!-- @dsCard group="Components" viewport="760x420" name="Devices" subtitle="Your devices: this computer, another computer, running as another user" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css"><script src="../../vendor/react.development.js"></script><script src="../../vendor/react-dom.development.js"></script><script src="../../vendor/babel.min.js"></script><script src="../../_ds_bundle.js"></script></head><body style="margin:0;padding:20px;background:var(--bg-0)"><div id="root"></div><script type="text/babel">
+const NS=window.InfinitaryDesignSystem_94f559;
+const {MachineRow,Button}=NS;
+const line={borderTop:"1px solid var(--line-1)"};
+function Demo(){
+  return <div style={{background:"var(--bg-1)",border:"1px solid var(--line-1)",borderRadius:"var(--radius-m)"}}>
+    <MachineRow name="This computer" detail="MacBook Pro · your first mate lives here" summary="Runs notes · Signed in to Codex, Claude and GitHub" state="1 task" busy/>
+    <MachineRow style={line} name="Running as Builder" tone="warn" detail="another user on this computer · runs work only, while Builder is logged in · out of reach since 15:10" summary="Runs api · Signed in to Codex and GitHub" state="out of reach" action={<Button variant="secondary" size="sm">Remove</Button>}/>
+    <MachineRow style={line} name="MacBook Air" detail="a computer · joined today 14:06 · seen just now" summary="Controlling your first mate now · Runs no project yet · No sign-ins yet" action={<Button variant="secondary" size="sm">Remove</Button>}/>
+    <MachineRow style={line} name="Mac mini" detail="a computer · joined today 15:02 · seen just now" summary="Runs website · Signed in to Codex, Claude and GitHub" state="1 task" busy action={<Button variant="secondary" size="sm">Remove</Button>}/>
+  </div>;
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<Demo/>);
+</script></body></html>

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "control-from-another-mac",
+      "reason": "Development only: multi-machine support stays hidden from installed builds until the captain explicitly lifts the gate. No alpha has shipped it."
+    }
+  ]
+}

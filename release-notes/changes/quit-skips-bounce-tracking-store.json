@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "quit-skips-bounce-tracking-store",
+      "reason": "Internal: the app turns off Chromium's bounce-tracking store (DIPS), which it never used, so a quit no longer waits for that store to open on a starved low-priority thread. The test apps stopped hitting the launch helper's forced kill on a loaded Mac; a person's own quit is the same apart from ending a little sooner on a heavily loaded Mac, which is not something a note can promise."
+    }
+  ]
+}

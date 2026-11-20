@@ -1,0 +1,111 @@
+{
+  "join-read": {
+    "ipad": 277561,
+    "iphone": 250276
+  },
+  "talk-tasks": {
+    "ipad": 101162,
+    "iphone": 92945
+  },
+  "address": {
+    "ipad": 47471,
+    "iphone": 46100
+  },
+  "keyboard-pinned": {
+    "ipad": 92704,
+    "iphone": 90889
+  },
+  "keyboard-scrolling": {
+    "ipad": 72020,
+    "iphone": 71276
+  },
+  "settings-pages": {
+    "ipad": 120283,
+    "iphone": 112319
+  },
+  "panels": {
+    "ipad": 74197,
+    "iphone": 60858
+  },
+  "talk-compose": {
+    "ipad": 143658,
+    "iphone": 151726
+  },
+  "rest": {
+    "ipad": 448129,
+    "iphone": 480611
+  },
+  "fold": {
+    "duo": 152731,
+    "iphone": 32755
+  },
+  "join-activity": {
+    "iphone": 116903
+  },
+  "join-away": {
+    "iphone": 219123
+  },
+  "talk-drafts": {
+    "iphone": 185563
+  },
+  "relaunch-first": {
+    "iphone": 57734
+  },
+  "relaunch-second": {
+    "iphone": 54295
+  },
+  "cards-merge": {
+    "iphone": 181119
+  },
+  "cards-form": {
+    "iphone": 219196
+  },
+  "cards-media": {
+    "iphone": 216661
+  },
+  "pick": {
+    "iphone": 48390
+  },
+  "cards-revise": {
+    "iphone": 39889
+  },
+  "cards-place": {
+    "iphone": 54087
+  },
+  "cards-notes": {
+    "iphone": 99900
+  },
+  "cards-diagram": {
+    "iphone": 63890
+  },
+  "keyboard-ways-out": {
+    "iphone": 73775
+  },
+  "body-field": {
+    "iphone": 143586
+  },
+  "card-questions": {
+    "iphone": 47348
+  },
+  "google": {
+    "iphone": 58014
+  },
+  "languages": {
+    "iphone": 154766
+  },
+  "panels-cards": {
+    "iphone": 50270
+  },
+  "weak-link": {
+    "iphone": 401958
+  },
+  "cards-secret": {
+    "iphone": 44255
+  },
+  "take-over": {
+    "iphone": 135745
+  },
+  "push": {
+    "iphone": 84202
+  }
+}

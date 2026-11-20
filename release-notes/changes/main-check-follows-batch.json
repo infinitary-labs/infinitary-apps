@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "main-check-follows-batch",
+      "reason": "Main's check stops repeating what a passed merge batch already checked, and the Linux startup checks move into the merge batch; this changes only how the project is checked, so nothing a person using the app sees changes."
+    }
+  ]
+}

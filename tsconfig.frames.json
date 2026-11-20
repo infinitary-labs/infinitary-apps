@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "allowJs": true,
+    "checkJs": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    // Shared schemas also run through Node's native TypeScript loader.
+    "allowImportingTsExtensions": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": [],
+    "paths": {
+      "@shared/*": ["./src/shared/*"]
+    }
+  },
+  // Frame scripts run inside sandboxed plugin frames, not in the renderer
+  // realm: they see `window.fm` (src/shared/plugins/bridge.ts) and nothing
+  // of the app. This project checks them as JavaScript against the
+  // bridge's own types; the renderer project never sees them.
+  "include": ["src/renderer/src/plugins/**/*.frame.js", "src/shared/**/*.ts"],
+  "exclude": ["src/shared/**/*.test.ts"]
+}

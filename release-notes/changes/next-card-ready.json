@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "next-card-ready",
+      "kind": "improvement",
+      "title": "The next card is ready when you close or reply to one",
+      "body": "While you read a card, the app now draws the card that comes up when you close it, so it appears at once instead of showing an empty card for a moment. Another card fades in over the one you left, and the card's height eases instead of jumping. After a close or a reply, the next card is now the first one you have not read yet, and the first card when you have read them all. Replying under a card on its own no longer rebuilds it: what you did in the card, such as an open section or a preview you adjusted, stays as you left it beside the thread.",
+      "area": "cards",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

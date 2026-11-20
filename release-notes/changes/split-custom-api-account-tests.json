@@ -1,0 +1,4 @@
+{
+  "entries": [],
+  "exclusions": [{ "id": "split-custom-api-account-tests", "reason": "Internal test file restructure; product behavior is unchanged." }]
+}

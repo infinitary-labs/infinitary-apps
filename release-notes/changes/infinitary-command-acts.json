@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "infinitary-command-acts",
+      "kind": "feature",
+      "title": "Act as you from your terminal",
+      "body": "The Infinitary command now acts as you, not only reads. Run infinitary-axi say to send your first mate your words, card act to press a card's button, card reply or card close, and task steer, stop, start or queue to move a task. Each change shows on its task as yours, from infinitary-axi.",
+      "area": "settings",
+      "noPicture": "What changed is what the terminal command can do; the one line it changes in Settings shows in the Infinitary command note's picture.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

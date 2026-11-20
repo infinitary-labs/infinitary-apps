@@ -1,0 +1,26 @@
+{"type":"source","note":"Reconstructed from the Sep 14 evidence index (fm3000-interaction-sys-improve-s1 report.md, F2 and section 7): 21 Firstmate verbs refused with 'being triaged by fleet supervision right now; try again in a moment'. Entries #267-#293 are eight steer/interrupt attempts on ba13eadd, #365-#393 seven on c9dab1e7, #613 and #619 on d299b1e5; the report attributes the remaining four to no entry. Message text is paraphrased; the verb mix follows the cancel-and-respawn recovery the report describes."}
+{"type":"task","alias":"ba13eadd","title":"Investigate stalled crewmate report"}
+{"type":"task","alias":"c9dab1e7","title":"Plan the card pipeline change"}
+{"type":"task","alias":"d299b1e5","title":"Explain the delivered row"}
+{"type":"task","alias":"unattributed","title":"Evening fleet follow-ups"}
+{"type":"call","entry":"#267","task":"ba13eadd","verb":"steer","message":"You are not stuck; continue from your plan and report when tests pass."}
+{"type":"call","entry":null,"task":"ba13eadd","verb":"steer","message":"Ignore the replayed self-brief and keep going with the fix."}
+{"type":"call","entry":null,"task":"ba13eadd","verb":"steer","message":"Status please: what is left before you can report?"}
+{"type":"call","entry":null,"task":"ba13eadd","verb":"interrupt","mode":"interrupt"}
+{"type":"call","entry":null,"task":"ba13eadd","verb":"steer","message":"Stop the background jobs and summarize what you found."}
+{"type":"call","entry":null,"task":"ba13eadd","verb":"steer","message":"The captain is waiting on this; send the short answer first."}
+{"type":"call","entry":null,"task":"ba13eadd","verb":"steer","message":"Your last output was garbled; restate the finding in English."}
+{"type":"call","entry":"#293","task":"ba13eadd","verb":"interrupt","mode":"cancel"}
+{"type":"call","entry":"#365","task":"c9dab1e7","verb":"steer","message":"The plan card is approved; start the investigation."}
+{"type":"call","entry":null,"task":"c9dab1e7","verb":"steer","message":"You are not stalled on the self-brief; proceed with step one."}
+{"type":"call","entry":null,"task":"c9dab1e7","verb":"steer","message":"Share what the sanitizer allowlist currently permits."}
+{"type":"call","entry":null,"task":"c9dab1e7","verb":"interrupt","mode":"interrupt"}
+{"type":"call","entry":null,"task":"c9dab1e7","verb":"steer","message":"Resume the investigation and report the allowlist gaps."}
+{"type":"call","entry":null,"task":"c9dab1e7","verb":"steer","message":"Keep it to one card with the recommended change."}
+{"type":"call","entry":"#393","task":"c9dab1e7","verb":"interrupt","mode":"cancel"}
+{"type":"call","entry":"#613","task":"d299b1e5","verb":"steer","message":"The captain asks why this row still shows as delivered."}
+{"type":"call","entry":"#619","task":"d299b1e5","verb":"steer","message":"Answer the captain directly: is anything left on this task?"}
+{"type":"call","entry":null,"task":"unattributed","verb":"steer","message":"Confirm the worktree is clean before you finish."}
+{"type":"call","entry":null,"task":"unattributed","verb":"steer","message":"Link the PR in your report."}
+{"type":"call","entry":null,"task":"unattributed","verb":"steer","message":"Wait for CI to go green, then report."}
+{"type":"call","entry":null,"task":"unattributed","verb":"steer","message":"No new card needed; revise the open one instead."}

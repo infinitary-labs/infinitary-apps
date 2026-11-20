@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "agent-test-work-trial-adjustment",
+      "reason": "Instruction-only adjustment of the development trial: a focused bug reproduction may be kept when it fails on the bug and passes with the fix, other new coverage still needs a request, and the next review is 20 changes started after this adjustment. No shipped product surface changes."
+    }
+  ]
+}

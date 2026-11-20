@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "starting-task-names",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "See which finished tasks let work start",
+      "body": "When queued work starts after other tasks finish, Activity names those tasks by title and task key instead of an internal id.",
+      "picture": {
+        "dark": "starting-task-names-dark.webp",
+        "light": "starting-task-names-light.webp",
+        "alt": "Activity's full start explanation names Split card handling and its SCR-1 task key."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

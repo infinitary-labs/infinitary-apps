@@ -1,0 +1,603 @@
+---
+title: Keyboard
+description: Every command you can run from the keyboard in Infinitary, and its keys in each preset on a Mac and on Linux.
+---
+
+{/* Written by node scripts/docs-site-keyboard.ts from the app's own command list. Do not edit by hand. */}
+
+import { TabItem, Tabs } from '@astrojs/starlight/components';
+
+Everything in Infinitary works from the keyboard.
+Tab moves between controls, and the arrows move inside a list.
+
+## Command search
+
+Press <kbd>⌘K</kbd> on a Mac, or <kbd>Ctrl+K</kbd> on Linux, to open command search.
+Type a few words, choose a command with the arrows and press Enter.
+Every command on this page is there, with its key beside it, including the ones that have no key.
+
+## Presets
+
+Infinitary comes with sets of keys called presets: Vim, Emacs, VS Code, Tmux, Legacy.
+A new installation starts on Vim.
+Legacy is offered only if you used Infinitary before presets existed.
+Choose a preset in **Settings**, under **Keyboard**.
+
+## Change a key
+
+In **Settings**, under **Keyboard**, every command has **Record**, **Remove** and **Reset**.
+Press **Record**, then the keys you want, then Enter to save them.
+If another command already uses those keys, Infinitary says which one before anything changes.
+
+## Every command and its keys
+
+A dash means the command has no key yet: run it from command search, or give it a key of your own.
+Two keys with a space between them are pressed one after the other.
+
+<Tabs syncKey="keyboard-preset">
+<TabItem label="Vim">
+
+**Anywhere in the window**
+
+| Command | Mac | Linux |
+| --- | --- | --- |
+| Search commands | <kbd>&#58;</kbd> when not typing, <kbd>⌘K</kbd> | <kbd>&#58;</kbd> when not typing, <kbd>Ctrl+K</kbd> |
+| Go to the main message | <kbd>I</kbd> when not typing, <kbd>⌘L</kbd> | <kbd>I</kbd> when not typing, <kbd>Ctrl+L</kbd> |
+| Go to the card's reply | <kbd>R</kbd> when not typing, <kbd>⇧⌘L</kbd> | <kbd>R</kbd> when not typing, <kbd>Ctrl+Shift+L</kbd> |
+| Go to the card's body | <kbd>G C</kbd> when not typing | <kbd>G C</kbd> when not typing |
+| Go to the card's buttons | <kbd>G A</kbd> when not typing | <kbd>G A</kbd> when not typing |
+| Press the recommended choice | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| Press the second choice | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| Press the third choice | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| Press the fourth choice | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| Go to the next part of the window | <kbd>⌃W W</kbd> when not typing, <kbd>F6</kbd> | <kbd>F6</kbd> |
+| Go to the previous part of the window | <kbd>⌃W P</kbd> when not typing, <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| Go to the part of the window on the left | <kbd>⌃W H</kbd> when not typing, <kbd>⌃H</kbd> when not typing | — |
+| Go to the part of the window below | <kbd>⌃W J</kbd> when not typing, <kbd>⌃J</kbd> when not typing | — |
+| Go to the part of the window above | <kbd>⌃W K</kbd> when not typing, <kbd>⌃K</kbd> when not typing | — |
+| Go to the part of the window on the right | <kbd>⌃W L</kbd> when not typing, <kbd>⌃L</kbd> when not typing | — |
+| Move left | <kbd>H</kbd> when not typing | <kbd>H</kbd> when not typing |
+| Move down | <kbd>J</kbd> when not typing, <kbd>⌃N</kbd> | <kbd>J</kbd> when not typing |
+| Move up | <kbd>K</kbd> when not typing, <kbd>⌃P</kbd> | <kbd>K</kbd> when not typing |
+| Move right | <kbd>L</kbd> when not typing | <kbd>L</kbd> when not typing |
+| Move to the start | <kbd>G G</kbd> when not typing | <kbd>G G</kbd> when not typing |
+| Move to the end | <kbd>⇧G</kbd> when not typing | <kbd>Shift+G</kbd> when not typing |
+| Move up a page | <kbd>⌃U</kbd> when not typing, <kbd>⌃B</kbd> when not typing | — |
+| Move down a page | <kbd>⌃D</kbd> when not typing, <kbd>⌃F</kbd> when not typing | — |
+| Cancel | <kbd>⌃&#91;</kbd> | — |
+| Previous work computers | — | — |
+| Next work computers | — | — |
+| Focus on a project | <kbd>G P</kbd> when not typing, <kbd>⇧⌘P</kbd> | <kbd>G P</kbd> when not typing, <kbd>Ctrl+Shift+P</kbd> |
+| Show all projects | — | — |
+| Show the previous card | <kbd>⇧H</kbd> when not typing, <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Shift+H</kbd> when not typing, <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| Show the next card | <kbd>⇧L</kbd> when not typing, <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Shift+L</kbd> when not typing, <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| Show the next new card | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| Put card aside | <kbd>Q</kbd> when not typing, <kbd>⌃W C</kbd> when not typing, <kbd>⇧⌘M</kbd> | <kbd>Q</kbd> when not typing, <kbd>Ctrl+Shift+M</kbd> |
+| Put every card aside or bring them back | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| Press the note's Done or Got it | — | — |
+| Decline every choice on the card | — | — |
+| Maximize or restore card | <kbd>⌃W O</kbd> when not typing | — |
+| Find in this card | <kbd>⌘F</kbd> | <kbd>Ctrl+F</kbd> |
+| Find next match | <kbd>⌘G</kbd> | <kbd>Ctrl+G</kbd> |
+| Find previous match | <kbd>⇧⌘G</kbd> | <kbd>Ctrl+Shift+G</kbd> |
+| Go to the next revised area | <kbd>&#93; C</kbd> when not typing | <kbd>&#93; C</kbd> when not typing |
+| Go to the next question | <kbd>&#125;</kbd> when not typing, <kbd>⌘J</kbd> | <kbd>&#125;</kbd> when not typing, <kbd>Ctrl+J</kbd> |
+| Go to the previous question | <kbd>&#123;</kbd> when not typing, <kbd>⇧⌘J</kbd> | <kbd>&#123;</kbd> when not typing, <kbd>Ctrl+Shift+J</kbd> |
+| Go to the next unanswered question | — | — |
+| Point at a part of the card | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| Show or hide the card's thread | <kbd>Z A</kbd> when not typing, <kbd>⌘&#92;</kbd> | <kbd>Z A</kbd> when not typing, <kbd>Ctrl+&#92;</kbd> |
+| Go to the thread's new messages | — | — |
+| Play or pause the card's sound | — | — |
+| Show Info | — | — |
+| Show Cards | — | — |
+| Show Activity | — | — |
+| Show Crewmate | — | — |
+| Take or return browser control | — | — |
+| Go to the browser page | — | — |
+| Back to the card | — | — |
+| Move the task to another computer | — | — |
+| Close the task as done | — | — |
+| Show Browser | — | — |
+| Next tab | <kbd>G T</kbd> when not typing, <kbd>⌃⇥</kbd> | <kbd>G T</kbd> when not typing |
+| Previous tab | <kbd>G ⇧T</kbd> when not typing, <kbd>⌃⇧⇥</kbd> | <kbd>G Shift+T</kbd> when not typing |
+| Find a task | <kbd>&#47;</kbd> when not typing, <kbd>⇧⌘F</kbd> | <kbd>&#47;</kbd> when not typing, <kbd>Ctrl+Shift+F</kbd> |
+| Open task board | <kbd>G B</kbd> when not typing, <kbd>⌘B</kbd> | <kbd>G B</kbd> when not typing, <kbd>Ctrl+B</kbd> |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| Open Settings | <kbd>G S</kbd> when not typing, <kbd>⌘,</kbd> | <kbd>G S</kbd> when not typing, <kbd>Ctrl+,</kbd> |
+| Open Keyboard settings | <kbd>&#63;</kbd> when not typing | <kbd>&#63;</kbd> when not typing |
+| Arrange panels | — | — |
+| Show available update | — | — |
+| Update later | — | — |
+| Check for updates | — | — |
+| Update the first mate's computer | — | — |
+| Show what's new | — | — |
+| Open the first mate's reply | — | — |
+| Open Runbooks | — | — |
+| Open your runbooks folder | — | — |
+| Open Usage | — | — |
+| Open Automation | — | — |
+| Open Integrations | — | — |
+| Pause all automations | — | — |
+| Play or pause ambient music | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| Switch Usage units | — | — |
+| Recheck allowance | — | — |
+| Make everything larger | <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| Make everything smaller | <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+Minus</kbd> |
+| Return to the usual size | <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+0</kbd> |
+
+**In the main message and a card's reply**
+
+| Command | Mac | Linux |
+| --- | --- | --- |
+| Delete back to the start of the line | <kbd>⌃U</kbd> | — |
+| Delete to the end of the line | <kbd>⌃K</kbd> | — |
+| Delete the word before the cursor | <kbd>⌃W</kbd> | — |
+| Put back what was last deleted | <kbd>⌃Y</kbd> | — |
+
+**In the main message**
+
+| Command | Mac | Linux |
+| --- | --- | --- |
+| Bring back the last message sent | <kbd>↑</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+<TabItem label="Emacs">
+
+**Anywhere in the window**
+
+| Command | Mac | Linux |
+| --- | --- | --- |
+| Search commands | <kbd>⌥X</kbd>, <kbd>⌘K</kbd> | <kbd>Alt+X</kbd> |
+| Go to the main message | <kbd>⌃X M</kbd>, <kbd>⌘L</kbd> | <kbd>Ctrl+X M</kbd> when not typing, <kbd>Ctrl+L</kbd> |
+| Go to the card's reply | <kbd>⇧⌘L</kbd> | <kbd>Ctrl+Shift+L</kbd> |
+| Go to the card's body | — | — |
+| Go to the card's buttons | — | — |
+| Press the recommended choice | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| Press the second choice | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| Press the third choice | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| Press the fourth choice | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| Go to the next part of the window | <kbd>⌃X O</kbd>, <kbd>F6</kbd> | <kbd>Ctrl+X O</kbd> when not typing, <kbd>F6</kbd> |
+| Go to the previous part of the window | <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| Go to the part of the window on the left | — | — |
+| Go to the part of the window below | — | — |
+| Go to the part of the window above | — | — |
+| Go to the part of the window on the right | — | — |
+| Move left | <kbd>⌃B</kbd> | <kbd>Ctrl+B</kbd> |
+| Move down | <kbd>⌃N</kbd> | <kbd>Ctrl+N</kbd> |
+| Move up | <kbd>⌃P</kbd> | <kbd>Ctrl+P</kbd> |
+| Move right | <kbd>⌃F</kbd> | <kbd>Ctrl+F</kbd> |
+| Move to the start | <kbd>&#60;</kbd> when not typing | <kbd>&#60;</kbd> when not typing |
+| Move to the end | <kbd>&#62;</kbd> when not typing | <kbd>&#62;</kbd> when not typing |
+| Move up a page | <kbd>⌥V</kbd> | <kbd>Alt+V</kbd> |
+| Move down a page | <kbd>⌃V</kbd> | <kbd>Ctrl+V</kbd> when not typing |
+| Cancel | <kbd>⌃G</kbd> | <kbd>Ctrl+G</kbd> |
+| Previous work computers | — | — |
+| Next work computers | — | — |
+| Focus on a project | <kbd>⌃X P</kbd>, <kbd>⇧⌘P</kbd> | <kbd>Ctrl+X P</kbd> when not typing, <kbd>Ctrl+Shift+P</kbd> |
+| Show all projects | — | — |
+| Show the previous card | <kbd>⌃X ←</kbd>, <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Ctrl+X ←</kbd> when not typing, <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| Show the next card | <kbd>⌃X →</kbd>, <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Ctrl+X →</kbd> when not typing, <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| Show the next new card | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| Put card aside | <kbd>⌃X 0</kbd>, <kbd>⌃X K</kbd>, <kbd>⇧⌘M</kbd> | <kbd>Ctrl+X 0</kbd> when not typing, <kbd>Ctrl+X K</kbd> when not typing, <kbd>Ctrl+Shift+M</kbd> |
+| Put every card aside or bring them back | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| Press the note's Done or Got it | — | — |
+| Decline every choice on the card | — | — |
+| Maximize or restore card | <kbd>⌃X 1</kbd> | <kbd>Ctrl+X 1</kbd> when not typing |
+| Find in this card | <kbd>⌘F</kbd> | <kbd>Alt+S</kbd> |
+| Find next match | <kbd>⌘G</kbd> | <kbd>F3</kbd> |
+| Find previous match | <kbd>⇧⌘G</kbd> | <kbd>Shift+F3</kbd>, <kbd>Ctrl+Shift+G</kbd> |
+| Go to the next revised area | — | — |
+| Go to the next question | <kbd>⌃X ↓</kbd>, <kbd>⌘J</kbd> | <kbd>Ctrl+X ↓</kbd> when not typing, <kbd>Ctrl+J</kbd> |
+| Go to the previous question | <kbd>⌃X ↑</kbd>, <kbd>⇧⌘J</kbd> | <kbd>Ctrl+X ↑</kbd> when not typing, <kbd>Ctrl+Shift+J</kbd> |
+| Go to the next unanswered question | — | — |
+| Point at a part of the card | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| Show or hide the card's thread | <kbd>⌘&#92;</kbd> | <kbd>Ctrl+&#92;</kbd> |
+| Go to the thread's new messages | — | — |
+| Play or pause the card's sound | — | — |
+| Show Info | — | — |
+| Show Cards | — | — |
+| Show Activity | — | — |
+| Show Crewmate | — | — |
+| Take or return browser control | — | — |
+| Go to the browser page | — | — |
+| Back to the card | — | — |
+| Move the task to another computer | — | — |
+| Close the task as done | — | — |
+| Show Browser | — | — |
+| Next tab | <kbd>⌃⇥</kbd> | <kbd>Ctrl+Tab</kbd> |
+| Previous tab | <kbd>⌃⇧⇥</kbd> | <kbd>Ctrl+Shift+Tab</kbd> |
+| Find a task | <kbd>⌃X B</kbd>, <kbd>⌃S</kbd>, <kbd>⇧⌘F</kbd> | <kbd>Ctrl+X B</kbd> when not typing, <kbd>Ctrl+S</kbd>, <kbd>Ctrl+Shift+F</kbd> |
+| Open task board | <kbd>⌃X ⌃B</kbd>, <kbd>⌘B</kbd> | <kbd>Ctrl+X Ctrl+B</kbd> when not typing |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| Open Settings | <kbd>⌘,</kbd> | <kbd>Ctrl+,</kbd> |
+| Open Keyboard settings | <kbd>⌃H B</kbd> when not typing | <kbd>Ctrl+H B</kbd> when not typing |
+| Arrange panels | — | — |
+| Show available update | — | — |
+| Update later | — | — |
+| Check for updates | — | — |
+| Update the first mate's computer | — | — |
+| Show what's new | <kbd>⌃H N</kbd> when not typing | <kbd>Ctrl+H N</kbd> when not typing |
+| Open the first mate's reply | — | — |
+| Open Runbooks | — | — |
+| Open your runbooks folder | — | — |
+| Open Usage | — | — |
+| Open Automation | — | — |
+| Open Integrations | — | — |
+| Pause all automations | — | — |
+| Play or pause ambient music | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| Switch Usage units | — | — |
+| Recheck allowance | — | — |
+| Make everything larger | <kbd>⌃X ⌃+</kbd>, <kbd>⌃X ⌃=</kbd>, <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+X Ctrl+Plus</kbd> when not typing, <kbd>Ctrl+X Ctrl+=</kbd> when not typing, <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| Make everything smaller | <kbd>⌃X ⌃-</kbd>, <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+X Ctrl+Minus</kbd> when not typing, <kbd>Ctrl+Minus</kbd> |
+| Return to the usual size | <kbd>⌃X ⌃0</kbd>, <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+X Ctrl+0</kbd> when not typing, <kbd>Ctrl+0</kbd> |
+
+**In the main message and a card's reply**
+
+| Command | Mac | Linux |
+| --- | --- | --- |
+| Delete back to the start of the line | <kbd>⌃U</kbd> | — |
+| Delete to the end of the line | <kbd>⌃K</kbd> | <kbd>Ctrl+K</kbd> |
+| Delete the word before the cursor | <kbd>⌃W</kbd> | — |
+| Put back what was last deleted | <kbd>⌃Y</kbd> | <kbd>Alt+Y</kbd> |
+
+**In the main message**
+
+| Command | Mac | Linux |
+| --- | --- | --- |
+| Bring back the last message sent | <kbd>↑</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+<TabItem label="VS Code">
+
+**Anywhere in the window**
+
+| Command | Mac | Linux |
+| --- | --- | --- |
+| Search commands | <kbd>⇧⌘P</kbd>, <kbd>F1</kbd> | <kbd>Ctrl+Shift+P</kbd>, <kbd>F1</kbd> |
+| Go to the main message | <kbd>⌃⌘I</kbd>, <kbd>⌘L</kbd> | <kbd>Ctrl+L</kbd> |
+| Go to the card's reply | <kbd>⇧⌘L</kbd> | <kbd>Ctrl+Shift+L</kbd> |
+| Go to the card's body | — | — |
+| Go to the card's buttons | — | — |
+| Press the recommended choice | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| Press the second choice | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| Press the third choice | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| Press the fourth choice | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| Go to the next part of the window | <kbd>F6</kbd> | <kbd>F6</kbd> |
+| Go to the previous part of the window | <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| Go to the part of the window on the left | <kbd>⌘K ⌘←</kbd> | <kbd>Ctrl+K Ctrl+←</kbd> |
+| Go to the part of the window below | <kbd>⌘K ⌘↓</kbd> | <kbd>Ctrl+K Ctrl+↓</kbd> |
+| Go to the part of the window above | <kbd>⌘K ⌘↑</kbd> | <kbd>Ctrl+K Ctrl+↑</kbd> |
+| Go to the part of the window on the right | <kbd>⌘K ⌘→</kbd> | <kbd>Ctrl+K Ctrl+→</kbd> |
+| Move left | — | — |
+| Move down | — | — |
+| Move up | — | — |
+| Move right | — | — |
+| Move to the start | — | — |
+| Move to the end | — | — |
+| Move up a page | — | — |
+| Move down a page | — | — |
+| Cancel | — | — |
+| Previous work computers | — | — |
+| Next work computers | — | — |
+| Focus on a project | <kbd>⌃R</kbd> | — |
+| Show all projects | — | — |
+| Show the previous card | <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| Show the next card | <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| Show the next new card | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| Put card aside | <kbd>⌘K W</kbd>, <kbd>⇧⌘M</kbd> | <kbd>Ctrl+K W</kbd>, <kbd>Ctrl+Shift+M</kbd> |
+| Put every card aside or bring them back | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| Press the note's Done or Got it | — | — |
+| Decline every choice on the card | — | — |
+| Maximize or restore card | <kbd>⌘K Z</kbd> | <kbd>Ctrl+K Z</kbd> |
+| Find in this card | <kbd>⌘F</kbd> | <kbd>Ctrl+F</kbd> |
+| Find next match | <kbd>⌘G</kbd> | <kbd>Ctrl+G</kbd> |
+| Find previous match | <kbd>⇧⌘G</kbd> | <kbd>Ctrl+Shift+G</kbd> |
+| Go to the next revised area | <kbd>F7</kbd> | <kbd>F7</kbd> |
+| Go to the next question | <kbd>F8</kbd>, <kbd>⌘J</kbd> | <kbd>F8</kbd>, <kbd>Ctrl+J</kbd> |
+| Go to the previous question | <kbd>⇧F8</kbd>, <kbd>⇧⌘J</kbd> | <kbd>Shift+F8</kbd>, <kbd>Ctrl+Shift+J</kbd> |
+| Go to the next unanswered question | — | — |
+| Point at a part of the card | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| Show or hide the card's thread | <kbd>⌘&#92;</kbd> | <kbd>Ctrl+&#92;</kbd> |
+| Go to the thread's new messages | — | — |
+| Play or pause the card's sound | — | — |
+| Show Info | — | — |
+| Show Cards | — | — |
+| Show Activity | — | — |
+| Show Crewmate | <kbd>⌃&#96;</kbd> | — |
+| Take or return browser control | — | — |
+| Go to the browser page | — | — |
+| Back to the card | — | — |
+| Move the task to another computer | — | — |
+| Close the task as done | — | — |
+| Show Browser | — | — |
+| Next tab | <kbd>⌃⇥</kbd> | — |
+| Previous tab | <kbd>⌃⇧⇥</kbd> | — |
+| Find a task | <kbd>⌘P</kbd>, <kbd>⇧⌘F</kbd> | <kbd>Ctrl+P</kbd>, <kbd>Ctrl+Shift+F</kbd> |
+| Open task board | <kbd>⌘B</kbd> | <kbd>Ctrl+B</kbd> |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| Open Settings | <kbd>⌘,</kbd> | <kbd>Ctrl+,</kbd> |
+| Open Keyboard settings | <kbd>⌘K ⌘S</kbd> | <kbd>Ctrl+K Ctrl+S</kbd> |
+| Arrange panels | — | — |
+| Show available update | — | — |
+| Update later | — | — |
+| Check for updates | — | — |
+| Update the first mate's computer | — | — |
+| Show what's new | — | — |
+| Open the first mate's reply | — | — |
+| Open Runbooks | — | — |
+| Open your runbooks folder | — | — |
+| Open Usage | — | — |
+| Open Automation | — | — |
+| Open Integrations | — | — |
+| Pause all automations | — | — |
+| Play or pause ambient music | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| Switch Usage units | — | — |
+| Recheck allowance | — | — |
+| Make everything larger | <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| Make everything smaller | <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+Minus</kbd> |
+| Return to the usual size | <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+0</kbd> |
+
+**In the main message and a card's reply**
+
+| Command | Mac | Linux |
+| --- | --- | --- |
+| Delete back to the start of the line | <kbd>⌃U</kbd> | — |
+| Delete to the end of the line | <kbd>⌃K</kbd> | — |
+| Delete the word before the cursor | <kbd>⌃W</kbd> | — |
+| Put back what was last deleted | <kbd>⌃Y</kbd> | — |
+
+**In the main message**
+
+| Command | Mac | Linux |
+| --- | --- | --- |
+| Bring back the last message sent | <kbd>↑</kbd>, <kbd>⌃P</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+<TabItem label="Tmux">
+
+**Anywhere in the window**
+
+| Command | Mac | Linux |
+| --- | --- | --- |
+| Search commands | <kbd>&#58;</kbd> when not typing, <kbd>⌃B &#58;</kbd>, <kbd>⌘K</kbd> | <kbd>&#58;</kbd> when not typing, <kbd>Ctrl+B &#58;</kbd>, <kbd>Ctrl+K</kbd> |
+| Go to the main message | <kbd>I</kbd> when not typing, <kbd>⌘L</kbd> | <kbd>I</kbd> when not typing, <kbd>Ctrl+L</kbd> |
+| Go to the card's reply | <kbd>R</kbd> when not typing, <kbd>⇧⌘L</kbd> | <kbd>R</kbd> when not typing, <kbd>Ctrl+Shift+L</kbd> |
+| Go to the card's body | <kbd>G C</kbd> when not typing, <kbd>⌃B &#91;</kbd> | <kbd>G C</kbd> when not typing, <kbd>Ctrl+B &#91;</kbd> |
+| Go to the card's buttons | <kbd>G A</kbd> when not typing | <kbd>G A</kbd> when not typing |
+| Press the recommended choice | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| Press the second choice | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| Press the third choice | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| Press the fourth choice | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| Go to the next part of the window | <kbd>⌃W W</kbd> when not typing, <kbd>⌃B O</kbd>, <kbd>F6</kbd> | <kbd>Ctrl+B O</kbd>, <kbd>F6</kbd> |
+| Go to the previous part of the window | <kbd>⌃W P</kbd> when not typing, <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| Go to the part of the window on the left | <kbd>⌃W H</kbd> when not typing, <kbd>⌃H</kbd> when not typing, <kbd>⌃B ←</kbd> | <kbd>Ctrl+B ←</kbd> |
+| Go to the part of the window below | <kbd>⌃W J</kbd> when not typing, <kbd>⌃J</kbd> when not typing, <kbd>⌃B ↓</kbd> | <kbd>Ctrl+B ↓</kbd> |
+| Go to the part of the window above | <kbd>⌃W K</kbd> when not typing, <kbd>⌃K</kbd> when not typing, <kbd>⌃B ↑</kbd> | <kbd>Ctrl+B ↑</kbd> |
+| Go to the part of the window on the right | <kbd>⌃W L</kbd> when not typing, <kbd>⌃L</kbd> when not typing, <kbd>⌃B →</kbd> | <kbd>Ctrl+B →</kbd> |
+| Move left | <kbd>H</kbd> when not typing | <kbd>H</kbd> when not typing |
+| Move down | <kbd>J</kbd> when not typing, <kbd>⌃N</kbd> | <kbd>J</kbd> when not typing |
+| Move up | <kbd>K</kbd> when not typing, <kbd>⌃P</kbd> | <kbd>K</kbd> when not typing |
+| Move right | <kbd>L</kbd> when not typing | <kbd>L</kbd> when not typing |
+| Move to the start | <kbd>G G</kbd> when not typing | <kbd>G G</kbd> when not typing |
+| Move to the end | <kbd>⇧G</kbd> when not typing | <kbd>Shift+G</kbd> when not typing |
+| Move up a page | <kbd>⌃U</kbd> when not typing | — |
+| Move down a page | <kbd>⌃D</kbd> when not typing, <kbd>⌃F</kbd> when not typing | — |
+| Cancel | <kbd>⌃&#91;</kbd> | — |
+| Previous work computers | — | — |
+| Next work computers | — | — |
+| Focus on a project | <kbd>G P</kbd> when not typing, <kbd>⌃B S</kbd>, <kbd>⇧⌘P</kbd> | <kbd>G P</kbd> when not typing, <kbd>Ctrl+B S</kbd>, <kbd>Ctrl+Shift+P</kbd> |
+| Show all projects | — | — |
+| Show the previous card | <kbd>⇧H</kbd> when not typing, <kbd>⌃B P</kbd>, <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Shift+H</kbd> when not typing, <kbd>Ctrl+B P</kbd>, <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| Show the next card | <kbd>⇧L</kbd> when not typing, <kbd>⌃B N</kbd>, <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Shift+L</kbd> when not typing, <kbd>Ctrl+B N</kbd>, <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| Show the next new card | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| Put card aside | <kbd>Q</kbd> when not typing, <kbd>⌃W C</kbd> when not typing, <kbd>⌃B D</kbd>, <kbd>⇧⌘M</kbd> | <kbd>Q</kbd> when not typing, <kbd>Ctrl+B D</kbd>, <kbd>Ctrl+Shift+M</kbd> |
+| Put every card aside or bring them back | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| Press the note's Done or Got it | — | — |
+| Decline every choice on the card | — | — |
+| Maximize or restore card | <kbd>⌃W O</kbd> when not typing, <kbd>⌃B Z</kbd> | <kbd>Ctrl+B Z</kbd> |
+| Find in this card | <kbd>⌘F</kbd> | <kbd>Ctrl+F</kbd> |
+| Find next match | <kbd>⌘G</kbd> | <kbd>Ctrl+G</kbd> |
+| Find previous match | <kbd>⇧⌘G</kbd> | <kbd>Ctrl+Shift+G</kbd> |
+| Go to the next revised area | <kbd>&#93; C</kbd> when not typing | <kbd>&#93; C</kbd> when not typing |
+| Go to the next question | <kbd>&#125;</kbd> when not typing, <kbd>⌘J</kbd> | <kbd>&#125;</kbd> when not typing, <kbd>Ctrl+J</kbd> |
+| Go to the previous question | <kbd>&#123;</kbd> when not typing, <kbd>⇧⌘J</kbd> | <kbd>&#123;</kbd> when not typing, <kbd>Ctrl+Shift+J</kbd> |
+| Go to the next unanswered question | — | — |
+| Point at a part of the card | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| Show or hide the card's thread | <kbd>Z A</kbd> when not typing, <kbd>⌘&#92;</kbd> | <kbd>Z A</kbd> when not typing, <kbd>Ctrl+&#92;</kbd> |
+| Go to the thread's new messages | — | — |
+| Play or pause the card's sound | — | — |
+| Show Info | — | — |
+| Show Cards | — | — |
+| Show Activity | — | — |
+| Show Crewmate | — | — |
+| Take or return browser control | — | — |
+| Go to the browser page | — | — |
+| Back to the card | — | — |
+| Move the task to another computer | — | — |
+| Close the task as done | — | — |
+| Show Browser | — | — |
+| Next tab | <kbd>G T</kbd> when not typing, <kbd>⌃⇥</kbd> | <kbd>G T</kbd> when not typing |
+| Previous tab | <kbd>G ⇧T</kbd> when not typing, <kbd>⌃⇧⇥</kbd> | <kbd>G Shift+T</kbd> when not typing |
+| Find a task | <kbd>&#47;</kbd> when not typing, <kbd>⇧⌘F</kbd>, <kbd>⌃B W</kbd>, <kbd>⌃B F</kbd> | <kbd>&#47;</kbd> when not typing, <kbd>Ctrl+Shift+F</kbd>, <kbd>Ctrl+B W</kbd>, <kbd>Ctrl+B F</kbd> |
+| Open task board | <kbd>G B</kbd> when not typing, <kbd>⌘B</kbd> | <kbd>G B</kbd> when not typing |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| Open Settings | <kbd>G S</kbd> when not typing, <kbd>⌘,</kbd> | <kbd>G S</kbd> when not typing, <kbd>Ctrl+,</kbd> |
+| Open Keyboard settings | <kbd>&#63;</kbd> when not typing, <kbd>⌃B &#63;</kbd> | <kbd>&#63;</kbd> when not typing, <kbd>Ctrl+B &#63;</kbd> |
+| Arrange panels | — | — |
+| Show available update | — | — |
+| Update later | — | — |
+| Check for updates | — | — |
+| Update the first mate's computer | — | — |
+| Show what's new | — | — |
+| Open the first mate's reply | — | — |
+| Open Runbooks | — | — |
+| Open your runbooks folder | — | — |
+| Open Usage | — | — |
+| Open Automation | — | — |
+| Open Integrations | — | — |
+| Pause all automations | — | — |
+| Play or pause ambient music | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| Switch Usage units | — | — |
+| Recheck allowance | — | — |
+| Make everything larger | <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| Make everything smaller | <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+Minus</kbd> |
+| Return to the usual size | <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+0</kbd> |
+
+**In the main message and a card's reply**
+
+| Command | Mac | Linux |
+| --- | --- | --- |
+| Delete back to the start of the line | <kbd>⌃U</kbd> | — |
+| Delete to the end of the line | <kbd>⌃K</kbd> | — |
+| Delete the word before the cursor | <kbd>⌃W</kbd> | — |
+| Put back what was last deleted | <kbd>⌃Y</kbd> | — |
+
+**In the main message**
+
+| Command | Mac | Linux |
+| --- | --- | --- |
+| Bring back the last message sent | <kbd>↑</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+<TabItem label="Legacy">
+
+**Anywhere in the window**
+
+| Command | Mac | Linux |
+| --- | --- | --- |
+| Search commands | <kbd>⌘K</kbd> | <kbd>Ctrl+K</kbd> |
+| Go to the main message | <kbd>⌘L</kbd> | <kbd>Ctrl+L</kbd> |
+| Go to the card's reply | <kbd>⇧⌘L</kbd> | <kbd>Ctrl+Shift+L</kbd> |
+| Go to the card's body | — | — |
+| Go to the card's buttons | — | — |
+| Press the recommended choice | <kbd>⌘1</kbd> | <kbd>Ctrl+1</kbd> |
+| Press the second choice | <kbd>⌘2</kbd> | <kbd>Ctrl+2</kbd> |
+| Press the third choice | <kbd>⌘3</kbd> | <kbd>Ctrl+3</kbd> |
+| Press the fourth choice | <kbd>⌘4</kbd> | <kbd>Ctrl+4</kbd> |
+| Go to the next part of the window | <kbd>F6</kbd> | <kbd>F6</kbd> |
+| Go to the previous part of the window | <kbd>⇧F6</kbd> | <kbd>Shift+F6</kbd> |
+| Go to the part of the window on the left | — | — |
+| Go to the part of the window below | — | — |
+| Go to the part of the window above | — | — |
+| Go to the part of the window on the right | — | — |
+| Move left | — | — |
+| Move down | — | — |
+| Move up | — | — |
+| Move right | — | — |
+| Move to the start | — | — |
+| Move to the end | — | — |
+| Move up a page | — | — |
+| Move down a page | — | — |
+| Cancel | — | — |
+| Previous work computers | — | — |
+| Next work computers | — | — |
+| Focus on a project | <kbd>⇧⌘P</kbd> | <kbd>Ctrl+Shift+P</kbd> |
+| Show all projects | — | — |
+| Show the previous card | <kbd>⇧⌘&#91;</kbd>, <kbd>⇧⌘&#123;</kbd> | <kbd>Ctrl+Shift+&#91;</kbd>, <kbd>Ctrl+Shift+&#123;</kbd> |
+| Show the next card | <kbd>⇧⌘&#93;</kbd>, <kbd>⇧⌘&#125;</kbd> | <kbd>Ctrl+Shift+&#93;</kbd>, <kbd>Ctrl+Shift+&#125;</kbd> |
+| Show the next new card | <kbd>⌥⇧⌘&#93;</kbd>, <kbd>⌥⇧⌘&#125;</kbd> | <kbd>Ctrl+Alt+Shift+&#93;</kbd>, <kbd>Ctrl+Alt+Shift+&#125;</kbd> |
+| Put card aside | <kbd>⇧⌘M</kbd> | <kbd>Ctrl+Shift+M</kbd> |
+| Put every card aside or bring them back | <kbd>⌥⇧⌘M</kbd> | <kbd>Ctrl+Alt+Shift+M</kbd> |
+| Press the note's Done or Got it | — | — |
+| Decline every choice on the card | — | — |
+| Maximize or restore card | — | — |
+| Find in this card | <kbd>⌘F</kbd> | <kbd>Ctrl+F</kbd> |
+| Find next match | <kbd>⌘G</kbd> | <kbd>Ctrl+G</kbd> |
+| Find previous match | <kbd>⇧⌘G</kbd> | <kbd>Ctrl+Shift+G</kbd> |
+| Go to the next revised area | — | — |
+| Go to the next question | <kbd>⌘J</kbd> | <kbd>Ctrl+J</kbd> |
+| Go to the previous question | <kbd>⇧⌘J</kbd> | <kbd>Ctrl+Shift+J</kbd> |
+| Go to the next unanswered question | — | — |
+| Point at a part of the card | <kbd>⇧⌘A</kbd> | <kbd>Ctrl+Shift+A</kbd> |
+| Show or hide the card's thread | <kbd>⌘&#92;</kbd> | <kbd>Ctrl+&#92;</kbd> |
+| Go to the thread's new messages | — | — |
+| Play or pause the card's sound | — | — |
+| Show Info | — | — |
+| Show Cards | — | — |
+| Show Activity | — | — |
+| Show Crewmate | — | — |
+| Take or return browser control | — | — |
+| Go to the browser page | — | — |
+| Back to the card | — | — |
+| Move the task to another computer | — | — |
+| Close the task as done | — | — |
+| Show Browser | — | — |
+| Next tab | — | — |
+| Previous tab | — | — |
+| Find a task | <kbd>⇧⌘F</kbd> | <kbd>Ctrl+Shift+F</kbd> |
+| Open task board | <kbd>⌘B</kbd> | <kbd>Ctrl+B</kbd> |
+| Find on task board | — | — |
+| Show the backlog | — | — |
+| Show done tasks | — | — |
+| Show dropped tasks | — | — |
+| Collapse all parts | — | — |
+| Expand all parts | — | — |
+| Move the selected task | — | — |
+| Open Knowledge | — | — |
+| Open Settings | <kbd>⌘,</kbd> | <kbd>Ctrl+,</kbd> |
+| Open Keyboard settings | — | — |
+| Arrange panels | — | — |
+| Show available update | — | — |
+| Update later | — | — |
+| Check for updates | — | — |
+| Update the first mate's computer | — | — |
+| Show what's new | — | — |
+| Open the first mate's reply | — | — |
+| Open Runbooks | — | — |
+| Open your runbooks folder | — | — |
+| Open Usage | — | — |
+| Open Automation | — | — |
+| Open Integrations | — | — |
+| Pause all automations | — | — |
+| Play or pause ambient music | <kbd>⌥⌘P</kbd> | <kbd>Ctrl+Alt+P</kbd> |
+| Switch Usage units | — | — |
+| Recheck allowance | — | — |
+| Make everything larger | <kbd>⌘+</kbd>, <kbd>⌘=</kbd>, <kbd>⌃+</kbd>, <kbd>⌃=</kbd> | <kbd>Ctrl+Plus</kbd>, <kbd>Ctrl+=</kbd> |
+| Make everything smaller | <kbd>⌘-</kbd>, <kbd>⌃-</kbd> | <kbd>Ctrl+Minus</kbd> |
+| Return to the usual size | <kbd>⌘0</kbd>, <kbd>⌃0</kbd> | <kbd>Ctrl+0</kbd> |
+
+**In the main message and a card's reply**
+
+| Command | Mac | Linux |
+| --- | --- | --- |
+| Delete back to the start of the line | <kbd>⌃U</kbd> | — |
+| Delete to the end of the line | <kbd>⌃K</kbd> | — |
+| Delete the word before the cursor | <kbd>⌃W</kbd> | — |
+| Put back what was last deleted | <kbd>⌃Y</kbd> | — |
+
+**In the main message**
+
+| Command | Mac | Linux |
+| --- | --- | --- |
+| Bring back the last message sent | <kbd>↑</kbd>, <kbd>⌃P</kbd> | <kbd>↑</kbd> |
+
+</TabItem>
+</Tabs>

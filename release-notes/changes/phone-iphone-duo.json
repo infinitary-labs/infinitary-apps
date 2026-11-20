@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "phone-iphone-duo",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Infinitary uses the room of an open iPhone Duo",
+      "body": "Open like a book, iPhone Duo now shows Infinitary as an iPad on its side does: Tasks, Activity and Panels fill the page left of the fold, and your cards and the message box the page right of it. Closed, it keeps the iPhone layout. Settings no longer turns into a Done button after you turn, fold or open the phone, and the first mate moves at the speed of the display you are looking at.",
+      "picture": {
+        "dark": "phone-iphone-duo-dark.webp",
+        "light": "phone-iphone-duo-light.webp",
+        "alt": "Infinitary on an open iPhone Duo: the Tasks list fills the left page up to the fold, and a decision card with its answers and the message box fill the right page."
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

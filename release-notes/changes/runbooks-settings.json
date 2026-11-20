@@ -1,0 +1,23 @@
+{
+  "entries": [
+    {
+      "id": "runbooks-settings",
+      "kind": "improvement",
+      "title": "A home for your runbooks",
+      "body": "Runbooks now has its own Settings tab, with common guidance first and your own runbooks grouped separately. View a built-in as a read-only temporary copy, or open your runbooks folder. Ask the first mate to make lasting guidance or a skill for every crewmate, or customize a built-in for you.",
+      "area": "settings",
+      "picture": {
+        "dark": "runbooks-settings-dark.webp",
+        "light": "runbooks-settings-light.webp",
+        "alt": "The Runbooks tab follows Intelligence and lists built-ins from Common workflows to Lessons, each with View and a switch"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "runbook-markdown-fallback",
+      "reason": "The Markdown sections and generated code fallback preserve the served text byte for byte; the visible settings and authoring result are covered by runbooks-settings."
+    }
+  ]
+}

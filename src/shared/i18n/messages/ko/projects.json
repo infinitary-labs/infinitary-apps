@@ -1,0 +1,41 @@
+{
+  "projectsHost": "프로젝트 호스트",
+  "projectsMoveAfterNew": "별도 프로젝트({key})",
+  "projectsMoveAfterRevive": "다시 별도 프로젝트({key})",
+  "projectsMoveApply": "이동 적용",
+  "projectsMoveAsks": {
+    "plural": "count",
+    "other": "일등항해사가 이 저장소를 옮기자고 해요. \"이동 적용\"을 클릭하기 전에는 아무것도 옮겨지지 않아요."
+  },
+  "projectsMoveAutomations": {
+    "plural": "count",
+    "other": "목록에서 빠지는 프로젝트에 관한 자동화 {count}개는 이후 {project}에 관한 것이 돼요."
+  },
+  "projectsMoveColumnAfter": "클릭 후",
+  "projectsMoveColumnNow": "현재 프로젝트",
+  "projectsMoveColumnRepository": "저장소",
+  "projectsMoveDirections": "{project}의 어느 저장소에 저장된 지침이든 이후 이 저장소들을 포함한 모든 저장소에 적용돼요.",
+  "projectsMoveFinishedTasks": {
+    "plural": "count",
+    "other": "끝난 작업 {count}개도 키를 그대로 유지한 채 함께 옮겨져요."
+  },
+  "projectsMoveKeeps": "각 저장소는 이름, 폴더, 설정을 그대로 유지해요.",
+  "projectsMoveLeaves": {
+    "plural": "count",
+    "other": "다음 프로젝트 {count}개가 프로젝트 목록에서 빠지고, 그 작업 키는 다시 누구도 쓸 수 없어요:"
+  },
+  "projectsMoveListMore": {
+    "plural": "count",
+    "other": "{first} 외 {count}개"
+  },
+  "projectsMoveListTwo": "{first} 및 {second}",
+  "projectsMoveNoOpenTask": "옮겨지는 열린 작업은 없어요.",
+  "projectsMoveNoTask": "옮겨지는 작업은 없어요.",
+  "projectsMoveNotNow": "나중에",
+  "projectsMoveOpenTasks": {
+    "plural": "count",
+    "other": "열린 작업 {count}개가 {project}에 합류하고, 키는 그대로예요:"
+  },
+  "projectsMoveTitleInto": "{repositories}을(를) {project}(으)로 옮길까요?",
+  "projectsMoveTitleOwn": "{repositories}을(를) 별도 프로젝트로 옮길까요?"
+}

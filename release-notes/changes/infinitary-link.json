@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "infinitary-link",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Make a link for another computer or a phone from a command",
+      "body": "On a computer where Infinitary runs with no window, you can now print a one-use link another computer joins with, or a code your phone scans. The link comes from the Infinitary already running there and works once, for ten minutes, as one made in Settings.",
+      "noPicture": "The link and the phone's code are printed by a command in a terminal, with no change to the app's windows.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

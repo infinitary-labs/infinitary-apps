@@ -1,0 +1,7 @@
+{
+  "run": "39381269010",
+  "head": "f1cc3333a0c928a33ab143fee74f54946445a66e",
+  "base": "caabdef699b07f398fdf1fd661890a02212ec436",
+  "module": "src/shared/tasks.ts",
+  "sourceDiff": "diff --git a/src/shared/tasks.ts b/src/shared/tasks.ts\nindex 9e2dd698..e83f7bbc 100644\n--- a/src/shared/tasks.ts\n+++ b/src/shared/tasks.ts\n@@ -111,0 +112,17 @@ export type TaskDeliveryMode = z.infer<typeof taskDeliveryModeSchema>;\n+/**\n+ * The newest watched workflow run a task started outside a pull request\n+ * (INF-594), as the app last read it: its state, and when the host says it\n+ * started and finished. It outlives the run's watch, so a finished run\n+ * still says how long it took.\n+ */\n+export const runChecksSchema = z.object({\n+  runId: z.number(),\n+  name: z.string(),\n+  state: z.enum([\"running\", \"passed\", \"failed\", \"cancelled\"]),\n+  startedAt: z.number().optional(),\n+  finishedAt: z.number().optional(),\n+  /** When the app read it. */\n+  at: z.number(),\n+});\n+export type RunChecks = z.infer<typeof runChecksSchema>;\n+\n@@ -133,0 +151,2 @@ export const taskDeliveryViewSchema = z.object({\n+  /** A hand-started run's checks; the checks cell shows them while the task has no change. */\n+  runChecks: runChecksSchema.optional(),\n"
+}

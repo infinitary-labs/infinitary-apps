@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "direction-lifecycle",
+      "kind": "improvement",
+      "title": "Your first mate checks whether standing directions still apply",
+      "body": "When new facts show that a standing direction has expired or repeats a built-in rule, your first mate offers to retire it. A direction whose condition has not arrived stays saved instead of becoming work that starts and is immediately dropped.",
+      "area": "firstmate",
+      "noPicture": "This changes the first mate's judgment on arriving facts, not a fixed screen or layout.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

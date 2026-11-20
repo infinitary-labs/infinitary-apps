@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "joined-mac-work-reason",
+      "kind": "fix",
+      "area": "devices",
+      "title": "A computer you join sets its work up again by itself, and says why when it cannot",
+      "body": "A computer that joins your first mate with its window now checks its background work each time it opens and connects, and starts it again when it stopped. When it still cannot, that computer's window and its row in Settings → Devices say why, such as the background being turned off in Login Items, with Try again on the window and Fix it on the row.",
+      "picture": {
+        "dark": "joined-mac-work-reason-dark.webp",
+        "light": "joined-mac-work-reason-light.webp",
+        "alt": "A computer's row in Settings → Devices saying its work cannot start because Infinitary there is not allowed to run in the background, with a Fix it button beside Remove"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

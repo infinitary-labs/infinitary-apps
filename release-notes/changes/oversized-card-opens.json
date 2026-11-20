@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "oversized-card-opens",
+      "kind": "fix",
+      "title": "A very large card opens with its words",
+      "body": "A card too large to run its drawings now opens with its words, tables and pictures, under a line saying its drawings are off, instead of saying it could not be opened. A card with a long title opens too.",
+      "area": "cards",
+      "picture": {
+        "dark": "oversized-card-opens-dark.webp",
+        "light": "oversized-card-opens-light.webp",
+        "alt": "A large card showing a line that its drawings are off, above its Why, What changed and Before sections."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

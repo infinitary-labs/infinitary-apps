@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "infinitary-command-old-name-warning",
+      "kind": "feature",
+      "title": "A card tells you when a script still uses the old command name",
+      "body": "When a script runs infinitary-inbox-axi, the old name of infinitary-axi, Infinitary shows a card saying when and from which folder it ran. The next version of Infinitary will remove the old name, so the card asks you to change the script to infinitary-axi. The old name still works for now, and the card shows once for each folder.",
+      "area": "settings",
+      "picture": {
+        "dark": "infinitary-command-old-name-warning-dark.webp",
+        "light": "infinitary-command-old-name-warning-light.webp",
+        "alt": "A card saying a script ran infinitary-inbox-axi from a folder and should use infinitary-axi"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

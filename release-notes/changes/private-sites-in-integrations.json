@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "private-sites-in-integrations",
+      "kind": "improvement",
+      "area": "settings",
+      "title": "Private sites moved to Integrations, in one box",
+      "body": "The private sites a crewmate's browser may open now live in Settings → Integrations, beside the other things your crew can reach, instead of in General. One box holds the list, each site's Remove and a + Site button that opens the field right where you add it. A suffix such as .corp.example.com says that it covers every name under it, and Allow on your first mate's card now opens Integrations with the site listed.",
+      "picture": {
+        "dark": "private-sites-in-integrations-dark.webp",
+        "light": "private-sites-in-integrations-light.webp",
+        "alt": "Settings, Integrations, the Private sites box listing wiki.corp.example and .corp.example.com and every name under it, each with Remove, above a + Site button"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

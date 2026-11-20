@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "phone-smoother-card-swipe",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Swiping between cards on an iPhone or iPad is smoother",
+      "body": "On your iPhone and iPad, the cards beside the one you are reading now load ahead of time, so the card a swipe brings in arrives whole and its words no longer shift after it settles. When you let go, the row carries on from your finger's speed and eases into place, instead of pausing and then jumping. The card you drag leans as before, and the one coming in leans a little less.",
+      "noPicture": "The change is the iPhone and iPad app's motion and loading, which a still picture cannot show.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

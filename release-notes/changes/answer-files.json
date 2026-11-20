@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "answer-files",
+      "kind": "improvement",
+      "title": "Crewmates read long answers, such as a long list of checks, from a file in parts",
+      "body": "When something a crewmate looks up comes back longer than its model takes in at once, such as a long list of checks, pull requests or releases from GitHub or GitLab, Infinitary now keeps the whole answer in a file in the task's own folder and tells the crewmate where it is. The crewmate reads the parts it needs from there. Before, a Claude crewmate was shown only a short preview of such an answer, or had a very long one refused, and other crewmates were handed all of it at once.",
+      "area": "crewmates",
+      "noPicture": "The change is in what a crewmate's model is handed after a long lookup; no screen looks different.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

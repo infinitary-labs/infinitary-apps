@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "ssh-mac-left-for-another-firstmate",
+      "reason": "A Mac added by its address that left this Firstmate for another one is said, in Devices and the feed, to run work for another Firstmate now and to be removed here, never to reach a different Mac or to catch up when it is back, and its Remove asks only to remove it now; part of the development-only multi-machine feature, which remains unavailable in released apps."
+    }
+  ]
+}

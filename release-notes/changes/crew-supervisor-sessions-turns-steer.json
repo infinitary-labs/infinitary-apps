@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crew-supervisor-sessions-turns-steer",
+      "reason": "Internal: the crew supervisor's crewmate sessions, turn lifecycle and steering move into owners of their own that share one typed core, with callers reaching them directly and guardrail tests renamed beside them; nothing a person sees changes."
+    }
+  ]
+}

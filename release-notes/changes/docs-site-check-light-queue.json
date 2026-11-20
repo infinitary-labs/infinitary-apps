@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "docs-site-check-light-queue",
+      "reason": "CI-only change: the docs site check takes the shared light Linux queue instead of the PC-only runner; no app behavior change."
+    }
+  ]
+}

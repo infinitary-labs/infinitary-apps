@@ -1,0 +1,40 @@
+{
+  "tasks": [
+    {
+      "id": "8c300001",
+      "title": "Plan the forecast summary",
+      "kind": "work",
+      "repo_id": "repo-weatherboard",
+      "status": "done",
+      "start_policy": "on-request",
+      "created_at": 1744016400000,
+      "started_at": null,
+      "shape_json": "{\"kind\":\"plan\"}"
+    },
+    {
+      "id": "8c300002",
+      "title": "Implement the rain outlook header",
+      "kind": "work",
+      "repo_id": "repo-weatherboard",
+      "status": "done",
+      "start_policy": "on-request",
+      "created_at": 1744016280000,
+      "started_at": 1744016446000,
+      "shape_json": "{\"kind\":\"implement\",\"basis\":\"8c300001\"}"
+    }
+  ],
+  "cards": [
+    {
+      "id": "card-fm-start-rain-outlook",
+      "task_id": "8c300002",
+      "title": "Start the rain outlook change?",
+      "body": "<p>The forecast layout has a reviewed plan.</p>",
+      "kind": "decision",
+      "actions_json": "[{\"id\":\"start-implementation\",\"label\":\"Start implementation\",\"default\":true},{\"id\":\"defer\",\"label\":\"Leave it waiting\"}]",
+      "created_at": 1744016412000,
+      "resolved_at": 1744016440000,
+      "chosen_action": "start-implementation"
+    }
+  ],
+  "card_messages": []
+}

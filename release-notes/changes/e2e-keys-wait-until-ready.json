@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "e2e-keys-wait-until-ready",
+      "reason": "End-to-end tests press keys only once the app takes them: a launch waits for a hidden mark the window sets once its shortcuts reach it, the key recorder waits until it records, and typing waits for focus. Two new test lints hold it. The hidden mark is the only app change, and nothing a person sees changes."
+    }
+  ]
+}

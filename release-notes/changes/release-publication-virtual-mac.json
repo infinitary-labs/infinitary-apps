@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "release-publication-virtual-mac",
+      "reason": "Release work: the release workflow signs on the real Mac through the checked disk image, then publishes and checks the downloads in a virtual Mac from a validated handoff. What a release publishes and checks is unchanged."
+    }
+  ]
+}

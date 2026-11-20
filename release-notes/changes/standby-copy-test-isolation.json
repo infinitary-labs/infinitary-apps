@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "standby-copy-test-isolation",
+      "reason": "Test only: isolate the standby peer fixture so it always uses its controlled hash. App behavior is unchanged."
+    }
+  ]
+}

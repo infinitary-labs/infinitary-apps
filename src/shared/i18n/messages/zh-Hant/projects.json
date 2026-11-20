@@ -1,0 +1,41 @@
+{
+  "projectsHost": "專案的主機",
+  "projectsMoveAfterNew": "單獨的專案（{key}）",
+  "projectsMoveAfterRevive": "重新成為單獨的專案（{key}）",
+  "projectsMoveApply": "套用移動",
+  "projectsMoveAsks": {
+    "plural": "count",
+    "other": "你的大副請求移動下列存放庫。按下「套用移動」之前，不會移動任何內容。"
+  },
+  "projectsMoveAutomations": {
+    "plural": "count",
+    "other": "與移出清單之專案相關的 {count} 項自動化，之後改為與 {project} 相關。"
+  },
+  "projectsMoveColumnAfter": "按下之後",
+  "projectsMoveColumnNow": "目前專案",
+  "projectsMoveColumnRepository": "存放庫",
+  "projectsMoveDirections": "為 {project} 中任一存放庫儲存的指引，之後會套用到其中每個存放庫，包括這些存放庫。",
+  "projectsMoveFinishedTasks": {
+    "plural": "count",
+    "other": "{count} 項已完成的任務隨之移動，編號不變。"
+  },
+  "projectsMoveKeeps": "每個存放庫都保留名稱、資料夾和設定。",
+  "projectsMoveLeaves": {
+    "plural": "count",
+    "other": "以下 {count} 個專案將移出專案清單，之後誰都不能再使用它們的任務編號前綴："
+  },
+  "projectsMoveListMore": {
+    "plural": "count",
+    "other": "{first} 及其他 {count} 個"
+  },
+  "projectsMoveListTwo": "{first} 和 {second}",
+  "projectsMoveNoOpenTask": "沒有未完成的任務移動。",
+  "projectsMoveNoTask": "沒有任務移動。",
+  "projectsMoveNotNow": "暫時不要",
+  "projectsMoveOpenTasks": {
+    "plural": "count",
+    "other": "{count} 項未完成的任務加入 {project}，編號不變："
+  },
+  "projectsMoveTitleInto": "將 {repositories} 移入 {project}？",
+  "projectsMoveTitleOwn": "將 {repositories} 移入一個單獨的專案？"
+}

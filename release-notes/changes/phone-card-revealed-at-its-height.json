@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-card-revealed-at-its-height",
+      "reason": "A phone card's body and its choices become ready only once the body has its full height, a fraction of a second after it draws; nobody notices the difference, and the phone cards check no longer taps a body that is still short."
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "batch-left-out-ahead",
+      "kind": "fix",
+      "area": "projects",
+      "title": "A change left out of a batch says when it can go on",
+      "body": "When a batch leaves out an approved change because it clashes with another approved change ahead of it, the change now says nothing can be done until that one merges, instead of asking for it to be brought up to date before that is possible. Once that batch merges, its crewmate brings it up to date right away. If the other change leaves the batch instead, your change goes back in line on its own.",
+      "noPicture": "The new words appear only on a task's timeline and its batch check when a batch leaves a change out, a moment a still picture of the app does not reach.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

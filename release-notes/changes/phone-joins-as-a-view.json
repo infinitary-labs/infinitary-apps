@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-joins-as-a-view",
+      "reason": "Internal: the Mac accepts a phone's join as a device that only reads, and announces itself on the local network while a phone is on the list. No phone can join yet because the phone app is not available to install; the A phone button and its code are covered by phone-reads-your-mac."
+    }
+  ]
+}

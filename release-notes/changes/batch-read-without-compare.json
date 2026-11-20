@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-read-without-compare",
+      "reason": "The merge batch's check reads the batch's tree and the main version it left with git instead of GitHub's compare answer, so a busy GitHub no longer holds a batch on that reading; it changes only how the project is checked, never the app."
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "queue-not-set-up",
+      "kind": "feature",
+      "area": "projects",
+      "title": "Batched pull requests wait until your project is set up for them",
+      "body": "When you choose batched pull requests for a project that has no workflow for its batch check yet, the project keeps sending changes as pull requests. A card says the project is not set up yet and offers to have the first mate plan the workflow. Once a workflow that mentions the batch check merges, the project switches to batched pull requests by itself. Not now keeps where its changes go.",
+      "picture": {
+        "dark": "queue-not-set-up-dark.webp",
+        "light": "queue-not-set-up-light.webp",
+        "alt": "A card says meter is not set up for batched pull requests yet, that its changes still go as pull requests, and offers Ask the first mate to plan it or Not now"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

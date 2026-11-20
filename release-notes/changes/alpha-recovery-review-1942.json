@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "alpha-recovery-review-1942",
+      "reason": "Release review only: review the required account-probe correction, timing exporter and intervening merge-card note; clarify the merge-card wording and preserve editorial coverage after bringing the candidate up to date for failed checks."
+    }
+  ]
+}

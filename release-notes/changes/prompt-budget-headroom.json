@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "prompt-budget-headroom",
+      "reason": "Internal: the crew's existing testing and validation guidance uses fewer words to leave room in its fixed prompt; no visible feature changes."
+    }
+  ]
+}

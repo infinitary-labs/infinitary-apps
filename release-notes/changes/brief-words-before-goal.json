@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "brief-words-before-goal",
+      "reason": "Internal builder and reviewer instructions put verbatim captain words before the goal and explicitly give them precedence. No app view changes."
+    }
+  ]
+}

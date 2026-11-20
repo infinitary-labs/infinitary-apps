@@ -1,0 +1,67 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "target": "ES2023",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    // Shared schemas also run through Node's native TypeScript loader.
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "types": ["vite/client"],
+    "paths": {
+      "@shared/*": ["./src/shared/*"],
+      // The app's panels and the e2e fixture panels (tests/fixtures/personal)
+      // type-check against the real contracts and the real design library -
+      // the `@infinitary/ui` boundary is src/renderer/src/design/index.ts
+      // (hostModules.ts). A fixture written before the Infinitary rename
+      // names them `@firstmate/`, which the compiler reads as the same.
+      "@infinitary/contracts": ["./src/shared/personal/contracts.ts"],
+      "@infinitary/ui": ["./src/renderer/src/design/index.ts"],
+      "@firstmate/contracts": ["./src/shared/personal/contracts.ts"],
+      "@firstmate/ui": ["./src/renderer/src/design/index.ts"]
+    }
+  },
+  "include": [
+    "ios/Infinitary/CardRuntime/**/*.ts",
+    "ios/Infinitary/SettingsRuntime/**/*.ts",
+    "src/renderer/**/*.ts",
+    "src/renderer/**/*.tsx",
+    // The app's own panel folders (docs/ui-plugins.md, "The app's own panels
+    // are ordinary folders"): checked against the real contracts and the
+    // real panel library, and compiled by the panel compiler into the lib.
+    "src/panels/**/*.ts",
+    "src/panels/**/*.tsx",
+    "src/shared/**/*.ts",
+    "tests/fixtures/cardAnnotations.ts",
+    "tests/fixtures/oversized-card/**/*.ts",
+    "tests/fixtures/personal/**/*.ts",
+    "tests/fixtures/personal/**/*.tsx",
+    "tests/fixtures/phone-panels/**/*.ts",
+    "tests/fixtures/phone-panels/**/*.tsx",
+    "tests/fixtures/personal-skills/**/*.ts",
+    "tests/fixtures/personal-skills/**/*.tsx",
+    "tests/fixtures/frame-realm/**/*.tsx",
+    // The browser layer's tests draw the window in a page (docs/testing.md,
+    // "The browser layer"); their Node side is under tests/helpers/.
+    "tests/browser/**/*.ts",
+    "tests/browser/**/*.tsx",
+    "tests/helpers/browserProvided.ts",
+    "tests/helpers/loadClock.ts",
+    "tests/helpers/architectureMap.ts",
+    // The window API and the shell's installed keys, which the browser layer
+    // runs in its page as the preload and main run them.
+    "src/preload/api.ts",
+    "src/preload/pushHub.ts",
+    "src/preload/readableRequest.ts",
+    "src/main/keyboard.ts"
+  ]
+}

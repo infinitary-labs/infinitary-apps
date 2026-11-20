@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "event-screen-offer",
+      "kind": "improvement",
+      "area": "settings",
+      "title": "Infinitary offers to screen events when an automation has an Only if condition",
+      "body": "When you save or turn on an automation with an Only if condition while Screen automation events is off, a card explains that every event still wakes your first mate. It shows what screening sends, and Turn on switches it on right there.",
+      "picture": {
+        "dark": "event-screen-offer-dark.webp",
+        "light": "event-screen-offer-light.webp",
+        "alt": "A card asking whether to skip events an automation does not need, naming its condition and what turning screening on sends, with Not now and Turn on"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

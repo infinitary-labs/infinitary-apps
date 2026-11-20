@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "card-default-command-1",
+      "kind": "improvement",
+      "highlight": 2,
+      "title": "⌘1 always picks a card's recommended choice",
+      "body": "On every card, ⌘1 now presses the recommended button, so the same key always takes the suggested step. The other buttons count up from right to left: ⌘2 is the next button to the left, then ⌘3 and ⌘4. On Linux, Ctrl takes ⌘'s place.",
+      "area": "cards",
+      "picture": {
+        "dark": "card-default-command-1-dark.webp",
+        "light": "card-default-command-1-light.webp",
+        "alt": "A decision card whose Approve and build button shows ⌘1 at the right edge, with Save and defer ⌘2 and Abandon ⌘3 to its left"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

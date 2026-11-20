@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "placed-quiet-alert-test-hold",
+      "reason": "Test-only repair of a flaky test: the twenty-minute quiet-alert test for a task on a computer that runs work now holds only the events written after the crewmate's call, so a late earlier event no longer stalls the call. No app behavior changes."
+    }
+  ]
+}

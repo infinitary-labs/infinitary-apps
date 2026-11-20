@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "virtual-mac-draws-in-software",
+      "reason": "The end-to-end launcher starts the app with software drawing when it runs in a virtual Mac, so a stalled frame there no longer fails a screenshot; tests and their docs only, nothing a person notices."
+    }
+  ]
+}

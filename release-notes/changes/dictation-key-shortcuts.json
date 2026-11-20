@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "dictation-key-shortcuts",
+      "kind": "fix",
+      "area": "message-box",
+      "title": "Shortcuts held with right ⌘ or right ⌃ no longer start talking",
+      "body": "When right ⌘ or right ⌃ is your dictation key, pressing it with another key now runs that shortcut, such as ⌘L to go back to the message box or ⌘Enter to send, and records nothing. A tap of the key, or holding it on its own, still starts talking.",
+      "noPicture": "The fix is a recording that no longer starts: the message box looks as it always does.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

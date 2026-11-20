@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "sign-in-card-names-task",
+      "kind": "fix",
+      "title": "A sign-in card names its task",
+      "body": "When a crewmate's provider needs you to sign in again, the card shows the task's key and title instead of a crewmate number. If the sign-in fails as the crewmate starts a turn, its task stays open with its work, ready to go on once you sign in.",
+      "area": "cards",
+      "picture": {
+        "dark": "sign-in-card-names-task-dark.webp",
+        "light": "sign-in-card-names-task-light.webp",
+        "alt": "The A provider needs sign in card, headed by the task's key SCR-1 and its title Promote the latest alpha to stable"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

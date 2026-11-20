@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "pr-integration-readers",
+      "reason": "CI only: the pull request check now also runs the integration tests that read a changed file, lists probe, browser and Mac-only readers apart with the run that owns each, and fails when a selected reader did not run. Nothing in the shipped app changes."
+    }
+  ]
+}

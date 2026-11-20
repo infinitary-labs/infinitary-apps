@@ -1,0 +1,21 @@
+{
+  "crewAPart": "一个部分",
+  "crewFirstmateLabel": "大副 - {state}",
+  "crewModelNames": "船员的模型名称",
+  "crewNextComputers": "下一组电脑",
+  "crewOrbitLabel": "船员 - {working} 个工作中，{idle} 个空闲",
+  "crewOutOfReach": "无法联系",
+  "crewPartsCount": "{finished} 个已完成，{running} 个运行中，{waiting} 个等待中",
+  "crewPreviousComputers": "上一组电脑",
+  "crewProgramsAndParts": "程序及其组成部分",
+  "crewStateIdle": "空闲",
+  "crewStateWorking": "工作中",
+  "crewSummaryAnotherTask": "另一个任务",
+  "crewSummaryBlockedBy": "被阻挡于",
+  "crewSummaryPartOf": "隶属于",
+  "crewSummaryParts": "组成部分",
+  "crewSummaryReviewing": "正在审查",
+  "crewSummaryRunning": "运行中",
+  "crewUnavailableComputer": "不可用的电脑",
+  "crewWorkComputers": "工作电脑"
+}

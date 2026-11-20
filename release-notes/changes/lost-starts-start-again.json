@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "lost-starts-start-again",
+      "kind": "fix",
+      "title": "A task starts by itself when its computer comes back",
+      "body": "When a computer a task needs drops its connection while the task is starting, the task now goes back in line and starts by itself once that computer is back, with nothing for you to click. A second drop at the same point of the same start stops it and tells your first mate. A task that continues work kept on this computer can now start on another computer too: its work is copied across first.",
+      "area": "devices",
+      "noPicture": "Nothing new appears on screen: a task that used to wait with Could not start now starts by itself.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

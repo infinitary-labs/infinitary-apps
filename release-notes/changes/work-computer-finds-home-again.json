@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "work-computer-finds-home-again",
+      "reason": "A computer that runs work finds its home again with a new command after the home's address changes; part of the development-only multi-machine feature, which remains unavailable in released apps."
+    }
+  ]
+}

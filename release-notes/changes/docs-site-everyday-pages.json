@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "docs-site-everyday-pages",
+      "reason": "Adds three documentation site pages, What you can ask for, Settings and Update and remove Infinitary, and links to them from existing pages; nothing in the app changes."
+    }
+  ]
+}

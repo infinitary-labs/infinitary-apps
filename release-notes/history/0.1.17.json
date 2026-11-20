@@ -1,0 +1,69 @@
+{
+  "entries": [
+    {
+      "id": "bf-2863ab5ff",
+      "kind": "feature",
+      "title": "Mark active adversarial reviews with ember orbits",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "2863ab5ff01cb99c6952fc52528eb9da80a37fda"
+        ]
+      }
+    },
+    {
+      "id": "bf-66930887e",
+      "kind": "feature",
+      "title": "Port recommended no-mistakes care rules",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "66930887ea77b7825ec086ed012cfe2108da1b54"
+        ]
+      }
+    },
+    {
+      "id": "bf-e25d08008",
+      "kind": "fix",
+      "title": "Keep the macOS 26 window transparent so wash can show the desktop",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "e25d0800877d9817655619d35c04fc246a43b17d"
+        ]
+      }
+    },
+    {
+      "id": "bf-0612bed49",
+      "kind": "fix",
+      "title": "Center the section expand chevron in its row",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "0612bed49b7f06247a67c9be5271412cab7a5a46"
+        ]
+      }
+    },
+    {
+      "id": "bf-6cba9671e",
+      "kind": "fix",
+      "title": "Return focus to prompt after transcription and send",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "6cba9671e964df92f5ac0057e8e324f2902ff7b2"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-17-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.17: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "7d2f746765ff03e3744fd09c0e762391d1edd393",
+        "1a988b130feda583ef8554974924c186c06fbee3"
+      ]
+    }
+  ]
+}

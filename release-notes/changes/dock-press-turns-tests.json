@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "dock-press-turns-tests",
+      "reason": "Test-only fix: the end-to-end helper that expands the Tasks and Activity docks now lets one dock's press finish before the other's starts, since two clicks at once could swallow one and leave its dock collapsed. The work-posture journey expands Tasks before it waits for that panel to paint, and gives its crewmate's turn the 30 seconds other journeys give it. No shipped behavior changes."
+    }
+  ]
+}

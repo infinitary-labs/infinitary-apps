@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "kept-running",
+      "kind": "feature",
+      "title": "Jobs you asked to keep running are listed under Kept running",
+      "body": "When you ask your first mate for something that keeps running after its task is done, such as a nightly backup, Settings → Automation lists it under Kept running, with the computer it runs on, the account it runs as and the task that set it up. The Automation panel lists it too. Check tells you whether it still runs, and Remove asks once, then removes it from that computer. If a remove does not finish, the job stays listed and says what happened, and Forget takes it off the list while warning that it may still run on that computer. You can also ask your first mate to remove one.",
+      "area": "settings",
+      "picture": {
+        "dark": "kept-running-dark.webp",
+        "light": "kept-running-light.webp",
+        "alt": "Settings → Automation listing two jobs under Kept running, each with its computer, account and task, and Check and Remove buttons"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

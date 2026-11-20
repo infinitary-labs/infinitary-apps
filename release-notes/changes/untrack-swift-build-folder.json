@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "untrack-swift-build-folder",
+      "reason": "Internal: the repository stops tracking two Swift build-system files committed by mistake and ignores every Swift build folder; nothing a person sees changes."
+    }
+  ]
+}

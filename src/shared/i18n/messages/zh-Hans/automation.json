@@ -1,0 +1,31 @@
+{
+  "automationEventsSkipped": "已跳过的事件",
+  "automationPanelActiveCount": {
+    "plural": "count",
+    "other": "{count} 个启用中"
+  },
+  "automationPanelEmpty": "还没有自动化",
+  "automationPanelKeptCount": {
+    "plural": "count",
+    "other": "{count} 个持续运行"
+  },
+  "automationPanelKeptHeading": "持续运行",
+  "automationPanelKeptRow": "{label} · {computer} · 在设置中打开",
+  "automationPanelListLabel": "自动化",
+  "automationPanelPausedCount": {
+    "plural": "count",
+    "other": "{count} 个已暂停"
+  },
+  "automationPanelUnreadableSummary": "无法读取",
+  "automationRunAlsoSkipped": "已跳过 {count} 个",
+  "automationRunFound": "发现：{words}",
+  "automationRunSkipped": {
+    "plural": "count",
+    "other": "{count} 个事件，{date}"
+  },
+  "automationRunSkippedState": "已跳过",
+  "automationScreenedNote": "未发送给你的大副：决定模型认为这些事件明显不符合此自动化的“仅当”条件。",
+  "automationWaitsFor": "仅当",
+  "automationWaitsForNote": "你的大副只会处理符合此条件的事件。在设置中开启事件筛选时，明显不符合此条件的事件不会交给你的大副，但仍列在此自动化的记录中。",
+  "automationWaitsForPlaceholder": "每个事件"
+}

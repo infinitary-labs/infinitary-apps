@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "card-thread-flip-side",
+      "kind": "improvement",
+      "title": "A card's thread sits on its back on your iPhone, and under its own reply box on your Mac",
+      "body": "On your iPhone and iPad, a card's conversation no longer runs under its body. One line at the card's foot says who wrote last, how many messages there are, or 1 new when a reply came in; tap it, or press Command-backslash, and the card turns over to show the thread, its reply box and its choices. Card turns it back. On your Mac, while a card's thread is open beside it, the card's choices sit under the thread's reply box, so it is clear that what you typed goes with the choice you click.",
+      "area": "cards",
+      "picture": {
+        "dark": "card-thread-flip-side-dark.webp",
+        "light": "card-thread-flip-side-light.webp",
+        "alt": "A card with its thread open beside it, and the card's choices under the thread's reply box"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

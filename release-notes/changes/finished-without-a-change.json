@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "finished-without-a-change",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Work that needed no change shows as finished, not discarded",
+      "body": "When a crewmate finishes its work without changing your project, for example by finding that the fix belongs in another task, your first mate now closes the task as finished. Before, many of these tasks were recorded as discarded even though the work was done. A task whose working copy still holds changes still closes only by merging them.",
+      "noPicture": "The task views are unchanged; the task's record now says finished where it said discarded.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "story-free-form-part",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Merge cards can show what changed as a picture",
+      "body": "A crewmate can now draw what changed on its merge card, picture first, in place of the list of bullets. The pull request keeps the bullets, so it still reads the same where your project lives.",
+      "picture": {
+        "dark": "story-free-form-part-dark.webp",
+        "light": "story-free-form-part-light.webp",
+        "alt": "A merge card whose What changed section is a drawing of where the story's parts go, with one sentence under it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

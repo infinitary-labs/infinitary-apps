@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "tasks-search-close",
+      "kind": "improvement",
+      "title": "Close the Tasks search with the button beside it",
+      "body": "The Tasks search now has a Close search button beside the field. Esc empties the words, and a second Esc closes the search. Closing it clears the words and the project, so every task is listed again.",
+      "area": "tasks",
+      "picture": {
+        "dark": "tasks-search-close-dark.webp",
+        "light": "tasks-search-close-light.webp",
+        "alt": "The Tasks panel with its search open, the Close search button beside the field, and its label naming Esc"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

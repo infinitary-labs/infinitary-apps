@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journey-groups-by-measured-time",
+      "reason": "Internal CI change: the full check's journeys are split into groups of measured time, with six parallel and three serial Linux groups and the Mac parallel journeys shared with the native job, so a batch run ends sooner. No app behavior changes."
+    }
+  ]
+}

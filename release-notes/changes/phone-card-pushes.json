@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "phone-card-pushes",
+      "kind": "feature",
+      "area": "cards",
+      "title": "Get a notification for each card on your iPhone and iPad",
+      "body": "Your iPhone and iPad can now show a notification when a new card is ready on your computer, even while Infinitary is closed. After you join a computer, Infinitary asks once. The notification shows the card's title, and tapping it opens that card. Your computer seals each card for your phone alone, so the service that delivers it cannot read it. Settings, Devices shows whether notifications are on, and turning them off in your phone's Settings tells your computer to stop sending. Your computer needs this version too.",
+      "picture": {
+        "dark": "phone-card-pushes-dark.webp",
+        "light": "phone-card-pushes-light.webp",
+        "alt": "The Notifications section in Settings, Devices on an iPhone, saying notifications are on and each new card and reply reaches the iPhone while Infinitary is closed, with a Change in Settings button"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

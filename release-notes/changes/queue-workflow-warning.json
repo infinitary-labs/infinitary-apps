@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "queue-workflow-warning",
+      "kind": "feature",
+      "area": "projects",
+      "title": "Settings warns when nothing answers your project's batch check",
+      "body": "When you choose batched pull requests, the app reads your project's workflows on GitHub. If none of them mentions the batch check, Settings, Projects says so under Where changes go. A merge waiting for the batch check says the same on its note. If a check that answered before stays quiet for two hours after you approve, the note says that too, and your approval is kept.",
+      "picture": {
+        "dark": "queue-workflow-warning-dark.webp",
+        "light": "queue-workflow-warning-light.webp",
+        "alt": "Under Where changes go, with batched pull requests chosen, an orange line says no workflow in this project mentions its batch check yet"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

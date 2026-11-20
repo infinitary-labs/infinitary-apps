@@ -1,0 +1,216 @@
+{
+  "address": {
+    "iphone": {
+      "reads": 162,
+      "launches": 1
+    },
+    "ipad": {
+      "reads": 166,
+      "launches": 1
+    }
+  },
+  "body-field": {
+    "iphone": {
+      "reads": 549,
+      "launches": 1
+    }
+  },
+  "card-questions": {
+    "iphone": {
+      "reads": 123,
+      "launches": 1
+    }
+  },
+  "cards-diagram": {
+    "iphone": {
+      "reads": 257,
+      "launches": 1
+    }
+  },
+  "cards-form": {
+    "iphone": {
+      "reads": 614,
+      "launches": 1
+    }
+  },
+  "cards-media": {
+    "iphone": {
+      "reads": 1240,
+      "launches": 1
+    }
+  },
+  "cards-merge": {
+    "iphone": {
+      "reads": 994,
+      "launches": 2
+    }
+  },
+  "cards-notes": {
+    "iphone": {
+      "reads": 456,
+      "launches": 1
+    }
+  },
+  "cards-place": {
+    "iphone": {
+      "reads": 165,
+      "launches": 1
+    }
+  },
+  "cards-revise": {
+    "iphone": {
+      "reads": 132,
+      "launches": 1
+    }
+  },
+  "cards-secret": {
+    "iphone": {
+      "reads": 155,
+      "launches": 1
+    }
+  },
+  "fold": {
+    "iphone": {
+      "reads": 72,
+      "launches": 1
+    },
+    "duo": {
+      "reads": 830,
+      "launches": 1
+    }
+  },
+  "google": {
+    "iphone": {
+      "reads": 117,
+      "launches": 1
+    }
+  },
+  "join-activity": {
+    "iphone": {
+      "reads": 737,
+      "launches": 1
+    }
+  },
+  "join-away": {
+    "iphone": {
+      "reads": 489,
+      "launches": 3
+    }
+  },
+  "join-read": {
+    "iphone": {
+      "reads": 445,
+      "launches": 5
+    },
+    "ipad": {
+      "reads": 529,
+      "launches": 5
+    }
+  },
+  "keyboard-pinned": {
+    "iphone": {
+      "reads": 246,
+      "launches": 1
+    },
+    "ipad": {
+      "reads": 247,
+      "launches": 1
+    }
+  },
+  "keyboard-scrolling": {
+    "iphone": {
+      "reads": 174,
+      "launches": 1
+    },
+    "ipad": {
+      "reads": 172,
+      "launches": 1
+    }
+  },
+  "keyboard-ways-out": {
+    "iphone": {
+      "reads": 342,
+      "launches": 1
+    }
+  },
+  "languages": {
+    "iphone": {
+      "reads": 134,
+      "launches": 4
+    }
+  },
+  "panels": {
+    "iphone": {
+      "reads": 311,
+      "launches": 3
+    },
+    "ipad": {
+      "reads": 324,
+      "launches": 3
+    }
+  },
+  "pick": {
+    "iphone": {
+      "reads": 94,
+      "launches": 1
+    }
+  },
+  "push": {
+    "iphone": {
+      "reads": 112,
+      "launches": 2
+    }
+  },
+  "rest": {
+    "iphone": {
+      "reads": 2414,
+      "launches": 3
+    },
+    "ipad": {
+      "reads": 1687,
+      "launches": 3
+    }
+  },
+  "settings-pages": {
+    "iphone": {
+      "reads": 578,
+      "launches": 1
+    },
+    "ipad": {
+      "reads": 573,
+      "launches": 1
+    }
+  },
+  "take-over": {
+    "iphone": {
+      "reads": 1193,
+      "launches": 1
+    }
+  },
+  "talk-compose": {
+    "iphone": {
+      "reads": 835,
+      "launches": 3
+    },
+    "ipad": {
+      "reads": 731,
+      "launches": 3
+    }
+  },
+  "talk-drafts": {
+    "iphone": {
+      "reads": 1431,
+      "launches": 2
+    }
+  },
+  "talk-tasks": {
+    "iphone": {
+      "reads": 323,
+      "launches": 3
+    },
+    "ipad": {
+      "reads": 305,
+      "launches": 3
+    }
+  }
+}

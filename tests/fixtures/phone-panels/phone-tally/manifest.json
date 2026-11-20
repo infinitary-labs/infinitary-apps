@@ -1,0 +1,13 @@
+{
+  "title": "Tally",
+  "api": 2,
+  "placement": { "x": "left", "y": "top" },
+  "reads": ["tasks.board"],
+  "cards": {
+    "note": { "view": "note", "title": "Tally note", "data": { "from": "button" } }
+  },
+  "header": [
+    { "id": "note", "icon": "note", "label": "Open the note", "emits": "note" },
+    { "id": "mark", "icon": "add", "label": "Mark the tally" }
+  ]
+}

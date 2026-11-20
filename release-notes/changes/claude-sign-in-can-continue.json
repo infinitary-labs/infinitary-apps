@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "claude-sign-in-can-continue",
+      "kind": "fix",
+      "title": "A Claude sign-in can continue, or stop",
+      "body": "When Claude's sign-in fails without saying why, even after the page said you were set up, Firstmate now tells you how to finish signing in to Claude yourself, then connect Claude here again. While Claude is connecting you can open the sign-in page again, paste a code if the page shows one, or cancel. Leaving Settings and coming back keeps the same sign-in going instead of starting another.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "claude-sign-in-can-continue-dark.webp",
+        "light": "claude-sign-in-can-continue-light.webp",
+        "alt": "Settings, Intelligence, while Claude is connecting: open the sign-in page again, paste a code if the page asks, or cancel"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

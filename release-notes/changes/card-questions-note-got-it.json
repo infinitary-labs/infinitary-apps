@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-questions-note-got-it",
+      "reason": "The card questions journey now expects a note its author gave no choices to show its own Got it beside the reply field and Chat, since every note has had that button; a test repair with no app change."
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "public-release-home",
+      "reason": "This prepares the public source move and carries the release history across it without changing download addresses or enabling Contribution."
+    }
+  ]
+}

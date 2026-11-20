@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-scene-waits",
+      "reason": "Test-only repair: the phone journey's character and crew scene parts wait through the phone checks' own load-clock waits instead of XCTest's wall-clock expectation windows, so a loaded iPad no longer fails while the program ring's count is still arriving; app behavior and the journey's assertions are unchanged."
+    }
+  ]
+}

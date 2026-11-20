@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "phone-summary-long-branch",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A long branch name stays inside a task's summary on your iPhone and iPad",
+      "body": "On your iPhone and iPad, a branch name too long for a task's summary now ends in an ellipsis inside it. Before, it pushed the summary past the edge of its sheet or its preview, which cut off words on both sides.",
+      "picture": {
+        "dark": "phone-summary-long-branch-dark.webp",
+        "light": "phone-summary-long-branch-light.webp",
+        "alt": "A task's summary on an iPhone with Model and Branch side by side in its footer, the long branch name ending in an ellipsis before its checks running for 3h 02m, all inside the sheet"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

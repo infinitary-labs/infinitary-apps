@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "welcome-presentation",
+      "kind": "feature",
+      "title": "A new welcome shows you around, one part at a time",
+      "body": "A new installation opens on a Welcome aboard card that shows your window one part per press: the message box, a card, Activity and Tasks, each explained beside it. Three starters put the start of a first ask in the message box for you to finish. The welcome is the only card a new installation shows, and Tasks sits on the right from the start.",
+      "area": "cards",
+      "picture": {
+        "dark": "welcome-presentation-dark.webp",
+        "light": "welcome-presentation-light.webp",
+        "alt": "The Welcome aboard card showing Activity, a card and Tasks in its picture of the window, with Back and Next under it and three starters below."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

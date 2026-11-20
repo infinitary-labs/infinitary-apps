@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "revision-names-message",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A card a crewmate revises in reply to you shows the new version",
+      "body": "When you reply under a crewmate's card and it answers by revising the card, the card now shows the revised version once the crewmate finishes. Before, the crewmate could answer without saying which of your messages it answered, and the card kept its old version beside the line that it had not answered yet.",
+      "noPicture": "The fix is in how a crewmate's revision is accepted; the card looks as it always did once revised.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

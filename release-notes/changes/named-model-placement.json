@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "named-model-placement",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A model you name is the model your task runs on",
+      "body": "When you ask for a task to run on a particular model, it now starts only on a computer signed in to that model, whichever computer it runs on. If none is, the task waits and your first mate asks whether to keep waiting or use another model, instead of quietly running it on a different one.",
+      "noPicture": "This changes which computer and model a task starts on and adds a question from the first mate, not how any view looks.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "work-computer-claude-sign-out",
+      "reason": "A computer that runs work signs out the Claude login Firstmate made there from a pasted code when it is signed out of Claude or removed, and leaves a login that was there before, with words saying which; part of the development-only multi-machine feature, which remains unavailable in released apps."
+    }
+  ]
+}

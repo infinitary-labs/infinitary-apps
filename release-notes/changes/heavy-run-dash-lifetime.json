@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "heavy-run-dash-lifetime",
+      "reason": "Internal test infrastructure: keep local journey and phone verification reservations alive under POSIX shells such as dash."
+    }
+  ]
+}

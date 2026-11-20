@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "notification-words",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Notifications say what a card asks and what the work does",
+      "body": "A card's notification on your Mac and your phone now opens with what the card asks and its project, such as Ready to merge. Below that come the work's plain name and one line saying what it does, where a merge notification used to show its pull request title and the word Why.",
+      "noPicture": "Notifications appear on the lock screen and in Notification Center, outside the app's window, where the app's picture recipe cannot photograph them.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

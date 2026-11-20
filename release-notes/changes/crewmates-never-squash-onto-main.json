@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "crewmates-never-squash-onto-main",
+      "reason": "Changes only what crewmates are told: never combine commits themselves and bring a branch up to date with git rebase, so a squash onto a moved main can no longer undo newer merged work. No screen or result of its own changes."
+    }
+  ]
+}

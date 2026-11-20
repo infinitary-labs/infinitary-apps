@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-journey-in-parts",
+      "reason": "Internal CI: the phone journey is four tests, each run on its own simulator and test home side by side on the iPhone and the iPad; the app is unchanged."
+    }
+  ]
+}

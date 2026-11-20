@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-settings-device-localization-counts",
+      "reason": "Reconciles four localization baseline counts without changing app behavior."
+    }
+  ]
+}

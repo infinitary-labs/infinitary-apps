@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journeys-overflow-to-compute-macs",
+      "reason": "Project checks only: the app journeys a request, an alpha or the swept batch runs on Linux can overflow to the compute Macs' Linux machines when the PC is full. No app behavior change."
+    }
+  ]
+}

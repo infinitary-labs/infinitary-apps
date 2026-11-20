@@ -1,0 +1,31 @@
+{
+  "entries": [
+    {
+      "id": "queue-pr-delivery",
+      "kind": "feature",
+      "area": "projects",
+      "title": "Merge pull requests through your project's queue",
+      "body": "A project on GitHub can send its approved pull requests through its own queue, which tests them together before they merge. Choose pull requests through your queue under Where changes go in Settings, Projects. When you click merge, the pull request waits for the batch check and merges once it passes, with no second click. If the batch fails, its crewmate fixes it and your click carries over when the fix keeps the work you approved.",
+      "picture": {
+        "dark": "queue-pr-delivery-dark.webp",
+        "light": "queue-pr-delivery-light.webp",
+        "alt": "Where changes go in Settings, Projects has pull requests through your queue chosen, beside pull requests and local merge"
+      },
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "merge-pending-note",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A merge you click stays in view until it merges",
+      "body": "When you click merge, a note takes the card's place and says what the merge waits for, such as its checks or the batch check. It says why if the merge cannot go through, and it leaves once the merge is done.",
+      "picture": {
+        "dark": "merge-pending-note-dark.webp",
+        "light": "merge-pending-note-light.webp",
+        "alt": "A Waiting for the batch check note says the merge is kept and runs once the project's queue passes"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

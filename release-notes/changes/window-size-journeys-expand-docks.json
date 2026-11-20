@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "window-size-journeys-expand-docks",
+      "reason": "The Size journeys expand the side panels before checking that a regular card folds them at larger sizes, since collapsed panels no longer take card room, and the short-window journey measures a card only after its body has drawn again on the way back from Settings, so they pass reliably on the Mac that runs the release checks. Test code only; nothing a person notices changes."
+    }
+  ]
+}

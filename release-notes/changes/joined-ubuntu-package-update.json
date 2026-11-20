@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "joined-ubuntu-package-update",
+      "kind": "fix",
+      "title": "Update an Ubuntu work computer from Devices",
+      "body": "If your joined Ubuntu computer uses the Infinitary package, Update can use its Remote Login address to install the new package. Devices waits to see the new version running before it reports success.",
+      "area": "devices",
+      "picture": {
+        "dark": "joined-ubuntu-package-update-dark.webp",
+        "light": "joined-ubuntu-package-update-light.webp",
+        "alt": "The selected Ubuntu worker in Devices, with a prefilled Remote Login address in the update form beneath its details"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

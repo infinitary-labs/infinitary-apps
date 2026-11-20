@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "phone-thread-answer-stays-in-view",
+      "kind": "fix",
+      "area": "devices",
+      "title": "A card's thread on your iPhone keeps its newest answer in view",
+      "body": "On your iPhone, a first mate answer in a card's thread could slip under the card's lower edge when the message box below grew to show the same answer. A thread you are reading at its end now stays at its end.",
+      "noPicture": "The thread looks as it did; only an answer that was hidden under the card's edge now stays in view.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

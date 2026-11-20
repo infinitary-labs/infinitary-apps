@@ -1,0 +1,7 @@
+{
+  "id": "programs",
+  "name": "Programs",
+  "description": "How work a script can decide becomes a program: the first mate hands it to a crewmate, which writes and starts it.",
+  "firstmate": "guide.md",
+  "skills": "skills"
+}

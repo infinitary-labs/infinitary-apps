@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "settings-section-spacing",
+      "kind": "improvement",
+      "title": "Settings sections are spaced evenly",
+      "body": "Every section in Settings now sits the same distance from the one above, and rows inside a section share one gap. Models no longer sits twice as far down on Intelligence, and a custom API connection no longer touches the accounts list.",
+      "area": "settings",
+      "noPicture": "A spacing change across every Settings tab; one picture cannot show it.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "claude-tool-wait-own-stub",
+      "reason": "Test-only repair of an intermittent integration test: each case of the Claude tool-wait test talks to a stub model API of its own, so a stopped client's late request no longer reaches the next case. No app behavior change."
+    }
+  ]
+}

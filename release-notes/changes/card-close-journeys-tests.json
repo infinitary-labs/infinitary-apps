@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "card-close-journeys-tests",
+      "reason": "Three end-to-end card close journeys pass again: one now asks about a pick made after a reply already sent the others, one picks its answers inside the card's frame, and the shared cleanup waits for a card that is already closed to leave the window instead of pressing its close. Test code only; nothing a person notices changes."
+    }
+  ]
+}

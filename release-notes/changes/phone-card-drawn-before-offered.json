@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-card-drawn-before-offered",
+      "reason": "A phone card's body is offered to accessibility only once it has drawn and taken its height, a fraction of a second after it appears; nobody notices the difference, and the iPhone cards check no longer taps text the card had not yet drawn."
+    }
+  ]
+}

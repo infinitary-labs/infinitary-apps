@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "load-line-sh-launcher",
+      "reason": "Internal: a waiting heavy run starts its two-second admission check through /bin/sh instead of by the script's path, so macOS 26 stops keeping a 1 KB kernel buffer per check; nothing a person sees changes."
+    }
+  ]
+}

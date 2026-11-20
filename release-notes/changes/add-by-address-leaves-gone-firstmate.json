@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "add-by-address-leaves-gone-firstmate",
+      "reason": "Adding a Mac by its address whose user runs another Firstmate's work asks the captain once, then leaves that Firstmate as a removal would, keeping unmerged work; part of the development-only multi-machine feature, which remains unavailable in released apps."
+    }
+  ]
+}

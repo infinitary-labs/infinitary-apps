@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "after-merge-steps-body-arrival",
+      "reason": "The after-merge steps journey waits for the merge card's body to draw before reading it, so a slow first drawing on a fresh test machine no longer fails it; nothing a person sees changes."
+    }
+  ]
+}

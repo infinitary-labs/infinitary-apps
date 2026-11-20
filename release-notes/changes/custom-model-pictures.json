@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "custom-model-pictures",
+      "kind": "fix",
+      "area": "subscriptions",
+      "title": "Custom API models that can read pictures now get them",
+      "body": "When you save a custom API, Save now checks whether each of its models can read a picture. A model that can shows Reads pictures beside Ready, and gets the pictures you attach and the screenshots a crewmate takes. Other models get a short note in place of each picture, as before, and Save still succeeds. Save a custom API you added earlier again to check its models.",
+      "picture": {
+        "dark": "custom-model-pictures-dark.webp",
+        "light": "custom-model-pictures-light.webp",
+        "alt": "The saved custom model shows Reads pictures beside Ready in Intelligence"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

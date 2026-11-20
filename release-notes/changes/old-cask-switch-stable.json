@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "old-cask-switch-stable",
+      "reason": "Step 14 of the Infinitary rename: release work that turns on the old-cask switch for stable, so the usual Firstmate 3000 stable update installs Infinitary. What a person who moves sees is the now-infinitary note; nothing in Infinitary itself changes."
+    }
+  ]
+}

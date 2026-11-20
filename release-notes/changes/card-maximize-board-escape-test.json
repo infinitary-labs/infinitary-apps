@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-maximize-board-escape-test",
+      "reason": "Internal test repair: the maximized task board journey opens the board on Find, so its Escape no longer races the summary of a tile the board's page gives focus back to. No user-facing behavior changes."
+    }
+  ]
+}

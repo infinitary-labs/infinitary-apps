@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "pi-close-keeps-late-results",
+      "kind": "fix",
+      "title": "Keep a Pi crewmate’s last action result when its conversation closes",
+      "body": "Closing a Pi conversation could stop saving before a running action returned. Infinitary now waits for the action’s result before releasing the conversation, so reopening it retains that result.",
+      "area": "tasks",
+      "noPicture": "This fixes the order in which a conversation stops and saves its last action result; no screen changes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "ssh-agent-not-running",
+      "reason": "Adding a Mac by its address, and the SSH connection kept to it, now say that the app holding the SSH key is not open and to open it, rather than that the key is locked with a passphrase or was refused, and the connection tries it again quietly as it does a locked key; part of the development-only multi-machine feature, which remains unavailable in released apps."
+    }
+  ]
+}

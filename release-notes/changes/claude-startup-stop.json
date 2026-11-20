@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "claude-startup-stop",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Stop Claude work while it starts",
+      "body": "A stop requested while a Claude conversation is starting now takes effect as soon as it starts, instead of being forgotten.",
+      "noPicture": "This changes stop delivery during client startup, not a visible view.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

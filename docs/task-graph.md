@@ -1,0 +1,344 @@
+# Task graph: parents, links, and the ready query
+
+Task-system phase P2 (design record `fm3000-task-system-design-s1/report.md`, sections 7 to 9).
+P0 made a task a durable record, P1 made every captain ask land on one; P2 gives the records structure - one parent per task, typed links between them - and turns the R1 sweep into a query over that structure.
+
+## The graph
+
+- **Hierarchy**: `tasks.parent_id`, one parent per task, and it means *containment* - the child is part of the parent's work.
+  A child inherits its parent's project (and its repo unless bound to one of its own); the ancestor walk refuses a cycle at write time (`TaskService.setParent`).
+  Only open work that has not started moves to another project, by `update_task`'s `project` or a parent there, and its parts move with it (`moveIntoProject` in `src/core/tasks/projectMove.ts`).
+  The moved task takes the repository it lands in - the new parent's on a re-parent, as a new child does, else the one the move names (`update_task`'s `repository`), else its own when the project holds it, else the project's only one (`moveTargetRepository` in `src/core/tasks/projectMove.ts`) - so its working copy, pull request, checks and GitHub writes are there; where there is none to take (Scratch, or a parent with none) it keeps its own.
+  A move into a project of several repositories that names none, and holds none of the task's own, is refused with their names, so no repository is guessed.
+  Each part takes what its parent takes, as a new child does, unless it is bound to a repository of its own, which it keeps.
+  The move is refused into a removed project, and into a project whose repository has no remote when a task it would take asks to ship as a pull request.
+  A parent may carry a crewmate or be a pure container - a planned row that never dispatches on its own.
+  **Discovery is not containment**: a follow-up a crewmate files is never a child of the task it was found on (see "Follow-ups are not children" below).
+- **Links** (`task_links`, primary key `(from, to, type)`): `blocks` - `to` is not ready until `from` closes successfully (`done`; dropped never clears), and does not close while `from` is still live work, whoever recorded the edge (INF-3167, the captain's choice A: every wait holds the start and the merge until the other task closes).
+  The `holds_merge` mark a must-merge-first filing or a required action's prerequisite still writes on that edge is history: no reader branches on it, and no second kind of wait exists.
+  `related` is informational; `discovered-from` - `from` was found while doing `to`, provenance with no effect on readiness or closing; `replaced-by` - `to` does `from`'s work now (a drop, a takeover or a fresh task), with no effect on readiness or closing either.
+  Each link reads on both ends, and the links decide which tasks read another's milestones (`docs/task-record.md`, "Whom an event concerns").
+  A `blocks` edge that would close a cycle is refused at insert (`TaskGraphRefusal`, surfaced as tool text): the walk follows `blocks` edges outward from `to` and must not reach `from`.
+  Both ordinary insertion and baseline-diagnosis acceptance also call one live-wait reachability guard, normalizing blockers to waiter → prerequisite and reading `standingDependencyWaits` at the current non-green head.
+  Only open or active endpoints participate in the mixed traversal; historical diagnoses, green deliveries, closed dependencies and informational links do not.
+  The guard also counts each live task's open parts among its prerequisites, since a parent closes only once its parts have (INF-3167, the loop INF-3140 found: a parent waiting on its own part), skipping the host's delivery children (`isHostRaisedShape`); `TaskService.setParent` runs the same guard, so a task is never put under a task it waits on.
+  The refusal's words (`waitCycleWords`) say how the loop is repaired: when only part of a task gives what the waiter needs, that part is split into its own task or the waiter is folded into the task it waits on, and a wait is removed only when it names the wrong task.
+  A refusal names the complete task-key loop, writes no link or diagnosis, and spends no repair attempt.
+  Structural ordinary-link refusal remains in force even for historical links, and dropped blockers retain their existing startup rules.
+- **Derived, never stored** (design principle 4): `blocked`, `held`, `ready`, `deadBlocker` come from `TaskService.graph.flagsOf` at read time.
+
+Start again uses the existing `replaced-by` link: the dropped predecessor stays closed, and a fresh task takes its outgoing waits from still-open or active work atomically (`docs/task-record.md`, "Starting dropped work again").
+**A wait follows moved work** (INF-1826).
+Writing a `replaced-by` link from A to B moves the live waits in the same write (`TaskService.moveWaits`, called from the one link writer): each open or active task A blocks now waits on B, and each `blocks` edge into A from open or active work now runs into B, keeping its merge mark and its `createdAt`.
+A link between A and B, a closed waiter, done or dropped work A waited on, the host's delivery machinery (a review), and a wait whose move would close a cycle stay where they are, and so does a baseline wait on a delivery record, which is not a link.
+The `unlinked` event the move writes on the waiter carries `movedTo`, which the idle ladder reads to name the work a carrier took over.
+The first mate links `replaced-by` on every move of work to another task (`link_tasks`'s description), and `update_task`'s `replaced_by` and Start again write the same link.
+Nothing moves back when the link is removed.
+Closed dependents keep their historical edges.
+A second restart of the same record refuses once a replacement or stronger-model retry exists; a task with any parts refuses too.
+The successor inherits the predecessor's parent only while that parent is still live, and its basis still means a specification.
+
+## The ready query
+
+`TaskStore.listReady()` is the sweep's dispatch list: open work, no gate, `start_policy = when-ready`, no `blocks` edge from a task that is not `done`; priority first, then age.
+`CrewWatch.sweepGates` runs it on the shared 60 s tick, after any close (`closeTask` sweeps), after any graph change (`graphChanged`), on quota refresh, and once at boot.
+The quit (`CrewSupervisor.disposeAll`) runs no new sweep and starts nothing, a start still waiting before its claim included, and it waits, at most `QUIT_SETTLE_MS`, for a sweep already running to end, so a host closes its database only after the sweep's last write; the next launch's sweep starts what the quit left.
+A start the quit stops part way, whoever began it - the sweep, a computer's new sign-in, the captain's Start or the first mate - did not fail: `dispatchQueuedTask` neither settles nor tells its failure, since the database may already be closed, and the next launch starts it, a claimed row that began nothing back in the queue first (`TaskStarts.releaseUnstartedDispatches`).
+On-request rows never appear in it; a captain-held row waits on its card.
+When completed blockers release a queued task, its Starting line in Activity names each finished task by its title and key.
+
+## A part that starts at approval
+
+A planned part may start when the part before it is approved to merge, instead of when it merges.
+The first mate marks it on `create_task` with `start_at_approval`, naming one of the part's own `blocked_by`; the mark is kept on the part's shape, and a link without it waits for the merge as before.
+Before the part starts, `update_task` sets the mark the same way, naming one of its `blocked_by` (a wait the same call adds counts), or clears it with an empty name; a name that is not one of its waits is refused in filing's words, and a started part's mark no longer changes.
+The tasks reader shows the mark as `start_at_approval` in the part's row and in its by-key read.
+`TaskGraph.listReady` adds to the ready query each marked part whose only unfinished wait is that prerequisite, while the prerequisite is live and its merge approval is standing or spent by the merge closing it (`TaskGraph.approvedBase`, `TaskStore.listAwaitingApproval`, sought through the `task_placement_requests_start_at_approval` index).
+This holds only where the part's delivery is batched pull requests, since the batch line is what holds its merge behind the prerequisite; elsewhere the mark waits for the merge, as an unmarked link does.
+While that approval holds, the wait neither holds the part's start nor its close; once the approval ends, the wait holds again.
+The part starts in a working copy built on the approved version, fetched from the prerequisite's pushed branch (`WorkspaceService.approvedBaseAt`), and records it as `built_on`; a part placed on a computer that runs work starts only where its prerequisite's working copy is.
+Its brief names that version, says it is not merged yet, and tells it not to bring its branch up to date onto the default branch while the prerequisite waits.
+Its review, its line count and its story read its difference against that version while the part's version builds on it and has taken in nothing newer from the default branch, whether or not the prerequisite merged since, since a squash merge never puts that version on the default branch (`TaskGraph.startedOn`, `WorkspaceService.builtOnAt`).
+A part on a computer that runs work is read there the same way: the revision read carries the approved version and answers the one it read from, and a computer without that change reads from the default branch, so its review brief names no approved version.
+If the prerequisite loses its approval before it merges, the idle ladder tells the part's crewmate once for each approval that ends (`base-approval-ended`), unless the prerequisite closed: a closed prerequisite is never approved again, and the batch line leaves the part out in words while its branch carries that unmerged work.
+A prerequisite counts as merged only when it closed done by a merge, which spent its approval (`TaskGraph.mergedAt`).
+A started part's close is released by the approval only when its `built_on` names that prerequisite.
+Its approved merge waits in the batch line behind its prerequisite (docs/forge.md, "Batches of your own").
+
+## Gates on active rows
+
+The gate is one hold, read by every reader of "is this task moving, and whose turn is it" (the primitives review's P2, captain-approved 2026-09-26).
+It holds an **active** row as it holds an open one: `flagsOf` and the board's view both report `held` whenever `gate` is set, and the board's `needsYou` counts a `captain` gate whose ref is a durable open card.
+`waitingCardId` is separate: only an eligible shown ready decision, not the gate itself (`docs/task-record.md`, "Ready waiting is a presentation projection").
+On an active work row the `captain` gate is written in one place, `IdleLadder.syncCaptainGate` (`src/core/orchestrator/idleLadder.ts`), from a card with actions up about it (on it, or its reviewer's question card about it, INF-5004; the one the gate already names while it stays up, else the newest), or a wait on the captain its crewmate declared.
+Every card placement and departure, cap and answer runs it; a change on an idle record restarts its idle clock (`docs/report-sort.md`).
+These writes are machinery: no timeline event of their own - the card and cap events already say what happened.
+
+An `at-time` gate on an active row is a timed wait.
+The sweep's active branch walks `listActive()`: it heals each work row's captain gate, and a due `at-time` gate is cleared into **one steer on the task's own lane** - the idle ladder's steer path, actor `supervisor` (`timedWaitOver`, worded by `renderWake`) - never a dispatch.
+A wait on another task ends the same way when that task closes: one `dependency-closed` steer per closed task, once (`docs/report-sort.md`, "A wait on work underway moves on its own").
+A baseline wait also resumes sooner, when the default branch's own run of the check it names passes (`docs/forge.md`, "A main failure's wake").
+A wait the first mate recorded can end sooner: a report from the task it waits on wakes the first mate, which passes on a finding the waiter was held for and removes the link (`docs/report-sort.md`, "A hold on a task's finding ends when that task reports it").
+The wait's end opens a new idle episode, so the turn it starts is the task's own.
+It has two writers on an active row: a crewmate's report that names `check_back` (`TaskService.turns.recordReport`, `docs/report-sort.md` "A check-back on a running job"), and the first mate's hold, `update_task` `hold` (`TaskService.turns.hold`, `docs/report-sort.md` "Holding a started task until a time").
+Any turn's start clears it (`TaskService.turns.clearDeclaration`), with the rest of a report's declaration: the task is moving again, so its idle reminders count from that turn.
+A hold that ends sooner on an event names its Automation rule in the gate's `ref`, and that rule's run ends it as its time would (`docs/automation.md`, "A rule that ends a hold").
+A crewmate declares a wait with `waiting_on_captain` (`docs/report-sort.md`); the host does not parse a free-text wait.
+
+A host card with actions and no task files an open `operation` row, `captain` gate ref = the card id (`TaskService.capture.fileHostCardTask`), so the host's own asks count as waiting on the captain while their shown decisions are ready, like every other card.
+An explicit choice closes the row `done/answered`; host withdrawal records `dropped/superseded`, and a recorded terminal dismissal records `dropped/cancelled`, with no feed line (host bookkeeping).
+The minus is not a terminal dismissal: it keeps the host card, its operation row and its captain gate open without choosing or declining.
+The sweep closes a row whose card is gone and files one for a host card that has none, as it does for first mate decision rows (`openCardTaskFor` finds either).
+
+A row whose blocker was **dropped** is a wait that cannot end: `listDeadBlocked` feeds one `[fm-op]` wake to the first mate (`wakeDeadGate`, cards/tasks/agents P0), deduped by content on the task's ref so the tick never nags, and the row stays as it is - no card, no hold.
+The first mate's own tools are the ways out: `link_tasks remove` the dead edge (the sweep then starts it), `update_task drop` it too, or leave it waiting.
+`update_task start_now` refuses while the dead edge stands, because the wait is the edge.
+
+## Follow-ups are not children
+
+A follow-up is not a child.
+`fileFollowup` sets **no `parentId`** (it passes `projectId` instead, keeping the origin's project and repo) and the `discovered-from` edge carries the whole relationship.
+The one way a follow-up holds its origin up is `blocks_me`, which adds a `blocks` edge and says so in the refusal.
+While nobody has started it, every report from the origin wakes the first mate and names it (`docs/report-sort.md`, row 2a).
+Migration 26 detaches the redundant parent edge from every live row whose parent is also its discovered-from origin, recording each in `followup_parent_backfill`; `blocks` edges are untouched, and closed rows keep their history.
+
+A detached follow-up must stay findable, so its origin is shown wherever the parent used to place it: `found on SCR-1` in the context-block index (`indexGraphNote`), `discovered_from` and `follow_ups` on a `tasks` row, and rows under the settle card's strip, labelled "Filed while working on this", one per open follow-up with its key, title and one word (must close first, starts once this merges, working, queued, backlog) chosen from the links, status and start policy, never the title (`followupNotice`) - the one moment those follow-ups bear on the decision to land.
+The word must close first marks a follow-up whose wait holds this merge until it closes, read as the close gate reads it (`holdingClose`); a wait the captain's words passed reads free and takes one of the other words.
+
+## The close rules
+
+A parent closes only when every child is closed (`TaskService.graph.closeRefusal` names the open children by key) - except delivery machinery: a child the HOST commissioned as part of delivering its parent (a `host:*` kind_source: the independent review, and the independent assessment of a kept merge's undecided repair; `TaskService.isDeliveryChild`) carries no intent of its own, so it never holds the parent's close, keeps the parent the host gave it (`setParent` refuses), and is retired by the supervisor whenever the parent closes, in any direction (`docs/delivery-rigor.md`, the reviewed sequence).
+The parent edge is the only stored review-to-builder join: which review a builder's verdict came from is read off it (`TaskService.graph.verdictReviewOf`), never cached on the builder.
+The host records no `blocks` edge from a review onto its builder (INF-1876): whether a merge waits for the verdict is the care runbook's guidance, and the edge an earlier release recorded is removed at the upgrade (`docs/saved-data-compatibility.md`, "The review's edge").
+A task also does not close while something it waits on is still live work - open or active (`TaskService.graph.blockerRefusal`, over `blockersHoldingClose`, which reads every live `blocks` edge into the task, INF-3167): a wait has one meaning whoever recorded it, so work still under way never readies the merge of what waits on it.
+Its refusal names the ways out: the blocker's close (its merge, or `settle_task` done, why `answered`, when it is a step whose report was all the waiter needed), dropping work that is not wanted, or `link_tasks remove` only when the wait names the wrong task.
+That wait is a soft hold (`waits`): the captain's recorded override passes it, and a close refused on it says so (`docs/delivery-rigor.md`, "The holds").
+A **dropped** blocker clears a close, and only a close - for readiness it is a wait that can never end and the first mate answers the dead-gate wake, but that wake names open rows only, so an active task held by a dropped blocker would strand with no way out.
+A `discard` abandons the work rather than completing it, so a wait never forbids it; only containment does, and only on the first mate's own drop (`closeGateRefusal`, `settleRefusals.ts`): the captain's own drop keeps open parts planned (`docs/task-record.md`, "One drop").
+A crewmate's merge card is refused at emit time while that same rule would refuse the click (`CrewmateCards.addCrewmateCard`; open children stay a click-time choice because the captain can override them).
+The `link_tasks` description says a blocks link holds the start and the merge until `from` closes.
+It says `related` is for work neither task is waiting on.
+The first mate records every wait between tasks as `blocks` that turn, from the task whose close gives what the waiter needs, so Tasks draws the arrow and the wait holds; when only part of a task would give it, it splits that part into its own step or folds the waiter into that task, never recording a wait that holds nothing (INF-3167).
+A click refused by a wait reads in plain words on the feed (captain, 2026-10-01: a second Merge click was needed after a tracking-only wait).
+Because every live edge gates closing, `flagsOf` reports `blocked` for **active** rows too: a task its crewmate works past a recorded wait must say it is held rather than look free until the merge refuses.
+When the captain's recorded override passed that hold (`overridePasses`, `docs/delivery-rigor.md` "The holds"), the row reads free, as its Blocked by and the close gate do.
+
+A task whose deliverable is an answer closes on a third path (captain F2 A): the captain's choice on its own crewmate's card closes the row `done/answered`, and `merge-pr` and `land` are refused on it outright, because it ships nothing.
+A card its crewmate declared `continues`, something it goes on from such as a consent, a card asking to send a kept write and a card handing the captain the task's browser (`browser_handoff`, INF-1322) are not that card: their choice reaches the crewmate and the row stays active (INF-1226, `docs/card-authoring.md` "An answer task's card is its deliverable").
+A choice made while the crewmate is still working outranks the cancel of that turn (INF-721): the close stops the turn, and that turn's end, before or after the close, neither relabels the row nor drops the `answer-closed` wake the first mate is owed (`CrewSessions.stopRuntime` marks the runtime settling, and `finish` leaves the record to the close).
+The captain's close control is not a choice and never ends work: it puts a decision or pending card aside, or reads an ordinary note.
+An ordinary note read acknowledges its message and reaches its crewmate through `card-closed`; a duplicate closure also reaches the author, but is not an ordinary-read acknowledgement.
+Putting a card aside or reading a marked saved answer sends no author wake and does not acknowledge that saved answer.
+Only explicit Done receipts the marked saved answer (`CardService.finishAnswer`, `answer-done`); for an answer deliverable, it closes the row `done/answered` without a `card-closed` wake.
+After an ordinary read, the crewmate reports `finished` if nothing remains, and the first mate can close the answer row with `settle_task` done, why `answered`; the read itself never closes it.
+The row lists under the now panel's `landed` group like any other closed work and reads `answered`.
+
+Whether an answer task is an internal step (captain's call C, 2026-09-24: "intelligent judgments ... handled mostly through instructions") of a sequence the first mate runs, or something the captain asked for personally, is the first mate's judgment: it declares a step when it creates it (`internal_step` on `spawn_crewmate` or `create_task`, stored on the shape), and the host infers nothing - no rule reads the parent, the kind or the words.
+Absent is the captain's own ask, which is also every row from before the field.
+`settle_task` done, why `answered`, lets the first mate close an IDLE answer task it declared a step `done/answered` once a planned or started task names it as its `basis` - its answer carries on in that task's brief (`DoneClose`, the one close as done; `docs/task-record.md`, "One close as done").
+It closes a step the same way when a live task waits on it through a `blocks` link (FI3-422): the step was run for that task, and its close as done is what clears the wait, so a finished check never holds that task's merge or has to be discarded; a task naming it as its basis comes first.
+The feed says where it went ("KEY answered: its answer carries on in KEY \"title\""), never "discarded".
+A step whose crewmate reported its answer closes the same way when nothing builds on it or waits on it (INF-1137): the first mate passed the answer on itself, as by a steer to a task already under way, and the feed reads "Answered: its crewmate reported the answer", so a finished investigation is never announced as dropped.
+The same close takes an answer the captain asked for once its crewmate's report declared it finished (`delivery.finishedAt`, FI3-435), with nothing built on it required.
+A verified file delivery through `steer_crewmate files_from`, or a plain result choice on the crewmate's card, records a durable result-handoff receipt (INF-1426).
+`settle_task` done, why `answered`, also closes a reported, idle task with that receipt, without requiring `internal_step` or an answer deliverable.
+The first mate judges whether the result completes the task; the receipt proves only that it was handed on.
+Consent, browser handoffs, continuing cards, invalid actions and dismissals record no result receipt.
+Closing on its own, the first mate's close is held on a task still working or with guidance queued, one whose crewmate has not reported, one whose own pull request reads open, one whose commits are not merged when the close names nowhere else the work went, an answer the captain asked for and has not read, one whose own answer card is still up, one whose card still asks the captain something, and open children or dependencies.
+An answer carried on by the task the captain's reply under its own answer card started is read and answered, so neither its unread answer nor its answer card still up holds it (`docs/task-record.md`, "One close as done").
+Each is a soft hold the captain's own words pass (`captain_words`).
+A first mate note on the task stays on the stack through the close, the same as a crewmate's note, until the captain closes it.
+Discard and Drop task close through the one drop (`docs/task-record.md`, "One drop"); `interrupt_crewmate` cancel and `update_task drop` keep their own closes.
+
+A **container completes with its children**.
+A parent that never started - on request, no crewmate, no working copy, no card of its own open - has nothing of its own to settle, so the ready sweep closes it.
+Once every child is closed, the ready sweep (`TaskIntake.completeContainers`, which runs after any close) closes it through `TaskService` as the host: `done/finished` when at least one child is done, else `dropped/cancelled`, with one feed line ("KEY done: everything under it is finished", or "stopped: nothing under it went ahead").
+A parent that carries a crewmate, ever started, or still has an open child is never touched, and `closeRefusal` is unchanged.
+The sweep runs after every close and every minute, so it counts the parts of every parent that could close in one read (`TaskService.childCounts`) and reads a parent's parts whole only once every one of them closed, counting again after each close it makes (INF-5130).
+It also waits while the first mate's lane still holds news about one of its parts that no turn has finished on (`InboxStore.holdsUnhandled`, INF-3846): the approval of a plan closes the plan, and the first mate's answer to it may file the parts the plan named.
+It also waits while the first mate's turn that closed one of its parts still runs (`TaskIntake.firstmateTurnBegan` and `firstmateTurnEnded`, over the task change seam, INF-4509): that close purges the part's news, so the lane alone cannot hold it, and the sweep judges it again when the turn ends.
+When the first mate's `settle_task` or `update_task` drop closes such a parent's last open part, the answer names the parent, its goal and its basis, and says it closes when the turn ends unless a part is filed under it (`TaskIntake.parentCloseNote`); whether the goal is met is the first mate's judgment, never the host's.
+Once that turn ends and nothing new is under it, the next sweep closes it.
+A parent tells the truth about its parts: a container the host closed opens again the moment a live part is filed or moved under it (`containerParents.ts`, in the same write as `TaskService.create` or `setParent`), with a timeline line naming the part, recorded as whoever filed or moved it.
+It opens before that write's wait checks, so a part that waits on the container, directly or through other tasks, is refused as a circular wait and the opening rolls back with it.
+The same sweep first opens again, as the host, every container closed while a part under it is live (`TaskService.reopenHeldContainers`), which corrects parents an earlier release closed before their parts were filed.
+No site opens a container one of its live parts already waits on: opened, it would wait on its own part and neither could ever move, so the sweep leaves it closed and a filing or move under it is refused with the circular-wait words (`TaskService.containerLoop`).
+Only the host's container close (a `finished` or `cancelled` close with `data.container` on its newest status line) opens again: a parent closed for its own reasons - its merge, its answer, the captain's drop, which keeps open parts planned on purpose - keeps that close, and a part filed under it carries that work on.
+
+`settle_task` in every mode and every settle through `SettleService.settleTask` check these first.
+An externally delivered work task closes `done/released` through `settle_task` done, why `released`, with a specific verified release named in `evidence`; closing on its own, the first mate needs an idle reported task and none of its own pull requests reading open, and the close records each of its pull requests and its working copy as it read them, unread included (`docs/task-record.md`, "One close as done").
+A pull request of its own closed without merging, or commits only history calls unmerged, such as a squash merge's originals, do not refuse it: the close keeps those commits on the task's kept ref (INF-2628).
+The release evidence is recorded in its close event.
+Ordinary work declared `in_folder` closes `done/finished` through `settle_task` done, why `finished`, after the first mate verifies its reported result and supplies `evidence` (INF-1279).
+The close records the declaration through the existing close owner without changing the project folder, preserving edits, staged work, stashes and unpushed commits.
+A change task with a working copy or branch of its own that delivered no change, such as a triage whose fix went to another task's branch, closes `done/finished` the same way (INF-2971): the host reads that copy where it ran, as a discard does, and records `noChange` beside the evidence when it holds no commit or uncommitted edit.
+A copy that holds work is held by the delivery proof unless the close names where the work went; one that cannot be read is recorded as unread and never holds the close.
+Every settle refusal names what would close the task, so finished work is never discarded for want of a working close.
+The host checks these typed facts, never the meaning of the evidence; verification remains the first mate's judgment, not a publication-specific state or a substitute for merging.
+A missing proposed change, a note dismissal or an unverified assertion never closes work; the host does not infer delivery from either.
+Each close refusal is a structured `SettleRefusal` (`{ refused, task, tasks, ways, text }`, cards/tasks/agents P2 WI-12): the tool returns its `.text`, and the ways out ride the settle wake as a fenced JSON block the first mate carries as effect buttons - a merge that keeps a task's open children planned is `settle_task` with `proceed_with_open`.
+`update_task drop` on a parent with open children needs `confirm`, which drops the open descendants as `superseded` (deepest first) and then the parent as `cancelled`; work a crewmate holds (an `active` row, idle included) is never dropped from a field edit - that stays with settle_task and its unlanded-work guard.
+Host closes (a failed turn, a cancel) are unguarded by design: a record must always be able to record what happened to it.
+
+## Tools
+
+The first mate (`src/core/pi/taskTools.ts`): `create_task` (plan without starting by default: the intent - goal, the user's words, and the same `constraints` and `delivery_note` `spawn_crewmate` takes, one shared schema, so a planned step's brief prints a free constraint verbatim under the user's words - `parent`, `blocked_by`, `start_policy` defaulting to on-request, `captain_stop` - recorded at filing when the captain chose to file it for later, as on `update_task` - `priority`, and `basis` - the same fact `spawn_crewmate` carries, recorded as named, a `basis` relationship (`docs/task-record.md`, "Relationships"), its verdict derived at every read and never stored, since the task it names is usually still running when the step is planned; `docs/task-record.md`), `update_task` (`start_again` on the captain's request to replace dropped work and start it, returning the new key; otherwise title, goal, priority, start_policy with `captain_stop` - the first mate's record that the captain asked for the wait, which the next-move check reads as the captain's stop (`docs/report-sort.md`, "The next-move check") - parent, project for open workspace-less work, `override_model_id` - the model the captain named for a filed task, which keeps its key and links and starts on it with `start_now` in the same call (contract v4.46, FI3-436), and on started work moves the task there between turns (INF-849, `docs/task-record.md` "Moving a started task to another provider") - `unstick`, the first mate's answer to a task stuck at its provider - `restart` continues it in a fresh conversation, `move` moves it to the app's pick off that provider (`docs/inbox.md`, "Stuck at its provider") - `runs_on`, where the captain said a task that has not started runs (`docs/helper.md`, "A task's own Runs on"), `withdraw_merge`, the captain taking back a merge the captain clicked, which keeps the work and holds its merge for the captain's next click (contract v4.67, `docs/delivery-rigor.md` "A kept merge approval"), `override`, the soft holds the captain's words in this turn pass and for how long, which the host refuses in a turn without the captain's words (`docs/delivery-rigor.md`, "The holds"), `take_back_yes`, the card id of a yes the captain gave on the task or on work it carries on, taken back on the captain's words (`docs/delivery-rigor.md`, "What the captain already allowed"), or `drop` with `reason`, `confirm` and `replaced_by`, the task that does the dropped one's work, which writes a `replaced-by` link before the close), `link_tasks` (`from`, `to`, `type`, `remove`), and `tasks` (the query: project, status, key, text, parent).
+The first mate's `create_task` and `update_task` calls setting `start_policy: "when-ready"` must declare `blocked_by` in that same call; `[]` explicitly declares none.
+An omitted list is undeclared, not independent: either tool returns the same typed refusal before any write or combined `start_now`.
+Creation records its declared prerequisites atomically with the new row.
+An update adds each declared prerequisite that is not linked yet, in the same step as its field edits, and never compares the list with the current links or removes one.
+Ids and keys name the same task, and duplicate references count once.
+A cycle refuses the whole update, so its field edits and the new link do not remain.
+An already linked prerequisite is left as it is, including one whose task has closed.
+`link_tasks` remains the way to remove a wait.
+Removing `blocks` also clears standing baseline diagnosis references from the waiting task to that owner, even when no graph edge exists; the check failure and diagnosis evidence remain recorded.
+On-request creation and updates still need no declaration, so the first mate can file related work safely, add its links, read back the graph, then start ready work within the captain's authorization.
+This is a generic input requirement, not a rule over plans, titles, parents or sequence labels; automatic scheduling and explicit independent work otherwise behave as before.
+`spawn_crewmate` gained `parent`, `blocked_by`, and `priority`; `after_task` stays as an alias of `blocked_by`.
+`spawn_crewmate`, `create_task` and `update_task` take `result_schema`, the JSON Schema a task's report `result` must fit, and `branch_from`, the task whose last commit its working copy starts at; the schema lives on the shape and `branch_from` is a `branch-source` relationship, both change only before the task starts, and are refused as tool text when they do not hold (`docs/task-record.md`, "A typed result and where a working copy starts").
+A parent still says only what a task is part of and moves no code; `branch_from` is the one relation that moves code, and the task it names is a sibling, never the parent.
+Every write attaches the turn's ask to the task it acts on (P1's attach-first).
+The prompt's class 4 is "spawn or plan"; the C5 dispatch extractor sorts `create_task` with spawn, the graph edits with operate, and `tasks` with the reads.
+
+Crewmates (`src/core/pi/crewmateTaskTools.ts`, the same pair over Claude's tool server in `src/core/claude/claudeTaskTools.ts`): `file_followup` (title, goal, why, `blocks_me`, and for a test failure `test_failure` plus `test_path`) files an on-request task of its own - never a child - joined to the crewmate's task by a `discovered-from` edge and placed in its project and repo, and the first mate hears one `[fm-op]` that names the key, whether it holds the origin up, and the choices.
+The host stores `test_path` and answers with the existing key instead of filing a second open or active row for the same path; a test failure with no path is refused.
+A test that fails outside the crewmate's change is a follow-up only when it also fails on the untouched main line, otherwise one line in the report.
+A report's `waits_on` records an existing open task whose close gives what its work needs as a `blocks` link, which holds its start and merge like every wait, on the task carrying its work when a `replaced-by` link moved it (`TaskService.graph.carrierOf`), refusing an unknown, closed, own or circular key (`TaskService.graph.linkWaits`; `docs/report-sort.md`, "A wait on work nobody has started is the first mate's turn").
+`start_program` (title, goal, script, `args`, bound; or `program` with a larger `bound` or `stop`) files a program in the crewmate's project, when-ready - never a child - joined to the crewmate's task by a `discovered-from` edge and a `blocks` link from it, which holds the crewmate's merge like every wait and whose close steers the crewmate (`docs/programs.md`, "Starting a program").
+`note_progress` writes one `progress` event on the crewmate's own timeline with `feed = 0`.
+Both register through `CrewmateSpec.onFollowup` / `onProgress`.
+
+The quiet ledger (FI3-152, direction A) is how the captain hears about those filings without a card.
+Charted's header counts crew-filed rows not yet opened (`captain_opened_at`; opening the record clears it).
+The row's word is `found on <origin key>`.
+The record card shows the filing's why and the first mate's `verdict` (one line, `update_task verdict` when leaving it planned).
+Hide removes the shown record entry from the stack, without dropping the task.
+Drop task on never-started work drops that one record as cancelled ("No longer wanted", captain-attributed), and its open parts stay planned, which its question names; on started work the same button is the captain's drop of started work, `stop-task`; both run the one drop (`docs/task-record.md`, "One drop").
+`update_task drop` is unchanged and still cascades open children when confirmed.
+`verify.yml`'s lanes run their gate from a path with a space, the path every crewmate works under.
+
+The retired supervision session held the read-only `tasks` query beside `crew_status`, so a wake about a task could see its parent, blockers and follow-ups; it wrote nothing on the graph, and S7c retired both it and those tools (`docs/report-sort.md`).
+Every crewmate still holds the same read-only query.
+
+## What gets filed, and what closes it
+
+Filing is selective (FI3-868, the captain's choice on FI3-845's backlog assessment).
+What counts is a judgment, so it lives in the crewmate's and the first mate's instructions alone; the host files whatever a crewmate files.
+
+- A crewmate files a concrete defect it can show on the current main line, or a credible risk to the person's data, accounts, signing material or merges.
+  Its `why` gives the evidence, what the finding breaks and for whom, and what the crewmate is unsure of.
+- An optional improvement - a refactor, a test that would only add assurance, a nicer wording - stays in the crewmate's report, unfiled.
+- Work the crewmate's own change needs, and the documents it makes stale, stay with that change.
+  The rest of its own work that must wait for a merge is not filed: it is listed as after-merge steps on the change's story, below.
+- A finding that matches an existing task is not filed: the report names that key and what the finding adds to it.
+- A change that meets another open task's whole goal names that key and the evidence in its report.
+
+On the report the first mate triages each filing.
+A repeat is dropped as covered (`update_task drop`, its reason naming the covering key) once anything it adds is in the kept task's goal.
+The rest start when ready, are dropped, or stay planned at the priority they deserve, with a verdict saying what waiting costs and who pays it, and what would start them.
+Optional ideas reach the captain only when they merit the captain's choice: together, in one decision card after the report that names them, and only the ones the captain picks become tasks.
+
+When a report says its change covers open tasks nobody started, the first mate links each to wait on the reporting task (`link_tasks blocks`) and leaves it on request.
+A captain's merge that goes through wakes the first mate only when it frees open work that only a start begins (`settled`, `docs/inbox.md`), so such a covered task brings the first mate back once the merge is in, as the first mate's own `settle_task` result does.
+It then drops a covered task only when the merge met its whole goal, removing that task's `blocks` links first so nothing is left waiting on a dropped row.
+Partial or unsure ones stay, with a verdict; nothing cascades into children, and started work is never dropped this way.
+
+Nothing is dropped by age, and no queue, timer, expiry or count decides what stays.
+At a release cut the first mate re-verifies crew-filed rows older than the last release against the main line before a drop (`docs/alpha.md`, "Activating the channels").
+The review names each key it checked, that key's fate, and the keys left unchecked; a row not re-verified stays.
+
+## Current blockers in the task panel and record
+
+The board/detail `blockedBy` list names only the waits that hold the task now, by one rule the board and the crew's tasks reader share (`holdingWaits`, INF-999).
+On open work that is every live (open or active) blocker.
+On active work it is every live blocker, since each holds the merge (INF-3167), unless the captain's words passed that hold (the recorded override, `overridePasses`), and the live work a standing baseline wait names.
+A crewmate working past a recorded wait is still held by it, and a hold the captain released reads as released.
+Close refusals, the active blocked flag, the settle card's must-close-first rows and the context's “cannot merge until” line read the same live edges and the same override (`holdingClose`), so a wait the captain's words passed reads free in all of them.
+Done, dropped and discarded work stays in graph/timeline history, not in the record's “Waiting on” banner or “Waits on” facts.
+With no live blockers, that banner disappears.
+The baseline wait (FI3-250) holds no edge to its close, but the task waits on that work all the same.
+The tasks reader's open rows also name a dropped blocker, so the agent can resolve it.
+
+This is not a change to the start policy: a dropped edge still prevents an open task from dispatching until the first mate resolves it.
+Such a record says it needs attention rather than claiming closed work is still underway, and Start stays disabled without naming the closed task as a live blocker.
+The ready query, dead-gate wake, agent wait explanations and historical feed lines retain the dropped-edge information.
+Closed blockers do not hold an active task's close.
+
+## Context block
+
+Index rows carry the graph in a few words: `[under SCR-1; blocked by SCR-3]`, `[found on SCR-1; on request]`, `[cannot merge until SCR-4 closes]` for active work, `blocked by X (dropped)`.
+`crew_status` says `starts on request` for a planned row.
+
+Task refs in tool text are keys; ids stay the join column.
+
+## Notes moved from AGENTS.md
+
+Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
+
+- The task graph (R1 on the record; task-system P2, `docs/task-graph.md`): `open` rows wait on a gate (`quota-reset | at-time | captain`), on `blocks` links, or on request (`start_policy`).
+  The R1 sweep IS the ready query now (`TaskStore.listReady`: open work, unheld, when-ready, every blocker `done`; on-request rows never dispatch on their own) and runs on the tick, after ANY close, after any graph change, on quota refresh, and at boot.
+  One parent per task (`parent_id`; a child inherits the project, the ancestor walk refuses cycles) and three link types; a `blocks` edge that would close a cycle is refused at insert as `TaskGraphRefusal`, which every tool returns as text - never let it become a thrown tool error or a silent no-op.
+  A dropped blocker is a dead wait: one deduped `[fm-op]` wake to the first mate (`wakeDeadGate`), no card and no hold; `link_tasks remove` on the dead edge lets the sweep start it, `update_task drop` drops it too, and `update_task start_now` refuses while the edge stands.
+  That refusal marks a dropped blocker and names its dead edge to remove with `link_tasks remove`; it never suggests dropping a blocker, because a dropped blocker's edge still blocks (`startWaitRefusal`).
+  The parent close rule (`closeRefusal`) guards settle/land/merge and `update_task drop` (confirm cascades open children as superseded); host closes stay unguarded.
+  Crewmate follow-ups (`file_followup`) are on-request rows with a `discovered-from` edge and a feed line, and the filing itself sends no wake: the report names what the turn filed (`filedThisTurn`).
+  While nobody has started a follow-up that holds the origin, a later report from the origin wakes the first mate and names it (`docs/report-sort.md`, row 2a).
+  Every crewmate (Pi and Claude) holds the read-only `tasks` query to search first (cards/tasks/agents P0, WI-4); `note_progress` is a `feed=0` timeline event.
+  A first mate decision row (`kind=decision`, gate ref = card id) lives exactly as long as its card is on the stack, and the sweep closes one whose card is gone.
+  There is no automatic Later and no park (cards/tasks/agents P0, captain rulings D1-D8 of 2026-09-15): a card carries exactly the actions its author declared, every click returns to the author, `recall_decision` is gone, and migration 28 closed every open park row into `park_row_backfill`.
+  Open rows have no worktree ("" columns) until dispatch; `closeTask` must keep skipping workspace removal for them.
+
+### After-merge steps
+
+The rest of the origin's work after its own change merges is declared, never filed during the work: the change's saved story may list `afterMerge` steps (`src/shared/afterMerge.ts`), each a new task's title, goal and why, or the key of an existing open task that has not started (`task`).
+A new step may name the project it is filed in by key (`project`), the origin's when absent, and any step may name the tasks whose merge it also waits for (`blockedBy`).
+A new step works in the repository it names (`repository`), else the origin's in the origin's project, else its project's only one; a step filed in another project that holds several repositories must name one (`TaskDeliveries.stepRepository`).
+Any crewmate step may also name the tasks waiting on the origin that still need the step's work (`holds`, INF-3846's "waits follow the work"): a change that ships one slice of the work keeps those tasks waiting for the rest instead of freeing them at its own merge.
+Which waiters still need the rest is the crewmate's judgment; the host only checks that the move can be made.
+Neither the steps nor their dependency lists have an item-count limit, including the merge card's display data.
+The existing whole-story guard accepts at most 60,000 UTF-16 code units of serialized JSON, including punctuation and after-merge work, to bound the stored and published story rather than the amount of work.
+An oversized story is refused without truncation: shorten descriptions or file the work as tasks first and list their keys, keeping every authorized task and dependency.
+Each step names who does it (`doer`): a crewmate in a project's working copy, the default, or the first mate, for a change in the app itself such as an Automation rule, a setting or a direction, which no crewmate can reach.
+A first-mate step is a title, goal and why alone, with no `task`, `project`, `repository`, `blockedBy`, `holds` or `uses`, and the merge files no task for it: the merge's settled wake, or the first mate's own `settle_task` result, hands it to the first mate to do with its own tools (`TaskDeliveries.firstmateAfterMergeSteps`).
+Preparing the story refuses a step whose shape is incomplete, a named task that is running, closed, unknown or the origin itself, a named task already set to start on its own unless it waits on the origin, an unknown or archived project, a repository its project does not hold or a missing one its project needs, a wait on an unknown task, on the origin, or one that would close a cycle, and a held task that is unknown, closed, the origin, the step's own task, not waiting on the origin, held by another step too, or one whose wait on the step would close a cycle (`TaskDeliveries.afterMergeRefusal`).
+The list is optional, and a story without one merges exactly as before (INF-2796, the captain's "a merge can totally end without anything to continue").
+The merge card draws the steps under "After merging, the crew starts", after the captain's own required actions in one strip at the top of its body, from the story the card shows: an existing task by its key, title and goal, read when the card is shown, a waiting step with a line naming what it waits for, and under every step a line naming who does it (`TaskDeliveries.afterMergeShown`).
+A merged or landed close files each new step in its own transaction (`TaskDeliveries.activateAfterMergeSteps`, beside `activateRequiredActions`) as a `when-ready` task titled `Continue: …`, discovered from the origin, and sets each named existing task `when-ready` with a note saying why and the same host-written `discovered-from` link to the origin, so its brief reads the origin's report and card and the message the origin served covers it; that later link never changes the task's own "You asked" line, which keeps where its work came from (`TaskCapture.originAbout`).
+A new step is filed as the crew's own work (`shape.internal_step`, INF-4574): the captain's merge started it but asked for no result of it, so its crewmate's report goes to the first mate and a card asks the captain only for their part.
+A drop or cancel of such a step closes quietly like other crew-started work, so it shows only on the step's record and in Activity, with no card or closing note for the captain (`src/core/orchestrator/taskClose.ts`).
+Its "You chose" line still names the captain's choice on the origin, since the host-written link made when the step was filed marks it as filed at that merge (`OriginReader.filedAtMerge`, `src/core/tasks/taskOrigin.ts`).
+Its brief names the merge that listed it, the other steps the same card listed, by title, and the tasks whose merge it waited for (`renderAfterMergeFacts`, `src/core/orchestrator/intentBrief.ts`).
+A step may name what it will use that needs the captain's yes (`uses`): the resource, the check and its possible cost or change.
+The merge card draws that line under the step, and the captain's own click on Merge records it as already allowed on the step's task, for the step's crewmate to read instead of asking again (`docs/delivery-rigor.md`); a merge the app makes on its own records nothing.
+The yes holds only when the merge was the captain's own click and the steps it filed are the ones that click's card showed: a kept approval the merge spent names that card, and a merge with no kept approval - a local branch, or a host with no checks - reads the card the click recorded (`TaskDelivery.mergeClick`) when the captain's own settle closed it.
+A merge the first mate or the app settled, or one whose steps came from another story than the clicked card's, records nothing (`captainMergeClick` in `src/core/tasks/taskDeliveries.ts`).
+A first-mate step takes no `uses`.
+Each `blockedBy` key becomes a `blocks` link from that task into the step, so the step starts only once that work merges too; a wait that would close a cycle by the time of the merge is skipped with a note on the step, so the merge is still recorded.
+Each held task's `blocks` link from the origin moves to the step in the same transaction (`TaskGraph.carryWait`), keeping its merge mark and when it began, before the sweep after the close reads it: the held task is never told to carry on at this merge, and its timeline records the move, so the step's close tells it whose work the step took over.
+A move that would close a cycle by the time of the merge is skipped with a note on the held task.
+The card leaves out a wait on work already closed.
+A named task that started or closed between the card and the merge is left as it is, and the settled wake says it started nothing for a closed one, so the first mate decides whether its work still needs a task.
+Its id is derived from the story's change, revision and the step's place, so a restart or a second activation files nothing twice.
+The ready sweep after the close starts each step nothing else holds; the discovered-from link gives its brief the origin's report, card and thread.
+The same link keeps the step in the coverage of the captain's message the origin served (`docs/task-capture.md`, "How a message ends"), so the message stays underway until the rest of the work is done.
+A discard, refusal or unknown merge closes nothing as merged, so it files nothing.
+The settled wake names the filed steps once, with the tasks each one holds, and so does the first mate's own `settle_task` result, so the first mate can drop a step another task already covers.
+A merge whose story left steps to the first mate wakes it even when nothing else would, since no task holds those steps.
+
+A `Continue: …` filing made during the work, as older instructions asked, is still the rest of the origin's work, not a dependency holding the origin.
+The first mate sets the `blocks` edge **from origin to continuation** before setting the filing `when-ready` in the same turn: the sweep runs after each graph change, so reversing this order can start it too early.
+A missed triage leaves an ordinary visible on-request filing.
+
+## Combining repairs after a circular-wait refusal
+
+The crewmate reports the full task-key loop to the first mate rather than declaring another wait or retrying the refusal.
+When only part of a task gives what the waiter needs, the first mate splits that part into its own task or folds the waiter into the task it waits on, and removes a wait only when it names the wrong task (INF-3167).
+For two repairs of failing checks it chooses one existing repair owner and combines necessary patches with attribution, keeping existing permissions and repair records.
+It removes only waits made obsolete by that consolidation, has the owner verify the combined version including every failed check, and reconciles other tasks only after merge.
+The host refuses loops but never chooses an owner or stores another wait type.
+
+## Captain-owned required actions
+
+Required actions use durable operation records distinct from card-only operations (`docs/required-actions.md`).
+They remain captain-owned after their cards close, and prerequisites use ordinary blocks links.
+Their sources are related links, never blocking children of a code task.

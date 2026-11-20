@@ -1,0 +1,46 @@
+{
+  "entries": [
+    {
+      "id": "bf-da0db21a1",
+      "kind": "feature",
+      "title": "Flicker the character that spent a finished request",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "da0db21a1d506caae3f1cb703230011738006b3b"
+        ]
+      }
+    },
+    {
+      "id": "bf-d0691cd58",
+      "kind": "feature",
+      "title": "Default Cursor's Grok slot to 4.7",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "d0691cd58a5fbab2e4adf608c9aaa0669a5dcf1c"
+        ]
+      }
+    },
+    {
+      "id": "bf-4bfeac128",
+      "kind": "feature",
+      "title": "Default GPT-6 Sol to high and medium, Grok to 4.7",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "4bfeac128f4603d2763b9c22990be9c411af97eb"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-4-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.4: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "8678d7e36a52486c202762fbf6af42591383aa2c"
+      ]
+    }
+  ]
+}

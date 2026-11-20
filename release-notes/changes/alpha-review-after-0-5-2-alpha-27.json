@@ -1,0 +1,23 @@
+{
+  "entries": [
+    {
+      "id": "protocol-twelve",
+      "kind": "removal",
+      "highlight": 3,
+      "area": "devices",
+      "title": "Update Infinitary on your other computers, iPhone and iPad",
+      "body": "This version changes how your computers work together again. A computer that runs work for you takes no new work until it runs this version too, and you can update it from Devices. A computer, iPhone or iPad that controls your first mate can look but not change anything until it is updated.",
+      "noPicture": "This changes which versions of Infinitary work together, not the layout or words of a screen.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": ["5ad16f7834ca7411ecfc36b95d3b209ba3f52f14"]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "alpha-review-after-0-5-2-alpha-27",
+      "reason": "Release review for the alpha after 0.5.2-alpha.27: ranks check rounds on the merge card, operations and the protocol 12 update as highlights; adds that update's note; rewords the integration actions, merge offer and waiting-task notes in plain words; asks for medium intelligence in the operations note; files the mistaken-goal note under crewmates. Nothing in the app changes."
+    }
+  ]
+}

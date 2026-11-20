@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "hide-prepared-successor",
+      "kind": "fix",
+      "title": "The card you return to is ready",
+      "body": "When you hide a task or an earlier card, the first live card you come back to is ready at once, even when another card is unread.",
+      "area": "cards",
+      "noPicture": "The destination looks unchanged; the fix reuses its prepared drawing instead of loading it again.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

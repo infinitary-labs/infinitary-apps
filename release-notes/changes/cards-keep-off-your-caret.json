@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "cards-keep-off-your-caret",
+      "kind": "fix",
+      "title": "A card or panel no longer takes the caret while you type",
+      "body": "A card or an added panel could move the caret out of the message you were typing, so your next keys landed in the card. Your caret and keys now stay in your message. Only your own click or key moves into a card or panel.",
+      "area": "cards",
+      "noPicture": "Nothing new is drawn: the caret stays in the message you are typing, as it looked before the card's script ran.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

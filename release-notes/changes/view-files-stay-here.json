@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "view-files-stay-here",
+      "reason": "Internal, behind the development-only multi-machine gate: on an app controlling Firstmate on another Mac, a dropped or chosen file that is neither a picture nor text is refused with a line naming that Mac instead of being typed in as a path on this Mac. An installed app shows and offers none of it."
+    }
+  ]
+}

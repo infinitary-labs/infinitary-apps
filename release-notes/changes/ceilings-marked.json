@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "ceilings-marked",
+      "reason": "Code comments only: report plausibility's two-word floor and writing-system check, the first mate's close sentence and the one answer-missing retry each name the model limit they cover and when to remove them; nothing a person notices."
+    }
+  ]
+}

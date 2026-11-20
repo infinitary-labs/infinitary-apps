@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "phone-keyboard-attached-for-chords",
+      "reason": "The phone UI tests' home now attaches a hardware keyboard to its own simulator while it waits for the simulator to acknowledge Infinitary's key commands, because UIKit only publishes them while one is attached. Test infrastructure only; no shipped behavior changed."
+    }
+  ]
+}

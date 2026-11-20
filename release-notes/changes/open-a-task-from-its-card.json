@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "open-a-task-from-its-card",
+      "kind": "feature",
+      "highlight": 1,
+      "title": "Open a task from its card",
+      "body": "Every card about a task now starts its top line with the task's key. Rest on it to see the task's summary, and click it to open the task's record in front of the card; Hide brings the card back. Show Info in command search does the same. A task you answered Not now to under Waiting on you shows its card again when you click its row.",
+      "area": "cards",
+      "picture": {
+        "dark": "open-a-task-from-its-card-dark.webp",
+        "light": "open-a-task-from-its-card-light.webp",
+        "alt": "A decision card whose top line starts with its task's key, SCR-1, before the task's title and the model"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

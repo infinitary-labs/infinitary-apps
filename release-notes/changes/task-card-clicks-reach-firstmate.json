@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "task-card-clicks-reach-firstmate",
+      "kind": "fix",
+      "title": "Firstmate now knows when you press Start, Continue or Drop task on a task",
+      "body": "When you press Start, Continue or Drop task on a task's own card, Firstmate now reads that it was you the next time it answers, beside your choices on cards. Before, it heard nothing of Continue or Drop task, and your Start reached it as if the task's wait had simply ended. The task's history now also says you started it.",
+      "area": "tasks",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "demo-recording-first-picture",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Demo recordings are no longer refused now and then",
+      "body": "A crewmate's demo recording that plays could sometimes be refused as showing no picture at its start, so its card did not come up with the demo. The check now waits for that first picture.",
+      "noPicture": "The demo card looks as it always did; the fix only stops a recording that plays from being refused.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

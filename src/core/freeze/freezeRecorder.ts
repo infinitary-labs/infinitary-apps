@@ -1,0 +1,435 @@
+import { GCProfiler } from "node:v8";
+import type { Worker } from "node:worker_threads";
+import { forgeOf } from "@shared/forge";
+import { type SourceIdentity, sourceIdentitySchema } from "@shared/selfSource";
+import { z } from "zod";
+import releaseConfig from "../../../packaging/release-source.json" with { type: "json" };
+import type { TypedWake } from "../orchestrator/wakes";
+import type { VersionSummary } from "./freezeTally";
+import { MemoryRecorder } from "./memoryRecorder";
+import type { PassSteps } from "./passSteps";
+import { takeWatchdog } from "./watchdog";
+
+/**
+ * The freeze recorder (docs/freeze-recorder.md; INF-2061's plan, built as
+ * INF-2066). A watchdog thread beside the app's main thread notices when the
+ * main thread misses its heartbeat, asks V8 once for the JavaScript call path
+ * the main thread is running. It persists a start before replies, then
+ * completes the same incident in a bounded local record: when, how long
+ * between heartbeats, how much of that the main
+ * thread's own processor time was, and the function names. It records no
+ * arguments, values or text.
+ */
+
+/**
+ * The main thread's heartbeat to the watchdog: a fifth of the line, so a
+ * stall at the line is told from one missed beat.
+ */
+export const HEARTBEAT_MS = 10;
+/**
+ * A main thread silent this long is frozen: INF-2078's plan, the stall a
+ * person feels as a missed frame or two while typing or scrolling.
+ */
+export const FREEZE_THRESHOLD_MS = 50;
+/** The record keeps the newest lines; older ones drop, so it never grows past this. */
+export const RECORD_MAX_LINES = 500;
+/** The minute pass record keeps a day of passes, one a minute; older ones drop. */
+export const PASS_RECORD_MAX_LINES = 1_440;
+
+/**
+ * The speed probe's fixed work: about 6 microseconds on a Mac's fast core,
+ * so a heartbeat every 10 ms spends well under a thousandth of the main
+ * thread on it.
+ */
+const SPEED_PROBE_ROUNDS = 4_000;
+/** The app's windows are read every this many heartbeats, 100 ms apart. */
+const WINDOW_READ_BEATS = 10;
+
+/** Whether the app's windows were shown at a pause (`Host.windowState`). */
+export const windowStateSchema = z.enum(["focused", "visible", "hidden", "none"]);
+export type WindowState = z.infer<typeof windowStateSchema>;
+
+/**
+ * How fast the main thread ran around a pause: the speed probe's time in the
+ * heartbeat before the stall and the one that ended it, and the fastest the
+ * probe ran in this run so far. A before or after several times the fastest
+ * is the main thread running slowly, not doing more work.
+ */
+const speedSchema = z.object({
+  beforeNs: z.number().int().nonnegative(),
+  afterNs: z.number().int().nonnegative().optional(),
+  fastestNs: z.number().int().nonnegative(),
+});
+
+/**
+ * The minute pass's step the main thread was running when a stall began, and
+ * the steps whose promised work had not settled yet (`./passSteps.ts`).
+ * Unsettled work only says the stall fell while it was outstanding, not that
+ * it ran then.
+ */
+const stepSchema = z.object({
+  running: z.string().optional(),
+  unsettled: z.array(z.string()).optional(),
+});
+
+/**
+ * The newest time the computer slept before or during a stall, as the
+ * watchdog saw it: its wall clock ran on while its monotonic clock, which
+ * stops while the computer sleeps, did not. A clock set by hand reads the
+ * same way.
+ */
+const sleepSchema = z.object({
+  wokeAt: z.string(),
+  sleptMs: z.number().int().nonnegative(),
+});
+
+/**
+ * The whole process's page faults between the heartbeat before a stall and
+ * the one that ended it, and its resident memory at each: `majorFaults` are
+ * pages it waited on the disk for, from a file or swap, and `minorFaults`
+ * the rest. Resident memory growing across a stall is memory paged back in.
+ */
+const pagingSchema = z.object({
+  majorFaults: z.number().int().nonnegative(),
+  minorFaults: z.number().int().nonnegative(),
+  rssBeforeBytes: z.number().int().nonnegative(),
+  rssAfterBytes: z.number().int().nonnegative(),
+});
+
+/**
+ * The main thread's garbage collections between the heartbeat before a stall
+ * and the one that ended it, as V8's collection profiler timed them on the
+ * main thread: `ms`, every collection's pause in all, `fullMs`, the part spent
+ * in full collections (mark-sweep-compact), and `count`, how many there were.
+ * Their time is part of the stall's `wallMs` and `cpuMs`.
+ */
+const gcSchema = z.object({
+  ms: z.number().int().nonnegative(),
+  fullMs: z.number().int().nonnegative(),
+  count: z.number().int().positive(),
+});
+export type GcReading = z.infer<typeof gcSchema>;
+
+const frameSchema = z.object({
+  name: z.string(),
+  file: z.string(),
+  line: z.number().int(),
+  column: z.number().int(),
+});
+
+/**
+ * One recorded stall. `frames` is the call path, innermost first. `uncertain`
+ * says the names may not be where the time went: `waited`, the main thread
+ * spent under half the stall on its own processor, so it was waiting on
+ * something outside JavaScript and the names were read after the wait;
+ * `late`, the names were read only after the stall had ended, from code that
+ * ran later.
+ */
+export const freezeLineSchema = z.object({
+  incidentId: z.string().optional(),
+  status: z.literal("completed").optional(),
+  completedAt: z.string().optional(),
+  at: z.string(),
+  build: sourceIdentitySchema.optional(),
+  wallMs: z.number().int().nonnegative(),
+  cpuMs: z.number().int().nonnegative(),
+  frames: z.array(frameSchema),
+  // Optional for old records and captures that were never requested or received.
+  captureRequestedAt: z.string().optional(),
+  capturedAt: z.string().optional(),
+  uncertain: z.enum(["waited", "late"]).optional(),
+  // Optional for old records and processes with no windows to read.
+  window: windowStateSchema.optional(),
+  speed: speedSchema.optional(),
+  // Optional for old records and stalls outside every step.
+  step: stepSchema.optional(),
+  // Optional for old records and runs whose computer has not slept.
+  sleep: sleepSchema.optional(),
+  // Optional for old records.
+  paging: pagingSchema.optional(),
+  // Optional for old records and stalls with no collection in them.
+  gc: gcSchema.optional(),
+});
+export type FreezeLine = z.infer<typeof freezeLineSchema>;
+
+/** An unfinished stall retains capture timing, but has no measured end, processor time or frames. */
+export const freezeIncidentSchema = z.union([
+  freezeLineSchema,
+  z.object({
+    incidentId: z.string(),
+    status: z.enum(["started", "interrupted"]),
+    at: z.string(),
+    interruptedAt: z.string().optional(),
+    build: sourceIdentitySchema.optional(),
+    captureRequestedAt: z.string().optional(),
+    capturedAt: z.string().optional(),
+    window: windowStateSchema.optional(),
+    speed: speedSchema.optional(),
+    step: stepSchema.optional(),
+    sleep: sleepSchema.optional(),
+  }),
+]);
+export type FreezeIncident = z.infer<typeof freezeIncidentSchema>;
+
+/**
+ * The captain's project that is Infinitary's own source, by where it lives,
+ * or undefined: the first mate offers a fix task only when there is one
+ * (the captain's answer on INF-2061).
+ */
+export function infinitaryProject<T extends { id: string; name: string; origin: string | null }>(
+  projects: readonly T[],
+  repository = releaseConfig.repository,
+): T | undefined {
+  const [owner, name] = repository.toLowerCase().split("/");
+  return projects.find((project) => {
+    const where = forgeOf(project.origin);
+    return (
+      where.host === "github.com" &&
+      where.owner?.toLowerCase() === owner &&
+      where.name?.toLowerCase() === name
+    );
+  });
+}
+
+/**
+ * The alpha recorder's automatic summary of one installed version's stalls,
+ * every run of it on this computer, sent when the app first starts on the
+ * next version (INF-3044's plan), once per version through the durable
+ * inbox, independent of call path, restart or dismissal (INF-2205).
+ */
+export function freezeWake(
+  summary: VersionSummary,
+  project: { id: string; name: string },
+): TypedWake {
+  return {
+    facts: {
+      kind: "freeze-recorded",
+      project: { id: project.id, name: project.name },
+      summary,
+    },
+    once: `freeze-recorded:version:${summary.version}`,
+  };
+}
+
+/**
+ * What the recorder keeps its per-version tally in (`./freezeTally.ts`,
+ * `FreezeTally`): a run's start, its awake time, each stall, and the
+ * earlier versions taken out once recovery is done.
+ */
+export type TallyKeeper = {
+  startRun(): void;
+  ran(ms: number): void;
+  add(line: FreezeIncident): void;
+  takeEarlier(): VersionSummary[];
+  flush(): void;
+};
+
+/** How often the recorder adds the run's awake time to the tally and writes it. */
+export const TALLY_WRITE_MS = 60_000;
+
+/**
+ * The recorder's main-thread half: it takes the watchdog (`./watchdog.ts`),
+ * which the app's entry armed before the app's code loaded, hands it the
+ * record, beats every `HEARTBEAT_MS` with the main thread's own processor
+ * time, and hands each recorded line to `onFreeze`. With `tally`, it counts
+ * this run and each stall in the per-version tally, writes it every
+ * `TALLY_WRITE_MS` and on stop, and once the watchdog has recovered the
+ * previous runs' unfinished stalls hands every earlier version's summary
+ * to `onVersionsEnded` (INF-3044). A watchdog that fails
+ * stops the recorder and never the app. With `memory`, it also keeps the
+ * memory reading (`./memoryRecorder.ts`), which needs no watchdog.
+ */
+export class FreezeRecorder {
+  private worker: Worker | undefined;
+  private beat: ReturnType<typeof setInterval> | undefined;
+  /** V8's collection profiler on the main thread, read and started again at each heartbeat. */
+  private collections: GCProfiler | undefined;
+  private write: ReturnType<typeof setInterval> | undefined;
+  private stopSteps: (() => void) | undefined;
+  /** When the run's awake time was last added to the tally, on the monotonic clock. */
+  private ranUntil = 0;
+  private readonly memory: MemoryRecorder | undefined;
+  /**
+   * The speed probe's result, kept so neither the bundler nor V8 drops its
+   * work as unused: a module variable only written was dropped from the
+   * app's build.
+   */
+  private probeSink = 1;
+
+  constructor(
+    private readonly options: {
+      recordPath: string;
+      build?: SourceIdentity;
+      onFreeze: (line: FreezeIncident) => void;
+      /** Whether the app's windows are shown, noted at each pause; absent with no windows. */
+      windowState?: () => WindowState;
+      tally?: TallyKeeper;
+      onVersionsEnded?: (summaries: VersionSummary[]) => void;
+      thresholdMs?: number;
+      /**
+       * The minute pass's steps: each stall is tagged with the step running
+       * and the work unsettled, and each pass's timing goes to `recordPath`.
+       */
+      steps?: { source: Pick<PassSteps, "listen">; recordPath: string };
+      memory?: { recordPath: string; footprint?: () => Promise<number | null> };
+    },
+  ) {
+    this.memory = options.memory
+      ? new MemoryRecorder({
+          recordPath: options.memory.recordPath,
+          ...(options.build ? { build: options.build } : {}),
+          ...(options.memory.footprint ? { footprint: options.memory.footprint } : {}),
+        })
+      : undefined;
+  }
+
+  start(): void {
+    this.memory?.start();
+    if (this.worker) return;
+    const tally = this.options.tally;
+    const versionsEnded = () => {
+      if (!tally) return;
+      const ended = tally.takeEarlier();
+      if (ended.length) this.options.onVersionsEnded?.(ended);
+    };
+    if (tally && !this.write) {
+      tally.startRun();
+      tally.flush();
+      this.ranUntil = performance.now();
+      this.write = setInterval(() => {
+        this.addRunning();
+        tally.flush();
+      }, TALLY_WRITE_MS);
+      this.write.unref();
+    }
+    const worker = takeWatchdog();
+    if (!worker) {
+      versionsEnded();
+      return;
+    }
+    this.worker = worker;
+    worker.on("message", (message: unknown) => {
+      // The watchdog has handed over every unfinished stall of earlier runs.
+      if (message && typeof message === "object" && "recovered" in message) {
+        tally?.flush();
+        versionsEnded();
+        return;
+      }
+      const line = freezeIncidentSchema.safeParse(message);
+      if (!line.success) return;
+      tally?.add(line.data);
+      this.options.onFreeze(line.data);
+    });
+    worker.on("error", () => this.stop());
+    worker.postMessage({
+      record: {
+        path: this.options.recordPath,
+        build: this.options.build,
+        thresholdMs: this.options.thresholdMs ?? FREEZE_THRESHOLD_MS,
+        maxLines: RECORD_MAX_LINES,
+        passPath: this.options.steps?.recordPath,
+        passMaxLines: PASS_RECORD_MAX_LINES,
+      },
+    });
+    this.stopSteps = this.options.steps?.source.listen({
+      mark: (steps) => worker.postMessage({ steps }),
+      pass: (pass) => worker.postMessage({ pass }),
+    });
+    // Each heartbeat carries the speed probe's time, the main thread's
+    // collections since the last heartbeat and, when it changed, the windows'
+    // state, read every WINDOW_READ_BEATS; the watchdog notes them at a pause.
+    const windowState = this.options.windowState;
+    let beats = 0;
+    let shown: WindowState | undefined;
+    this.collections = new GCProfiler();
+    this.collections.start();
+    const beat = () => {
+      const probeNs = this.speedProbe();
+      const gc = this.collected();
+      let window: WindowState | undefined;
+      if (windowState && beats++ % WINDOW_READ_BEATS === 0) {
+        const now = windowState();
+        if (now !== shown) window = shown = now;
+      }
+      worker.postMessage({
+        probeNs,
+        ...(window ? { window } : {}),
+        ...(gc ? { gc } : {}),
+        cpu: process.threadCpuUsage(),
+      });
+    };
+    beat();
+    this.beat = setInterval(beat, HEARTBEAT_MS);
+    this.beat.unref();
+  }
+
+  /**
+   * Times a fixed piece of work on the main thread, in nanoseconds. A slower
+   * core or a throttled process takes longer for the same work, which the
+   * main thread's processor time alone does not show.
+   */
+  private speedProbe(): number {
+    const start = process.hrtime.bigint();
+    let x = this.probeSink | 1;
+    for (let round = 0; round < SPEED_PROBE_ROUNDS; round++) {
+      x ^= x << 13;
+      x ^= x >>> 17;
+      x ^= x << 5;
+    }
+    this.probeSink = x;
+    return Number(process.hrtime.bigint() - start);
+  }
+
+  /**
+   * The main thread's collections since the last heartbeat. V8's collection
+   * profiler times each one on the main thread as it happens, so the
+   * heartbeat that ends a stall carries the collections inside it; stopping
+   * and starting it again costs about a microsecond in Electron.
+   */
+  private collected(): GcReading | undefined {
+    const profiler = this.collections;
+    if (!profiler) return undefined;
+    const read = profiler.stop();
+    const next = new GCProfiler();
+    next.start();
+    this.collections = next;
+    const statistics = read?.statistics ?? [];
+    if (!statistics.length) return undefined;
+    let micros = 0;
+    let fullMicros = 0;
+    for (const each of statistics) {
+      micros += each.cost;
+      if (each.gcType === "MarkSweepCompact") fullMicros += each.cost;
+    }
+    return {
+      ms: Math.round(micros / 1000),
+      fullMs: Math.round(fullMicros / 1000),
+      count: statistics.length,
+    };
+  }
+
+  private addRunning(): void {
+    const now = performance.now();
+    this.options.tally?.ran(now - this.ranUntil);
+    this.ranUntil = now;
+  }
+
+  stop(): void {
+    this.memory?.stop();
+    this.stopSteps?.();
+    this.stopSteps = undefined;
+    if (this.beat) clearInterval(this.beat);
+    this.beat = undefined;
+    this.collections?.stop();
+    this.collections = undefined;
+    if (this.write) {
+      clearInterval(this.write);
+      this.addRunning();
+    }
+    this.write = undefined;
+    this.options.tally?.flush();
+    const worker = this.worker;
+    this.worker = undefined;
+    void worker?.terminate();
+  }
+}

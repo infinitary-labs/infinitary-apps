@@ -1,0 +1,11 @@
+{
+  "entries": [{
+    "id": "message-attachments-follow-tasks",
+    "kind": "fix",
+    "title": "Attached pictures and text files follow their tasks",
+    "body": "Your crewmate can open the complete attachments from your message on the computer running the task, without another task copying them first.",
+    "area": "devices",
+    "noPicture": "This changes which files reach a task, not the appearance of a screen.",
+    "provenance": { "origin": "change" }
+  }]
+}

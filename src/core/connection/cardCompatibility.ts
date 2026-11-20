@@ -1,0 +1,155 @@
+import { withoutSkipped } from "@shared/cardAnswerLines";
+import { type CardNote, noteText } from "@shared/cardNotes";
+import type { Spelling } from "@shared/codeNames";
+import { contractChange } from "./contractChanges";
+import { type JournalEntry, pushFrameIn } from "./journal";
+import { type ActionReads, frameWithoutUnreadActions } from "./taskAllow";
+
+/** The ambient music's switch and volume in the look (`ambient-music.md`). */
+export const AMBIENT_MUSIC = contractChange("ambient-music");
+export const AMBIENT_PAUSE = contractChange("ambient-pause");
+export const AMBIENT_STYLE = contractChange("ambient-style");
+
+/** A skipped question's answer marked as a skip (`card-answer-skipped.md`). */
+export const CARD_ANSWER_SKIPPED = contractChange("card-answer-skipped");
+
+/** Strict older desktops need fields removed; readers without annotations keep a readable note. */
+export function threadLinesFor(
+  value: unknown,
+  reads: { sharing: boolean; annotations: boolean; through?: boolean; skipped?: boolean },
+): unknown {
+  if (Array.isArray(value)) return value.map((entry) => threadLinesFor(entry, reads));
+  if (!value || typeof value !== "object") return value;
+  const record = value as Record<string, unknown>;
+  if (!Array.isArray(record.messages))
+    return Array.isArray(record.cards)
+      ? { ...record, cards: record.cards.map((card) => threadLinesFor(card, reads)) }
+      : value;
+  // A reader from before `card-answer-skipped` reads answers strictly.
+  const answers = (value: unknown) => (reads.skipped === false ? withoutSkipped(value) : value);
+  return {
+    ...record,
+    ...("answers" in record ? { answers: answers(record.answers) } : {}),
+    messages: record.messages.map((message) => {
+      if (!message || typeof message !== "object") return message;
+      const { contributor, answersMessage, clarification, notes, through, ...line } =
+        message as Record<string, unknown>;
+      return {
+        ...line,
+        ...("answers" in line ? { answers: answers(line.answers) } : {}),
+        ...(reads.through && through ? { through } : {}),
+        ...(reads.sharing ? { contributor, answersMessage, clarification } : {}),
+        ...(reads.annotations
+          ? notes
+            ? { notes }
+            : {}
+          : notes && Array.isArray(notes)
+            ? {
+                text: [line.text, ...(notes as CardNote[]).map(noteText)]
+                  .filter(Boolean)
+                  .join("\n"),
+              }
+            : {}),
+      };
+    }),
+  };
+}
+
+/**
+ * A view reads the look strictly, so each choice added after it - the
+ * language (`language-choice`) and the fonts (`font-choice`) when it is
+ * older than major 16, and the ambient music (`ambient-music`) - is left out
+ * of the look it is pushed or answered when its hello does not list that
+ * name; a view keeps its own look and never needs the home's.
+ */
+export function lookFor(channel: string, value: unknown, unread: readonly string[]): unknown {
+  if (unread.length === 0 || !value || typeof value !== "object") return value;
+  if (channel === "inf:settings:appearance:get") return without(value, unread);
+  if (channel !== "inf:shell:preferences") return value;
+  const look = value as Record<string, unknown>;
+  return { ...look, appearance: without(look.appearance, unread) };
+}
+
+function without(appearance: unknown, unread: readonly string[]): unknown {
+  if (!appearance || typeof appearance !== "object") return appearance;
+  return Object.fromEntries(
+    Object.entries(appearance as Record<string, unknown>).filter(([key]) => !unread.includes(key)),
+  );
+}
+
+/** Which added card fields a view's card decoder reads. */
+export type CardReads = {
+  updates: boolean;
+  ended: boolean;
+  annotations: boolean;
+  files: boolean;
+  through: boolean;
+  skipped: boolean;
+};
+
+/**
+ * Keep old desktop strict card decoders working: a snapshot leaves out each
+ * added field the view does not read. Phones already ignore optional JSON fields.
+ */
+export function legacyCardSnapshot(value: unknown, reads: CardReads): unknown {
+  if (!Array.isArray(value) || (reads.updates && reads.ended && reads.files)) return value;
+  return value.map(({ currentUpdateId, currentUpdateSeen, ended, files, ...card }) => ({
+    ...card,
+    ...(reads.updates ? { currentUpdateId, currentUpdateSeen } : {}),
+    ...(reads.ended ? { ended } : {}),
+    ...(reads.files && files ? { files } : {}),
+  }));
+}
+
+/**
+ * Every channel a view may ask, or hears, whose answer carries card lines:
+ * an older desktop reads each line strictly, so it gets them without who
+ * wrote them.
+ */
+export const THREAD_CHANNELS = new Set([
+  "inf:cards:show",
+  "inf:cards:thread",
+  "inf:cards:past",
+  "inf:cards:show-past",
+  "inf:cards:reply",
+]);
+
+export function cardPushFor(
+  entry: JournalEntry,
+  spelling: Spelling,
+  reads: CardReads,
+  sharedCards = true,
+  actionReads: ActionReads = { taskAllow: true, keepGoing: true },
+  unread: readonly string[] = [],
+): string {
+  const spelled = lookPushFor(entry, spelling, unread);
+  const text = entry.channel.startsWith("inf:cards")
+    ? frameWithoutUnreadActions(spelled, actionReads)
+    : spelled;
+  if (
+    (!sharedCards || !reads.annotations || !reads.through || !reads.skipped) &&
+    THREAD_CHANNELS.has(entry.channel)
+  ) {
+    const frame = JSON.parse(text);
+    return JSON.stringify({
+      ...frame,
+      payload: threadLinesFor(frame.payload, {
+        sharing: sharedCards,
+        annotations: reads.annotations,
+        through: reads.through,
+        skipped: reads.skipped,
+      }),
+    });
+  }
+  if ((reads.updates && reads.ended && reads.files) || entry.channel !== "inf:cards") return text;
+  const frame = JSON.parse(text);
+  return JSON.stringify({ ...frame, payload: legacyCardSnapshot(frame.payload, reads) });
+}
+
+/** A look pushed to a view, without the choices it cannot read (`lookFor`). */
+function lookPushFor(entry: JournalEntry, spelling: Spelling, unread: readonly string[]): string {
+  const spelled = pushFrameIn(entry, spelling);
+  if (unread.length === 0 || entry.channel !== "inf:shell:preferences") return spelled;
+  const frame = JSON.parse(spelled);
+  return JSON.stringify({ ...frame, payload: lookFor(entry.channel, frame.payload, unread) });
+}

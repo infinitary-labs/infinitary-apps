@@ -1,0 +1,104 @@
+{
+  "entries": [
+    {
+      "id": "done-close-after-set-aside-guidance",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A task closes even when its crewmate never took some guidance",
+      "body": "When a crewmate refused the same guidance three times, the first mate was told and the guidance was set aside. The task could still never be closed as done, because the app counted that guidance as waiting. Now set-aside guidance no longer holds the close.",
+      "noPicture": "This changes whether a close goes through, not how any view looks.",
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "folder-move-stopped-mid-copy",
+      "kind": "fix",
+      "area": "updates",
+      "title": "Work set aside by a stopped folder move comes back",
+      "body": "If the app was stopped while it brought older work into its folder, its own work stayed in a set-aside folder nothing pointed to. The next launch now puts that work back and asks again which folder to open.",
+      "noPicture": "The hand-over window looks the same; what changes is which work it finds after a stopped move.",
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "subscriptions-after-failed-account-write",
+      "kind": "fix",
+      "area": "subscriptions",
+      "title": "Subscriptions recovers from one failed save",
+      "body": "One failed save while an account was being checked made the Subscriptions list fail until the app restarted. The next check now reads the account again.",
+      "noPicture": "The list looks the same once it reads again; the fix is that it reads again.",
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "default-repo-without-first-commit",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Tasks without a project start after an interrupted first setup",
+      "body": "If the app stopped while it made its folder for tasks without a project, every such task then failed to start. The app now finishes that folder's setup the next time a task needs it.",
+      "noPicture": "This changes whether a task starts, not how any view looks.",
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "panel-update-ask-again",
+      "kind": "fix",
+      "area": "settings",
+      "title": "Update panel can be pressed again after an update that did not take",
+      "body": "When an update to one of your panels finished with the panel still paused, its Update panel button stayed disabled until the app restarted. Once that update's task closes, the button works again.",
+      "noPicture": "The button looks as before; it is simply enabled again in this case.",
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "macos-privacy-wait-closes",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A task no longer shows Waiting on macOS for good",
+      "body": "If the app stopped reading macOS's privacy log while a task waited on your answer, the task kept saying it waited on macOS. It now gets a line saying the app can no longer tell when macOS has your answer.",
+      "noPicture": "The change is one line of words on a task's timeline, with no new view.",
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "macos-confirmation-asks-again",
+      "kind": "fix",
+      "area": "settings",
+      "title": "macOS asks again after one confirmation fails",
+      "body": "After one macOS confirmation failed to start, every later one answered no without asking, until the app restarted. Each confirmation now asks again.",
+      "noPicture": "The confirmation itself is macOS's own dialog and looks the same.",
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "custom-api-cancel-during-save",
+      "kind": "fix",
+      "area": "subscriptions",
+      "title": "Cancel while a custom API saves no longer saves it",
+      "body": "Pressing Cancel while Save was still reaching the server could save the connection anyway. Cancel now lets that connection go.",
+      "noPicture": "The form looks the same; the cancelled connection simply no longer appears afterwards.",
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "withdrawn-integration-ask-never-runs",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A withdrawn integration request no longer runs later",
+      "body": "When a crewmate took back a request to use an integration, choosing Allow for the rest of this task on a later request also ran the one taken back. Now only requests still asking run.",
+      "noPicture": "This changes what an approval runs, not how its card looks.",
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "claude-allowance-after-keychain-hiccup",
+      "kind": "fix",
+      "area": "subscriptions",
+      "title": "Claude's allowance keeps updating after one Keychain hiccup",
+      "body": "One failed look at whether Claude's sign-in was in the Keychain stopped Claude's allowance from updating in the background until you pressed Retry. The next background read now looks again.",
+      "noPicture": "The allowance looks the same; it now keeps updating on its own.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "plugin-staging-sweep",
+      "reason": "Leftover staging folders from a quit during a plugin install are now removed, and an install moved aside for an update that never landed is put back; nothing a person sees changes beyond disk space."
+    },
+    {
+      "id": "work-computer-update-stop-cleanup",
+      "reason": "A work computer stopped during an update now lets the download go and removes its temporary folder; nothing a person sees changes beyond disk space."
+    }
+  ]
+}

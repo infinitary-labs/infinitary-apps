@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-browser-passkey-asks-first",
+      "kind": "fix",
+      "title": "A passkey in a task's browser asks before Chrome's window appears",
+      "body": "While you hold a task's browser in Chrome and a site asks for a passkey, the browser now asks you first, with Use passkey and Not now. Not now tells the site no, so it offers a password or a code, and nothing appears on your desktop. Use passkey brings Chrome's window forward for your Mac's passkey prompt, and the window goes back to the Dock when the passkey is done or you return control, even if Chrome brought it out by itself.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-browser-passkey-asks-first-dark.webp",
+        "light": "task-browser-passkey-asks-first-light.webp",
+        "alt": "A task's browser view with a row saying the site asks for a passkey, and Use passkey and Not now buttons"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

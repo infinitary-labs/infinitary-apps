@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "services-owner-wiring-split",
+      "reason": "The wiring for the crew, the first mate, Automation, plugins and knowledge moves unchanged out of the app's composition root into a module beside each owner, so that file leaves the size warning; nothing a person sees or does changes."
+    }
+  ]
+}

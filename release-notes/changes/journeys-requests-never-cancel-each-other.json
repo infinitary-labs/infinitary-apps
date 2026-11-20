@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "journeys-requests-never-cancel-each-other",
+      "reason": "CI only: two requests for journeys on the same branch no longer cancel each other, while a newer push to a pull request still replaces its older run. Nothing in the app changes."
+    }
+  ]
+}

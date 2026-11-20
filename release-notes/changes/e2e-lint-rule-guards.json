@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "e2e-lint-rule-guards",
+      "reason": "Faster versions of the project's own end-to-end test lint rules, with the same findings; nothing in the app changes."
+    }
+  ]
+}

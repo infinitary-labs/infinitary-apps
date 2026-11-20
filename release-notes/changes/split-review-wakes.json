@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-review-wakes",
+      "reason": "Internal: review tests move into separate files without changing behavior."
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "merge-anyway",
+      "kind": "improvement",
+      "title": "Merge a pull request anyway when its checks failed",
+      "body": "When a pull request's checks failed and the crewmate has looked into each one, its merge card now offers Merge anyway beside the merge. One click merges that version as it is, without asking the first mate. The button goes away once the checks pass or the change gets a new version.",
+      "area": "cards",
+      "picture": {
+        "dark": "merge-anyway-dark.webp",
+        "light": "merge-anyway-light.webp",
+        "alt": "A merge card whose checks failed, with Merge anyway beside Merge after fixing errors"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

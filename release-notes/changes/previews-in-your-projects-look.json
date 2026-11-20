@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "previews-in-your-projects-look",
+      "kind": "improvement",
+      "title": "Previews of your project's screens use its own look and fonts",
+      "body": "When a crewmate shows you a preview or a drawing of your project's screens, it draws them in your project's own colors, type and controls instead of Infinitary's, while the card's own words keep Infinitary's look. A preview can use your project's own font files: Infinitary checks each one before the card goes up, so a damaged font sends the crewmate back to fix it. This works for tasks on your other computers and on a paired Mac too, once that computer is updated.",
+      "highlight": 3,
+      "area": "cards",
+      "picture": {
+        "dark": "previews-in-your-projects-look-dark.webp",
+        "light": "previews-in-your-projects-look-light.webp",
+        "alt": "A card previewing a wallet app's balance screen in that project's own rounded typeface, under the card's title in Infinitary's type"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

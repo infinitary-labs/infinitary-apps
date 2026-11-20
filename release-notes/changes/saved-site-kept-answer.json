@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "saved-site-kept-answer",
+      "reason": "Test-only repair: the saved-site scenario reads deferred browser answers through the existing browser journey helpers before reporting. Product behavior and the sign-in journey's assertions are unchanged."
+    }
+  ]
+}

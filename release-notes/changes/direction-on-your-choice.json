@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "direction-on-your-choice",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Your first mate saves a standing direction you chose on a card",
+      "body": "When you choose a rule on a card, or say it while your first mate is working, your first mate can save it as a standing direction without you typing it again. Each change to a direction now shows in Activity like any setting, and its history keeps the reason your first mate gave. Your first mate can also sign you out of a GitLab or GitHub Enterprise host when you ask, as Settings can.",
+      "noPicture": "This changes when the first mate may save a direction; the Directions list looks as it did.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

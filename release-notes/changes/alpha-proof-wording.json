@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "alpha-proof-wording",
+      "reason": "Release documentation and the release run's summary now say an automatic alpha reuses every main check except the phone check, and name a phone-only failure, instead of claiming a fully passing run. The alpha rule and the app are unchanged."
+    }
+  ]
+}

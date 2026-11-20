@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "test-ports-claimed",
+      "reason": "Test-only repair: every test that gives a home or other listener a loopback port now claims one no other test worker can be handed, instead of a port another worker's listener could take before it listened. No shipped behavior changed."
+    }
+  ]
+}

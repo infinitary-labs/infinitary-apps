@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "load-clock-disk-waits",
+      "reason": "On Linux a unit test's load clock no longer counts time in which the computer's work waited on its disk, so a test on a job machine whose disk other work starves is not ended early; only the project's tests change, and a person using the app notices nothing."
+    }
+  ]
+}

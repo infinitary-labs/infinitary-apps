@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "trim-firstmate-handoff-wording",
+      "reason": "Internal: concise first mate instructions retain their existing rules while reducing fixed context size."
+    }
+  ]
+}

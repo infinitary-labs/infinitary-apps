@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "hold-ends-on-event",
+      "kind": "improvement",
+      "area": "tasks",
+      "title": "A held task carries on as soon as what it waits for happens",
+      "body": "When Firstmate holds a started task that waits on something outside, such as another task closing or an event from a connected service, the hold can now end the moment that event comes instead of at its set time. The crewmate hears what arrived and carries on, without waking Firstmate or asking you. The rule that waits for the event shows in Automation like any other and goes away once the hold ends.",
+      "noPicture": "This changes when an existing hold ends; the rule it adds is an ordinary row in the existing Automation list.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

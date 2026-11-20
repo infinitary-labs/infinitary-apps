@@ -1,0 +1,41 @@
+name: Prepare the Linux desktop for journeys
+description: Install the virtual display and desktop libraries, configure Electron's sandbox helper and fetch Playwright's FFmpeg, after the install (docs/testing.md, "The Linux source desktop").
+inputs:
+  working-directory:
+    description: Checkout containing the installed dependencies.
+    default: .
+runs:
+  using: composite
+  steps:
+    # The machine's own automatic updates may hold apt's locks; the helper
+    # takes over from them. On an image that already holds every package, as
+    # the PC's job image does, it downloads nothing, so a slow mirror cannot
+    # run out the step's time (docs/testing.md, "The runner's automatic updates").
+    - name: Install virtual display and desktop libraries
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: timeout 600 scripts/apt-install.sh xvfb xdotool libgtk-3-0 libnss3 libasound2t64 libgbm1
+    # An unpacked Electron download has no installer to configure its
+    # sandbox helper. Do that only in a disposable Linux job: a hosted
+    # machine, or the PC's fresh virtual machine deleted after the job.
+    - name: Configure Electron's sandbox helper
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        sandbox="$(node -p 'require("node:path").join(require("node:path").dirname(require("electron")), "chrome-sandbox")')"
+        test -f "$sandbox"
+        # Chromium parses the helper as a command prefix and splits a
+        # helper path containing spaces. The app/checkout may stay under
+        # Application Support; only this pinned helper gets a plain path.
+        helper="$RUNNER_TEMP/firstmate-chrome-sandbox"
+        case "$helper" in *' '*) echo 'Sandbox helper path must have no spaces'; exit 1;; esac
+        sudo install -o root -g root -m 4755 "$sandbox" "$helper"
+        # An adjacent helper wins over CHROME_DEVEL_SANDBOX even when
+        # unconfigured. Use Chromium's development fallback instead.
+        rm "$sandbox"
+        test ! -e "$sandbox"
+        echo "CHROME_DEVEL_SANDBOX=$helper" >> "$GITHUB_ENV"
+    - name: Install Playwright's FFmpeg
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: pnpm exec playwright install ffmpeg

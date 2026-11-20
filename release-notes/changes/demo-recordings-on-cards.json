@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "demo-recordings-on-cards",
+      "kind": "feature",
+      "title": "Cards can show a short demo of how a change works",
+      "body": "When a change is about how something moves or responds - a drag, a keyboard journey, a loading state - a crewmate's card can now show a short demo instead of still pictures. The card shows a still from it with a Play button and its length; Play opens it in the large viewer, where it plays once and you can pause, scrub and replay. Nothing plays on its own.",
+      "area": "cards",
+      "picture": {
+        "dark": "demo-recordings-on-cards-dark.webp",
+        "light": "demo-recordings-on-cards-light.webp",
+        "alt": "A crewmate's merge card with a demo's still and a Play button that says it lasts 3 seconds under After"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

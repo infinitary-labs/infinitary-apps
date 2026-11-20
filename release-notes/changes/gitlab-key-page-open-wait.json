@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "gitlab-key-page-open-wait",
+      "reason": "Test only: the GitLab sign-in journey waits until the app has asked to open the key page, instead of reading the recorded opens once right after the key press, so a busy runner no longer fails it. Nothing a person using the app notices."
+    }
+  ]
+}

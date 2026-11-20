@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "panels-checked-on-your-rail",
+      "kind": "fix",
+      "title": "A crewmate checks a panel on your side rail before it finishes",
+      "body": "When a crewmate builds or changes one of your panels, it now puts the new version on your side rail and looks at it there before it reports. If the panel can't show, for example because that side rail is already full, the crewmate tells you why and waits for you instead of finishing. The first mate also knows which of your panels are on screen and which are not.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "panels-checked-on-your-rail-dark.webp",
+        "light": "panels-checked-on-your-rail-light.webp",
+        "alt": "A new Tokyo clock panel on the left side rail, its orange dot showing a crewmate is still working on it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

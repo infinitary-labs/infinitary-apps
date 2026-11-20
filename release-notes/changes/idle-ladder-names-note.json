@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "idle-ladder-names-note",
+      "reason": "Changes only the words Firstmate and an idle crewmate are sent when a crewmate stops with its note up: they name that note instead of saying no card is up, and ask the crewmate to say it waits on the captain rather than post the note again. Nothing on screen changes, and whether a crewmate follows the words is the model's, so nothing a person reliably notices changes."
+    }
+  ]
+}

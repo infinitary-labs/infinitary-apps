@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "unlabeled-completion-merge",
+      "reason": "A crewmate's tool now accepts the completion decision its instructions already asked for, with the merge declared and no button words, because the app writes those words itself. Before, the tool turned that call away and the crewmate had to try again; the card a person sees, and its buttons, are unchanged."
+    }
+  ]
+}

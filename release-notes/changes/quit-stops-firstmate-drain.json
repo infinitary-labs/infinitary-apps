@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "quit-stops-firstmate-drain",
+      "reason": "Internal: a Firstmate lane drain that resumes after the app began quitting stops before it reads the lane or starts a turn, leaving the rows for the next launch as a cut turn's already are. It fixes an intermittent test-run error; a person notices nothing."
+    }
+  ]
+}

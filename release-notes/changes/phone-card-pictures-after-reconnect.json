@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "phone-card-pictures-after-reconnect",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Card pictures show on iPhone and iPad after opening Infinitary",
+      "body": "A card's pictures on iPhone and iPad could stay as empty boxes with a question mark when you opened Infinitary or it reconnected to your computer. Infinitary now waits until your computer is in reach and then shows them.",
+      "noPicture": "Card pictures look the same as before; the fix is that they arrive after the phone reconnects.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

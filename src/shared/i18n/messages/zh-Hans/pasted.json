@@ -1,0 +1,5 @@
+{
+  "pastedFileMeta": "文件 · {lines} · {kilobytes} KB",
+  "pastedFileRemove": "移除文件，{lines}",
+  "pastedFileRemoveNamed": "移除 {name}"
+}

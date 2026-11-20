@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "task-record-opens-steady",
+      "kind": "fix",
+      "title": "A task record opens without jumping",
+      "body": "Opening a task record on an empty stage used to show an empty card that grew and moved twice as its details arrived. The record now appears once, at the size it keeps.",
+      "area": "cards",
+      "noPicture": "The fix is the absence of movement in the first second, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

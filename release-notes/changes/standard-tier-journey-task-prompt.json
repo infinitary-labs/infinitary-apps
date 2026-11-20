@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "standard-tier-journey-task-prompt",
+      "reason": "The standard-tier journey now expects the crewmate prompt for its own task's delivery and care, read from the task record through the one helper the app uses, so it passes again after local tasks stopped receiving the pull-request passages. No shipped behavior changed."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "next-card-after-close",
+      "kind": "improvement",
+      "title": "Closing a card brings up the one after it",
+      "body": "Once you have read every card, closing one brings up the card after it, or the one before it when it was the last. An unread card still comes up first. This works the same on the Mac, iPhone and iPad.",
+      "area": "cards",
+      "noPicture": "Which card comes up after a close is an order over time, which a still pair cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

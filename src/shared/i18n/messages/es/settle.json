@@ -1,0 +1,12 @@
+{
+  "settleCannotMerge": "No se puede fusionar: {problem}",
+  "settleCouldNotDiscard": "No se pudo descartar: {problem}",
+  "settleDiscardedPullOpen": "Descartada. Su solicitud de incorporación de cambios sigue abierta donde se aloja el proyecto: {problem}",
+  "settleDiscardedPullOpenThen": "Descartada. Su solicitud de incorporación de cambios sigue abierta donde se aloja el proyecto: {problem}. {followup}",
+  "settleDiscarding": "Descartando",
+  "settleDiscardingAfterTurn": "Descartando cuando su tripulante termine lo que está haciendo",
+  "settleMerging": "Fusionando",
+  "settleMergingAfterTurn": "Fusionando cuando su tripulante termine lo que está haciendo",
+  "settleMergingChange": "Fusionando {change}",
+  "settleMergingChangeAfterTurn": "Fusionando {change} cuando su tripulante termine lo que está haciendo"
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "brief-receipt-by-reference",
+      "reason": "The record's copy of a crewmate's first brief keeps the reports it quoted as references to those reports instead of a second copy, and a follow-up that ships a change is handed its origin's findings once instead of also being told to look them up; what each crewmate reads is otherwise unchanged and nothing a person sees moves."
+    }
+  ]
+}

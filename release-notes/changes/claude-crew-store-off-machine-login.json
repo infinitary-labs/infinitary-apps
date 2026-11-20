@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "claude-crew-store-off-machine-login",
+      "reason": "Journeys whose crew runs on Claude sign their throwaway account in from its own store on every platform and run as a user with no saved Claude login, so a Mac's own login can no longer read that account as signed out mid-run. Nothing in the app changed."
+    }
+  ]
+}

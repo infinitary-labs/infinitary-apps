@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "journey-selection-coverage",
+      "reason": "Internal test selection and crew gate: declare stand-in coverage, include direct product imports, and record complete journey proof without adding a pull request job."
+    }
+  ]
+}

@@ -1,0 +1,144 @@
+{
+  "entries": [
+    {
+      "id": "bf-7718a675b",
+      "kind": "feature",
+      "title": "Keep a local record of card decisions and export it as episodes",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "7718a675bbc3c0cb01ba63371e6479ae58ecb28c"
+        ]
+      }
+    },
+    {
+      "id": "bf-634e53a27",
+      "kind": "feature",
+      "title": "Declare objective plan skips across installs",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "634e53a270b88ae0b5f598aa1ac7ac28143bc782",
+          "73d4a0cfe987dc9d697faaa8b333d9613af10c49"
+        ]
+      }
+    },
+    {
+      "id": "bf-b4fda8caa",
+      "kind": "fix",
+      "title": "Enforce conventional change and save-point names",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "b4fda8caa359f3f60c9f8e684dd81d2b383fc9dc",
+          "5cca54e85db9d250fb8d895c29e4cff9a49eedc9"
+        ]
+      }
+    },
+    {
+      "id": "bf-33cc78365",
+      "kind": "fix",
+      "title": "Guide mid-task continuations through landing",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "33cc7836522ba8c1cd1f586d093397176b37f836",
+          "f950129991eed374b2a15c30d9db24cf4c8f9c50"
+        ]
+      }
+    },
+    {
+      "id": "bf-69900df81",
+      "kind": "fix",
+      "title": "Upgrade Pi and start Codex on GPT-6.1 Sol",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "69900df8160e83bcaab587d5f58d509691c69c21",
+          "d1fe95c348fcac90cfa8f29ff97cc74104a70d1f"
+        ]
+      }
+    },
+    {
+      "id": "bf-68c93c56f",
+      "kind": "fix",
+      "title": "Document how to request a release after plain-titled merges",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "68c93c56f3c545da424f65fede9ab4822227ed24"
+        ]
+      }
+    },
+    {
+      "id": "bf-1f6e2bb62",
+      "kind": "fix",
+      "title": "Keep macOS release jobs awake",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "1f6e2bb620d9eb55626c30702c5ed5e12d38c3c4"
+        ]
+      }
+    },
+    {
+      "id": "bf-5f0bbd6c4",
+      "kind": "fix",
+      "title": "Keep macOS verify runner awake",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "5f0bbd6c49ea690757486937a183f4091fea4bda"
+        ]
+      }
+    },
+    {
+      "id": "bf-13f2f0e61",
+      "kind": "fix",
+      "title": "Keep the macOS signing job awake",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "13f2f0e614dbdffecfe2e8d4aaeda95cef3ce681"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-23-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.23: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "7c0ff213c515ecdd304fa655eac780e96b6b7e25",
+        "f5cc4676ae332c8d603d45587e2627cf0942ca12",
+        "8db3b1443d8f21fa6ae707f2801bb205dc614fce",
+        "309f7c9f69ab02b323a2111ed1884159378772b4",
+        "b2ba2d105dc22d83ff2b16ede5262e0ff54b9dd2",
+        "c6e33a3a84417281441ea90b76d8112957ca1df8",
+        "40d9af00544ef59d02d140ae140b3752b99fb5e0",
+        "0e78e87c78d667a4ee900ad71d58471e8f192282",
+        "8d1c51a08f3a34818c9601f294968b52af9983cb",
+        "9041968daa15286d5cc8bdb610657a00d94e123a",
+        "c190de35076af0594640ded07e6fbf5a03637dae",
+        "893124e0c761650f81c922d2dd4f38b5d7f8246b",
+        "c7de6ffa4438e53701c03fbfb55cfa11ade95374",
+        "418922a6e208c6ed54574109f0f93179f81264ac",
+        "69de67b86e4bfdfa6a450258fa78d6c3b3b6ff72",
+        "d1730e41709570a714ea5b62c77264b9702923a4",
+        "2d059a19702dbeea8cc364f470126011503b2c29",
+        "1c60e8e4b1e9ddedb2ad6823fceaf68f7f6fe888",
+        "7c63c37c9962edd67881b54b4c42668dd0d5f40e",
+        "5fc1912f1d7736e49970e258b729a3bb83e85446",
+        "eec6b91c98fbd34d343df29305c994580c99eb2b",
+        "e03cc29c2d9ab69999d0c239c245ff317a13250b",
+        "cae09320add0426128491fe982a4e38da3bae604",
+        "fe0b405911fb13e45ac7936be50cab1dce221a2e",
+        "8ca4be321dd8349b014e6fae9eb7d424a9043f8e",
+        "d3e71af9b2fd107e8fe874e819c5c04ab1aa7a45",
+        "5d9effbec60f4333602b6fc6dcccf81e12a9859f",
+        "058babab619998b4cca7f6e6aa745de07bf77612",
+        "fe15e34f24eaf5b25d609edcc98474894d2b03e8"
+      ]
+    }
+  ]
+}

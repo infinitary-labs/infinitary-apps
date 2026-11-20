@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "installer-hosts-resolver-wait",
+      "reason": "Internal: the release's update check and the signed installer check wait until the Mac's resolver sends the rerouted download address to their local feed before reading it; nothing a person sees changes."
+    }
+  ]
+}

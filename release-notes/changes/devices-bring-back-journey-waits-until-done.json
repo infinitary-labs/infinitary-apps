@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "devices-bring-back-journey-waits-until-done",
+      "reason": "Internal, tests only: the Devices Bring it back journey starts the other Mac's run only once Bring it back is done there, so the run dials the address the other Mac now keeps instead of the old one. No shipped behavior changed."
+    }
+  ]
+}

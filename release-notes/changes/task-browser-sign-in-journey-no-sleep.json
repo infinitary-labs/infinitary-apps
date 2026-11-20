@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "task-browser-sign-in-journey-no-sleep",
+      "reason": "Removes a leftover eight-second wait and a debug file written outside the run's scratch folders from the end-to-end test of a crewmate asking the captain to sign in. No shipped behavior changed."
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "resetKeysAsk": "Rétablir tous les raccourcis du préréglage {preset} ?",
+  "resetKeysConfirm": "Réinitialiser tous les raccourcis",
+  "resetKeysDetail": "Chaque raccourci modifié dans les réglages du clavier reprend celui que lui donne le préréglage {preset}."
+}

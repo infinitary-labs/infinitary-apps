@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "mac-package-cache",
+      "reason": "Internal CI: Mac jobs stop saving a package cache that later jobs never read back, about 2 minutes off each Mac job. No app surface changes."
+    }
+  ]
+}

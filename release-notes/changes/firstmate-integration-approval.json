@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "firstmate-integration-approval",
+      "kind": "feature",
+      "area": "settings",
+      "title": "Your first mate asks before it uses an integration",
+      "body": "Your first mate can now use an integration action itself instead of starting a crewmate for it. Unless you chose Always allow, the app shows your first mate’s reason and the exact call, and nothing runs before your click. Changes and sends highlight Only this time.",
+      "picture": {
+        "dark": "firstmate-integration-approval-dark.webp",
+        "light": "firstmate-integration-approval-light.webp",
+        "alt": "An integration approval card names your first mate, shows its reason and the exact call, and highlights Only this time."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

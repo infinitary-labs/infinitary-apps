@@ -1,0 +1,9 @@
+{
+  "exclusions": [
+    {
+      "id": "unused-crew-strip",
+      "reason": "Removes crew strip files nothing loads, and comments that pointed at them. Nothing in the app changes.",
+      "covers": ["90f5f372064eac07f723e9d2af02bbca59b32702"]
+    }
+  ]
+}

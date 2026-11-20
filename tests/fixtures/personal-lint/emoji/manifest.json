@@ -1,0 +1,6 @@
+{
+  "id": "emoji",
+  "title": "Build 🚦",
+  "preferredPlacement": { "x": "right", "y": "top" },
+  "presence": { "always": true }
+}

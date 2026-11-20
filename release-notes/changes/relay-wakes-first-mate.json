@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "relay-wakes-first-mate",
+      "kind": "improvement",
+      "title": "Your first mate hears a decision you give a crewmate right away",
+      "body": "When you answer under a crewmate's card with something only your first mate can carry out, such as starting other work or holding a change, the crewmate passes it on and your first mate acts on it straight away. Before, it waited until that crewmate finished everything else it was doing, which could take an hour while other work went ahead without your decision.",
+      "area": "firstmate",
+      "noPicture": "When the first mate hears a passed-on decision is a matter of timing, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

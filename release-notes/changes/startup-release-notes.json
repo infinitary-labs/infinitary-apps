@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "startup-release-notes",
+      "kind": "feature",
+      "title": "See what is new after an update",
+      "body": "When Firstmate 3000 opens on a newer version, a note on top of your cards lists every change since the version you last opened, including releases you skipped.",
+      "area": "updates",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

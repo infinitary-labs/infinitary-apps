@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "reasoning-only-turn-end",
+      "kind": "fix",
+      "area": "subscriptions",
+      "title": "Reasoning models on your own server can finish a turn with reasoning alone",
+      "body": "On a connection to your own OpenAI-compatible server, a reasoning model that ends its turn with reasoning and no further words is no longer refused as a broken protocol. The turn finishes instead of failing and trying again.",
+      "noPicture": "This changes which replies are kept, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

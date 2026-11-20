@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "failed-start-crewmate-leaves",
+      "kind": "fix",
+      "title": "A crewmate whose start failed no longer stays on the map",
+      "body": "When a task could not start and was taken back, its crewmate used to stay on the computer's ring with no preview, and opening it said the record could not be read. It now drifts away as soon as the task is gone. Your phone already showed this correctly.",
+      "area": "crewmates",
+      "noPicture": "The fix takes away a crewmate that should not be drawn; the ring otherwise looks as before.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

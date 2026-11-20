@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-frees-run-without-rerun",
+      "reason": "The project's own batch check lets the next batch form when a failed batch run never asked for its rerun; how this repository's checks run, nothing in the app a person notices."
+    }
+  ]
+}

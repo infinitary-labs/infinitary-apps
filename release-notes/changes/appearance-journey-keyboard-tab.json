@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "appearance-journey-keyboard-tab",
+      "reason": "Internal, tests only: the Appearance journey now expects the Keyboard tab between Appearance and Projects in Settings, matching the current tab order. No shipped behavior changed."
+    }
+  ]
+}

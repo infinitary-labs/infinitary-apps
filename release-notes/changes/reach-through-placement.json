@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "reach-through-placement",
+      "reason": "Internal: the placement engine carries each computer's reach value as it is instead of a connecting flag made from it; a waiting Automatic start and Task Details read the same words."
+    }
+  ]
+}

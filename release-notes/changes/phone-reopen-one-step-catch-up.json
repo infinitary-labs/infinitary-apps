@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "phone-reopen-one-step-catch-up",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Your iPhone and iPad catch up in one step when you reopen Infinitary",
+      "body": "When you reopen Infinitary on your iPhone or iPad, it reads everything that happened while you were away before it changes the screen, then updates your cards, tasks and crew once instead of redrawing for every update. The first mate and crew no longer replay reactions from while you were away.",
+      "noPicture": "The screens show the same things; they change once after the catch-up instead of many times during it.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

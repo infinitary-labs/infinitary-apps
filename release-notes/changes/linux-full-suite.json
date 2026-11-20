@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "linux-full-suite",
+      "reason": "Internal Linux piece: every journey runs on hosted Linux before each alpha, and a stable inherits that run. Linux alone gains a shortest voice hint for the narrowest window. Two timing fixes found there: an arrow press in command search arriving between draws no longer goes missing, and search opened right after a card closes keeps its caret."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "prci-split",
+      "reason": "Internal: the checks and merge service splits into its owners (checks, draft readiness, merge, reviews, the check tool and publication) and its tests split with it; nothing a person sees changes."
+    }
+  ]
+}

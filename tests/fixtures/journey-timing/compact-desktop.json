@@ -1,0 +1,321 @@
+{
+  "schemaVersion": 1,
+  "run": "41109431383",
+  "attempt": "1",
+  "revision": "79e5497f4fac021107099c685680c6f0b939ca3d",
+  "platform": "Linux",
+  "architecture": "X64",
+  "lane": "desktop",
+  "suite": "starter",
+  "shard": "1",
+  "job": "source-desktop",
+  "artifactSuffix": "source",
+  "requestedFiles": [],
+  "jobStartedAt": 1793387265000,
+  "testStepStartedAt": 1793387306000,
+  "observedAt": 1793387486111,
+  "testStepOutcome": "success",
+  "reportState": "present",
+  "complete": true,
+  "successful": true,
+  "configuredWorkers": 2,
+  "actualWorkers": 1,
+  "selectedFiles": [
+    "tests/e2e/devices.spec.ts",
+    "tests/e2e/phase6-voice.spec.ts",
+    "tests/e2e/repro-voice-press.spec.ts",
+    "tests/e2e/voice-prompt-focus.spec.ts"
+  ],
+  "missingFiles": [],
+  "stats": {
+    "startTime": "2026-10-30T19:08:27.201Z",
+    "duration": 178749.447,
+    "expected": 25,
+    "skipped": 5,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "timing": {
+    "jobObservedMs": 221111,
+    "setupMs": 41000,
+    "testStepObservedMs": 180111,
+    "playwrightMs": 178749.447
+  },
+  "files": [
+    {
+      "file": "tests/e2e/devices.spec.ts",
+      "project": "desktop",
+      "outcomes": {
+        "expected": 18,
+        "skipped": 5
+      },
+      "tests": 23,
+      "missing": 0,
+      "attempts": [
+        {
+          "startMs": 1793387316843,
+          "durationMs": 7694,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387324565,
+          "durationMs": 3322,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387327895,
+          "durationMs": 3119,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387331021,
+          "durationMs": 3500,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387334528,
+          "durationMs": 7169,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387341704,
+          "durationMs": 6534,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387348245,
+          "durationMs": 7641,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387355894,
+          "durationMs": 7091,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387362992,
+          "durationMs": 7202,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387370202,
+          "durationMs": 2,
+          "status": "skipped",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387370214,
+          "durationMs": 1,
+          "status": "skipped",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387370230,
+          "durationMs": 5064,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387375300,
+          "durationMs": 5257,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387380564,
+          "durationMs": 5398,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387385969,
+          "durationMs": 3686,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387389662,
+          "durationMs": 8290,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387397960,
+          "durationMs": 24217,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387422185,
+          "durationMs": 10406,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387432597,
+          "durationMs": 9435,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387442040,
+          "durationMs": 5148,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387447195,
+          "durationMs": 1,
+          "status": "skipped",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387447202,
+          "durationMs": 0,
+          "status": "skipped",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387447208,
+          "durationMs": 0,
+          "status": "skipped",
+          "worker": 0,
+          "retry": 0
+        }
+      ],
+      "startMs": 1793387316843,
+      "endMs": 1793387447188,
+      "elapsedMs": 130345,
+      "workMs": 130173,
+      "skipped": 5
+    },
+    {
+      "file": "tests/e2e/phase6-voice.spec.ts",
+      "project": "desktop",
+      "outcomes": {
+        "expected": 3
+      },
+      "tests": 3,
+      "missing": 0,
+      "attempts": [
+        {
+          "startMs": 1793387447224,
+          "durationMs": 328,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387450527,
+          "durationMs": 8137,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387458671,
+          "durationMs": 4753,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        }
+      ],
+      "startMs": 1793387447224,
+      "endMs": 1793387463424,
+      "elapsedMs": 16200,
+      "workMs": 13218,
+      "skipped": 0
+    },
+    {
+      "file": "tests/e2e/repro-voice-press.spec.ts",
+      "project": "desktop",
+      "outcomes": {
+        "expected": 1
+      },
+      "tests": 1,
+      "missing": 0,
+      "attempts": [
+        {
+          "startMs": 1793387463615,
+          "durationMs": 6628,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        }
+      ],
+      "startMs": 1793387463615,
+      "endMs": 1793387470243,
+      "elapsedMs": 6628,
+      "workMs": 6628,
+      "skipped": 0
+    },
+    {
+      "file": "tests/e2e/voice-prompt-focus.spec.ts",
+      "project": "desktop",
+      "outcomes": {
+        "expected": 3
+      },
+      "tests": 3,
+      "missing": 0,
+      "attempts": [
+        {
+          "startMs": 1793387470255,
+          "durationMs": 7131,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387477392,
+          "durationMs": 3668,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1793387481067,
+          "durationMs": 4553,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        }
+      ],
+      "startMs": 1793387470255,
+      "endMs": 1793387485620,
+      "elapsedMs": 15365,
+      "workMs": 15352,
+      "skipped": 0
+    }
+  ]
+}

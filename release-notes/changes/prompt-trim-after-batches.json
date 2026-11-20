@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "prompt-trim-after-batches",
+      "reason": "Internal wording trim of the served card, report, knowledge and pull request tool text, to bring the first mate's and crewmate's fixed context back under their size budgets after batched changes grew them; every rule is kept and nothing a person sees changes."
+    }
+  ]
+}

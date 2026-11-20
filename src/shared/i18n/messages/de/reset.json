@@ -1,0 +1,5 @@
+{
+  "resetKeysAsk": "Alle Tasten auf die der Vorlage {preset} zurücksetzen?",
+  "resetKeysConfirm": "Alle Tasten zurücksetzen",
+  "resetKeysDetail": "Jedes Tastenkürzel, das du in den Tastatureinstellungen geändert hast, kehrt zu dem zurück, das die Vorlage {preset} vorsieht."
+}

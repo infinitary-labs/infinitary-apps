@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "crewmate-programs",
+      "kind": "feature",
+      "area": "crewmates",
+      "title": "Crewmates start programs when the work needs one",
+      "body": "When you ask for a loop until something passes, an audit, deep research or a change to each item in turn, your first mate hands the ask to one crewmate. That crewmate reads your project, writes the program and starts it, then picks up its result when it ends. It asks you on its own card before a large run, and before going past the number of parts it proposed.",
+      "noPicture": "A program still shows on the task board and in Activity as before; what changed is which agent writes and starts it.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

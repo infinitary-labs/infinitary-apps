@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "first-mate-answers-own-cards",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Your first mate's answers are its own cards",
+      "body": "When your first mate answers a question about a task, its card now reads first mate instead of showing that task's name and details as if the task had written it. It names the tasks it is about in its words, and each of those tasks links to the answer from its record. Buttons on a choice about a task still act on that task.",
+      "picture": {
+        "dark": "first-mate-answers-own-cards-dark.webp",
+        "light": "first-mate-answers-own-cards-light.webp",
+        "alt": "A note from your first mate, Own vs rent: owning Macs wins for steady use, headed first mate"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

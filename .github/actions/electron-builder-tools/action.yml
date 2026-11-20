@@ -1,0 +1,82 @@
+name: electron-builder's tools
+description: Keep the packaging tools electron-builder downloads from GitHub's release server in the Actions cache - restored before a package step, and kept after it even when it failed partway.
+inputs:
+  working-directory:
+    description: Checkout whose package.json names the electron-builder version.
+    default: .
+  save:
+    description: "'true' on the second use, after the package step: keeps every tool archive the step downloaded."
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    # electron-builder downloads the tools a target needs from GitHub's
+    # release server (electron-builder-binaries): the AppImage tools, 7-Zip
+    # and fpm for the Linux packages, dmgbuild for a Mac disk image. A runner
+    # that starts fresh for each job downloads them every time, and one 504
+    # there failed a Linux package build after its first tool arrived. Each
+    # archive electron-builder keeps lands in <cache>/<release>/<file>, in one
+    # of the five kinds it unpacks, and it checks a cached archive against its
+    # pinned checksum before use, so only those archives are kept here, never
+    # the unpacked tools beside them.
+    #
+    # Its second use runs after the package step whatever that step did, so
+    # a build that downloaded one tool and then failed still keeps that tool:
+    # each attempt starts from everything earlier attempts fetched. The key
+    # names the archives' own checksums, so a job saves only a set no earlier
+    # job saved.
+    - id: tools
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        SAVE: ${{ inputs.save }}
+      run: |
+        dir="$RUNNER_TEMP/electron-builder-cache"
+        version="$(node -p 'require("./package.json").devDependencies["electron-builder"]')"
+        prefix="electron-builder-tools-$RUNNER_OS-$RUNNER_ARCH-$version-"
+        printf 'dir=%s\nprefix=%s\n' "$dir" "$prefix" >> "$GITHUB_OUTPUT"
+        if [[ "$SAVE" != true ]]; then
+          # electron-builder reads its cache folder from ELECTRON_BUILDER_CACHE.
+          printf 'ELECTRON_BUILDER_CACHE=%s\n' "$dir" >> "$GITHUB_ENV"
+          exit 0
+        fi
+        [[ -d "$dir" ]] || exit 0
+        cd "$dir"
+        shopt -s nullglob
+        archives=(*/*.7z */*.tar.gz */*.tar.xz */*.tgz */*.zip)
+        (( ${#archives[@]} )) || exit 0
+        if command -v sha256sum >/dev/null; then sums="$(sha256sum "${archives[@]}")"; else sums="$(shasum -a 256 "${archives[@]}")"; fi
+        printf '%s\n' "$sums"
+        key="$prefix$(printf '%s\n' "$sums" | LC_ALL=C sort | { if command -v sha256sum >/dev/null; then sha256sum; else shasum -a 256; fi; } | cut -c1-16)"
+        if [[ "$key" == "${ELECTRON_BUILDER_TOOLS_RESTORED:-}" ]]; then
+          echo "The cache already holds these tools under $key."
+          exit 0
+        fi
+        printf 'key=%s\n' "$key" >> "$GITHUB_OUTPUT"
+    - id: restore
+      if: inputs.save != 'true'
+      uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
+      with:
+        path: |
+          ${{ steps.tools.outputs.dir }}/*/*.7z
+          ${{ steps.tools.outputs.dir }}/*/*.tar.gz
+          ${{ steps.tools.outputs.dir }}/*/*.tar.xz
+          ${{ steps.tools.outputs.dir }}/*/*.tgz
+          ${{ steps.tools.outputs.dir }}/*/*.zip
+        key: ${{ steps.tools.outputs.prefix }}
+        restore-keys: ${{ steps.tools.outputs.prefix }}
+    - if: inputs.save != 'true'
+      shell: bash
+      env:
+        MATCHED: ${{ steps.restore.outputs.cache-matched-key }}
+      run: printf 'ELECTRON_BUILDER_TOOLS_RESTORED=%s\n' "$MATCHED" >> "$GITHUB_ENV"
+    - if: inputs.save == 'true' && steps.tools.outputs.key != ''
+      uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
+      with:
+        path: |
+          ${{ steps.tools.outputs.dir }}/*/*.7z
+          ${{ steps.tools.outputs.dir }}/*/*.tar.gz
+          ${{ steps.tools.outputs.dir }}/*/*.tar.xz
+          ${{ steps.tools.outputs.dir }}/*/*.tgz
+          ${{ steps.tools.outputs.dir }}/*/*.zip
+        key: ${{ steps.tools.outputs.key }}

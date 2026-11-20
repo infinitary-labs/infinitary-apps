@@ -1,0 +1,60 @@
+name: The demo encoder's download
+description: Keep the pinned FFmpeg build a demo recording is encoded with in the Actions cache, so a journey reads it there instead of from GitHub's release server.
+inputs:
+  working-directory:
+    description: Checkout whose tests/e2e/demoEncoder.ts names the pinned build.
+    default: .
+runs:
+  using: composite
+  steps:
+    # A journey that records a demo fetches the pinned encoder on first use
+    # (tests/e2e/demoEncoder.ts) into the machine's own cache folder, and a
+    # fresh runner has none, so every such job downloaded it from GitHub's
+    # release server in the middle of a journey, with no retry: one 504 there
+    # failed a merge batch's demo journeys in every Linux journey group and on
+    # the Mac. Restored here, a job reaches that server only on the pin's
+    # first download; a machine that already keeps the build skips the
+    # restore and runs its own copy.
+    - id: encoder
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        node --input-type=module -e '
+          const { existsSync } = await import("node:fs");
+          const { encoderCache } = await import("./tests/e2e/demoEncoder.ts");
+          const cache = encoderCache();
+          if (cache) {
+            console.log(`dir=${cache.dir}`);
+            console.log(`key=${cache.key}`);
+            console.log(`kept=${existsSync(cache.binary)}`);
+          }
+        ' >> "$GITHUB_OUTPUT"
+    - id: restore
+      if: steps.encoder.outputs.key != '' && steps.encoder.outputs.kept != 'true'
+      uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
+      with:
+        path: ${{ steps.encoder.outputs.dir }}
+        key: ${{ steps.encoder.outputs.key }}
+    # A miss fetches the build here, before any journey, and saves it at once.
+    # actions/cache saved only after a job passed every step, and only a run
+    # on main writes the cache every branch reads, so the key stayed empty:
+    # alpha run 42477283672 missed it in every Linux journey group, and each
+    # demo journey fetched mid-test and took GitHub's 504, or hung until its
+    # test timed out. Saved in its own step, one fetch fills the key whatever
+    # the journeys do next. A failed fetch leaves the journeys to fetch it as
+    # they always have, so the journeys that record no demo still report.
+    - id: fetch
+      if: steps.restore.outcome == 'success' && steps.restore.outputs.cache-hit != 'true'
+      continue-on-error: true
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        node --input-type=module -e '
+          const { demoEncoder } = await import("./tests/e2e/demoEncoder.ts");
+          console.log(`The pinned encoder runs from ${await demoEncoder()}`);
+        '
+    - if: steps.fetch.outcome == 'success'
+      uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
+      with:
+        path: ${{ steps.encoder.outputs.dir }}
+        key: ${{ steps.encoder.outputs.key }}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "full-tests-on-main",
+      "reason": "Developer CI scheduling only: full unit and integration sweeps move from pull requests to main; release verification and app behavior are unchanged."
+    }
+  ]
+}

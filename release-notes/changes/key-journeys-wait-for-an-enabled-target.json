@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "key-journeys-wait-for-an-enabled-target",
+      "reason": "Test only: the journeys' key helpers also wait until their target is enabled before focusing it, because a control stays disabled while its value loads and a focus call on it did nothing; the window-starts-run journey reads Start at login once its saved setting has loaded. No shipped behavior changed."
+    }
+  ]
+}

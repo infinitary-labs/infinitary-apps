@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "session-host-tool-callbacks",
+      "reason": "Moves the callbacks a crewmate's tools run on, and its files, integrations and secrets commands, on a computer that runs work out of the session host into their own file unchanged, so the session host stays under the size warning; nothing a person sees changes."
+    }
+  ]
+}

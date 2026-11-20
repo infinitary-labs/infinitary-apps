@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "casual-web-projects",
+      "kind": "improvement",
+      "title": "A small page gets the same start as a game for fun",
+      "body": "A new page, toy or small app made for fun or for yourself now gets its own project, as a game for fun does. Firstmate suggests keeping changes on this computer, merging them on their own, and Quick care, and says why on the setup card. When it is finished, its note has an Open button; a finished game's note now shows Open instead of Play. A project that names a framework, hosting, a sign-in, a team or a launch gets Asks first, Default care and a plan first.",
+      "area": "firstmate",
+      "noPicture": "The setup card and the finished note look as before; only which asks get them, and the word on the finished note's button, change.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

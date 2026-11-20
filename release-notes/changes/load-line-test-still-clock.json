@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "load-line-test-still-clock",
+      "reason": "Test-only: the load line's native command tests hold the line's clock still while they replay one reading, so a slow test runner can no longer age that reading past its freshness window mid-test; the app is unchanged."
+    }
+  ]
+}

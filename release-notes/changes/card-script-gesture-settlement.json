@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "card-script-gesture-settlement",
+      "reason": "The keyboard and local-link journeys wait for synthetic gestures to be decided before a real press gives the card focus. The focus-grace constant is shared without changing shipped behavior."
+    }
+  ]
+}

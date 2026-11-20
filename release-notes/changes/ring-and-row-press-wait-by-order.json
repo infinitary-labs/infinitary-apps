@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "ring-and-row-press-wait-by-order",
+      "reason": "Two journeys wait by order instead of a fixed window: the crew ring is read once the closing note is closed, and a Tasks row press finds and presses the row in one go, so a row drawn anew under another group is not missed. Nothing in the app changed."
+    }
+  ]
+}

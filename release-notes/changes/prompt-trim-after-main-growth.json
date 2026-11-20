@@ -1,0 +1,7 @@
+{
+  "entries": [],
+  "exclusions": [{
+    "id": "prompt-trim-after-main-growth",
+    "reason": "Internal: tighter wording of a few served tool descriptions, to bring the first mate's and Claude crewmate's fixed context back under their token budgets after main grew past them; every rule is kept and nothing a person sees changes."
+  }]
+}

@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "phone-card-text-box-room",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Typing in a card on iPhone or iPad gives the card more room",
+      "body": "On iPhone and iPad, while you type in a card's reply box or a text box inside a card, the page count, your last message and the message box below the card step aside, so the card grows down to the keyboard. The box you type in keeps a little room under it, or the card's choices show under the reply. Everything comes back when the keyboard closes, and the message box keeps what you had typed.",
+      "noPicture": "The phone checks take the pictures of a card with the keyboard up; the desktop hero picture cannot capture the phone app.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

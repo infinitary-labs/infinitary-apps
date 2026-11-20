@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-stop-at-failed-confirm",
+      "reason": "CI: this project's merge batch check also stops once a failed test fails its confirm again; nothing in the app changes."
+    }
+  ]
+}

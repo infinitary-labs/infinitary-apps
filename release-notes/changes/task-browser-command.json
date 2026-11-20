@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "task-browser-command",
+      "reason": "Crewmates reach their task's browser through a command in their shell instead of five tools, so the browser leaves every crewmate's standing context; the browser, its view, its cards and the task record work as before."
+    }
+  ]
+}

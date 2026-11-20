@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "faster-task-record-open",
+      "kind": "improvement",
+      "area": "tasks",
+      "title": "A task's record opens faster when you have many tasks",
+      "body": "Opening a task's record no longer reads every task you ever had, so it stays quick as your list of tasks grows. Searching Tasks for older work is quicker too.",
+      "noPicture": "The record looks the same; it only appears sooner.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

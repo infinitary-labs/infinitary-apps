@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "shared-card-seen",
+      "kind": "fix",
+      "title": "Notes stay available, and new marks agree across your devices",
+      "body": "Reading a note, waiting or moving to another card no longer hides it. Updated Mac windows, iPhone and iPad share which card updates you have seen, while each window keeps its own project filter and selected card. Previously hidden open notes can return, and an older update may appear new once if its reading could not be confirmed. Older apps keep their existing behavior until updated.",
+      "area": "cards",
+      "noPicture": "This changes retention over time and shared reading state across devices, not card styling; the change is demonstrated by journeys and recordings rather than a still hero picture.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

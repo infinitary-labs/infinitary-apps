@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-settings-rigor-keys",
+      "reason": "Test-only: the phone settings journey counts the places changes can go on a project's page before pressing Down to reach Rigor, since batched pull requests are offered only while their runbook is on. Nothing in the shipped app changes."
+    }
+  ]
+}

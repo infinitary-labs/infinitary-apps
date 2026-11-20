@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "run-work-journey-split",
+      "reason": "Split the work mode's end-to-end journey along its owners, under the code size warning line; every test moved unchanged and nothing a person sees changes."
+    }
+  ]
+}

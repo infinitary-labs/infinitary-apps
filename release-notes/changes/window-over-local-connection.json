@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "window-over-local-connection",
+      "reason": "The window on the first mate's own computer now reaches its first mate over the connection's local door instead of a direct path inside the process; it shows and does the same things, with no new control, row or setting a person sees."
+    }
+  ]
+}

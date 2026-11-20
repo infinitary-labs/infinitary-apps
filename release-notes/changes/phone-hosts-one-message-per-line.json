@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-hosts-one-message-per-line",
+      "reason": "Internal: the compiled message tables, and the phone's card and panel scripts that bundle them, list one message per line, so two changes that each add a message combine in a batch without a clash in the committed scripts; the phone shows the same words."
+    }
+  ]
+}

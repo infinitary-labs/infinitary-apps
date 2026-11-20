@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "task-card-fact-strip",
+      "kind": "improvement",
+      "highlight": 3,
+      "title": "A task's card lines up, and its pull request sits with its model",
+      "body": "A task's card now starts everything on one left edge: its status, title, Now, Progress and the Goal, Activity and Details rows. Its pull request and checks moved from the middle of the card to the strip at the bottom, beside the model, the same strip a card that merges shows. Resting on a task shows that strip too. Every pull request number on a task's card, in Now and Activity included, now opens the pull request when you click it.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-card-fact-strip-dark.webp",
+        "light": "task-card-fact-strip-light.webp",
+        "alt": "A task's card with its labels on one left edge and a strip at the bottom showing the model, the pull request #965 as a link, and the checks that failed"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

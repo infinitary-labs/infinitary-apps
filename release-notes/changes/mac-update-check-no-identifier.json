@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "mac-update-check-no-identifier",
+      "reason": "A direct Mac copy's update check no longer sends the update library's random per-install ID with each feed read, and an earlier version's saved ID file is removed; nothing a person sees or does changes, and Diagnostics' install ID stays the one identifier that leaves for us."
+    }
+  ]
+}

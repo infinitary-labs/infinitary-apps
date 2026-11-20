@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "linux-startup-fixture-no-download",
+      "reason": "Main's Linux automatic startup fixture now gives its plain Ubuntu container the hosted machine's own systemctl instead of downloading systemd from Ubuntu's package archive, so the archive refusing connections no longer fails the check; the app and what a person sees are unchanged."
+    }
+  ]
+}

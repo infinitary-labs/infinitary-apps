@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "ask-which-way-to-add-a-mac",
+      "kind": "fix",
+      "title": "Firstmate asks which way to add a Mac",
+      "body": "Ask Firstmate to add another Mac without saying how, and it asks you on one card. The card offers every way: a link, a command, the Mac's address, or another user on this Mac. Before, it picked one way for you, so its card could leave out the way you wanted.",
+      "area": "devices",
+      "noPicture": "Firstmate writes this card in its own words each time it asks, so no one picture shows it.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "phone-split-at-fold",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Choose whether an open iPhone Duo splits at the fold",
+      "body": "Settings → Appearance on iPhone Duo now has a Split at the fold switch. It starts on, keeping Tasks and Activity on one side of the fold and your cards on the other. Turn it off and the open phone lays out as an iPad does, with a narrower list beside your cards and the card centred across the whole screen.",
+      "picture": {
+        "dark": "phone-split-at-fold-dark.webp",
+        "light": "phone-split-at-fold-light.webp",
+        "alt": "Infinitary on an open iPhone Duo with Split at the fold off: a narrower Tasks list on the left and a decision card centred across the fold."
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

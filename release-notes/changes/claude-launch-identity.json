@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "claude-launch-identity",
+      "kind": "fix",
+      "area": "subscriptions",
+      "title": "Claude conversations identify Infinitary by its own name",
+      "body": "New Claude conversations now tell Claude they come from Infinitary, after people reported that Claude counted their allowance differently without it. Infinitary does not measure or promise lower allowance use. Your Claude sign-in and saved conversations stay the same.",
+      "noPicture": "This changes the identity sent by new Claude processes, not any visible screen.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "observe-kept-session-identity",
+      "reason": "Repairs the Observe journey to reopen the original task by session identity when a newer similarly named question exists; no product behavior changes."
+    }
+  ]
+}

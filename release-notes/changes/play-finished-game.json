@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "play-finished-game",
+      "kind": "feature",
+      "title": "Play a finished game from its card",
+      "body": "When a crewmate finishes a game for you, it tries the game in its own browser first, and its note shows a picture of the game and a Play button. Play opens the game in the task's browser inside the app, with you in control, straight from the game's own project folder. The note does not hold up the task, and Play keeps working after the task closes. Play works once the game's changes reach its project, and not for a task running on another computer.",
+      "area": "cards",
+      "picture": {
+        "dark": "play-finished-game-dark.webp",
+        "light": "play-finished-game-light.webp",
+        "alt": "A finished game's note with a picture of the game and a Browser strip whose Play button opens index.html in the task's browser."
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

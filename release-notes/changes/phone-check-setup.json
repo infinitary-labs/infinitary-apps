@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-check-setup",
+      "reason": "Internal: the project's own phone check reuses main's fetched Swift packages, starts its simulators while the app builds and leaves the generated files to the Linux check; nothing a person sees changes."
+    }
+  ]
+}

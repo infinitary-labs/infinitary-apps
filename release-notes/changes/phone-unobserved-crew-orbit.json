@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-unobserved-crew-orbit",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Idle crewmates keep orbiting on iPhone and iPad",
+      "body": "On iPhone and iPad, an idle crewmate the app has not heard from lately, such as a reviewer waiting on its builder, no longer stands still and faded. It orbits and circles the work it waits on, as it does on your Mac. Only a computer out of reach still holds its crew still.",
+      "noPicture": "This changes motion, which a still picture of the scene cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

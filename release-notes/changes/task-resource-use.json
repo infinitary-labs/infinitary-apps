@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "task-resource-use",
+      "kind": "feature",
+      "area": "tasks",
+      "title": "See what your running tasks use",
+      "highlight": 3,
+      "body": "Each task's record shows its processor use, resident memory and processes. When your Mac reports memory pressure, Activity names the tasks and your first mate hears once, without stopping work.",
+      "picture": {
+        "dark": "task-resource-use-dark.webp",
+        "light": "task-resource-use-light.webp",
+        "alt": "Upper part of a task record showing the Use row with processor use, resident memory and one process"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "standby-peers",
+      "kind": "feature",
+      "title": "Computers that keep a copy of your first mate now reach each other",
+      "body": "Each computer that keeps a live copy of your first mate now reaches the other computers that keep one, directly and with its own key, and stays in reach of them while this computer is away. In Settings → Devices, Ready to take over says which other copies that computer reaches, and what to do about one it cannot reach. Only computers on your list are let in.",
+      "area": "devices",
+      "picture": {
+        "dark": "standby-peers-dark.webp",
+        "light": "standby-peers-light.webp",
+        "alt": "Settings, Devices, with Ready to take over open for a Mac mini, saying Mac mini reaches the copy on Mac Studio"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

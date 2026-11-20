@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-proven-second-tap",
+      "reason": "Internal: the phone checks send a tap once more only when the simulated iPhone or iPad's own log proves it ignored the first one, or the photo picker's own log proves it read a photo tap as a press-and-hold, and no longer wait for Apple's animation signal, waiting instead until the screen inside each target has settled; nothing a person sees changes."
+    }
+  ]
+}

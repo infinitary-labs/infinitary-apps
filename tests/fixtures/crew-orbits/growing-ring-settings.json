@@ -1,0 +1,55 @@
+{
+  "provenance": "Captain clicked Approve and build on INF-1179 (Try a growing ring beside today's three orbits) and submitted these settings and answers",
+  "captainWords": [
+    "can we try making the per-orbit limit 24 instead of 16?",
+    "the 3rd orbit actually makes things messy again. let's only allow 2 orbits. just keep packing the two orbits after 48?"
+  ],
+  "rule": {
+    "radius": "the innermost open orbit k: start + (cap(k) - start) * (n - 1) / (seats - 1), at most cap(k); every orbit outside it holds at cap(k)",
+    "cap": "capRadiusPx - k * orbitStepPx",
+    "tilt": "8 + ((firstTiltDeg - 8 + k * tiltStepDeg) mod 74)",
+    "node": "firstNodeDeg + k * nodeStepDeg",
+    "speed": "speedDegPerSec * (-1)^k when alternateDirection, times (1 + 0.75 k) when innerFaster",
+    "phase": "k * phaseStepRad",
+    "overflow": "past every orbit's seats, the orbit with fewer crew takes the arrival, the first on a tie"
+  },
+  "answers": {
+    "layout_rule": "hold",
+    "orbit_growth": "steady",
+    "inner_seats": "same",
+    "q1_names": "eight",
+    "q2_program_ring": "first-orbit",
+    "q4_refill": "refill-outward",
+    "q5_clusters": "same-rule"
+  },
+  "orbit_layout": {
+    "version": 1,
+    "layout": "growing-ring",
+    "units": { "radius": "scene px", "tilt": "deg", "speed": "deg/s" },
+    "product": {
+      "rule": "hold",
+      "growth": "steady",
+      "startRadiusPx": 150,
+      "capRadiusPx": 256,
+      "orbitStepPx": 46,
+      "seatsPerOrbit": 24,
+      "innerSeats": "same",
+      "maxOrbits": 2,
+      "firstTiltDeg": 42,
+      "tiltStepDeg": 23,
+      "nodeStepDeg": 46,
+      "speedDegPerSec": 8,
+      "alternateDirection": true,
+      "innerFaster": true,
+      "firstNodeDeg": -24.06,
+      "phaseStepRad": 0.53
+    },
+    "demo": {
+      "crew": 33,
+      "workingShare": 60,
+      "waitingDemo": true,
+      "orbitPaths": false,
+      "playing": true
+    }
+  }
+}

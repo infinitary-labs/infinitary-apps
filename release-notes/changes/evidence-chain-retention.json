@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "evidence-chain-retention",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Later tasks keep earlier evidence available without copying it",
+      "body": "Open work now keeps every earlier task's evidence available, even through finished tasks and while the later task has not started. Crewmates are told to read that evidence where it is instead of copying accumulated folders forward. Once no open work needs it, the usual week after closure still applies.",
+      "noPicture": "Nothing on screen changes: this fixes background file retention and the instructions crewmates receive.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

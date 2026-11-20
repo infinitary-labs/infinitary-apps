@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "zod-parameter-noise",
+      "reason": "Internal: tool parameters drop the JSON Schema dialect line, zod's safe-integer range and one repeated sentence, so a crewmate's fixed instructions fit their measured budget again; nothing a person sees changes."
+    }
+  ]
+}

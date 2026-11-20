@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "general-version-three-notes",
+      "kind": "fix",
+      "title": "General settings shows three recent release notes first",
+      "body": "Version now sits at the bottom of General settings. It starts with your three newest release notes. Show more reveals the rest, including from the keyboard. Each note still opens as you saw it.",
+      "area": "settings",
+      "picture": {
+        "dark": "general-version-three-notes-dark.webp",
+        "light": "general-version-three-notes-light.webp",
+        "alt": "Version at the bottom of General settings with three recent release notes and Show more."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

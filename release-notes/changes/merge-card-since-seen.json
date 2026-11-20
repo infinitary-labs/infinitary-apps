@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "merge-card-since-seen",
+      "kind": "improvement",
+      "title": "A merge card that comes back says what changed",
+      "body": "When a merge card comes back after you saw an earlier one for the same change, it opens with a short summary of what changed since then. The crewmate writes it in its own words, under a label that says when you saw the earlier card. The pull request never shows it.",
+      "area": "cards",
+      "picture": {
+        "dark": "merge-card-since-seen-dark.webp",
+        "light": "merge-card-since-seen-light.webp",
+        "alt": "A merge card opening with a summary under Since the card you saw, above Why, saying the change grew from 1,366 to 4,562 added lines"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "custom-api-live-models",
+      "kind": "fix",
+      "area": "settings",
+      "title": "Custom connections list new models such as Claude Fable 5.2 as Reasoning profiles",
+      "body": "A connection you add in Settings → Intelligence now offers Reasoning profiles for models that came out after your version of Infinitary, such as Claude Fable 5.2, within a few hours of their release. A model you add takes the profile with its exact ID on its own, and Off is now called Not set (model's default), because some models think even then.",
+      "picture": {
+        "dark": "custom-api-live-models-dark.webp",
+        "light": "custom-api-live-models-light.webp",
+        "alt": "A custom connection's model line for claude-fable-5-2 with its Reasoning profile set to Claude Fable 5.2 · anthropic"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

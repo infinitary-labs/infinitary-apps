@@ -1,0 +1,7 @@
+{
+  "id": "lessons",
+  "name": "Lessons",
+  "description": "Guidance and card parts for learning and practising.",
+  "firstmate": "guide.md",
+  "skills": "skills"
+}

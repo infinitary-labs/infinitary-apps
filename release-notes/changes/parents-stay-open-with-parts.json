@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "parents-stay-open-with-parts",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A task with parts no longer reads finished while its parts are still to come",
+      "body": "When you approve a plan, the task above it now waits for your first mate to file the parts the plan named instead of reading finished in that moment. A part filed under a task that had closed by itself when its earlier parts finished opens it again, and such tasks that read finished while parts under them were still open open again. A task that closed for its own reasons, such as a merge or your choice, keeps its close.",
+      "noPicture": "Tasks look the same; the change is which tasks read open.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

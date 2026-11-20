@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "claude-linux-test-budgets",
+      "reason": "Sizes the project-resources, crew-agents and auto-memory integration test limits from Linux check-machine measurements and clarifies the cohort rule. No shipped behavior changes."
+    }
+  ]
+}

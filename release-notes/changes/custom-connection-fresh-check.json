@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "custom-connection-fresh-check",
+      "kind": "fix",
+      "title": "A custom connection asks for its fresh check where you start",
+      "body": "If Firstmate answers from a custom connection whose checks an earlier version made, the start screen no longer asks you to connect a subscription. It names your connection and checks it right there with Check again. Your Firstmate choice and crew slots come back once the check passes, without a restart, and the same happens when you save the connection again from Settings. The start screen's words also stay clear of your last message.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "custom-connection-fresh-check-dark.webp",
+        "light": "custom-connection-fresh-check-light.webp",
+        "alt": "The start screen reading Check Operator gateway again to begin, with what the check covers and a Check again button"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

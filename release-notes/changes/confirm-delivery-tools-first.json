@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "confirm-delivery-tools-first",
+      "kind": "improvement",
+      "title": "Crewmates check they can deliver before they start building",
+      "body": "Before changing anything, a crewmate now checks that it can push its work, open the pull request, read its checks and gather the evidence it plans to show you. When something it needs is missing, such as a sign-in or a way to read test results, it says so at the start, so it can be arranged while the work goes on instead of after the work is done.",
+      "area": "crewmates",
+      "noPicture": "Nothing on screen changes: a missing sign-in or tool is reported at the start of a task instead of at its end.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

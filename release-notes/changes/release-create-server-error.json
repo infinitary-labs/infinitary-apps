@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-create-server-error",
+      "reason": "The release workflow reads a release again and creates it once more after GitHub answers its create with a server error; no app behavior changes."
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "own-model-list-credit",
+      "kind": "fix",
+      "title": "A new model from your own model list names its own provider",
+      "body": "When a provider in your own model list gains a model, Activity now names that provider, such as \"home-lab added coder-2\", instead of a subscription like Grok. A provider your list gains for the first time is not announced, the same as a newly connected subscription.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "own-model-list-credit-dark.webp",
+        "light": "own-model-list-credit-light.webp",
+        "alt": "Activity: Grok added grok-4.7 to medium, then home-lab added coder-2."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

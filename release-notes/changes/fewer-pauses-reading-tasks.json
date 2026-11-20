@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "fewer-pauses-reading-tasks",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Fewer pauses with a long task history",
+      "body": "With thousands of tasks on record, the window no longer stops for a quarter of a second while your first mate lists tasks or starts several crewmates at once. Each list, card and background check now reads a task once instead of again for every neighbour that names it.",
+      "noPicture": "This removes pauses in the window's response; nothing on screen looks different.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

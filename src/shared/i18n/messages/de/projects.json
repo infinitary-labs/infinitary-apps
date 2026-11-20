@@ -1,0 +1,47 @@
+{
+  "projectsHost": "der Host des Projekts",
+  "projectsMoveAfterNew": "Ein eigenes Projekt ({key})",
+  "projectsMoveAfterRevive": "Wieder ein eigenes Projekt ({key})",
+  "projectsMoveApply": "Verschiebung anwenden",
+  "projectsMoveAsks": {
+    "plural": "count",
+    "one": "Dein erster Offizier möchte dieses Repository verschieben. Nichts wird verschoben, bis du auf „Verschiebung anwenden“ klickst.",
+    "other": "Dein erster Offizier möchte diese Repositorys verschieben. Nichts wird verschoben, bis du auf „Verschiebung anwenden“ klickst."
+  },
+  "projectsMoveAutomations": {
+    "plural": "count",
+    "one": "{count} Automatisierung zu den Projekten, die die Liste verlassen, gilt danach {project}.",
+    "other": "{count} Automatisierungen zu den Projekten, die die Liste verlassen, gelten danach {project}."
+  },
+  "projectsMoveColumnAfter": "Nach deinem Klick",
+  "projectsMoveColumnNow": "Projekt jetzt",
+  "projectsMoveColumnRepository": "Repository",
+  "projectsMoveDirections": "Vorgaben, die für ein Repository in {project} gespeichert sind, gelten danach für alle, auch für diese.",
+  "projectsMoveFinishedTasks": {
+    "plural": "count",
+    "one": "{count} abgeschlossene Aufgabe folgt, ihr Kürzel bleibt.",
+    "other": "{count} abgeschlossene Aufgaben folgen, ihre Kürzel bleiben."
+  },
+  "projectsMoveKeeps": "Jedes behält Namen, Ordner und Einstellungen.",
+  "projectsMoveLeaves": {
+    "plural": "count",
+    "one": "Dieses Projekt verlässt die Projektliste, und niemand kann sein Kürzel wieder vergeben:",
+    "other": "Diese {count} Projekte verlassen die Projektliste, und niemand kann ihre Kürzel wieder vergeben:"
+  },
+  "projectsMoveListMore": {
+    "plural": "count",
+    "one": "{first} und {count} weiteres",
+    "other": "{first} und {count} weitere"
+  },
+  "projectsMoveListTwo": "{first} und {second}",
+  "projectsMoveNoOpenTask": "Keine offene Aufgabe wird verschoben.",
+  "projectsMoveNoTask": "Keine Aufgabe wird verschoben.",
+  "projectsMoveNotNow": "Nicht jetzt",
+  "projectsMoveOpenTasks": {
+    "plural": "count",
+    "one": "{count} offene Aufgabe kommt zu {project}, ihr Kürzel bleibt:",
+    "other": "{count} offene Aufgaben kommen zu {project}, ihre Kürzel bleiben:"
+  },
+  "projectsMoveTitleInto": "{repositories} in {project} verschieben?",
+  "projectsMoveTitleOwn": "{repositories} in ein eigenes Projekt verschieben?"
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "probe-selection-ci-leftover",
+      "reason": "Internal CI cleanup: drop the job-summary write and a stale comment left from the pull request probe selection."
+    }
+  ]
+}

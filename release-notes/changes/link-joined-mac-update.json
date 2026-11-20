@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "link-joined-mac-update",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Update now works on a Mac that joined by pasting its link",
+      "body": "When another Mac joined by pasting its link, Update in Settings → Devices said it updated, but the Mac came back on its old version and the warning said it had not started again. Now that Mac keeps a copy of this computer's version in its work folder at its first Update and starts again on it. The Mac's own installed app is left as it is.",
+      "noPicture": "Settings → Devices and its lines look the same; the Mac now comes back on the new version instead of the old one.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

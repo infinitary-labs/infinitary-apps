@@ -1,0 +1,28 @@
+{
+  "entries": [
+    {
+      "id": "protocol-ten",
+      "kind": "removal",
+      "highlight": 3,
+      "area": "devices",
+      "title": "Update Infinitary on your other computers",
+      "body": "This version changes how your computers work together. A computer that runs work for you takes no new work until it runs this version too, and you can update it from Devices. A computer that controls your first mate can look but not change anything until it is updated.",
+      "noPicture": "This changes which versions of Infinitary work together, not the layout or words of a screen.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": ["05fce95710f49c06c557069fad61a6009ec9a18d"]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "alpha-review-after-0-5-0-alpha-5",
+      "reason": "Release review for the alpha after 0.5.0-alpha.5: ranks minimizing a card, lighting a task everywhere and the protocol 10 update as highlights; rewords the minimize and merge-wait notes; adds the protocol 10 update note, which its change did not cover. Nothing in the app changes."
+    },
+    {
+      "id": "devices-download-link-comments",
+      "reason": "Code comments only: two comments now say a device download link lasts thirty minutes. Nothing in the app changes.",
+      "covers": ["3391d0054eaeffe0f6638ea9f0fc2fd5ca6f5deb"]
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "gpt-6-luna-decisions",
+      "kind": "feature",
+      "title": "Choose GPT-6 Luna Decisions for Firstmate's quick decisions",
+      "body": "Settings \u2192 Intelligence \u2192 Models \u2192 Decisions now lists OpenAI's GPT-6 Luna Decisions among the models your OpenRouter sign-in offers. It works like the others there: it needs no extra key, and when it cannot answer, Firstmate decides the usual way.",
+      "area": "settings",
+      "noPicture": "The new choice appears as one more row in an existing list.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

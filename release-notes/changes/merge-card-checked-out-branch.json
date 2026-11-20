@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "merge-card-checked-out-branch",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Merge cards come up for work delivered from another branch",
+      "body": "When a crewmate delivers its work from a branch other than its task's own, its merge card now comes up for that branch's pull request, and your merge click merges it, instead of being turned down because an earlier pull request had already merged. When a merge card cannot come up yet, the crewmate is told the one thing still missing, so it stops retrying the wrong step.",
+      "noPicture": "The merge card looks the same; what changed is which pull request it is shown and merged for.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

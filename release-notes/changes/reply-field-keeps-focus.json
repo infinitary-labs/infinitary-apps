@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "reply-field-keeps-focus",
+      "kind": "fix",
+      "title": "You can type a second reply under a card right away",
+      "body": "After you send a reply under a card that stays on screen, the reply box keeps your cursor, whether you pressed Return or clicked the send arrow, so you can type the next reply without clicking the box again. When the card you replied under moves to the back, your cursor now goes to the message box instead of the next card's close button.",
+      "area": "cards",
+      "noPicture": "A picture cannot show typing at once, and the reply field looks the same.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

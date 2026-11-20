@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "starve-check-vfork-parent",
+      "reason": "Internal test tooling: the Linux load controller counts a parent waiting in vfork with a stop pending as stopped, so its freeze no longer waits forever."
+    }
+  ]
+}

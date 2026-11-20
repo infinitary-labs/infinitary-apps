@@ -1,0 +1,53 @@
+{
+  "projectsHost": "o host do projeto",
+  "projectsMoveAfterNew": "Um projeto próprio ({key})",
+  "projectsMoveAfterRevive": "Seu próprio projeto de novo ({key})",
+  "projectsMoveApply": "Aplicar mudança",
+  "projectsMoveAsks": {
+    "plural": "count",
+    "one": "Seu imediato pede para mover este repositório. Nada muda até você clicar em “Aplicar mudança”.",
+    "many": "Seu imediato pede para mover estes repositórios. Nada muda até você clicar em “Aplicar mudança”.",
+    "other": "Seu imediato pede para mover estes repositórios. Nada muda até você clicar em “Aplicar mudança”."
+  },
+  "projectsMoveAutomations": {
+    "plural": "count",
+    "one": "{count} automação sobre os projetos que saem da lista passa a ser sobre {project}.",
+    "many": "{count} automações sobre os projetos que saem da lista passam a ser sobre {project}.",
+    "other": "{count} automações sobre os projetos que saem da lista passam a ser sobre {project}."
+  },
+  "projectsMoveColumnAfter": "Depois do seu clique",
+  "projectsMoveColumnNow": "Projeto agora",
+  "projectsMoveColumnRepository": "Repositório",
+  "projectsMoveDirections": "As diretrizes salvas para qualquer repositório de {project} passam a valer para todos eles, inclusive estes.",
+  "projectsMoveFinishedTasks": {
+    "plural": "count",
+    "one": "{count} tarefa concluída vai junto, com a chave mantida.",
+    "many": "{count} tarefas concluídas vão junto, com as chaves mantidas.",
+    "other": "{count} tarefas concluídas vão junto, com as chaves mantidas."
+  },
+  "projectsMoveKeeps": "Cada um mantém nome, pasta e ajustes.",
+  "projectsMoveLeaves": {
+    "plural": "count",
+    "one": "Este projeto sai da lista de projetos, e ninguém poderá usar a chave dele de novo:",
+    "many": "Estes {count} de projetos saem da lista de projetos, e ninguém poderá usar as chaves deles de novo:",
+    "other": "Estes {count} projetos saem da lista de projetos, e ninguém poderá usar as chaves deles de novo:"
+  },
+  "projectsMoveListMore": {
+    "plural": "count",
+    "one": "{first} e mais {count}",
+    "many": "{first} e mais {count}",
+    "other": "{first} e mais {count}"
+  },
+  "projectsMoveListTwo": "{first} e {second}",
+  "projectsMoveNoOpenTask": "Nenhuma tarefa aberta é movida.",
+  "projectsMoveNoTask": "Nenhuma tarefa é movida.",
+  "projectsMoveNotNow": "Agora não",
+  "projectsMoveOpenTasks": {
+    "plural": "count",
+    "one": "{count} tarefa aberta entra em {project}, com a chave mantida:",
+    "many": "{count} tarefas abertas entram em {project}, com as chaves mantidas:",
+    "other": "{count} tarefas abertas entram em {project}, com as chaves mantidas:"
+  },
+  "projectsMoveTitleInto": "Mover {repositories} para {project}?",
+  "projectsMoveTitleOwn": "Mover {repositories} para um projeto próprio?"
+}

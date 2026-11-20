@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "collapsed-validation-gap",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Missing proof stays concise until you open its record",
+      "body": "When a builder asks to proceed without live proof, the card keeps what your click grants in view. The recorded gap starts closed; open it to read what is missing, what was tried and ways to close it. Accepting still records no live pass and merges nothing.",
+      "picture": {
+        "dark": "collapsed-validation-gap-dark.webp",
+        "light": "collapsed-validation-gap-light.webp",
+        "alt": "A device check decision keeps the untested scenario and no-pass, no-merge limits visible above the closed The recorded gap row."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

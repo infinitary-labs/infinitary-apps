@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "stage-follows-large-boards",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Wait arrows and task parts keep up with a long task list",
+      "body": "Once your tasks list grew past about 500 tasks, the arrows between waiting crewmates and the drawing of a task split into parts could stop changing. They now update whenever a wait is added or removed or a part is dropped, however long the list is.",
+      "noPicture": "The stage looks as it already did with fewer tasks; the fix is that it keeps changing with many.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

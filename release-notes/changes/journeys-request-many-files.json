@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journeys-request-many-files",
+      "reason": "CI only: a journeys check request naming twenty or more journeys starts its jobs instead of failing at creation, and a newer request of the same journeys still replaces the older one; nothing in the app changes."
+    }
+  ]
+}

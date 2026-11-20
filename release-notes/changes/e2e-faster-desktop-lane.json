@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "e2e-faster-desktop-lane",
+      "reason": "Test scheduling only: the background work and browser booking journeys run alongside the other application tests in the release Mac check instead of one at a time, keeping every assertion and the complete failure report. No shipped behavior changed."
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "batch-fix-collisions",
+      "kind": "improvement",
+      "area": "projects",
+      "title": "A held batch fixes two approved changes that meet badly",
+      "body": "On a project with batched pull requests, when two approved changes each work alone but fail together, the crewmate repairing the held batch can now fix where they meet, even in lines one of them wrote, instead of sending a correct change back for your approval again. It can also send one change back and fix the rest in a single answer: the batch then waits for that fix and checks once.",
+      "noPicture": "This changes how a held batch is combined with its fix; no screen looks different.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

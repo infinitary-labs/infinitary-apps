@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "knowledge-tab-keeps-list-focus",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "The keyboard stays in the Knowledge list you move to",
+      "body": "In the Knowledge browser, an arrow key that changes tabs no longer pulls the keyboard back to the tab after you have moved on into its list. This could happen when the app drew slowly.",
+      "noPicture": "The fix is about where the keyboard rests a moment after a key; a still picture looks the same before and after.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "pin-a-task",
+      "kind": "feature",
+      "title": "Pin a task to the top of Tasks",
+      "body": "Rest on any row in Tasks and press its pin to keep that task in a Pinned section at the top, whatever state it is in, done work included. Pinned tasks stay in the order you pinned them, and pressing the filled pin again puts the task back under its state. The task board's menu and the task's own record pin and unpin too, and the Tasks tab on your phone shows the same Pinned section.",
+      "area": "tasks",
+      "picture": {
+        "dark": "pin-a-task-dark.webp",
+        "light": "pin-a-task-light.webp",
+        "alt": "The Tasks panel with a Pinned section at the top holding two tasks, one of them finished, each with a filled pin"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+Infinitary
+Copyright 2026 Infinitary Labs, Inc.
+
+LICENSE applies to the Infinitary software and documentation owned by
+Infinitary Labs, Inc. It does not relicense third-party material. Third-party
+licenses and notices, including those distributed with dependencies and assets,
+continue to apply. Previously distributed versions retain their original terms.
+
+Infinitary was previously developed and distributed as Firstmate 3000. That
+code belongs to Infinitary Labs, Inc. and is covered by LICENSE like the rest
+of Infinitary.
+
+The pull request signature line and pipeline attestation markers Infinitary
+writes for careful changes match the no-mistakes project's own markers.
+no-mistakes is owned by Infinitary Labs, Inc.'s founder, who grants their use
+in Infinitary under LICENSE.
+
+This product bundles Git, the version control system (https://git-scm.com),
+as built for macOS by dugite-native (https://github.com/desktop/dugite-native):
+git 2.53.0 from the dugite-native v2.53.0-4 release, for arm64 and x86_64,
+under Contents/Resources/git. Git is licensed under the GNU General Public
+License, version 2 (https://www.gnu.org/licenses/old-licenses/gpl-2.0.html).
+Its complete corresponding source is at https://github.com/git/git/tree/v2.53.0,
+and the scripts that built these binaries are at
+https://github.com/desktop/dugite-native/tree/v2.53.0-4. Git is a separate
+program the app runs; it is not linked into Infinitary. The binaries are
+shipped as that release built them, less the Git Credential Manager and
+git-lfs programs it also carries.
+
+This product includes dugite (https://github.com/desktop/dugite),
+Copyright (c) 2016 GitHub and contributors, licensed under the MIT License.
+
+JetBrains Mono and Space Grotesk are licensed under the SIL Open Font License,
+version 1.1. Their full notice accompanies the fonts in the app bundles and
+is in ios/Infinitary/InfinitaryApp/Fonts/Font-licenses.txt in source.
+The Swift package notices are in ios/Infinitary/InfinitaryApp/Notices/.
+Electron and Chromium carry their own bundled license files.
+The Claude Agent SDK is separately licensed under its accompanying terms, which
+ship with the app as licenses/claude-agent-sdk-LICENSE.md.

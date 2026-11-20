@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-check-leftovers",
+      "reason": "The project's own phone check now removes, at its start, the test simulators and scratch folders that earlier killed runs left on the Mac that runs it; how Infinitary is developed, nothing in the app changes."
+    }
+  ]
+}

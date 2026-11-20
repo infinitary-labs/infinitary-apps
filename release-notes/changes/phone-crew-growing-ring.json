@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "phone-crew-growing-ring",
+      "kind": "improvement",
+      "title": "Your crew gather on the growing ring on iPhone and iPad",
+      "body": "In Infinitary on iPhone and iPad, your crew now gather the way they do on your Mac. One ring around your first mate widens a little with each new crewmate, and past 24 a second ring opens inside it, tilted differently and turning the other way. There are never more than two rings. When someone leaves, the others glide round their ring to close the gap. The rings are a little smaller than on your Mac, so eight crewmates fit on even the smallest iPhone held upright. Your other computers' groups are drawn at half size, as on your Mac, and the faint ring outlines are gone.",
+      "area": "devices",
+      "picture": {
+        "dark": "phone-crew-growing-ring-dark.webp",
+        "light": "phone-crew-growing-ring-light.webp",
+        "alt": "Thirty crewmates around the first mate on iPhone: 24 on a wide outer ring and 6 on a smaller, differently tilted ring inside it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

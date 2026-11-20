@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "trim-firstmate-tool-wording",
+      "reason": "Shorten existing agent guidance without changing the interface."
+    }
+  ]
+}

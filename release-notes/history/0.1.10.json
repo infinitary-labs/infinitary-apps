@@ -1,0 +1,61 @@
+{
+  "entries": [
+    {
+      "id": "bf-5645ac9ff",
+      "kind": "feature",
+      "title": "Offer GitHub sign-in for task dispatch",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "5645ac9ff76b50776412b93b5fc6ff0088e28292"
+        ]
+      }
+    },
+    {
+      "id": "bf-74b6d8103",
+      "kind": "feature",
+      "title": "One plugin vehicle - add a panel by talking, behind one consent card",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "74b6d8103cf2a8419bf4636d0b75b0f7733ae192"
+        ]
+      }
+    },
+    {
+      "id": "bf-a220f8eac",
+      "kind": "feature",
+      "title": "The frame realm - draw added panels contained, Tasks and Activity in the plugin shape",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "a220f8eaccd59be0e3df85a03dbd985aeb45ff37"
+        ]
+      }
+    },
+    {
+      "id": "bf-af921c59c",
+      "kind": "feature",
+      "title": "Seed the sharpened sequences and let create_task relay a step's line verbatim",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "af921c59c201ffd846cb0d6b0b144b4152a9cb4f"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-10-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.10: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "05e4ffcec6739385a31c5ab015e134729e047dd2",
+        "ad71faa0ea4b84759e2cf8509a0a0deb9c0c48aa",
+        "5a058fc404763022c8c6c6ab8a7bbe3b33497ace",
+        "ec76ff5fafa73688ee5171756801259c184dd7d6",
+        "c130c151a20686a8ec203adcf8ed8301505e9517"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,730 @@
+import { describe, expect, it } from "vitest";
+import {
+  bindingLabel,
+  COMMAND_IDS,
+  commandFor,
+  DEFAULT_BINDINGS,
+  type KeyBinding,
+  type KeyPress,
+  keyHint,
+  keysOf,
+  menuAccelerator,
+  panelCommandFor,
+  panelCommandId,
+} from "./keyboard";
+import {
+  bindingProblem,
+  bindingWarning,
+  chordOfPress,
+  chordsOverlap,
+  clashesWith,
+  clashWords,
+  DEFAULT_SAVED_KEYMAP,
+  isChanged,
+  keymapRefusal,
+  keymapSnapshot,
+  legacyOffered,
+  prefixOf,
+  prefixProblem,
+  presetKeymap,
+  readSavedKeymap,
+  resolveBindings,
+  type SavedKeymap,
+  sharedPlace,
+  unknownCommands,
+  withAllCatalogKeys,
+  withCatalogKeys,
+  withKeyMoved,
+  withKeys,
+  withPrefix,
+  withPreset,
+} from "./keymap";
+
+const press = (key: string, held: Partial<KeyPress> = {}): KeyPress => ({
+  key,
+  code: /^[a-z]$/i.test(key) ? `Key${key.toUpperCase()}` : "",
+  meta: false,
+  ctrl: false,
+  alt: false,
+  shift: false,
+  composing: false,
+  repeat: false,
+  ...held,
+});
+
+const saved = (keys: SavedKeymap["keys"]): SavedKeymap => ({ ...DEFAULT_SAVED_KEYMAP, keys });
+
+describe("reading what is saved", () => {
+  it("reads nothing saved as a new profile's preset, and an unreadable value as Legacy's keys, said so", () => {
+    // INF-3547's accepted plan: new profiles start on Vim.
+    expect(readSavedKeymap(undefined)).toEqual({ saved: presetKeymap("vim"), unreadable: false });
+    expect(readSavedKeymap({ version: 2, keys: {} })).toEqual({
+      saved: DEFAULT_SAVED_KEYMAP,
+      unreadable: true,
+    });
+    expect(readSavedKeymap({ version: 1, keys: { "cards.next": [{ key: 7 }] } }).unreadable).toBe(
+      true,
+    );
+    const kept = saved({ "commands.search": [{ key: "p", meta: true }] });
+    expect(readSavedKeymap(kept)).toEqual({ saved: kept, unreadable: false });
+  });
+
+  it("INF-1879: drops a saved Close binding without assigning its old effect elsewhere", () => {
+    const before = saved({
+      "cards.close": [{ key: "w", meta: true, shift: true }],
+      "cards.minimize": [{ key: "m", meta: true, shift: true }],
+    });
+    expect(readSavedKeymap(before).saved.keys).toEqual({
+      "cards.minimize": before.keys["cards.minimize"],
+    });
+  });
+
+  it("carries a key saved under a retired command to the panel command that took it over", () => {
+    // The catalog's `tasks.*` are the Tasks panel folder's own commands now.
+    const before = saved({
+      "tasks.board": [{ key: "k", ctrl: true, alt: true }],
+      "tasks.board-find": [],
+      "tasks.find": [{ key: "u", meta: true }],
+      "panel:now/find": [{ key: "g", meta: true }],
+      "cards.next": [{ key: "n", meta: true }],
+    });
+    expect(readSavedKeymap(before).saved.keys).toEqual({
+      "panel:now/board": [{ key: "k", ctrl: true, alt: true }],
+      "panel:now/board-find": [],
+      // A key saved under the new id already wins over the old one's.
+      "panel:now/find": [{ key: "g", meta: true }],
+      "cards.next": [{ key: "n", meta: true }],
+    });
+    const board = {
+      id: "panel:now/board" as const,
+      label: "Open task board",
+      panel: "Tasks",
+      keys: [{ key: "b", meta: true }],
+    };
+    const bindings = resolveBindings(readSavedKeymap(before).saved, [board]);
+    expect(keysOf(bindings, board.id)).toEqual([{ key: "k", ctrl: true, alt: true }]);
+  });
+
+  it("keeps a command this version does not know, and runs nothing for it", () => {
+    const later = saved({ "panes.split": [{ key: "u", meta: true }] });
+    expect(unknownCommands(later)).toEqual(["panes.split"]);
+    expect(resolveBindings(later)).toEqual(DEFAULT_BINDINGS);
+    expect(commandFor(press("u", { meta: true }), {}, resolveBindings(later))).toBeUndefined();
+  });
+});
+
+describe("the keys a command may take", () => {
+  it("takes a chord that holds ⌘ or ⌃, or a function key", () => {
+    expect(bindingProblem({ key: "p", meta: true }, "commands.search")).toBeNull();
+    expect(bindingProblem({ key: "j", ctrl: true, shift: true }, "cards.next")).toBeNull();
+    expect(bindingProblem({ key: "F6" }, "focus.main-message")).toBeNull();
+    expect(bindingProblem({ key: "]", meta: true, alt: true }, "cards.next")).toBeNull();
+  });
+
+  it("refuses an anywhere key that types, alone or with only ⇧", () => {
+    for (const binding of [{ key: "k" }, { key: "k", shift: true }, { key: " " }])
+      expect(bindingProblem(binding, "commands.search")).toBe(
+        "A shortcut that works anywhere holds ⌘, ⌃ or ⌥; a plain key works only when not typing",
+      );
+  });
+
+  // INF-3547's accepted plan, piece 2: "a key may hold Option", as Emacs's
+  // M-x does, and the recorder names the character it stops typing.
+  it("takes an anywhere key held with ⌥ alone, and says what it stops typing", () => {
+    expect(bindingProblem({ key: "x", alt: true }, "commands.search")).toBeNull();
+    expect(bindingProblem({ key: "x", alt: true, shift: true }, "commands.search")).toBeNull();
+    expect(bindingProblem({ key: "x", alt: true }, "commands.search", [], "ctrl")).toBeNull();
+    expect(bindingWarning({ key: "x", alt: true }, "commands.search", [], "mac", "≈")).toBe(
+      "⌥X types “≈”, which no text field will take from this key once it is a shortcut.",
+    );
+    expect(
+      bindingWarning(
+        { key: "x", alt: true, when: "not-typing" },
+        "commands.search",
+        [],
+        "mac",
+        "≈",
+      ),
+    ).toBeNull();
+    expect(bindingWarning({ key: "x", alt: true }, "commands.search", [], "mac", "x")).toBe(
+      "⌥X will no longer type in any text field once it is a shortcut.",
+    );
+    expect(bindingWarning({ key: "x", meta: true }, "commands.search", [], "mac", "x")).toBeNull();
+  });
+
+  // INF-3547's accepted plan, piece 2: "Ctrl+Tab may be a shortcut".
+  it("takes Tab held with ⌃, which never moves between controls", () => {
+    expect(bindingProblem({ key: "Tab", ctrl: true }, "cards.next-tab")).toBeNull();
+    expect(
+      bindingProblem({ key: "Tab", ctrl: true, shift: true }, "cards.previous-tab"),
+    ).toBeNull();
+    expect(bindingProblem({ key: "Tab", ctrl: true }, "cards.next-tab", [], "ctrl")).toBeNull();
+  });
+
+  // INF-3547's accepted plan, piece 2: the Mac's text keys Ctrl+N, P, F, B
+  // and V "may be bound only to the movement command matching what the Mac
+  // already does there".
+  it("gives a Mac text key that moves only to the movement command that moves the same way", () => {
+    expect(bindingProblem({ key: "n", ctrl: true }, "move.down")).toBeNull();
+    expect(bindingProblem({ key: "f", ctrl: true }, "move.right")).toBeNull();
+    expect(bindingProblem({ key: "b", ctrl: true }, "move.left")).toBeNull();
+    expect(bindingProblem({ key: "n", ctrl: true }, "move.up")).toBe("⌃N moves down a line");
+    expect(bindingProblem({ key: "n", ctrl: true }, "commands.search")).toBe(
+      "⌃N moves down a line",
+    );
+  });
+
+  // INF-3547's later piece 5, the captain's approved Emacs keys on Linux: Ctrl+X
+  // and Ctrl+V cut and paste only in a text field there, so outside one they
+  // may be keys; Ctrl+C copies selected text anywhere and keeps that job.
+  it("lets Linux's Ctrl+X and Ctrl+V work when not typing or as a second key, never anywhere", () => {
+    const outside = { when: "not-typing" as const };
+    expect(
+      bindingProblem(
+        { key: "x", ctrl: true, ...outside, second: { key: "o" } },
+        "regions.next",
+        [],
+        "ctrl",
+      ),
+    ).toBeNull();
+    expect(
+      bindingProblem({ key: "v", ctrl: true, ...outside }, "move.page-down", [], "ctrl"),
+    ).toBeNull();
+    expect(
+      bindingProblem(
+        { key: "j", ctrl: true, second: { key: "v", ctrl: true } },
+        "cards.next",
+        [],
+        "ctrl",
+      ),
+    ).toBeNull();
+    expect(bindingProblem({ key: "x", ctrl: true }, "regions.next", [], "ctrl")).toBe(
+      "Ctrl+X cuts",
+    );
+    expect(bindingProblem({ key: "v", ctrl: true }, "move.page-down", [], "ctrl")).toBe(
+      "Ctrl+V pastes",
+    );
+    expect(bindingProblem({ key: "c", ctrl: true, ...outside }, "cards.next", [], "ctrl")).toBe(
+      "Ctrl+C copies",
+    );
+  });
+
+  it("refuses the keys that keep their own jobs, and says which job", () => {
+    expect(bindingProblem({ key: "Enter", meta: true }, "commands.search")).toMatch(/^Enter sends/);
+    expect(bindingProblem({ key: "Tab", meta: true }, "commands.search")).toMatch(/^Tab moves/);
+    expect(bindingProblem({ key: "Escape" }, "commands.search")).toMatch(/^Escape closes/);
+    expect(bindingProblem({ key: "ArrowUp", meta: true }, "message.recall")).toMatch(/arrow keys/);
+    expect(bindingProblem({ key: "Dead", alt: true }, "commands.search")).toMatch(/accent/);
+    expect(bindingProblem({ key: "q", meta: true }, "commands.search")).toBe("⌘Q quits Infinitary");
+    expect(bindingProblem({ key: "w", meta: true }, "cards.maximize")).toBe("⌘W closes the window");
+    expect(bindingProblem({ key: "z", meta: true, shift: true }, "cards.next")).toBe("⇧⌘Z redoes");
+    expect(bindingProblem({ key: "a", ctrl: true }, "message.delete-to-line-start")).toBe(
+      "⌃A moves to the start of the line",
+    );
+  });
+
+  it("takes two keys only for a window command, the first holding ⌘ or ⌃", () => {
+    expect(
+      bindingProblem({ key: "k", meta: true, second: { key: "s" } }, "settings.keyboard"),
+    ).toBeNull();
+    expect(bindingProblem({ key: "F6", second: { key: "s" } }, "settings.keyboard")).toBe(
+      "A two-key shortcut starts with ⌘ or ⌃, or works when not typing",
+    );
+    expect(
+      bindingProblem({ key: "k", ctrl: true, second: { key: "u" } }, "message.delete-word-before"),
+    ).toBe("Only a command that works anywhere in the window takes two keys");
+    expect(
+      bindingProblem({ key: "k", meta: true, second: { key: "Escape" } }, "settings.keyboard"),
+    ).toMatch(/^Escape/);
+  });
+
+  // Accepted layers plan, piece 3: a first key may be plain while not typing, and the second an arrow.
+  it("takes a plain first key only when not typing, and an arrow as a second key", () => {
+    expect(
+      bindingProblem({ key: "g", when: "not-typing", second: { key: "t" } }, "settings.keyboard"),
+    ).toBeNull();
+    expect(bindingProblem({ key: "g", second: { key: "t" } }, "settings.keyboard")).toBe(
+      "A shortcut that works anywhere holds ⌘, ⌃ or ⌥; a plain key works only when not typing",
+    );
+    for (const key of ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]) {
+      expect(bindingProblem({ key: "x", ctrl: true, second: { key } }, "cards.next")).toBeNull();
+      expect(
+        bindingProblem({ key: "k", meta: true, second: { key, meta: true } }, "cards.next"),
+      ).toBeNull();
+      // Alone, an arrow keeps moving the cursor and through lists.
+      expect(bindingProblem({ key, when: "not-typing" }, "cards.next")).not.toBeNull();
+    }
+    for (const key of ["Enter", "Tab", "Escape", "Home"])
+      expect(
+        bindingProblem({ key: "g", when: "not-typing", second: { key } }, "cards.next"),
+      ).not.toBeNull();
+    expect(
+      bindingProblem(
+        { key: "j", ctrl: true, second: { key: "ArrowLeft", meta: true } },
+        "cards.next",
+        [],
+        "ctrl",
+      ),
+    ).toBe("Super+← belongs to your desktop");
+  });
+
+  it("records a press as the chord it is, the letter in lower case and Shift as held", () => {
+    expect(chordOfPress(press("L", { meta: true, shift: true }))).toEqual({
+      key: "l",
+      meta: true,
+      shift: true,
+    });
+    expect(chordOfPress(press("]", { meta: true, shift: true, code: "BracketRight" }))).toEqual({
+      key: "]",
+      meta: true,
+      shift: true,
+    });
+    // A layout without Latin letters records the physical key's letter.
+    expect(chordOfPress(press("л", { ctrl: true, code: "KeyK" }))).toEqual({
+      key: "k",
+      ctrl: true,
+    });
+    expect(chordOfPress(press("F6"))).toEqual({ key: "F6" });
+  });
+
+  it("finds two chords the same press would run", () => {
+    expect(chordsOverlap({ key: "k", meta: true }, { key: "K", meta: true })).toBe(true);
+    expect(chordsOverlap({ key: "k", meta: true }, { key: "k", meta: true, shift: true })).toBe(
+      false,
+    );
+    // A typed character without Shift in its chord is that character, Shift or not.
+    expect(chordsOverlap({ key: "+", ctrl: true }, { key: "+", ctrl: true, shift: true })).toBe(
+      true,
+    );
+    expect(chordsOverlap({ key: "]", meta: true, shift: true }, { key: "]", meta: true })).toBe(
+      true,
+    );
+    expect(chordsOverlap({ key: "F6" }, { key: "F6", shift: true })).toBe(false);
+  });
+});
+
+describe("clashes", () => {
+  it("names both commands, the key, and where both work", () => {
+    const [clash] = clashesWith(DEFAULT_BINDINGS, "cards.next", { key: "k", meta: true });
+    expect(clash).toEqual({
+      id: "commands.search",
+      binding: { key: "k", meta: true },
+      kind: "same",
+    });
+    expect(clash && clashWords("cards.next", clash)).toBe(
+      "⌘K already runs “Search commands” anywhere in the window",
+    );
+    const [field] = clashesWith(DEFAULT_BINDINGS, "settings.open", { key: "k", ctrl: true });
+    expect(field && clashWords("settings.open", field)).toBe(
+      "⌃K already runs “Delete to the end of the line” in the main message and a card's reply",
+    );
+    expect(sharedPlace("message-field", "main-message")).toBe("in the main message");
+  });
+
+  it("refuses a whole key that starts another command's two keys, and the other way round", () => {
+    const [prefix] = clashesWith(DEFAULT_BINDINGS, "settings.keyboard", {
+      key: "k",
+      meta: true,
+      second: { key: "s" },
+    });
+    expect(prefix?.kind).toBe("prefix");
+    expect(prefix && clashWords("settings.keyboard", prefix)).toBe(
+      "⌘K runs “Search commands” anywhere in the window, so it can't start two keys",
+    );
+    const twoKeys = resolveBindings(
+      saved({ "settings.keyboard": [{ key: "u", meta: true, second: { key: "s" } }] }),
+    );
+    const [starts] = clashesWith(twoKeys, "commands.search", { key: "u", meta: true });
+    expect(starts && clashWords("commands.search", starts)).toBe(
+      "⌘U S runs “Open Keyboard settings” anywhere in the window, and starts with this key",
+    );
+    // Two two-key shortcuts may share their first key.
+    expect(
+      clashesWith(twoKeys, "cards.maximize", { key: "u", meta: true, second: { key: "w" } }),
+    ).toEqual([]);
+  });
+});
+
+describe("the installed map", () => {
+  it("runs a changed command on its new key, and no longer on its old one", () => {
+    const bindings = resolveBindings(saved({ "commands.search": [{ key: "p", meta: true }] }));
+    expect(commandFor(press("p", { meta: true }), {}, bindings)).toBe("commands.search");
+    expect(commandFor(press("k", { meta: true }), {}, bindings)).toBeUndefined();
+    expect(keyHint("commands.search", bindings)).toBe("⌘P");
+    expect(menuAccelerator("commands.search", bindings)).toBe("Command+P");
+  });
+
+  it("tells an explicit no key from the catalog's keys", () => {
+    const none = saved({ "settings.open": [] });
+    expect(isChanged(none, "settings.open")).toBe(true);
+    expect(resolveBindings(none)["settings.open"]).toEqual([]);
+    expect(menuAccelerator("settings.open", resolveBindings(none))).toBeUndefined();
+    expect(isChanged(DEFAULT_SAVED_KEYMAP, "settings.open")).toBe(false);
+  });
+
+  it("keeps a person's key when a catalog key clashes with it, and drops keys no command may take", () => {
+    // As if a newer catalog gave ⌘K's search a key a person already uses.
+    const mine = saved({ "cards.next": [{ key: "k", meta: true }] });
+    const bindings = resolveBindings(mine);
+    expect(bindings["cards.next"]).toEqual([{ key: "k", meta: true }]);
+    expect(bindings["commands.search"]).toEqual([]);
+    expect(
+      resolveBindings(saved({ "cards.next": [{ key: "q", meta: true }] }))["cards.next"],
+    ).toEqual([]);
+  });
+
+  it("gives a menu the first key it can show, never two keys, and a hint every kind", () => {
+    const bindings = resolveBindings(
+      saved({
+        "settings.open": [{ key: "u", meta: true, second: { key: "s" } }, { key: "F7" }],
+      }),
+    );
+    expect(keyHint("settings.open", bindings)).toBe("⌘U S");
+    expect(menuAccelerator("settings.open", bindings)).toBe("F7");
+  });
+
+  it("numbers each install", () => {
+    const snapshot = keymapSnapshot({ saved: DEFAULT_SAVED_KEYMAP, unreadable: false }, 3);
+    expect(snapshot).toEqual({
+      version: 3,
+      saved: DEFAULT_SAVED_KEYMAP,
+      bindings: DEFAULT_BINDINGS,
+      unreadable: false,
+      panels: [],
+    });
+  });
+});
+
+describe("a change, installed whole or not at all", () => {
+  it("installs a change whose every key holds", () => {
+    expect(
+      keymapRefusal(saved({ "commands.search": [{ key: "p", meta: true }] }), DEFAULT_SAVED_KEYMAP),
+    ).toBeNull();
+  });
+
+  it("refuses a key no command may take", () => {
+    expect(
+      keymapRefusal(saved({ "commands.search": [{ key: "c", meta: true }] }), DEFAULT_SAVED_KEYMAP),
+    ).toBe("Search commands: ⌘C copies");
+  });
+
+  it("refuses to take another command's key without changing that command too", () => {
+    expect(
+      keymapRefusal(saved({ "cards.next": [{ key: "k", meta: true }] }), DEFAULT_SAVED_KEYMAP),
+    ).toBe("⌘K runs “Show the next card” now, so “Search commands” can't have it too");
+    expect(
+      keymapRefusal(
+        saved({
+          "cards.next": [{ key: "u", meta: true }],
+          "cards.previous": [{ key: "u", meta: true }],
+        }),
+        DEFAULT_SAVED_KEYMAP,
+      ),
+    ).toBe("Show the next card: ⌘U already runs “Show the previous card” anywhere in the window");
+  });
+
+  it("installs a moved key, the command it left keeping its others", () => {
+    const moved = withKeyMoved(
+      DEFAULT_SAVED_KEYMAP,
+      DEFAULT_BINDINGS,
+      "cards.next",
+      { key: "=", meta: true },
+      "replace",
+    );
+    expect(moved.keys).toEqual({
+      "cards.next": [{ key: "=", meta: true }],
+      "size.larger": [
+        { key: "+", meta: true },
+        { key: "+", ctrl: true },
+        { key: "=", ctrl: true },
+      ],
+    });
+    expect(keymapRefusal(moved, DEFAULT_SAVED_KEYMAP)).toBeNull();
+    const added = withKeyMoved(
+      DEFAULT_SAVED_KEYMAP,
+      DEFAULT_BINDINGS,
+      "cards.next",
+      { key: "u", meta: true },
+      "add",
+    );
+    expect(added.keys["cards.next"]?.map((binding) => bindingLabel(binding))).toEqual([
+      "⇧⌘]",
+      "⇧⌘}",
+      "⌘U",
+    ]);
+  });
+
+  it("still installs a change after a newer catalog gave away a key a person holds", () => {
+    const mine = saved({ "cards.next": [{ key: "k", meta: true }] });
+    expect(
+      keymapRefusal(withKeys(mine, "settings.open", [{ key: "u", meta: true }]), mine),
+    ).toBeNull();
+  });
+
+  it("refuses the same key twice on one command", () => {
+    expect(
+      keymapRefusal(
+        saved({
+          "commands.search": [
+            { key: "p", meta: true },
+            { key: "P", meta: true },
+          ],
+        }),
+        DEFAULT_SAVED_KEYMAP,
+      ),
+    ).toBe("Search commands lists ⌘P twice");
+  });
+});
+
+describe("changes Keyboard settings makes", () => {
+  it("saves the catalog's own keys as no change at all", () => {
+    const changed = withKeys(DEFAULT_SAVED_KEYMAP, "commands.search", [{ key: "p", meta: true }]);
+    expect(isChanged(changed, "commands.search")).toBe(true);
+    expect(withKeys(changed, "commands.search", [{ key: "k", meta: true }])).toEqual(
+      DEFAULT_SAVED_KEYMAP,
+    );
+    expect(withCatalogKeys(changed, "commands.search")).toEqual(DEFAULT_SAVED_KEYMAP);
+    // A command chosen by name has no key to remove.
+    expect(withKeys(DEFAULT_SAVED_KEYMAP, "cards.maximize", [])).toEqual(DEFAULT_SAVED_KEYMAP);
+  });
+
+  it("resets every command it knows and keeps the ones it does not", () => {
+    const later = saved({
+      "commands.search": [{ key: "p", meta: true }],
+      "panes.split": [{ key: "u", meta: true }],
+    });
+    expect(withAllCatalogKeys(later)).toEqual(saved({ "panes.split": [{ key: "u", meta: true }] }));
+  });
+
+  it("saves only a key's own fields", () => {
+    const extra = { key: "p", meta: true, shift: false, label: "x" } as unknown as KeyBinding;
+    expect(withKeys(DEFAULT_SAVED_KEYMAP, "commands.search", [extra]).keys).toEqual({
+      "commands.search": [{ key: "p", meta: true }],
+    });
+  });
+
+  it("covers every command", () => {
+    expect(Object.keys(resolveBindings(DEFAULT_SAVED_KEYMAP))).toEqual(COMMAND_IDS);
+  });
+});
+
+describe("a panel's commands (docs/keyboard.md, \"A panel's commands\")", () => {
+  const open = {
+    id: panelCommandId("reading-list", "open"),
+    label: "Open reading",
+    panel: "Reading list",
+    keys: [{ key: "u", meta: true }],
+  } as const;
+  const greedy = {
+    id: panelCommandId("notes", "new"),
+    label: "New note",
+    panel: "Notes",
+    // ⌘L is the catalog's: Go to the main message.
+    keys: [{ key: "l", meta: true }],
+  } as const;
+  const later = {
+    id: panelCommandId("notes", "open"),
+    label: "Open notes",
+    panel: "Notes",
+    keys: [{ key: "u", meta: true }],
+  } as const;
+
+  it("gives a suggested key only where no other command already uses it", () => {
+    const bindings = resolveBindings(DEFAULT_SAVED_KEYMAP, [open, greedy]);
+    expect(keysOf(bindings, open.id)).toEqual([{ key: "u", meta: true }]);
+    expect(keysOf(bindings, greedy.id)).toEqual([]);
+    expect(bindings["focus.main-message"]).toEqual(DEFAULT_BINDINGS["focus.main-message"]);
+    // The panel added first keeps the key both asked for.
+    const both = resolveBindings(DEFAULT_SAVED_KEYMAP, [open, later]);
+    expect(keysOf(both, open.id)).toEqual([{ key: "u", meta: true }]);
+    expect(keysOf(both, later.id)).toEqual([]);
+    expect(panelCommandFor(press("u", { meta: true }), both, [open, later])).toBe(open.id);
+  });
+
+  it("takes a key of a person's own, which wins over a catalog key it moved", () => {
+    const moved = withKeyMoved(
+      DEFAULT_SAVED_KEYMAP,
+      resolveBindings(DEFAULT_SAVED_KEYMAP, [greedy]),
+      greedy.id,
+      { key: "l", meta: true },
+      "replace",
+      [greedy],
+    );
+    // The key it suggested is its own, so only the command it left is a change.
+    expect(moved.keys).toEqual({ "focus.main-message": [] });
+    expect(keymapRefusal(moved, DEFAULT_SAVED_KEYMAP, [greedy])).toBeNull();
+    const bindings = resolveBindings(moved, [greedy]);
+    expect(keysOf(bindings, greedy.id)).toEqual([{ key: "l", meta: true }]);
+    expect(bindings["focus.main-message"]).toEqual([]);
+  });
+
+  it("names a clash with a panel's command by its words", () => {
+    const bindings = resolveBindings(DEFAULT_SAVED_KEYMAP, [open]);
+    const [clash] = clashesWith(bindings, "settings.open", { key: "u", meta: true }, [open]);
+    expect(clash).toMatchObject({ id: open.id, kind: "same" });
+    expect(clashWords("settings.open", clash as never, [open])).toContain("Open reading");
+  });
+
+  it("keeps a key saved for a panel that is not here now, unrun, until it comes back", () => {
+    const saved = { ...DEFAULT_SAVED_KEYMAP, keys: { [open.id]: [{ key: "k", ctrl: true }] } };
+    expect(unknownCommands(saved)).toEqual([open.id]);
+    expect(unknownCommands(saved, [open])).toEqual([]);
+    expect(withAllCatalogKeys(saved).keys).toEqual(saved.keys);
+    expect(withAllCatalogKeys(saved, [open]).keys).toEqual({});
+    // Its own suggestion is no change at all.
+    expect(withKeys(DEFAULT_SAVED_KEYMAP, open.id, open.keys, [open]).keys).toEqual({});
+  });
+
+  it("installs the panels' commands with the snapshot, so every reader lists them", () => {
+    const snapshot = keymapSnapshot({ saved: DEFAULT_SAVED_KEYMAP, unreadable: false }, 2, [open]);
+    expect(snapshot.panels).toEqual([open]);
+    expect(keyHint(open.id, snapshot.bindings)).toBe("⌘U");
+  });
+});
+
+// INF-3547's accepted plan, piece 4, and the captain's pick on it: "They stay
+// on Legacy with every changed key intact"; each preset keeps its own changes
+// and Reset all keys returns to the chosen preset.
+describe("presets", () => {
+  /** What a version from before presets saved after a person changed two keys. */
+  const BEFORE_PRESETS = {
+    version: 1,
+    keys: {
+      "commands.search": [{ key: "p", meta: true }],
+      "cards.maximize": [{ key: "m", meta: true, alt: true }],
+    },
+  };
+
+  it("reads keys saved before presets as Legacy, every changed key intact", () => {
+    const { saved, unreadable } = readSavedKeymap(BEFORE_PRESETS);
+    expect(unreadable).toBe(false);
+    expect(saved.preset).toBe("legacy");
+    expect(saved.keys).toEqual(BEFORE_PRESETS.keys);
+    expect(legacyOffered(saved)).toBe(true);
+    const bindings = resolveBindings(saved);
+    expect(bindings["commands.search"]).toEqual([{ key: "p", meta: true }]);
+    expect(bindings["focus.main-message"]).toEqual(DEFAULT_BINDINGS["focus.main-message"]);
+  });
+
+  it("keeps each preset's changes when another is picked, and brings them back", () => {
+    const legacy = readSavedKeymap(BEFORE_PRESETS).saved;
+    const vim = withPreset(legacy, "vim");
+    expect(vim.keys).toEqual({});
+    expect(legacyOffered(vim)).toBe(true);
+    expect(keymapRefusal(vim, legacy)).toBeNull();
+    // Vim's own keys, with nothing changed: j moves down while not typing.
+    expect(resolveBindings(vim)["move.down"]).toContainEqual({ key: "j", when: "not-typing" });
+    const vimChanged = withKeys(vim, "move.down", [{ key: "n", when: "not-typing" }]);
+    const back = withPreset(vimChanged, "legacy");
+    expect(back.keys).toEqual(BEFORE_PRESETS.keys);
+    expect(keymapRefusal(back, vimChanged)).toBeNull();
+    expect(withPreset(back, "vim").keys).toEqual({
+      "move.down": [{ key: "n", when: "not-typing" }],
+    });
+  });
+
+  it("resets all keys to the chosen preset's, leaving the others' changes kept", () => {
+    const vim = withKeys(withPreset(readSavedKeymap(BEFORE_PRESETS).saved, "vim"), "move.down", []);
+    const reset = withAllCatalogKeys(vim);
+    expect(reset.preset).toBe("vim");
+    expect(reset.keys).toEqual({});
+    expect(resolveBindings(reset)["move.down"]).toContainEqual({ key: "j", when: "not-typing" });
+    expect(withPreset(reset, "legacy").keys).toEqual(BEFORE_PRESETS.keys);
+  });
+
+  it("counts a preset's own keys as no change", () => {
+    const vim = presetKeymap("vim");
+    const own = resolveBindings(vim)["focus.main-message"];
+    expect(withKeys(vim, "focus.main-message", own).keys).toEqual({});
+    expect(
+      withKeys(vim, "focus.main-message", DEFAULT_BINDINGS["focus.main-message"]).keys,
+    ).toEqual({ "focus.main-message": DEFAULT_BINDINGS["focus.main-message"] });
+  });
+
+  it("offers Legacy only to a profile that had it", () => {
+    expect(legacyOffered(presetKeymap("vim"))).toBe(false);
+    expect(legacyOffered(withPreset(presetKeymap("vim"), "emacs"))).toBe(false);
+  });
+});
+
+/**
+ * INF-3547's accepted plan, piece 6: tmux's prefix layer works anywhere,
+ * taking over the Mac's own ⌃B while typing as tmux does in a terminal,
+ * and its prefix is one "a person changes in one place".
+ */
+describe("tmux's prefix", () => {
+  const ctrlA = { key: "a", ctrl: true };
+  const tmux = presetKeymap("tmux");
+
+  it("installs ⌃B, then a key, anywhere, though ⌃B moves back a character in a text field", () => {
+    expect(prefixOf(tmux)).toEqual({ key: "b", ctrl: true });
+    expect(prefixOf(presetKeymap("vim"))).toBeUndefined();
+    const bindings = resolveBindings(tmux);
+    expect(bindings["cards.next"]).toContainEqual({ key: "b", ctrl: true, second: { key: "n" } });
+    expect(bindings["commands.search"]).toContainEqual({
+      key: "b",
+      ctrl: true,
+      second: { key: ":" },
+    });
+    // The allowance is the prefix's alone: on Vim, ⌃B then a key stays refused.
+    const pair = { key: "b", ctrl: true, second: { key: "x" } };
+    expect(bindingProblem(pair, "cards.next")).toMatch(/moves back a character/);
+    expect(bindingProblem(pair, "cards.next", [], "mac", prefixOf(tmux))).toBeNull();
+    // A single ⌃B anywhere is still the text field's.
+    expect(
+      bindingProblem({ key: "b", ctrl: true }, "cards.next", [], "mac", prefixOf(tmux)),
+    ).toMatch(/moves back a character/);
+  });
+
+  it("moves every prefix key, a person's own included, when the prefix changes", () => {
+    const own = withKeys(tmux, "settings.open", [{ key: "b", ctrl: true, second: { key: "," } }]);
+    const moved = withPrefix(own, ctrlA);
+    expect(moved.prefix).toEqual(ctrlA);
+    expect(moved.keys["settings.open"]).toEqual([{ key: "a", ctrl: true, second: { key: "," } }]);
+    expect(keymapRefusal(moved, own)).toBeNull();
+    const bindings = resolveBindings(moved);
+    expect(bindings["cards.next"]).toContainEqual({ ...ctrlA, second: { key: "n" } });
+    expect(bindings["cards.next"]).not.toContainEqual({
+      key: "b",
+      ctrl: true,
+      second: { key: "n" },
+    });
+    expect(bindings["settings.open"]).toEqual([{ ...ctrlA, second: { key: "," } }]);
+    // ⌃B is Vim's page up again.
+    expect(bindings["move.page-up"]).toContainEqual({ key: "b", ctrl: true, when: "not-typing" });
+    // Back to ⌃B saves no prefix at all.
+    expect(withPrefix(moved, { key: "b", ctrl: true }).prefix).toBeUndefined();
+  });
+
+  it("keeps the prefix through another preset, and Reset all keys puts ⌃B back on tmux", () => {
+    const moved = withPrefix(tmux, ctrlA);
+    const vim = withPreset(moved, "vim");
+    expect(vim.prefix).toEqual(ctrlA);
+    expect(withAllCatalogKeys(vim).prefix).toEqual(ctrlA);
+    expect(prefixOf(withPreset(vim, "tmux"))).toEqual(ctrlA);
+    expect(withAllCatalogKeys(moved).prefix).toBeUndefined();
+    expect(readSavedKeymap(JSON.parse(JSON.stringify(moved))).saved).toEqual(moved);
+  });
+
+  it("refuses a prefix that typing presses, the system keeps, or that answers a card", () => {
+    expect(prefixProblem({ key: "b", ctrl: true })).toBeNull();
+    expect(prefixProblem(ctrlA)).toBeNull();
+    expect(prefixProblem({ key: "a" })).toMatch(/holds ⌘ or ⌃/);
+    expect(prefixProblem({ key: "a", alt: true })).toMatch(/holds ⌘ or ⌃/);
+    expect(prefixProblem({ key: "q", meta: true })).toMatch(/quits Infinitary/);
+    expect(prefixProblem({ key: "1", meta: true })).toMatch(/answers a card/);
+    expect(prefixProblem({ key: "b", ctrl: true }, "ctrl")).toBeNull();
+    expect(prefixProblem({ key: "c", ctrl: true }, "ctrl")).toMatch(/copies/);
+    // Cut and paste while typing on a Ctrl system, which a prefix would take (INF-3833's review).
+    expect(prefixProblem({ key: "x", ctrl: true }, "ctrl")).toMatch(/cuts/);
+    expect(prefixProblem({ key: "v", ctrl: true }, "ctrl")).toMatch(/pastes/);
+    expect(prefixProblem(ctrlA, "ctrl")).toMatch(/selects all/);
+    expect(keymapRefusal({ ...tmux, prefix: { key: "q", meta: true } }, tmux)).toMatch(/^Prefix: /);
+  });
+
+  it("refuses a prefix whose keys another command's own key would take", () => {
+    // ⌘U is a person's key for Go to the main message, so it cannot start the layer.
+    const own = withKeys(tmux, "focus.main-message", [{ key: "u", meta: true }]);
+    expect(keymapRefusal(withPrefix(own, { key: "u", meta: true }), own)).not.toBeNull();
+  });
+});

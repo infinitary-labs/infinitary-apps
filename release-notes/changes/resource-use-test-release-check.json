@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "resource-use-test-release-check",
+      "reason": "Test only: the resource-use and declared-run journeys' stand-in programs look at their release file themselves through Node's stat polling instead of a directory watch, which macOS delivered seconds late or never, so on a Mac they no longer outlive their release. Nothing a person sees changes."
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "reply-answered-on-its-card",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Your reply is answered on the card you wrote under",
+      "body": "When you reply under a crewmate's card, its answer now stays on that card, even when the crewmate also puts up a new card. Crewmates no longer answer into a card that is already closed while your reply waits on another one.",
+      "noPicture": "This changes where a crewmate's answer goes and what its reminders name, not how a card looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

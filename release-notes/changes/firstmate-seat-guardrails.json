@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "firstmate-seat-guardrails",
+      "reason": "Internal: new tests pin how the first mate's seat answers Settings picks, the way back, sign-in holds and moves before the first mate files are split; nothing a person sees changes."
+    }
+  ]
+}

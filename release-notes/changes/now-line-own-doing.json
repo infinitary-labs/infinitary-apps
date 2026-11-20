@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "now-line-own-doing",
+      "kind": "improvement",
+      "title": "Now says what a crewmate is actually doing",
+      "body": "A crewmate's Now line, on its summary and its task's record, shows what it is doing at this moment: the sentence it last wrote, or what it said its newest command, read, edit or search was for. Messages sent to the crewmate, such as a finished background job or a checks reading, stay in Activity and no longer take over Now. When a crewmate has done nothing since, Now keeps its last doing with its real age, so a crewmate that stopped looks stopped.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "now-line-own-doing-dark.webp",
+        "light": "now-line-own-doing-light.webp",
+        "alt": "A crewmate's summary whose Now line reads Run the journey alone after the fix, its age now"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

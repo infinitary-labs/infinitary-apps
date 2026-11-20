@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "agents-reach-readings-through-the-app",
+      "reason": "Test only: the agent's-reach journey's builder reads its checks and revalidates each pushed fix through the app's own tools, instead of the test writing them into the running app's database, which failed with \"database is locked\" when the app wrote at the same moment."
+    }
+  ]
+}

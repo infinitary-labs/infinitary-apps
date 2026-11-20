@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "connection-card-pushes-split",
+      "reason": "Internal: how the connection shapes a card or look push for an older view moves out of the connection file into its existing card-compatibility file, and respelling a numbered push moves beside the journal that writes it, so the connection file stays under the size check's line ceiling once the batched changes combine; nothing a person sees changes."
+    }
+  ]
+}

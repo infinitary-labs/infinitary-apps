@@ -1,0 +1,35 @@
+Test Suite 'Selected tests' started at 2026-11-15 00:56:31.699.
+Test Suite 'PhoneWeakLinkTests.xctest' started at 2026-11-15 00:56:31.700.
+Test Suite 'PhoneWeakLinkTests' started at 2026-11-15 00:56:31.700.
+Test Case '-[PhoneWeakLinkTests.PhoneWeakLinkTests testADropOnAWeakLinkComesBackFromTheReplay]' started.
+Test Case '-[PhoneWeakLinkTests.PhoneWeakLinkTests testADropOnAWeakLinkComesBackFromTheReplay]' passed (13.452 seconds).
+Test Case '-[PhoneWeakLinkTests.PhoneWeakLinkTests testALargeCatchUpOnASlowLinkArrivesOnOneConnection]' started.
+Test Case '-[PhoneWeakLinkTests.PhoneWeakLinkTests testALargeCatchUpOnASlowLinkArrivesOnOneConnection]' passed (99.581 seconds).
+Test Case '-[PhoneWeakLinkTests.PhoneWeakLinkTests testALongAnswerOnASlowLinkArrivesOnOneConnection]' started.
+Test Case '-[PhoneWeakLinkTests.PhoneWeakLinkTests testALongAnswerOnASlowLinkArrivesOnOneConnection]' passed (75.997 seconds).
+Test Case '-[PhoneWeakLinkTests.PhoneWeakLinkTests testALongSilenceIsStillCutAndRedialed]' started.
+Test Case '-[PhoneWeakLinkTests.PhoneWeakLinkTests testALongSilenceIsStillCutAndRedialed]' passed (32.305 seconds).
+Test Case '-[PhoneWeakLinkTests.PhoneWeakLinkTests testAnAnswerAlreadyOnItsWayDoesNotKeepADeadPath]' started.
+Test Case '-[PhoneWeakLinkTests.PhoneWeakLinkTests testAnAnswerAlreadyOnItsWayDoesNotKeepADeadPath]' passed (6.566 seconds).
+Test Case '-[PhoneWeakLinkTests.PhoneWeakLinkTests testAnInstantRedialSaysAndBuzzesNothing]' started.
+Test Case '-[PhoneWeakLinkTests.PhoneWeakLinkTests testAnInstantRedialSaysAndBuzzesNothing]' passed (2.109 seconds).
+Test Case '-[PhoneWeakLinkTests.PhoneWeakLinkTests testAnOutageDialsSeldomAndFindsTheReturn]' started.
+Test Case '-[PhoneWeakLinkTests.PhoneWeakLinkTests testAnOutageDialsSeldomAndFindsTheReturn]' passed (57.527 seconds).
+Test Case '-[PhoneWeakLinkTests.PhoneWeakLinkTests testAReadNeverAnsweredIsStillCut]' started.
+Test Case '-[PhoneWeakLinkTests.PhoneWeakLinkTests testAReadNeverAnsweredIsStillCut]' passed (49.182 seconds).
+Test Case '-[PhoneWeakLinkTests.PhoneWeakLinkTests testASlowLinkReachesInReachAndStays]' started.
+Test Case '-[PhoneWeakLinkTests.PhoneWeakLinkTests testASlowLinkReachesInReachAndStays]' passed (44.492 seconds).
+Test Case '-[PhoneWeakLinkTests.PhoneWeakLinkTests testAStallWithANetworkChangeKeepsTheConnection]' started.
+Test Case '-[PhoneWeakLinkTests.PhoneWeakLinkTests testAStallWithANetworkChangeKeepsTheConnection]' passed (6.159 seconds).
+Test Suite 'PhoneWeakLinkTests' passed at 2026-11-15 01:02:59.070.
+	 Executed 10 tests, with 0 failures (0 unexpected) in 387.369 (387.370) seconds
+Test Suite 'PhoneWeakLinkTests.xctest' passed at 2026-11-15 01:02:59.070.
+	 Executed 10 tests, with 0 failures (0 unexpected) in 387.369 (387.370) seconds
+Test Suite 'Selected tests' passed at 2026-11-15 01:02:59.070.
+	 Executed 10 tests, with 0 failures (0 unexpected) in 387.369 (387.371) seconds
+Test Suite 'Selected tests' started at 2026-11-15 01:02:59.177.
+Test Suite 'InfinitaryKitTests.xctest' started at 2026-11-15 01:02:59.178.
+Test Suite 'InfinitaryKitTests.xctest' passed at 2026-11-15 01:02:59.178.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'Selected tests' passed at 2026-11-15 01:02:59.178.
+	 Executed 0 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds

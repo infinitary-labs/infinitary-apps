@@ -1,0 +1,1 @@
+The Intelligence action catalog no longer offers a global routing switch (INF-4876, approved direction A). The existing model-pins action still edits the active ordered list; restoring dormant pins is a Settings choice.

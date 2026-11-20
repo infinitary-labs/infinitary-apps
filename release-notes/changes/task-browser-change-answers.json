@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "task-browser-change-answers",
+      "reason": "Internal browser tool responses: same-page actions report safe changed outline lines and a short facts block instead of repeating the page; no captain-facing view or action changes."
+    }
+  ]
+}

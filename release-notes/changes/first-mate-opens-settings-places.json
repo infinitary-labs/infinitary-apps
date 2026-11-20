@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "first-mate-opens-settings-places",
+      "kind": "feature",
+      "area": "firstmate",
+      "title": "Your first mate takes you to the exact place in Settings",
+      "body": "Ask your first mate to connect your phone, change a computer's address, move your first mate, keep a copy on another computer, sign a computer in to GitHub, forget a kept job or open a page of Secrets, and its card takes you straight there, where the last click stays yours. On your computer, it can also open a task's record or a Settings section when you ask to see it. Asking it to turn on the Infinitary command now opens that switch, not a server key form.",
+      "picture": {
+        "dark": "first-mate-opens-settings-places-dark.webp",
+        "light": "first-mate-opens-settings-places-light.webp",
+        "alt": "The first mate's Connect your phone card with its Make a link button"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

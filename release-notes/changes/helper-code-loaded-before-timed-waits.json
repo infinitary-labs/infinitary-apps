@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "helper-code-loaded-before-timed-waits",
+      "reason": "Test only: the end-to-end journeys that run another Mac's helper inside the test process now load its sign-ins and conversations code as the spec file loads, so compiling it no longer freezes a timed wait on a busy runner. No shipped behavior changed."
+    }
+  ]
+}

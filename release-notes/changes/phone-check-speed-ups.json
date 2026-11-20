@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-check-speed-ups",
+      "reason": "Speeds up the phone check: the slow-link tests run on the Mac with an in-memory identity, the UI journeys open links, read the screen once per probe and wait less, and a guard counts each part's screen reads and app launches. Nothing a person using the app notices."
+    }
+  ]
+}

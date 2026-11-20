@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "view-pointing-test-connection",
+      "reason": "The desktop navigation test waits for the view to finish connecting before sending an event; app behavior is unchanged."
+    }
+  ]
+}

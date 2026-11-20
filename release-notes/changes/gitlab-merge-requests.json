@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "gitlab-merge-requests",
+      "kind": "feature",
+      "highlight": 2,
+      "title": "Merge requests and pipeline checks on GitLab",
+      "body": "Work on your projects on gitlab.com or your own GitLab server now merges through merge requests. A crewmate opens a merge request for its work, the card shows GitLab's pipeline as the checks, and your merge click merges exactly the version those checks passed. A pipeline that is still running or failed, or a manual job nobody started, holds the merge.",
+      "area": "projects",
+      "picture": {
+        "dark": "gitlab-merge-requests-dark.webp",
+        "light": "gitlab-merge-requests-light.webp",
+        "alt": "A completion card for a GitLab project naming its merge request !1, with the checks passed and the button to merge it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "tasks-search-icon",
+      "kind": "improvement",
+      "title": "Tasks opens search from an icon",
+      "body": "The Tasks panel shows a magnifying glass beside its title. It opens the same search as before.",
+      "area": "tasks",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

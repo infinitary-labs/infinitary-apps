@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "queue-workflow-files-up-to-date",
+      "kind": "fix",
+      "area": "projects",
+      "title": "A queued change to workflow files merges after its batch passes",
+      "body": "On GitHub, a project's queue could check a change that edits workflow files and then fail to merge it, because the default branch had changed the same files since the change branched and GitHub lets the queue write those files only as the change has them. The queue now sends such a change back to be brought up to date before it joins a batch, and merges it once its batch passes. Your first mate offers a project's queue the update.",
+      "noPicture": "This changes which changes a project's queue on GitHub takes into a batch, not any screen in the app.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

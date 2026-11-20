@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "quit-during-start",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A task that was starting when you quit starts again next time",
+      "body": "Quitting Infinitary while a task was starting, whether it started from the queue or once another computer finished signing in, no longer counts as a failed start. Your first mate no longer tells you it could not start, and the task starts again the next time Infinitary opens.",
+      "noPicture": "Nothing on screen changes; what changes is that a quit during a start is no longer reported as a failure.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

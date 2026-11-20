@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "channel-held-up-test-on-a-moved-clock",
+      "reason": "Test only: the task channel's held-up check runs the shell's limit and the channel's deadline on a clock the test moves, after the look reaches the browser, so a loaded Mac that starts the launcher late no longer turns it into a background job. Nothing a person sees changes."
+    }
+  ]
+}

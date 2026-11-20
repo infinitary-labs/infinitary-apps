@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "tooltips-show-keys",
+      "kind": "improvement",
+      "title": "Buttons and tabs show their keyboard shortcut",
+      "body": "When you rest on a button or tab, or reach it with Tab, it now names the key that does the same thing, so you can use the key next time. This covers a task card's tabs, Settings' tabs, Show all projects, Show panels and Open Automation. Buttons such as Pause all, Refresh and Done show the key inside them, and fixed keys show too, such as Esc on Back. Each shows the key set in Settings → Keyboard now, and follows it when you change or remove the key.",
+      "area": "settings",
+      "picture": {
+        "dark": "tooltips-show-keys-dark.webp",
+        "light": "tooltips-show-keys-light.webp",
+        "alt": "Settings with the Automation tab's label naming the key given to Open Automation"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

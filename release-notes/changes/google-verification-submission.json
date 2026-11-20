@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "google-verification-submission",
+      "reason": "Internal: the final per-scope justification, intended data usage and recording script for Google's verification form, in the submission guide only; no behavior a person notices changes."
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "phone-card-text-box-above-keyboard",
+      "kind": "fix",
+      "area": "devices",
+      "title": "A text box in a card stays in view while you type on an iPhone or iPad",
+      "body": "On your iPhone and iPad, tapping a text box inside a card no longer scrolls it away behind the keyboard. The card now scrolls so the box sits above the keyboard, and you can see what you type.",
+      "noPicture": "The fix is in the iPhone and iPad app, which the desktop app's note picture cannot show.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

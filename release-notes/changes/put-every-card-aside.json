@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "put-every-card-aside",
+      "kind": "feature",
+      "title": "Put every card aside with one key",
+      "body": "Press ⌥⇧⌘M to put every card aside at once and clear the stage, with your words in the message box kept. Press it again on the empty stage and the cards come back, with your picks still in them. Holding ⌥ over a card's minus changes it to Put every card aside, and clicking it does the same.",
+      "area": "cards",
+      "picture": {
+        "dark": "put-every-card-aside-dark.webp",
+        "light": "put-every-card-aside-light.webp",
+        "alt": "A decision card with ⌥ held over its minus, whose label reads Put every card aside with the key ⌥⇧⌘M"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

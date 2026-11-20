@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crew-hover-checks-minute",
+      "reason": "Test-only repair: the crew hover journey reads the checks' running time against the host's start and the clock, so a minute passing between its summary and record steps no longer fails it. No app behavior changes."
+    }
+  ]
+}

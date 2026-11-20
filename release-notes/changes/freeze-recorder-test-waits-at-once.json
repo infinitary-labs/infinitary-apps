@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "freeze-recorder-test-waits-at-once",
+      "reason": "Test only: the freeze recorder's interruption test now starts its disposable process's wait as soon as the recorder starts, so a stall before the wait on a busy runner can no longer be the line the test reads and end before the process is stopped. Nothing in the shipped app changes."
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "mergeButtonAfterFixing": "오류를 고친 뒤 병합",
+  "mergeButtonBatch": "다음 일괄 끌어오기 요청으로 병합",
+  "mergeButtonBranch": "분기 병합",
+  "mergeButtonPullRequest": "끌어오기 요청 병합",
+  "mergeButtonWhenChecksPass": "검사를 통과하면 병합",
+  "mergeContinues": "이 병합 뒤에도 작업은 계속돼요.",
+  "mergeHeldOther": "이 카드가 올라온 뒤 다른 끌어오기 요청이 이 작업의 현재 변경이 됐어요. 카드가 그것을 보여 주면 병합이 다시 생겨요.",
+  "mergeHeldPushed": "이 카드가 올라온 뒤 더 새로운 버전이 푸시됐어요. 카드가 새 버전을 보여 주면 병합이 다시 생겨요.",
+  "mergeSetByFirstMate": "일등항해사가 이 작업에 맞춰 정했어요.",
+  "mergeSetInProject": "이 프로젝트의 설정에서 정했어요."
+}

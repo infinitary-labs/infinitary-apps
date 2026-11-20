@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "character-cinch",
+      "kind": "feature",
+      "title": "Firstmate draws itself tight while it shortens a long conversation",
+      "body": "When a conversation grows too long and Firstmate shortens it, a ring now wraps around Firstmate and pulls it smaller, with small lights flowing into its centre. When it finishes, the ring lets go and Firstmate springs back to its usual size. The phone app shows the same animation.",
+      "area": "firstmate",
+      "picture": {
+        "dark": "character-cinch-dark.webp",
+        "light": "character-cinch-light.webp",
+        "alt": "Firstmate drawn small inside a thin ring, with small lights flowing toward its centre"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

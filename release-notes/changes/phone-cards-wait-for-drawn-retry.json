@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-cards-wait-for-drawn-retry",
+      "reason": "Test only: the phone journey waits for a retried card to report drawn before tapping inside it, so the stalled-answer check cannot miss its own tap under load."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "mac-check-lease-records-first",
+      "reason": "Internal CI: a command under the Mac check lease starts only once its lease is recorded, so a waiting check can always take back the lease of a holder that died or stopped right after admission."
+    }
+  ]
+}

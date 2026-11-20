@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "work-computer-crewmates-normal-priority",
+      "kind": "fix",
+      "area": "devices",
+      "title": "A crewmate on another Mac keeps its pace while that Mac is busy",
+      "body": "A crewmate working on another Mac now runs its builds and tests at that Mac's normal priority. Before, they ran below everything else there, so on a busy Mac they ran slowly and their tests could fail with nothing wrong in your project. A Mac you added by its address picks this up at its next update in Settings → Devices. Any other Mac picks it up once you add it again, whether you added it with a command or by pasting its link when it first opened.",
+      "noPicture": "Nothing on screen changes: a crewmate on another Mac finishes its builds and tests sooner, and its tests stop failing while that Mac is busy.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

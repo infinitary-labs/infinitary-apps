@@ -1,0 +1,6 @@
+{
+  "entries": [],
+  "exclusions": [
+    { "id": "split-interaction-metric-catalog", "reason": "The interaction metrics catalog moved without changing behavior." }
+  ]
+}

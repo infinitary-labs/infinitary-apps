@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "delivery-choices-order",
+      "kind": "improvement",
+      "area": "projects",
+      "title": "Where changes go lists local merge first",
+      "body": "In Settings, Projects, the choices under Where changes go now run from the lightest to the most involved: local merge, then pull requests, then batched pull requests.",
+      "picture": {
+        "dark": "delivery-choices-order-dark.webp",
+        "light": "delivery-choices-order-light.webp",
+        "alt": "A project's settings with Where changes go showing local merge, pull requests and batched pull requests from left to right, above Ask before merging, Care and Runs on"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

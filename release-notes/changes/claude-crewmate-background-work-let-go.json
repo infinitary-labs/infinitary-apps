@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "claude-crewmate-background-work-let-go",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate on Claude carries on after Infinitary restarts while its background work runs",
+      "body": "When you quit or restart Infinitary while a crewmate on Claude waits on work it started in the background, such as a test run, the crewmate is now told once that the work did not finish, and picks the task up again. The same holds on a computer that runs work for you, and whenever Claude stops that work on its own. Before, the crewmate could wait for a result that would never come.",
+      "noPicture": "Nothing new appears on screen: the task moves on after the restart instead of waiting.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

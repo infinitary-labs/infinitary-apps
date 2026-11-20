@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "board-first-build-in-parts",
+      "reason": "The task board's first push is built over several turns of the main process instead of one, and the queue-wait words reuse one date formatter, so the freeze journey's startup stall on a large record stays under its line; a board of a usual size builds in a few milliseconds either way, so nothing a person sees changes."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "tasks-hover-performance",
+      "kind": "fix",
+      "title": "Task summaries keep up with your mouse",
+      "body": "Moving quickly across rows in a long Tasks list no longer makes the whole list do the same work again.",
+      "area": "tasks",
+      "noPicture": "The improvement is hover responsiveness, which requires motion to demonstrate; the appearance is unchanged.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journeys-shorten-the-tick",
+      "reason": "Test-only: a development or end-to-end run may shorten the app's one-minute tick, and the journeys that waited on it for a redelivery, a check's reread or a placement sweep now do. A packaged build always ticks once a minute, so no shipped behavior changed."
+    }
+  ]
+}

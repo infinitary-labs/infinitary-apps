@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "model-reasoning-reads-catalog-name",
+      "reason": "Test only: the model reasoning journey reads Opus's name once each launch's model catalog has named it, so a slow first allowance read on hosted Linux no longer leaves it looking for the raw id's boxes after the relaunch. No shipped behavior changed."
+    }
+  ]
+}

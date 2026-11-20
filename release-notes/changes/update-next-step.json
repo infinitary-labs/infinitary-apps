@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "update-next-step",
+      "kind": "improvement",
+      "title": "Updates always show the next step",
+      "body": "The Version row in Settings and the update notice now say where an update stands, with the button for the next step beside it: Update and restart, Try again, Restart, or Open the releases page when Infinitary cannot update that copy itself. A copy installed with Homebrew or a Linux package manager shows its update command with Copy command. When Infinitary is up to date, the line says when it last checked, and the Infinitary menu has Check for Updates… under About.",
+      "area": "updates",
+      "picture": {
+        "dark": "update-next-step-dark.webp",
+        "light": "update-next-step-light.webp",
+        "alt": "The Version row in Settings saying version 0.1.31 is available, with View release and Update and restart beside it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

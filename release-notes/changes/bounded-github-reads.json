@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "bounded-github-reads",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Crewmates stop waiting on lost GitHub reads",
+      "body": "A GitHub read now waits up to 30 seconds and tries once more before telling the crewmate it could not get an answer. Large lists still arrive in smaller pages, and file transfers keep their longer waits.",
+      "noPicture": "This changes how long a background read waits, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

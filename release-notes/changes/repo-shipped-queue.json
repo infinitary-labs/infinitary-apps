@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "repo-shipped-queue",
+      "reason": "This repository's own batch checks now run in the queue Infinitary ships, in place of its hand-written batch workflow; how this repository's checks run, nothing in the app a person notices."
+    }
+  ]
+}

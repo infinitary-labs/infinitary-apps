@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "phone-card-waits-for-a-loading-body",
+      "kind": "fix",
+      "title": "A card on a busy iPhone or iPad finishes opening",
+      "body": "On a busy iPhone or iPad, a card could still be replaced by \"This card stopped responding\" while it was opening. Infinitary now starts checking a card only once it can answer. A card that really stops answering still offers Retry.",
+      "area": "devices",
+      "noPicture": "The fix removes a wrong message; the card itself looks as it did before.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

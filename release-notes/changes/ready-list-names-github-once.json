@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "ready-list-names-github-once",
+      "kind": "fix",
+      "title": "Ready lists name your GitHub sign-in once",
+      "body": "A computer's Ready to take over list, and the list before moving your first mate there, named your GitHub sign-in twice, with different advice each time. Each list now names it once: Ready to take over says the computer has no GitHub sign-in of its own and offers Sign in to GitHub there, and the move list says you sign in to GitHub again there.",
+      "area": "devices",
+      "picture": {
+        "dark": "ready-list-names-github-once-dark.webp",
+        "light": "ready-list-names-github-once-light.webp",
+        "alt": "Settings, Devices, with Mac mini's Ready to take over list naming GitHub once, on the line with its Sign in to GitHub there button"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

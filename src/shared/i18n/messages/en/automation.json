@@ -1,0 +1,35 @@
+{
+  "automationEventsSkipped": "Events skipped",
+  "automationPanelActiveCount": {
+    "plural": "count",
+    "one": "{count} active",
+    "other": "{count} active"
+  },
+  "automationPanelEmpty": "No automations yet",
+  "automationPanelKeptCount": {
+    "plural": "count",
+    "one": "{count} kept",
+    "other": "{count} kept"
+  },
+  "automationPanelKeptHeading": "Kept running",
+  "automationPanelKeptRow": "{label} · {computer} · Open in Settings",
+  "automationPanelListLabel": "Automations",
+  "automationPanelPausedCount": {
+    "plural": "count",
+    "one": "{count} paused",
+    "other": "{count} paused"
+  },
+  "automationPanelUnreadableSummary": "cannot be read",
+  "automationRunAlsoSkipped": "{count} skipped",
+  "automationRunFound": "Found: {words}",
+  "automationRunSkipped": {
+    "plural": "count",
+    "one": "{count} event, {date}",
+    "other": "{count} events, {date}"
+  },
+  "automationRunSkippedState": "Skipped",
+  "automationScreenedNote": "Not sent to your first mate: the decision model read these events as plainly not meeting this automation's Only if condition.",
+  "automationWaitsFor": "Only if",
+  "automationWaitsForNote": "Your first mate acts only on events that meet this. While the event screen is on in Settings, an event that plainly does not meet this skips your first mate and is still listed in this automation's history.",
+  "automationWaitsForPlaceholder": "Every event"
+}

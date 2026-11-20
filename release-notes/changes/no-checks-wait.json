@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "no-checks-wait",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate no longer waits two hours on a pull request with no checks",
+      "body": "When a pull request in your project has no checks, its crewmate is now told how to end the wait at once: by recording that the project runs no checks, or by telling you it has nothing to show for that. Before, it could sit idle for up to two hours, then hear that checks were still running when none had started.",
+      "noPicture": "The change is in what a crewmate is told about an empty check list; no screen changes.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

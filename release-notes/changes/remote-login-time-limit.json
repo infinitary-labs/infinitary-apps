@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "remote-login-time-limit",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Devices says when the time limit stopped adding or updating a computer",
+      "body": "When adding or updating a computer by its address runs past its 30-minute time limit before Infinitary starts there, Devices and the activity feed now say that limit stopped it and that nothing changed there. Before, they said the computer could not be reached, even though it had answered the whole time.",
+      "picture": {
+        "dark": "remote-login-time-limit-dark.webp",
+        "light": "remote-login-time-limit-light.webp",
+        "alt": "Settings, Devices, saying updating Infinitary on a computer stopped at its 30-minute time limit and nothing changed there, above that computer's row with Update"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

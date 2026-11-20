@@ -1,0 +1,75 @@
+{
+  "api": 1,
+  "title": "Tasks",
+  "placement": { "x": "right", "y": "bottom" },
+  "order": 10,
+  "size": "content",
+  "presence": { "code": true },
+  "reads": ["tasks.board", "tasks.detail", "tasks.search"],
+  "moves": true,
+  "cards": {
+    "board": { "view": "board", "title": "Tasks", "width": "wide", "height": "fill" }
+  },
+  "header": [
+    { "id": "search", "icon": "search", "label": "Search tasks" },
+    { "id": "board", "icon": "open", "label": "Open task board", "emits": "board" }
+  ],
+  "commands": [
+    { "id": "find", "label": "Find a task", "presses": "search", "key": "⇧⌘F" },
+    {
+      "id": "board",
+      "label": "Open task board",
+      "emits": "board",
+      "data": { "focus": "tiles" },
+      "key": "⌘B",
+      "words": ["kanban", "columns"]
+    },
+    {
+      "id": "board-find",
+      "label": "Find on task board",
+      "emits": "board",
+      "data": { "focus": "find" },
+      "words": ["kanban", "search"]
+    },
+    {
+      "id": "board-backlog",
+      "label": "Show the backlog",
+      "emits": "board",
+      "data": { "focus": "backlog" },
+      "words": ["kanban", "board", "planned"]
+    },
+    {
+      "id": "board-done",
+      "label": "Show done tasks",
+      "emits": "board",
+      "data": { "focus": "done" },
+      "words": ["kanban", "board", "finished", "completed"]
+    },
+    {
+      "id": "board-dropped",
+      "label": "Show dropped tasks",
+      "emits": "board",
+      "data": { "focus": "dropped" },
+      "words": ["kanban", "board"]
+    },
+    {
+      "id": "collapse-parts",
+      "label": "Collapse all parts",
+      "asks": "collapse-parts",
+      "words": ["fold", "subtasks", "children", "hide"]
+    },
+    {
+      "id": "expand-parts",
+      "label": "Expand all parts",
+      "asks": "expand-parts",
+      "words": ["unfold", "subtasks", "children", "show"]
+    },
+    {
+      "id": "board-move",
+      "label": "Move the selected task",
+      "emits": "board",
+      "data": { "focus": "menu" },
+      "words": ["kanban", "board", "queue", "start", "backlog", "drop"]
+    }
+  ]
+}

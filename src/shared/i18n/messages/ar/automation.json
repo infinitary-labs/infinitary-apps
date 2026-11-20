@@ -1,0 +1,51 @@
+{
+  "automationEventsSkipped": "أحداث متخطاة",
+  "automationPanelActiveCount": {
+    "plural": "count",
+    "zero": "نشطة: {count}",
+    "one": "نشطة: {count}",
+    "two": "نشطة: {count}",
+    "few": "نشطة: {count}",
+    "many": "نشطة: {count}",
+    "other": "نشطة: {count}"
+  },
+  "automationPanelEmpty": "لا توجد عمليات أتمتة بعد",
+  "automationPanelKeptCount": {
+    "plural": "count",
+    "zero": "مستمرة: {count}",
+    "one": "مستمرة: {count}",
+    "two": "مستمرة: {count}",
+    "few": "مستمرة: {count}",
+    "many": "مستمرة: {count}",
+    "other": "مستمرة: {count}"
+  },
+  "automationPanelKeptHeading": "يستمر في العمل",
+  "automationPanelKeptRow": "{label} · {computer} · فتح في الإعدادات",
+  "automationPanelListLabel": "عمليات الأتمتة",
+  "automationPanelPausedCount": {
+    "plural": "count",
+    "zero": "موقوفة مؤقتًا: {count}",
+    "one": "موقوفة مؤقتًا: {count}",
+    "two": "موقوفة مؤقتًا: {count}",
+    "few": "موقوفة مؤقتًا: {count}",
+    "many": "موقوفة مؤقتًا: {count}",
+    "other": "موقوفة مؤقتًا: {count}"
+  },
+  "automationPanelUnreadableSummary": "تتعذّر قراءتها",
+  "automationRunAlsoSkipped": "تُخطّي {count}",
+  "automationRunFound": "ما وُجد: {words}",
+  "automationRunSkipped": {
+    "plural": "count",
+    "zero": "لا أحداث، {date}",
+    "one": "حدث واحد، {date}",
+    "two": "حدثان، {date}",
+    "few": "{count} أحداث، {date}",
+    "many": "{count} حدثًا، {date}",
+    "other": "{count} حدث، {date}"
+  },
+  "automationRunSkippedState": "متخطّى",
+  "automationScreenedNote": "لم تُرسل إلى نائب القبطان: قرأ نموذج القرارات هذه الأحداث على أنها بوضوح لا تحقق شرط «فقط إذا» في هذه الأتمتة.",
+  "automationWaitsFor": "فقط إذا",
+  "automationWaitsForNote": "لا يتصرف نائب القبطان إلا في الأحداث التي تحقق هذا الشرط. ما دام فرز الأحداث مفعّلًا في الإعدادات، فإن الحدث الذي لا يحقق هذا الشرط بوضوح لا يصل إلى نائب القبطان ويبقى مدرجًا في سجل هذه الأتمتة.",
+  "automationWaitsForPlaceholder": "كل حدث"
+}

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "languages",
+      "kind": "feature",
+      "title": "Infinitary in ten languages",
+      "body": "Infinitary now speaks Simplified Chinese, Traditional Chinese, Japanese, Korean, Spanish, French, German, Portuguese (Brazil) and Arabic, as well as English, and Arabic lays the window out right to left. English stays the default, and the new Language row at the end of Settings → Appearance switches to another one. Your first mate and crew write to you in the same language. Some parts, such as most of Settings, still show English for now.",
+      "area": "settings",
+      "picture": {
+        "dark": "languages-dark.webp",
+        "light": "languages-light.webp",
+        "alt": "The Language row at the end of Settings → Appearance, set to Japanese"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

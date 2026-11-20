@@ -1,0 +1,118 @@
+<!-- part: quiz. The round itself. Paste last, after board, progress and finish, with CONFIG filled in. -->
+<style>
+  #lesson [hidden] { display: none !important; }
+  .lesson-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .lesson-main { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+  .lesson-side { flex: 1 1 160px; min-width: 0; }
+  .lesson-choices { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 8px; }
+  .lesson-row { display: flex; gap: 8px; margin-top: 8px; }
+</style>
+<div id="lesson">
+  <div class="lesson-top"><div id="dots"></div><span id="count" class="inf-muted"></span></div>
+  <p id="prompt"></p>
+  <div id="main" class="lesson-main">
+    <div id="draw"></div>
+    <div class="lesson-side">
+      <div id="choices" class="lesson-choices"></div>
+      <p id="feedback" role="status" aria-live="polite"></p>
+      <div class="lesson-row">
+        <button type="button" id="hint">Show me a hint</button>
+        <button type="button" id="advance" hidden>Next question</button>
+      </div>
+    </div>
+  </div>
+  <div id="finish" hidden></div>
+</div>
+<script>
+(function (L) {
+  // CONFIG is the teacher's: 8 to 12 items. Each item:
+  // { id: "rook-1", q: "Which square can the rook reach?", draw: { board: {...} } or { line: {...} },
+  //   kind: "choice" (correct + wrong, all about the same length) or "square" (correct is a square name),
+  //   correct: "a8", wrong: ["b7", "c6"], hints: ["Look along the file.", "..."], worked: "A rook slides ..." }
+  var CONFIG = { items: [], nextGoal: "" };
+
+  var PRAISE = ["Nice work!", "You checked before you chose, and it paid off.", "Good thinking!",
+    "That careful look worked.", "Yes! Steady and sure."];
+  var el = function (id) { return document.getElementById(id); };
+  var items = CONFIG.items, index = 0, misses = 0, hints = 0, locked = false, results = [];
+
+  // Fair choices: the right answer visits every position in turn, never the same one twice running.
+  function place(item, at) {
+    var options = item.wrong.slice(), n = options.length + 1;
+    options.splice(((n * 10 - at + 2) % n), 0, item.correct);
+    return options;
+  }
+  function report() {
+    var firstTry = results.filter(function (r) { return r.firstTry; }).length;
+    var summary = { n: items.length, done: results.length, firstTry: firstTry,
+      items: results.map(function (r) { return [r.id, r.firstTry ? 1 : 0, r.misses, r.hints]; }) };
+    if (window.inf && inf.stage) inf.stage("round", JSON.stringify(summary));
+    return summary;
+  }
+  function show() {
+    var item = items[index];
+    misses = 0; hints = 0; locked = false;
+    L.drawProgress(el("dots"), el("count"), results, index, items.length);
+    el("prompt").textContent = item.q;
+    el("feedback").textContent = "";
+    el("advance").hidden = true;
+    el("hint").hidden = false;
+    var draw = el("draw");
+    draw.textContent = "";
+    if (item.draw && item.draw.line) L.drawLine(draw, item.draw.line);
+    else if (item.draw && item.draw.board) L.drawBoard(draw, Object.assign({ pick: item.kind === "square" }, item.draw.board), choose);
+    var box = el("choices");
+    box.textContent = "";
+    if (item.kind !== "square") place(item, index).forEach(function (option) {
+      var button = document.createElement("button");
+      button.type = "button";
+      button.textContent = option;
+      button.addEventListener("click", function () { choose(option); });
+      box.appendChild(button);
+    });
+  }
+  function settle(firstTry) {
+    locked = true;
+    results.push({ id: items[index].id, firstTry: firstTry, misses: misses, hints: hints });
+    L.drawProgress(el("dots"), el("count"), results, index + 1, items.length);
+    report();
+    var advance = el("advance");
+    advance.hidden = false;
+    advance.textContent = index + 1 === items.length ? "See how it went" : "Next question";
+    el("hint").hidden = true;
+    advance.focus();
+  }
+  function choose(answer) {
+    if (locked) return;
+    var item = items[index];
+    if (answer === item.correct) {
+      el("feedback").textContent = PRAISE[index % PRAISE.length];
+      settle(misses === 0 && hints === 0);
+    } else {
+      misses++;
+      if (misses >= 2) {
+        el("feedback").textContent = "Let's look at it together. " + item.worked + " The answer is " + item.correct + ".";
+        settle(false);
+      } else {
+        el("feedback").textContent = "Not quite. Have another look, or ask for a hint.";
+      }
+    }
+  }
+  el("hint").addEventListener("click", function () {
+    if (locked) return;
+    var item = items[index];
+    if (hints < item.hints.length) el("feedback").textContent = item.hints[hints++];
+    else el("feedback").textContent = "That was the last hint. Take your time.";
+  });
+  el("advance").addEventListener("click", function () {
+    index++;
+    if (index < items.length) { show(); return; }
+    var summary = report();
+    ["prompt", "main"].forEach(function (id) { el(id).hidden = true; });
+    el("dots").hidden = false;
+    el("finish").hidden = false;
+    L.drawFinish(el("finish"), summary, CONFIG.nextGoal);
+  });
+  if (items.length) show();
+})(window.FMLesson);
+</script>

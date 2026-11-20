@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "windows-process-readings",
+      "reason": "Windows is not yet a supported platform: the app now reads Windows' programs, connections and job objects so the crew command check, heavy runs and a closed task's leftover programs work there. Mac and Linux behave as before."
+    }
+  ]
+}

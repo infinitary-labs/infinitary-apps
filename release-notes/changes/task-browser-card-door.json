@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "task-browser-card-door",
+      "reason": "Internal, behind the development-only task browser gate: a crewmate's card can carry a labeled door that opens its task's browser view without answering the card, and an installed app shows none of it."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "home-connection",
+      "reason": "Adds the connection another Mac or device will use to reach this one. It listens only once a device is paired, and pairing ships later, so nothing in the app changes yet."
+    }
+  ]
+}

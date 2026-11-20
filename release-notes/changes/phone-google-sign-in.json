@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-google-sign-in",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Sign in to Google from iPhone and iPad",
+      "body": "Settings on iPhone and iPad now has Google under Integrations, for the computer it controls, showing who is signed in, with Sign in and Sign out. Sign in shows what Infinitary uses from your Google account, then opens Google's page inside the app and passes Google's answer back to your first mate's computer, where the sign-in stays. If the phone cannot take the answer itself, it asks you to paste the address the page ended on.",
+      "noPicture": "The phone check pictures the Google row in one theme only, while a hero picture is a light and dark pair.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

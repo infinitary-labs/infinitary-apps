@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-browser-from-any-computer",
+      "kind": "feature",
+      "title": "Watch and take over a task's browser from another computer",
+      "body": "A computer that controls your first mate now shows a task's browser too. Open it from a card or the task, take control, and what you click and type goes to the page on the computer where your first mate lives.",
+      "area": "devices",
+      "picture": {
+        "dark": "task-browser-from-any-computer-dark.webp",
+        "light": "task-browser-from-any-computer-light.webp",
+        "alt": "A task's browser shown on a second computer with control taken: a sign-up page under the row that says you have control, and Return control"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

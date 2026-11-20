@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "key-reminder-longer-fade",
+      "kind": "improvement",
+      "title": "The key shown after a click stays longer and fades",
+      "body": "After you click a button that has a keyboard shortcut, the shortcut at the bottom of the window now stays for about five seconds, and it fades in and out instead of appearing and vanishing at once. Pressing a key or clicking elsewhere still takes it away at once.",
+      "area": "settings",
+      "noPicture": "The reminder looks the same at rest; it only stays longer and fades, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

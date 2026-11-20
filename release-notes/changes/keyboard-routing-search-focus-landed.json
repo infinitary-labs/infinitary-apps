@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "keyboard-routing-search-focus-landed",
+      "reason": "Test-only: the keyboard-routing journey waits until the card's note holds the window's focus before pressing the command search key, without retries or sleeps, and still checks that Escape gives focus back to the card. Product behavior is unchanged."
+    }
+  ]
+}

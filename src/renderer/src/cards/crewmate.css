@@ -1,0 +1,401 @@
+/* The task card's Crewmate tab (docs/task-card-tabs.md, "The Crewmate tab";
+   the design skill's components/cards/TaskCrewmate): the crewmate's session
+   in Claude Code's shape - a mark column, mono calls with their results
+   folded under them, its own words in the UI face - then a status line and
+   a boxed > prompt pinned under the transcript. Tokens only. */
+/* The transcript gives up its room first, down to one line, then the middle
+   scrolls the heading and this floor away while the top row and foot stay. */
+.fm-crew-log {
+  flex: 1 1 auto;
+  min-height: 1.6em;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding: var(--space-3) var(--space-3) var(--space-3) 20px;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--fg-2);
+}
+.fm-crew-log:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-inset);
+}
+.fm-crew-earlier,
+.fm-crew-empty {
+  font-family: var(--font-ui);
+  color: var(--fg-3);
+  margin-bottom: var(--space-2);
+}
+/* One line: its mark, then what it says. */
+.fm-crew-line {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  column-gap: var(--space-2);
+  align-items: start;
+}
+.fm-crew-line + .fm-crew-line {
+  margin-top: 2px;
+}
+.fm-crew-line[data-crew-line="said"],
+.fm-crew-line[data-crew-line="sent"],
+.fm-crew-line[data-crew-line="brief"],
+.fm-crew-line[data-crew-line="tool"] {
+  margin-top: var(--space-2);
+}
+.fm-crew-mark {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  height: 1.6em;
+  color: var(--fg-3);
+}
+.fm-crew-mark[data-tone="hot"] {
+  color: var(--hot);
+}
+.fm-crew-mark[data-tone="captain"] {
+  color: var(--captain);
+}
+.fm-crew-mark[data-tone="danger"] {
+  color: var(--danger);
+}
+.fm-crew-body {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+/* The crewmate's own words, in the face the app speaks in. */
+.fm-crew-said {
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+  color: var(--fg-1);
+  white-space: pre-wrap;
+}
+.fm-crew-live::after {
+  content: "";
+  display: inline-block;
+  width: 0.5em;
+  height: 1em;
+  margin-inline-start: 2px;
+  vertical-align: -0.15em;
+  background: var(--hot);
+}
+/* A call: the tool, its target, and the line the crewmate wrote. */
+.fm-crew-call .name {
+  color: var(--fg-1);
+}
+.fm-crew-call .target {
+  color: var(--fg-2);
+}
+.fm-crew-call .reading {
+  color: var(--fg-3);
+  margin-inline-start: 1ch;
+}
+.fm-crew-result {
+  color: var(--fg-3);
+}
+.fm-crew-result[data-error] {
+  color: var(--danger);
+}
+.fm-crew-fold {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: var(--accent);
+  cursor: pointer;
+  border-radius: var(--radius-xs);
+}
+.fm-crew-fold:hover {
+  text-decoration: underline;
+}
+.fm-crew-fold:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+/* What a fold opens to: the result's text, or what an edit changed. */
+.fm-crew-out {
+  margin: var(--space-1) 0 var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-s);
+  background: var(--bg-1);
+  color: var(--fg-2);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  max-height: 320px;
+  overflow: auto;
+}
+.fm-crew-diff {
+  margin: var(--space-1) 0 var(--space-1);
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-s);
+  overflow: hidden;
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+.fm-crew-diff > div {
+  padding: 0 var(--space-2);
+  white-space: pre-wrap;
+  color: var(--fg-3);
+}
+.fm-crew-diff > [data-diff="added"] {
+  color: var(--ok);
+  background: var(--ok-dim);
+}
+.fm-crew-diff > [data-diff="removed"] {
+  color: var(--danger);
+  background: var(--danger-dim);
+}
+.fm-crew-diff > [data-diff="gap"] {
+  height: 1px;
+  padding: 0;
+  margin: var(--space-1) 0;
+  background: var(--line-1);
+}
+.fm-crew-diff > [data-diff="more"] {
+  background: var(--bg-1);
+}
+.fm-crew-pictures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-1) 0;
+}
+.fm-crew-picture {
+  appearance: none;
+  padding: 0;
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-s);
+  background: var(--bg-1);
+  cursor: zoom-in;
+  overflow: hidden;
+  display: block;
+}
+.fm-crew-picture[data-large] {
+  cursor: zoom-out;
+}
+.fm-crew-picture img {
+  display: block;
+  max-width: 100%;
+  max-height: 240px;
+}
+.fm-crew-picture[data-large] img {
+  max-height: none;
+}
+.fm-crew-picture:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+/* A line someone sent it: the captain's in his color, the others quieter. */
+.fm-crew-sent {
+  white-space: pre-wrap;
+}
+.fm-crew-sent[data-crew-from="captain"] {
+  color: var(--fg-1);
+}
+.fm-crew-who {
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--fg-3);
+  margin-inline-end: var(--space-2);
+}
+.fm-crew-queued {
+  margin-inline-start: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--warn);
+}
+.fm-crew-note {
+  font-family: var(--font-ui);
+  color: var(--fg-3);
+}
+/* The app's own tools as blocks: the plan, a report, a card, the pull request. */
+.fm-crew-block {
+  margin: var(--space-1) 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-m);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  color: var(--fg-2);
+}
+.fm-crew-block .k {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.fm-crew-block .ti {
+  color: var(--fg-1);
+  margin-top: 2px;
+}
+.fm-crew-block .text {
+  margin-top: var(--space-1);
+  white-space: pre-wrap;
+}
+.fm-crew-block .act {
+  margin-top: var(--space-2);
+  display: flex;
+  gap: var(--space-2);
+}
+.fm-crew-block .items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: var(--space-1);
+}
+.fm-crew-block .item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.fm-crew-block .item[data-plan-item="current"] {
+  color: var(--fg-1);
+}
+.fm-crew-block .item[data-plan-item="next"],
+.fm-crew-block .item[data-plan-item="skipped"] {
+  color: var(--fg-3);
+}
+.fm-crew-block a {
+  color: var(--accent);
+  text-decoration: none;
+}
+.fm-crew-block a:hover {
+  text-decoration: underline;
+}
+.fm-crew-block .dot {
+  flex: none;
+}
+/* Under the transcript: the status line, then the boxed prompt. */
+.fm-crew-foot {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3) var(--space-2) 20px;
+  border-top: 1px solid var(--line-1);
+}
+.fm-crew-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+}
+.fm-crew-status .state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--fg-2);
+}
+.fm-crew-status[data-crew-status="working"] .state {
+  color: var(--hot);
+}
+.fm-crew-status .stop {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent);
+  cursor: pointer;
+  border-radius: var(--radius-xs);
+}
+.fm-crew-status .stop:hover {
+  text-decoration: underline;
+}
+.fm-crew-status .stop:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.fm-crew-status .stop:disabled {
+  color: var(--fg-3);
+  cursor: default;
+  text-decoration: none;
+}
+.fm-crew-compose {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-m);
+  background: var(--surface-input);
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+.fm-crew-compose[data-focus] {
+  border-color: var(--line-2);
+  box-shadow: var(--focus-ring);
+}
+.fm-crew-compose .prompt {
+  flex: none;
+  /* Level with the field's first line, which sits under the field's own 2px of padding. */
+  padding-top: 2px;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  color: var(--accent);
+}
+.fm-crew-compose .to {
+  flex: none;
+  align-self: center;
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+  white-space: nowrap;
+}
+.fm-crew-refusal {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--danger);
+}
+.fm-crew-closed {
+  font-size: var(--text-sm);
+  color: var(--fg-3);
+}
+
+.fm-crew-browser-cue {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-1) var(--space-3);
+}
+.fm-crew-browser-cue [data-thread-cue-who] {
+  flex: none;
+}
+.fm-crew-browser {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+  overflow: auto;
+}
+.fm-crew-browser-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: none;
+  padding: var(--space-1) var(--space-3);
+  border-bottom: 1px solid var(--line-1);
+  color: var(--fg-3);
+  font-size: var(--text-sm);
+}
+.fm-crew-browser .fm-crew-log {
+  flex-basis: 0;
+}
+.fm-crew-browser .fm-crew-compose {
+  flex-wrap: wrap;
+}
+.fm-crew-browser .fm-crew-compose .to {
+  flex-basis: 100%;
+  text-align: end;
+}

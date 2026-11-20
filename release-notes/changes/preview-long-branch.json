@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "preview-long-branch",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A long branch name stays inside a task's preview",
+      "body": "When you rest on a task, a branch name too long for its preview now ends in an ellipsis inside the preview instead of running past its edge, and the Model and Difficulty labels no longer draw over each other. The task card still shows the whole name.",
+      "picture": {
+        "dark": "preview-long-branch-dark.webp",
+        "light": "preview-long-branch-light.webp",
+        "alt": "A task's preview with Model, Difficulty and Branch side by side in its footer, the long branch name ending in an ellipsis before its checks running for 3h 02m, all inside the preview"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

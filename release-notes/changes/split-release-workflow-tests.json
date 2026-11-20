@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-release-workflow-tests",
+      "reason": "Splits the release workflow contract tests into one file per workflow owner under the 2,000-line bar, keeping every test; only how the project is checked changes."
+    }
+  ]
+}

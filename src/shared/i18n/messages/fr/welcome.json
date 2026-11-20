@@ -1,0 +1,21 @@
+{
+  "welcomeActivity": "Les équipiers travaillent en arrière-plan et font leur rapport ici.",
+  "welcomeBack": "Retour",
+  "welcomeBox": "Tapez ce que vous voulez faire faire dans la zone de message sous cette carte.",
+  "welcomeCard": "Je vous rapporte réponses et choix sous forme de cartes comme celle-ci.",
+  "welcomeEnd": "C’est tout. Pour commencer, appuyez sur une amorce ci-dessous.",
+  "welcomeFigure": "Votre fenêtre, une partie à chaque appui : la zone de message, une carte, Activité et Tâches",
+  "welcomeLabelActivity": "Activité",
+  "welcomeLabelBox": "la zone de message",
+  "welcomeLabelTasks": "Tâches",
+  "welcomeNext": "Suivant",
+  "welcomeStarterClone": "Cloner un projet",
+  "welcomeStarterCloneWords": "Cloner le projet à l’adresse ",
+  "welcomeStarterFolder": "Travailler dans un dossier de mon ordinateur",
+  "welcomeStarterFolderWords": "Travailler dans le dossier ",
+  "welcomeStarterNew": "Démarrer un nouveau projet",
+  "welcomeStarterNewWords": "Démarrer un nouveau projet nommé ",
+  "welcomeStartersLead": "Pour commencer, appuyez sur l’une d’elles et terminez la phrase :",
+  "welcomeTasks": "Chaque demande a sa fiche ici.",
+  "welcomeTitle": "Notre façon de travailler"
+}

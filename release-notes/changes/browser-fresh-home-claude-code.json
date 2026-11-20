@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "browser-fresh-home-claude-code",
+      "reason": "The browser tests' homes now boot with a home folder of their own and no Claude Code, so they read the same on a developer's computer as in CI and never run or read the computer's own Claude Code. Only tests and their docs change; nothing a person using the app notices."
+    }
+  ]
+}

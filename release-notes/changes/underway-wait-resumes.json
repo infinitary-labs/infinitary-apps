@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "underway-wait-resumes",
+      "kind": "fix",
+      "title": "A task waiting on another task's work now waits quietly and picks up when that work is done",
+      "body": "When a task cannot go on until another task that is already underway finishes, the task now shows that it is waiting on that task instead of being treated as stuck. Firstmate is no longer told it stalled, and no stuck card reaches you while the other work goes on. Once that work is done or dropped, the waiting task is told and carries on by itself.",
+      "area": "crewmates",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

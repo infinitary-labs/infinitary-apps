@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "inf-1038-isolate-legacy-command-test",
+      "reason": "Test-only isolation of the placed integrations-command fixture from runner-installed commands; no product behavior changes."
+    }
+  ]
+}

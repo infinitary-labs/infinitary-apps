@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "window-opens-past-silent-run",
+      "kind": "fix",
+      "area": "updates",
+      "title": "Infinitary's window no longer waits forever on a background part that does not answer",
+      "body": "After an update, Infinitary's window could wait forever when the part that keeps your first mate running in the background did not answer it. After a short wait, the window now says your first mate is not answering. Restart it stops that part by force and starts it again, and Start it here carries on in this window instead. The background part also no longer waits on your project folders before it answers.",
+      "picture": {
+        "dark": "window-opens-past-silent-run-dark.webp",
+        "light": "window-opens-past-silent-run-light.webp",
+        "alt": "A notice titled Infinitary is not answering, with Quit, Start it here and Restart it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

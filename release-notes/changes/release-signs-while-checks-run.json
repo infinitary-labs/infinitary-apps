@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "release-signs-while-checks-run",
+      "reason": "Release work: the release workflow builds, signs and notarizes an alpha while its checks run, and records and publishes it only after every check passed. What a release publishes and checks is unchanged."
+    }
+  ]
+}

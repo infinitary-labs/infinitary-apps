@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "trim-duplicate-story-schema",
+      "reason": "Internal: the crew reads the shared change-story shape once and shorter repeated guidance, restoring prompt room without changing a visible view."
+    }
+  ]
+}

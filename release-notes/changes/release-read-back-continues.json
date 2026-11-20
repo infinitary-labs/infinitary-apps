@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-read-back-continues",
+      "reason": "Release work: the release's check that reads each uploaded download back from the download site now continues from the byte it reached when the connection drops part way, so one dropped connection no longer fails an alpha; the downloads themselves are unchanged."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-weak-link-part",
+      "reason": "Internal: the phone check runs the weak link tests as a part of their own instead of inside the rest part, so a change to one runs only the part it edits; no test changes and nothing a person sees changes."
+    }
+  ]
+}

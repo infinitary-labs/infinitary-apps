@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "remote-released-close",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Tasks that ran on another computer can close as released",
+      "body": "When work was released outside the app, Firstmate can now close a task that ran on another computer as released, after checking that computer's copy of the work. If the copy has unsaved edits or work not yet in the project, or the computer can't be reached, the task stays open.",
+      "noPicture": "This changes the released closure check, not any visible controls or layout.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

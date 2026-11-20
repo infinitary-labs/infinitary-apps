@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "automation-run-found",
+      "kind": "feature",
+      "title": "See what each automation run found",
+      "body": "An automation's history now shows what your first mate found on each run, beside when it ran and what it led to, so you can check a reminder or a recurring check run by run. When you ask to hear about something another service announces, such as a workflow run finishing on GitHub, your first mate now waits for that event instead of checking on a clock.",
+      "area": "settings",
+      "picture": {
+        "dark": "automation-run-found-dark.webp",
+        "light": "automation-run-found-light.webp",
+        "alt": "An automation's History in Settings with two handled runs, each with a Found line saying what the first mate found"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

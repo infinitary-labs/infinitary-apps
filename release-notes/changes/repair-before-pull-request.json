@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "repair-before-pull-request",
+      "reason": "A crewmate that repairs a failed workflow run before opening its pull request now gets that repair's result from the checks at the repair's own version, instead of a refusal to declare its next repair. It changes only the repair record and what a crewmate is told when it reads its checks; nothing on screen changes."
+    }
+  ]
+}

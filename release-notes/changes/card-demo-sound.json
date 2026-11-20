@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "card-demo-sound",
+      "kind": "feature",
+      "area": "cards",
+      "title": "Hear a demo's sound when it matters",
+      "body": "A crewmate's demo recording can now keep its sound when the demo is about something you need to hear, such as a new alert or a voice-over. Every other demo stays silent. A demo with sound says so on its button, Play · 12 s · sound, and its sound plays only when you press Play, stopping any card's sound clip that was playing.",
+      "picture": {
+        "dark": "card-demo-sound-dark.webp",
+        "light": "card-demo-sound-light.webp",
+        "alt": "A maximized note with a narration clip's Listen button, and under it a demo's poster whose button reads Play · 3 s · sound"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "panels-on-the-phone",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Your panels on your iPhone and iPad",
+      "body": "When your computer has side panels, your iPhone and iPad show them on a Panels tab, one under another in the order your computer holds them. Open it with Command-4, or from the sidebar on a wide iPad. Each panel stays up to date and its buttons work on your computer. Tap a panel's title to fold it; it stays folded next time.",
+      "picture": {
+        "dark": "panels-on-the-phone-dark.webp",
+        "light": "panels-on-the-phone-light.webp",
+        "alt": "The phone's top bar with a fourth icon, three stacked panes, lit; below it a panel titled TALLY with the word yours, its count, a 3 TASKS badge and Add one and End work buttons."
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

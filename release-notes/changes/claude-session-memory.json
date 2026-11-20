@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "claude-session-memory",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Finished Claude conversations no longer stay in memory",
+      "body": "Infinitary now lets go of a Claude conversation's history once that conversation ends, so its memory use no longer grows with every Claude conversation it has run since it started.",
+      "noPicture": "This lowers the app's memory use without changing anything on screen.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "alpha-memory-reading",
+      "reason": "Alpha-only diagnostic: the freeze recorder also writes a local reading of the main process's memory, split between native and JavaScript, with nothing on screen and nothing sent anywhere."
+    }
+  ]
+}

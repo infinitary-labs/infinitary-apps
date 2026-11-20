@@ -1,0 +1,59 @@
+{
+  "entries": [
+    {
+      "id": "bf-a6e233d75",
+      "kind": "feature",
+      "title": "Headless attempt driver with a mock dry run",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "a6e233d75212731922f615822c52f5c818bf500f"
+        ]
+      }
+    },
+    {
+      "id": "bf-c085c7122",
+      "kind": "feature",
+      "title": "S0 task runtime on Apple container, with the 113-task empty-patch sweep",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "c085c7122e34d1c4ba9cbe95b671e80e2dd80c8b"
+        ]
+      }
+    },
+    {
+      "id": "bf-2ca7dfa8d",
+      "kind": "fix",
+      "title": "Use the panel expand chevron on section headers",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "2ca7dfa8d9df992d6fecedc9555c1ae910b39608"
+        ]
+      }
+    },
+    {
+      "id": "bf-dda8c25cc",
+      "kind": "fix",
+      "title": "Toggle voice on quick right Option press while retaining hold to talk",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "dda8c25cc2f1207ad35dd41f11f367b7cb8d0401"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-16-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.16: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "07d3c6607aee0921b003497ea5bba90585d37677",
+        "567b5938abd95dbee694e79a2289a14938bb2f28",
+        "d78b39e5b89d2cfad24467f2e218b73917c985f4"
+      ]
+    }
+  ]
+}

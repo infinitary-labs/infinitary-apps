@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "commit-check-stale-local-main",
+      "kind": "fix",
+      "title": "Opening a pull request no longer trips on changes already merged",
+      "body": "When this Mac's copy of the main branch was behind GitHub, the app treated changes already merged there as part of the task and refused to open its pull request. It now checks only the task's own new changes, and no longer refuses a change that took in newer work with a merge.",
+      "area": "crewmates",
+      "noPicture": "Nothing on screen changes: the pull request now simply opens.",
+      "provenance": { "origin": "change", "covers": [] }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "routing-candidate-facts",
+      "reason": "Internal record only: routing and account decisions save each candidate's score and allowance reading, with nothing new on screen."
+    }
+  ]
+}

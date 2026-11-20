@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-read-back-waits-out-server-errors",
+      "reason": "Release work: the release's check that reads each uploaded download back from the download site now waits out a passing server error, such as a 503, instead of stopping the alpha at once; the downloads themselves are unchanged."
+    }
+  ]
+}

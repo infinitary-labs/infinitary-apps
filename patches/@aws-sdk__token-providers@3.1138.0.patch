@@ -1,0 +1,60 @@
+diff --git a/dist-cjs/index.js b/dist-cjs/index.js
+index 6e41e39af3104889a548336e33e08d0184598f20..9b01979a19f4600ed3b13a7afcbe915d9dd6f87c 100644
+--- a/dist-cjs/index.js
++++ b/dist-cjs/index.js
+@@ -39,7 +39,10 @@ const getNewSsoOidcToken = async (ssoToken, ssoRegion, init = {}, callerClientCo
+         clientSecret: ssoToken.clientSecret,
+         refreshToken: ssoToken.refreshToken,
+         grantType: "refresh_token",
+-    }));
++    })).catch((error) => {
++        if (error instanceof Error && error.$metadata) error.awsRenewalOperation = "CreateToken";
++        throw error;
++    });
+ };
+ 
+ const validateTokenExpiry = (token) => {
+@@ -135,7 +138,11 @@ const fromSso = (init = {}) => async ({ callerClientConfig } = {}) => {
+         };
+     }
+     catch (error) {
+-        validateTokenExpiry(existingToken);
++        try {
++            validateTokenExpiry(existingToken);
++        } catch (expired) {
++            throw Object.assign(expired, { cause: error });
++        }
+         return existingToken;
+     }
+ };
+diff --git a/dist-es/fromSso.js b/dist-es/fromSso.js
+index a2cb04453efd9a8d8b4aa6239a779c7542ef995f..1c7838e886b8e291e1e5a8ffd992e5d038eca48a 100644
+--- a/dist-es/fromSso.js
++++ b/dist-es/fromSso.js
+@@ -78,7 +78,11 @@ export const fromSso = (init = {}) => async ({ callerClientConfig } = {}) => {
+         };
+     }
+     catch (error) {
+-        validateTokenExpiry(existingToken);
++        try {
++            validateTokenExpiry(existingToken);
++        } catch (expired) {
++            throw Object.assign(expired, { cause: error });
++        }
+         return existingToken;
+     }
+ };
+diff --git a/dist-es/getNewSsoOidcToken.js b/dist-es/getNewSsoOidcToken.js
+index ecbbe63efafd7de907ae872550064b92f800b0fc..9f66645ea005642433a478d015282ae090183f12 100644
+--- a/dist-es/getNewSsoOidcToken.js
++++ b/dist-es/getNewSsoOidcToken.js
+@@ -7,5 +7,8 @@ export const getNewSsoOidcToken = async (ssoToken, ssoRegion, init = {}, callerC
+         clientSecret: ssoToken.clientSecret,
+         refreshToken: ssoToken.refreshToken,
+         grantType: "refresh_token",
+-    }));
++    })).catch((error) => {
++        if (error instanceof Error && error.$metadata) error.awsRenewalOperation = "CreateToken";
++        throw error;
++    });
+ };

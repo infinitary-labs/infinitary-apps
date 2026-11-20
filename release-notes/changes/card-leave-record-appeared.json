@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-leave-record-appeared",
+      "reason": "Test-only repair: the card corner journey now presses a task record's controls only once the record has appeared, with no app behavior change."
+    }
+  ]
+}

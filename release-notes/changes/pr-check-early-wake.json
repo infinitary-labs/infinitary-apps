@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "pr-check-early-wake",
+      "reason": "Release review: a crewmate hears on the first failed pull request check and again when the rest finish. To a person this is the same result as named-run-watch, whose note now describes pull request checks too."
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "github-cli-sign-in",
+      "kind": "feature",
+      "title": "Connect GitHub through GitHub CLI when your organization blocks Infinitary",
+      "body": "If your organization does not approve apps like Infinitary, Settings → Integrations can use the GitHub sign-in that GitHub CLI already holds on this computer. Start signing in to GitHub or GitHub Enterprise, then choose Use GitHub CLI under the code. Your crew then reaches GitHub as before, and the row says it signs in through GitHub CLI.",
+      "area": "settings",
+      "picture": {
+        "dark": "github-cli-sign-in-dark.webp",
+        "light": "github-cli-sign-in-light.webp",
+        "alt": "Settings, Integrations, with the GitHub sign-in code and, under it, a line offering Use GitHub CLI for an organization that blocks apps like Infinitary"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,161 @@
+name: republish-casks
+
+# Republishing the casks (docs/alpha.md "Republishing the casks"): when a
+# change to how the casks are written reaches main - support for an older
+# Homebrew, a new alpha notice - both casks on the public tap are written
+# again by main's generator at exactly the targets the tap already names.
+# Nothing moves: no build, no release, no new artifact, and
+# infinitary-updates.json is never written. A cask that installs anything
+# but its channel's target is refused, every target's public download is
+# fetched back without a credential and checked against its checksum before
+# the one tap commit, and casks that are already current write nothing
+# (scripts/publish-tap.sh republish).
+#
+# On demand, a dry run writes the casks it would commit in a scratch clone of
+# the tap, keeps them on the run and pushes nothing:
+#
+#   gh workflow run republish-casks.yml --ref main -f dry_run=true
+#
+# Only Infinitary's own repository writes Infinitary's tap: a push to main
+# anywhere else - the Firstmate 3000 repository before it is archived - may
+# only rehearse. Firstmate 3000's casks move only with a release, through the
+# old-cask switch (docs/alpha.md "The old-cask switch").
+
+on:
+  push:
+    branches: [main]
+    # What the casks are written from; a run that finds them current writes
+    # nothing, so a change here that alters no cask costs one quiet run.
+    paths:
+      - .github/workflows/republish-casks.yml
+      - packaging/alpha-notice.txt
+      - scripts/publish-tap.sh
+      - scripts/tap-publication.ts
+      - src/core/update/tapPublication.ts
+      - src/core/update/macInstallation.ts
+      - packaging/mac-installation.json
+      - src/core/update/updateChannels.ts
+      - src/shared/userDataFolders.ts
+  workflow_dispatch:
+    inputs:
+      mac_runner:
+        description: Optional isolated runner label for a dry run; ignored for publication
+        required: false
+        type: string
+      dry_run:
+        description: Write the casks it would commit in a scratch clone of the tap, keep them on the run, and push nothing
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# One republication at a time, never cancelled mid-push; each reads the tap
+# afresh, and the tap's push refuses a writer that read a stale tap.
+concurrency:
+  group: republish-casks
+  cancel-in-progress: false
+
+env:
+  TAP_REPO: infinitary-labs/homebrew-tap
+
+jobs:
+  republish:
+    environment: desktop-release
+    name: ${{ format('{0} · Republish Homebrew entries', github.event_name == 'push' && 'Main push' || 'Manual request') }}
+    # Only main's generator in Infinitary's own repository writes the tap;
+    # any other ref or repository may only rehearse.
+    if: ${{ github.ref == 'refs/heads/main' && github.repository == 'infinitary-labs/infinitary-apps' && inputs.dry_run != true }}
+    runs-on: ${{ fromJSON(vars.MAC_QUEUES || '{}').light || vars.MAC_RUNNER || 'macos-15' }}
+    timeout-minutes: 30
+    steps:
+      - &checkout
+        name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      # Its own folder per job: both Mac runner slots run as one user, and
+      # setup wipes the default ~/setup-pnpm, pnpm's store included.
+      - &pnpm
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
+
+      # No package cache on a Mac (journeys.yml says why, INF-724).
+      - &node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+
+      - &electron
+        uses: ./.github/actions/electron-download
+
+      - &dependencies
+        name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Republish the casks
+        id: tap
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          set -euo pipefail
+          : "${HOMEBREW_TAP_TOKEN:?Missing HOMEBREW_TAP_TOKEN}"
+          TAP_URL="https://github.com/$TAP_REPO.git" WORK="$RUNNER_TEMP/tap-republish" \
+            scripts/publish-tap.sh republish | tee "$RUNNER_TEMP/tap-result.txt"
+
+      - &summarize
+        name: Summarize
+        if: always()
+        continue-on-error: true
+        env:
+          DRY_RUN: ${{ inputs.dry_run == true }}
+        run: |
+          {
+            if [[ "$DRY_RUN" == true ]]; then
+              echo "### Cask republication dry run from \`$GITHUB_SHA\`"
+              echo
+              echo "Pushed nothing: the casks it would commit are kept on the run."
+            else
+              echo "### Cask republication from \`$GITHUB_SHA\`"
+            fi
+            echo
+            if [[ -f "$RUNNER_TEMP/tap-result.txt" ]]; then
+              echo '```'
+              cat "$RUNNER_TEMP/tap-result.txt"
+              echo '```'
+            else
+              echo "The tap step did not finish; see its log."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  preview:
+    name: Manual request · Preview Homebrew entries; publish nothing
+    if: ${{ inputs.dry_run == true }}
+    runs-on: ${{ inputs.mac_runner || fromJSON(vars.MAC_QUEUES || '{}').light || vars.MAC_RUNNER || 'macos-15' }}
+    timeout-minutes: 30
+    steps:
+      - *checkout
+      - *pnpm
+      - *node
+      - *electron
+      - *dependencies
+      - name: Rehearse the republished casks
+        id: tap-rehearsal
+        run: |
+          set -euo pipefail
+          TAP_URL="https://github.com/$TAP_REPO.git" WORK="$RUNNER_TEMP/tap-republish" \
+            OUT="$RUNNER_TEMP/tap-rehearsal" scripts/publish-tap.sh republish-rehearsal | tee "$RUNNER_TEMP/tap-result.txt"
+
+      - name: Keep the rehearsed casks
+        if: ${{ always() && steps.tap-rehearsal.outcome == 'success' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: tap-republish-rehearsal
+          path: ${{ runner.temp }}/tap-rehearsal
+          if-no-files-found: error
+          retention-days: 30
+
+      - *summarize

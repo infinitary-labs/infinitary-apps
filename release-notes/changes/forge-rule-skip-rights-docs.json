@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "forge-rule-skip-rights-docs",
+      "reason": "Documentation only: records which GitHub rule-set skip rights a merge past the branch rules was shown to work with. Nothing in the shipped app changed."
+    }
+  ]
+}

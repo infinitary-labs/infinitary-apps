@@ -1,0 +1,81 @@
+packages:
+  - "."
+# Universal mac builds need both architectures' native prebuilds present so
+# electron-builder can lipo them together (see docs/architecture.md section 10).
+supportedArchitectures:
+  os:
+    - current
+    - darwin
+  cpu:
+    - current
+    - x64
+    - arm64
+allowBuilds:
+  electron: true
+  esbuild: true
+  better-sqlite3: true
+  # koffi is a direct dep for the host Keychain FFI (CD-5=B) and also arrives
+  # transitively via pi-tui. It must be allowed to install its prebuilds.
+  koffi: true
+  # Transitive build scripts (via pi-coding-agent and electron-builder),
+  # allowed as a vetted set.
+  '@google/genai': true
+  electron-winstaller: true
+  protobufjs: true
+  # The voice helper runs Whisper on onnxruntime-node (docs/architecture.md
+  # section 8). Its npm package already carries the macOS binary; its
+  # install script only fetches GPU libraries for other platforms, so it
+  # stays off. sharp comes with @huggingface/transformers for image work,
+  # which nothing here does (the main build stands it in, src/main/voice/noSharp.ts).
+  onnxruntime-node: false
+  sharp: false
+  # dugite's own postinstall fetches git for the installing machine's
+  # architecture only; the universal build ships both, so
+  # scripts/ensure-bundled-git.ts (our postinstall) fetches them from
+  # dugite's own pinned manifest instead (docs/forge.md "The app's own git").
+  dugite: false
+minimumReleaseAge: 0
+# The @electron/universal, @vitest/runner, vitest, playwright and
+# electron-updater patches, and the load-clock hunks of the playwright-core
+# one, are ours and stay across upgrades; re-make them on an upgrade. The other patches carry one fix their package's next release
+# already has; drop it when the package is upgraded to that release.
+# - @electron/universal: ours, kept across upgrades. The
+#   universal merge reads each file's first four bytes and asks `file` only
+#   when they could start a Mach-O or cannot be read, instead of spawning
+#   `file` for every file of both slices; every classification stays the same
+#   (INF-1418; docs/architecture.md section 10). Re-make it on an upgrade.
+# - electron-updater: ours, kept across upgrades. A feed read sends no
+#   x-user-staging-id, the library's random per-install ID, so Diagnostics'
+#   install ID stays the one identifier that leaves for us (INF-4948;
+#   docs/alpha.md "Update channels"). Re-make it on an upgrade;
+#   src/main/host/macUpdateFeed.test.ts fails while it is missing.
+# - @vitest/runner and vitest: ours, kept across upgrades. On an ordinary run a
+#   test's or hook's limit, and an expect.poll or vi.waitFor window, read the
+#   load clock tests/helpers/budgets.ts starts in each worker and end by their
+#   wall cap; a graded run (INFINITARY_PERF_BUDGETS=1, on a quiet host) keeps
+#   the wall clock (INF-1083; docs/test-cohorts.md, "Budgets"). Re-make them
+#   on an upgrade.
+# - electron-vite: its CommonJS shim goes after a main chunk's last real
+#   import, found by parsing the chunk, never inside a string or comment that
+#   reads like an import (electron-vite 6.0.0-beta.4, docs/architecture.md
+#   section 10).
+# - playwright and playwright-core: on an ordinary run every wait deadline -
+#   test, hook, fixture, step, expect, poll, action and event - reads the load
+#   clock `tests/helpers/budgets.ts` starts in each test worker, and ends by
+#   its wall cap (INF-1083; docs/e2e-contracts.md, "Waits run on the load
+#   clock"). The core patch also keeps one line of Playwright's own fix, which
+#   its 1.64 beta has: a reply that arrives after a page crashed is ignored
+#   instead of failing the test with "Target crashed" (docs/e2e-contracts.md,
+#   "A crashed page"); only that hunk drops on the upgrade.
+patchedDependencies:
+  '@aws-sdk/credential-provider-login@3.972.79': patches/@aws-sdk__credential-provider-login@3.972.79.patch
+  '@aws-sdk/credential-provider-sso@3.973.16': patches/@aws-sdk__credential-provider-sso@3.973.16.patch
+  '@aws-sdk/token-providers@3.1138.0': patches/@aws-sdk__token-providers@3.1138.0.patch
+  '@earendil-works/pi-ai@1.5.0': patches/@earendil-works__pi-ai@1.5.0.patch
+  '@electron/universal@2.0.3': patches/@electron__universal@2.0.3.patch
+  '@vitest/runner@4.1.10': patches/@vitest__runner@4.1.10.patch
+  electron-updater@6.8.9: patches/electron-updater@6.8.9.patch
+  electron-vite@5.0.0: patches/electron-vite@5.0.0.patch
+  playwright-core@1.62.1: patches/playwright-core@1.62.1.patch
+  playwright@1.62.1: patches/playwright@1.62.1.patch
+  vitest@4.1.10: patches/vitest@4.1.10.patch

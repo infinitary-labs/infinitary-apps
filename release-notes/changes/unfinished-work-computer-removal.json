@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "unfinished-work-computer-removal",
+      "reason": "A work computer's removal that fails part-way now removes the rest and is finished by its next run, for the development-only multi-machine feature, which remains unavailable in released apps."
+    }
+  ]
+}

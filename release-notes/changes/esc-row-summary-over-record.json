@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "esc-row-summary-over-record",
+      "kind": "fix",
+      "title": "Esc closes only the Tasks summary over an open record",
+      "body": "With a task's record open and the pointer resting on another Tasks row, Esc now closes that row's summary and leaves the record open. Before, the summary could close as soon as focus left the Tasks list, and Esc then hid the record.",
+      "area": "tasks",
+      "noPicture": "What changed is what Esc closes, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

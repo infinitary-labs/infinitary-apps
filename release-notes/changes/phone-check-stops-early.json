@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-check-stops-early",
+      "reason": "Internal CI: a pull request's phone check stops its other parts at the first failed part, and the phone check keeps its whole result bundles only when it fails or records; nothing a person sees in the app changes."
+    }
+  ]
+}

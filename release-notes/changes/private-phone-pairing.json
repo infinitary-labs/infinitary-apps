@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "private-phone-pairing",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Phone connections prefer your private network",
+      "body": "Phone links and reconnects now prefer detected private-network addresses while keeping local fallbacks. Your phone learns updated alternatives when it connects to your computer, and its computer sheet shows the address it actually reached. Both devices still need access to the private network, with Infinitary open on an awake computer.",
+      "picture": {
+        "dark": "private-phone-pairing-dark.webp",
+        "light": "private-phone-pairing-light.webp",
+        "alt": "The phone pairing panel explains private-network preference and local fallbacks above its scan code and Copy link button."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

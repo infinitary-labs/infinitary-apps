@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "card-maximize-picks-in-frame",
+      "reason": "The card maximize journey picks its answer with a click played inside the card's frame, as every other card journey does, so it passes on a Mac whose test window is hidden. No shipped behavior changed."
+    }
+  ]
+}

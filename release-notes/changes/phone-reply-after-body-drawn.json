@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-reply-after-body-drawn",
+      "reason": "Test only: the phone check's past-card step now presses a card's reply field only once the card's body has drawn, since the body's first draw moves the field and a tap read before that move focused nothing. No shipped behavior changed."
+    }
+  ]
+}

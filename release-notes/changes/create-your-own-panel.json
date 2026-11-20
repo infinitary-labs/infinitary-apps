@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "create-your-own-panel",
+      "kind": "feature",
+      "title": "Create a panel of your own from the left side",
+      "body": "Once your first task has finished, an empty space at the top of the left side says Create your own panel. Click it and the message box starts with Make me a panel that shows, so you finish the sentence and send it. A new panel of yours now appears at the top of the left side, where the space was, and the space goes away while you have one. Its x hides it for good, and so does asking Firstmate to hide it.",
+      "area": "firstmate",
+      "picture": {
+        "dark": "create-your-own-panel-dark.webp",
+        "light": "create-your-own-panel-light.webp",
+        "alt": "An empty outline at the top left reading Create your own panel, and the message box below Firstmate already holding Make me a panel that shows the weather in Lisbon"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

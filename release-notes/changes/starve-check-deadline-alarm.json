@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "starve-check-deadline-alarm",
+      "reason": "Internal test tooling: the load controller's experiment limit is an alarm that its deadline test sends once the whole process tree is stopped, so a loaded runner no longer fails the test."
+    }
+  ]
+}

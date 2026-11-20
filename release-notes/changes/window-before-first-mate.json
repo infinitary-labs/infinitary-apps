@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "window-before-first-mate",
+      "kind": "improvement",
+      "area": "updates",
+      "title": "Infinitary's window opens sooner after an update or a restart",
+      "body": "When Infinitary starts your first mate as it opens, after an update or a restart, its window now appears at once instead of waiting for your first mate to be ready, and your cards appear as soon as your first mate is. A message you type before then is sent once your first mate is ready.",
+      "noPicture": "The window looks the same as before; it only appears sooner.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,252 @@
+.fm-topology {
+  --topology-node: 124px;
+  background: var(--bg-1);
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-m);
+  margin-block-end: 12px;
+}
+.fm-topology-bar,
+.fm-topology-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 10px 14px;
+}
+.fm-topology-bar {
+  border-block-end: 1px solid var(--line-1);
+}
+.fm-topology-foot {
+  border-block-start: 1px solid var(--line-1);
+}
+.fm-topology-count,
+.fm-topology-state,
+.fm-topology-pager,
+.fm-topology-legend {
+  color: var(--fg-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+.fm-topology-switch,
+.fm-topology-pager,
+.fm-topology-legend,
+.fm-topology-legend span {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.fm-topology-legend {
+  column-gap: 14px;
+}
+.fm-topology-switch button,
+.fm-topology-pager button {
+  appearance: none;
+  background: var(--bg-2);
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-s);
+  color: var(--fg-1);
+  cursor: pointer;
+  font: inherit;
+  padding: 4px 8px;
+}
+.fm-topology button[aria-disabled="true"],
+.fm-topology button:disabled {
+  opacity: 0.48;
+  cursor: default;
+}
+.fm-topology button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-1));
+}
+.fm-topology button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  z-index: 1;
+}
+.fm-topology-stage[data-layout="map"] {
+  position: relative;
+  block-size: 380px;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in srgb, var(--accent) 9%, var(--bg-0)),
+    var(--bg-0) 76%
+  );
+}
+.fm-topology-edges {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  pointer-events: none;
+}
+.fm-topology-edges ellipse {
+  stroke: var(--line-1);
+  fill: none;
+}
+.fm-topology-edge {
+  stroke: var(--fg-3);
+  stroke-width: 1.25;
+  fill: none;
+}
+.fm-topology-edge[data-contact="live"] {
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+.fm-topology-edge[data-contact="trying"] {
+  stroke-dasharray: 1 5;
+  stroke-linecap: round;
+  stroke-width: 2;
+}
+.fm-topology-legend svg {
+  inline-size: 22px;
+  block-size: 8px;
+}
+.fm-topology-node {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-inline-size: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-s);
+  background: var(--bg-1);
+  color: var(--fg-1);
+  cursor: pointer;
+  font: inherit;
+}
+.fm-topology-node:hover {
+  background: var(--bg-2);
+  border-color: var(--line-2);
+}
+.fm-topology-stage[data-layout="map"] .fm-topology-node {
+  position: absolute;
+  /* physical: matches the unmirrored SVG coordinates */
+  left: var(--node-x);
+  top: var(--node-y);
+  transform: translate(-50%, -50%);
+  inline-size: var(--topology-node);
+  flex-direction: column;
+  gap: 3px;
+  /* Leave room between wrapped statuses and their keyboard outlines. */
+  padding-block: 2px;
+}
+.fm-topology-name {
+  min-inline-size: 0;
+  font-size: var(--text-sm);
+}
+.fm-topology-stage[data-layout="map"] .fm-topology-name {
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fm-topology-state {
+  text-align: center;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.fm-topology-progress {
+  display: block;
+  margin-block-start: 3px;
+  color: var(--fg-2);
+}
+.fm-topology-state[data-contact="live"] {
+  color: var(--accent);
+}
+.fm-topology-state[data-contact="away"] {
+  color: var(--warn);
+}
+.fm-topology-glyph {
+  inline-size: 32px;
+  block-size: 24px;
+  flex: none;
+  fill: none;
+  stroke: var(--fg-2);
+  stroke-width: 1.15;
+}
+.fm-topology-home {
+  inline-size: 56px;
+  block-size: 48px;
+  flex: none;
+  color: var(--accent);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 0.85;
+  filter: drop-shadow(0 0 5px currentColor);
+}
+.fm-topology-home circle {
+  fill: currentColor;
+  stroke: none;
+}
+.fm-topology-home[data-turn="true"] {
+  animation: fm-topology-turn var(--dur-slow) ease-out;
+}
+@keyframes fm-topology-turn {
+  from {
+    transform: perspective(100px) rotateY(-45deg);
+  }
+  to {
+    transform: none;
+  }
+}
+.fm-topology-stage[data-layout="list"] {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+}
+.fm-topology-stage[data-layout="list"] .fm-topology-node {
+  text-align: start;
+  padding-inline: 10px;
+  gap: 10px;
+}
+.fm-topology-stage[data-layout="list"] .fm-topology-name {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+.fm-topology-stage[data-layout="list"] .fm-topology-home {
+  inline-size: 32px;
+  block-size: 24px;
+}
+.fm-devices-local-users,
+.fm-device-address-details,
+.fm-device-progress-link {
+  border-block-start: 1px solid var(--line-1);
+  padding: 10px 18px;
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+}
+.fm-device-address-details dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+.fm-device-address-details dl {
+  margin-block: 6px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+}
+.fm-device-progress-link {
+  display: block;
+  background: transparent;
+  border-inline: 0;
+  border-block-end: 0;
+  cursor: pointer;
+}
+[data-device-inspector] .fm-devices-row {
+  flex-wrap: wrap;
+}
+[data-device-inspector] .fm-devices-text {
+  flex-basis: 185px;
+}
+[data-device-inspector] .fm-devices-detail {
+  user-select: text;
+}
+.fm-topology-switch {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}

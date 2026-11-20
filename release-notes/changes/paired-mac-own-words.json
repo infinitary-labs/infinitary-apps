@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "paired-mac-own-words",
+      "reason": "Internal, behind the development-only multi-machine gate: a test and docs record the captain's choice that words typed on a paired Mac count as his own words. Nothing in the app changes."
+    }
+  ]
+}

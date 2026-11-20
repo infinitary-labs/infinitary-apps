@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "gitlab-evidence-fixture-clock",
+      "reason": "Test-only repair: pin the GitLab workflow evidence fixture's clock and isolate its worker so missing, expired and oversized archive assertions remain deterministic without changing app behavior."
+    }
+  ]
+}

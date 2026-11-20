@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "catalog-move-rebuilds-phone-hosts",
+      "reason": "Internal: the step that brings a change from before the catalog move up to date now rebuilds the phone's card and panel hosts and stages only files it rebuilt, so it no longer commits a generated file with conflict marks; nothing in the app changes."
+    }
+  ]
+}

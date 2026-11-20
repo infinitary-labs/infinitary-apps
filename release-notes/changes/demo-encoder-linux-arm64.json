@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "demo-encoder-linux-arm64",
+      "reason": "The demo journeys can now encode their MP4 on arm64 Linux test machines, which had no pinned FFmpeg build; this changes only how the project is checked, and the app is unchanged."
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "phone-waits-load-clock",
+      "reason": "Internal phone-check infrastructure: native observations and failure timers use bounded load-clock waits, XCTest retains finite allowances, and every phone workflow route has a 60-minute gate limit. No shipped app behavior changes."
+    }
+  ]
+}

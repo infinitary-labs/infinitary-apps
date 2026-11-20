@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "replay-reads-withdrawals",
+      "reason": "The development-only replay harness now reads a card its own author withdrew as that withdrawal, using the recorded close_card call, instead of feeding the withdrawal reason to choice admission as a captain choice; nothing in the app changes."
+    }
+  ]
+}

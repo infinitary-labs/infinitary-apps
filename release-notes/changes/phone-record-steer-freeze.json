@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "phone-record-steer-freeze",
+      "kind": "fix",
+      "title": "A task's Crewmate tab on iPhone and iPad no longer freezes after you steer",
+      "body": "After you sent a message to a crewmate from its task on iPhone or iPad, the app could sometimes stop responding to taps until it was closed. The Crewmate tab now stays responsive.",
+      "area": "devices",
+      "noPicture": "The tab looks the same; the change is that it keeps responding after a steer.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

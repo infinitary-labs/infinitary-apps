@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "phone-ipad-and-landscape",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "iPad layouts that line up, and more room to read on an iPhone turned on its side",
+      "body": "On iPad, the card, its page arrows, the message box and the Tasks list now share one centred column. Turned on its side, the iPad's sidebar has Activity and Tasks as a pair of buttons at its top, so Tasks is one tap away instead of below all of Activity. The new-card notice sits under the iPad's tabs instead of covering them, and over the card beside the sidebar. When you turn an iPhone on its side, your Mac's name and whether it is in reach share one line, and the notice and your last message wait until you turn it back, leaving more room for the card.",
+      "picture": {
+        "dark": "phone-ipad-and-landscape-dark.png",
+        "light": "phone-ipad-and-landscape-light.png",
+        "alt": "Infinitary on an iPad turned on its side: a sidebar with Activity and Tasks buttons at its top above the Activity list, and beside it the card \"Your phone is reading your Mac\" with the page arrows and the message box lined up under it in one column."
+      },
+      "provenance": { "origin": "change", "covers": [] }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<!-- INF-4794: the notification part reads the app's push key from the push group alone, never the app's own keychain group. -->
+<key>keychain-access-groups</key><array><string>$(AppIdentifierPrefix)com.getinfinitary.infinitary.push</string></array>
+</dict></plist>

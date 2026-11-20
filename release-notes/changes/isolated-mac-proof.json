@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "isolated-mac-proof",
+      "reason": "Internal CI only: isolated Mac verification and cask rehearsals, a complete image toolchain with Interactive guest services and fresh-boot checks. No product UI change."
+    }
+  ]
+}

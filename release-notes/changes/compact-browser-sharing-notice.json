@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "compact-browser-sharing-notice",
+      "kind": "fix",
+      "title": "A temporary task browser leaves more room for the page",
+      "body": "When you take control of a temporary task browser, the notice about returning control no longer leaves extra space for saved sign-in options that aren't there.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "compact-browser-sharing-notice-dark.webp",
+        "light": "compact-browser-sharing-notice-light.webp",
+        "alt": "A temporary task browser showing a short Return control notice above a site's notification request"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

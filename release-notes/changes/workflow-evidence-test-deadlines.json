@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "workflow-evidence-test-deadlines",
+      "reason": "Test-only fix: the workflow evidence tests count the forge's request deadlines on the test clock, so a stalled test runner no longer ends a stand-in server's request; no app behavior change."
+    }
+  ]
+}

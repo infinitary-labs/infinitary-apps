@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "ask-again-pictures",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Ask again keeps your pictures",
+      "body": "When you choose Ask again, your first mate receives the original pictures with your message, even when you sent no words.",
+      "noPicture": "The fix restores the pictures sent to the first mate; the notice and message box look the same.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

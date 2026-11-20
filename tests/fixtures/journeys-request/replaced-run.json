@@ -1,0 +1,27 @@
+{
+  "ref": "refs/heads/fm/task-d80816db",
+  "inputs": {
+    "files": "card-demo card-thread-place tool-repetition validation-checklist first-launch operation-deliverable task-move retrieval-routing forge-signin rail-overflow rigor-reviewed agents-reach claude-crew-cutoff card-threads claude-crew-turn lesson-loop card-body-file gitlab-delivery review-carefully correction-retention decision-models",
+    "platforms": "both",
+    "base": "origin/main",
+    "mac_all": false,
+    "starve": false,
+    "perf": false
+  },
+  "marks": [
+    {
+      "id": 13837488240,
+      "name": "journeys-request-187eb7a9ca9eb392eb2831f1cab9b43f95993e561179e01139bf38884d9076cf",
+      "workflow_run": { "id": 42981591991, "head_branch": "fm/task-d80816db" }
+    },
+    {
+      "id": 13836934646,
+      "name": "journeys-request-187eb7a9ca9eb392eb2831f1cab9b43f95993e561179e01139bf38884d9076cf",
+      "workflow_run": { "id": 42981277717, "head_branch": "fm/task-d80816db" }
+    }
+  ],
+  "runs": [
+    { "id": 42981277717, "status": "queued", "run_attempt": 1, "head_branch": "fm/task-d80816db" },
+    { "id": 42981591991, "status": "queued", "run_attempt": 1, "head_branch": "fm/task-d80816db" }
+  ]
+}

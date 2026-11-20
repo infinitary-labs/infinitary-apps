@@ -1,0 +1,9 @@
+{
+  "exclusions": [
+    {
+      "id": "infinitary-reads-both-names",
+      "reason": "Step 1 of the Infinitary rename, and the check before its alpha: Firstmate 3000 reads Infinitary's names beside its own - a setting under either prefix, a pairing link in either scheme, the SSH key's comment, a moved folder's marker, the move lock and the channel file's new field - and keeps writing its own. Nothing a person sees changes.",
+      "covers": ["329c304f4110361b8c5bc50f17ac41313dbc26ad"]
+    }
+  ]
+}

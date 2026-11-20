@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "fixed-context-restatements",
+      "reason": "Firstmate's tool text drops three sentences its instructions already say, so its fixed instructions fit their size budget again; nothing a person sees or receives changes."
+    }
+  ]
+}

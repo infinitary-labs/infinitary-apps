@@ -1,0 +1,90 @@
+name: Confirm a batch's failed tests
+description: Run each failed test file of a batch three rounds on the batch's version, which the job checked out under Application Support/firstmate, as the local actions this one runs are found there, and keep a failed round's evidence (docs/testing.md, "The swept batch"; scripts/batch-confirm.ts).
+inputs:
+  files:
+    description: The failed test files, separated by spaces.
+    required: true
+  platform:
+    description: linux or mac, the platform whose job failed.
+    required: true
+  artifact:
+    description: The name a failed round's evidence is kept under, which no other job of the run uses.
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: ./Application Support/firstmate/.github/actions/pnpm
+      with:
+        working-directory: Application Support/firstmate
+    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+      with:
+        node-version: 24
+        cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
+        cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
+    - uses: ./Application Support/firstmate/.github/actions/node-headers
+    - uses: ./Application Support/firstmate/.github/actions/electron-download
+      with:
+        working-directory: Application Support/firstmate
+    - shell: bash
+      working-directory: Application Support/firstmate
+      run: pnpm install --frozen-lockfile
+      env:
+        NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
+    # A journey among the files needs the built app, and on Linux the
+    # virtual desktop source-journeys.yml prepares.
+    - id: journeys
+      shell: bash
+      working-directory: Application Support/firstmate
+      env:
+        FILES: ${{ inputs.files }}
+      run: |
+        case " $FILES " in *.spec.ts\ *) echo "any=true" >> "$GITHUB_OUTPUT" ;; esac
+    - if: steps.journeys.outputs.any == 'true' && inputs.platform == 'linux'
+      uses: ./Application Support/firstmate/.github/actions/linux-desktop
+      with:
+        working-directory: Application Support/firstmate
+    - if: steps.journeys.outputs.any == 'true'
+      shell: bash
+      working-directory: Application Support/firstmate
+      run: pnpm build
+    - if: steps.journeys.outputs.any == 'true' && inputs.platform == 'mac'
+      shell: bash
+      working-directory: Application Support/firstmate
+      run: pnpm exec playwright install ffmpeg
+    - if: steps.journeys.outputs.any == 'true'
+      uses: ./Application Support/firstmate/.github/actions/demo-encoder
+      with:
+        working-directory: Application Support/firstmate
+    - id: rounds
+      name: Run each failed test file three rounds
+      shell: bash
+      working-directory: Application Support/firstmate
+      env:
+        FILES: ${{ inputs.files }}
+        PLATFORM: ${{ inputs.platform }}
+        JOURNEYS: ${{ steps.journeys.outputs.any }}
+        SCREEN: 2560x1600x24
+      run: |
+        if [ "$PLATFORM" = mac ]; then
+          cores="$(node scripts/job-cores.ts)"
+          node scripts/batch-confirm.ts --files "$FILES" -- "--workers=$(( cores > 1 ? cores / 2 : 1 ))"
+        elif [ "$JOURNEYS" = true ]; then
+          scripts/on-screen.sh node scripts/batch-confirm.ts --files "$FILES"
+        else
+          node scripts/batch-confirm.ts --files "$FILES"
+        fi
+    # What a failed round leaves for whoever repairs the batch, as
+    # verify.yml's journey jobs keep theirs (docs/testing.md, "The swept
+    # batch"): every result directory under test-results/ - each failed
+    # journey's error context, trace and screenshot, and each round's JSON
+    # result - which the machine would otherwise take with it. A failed
+    # Vitest file leaves none. It runs only when the rounds failed, so it
+    # never turns a passing confirm red.
+    - name: Keep the failed journeys' evidence
+      if: ${{ always() && steps.rounds.outcome == 'failure' }}
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      with:
+        name: ${{ inputs.artifact }}
+        path: Application Support/firstmate/test-results/
+        if-no-files-found: ignore
+        retention-days: 7

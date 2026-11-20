@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-repair-change-base",
+      "reason": "A held batch's repair now has its branch check measured from the batch version it is built on, so the check tests only the repair; this changes only how the project checks its own changes."
+    }
+  ]
+}

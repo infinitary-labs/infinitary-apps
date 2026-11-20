@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "claude-saved-expiry-not-signout",
+      "kind": "fix",
+      "title": "Claude no longer asks you to sign in because of an old saved date",
+      "body": "A working Claude sign-in keeps showing its allowance even when its saved expiry date has passed. Infinitary checks whether the sign-in works instead of treating that date as a sign-out.",
+      "area": "subscriptions",
+      "noPicture": "The fix changes when the existing Claude allowance or sign-in status appears, without adding a screen or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

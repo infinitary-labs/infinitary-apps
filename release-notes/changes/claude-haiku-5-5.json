@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "claude-haiku-5-5",
+      "kind": "improvement",
+      "title": "Claude Haiku 5.5 joins your models",
+      "body": "Claude Haiku 5.5 is the new low-intelligence starter for Claude. Your saved model placements stay as you chose them, and Quick care uses less reasoning.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "claude-haiku-5-5-dark.webp",
+        "light": "claude-haiku-5-5-light.webp",
+        "alt": "Claude Haiku 5.5 in the low intelligence level in Settings."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

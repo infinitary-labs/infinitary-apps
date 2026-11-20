@@ -1,0 +1,53 @@
+{
+  "projectsHost": "l’hébergeur du projet",
+  "projectsMoveAfterNew": "Un projet à part ({key})",
+  "projectsMoveAfterRevive": "De nouveau son propre projet ({key})",
+  "projectsMoveApply": "Appliquer le déplacement",
+  "projectsMoveAsks": {
+    "plural": "count",
+    "one": "Votre second demande à déplacer ce dépôt. Rien ne bouge tant que vous n’avez pas cliqué sur « Appliquer le déplacement ».",
+    "many": "Votre second demande à déplacer ces dépôts. Rien ne bouge tant que vous n’avez pas cliqué sur « Appliquer le déplacement ».",
+    "other": "Votre second demande à déplacer ces dépôts. Rien ne bouge tant que vous n’avez pas cliqué sur « Appliquer le déplacement »."
+  },
+  "projectsMoveAutomations": {
+    "plural": "count",
+    "one": "{count} automatisation portant sur les projets qui quittent la liste porte ensuite sur {project}.",
+    "many": "{count} d’automatisations portant sur les projets qui quittent la liste portent ensuite sur {project}.",
+    "other": "{count} automatisations portant sur les projets qui quittent la liste portent ensuite sur {project}."
+  },
+  "projectsMoveColumnAfter": "Après votre clic",
+  "projectsMoveColumnNow": "Projet actuel",
+  "projectsMoveColumnRepository": "Dépôt",
+  "projectsMoveDirections": "Les consignes enregistrées pour un dépôt de {project} s’appliquent ensuite à chacun d’eux, ceux-ci compris.",
+  "projectsMoveFinishedTasks": {
+    "plural": "count",
+    "one": "{count} tâche terminée suit, clé conservée.",
+    "many": "{count} de tâches terminées suivent, clés conservées.",
+    "other": "{count} tâches terminées suivent, clés conservées."
+  },
+  "projectsMoveKeeps": "Chacun garde son nom, son dossier et ses réglages.",
+  "projectsMoveLeaves": {
+    "plural": "count",
+    "one": "Ce projet quitte la liste des projets, et personne ne pourra reprendre sa clé :",
+    "many": "Ces {count} de projets quittent la liste des projets, et personne ne pourra reprendre leurs clés :",
+    "other": "Ces {count} projets quittent la liste des projets, et personne ne pourra reprendre leurs clés :"
+  },
+  "projectsMoveListMore": {
+    "plural": "count",
+    "one": "{first} et {count} autre",
+    "many": "{first} et {count} autres",
+    "other": "{first} et {count} autres"
+  },
+  "projectsMoveListTwo": "{first} et {second}",
+  "projectsMoveNoOpenTask": "Aucune tâche ouverte ne bouge.",
+  "projectsMoveNoTask": "Aucune tâche ne bouge.",
+  "projectsMoveNotNow": "Pas maintenant",
+  "projectsMoveOpenTasks": {
+    "plural": "count",
+    "one": "{count} tâche ouverte rejoint {project}, clé conservée :",
+    "many": "{count} de tâches ouvertes rejoignent {project}, clés conservées :",
+    "other": "{count} tâches ouvertes rejoignent {project}, clés conservées :"
+  },
+  "projectsMoveTitleInto": "Déplacer {repositories} dans {project} ?",
+  "projectsMoveTitleOwn": "Déplacer {repositories} dans un projet à part ?"
+}

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "app-gestures-say-words",
+      "kind": "improvement",
+      "title": "Firstmate's own small reactions now say a few words too",
+      "body": "The reactions the app plays by itself now show a few words above the character, like Firstmate's other gestures: \"Hello\" when the app opens, \"Merged\" when work is merged, \"Noted\" when Firstmate keeps a note of yours, and a short description of each bit of idle play, such as \"Here’s Orion\". A reply's words still wait until Firstmate has finished its turn.",
+      "area": "firstmate",
+      "picture": {
+        "dark": "app-gestures-say-words-dark.webp",
+        "light": "app-gestures-say-words-light.webp",
+        "alt": "The word Hello above the Firstmate character as the app opens"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

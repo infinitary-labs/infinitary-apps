@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "panels-languages",
+      "kind": "improvement",
+      "title": "The task board, Knowledge and Automation in your language",
+      "body": "The task board, the Knowledge browser and the Knowledge and Automation panels now show their buttons, tabs, search, counts and empty states in the language you chose in Settings → Appearance. Lane names and task status lines still show English for now.",
+      "area": "tasks",
+      "picture": {
+        "dark": "panels-languages-dark.webp",
+        "light": "panels-languages-light.webp",
+        "alt": "The task board in Japanese, with its search, view tabs and empty lanes translated"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

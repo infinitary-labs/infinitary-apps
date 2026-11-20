@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "press-input-test-import",
+      "reason": "Repairs a held merge batch: imports the contract changes the card press-input view test reads, which the protocol's major 16 had removed from that test file; no app behavior changes, and the press-input change's own exclusion covers its work."
+    }
+  ]
+}

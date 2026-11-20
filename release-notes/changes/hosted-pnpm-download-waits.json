@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "hosted-pnpm-download-waits",
+      "reason": "Checks only: the project's jobs on GitHub-hosted machines give pnpm's package downloads ten minutes each and four more tries, as the project's own job images already do, so a slow download from npm's registry no longer fails a batch's install, and every install of the project now fails when pnpm silently left out a package it could not download. Nothing a person using the app notices."
+    }
+  ]
+}

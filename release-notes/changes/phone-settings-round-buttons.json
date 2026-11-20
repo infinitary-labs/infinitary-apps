@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "phone-settings-round-buttons",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Settings on your iPhone and iPad closes with a round X",
+      "body": "On iOS 26 and later, the top of Settings on your iPhone and iPad now shows two matching round buttons, as Apple's own sheets do: a back arrow on the left and an X on the right that closes Settings. Your choices still save as you make them. On iOS 18 the back button still names the page it returns to, and Done stays a word.",
+      "picture": {
+        "dark": "phone-settings-round-buttons-dark.png",
+        "light": "phone-settings-round-buttons-light.png",
+        "alt": "The top of the Appearance page in Settings on an iPhone: a round back arrow on the left, the title Appearance, and a matching round X on the right, above the Theme choice."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

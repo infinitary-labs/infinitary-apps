@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "gitlab-sign-in",
+      "kind": "feature",
+      "title": "Find and clone your GitLab projects",
+      "body": "Settings → Projects now offers GitLab. Make a key on gitlab.com or your own GitLab server, then paste it in. Firstmate checks the key before keeping it on this Mac, lists your projects, and clones the one you choose, including projects in nested groups.",
+      "area": "projects",
+      "picture": {
+        "dark": "gitlab-sign-in-dark.webp",
+        "light": "gitlab-sign-in-light.webp",
+        "alt": "Where your projects live, signed in to GitLab with another GitLab server available to add"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,331 @@
+import type { CrewSpeed } from "@shared/crewSpeed";
+import type { DecisionModelId, DecisionsSettings, DecisionsView } from "@shared/decisions";
+import { DECISION_MODEL_CATALOG } from "@shared/decisions";
+import type { DecisionUseRequest } from "@shared/decisionUses";
+import * as m from "@shared/i18n/messages.generated";
+import { levelWord } from "@shared/levelWords";
+import { modelNames } from "@shared/modelDisplayName";
+import type { ModelSlotsView, ReasoningChoice, Slot } from "@shared/modelSlots";
+import { SLOTS } from "@shared/modelSlots";
+import type { RoutingSettings } from "@shared/quota";
+import { allowanceProviderOf, servedModelKey } from "@shared/quota";
+import { useEffect, useRef, useState } from "react";
+import { Button } from "../design";
+import { DecisionsGroup } from "./DecisionsGroup";
+import { ModelLevels } from "./ModelLevels";
+import { MODELS_WORDS } from "./modelsWords";
+import { SettingError } from "./settingRows";
+
+/**
+ * "Which of my models may Firstmate use, and as what." Level-first: four
+ * levels plus Not in use, each model a pill in every level it is used at
+ * (`ModelLevels`). A model may sit in more than one level at once; not in
+ * use means in none. A model pin (✱) takes precedence over levels, and so
+ * does asking for premium in words. Automatic selection never picks
+ * premium. Rejecting a result may climb one bounded rung (at most two per
+ * lineage), the only way into premium without a pin or an ask.
+ *
+ * Since the Instruments relayout the section is a disclosure: the header
+ * line carries the whole story ("premium 2 · high 4 · 31 not in use · 1
+ * pinned ✱") and the board opens on demand, or from a row's "Model
+ * slots".
+ *
+ * Under the levels sits Decisions (S7b, design section 5.2), a setting of
+ * its own rather than a fifth level. It holds exactly ONE model, because
+ * ranking makes no sense for a question - there is no quota ladder to walk
+ * for one bounded call, and the adapted path's own walk is the slot ladder
+ * already. Its rules are different from a level's in every way that
+ * matters: it never runs work, routing cannot see it, and the one native
+ * option reaches its own endpoint only after the captain pastes their own
+ * key and turns it on. Its Uses list, one switch per way Infinitary asks a
+ * decision model, and its consent dialog are `DecisionsGroup`.
+ */
+
+const chevron = (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="m6 9 6 6 6-6" />
+  </svg>
+);
+
+export function ModelsSection({
+  saving = false,
+  slots,
+  routing,
+  decisions,
+  open,
+  onToggle,
+  focusAccountId,
+  onFocused,
+  onSaveRouting,
+  routingError,
+  onSetSlotMembership,
+  onSetReasoning,
+  onSetSpeed,
+  onResetSlots,
+  onSetDecisions,
+  onSetDecisionKey,
+  onRemoveDecisionKey,
+  onSetDecisionUse,
+}: {
+  saving?: boolean;
+  slots: ModelSlotsView | null;
+  routing: RoutingSettings | null;
+  /** The Decisions group's whole state; null until the first read lands. */
+  decisions: DecisionsView | null;
+  open: boolean;
+  onToggle: () => void;
+  /** Kept so a kebab "Model slots" can open the board; no per-account card. */
+  focusAccountId: string | null;
+  onFocused: () => void;
+  onSaveRouting: (settings: RoutingSettings) => void;
+  routingError?: string | null;
+  /**
+   * Adds or removes one slot from an offering's membership - it may hold
+   * more than one. Resolves false when the write was refused.
+   */
+  onSetSlotMembership: (key: string, slot: Slot, on: boolean) => Promise<boolean>;
+  onSetSpeed?: (key: string, speed: CrewSpeed) => Promise<boolean>;
+  onSetReasoning?: (key: string, slot: Slot, value: ReasoningChoice | null) => Promise<boolean>;
+  onResetSlots: () => void;
+  /** The row, never a key. */
+  onSetDecisions: (decisions: DecisionsSettings) => void;
+  /** Write-only: the key goes down, the row's new state comes back. */
+  onSetDecisionKey: (id: DecisionModelId, key: string) => Promise<boolean>;
+  onRemoveDecisionKey: (id: DecisionModelId) => void;
+  /** One use switched, after the consent dialog when it asks first. */
+  onSetDecisionUse: (request: DecisionUseRequest) => void;
+}) {
+  const models = slots?.models ?? [];
+  const byName = slots?.byName ?? [];
+  const [resetArmed, setResetArmed] = useState(false);
+  const resetButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!open || !focusAccountId) return;
+    document.getElementById("fm-subs-models-panel")?.scrollIntoView({ block: "nearest" });
+    onFocused();
+  }, [open, focusAccountId, onFocused]);
+
+  const dormant = [
+    ...new Map((routing?.dormantPins ?? []).map((pin) => [servedModelKey(pin), pin])).values(),
+  ];
+  if (models.length === 0 && dormant.length === 0) return null;
+
+  const restorePins = () => {
+    if (!routing) return;
+    const keys = new Set(routing.pins.map(servedModelKey));
+    onSaveRouting({
+      ...routing,
+      pins: [...routing.pins, ...dormant.filter((pin) => !keys.has(servedModelKey(pin)))],
+      dormantPins: [],
+    });
+  };
+
+  const pinRefFor = (model: { provider: string; id: string }) => ({
+    provider: allowanceProviderOf(model.provider) ?? model.provider,
+    id: model.id,
+  });
+
+  const isPinned = (model: { provider: string; id: string }): boolean =>
+    routing?.pins.some((pin) => servedModelKey(pin) === servedModelKey(model)) ?? false;
+
+  const togglePin = (model: { provider: string; id: string }) => {
+    if (!routing) return;
+    onSaveRouting({
+      ...routing,
+      pins: isPinned(model)
+        ? routing.pins.filter((pin) => servedModelKey(pin) !== servedModelKey(model))
+        : [...routing.pins, pinRefFor(model)],
+    });
+  };
+
+  const inLevel = (slot: Slot) => models.filter((model) => model.slots.includes(slot)).length;
+  const notInUse = models.filter((model) => model.slots.length === 0).length;
+  // In the order routing tries them: the first that can take the work wins.
+  const alwaysUse = (routing?.pins ?? []).flatMap((pin) => {
+    const model = models.find((row) => servedModelKey(row) === servedModelKey(pin));
+    return model ? [model] : [];
+  });
+  const newCount = models.filter((model) => model.isNew).length;
+  const summary = slots?.usingDefaults
+    ? MODELS_WORDS.startingLevelsSummary
+    : [
+        ...SLOTS.map((slot) =>
+          inLevel(slot) > 0 ? `${levelWord(slot).toLocaleLowerCase()} ${inLevel(slot)}` : "",
+        ),
+        notInUse > 0 ? m.settingsModelsSummaryNotInUse({ count: String(notInUse) }) : "",
+        alwaysUse.length
+          ? m.settingsModelsSummaryAlwaysUse({ count: String(alwaysUse.length) })
+          : "",
+        newCount ? m.settingsModelsSummaryNew({ count: String(newCount) }) : "",
+        decisionsSummary(decisions, modelNames([...models, ...byName])),
+      ]
+        .filter(Boolean)
+        .join(" · ");
+
+  const board = (
+    <section aria-label={m.settingsModelsHeading()} className="fm-subs-disclose">
+      <button
+        type="button"
+        className="fm-subs-disclose-head"
+        aria-expanded={open}
+        aria-controls="fm-subs-models-panel"
+        onClick={onToggle}
+      >
+        <span style={{ fontSize: "var(--text-base)", fontWeight: 500, color: "var(--fg-1)" }}>
+          {m.settingsModelsHeading()}
+        </span>
+        <span
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: "var(--text-xs)",
+            color: "var(--fg-3)",
+            minWidth: 0,
+            overflowWrap: "anywhere",
+          }}
+        >
+          {summary}
+        </span>
+        <span className="fm-subs-chevron">{chevron}</span>
+      </button>
+      <div
+        className="fm-subs-disclose-body"
+        data-crew-model-choice=""
+        style={{ padding: "0 18px 12px" }}
+      >
+        <p>{m.settingsModelsAutomaticChoice()}</p>
+        {dormant.length > 0 && (
+          <div data-dormant-pins="">
+            <p>{m.settingsModelsDormantPins()}</p>
+            <ol>
+              {dormant.map((pin) => (
+                <li className="fm-models-mono" key={servedModelKey(pin)}>
+                  {models.find((model) => servedModelKey(model) === servedModelKey(pin))?.label ??
+                    servedModelKey(pin)}
+                </li>
+              ))}
+            </ol>
+            <Button size="sm" variant="ghost" disabled={saving} onClick={restorePins}>
+              {m.settingsModelsRestorePins()}
+            </Button>
+          </div>
+        )}
+        <SettingError error={routingError ?? null} surface="model-pins" />
+      </div>
+      {open && (
+        <div
+          id="fm-subs-models-panel"
+          className="fm-subs-disclose-body"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
+            padding: "0 18px 16px",
+          }}
+        >
+          <ModelLevels
+            models={models}
+            byName={byName}
+            alwaysUse={alwaysUse}
+            isPinned={isPinned}
+            onTogglePin={togglePin}
+            onSetSlotMembership={onSetSlotMembership}
+            onSetReasoning={onSetReasoning}
+            onSetSpeed={onSetSpeed}
+          />
+          {decisions && slots && (
+            <DecisionsGroup
+              decisions={decisions}
+              slots={slots}
+              onSetDecisions={onSetDecisions}
+              onSetDecisionKey={onSetDecisionKey}
+              onRemoveDecisionKey={onRemoveDecisionKey}
+              onSetDecisionUse={onSetDecisionUse}
+            />
+          )}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <Button
+              ref={resetButton}
+              variant={resetArmed ? "danger" : "ghost"}
+              size="sm"
+              onClick={() => {
+                if (!resetArmed) {
+                  setResetArmed(true);
+                  return;
+                }
+                onResetSlots();
+                setResetArmed(false);
+              }}
+            >
+              {resetArmed ? m.settingsModelsResetConfirm() : m.settingsModelsReset()}
+            </Button>
+            {resetArmed && (
+              <>
+                {/* Cancel leaves the levels as they are and hands focus back to the reset. */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setResetArmed(false);
+                    resetButton.current?.focus();
+                  }}
+                >
+                  {m.settingsModelsResetCancel()}
+                </Button>
+                <span style={{ fontSize: "var(--text-xs)", color: "var(--fg-3)" }}>
+                  {m.settingsModelsResetNote()}
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+  return (
+    <fieldset
+      disabled={saving}
+      aria-busy={saving}
+      style={{ margin: 0, padding: 0, border: 0, minWidth: 0 }}
+    >
+      {board}
+    </fieldset>
+  );
+}
+
+/**
+ * The header line's one extra token: which model answers decisions. It says
+ * the model, never the state of a key; a pick that cannot answer says who
+ * answers in its place.
+ */
+function decisionsSummary(
+  decisions: DecisionsView | null,
+  nameOf: (offering: string) => string,
+): string {
+  if (!decisions) return "";
+  const answerer = decisions.settings.answerer;
+  if (answerer.kind === "native") {
+    const row = DECISION_MODEL_CATALOG.find((entry) => entry.id === answerer.id);
+    return m.settingsModelsSummaryDecisions({ model: row?.name ?? answerer.id });
+  }
+  if (answerer.kind === "openrouter")
+    return m.settingsModelsSummaryDecisions({
+      model:
+        decisions.openrouter?.models.find((model) => model.id === answerer.model)?.name ??
+        // i18n-exempt: a product name
+        "OpenRouter",
+    });
+  if (answerer.offering === "auto" || decisions.pinned === "fallback")
+    return m.settingsModelsSummaryDecisionsAuto();
+  if (decisions.pinned === "held") return m.settingsModelsSummaryDecisionsUnanswered();
+  return m.settingsModelsSummaryDecisions({ model: nameOf(answerer.offering) });
+}

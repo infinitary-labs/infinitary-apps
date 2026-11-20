@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "shared-gitlab-change-story",
+      "kind": "feature",
+      "title": "GitLab merge requests carry the same evidence as their merge cards",
+      "body": "New merge requests on gitlab.com and their merge cards share one explanation, with the same pictures and recordings, which play in GitLab's own player. Infinitary confirms every upload before opening the merge request and preserves text you add around its description. In a private project it uploads only while GitLab requires sign-in to view its media files, and it never changes that setting for you.",
+      "area": "cards",
+      "noPicture": "The story spans GitLab and the app; one app picture cannot demonstrate that they share the same evidence.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "infinitary-status",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Check Infinitary started by a command",
+      "body": "When a command starts Infinitary with no window, you can now check whether it is running and why it last stopped. The result also includes what was known about its display and Keychain when it started. A forced stop keeps its reason unknown rather than showing an earlier clean stop.",
+      "noPicture": "Status is text or JSON printed by a command, with no change to the app's windows.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

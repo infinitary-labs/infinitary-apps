@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journey-requests-keep-desktop-lane-apart",
+      "reason": "Journey requests run the serial desktop lane's files after the parallel lanes' in a test run of their own, and the automatic placement journey keeps its reading before checking its wait; only how the project's tests run changes, not the app."
+    }
+  ]
+}

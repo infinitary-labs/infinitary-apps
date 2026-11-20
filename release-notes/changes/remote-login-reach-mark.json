@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "remote-login-reach-mark",
+      "reason": "Tests only: the Remote Login probe waits for the other computer's step through a watch on the mark file instead of its folder, so it no longer runs out its budget while other test rounds churn the disk."
+    }
+  ]
+}

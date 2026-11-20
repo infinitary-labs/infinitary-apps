@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "crewmates-keep-circling-with-an-arrow",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "A crewmate that waits on or reviews another keeps circling it, with an arrow",
+      "body": "On the main view, a crewmate waiting on another crewmate's work, or reviewing it, circles that crewmate. It used to jump back to its own place whenever a third crewmate passed close, and its arrow showed only while it was away. Now it keeps circling as other crewmates pass, and a quiet arrow always points at the crewmate it waits on or reviews.",
+      "picture": {
+        "dark": "crewmates-keep-circling-with-an-arrow-dark.webp",
+        "light": "crewmates-keep-circling-with-an-arrow-light.webp",
+        "alt": "The first mate with its crew in orbit, two crewmates each circling another with a short arrow pointing at the one it waits on or reviews"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

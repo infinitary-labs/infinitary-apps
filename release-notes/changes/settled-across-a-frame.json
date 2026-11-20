@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "settled-across-a-frame",
+      "reason": "Internal test repair: the end-to-end layout helper settled() takes its two agreeing readings across a painted frame, so a frame that comes late no longer reads as a still layout. No user-facing behavior changes."
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "followup-must-close-first",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Merge cards say filed work must close first",
+      "body": "When work filed while a task ran holds its merge, the merge card now says it must close first, since the merge waits until that work is closed, not only merged. Once you tell the first mate to go ahead past that wait, the card and the first mate no longer name it as holding the merge.",
+      "picture": {
+        "dark": "followup-must-close-first-dark.webp",
+        "light": "followup-must-close-first-light.webp",
+        "alt": "A merge card lists the work filed while it ran, with must close first beside the one that holds the merge"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

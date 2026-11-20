@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "release-search-list-lock",
+      "reason": "Release machinery only: the Mac release job holds the same keychain-list lock as local signing while it adds and removes its throwaway signing keychain. Nothing in the shipped app changes."
+    }
+  ]
+}

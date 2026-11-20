@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "phone-held-press-acts",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A longer press on a card's picture or choice works on your iPhone and iPad",
+      "body": "On your iPhone or iPad, holding a finger on a card a moment before lifting it could do nothing: a picture opened no viewer and a choice stayed unpicked, more often while the card was busy. A press now does what a tap does, once, however long you hold it. Holding a card's picture opens it rather than picking it up to drag, and holding a finger on a card's words outside a choice still selects them.",
+      "noPicture": "The viewer and the choices look as they did; only a held press now reaches them, which one picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "device-sign-in-work-status",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Computer setup says what it is waiting for",
+      "body": "Intelligence, Integrations and the setup card now explain when a joined computer is not ready for sign-ins. Intelligence offers Fix it when the computer's window can retry background work, and setup links appear when their settings are ready.",
+      "picture": {
+        "dark": "device-sign-in-work-status-dark.webp",
+        "light": "device-sign-in-work-status-light.webp",
+        "alt": "Intelligence shows why a joined Mac cannot run background work, with Fix it below the explanation"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "activity-sentence-capitals",
+      "kind": "fix",
+      "title": "Activity updates start with capitals",
+      "body": "Task starts, reports, schedules and other Activity notices now use consistent sentence case, without changing names.",
+      "area": "tasks",
+      "picture": {
+        "dark": "activity-sentence-capitals-dark.webp",
+        "light": "activity-sentence-capitals-light.webp",
+        "alt": "Activity shows task updates starting with capitals."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

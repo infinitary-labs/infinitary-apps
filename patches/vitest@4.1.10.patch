@@ -1,0 +1,63 @@
+diff --git a/dist/chunks/test.DNmyFkvJ.js b/dist/chunks/test.DNmyFkvJ.js
+index 5e59edbaa734215b8c920201c4ec23a65afe872d..57199e664cb2af0d37e6eb41952a7118c7f9e6f3 100644
+--- a/dist/chunks/test.DNmyFkvJ.js
++++ b/dist/chunks/test.DNmyFkvJ.js	
+@@ -3356,6 +3356,19 @@ function copyStackTrace$1(target, source) {
+ 	if (source.stack !== void 0) target.stack = source.stack.replace(source.message, target.message);
+ 	return target;
+ }
++// Infinitary (INF-1083): on an ordinary run, tests/helpers/budgets.ts starts a load
++// clock in each worker, and a wait's window counts only the time the worker got to
++// run, ending by its wall cap. A graded run (INFINITARY_PERF_BUDGETS=1) starts none
++// and keeps the wall clock. Returns the timer's cancel.
++function windowTimer(fire, timeout, setTimeout, clearTimeout) {
++	const clock = globalThis[Symbol.for("infinitary.unitLoadClock")];
++	if (clock) {
++		const timer = clock.timer(fire, clock.now() + timeout);
++		return () => timer.cancel();
++	}
++	const timer = setTimeout(fire, timeout);
++	return () => clearTimeout(timer);
++}
+ function waitFor(callback, options = {}) {
+ 	const { setTimeout, setInterval, clearTimeout, clearInterval } = getSafeTimers();
+ 	const { interval = 50, timeout = 1e3 } = typeof options === "number" ? { timeout: options } : options;
+@@ -3366,7 +3379,7 @@ function waitFor(callback, options = {}) {
+ 		let timeoutId;
+ 		let intervalId;
+ 		const onResolve = (result) => {
+-			if (timeoutId) clearTimeout(timeoutId);
++			timeoutId?.();
+ 			if (intervalId) clearInterval(intervalId);
+ 			resolve(result);
+ 		};
+@@ -3400,7 +3413,7 @@ function waitFor(callback, options = {}) {
+ 			}
+ 		};
+ 		if (checkCallback() === true) return;
+-		timeoutId = setTimeout(handleTimeout, timeout);
++		timeoutId = windowTimer(handleTimeout, timeout, setTimeout, clearTimeout);
+ 		intervalId = setInterval(checkCallback, interval);
+ 	});
+ }
+@@ -3767,9 +3780,9 @@ function createExpectPoll(expect) {
+ 					const { setTimeout, clearTimeout } = getSafeTimers();
+ 					let executionPhase = "fn";
+ 					let hasTimedOut = false;
+-					const timerId = setTimeout(() => {
++					const cancelTimer = windowTimer(() => {
+ 						hasTimedOut = true;
+-					}, timeout);
++					}, timeout, setTimeout, clearTimeout);
+ 					try {
+ 						while (true) {
+ 							const isLastAttempt = hasTimedOut;
+@@ -3798,7 +3811,7 @@ function createExpectPoll(expect) {
+ 							}
+ 						}
+ 					} finally {
+-						clearTimeout(timerId);
++						cancelTimer();
+ 					}
+ 				};
+ 				let awaited = false;

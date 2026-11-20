@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "card-leave-row-focus",
+      "reason": "Test-only: the card put-away journey waits for a card a Tasks row brings forward to take focus before it moves focus or presses a key; the app is unchanged."
+    }
+  ]
+}

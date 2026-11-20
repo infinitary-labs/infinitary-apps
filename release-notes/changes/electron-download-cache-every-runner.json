@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "electron-download-cache-every-runner",
+      "reason": "Internal: the checks' fresh virtual machines restore Electron's download from the Actions cache as hosted runners do, so a Mac check downloads Electron from GitHub's release server only for a new version's first download; the app does not change."
+    }
+  ]
+}

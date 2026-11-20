@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "readme-and-draft-terms",
+      "reason": "Documentation only: the README, the package descriptions and the unpublished draft of the data terms now describe what the app does and what stays yours. Nothing in the app changed."
+    }
+  ]
+}

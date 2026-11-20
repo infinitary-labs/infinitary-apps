@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "transcribing-after-abandoned-recording",
+      "kind": "fix",
+      "area": "message-box",
+      "title": "The message box no longer stays on Transcribing after a cancelled recording",
+      "body": "If you started a second hold-to-talk recording while the first was still being turned into words, and then cancelled the second, with Escape say, the message box kept saying it was transcribing. It now goes back to its usual hint.",
+      "noPicture": "The fix removes a stuck hint; the message box looks as it always did once a recording ends.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "kept-approval-no-repair-after-merge",
+      "reason": "Internal: a crewmate whose pull request merged outside the app while the captain's kept merge approval waited is no longer told to declare a repair of that merge; the task already closed as merged on its own, so nothing a person sees changes."
+    }
+  ]
+}

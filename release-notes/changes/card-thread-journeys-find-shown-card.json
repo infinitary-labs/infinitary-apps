@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "card-thread-journeys-find-shown-card",
+      "reason": "The card-thread journeys find the shown card by the card itself instead of by its title's words, which the Firstmate's reply above the input also shows. Test code only; nothing a person notices changes."
+    }
+  ]
+}

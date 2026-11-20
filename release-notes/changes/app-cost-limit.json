@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "app-cost-limit",
+      "kind": "feature",
+      "area": "tasks",
+      "title": "A task asks before it spends past its cost limit",
+      "body": "When a task, with the work under it, passes $50 of estimated spend, its crewmate stops at a safe point and a card asks you. Allow $50 more lets it go on, No limit for this task lets it finish, and Stop here moves it to the backlog with its work kept. You can also reply with another amount. Change the $50 or turn the limit off in Settings → Intelligence, which also shows how many of your recent tasks would have asked.",
+      "picture": {
+        "dark": "app-cost-limit-dark.webp",
+        "light": "app-cost-limit-light.webp",
+        "alt": "The cost limit row in Settings → Intelligence with a $50 amount, its switch on, and how many recent tasks would have asked"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

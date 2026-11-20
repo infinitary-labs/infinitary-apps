@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-flick-short-card-closes-keyboard",
+      "kind": "fix",
+      "area": "devices",
+      "title": "On iPhone and iPad, flicking a short card closes the keyboard",
+      "body": "With the keyboard up, flicking a card now closes the keyboard even when the whole card fits above it. Before, only a card too tall to fit would close the keyboard when flicked.",
+      "noPicture": "The change is the keyboard closing as a card is flicked, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

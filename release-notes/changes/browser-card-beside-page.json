@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "browser-card-beside-page",
+      "kind": "improvement",
+      "area": "tasks",
+      "title": "A card that opens a crewmate's browser stays beside the page",
+      "body": "When a card's own button opens a crewmate's browser, such as Try it or View booking, the card now stays beside the page with its steps and a place to ask the crewmate a question. A new card the crewmate puts up while you look at the page appears there too, and Back to the card takes you to its choices.",
+      "picture": {
+        "dark": "browser-card-beside-page-dark.webp",
+        "light": "browser-card-beside-page-light.webp",
+        "alt": "A crewmate's browser page with the card that opened it in a column on the right: its title, its three steps, a Back to the card link and a reply field"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

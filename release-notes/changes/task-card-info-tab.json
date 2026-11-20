@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "task-card-info-tab",
+      "kind": "improvement",
+      "title": "A task's card reads like its preview, with Cards and Activity as tabs",
+      "body": "A task's Info tab now reads like the preview you see when you point at a task: what is wrong or what it waits on comes first, then the goal, with your own messages folded under it and their count in the fold's name. Now, Progress and one row of facts follow, with the computer's live use beside where the task runs, and one closed More row at the end holds the rest and stays open for that task once you open it. Cards, with how many, and Activity are tabs of their own beside Info, Crewmate and Browser.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-card-info-tab-dark.webp",
+        "light": "task-card-info-tab-light.webp",
+        "alt": "A task's card on its Info tab: the goal with Your 2 messages folded under it, Now, Progress, a row of facts under a hairline and a closed More row, with Info, Cards 1, Activity and Crewmate tabs under the title"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

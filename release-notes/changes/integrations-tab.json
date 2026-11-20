@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "integrations-tab",
+      "kind": "feature",
+      "title": "Integrations: one place for what your first mate and crew reach outside your projects",
+      "body": "Settings has a new Integrations tab. GitHub is the first integration, and your GitHub sign-in now lives there; Projects points to it. Your first mate and your crew on this computer can read through GitHub for you, and a change there waits for your click on a card. Open a row to turn an action off, or use its menu to check, pause or remove it. You can also open it from command search with Open Integrations.",
+      "area": "settings",
+      "picture": {
+        "dark": "integrations-tab-dark.webp",
+        "light": "integrations-tab-light.webp",
+        "alt": "Settings → Integrations with the GitHub row open, its read allowed and its change asking you"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

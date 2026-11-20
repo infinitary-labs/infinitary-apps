@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "check-repair-diagnosed-card",
+      "reason": "Internal: the check-repair journey's stand-in crewmate tries its early completion card before diagnosing the flake, where the checks gate still refuses it, since a diagnosed failure now lets the card up with Merge anyway; the app is unchanged."
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "project-row-centred",
+      "kind": "improvement",
+      "area": "projects",
+      "title": "The project row opens centred",
+      "body": "The row of your projects at the top of the window now opens centred, in line with the pill, Firstmate and the message box below, instead of starting at the pill and running off to the right.",
+      "picture": {
+        "dark": "project-row-centred-dark.webp",
+        "light": "project-row-centred-light.webp",
+        "alt": "The row of project pills open and centred at the top of the window - All projects, infinitary, quota-lab, website and personal, then the arrow that folds it - in line with Firstmate below"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

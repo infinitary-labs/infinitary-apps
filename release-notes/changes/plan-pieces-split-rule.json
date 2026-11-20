@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "plan-pieces-split-rule",
+      "reason": "Internal: a change to what planners and Firstmate are told about splitting a plan into pieces; no screen or setting changes."
+    }
+  ]
+}

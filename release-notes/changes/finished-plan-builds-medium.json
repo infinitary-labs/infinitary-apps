@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "finished-plan-builds-medium",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Building from an approved plan uses medium intelligence",
+      "body": "Planning still uses high intelligence. A crewmate that builds from a plan you approved now asks for medium intelligence and medium reasoning.",
+      "noPicture": "The routing rule changes which intelligence level a build requests, not the task summary layout.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

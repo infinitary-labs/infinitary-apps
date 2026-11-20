@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "launch-gate-cleanup",
+      "reason": "Release work: the launch gate stops and reaps the app and every process writing into its throwaway profile before removing it, and every release launch runs the workflow's own copy of the gate."
+    }
+  ]
+}

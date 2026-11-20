@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "separate-mac-on-grant",
+      "reason": "A computer that runs work now learns whether it is on the home's own Mac from the home's welcome (protocol 9.1) and keeps that on its grant, instead of reading the home's SSH session and keeping a file of its own. Its work runs at the same priority as before: normal on a separate Mac, low for another user on the home's own Mac."
+    }
+  ]
+}

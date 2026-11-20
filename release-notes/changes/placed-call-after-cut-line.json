@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "placed-call-after-cut-line",
+      "reason": "Internal recovery fix: an answer the home keeps for a task on another computer, after a quit cut the last kept line, now starts on a fresh line, so the crewmate asking that call again after a later restart gets its answer instead of a needless recovery refusal; no effect repeated before or after, and nothing a person sees changes."
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "cards-room-in-short-windows",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Cards stay readable on a 1280 by 720 screen",
+      "body": "In a short window, such as on a small laptop or a remote desktop set to 1280 by 720, the empty space around a card now gives way so the card keeps its room. A card there shows several more lines of its text, and its title and buttons stay whole. In these windows the message box sits closer to the bottom edge. Windows 864 pixels tall or taller look the same as before.",
+      "picture": {
+        "dark": "cards-room-in-short-windows-dark.webp",
+        "light": "cards-room-in-short-windows-light.webp",
+        "alt": "A decision card in a 1280 by 720 window showing its title, several lines of its body, a diagram, the reply field and every button"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

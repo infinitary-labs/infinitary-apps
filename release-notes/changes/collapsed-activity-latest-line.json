@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "collapsed-activity-latest-line",
+      "kind": "improvement",
+      "title": "Collapsed Activity shows the newest line",
+      "body": "While Activity is collapsed, its header now shows the newest line in place of its name: a dot in the line's color, the task's key, the words and their age. A newer line rises in as the one before lifts out, and the line stays until something new happens, even after you reopen the app. Rest the pointer on it to read the whole line, and click it or press Enter on it to open Activity. Before anything has happened, the header still reads Activity and quiet.",
+      "area": "tasks",
+      "picture": {
+        "dark": "collapsed-activity-latest-line-dark.webp",
+        "light": "collapsed-activity-latest-line-light.webp",
+        "alt": "The collapsed Activity panel in the bottom-left corner showing its newest line and the age now, beside the message box"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

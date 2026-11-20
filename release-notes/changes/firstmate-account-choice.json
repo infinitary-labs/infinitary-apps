@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "firstmate-account-choice",
+      "kind": "feature",
+      "title": "Choose which account Firstmate answers on",
+      "body": "If you have two or more accounts of the subscription Firstmate uses, Settings → Intelligence now shows which one Firstmate answers on, beside the Firstmate model, and lets you pick another. An account's own menu now says Prefer for crew work, so the two choices no longer look alike.",
+      "highlight": 3,
+      "area": "subscriptions",
+      "picture": {
+        "dark": "firstmate-account-choice-dark.webp",
+        "light": "firstmate-account-choice-light.webp",
+        "alt": "The Firstmate model and account row on Settings → Intelligence: a Codex model, and beside it the account dropdown set to Personal"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

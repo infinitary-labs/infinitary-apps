@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "move-task-to-another-provider",
+      "kind": "feature",
+      "title": "Move a task to another provider when one needs sign in",
+      "body": "When a crewmate's provider needs you to sign in again and another provider you signed in to can take the work, the card offers to move the task there, naming the model it would run on. The task keeps its key, its branch and its working copy, and goes on where it left off. You can also ask the first mate to move a started task to a model you name.",
+      "area": "cards",
+      "picture": {
+        "dark": "move-task-to-another-provider-dark.webp",
+        "light": "move-task-to-another-provider-light.webp",
+        "alt": "The A provider needs sign in card for task SCR-4, with Move to GPT Luna Latest as its default button beside Open settings"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

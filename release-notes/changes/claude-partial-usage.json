@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "claude-partial-usage",
+      "kind": "fix",
+      "title": "Keep Claude usage from counting earlier work again",
+      "body": "When Claude leaves a count out of a usage report, Firstmate now keeps the earlier total for comparison without treating the missing count as zero. Later reports no longer charge that earlier work again.",
+      "area": "settings",
+      "noPicture": "This fixes recording of partial provider reports without changing a view or its controls.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

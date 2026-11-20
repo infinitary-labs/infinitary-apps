@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "custom-connection-proxy-replies",
+      "kind": "fix",
+      "title": "Custom connections accept more working replies",
+      "body": "A custom connection check and its later turns now accept a finished reply that a working server already sends. Saved models need one fresh check before use. A reply that stops at its output limit is kept, the same way your other subscriptions keep one.",
+      "area": "subscriptions",
+      "noPicture": "The connection screen is unchanged. Only whether a working server's check passes changes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

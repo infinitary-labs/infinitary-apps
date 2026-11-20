@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "chosen-answer-card",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Chosen plans count as answers",
+      "body": "Choosing a ready plan that answers your question now keeps that card as the answer, even when its author also marked it as a question. Your first mate still receives your choice to carry out the authorized follow-on work, without asking for a duplicate summary.",
+      "noPicture": "This changes answer tracking after a choice, not the card’s appearance or controls.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

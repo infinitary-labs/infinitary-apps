@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "blocker-report-once",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "The first mate hears a crewmate's blocker once",
+      "body": "When a crewmate reports a blocker and asks the first mate to act, the first mate now receives that report once, with what the work waits for and the ways around it. It no longer takes a second turn on the same report seconds later, so your feed loses the repeated line and your plan's allowance is not spent on it.",
+      "noPicture": "Nothing new is drawn: a repeated first mate turn and its feed line stop appearing.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

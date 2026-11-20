@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "branch-from-test-limit",
+      "reason": "Internal: the branch_from real-git test group takes the same 60-second limit as the file's other real-git groups; nothing a person sees changes."
+    }
+  ]
+}

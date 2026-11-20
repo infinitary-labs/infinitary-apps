@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "linux-browser-dictation",
+      "reason": "Internal Linux piece: the task browser and voice journeys run on the Linux lane, and where dictation runs now follows the computer's graphics card and speech library rather than its system's name, hiding it on a computer without a card. No Linux build is released yet, and a Mac transcribes where it does today; the note people read comes with the Linux release piece."
+    }
+  ]
+}

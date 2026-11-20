@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "docs-site-remaining-pages",
+      "reason": "Adds the rest of the documentation site's pages, the generated Keyboard and What's new pages and their check; nothing in the app changes."
+    }
+  ]
+}

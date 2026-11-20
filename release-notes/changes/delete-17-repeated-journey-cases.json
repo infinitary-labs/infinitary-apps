@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "delete-17-repeated-journey-cases",
+      "reason": "Deletes 17 journey cases that repeat a kept test. Only tests change; nothing in the app changes."
+    }
+  ]
+}

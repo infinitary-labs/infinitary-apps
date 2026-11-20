@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "phone-notifications-withdrawn",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Phone notifications go away once you see the card on your computer",
+      "body": "When you look at, answer or close a card on your computer, Infinitary on your iPhone or iPad can now remove that card's notification without you opening the app. It often happens within a few minutes, but Apple does not promise when these quiet updates arrive, and after the first one, each phone gets at most one every 20 minutes. Cards you have not seen keep their notifications, and so does a newer reply on a card. This works while Infinitary is in the background on the phone and was not swiped away.",
+      "noPicture": "The change removes notifications from the phone's Notification Center, which the hero capture cannot photograph; no view of the app itself changes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

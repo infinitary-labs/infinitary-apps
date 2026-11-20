@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "installer-test-stand-in-starter-exit",
+      "reason": "Test-only: the installer packaging test's upload stand-in also exits once the process that started it ends, so a test process killed before its cleanup leaves no stand-in running. Nothing in the app changes."
+    }
+  ]
+}

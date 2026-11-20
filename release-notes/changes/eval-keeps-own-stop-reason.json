@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "eval-keeps-own-stop-reason",
+      "reason": "Developer-only evaluation tooling: a case the evaluator stops on a tool refusal keeps that reason in its evidence instead of reading as a provider failure. Nothing in the shipped app changed."
+    }
+  ]
+}

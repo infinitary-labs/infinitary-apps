@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "inbox",
+      "kind": "feature",
+      "area": "firstmate",
+      "title": "Your own scripts can wake your first mate",
+      "body": "Turn on the Infinitary Inbox in Settings, Integrations, and any script or terminal on this computer can drop a short note into it, such as a finished deploy or a failed backup. The script gets a receipt at once, and your first mate reads each note as information from outside, never as an instruction, and decides what it needs.",
+      "picture": {
+        "dark": "inbox-dark.webp",
+        "light": "inbox-light.webp",
+        "alt": "Settings, Integrations with the Infinitary Inbox section at the top, its switch on, an example line a script runs with a Copy example button, and the rule that wakes the first mate."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,62 @@
+{
+  "entries": [
+    {
+      "id": "bf-4793b5ebc",
+      "kind": "feature",
+      "title": "Claude crewmates steer and settle like the seat (step 5)",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "4793b5ebc294980fcf43fbe2ef86e9d815d0f7cc"
+        ]
+      }
+    },
+    {
+      "id": "bf-ea712de95",
+      "kind": "feature",
+      "title": "The Claude crewmate's record (step 6)",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "ea712de9588cd3acc0a45a0182252a22424bedd4"
+        ]
+      }
+    },
+    {
+      "id": "bf-4b1c5a8f4",
+      "kind": "feature",
+      "title": "Time bounds on one clock (step 7)",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "4b1c5a8f4c935197b26fc7025588a232f336a2a4"
+        ]
+      }
+    },
+    {
+      "id": "bf-69961a732",
+      "kind": "fix",
+      "title": "Keep git's detached maintenance out of the pool fixture copy",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "69961a73206cb1e6630f412076c50ae92b1ba6f7"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-12-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.12: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "09171611175567a40dd27f74f816dbf015b46259",
+        "eb63b69e3f7229bc5bb6402e714c3c6e3adfbc54",
+        "cd9e19f19bce3afead1284c2a396d223031ba07c",
+        "119b1ab335771461931299c3bbc5009db43f6293",
+        "9f867a4088e07d06c18616bd33151b38274ab731",
+        "4c640eee34888591c4b479582575423b7d9de228"
+      ]
+    }
+  ]
+}

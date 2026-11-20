@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-waits-on-macos",
+      "kind": "improvement",
+      "area": "tasks",
+      "title": "A task says when it waits on macOS",
+      "body": "When a crewmate's search makes macOS ask whether Infinitary may use another app's data, the task now says it waits on macOS, and then which answer you gave. The question itself says why it appears and that Don't Allow is usually fine. Crewmates also search only the folders they can name, so macOS asks less often.",
+      "picture": {
+        "dark": "task-waits-on-macos-dark.webp",
+        "light": "task-waits-on-macos-light.webp",
+        "alt": "A task's summary beside its row in Tasks, whose Now line begins Waiting on macOS"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

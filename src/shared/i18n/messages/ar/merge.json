@@ -1,0 +1,12 @@
+{
+  "mergeButtonAfterFixing": "الدمج بعد إصلاح الأخطاء",
+  "mergeButtonBatch": "الدمج في الدفعة التالية",
+  "mergeButtonBranch": "دمج الفرع",
+  "mergeButtonPullRequest": "دمج طلب السحب",
+  "mergeButtonWhenChecksPass": "الدمج عند نجاح الفحوصات",
+  "mergeContinues": "تستمر المهمة بعد هذا الدمج.",
+  "mergeHeldOther": "أصبح طلب سحب آخر هو التغيير الحالي لهذه المهمة بعد ظهور هذه البطاقة. يعود الدمج عندما تعرضه البطاقة.",
+  "mergeHeldPushed": "دُفعت نسخة أحدث بعد ظهور هذه البطاقة. يعود الدمج عندما تعرض البطاقة النسخة الأحدث.",
+  "mergeSetByFirstMate": "ضبطه نائب القبطان لهذه المهمة.",
+  "mergeSetInProject": "مضبوط في إعدادات هذا المشروع."
+}

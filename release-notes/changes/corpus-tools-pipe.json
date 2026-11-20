@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "corpus-tools-pipe",
+      "reason": "The supervision turn extractor and the miss and duplicate candidate derivers, offline development commands, now write every record when their output is piped to another command; no person using the app notices."
+    }
+  ]
+}

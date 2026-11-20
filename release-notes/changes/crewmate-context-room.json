@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crewmate-context-room",
+      "reason": "Shorten crewmate-only instructions without changing their requirements, restoring the existing fixed-context and conversation-room checks."
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-wait-reason",
+      "kind": "fix",
+      "title": "Tasks only wait on you when a decision is ready",
+      "body": "A crewmate saying it is waiting no longer puts a task under Waiting on you without a card to answer. A paused task shows its latest report, so a closed note cannot hide what stopped the work.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-wait-reason-dark.webp",
+        "light": "task-wait-reason-light.webp",
+        "alt": "A paused task names the missing capability in its latest report beneath a closed note."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

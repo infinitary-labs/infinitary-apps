@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "merge-card-risk-chart",
+      "kind": "feature",
+      "title": "Merge cards show a risk chart",
+      "body": "A card that asks you to merge now shows a small chart at its top right with one dot for each of seven things that make a change risky: how much of your project it touches, whether it changes what happens by default, how hard it is to undo, how well it was shown working, whether it touches saved data or sign-ins, how new the code is, and what it brings in. Each dot sits further out and turns warmer as that risk grows. Rest on a dot, or reach it with Tab, to read why the crewmate rated it so.",
+      "highlight": 1,
+      "area": "cards",
+      "picture": {
+        "dark": "merge-card-risk-chart-dark.webp",
+        "light": "merge-card-risk-chart-light.webp",
+        "alt": "A merge card with a seven-dot risk chart at its top right beside the title, the Blast radius dot lit and its note open: wide, with the crewmate's reason."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

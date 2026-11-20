@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "typecheck-heap-headroom",
+      "reason": "Internal CI work: the typecheck runs with a 4 GB heap ceiling so linux-checks no longer runs out of memory on the hosted Linux runner. Nothing in the app changes."
+    }
+  ]
+}

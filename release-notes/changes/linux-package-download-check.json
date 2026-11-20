@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "linux-package-download-check",
+      "reason": "Internal: each Linux package check job compares its downloaded copy with the build's own SHA256SUMS before installing, fetches a damaged copy once more and otherwise fails naming each file; nothing a person installs or sees changes."
+    }
+  ]
+}

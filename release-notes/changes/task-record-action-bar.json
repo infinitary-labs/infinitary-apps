@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "task-record-action-bar",
+      "kind": "improvement",
+      "title": "Every open task ends in the same buttons",
+      "body": "An open task now ends in one row. That row holds a sentence on what happens next, Drop task, and Start, Continue or Show the card. Those buttons stay in the same place. Drop task replaces Stop task and says whether unfinished work is kept. Finished tasks show no buttons.",
+      "area": "tasks",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

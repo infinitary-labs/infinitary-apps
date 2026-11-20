@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "job-clamp-read-as-a-ceiling",
+      "reason": "Internal test repair: the job manager's priority test reads the utility clamp as a ceiling a command cannot rise past, and marks the clamped command, so it passes on a loaded Mac and still checks the clamp where the run itself is held at utility. No user-facing behavior changes."
+    }
+  ]
+}

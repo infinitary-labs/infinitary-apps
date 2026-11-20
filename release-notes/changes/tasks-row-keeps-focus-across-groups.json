@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "tasks-row-keeps-focus-across-groups",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A task you reach with the keyboard keeps focus as it moves to another group",
+      "body": "In the Tasks list, when the task your keyboard rests on moves to another group, such as from Queued to Working as its crewmate starts, focus stays on its row and its summary stays open beside it. The arrow keys carry on from there, and coming back to the list later finds the same task. Before, focus was lost, the summary closed and coming back started at the first row.",
+      "noPicture": "This changes where focus goes while a row moves; a still picture of a focused row with its summary looks the same before and after.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

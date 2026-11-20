@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "view-says-how-fresh",
+      "kind": "improvement",
+      "title": "Your phone and other Macs say how fresh they are",
+      "body": "A Mac that controls your first mate's computer, and your phone, now say Live once every change there is shown. When they come back after losing touch, they say they are catching up, and whether they replay what was missed or read everything again, until it is shown. Out of reach says since when, with the day when it was not today. Words typed while out of reach still stay in the box and are never sent.",
+      "area": "devices",
+      "picture": {
+        "dark": "view-says-how-fresh-dark.webp",
+        "light": "view-says-how-fresh-light.webp",
+        "alt": "A Mac controlling MacBook Pro: the top line says MacBook Pro is out of reach since 05:03 PM, above a notice that Infinitary is closed there"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

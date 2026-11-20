@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "stale-requested-checks",
+      "reason": "A newer request of the phone, journeys or full verification check on a task branch now cancels the older run of the same selection; this changes only how the project's own checks run, so nothing in the app changes."
+    }
+  ]
+}

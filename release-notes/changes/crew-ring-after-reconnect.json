@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "crew-ring-after-reconnect",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "The crew ring shows each crewmate as it is after a reconnect",
+      "body": "When the window reconnected to the Mac it controls, a crewmate on the ring could keep looking busy or idle as it was before the gap until its next change. A crewmate whose task became active again while it was leaving the ring could also vanish. The ring now takes each crewmate's current look when it reconnects, and a crewmate that comes back stays.",
+      "noPicture": "The ring looks the same; the fix only makes it match the record after a reconnect.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "translation-corrections",
+      "kind": "fix",
+      "area": "settings",
+      "title": "Clearer words in every language",
+      "body": "In the nine languages besides English, lines that said something different from the English now say the same thing. Among them are the line about a computer that is out of reach, a waiting copy's status, how often a batch of approved changes merges, and the jobs that stop when you update. Words for a computer, a phone, the record, pinned models, Not now and the Secrets section now match the rest of each language.",
+      "noPicture": "Only the words of existing lines change, in languages other than English; the layout stays the same.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

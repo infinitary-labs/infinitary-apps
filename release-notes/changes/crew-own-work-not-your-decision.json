@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "crew-own-work-not-your-decision",
+      "kind": "fix",
+      "title": "Fewer cards ask you to decide what the crew already decided",
+      "body": "Work the crew starts on its own, including steps that start after you merge, now reports to your first mate instead of ending on a card for you, and a card asks you only for what only you can give. A merge card now says what each step after the merge will use, and your click on Merge allows it, so that step does not ask you again.",
+      "area": "crewmates",
+      "noPicture": "Most of this change is in what crewmates are told, and the merge card's new line shows only when a crewmate names a step's use, which a seeded card cannot show at release scale.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "frame-height-at-width-zero",
+      "reason": "Internal: a frame no longer takes a height its page read before the frame's width reached it, which on Linux grew a card's fact strip for a moment and flashed a scrollbar as the card arrived; it steadies the journey that reads the stop card's override fact, and no lasting visible change was observed."
+    }
+  ]
+}

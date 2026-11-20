@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "point-at-turns-off-after-pick",
+      "kind": "improvement",
+      "title": "Point at turns off once it picks a part of a card",
+      "body": "After Point at picks a part or words on a card, it turns itself off while your note opens, so a later click on the card is an ordinary click again. To point at another part, turn Point at on again. Your iPhone and iPad do the same.",
+      "area": "cards",
+      "picture": {
+        "dark": "point-at-turns-off-after-pick-dark.webp",
+        "light": "point-at-turns-off-after-pick-light.webp",
+        "alt": "A card with one note on its second paragraph waiting in its thread, and the Point at button beside the reply field no longer lit"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

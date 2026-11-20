@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "join-by-command",
+      "reason": "Internal, behind the development-only multi-machine gate: joining a computer that runs work by one command, on another Mac or as another macOS user on this Mac, its background run, Settings -> Devices listing what each computer runs and is signed in to, and Remove bringing its unmerged work home first. An installed app shows and offers none of it."
+    }
+  ]
+}

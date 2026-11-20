@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "mac-specific-full-check",
+      "reason": "Development verification only: the full check repeats only Mac-specific Vitest files on Mac while Linux keeps the complete suite. No shipped app behavior changes."
+    }
+  ]
+}

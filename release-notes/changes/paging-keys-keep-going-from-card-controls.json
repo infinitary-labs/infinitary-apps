@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "paging-keys-keep-going-from-card-controls",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Paging keys keep working after you use something inside a card",
+      "body": "With keys that work when you are not typing, such as Vim's Shift+H and Shift+L, paging from a link, button or checkbox inside a card, or from a button you clicked, now lands on the next card. Pressing the key again pages again instead of typing into the message box.",
+      "noPicture": "The fix is where focus goes after a key is pressed, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

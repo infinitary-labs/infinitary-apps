@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "phone-push-computer-half",
+      "reason": "The computer's half of card pushes to a phone: it keeps a phone's push registration and seals cards for Infinitary's relay, but no phone asks for pushes until the phone's half ships, so nobody notices it yet. The phone's half carries the note."
+    }
+  ]
+}

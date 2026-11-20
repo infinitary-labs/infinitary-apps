@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "thread-shows-working",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A card's thread scrolls to show working",
+      "body": "When you reply under Firstmate's own card and the thread is longer than its column, the thread now scrolls on its own to show \"working\" once Firstmate starts on your reply, instead of leaving it just below the fold.",
+      "noPicture": "The fix is the thread scrolling on its own; a still of the end state looks like any thread already at its foot.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

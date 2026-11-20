@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "dragged-card-no-top-line",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A card you swipe on iPhone no longer shows a line across its top",
+      "body": "On iOS 27, swiping a card sideways drew a lighter strip along the card's top, ending in a thin bright line, while the card leaned. The card now stays plain as it leans.",
+      "noPicture": "The fix removes a strip that showed only mid-swipe; a still of the swiped card without it shows an ordinary card.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

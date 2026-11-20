@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "automatic-computer-choice",
+      "kind": "feature",
+      "area": "projects",
+      "title": "Choose a computer automatically",
+      "body": "Automatic chooses a compatible computer with room for each new task. Started tasks stay where they started, and explicit task choices still win. Task Details explain the choice.",
+      "picture": {
+        "dark": "automatic-computer-choice-dark.webp",
+        "light": "automatic-computer-choice-light.webp",
+        "alt": "Project settings show Automatic in the Runs on control, below Care and Ask before merging."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

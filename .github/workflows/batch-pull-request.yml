@@ -1,0 +1,38 @@
+name: batch
+
+# A batch pull request's check (docs/testing.md, "A batch pull request"): a
+# pull request from a branch of this repository whose name starts with
+# infinitary-batch/ carries the approved changes the app combined, one commit
+# each (docs/forge.md, "Batches of your own"), and this file runs the swept
+# batch on its version (batch-checks.yml).
+#
+# Only a branch of this repository itself starts the checks, never a fork's
+# branch of that name: the swept batch runs on this project's own Mac, which
+# code from a fork must not reach. A pull request has no filter on the name
+# of its branch, so every other pull request starts this file too, and its
+# one job skips itself.
+#
+# The job's name leads with the Merge batch trigger (scripts/ci-job-names.mjs),
+# and main's sort and the alpha's proof read the run by it (scripts/batch-pull.mjs).
+
+on:
+  pull_request:
+
+# verify.yml reads its caller's run, and the failures job reads this run's logs.
+permissions:
+  contents: read
+  actions: read
+
+# A newer version of the same pull request replaces the run of an older one.
+concurrency:
+  group: batch-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    if: ${{ startsWith(github.head_ref, 'infinitary-batch/') && github.event.pull_request.head.repo.full_name == github.repository && github.base_ref == github.event.repository.default_branch }}
+    name: Merge batch · Batch checks
+    uses: ./.github/workflows/batch-checks.yml
+    with:
+      trigger: Merge batch
+      head: ${{ github.event.pull_request.head.sha }}

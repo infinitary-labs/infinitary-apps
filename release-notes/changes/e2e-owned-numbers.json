@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "e2e-owned-numbers",
+      "reason": "Tests only: journey specs read numbers, formats and ids from the modules that own them instead of typing copies. Nothing in the app changes."
+    }
+  ]
+}

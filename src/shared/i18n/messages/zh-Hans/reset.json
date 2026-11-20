@@ -1,0 +1,5 @@
+{
+  "resetKeysAsk": "要将所有按键重置为 {preset} 预设的按键吗？",
+  "resetKeysConfirm": "重置所有按键",
+  "resetKeysDetail": "你在键盘设置中改过的每个快捷键，都会恢复为 {preset} 预设给它的按键。"
+}

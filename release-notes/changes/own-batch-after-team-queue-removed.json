@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "own-batch-after-team-queue-removed",
+      "kind": "fix",
+      "area": "projects",
+      "title": "Approved changes no longer wait on a team's queue the project removed",
+      "body": "When a project on batched pull requests stops using a team's queue, Infinitary now notices at your next merge and puts your approved changes in a batch of your own. A change you approved while the queue was still there joins your next batch instead of waiting for the queue's check forever.",
+      "noPicture": "This changes whether an approved change waits or merges; no view is drawn differently.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

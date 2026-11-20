@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "cask-ownership-probe-tapped-load",
+      "reason": "Test-only repair: the Homebrew ownership probe loads the generated casks by their tapped names, as current Homebrew requires, instead of from file paths; no app behavior changes."
+    }
+  ]
+}

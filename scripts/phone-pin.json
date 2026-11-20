@@ -1,0 +1,8 @@
+{
+  "xcode": "27.1",
+  "devices": {
+    "iphone": { "name": "iPhone 16", "ios": "27.0", "iosBuild": "24A434" },
+    "ipad": { "name": "iPad Pro 11-inch (M4)", "ios": "27.0", "iosBuild": "24A434" },
+    "duo": { "name": "iPhone Duo", "ios": "27.1", "iosBuild": "24A94425" }
+  }
+}

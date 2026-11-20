@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "agents-reach-nets",
+      "reason": "Internal: a ledger of the host's named limits in the project's own checks, a count of the captain's overrides per hold kind in the offline metrics, and the procedure for a weekly audit an Automation rule starts; nothing a person sees in the app changes."
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "infinitary-command-old-name",
+      "kind": "improvement",
+      "title": "The old command name keeps working",
+      "body": "Scripts that still run infinitary-inbox-axi keep working until it is retired, with a notice that infinitary-axi is the new name; with --json the notice sits inside the answer, so it still reads as JSON. The Infinitary command box in Settings, Integrations now says when something last ran the old name, and from which folder.",
+      "area": "settings",
+      "picture": {
+        "dark": "infinitary-command-old-name-dark.webp",
+        "light": "infinitary-command-old-name-light.webp",
+        "alt": "The Infinitary command box in Settings, Integrations, with a line saying when and from which folder the old name infinitary-inbox-axi last ran"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

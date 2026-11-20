@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "record-body-after-reveal",
+      "reason": "Test-only repair: the journeys' record-body wait looks again for an undrawn body once the stage reveals the record, so a record shown at the end of its hold with its body still drawing no longer leaves that body out of view for good. No app behavior changes."
+    }
+  ]
+}

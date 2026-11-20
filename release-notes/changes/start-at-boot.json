@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "start-at-boot",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Start Infinitary when a Linux computer starts, before anyone logs in",
+      "body": "On Linux, infinitary start-at-boot now sets Infinitary up to start with no window whenever the computer starts, as your user, so your first mate and crew keep working with nobody logged in. Where Linux needs an administrator to allow that, it prints the one line they run. infinitary start-at-boot --off undoes it, and infinitary help run lists other ways to start Infinitary, such as when you log in on a Mac. A start at boot on a Mac comes later.",
+      "noPicture": "The command's own lines appear in a terminal, with no change to the app's windows.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

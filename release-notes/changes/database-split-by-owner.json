@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "database-split-by-owner",
+      "reason": "Internal: the database file and its migration tests split into files by owner, with the same migrations, versions and test names; nothing a person sees changes."
+    }
+  ]
+}

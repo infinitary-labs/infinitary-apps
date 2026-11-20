@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "accepted-gap-merge-card",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A careful change you let go on without a live check reaches its merge card",
+      "body": "When you accept that a careful change goes on without one of its live checks, or tell your first mate to go on without the proof, the merge card now comes up once the other checks pass. Before, the change could wait for proof you had already let go, until someone read why.",
+      "noPicture": "This changes when the existing merge card appears, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "claude-transcript-start-lookup",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Starting Claude work stays responsive",
+      "body": "Looking for a Claude conversation no longer pauses the app while it checks older project folders.",
+      "noPicture": "This changes background transcript discovery, not a visible view; event-loop and timing measurements demonstrate it.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

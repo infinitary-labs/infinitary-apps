@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "ambient-music",
+      "kind": "feature",
+      "area": "settings",
+      "title": "Calm ambient music that follows your crew",
+      "body": "Turn on Ambient music in Settings → Appearance, from command search, or by asking your first mate. Infinitary composes calm lofi on your computer, with nothing to download. It fills in as crewmates start working, chimes when something waits for you, sparkles when a task merges, and goes quiet while you talk to your first mate. It is off until you turn it on.",
+      "picture": {
+        "dark": "ambient-music-dark.webp",
+        "light": "ambient-music-light.webp",
+        "alt": "The Sound group in Settings → Appearance, with the Ambient music switch turned on and Volume at 40%"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

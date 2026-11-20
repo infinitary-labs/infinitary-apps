@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-target-pixels-own-welcome",
+      "reason": "Tests only: the phone's target pixel test reaches its welcome screen by having its test computer remove the phone, rather than pressing Leave over whatever an earlier test left on screen, and the app shows nothing new."
+    }
+  ]
+}

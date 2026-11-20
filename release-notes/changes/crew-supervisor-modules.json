@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crew-supervisor-modules",
+      "reason": "Internal: the crew supervisor's options and runtime types, work shape, brief assembly, settle facts, work posture and review code move into their own modules, with every caller reaching them directly and the matching tests moved beside them; nothing a person sees changes."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "composer-placeholder-centered",
+      "kind": "fix",
+      "title": "The message box hint sits in the middle of the box",
+      "body": "The grey hint in the empty message box, such as \"type, or press/hold right ⌥ to talk\", is now centered on the whole box. Before, the Add files button pushed it to the right. What you type still starts at the left, beside the button.",
+      "area": "message-box",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "merge-card-since-seen-shows",
+      "kind": "fix",
+      "title": "A merge card that comes back now says why",
+      "body": "When a merge card comes back after you saw it, approved it or chose another button, it opens with the crewmate's summary of what changed since. A label above it says what you last did on the earlier card and when, such as You approved an earlier version. The summary was meant to show before, but it was always left out.",
+      "area": "cards",
+      "picture": {
+        "dark": "merge-card-since-seen-shows-dark.webp",
+        "light": "merge-card-since-seen-shows-light.webp",
+        "alt": "A merge card opening with You chose Not now and the time, then the crewmate's summary, above Why"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

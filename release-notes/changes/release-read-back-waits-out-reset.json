@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-read-back-waits-out-reset",
+      "reason": "Release work: the release's read-back of its new feeds and uploaded downloads now waits out a connection lost before the first byte, and its release storage reads wait out a server error or a lost connection, so a short outage no longer stops an alpha after its casks moved; the downloads and feeds themselves are unchanged."
+    }
+  ]
+}

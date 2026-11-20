@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "merge-waits-for-github",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Merging a pull request a task did not open waits for GitHub",
+      "body": "Just after new work reaches your main branch, GitHub can take a few seconds to work out whether a pull request can still merge. When a task asked you to merge a pull request it did not open, such as another task's, a click in that moment was refused. The app now asks GitHub again for up to half a minute and merges at the version you approved as soon as GitHub says it can. If GitHub still has not decided, nothing merges and the task hears why.",
+      "noPicture": "The card looks the same; the click now merges where it used to be refused.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

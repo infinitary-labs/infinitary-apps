@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "join-by-address-first-launch",
+      "kind": "fix",
+      "title": "Join by its address works the first time you open Infinitary on a new computer",
+      "body": "When you opened Infinitary on a new computer, Join by its address always said it could not ask the other computer for a link. Now it signs in to the computer your first mate is on, asks for its link and joins it, as Paste its link does.",
+      "area": "devices",
+      "noPicture": "Nothing new is drawn: Join by its address now reaches the question it already asks on other launches, in place of the warning line.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

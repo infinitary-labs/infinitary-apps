@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "claude-block-page-not-signed-out",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A network block no longer asks you to sign in to Claude again",
+      "body": "When a firewall or network block page answered a Claude request, the app took it as a lost sign-in: it paused every Claude crewmate and asked you to sign in again. Now only a refused sign-in does that. A block page is an ordinary failed turn, and the crewmate tries again on its own.",
+      "noPicture": "The fix removes a wrong pause and sign-in card; no view or control changes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

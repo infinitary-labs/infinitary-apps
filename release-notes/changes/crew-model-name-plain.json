@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "crew-model-name-plain",
+      "kind": "fix",
+      "title": "A crewmate's model name no longer sits on a plate",
+      "body": "The name above a crewmate in the crew graph is now plain text. Pointing at it, or focusing it, no longer paints a solid background or a border behind the words. The name still brightens, and resting on it still opens the same summary.",
+      "area": "crewmates",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": ["ead38f90f2e973ea31fd3e07302aeda134a83622"]
+      }
+    }
+  ]
+}

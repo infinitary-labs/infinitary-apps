@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "trim-crewmate-validation-words",
+      "reason": "Shortens the validation safety words served to crewmates to bring the fixed context back under its budget; the rules they state are unchanged."
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "journey-fixture-owners",
+      "reason": "Internal test-only ownership lint and fixture migrations; no product behavior, user interface or pull request check is added."
+    }
+  ]
+}

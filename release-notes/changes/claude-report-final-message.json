@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "claude-report-final-message",
+      "kind": "fix",
+      "title": "A Claude crewmate's update shows only its last message",
+      "body": "When a Claude crewmate finished without writing a report, its task's latest update and its line in Activity could join notes it wrote to itself along the way. They now show only its last message.",
+      "area": "crewmates",
+      "noPicture": "The task record and Activity look as before; only the words in the update change.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

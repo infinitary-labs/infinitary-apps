@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "allowance-forecast-reset",
+      "kind": "fix",
+      "title": "Allowance forecasts respect the reset",
+      "body": "Subscriptions no longer warns that a model's allowance will run out after it resets. Incomplete allowance readings no longer produce a forecast from just the readable windows.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "allowance-forecast-reset-dark.webp",
+        "light": "allowance-forecast-reset-light.webp",
+        "alt": "Subscriptions shows a model-only allowance with 90% remaining as on pace, without an exhaustion warning beyond its reset."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

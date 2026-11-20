@@ -1,0 +1,31 @@
+{
+  "entries": [
+    {
+      "id": "correction-retention",
+      "kind": "feature",
+      "title": "Keep a correction for later project work",
+      "body": "Propose standing direction lets your decision model notice when you tell your first mate how you like things done. It is on unless you switch it off under Decisions. Your first mate offers exact wording on a separate card for one project. Keep it with one choice, change the wording by reply, or use it just this time. Your current work continues while the offer waits.",
+      "area": "message-box",
+      "picture": {
+        "dark": "correction-retention-dark.webp",
+        "light": "correction-retention-light.webp",
+        "alt": "A separate offer names Harbor, preserves the next-three-reviews condition, and offers Keep for this project or Just this time"
+      },
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "decision-model-uses",
+      "kind": "feature",
+      "title": "Switch each use of your decision model on or off",
+      "body": "Under Decisions, Settings lists every way Infinitary asks your decision model, each with its own switch. Task classification always stays on, and Propose standing direction starts on. Turning on Jev or an OpenRouter decision model asks once, in one dialog, for every use. If you turned one on before, Propose standing direction asks for your OK before it uses that model.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "decision-model-uses-dark.webp",
+        "light": "decision-model-uses-light.webp",
+        "alt": "The Decisions group under the model levels, with the model that answers on top and a Uses list below: Task classification locked on and Propose standing direction with its own switch"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

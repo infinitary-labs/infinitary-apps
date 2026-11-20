@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "kept-yes-on-consent-cards",
+      "kind": "feature",
+      "title": "A yes you give a crewmate is remembered",
+      "body": "When a crewmate asks to use something of yours, such as your account, its card now says what your yes will cover. Infinitary keeps that yes for the rest of the task, its review, a retry on a stronger model and any task that takes over its work, so none of them asks you again. Each yes shows on the task's timeline, and you can tell the first mate to take one back.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "kept-yes-on-consent-cards-dark.webp",
+        "light": "kept-yes-on-consent-cards-light.webp",
+        "alt": "A crewmate's consent card with a box under its text saying Use my account is kept as your yes to signing in with your own GitHub account for the sign-in check"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

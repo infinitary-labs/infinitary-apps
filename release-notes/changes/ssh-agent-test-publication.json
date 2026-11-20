@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "ssh-agent-test-publication",
+      "reason": "Test-only fix: the stand-in SSH agent publishes its socket only after loading its key, and address rediscovery waits for a complete SSH attempt. No shipped behavior changes."
+    }
+  ]
+}

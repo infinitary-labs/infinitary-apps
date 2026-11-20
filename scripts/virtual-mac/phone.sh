@@ -1,0 +1,104 @@
+#!/bin/bash
+# Legacy fixed-clone lifecycle, retained for existing callers and cleanup.
+# Phone verification now uses phone.yml and MAC_QUEUES.phone on the two vBoxx VMs.
+# Do not use this script or a Mac mini borrow for phone proof. No current workflow
+# calls it; PHONE_VIRTUAL_MAC no longer selects a workflow route (INF-2202).
+# The lifecycle below is kept intact so rollout does not interrupt existing jobs.
+#
+# usage: scripts/virtual-mac/phone.sh run <results folder> <iphone|ipad>...
+#        scripts/virtual-mac/phone.sh start <results folder>
+#        scripts/virtual-mac/phone.sh gate <iphone|ipad>...
+#        scripts/virtual-mac/phone.sh delete
+#
+# start deletes a clone an earlier check left, clones IMAGE (default
+# infinitary-lane) as PHONE_VM (default <IMAGE>-phone), starts it with the
+# working copy's committed version and installs its packages. gate runs
+# scripts/test-phone.ts in the clone for the device it names, or for both at
+# once from one build when it names two, and copies each device's results into
+# <results folder>/<device>, where the Mac mini's gates write them; it exits
+# with the gate's own exit code. delete stops and deletes the clone.
+set -euo pipefail
+
+IMAGE="${IMAGE:-infinitary-lane}"
+NAME="${BORROWED_VM:-${PHONE_VM:-$IMAGE-phone}}"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# The clone's shared input folder outlives each step: the clone runs from
+# start to delete.
+WORK="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/$NAME"
+# shellcheck source=scripts/virtual-mac/vm.sh
+source "$ROOT/scripts/virtual-mac/vm.sh"
+
+usage() {
+  echo "For phone proof, request phone.yml on the vBoxx phone queue; do not borrow a mini VM." >&2
+  echo "legacy usage: scripts/virtual-mac/phone.sh run <results folder> <iphone|ipad>... | start <results folder> | gate <iphone|ipad>... | delete" >&2
+  exit 2
+}
+stamp() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+
+# Stops and deletes the clone; fails when it is still there afterwards.
+delete_clone() {
+  stop_vm "$NAME"
+  "$TART" delete "$NAME" > /dev/null 2>&1 || true
+  rm -rf "$WORK"
+  if "$TART" list --source local --quiet | grep -xF "$NAME" > /dev/null; then
+    echo "The virtual Mac $NAME could not be deleted." >&2
+    return 1
+  fi
+}
+
+# shellcheck source=scripts/virtual-mac/borrow.sh
+source "$ROOT/scripts/virtual-mac/borrow.sh"
+case "${1:-}" in
+  run)
+    [ "$#" -ge 3 ] || usage
+    borrow_virtual_mac "Infinitary phone check" "$@"
+    out="$2"
+    shift 2
+    # Keep the borrow until the gates and cleanup finish, including failure.
+    trap '"/bin/bash" "$0" delete' EXIT
+    /bin/bash "$0" start "$out"
+    /bin/bash "$0" gate "$@"
+    ;;
+  start)
+    [ "$#" -eq 2 ] || usage
+    if [ -z "${CI:-}" ] && [ -z "${BORROWED_PLACE:-}" ] && command -v borrow-virtual-mac > /dev/null; then
+      echo "For phone proof, request phone.yml on the vBoxx phone queue; do not borrow a mini VM." >&2
+      exit 2
+    fi
+    mkdir -p "$2"
+    OUT="$(cd "$2" && pwd)"
+    delete_clone
+    mkdir -p "$WORK/in"
+    cp "$ROOT/scripts/virtual-mac/phone-job.sh" "$WORK/in/phone-job.sh"
+    # The committed version only, as a file tree: a pull request's checkout
+    # is shallow, and a bundle of it cannot be fetched into an empty clone.
+    git -C "$ROOT" archive --format=tar -o "$WORK/in/source.tar" HEAD
+    echo "== Starting $NAME, a fresh clone of $IMAGE, at $(git -C "$ROOT" rev-parse --short HEAD) ($(stamp))"
+    "$TART" clone "$IMAGE" "$NAME"
+    if [ -n "${BORROWED_PLACE:-}" ]; then
+      "$TART" set "$NAME" --cpu "${BORROWED_CPUS:?}" --memory "${BORROWED_MEMORY_MB:?}"
+    fi
+    start_vm "$NAME" "$WORK/tart-run.log" "$SHARED/in/phone-job.sh" "--dir=in:$WORK/in:ro" "--dir=out:$OUT"
+    echo "== The virtual Mac started ($(stamp))"
+    "$TART" exec "$NAME" /bin/bash -lc "/bin/bash '$SHARED/in/phone-job.sh' prepare '$SHARED/in'"
+    ;;
+  gate)
+    shift
+    [ "$#" -gt 0 ] || usage
+    for device in "$@"; do
+      case "$device" in
+        iphone | ipad) ;;
+        *) usage ;;
+      esac
+    done
+    recording=""
+    if [ "${PHONE_RECORDING:-}" = 1 ]; then recording="PHONE_RECORDING=1 "; fi
+    "$TART" exec "$NAME" /bin/bash -lc "${recording}/bin/bash '$SHARED/in/phone-job.sh' gate '$SHARED/out' $*"
+    ;;
+  delete)
+    [ "$#" -eq 1 ] || usage
+    delete_clone
+    echo "== Deleted $NAME ($(stamp))"
+    ;;
+  *) usage ;;
+esac

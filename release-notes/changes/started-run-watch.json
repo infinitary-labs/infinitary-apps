@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "started-run-watch",
+      "reason": "Release review: the app now watches a check run a crewmate starts or reruns without the crewmate naming it again. To a person this is the same result as named-run-watch, whose note describes it."
+    }
+  ]
+}

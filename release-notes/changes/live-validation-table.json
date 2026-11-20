@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "live-validation-table",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "See each live validation result before merging",
+      "body": "When a change has a live validation record, its merge card and pull request now list every scenario, its result and its evidence. The summary counts only scenarios demonstrated live. On the merge card, you can also open the kept pictures and transcripts. The task record shows the same columns and counts.",
+      "picture": {
+        "dark": "live-validation-table-dark.webp",
+        "light": "live-validation-table-light.webp",
+        "alt": "The merge card lists a saved-reading scenario, its Passed live result and an openable retained transcript."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

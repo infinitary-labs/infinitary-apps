@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "last-turn-quoted-lines",
+      "kind": "improvement",
+      "area": "message-box",
+      "highlight": 1,
+      "title": "Your last message and Firstmate's reply now read as quotes",
+      "body": "The two lines above the message box now sit inside quotation marks, and Firstmate's reply is the same size as your message, so a short reply such as \"Got it\" reads as something said rather than a button. Neither line is a link any more: a click does nothing, and Tab passes over them. Resting the pointer on a line that is cut short shows its whole text, and Activity still keeps every message.",
+      "picture": {
+        "dark": "last-turn-quoted-lines-dark.webp",
+        "light": "last-turn-quoted-lines-light.webp",
+        "alt": "Your message \"cut another alpha once the checks pass\" and under it Firstmate's reply \"Got it\", each in quotation marks and the same size, centered just above the message box"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

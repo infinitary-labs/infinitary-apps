@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "personal-resources",
+      "kind": "feature",
+      "highlight": 3,
+      "title": "Crewmates can follow your global instructions and skills",
+      "body": "Turn on Global instructions and skills in Settings → Intelligence, and each crewmate also follows the instructions and skills you keep on the Mac it runs on. Nothing is copied between Macs. Firstmate's own rules still decide how work is delivered; your instructions guide style and judgment. The switch starts off, and it applies the next time a crewmate starts or picks a task back up.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "personal-resources-dark.webp",
+        "light": "personal-resources-light.webp",
+        "alt": "The Global instructions and skills switch turned on in Intelligence Settings"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

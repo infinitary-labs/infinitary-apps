@@ -1,0 +1,23 @@
+<!-- @dsCard group="Components" viewport="700x320" name="First mate & crew" subtitle="4D tesseract character (idle · listening · working) · 3D tetrahedron crewmates" -->
+<!DOCTYPE html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css"><script src="../../vendor/react.development.js"></script><script src="../../vendor/react-dom.development.js"></script><script src="../../vendor/babel.min.js"></script><script src="../../_ds_bundle.js"></script></head><body style="margin:0;padding:20px;background:var(--bg-0)"><div id="root"></div><script type="text/babel">
+const NS=window.InfinitaryDesignSystem_94f559;
+const {Firstmate,Crewmate,CrewStrip}=NS;
+function Demo(){
+  return <div style={{display:"flex",flexDirection:"column",gap:8}}>
+    <div style={{display:"flex",gap:8,alignItems:"center"}}>
+      {["idle","listening","working"].map(s=><div key={s} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+        <Firstmate state={s} size={180} level={s==="listening"?0.5:0}/>
+        <span style={{fontFamily:"var(--font-mono)",fontSize:11,color:"var(--fg-3)"}}>{s}</span>
+      </div>)}
+    </div>
+    <div style={{display:"flex",gap:24,alignItems:"center"}}>
+      <CrewStrip working={3} idle={5}/>
+      <div style={{display:"flex",gap:10,alignItems:"center"}}>
+        <Crewmate status="working" size={28}/><Crewmate status="idle" size={28}/>
+        <span style={{fontFamily:"var(--font-mono)",fontSize:11,color:"var(--fg-3)"}}>working (ember) / idle (cyan)</span>
+      </div>
+    </div>
+  </div>;
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<Demo/>);
+</script></body></html>

@@ -1,0 +1,13 @@
+{
+  "exclusions": [
+    {
+      "id": "alpha-review-after-0-3-0-alpha-60",
+      "reason": "Release review after alpha 0.3.0-alpha.60: ranks choosing how large cards open and the Automation tab as highlights, takes the Automation tab's hero picture pair, rewords the GPT-6 Luna Decisions and other-computer notes in plain words, and adds an exclusion for a test-only fix the notes check found uncovered. Nothing in the app changes."
+    },
+    {
+      "id": "e2e-lost-main-process-promises",
+      "reason": "Test helpers only: end-to-end journeys re-run an idempotent main-process step when the test runner loses its promise after a Claude crewmate launch. Nothing in the app changes.",
+      "covers": ["6fc000cffd4e6ed374c7d9d851770ff6923b4bec"]
+    }
+  ]
+}

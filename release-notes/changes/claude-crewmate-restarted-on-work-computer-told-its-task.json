@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "claude-crewmate-restarted-on-work-computer-told-its-task",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Claude crewmates on a computer you update keep their task",
+      "body": "When a computer that runs work for you updates, a Claude crewmate working there can have to start a new conversation. It is now told its task's brief and where its earlier conversation is saved, as a crewmate on this Mac already is, so it carries on with its task instead of starting without it.",
+      "noPicture": "Nothing on screen looks different: the change is in what the crewmate is told, so its next turn picks the task up where it left off.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

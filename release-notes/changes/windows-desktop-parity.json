@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "notification-opens-its-card",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Clicking a notification opens its card",
+      "body": "When you click a notification about a card, Infinitary comes to the front with that card showing, rather than whichever card you last looked at.",
+      "noPicture": "The change is what a click on a system notification opens, which a still of the window before and after cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "windows-desktop-parity",
+      "reason": "Windows is not a supported platform yet: notifications, Start at login, starting by a command through Task Scheduler and dictation's microphone check now work there for the Windows port. Mac and Linux behave as before, apart from the notification click above."
+    }
+  ]
+}

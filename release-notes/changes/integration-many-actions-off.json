@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "integration-many-actions-off",
+      "kind": "fix",
+      "area": "settings",
+      "title": "Integrations keep their settings when you turn off many actions",
+      "body": "Turning off more than 64 actions on one integration no longer resets every integration's names, pauses and turned-off actions. If an earlier version stopped showing them and you have not changed an integration since, they come back after you update.",
+      "noPicture": "This changes how turned-off actions are saved, not how Settings looks.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

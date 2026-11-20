@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "folder-repair-starts-in-folder",
+      "kind": "fix",
+      "title": "A folder repair started again works in the project's folder",
+      "body": "When Bring the folder up to date had started above a missing project folder and was started again, it still worked in that folder above, even once the project's folder was there. It now works in the project's folder whenever it is there.",
+      "area": "projects",
+      "noPicture": "It shows only as the folder a crewmate works in, with no new screen.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

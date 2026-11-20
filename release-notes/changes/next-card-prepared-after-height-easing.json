@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "next-card-prepared-after-height-easing",
+      "kind": "fix",
+      "area": "cards",
+      "title": "The next card is ready when you close the one you read",
+      "body": "After you moved to another card, the card a close brings up next was sometimes not prepared, so closing showed it only once it had loaded. It is now prepared every time and comes forward at once.",
+      "noPicture": "The difference is how the next card arrives after a close, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

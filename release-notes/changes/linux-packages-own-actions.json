@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "linux-packages-own-actions",
+      "reason": "Internal: the Linux package workflow takes its local actions from its own commit, so a stable built from an older alpha's commit builds and checks its Linux packages; the packages themselves do not change."
+    }
+  ]
+}

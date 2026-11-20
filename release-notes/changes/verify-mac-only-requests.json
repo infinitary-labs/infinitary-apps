@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "verify-mac-only-requests",
+      "reason": "CI only: a manual verify request can choose to run only its three Mac jobs, with no Linux job; nothing in the app changes."
+    }
+  ]
+}

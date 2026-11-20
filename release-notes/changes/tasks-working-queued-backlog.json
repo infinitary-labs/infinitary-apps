@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "tasks-working-queued-backlog",
+      "kind": "improvement",
+      "title": "Tasks read Working, Queued and Backlog",
+      "body": "The Tasks panel's groups are now Waiting on you, Working, Queued, Backlog and Done. Queued holds work that starts by itself, and Backlog holds work that waits for you to press Start. A task says the same words wherever you read it, a blocked or held task keeps its word with the reason beside it, and a task split into parts says its parts do the work.",
+      "area": "tasks",
+      "picture": {
+        "dark": "tasks-working-queued-backlog-dark.webp",
+        "light": "tasks-working-queued-backlog-light.webp",
+        "alt": "The Tasks panel with the groups Working, Queued, Backlog and Done open"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

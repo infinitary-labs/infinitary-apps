@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "linux-journeys-pointer-in-corner",
+      "reason": "Makes the hosted Linux journeys park the virtual screen's pointer on its last pixel and check it got there, so parallel journeys' windows stop handing it to the window under test. Only the test lane changed; no shipped behavior did."
+    }
+  ]
+}

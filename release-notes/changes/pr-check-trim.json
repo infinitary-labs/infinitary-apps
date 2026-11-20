@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "pr-check-trim",
+      "reason": "Internal: the pull request check drops the steps that never caught a problem, runs the browser tests only for renderer changes, runs the critical path inside the build check, and skips the build for test, docs, release note and phone-only changes; nothing a person sees in the app changes."
+    }
+  ]
+}

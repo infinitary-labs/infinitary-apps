@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "closing-note",
+      "kind": "improvement",
+      "title": "Work that closes without your click leaves you a note",
+      "body": "When your first mate merges, drops or stops a task a crewmate worked on, and you did not click to do it, a note now says what became of the work in your first mate's own sentence, with the pull request linked after a merge. A crewmate whose work merges on its own shows you its full story before the merge. Each note stays until you close it, and Activity's line for a drop now says why.",
+      "area": "cards",
+      "picture": {
+        "dark": "closing-note-dark.webp",
+        "light": "closing-note-light.webp",
+        "alt": "A note titled with a task's key and dropped, in the first mate's sentence, beside Activity's Dropped line for the same task"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

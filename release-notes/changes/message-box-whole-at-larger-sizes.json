@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "message-box-whole-at-larger-sizes",
+      "kind": "fix",
+      "title": "The message box keeps its width at a larger Size",
+      "body": "At a Size of 110%, 125% or 150%, open side panels could squeeze the message box in a small window. Its hint was cut off, or it got too narrow to use. Now the side panels fold away until there is room for them beside a usable message box. They come back when the window is wider or the Size is smaller. Your panel choices stay as they were.",
+      "area": "message-box",
+      "picture": {
+        "dark": "message-box-whole-at-larger-sizes-dark.webp",
+        "light": "message-box-whole-at-larger-sizes-light.webp",
+        "alt": "At 125% in the smallest window, with the open side panels folded away, the message box sits whole under Firstmate and shows its full hint"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

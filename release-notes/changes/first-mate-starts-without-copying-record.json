@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "first-mate-starts-without-copying-record",
+      "kind": "improvement",
+      "area": "firstmate",
+      "title": "Your first mate starts sooner on a large record",
+      "body": "Before your first mate starts, the app checks that your saved work comes from a version it understands. It used to copy your whole record twice to do that, which took about a second on a record of a gigabyte. It now checks once, on a copy your Mac makes in a few thousandths of a second.",
+      "noPicture": "This shortens the wait before the first mate answers; no view looks different.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

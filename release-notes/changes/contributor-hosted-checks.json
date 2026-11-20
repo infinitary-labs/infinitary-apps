@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "contributor-hosted-checks",
+      "reason": "Internal CI routing: outside contributors' pull requests run on GitHub's hosted machines; no change to the app."
+    }
+  ]
+}

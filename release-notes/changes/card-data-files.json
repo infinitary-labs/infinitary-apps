@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-data-files",
+      "reason": "Internal: a card's script can read a JSON data file the card names, and the architecture map's skill now names its data that way instead of carrying it in the card; a map card looks and works the same, so nothing a person sees changes."
+    }
+  ]
+}

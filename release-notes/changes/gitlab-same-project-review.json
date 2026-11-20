@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "gitlab-same-project-review",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Crewmates can clear a GitLab merge request in a project with no hosted checks",
+      "body": "A crewmate's merge request from a branch in the same GitLab project was refused as if it came from someone else's copy of the project. Now the crewmate can review it, and in a project with no hosted checks it can record that the project's own checks passed, so you can merge it. Merge requests from other copies of the project are still refused.",
+      "noPicture": "This changes what a crewmate may record for a GitLab merge request, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

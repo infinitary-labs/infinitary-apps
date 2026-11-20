@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "ubuntu-package-only-with-the-tap",
+      "reason": "Adding an Ubuntu 24.04 or 26.04 computer by its address takes the Ubuntu package way only when this home reads the published builds; a development run with none, as on the Linux test runners, keeps the AppImage way instead of refusing. An installed release always reads them, so a person sees no change."
+    }
+  ]
+}

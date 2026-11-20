@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "unknown-card-no-refusal",
+      "reason": "Internal: changes only what the first mate is told when a work computer's completion card got no answer from this computer. The task record no longer says such a card was refused when it may already be up. No view, card or control changes."
+    }
+  ]
+}

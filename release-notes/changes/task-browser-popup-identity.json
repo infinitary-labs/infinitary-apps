@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "task-browser-popup-identity",
+      "kind": "fix",
+      "title": "Second browser pages no longer announce the app to websites",
+      "body": "When a website opens a second page in a task’s browser, that page uses the same browser identification as the first, without reloading or sending a form again.",
+      "area": "tasks",
+      "noPicture": "This changes browser identification sent to websites, not the browser view.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

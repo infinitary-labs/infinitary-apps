@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crewmate-fixed-context-budget",
+      "reason": "Shortens the crewmate delivery guidance without changing its rules, restoring the fixed-context budget and testing every runtime and care combination against the input guard. No user-facing behavior changes."
+    }
+  ]
+}

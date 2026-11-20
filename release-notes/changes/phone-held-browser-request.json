@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-held-browser-request",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A browser request on your iPhone or iPad says when you have control",
+      "body": "When a crewmate asks you to take over its browser and you open the page on your computer, the request on your iPhone or iPad now says you have control at once, instead of still saying the browser is paused for your help. The request stays there with its thread while you hold the page, and a reply you send from the phone shows beside the page on your computer.",
+      "noPicture": "The line keeps its look; the fix only makes its words follow the take and the return as they happen.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

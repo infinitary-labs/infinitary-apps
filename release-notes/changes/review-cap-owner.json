@@ -1,0 +1,11 @@
+{
+  "entries": [{
+    "id": "review-cap-owner",
+    "kind": "fix",
+    "area": "firstmate",
+    "title": "Fewer review-limit questions with obvious answers",
+    "body": "Your first mate can reopen review rounds when the remaining findings are fixes or minor questions. Errors and important questions still come to you. This applies each time the remaining findings qualify, without changing who may merge your work.",
+    "noPicture": "This changes who handles a review hold, not a dedicated view or control.",
+    "provenance": { "origin": "change" }
+  }]
+}

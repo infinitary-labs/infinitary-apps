@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "home-link-closed-dial",
+      "reason": "A connection to another computer that is closed while its dial is still under way now ends the socket that dial hands back without an uncaught error; the app only logged that error, so nothing a person sees changes, and main's check no longer fails on it."
+    }
+  ]
+}

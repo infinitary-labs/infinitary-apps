@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "keyboard-reasons-on-rest",
+      "kind": "improvement",
+      "title": "Read from the keyboard the rest of what resting the pointer shows",
+      "body": "Tab now also reaches the exact time behind each short age in a task's record, why a card's buttons can't be pressed while the Mac you control is out of reach, why a custom API connection can't resume or run your first mate yet, who is driving when a task's browser keeps Back, Forward and Reload from you, why a small picture has no Actual size, what a model's new mark means and that its × removes it from one level only, and a panel's busy dot. Each shows the same label the pointer does, Esc puts it away, and screen readers read the same words.",
+      "area": "tasks",
+      "picture": {
+        "dark": "keyboard-reasons-on-rest-dark.webp",
+        "light": "keyboard-reasons-on-rest-light.webp",
+        "alt": "A task's record: the keyboard on an Activity line's age, 2h, ringed, with its exact time in the label under it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

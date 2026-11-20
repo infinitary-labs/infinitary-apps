@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "copilot-fable-held-back",
+      "reason": "Internal: the catalog checks record why Copilot's premium starter stays on Fable 5.1 while only the live overlay serves Fable 5.2; no starter or listed row changes."
+    }
+  ]
+}

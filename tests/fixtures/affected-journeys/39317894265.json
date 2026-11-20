@@ -1,0 +1,7 @@
+{
+  "run": "39317894265",
+  "head": "fa50e3bef169302fabdd86af5cba09dd3a676750",
+  "base": "94bbfbd4ccd40a9a79280866ec736365f4dfb4c5",
+  "module": "src/shared/connection.ts",
+  "sourceDiff": "diff --git a/src/shared/connection.ts b/src/shared/connection.ts\nindex 0f3ff10e..4a241066 100644\n--- a/src/shared/connection.ts\n+++ b/src/shared/connection.ts\n@@ -236,0 +237,10 @@ const spellingsSchema = z.array(z.string().min(1).max(32)).max(16).optional();\n+/**\n+ * The name of each minor contract change a side has, one per file in\n+ * `src/shared/contract-changes/` but the major's\n+ * (`src/core/connection/contractChanges.ts`, docs/contract.md \"Changes by\n+ * name\"). A feature that needs the other side to have a change waits for its\n+ * name here; a side that says nothing has none. Open strings, as spellings\n+ * are; a major removes every name, so the list stays short.\n+ */\n+const changesSchema = z.array(z.string().min(1).max(64)).max(256).optional();\n+\n@@ -306,0 +317 @@ export const clientFrameSchema = z.union([\n+      changes: changesSchema,\n@@ -352,0 +364 @@ export const homeFrameSchema = z.union([\n+    changes: changesSchema,\n"
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "guided-merge-withdraws-answered-question",
+      "reason": "Test only: the guided kept-merge journey's stand-in crewmate withdraws its question card once the captain's reply answers it, as crewmates are told since a merge keeps a task open while a question is open, so the journey's merge closes the task again."
+    }
+  ]
+}

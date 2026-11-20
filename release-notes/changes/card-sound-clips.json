@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "card-sound-clips",
+      "kind": "feature",
+      "area": "cards",
+      "title": "Listen to sound clips inside a card",
+      "body": "A crewmate can now attach a sound clip to a card, such as narration made with a voice tool on your computer. The card shows a Listen button with the clip's length, and nothing plays until you press it. The clip plays in a strip under the card's text, with Play and Pause, a slider to move through it and its time, and keeps playing while the window is hidden. It stops when you pause it, when it ends, or when you move on from the card.",
+      "picture": {
+        "dark": "card-sound-clips-dark.webp",
+        "light": "card-sound-clips-light.webp",
+        "alt": "A note whose body shows a Listen button with the clip's length, and under it a sound strip with Play, the clip's caption, a slider and its time, paused at one second of two"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

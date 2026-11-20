@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "requested-checks-on-merge-card",
+      "kind": "improvement",
+      "title": "A merge card shows the extra checks a crewmate is still waiting on",
+      "body": "When a crewmate asked for an extra check on the version it offers, such as the phone check, the merge card now shows it beside the pull request's own checks, saying whether it is still queued for a machine or running and for how long. A long wait no longer hides behind checks that read passed.",
+      "area": "cards",
+      "picture": {
+        "dark": "requested-checks-on-merge-card-dark.webp",
+        "light": "requested-checks-on-merge-card-light.webp",
+        "alt": "A merge card whose checks passed, with a phone cell beside them reading queued for 1h 27m"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,480 @@
+/* The Tasks panel (./panel.tsx; the design skill's NowPanel): its search,
+   its project chips, the groups and their rows. Drawn in the panel's own
+   page, so every rule is the panel's own. */
+:where([data-now]),
+:where([data-now]) * {
+  box-sizing: border-box;
+}
+:where([data-now]) button {
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--fg-1);
+  background: transparent;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-m);
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+:where([data-now]) button:hover {
+  background: var(--bg-3);
+}
+:where([data-now]) input {
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  color: var(--fg-1);
+  background: var(--surface-input);
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-m);
+  padding: var(--space-2) var(--space-3);
+  outline: none;
+}
+:where([data-now]) input:focus {
+  border-color: var(--line-2);
+  box-shadow: var(--focus-ring);
+}
+:where([data-now]) :focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+[data-now] {
+  --now-thumb: 3px;
+  --now-dot: 6px;
+  font-size: var(--text-base);
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  min-height: 0;
+  gap: var(--space-2);
+}
+[data-now] {
+  container-type: inline-size;
+}
+[data-now-groups] {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+/* The frame cuts what is drawn past its edge, so the search keeps its focus
+   glow's reach clear on every side: the ring's 24px blur less the 6px it
+   is drawn in by. Below, the list's gap makes up the rest. */
+[data-now-filters] {
+  --now-glow: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: var(--now-glow) var(--now-glow) calc(var(--now-glow) - var(--space-2));
+}
+[data-now-filters][hidden] {
+  display: none;
+}
+/* The field, and Close search 6px after it. */
+[data-now-query-row] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+[data-now-query] {
+  padding: 4px 8px;
+  font-size: var(--text-sm);
+  flex: 1;
+  min-width: 0;
+}
+/* Close search and Esc do what the field's own cross did. */
+[data-now-query]::-webkit-search-cancel-button {
+  display: none;
+}
+[data-now-close] {
+  flex: 0 0 auto;
+  padding: 0;
+}
+[data-now-projects] {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+[data-now-projects]:empty {
+  display: none;
+}
+.chip {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+  background: transparent;
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-pill);
+  padding: 1px 8px;
+  cursor: pointer;
+  font-weight: 400;
+}
+.chip[aria-pressed="true"] {
+  color: var(--fg-1);
+  background: var(--bg-3);
+}
+[data-now-groups] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-height: 0;
+  position: relative;
+}
+[data-now-groups]::-webkit-scrollbar {
+  width: var(--now-thumb);
+  height: var(--now-thumb);
+}
+[data-now-groups]::-webkit-scrollbar-track {
+  background: transparent;
+}
+[data-now-groups]::-webkit-scrollbar-thumb {
+  background: var(--fg-3);
+}
+[data-now-groups]::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+[data-now-group] {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+/* Even vertical padding: the expand chevron centers on the row the way the
+   Activity header centers its own. 6px over 2px left it low in the row. */
+[data-now-group-header] {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 4px 6px;
+  border: none;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: default;
+}
+[data-now-group-header][aria-expanded] {
+  cursor: pointer;
+}
+[data-now-group-header][aria-expanded]:hover {
+  background: var(--bg-2);
+}
+.label {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.n {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+}
+.caret {
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+}
+[data-now-row] {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) fit-content(40%);
+  align-items: center;
+  column-gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 5px 6px;
+  padding-inline-start: calc(6px + var(--depth, 0) * 12px);
+  border: none;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 400;
+  text-align: start;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+[data-now-queue-wait] {
+  grid-column: 2 / -1;
+  grid-row: 2;
+  color: var(--fg-3);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
+  overflow-wrap: anywhere;
+}
+[data-now-row]:hover,
+[data-now-row][data-now-lit] {
+  background: var(--bg-3);
+}
+/* Headers and rows span the frame, which cuts what is drawn past its
+   edge, so they draw the focus ring inside their own edge. */
+[data-now-group-header]:focus-visible,
+[data-now-row]:focus-visible {
+  box-shadow: var(--focus-ring-inset);
+}
+
+.title {
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: var(--leading-body);
+}
+[data-now-group="waiting"] .title {
+  color: var(--fg-1);
+}
+.title-key {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+}
+.word {
+  color: var(--fg-3);
+}
+.word[data-now-word="could not start"] {
+  color: var(--warn);
+}
+.key {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+/* A task another computer runs: its project, where, and that its computer
+   is out of reach, connecting or catching up. Drawn last first from the
+   right, a part that does not fit wraps onto the hidden second line whole -
+   the project's name first, then the place - so the reach words always show. */
+.key[data-now-place] {
+  display: flex;
+  flex-direction: row-reverse;
+  flex-wrap: wrap;
+  height: 1lh;
+}
+.key[data-now-place] > span {
+  flex-shrink: 0;
+  white-space: pre;
+}
+.reach {
+  color: var(--warn);
+}
+/* Still connecting, or connected and catching up, is not a warning: the
+   words read in the quiet color. */
+[data-now-connecting] .reach,
+[data-now-catching-up] .reach {
+  color: var(--fg-3);
+}
+[data-now-row] > .key {
+  grid-column: 3;
+  grid-row: 1;
+}
+[data-now-row]:not([data-now-trailing]) {
+  grid-template-columns: 12px minmax(0, 1fr);
+}
+/* Rows whose records are open in the main stack: an
+   accent-tinted surface and the title at full strength, and no border at
+   all - the captain's call on the pane prototype. */
+[data-now-row][data-now-selected] {
+  background: var(--accent-dim);
+}
+[data-now-row][data-now-selected] .title {
+  color: var(--fg-1);
+}
+[data-now-row][data-now-selected] .key {
+  color: var(--fg-2);
+}
+/* A row and its controls: a backlog row's Start (INF-1663), then every
+   row's pin (INF-3127). They sit over the row's right end, beside the row
+   rather than in it, so the row stays one button and nothing moves on rest.
+   They show while the pointer rests on the row or a control, or the
+   keyboard's focus is on either. They draw no surface of their own: the
+   row keeps its rest look under them, and the row's words fade out before
+   their left edge, as wide as they are (`--now-start-w`). */
+[data-now-item] {
+  position: relative;
+}
+:where([data-now-item]:hover, [data-now-item]:has(:focus-visible)) > [data-now-row] {
+  background: var(--bg-3);
+}
+[data-now-item] .title,
+[data-now-item] .key {
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+:is([data-now-item]:hover, [data-now-item]:has(:focus-visible)) .title {
+  mask-image: linear-gradient(
+    to left,
+    transparent calc(var(--now-start-w, 0px) + 2px),
+    #000 calc(var(--now-start-w, 0px) + 18px)
+  );
+}
+/* A task with parts (INF-3823's plan): its finished parts and all of them
+   in mono, then the panel's own chevron where rows list under it, at the
+   row's end on its first line, always shown. The row keeps its words
+   clear of it (`--now-fold-w`), and its Start and pin sit before it. */
+[data-now-item][data-now-folds] > [data-now-row] {
+  padding-inline-end: calc(6px + var(--now-fold-w, 0px));
+}
+[data-now] [data-now-fold] {
+  position: absolute;
+  /* On the title's own line: the row's first line is as tall as its status
+     mark's (the panel's body size), and the title's smaller line sits
+     centred in it. */
+  top: calc(5px + (var(--text-base) - var(--text-sm)) * var(--leading-body) / 2);
+  inset-inline-end: 2px;
+  height: 1lh;
+  /* The title's own font, size and line, so the count's text sits on the
+     title's baseline: one line, read across. */
+  font-family: inherit;
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  display: block;
+  white-space: nowrap;
+  padding-block: 0;
+  padding-inline: 4px 2px;
+  border: none;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--fg-2);
+}
+[data-now] span[data-now-fold] {
+  padding-inline-end: 4px;
+  pointer-events: none;
+}
+[data-now] button[data-now-fold]:hover {
+  background: var(--bg-2);
+}
+[data-now-fold] .caret {
+  margin-inline-start: 2px;
+  vertical-align: middle;
+}
+/* A collapsed task's bar: one segment per part, in the row marks' colors -
+   finished, working now, waiting on you, not finished - 3px under its title. */
+/* Each segment is its part's rest target (INF-4147): its own width and half
+   of each gap, from 2px above the drawn bar down to the row's bottom edge.
+   The bar's box reaches 5px into the row's padding and gives it back, so
+   the row keeps its height; the drawn segment is each target's ::before. */
+[data-now-bar] {
+  grid-column: 2 / -1;
+  grid-row: 3;
+  display: flex;
+  height: 11px;
+  margin: 0 -1px -5px;
+  overflow: hidden;
+}
+[data-now-bar] i {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 1px;
+}
+[data-now-bar][data-now-many] i {
+  padding: 0 0.5px;
+}
+[data-now-bar] i::before {
+  content: "";
+  display: block;
+  height: 3px;
+  margin-top: 2px;
+  border-radius: var(--radius-xs);
+}
+/* The rested segment grows to 5px in place, its bottom edge where it was. */
+[data-now-bar] i[data-now-part-rested]::before {
+  height: 5px;
+  margin-top: 0;
+}
+[data-now-part="done"]::before {
+  background: var(--fg-3);
+}
+[data-now-part="working"]::before {
+  background: var(--warn);
+}
+[data-now-part="waiting"]::before {
+  background: var(--accent);
+}
+[data-now-part="rest"]::before {
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+:is([data-now-item]:hover, [data-now-item]:has(:focus-visible)) .key {
+  opacity: 0;
+}
+[data-now] [data-now-controls] {
+  position: absolute;
+  /* Centred on the row's first line, so a row with a wait line under its title keeps it clear. */
+  top: 5px;
+  inset-inline-end: 4px;
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  height: 1lh;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+}
+/* Beside a task's parts, its Start and pin sit before them. */
+[data-now] [data-now-item][data-now-folds] > [data-now-controls] {
+  inset-inline-end: calc(8px + var(--now-fold-w, 0px));
+}
+[data-now] [data-now-start],
+[data-now] [data-now-pin] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  padding: 0 8px;
+  font-size: var(--text-sm);
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--fg-1);
+  background: transparent;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-s);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+/* The pin is a square of the Start's height, the glyph alone. */
+[data-now] [data-now-pin] {
+  width: 22px;
+  padding: 0;
+  color: var(--fg-2);
+}
+[data-now] [data-now-pin][data-now-pinned] {
+  color: var(--fg-1);
+}
+:is([data-now-item]:hover, [data-now-item]:has(:focus-visible))
+  :is([data-now-start], [data-now-pin]) {
+  opacity: 1;
+  pointer-events: auto;
+}
+[data-now] :is([data-now-start], [data-now-pin]):hover {
+  background: transparent;
+  border-color: var(--fg-3);
+}
+[data-now] [data-now-start][aria-disabled="true"] {
+  color: var(--fg-3);
+  border-color: var(--line-1);
+  cursor: default;
+}
+/* A narrow panel: the row drops its project name and where it runs, and
+   keeps only that its computer is out of reach. (With one project the
+   panel leaves the name out itself.) After the rows' own rules, which
+   these narrow. */
+@container (max-width: 320px) {
+  [data-now-row]:not([data-now-out-of-reach]) {
+    grid-template-columns: 12px minmax(0, 1fr);
+  }
+  [data-now-row]:not([data-now-out-of-reach]) .key,
+  .name,
+  .place {
+    display: none;
+  }
+}

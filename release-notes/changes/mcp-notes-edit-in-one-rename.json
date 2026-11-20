@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "mcp-notes-edit-in-one-rename",
+      "reason": "Tests only: the MCP integration test changes its stand-in server's notes file in one rename, as the stand-in already does, so the server no longer sees a truncated file and tells one edit twice; the app shows nothing new."
+    }
+  ]
+}

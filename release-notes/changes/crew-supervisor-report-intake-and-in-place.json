@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crew-supervisor-report-intake-and-in-place",
+      "reason": "Internal: the crew supervisor's report intake - a crewmate's follow-ups, progress, report, responses and validation records - and its own work in a project's folder - folder and pull request repairs, the start check and their close - move into owners of their own, with callers reaching them directly and guardrail tests renamed beside them; nothing a person sees changes."
+    }
+  ]
+}

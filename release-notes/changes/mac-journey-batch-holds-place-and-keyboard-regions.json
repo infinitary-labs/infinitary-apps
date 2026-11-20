@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "mac-journey-batch-holds-place-and-keyboard-regions",
+      "reason": "Two journeys wait for what they read: holds-place counts the card thread's answer it restored after restart, and keyboard-regions starts the Tasks arrows once the second task's row has moved from queued to working; test only, nothing a person notices."
+    }
+  ]
+}

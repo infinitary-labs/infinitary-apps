@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "stage-reveals-seen-test",
+      "reason": "Test-only repair: establish the first live card's recorded reading before opening a past card or task record in the prepared-card Hide journeys. Product behavior and existing assertions are unchanged."
+    }
+  ]
+}

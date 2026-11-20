@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "collapse-parent-tasks",
+      "kind": "feature",
+      "area": "tasks",
+      "title": "Collapse a task's parts and still see its progress",
+      "body": "In the Tasks panel, a task with parts now shows how many are finished, such as 2/5. Click the count, or press ← on the task, to hide its parts; a thin bar under the task then shows each part finished, working or waiting. A part that waits on you stays shown, and a collapsed task stays collapsed after a restart. Expand all parts and Collapse all parts are in command search.",
+      "picture": {
+        "dark": "collapse-parent-tasks-dark.webp",
+        "light": "collapse-parent-tasks-light.webp",
+        "alt": "The Tasks panel with a pinned task reading 2/5 and collapsed, a five-part bar under it with two parts filled, and below it in Backlog an expanded task reading 1/3 with its parts listed"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

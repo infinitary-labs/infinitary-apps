@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-messages-after-queue-removal",
+      "reason": "Regenerates the phone's message files in the nine languages besides English for the batched pull request words that the team queue's removal rewords and removes; that change's own note covers what a person sees."
+    }
+  ]
+}

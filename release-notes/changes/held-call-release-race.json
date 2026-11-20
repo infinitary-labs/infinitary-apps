@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "held-call-release-race",
+      "reason": "Test only: the journey that updates the first mate's computer while a crewmate's call runs now ends that call by opening the call's pipe once the call waits on it and closing it unwritten, instead of writing to it, which could fail with a broken pipe when the call had already closed it. No shipped behavior changed."
+    }
+  ]
+}

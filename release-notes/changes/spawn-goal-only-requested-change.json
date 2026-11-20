@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "spawn-goal-only-requested-change",
+      "reason": "Internal first mate instruction: spawn goals name only the requested change, with preservation expressed as constraints rather than descriptions of existing behavior. No visible interface change."
+    }
+  ]
+}

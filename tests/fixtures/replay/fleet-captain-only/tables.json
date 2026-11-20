@@ -1,0 +1,340 @@
+{
+  "tasks": [
+    {
+      "id": "8c100002",
+      "title": "Check the holiday service",
+      "repo_id": "repo-harbour",
+      "key": "HBR-2",
+      "status": "active",
+      "kind": "work",
+      "created_at": 1738591200000
+    },
+    {
+      "id": "8c100003",
+      "title": "Check the wheelchair berth",
+      "repo_id": "repo-harbour",
+      "key": "HBR-3",
+      "status": "active",
+      "kind": "work",
+      "created_at": 1738591200000
+    },
+    {
+      "id": "8c100004",
+      "title": "Check the return fare",
+      "repo_id": "repo-harbour",
+      "key": "HBR-4",
+      "status": "active",
+      "kind": "work",
+      "created_at": 1738591200000
+    },
+    {
+      "id": "8c100005",
+      "title": "Check the weather notice",
+      "repo_id": "repo-harbour",
+      "key": "HBR-5",
+      "status": "active",
+      "kind": "work",
+      "created_at": 1738591200000
+    },
+    {
+      "id": "8c100006",
+      "title": "Check the late departure",
+      "repo_id": "repo-harbour",
+      "key": "HBR-6",
+      "status": "active",
+      "kind": "work",
+      "created_at": 1738591200000
+    },
+    {
+      "id": "8c100007",
+      "title": "Check the midnight crossing",
+      "repo_id": "repo-harbour",
+      "key": "HBR-7",
+      "status": "active",
+      "kind": "work",
+      "created_at": 1738591200000
+    },
+    {
+      "id": "8c100008",
+      "title": "Check the holiday service",
+      "repo_id": "repo-harbour",
+      "key": "HBR-8",
+      "status": "active",
+      "kind": "work",
+      "created_at": 1738591200000
+    },
+    {
+      "id": "8c100009",
+      "title": "Check the wheelchair berth",
+      "repo_id": "repo-harbour",
+      "key": "HBR-9",
+      "status": "active",
+      "kind": "work",
+      "created_at": 1738591200000
+    },
+    {
+      "id": "8c10000a",
+      "title": "Check the return fare",
+      "repo_id": "repo-harbour",
+      "key": "HBR-10",
+      "status": "active",
+      "kind": "work",
+      "created_at": 1738591200000
+    },
+    {
+      "id": "8c10000b",
+      "title": "Check the weather notice",
+      "repo_id": "repo-harbour",
+      "key": "HBR-11",
+      "status": "active",
+      "kind": "work",
+      "created_at": 1738591200000
+    },
+    {
+      "id": "8c10000c",
+      "title": "Check the late departure",
+      "repo_id": "repo-harbour",
+      "key": "HBR-12",
+      "status": "active",
+      "kind": "work",
+      "created_at": 1738591200000
+    },
+    {
+      "id": "8c10000d",
+      "title": "Check the midnight crossing",
+      "repo_id": "repo-harbour",
+      "key": "HBR-13",
+      "status": "active",
+      "kind": "work",
+      "created_at": 1738591200000
+    },
+    {
+      "id": "8c10000e",
+      "title": "Check the holiday service",
+      "repo_id": "repo-harbour",
+      "key": "HBR-14",
+      "status": "active",
+      "kind": "work",
+      "created_at": 1738591200000
+    },
+    {
+      "id": "8c10000f",
+      "title": "Check the wheelchair berth",
+      "repo_id": "repo-harbour",
+      "key": "HBR-15",
+      "status": "active",
+      "kind": "work",
+      "created_at": 1738591200000
+    },
+    {
+      "id": "8c100010",
+      "title": "Check the return fare",
+      "repo_id": "repo-harbour",
+      "key": "HBR-16",
+      "status": "active",
+      "kind": "work",
+      "created_at": 1738591200000
+    },
+    {
+      "id": "8c100011",
+      "title": "Check the weather notice",
+      "repo_id": "repo-harbour",
+      "key": "HBR-17",
+      "status": "active",
+      "kind": "work",
+      "created_at": 1738591200000
+    },
+    {
+      "id": "8c100012",
+      "title": "Check the late departure",
+      "repo_id": "repo-harbour",
+      "key": "HBR-18",
+      "status": "active",
+      "kind": "work",
+      "created_at": 1738591200000
+    }
+  ],
+  "cards": [],
+  "supervision_outcomes": [
+    {
+      "id": 1,
+      "task_id": "8c100001",
+      "verdict": "routine",
+      "summary": "The midnight crossing result matches the expected service.",
+      "wake": "[fm-op] crewmate 1 reported on task 8c100001 \"Check the midnight crossing\": The trial timetable matches the harbour schedule for this slot. The board retains th",
+      "wake_kind": "crewmate-report",
+      "at": 1738591834000,
+      "model": "fixture-model"
+    },
+    {
+      "id": 2,
+      "task_id": "8c100002",
+      "verdict": "routine",
+      "summary": "The holiday service result matches the expected service.",
+      "wake": "[fm-op] crewmate 2 reported on task 8c100002 \"Check the holiday service\": The trial timetable matches the harbour schedule for this slot. The board retains the ",
+      "wake_kind": "crewmate-report",
+      "at": 1738591864000,
+      "model": "fixture-model"
+    },
+    {
+      "id": 3,
+      "task_id": "8c100003",
+      "verdict": "captain",
+      "summary": "The wheelchair berth result matches the expected service.",
+      "wake": "[fm-op] crewmate 3 reported on task 8c100003 \"Check the wheelchair berth\": The trial timetable matches the harbour schedule for this slot. The board retains the",
+      "wake_kind": "crewmate-report",
+      "at": 1738591894000,
+      "model": "fixture-model"
+    },
+    {
+      "id": 4,
+      "task_id": "8c100004",
+      "verdict": "routine",
+      "summary": "The return fare result matches the expected service.",
+      "wake": "[fm-op] crewmate 4 reported on task 8c100004 \"Check the return fare\": The trial timetable matches the harbour schedule for this slot. The board retains the prio",
+      "wake_kind": "crewmate-report",
+      "at": 1738591924000,
+      "model": "fixture-model"
+    },
+    {
+      "id": 5,
+      "task_id": "8c100005",
+      "verdict": "routine",
+      "summary": "The weather notice result matches the expected service.",
+      "wake": "[fm-op] crewmate 5 reported on task 8c100005 \"Check the weather notice\": The trial timetable matches the harbour schedule for this slot. The board retains the p",
+      "wake_kind": "crewmate-report",
+      "at": 1738591954000,
+      "model": "fixture-model"
+    },
+    {
+      "id": 6,
+      "task_id": "8c100006",
+      "verdict": "captain",
+      "summary": "The late departure result matches the expected service.",
+      "wake": "[fm-op] crewmate 6 reported on task 8c100006 \"Check the late departure\": The trial timetable matches the harbour schedule for this slot. The board retains the p",
+      "wake_kind": "crewmate-report",
+      "at": 1738591984000,
+      "model": "fixture-model"
+    },
+    {
+      "id": 7,
+      "task_id": "8c100007",
+      "verdict": "routine",
+      "summary": "The midnight crossing result matches the expected service.",
+      "wake": "[fm-op] crewmate 7 reported on task 8c100007 \"Check the midnight crossing\": The trial timetable matches the harbour schedule for this slot. The board retains th",
+      "wake_kind": "crewmate-report",
+      "at": 1738592014000,
+      "model": "fixture-model"
+    },
+    {
+      "id": 8,
+      "task_id": "8c100008",
+      "verdict": "routine",
+      "summary": "The holiday service result matches the expected service.",
+      "wake": "[fm-op] crewmate 8 reported on task 8c100008 \"Check the holiday service\": The trial timetable matches the harbour schedule for this slot. The board retains the ",
+      "wake_kind": "crewmate-report",
+      "at": 1738592044000,
+      "model": "fixture-model"
+    },
+    {
+      "id": 9,
+      "task_id": "8c100009",
+      "verdict": "captain",
+      "summary": "The wheelchair berth result matches the expected service.",
+      "wake": "[fm-op] crewmate 9 reported on task 8c100009 \"Check the wheelchair berth\": The trial timetable matches the harbour schedule for this slot. The board retains the",
+      "wake_kind": "crewmate-report",
+      "at": 1738592074000,
+      "model": "fixture-model"
+    },
+    {
+      "id": 10,
+      "task_id": "8c10000a",
+      "verdict": "routine",
+      "summary": "The return fare result matches the expected service.",
+      "wake": "[fm-op] crewmate 10 reported on task 8c10000a \"Check the return fare\": The trial timetable matches the harbour schedule for this slot. The board retains the pri",
+      "wake_kind": "crewmate-report",
+      "at": 1738592104000,
+      "model": "fixture-model"
+    },
+    {
+      "id": 11,
+      "task_id": "8c10000b",
+      "verdict": "routine",
+      "summary": "The weather notice result matches the expected service.",
+      "wake": "[fm-op] crewmate 11 reported on task 8c10000b \"Check the weather notice\": The trial timetable matches the harbour schedule for this slot. The board retains the ",
+      "wake_kind": "crewmate-report",
+      "at": 1738592134000,
+      "model": "fixture-model"
+    },
+    {
+      "id": 12,
+      "task_id": "8c10000c",
+      "verdict": "captain",
+      "summary": "The late departure result matches the expected service.",
+      "wake": "[fm-op] crewmate 12 reported on task 8c10000c \"Check the late departure\": The trial timetable matches the harbour schedule for this slot. The board retains the ",
+      "wake_kind": "crewmate-report",
+      "at": 1738592164000,
+      "model": "fixture-model"
+    },
+    {
+      "id": 13,
+      "task_id": "8c10000d",
+      "verdict": "routine",
+      "summary": "The midnight crossing result matches the expected service.",
+      "wake": "[fm-op] crewmate 13 reported on task 8c10000d \"Check the midnight crossing\": The trial timetable matches the harbour schedule for this slot. The board retains t",
+      "wake_kind": "crewmate-report",
+      "at": 1738592194000,
+      "model": "fixture-model"
+    },
+    {
+      "id": 14,
+      "task_id": "8c10000e",
+      "verdict": "routine",
+      "summary": "The holiday service result matches the expected service.",
+      "wake": "[fm-op] crewmate 14 reported on task 8c10000e \"Check the holiday service\": The trial timetable matches the harbour schedule for this slot. The board retains the",
+      "wake_kind": "crewmate-report",
+      "at": 1738592224000,
+      "model": "fixture-model"
+    },
+    {
+      "id": 15,
+      "task_id": "8c10000f",
+      "verdict": "captain",
+      "summary": "The wheelchair berth result matches the expected service.",
+      "wake": "[fm-op] crewmate 15 reported on task 8c10000f \"Check the wheelchair berth\": The trial timetable matches the harbour schedule for this slot. The board retains th",
+      "wake_kind": "crewmate-report",
+      "at": 1738592254000,
+      "model": "fixture-model"
+    },
+    {
+      "id": 16,
+      "task_id": "8c100010",
+      "verdict": "routine",
+      "summary": "The return fare result matches the expected service.",
+      "wake": "[fm-op] crewmate 16 reported on task 8c100010 \"Check the return fare\": The trial timetable matches the harbour schedule for this slot. The board retains the pri",
+      "wake_kind": "crewmate-report",
+      "at": 1738592284000,
+      "model": "fixture-model"
+    },
+    {
+      "id": 17,
+      "task_id": "8c100011",
+      "verdict": "routine",
+      "summary": "The weather notice result matches the expected service.",
+      "wake": "[fm-op] crewmate 17 reported on task 8c100011 \"Check the weather notice\": The trial timetable matches the harbour schedule for this slot. The board retains the ",
+      "wake_kind": "crewmate-report",
+      "at": 1738592314000,
+      "model": "fixture-model"
+    },
+    {
+      "id": 18,
+      "task_id": "8c100012",
+      "verdict": "captain",
+      "summary": "The late departure result matches the expected service.",
+      "wake": "[fm-op] crewmate 18 reported on task 8c100012 \"Check the late departure\": The trial timetable matches the harbour schedule for this slot. The board retains the ",
+      "wake_kind": "crewmate-report",
+      "at": 1738592344000,
+      "model": "fixture-model"
+    }
+  ]
+}

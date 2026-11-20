@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "first-run-crew-facts-seek",
+      "reason": "Internal performance repair: the first-run record's crew facts are read with seeking queries instead of three full task lists, and the window is created one event-loop turn after the core starts. Only a record without those facts, such as the freeze journey's freshly seeded one, paid the read cost; nothing on screen changes."
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "claude-hold-clears-itself",
+      "kind": "fix",
+      "title": "Claude work resumes once Claude is serving again",
+      "body": "A pause that started because Claude could not read its sign-in no longer waits until you remove the account and add it again. Once Claude accepts that same sign-in, the work goes out on its own. While the pause stands, the Claude row says so, and Sign in clears it.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "claude-hold-clears-itself-dark.webp",
+        "light": "claude-hold-clears-itself-light.webp",
+        "alt": "Settings, Intelligence: the Claude row shows live allowance meters, an on-hold mark, and Sign in"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

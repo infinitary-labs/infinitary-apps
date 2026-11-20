@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "windows-automatic-placement",
+      "reason": "Windows is not a supported platform yet: a Windows PC now passes Automatic's checks of its own system, programs, identity and memory, so a task in a project that lives elsewhere starts there instead of waiting. Mac and Linux placement behave as before."
+    }
+  ]
+}

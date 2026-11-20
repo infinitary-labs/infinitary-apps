@@ -1,0 +1,16 @@
+{
+  "version": "0.1.3",
+  "channel": "stable",
+  "sourceCommit": "b00ed664bfdd4360de66df19cecf77c96a902e87",
+  "date": "2026-09-23",
+  "promotedFrom": null,
+  "entryIds": [
+    "bf-49c707174",
+    "bf-7daabe5cd",
+    "bf-88240e2f6",
+    "bf-90ce05f40",
+    "bf-bc56d29e8",
+    "bf-c6630d027",
+    "bf-f1d0d8e2c"
+  ]
+}

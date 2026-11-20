@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "panel-actions-test-isolated",
+      "reason": "Test setup only: the panel actions test replaces the frame focus check with a stand-in, so it now runs in its own test worker, where another file cannot load the panel code first and skip the stand-in. Nothing a person uses changes."
+    }
+  ]
+}

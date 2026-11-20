@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "e2e-close-once-tests",
+      "reason": "Test-only fix: the end-to-end harness now closes each launched app once, so a journey's cleanup that closes an app a step already closed, or one that quit by itself, no longer throws from Playwright and hides the step's own failure. No shipped behavior changes."
+    }
+  ]
+}

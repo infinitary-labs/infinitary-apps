@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "reply-wait-pushed-at-once",
+      "reason": "Sends a card's wait for its answer to the window as soon as the captain replies, instead of up to 60 ms later, so an answer inside that moment still marks the card unread. Only the instant stand-in model in the end-to-end tests answers that fast, so nothing anyone sees changes."
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "card-sound-clips-phone",
+      "kind": "feature",
+      "area": "cards",
+      "title": "Listen to a card's sound clips on iPhone and iPad",
+      "body": "A card's sound clip now plays on your iPhone and iPad too. Tap Listen in the card, and the clip plays in a strip under the card's text, with Play and Pause, a slider to move through it and its time. It plays even with the silent switch on, since you asked for it, and it pauses when you leave Infinitary. It stops when you move on from the card.",
+      "picture": {
+        "dark": "card-sound-clips-phone-dark.webp",
+        "light": "card-sound-clips-phone-light.webp",
+        "alt": "A card on iPhone whose body shows a Listen button with the clip's length, and under the body a sound strip with its caption, Play, a slider and its time, paused at two seconds of twenty"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "move-first-step-at-once",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Moving your first mate says it has started as soon as you press Move now",
+      "body": "When you move your first mate to another computer from Settings → Devices, the list under that computer now says it is moving your first mate and offers Cancel the move right after you press Move now. Before, Move now looked ready to press again and nothing showed until your projects and the first part of the record had reached the other computer, which can take minutes.",
+      "noPicture": "This changes when the existing step line first appears after Move now, not how the list looks.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

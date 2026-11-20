@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-pictures-wait-for-slow-writes",
+      "reason": "Test only: the card pictures stand-in attaches its pictures only after every write that outlasted the shell's limit has exited. The bash tool's background-job receipt moves into a composer with the same words, for the stand-in to read. Regression cases replay one and two slow writes without weakening journey assertions."
+    }
+  ]
+}

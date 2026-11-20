@@ -1,0 +1,14 @@
+{
+  "id": "pull-comments",
+  "name": "Pull request comments",
+  "description": "A crewmate answers comments on its pull request until it merges: clear fixes by itself, unclear ones as a choice for you.",
+  "firstmate": "guide.md",
+  "crew": {
+    "file": "crew.md",
+    "when": {
+      "delivery": ["direct-pr", "queue-pr"]
+    }
+  },
+  "wakes": ["pull-request-comments"],
+  "startsOff": true
+}

@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "firstmate-keeps-open-work-after-long-conversations",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Your first mate keeps track of your open messages in long conversations",
+      "body": "In a long conversation, the first mate could lose track of messages it had not finished and cards still waiting on you. It now reads them back from the app whenever its conversation is condensed, and keeps your task information current with less repetition.",
+      "noPicture": "This changes what the first mate reads and remembers between turns, not a view or control.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

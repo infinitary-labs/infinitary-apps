@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "activity-line-focus-during-swap",
+      "kind": "fix",
+      "title": "The collapsed Activity line keeps your keyboard place when you reach it just as a newer line arrives",
+      "body": "Pressing Shift+Tab onto the line in a collapsed Activity panel's header, at the moment a newer line was replacing it, could send you to the message box. You now stay on the line, which shows the newer words.",
+      "area": "tasks",
+      "noPicture": "Where the keyboard's place stays in the moment one line replaces another cannot show in a still picture.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "setup-hooks-on-load-clock",
+      "reason": "Tests only: a hook that a test setup file registers before the load clock starts now runs on that clock, so a stalled, loaded test runner no longer fails a passing file at the wall clock's hook limit; the app itself is unchanged."
+    }
+  ]
+}

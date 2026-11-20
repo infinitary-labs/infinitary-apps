@@ -1,0 +1,272 @@
+/* Subscriptions tab, the Instruments direction (captain's pick, 2026-09-05):
+   one flat list of accounts, a status dot and every window as a micro-meter
+   per row, actions behind a kebab. The layout rules that inline styles
+   cannot express live here: the row grid, hover, the container query that
+   restacks a narrow column, and reduced motion. */
+
+[data-subscriptions-list] {
+  container-type: inline-size;
+}
+
+.fm-subs-row {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 6px 112px minmax(150px, 0.8fr) minmax(0, 1.7fr) 28px;
+  gap: 14px;
+  align-items: center;
+  padding: 9px var(--space-4);
+  min-height: 50px;
+  border-top: 1px solid var(--line-1);
+  min-width: 0;
+}
+
+.fm-subs-row:first-child {
+  border-top: 0;
+}
+
+.fm-subs-row:hover {
+  background: var(--bg-2);
+}
+
+.fm-subs-row[data-paused] {
+  opacity: 0.55;
+}
+
+.fm-subs-dot {
+  display: inline-flex;
+  align-items: center;
+}
+
+.fm-subs-prov {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--fg-1);
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.fm-subs-prov-inline {
+  display: none;
+  color: var(--fg-2);
+}
+
+.fm-subs-who {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.fm-subs-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  color: var(--fg-1);
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.fm-subs-label > .fm-subs-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.fm-subs-sub {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+  overflow-wrap: anywhere;
+}
+
+.fm-subs-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px var(--space-4);
+  min-width: 0;
+}
+
+.fm-subs-state {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+  min-width: 0;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+/* Paying past the allowance: its own line under the meters. */
+.fm-subs-credits {
+  flex-basis: 100%;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+  min-width: 0;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.fm-subs-state[data-tone="danger"] {
+  color: var(--danger);
+}
+
+.fm-subs-verdict {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  color: var(--fg-3);
+}
+
+.fm-subs-verdict[data-tone="ok"] {
+  color: var(--ok);
+}
+
+.fm-subs-verdict[data-tone="danger"] {
+  color: var(--danger);
+}
+
+.fm-subs-verdict[data-tone="warn"] {
+  color: var(--warn);
+}
+
+.fm-subs-menu {
+  display: inline-flex;
+  justify-content: flex-end;
+}
+
+.fm-subs-add {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px var(--space-4);
+  border-top: 1px solid var(--line-1);
+  flex-wrap: wrap;
+}
+
+/* A cramped column: dot · identity · kebab, the meter flow underneath, and
+   the provider name joins the label ("Codex · Personal"). */
+@container (max-width: 640px) {
+  .fm-subs-row {
+    grid-template-columns: 6px minmax(0, 1fr) 28px;
+    grid-template-areas:
+      "dot who kebab"
+      ". flow flow";
+    row-gap: 8px;
+  }
+  .fm-subs-dot {
+    grid-area: dot;
+  }
+  .fm-subs-prov {
+    display: none;
+  }
+  .fm-subs-prov-inline {
+    display: inline;
+  }
+  .fm-subs-who {
+    grid-area: who;
+  }
+  .fm-subs-flow {
+    grid-area: flow;
+  }
+  .fm-subs-menu {
+    grid-area: kebab;
+  }
+}
+
+/* The Models disclosure. */
+.fm-subs-disclose {
+  background: var(--bg-1);
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-m);
+  overflow: hidden;
+}
+
+.fm-subs-disclose-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 12px 18px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  text-align: start;
+  font-family: var(--font-ui);
+  color: var(--fg-1);
+}
+
+.fm-subs-disclose-head:hover {
+  background: var(--bg-2);
+}
+
+/* The disclosure clips what lies outside it, so its heading draws the
+   ring, glow and all, inside its own edge. */
+.fm-subs-disclose-head:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-inset);
+}
+
+.fm-subs-chevron {
+  margin-inline-start: auto;
+  color: var(--fg-3);
+  display: inline-flex;
+  transition: transform var(--dur-med) var(--ease-out);
+}
+
+.fm-subs-disclose-head[aria-expanded="true"] .fm-subs-chevron {
+  transform: rotate(180deg);
+}
+
+.fm-subs-disclose-body {
+  animation: fm-subs-reveal var(--dur-med) var(--ease-out);
+}
+
+/* The slot, picker, and Off lists scroll inside their cards. The same thin
+   classic scrollbar the feed and Now scrollers get - it consumes layout
+   width, so a long list's scroll strip never lands on a row's kebab. */
+.fm-subs-scroll {
+  --subs-thumb: 3px;
+}
+
+.fm-subs-scroll::-webkit-scrollbar {
+  width: var(--subs-thumb);
+  height: var(--subs-thumb);
+}
+
+.fm-subs-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.fm-subs-scroll::-webkit-scrollbar-thumb {
+  background: var(--fg-3);
+}
+
+.fm-subs-scroll::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.fm-subs-scroll::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .fm-subs-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--fg-3) transparent;
+  }
+}
+
+@keyframes fm-subs-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

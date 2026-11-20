@@ -1,0 +1,13 @@
+{
+  "mergedAt": "Mesclada às {at}",
+  "mergedChangeOn": "{change} mesclada no {place}",
+  "mergedChangeOnHost": "{change} mesclada no host do projeto",
+  "mergedChangeWhereItLives": "{change} mesclada onde o projeto fica",
+  "mergedInCommit": "Mesclada no commit {commit}",
+  "mergedInPull": "Mesclada na solicitação de pull {change}",
+  "mergedOn": "Mesclada no {place}",
+  "mergedOnItsOwnAt": "Mesclada por conta própria às {at}",
+  "mergedWhereItLives": "Mesclada onde o projeto fica",
+  "mergedWithBatchOn": "Mesclada com o lote {change} no {place}",
+  "mergedWithBatchWhereItLives": "Mesclada com o lote {change} onde o projeto fica"
+}

@@ -1,0 +1,695 @@
+import { describe, expect, it, vi } from "vitest";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
+import { softHoldWords } from "../../shared/holds";
+import type { Forge, ForgePull } from "../forge";
+import { appPathsFor } from "../paths";
+import { PI_CONTROL_PROFILE } from "../pi/controlProfile";
+import { CardStore } from "../storage/cardStore";
+import { openInMemoryDatabase } from "../storage/db";
+import { InboxStore } from "../storage/inboxStore";
+import { seedTask } from "../tasks/seedTask";
+import { TaskService } from "../tasks/taskService";
+import { RepoRegistry } from "../workspace/repoRegistry";
+import { seedProject } from "../workspace/seedProject";
+import { askEndingOf } from "./askEnding";
+import type { CardService } from "./cardService";
+import { createChangeDelivery } from "./changeDelivery";
+import { armWatch, CHECK_REFRESH_MS, CheckWatcher } from "./checkWatch";
+import { CrewSupervisor } from "./crewSupervisor";
+import type { SettleServiceHost } from "./settleHost";
+import { createSettleOwners } from "./settleOwners";
+
+/**
+ * INF-458 and the captain’s safety correction: only an explicitly finished
+ * task closes on merge. Since INF-2744 the finishing declaration is the
+ * open merge card's own `after: "close"`, never a report field.
+ */
+function fixture() {
+  let now = CHECK_REFRESH_MS;
+  const db = openInMemoryDatabase();
+  const tasks = new TaskService({ db, strict: true, now: () => now });
+  const inbox = new InboxStore(db, { now: () => now });
+  seedProject(db, {
+    id: "project",
+    name: "Meter",
+    path: "/not-mounted/project",
+    origin: "https://github.com/o/meter.git",
+    delivery: "direct-pr",
+  });
+  const repos = new RepoRegistry(db, "/not-mounted/fleet");
+  seedTask(tasks, {
+    id: "meter",
+    title: "Correct the meter",
+    status: "idle",
+    repoId: "project",
+    repoDir: "/not-mounted/project",
+    worktreeDir: "/not-mounted/worktree",
+    branch: "fm/task-meter",
+  });
+  seedDelivery(tasks, "meter", {
+    prNumber: 71,
+    prUrl: "https://github.com/o/meter/pull/71",
+    headSha: "a".repeat(40),
+    ci: "green",
+    ciAt: 0,
+  });
+  // The task's open merge card, as the card stack answers for it.
+  let openCard:
+    | { cardId: string; cardTitle: string; actionId: string; label: string; after: "close" }
+    | undefined;
+  // The crewmate's merge card for the current change, declaring that its
+  // merge closes the task, with the offer the host kept for it.
+  const declare = (prNumber = 71, headSha = "a".repeat(40)) => {
+    openCard = {
+      cardId: "card-meter-merge",
+      cardTitle: "The meter counts every press",
+      actionId: "merge",
+      label: "Merge the pull request",
+      after: "close",
+    };
+    seedDelivery(tasks, "meter", {
+      completionOffers: [
+        {
+          cardId: "card-meter-merge",
+          offerId: "offer-1",
+          headSha,
+          prNumber,
+          shownFor: prNumber,
+          at: 1,
+        },
+      ],
+    });
+  };
+  const withdraw = () => {
+    openCard = undefined;
+  };
+  declare();
+  let pull: ForgePull | undefined = {
+    number: 71,
+    state: "open",
+    merged: false,
+    headSha: "a".repeat(40),
+    branch: "fm/task-meter",
+    base: "main",
+    readiness: "clean",
+  };
+  const readPull = vi.fn(async () => pull);
+  const forge = { pull: readPull } as unknown as Forge;
+  const delivery = createChangeDelivery({ tasks, repos, forgeFor: () => forge });
+  const retire = vi.fn(async () => ({ outcome: "removed" as const, kept: null }));
+  const stop = vi.fn(async () => {});
+  const merge = vi.fn();
+  const cards = {
+    openMergeAction: () => openCard,
+    retireTaskCards: vi.fn(),
+    releaseNotes: vi.fn(),
+    releaseMerged: vi.fn(),
+    drawsMergedLine: () => false,
+    hostCards: { withdrawHostCard: vi.fn() },
+    values: () => [],
+    stored: () => undefined,
+    shownAt: () => 0,
+    scheduleBroadcast: vi.fn(),
+  } as unknown as CardService;
+  const host: SettleServiceHost = {
+    tasks,
+    inbox,
+    repos,
+    cards,
+    askEnding: askEndingOf(tasks, cards),
+    now: () => now,
+    workspace: { retireTaskWorktree: retire } as unknown as SettleServiceHost["workspace"],
+    readPull: (id, number) => delivery.merges.pullState(id, number),
+    mergePullRequest: merge,
+    runtimeState: () => "idle",
+    stopRuntime: stop,
+    endLiveTask: () => {},
+    isPersonalTask: () => false,
+    deliverableOf: () => "change",
+    taskDelivery: () => "direct-pr",
+    taskAutonomy: () => false,
+    resolveTaskRef: () => tasks.get("meter")!,
+    notifyOp: () => {},
+    pokeInbox: () => {},
+    sweepGates: async () => {},
+    broadcastCrewCounts: () => {},
+    broadcastEvent: () => {},
+  };
+  const { settle, locks } = createSettleOwners(host);
+  let blocked = false;
+  const readChecks = vi.fn(async () => ({ kind: "gone" as const }));
+  const steer = vi.fn();
+  const watcher = () =>
+    new CheckWatcher({
+      tasks,
+      inbox,
+      read: readChecks,
+      steer,
+      idleBehindOtherWork: () => blocked,
+      reconcileMerged: (id) => settle.reconcileExternalMerge(id),
+    });
+  return {
+    tasks,
+    inbox,
+    host,
+    declare,
+    withdraw,
+    retire,
+    stop,
+    merge,
+    cards,
+    readPull,
+    readChecks,
+    steer,
+    settle,
+    locks,
+    watcher,
+    sweep: async () => {
+      const supervisor = new CrewSupervisor({
+        now: () => now,
+        paths: appPathsFor(scratchDir("infinitary-merge-inbox-")),
+        tasks,
+        inbox,
+        repos,
+        cardStore: new CardStore(db),
+        workspace: host.workspace,
+        sessions: {
+          pi: {
+            backend: "pi",
+            controlProfile: PI_CONTROL_PROFILE,
+            open: async () => {
+              throw new Error("No saved conversation is available to open.");
+            },
+          },
+        },
+        bind: async () => {
+          throw new Error("No saved conversation is available to bind.");
+        },
+        broadcastEvent: () => {},
+        broadcastCards: () => {},
+      });
+      await supervisor.watch.sweepInbox(now);
+      await supervisor.disposeAll();
+    },
+    now: () => now,
+    advance: () => {
+      now += CHECK_REFRESH_MS;
+    },
+    merged: () => {
+      pull = { ...pull!, state: "closed", merged: true, mergedSha: "b".repeat(40) };
+    },
+    answer: (value: ForgePull | undefined) => {
+      pull = value;
+    },
+    pull: () => pull!,
+    blocked: () => {
+      blocked = true;
+    },
+  };
+}
+
+describe("external merge reconciliation", () => {
+  it("closes once on the shared watch without a merge request or captain consent, even with a missing project folder", async () => {
+    const h = fixture();
+    const watcher = h.watcher();
+    await watcher.poll(h.now());
+    expect(h.tasks.get("meter")?.status).toBe("active");
+    h.merged();
+    h.advance();
+    await watcher.poll(h.now());
+    expect(h.tasks.get("meter")).toMatchObject({
+      status: "done",
+      closedReason: "merged",
+      workspaceState: "removed",
+      delivery: { ci: "merged", landedMode: "pr" },
+    });
+    expect(h.retire).toHaveBeenCalledOnce();
+    expect(h.stop).toHaveBeenCalledOnce();
+    expect(h.cards.retireTaskCards).toHaveBeenCalledWith("meter", "merged", { keepNotes: true });
+    expect(h.inbox.pending("meter")).toEqual([]);
+    expect(h.merge).not.toHaveBeenCalled();
+    expect(h.steer).not.toHaveBeenCalled();
+    h.advance();
+    await h.watcher().poll(h.now());
+    expect(h.retire).toHaveBeenCalledOnce();
+  });
+
+  it.each(["merged", "no-pr", "green"] as const)(
+    "resumes monitoring a declared completion after restart from %s and a manual-merge choice",
+    async (ci) => {
+      const h = fixture();
+      seedDelivery(h.tasks, "meter", { ci });
+      h.blocked();
+      h.merged();
+      await h.watcher().poll(h.now());
+      expect(h.tasks.get("meter")).toMatchObject({ status: "done", closedReason: "merged" });
+      expect(h.readChecks).not.toHaveBeenCalled();
+      expect(h.merge).not.toHaveBeenCalled();
+    },
+  );
+
+  it("records a prerequisite merge without closing, then closes after the remaining work explicitly finishes", async () => {
+    const h = fixture();
+    // Its crewmate took the merge card down: deployment verification still
+    // remains after this merge.
+    h.withdraw();
+    h.merged();
+    await h.watcher().poll(h.now());
+    expect(h.tasks.get("meter")).toMatchObject({
+      status: "active",
+      delivery: { ci: "merged" },
+      workspaceState: "present",
+    });
+    expect(h.stop).not.toHaveBeenCalled();
+    expect(h.retire).not.toHaveBeenCalled();
+    const wake = h.inbox.allFor("meter");
+    expect(wake).toHaveLength(1);
+    expect(wake[0]).toMatchObject({ facts: { kind: "external-merge", head: h.pull().headSha } });
+    h.advance();
+    await h.watcher().poll(h.now());
+    expect(h.inbox.allFor("meter")).toHaveLength(1);
+    h.inbox.ack([wake[0]!.id]);
+    h.declare();
+    h.advance();
+    await h.watcher().poll(h.now());
+    expect(h.tasks.get("meter")?.closedReason).toBe("merged");
+    expect(h.retire).toHaveBeenCalledOnce();
+  });
+
+  // INF-2525, the captain's words: "if they both got raised, then we should
+  // make sure the merge card doesn't close the task directly". Another of
+  // the task's pull requests still open keeps it open past an outside merge
+  // of a declared completion, and its crewmate hears which one.
+  it("keeps the task open on an outside merge while another of its pull requests is open (INF-2525)", async () => {
+    const h = fixture();
+    seedDelivery(h.tasks, "meter", {
+      mergeReviews: [
+        {
+          id: "review-next",
+          kind: "github",
+          host: "github.com",
+          owner: "o",
+          name: "meter",
+          number: 72,
+          headSha: "c".repeat(40),
+          base: "main",
+          branch: "fm/task-label",
+          method: "squash",
+          title: "fix: label the meter",
+          at: 1,
+        },
+      ],
+    });
+    h.merged();
+    const merged = h.pull();
+    h.readPull.mockImplementation(async (...args: unknown[]) =>
+      args.includes(72) ? { ...merged, number: 72, state: "open", merged: false } : merged,
+    );
+    await h.watcher().poll(h.now());
+    expect(h.tasks.get("meter")).toMatchObject({ status: "active", delivery: { ci: "merged" } });
+    expect(h.retire).not.toHaveBeenCalled();
+    expect(h.inbox.allFor("meter")).toEqual([
+      expect.objectContaining({
+        facts: expect.objectContaining({
+          kind: "external-merge",
+          open: "#72 on this task is still open",
+        }),
+      }),
+    ]);
+  });
+
+  // The review of INF-3799: the watcher read a merge while its crewmate
+  // worked, under the captain's kept approval that already closes the task,
+  // and its wake still asked for a merge card, which check_change says not
+  // to put up. The wake names what declared the close, and the task closes
+  // as merged once the turn ends, with nothing sent.
+  it.each(["approval", "card"] as const)(
+    "wakes a working crewmate to put up no merge card when the %s already closes the task",
+    async (closes) => {
+      const h = fixture();
+      if (closes === "approval") {
+        h.withdraw();
+        seedDelivery(h.tasks, "meter", {
+          mergeAuthorization: {
+            version: 1,
+            id: "auth-1",
+            generation: 1,
+            issuer: "captain",
+            at: 1,
+            card: { id: "card-meter-merge", offerId: "offer-1", actionId: "merge" },
+            target: {
+              repoId: "project",
+              host: "github.com",
+              owner: "o",
+              name: "meter",
+              prNumber: 71,
+              branch: "fm/task-meter",
+              delivery: "direct-pr",
+              method: "squash",
+            },
+            approvedHead: "a".repeat(40),
+            lineage: [],
+            proceedWithOpen: false,
+            status: "standing",
+            after: "close",
+          },
+        });
+      }
+      h.tasks.turns.setActivity("meter", "running");
+      h.merged();
+      await h.watcher().poll(h.now());
+      expect(h.tasks.get("meter")).toMatchObject({ status: "active", delivery: { ci: "merged" } });
+      const wake = h.inbox.allFor("meter");
+      expect(wake).toEqual([
+        expect.objectContaining({
+          facts: expect.objectContaining({ kind: "external-merge", closes }),
+        }),
+      ]);
+      h.inbox.ack([wake[0]!.id]);
+      h.tasks.turns.setActivity("meter", "idle");
+      h.advance();
+      await h.watcher().poll(h.now());
+      expect(h.tasks.get("meter")?.closedReason).toBe("merged");
+      expect(h.merge).not.toHaveBeenCalled();
+    },
+  );
+
+  // INF-1391: the external-merge journey found a tick deleting escalated
+  // guidance when the new merge wake reached a task without a saved session.
+  it.each(["before", "after"] as const)(
+    "keeps unfinished guidance when the inbox sweeps %s a prerequisite merge",
+    async (order) => {
+      const h = fixture();
+      h.tasks.turns.recordReport("meter", { text: "Deployment verification remains." });
+      seedTask(h.tasks, {
+        id: "verify",
+        title: "Verify deployment",
+        status: "queued",
+        startPolicy: "on-request",
+        parentId: "meter",
+      });
+      const guidance = h.inbox.enqueue("meter", "Verify deployment before finishing this task.");
+      h.inbox.markEscalated(guidance);
+      const kept = h.inbox.get(guidance);
+      expect(h.tasks.get("meter")?.sessionFile).toBeNull();
+      if (order === "before") await h.sweep();
+      h.merged();
+      await h.watcher().poll(h.now());
+      // Force the order that the journey's asynchronous tick only sometimes reached.
+      await h.sweep();
+      expect(h.inbox.get(guidance)).toEqual(kept);
+      expect(h.inbox.pending("meter")).toEqual([
+        expect.objectContaining({
+          facts: expect.objectContaining({ kind: "external-merge", head: h.pull().headSha }),
+        }),
+      ]);
+      expect(h.tasks.get("meter")).toMatchObject({
+        status: "active",
+        closedReason: null,
+        workspaceState: "present",
+        delivery: { ci: "merged" },
+      });
+      expect(h.tasks.get("verify")?.status).toBe("open");
+      expect(h.retire).not.toHaveBeenCalled();
+      h.advance();
+      await h.watcher().poll(h.now());
+      await h.sweep();
+      expect(h.inbox.get(guidance)).toEqual(kept);
+      expect(h.inbox.allFor("meter")).toHaveLength(2);
+    },
+  );
+
+  it.each([
+    "turn",
+    "queued",
+    "in-flight",
+    "job",
+    "child",
+    "dependency",
+    "interrupted",
+    "question",
+  ] as const)(
+    "keeps %s work intact even if an earlier report declared completion",
+    async (remaining) => {
+      const h = fixture();
+      let guidance: number | undefined;
+      if (remaining === "turn") h.host.runtimeState = () => "streaming";
+      if (remaining === "interrupted") h.tasks.turns.setActivity("meter", "interrupted");
+      if (remaining === "job") h.host.hasRunningJobs = () => true;
+      if (remaining === "question") {
+        h.host.cards.values = function* () {
+          yield {
+            id: "card-meter-question",
+            taskId: "meter",
+            author: "crewmate",
+            title: "Choose the deployment target",
+            body: "<p>Which deployment target should I verify?</p>",
+            meta: "",
+            createdAt: 1,
+            status: "ready",
+            priority: 30,
+            actions: [{ id: "staging", label: "Staging", default: true, variant: "primary" }],
+          };
+        };
+      }
+      if (remaining === "queued" || remaining === "in-flight") {
+        guidance = h.inbox.enqueue("meter", "Verify deployment before closing this task.");
+        if (remaining === "in-flight") h.inbox.markDelivered([guidance]);
+      }
+      if (remaining === "child") {
+        seedTask(h.tasks, {
+          id: "verify",
+          title: "Verify deployment",
+          status: "queued",
+          parentId: "meter",
+        });
+        expect(h.tasks.graph.closeRefusal("meter")?.refused).toBe("children-open");
+      }
+      if (remaining === "dependency") {
+        seedTask(h.tasks, { id: "verify", title: "Verify deployment", status: "queued" });
+        h.tasks.graph.link("verify", "meter", "blocks", "crewmate", true);
+      }
+      h.merged();
+      await h.watcher().poll(h.now());
+      expect(h.tasks.get("meter")).toMatchObject({
+        status: "active",
+        workspaceState: "present",
+        delivery: { ci: "merged" },
+      });
+      expect(h.stop).not.toHaveBeenCalled();
+      expect(h.retire).not.toHaveBeenCalled();
+      expect(h.cards.retireTaskCards).not.toHaveBeenCalled();
+      if (guidance !== undefined)
+        expect(
+          [...h.inbox.allFor("meter"), ...h.inbox.inFlight("meter")].map((row) => row.id),
+        ).toContain(guidance);
+      if (remaining === "child" || remaining === "dependency")
+        expect(h.tasks.get("verify")?.status).toBe("open");
+    },
+  );
+
+  it("binds the declaration to the merge card's exact PR/version, and declares nothing once that card is gone (INF-2744)", async () => {
+    const h = fixture();
+    // The card left the stack: nothing declares the merge closes the task.
+    h.withdraw();
+    h.answer({ ...h.pull(), merged: true, state: "closed" });
+    await h.watcher().poll(h.now());
+    expect(h.tasks.get("meter")?.status).toBe("active");
+    h.inbox.ack(h.inbox.allFor("meter").map((row) => row.id));
+    // A card shown at another version declares nothing about this merge.
+    h.declare(71, "c".repeat(40));
+    h.advance();
+    await h.watcher().poll(h.now());
+    expect(h.tasks.get("meter")?.status).toBe("active");
+    expect(h.retire).not.toHaveBeenCalled();
+    h.inbox.ack(h.inbox.allFor("meter").map((row) => row.id));
+    // The merge card at the merged version closes it.
+    h.declare();
+    h.advance();
+    await h.watcher().poll(h.now());
+    expect(h.tasks.get("meter")?.closedReason).toBe("merged");
+  });
+
+  it("closes the record before an idle runtime shutdown can yield to new guidance", async () => {
+    const h = fixture();
+    let stopped!: () => void;
+    h.stop.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          stopped = resolve;
+        }),
+    );
+    h.merged();
+    const reading = h.watcher().poll(h.now());
+    await vi.waitFor(() => expect(h.stop).toHaveBeenCalledOnce());
+    expect(h.tasks.get("meter")?.closedReason).toBe("merged");
+    expect(h.retire).not.toHaveBeenCalled();
+    stopped();
+    await reading;
+    expect(h.retire).toHaveBeenCalledOnce();
+  });
+
+  it("keeps an unreachable working copy pending for its existing owner instead of touching its path here", async () => {
+    const h = fixture();
+    h.tasks.placement.setDevice("meter", "mini");
+    h.merged();
+    await h.watcher().poll(h.now());
+    expect(h.tasks.get("meter")).toMatchObject({
+      status: "done",
+      closedReason: "merged",
+      deviceId: "mini",
+      workspaceState: "present",
+    });
+    expect(h.retire).not.toHaveBeenCalled();
+    expect(h.merge).not.toHaveBeenCalled();
+  });
+
+  // INF-2546 R11, under the captain's "close the task when its finishing
+  // change merges": the finishing change may be another branch's pull
+  // request the task made current. Merged outside the app with the
+  // crewmate's declaration, it closes the task as merged, and the merge is
+  // that pull request's own, never the task's own pull request's.
+  it("closes on the outside merge of the current change on another branch, and records the merge on that change alone (INF-2546)", async () => {
+    const h = fixture();
+    const theirs = "9".repeat(40);
+    const release = {
+      id: "mrrelease94",
+      kind: "github" as const,
+      host: "github.com",
+      owner: "o",
+      name: "meter",
+      number: 94,
+      headSha: theirs,
+      base: "main",
+      branch: "release-please--branches--main",
+      method: "squash" as const,
+      title: "chore(main): release 0.2.0",
+      at: 1,
+    };
+    seedDelivery(h.tasks, "meter", {
+      mergeReviews: [release],
+      checkTarget: release,
+      prNumber: 94,
+      headSha: theirs,
+      ci: "green",
+    });
+    // The release is the finishing change: its merge card says it closes the task.
+    h.declare(94, theirs);
+    h.answer({
+      number: 94,
+      state: "closed",
+      merged: true,
+      mergedSha: "b".repeat(40),
+      headSha: theirs,
+      branch: release.branch,
+      base: "main",
+      readiness: "clean",
+    });
+    // The task's own pull request reads by its own number, closed when the
+    // release became the finishing change (INF-2525: an open one would keep
+    // the task open).
+    const released = h.pull();
+    h.readPull.mockImplementation(async (...args: unknown[]) =>
+      args.includes(71)
+        ? {
+            ...released,
+            number: 71,
+            merged: false,
+            branch: "fm/task-meter",
+            headSha: "a".repeat(40),
+          }
+        : released,
+    );
+    await h.watcher().poll(h.now());
+    expect(h.tasks.get("meter")).toMatchObject({ status: "done", closedReason: "merged" });
+    expect(h.merge).not.toHaveBeenCalled();
+    const changes = h.tasks.changesFor("meter");
+    expect(changes.map((change) => change.handle?.number).sort()).toEqual([71, 94]);
+    expect(changes.find((change) => change.handle?.number === 94)?.receipt).toMatchObject({
+      outcome: "merged",
+      reason: "merged",
+    });
+    expect(changes.find((change) => change.handle?.number === 71)?.receipt?.outcome).not.toBe(
+      "merged",
+    );
+  });
+
+  it("does not confuse closed, missing, unreadable or another numbered PR with a merge", async () => {
+    const h = fixture();
+    for (const answer of [
+      undefined,
+      { ...h.pull(), state: "closed" as const },
+      { ...h.pull(), number: 72, merged: true },
+    ]) {
+      h.answer(answer);
+      await h.watcher().poll(h.now());
+      expect(h.tasks.get("meter")?.status).toBe("active");
+      h.advance();
+    }
+    h.readPull.mockRejectedValueOnce(new Error("sign-in unavailable"));
+    await h.watcher().poll(h.now());
+    expect(h.tasks.get("meter")?.status).toBe("active");
+    expect(h.retire).not.toHaveBeenCalled();
+  });
+
+  it("serializes a slow read and rejects a PR identity changed while it was out", async () => {
+    const h = fixture();
+    let answer!: (value: ForgePull) => void;
+    h.readPull.mockImplementationOnce(
+      () =>
+        new Promise<ForgePull>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const watcher = h.watcher();
+    const reading = watcher.poll(h.now());
+    await watcher.poll(h.now());
+    expect(h.readPull).toHaveBeenCalledOnce();
+    seedDelivery(h.tasks, "meter", { prNumber: 72 });
+    answer({ ...h.pull(), merged: true, state: "closed" });
+    await reading;
+    expect(h.tasks.get("meter")?.status).toBe("active");
+    expect(h.retire).not.toHaveBeenCalled();
+  });
+
+  it("ends a running check watch by closing, without a gone-check wake", async () => {
+    const h = fixture();
+    seedDelivery(h.tasks, "meter", { ciWatch: armWatch(undefined, h.pull().headSha, 0) });
+    h.merged();
+    await h.watcher().poll(h.now());
+    expect(h.tasks.get("meter")?.delivery?.ciWatch).toBeUndefined();
+    expect(h.tasks.get("meter")?.closedReason).toBe("merged");
+    expect(h.steer).not.toHaveBeenCalled();
+  });
+  it("answers a merge asked while the watch reads its pull request, and leaves a merge read then to the settle holding it", async () => {
+    const h = fixture();
+    let answer!: (value: ForgePull) => void;
+    h.readPull.mockImplementationOnce(
+      () =>
+        new Promise<ForgePull>((resolve) => {
+          answer = resolve;
+        }),
+    );
+    const reading = h.watcher().poll(h.now());
+    // The first mate's merge, asked while the read is out, hears its own
+    // answer: on this project the merge is the captain's click.
+    const asked = await h.settle.settleTaskGuarded("meter", "merge-pr", undefined, "firstmate");
+    expect(asked.contention).toBeUndefined();
+    expect(asked).toMatchObject({
+      ok: false,
+      text: expect.stringContaining(softHoldWords("asks-first", "firstmate")),
+    });
+    // A settle holding the task when the read answers merged keeps it.
+    const settling = h.locks.claim("meter", "merge-pr");
+    answer({ ...h.pull(), merged: true, state: "closed" });
+    await reading;
+    expect(h.tasks.get("meter")?.status).toBe("active");
+    expect(h.retire).not.toHaveBeenCalled();
+    settling.release();
+    h.merged();
+    h.advance();
+    await h.watcher().poll(h.now());
+    expect(h.tasks.get("meter")).toMatchObject({ status: "done", closedReason: "merged" });
+  });
+});

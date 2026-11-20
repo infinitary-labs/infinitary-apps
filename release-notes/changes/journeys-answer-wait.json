@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journeys-answer-wait",
+      "reason": "Seven journeys that ask the first mate something now wait for its answer before reading the result, instead of the character looking idle, which it shows before its turn starts. Only how the project is checked changes."
+    }
+  ]
+}

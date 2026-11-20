@@ -1,0 +1,760 @@
+import { BATCH_GATE } from "@shared/batchGate";
+// The crewmate glyph in orbit: the design skill's Crewmate - a 3D wireframe
+// tetrahedron, the simplest solid, deliberately one dimension below the 4D
+// Firstmate - plus what orbit life adds: it unfolds from a point when it
+// arrives and folds back when it leaves, a working crewmate carries a
+// little light of its own and a filament tick walking its edges, an idle
+// one goes dim and slow. Colors are the wire tokens the caller read.
+//
+// Working and idle read in motion and posture: working = fast double
+// rotation, pulsing nodes, the tick, a halo, sitting ON the ring; idle =
+// slow tumble, a slow bob, sitting a touch farther out. Color says the same
+// thing, the Firstmate's own way (captain's board call): a working crewmate
+// heats from ice cyan to ember (`--wire-hot`) as the rig does on its turn,
+// an idle one stays a dim ice cyan. A crewmate whose working is a
+// background wait is still working, banked (INF-676, the captain's
+// direction A; INF-1777): idle strength and pace, no tick and no halo,
+// inside a thin dashed cyan ring whose arc travels as the fact strip's
+// running checks do; reduced motion holds the ring whole and still. The
+// dashes keep it apart from the beacon's full ring. Its wires say where the
+// wait is: ember for local work it left running, ice cyan for checks
+// outside. A crewmate waiting on the captain (INF-1543,
+// the captain's direction A, the beacon) wears the Tasks row's Waiting on
+// you ring: a thin accent circle round its solid, under a soft halo, that
+// breathes slowly - brightening, fading and swelling a touch - with no
+// onset and no new hue; reduced motion holds it whole at mid light.
+//
+// The solid says how strong a model the crewmate runs on (captain's board
+// verdict, 2026-09-23): a richer 3D solid for a stronger slot, every one
+// inscribed in the same sphere and every one still simpler than the 4D
+// Firstmate - tetrahedron (low), octahedron (medium), icosahedron (high),
+// geodesic sphere (premium). A crewmate whose slot is unknown keeps the
+// tetrahedron, claiming no more than the app knows; it paints exactly as a
+// crewmate did before tiers existed.
+//
+// A fixed star (INF-3634, ./fixedStars.ts), a crewmate whose task is listed
+// under Pinned, wears a glint under its solid: a soft glow and four thin
+// tapered rays in its own light lifted toward white, the long ones up and
+// down, twinkling slowly on its own beat; reduced motion holds it steady.
+
+import type { Slot } from "@shared/modelSlots";
+import { noise1, TAU } from "../face";
+import { FLICKER_TUNING, filamentWaver } from "../flicker";
+import { CONSTELLATION } from "./constellation";
+import { FIXED_STARS } from "./fixedStars";
+import type { CrewmateFrame, DependencyLink, PacketFrame, ProgramFrame } from "./orbit";
+
+export type Rgb = [number, number, number];
+export type CrewColors = { accent: Rgb; hot: Rgb; boost: number; quiet?: Rgb };
+
+type Vec3 = readonly [number, number, number];
+type Edge = readonly [number, number];
+
+const S3 = 1 / Math.sqrt(3);
+const VERTICES: ReadonlyArray<Vec3> = [
+  [S3, S3, S3],
+  [S3, -S3, -S3],
+  [-S3, S3, -S3],
+  [-S3, -S3, S3],
+];
+const EDGES: ReadonlyArray<Edge> = [
+  [0, 1],
+  [0, 2],
+  [0, 3],
+  [1, 2],
+  [1, 3],
+  [2, 3],
+];
+/**
+ * A crewmate's wireframe. Denser solids draw finer so the ring stays calm:
+ * `ink` scales edge alpha, line width and node radius. `nodes` is how many
+ * of the leading vertices carry a node (all when absent).
+ */
+export type Solid = {
+  v: ReadonlyArray<Vec3>;
+  e: ReadonlyArray<Edge>;
+  ink: readonly [alpha: number, line: number, node: number];
+  nodes?: number;
+};
+
+const dist = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+const onSphere = ([x, y, z]: Vec3): Vec3 => {
+  const n = Math.hypot(x, y, z);
+  return [x / n, y / n, z / n];
+};
+/** A convex solid's edges: every pair of vertices at the shortest distance. */
+function edgesOf(v: ReadonlyArray<Vec3>): Edge[] {
+  let min = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < v.length; i++)
+    for (let j = i + 1; j < v.length; j++) min = Math.min(min, dist(v[i] as Vec3, v[j] as Vec3));
+  const out: Edge[] = [];
+  for (let i = 0; i < v.length; i++)
+    for (let j = i + 1; j < v.length; j++)
+      if (dist(v[i] as Vec3, v[j] as Vec3) < min * 1.01) out.push([i, j]);
+  return out;
+}
+const OCTA_V: Vec3[] = [
+  [1, 0, 0],
+  [-1, 0, 0],
+  [0, 1, 0],
+  [0, -1, 0],
+  [0, 0, 1],
+  [0, 0, -1],
+];
+const PHI = (1 + Math.sqrt(5)) / 2;
+/** The icosahedron: the cyclic permutations of (0, ±1, ±φ), on the unit sphere. */
+const ICOSA_V: Vec3[] = [-1, 1].flatMap((a) =>
+  [-1, 1].flatMap((b) =>
+    (
+      [
+        [0, a, b * PHI],
+        [a, b * PHI, 0],
+        [b * PHI, 0, a],
+      ] as const
+    ).map(onSphere),
+  ),
+);
+const ICOSA_E = edgesOf(ICOSA_V);
+
+/**
+ * The geodesic sphere: the icosahedron with every face split into four and
+ * the new corners pushed out to the sphere. Its first 12 vertices are the
+ * icosahedron's own, and only those carry a node - a node on each of 42
+ * corners at orbit size is noise, not structure.
+ */
+function geodesic(): Solid {
+  const v: Vec3[] = [...ICOSA_V];
+  const midpoints = new Map<string, number>();
+  const mid = (p: number, q: number): number => {
+    const key = `${Math.min(p, q)}:${Math.max(p, q)}`;
+    const known = midpoints.get(key);
+    if (known !== undefined) return known;
+    const a = v[p] as Vec3;
+    const b = v[q] as Vec3;
+    v.push(onSphere([a[0] + b[0], a[1] + b[1], a[2] + b[2]]));
+    midpoints.set(key, v.length - 1);
+    return v.length - 1;
+  };
+  const adjacent = new Set(ICOSA_E.map(([p, q]) => `${p}:${q}`));
+  const touches = (p: number, q: number) => adjacent.has(`${Math.min(p, q)}:${Math.max(p, q)}`);
+  const edges = new Map<string, Edge>();
+  const add = (p: number, q: number) => edges.set(`${Math.min(p, q)}:${Math.max(p, q)}`, [p, q]);
+  for (let a = 0; a < 12; a++)
+    for (let b = a + 1; b < 12; b++)
+      for (let c = b + 1; c < 12; c++) {
+        if (!touches(a, b) || !touches(b, c) || !touches(a, c)) continue;
+        const ab = mid(a, b);
+        const bc = mid(b, c);
+        const ca = mid(c, a);
+        for (const [p, q] of [
+          [a, ab],
+          [ab, b],
+          [b, bc],
+          [bc, c],
+          [c, ca],
+          [ca, a],
+          [ab, bc],
+          [bc, ca],
+          [ca, ab],
+        ] as const)
+          add(p, q);
+      }
+  // The finest ink on the ring; its twelve nodes at four-fifths of the
+  // icosahedron's own (0.66), so the corners still read through the mesh.
+  return { v, e: [...edges.values()], ink: [0.62, 0.62, 0.66 * 0.8], nodes: 12 };
+}
+
+const TETRAHEDRON: Solid = { v: VERTICES, e: EDGES, ink: [1, 1, 1] };
+/** Each slot's solid, all inscribed in the unit sphere. */
+export const TIER_SOLIDS: Readonly<Record<Slot, Solid>> = {
+  low: TETRAHEDRON,
+  medium: { v: OCTA_V, e: edgesOf(OCTA_V), ink: [0.92, 0.95, 0.9] },
+  high: { v: ICOSA_V, e: ICOSA_E, ink: [0.8, 0.82, 0.66] },
+  premium: geodesic(),
+};
+
+/** The solid a crewmate is drawn as: its slot's, or the tetrahedron when the slot is unknown. */
+export function solidFor(tier: Slot | undefined): Solid {
+  return tier ? TIER_SOLIDS[tier] : TETRAHEDRON;
+}
+
+const WHITE_HOT: Rgb = [255, 244, 224];
+/** The filament tick's cycle: one edge lights per period, for the first 30% of it. */
+const TICK_PERIOD_MS = 900;
+const TICK_ON = 0.3;
+
+function mix(a: Rgb, b: Rgb, t: number): Rgb {
+  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+}
+
+function rgba(c: Rgb, alpha: number): string {
+  return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${Math.max(0, Math.min(1, alpha))})`;
+}
+
+/**
+ * A crewmate's wire color and strength at a working blend (0 idle .. 1
+ * working): the rig's heat ramp, ice cyan to ember, and an idle crewmate
+ * receding by strength, never by a second hue (components/mate/Crewmate).
+ * `wait` banks it for a background wait, and `job` is the share of that wait
+ * that is local work, which keeps the ember; a wait on checks is ice cyan.
+ */
+export function crewmateLight(
+  colors: CrewColors,
+  work: number,
+  wait = 0,
+  captain = 0,
+  job = 0,
+): { color: Rgb; strength: number } {
+  const w = Math.max(0, Math.min(1, work));
+  const c = Math.max(0, Math.min(1, wait));
+  const k = Math.max(0, Math.min(1, captain));
+  const j = Math.max(0, Math.min(1, job));
+  // A background wait banks it to idle strength, ember only for local work.
+  const working = 0.55 + 0.45 * w;
+  const banked = working + (WAIT_LIGHT.strength - working) * c;
+  return {
+    color: mix(colors.accent, colors.hot, Math.max(w, c * j)),
+    strength: banked + (CAPTAIN_LIGHT.wire - banked) * k,
+  };
+}
+
+/**
+ * The banked wire strength, the wait ring around the solid as a share of the
+ * glyph, its travelling arc's sweep, and how many dashes break the ring.
+ */
+export const WAIT_LIGHT = {
+  strength: 0.6,
+  ring: 0.8,
+  arc: 1.1,
+  dashes: 12,
+  dashShare: 0.55,
+} as const;
+
+/**
+ * The beacon, as the captain set it in INF-1543's preview: the ring as a
+ * share of the glyph, its light breathing between `lo` and `hi` of the
+ * accent, its swell, the halo's strength and reach, and the waiting
+ * crewmate's wire strength.
+ */
+export const CAPTAIN_LIGHT = {
+  ring: 0.9,
+  lo: 0.25,
+  hi: 0.85,
+  swell: 0.06,
+  halo: 0.12,
+  haloReach: 1.3,
+  wire: 0.55,
+  line: 1.2,
+} as const;
+
+/**
+ * The beacon (INF-1543): the Tasks row's Waiting on you ring round the
+ * solid, under a soft halo, breathing; a settled frame holds it at mid light.
+ */
+function drawCaptainRing(
+  ctx: CanvasRenderingContext2D,
+  f: CrewmateFrame,
+  px: number,
+  py: number,
+  colors: CrewColors,
+): void {
+  const k = (f.captain ?? 0) * f.alpha * f.unfold;
+  if (k <= 0.01) return;
+  const b = f.captainBreath ?? 0.5;
+  const haloR = f.size * CAPTAIN_LIGHT.haloReach;
+  const haloA = CAPTAIN_LIGHT.halo * (0.4 + 0.6 * b) * k;
+  if (haloA > 0.005) {
+    const g = ctx.createRadialGradient(px, py, 0, px, py, haloR);
+    g.addColorStop(0, rgba(colors.accent, haloA));
+    g.addColorStop(1, rgba(colors.accent, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(px, py, haloR, 0, TAU);
+    ctx.fill();
+  }
+  const r = f.size * CAPTAIN_LIGHT.ring * (1 + CAPTAIN_LIGHT.swell * (b - 0.5));
+  ctx.globalAlpha = 1;
+  ctx.lineCap = "round";
+  ctx.strokeStyle = rgba(
+    colors.accent,
+    (CAPTAIN_LIGHT.lo + (CAPTAIN_LIGHT.hi - CAPTAIN_LIGHT.lo) * b) * k * colors.boost,
+  );
+  ctx.lineWidth = CAPTAIN_LIGHT.line;
+  ctx.beginPath();
+  ctx.arc(px, py, r, 0, TAU);
+  ctx.stroke();
+}
+
+/**
+ * The wait ring (INF-676, INF-1777): the fact strip's running-checks mark
+ * carried onto the stage, a faint dashed accent circle - never the beacon's
+ * full one - with a brighter arc travelling round it, or the dashed circle
+ * whole and still on a settled frame.
+ */
+function drawWaitRing(
+  ctx: CanvasRenderingContext2D,
+  f: CrewmateFrame,
+  px: number,
+  py: number,
+  colors: CrewColors,
+): void {
+  const k = (f.wait ?? 0) * f.alpha * f.unfold;
+  if (k <= 0.01) return;
+  if (f.batch) {
+    const half = (BATCH_GATE.arcDeg * Math.PI) / 360;
+    const turn = f.batchTurn ?? 0;
+    ctx.globalAlpha = 1;
+    ctx.lineCap = "round";
+    ctx.lineWidth = BATCH_GATE.line;
+    ctx.strokeStyle = rgba(colors.accent, BATCH_GATE.alpha * k * colors.boost);
+    for (const center of [0, Math.PI]) {
+      ctx.beginPath();
+      ctx.arc(px, py, f.size * BATCH_GATE.ring, center - half + turn, center + half + turn);
+      ctx.stroke();
+    }
+    return;
+  }
+  const r = f.size * WAIT_LIGHT.ring;
+  const dash = (TAU * r) / WAIT_LIGHT.dashes;
+  ctx.lineCap = "butt";
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = rgba(colors.accent, (f.waitArc === undefined ? 0.6 : 0.3) * k * colors.boost);
+  ctx.lineWidth = 1;
+  ctx.setLineDash([dash * WAIT_LIGHT.dashShare, dash * (1 - WAIT_LIGHT.dashShare)]);
+  ctx.beginPath();
+  ctx.arc(px, py, r, 0, TAU);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  if (f.waitArc === undefined) return;
+  ctx.lineCap = "round";
+  ctx.strokeStyle = rgba(mix(colors.accent, WHITE_HOT, 0.2), 0.9 * k);
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.arc(px, py, r, f.waitArc, f.waitArc + WAIT_LIGHT.arc);
+  ctx.stroke();
+}
+
+/** A fixed star's light: the crewmate's own, lifted toward white. */
+function starColor(f: CrewmateFrame, colors: CrewColors): Rgb {
+  return mix(
+    crewmateLight(colors, f.work, f.wait, f.captain, f.job).color,
+    WHITE_HOT,
+    FIXED_STARS.lift,
+  );
+}
+
+/**
+ * The glint of a fixed star (INF-3634): a glow one glyph across and four
+ * tapered rays, the long ones up and down, breathing with its twinkle.
+ */
+function drawGlint(
+  ctx: CanvasRenderingContext2D,
+  f: CrewmateFrame,
+  px: number,
+  py: number,
+  colors: CrewColors,
+): void {
+  const on = (f.star ?? 0) * f.alpha * f.unfold;
+  if (on <= 0.01) return;
+  const tw = f.twinkle ?? 0;
+  const color = starColor(f, colors);
+  const a = on * (FIXED_STARS.light + FIXED_STARS.twinkleLight * tw) * colors.boost;
+  const s = f.size;
+  const long = FIXED_STARS.rays * s * (1 + FIXED_STARS.twinkleLength * tw);
+  ctx.globalAlpha = 1;
+  const glow = ctx.createRadialGradient(px, py, 0, px, py, s);
+  glow.addColorStop(0, rgba(color, FIXED_STARS.glow * a));
+  glow.addColorStop(1, rgba(color, 0));
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(px, py, s, 0, TAU);
+  ctx.fill();
+  const w = FIXED_STARS.rayWidth;
+  for (const [dx, dy, share] of [
+    [0, -1, 1],
+    [0, 1, 1],
+    [-1, 0, FIXED_STARS.sideRay],
+    [1, 0, FIXED_STARS.sideRay],
+  ] as const) {
+    const tx = px + dx * long * share;
+    const ty = py + dy * long * share;
+    const ray = ctx.createLinearGradient(px, py, tx, ty);
+    ray.addColorStop(0, rgba(color, a));
+    ray.addColorStop(0.4, rgba(color, a * 0.5));
+    ray.addColorStop(1, rgba(color, 0));
+    ctx.fillStyle = ray;
+    ctx.beginPath();
+    ctx.moveTo(px - dy * w, py + dx * w);
+    ctx.lineTo(tx, ty);
+    ctx.lineTo(px + dy * w, py - dx * w);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+/**
+ * The hairline between two fixed stars (INF-3634), in the later star's
+ * light, leaving a gap round each solid.
+ */
+export function drawStarJoin(
+  ctx: CanvasRenderingContext2D,
+  from: CrewmateFrame,
+  to: CrewmateFrame,
+  cx: number,
+  cy: number,
+  colors: CrewColors,
+): void {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.hypot(dx, dy);
+  const gap = from.size * FIXED_STARS.joinGap;
+  if (length <= gap * 2) return;
+  const k = Math.min(from.star ?? 0, to.star ?? 0) * Math.min(from.alpha, to.alpha);
+  if (k <= 0.01) return;
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = rgba(starColor(to, colors), FIXED_STARS.joinLight * k * colors.boost);
+  ctx.beginPath();
+  ctx.moveTo(cx + from.x + (dx / length) * gap, cy + from.y + (dy / length) * gap);
+  ctx.lineTo(cx + to.x - (dx / length) * gap, cy + to.y - (dy / length) * gap);
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** The light a spark or a packet carries: the Firstmate's accent lifted toward white. */
+function sparkColor(colors: CrewColors): Rgb {
+  return mix(colors.accent, WHITE_HOT, 0.4);
+}
+
+/**
+ * The black hole's rush (./rush.ts): the arc a racing crewmate just swept,
+ * in its own light lifted toward white, thinning and fading away from it.
+ */
+function drawStreak(
+  ctx: CanvasRenderingContext2D,
+  streak: ReadonlyArray<{ x: number; y: number }>,
+  f: CrewmateFrame,
+  cx: number,
+  cy: number,
+  colors: CrewColors,
+): void {
+  const color = mix(crewmateLight(colors, f.work, f.wait, f.captain, f.job).color, WHITE_HOT, 0.25);
+  const segments = streak.length - 1;
+  ctx.lineCap = "round";
+  for (let i = 0; i < segments; i++) {
+    const P = streak[i];
+    const Q = streak[i + 1];
+    if (!P || !Q) continue;
+    const fade = 1 - i / segments;
+    ctx.strokeStyle = rgba(color, 0.42 * fade * fade * f.alpha * f.unfold * colors.boost);
+    ctx.lineWidth = Math.max(0.6, f.size * 0.2 * fade);
+    ctx.beginPath();
+    ctx.moveTo(cx + P.x, cy + P.y);
+    ctx.lineTo(cx + Q.x, cy + Q.y);
+    ctx.stroke();
+  }
+}
+
+/**
+ * Paint one crewmate at its frame position, relative to (cx, cy) - the
+ * Firstmate's center on this canvas.
+ */
+export function drawCrewmate(
+  ctx: CanvasRenderingContext2D,
+  f: CrewmateFrame,
+  cx: number,
+  cy: number,
+  colors: CrewColors,
+  now: number,
+): void {
+  const jitter = f.nudge > 0.001 ? f.nudge * 3 : 0;
+  const px = cx + f.x + (jitter ? noise1((now / 1000) * 14 + f.seed) * jitter : 0);
+  const py = cy + f.y + (jitter ? noise1((now / 1000) * 13 + f.seed * 1.7) * jitter : 0);
+  const s = f.size;
+  const R = s * 0.4;
+  const bright = sparkColor(colors);
+
+  if (f.streak && f.unfold > 0.01) drawStreak(ctx, f.streak, f, cx, cy, colors);
+
+  // The travelling spark and its ghosts (spawn) or the fading ember (home).
+  if (f.spark > 0.01) {
+    for (let g = 0; g < f.trail.length; g++) {
+      const ghost = f.trail[g];
+      if (!ghost) continue;
+      ctx.fillStyle = rgba(bright, (0.55 - g * 0.15) * f.spark * f.alpha);
+      ctx.beginPath();
+      ctx.arc(cx + ghost.x, cy + ghost.y, (2.2 - g * 0.4) * (s / 30), 0, TAU);
+      ctx.fill();
+    }
+    const sr = 2.8 * f.spark * (s / 30) + 0.6;
+    const halo = ctx.createRadialGradient(px, py, 0, px, py, sr * 4);
+    halo.addColorStop(0, rgba(colors.accent, 0.35 * f.spark * f.alpha));
+    halo.addColorStop(1, rgba(colors.accent, 0));
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(px, py, sr * 4, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = rgba(bright, 0.95 * f.spark * f.alpha);
+    ctx.beginPath();
+    ctx.arc(px, py, sr, 0, TAU);
+    ctx.fill();
+  }
+  if (f.unfold <= 0.01) return;
+
+  drawGlint(ctx, f, px, py, colors);
+  drawCaptainRing(ctx, f, px, py, colors);
+  drawWaitRing(ctx, f, px, py, colors);
+  const work = f.work;
+  const flick = f.flicker;
+  const light = crewmateLight(colors, work, f.wait, f.captain, f.job);
+  // A working crewmate carries a little light of its own, in its own heat;
+  // a completed request's flicker is a filament on the wires, so only a
+  // whisper of it spills here (../flicker `glowSpill`).
+  const spill = flick * FLICKER_TUNING.glowSpill;
+  const haloA = (0.14 * work + 0.5 * spill) * f.alpha * f.unfold;
+  const haloR = s * (0.95 + 0.2 * spill);
+  if (haloA > 0.005) {
+    const g = ctx.createRadialGradient(px, py, 0, px, py, haloR);
+    g.addColorStop(0, rgba(light.color, haloA));
+    g.addColorStop(1, rgba(light.color, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(px, py, haloR, 0, TAU);
+    ctx.fill();
+  }
+
+  const col = mix(light.color, WHITE_HOT, Math.min(1, f.flash * 0.5 + spill * 0.4));
+  // Double rotation; the spin rate already carries the
+  // working/idle difference (./orbit.ts).
+  const ca = Math.cos(f.spin);
+  const sa = Math.sin(f.spin);
+  const cb = Math.cos(f.spin * 0.6);
+  const sb = Math.sin(f.spin * 0.6);
+  const u = f.unfold;
+  const solid = solidFor(f.tier);
+  const [inkAlpha, inkLine, inkNode] = solid.ink;
+  const pts = solid.v.map(([x, y, z]) => {
+    const x1 = x * ca - z * sa;
+    const z1 = x * sa + z * ca;
+    const y1 = y * cb - z1 * sb;
+    const z2 = y * sb + z1 * cb;
+    const k = 3 / (3 - z2);
+    // Unfolding: every vertex grows out from the centroid.
+    return [px + x1 * k * R * u, py + y1 * k * R * u, k] as const;
+  });
+  const base = light.strength * f.alpha * colors.boost;
+  const lw = Math.max(1, Math.min(1.6, 1.4 * (s / 30))) * inkLine;
+  ctx.lineWidth = lw;
+  ctx.lineCap = "round";
+  ctx.strokeStyle = rgba(col, 1);
+  const seedOff = Math.floor(f.seed * 8);
+  for (let ei = 0; ei < solid.e.length; ei++) {
+    const [p, q] = solid.e[ei] as Edge;
+    const P = pts[p];
+    const Q = pts[q];
+    if (!P || !Q) continue;
+    let alpha =
+      Math.max(0.35, Math.min(0.9, 0.4 + ((P[2] + Q[2]) / 2 - 0.85) * 0.9)) * base * inkAlpha;
+    if (flick > 0) {
+      // The flicker is the filament: each edge wavers on its own phase, and
+      // only the edge that's actually hot runs white - never the whole glyph.
+      const fw = flick * filamentWaver(ei + seedOff, now);
+      ctx.strokeStyle = rgba(mix(col, WHITE_HOT, Math.min(1, fw * 0.7)), 1);
+      alpha *= 1 + 0.9 * fw;
+    }
+    ctx.globalAlpha = Math.min(1, alpha);
+    ctx.beginPath();
+    ctx.moveTo(P[0], P[1]);
+    ctx.lineTo(Q[0], Q[1]);
+    ctx.stroke();
+  }
+  // The filament tick: one edge at a time lights white-hot, walking the
+  // solid - the working crewmate's "hands busy" cue, the rig's own filament.
+  if (work > 0.05 && u > 0.9) {
+    const cycle = now / TICK_PERIOD_MS + f.seed;
+    const ph = cycle - Math.floor(cycle);
+    if (ph < TICK_ON) {
+      const k = Math.sin((ph / TICK_ON) * Math.PI) * work * f.alpha;
+      const edge = solid.e[Math.floor(cycle) % solid.e.length];
+      const P = edge ? pts[edge[0]] : undefined;
+      const Q = edge ? pts[edge[1]] : undefined;
+      if (P && Q) {
+        ctx.globalAlpha = k;
+        ctx.strokeStyle = rgba(mix(light.color, WHITE_HOT, 0.75), 1);
+        ctx.lineWidth = lw * 0.6;
+        ctx.beginPath();
+        ctx.moveTo(P[0], P[1]);
+        ctx.lineTo(Q[0], Q[1]);
+        ctx.stroke();
+        ctx.lineWidth = lw;
+      }
+    }
+  }
+  ctx.fillStyle = rgba(col, 1);
+  const nodeCount = solid.nodes ?? pts.length;
+  for (let i = 0; i < nodeCount; i++) {
+    const P = pts[i];
+    if (!P) continue;
+    // Nodes pulse in sequence while working, as the Firstmate's do.
+    let pulseK = 1 + 0.5 * work * Math.max(0, Math.sin(now / 300 + i * 1.3 + f.seed));
+    let alpha = Math.max(0.5, Math.min(1, 0.5 + (P[2] - 0.85) * 0.8)) * base * inkAlpha;
+    if (flick > 0) {
+      // Inside a flicker each node wavers white-hot on its own phase too.
+      const nw = flick * filamentWaver(i + seedOff + 20, now);
+      ctx.fillStyle = rgba(mix(col, WHITE_HOT, Math.min(1, nw * 0.6)), 1);
+      pulseK += 0.15 * flick;
+      alpha *= 1 + 0.45 * nw;
+    }
+    ctx.globalAlpha = Math.min(1, alpha);
+    ctx.beginPath();
+    ctx.arc(P[0], P[1], 1.2 * (s / 28) * pulseK * (0.4 + 0.6 * u) * inkNode, 0, TAU);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * The arrow's clearance from the glyph it leaves and the glyph it points at,
+ * and the least line it keeps when the two crowd together on screen.
+ */
+const LINK = { startPx: 18, endPx: 21, minLinePx: 6 } as const;
+
+/**
+ * An arrow from a waiting crewmate or a reviewer to the crewmate it waits on
+ * or reviews. The arrowhead sits at the blocker. It is drawn at every
+ * distance (INF-304): as the two glyphs close in on screen, the clearances
+ * give way so the line never shrinks below `LINK.minLinePx`. Each kind has
+ * its own color (captain, INF-556): a wait is the quiet gray and lights in
+ * the accent; a review is the working ember, at rest and lit.
+ */
+export function drawDependencyLink(
+  ctx: CanvasRenderingContext2D,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  cx: number,
+  cy: number,
+  colors: CrewColors,
+  lit: boolean,
+  kind: DependencyLink["kind"] = "wait",
+): void {
+  const ax = cx + from.x;
+  const ay = cy + from.y;
+  const bx = cx + to.x;
+  const by = cy + to.y;
+  let dx = bx - ax;
+  let dy = by - ay;
+  const length = Math.hypot(dx, dy);
+  // Two glyphs drawn on one spot leave the arrow no direction to point.
+  if (length < 1) return;
+  dx /= length;
+  dy /= length;
+  const room = Math.min(1, Math.max(0, length - LINK.minLinePx) / (LINK.startPx + LINK.endPx));
+  const startX = ax + dx * LINK.startPx * room;
+  const startY = ay + dy * LINK.startPx * room;
+  const endX = bx - dx * LINK.endPx * room;
+  const endY = by - dy * LINK.endPx * room;
+  const color =
+    kind === "review" ? colors.hot : lit ? colors.accent : (colors.quiet ?? colors.accent);
+  ctx.save();
+  ctx.strokeStyle = rgba(color, lit ? 0.7 : 0.28);
+  ctx.lineWidth = lit ? 1.4 : 1;
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.lineTo(endX, endY);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(endX - dx * 5 - dy * 3, endY - dy * 5 + dx * 3);
+  ctx.lineTo(endX, endY);
+  ctx.lineTo(endX - dx * 5 + dy * 3, endY - dy * 5 - dx * 3);
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** A packet in flight: one bright dot with a faint halo. */
+export function drawPacket(
+  ctx: CanvasRenderingContext2D,
+  p: PacketFrame,
+  cx: number,
+  cy: number,
+  colors: CrewColors,
+): void {
+  const x = cx + p.x;
+  const y = cy + p.y;
+  const halo = ctx.createRadialGradient(x, y, 0, x, y, 9);
+  halo.addColorStop(0, rgba(colors.accent, 0.3 * p.alpha));
+  halo.addColorStop(1, rgba(colors.accent, 0));
+  ctx.fillStyle = halo;
+  ctx.beginPath();
+  ctx.arc(x, y, 9, 0, TAU);
+  ctx.fill();
+  ctx.fillStyle = rgba(sparkColor(colors), 0.95 * p.alpha);
+  ctx.beginPath();
+  ctx.arc(x, y, 2.4, 0, TAU);
+  ctx.fill();
+}
+
+/** How far a branch keeps clear of what it joins: a crewmate, the mark. */
+const BRANCH = { crewPx: 14, markPx: CONSTELLATION.rootMarkPx + 2 } as const;
+
+/**
+ * A task with parts as its constellation (INF-799): a branch for every link
+ * a running part hangs from, at the wait arrow's weight and lit in the
+ * accent while a result rides it, and the program's mark, a hollow ring that
+ * lights as a result lands. Each running part is its crewmate, painted by
+ * `drawCrewmate`; a finished or unstarted part draws nothing (INF-1037).
+ */
+export function drawConstellation(
+  ctx: CanvasRenderingContext2D,
+  program: ProgramFrame,
+  cx: number,
+  cy: number,
+  colors: CrewColors,
+): void {
+  if (program.alpha <= 0.01) return;
+  const quiet = colors.quiet ?? colors.accent;
+  const ends = new Map<string, { x: number; y: number; clear: number }>();
+  ends.set(program.id, { x: program.x, y: program.y, clear: BRANCH.markPx });
+  for (const node of program.nodes)
+    ends.set(node.id, { x: node.x, y: node.y, clear: BRANCH.crewPx });
+  ctx.save();
+  ctx.globalAlpha = program.alpha;
+  for (const branch of program.branches) {
+    const a = ends.get(branch.fromId);
+    const b = ends.get(branch.toId);
+    if (!a || !b) continue;
+    let dx = b.x - a.x;
+    let dy = b.y - a.y;
+    const length = Math.hypot(dx, dy);
+    if (length <= a.clear + b.clear) continue;
+    dx /= length;
+    dy /= length;
+    ctx.strokeStyle = rgba(branch.lit ? colors.accent : quiet, branch.lit ? 0.7 : 0.28);
+    ctx.lineWidth = branch.lit ? 1.4 : 1;
+    ctx.beginPath();
+    ctx.moveTo(cx + a.x + dx * a.clear, cy + a.y + dy * a.clear);
+    ctx.lineTo(cx + b.x - dx * b.clear, cy + b.y - dy * b.clear);
+    ctx.stroke();
+  }
+  const x = cx + program.x;
+  const y = cy + program.y;
+  const r = CONSTELLATION.rootMarkPx;
+  if (program.lit > 0.01) {
+    const glow = ctx.createRadialGradient(x, y, 0, x, y, r * 3);
+    glow.addColorStop(0, rgba(colors.accent, 0.3 * program.lit));
+    glow.addColorStop(1, rgba(colors.accent, 0));
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 3, 0, TAU);
+    ctx.fill();
+  }
+  ctx.strokeStyle = rgba(
+    mix(quiet, colors.accent, program.lit),
+    (0.5 + 0.5 * program.lit) * colors.boost,
+  );
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, TAU);
+  ctx.stroke();
+  ctx.restore();
+}

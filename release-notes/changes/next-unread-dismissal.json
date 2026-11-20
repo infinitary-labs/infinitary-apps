@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "next-unread-dismissal",
+      "kind": "fix",
+      "title": "Closing a card returns to unread cards",
+      "body": "Closing a later card now brings up the first unread card instead of returning to one you already read, including after reopening the window.",
+      "area": "cards",
+      "noPicture": "The fix changes the destination after closing a card; matching before-and-after recordings demonstrate the journey rather than a still picture.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

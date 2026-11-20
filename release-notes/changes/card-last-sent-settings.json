@@ -1,0 +1,12 @@
+{
+  "entries": [{
+    "id": "card-last-sent-settings",
+    "kind": "fix",
+    "title": "Closing a card warns only about unsent answers",
+    "body": "Settings sent with a reply no longer trigger a discard warning. Later edits still ask before closing.",
+    "area": "cards",
+    "noPicture": "The fix removes an unnecessary warning after closing; there is no new visible control to photograph.",
+    "provenance": { "origin": "change" }
+  }],
+  "exclusions": []
+}

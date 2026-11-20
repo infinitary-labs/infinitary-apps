@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "custom-anthropic-messages",
+      "kind": "feature",
+      "title": "Claude models on your own connection can now cache",
+      "body": "A custom connection can use the Anthropic Messages format. Claude then caches your conversation from the start, with Cache retention set to Short, and Usage shows its cache reads and writes. Pick Anthropic Messages as the API protocol; the connection check asks for no reasoning or cache setting beyond the model's own.",
+      "area": "subscriptions",
+      "noPicture": "A new choice in an existing protocol list; the form looks as before.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

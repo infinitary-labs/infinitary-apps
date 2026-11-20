@@ -1,0 +1,71 @@
+{
+  "entries": [
+    {
+      "id": "bf-62f5700d2",
+      "kind": "feature",
+      "title": "Ask a decision's questions inline, sent with the footer (contract 4.22)",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "62f5700d2e3e87dac07fb8bc06ab71b62d325218"
+        ]
+      }
+    },
+    {
+      "id": "bf-e9eecc906",
+      "kind": "feature",
+      "title": "Size a card to its content, then the hint, then the captain's drag",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "e9eecc9067b5ba1592c823da95db2102450c584c"
+        ]
+      }
+    },
+    {
+      "id": "bf-7834769e7",
+      "kind": "feature",
+      "title": "Lifecycle footer and the model chip app-wide (task popup, host side)",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "7834769e781fc80e94fa6874e78ef402292bac30"
+        ]
+      }
+    },
+    {
+      "id": "bf-6b257a407",
+      "kind": "feature",
+      "title": "The task record body as peer rows, in plain words (contract 4.24)",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "6b257a407d8ecede75f8fa4cbf8c4bcc00af9825"
+        ]
+      }
+    },
+    {
+      "id": "bf-6497aa8ae",
+      "kind": "fix",
+      "title": "Hold a lone card under the stage's edge through a resize",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "6497aa8ae0100773765e917557c96d7b211fabc2"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-21-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.21: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "e8907e717a165fc90f8231de5b50a6be01b84f43",
+        "b6ffd25e68e5e9e003ab302dc17f983991033810",
+        "552a901e99f212a3e6f990e4b2fe25d78c36ae9c",
+        "6db3e52b0955c6c1293ff0b8bad7fda2eb0f6a7e"
+      ]
+    }
+  ]
+}

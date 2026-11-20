@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "statement-census-call-paths",
+      "reason": "Test-only: the statement check's census reads each call path's source-mapped stack once per test worker instead of on every SQLite prepare, so the pull request check's tests that read a changed file finish well inside their limit. No app behavior change."
+    }
+  ]
+}

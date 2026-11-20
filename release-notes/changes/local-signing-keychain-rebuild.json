@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "local-signing-keychain-rebuild",
+      "reason": "Local development signing rebuilds a keychain that no longer opens with its stored secret from the key bundle, keeping the certificate. Only developers who build the app on their own Mac are affected; the released app is unchanged."
+    }
+  ]
+}

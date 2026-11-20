@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "amazon-bedrock",
+      "kind": "feature",
+      "area": "subscriptions",
+      "title": "Connect Amazon Bedrock for Claude models",
+      "body": "Connect Amazon Bedrock with an AWS profile or a Bedrock API key and choose an AWS region. Infinitary shows which Claude models you can use and this month’s estimated spend.",
+      "picture": {
+        "dark": "amazon-bedrock-dark.webp",
+        "light": "amazon-bedrock-light.webp",
+        "alt": "A connected Amazon Bedrock API-key account in AI Subscriptions, above the Add account row"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

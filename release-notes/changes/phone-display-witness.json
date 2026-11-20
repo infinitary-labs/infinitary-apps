@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-display-witness",
+      "reason": "Internal: the phone checks confirm each appearance and text size change from the simulated iPhone or iPad's own log, and set the text size once more only when the app's log proves it read the old size; nothing a person sees changes."
+    }
+  ]
+}

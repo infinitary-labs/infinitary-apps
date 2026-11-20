@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "firstmate-wake-words-test-split",
+      "reason": "Internal: the byte-for-byte pins of the first mate's wake words move unchanged from one test file into one file per wake family that words them, under the code size warning line; no test is lost and nothing a person sees changes."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "ios-doc-reflow-15s",
+      "reason": "Splits one line of the iPhone documentation into one sentence per line, as the docs' reflow tool now asks, which repairs main's unit tests; no app behavior changes."
+    }
+  ]
+}

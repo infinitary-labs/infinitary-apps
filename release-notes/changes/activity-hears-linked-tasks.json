@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "activity-hears-linked-tasks",
+      "kind": "improvement",
+      "title": "A task's Activity hears from the tasks linked to it",
+      "body": "A task's Activity now shows what happened to its parts, its follow-ups and the tasks it waits for: when one starts, opens a pull request, merges or is dropped, and why. When Firstmate drops a task for another, Activity names the replacement and tells you when it merges. A merge that could not run leaves a line, and replies under a task's cards show there too. Each line names the other task, and its key opens that task.",
+      "area": "tasks",
+      "picture": {
+        "dark": "activity-hears-linked-tasks-dark.webp",
+        "light": "activity-hears-linked-tasks-light.webp",
+        "alt": "A task's Activity with lines from its part, its dropped follow-up and that follow-up's replacement, which merged pull request #977"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

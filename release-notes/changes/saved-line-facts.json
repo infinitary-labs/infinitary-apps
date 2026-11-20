@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "saved-line-facts",
+      "reason": "Internal: Activity, merge lines, the welcome, the menus and the file dialogs now save or draw the app's own words through the message catalog, so a later translation shows them in the person's language; the catalog holds only English so far, and nothing a person sees changes."
+    }
+  ]
+}

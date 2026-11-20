@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "next-move-captain-wait",
+      "kind": "fix",
+      "title": "Work you chose to hold no longer comes back as standing still",
+      "body": "When you ask your first mate to file work for later, it now records that you chose the wait as it files the work, so no card about that work standing still follows. When your first mate asks you about several tasks on one card, that card counts as each task's question, and no separate standing-still card appears for them until you answer it.",
+      "area": "tasks",
+      "noPicture": "The change removes cards that used to appear; no card or view looks different.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

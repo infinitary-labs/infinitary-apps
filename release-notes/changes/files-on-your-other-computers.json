@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "files-on-your-other-computers",
+      "kind": "feature",
+      "area": "crewmates",
+      "title": "Crewmates can copy a file from your other computers",
+      "body": "A crewmate working on one of your computers can now copy a file from another of them into its task's own folder, such as a picture you named by where it sits on your laptop. It reaches anything that computer's user can read, except Infinitary's own sign-ins and keys, and a database another app has open arrives complete. Each copy adds one line to the task's Activity, and the copy goes when the task closes. Both computers need this update.",
+      "noPicture": "Nothing new appears on screen beyond one ordinary line in the task's Activity for each copy; the change is what a crewmate can reach.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

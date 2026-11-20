@@ -1,0 +1,62 @@
+[
+  {
+    "source": "DOP-46",
+    "title": "Activate the chosen placement service",
+    "operation": true
+  },
+  {
+    "source": "DOP-47",
+    "title": "Restart the placement service once",
+    "operation": true
+  },
+  {
+    "source": "INF-937",
+    "title": "Move the approved leftovers to Trash",
+    "operation": true
+  },
+  {
+    "source": "INI-15",
+    "title": "Merge the approved website change",
+    "operation": true
+  },
+  {
+    "source": "SCR-555",
+    "title": "Publish the approved website",
+    "operation": true
+  },
+  {
+    "source": "SCR-405",
+    "title": "Create the private business project",
+    "operation": true
+  },
+  {
+    "source": "DOP-35",
+    "title": "Restart the runner supervisor",
+    "operation": true
+  },
+  {
+    "source": "INF-1243",
+    "title": "Upload the approved TestFlight build",
+    "operation": true
+  },
+  {
+    "source": "HBL-27",
+    "title": "Deploy the approved backend",
+    "operation": true
+  },
+  {
+    "source": "chore-docs",
+    "title": "Correct the setup instructions",
+    "operation": false
+  },
+  {
+    "source": "chore-dependency",
+    "title": "Update the existing dependency",
+    "operation": false
+  },
+  {
+    "source": "chore-config",
+    "title": "Change the listener configuration",
+    "operation": false
+  }
+]

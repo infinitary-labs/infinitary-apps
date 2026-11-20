@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-linux-package-queue",
+      "reason": "Route publishing release package checks through a configurable runner queue; app behavior is unchanged."
+    }
+  ]
+}

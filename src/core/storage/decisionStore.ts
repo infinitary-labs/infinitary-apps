@@ -1,0 +1,584 @@
+import { type DecisionAnswer, decisionAnswerSchema } from "@shared/decisions";
+import type { CrewDecidedBy } from "@shared/modelChoice";
+import type { SpendBand } from "@shared/quotaSignals";
+import { z } from "zod";
+import type { WakeFacts } from "../orchestrator/wakes";
+import type { ChargeFact } from "../routing/placedWork";
+import type { AppDatabase } from "./db";
+import { prepared } from "./statements";
+
+/**
+ * The one decision ledger (the primitives review, P6; migration 50;
+ * docs/decision-models.md "The decision ledger"): one `decisions` row per
+ * decision the host makes about a task, with its `kind`, the rule that
+ * decided and why, and this store its one writer.
+ *
+ * - `routing` - which model a spawn was routed to and at what tier, with
+ *   the shape's rule (`Router`).
+ * - `account` - which account of that provider serves it (`AccountSelector`).
+ * - `correction` - one typed model receipt per immutable captain-input
+ *   identity, including quiet results, without an invented task.
+ * - `sort` - the whose-turn sort and the idle ladder's rungs (the
+ *   crew's `CrewTurns.recordSort`), and the retired triage session's verdicts
+ *   before them: the wake, its typed facts, routine or captain, and why.
+ *   Append-only apart from the one write-once missed-escalation label
+ *   (migration 16). A decision and its effect commit in one transaction
+ *   (`transaction`), so nothing about a handled wake ever depends on
+ *   conversation memory.
+ *
+ * The three old table names are read-only views over this table
+ * (`LEDGER_VIEWS`, views.ts), so the offline readers read one ledger old
+ * or new.
+ */
+
+export type DecisionKind = "routing" | "account" | "sort" | "correction";
+
+const correctionFactsSchema = z.object({
+  version: z.literal(1),
+  questionId: z.string(),
+  stateSha: z.string(),
+  // Provider prose may echo input; the source owner retains the actual words.
+  answer: decisionAnswerSchema.omit({ detail: true }),
+});
+
+/** The model receipt, not an active instruction or a copy of the captain's words. */
+export type CorrectionDecisionInput = {
+  sourceKey: string;
+  taskId?: string;
+  at: number;
+  questionId: string;
+  stateSha: string;
+  answer: DecisionAnswer;
+};
+export type CorrectionDecision = CorrectionDecisionInput & { id: number };
+
+export type SupervisionVerdict = "routine" | "captain";
+
+/** A `sort` row as the Firstmate's log and label tool read it. */
+export type SupervisionOutcome = {
+  id: number;
+  taskId: string;
+  wake: string;
+  verdict: SupervisionVerdict;
+  summary: string;
+  at: number;
+  cardId: string | null;
+  /**
+   * The model that judged a retired triage, or `rule:<id>` for a row a rule
+   * sorted (R4.4) - the stamp the rule had before it moved to its own column.
+   */
+  model: string | null;
+  promptSha: string | null;
+  toolsSha: string | null;
+  steered: boolean | null;
+  wakeKind: string | null;
+  /** Confirmed missed escalation (migration 16). Null = no label at all. */
+  missedEscalation: boolean | null;
+  missedNote: string | null;
+  missedAt: number | null;
+  /** The recorded wake's typed facts; null for prose and for every row before the ledger. */
+  facts: WakeFacts | null;
+};
+
+export type SupervisionOutcomeInput = {
+  taskId: string;
+  wake: string;
+  verdict: SupervisionVerdict;
+  summary: string;
+  /** The rule that sorted it (a whose-turn or idle rule id). */
+  rule?: string | null;
+  /** The typed facts of the wake it recorded, when the wake was typed. */
+  facts?: WakeFacts | null;
+  cardId?: string | null;
+  model?: string | null;
+  promptSha?: string | null;
+  toolsSha?: string | null;
+  steered?: boolean | null;
+  wakeKind?: string | null;
+};
+
+/**
+ * One candidate of a routing decision as the router scored it: the allowance
+ * reading behind it (`percentRemaining`, `pace`) and its `spendPriority`
+ * score, whatever became of it. Models the router skipped are here too.
+ */
+export type RoutingCandidateFact = {
+  provider: string;
+  model: string;
+  percentRemaining?: number;
+  pace?: string;
+  spendPriority?: number;
+  /** Projected to last through every reset (true) or to run out first (false). */
+  lastsThroughReset?: boolean;
+  /** The band of its unadjusted reading (INF-1714); absent on rows before it. */
+  band?: SpendBand;
+  /** The score before placed work, when placed work adjusted `spendPriority`. */
+  rawSpendPriority?: number;
+  /** The account whose reading ranked it, when it was measured and when its tightest window resets. */
+  accountId?: string;
+  measuredAt?: number;
+  resetsAtMs?: number;
+  /** What became of it: picked, eligible (ranked, not picked), or why it was skipped. */
+  status: string;
+  charge?: ChargeFact;
+};
+
+/** One candidate of an account selection, with the reading behind it. */
+export type AccountCandidateFact = {
+  accountId: string;
+  label: string;
+  percentRemaining?: number;
+  pace?: string;
+  spendPriority?: number;
+  lastsThroughReset?: boolean;
+  band?: SpendBand;
+  status: string;
+  charge?: ChargeFact;
+};
+
+/**
+ * How a crew routing choice was made (INF-1714), versioned so a reader
+ * tells a row of this policy from an older one: what decided it, the
+ * near-floor boundary it ranked under, and the computer it routed for
+ * (`home`, or the computer that runs work by name).
+ */
+export type SelectionFacts = {
+  version: 1;
+  decidedBy: CrewDecidedBy;
+  floorPercent: number;
+  computer: string;
+  /** Models with no allowance reading took turns for it (INF-3782). */
+  turns?: true;
+};
+
+/**
+ * The typed facts a routing or account row saves in `facts_json`, beside its
+ * reasons. They live in the record only: no screen reads them
+ * (docs/decision-models.md, "Candidate facts").
+ */
+export type CandidateFacts =
+  | {
+      kind: "routing-candidates";
+      candidates: RoutingCandidateFact[];
+      accountId?: string;
+      selection?: SelectionFacts;
+    }
+  | {
+      kind: "account-candidates";
+      candidates: AccountCandidateFact[];
+      /** The provider's account pin chose it (INF-1714). */
+      pinned?: true;
+    };
+
+export type RoutingDecisionInput = {
+  taskId: string;
+  provider: string | null;
+  model: string | null;
+  /** The slot asked for. */
+  bucket: string;
+  /** The policy row that asked for it (R0-R9). */
+  rule: string;
+  /** The slot actually served (S5); null only when nothing was chosen. */
+  served: string | null;
+  reasons: readonly string[];
+  facts?: CandidateFacts;
+};
+
+/** A routing row as its readers use it; its reasons stay in the ledger. */
+export type RoutingDecision = {
+  id: number;
+  taskId: string;
+  provider: string | null;
+  model: string | null;
+  bucket: string;
+  rule: string | null;
+  served: string | null;
+  at: number;
+};
+
+export type AccountDecisionInput = {
+  taskId: string;
+  provider: string;
+  accountId: string | null;
+  reasons: readonly string[];
+  facts?: CandidateFacts;
+};
+
+type SortRow = {
+  id: number;
+  task_id: string;
+  wake: string;
+  verdict: SupervisionVerdict;
+  summary: string;
+  at: number;
+  rule: string | null;
+  card_id: string | null;
+  model: string | null;
+  prompt_sha: string | null;
+  tools_sha: string | null;
+  steered: number | null;
+  wake_kind: string | null;
+  missed_escalation: number | null;
+  missed_note: string | null;
+  missed_at: number | null;
+  facts_json: string | null;
+};
+
+type RoutingRow = {
+  id: number;
+  task_id: string;
+  provider: string | null;
+  model: string | null;
+  bucket: string;
+  rule: string | null;
+  served: string | null;
+  at: number;
+};
+
+/** What flag_missed_escalation asks the store to label. */
+export type MissedEscalationInput = {
+  taskId: string;
+  note: string;
+  outcomeId?: number;
+  at?: number;
+};
+
+/**
+ * Every honest end of a label attempt. Refusals are values, not throws:
+ * the tool renders them as plain text so a rejected label never breaks a
+ * captain turn.
+ */
+export type MissedEscalationResult =
+  | { status: "flagged"; outcome: SupervisionOutcome }
+  | { status: "no-outcome"; taskId: string }
+  | { status: "other-task"; outcome: SupervisionOutcome }
+  | { status: "not-routine"; outcome: SupervisionOutcome }
+  | { status: "already-flagged"; outcome: SupervisionOutcome };
+
+function parseFacts(json: string | null): WakeFacts | null {
+  if (!json) return null;
+  try {
+    const facts = JSON.parse(json) as unknown;
+    return facts && typeof facts === "object" && typeof (facts as WakeFacts).kind === "string"
+      ? (facts as WakeFacts)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function parseCandidateFacts(json: string | null): CandidateFacts | null {
+  if (!json) return null;
+  try {
+    return JSON.parse(json) as CandidateFacts;
+  } catch {
+    return null;
+  }
+}
+
+function fromSortRow(row: SortRow): SupervisionOutcome {
+  return {
+    id: row.id,
+    taskId: row.task_id,
+    wake: row.wake,
+    verdict: row.verdict,
+    summary: row.summary,
+    at: row.at,
+    cardId: row.card_id,
+    model: row.rule === null ? row.model : `rule:${row.rule}`,
+    promptSha: row.prompt_sha,
+    toolsSha: row.tools_sha,
+    steered: row.steered == null ? null : row.steered !== 0,
+    wakeKind: row.wake_kind,
+    missedEscalation: row.missed_escalation == null ? null : row.missed_escalation !== 0,
+    missedNote: row.missed_note,
+    missedAt: row.missed_at,
+    facts: parseFacts(row.facts_json),
+  };
+}
+
+function fromRoutingRow(row: RoutingRow): RoutingDecision {
+  return {
+    id: row.id,
+    taskId: row.task_id,
+    provider: row.provider,
+    model: row.model,
+    bucket: row.bucket,
+    rule: row.rule,
+    served: row.served,
+    at: row.at,
+  };
+}
+
+const SORT_COLUMNS = `id, task_id, wake, verdict, summary, at, rule, card_id, model, prompt_sha,
+  tools_sha, steered, wake_kind, missed_escalation, missed_note, missed_at, facts_json`;
+
+const ROUTING_COLUMNS = "id, task_id, provider, model, bucket, rule, served, at";
+
+export class DecisionStore {
+  constructor(private readonly db: AppDatabase) {}
+
+  /** Run a decision + its effect atomically (the store-first guarantee). */
+  transaction<T>(fn: () => T): T {
+    return this.db.transaction(fn)();
+  }
+
+  /**
+   * The first completed result wins for this exact source, including quiet
+   * and failed results. Enclose this, its wake and the input ack in transaction().
+   * The existing non-null task column uses the empty value for no task;
+   * a composer input must never create a task just to fit the ledger.
+   */
+  recordCorrection(input: CorrectionDecisionInput): CorrectionDecision {
+    const facts = correctionFactsSchema.parse({
+      version: 1,
+      questionId: input.questionId,
+      stateSha: input.stateSha,
+      answer: input.answer,
+    });
+    this.db
+      .prepare(
+        `INSERT INTO decisions (kind, task_id, at, rule, wake, facts_json, verdict, model)
+         VALUES ('correction', ?, ?, 'decision-model', ?, ?, ?, ?)
+         ON CONFLICT (wake) WHERE kind = 'correction' DO NOTHING`,
+      )
+      .run(
+        input.taskId ?? "",
+        input.at,
+        input.sourceKey,
+        JSON.stringify(facts),
+        input.answer.value,
+        input.answer.source ?? null,
+      );
+    const recorded = this.correction(input.sourceKey);
+    if (!recorded) throw new Error("The correction decision was not recorded.");
+    return recorded;
+  }
+
+  /** Seek one receipt by source identity; never search the words or the history. */
+  correction(sourceKey: string): CorrectionDecision | undefined {
+    const row = this.db
+      .prepare(
+        `SELECT id, task_id, at, facts_json FROM decisions
+         WHERE kind = 'correction' AND wake = ?`,
+      )
+      .get(sourceKey) as
+      | { id: number; task_id: string; at: number; facts_json: string }
+      | undefined;
+    if (!row) return undefined;
+    const facts = correctionFactsSchema.parse(JSON.parse(row.facts_json));
+    return {
+      id: row.id,
+      sourceKey,
+      ...(row.task_id ? { taskId: row.task_id } : {}),
+      at: row.at,
+      questionId: facts.questionId,
+      stateSha: facts.stateSha,
+      answer: facts.answer,
+    };
+  }
+
+  /** Record a routing decision with its reasons - the "why this model" surface. */
+  recordRouting(input: RoutingDecisionInput): number {
+    const info = this.db
+      .prepare(
+        `INSERT INTO decisions (kind, task_id, at, rule, reasons_json, provider, model, bucket, served, facts_json)
+         VALUES ('routing', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        input.taskId,
+        Date.now(),
+        input.rule,
+        JSON.stringify(input.reasons),
+        input.provider,
+        input.model,
+        input.bucket,
+        input.served,
+        input.facts ? JSON.stringify(input.facts) : null,
+      );
+    return Number(info.lastInsertRowid);
+  }
+
+  /** Record an account selection with its reasons - the "why this account" surface. */
+  recordAccount(input: AccountDecisionInput): number {
+    const info = this.db
+      .prepare(
+        `INSERT INTO decisions (kind, task_id, at, reasons_json, provider, account_id, facts_json)
+         VALUES ('account', ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        input.taskId,
+        Date.now(),
+        JSON.stringify(input.reasons),
+        input.provider,
+        input.accountId,
+        input.facts ? JSON.stringify(input.facts) : null,
+      );
+    return Number(info.lastInsertRowid);
+  }
+
+  /** The candidate facts a routing row saved, by its id; null when it saved none. */
+  routingFacts(id: number): CandidateFacts | null {
+    const row = this.db
+      .prepare("SELECT facts_json FROM decisions WHERE id = ? AND kind = 'routing'")
+      .get(id) as { facts_json: string | null } | undefined;
+    return parseCandidateFacts(row?.facts_json ?? null);
+  }
+
+  /** Record one sort: the wake, its facts, the verdict and why. */
+  recordSort(input: SupervisionOutcomeInput): number {
+    const info = this.db
+      .prepare(
+        `INSERT INTO decisions
+          (kind, task_id, at, rule, wake, facts_json, verdict, summary, card_id, model,
+           prompt_sha, tools_sha, steered, wake_kind)
+         VALUES ('sort', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        input.taskId,
+        Date.now(),
+        input.rule ?? null,
+        input.wake,
+        input.facts ? JSON.stringify(input.facts) : null,
+        input.verdict,
+        input.summary,
+        input.cardId ?? null,
+        input.model ?? null,
+        input.promptSha ?? null,
+        input.toolsSha ?? null,
+        input.steered == null ? null : input.steered ? 1 : 0,
+        input.wakeKind ?? null,
+      );
+    return Number(info.lastInsertRowid);
+  }
+
+  /**
+   * Label one routine outcome as a confirmed missed escalation (PoC-2 C3).
+   * Write-once and only over `routine`: an escalated verdict cannot be a
+   * miss, and a second flag must not silently overwrite the captain's own
+   * words. Without an explicit outcome id the newest routine outcome on the
+   * task is the target, because that is the wake a captain is talking about
+   * when he says it should have reached him.
+   */
+  flagMissedEscalation(input: MissedEscalationInput): MissedEscalationResult {
+    const row =
+      input.outcomeId !== undefined
+        ? (this.db
+            .prepare(`SELECT ${SORT_COLUMNS} FROM decisions WHERE id = ? AND kind = 'sort'`)
+            .get(input.outcomeId) as SortRow | undefined)
+        : (this.db
+            .prepare(
+              `SELECT ${SORT_COLUMNS} FROM decisions
+               WHERE kind = 'sort' AND task_id = ? AND verdict = 'routine'
+               ORDER BY id DESC LIMIT 1`,
+            )
+            .get(input.taskId) as SortRow | undefined);
+    if (!row) return { status: "no-outcome", taskId: input.taskId };
+    const outcome = fromSortRow(row);
+    if (outcome.taskId !== input.taskId) return { status: "other-task", outcome };
+    if (outcome.verdict !== "routine") return { status: "not-routine", outcome };
+    if (outcome.missedEscalation) return { status: "already-flagged", outcome };
+    const at = input.at ?? Date.now();
+    this.db
+      .prepare(
+        `UPDATE decisions
+         SET missed_escalation = 1, missed_note = ?, missed_at = ?
+         WHERE id = ?`,
+      )
+      .run(input.note, at, outcome.id);
+    return {
+      status: "flagged",
+      outcome: { ...outcome, missedEscalation: true, missedNote: input.note, missedAt: at },
+    };
+  }
+
+  /**
+   * Whether this exact wake text was already sorted on the task (WI-6): a
+   * wake that repeats one already judged carries no new information,
+   * whatever verdict it earned the first time.
+   */
+  hasTriaged(taskId: string, wake: string): boolean {
+    return (
+      this.db
+        .prepare("SELECT 1 FROM decisions WHERE kind = 'sort' AND task_id = ? AND wake = ? LIMIT 1")
+        .get(taskId, wake) !== undefined
+    );
+  }
+
+  /** The newest sort outcomes, newest first - the Firstmate's log. */
+  recent(limit = 20): SupervisionOutcome[] {
+    const rows = this.db
+      .prepare(`SELECT ${SORT_COLUMNS} FROM decisions WHERE kind = 'sort' ORDER BY id DESC LIMIT ?`)
+      .all(limit) as SortRow[];
+    return rows.map(fromSortRow);
+  }
+
+  /**
+   * Routing decisions, oldest first (by `at`, then id): every one, or only
+   * those of `taskIds`, and with `chosen` only those that chose a model.
+   */
+  routing(options: { taskIds?: readonly string[]; chosen?: boolean } = {}): RoutingDecision[] {
+    const where = ["kind = 'routing'"];
+    const params: string[] = [];
+    if (options.taskIds) {
+      if (options.taskIds.length === 0) return [];
+      where.push(`task_id IN (${options.taskIds.map(() => "?").join(", ")})`);
+      params.push(...options.taskIds);
+    }
+    if (options.chosen) where.push("provider IS NOT NULL");
+    const rows = this.db
+      .prepare(
+        `SELECT ${ROUTING_COLUMNS} FROM decisions WHERE ${where.join(" AND ")} ORDER BY at ASC, id ASC`,
+      )
+      .all(...params) as RoutingRow[];
+    return rows.map(fromRoutingRow);
+  }
+
+  /** The board's latest chosen slot facts, seeking once per task rather than reading its history. */
+  latestChosenSlots(
+    taskIds: readonly string[],
+  ): Pick<RoutingDecision, "taskId" | "bucket" | "served">[] {
+    if (taskIds.length === 0) return [];
+    return prepared(
+      this.db,
+      `SELECT latest.task_id AS taskId, latest.bucket, latest.served
+       FROM json_each(?) AS asked CROSS JOIN decisions AS latest
+       WHERE latest.id = (
+         SELECT id FROM decisions WHERE kind = 'routing' AND task_id = asked.value
+           AND provider IS NOT NULL ORDER BY at DESC, id DESC LIMIT 1
+       )`,
+    ).all(JSON.stringify(taskIds)) as Pick<RoutingDecision, "taskId" | "bucket" | "served">[];
+  }
+
+  /**
+   * Each model's newest routing row that chose it, by id, for taking turns
+   * (INF-3782): a model never chosen is absent. Seeks the
+   * `decisions_routing_model_recent` index once per model, never the history.
+   */
+  lastChosenIds(models: readonly { provider: string; id: string }[]): Map<string, number> {
+    const out = new Map<string, number>();
+    const statement = prepared(
+      this.db,
+      `SELECT id FROM decisions WHERE kind = 'routing' AND provider IS NOT NULL
+         AND provider = ? AND model = ? ORDER BY id DESC LIMIT 1`,
+    );
+    for (const model of models) {
+      const key = `${model.provider}/${model.id}`;
+      if (out.has(key)) continue;
+      const row = statement.get(model.provider, model.id) as { id: number } | undefined;
+      if (row) out.set(key, row.id);
+    }
+    return out;
+  }
+
+  /** The task's newest routing decision in the order it was written; undefined when it never routed. */
+  latestRouting(taskId: string): RoutingDecision | undefined {
+    const row = this.db
+      .prepare(
+        `SELECT ${ROUTING_COLUMNS} FROM decisions WHERE kind = 'routing' AND task_id = ?
+         ORDER BY id DESC LIMIT 1`,
+      )
+      .get(taskId) as RoutingRow | undefined;
+    return row ? fromRoutingRow(row) : undefined;
+  }
+}

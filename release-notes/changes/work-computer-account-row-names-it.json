@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "work-computer-account-row-names-it",
+      "kind": "fix",
+      "title": "A computer that runs your work names itself on its own sign-in rows",
+      "body": "In Settings → Intelligence, an account under a computer that runs your work now says its words of that computer. A Claude account there with no login yet reads \"Sign in with Claude on iMac.\", where it used to name the computer your first mate lives on, or this computer.",
+      "area": "subscriptions",
+      "noPicture": "A few words in one line of an account row change; a release review takes a picture if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

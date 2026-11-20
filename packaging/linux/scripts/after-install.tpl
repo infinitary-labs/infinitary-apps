@@ -1,0 +1,94 @@
+#!/bin/bash
+# The Ubuntu and Fedora packages' install script (electron-builder.linux.yml):
+# electron-builder 26.15.3's own templates/linux/after-install.tpl, with one
+# steps added after its command link, marked below. electron-builder fills in
+# each dollar-brace name it knows and refuses any other, so the added step
+# writes its shell variables without braces.
+
+if type update-alternatives >/dev/null 2>&1; then
+    # Remove previous link if it doesn't use update-alternatives
+    if [ -L '/usr/bin/${executable}' -a -e '/usr/bin/${executable}' -a "`readlink '/usr/bin/${executable}'`" != '/etc/alternatives/${executable}' ]; then
+        rm -f '/usr/bin/${executable}'
+    fi
+    update-alternatives --install '/usr/bin/${executable}' '${executable}' '/opt/${sanitizedProductName}/${executable}' 100 || ln -sf '/opt/${sanitizedProductName}/${executable}' '/usr/bin/${executable}'
+else
+    ln -sf '/opt/${sanitizedProductName}/${executable}' '/usr/bin/${executable}'
+fi
+
+# Added: the old program path (docs/linux-packages.md, "The old program
+# path"). This package replaces Firstmate 3000's, whose program was
+# /opt/firstmate-3000/firstmate-3000 and whose command was
+# /usr/bin/firstmate-3000. An older app that installed this package as its
+# update starts again from the path it was started from, so each leads to
+# this package's program. A path that still leads to a program elsewhere is
+# left as it is: Firstmate 3000's own, while an rpm transaction has not yet
+# taken its package away (packaging/linux/scripts/rpm-posttrans.sh makes the
+# link once it has). The same step as rpm-posttrans.sh.
+for OLD in /opt/firstmate-3000/firstmate-3000 /usr/bin/firstmate-3000; do
+    case "$(readlink -f "$OLD" 2>/dev/null)" in
+        '/opt/${sanitizedProductName}/'*) ;;
+        *) if [ -e "$OLD" ]; then continue; fi ;;
+    esac
+    mkdir -p "$(dirname "$OLD")"
+    ln -sfn '/opt/${sanitizedProductName}/${executable}' "$OLD"
+done
+
+# Added: your own command on everyone's path, and its old name for one
+# release (docs/linux-packages.md, "Your own command"; docs/axi-commands.md,
+# "Infinitary from your terminal"), so a script runs infinitary-axi by its
+# short name. A path that already holds something not of this package's is
+# left as it is.
+for NAME in infinitary-axi infinitary-inbox-axi; do
+    LINK=/usr/bin/$NAME
+    case "$(readlink "$LINK" 2>/dev/null)" in
+        '/opt/${sanitizedProductName}/'*) ;;
+        *) if [ -e "$LINK" ] || [ -L "$LINK" ]; then continue; fi ;;
+    esac
+    ln -sfn "/opt/${sanitizedProductName}/resources/axi-bin/$NAME" "$LINK"
+done
+
+# Check if user namespaces are supported by the kernel and working with a quick test:
+if ! { [[ -L /proc/self/ns/user ]] && unshare --user true; }; then
+    # Use SUID chrome-sandbox only on systems without user namespaces:
+    chmod 4755 '/opt/${sanitizedProductName}/chrome-sandbox' || true
+else
+    chmod 0755 '/opt/${sanitizedProductName}/chrome-sandbox' || true
+fi
+
+if hash update-mime-database 2>/dev/null; then
+    update-mime-database /usr/share/mime || true
+fi
+
+if hash update-desktop-database 2>/dev/null; then
+    update-desktop-database /usr/share/applications || true
+fi
+
+# Install apparmor profile. (Ubuntu 24+)
+# First check if the version of AppArmor running on the device supports our profile.
+# This is in order to keep backwards compatibility with Ubuntu 22.04 which does not support abi/4.0.
+# In that case, we just skip installing the profile since the app runs fine without it on 22.04.
+#
+# Those apparmor_parser flags are akin to performing a dry run of loading a profile.
+# https://wiki.debian.org/AppArmor/HowToUse#Dumping_profiles
+#
+# Unfortunately, at the moment AppArmor doesn't have a good story for backwards compatibility.
+# https://askubuntu.com/questions/1517272/writing-a-backwards-compatible-apparmor-profile
+if apparmor_status --enabled > /dev/null 2>&1; then
+  APPARMOR_PROFILE_SOURCE='/opt/${sanitizedProductName}/resources/apparmor-profile'
+  APPARMOR_PROFILE_TARGET='/etc/apparmor.d/${executable}'
+  if apparmor_parser --skip-kernel-load --debug "$APPARMOR_PROFILE_SOURCE" > /dev/null 2>&1; then
+    cp -f "$APPARMOR_PROFILE_SOURCE" "$APPARMOR_PROFILE_TARGET"
+
+    # Updating the current AppArmor profile is not possible and probably not meaningful in a chroot'ed environment.
+    # Use cases are for example environments where images for clients are maintained.
+    # There, AppArmor might correctly be installed, but live updating makes no sense.
+    if ! { [ -x '/usr/bin/ischroot' ] && /usr/bin/ischroot; } && hash apparmor_parser 2>/dev/null; then
+      # Extra flags taken from dh_apparmor:
+      # > By using '-W -T' we ensure that any abstraction updates are also pulled in.
+      # https://wiki.debian.org/AppArmor/Contribute/FirstTimeProfileImport
+      apparmor_parser --replace --write-cache --skip-read-cache "$APPARMOR_PROFILE_TARGET"
+    fi
+  else
+    echo "Skipping the installation of the AppArmor profile as this version of AppArmor does not seem to support the bundled profile"
+  fi
+fi

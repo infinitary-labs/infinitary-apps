@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "phone-design-shell",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "A familiar look on your phone",
+      "body": "The early phone app now looks like Infinitary on your computer: it draws your first mate and shows clearer Activity. Your computer's name and reach sit at the top, with its details behind one button. Turn your iPad sideways to read Activity beside your cards.",
+      "picture": {
+        "dark": "phone-design-shell-dark.png",
+        "light": "phone-design-shell-light.png",
+        "alt": "Infinitary on iPhone, showing recent Activity beneath the computer’s name, reach and details button."
+      },
+      "provenance": { "origin": "change", "covers": [] }
+    }
+  ],
+  "exclusions": []
+}

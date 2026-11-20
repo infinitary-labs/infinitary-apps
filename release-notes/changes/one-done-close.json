@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "one-done-close",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Your first mate closes finished work one way, and says where it went",
+      "body": "Finished work no longer gets stuck because it fit none of the first mate's ways to close it. The first mate closes it as done and names why: answered, finished, released, carried on by another task, or merged. The record lists what it found, such as a pull request still open or edits it saved. On its own it still waits for the crewmate's report, an open pull request, or unmerged work with nowhere named. Your own words let it close anyway.",
+      "noPicture": "This changes how the first mate closes tasks and what their records say, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

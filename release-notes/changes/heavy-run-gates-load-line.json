@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "heavy-run-gates-load-line",
+      "reason": "Internal: this project's own local phone gate and journey runs declare their needs in the computer's load line, and fall back to the Mac mini's crew places where the shell has no line; how the project is developed, nothing a person notices in the app."
+    }
+  ]
+}

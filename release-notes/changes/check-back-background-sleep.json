@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "check-back-background-sleep",
+      "reason": "Internal: a crewmate's report tool and the reply to a check-back with nothing running now tell it to start a background sleep to wait for time; nothing a person sees changes."
+    }
+  ]
+}

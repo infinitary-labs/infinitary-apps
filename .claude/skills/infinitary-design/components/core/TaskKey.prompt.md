@@ -1,0 +1,52 @@
+# Task keys (FI3-594, FI3-1271)
+
+A task key the app shows as text - `FI3-572` - is a link to that task wherever a person reads it: a card's body, its title and its thread, the task record, Activity, Knowledge and Settings.
+Resting on it shows the task's summary, and a click or Enter opens the task's record.
+One rule, one summary and one way of opening serve every place; a card body's keys are linked by its frame's bridge (`../cards/ResponseCard`, "Task keys in a body"), a panel's through its pointing (`PanelTaskKeyText`), and the window's own through `TaskKeyLink`.
+
+- **Which words.**
+  Only a key that is exactly a recorded task's key: a word shaped like a key that names no task (`F13-572` where no project F13 exists), a lowercase key, or part of a longer word (`FI3-594-plan`) stays text.
+  Nothing near is guessed.
+  A task's own key on its own record, summary or task browser stays text: opening it would only bring the same task forward.
+  On a card every key links, the card's own task's included - in its head (next), its title, its body and its thread - so the same key never reads as a link in one place and as text in another.
+- **The card's own key (INF-358).**
+  A card about a task leads its head's meta line with that task's key, in the quiet look, then a middle dot and the meta words: `INF-358 · Open the waiting decision from the Tasks panel`.
+  Every card about a task has it the same way - a crewmate's card and the app's own cards about a task, the stuck-task card, a required action, a closing note and a sign-in asked for a task.
+  A card the first mate writes is its own and draws no key in its head, even a decision whose buttons act on a task: it names its tasks in its words, where each key is a link.
+  A card about no task - a provider's or a forge's sign-in - draws no key either.
+  The meta words never repeat the key: the stuck-task card, whose title already names its task, has none, so its head reads the key alone (INF-418).
+  The key keeps its whole width; the meta words beside it give way.
+  Resting on it or focusing it opens the task's summary as any key does.
+  A click or Enter on it opens the task's record in front of the card, never the task's waiting decision - that is the card itself - and Hide or Esc on that record comes back to the card while it is still up (`../cards/TaskRecord`, "From a card").
+  Show Info on the card, by name in command search, opens the same record; Show Crewmate and Show Browser open the task's other tabs where it has them.
+  Everywhere else on the card - its title, its body, its thread - the card's own key is a link like any other key, and a click or Enter on it opens the same record in front of the card.
+- **Where a key stays text.**
+  A key inside a control that already does one thing stays text, so the control keeps its one action: a button, a toggle's summary (an Activity line's, whose opened text links), a `role=button` element, a draft button, a link, a Tasks row or a board tile, a Knowledge list row, a Cards row title, an action label, a collapsed panel's newest line and a thread's collapsed cue.
+  A choice's label in a card body is not such a control: its key links, a click on the key opens the task and leaves the choice as it was, and the label's other words still pick it.
+  The last turn above the input is plain text, never a link, so its keys stay text too (`VoiceInput.prompt.md`).
+  A confirmation sentence - Drop task's, a board move's - stays text, since following a link would abandon the confirmation.
+  The summary never takes the pointer, so its keys stay text; so do the board's passing status line, Diagnostics' raw records, inputs, menus, notifications and what a screen reader announces.
+- **How it reads.**
+  In words - a card's body or title, a thread line, the record's Now line, its Waiting on box and the words of a task, a refusal, a finding's statement - as the body's other links: `--accent`, underlined, in the font around it, with a pointer cursor; resting on it gives it the row hover surface (`--bg-3`, `--radius-s`).
+  In a dense list - an Activity line, the record's Activity and Details, a Usage row, Knowledge's who-and-when lines - it keeps the list's own type and color (the dim mono a key has there), underlined, and turns `--accent` while it is rested on or focused, so a column of keys never outshouts the words.
+- **Lit by a rest elsewhere (INF-237).**
+  While the same task rests anywhere else - its crewmate, its Tasks row or tile, another key - every key of that task takes the look its own rest gives it: the row hover surface in words, `--accent` in a dense list.
+  No summary opens for it and nothing moves; it clears the instant that rest ends.
+- **Rest.**
+  Resting on a key opens the crew summary for its task (`../mate/Crewmate`, Reading a crewmate) after the same beat (130ms): the same panel and the same shared facts, in the same order and words, as its Tasks row (`../now/NowPanel`, Row hover).
+  A key on a card - its body, title, thread, or the record - sits outside the card, level with the key (`../cards/ResponseCard`, "Task keys in a body"); a key in a panel on its rail sits beside the panel, as a Tasks row's summary does; a key in Settings sits outside the Settings section.
+  It is in the window-wide layer above the rails and the cards, and never takes the pointer.
+- **The keyboard.**
+  Every key is a Tab stop with the `:focus-visible` ring; the keyboard's focus on it opens the same summary as the pointer's rest, once the key is in view, and Enter opens the task as a click does.
+  In Activity the list stays one stop that the arrows scroll, and each key after it is a stop of its own; F6 leaves for the next part of the window.
+- **Closing.**
+  A cut, as for a row: when the pointer leaves the key, on Esc, on a press on the key, when what it is in scrolls or takes a new revision, when the window resizes or loses focus, on any other key press in the window, when focus leaves the key, or when the key leaves.
+  After Esc or a press it stays closed until the pointer leaves that key, or focus does.
+  Esc closes only the summary, never the card or the Settings under it.
+- **Click.**
+  A click on the key, or Enter on it, opens the task's record at the front of the stack, even when a card waits for that task.
+  Hide or Esc returns to the card the key was clicked from while that card is still shown.
+  Tasks rows and board tiles instead show the waiting decision, deferred action or newest showable card, with the record as the fallback.
+  A key in Settings leaves Settings for the main view first.
+  Only the captain's own click or key opens a task; resting needs none.
+  It is navigation, never a card action: it runs no effect, sends nothing to an author, and works on a past card too.

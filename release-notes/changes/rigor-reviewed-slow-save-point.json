@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "rigor-reviewed-slow-save-point",
+      "reason": "Test only: the reviewed-tier journeys' scripted builder waits for a save point that outlasted the shell's three-second limit before it reads its checks, instead of repeating a refused report, and the rigor-reviewed journey's builder reads its checks through the app's own tools instead of the test writing them into the running app's database."
+    }
+  ]
+}

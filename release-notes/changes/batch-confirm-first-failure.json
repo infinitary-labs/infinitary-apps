@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-confirm-first-failure",
+      "reason": "CI: this project's batch check confirms a failed test file from the first failed job instead of after every check ended; nothing in the app changes."
+    }
+  ]
+}

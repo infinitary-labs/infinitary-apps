@@ -1,0 +1,646 @@
+import { HOLD_KINDS, type HoldKind } from "@shared/holds";
+import { type LiveValidationInput, liveValidationInputSchema } from "@shared/liveValidation";
+import { RECOVERY_APPROACHES, type RecoveryApproach } from "@shared/recovery";
+import { Type } from "typebox";
+import { KNOWLEDGE_TOOL, RECORD_KNOWLEDGE_TOOL } from "../knowledge/knowledgeTools";
+import { ORDINARY_NOTE_READ_ACK } from "../prompts/cardContract";
+import {
+  type CrewmateTool,
+  callWithSignal,
+  crewmateTool,
+  stringEnum,
+  zodParameter,
+} from "../session/tools";
+import { keepHandoverFiles } from "../tasks/handoverFiles";
+import { cardPictureRoot } from "./cardImages";
+import { CLOSE_CARD_TOOL, EMIT_CARD_TOOL } from "./cardTool";
+import {
+  CHECK_CHANGE_TOOL,
+  DOWNLOAD_ARTIFACT_TOOL,
+  GITHUB_READ_TOOL,
+  GITHUB_WRITE_TOOL,
+  OPEN_CHANGE_TOOL,
+  PREPARE_CHANGE_TOOL,
+  READ_WORKFLOW_TOOL,
+  SHOW_MERGE_CARD_TOOL,
+} from "./forgeTools";
+import { CAPTURE_PANEL_TOOL, LINT_PANEL_TOOL, PLACE_PANEL_TOOL } from "./panelTools";
+import { TASKS_QUERY_TOOL } from "./taskTools";
+import { keepValidationEvidence } from "./validationEvidence";
+
+/**
+ * The crewmate's record-facing tools (task-system P2, design section 7):
+ * `file_followup` records a defect or safety risk the crewmate found but
+ * should not fix itself (FI3-868: optional ideas stay in its report) - an
+ * on-request task of its own, discovered-from the crewmate's task
+ * rather than filed under it, that the Firstmate hears about with the
+ * report and decides on (cards/tasks/agents P0, WI-4) - and `note_progress`
+ * puts one line on the crewmate's own timeline without touching the feed.
+ * The read-only `tasks` query (taskTools.ts) sits beside them so a crewmate
+ * searches the backlog before filing. Each is one entry of the crewmate
+ * tool spec (`../session/tools.ts`), and `CREWMATE_TOOLS` below is the
+ * whole set: the Pi session and the Claude client's tool server generate
+ * their tools from the same entries, so a crewmate reads the same contract
+ * whichever subscription runs it.
+ */
+
+export const FILE_FOLLOWUP_TOOL_NAME = "file_followup";
+export const START_PROGRAM_TOOL_NAME = "start_program";
+export const NOTE_PROGRESS_TOOL_NAME = "note_progress";
+export const REPORT_TOOL_NAME = "report";
+export const REPLY_TOOL_NAME = "reply";
+
+/**
+ * The thread answer (cards-as-threads phase 1, contract v4.1). Every card is
+ * the head of a conversation between the captain and its author, and until
+ * now a crewmate had no output for "say something back": the Firstmate
+ * relayed it by hand, or the card had to be closed to answer at all.
+ *
+ * The rules the mechanics carry - revise when the card should change, prose
+ * only, and the settle hand-off - are the shared card-reply contract
+ * (`CARD_REPLY` in `src/core/prompts/cardContract.ts`), which every persona
+ * includes once. This description says how to call it and nothing else, so
+ * it stays well under the Claude transport's 2,048-character cap.
+ */
+export const REPLY_TOOL_DESCRIPTION = [
+  "Write in any card's thread, yours or another task's, with no grant: plain prose, a few sentences.",
+  "Only a line whose answers_message names a captain message ends that question, on your own card too.",
+  // Reading the card first is said once, on tasks card; a closed card's dated
+  // clarification and a line on a question someone already answered are said
+  // by the host's own refusal and result (docs/orchestrator-contract.md, "The
+  // fixed-context budget").
+  // Revising the card with the answer as its reply is CARD_REPLY's, which
+  // every persona's prompt carries, so this says only what a line is not
+  // (INF-2845 paid for signs_off this way).
+  "Never a card and never actions.",
+].join(" ");
+
+/**
+ * What a crewmate's signed-off line does (INF-2845, the captain's direction
+ * A: "the crewmate marks a reply that says you are done, in any words, as
+ * closing"). When to mark one is the thread steer's to say
+ * (`THREAD_STEER_PREAMBLE`), so the crewmate's fixed context grows only by
+ * this; the host checks only the typed conditions (`signOffRefusal`).
+ */
+export const SIGNS_OFF_DESCRIPTION = "Closes your answer as Done does.";
+
+/**
+ * Correct a required action's words (docs/required-actions.md, "Correcting
+ * the words"): any crewmate may, with no grant, and the app keeps the
+ * filing, the target and the completion as they were. A stale generation
+ * and a completed action are said by the correction's own refusals; the
+ * card read lists the generation and each filing's source and action id,
+ * and the patch's fields name the words (docs/orchestrator-contract.md,
+ * "The fixed-context budget").
+ */
+export const REVISE_REQUIRED_ACTION_TOOL_DESCRIPTION = [
+  "Correct a required action's wrong words once you verified the right ones on its target yourself.",
+  "Read its card first with tasks card.",
+  "A different action is a cancellation plus a new declaration, never a correction.",
+].join(" ");
+
+/**
+ * The explicit report (interaction P0, WI-1): a turn reaches Firstmate only
+ * when it reports - through this tool, or by ending with text.
+ */
+export const REPORT_TOOL_DESCRIPTION = [
+  "Report verified work, findings or blockers to the first mate.",
+  "The first mate hears only an explicit report, or your final message when a turn ends with text; ending silently reports nothing.",
+  "For new outcomes, lead with the result in a few plain sentences.",
+  "Not progress (note_progress) or repeated reports.",
+  "Autonomy on: at green, show the merge card as with autonomy off; the app merges from it unless a standing exception passes asks_first, citing the direction.",
+].join(" ");
+
+/** INF-2796: where work that needs a crewmate's own merge first goes now. */
+export const FOLLOWUP_AFTER_MERGE_RULE =
+  "Work needing your merge first goes in your story's afterMerge instead.";
+
+export const FILE_FOLLOWUP_TOOL_DESCRIPTION = [
+  "Record a defect or safety risk you discovered outside your task, instead of doing it:",
+  "a bug you can show on the current main line, or a credible risk to the person's data, accounts, signing material or merges.",
+  "Not for an optional improvement: that is one line in your report, and the first mate decides whether the captain sees it.",
+  "Not for work your own change needs to be finished, or documents it makes stale: those are yours.",
+  "Search tasks first (text, project); if a match exists, file nothing and report its key.",
+  "The planned task waits for the first mate to triage; filing starts nothing and does not hold up your work.",
+  FOLLOWUP_AFTER_MERGE_RULE,
+  "For a host-record takeover, file Take over: my branch in a fresh task, then needs_firstmate to start it now; no merge prerequisite, never to bypass consent or repeat an unknown effect.",
+  "Set blocks_me only for a real dependency your task cannot merge without; it stops your task closing.",
+  "For a test failure, pass test_failure true and test_path: the host refuses a missing path and returns an existing key instead of filing a duplicate.",
+  "Never file progress, captain questions (emit a card), or work you are about to do yourself.",
+].join(" ");
+
+export const NOTE_PROGRESS_TOOL_DESCRIPTION = [
+  "Put one line on your task's own timeline - a milestone reached, a decision you made, what you are doing next.",
+  "It is never a card or a feed line; the captain reads it on the task's record.",
+  "Call it at real milestones, as soon as a plan item finishes or the work moves on, mid-turn, never held to the end or instead of your final report.",
+  "Pass plan to show where the work stands: the whole list of what the task takes.",
+  "The captain sees dots and a list: under eight items, one current at a time.",
+  "Send the first list with your brief and the whole list with every later note, unchanged if nothing moved; fold finished items into one to make room; the final report leaves every item done or skipped.",
+].join(" ");
+
+export const FILE_FOLLOWUP_TOOL = crewmateTool({
+  name: FILE_FOLLOWUP_TOOL_NAME,
+  label: "File follow-up",
+  description: FILE_FOLLOWUP_TOOL_DESCRIPTION,
+  parameters: Type.Object({
+    title: Type.String({ description: "Short sentence-case title (max 64 chars)" }),
+    goal: Type.String({ description: "One sentence: what done looks like" }),
+    why: Type.String({
+      description:
+        "What you found, in plain words: the evidence on the current main line, what it breaks and for whom, and what you are unsure of",
+    }),
+    blocks_me: Type.Optional(Type.Boolean()),
+    test_failure: Type.Optional(
+      Type.Boolean({
+        description: "A test failure; pass test_path too.",
+      }),
+    ),
+    test_path: Type.Optional(
+      Type.String({
+        description: "The failing test's path.",
+      }),
+    ),
+  }),
+  bind: ({ onFollowup }) =>
+    onFollowup &&
+    (async (params, signal) => ({
+      text: await callWithSignal(
+        onFollowup,
+        [
+          {
+            title: params.title,
+            goal: params.goal,
+            why: params.why,
+            ...(params.blocks_me ? { blocksMe: true } : {}),
+            ...(params.test_failure ? { testFailure: true } : {}),
+            ...(params.test_path ? { testPath: params.test_path } : {}),
+          },
+        ],
+        signal,
+      ),
+    })),
+});
+
+/**
+ * A crewmate starts a program its task needs (INF-3022's plan; the captain's
+ * Approve and build): the only way a program starts (docs/programs.md,
+ * "Starting a program"). The dialect and shapes are the Programs runbook's
+ * crew skill, opened on demand, so this says only how to call it.
+ */
+export const START_PROGRAM_TOOL_DESCRIPTION =
+  "Start a program, a script filing your task's parts as tasks; see the programs skill.";
+
+export const START_PROGRAM_TOOL = crewmateTool({
+  name: START_PROGRAM_TOOL_NAME,
+  label: "Program",
+  description: START_PROGRAM_TOOL_DESCRIPTION,
+  parameters: Type.Object({
+    title: Type.Optional(Type.String()),
+    goal: Type.Optional(Type.String()),
+    script: Type.Optional(Type.String()),
+    // The script's args: a JSON object, as its shapes read them (args.rounds, args.goal).
+    args: Type.Optional(Type.Unsafe<Record<string, unknown>>({ type: "object" })),
+    bound: Type.Optional(Type.Integer()),
+    program: Type.Optional(Type.String()),
+    stop: Type.Optional(Type.Boolean()),
+  }),
+  bind: ({ onStartProgram }) =>
+    onStartProgram &&
+    (async (params, signal) => ({
+      text: await callWithSignal(
+        onStartProgram,
+        [
+          {
+            ...(params.title !== undefined ? { title: params.title } : {}),
+            ...(params.goal !== undefined ? { goal: params.goal } : {}),
+            ...(params.script !== undefined ? { script: params.script } : {}),
+            ...(params.args !== undefined ? { args: params.args } : {}),
+            ...(params.bound !== undefined ? { bound: params.bound } : {}),
+            ...(params.program !== undefined ? { program: params.program } : {}),
+            ...(params.stop ? { stop: true } : {}),
+          },
+        ],
+        signal,
+      ),
+    })),
+});
+
+export const REPORT_TOOL = crewmateTool({
+  name: REPORT_TOOL_NAME,
+  label: "Report",
+  description: REPORT_TOOL_DESCRIPTION,
+  parameters: Type.Object({
+    first_release: Type.Optional(
+      Type.Object(
+        {
+          version: Type.String({ minLength: 1 }),
+          url: Type.String(),
+          evidence: Type.String({ minLength: 1 }),
+          tasks: Type.Array(Type.String({ minLength: 1 }), { minItems: 1 }),
+          corrects: Type.Optional(Type.String({ minLength: 1 })),
+        },
+        {
+          additionalProperties: false,
+          description:
+            "After verifying a published release, report each included merged task, including internal ones, with its earliest release, page and evidence of membership and first publication. Collect every key with tasks skip and report each earliest-release group. Arrange missing verification; never infer from merge time. Existing attribution stays unless corrects names the previous version. This records facts only.",
+        },
+      ),
+    ),
+    // Plain schemas keep the fixed context small; the host parses each with its owner's schema.
+    work_wait: Type.Optional(
+      Type.Object(
+        {
+          owner: Type.Optional(Type.String()),
+          end: Type.Optional(Type.String()),
+          observation: Type.String(),
+          cheapestWay: Type.String(),
+        },
+        {
+          description:
+            "A work wait: owner, end fact, current observation and cheapest way around it. Omit owner/end only when unknown; never poll an unchanged wait.",
+        },
+      ),
+    ),
+    recovery_ways: Type.Optional(
+      Type.Array(
+        Type.Object({
+          action: Type.String(),
+          approach: Type.Optional(
+            Type.Unsafe<RecoveryApproach>({ type: "string", enum: [...RECOVERY_APPROACHES] }),
+          ),
+          hold: Type.Unsafe<HoldKind>({ type: "string", enum: [...HOLD_KINDS] }),
+          evidence: Type.String(),
+          nextFact: Type.String(),
+        }),
+        {
+          description:
+            "Read-only recovery findings for the first mate, never a card. Only a workaround may be consent-free; holds, stronger models and sign-in remain the captain's. Signing, releases, merges, destruction and access use asks-first; never bypass consent or replay an unknown effect.",
+        },
+      ),
+    ),
+    validation: Type.Optional(
+      zodParameter<LiveValidationInput>(liveValidationInputSchema, {
+        description:
+          "Typed validation facts, kept at every care; only a Careful merge waits on them; its brief gives the rules. Requests grant nothing; approval needs the captain's click on the emit_card.validation_request card, or a check request's allowance naming an Already allowed yes: its card id, or standing for an override.",
+      }),
+    ),
+    text: Type.String({
+      description: "The report: outcome first, then what you verified; plain prose",
+    }),
+    summary: Type.Optional(
+      Type.String({
+        description:
+          "Always pass it: one plain sentence saying what happened, the task's headline; never a heading like Intent, never the ask restated",
+      }),
+    ),
+    waiting_on_captain: Type.Optional(
+      Type.Object(
+        {
+          reason: Type.String({
+            description: "What the captain still has to read or decide, in a few plain words",
+          }),
+          card_id: Type.Optional(
+            Type.String({
+              description: "Your open card the captain is to read; omit when none is up",
+            }),
+          ),
+        },
+        {
+          description: `Pass when only the captain can unblock you and no work remains. ${ORDINARY_NOTE_READ_ACK} With neither card nor saved answer, the first mate asks them.`,
+        },
+      ),
+    ),
+    check_back: Type.Optional(
+      Type.Object(
+        { minutes: Type.Number(), waiting_for: Type.String() },
+        {
+          description:
+            "Your job still runs as your turn ends: minutes until you look again, and what it does. The app wakes you then; to wait for time alone, start a background sleep first.",
+        },
+      ),
+    ),
+    waits_on: Type.Optional(
+      Type.Array(Type.String(), {
+        description:
+          "Keys of open tasks whose close gives what your work needs; each wait holds start and merge until its close steers you. Unstarted work goes to the first mate. If only part gives it, name that part with needs_firstmate. A replaced task's wait goes to its carrier.",
+      }),
+    ),
+    finished: Type.Optional(
+      Type.Boolean({
+        description: `True after the captain acknowledges your outcome and nothing remains; the first mate is woken to close it. ${ORDINARY_NOTE_READ_ACK} Aside is not acknowledgement; saved answers await Done: use waiting_on_captain.`,
+      }),
+    ),
+    responses: Type.Optional(
+      Type.Array(
+        Type.Object({
+          request_id: Type.String(),
+          response_id: Type.String(),
+          status: stringEnum(["answered", "not-yet-answered"]),
+        }),
+        {
+          description:
+            "Request/response identities: save this exact answer and notify now. Retry reuses response_id; corrections use a new one. Not-yet-answered leaves the request open.",
+        },
+      ),
+    ),
+    needs_firstmate: Type.Optional(
+      Type.String({
+        description:
+          "Relay captain-approved builds by reply, merges, discards, stronger models or unrelated work, with exact words and final specification. For checks you cannot run or work on another computer, name the computer, need and destination. Wakes the first mate when sent, even with a card or wait; an unanswered captain reply holds it to turn end. It authorizes nothing. Requested answers use responses, not progress or news.",
+      }),
+    ),
+    captain_words_from: Type.Optional(
+      Type.String({
+        description:
+          "When reporting the captain's words, name your card they replied under or clicked, or crewmate-tab. The app reads the newest words there and quotes them in filed work. A card without their words refuses the report.",
+      }),
+    ),
+    files: Type.Optional(
+      Type.Array(Type.String(), {
+        description:
+          "Absolute paths of files this report hands to another task. The app keeps verified copies. Never paste contents: they may hold secrets.",
+      }),
+    ),
+    result: Type.Optional(
+      Type.Object(
+        {},
+        {
+          additionalProperties: true,
+          description:
+            "The brief's JSON result; fix invalid fields. A waiting_on_captain, needs_firstmate, check_back or responses report may omit it. The next task reads it as data; text stays the plain account.",
+        },
+      ),
+    ),
+  }),
+  bind: (delegate) =>
+    delegate.onReport &&
+    (async (params, signal) => ({
+      text: await callWithSignal(
+        delegate.onReport!,
+        [
+          params.text,
+          params.summary,
+          {
+            ...(params.responses?.length
+              ? {
+                  responses: params.responses.map((response) => ({
+                    requestId: response.request_id,
+                    responseId: response.response_id,
+                    status: response.status,
+                  })),
+                }
+              : {}),
+            ...(params.first_release ? { firstRelease: params.first_release } : {}),
+            ...(params.validation
+              ? {
+                  validation: await keepValidationEvidence(
+                    liveValidationInputSchema.parse(params.validation),
+                    cardPictureRoot(delegate),
+                  ),
+                }
+              : {}),
+            ...(params.waiting_on_captain
+              ? {
+                  wait: {
+                    reason: params.waiting_on_captain.reason,
+                    ...(params.waiting_on_captain.card_id
+                      ? { cardId: params.waiting_on_captain.card_id }
+                      : {}),
+                  },
+                }
+              : {}),
+            ...(params.work_wait ? { workWait: params.work_wait } : {}),
+            ...(params.recovery_ways?.length ? { recoveryWays: params.recovery_ways } : {}),
+            ...(params.check_back
+              ? {
+                  checkBack: {
+                    minutes: params.check_back.minutes,
+                    waitingFor: params.check_back.waiting_for,
+                  },
+                }
+              : {}),
+            ...(params.finished ? { finished: true } : {}),
+            ...(params.waits_on && params.waits_on.length > 0 ? { waitsOn: params.waits_on } : {}),
+            ...(params.needs_firstmate !== undefined
+              ? { needsFirstmate: params.needs_firstmate }
+              : {}),
+            ...(params.captain_words_from !== undefined
+              ? { captainWordsFrom: params.captain_words_from }
+              : {}),
+            ...(params.result !== undefined
+              ? { result: params.result as Record<string, unknown> }
+              : {}),
+            ...(params.files && params.files.length > 0
+              ? { files: await keepReportedFiles(params.files, delegate.handoverDir) }
+              : {}),
+          },
+        ],
+        signal,
+      ),
+    })),
+});
+
+/** A report's files, kept as verified copies where this crewmate runs (INF-992). */
+function keepReportedFiles(paths: readonly string[], dir: string | undefined) {
+  if (!dir)
+    throw new Error("This task has no folder to keep handed files in, so it cannot hand files on.");
+  return keepHandoverFiles(paths, dir);
+}
+
+export const NOTE_PROGRESS_TOOL = crewmateTool({
+  name: NOTE_PROGRESS_TOOL_NAME,
+  label: "Note progress",
+  description: NOTE_PROGRESS_TOOL_DESCRIPTION,
+  parameters: Type.Object({
+    text: Type.String({ description: "One line, sentence case, factual" }),
+    plan: Type.Optional(
+      Type.Array(
+        Type.Object({
+          label: Type.String({
+            description: "What the item is, in a few words",
+          }),
+          short: Type.String({
+            description: "A word or two under its dot",
+          }),
+          state: stringEnum(["done", "current", "next", "skipped"]),
+        }),
+        {
+          description: "In order, replacing the last list; the line folds what it cannot hold",
+        },
+      ),
+    ),
+  }),
+  bind: ({ onProgress }) =>
+    onProgress &&
+    (async (params, signal) => ({
+      text: await callWithSignal(onProgress, [params.text, params.plan], signal),
+    })),
+});
+
+/**
+ * The crewmate's thread answer. Refusals come back as tool TEXT (an unknown
+ * or foreign card, empty words, an over-long reply) rather than as throws:
+ * a conversational miss is guidance, not a failure of the turn.
+ */
+export const REPLY_TOOL = crewmateTool({
+  name: REPLY_TOOL_NAME,
+  label: "Reply in thread",
+  description: REPLY_TOOL_DESCRIPTION,
+  parameters: Type.Object({
+    card_id: Type.String({ description: "The card whose thread you are answering in" }),
+    text: Type.String({
+      description: "Your answer, in sentence case",
+    }),
+    interim: Type.Optional(
+      Type.Boolean({
+        description:
+          "True for one line saying what you are doing, before long work on the captain's reply; their reply keeps waiting for your answer.",
+      }),
+    ),
+    // The description says a line ends a captain question only when answers_message names it.
+    answers_message: Type.Optional(Type.Integer({ minimum: 1 })),
+    // Top-level, so the rule reaches a Claude crewmate (INF-2845, direction A).
+    signs_off: Type.Optional(
+      Type.Boolean({
+        description: SIGNS_OFF_DESCRIPTION,
+      }),
+    ),
+    // A resent operation_id answers with its first result, which says so.
+    operation_id: Type.Optional(Type.String()),
+    response: Type.Optional(
+      Type.Object(
+        {
+          request_id: Type.String(),
+          response_id: Type.String(),
+          status: stringEnum(["answered", "not-yet-answered"]),
+        },
+        { description: "As report's response; a report reusing its response_id adds nothing." },
+      ),
+    ),
+  }),
+  bind: ({ onReply }) =>
+    onReply &&
+    (async (params, signal) => ({
+      text: await callWithSignal(
+        onReply,
+        [
+          {
+            cardId: params.card_id,
+            text: params.text,
+            ...(params.interim === true ? { interim: true } : {}),
+            ...(params.answers_message !== undefined
+              ? { answersMessage: params.answers_message }
+              : {}),
+            ...(params.signs_off === true ? { signsOff: true } : {}),
+            ...(params.operation_id?.trim() ? { operationId: params.operation_id.trim() } : {}),
+            ...(params.response
+              ? {
+                  response: {
+                    requestId: params.response.request_id,
+                    responseId: params.response.response_id,
+                    status: params.response.status,
+                  },
+                }
+              : {}),
+          },
+        ],
+        signal,
+      ),
+    })),
+});
+
+/** Correct a required action's words, keeping its filing (docs/required-actions.md). */
+export const REVISE_REQUIRED_ACTION_TOOL = crewmateTool({
+  name: "revise_required_action",
+  label: "Correct required action",
+  description: REVISE_REQUIRED_ACTION_TOOL_DESCRIPTION,
+  parameters: Type.Object({
+    action: Type.String({ description: "Its card id or task key" }),
+    // The description says to read the card first, and the card read lists the
+    // generation and each filing's source and action id, so the three are served bare.
+    source: Type.String(),
+    action_id: Type.String(),
+    expected_generation: Type.Integer({ minimum: 0 }),
+    // The patch carries only the words that change, and reason says why they were wrong.
+    patch: Type.Object({
+      title: Type.Optional(Type.String()),
+      consequence: Type.Optional(Type.String()),
+      instructions: Type.Optional(Type.Array(Type.String())),
+      criterion: Type.Optional(Type.String()),
+    }),
+    reason: Type.String(),
+    // A resent operation_id answers with its first result, which says so.
+    operation_id: Type.String(),
+    // The description and the refusal of a different action say what it declares.
+    same_action: Type.Boolean(),
+  }),
+  bind: ({ onReviseRequiredAction }) =>
+    onReviseRequiredAction &&
+    (async (params, signal) => ({
+      text: await callWithSignal(
+        onReviseRequiredAction,
+        [
+          {
+            action: params.action,
+            source: params.source,
+            actionId: params.action_id,
+            expectedGeneration: params.expected_generation,
+            patch: params.patch,
+            reason: params.reason,
+            operationId: params.operation_id,
+            sameAction: params.same_action,
+          },
+        ],
+        signal,
+      ),
+    })),
+});
+
+/**
+ * Every tool a crewmate can hold, in the order both runtimes serve them:
+ * the card pair, the record pair, the report, the thread answer, the
+ * read-only backlog, the knowledge pair (only a crewmate whose task has a
+ * project or the references grant, in an alpha or development build, has
+ * it, on this Mac or a computer that runs work), the
+ * live-build checks (only a crewmate on the personal workspace has them),
+ * and the pair where the project lives. A task's own browser is no tool:
+ * its crewmate runs `infinitary-browser-axi` in its shell (docs/axi-commands.md).
+ * This list is
+ * the one spec (primitives P7): the Pi placement, the Claude tool server
+ * and the self-source pin all read it, so adding a crewmate tool is one
+ * entry here.
+ */
+export const CREWMATE_TOOLS = [
+  EMIT_CARD_TOOL,
+  CLOSE_CARD_TOOL,
+  FILE_FOLLOWUP_TOOL,
+  START_PROGRAM_TOOL,
+  NOTE_PROGRESS_TOOL,
+  REPORT_TOOL,
+  REPLY_TOOL,
+  REVISE_REQUIRED_ACTION_TOOL,
+  TASKS_QUERY_TOOL,
+  KNOWLEDGE_TOOL,
+  RECORD_KNOWLEDGE_TOOL,
+  LINT_PANEL_TOOL,
+  PLACE_PANEL_TOOL,
+  CAPTURE_PANEL_TOOL,
+  SHOW_MERGE_CARD_TOOL,
+  PREPARE_CHANGE_TOOL,
+  OPEN_CHANGE_TOOL,
+  CHECK_CHANGE_TOOL,
+  READ_WORKFLOW_TOOL,
+  DOWNLOAD_ARTIFACT_TOOL,
+  GITHUB_READ_TOOL,
+  GITHUB_WRITE_TOOL,
+] as const satisfies readonly CrewmateTool[];
+
+/** This module, as the self-source map names where a crewmate tool is defined. */
+export const CREWMATE_TOOLS_MODULE = "src/core/pi/crewmateTaskTools.ts";
+
+/** The crewmate tool set as the self-source map records it, read off the spec. */
+export function crewmateToolManifest(
+  tools: readonly CrewmateTool[] = CREWMATE_TOOLS,
+): { name: string; module: string }[] {
+  return tools.map((tool) => ({ name: tool.name, module: CREWMATE_TOOLS_MODULE }));
+}

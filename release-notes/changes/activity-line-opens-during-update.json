@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "activity-line-opens-during-update",
+      "kind": "fix",
+      "title": "An Activity line you open stays open when the record updates as you click",
+      "body": "In a task's record, a click on an Activity line could be lost when the record updated at that moment, so the line stayed closed until the next update. The line now opens, or closes, the moment you click it.",
+      "area": "tasks",
+      "noPicture": "The line looks the same; the fix only keeps a click from being lost when an update lands within a moment of it.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

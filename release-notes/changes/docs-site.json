@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "docs-site",
+      "reason": "Adds the docs site's source, its three first pages and its check to the repository; nothing in the app changes, and the site is not published until a later change."
+    }
+  ]
+}

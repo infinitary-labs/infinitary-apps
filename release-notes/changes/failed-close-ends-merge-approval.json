@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "failed-close-ends-merge-approval",
+      "reason": "Internal: a task closed by a cancelled or failed turn now ends its kept merge approval and leaves the batch line in the close itself, as every other close does; the batch and the kept merge already skipped closed tasks, so nothing a person sees changes."
+    }
+  ]
+}

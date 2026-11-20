@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crewmate-directions-again-on-change",
+      "reason": "Internal: a crewmate's conversation is told its standing directions once, and again only after they change or the conversation folds its context, instead of on every turn; the crewmate follows the same directions, so nothing a person sees changes."
+    }
+  ]
+}

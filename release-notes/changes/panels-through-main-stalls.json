@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "panels-through-main-stalls",
+      "kind": "fix",
+      "area": "other",
+      "title": "Your panels keep working while the app is busy",
+      "body": "A panel or a card that runs its own script no longer stops with \"stopped responding\" just because the app itself was busy for a while. When a panel does stop and its fresh page then works, a later stop opens a fresh page again on its own instead of waiting for you to press Retry.",
+      "noPicture": "The change is a stopped line that no longer appears over time, which a still picture cannot show apart from an ordinary panel.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "unreadable-work-removal",
+      "reason": "Conservative removal and recovery for the development-only multi-machine feature, which remains unavailable in released apps."
+    }
+  ]
+}

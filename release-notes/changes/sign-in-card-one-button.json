@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "sign-in-card-one-button",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A card asking you to sign in has one button to open the browser",
+      "body": "When a crewmate asks you to take over its browser, the card's own button, such as Open browser and sign in, is now the only way in. The Browser line above it still shows the site and that it is paused for you. If you take the browser over from the task instead, the card goes away when you return control.",
+      "picture": {
+        "dark": "sign-in-card-one-button-dark.webp",
+        "light": "sign-in-card-one-button-light.webp",
+        "alt": "A sign-in card whose Browser line shows the site paused for your help, with Open browser and sign in as its only browser button"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

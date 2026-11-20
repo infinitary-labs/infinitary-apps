@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "lost-claude-conversation-restarts-visibly",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate whose Claude conversation was lost says so and picks up its task",
+      "body": "When Claude no longer has a crewmate's earlier conversation, for example after it clears old conversations, the crewmate starts a new one knowing it is continuing its task. It gets its brief again and is told where its earlier record is, and the task's history notes that the earlier conversation could not be reopened. Before, it started over silently with none of that.",
+      "noPicture": "This changes what a resumed crewmate is told and one line on the task's history, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crew-supervisor-doors-import",
+      "reason": "Internal: a test imports the core services type from the file it moved to, so the project typechecks again; nothing a person sees changes."
+    }
+  ]
+}

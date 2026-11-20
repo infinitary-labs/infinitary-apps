@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "openrouter-decision-usage",
+      "kind": "fix",
+      "title": "Usage names the OpenRouter model that answered a decision",
+      "body": "When an OpenRouter decision model sorts new work, Usage now lists the model OpenRouter says answered, such as a dated version of Jev latest, at the cost OpenRouter reported for the call. Before, it listed the model that was asked for, at a cost worked out from listed prices.",
+      "area": "settings",
+      "picture": {
+        "dark": "openrouter-decision-usage-dark.webp",
+        "light": "openrouter-decision-usage-light.webp",
+        "alt": "Usage details for an OpenRouter decision model named by the dated model that answered, with estimates from the cost the provider reported"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-retry-one-copy",
+      "reason": "Release work: a retried upload of an alpha keeps one copy of each download on the release machine instead of one for every place it checks, so a retry after every place already took every file no longer runs out of disk; the downloads themselves are unchanged."
+    }
+  ]
+}

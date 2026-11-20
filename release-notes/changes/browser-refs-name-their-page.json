@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "browser-refs-name-their-page",
+      "kind": "fix",
+      "title": "A crewmate's browser never clicks the wrong thing after a page changes",
+      "body": "When a page in a crewmate's browser moves on, the crewmate can no longer press something that only took the place of the button or link it meant. It is told the page changed and looks again, and the same holds between a page and a second page a site opens, and after you hand the browser back.",
+      "area": "tasks",
+      "noPicture": "The change is in what a crewmate reads back from a page, which is not drawn on screen.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "entries": [{
+    "id": "context-shortening-usage",
+    "kind": "fix",
+    "title": "Usage includes context-shortening calls",
+    "body": "New completed context-shortening calls now contribute their reported tokens and estimated cost to Usage. Existing saved usage is unchanged.",
+    "area": "settings",
+    "noPicture": "This corrects accounting for new background calls without changing the Usage layout or controls.",
+    "provenance": { "origin": "change" }
+  }]
+}

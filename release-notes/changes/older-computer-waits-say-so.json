@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "older-computer-waits-say-so",
+      "kind": "fix",
+      "title": "A task waiting for an older computer says why",
+      "body": "A task that waits for a computer on an older Firstmate now says the computer takes no new work until it is updated, in the feed, in Tasks and in the task's record, and its Update card comes back. It used to read as out of reach.",
+      "area": "devices",
+      "noPicture": "Wording on a row that appears only while a connected computer runs an older Firstmate, which a still cannot stage without one.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

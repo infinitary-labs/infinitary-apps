@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "not-typing-keys-tasks-search",
+      "reason": "Test-only: the keyboard journey searches Tasks with its two wide notes put aside, so the docks they fold cannot take the search's focus mid-typing. No app behavior change."
+    }
+  ]
+}

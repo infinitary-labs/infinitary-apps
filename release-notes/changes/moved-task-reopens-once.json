@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "moved-task-reopens-once",
+      "reason": "Repairs a regression no release carried: since the transcript lookup change, a task moved to a computer that runs work could stay retiring because a second resume replaced the move's own; a resume now joins the one already opening."
+    }
+  ]
+}

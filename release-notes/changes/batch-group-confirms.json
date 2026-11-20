@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-group-confirms",
+      "reason": "CI: this project's batch check confirms each failed Linux test group beside it instead of in a job that waited beside every check; nothing in the app changes."
+    }
+  ]
+}

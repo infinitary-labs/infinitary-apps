@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "emote-words",
+      "kind": "feature",
+      "title": "Firstmate can add a few words to its gestures",
+      "body": "When Firstmate reacts with a gesture, it can now add a few words, up to 40 characters, shown just above the character where \"Thinking…\" appears on your first turn. The words fade after a few seconds. A reply such as \"On it\" waits until Firstmate has finished its turn, like the gesture does.",
+      "area": "firstmate",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

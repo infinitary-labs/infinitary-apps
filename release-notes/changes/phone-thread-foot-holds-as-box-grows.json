@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "phone-thread-foot-holds-as-box-grows",
+      "kind": "fix",
+      "area": "devices",
+      "title": "The end of a card's thread stays in view as the message box grows on your iPhone",
+      "body": "On your iPhone, the first mate's answer at the end of a card's thread could now and then end up under the card's lower edge when the message box below grew to show that same answer. A thread you are reading at its end now keeps its end in view while the message box, the keyboard or the card's foot changes size.",
+      "noPicture": "The thread looks as it did; only an answer that was sometimes hidden under the card's edge now stays in view.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

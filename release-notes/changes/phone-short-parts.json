@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "phone-short-parts",
+      "reason": "Internal: the phone check's join, talk, relaunch and cards parts are split into shorter tests so a pull request's phone check can run the closest one alone; every check stays and the app is unchanged."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "frame-bridge-script-split",
+      "reason": "Internal: the frame bridge script's held page, pictures, form, task key links and keyboard move into their own files, under the code size warning line; the script the frames run is byte-for-byte the same and nothing a person sees changes."
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "faster-batch-closes-usage-project-removal",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Fewer pauses after batch merges and when reading task history",
+      "body": "Infinitary can respond between task closures after a batch merge. Usage loads faster on long histories, and checking whether a project can be removed no longer loads closed tasks.",
+      "noPicture": "These changes shorten waits without changing any view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

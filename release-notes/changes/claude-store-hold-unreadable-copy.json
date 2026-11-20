@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "claude-store-hold-unreadable-copy",
+      "kind": "fix",
+      "area": "subscriptions",
+      "title": "Claude can sign itself back in after a resumed conversation fails to open",
+      "body": "When a crewmate's earlier Claude conversation could not be reopened, the app kept Claude's sign-in marked as busy. After that, the app no longer renewed the sign-in on its own until you restarted it. The app now frees the sign-in when a resume fails, so renewal keeps working.",
+      "noPicture": "This fixes a sign-in held after a failed resume without changing a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

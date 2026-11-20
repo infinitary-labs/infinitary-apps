@@ -1,0 +1,300 @@
+name: ci
+
+# A pushed task branch and a pull request run one Linux job (INF-2915's plan,
+# the captain's direction B): the release notes, typecheck, the lint, the
+# edited unit and integration tests and the unit, integration and browser
+# tests that read a changed file, the build and the one critical-path journey
+# (INF-2507), and every browser test when a version touches the renderer or
+# its browser tests.
+# A version whose every path is a test, docs, the docs site, a release note or
+# the phone app
+# skips the build and the critical path (scripts/pr-paths.ts). The swept
+# batch runs everything before a change reaches main (docs/testing.md, "What
+# a pull request runs"). Edited unit files run three total rounds locally,
+# never in extra PR repeat jobs, and once more here beside the tests that read
+# a changed file. Full unit, integration and probe sweeps run here only on
+# request, never on PRs.
+# A change here is a pushed task branch with no pull request of its own
+# (docs/forge.md, "Batches of your own"), so each push of a task's branch,
+# named inf/* by the naming runbook's words or fm/task-* from before, starts
+# this job, measured from the commit the branch left main at, or from the
+# newest batch version it is built on (docs/testing.md, "A pushed branch"). A pull request runs the same job on
+# its merge commit: another person's, or a task's own from before it. A batch
+# pull request skips it, since batch-pull-request.yml runs the swept batch on
+# that version.
+# A push to main starts none of these jobs (INF-2340): main.yml's full check
+# runs the same commands in verify.yml's linux-checks lane and its Linux test
+# groups, every probe included.
+# Which Linux machines (INI-9's plan, approved by the captain): every job
+# runs on the label the repository variable LINUX_RUNNER names - the
+# placement service's shell-pc-linux, a fresh VM per job on the Windows PC,
+# five at once - and on GitHub's hosted ubuntu-24.04 when it is unset.
+# The repository variable LINUX_QUEUES (DOP-251's plan) can send a job's
+# kind to another queue, such as the Mac mini's Linux guests, before
+# LINUX_RUNNER; a kind it leaves out keeps the label above (docs/testing.md,
+# "Each Linux job's kind"). Self-hosted images supply Node 24 and their own
+# pnpm store (DOP-67/68), so only GitHub-hosted jobs restore setup-node's
+# pnpm cache (DOP-66 fix 1).
+# An outside contributor's pull request (docs/public-ci.md, "Outside
+# contributors") runs only on GitHub's own machines, whatever the variables
+# say: this job on hosted Ubuntu, and contributors.yml's journeys and Windows
+# build on hosted Ubuntu, Mac and Windows. The checks that need the
+# project's own machines - the fresh Windows 11 check, the signed installer
+# checks, signing and TestFlight - wait for the batch. A pull request runs the
+# check files it carries, so the owner's approval of each run, not this
+# routing, keeps a contributor off the project's machines.
+
+on:
+  # Linux-only branch validation; edited unit-file rounds belong locally.
+  workflow_dispatch:
+    inputs:
+      sweep:
+        description: Also run the unit, integration and probe sweeps (default - code and build only)
+        required: false
+        type: boolean
+        default: false
+  # Each push of a task's branch; the app's own batch branches
+  # (infinitary-batch/*) and main start nothing here.
+  push:
+    branches:
+      - "inf/**"
+      - "fm/task-*"
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# The retained job runs on every pushed task branch and pull request,
+# including release notes. Full sweeps run only on a request: a push and a
+# pull request name no sweep, so those jobs skip at the job boundary.
+# Each test step ends at 30 minutes (INF-1083, the captain's choice for unit
+# tests): a stuck test or wait ends sooner, by its own cap of at most 10
+# minutes (docs/test-cohorts.md, "Budgets"), and these steps take about two.
+jobs:
+  # Each job's name leads with what started it (scripts/ci-job-names.mjs).
+  # A batch pull request skips it: the exact pull requests whose checks
+  # batch-pull-request.yml starts, a batch branch of this repository itself
+  # into the default branch, which the swept batch checks whole.
+  typecheck-lint-build:
+    if: ${{ !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'infinitary-batch/') && github.event.pull_request.head.repo.full_name == github.repository && github.base_ref == github.event.repository.default_branch) }}
+    name: ${{ github.event_name == 'pull_request' && 'Pull request · Code, build, affected tests and critical path (Linux)' || github.event_name == 'push' && 'Branch push · Code, build, affected tests and critical path (Linux)' || 'Manual request · Code and build (Linux)' }}
+    # An outside contributor's pull request takes hosted Ubuntu before any variable.
+    runs-on: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').typecheck || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          # The pull request's merge commit and its base parent, for the notes,
+          # paths and reader steps. A pushed branch has no merge commit, so it
+          # fetches every commit to find the one it left main at.
+          fetch-depth: ${{ github.event_name != 'push' && 2 || 0 }}
+      - uses: ./.github/actions/pnpm
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
+      # Where the change starts, for the notes, paths, reader and critical-path
+      # steps: the base parent of a pull request's merge commit, and for a
+      # pushed branch the commit it left main at, so main's newer commits are
+      # never read as the branch's own changes. A pushed branch built on a
+      # batch's version, as a held batch's repair is, starts at the newest
+      # such version instead, so its check tests only the repair, not every
+      # change of the batch (INF-5379's plan, piece 2; docs/testing.md, "A
+      # pushed branch"). The full checkout fetches every batch branch.
+      - name: Find the change's base
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        env:
+          FROM: ${{ github.event_name == 'pull_request' && 'HEAD^1' || 'origin/main' }}
+        run: |
+          base=$(git merge-base "$FROM" HEAD)
+          for batch in $(git for-each-ref --format='%(objectname)' refs/remotes/origin/infinitary-batch/); do
+            if [ "$batch" != "$base" ] && git merge-base --is-ancestor "$base" "$batch" 2>/dev/null && git merge-base --is-ancestor "$batch" HEAD 2>/dev/null; then
+              base=$batch
+            fi
+          done
+          echo "CHANGE_BASE=$base" >> "$GITHUB_ENV"
+      # A change adds its release note or exclusion and the ledger stays
+      # consistent (docs/release-notes.md "The release check"). Plain Node, no
+      # install, under a second, so a miss fails here instead of at the alpha.
+      - name: Release notes
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        run: node scripts/release-notes.ts change --base "$CHANGE_BASE"
+      # A change that moves the contract's major or view floor is flagged
+      # with the phone build the next alpha waits for (docs/testing.md, "What
+      # a task branch requests"; INF-4500). Plain Node, never fails.
+      - name: Phone contract flag
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        run: node scripts/phone-contract-flag.ts --base "$CHANGE_BASE"
+      # What this version runs beyond its code checks (INF-2915's plan):
+      # build=false when every changed path is a test, docs, a release note
+      # or the phone app; browser=true, every browser test, when one is the
+      # renderer or its browser tests. Plain Node, no install.
+      - name: Changed paths
+        id: paths
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        run: node scripts/pr-paths.ts --base "$CHANGE_BASE"
+      - uses: ./.github/actions/node-headers
+      - uses: ./.github/actions/electron-download
+      - run: pnpm install --frozen-lockfile
+        # Scope Node headers to this install, never to Electron rebuilds.
+        env:
+          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
+      - run: pnpm typecheck
+      - run: pnpm check
+      # The adherence lint caught nothing on 372 pull request runs (INF-2915's
+      # plan), so it runs on a request, as main's check does, and before each
+      # push in pnpm check:changed, never on a pull request or a pushed branch.
+      - run: pnpm lint:adherence
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+      # Chromium, about 15 seconds, for the browser step, for a browser test
+      # the next step runs and for an integration file it runs that starts
+      # one, such as tests/run-temp-root.test.ts (the integration groups
+      # install it too).
+      - uses: ./.github/actions/browser-chromium
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+      - uses: ./.github/actions/linux-test-tools
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+      # Each edited test file, and the unedited unit, integration and
+      # browser tests that import or read each changed file, run once here
+      # (scripts/unit-reach.ts directUnitReach), so a break the crewmate's
+      # Mac rounds did not see fails the pull request, not the merge batch or
+      # main's full check (INF-2478, INF-2999; INF-3690's gap 3 for edited
+      # files, whose three rounds stay local). A probe, an unedited
+      # Mac-listed reader, or a browser file when the browser step runs every
+      # one, is listed with the run that owns it, and a selected file that
+      # did not run fails it. A selection wider than 100 files runs as
+      # several Vitest runs one after another, each with fresh workers, so an
+      # in-memory worker's memory stays inside this runner's (INF-4163).
+      - name: Unit, integration and browser tests that read a changed file
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        run: node scripts/unit-repeats.ts --reach --base "$CHANGE_BASE" --run
+        timeout-minutes: 30
+      # The browser layer (docs/testing.md, "The browser layer"): every
+      # browser file, about three minutes, when the version touches the
+      # renderer or its browser tests; otherwise the step before runs the
+      # browser files that read a changed file. A requested sweep runs them
+      # in unit-tests, and the swept batch on every approved change.
+      - name: Browser tests
+        if: ${{ github.event_name != 'workflow_dispatch' && steps.paths.outputs.browser == 'true' }}
+        run: pnpm test --project browser
+        timeout-minutes: 30
+      - run: pnpm build
+        if: ${{ github.event_name == 'workflow_dispatch' || steps.paths.outputs.build == 'true' }}
+      # The critical path (INF-2480's plan, captain: "path six-steps (launch,
+      # sign in, project, first mate, crewmate card, merge)"; INF-2507): the
+      # one journey every change that builds the app runs, on the app just
+      # built from the pushed branch's version or the pull request's merge
+      # commit, on the Linux desktop
+      # (docs/testing.md, "The critical path"). A change that edits it runs
+      # it three rounds and alone, as any edited journey.
+      - uses: ./.github/actions/linux-desktop
+        if: ${{ github.event_name != 'workflow_dispatch' && steps.paths.outputs.build == 'true' }}
+      - name: Critical-path journey
+        id: critical-path
+        if: ${{ github.event_name != 'workflow_dispatch' && steps.paths.outputs.build == 'true' }}
+        # The journey ends at 75 minutes and its command at 90 (INF-1083,
+        # the captain's check limits, as journeys.yml).
+        timeout-minutes: 90
+        run: scripts/on-screen.sh node scripts/journey-runs.ts --base "$CHANGE_BASE" --files tests/e2e/critical-path.spec.ts --alone-out playwright-report/alone -- --project=desktop
+        env:
+          INFINITARY_SOURCE_EVIDENCE: ${{ runner.temp }}/source-desktop-evidence
+          PLAYWRIGHT_JSON_OUTPUT_FILE: playwright-report/source-results.json
+          INFINITARY_E2E_RUN_MINUTES: 75
+          SCREEN: 2560x1600x24
+      # Linux runs every test it can (docs/testing.md, "Tests that need a
+      # Mac"): a test that skipped here without MAC_ONLY_TAG fails the job.
+      - name: Refuse a test that skipped on Linux without the Mac tag
+        if: ${{ !cancelled() && (steps.critical-path.outcome == 'success' || steps.critical-path.outcome == 'failure') }}
+        run: node scripts/untagged-skips.ts playwright-report/source-results.json
+      - name: Keep the Linux window and the journey's results
+        if: ${{ always() && steps.critical-path.outcome == 'failure' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: source-desktop-critical-path
+          path: |
+            ${{ runner.temp }}/source-desktop-evidence/
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 3
+
+  # The in-memory cohorts and the browser layer (docs/test-cohorts.md).
+  unit-tests:
+    if: github.event_name != 'pull_request' && inputs.sweep
+    name: Manual request · Unit tests (Linux)
+    runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').ci || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: ./.github/actions/pnpm
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
+      - uses: ./.github/actions/node-headers
+      - uses: ./.github/actions/electron-download
+      - run: pnpm install --frozen-lockfile
+        # Scope Node headers to this install, never to Electron rebuilds.
+        env:
+          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
+      # The browser layer (docs/testing.md, "The browser layer").
+      - uses: ./.github/actions/browser-chromium
+      - run: pnpm test --project pure --project unit --project unit-isolated --project browser
+        timeout-minutes: 30
+
+  # The integration cohort, split by vitest's own --shard (a hash of each
+  # file's path), on machines of their own so nothing else loads the host
+  # its budgets measure. Each shard reports even when the other fails.
+  integration-tests:
+    if: github.event_name != 'pull_request' && inputs.sweep
+    name: ${{ format('Manual request · Integration tests (Linux; group {0}/{1})', matrix.shard, strategy.job-total) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').ci || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: ./.github/actions/pnpm
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
+      - uses: ./.github/actions/node-headers
+      - uses: ./.github/actions/electron-download
+      - run: pnpm install --frozen-lockfile
+        # Scope Node headers to this install, never to Electron rebuilds.
+        env:
+          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
+      # The run-root regression starts real Vitest Chromium too.
+      - uses: ./.github/actions/browser-chromium
+      - uses: ./.github/actions/linux-test-tools
+      - run: pnpm test --project integration --shard="$SHARD/$SHARDS"
+        env:
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ strategy.job-total }}
+        timeout-minutes: 30
+
+  # Probes can fail with no code change (docs/test-cohorts.md, "Probes").
+  # Run every probe on request, never a changed-path selection.
+  probe-tests:
+    if: github.event_name != 'pull_request' && inputs.sweep
+    name: Manual request · Environment checks (Linux)
+    runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').ci || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: ./.github/actions/pnpm
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
+      - uses: ./.github/actions/node-headers
+      - uses: ./.github/actions/electron-download
+      - run: pnpm install --frozen-lockfile
+        # Scope Node headers to this install, never to Electron rebuilds.
+        env:
+          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
+      - run: pnpm test --project probe
+        timeout-minutes: 30

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "browser-request-beside-page",
+      "kind": "improvement",
+      "area": "tasks",
+      "title": "A crewmate's request stays beside its browser while you help",
+      "body": "When a crewmate asks you to take over its browser, its card now stays open beside the page, with its steps, its conversation and a place to write. Ask it a question while you work, and anything you leave in the field goes to the crewmate when you return control.",
+      "picture": {
+        "dark": "browser-request-beside-page-dark.webp",
+        "light": "browser-request-beside-page-light.webp",
+        "alt": "A crewmate's browser page with its request card docked in a column on the right, the card's words above its conversation and reply field"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

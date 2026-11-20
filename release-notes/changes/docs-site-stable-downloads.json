@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "docs-site-stable-downloads",
+      "reason": "Updates the public installation guides without changing the app or how it is released."
+    }
+  ]
+}

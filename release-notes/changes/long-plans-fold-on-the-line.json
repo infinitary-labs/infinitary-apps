@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "long-plans-fold-on-the-line",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate's long plan now shows, with the rest folded into one dot",
+      "body": "When a crewmate lists more steps than the line beside it can hold, the line now shows the first ones and folds the rest into one dot, such as \"4 more\", and the task's record lists every step in full. Before, a long plan or a long step name was turned away, and the line kept showing the crewmate's older plan. Cards are also no longer turned back for how they are worded or laid out, so a crewmate's card reaches you on its first try.",
+      "picture": {
+        "dark": "long-plans-fold-on-the-line-dark.webp",
+        "light": "long-plans-fold-on-the-line-light.webp",
+        "alt": "A crewmate's summary for the task Cut the alpha from current main: Progress reads 2 of 14, 1 skipped, then the current step cut short, over a line of twelve dots whose short labels are cut to fit and whose last dot reads 4 more."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

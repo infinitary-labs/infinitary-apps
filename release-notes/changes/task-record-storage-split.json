@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "task-record-storage-split",
+      "reason": "Internal task storage restructuring does not change product behavior."
+    }
+  ]
+}

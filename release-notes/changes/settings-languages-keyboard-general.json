@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "settings-languages-keyboard-general",
+      "kind": "improvement",
+      "title": "More of Settings in your language",
+      "body": "The General, Appearance, Panels, Keyboard, Runbooks, Integrations and Secrets tabs of Settings now show their words in the language you chose in Settings → Appearance. Some descriptions, such as the one under Diagnostics, still show English for now.",
+      "area": "settings",
+      "picture": {
+        "dark": "settings-languages-keyboard-general-dark.webp",
+        "light": "settings-languages-keyboard-general-light.webp",
+        "alt": "Settings → Appearance in Japanese, with every row's name and description translated"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

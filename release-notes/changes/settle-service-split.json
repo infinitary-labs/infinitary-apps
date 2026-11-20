@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "settle-service-split",
+      "reason": "Internal: the settle service splits into its owners (settle locks, the kept merge approval and its merges, a task's close, the declared closes and the refusals), with copied code and an unreachable fallback removed; nothing a person sees changes."
+    }
+  ]
+}

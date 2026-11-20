@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "browser-tests-busy-mac-clock",
+      "reason": "Tests only: the browser tests' clicks and seeded homes count only the time their test got to run, and the thread test waits for a jump's scroll to end, so a busy computer no longer fails them; nothing in the app changes."
+    }
+  ]
+}

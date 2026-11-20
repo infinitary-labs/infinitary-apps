@@ -1,0 +1,26 @@
+{
+  "entries": [
+    {
+      "id": "tasks-row-press-keeps-focus",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Clicking another Tasks row works while a card comes forward",
+      "body": "When you open a task from Tasks and at once click another row, the card you opened no longer takes the keyboard's place from Tasks, so the second click opens its task.",
+      "noPicture": "A rare ordering of two clicks; the screens look the same before and after once it is gone.",
+      "provenance": {
+        "origin": "change"
+      }
+    },
+    {
+      "id": "summary-closes-on-leave",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A summary no longer stays open after you move away",
+      "body": "Moving the pointer off a crewmate, a Tasks row or a task key just as its summary was due to open could leave the summary showing with nothing pointed at. It now opens only while you still rest there.",
+      "noPicture": "Moving the pointer away at the moment a summary opens cannot show in a still picture.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

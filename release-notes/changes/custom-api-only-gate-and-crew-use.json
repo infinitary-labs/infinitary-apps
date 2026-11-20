@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "custom-api-only-gate-and-crew-use",
+      "reason": "Same journey as custom-connection-fresh-check: a custom-API-only profile whose checks an earlier version made. Saving a re-checked connection now offers its models at once, and the start screen's words stay clear of the last turn; the custom-connection-fresh-check note says both, so a person reads the fix once."
+    }
+  ]
+}

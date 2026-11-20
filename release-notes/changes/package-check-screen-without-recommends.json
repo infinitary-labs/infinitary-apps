@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "package-check-screen-without-recommends",
+      "reason": "Internal CI only: the Linux package checks install their virtual screen without apt's recommended packages, so a slow mirror no longer stretches the install past its time limit. No product change."
+    }
+  ]
+}

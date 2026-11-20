@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "task-browser-engine-order",
+      "kind": "feature",
+      "title": "Task browsers use your installed Chrome or Edge",
+      "body": "A task browser tries Google Chrome on the computer running the task, then Microsoft Edge. If neither can open, it uses the built-in browser. Infinitary doesn't install either one or use your personal browser profile.",
+      "area": "tasks",
+      "noPicture": "The Browser tab stays the same; only the browser engine behind it changes.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

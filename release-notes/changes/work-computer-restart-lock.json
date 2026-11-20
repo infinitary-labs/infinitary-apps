@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "work-computer-restart-lock",
+      "kind": "fix",
+      "title": "A computer that runs work starts again after a forced restart",
+      "body": "After a power cut or forced restart, a computer that runs work for another Mac could stay stuck and never start. It now starts by itself. If its work still cannot start, Settings → Devices says so instead of showing connecting.",
+      "area": "devices",
+      "noPicture": "The fix is a computer starting again after a restart; Devices shows its existing could-not-start line.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

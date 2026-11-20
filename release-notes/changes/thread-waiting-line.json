@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "thread-waiting-line",
+      "kind": "improvement",
+      "title": "A reply that has to wait now says so in its thread",
+      "body": "When you reply under a crewmate's card and the reply cannot be answered yet, the thread now says it is saved, what it waits on - your plan's allowance, a sign-in, the checks, or the crewmate itself - and who goes next. The line changes on its own when the wait ends and goes once the crewmate answers. A message to Firstmate while it is paused now shows a saved line above the input too, even after you closed its pause card.",
+      "area": "cards",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "own-batches-switch",
+      "reason": "Changes only how this project checks and merges its own changes: it removes the team queue's workflow files, checks each task branch at its push, and leaves each batch's checks to the batch pull request. The app itself is unchanged, so nothing a person has seen changes."
+    }
+  ]
+}

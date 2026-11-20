@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-removal-after-a-starved-handshake",
+      "reason": "Test only: the phone journey's removal-while-away check counts the attempts at the test home and its refusals, so a starved iPad simulator that outlasts the phone's own handshake deadline adds a round through the stalled address instead of failing the check. Nothing a person sees changes."
+    }
+  ]
+}

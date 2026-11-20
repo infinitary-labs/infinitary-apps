@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "join-by-its-address",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Join your computer from your phone by its address",
+      "body": "In the Infinitary phone app, Join by its address joins your Mac or Linux computer when you are not next to it to scan its code. Type your account and computer, such as kun@studio, the way you would sign in to it; Remote Login must be on in your Mac’s Sharing settings, or SSH on Linux. The phone shows the computer’s fingerprint the first time and asks whether it is yours. Your password is used once, to let this phone’s own key in, and is never kept; you can instead copy the phone’s key and add it yourself. Infinitary must be open on the computer.",
+      "picture": {
+        "dark": "join-by-its-address-dark.webp",
+        "light": "join-by-its-address-light.webp",
+        "alt": "The Join by its address sheet on iPhone: the computer has not let this phone’s key in yet, a password field with Sign in once, and a line offering to copy the phone’s key instead"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

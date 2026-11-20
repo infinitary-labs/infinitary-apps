@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "still-down-after-retry-answers",
+      "reason": "The first mate is no longer told a task is still failing at its provider while the retry is already working, such as after a computer that runs work quit and came back; this changes only a wake the first mate reads, with nothing on a screen."
+    }
+  ]
+}

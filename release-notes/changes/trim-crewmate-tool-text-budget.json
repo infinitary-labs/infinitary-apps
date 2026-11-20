@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "trim-crewmate-tool-text-budget",
+      "reason": "Shortens wording in a few crew-only tool descriptions to bring the served prompt back under its budget; nothing a person sees changes."
+    }
+  ]
+}

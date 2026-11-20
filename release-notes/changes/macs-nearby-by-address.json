@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "macs-nearby-by-address",
+      "kind": "feature",
+      "title": "Pick a Mac on your network to add it",
+      "body": "When you add a Mac by its address, Settings lists the Macs on your network that have Remote Login on. Pick one and its address fills in with your user name, which you can change before you add it. A Mac already on your list is marked, and this Mac is never listed. You can still type any address. If macOS has not let Firstmate use your local network, the list says so.",
+      "area": "devices",
+      "highlight": 2,
+      "picture": {
+        "dark": "macs-nearby-by-address-dark.webp",
+        "light": "macs-nearby-by-address-light.webp",
+        "alt": "Settings, Devices, adding a Mac by its address, with three Macs on this network listed under the address field and one marked on your list"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

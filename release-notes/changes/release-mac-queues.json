@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-mac-queues",
+      "reason": "CI release work: a publishing release's Mac jobs can ask for release-only runner queues through new repository variables; unset, nothing changes, and no person notices it in the app."
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "knowledge-replaces-notes",
+      "area": "firstmate",
+      "kind": "improvement",
+      "highlight": 2,
+      "title": "Your preferences become directions in Knowledge",
+      "body": "The preferences Firstmate remembered for you are now directions in Knowledge, kept apart from facts about you. Firstmate reads all of them on every turn, a crewmate reads the ones for its project, and only your own words add or change one. Stable releases now have Knowledge too. Everything else Firstmate kept as notes, each preference's earlier wording, and what crewmates recorded about your projects are removed; what Knowledge holds about you and the sources you saved stay. Earlier versions of Firstmate cannot open your saved work after this update.",
+      "provenance": { "origin": "change" },
+      "noPicture": "The main change is which saved directions Firstmate receives on every turn, not a new layout."
+    }
+  ]
+}

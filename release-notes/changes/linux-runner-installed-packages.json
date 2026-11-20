@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "linux-runner-installed-packages",
+      "reason": "Project checks only: a Linux runner whose image already holds every package a check step names no longer refreshes the package lists or upgrades those packages, so a slow Ubuntu mirror cannot run out the step's ten minutes. No app behavior change."
+    }
+  ]
+}

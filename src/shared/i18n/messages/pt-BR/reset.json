@@ -1,0 +1,5 @@
+{
+  "resetKeysAsk": "Redefinir todas as teclas para as da predefinição {preset}?",
+  "resetKeysConfirm": "Redefinir todas as teclas",
+  "resetKeysDetail": "Cada atalho que você mudou nos ajustes do teclado volta para o que a predefinição {preset} dá a ele."
+}

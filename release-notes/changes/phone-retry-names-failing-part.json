@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-retry-names-failing-part",
+      "reason": "Project testing rule and documentation only: a phone check retry after a failure names only the failing part and device, and the docs now say which Mac places serve phone checks; nothing in the app changes."
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "one-answer-per-card-reply",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Your first mate answers a reply under its card once",
+      "body": "When you ask something under one of your first mate's cards, it now answers once in the card's thread. Before, the app could wrongly decide the first answer was missing, and your first mate then repeated the same answer in the thread and again on the card.",
+      "noPicture": "This removes repeated answers from a card's thread; the card and thread look the same as before.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

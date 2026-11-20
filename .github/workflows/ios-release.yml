@@ -1,0 +1,203 @@
+name: Infinitary to TestFlight
+run-name: Infinitary ${{ inputs.version }}${{ inputs.check_build && format(' — check build {0}', inputs.check_build) || ' — TestFlight' }}
+
+# INF-64 piece 3 / INF-80. Only a deliberate dispatch on merged main releases.
+# Unsigned checks use the vBoxx phone queue; Xcode signing stays on the host.
+# No explicit keychain operations, no certificate cleanup, no automatic retries.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Phone version, for example 0.1.0
+        required: true
+        type: string
+      check_build:
+        description: Only check an existing build, for example 1.1; leave empty to release
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+env:
+  PHONE_VERSION: ${{ inputs.version }}
+  CHECK_BUILD: ${{ inputs.check_build }}
+
+jobs:
+  # Each job's name leads with what was requested (scripts/ci-job-names.mjs).
+  resolve:
+    name: ${{ inputs.check_build && 'Requested TestFlight status · Check version and build request' || 'Requested TestFlight · Check source and version' }}
+    # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      build_number: ${{ steps.resolve.outputs.build_number }}
+      source_commit: ${{ steps.resolve.outputs.source_commit }}
+      mode: ${{ steps.resolve.outputs.mode }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - id: resolve
+        name: Validate the version and exact source
+        run: node scripts/phone-release.ts resolve
+
+  preflight:
+    needs: resolve
+    if: needs.resolve.outputs.mode == 'release'
+    name: Requested TestFlight · Check Apple readiness
+    environment: ios-release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ needs.resolve.outputs.source_commit }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - name: Check Apple's app record and internal testing
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+        run: node scripts/phone-release.ts preflight
+
+  phone:
+    needs: [resolve, preflight]
+    if: needs.resolve.outputs.mode == 'release'
+    # The reusable workflow and its checkout use this dispatch's resolved source.
+    # No release environment or signing secrets cross into the disposable guest.
+    # INF-4241 piece 8: one call that names no device, so phone.yml's one job checks every device
+    # PHONE_PARTS in scripts/phone-test-plan.ts names from one build on one phone Mac
+    # (tests/phone-ci.test.ts holds this): every part on the iPhone, and on the iPad and the iPhone
+    # Duo only the parts about each, the Duo's in the hinge its row names.
+    name: Requested TestFlight · Phone checks
+    uses: ./.github/workflows/phone.yml
+    # GitHub starts no job of a called workflow that asks for more than this
+    # grant, even one its condition skips: phone.yml's Export phone pictures
+    # job asks for actions: read (tests/workflow-hygiene.test.ts).
+    permissions:
+      contents: read
+      actions: read
+    with:
+      trigger: Requested TestFlight
+      source_commit: ${{ needs.resolve.outputs.source_commit }}
+
+  testflight:
+    name: Requested TestFlight · Sign and upload
+    needs: [resolve, phone]
+    if: needs.resolve.outputs.mode == 'release' && needs.phone.result == 'success'
+    environment: ios-release
+    # INF-603: Xcode signs the upload with the captain's certificates on
+    # the real Mac, so it asks for the real Mac, never a virtual one, once
+    # the switch sets REAL_MAC_RUNNER (docs/testing.md, "The real Mac's place"),
+    # or the testflight kind's queue on the real Mac once MAC_QUEUES names it
+    # (docs/testing.md, "Each Mac job's kind and size").
+    runs-on: ${{ fromJSON(vars.MAC_QUEUES || '{}').testflight || vars.REAL_MAC_RUNNER || vars.MAC_RUNNER || 'mini-mac' }}
+    # TestFlight uploads keep a line of their own, apart from the phone checks'
+    # (INF-989), without excluding desktop checks.
+    concurrency:
+      group: ios-testflight
+      queue: max
+      cancel-in-progress: false
+    # Retain the native lane's job allowance plus up to 60 minutes for release work.
+    timeout-minutes: 225
+    defaults:
+      run:
+        working-directory: Application Support/infinitary
+    steps:
+      - name: Checkout the keep-awake action
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ needs.resolve.outputs.source_commit }}
+          sparse-checkout: .github/actions/keep-mac-awake
+          persist-credentials: false
+      - name: Keep the Mac awake
+        uses: ./.github/actions/keep-mac-awake
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ needs.resolve.outputs.source_commit }}
+          path: Application Support/infinitary
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
+          package_json_file: Application Support/infinitary/package.json
+      # No package cache on a Mac (journeys.yml says why, INF-724).
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - id: release_request
+        name: Refuse release-job reruns before installing or signing
+        run: node scripts/phone-release.ts resolve
+      # The install's home is fresh for each job, so it would fetch Electron and the app's git
+      # from GitHub's release server every time (docs/testing.md, "Downloads from GitHub's
+      # release server").
+      - uses: ./Application Support/infinitary/.github/actions/electron-download
+        with:
+          working-directory: Application Support/infinitary
+      - name: Install without reading this Mac's signing material
+        run: |
+          store="$(pnpm store path --silent)"
+          install_home="$RUNNER_TEMP/phone-install-home"
+          mkdir -p "$install_home"
+          HOME="$install_home" CFFIXED_USER_HOME="$install_home" \
+            INFINITARY_LOCAL_CODESIGN_DIR="$install_home/local-codesign" \
+            pnpm install --frozen-lockfile --store-dir "$store"
+      # The same-source unsigned phone job must pass before this host job starts.
+      - id: upload
+        name: Archive and upload Infinitary
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          PHONE_RECEIPT: ${{ runner.temp }}/phone-upload.json
+        run: bash scripts/release-phone.sh
+      - name: Remove this release's temporary key and archive
+        if: always()
+        run: |
+          if [[ -n "${PHONE_RELEASE_WORK:-}" && "$PHONE_RELEASE_WORK" == "$RUNNER_TEMP"/infinitary-ios-release.* ]]; then
+            rm -rf "$PHONE_RELEASE_WORK"
+          fi
+      - name: Keep the non-secret upload receipt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: phone-release-${{ needs.resolve.outputs.version }}-${{ needs.resolve.outputs.build_number }}
+          path: ${{ runner.temp }}/phone-upload.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  availability:
+    environment: ios-release
+    name: ${{ format('{0} · Confirm TestFlight availability', (inputs.check_build && 'Requested TestFlight status' || 'Requested TestFlight')) }}
+    needs: [resolve, testflight]
+    # A status-only dispatch makes no Mac job. Failed uploads may have reached Apple:
+    # inspect them with check_build, never automatically resubmit the upload.
+    if: ${{ !cancelled() && needs.resolve.result == 'success' && (needs.resolve.outputs.mode == 'status' || needs.testflight.result == 'success') }}
+    # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ needs.resolve.outputs.source_commit }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - name: Wait for Apple to confirm internal TestFlight availability
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          CHECK_BUILD: ${{ needs.resolve.outputs.build_number }}
+        run: node scripts/phone-release.ts status

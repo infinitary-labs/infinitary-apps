@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "rail-bottom-group",
+      "kind": "fix",
+      "title": "Alpha only: Tasks sits directly above Knowledge",
+      "body": "The panels at the bottom of a side rail now stay together, without a large empty gap when Knowledge expands or collapses.",
+      "area": "tasks",
+      "picture": {
+        "dark": "rail-bottom-group-dark.webp",
+        "light": "rail-bottom-group-light.webp",
+        "alt": "Tasks directly above the expanded Knowledge panel at the bottom of the right rail"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

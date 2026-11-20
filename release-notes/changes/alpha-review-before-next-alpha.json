@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "alpha-review-before-next-alpha",
+      "reason": "Release review before the next alpha: ranks three highlights and rewrites four notes into plain language. Nothing in the app changes."
+    }
+  ]
+}

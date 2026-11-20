@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "usage-token-coverage",
+      "kind": "fix",
+      "area": "settings",
+      "title": "Usage distinguishes missing token counts from zero",
+      "body": "Usage warns when token categories are missing. Model details show how many records reported each category, and show Not available when none did.",
+      "picture": {
+        "dark": "usage-token-coverage-dark.webp",
+        "light": "usage-token-coverage-light.webp",
+        "alt": "Usage model details show category reporting counts and Not available for unreported cached tokens."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

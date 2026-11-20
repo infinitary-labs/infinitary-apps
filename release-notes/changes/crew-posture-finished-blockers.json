@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "crew-posture-finished-blockers",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Fewer pauses when a crewmate starts, reports or finishes",
+      "body": "The window could stop answering for up to half a second when a crewmate started, reported or finished, or when Tasks refreshed. Infinitary now checks what each crewmate waits on without rereading the finished tasks it once waited on, and counts the crew in one pass.",
+      "noPicture": "The window and its controls look the same; this removes repeated reading behind the crew's state and counts.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

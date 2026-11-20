@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "cancel-while-crewmate-starts",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Cancelling a task whose crewmate is still getting ready ends it",
+      "body": "When a task is cancelled while its crewmate is still getting ready to work, the task now closes as cancelled, and the first mate's closing note says so. Before, the task could go back to waiting as if it had failed to start, with no note, or vanish without a record of the cancel.",
+      "noPicture": "The screens are the ones any cancel already shows; what changed is that a cancel arriving during a crewmate's start now reaches them.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

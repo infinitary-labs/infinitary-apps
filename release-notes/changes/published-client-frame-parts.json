@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "published-client-frame-parts",
+      "reason": "Internal contract tooling: the independent scripted client joins frame parts before reading the published response. App behavior and compatibility rules are unchanged."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "changed-test-never-flake",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "A crewmate runs the tests it wrote ten times before asking to merge",
+      "body": "When a crewmate adds or edits a test, it runs that test ten times in a row on your computer before it asks you to merge, or three times on each device for a test that runs on phones or tablets, and tells you how many passed. A failure in a test the change wrote is treated as a problem with the change, never as bad luck, so the crewmate fixes it instead of running the checks again.",
+      "noPicture": "This changes how a crewmate checks its own tests and what it reports, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

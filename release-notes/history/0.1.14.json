@@ -1,0 +1,57 @@
+{
+  "entries": [
+    {
+      "id": "bf-ed64789a4",
+      "kind": "feature",
+      "title": "A card comes back at its author's close-out",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "ed64789a40d961fd3124f8039d3bb8fa020e0579"
+        ]
+      }
+    },
+    {
+      "id": "bf-9ee5ac31f",
+      "kind": "fix",
+      "title": "Never start a vendor sign-in over a login FM3000 cannot read",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "9ee5ac31ff47792ae04230d4d6e93c58f8ec9ba5"
+        ]
+      }
+    },
+    {
+      "id": "bf-a6d0afa36",
+      "kind": "fix",
+      "title": "Walk uncatalogued models cheapest first",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "a6d0afa36ceb914ee2d38fd41f66cb90c06b699f"
+        ]
+      }
+    },
+    {
+      "id": "bf-091ac44a3",
+      "kind": "fix",
+      "title": "Give the npm-pack plugin case a measured budget and keep npm off the registry",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "091ac44a3e6e23342886a77a510f8c1c97a4fe47"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-14-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.14: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "c1c6853a55b2e1d8855b7714c34e40c7d0597a0a"
+      ]
+    }
+  ]
+}

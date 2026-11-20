@@ -1,0 +1,84 @@
+/* The Knowledge panel (./panel.tsx; the design skill's
+   components/knowledge/KnowledgeBrowser, "The Knowledge panel"): four direction lines and links to the list and graph. */
+
+.fm-knowledge-panel {
+  color: var(--fg-2);
+  font-size: var(--text-sm);
+}
+
+.fm-knowledge-panel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fm-knowledge-panel-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--space-2);
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 5px 6px;
+  border: none;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.fm-knowledge-panel-row:hover {
+  background: var(--bg-3);
+}
+
+.fm-knowledge-panel-name {
+  color: var(--fg-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fm-knowledge-panel-tag {
+  max-width: 88px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+  white-space: nowrap;
+}
+
+.fm-knowledge-panel-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  column-gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--line-1);
+}
+
+.fm-knowledge-panel-links button {
+  margin: 0;
+  padding: var(--space-1);
+  border: none;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--fg-2);
+  font: inherit;
+  cursor: pointer;
+}
+
+.fm-knowledge-panel-links button:hover {
+  background: var(--bg-3);
+}
+
+.fm-knowledge-panel-said {
+  margin: 0;
+  padding: 5px 6px;
+  color: var(--fg-3);
+}

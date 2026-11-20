@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "corpus-tools-guardrails",
+      "reason": "Internal: tests that the corpus and replay commands load and run under plain Node, and that the dispatch extractor reads who closed a card, before those tools are split; nothing a person sees changes."
+    }
+  ]
+}

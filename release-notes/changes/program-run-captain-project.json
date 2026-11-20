@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "program-run-captain-project",
+      "reason": "Internal: the program journey's stand-in first mate reads the project from the captain's own words rather than the whole message, so the project scopes note in the host's context no longer names the wrong project; the app is unchanged."
+    }
+  ]
+}

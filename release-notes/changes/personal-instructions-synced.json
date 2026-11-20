@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "personal-instructions-synced",
+      "kind": "improvement",
+      "title": "Your global instructions and skills follow your work to your other computers",
+      "body": "With Global instructions and skills on, the computer that keeps your first mate sends its instructions and skills to each computer that runs your work whenever they change, never with each task. Crewmates there read the same version as here, not that computer's own files, and a computer out of reach keeps the last version it received. A task's Info tab names the version it read and on which computer.",
+      "area": "devices",
+      "picture": {
+        "dark": "personal-instructions-synced-dark.webp",
+        "light": "personal-instructions-synced-light.webp",
+        "alt": "A finished task's Info tab, with More open, naming the version of the global instructions and skills it read on Mac mini"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "kimi-code-subscription",
+      "kind": "feature",
+      "title": "Kimi Code works as a subscription",
+      "body": "Add your Kimi Code plan in Settings, Intelligence, with Kimi Code: sign in with a code in your browser or paste a Kimi Code key. Its row shows how much of the plan's session, weekly and monthly allowance is left, and the first mate starts with k3 for high work and kimi-for-coding for medium work. A Kimi Code account you added before loads again, and asks you to sign in again once its sign-in has lapsed.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "kimi-code-subscription-dark.webp",
+        "light": "kimi-code-subscription-light.webp",
+        "alt": "Settings, Intelligence, with a Kimi Code account named Personal on the Allegretto plan showing session 70%, weekly 90% and monthly 95% left, above the Add account chips that now include Kimi Code."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

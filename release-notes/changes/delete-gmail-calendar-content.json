@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "delete-gmail-calendar-content",
+      "kind": "feature",
+      "title": "Delete the Gmail and Calendar content your crew read",
+      "body": "What your first mate and crew read from Gmail and Calendar now stays in their saved conversations for 30 days, then a short note takes its place. To delete it sooner, use Delete Gmail and Calendar content in Settings → General: it replaces everything read so far and keeps your tasks and their conversations. What they wrote themselves, in cards, notes and files, stays until you delete the task.",
+      "area": "settings",
+      "picture": {
+        "dark": "delete-gmail-calendar-content-dark.webp",
+        "light": "delete-gmail-calendar-content-light.webp",
+        "alt": "Settings → General with a new row, Delete Gmail and Calendar content, under Purge task data: it replaces what the crew read with a note and says it also goes on its own 30 days after it was read."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

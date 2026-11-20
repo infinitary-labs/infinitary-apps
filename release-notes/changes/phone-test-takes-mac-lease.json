@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "phone-test-takes-mac-lease",
+      "reason": "Developer test tooling: a local phone check now waits for the Mac's check lease, as CI's phone checks already do. No shipped behavior changed."
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "address-stays-after-refusal",
+      "kind": "fix",
+      "title": "The address stays when a Mac cannot be added",
+      "body": "If adding a Mac by its address does not work, the address stays in the field, with what happened and what to do. Try again runs the same add. Cancel changes nothing.",
+      "area": "devices",
+      "picture": {
+        "dark": "address-stays-after-refusal-dark.webp",
+        "light": "address-stays-after-refusal-light.webp",
+        "alt": "Settings, Devices, with the address still in the field after it could not be reached, and Try again and Cancel"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

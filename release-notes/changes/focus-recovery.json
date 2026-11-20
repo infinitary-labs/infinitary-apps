@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "focus-recovery",
+      "kind": "fix",
+      "title": "Keep typing when a focused control disappears",
+      "body": "When a card, attachment or other focused control goes away, focus now returns to the main message box instead of a card button or the page. A reply field stays focused when its card stays on screen.",
+      "area": "message-box",
+      "noPicture": "This changes where keyboard input goes, not the layout or appearance of the message box.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

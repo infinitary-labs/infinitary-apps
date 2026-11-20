@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "demo-encoder-ci-cache",
+      "reason": "CI keeps the pinned FFmpeg build the demo journeys record with in the Actions cache, so a release server outage no longer fails those journeys; the app and what a person sees are unchanged."
+    }
+  ]
+}

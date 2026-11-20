@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "spark-reaches-crewmate",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "The spark shows everything that reaches a crewmate",
+      "body": "The spark from your first mate now flies for every action that reaches a crewmate, including a stop, a merge, a discard and a change to its task. A message that waits for its account flies when the crewmate reads it. A crewmate that is leaving goes once its spark lands. Closing a crewmate's card as a duplicate now tells that crewmate.",
+      "noPicture": "The spark is motion that a still picture cannot show; the change's recording shows it.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "demo-encoder-saved-on-fetch",
+      "reason": "CI fetches the pinned FFmpeg build for demo journeys before they run and saves it to the Actions cache straight away, so the cache fills even when a job fails; the app and what a person sees are unchanged."
+    }
+  ]
+}

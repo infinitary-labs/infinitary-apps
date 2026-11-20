@@ -1,0 +1,23 @@
+// An end-to-end spec types with Playwright's keyboard only through
+// `typeInto` in tests/e2e/windowKeys.ts, which waits until the field it
+// names holds the window's focus (docs/testing.md, "The e2e assertion
+// contract"). The keyboard types wherever focus is, so words typed before
+// a step's focus has landed go to whatever held it - the race behind
+// devices' address and the key journeys that failed on a loaded Mac. A
+// spec that only needs words in a field fills it with `fill` or
+// `pressSequentially`, which focus it themselves. tests/e2e/windowKeys.ts,
+// the helper's home, is exempt. Runs inside `pnpm check` through
+// biome.json's plugins, as an error since every spec moved.
+
+language js
+
+`$keyboard.$method($...)` where {
+  $method <: or {
+    "type",
+    "insertText"
+  },
+  $keyboard <: r"(?s)^(?:.*\.)?keyboard$",
+  $filename <: r".*tests/e2e/.*",
+  not $filename <: r".*tests/e2e/windowKeys\.ts",
+  register_diagnostic(span=$method, message="Keys typed before focus has landed go to whatever held it. Type into a field through typeInto(field, text) in tests/e2e/windowKeys.ts, which waits until the field holds focus, or fill it with fill or pressSequentially (docs/testing.md, the e2e assertion contract).", severity="error")
+}

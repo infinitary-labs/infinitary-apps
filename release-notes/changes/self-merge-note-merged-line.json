@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "self-merge-note-merged-line",
+      "kind": "fix",
+      "title": "Notes for work that merges on its own always say when it merged",
+      "body": "A note for work that merges on its own now changes from Merges on its own to Merged on its own, with the time and the pull request, however the merge happened. Before, it could keep saying Merges on its own if your message had already been answered on another card. Your first mate's closing words now appear only in this line.",
+      "area": "cards",
+      "picture": {
+        "dark": "self-merge-note-merged-line-dark.webp",
+        "light": "self-merge-note-merged-line-light.webp",
+        "alt": "A note for work that merged on its own shows the time it merged, its pull request and your first mate's closing words"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

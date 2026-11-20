@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "copy-versions",
+      "kind": "improvement",
+      "title": "Devices shows the version each copy of Infinitary runs",
+      "body": "Infinitary open on another computer, and the iPhone and iPad app, now tell your first mate's computer which version they run. Settings → Devices lists the version of each app open there and of each computer's work, and marks an app that is behind this computer's, so you can see which copy still needs updating. Your first mate reads the same versions when you ask about them.",
+      "area": "devices",
+      "picture": {
+        "dark": "copy-versions-dark.webp",
+        "light": "copy-versions-light.webp",
+        "alt": "Settings, Devices, a computer that controls your first mate, whose app has an older Infinitary than this computer's"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

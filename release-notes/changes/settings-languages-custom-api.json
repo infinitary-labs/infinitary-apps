@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "settings-languages-custom-api",
+      "kind": "improvement",
+      "title": "Custom API and adding computers in your language",
+      "body": "The custom API form, the account sign-in chips and their sign-in codes, and the steps for adding another computer or controlling this one from another now show their words in the language you chose in Settings → Appearance.",
+      "area": "settings",
+      "picture": {
+        "dark": "settings-languages-custom-api-dark.webp",
+        "light": "settings-languages-custom-api-light.webp",
+        "alt": "The Add a custom API form in Japanese, with its fields, the models list and the save note translated"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

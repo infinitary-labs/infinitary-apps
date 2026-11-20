@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "linux-only-full-journey-route",
+      "reason": "Repository-only workflow routing and request guidance: expose full Linux journeys separately and require explicit manual full-system selection. No shipped app behavior changes."
+    }
+  ]
+}

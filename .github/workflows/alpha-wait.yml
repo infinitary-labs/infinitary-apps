@@ -1,0 +1,196 @@
+name: Wait for the alpha cut
+
+# Called first by main.yml (INF-2465, the captain: "i want to make it so that
+# the next main check keeps queueing all merges until the alpha is actually
+# cut successfully, not while the alpha cut is still happening";
+# docs/testing.md, "Main's desktop release check").
+#
+# A main check waits while any rolling alpha is being cut, and the wait holds
+# no machine (INF-2834, the captain's pick: "Make main's wait for an alpha cut
+# hold no machine. 590 hosted minutes a day, with no change to anyone's
+# wait."). release.yml names each rolling alpha run after its main run
+# ("Alpha from main run N") and runs it in the concurrency group
+# rolling-alpha-from-main-run-N. Every release starts by dispatch, main's
+# check starting its own alpha in its last job, so the find job lists those
+# runs by name alone: every one still running, including one re-run after it
+# ended (INF-2780), and the alpha the newest earlier main check started if it
+# passed, which it waits for on its machine for the moments GitHub takes to
+# list it. The wait job then
+# joins each running alpha's group, so GitHub holds it with no machine until
+# that alpha run ends, however it ends: a failed cut must not hold main's
+# fixes. The ended job confirms every alpha ended, polling as before only for
+# a run that holds no group, such as one started before the groups. While it
+# waits, main's concurrency group keeps every new merge in one waiting run.
+# When it did wait and main moved meanwhile, this run cancels itself, so that
+# waiting run checks every merge at once.
+#
+# The captain's pause (PERS-51, the captain: "add a "pause/resume" button on
+# the rolling alpha panel for me to pause/resume the rolling pipeline
+# manually"; docs/alpha.md, "Pausing the rolling pipeline"): while the
+# repository variable ROLLING_ALPHA_PAUSED is true, a main check a push
+# started cancels itself here, before any check behind this job starts. A
+# check started by hand still runs. Resuming re-runs nothing: the next merge's
+# check covers every merge made during the pause.
+#
+# GitHub's answers: GitHub ends a request it takes more than ten seconds to
+# answer with a server error, and one such answer must not fail main's check.
+# Each script here asks again after a server error (github-script's `retries`
+# input) and asks for no more than it reads: main's runs only as far back as
+# the ten minutes the previous run's alpha is waited for, and no run's pull
+# requests.
+on:
+  workflow_call:
+    inputs:
+      trigger:
+        description: What started the caller's run, which every job name here leads with (scripts/ci-job-names.mjs)
+        type: string
+        required: true
+
+# The wait lists this workflow's runs, reads the branch and cancels its own run.
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  find:
+    name: ${{ format('{0} · Find the alpha cuts to wait for', inputs.trigger) }}
+    # Every Linux job main.yml starts runs on GitHub's hosted machines
+    # (docs/testing.md, "A release's hosted machines").
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      # The main run number of each rolling alpha still being cut, as JSON.
+      alphas: ${{ steps.find.outputs.alphas }}
+      # Whether this run waited for an alpha, being cut or about to start.
+      waited: ${{ steps.find.outputs.waited }}
+    steps:
+      - name: Stop while the captain has paused the rolling pipeline
+        if: vars.ROLLING_ALPHA_PAUSED == 'true' && github.event_name != 'workflow_dispatch'
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        with:
+          retries: 3
+          script: |
+            await core.summary.addHeading('Paused by the captain').addRaw(`The rolling pipeline is paused, so this check of ${context.sha} cancels itself. After Resume, the next merge's check covers every merge made meanwhile.`).write();
+            await github.rest.actions.cancelWorkflowRun({...context.repo, run_id: context.runId});
+            // GitHub stops this job within moments; until it does, no check behind it starts.
+            await new Promise((done) => setTimeout(done, 10 * 60_000));
+            core.setFailed('GitHub had not cancelled this paused check after ten minutes.');
+      - name: Find the alpha cuts to wait for
+        id: find
+        if: vars.ROLLING_ALPHA_PAUSED != 'true' || github.event_name == 'workflow_dispatch'
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        with:
+          retries: 3
+          script: |
+            const minute = 60_000;
+            const pause = (ms) => new Promise((done) => setTimeout(done, ms));
+            const started = Date.now();
+            const {data: me} = await github.rest.actions.getWorkflowRun({...context.repo, run_id: context.runId});
+            // The previous run matters only for ten minutes after it ended,
+            // and no twenty main runs end in ten minutes.
+            const {data: mains} = await github.rest.actions.listWorkflowRuns({
+              ...context.repo, workflow_id: 'main.yml', branch: 'main', status: 'completed',
+              exclude_pull_requests: true, per_page: 20
+            });
+            // A main run from before batches of the person's own was started by the team queue's dispatch.
+            const previous = mains.workflow_runs
+              .filter((run) => ['push', 'repository_dispatch'].includes(run.event) && run.run_number < me.run_number && run.conclusion === 'success')
+              .sort((a, b) => b.run_number - a.run_number)[0];
+            const prefix = 'Alpha from main run ';
+            const title = previous && `${prefix}${previous.run_number}`;
+            let waited = false;
+            for (;;) {
+              const {data} = await github.rest.actions.listWorkflowRuns({
+                ...context.repo, workflow_id: 'release.yml', exclude_pull_requests: true, per_page: 100
+              });
+              const alphas = data.workflow_runs.filter((run) => run.display_title?.startsWith(prefix));
+              const running = alphas.filter((run) => run.status !== 'completed');
+              // A passed main check started its alpha in its last job; one that
+              // never started, such as before run names, holds nothing.
+              const pending = previous && !alphas.some((run) => run.display_title === title) &&
+                Date.now() - Date.parse(previous.updated_at) <= 10 * minute;
+              // A run GitHub has not yet put in its group: the wait would join
+              // the group first and start beside it.
+              const joining = running.some((run) => ['requested', 'pending'].includes(run.status)) &&
+                Date.now() - started <= 10 * minute;
+              if (!pending && !joining) {
+                const cuts = [...new Set(running.map((run) => Number(run.display_title.slice(prefix.length))))]
+                  .filter((run) => Number.isInteger(run) && run > 0);
+                if (cuts.length) {
+                  waited = true;
+                  await core.summary.addHeading('Waiting with no machine').addRaw(`${running.map((run) => run.html_url).join(', ')} still being cut, so this check waits in each one's group and starts when it ends.`).write();
+                }
+                core.setOutput('alphas', JSON.stringify(cuts));
+                core.setOutput('waited', String(waited));
+                return;
+              }
+              waited = true;
+              await pause(10_000);
+            }
+  # One job for each alpha being cut, in the group its run holds: GitHub keeps
+  # it pending, on no machine, until that run ends (release.yml's concurrency).
+  wait:
+    needs: find
+    if: needs.find.outputs.alphas != '[]'
+    name: ${{ format('{0} · Wait for the alpha cut from main run {1}', inputs.trigger, matrix.run) }}
+    strategy:
+      matrix:
+        run: ${{ fromJSON(needs.find.outputs.alphas) }}
+    concurrency:
+      group: ${{ format('rolling-alpha-from-main-run-{0}', matrix.run) }}
+      cancel-in-progress: false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: The alpha cut ended
+        env:
+          RUN: ${{ matrix.run }}
+        run: echo "The alpha cut from main run $RUN ended, so its group let this check go on."
+  ended:
+    needs: [find, wait]
+    if: ${{ !cancelled() && needs.find.outputs.waited == 'true' && needs.wait.result != 'failure' }}
+    name: ${{ format('{0} · Start after the alpha cut', inputs.trigger) }}
+    runs-on: ubuntu-24.04
+    # GitHub's own limit for a hosted job; the script ends its wait before it.
+    timeout-minutes: 360
+    steps:
+      - name: Confirm every alpha cut ended
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        env:
+          WAITED: ${{ needs.find.outputs.alphas }}
+        with:
+          retries: 3
+          script: |
+            const minute = 60_000;
+            const pause = (ms) => new Promise((done) => setTimeout(done, ms));
+            const started = Date.now();
+            const prefix = 'Alpha from main run ';
+            const waited = JSON.parse(process.env.WAITED || '[]');
+            for (;;) {
+              const {data} = await github.rest.actions.listWorkflowRuns({
+                ...context.repo, workflow_id: 'release.yml', exclude_pull_requests: true, per_page: 100
+              });
+              const alphas = data.workflow_runs.filter((run) => run.display_title?.startsWith(prefix));
+              // Normally none: each ended before its group let the wait go on.
+              // One that holds no group, such as a run from before the groups,
+              // is waited for here as before.
+              const running = alphas.filter((run) => run.status !== 'completed');
+              if (!running.length) {
+                for (const run of waited) {
+                  const alpha = alphas.find((each) => each.display_title === `${prefix}${run}`);
+                  if (alpha) await core.summary.addHeading('Alpha cut ended').addRaw(`${alpha.html_url} ended ${alpha.conclusion} before this check started.`).write();
+                }
+                break;
+              }
+              // Before GitHub's own job limit ends the wait as a failure.
+              if (Date.now() - started > 340 * minute) {
+                await core.summary.addHeading('Alpha cut still running').addRaw(`${running[0].html_url} had not ended after the longest wait a job allows, so this check starts.`).write();
+                break;
+              }
+              await pause(minute);
+            }
+            const {data: branch} = await github.rest.repos.getBranch({...context.repo, branch: 'main'});
+            if (branch.commit.sha === context.sha) return;
+            await core.summary.addHeading('A newer merge waits').addRaw(`Main moved to ${branch.commit.sha} while the alpha was cut, so this check cancels itself and the waiting check covers every merge.`).write();
+            await github.rest.actions.cancelWorkflowRun({...context.repo, run_id: context.runId});

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "merge-card-status-line",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "A merge card's foot reads as one status line",
+      "body": "The foot of a merge card now says where the change stands on one line: its checks, a review and the batch check, each a mark and a word, with whatever is failing first. What needs you sits under that line: why a batch check failed, and each failed check with what the crewmate found. The project, the pull request and the size of the change stand quietly at the line's far end. Counts and times show when you rest on a state, with the pointer or with Tab. The line saying whether the merge closes the task now stands beside the buttons.",
+      "picture": {
+        "dark": "merge-card-status-line-dark.webp",
+        "light": "merge-card-status-line-light.webp",
+        "alt": "A merge card whose foot starts with one line: Checks failed, then Review passed, with the project, the pull request, the lines changed and Careful care at its far end. Under it two failed checks lead with what the crewmate found, and Merging closes this task stands beside the buttons."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

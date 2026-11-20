@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "keyboard-facts-on-rest",
+      "kind": "improvement",
+      "title": "Read from the keyboard what resting the pointer shows",
+      "body": "Tab now reaches the details Firstmate used to show only under a resting pointer: when an allowance resets, what ✱ and the firstmate tag mean beside an account, why a provider can't be connected yet, a folder path too long to fit, and the exact time behind a task's short ages. The keyboard brings up the same label the pointer does, Esc puts it away, and screen readers read the same words.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "keyboard-facts-on-rest-dark.webp",
+        "light": "keyboard-facts-on-rest-light.webp",
+        "alt": "Settings, Intelligence: the keyboard on a Codex account's weekly allowance, ringed, with the label weekly · resets Fri under it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

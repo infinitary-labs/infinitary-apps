@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "pr-reader-step-browser-readers",
+      "reason": "CI only: the pull request check's reader step now also runs the browser tests that import or read a changed file when the change leaves the renderer and its browser tests alone, so a shared module's break reaches the pull request instead of the merge batch. The app itself does not change."
+    }
+  ]
+}

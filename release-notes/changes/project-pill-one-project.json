@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "project-pill-one-project",
+      "kind": "fix",
+      "title": "The project pill stays out of the way",
+      "body": "With one project set up, the top bar no longer shows the All projects pill; your personal workspace gets a pill only while the Tasks panel lists one of its tasks. Opening the pill no longer dims your crewmates on its own: a project lights up only once you move the pointer onto its pill.",
+      "area": "projects",
+      "picture": {
+        "dark": "project-pill-one-project-dark.webp",
+        "light": "project-pill-one-project-light.webp",
+        "alt": "The open project row in the top bar with every crewmate on the stage still fully lit"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

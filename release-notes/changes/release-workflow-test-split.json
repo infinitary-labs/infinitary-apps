@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-workflow-test-split",
+      "reason": "Separates portable release workflow tests from native Mac bundle checks while preserving assertions, integration isolation and Mac coverage. No shipped behavior changes."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "latency-check",
+      "reason": "INF-2078's plan: the freeze recorder's line drops from 100 ms to 50 ms, which only changes what an alpha build records and what the first mate hears about, and a new on-demand latency check for the crew; nothing a person sees changes."
+    }
+  ]
+}

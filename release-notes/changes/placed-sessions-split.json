@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "placed-sessions-split",
+      "reason": "Internal restructure: the home's side of conversations on other computers splits into machines, ledger, callbacks, record copy and accounts modules, with one roster reader, one close order, one piece writer and one current-contract check, and no app behavior change."
+    }
+  ]
+}

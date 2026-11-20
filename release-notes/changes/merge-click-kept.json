@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "merge-click-kept",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Your merge click is no longer undone when a crewmate asks again",
+      "body": "Once you click Merge on a crewmate's merge card, a second merge card for the same version is no longer put up, so your click stays and the merge goes ahead, through your project's queue where it has one. You see a new merge card only when the crewmate pushes a newer version. The merge card's Batch check now reads waiting for your approval instead of failed before you click, and reads on hold, with the reason, while your newer message waits for the crewmate's answer.",
+      "picture": {
+        "dark": "merge-click-kept-dark.webp",
+        "light": "merge-click-kept-light.webp",
+        "alt": "A merge card whose strip reads Batch check waiting for your approval beside Checks passed, with Merge the pull request"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

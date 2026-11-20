@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "mac-check-tag-every-lane",
+      "reason": "Internal CI: main's Mac check runs only the journeys tagged Mac-only in every lane, the desktop lane included; nothing a person sees changes."
+    }
+  ]
+}

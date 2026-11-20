@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "focus-stays-on-cards",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Card shortcuts keep the keyboard on your cards",
+      "body": "When you move to the next or previous card, answer one or put one aside with a shortcut, the keyboard now lands on the card that takes its place instead of the message box, so you can press the shortcut again right away. When you were typing, the message box keeps your words and caret. Leaving Settings brings you back to the card you were on, and a side panel keeps its place when a card changes.",
+      "picture": {
+        "dark": "focus-stays-on-cards-dark.webp",
+        "light": "focus-stays-on-cards-light.webp",
+        "alt": "The last of four cards has the keyboard's ring after three presses of the next-card key, and the message box below waits unfocused"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

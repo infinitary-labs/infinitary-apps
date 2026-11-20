@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journey-worker-declarations",
+      "reason": "Internal test tooling: local journey worker defaults and load declarations, with no app behavior change."
+    }
+  ]
+}

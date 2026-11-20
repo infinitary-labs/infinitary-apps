@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "view-card-settings-buttons",
+      "reason": "On an app controlling Firstmate on another Mac, a card button that opens Settings there sends nothing and says to do it on that Mac, keeping the card; part of the development-only multi-machine feature, which remains unavailable in released apps."
+    }
+  ]
+}

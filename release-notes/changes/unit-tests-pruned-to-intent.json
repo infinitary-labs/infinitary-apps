@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "unit-tests-pruned-to-intent",
+      "reason": "Deletes 298 unit-cohort test cases that assert no ask, standing ruling or fixed bug of the captain, rewrites 8 hand-typed pins to read their source, and drops one unused test helper. No shipped behavior changed."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "short-duo-and-ipad-passes-on-branches",
+      "reason": "How the project itself is checked: a phone check request for a change that edits the phone app's screens also runs the iPad's and the iPhone Duo's short passes; nothing in the app changes."
+    }
+  ]
+}

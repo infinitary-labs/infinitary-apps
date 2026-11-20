@@ -1,0 +1,21 @@
+{
+  "crewAPart": "パート",
+  "crewFirstmateLabel": "一等航海士 - {state}",
+  "crewModelNames": "乗組員のモデル名",
+  "crewNextComputers": "次のコンピューター",
+  "crewOrbitLabel": "乗組員 - {working}人が作業中、{idle}人が待機中",
+  "crewOutOfReach": "連絡がつきません",
+  "crewPartsCount": "{finished}件完了、{running}件実行中、{waiting}件待機中",
+  "crewPreviousComputers": "前のコンピューター",
+  "crewProgramsAndParts": "プログラムとそのパート",
+  "crewStateIdle": "待機中",
+  "crewStateWorking": "作業中",
+  "crewSummaryAnotherTask": "別のタスク",
+  "crewSummaryBlockedBy": "待っている作業",
+  "crewSummaryPartOf": "所属",
+  "crewSummaryParts": "パート",
+  "crewSummaryReviewing": "レビュー中",
+  "crewSummaryRunning": "実行中",
+  "crewUnavailableComputer": "利用できないコンピューター",
+  "crewWorkComputers": "作業コンピューター"
+}

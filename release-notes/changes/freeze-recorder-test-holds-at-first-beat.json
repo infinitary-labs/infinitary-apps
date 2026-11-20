@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "freeze-recorder-test-holds-at-first-beat",
+      "reason": "Test only: each freeze recorder integration case now holds the main thread straight after the recorder's first heartbeat and reads the first stall recorded, so a busy runner that delays a heartbeat or stalls the main thread before the hold can no longer leave a case waiting for a stall it skipped. Nothing in the shipped app changes."
+    }
+  ]
+}

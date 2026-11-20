@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "skippable-question-default",
+      "kind": "feature",
+      "area": "cards",
+      "title": "Cards show which questions you may skip and what a skip sends",
+      "body": "On a card that asks several questions, an optional question now tags its suggested option Default instead of Recommended, and draws a hollow ring on it until you pick something there. The footer counts how many questions still need your answer and how many defaults a click would send, and the crewmate reads each skipped question as the default it sent.",
+      "picture": {
+        "dark": "skippable-question-default-dark.webp",
+        "light": "skippable-question-default-light.webp",
+        "alt": "A card with four questions: the required one tagged Recommended, three optional ones tagged Default with hollow rings, and a footer reading 1 to answer · 3 defaults"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

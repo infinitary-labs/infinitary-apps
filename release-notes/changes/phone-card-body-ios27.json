@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "phone-card-body-ios27",
+      "reason": "Internal: the phone app hides a card's body natively until it holds its drawn height, instead of inside the card page, so the phone check reads card words on the iOS 27.0 simulator; the phone check's log and cards journey adapt to iOS 27.0. A person sees and taps cards as before."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "standby-copy-hash-start",
+      "reason": "Test only: the standby copy test waits for the hash and write requests directly instead of polling for them; app behavior is unchanged."
+    }
+  ]
+}

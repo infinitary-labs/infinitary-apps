@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "phone-scene-graphics-chip",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Your iPhone and iPad stay cooler with the crew on screen",
+      "body": "The first mate and your crew now draw on your iPhone or iPad's graphics chip instead of its processor. They look and move as before, and Infinitary needs far less of the processor to show them, so your phone does less work while the app is open.",
+      "noPicture": "The scene looks the same as before; only the work behind drawing it moved off the processor.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

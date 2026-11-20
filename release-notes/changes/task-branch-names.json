@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-branch-names",
+      "kind": "improvement",
+      "title": "Work branches are named for what they do",
+      "body": "A new task's branch now says what the work does, such as inf/fix-login-timeout-a1b2, instead of a code such as fm/task-a1b2c3d4. The first mate names it when it files or starts the task, following the Commit and PR naming runbook, and a branch it leaves unnamed is named from the task's title. The short code at the end keeps each name unique. To name branches your own way, ask the first mate for your own copy of that runbook, change its words, and turn it on in Settings › Runbooks. Tasks started before keep their branches.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-branch-names-dark.webp",
+        "light": "task-branch-names-light.webp",
+        "alt": "A card offering the meter fix to merge, naming its change by the branch inf/send-the-meter-fix-up-to-its-host and a short code"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

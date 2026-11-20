@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-wait-details",
+      "kind": "feature",
+      "title": "See what a task is waiting for",
+      "body": "Kanban tiles group a task’s waits beside its next recorded event. Hover previews and task cards show every wait and its own time, including unknown times, without adding more to task lists. A read, check-back, reset or start time is not a finish estimate.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-wait-details-dark.webp",
+        "light": "task-wait-details-light.webp",
+        "alt": "A task card shows SCR-1 with an unknown end time, its recorded wait time and a separate start time."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

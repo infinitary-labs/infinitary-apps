@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-map-part-script",
+      "reason": "The architecture map part's readable script is split into four source files joined in order when the parts are generated; the generated part and the app's copy of its code are byte-identical, so nothing a person sees changes."
+    }
+  ]
+}

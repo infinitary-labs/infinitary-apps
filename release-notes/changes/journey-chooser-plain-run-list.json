@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "journey-chooser-plain-run-list",
+      "reason": "Internal CI: the pull request's journey chooser finds the newest passing full verification in verify.yml's plain run list instead of GitHub's search by result, which answered no run during an outage. No app surface changes."
+    }
+  ]
+}

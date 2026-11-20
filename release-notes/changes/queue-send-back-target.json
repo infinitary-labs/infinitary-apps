@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "queue-send-back-target",
+      "kind": "fix",
+      "area": "projects",
+      "title": "Sending a change back no longer fails the fix pushed after the pause",
+      "body": "When your project's batch pauses and someone sends one change back, the queue now fails only the version the batch ran. If that change was pushed again with a fix in the meantime, the queue writes nothing on the fix and says so on the pause's issue, so the fix goes in a later batch instead of being sent back by mistake. Your first mate offers a project's queue the update.",
+      "noPicture": "The change is in what a project's queue writes on a change and its pause issue where the project lives; no screen in the app looks different.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

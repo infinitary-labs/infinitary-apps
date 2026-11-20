@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "card-reply-no-stall",
+      "kind": "fix",
+      "title": "A card reply no longer holds up the app when you have many tasks",
+      "body": "With hundreds of tasks, each reply under a card kept the app busy for about half a second, and anything else you did waited behind it. The app now checks only the work that is still open or underway, and it no longer reloads all your tasks after each card change.",
+      "area": "cards",
+      "noPicture": "Nothing on screen looks different: the app answers sooner after a card reply.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

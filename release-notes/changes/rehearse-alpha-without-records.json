@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "rehearse-alpha-without-records",
+      "reason": "A release rehearsal of the dispatched commit now reads past releases from their tags instead of requiring their committed records; it changes only how releases are checked, nothing a person using the app sees."
+    }
+  ]
+}

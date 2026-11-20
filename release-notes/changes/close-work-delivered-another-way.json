@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "close-work-delivered-another-way",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "The first mate closes tasks whose work merged another way",
+      "body": "A task whose pull request was merged as one squashed commit now closes as merged; the first mate keeps the task's own commits as it closes, so nothing is lost. A task whose work merged in another task's pull request, while its own pull request closed unmerged, now closes as done through that other task instead of staying open.",
+      "noPicture": "The fix is which close the first mate chooses, which shows only as the task leaving the list.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

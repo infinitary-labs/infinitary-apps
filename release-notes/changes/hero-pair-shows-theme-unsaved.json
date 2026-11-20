@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "hero-pair-shows-theme-unsaved",
+      "reason": "Test-only: the hero picture helper shows each theme without saving it, so a pair of Activity no longer holds the theme switch's own line in one picture. No shipped product surface changes."
+    }
+  ]
+}

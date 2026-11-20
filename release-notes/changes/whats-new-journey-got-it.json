@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "whats-new-journey-got-it",
+      "reason": "The What's new and closing note journeys close their note with its Got it button, the captain-session replay plays a recorded note close through that button, since the minus now only puts a note aside, and one unit test file that loads the Claude client runs in its own lane; test and tooling repairs with no app change."
+    }
+  ]
+}

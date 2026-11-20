@@ -1,0 +1,559 @@
+import type { Card, CardMessage } from "@shared/cards";
+import * as m from "@shared/i18n/messages.generated";
+import { panelCommandId } from "@shared/keyboard";
+import type { TaskView } from "@shared/tasks";
+import { describe, expect, it, vi } from "vitest";
+import { lendTaskTabs, taskTabsOf } from "../cards/taskTabs";
+import { commandRefusal, type RefusalState, type WindowFacts } from "./commandRefusals";
+
+/** The board as a card's head reads it: which task each card is about. */
+const cardTasks = new Map<string, Partial<TaskView>>();
+vi.mock("../cards/cardTask", () => ({
+  cardTaskOf: (card: { id: string }) => cardTasks.get(card.id),
+}));
+
+function card(id: string, overrides: Partial<Card> = {}): Card {
+  return {
+    id,
+    author: "firstmate",
+    priority: 10,
+    title: id,
+    meta: "firstmate",
+    body: "",
+    actions: [],
+    status: "ready",
+    createdAt: 1,
+    ...overrides,
+  };
+}
+
+const HOME: RefusalState = {
+  view: "home",
+  recording: false,
+  pickingDictationKey: false,
+  recordingKeys: false,
+  firstRun: null,
+  firstRunSettled: true,
+  commandSearchOpen: false,
+  cards: [card("a"), card("b")],
+  cardIndex: 0,
+  unreadCardIds: [],
+  heldBackCardIds: [],
+  records: [],
+  threads: {},
+  releaseNotes: {
+    version: "0.1.28",
+    name: "stable 0.1.28",
+    notes: [{ version: "0.1.28", name: "stable 0.1.28", cardId: "note", listed: true, shownAt: 1 }],
+  },
+  thisMac: null,
+  devicesShown: true,
+  secretsShown: true,
+  pendingCardActions: {},
+  lastTurn: { you: "Is it done?", reply: { text: "Not yet." } },
+};
+const CLEAR: WindowFacts = { dialogOpen: false };
+
+describe("why a window command cannot run now", () => {
+  // INF-1228, the captain's answer control=all: of a first mate started by a
+  // command, the tabs nobody could open there open here. INF-1352's plan, piece 2
+  // (INF-1339): Automation and Pause all automations run from a view too.
+  it("opens Usage, Integrations and Automation on a computer that controls another", () => {
+    const view = {
+      role: "view",
+      name: "Mac mini",
+      address: "192.168.1.30",
+      joinedAt: 0,
+      contact: "in-reach",
+      readOnly: null,
+      heardAt: null,
+      caughtUp: 1,
+    } as const;
+    const windowed = { ...HOME, thisMac: view };
+    // INF-2344: the arrangement is saved where the first mate lives, so Arrange panels is too.
+    for (const command of [
+      "settings.usage",
+      "usage.unit",
+      "settings.integrations",
+      "settings.panels",
+      "settings.automation",
+      "automation.pause-all",
+    ] as const)
+      expect(commandRefusal(command, windowed, CLEAR)).toBeNull();
+    // The captain's answer on the review: an older first mate is told apart before it is asked.
+    for (const command of ["usage.unit", "allowance.recheck"] as const)
+      expect(
+        commandRefusal(command, { ...HOME, thisMac: { ...view, needsUpdateThere: true } }, CLEAR),
+      ).toBe("Update Infinitary on Mac mini to do this from here.");
+  });
+
+  // The captain's answer on INF-1358's review: "Mark them off with the
+  // reason, like every other card button there" - the key for Take or
+  // Return control included.
+  it("refuses taking or returning a task's browser while changes on the other computer are off", () => {
+    const view = {
+      role: "view",
+      name: "Mac mini",
+      address: "192.168.1.30",
+      joinedAt: 0,
+      contact: "closed",
+      readOnly: null,
+      heardAt: null,
+      caughtUp: 1,
+    } as const;
+    const shown = { ...CLEAR, browserControl: true };
+    expect(commandRefusal("browser.control", { ...HOME, thisMac: view }, shown)).toBe(
+      "Changes are off until Mac mini is back",
+    );
+    expect(
+      commandRefusal(
+        "browser.control",
+        { ...HOME, thisMac: { ...view, contact: "in-reach" } },
+        shown,
+      ),
+    ).toBeNull();
+  });
+
+  // The captain on INF-4587's review: Go to the browser page refuses with
+  // its own line, never the take-or-return control's.
+  it("refuses Go to the browser page with its own line while no page of the captain's is shown", () => {
+    expect(commandRefusal("browser.page", HOME, { ...CLEAR, browserControl: true })).toBe(
+      m.refuseShowABrowserPageYouControlFirst(),
+    );
+    expect(commandRefusal("browser.page", HOME, { ...CLEAR, browserPage: true })).toBeNull();
+  });
+
+  // INF-4578's direction A, piece 3: Back to the card says what to show
+  // first while no card is docked beside a browser's page.
+  it("refuses Back to the card with its own line while no card is docked beside a page", () => {
+    expect(commandRefusal("browser.card", HOME, { ...CLEAR, browserPage: true })).toBe(
+      m.refuseShowACardBesideABrowserPageFirst(),
+    );
+    expect(commandRefusal("browser.card", HOME, { ...CLEAR, browserCard: true })).toBeNull();
+  });
+
+  // INF-1109's accepted Secrets boundary (docs/secrets.md, "Remote decisions"): its Settings stay
+  // on the home, so their command is refused wherever the tab is not offered.
+  it("keeps the Secrets command on the home", () => {
+    const view = {
+      role: "view",
+      name: "Mac mini",
+      address: "192.168.1.30",
+      joinedAt: 0,
+      contact: "in-reach",
+      readOnly: null,
+      heardAt: null,
+      caughtUp: 1,
+    } as const;
+    expect(commandRefusal("settings.secrets", HOME, CLEAR)).toBeNull();
+    expect(commandRefusal("settings.secrets", { ...HOME, thisMac: view }, CLEAR)).toBe(
+      "Secrets is on Mac mini",
+    );
+  });
+
+  // INF-1690's accepted answer: a build without protected storage has no Secrets to open.
+  it("refuses Open Secrets in a build without protected storage", () => {
+    expect(commandRefusal("settings.secrets", { ...HOME, secretsShown: false }, CLEAR)).toBe(
+      "Secrets is not in this build",
+    );
+  });
+
+  it("refuses Try again where Devices is not offered", () => {
+    expect(commandRefusal("devices.try-again", HOME, CLEAR)).toBeNull();
+    expect(commandRefusal("devices.try-again", { ...HOME, devicesShown: false }, CLEAR)).toBe(
+      "Devices is on the computer where your first mate lives",
+    );
+  });
+
+  // INF-2245: Update later lets an update go only while it saves the crew's work.
+  it("offers Update later only while an update saves work", () => {
+    expect(commandRefusal("updates.later", HOME, { ...CLEAR, savingForUpdate: true })).toBeNull();
+    expect(commandRefusal("updates.later", HOME, CLEAR)).toBe("No update is saving work now");
+  });
+
+  // INF-4012 direction 1: the first mate's computer's update row is offered only where it answers it from here.
+  it("opens the first mate's computer's update only where it answers it from here", () => {
+    const view = {
+      role: "view",
+      name: "Mac mini",
+      address: "192.168.1.30",
+      joinedAt: 0,
+      contact: "in-reach",
+      readOnly: "older-there",
+      heardAt: null,
+      caughtUp: 1,
+    } as const;
+    expect(
+      commandRefusal("updates.home", { ...HOME, thisMac: { ...view, homeUpdates: true } }, CLEAR),
+    ).toBeNull();
+    expect(commandRefusal("updates.home", { ...HOME, thisMac: view }, CLEAR)).toBe(
+      "No update is available",
+    );
+    expect(commandRefusal("updates.home", HOME, CLEAR)).toBe("No update is available");
+  });
+
+  it("INF-1879: the new Done control preserves the existing recording focus guard", () => {
+    const answer = { ...CLEAR, answerDoneReady: true };
+    expect(commandRefusal("focus.card-actions", HOME, answer)).toBeNull();
+    expect(commandRefusal("focus.card-actions", { ...HOME, recording: true }, answer)).toBe(
+      commandRefusal("focus.card-body", { ...HOME, recording: true }, CLEAR),
+    );
+  });
+
+  it("lets every command run on a home screen with cards", () => {
+    for (const id of [
+      "commands.search",
+      "focus.main-message",
+      "focus.card-reply",
+      "focus.card-body",
+      "regions.next",
+      "regions.previous",
+      "cards.next",
+      "cards.minimize",
+      "cards.maximize",
+      "settings.open",
+      "settings.keyboard",
+      "whats-new.show",
+      "size.larger",
+    ] as const)
+      expect(commandRefusal(id, HOME, CLEAR)).toBeNull();
+  });
+
+  // INF-4541, the captain's approved plan: the arrows go round past either
+  // end, so only a lone card stops them; "N new" needs a new card besides
+  // the shown one.
+  it("pages past either end of the stack, refusing only a lone card", () => {
+    expect(commandRefusal("cards.previous", HOME, CLEAR)).toBeNull();
+    expect(commandRefusal("cards.next", { ...HOME, cardIndex: 1 }, CLEAR)).toBeNull();
+    const lone = { ...HOME, cards: [card("a")] };
+    expect(commandRefusal("cards.previous", lone, CLEAR)).toBe(m.refuseThisIsTheOnlyCard());
+    expect(commandRefusal("cards.next", lone, CLEAR)).toBe(m.refuseThisIsTheOnlyCard());
+  });
+
+  it("shows the next new card only while one besides the shown card is new", () => {
+    expect(commandRefusal("cards.next-new", HOME, CLEAR)).toBe(m.refuseNoOtherCardIsNew());
+    expect(commandRefusal("cards.next-new", { ...HOME, unreadCardIds: ["a"] }, CLEAR)).toBe(
+      m.refuseNoOtherCardIsNew(),
+    );
+    expect(commandRefusal("cards.next-new", { ...HOME, unreadCardIds: ["b"] }, CLEAR)).toBeNull();
+  });
+
+  it("holds every shell command while the dictation key is picked, and all but its own while search is open", () => {
+    const picking = { ...HOME, pickingDictationKey: true, view: "settings" as const };
+    expect(commandRefusal("commands.search", picking, CLEAR)).toBe(
+      "Settings is waiting for a dictation key",
+    );
+    const searching = { ...HOME, commandSearchOpen: true };
+    expect(commandRefusal("focus.main-message", searching, CLEAR)).toBe("Command search is open");
+    expect(commandRefusal("commands.search", searching, { ...CLEAR, dialogOpen: true })).toBeNull();
+    // The size keys belong to the main process, which never asks.
+    expect(commandRefusal("size.reset", picking, CLEAR)).toBeNull();
+  });
+
+  it("holds every shell command while Keyboard settings records a key, and opens it from Settings", () => {
+    const recordingKeys = { ...HOME, recordingKeys: true, view: "settings" as const };
+    expect(commandRefusal("settings.keyboard", recordingKeys, CLEAR)).toBe(
+      "Settings is recording a key",
+    );
+    expect(commandRefusal("commands.search", recordingKeys, CLEAR)).toBe(
+      "Settings is recording a key",
+    );
+    expect(commandRefusal("settings.keyboard", { ...HOME, view: "settings" }, CLEAR)).toBeNull();
+  });
+
+  it("keeps an open dialog's focus until Escape closes it", () => {
+    const dialog = { ...CLEAR, dialogOpen: true };
+    expect(commandRefusal("commands.search", HOME, dialog)).toBe("Close the open dialog first");
+    expect(commandRefusal("cards.next", HOME, dialog)).toBe("Close the open dialog first");
+  });
+
+  it("says why the reply cannot take focus: no card, a card that takes none, a recording", () => {
+    expect(commandRefusal("focus.card-reply", { ...HOME, cards: [] }, CLEAR)).toBe(
+      "No card is shown",
+    );
+    const host = { ...HOME, cards: [card("h", { author: "host" })] };
+    expect(commandRefusal("focus.card-reply", host, CLEAR)).toBe("This card takes no reply");
+    const record = { ...HOME, records: [{ taskId: "t1" }] };
+    expect(commandRefusal("focus.card-reply", record, CLEAR)).toBe("This card takes no reply");
+    expect(commandRefusal("focus.card-reply", { ...HOME, recording: true }, CLEAR)).toBe(
+      "A recording is running",
+    );
+    // From Settings it goes home first, so Settings is no reason.
+    expect(commandRefusal("focus.card-reply", { ...HOME, view: "settings" }, CLEAR)).toBeNull();
+  });
+
+  it("goes to the shown entry's body from home or Settings, whatever the entry is", () => {
+    expect(commandRefusal("focus.card-body", { ...HOME, view: "settings" }, CLEAR)).toBeNull();
+    expect(commandRefusal("focus.card-body", { ...HOME, records: [{ taskId: "t1" }] }, CLEAR)).toBe(
+      null,
+    );
+    expect(commandRefusal("focus.card-body", { ...HOME, cards: [] }, CLEAR)).toBe(
+      "No card is shown",
+    );
+    expect(commandRefusal("focus.card-body", { ...HOME, recording: true }, CLEAR)).toBe(
+      "A recording is running",
+    );
+  });
+
+  it("moves between a task card's tabs only while its strip is drawn with somewhere to go", () => {
+    const record = { ...HOME, records: [{ taskId: "t1" }] };
+    expect(commandRefusal("cards.next-tab", { ...HOME, cards: [] }, CLEAR)).toBe(
+      "No card is shown",
+    );
+    // A task with no browser draws no strip.
+    expect(commandRefusal("cards.next-tab", record, CLEAR)).toBe("This card has no tabs");
+    const unlend = lendTaskTabs({
+      taskId: "t1",
+      shown: "info",
+      tabs: taskTabsOf({
+        state: "open",
+        site: "localhost:5173",
+        url: "http://localhost:5173/",
+        title: "Settings",
+        session: "run-1",
+        generation: 1,
+      }),
+      selected: 0,
+      enabled: () => true,
+      go: () => {},
+    });
+    try {
+      expect(commandRefusal("cards.next-tab", record, CLEAR)).toBeNull();
+      expect(commandRefusal("cards.show-browser", record, CLEAR)).toBeNull();
+      expect(commandRefusal("cards.show-info", record, CLEAR)).toBe("That tab is already shown");
+      // A card with no Crewmate tab says so, rather than that it is shown.
+      expect(commandRefusal("cards.show-crewmate", record, CLEAR)).toBe(
+        "This card has no such tab",
+      );
+      // INF-2261: so do Cards and Activity on a task with neither.
+      expect(commandRefusal("cards.show-cards", record, CLEAR)).toBe("This card has no such tab");
+      expect(commandRefusal("cards.show-activity", record, CLEAR)).toBe(
+        "This card has no such tab",
+      );
+      expect(commandRefusal("cards.next-tab", { ...record, view: "settings" }, CLEAR)).toBe(
+        "Settings is open",
+      );
+    } finally {
+      unlend();
+    }
+  });
+
+  it("opens a task's tabs from a card about it, and refuses on a card about no task (INF-358)", () => {
+    cardTasks.set("a", { id: "t1", key: "SCR-1", startedAt: null });
+    cardTasks.set("b", { id: "t2", key: "SCR-2", startedAt: 5 });
+    try {
+      expect(commandRefusal("cards.show-info", HOME, CLEAR)).toBeNull();
+      expect(commandRefusal("cards.show-browser", HOME, CLEAR)).toBeNull();
+      // INF-2261: a card about a task is one of its cards and a line of its Activity.
+      expect(commandRefusal("cards.show-cards", HOME, CLEAR)).toBeNull();
+      expect(commandRefusal("cards.show-activity", HOME, CLEAR)).toBeNull();
+      // No crewmate has run the task: it has no Crewmate tab to show.
+      expect(commandRefusal("cards.show-crewmate", HOME, CLEAR)).toBe("This card has no such tab");
+      expect(commandRefusal("cards.show-crewmate", { ...HOME, cardIndex: 1 }, CLEAR)).toBeNull();
+      // Next and Previous tab stay the strip's own.
+      expect(commandRefusal("cards.next-tab", HOME, CLEAR)).toBe("This card has no tabs");
+      const none = { ...HOME, cards: [card("c")] };
+      expect(commandRefusal("cards.show-info", none, CLEAR)).toBe("This card is not about a task");
+      expect(commandRefusal("cards.show-info", { ...HOME, view: "settings" }, CLEAR)).toBe(
+        "Settings is open",
+      );
+    } finally {
+      cardTasks.clear();
+    }
+  });
+
+  it("goes to a card's buttons only when it has some to press", () => {
+    const decision = card("d", { actions: [{ id: "go", label: "Go", default: true }] });
+    expect(commandRefusal("focus.card-actions", { ...HOME, cards: [decision] }, CLEAR)).toBeNull();
+    expect(
+      commandRefusal("focus.card-actions", { ...HOME, cards: [decision], view: "settings" }, CLEAR),
+    ).toBeNull();
+    expect(commandRefusal("focus.card-actions", HOME, CLEAR)).toBe("This card has no buttons");
+    const record = { ...HOME, cards: [decision], records: [{ taskId: "t1" }] };
+    expect(commandRefusal("focus.card-actions", record, CLEAR)).toBe("This card has no buttons");
+    expect(commandRefusal("focus.card-actions", { ...HOME, cards: [] }, CLEAR)).toBe(
+      "No card is shown",
+    );
+  });
+
+  // INF-3963's approved plan: the footer's stepper through a card's
+  // questions, in keys, refused where there is nothing to step through.
+  it("moves between a card's questions only on a shown card whose body asks some", () => {
+    const decision = card("d", { body: "<fieldset><legend>Who?</legend></fieldset>" });
+    // A playable preview draws with its own style: its settings are its own controls'.
+    const preview = card("p", { body: `<style>p{color:red}</style>${decision.body}` });
+    const reading = { answered: 0, picked: 0, of: 2, changed: 0, answers: [] };
+    const asking = { ...HOME, cards: [decision], cardAnswers: { d: reading } };
+    for (const id of [
+      "cards.next-question",
+      "cards.previous-question",
+      "cards.unanswered-question",
+    ] as const) {
+      expect(commandRefusal(id, asking, CLEAR)).toBeNull();
+      expect(commandRefusal(id, { ...asking, cardAnswers: {} }, CLEAR)).toBe(
+        m.refuseThisCardAsksNoQuestions(),
+      );
+      expect(
+        commandRefusal(id, { ...HOME, cards: [preview], cardAnswers: { p: reading } }, CLEAR),
+      ).toBe(m.refuseThisCardAsksNoQuestions());
+      expect(commandRefusal(id, { ...asking, recording: true }, CLEAR)).toBe(
+        m.refuseARecordingIsRunning(),
+      );
+      expect(commandRefusal(id, { ...asking, cards: [] }, CLEAR)).toBe(m.refuseNoCardIsShown());
+    }
+  });
+
+  it("shows or hides a thread only where the shown card has one", () => {
+    const said: CardMessage = { id: 1, cardId: "a", who: "captain", text: "why", at: 1 };
+    const threaded = { ...HOME, threads: { a: [said] } };
+    expect(commandRefusal("cards.thread", threaded, CLEAR)).toBeNull();
+    expect(commandRefusal("cards.thread", HOME, CLEAR)).toBe("This card has no thread yet");
+    expect(commandRefusal("cards.thread", { ...threaded, threads: { a: [] } }, CLEAR)).toBe(
+      "This card has no thread yet",
+    );
+    const host = { ...threaded, cards: [card("a", { author: "host" })] };
+    expect(commandRefusal("cards.thread", host, CLEAR)).toBe("This card takes no reply");
+    const record = { ...threaded, records: [{ taskId: "t1" }] };
+    expect(commandRefusal("cards.thread", record, CLEAR)).toBe("This card takes no reply");
+    expect(commandRefusal("cards.thread", { ...threaded, recording: true }, CLEAR)).toBe(
+      "A recording is running",
+    );
+    expect(commandRefusal("cards.thread", { ...threaded, view: "settings" }, CLEAR)).toBe(
+      "Settings is open",
+    );
+    expect(commandRefusal("cards.thread", { ...threaded, cards: [] }, CLEAR)).toBe(
+      "No card is shown",
+    );
+  });
+
+  // INF-4578's approved direction A: Command-backslash opens or folds the
+  // request docked beside a browser's page, and refuses a view with none.
+  it("opens or folds the request docked beside a shown browser's page", () => {
+    const browser = { ...HOME, records: [{ browserTaskId: "t1" }] };
+    expect(commandRefusal("cards.thread", browser, { ...CLEAR, browserReply: true })).toBeNull();
+    expect(commandRefusal("cards.thread", browser, CLEAR)).toBe(m.refuseThisCardTakesNoReply());
+  });
+
+  // INF-3124: the thread's jump down is a command, there only while the captain reads above the foot.
+  it("goes to the thread's new messages only while the shown thread shows its jump down", () => {
+    const said: CardMessage = { id: 1, cardId: "a", who: "firstmate", text: "here", at: 1 };
+    const threaded = { ...HOME, threads: { a: [said] } };
+    expect(commandRefusal("cards.thread-new", threaded, { ...CLEAR, threadJump: true })).toBeNull();
+    expect(commandRefusal("cards.thread-new", threaded, CLEAR)).toBe(
+      "No card thread is read above its latest message",
+    );
+    expect(commandRefusal("cards.thread-new", { ...threaded, cards: [] }, CLEAR)).toBe(
+      "No card is shown",
+    );
+  });
+
+  it("keeps the cards' commands to the home screen, where the cards are", () => {
+    const settings = { ...HOME, view: "settings" as const };
+    expect(commandRefusal("cards.minimize", settings, CLEAR)).toBe("Settings is open");
+    expect(commandRefusal("cards.next", settings, CLEAR)).toBe("Settings is open");
+    expect(commandRefusal("settings.open", settings, CLEAR)).toBe("Settings is already open");
+    expect(commandRefusal("cards.minimize", { ...HOME, cards: [] }, CLEAR)).toBe(
+      "No card is shown",
+    );
+    expect(commandRefusal("cards.maximize", settings, CLEAR)).toBe("Settings is open");
+    expect(commandRefusal("cards.maximize", { ...HOME, cards: [] }, CLEAR)).toBe(
+      "No card is shown",
+    );
+  });
+
+  // INF-4002: one key both ways - every card aside, or on an empty stage every card put aside back.
+  it("puts every card aside from a shown card, brings them back on an empty stage, and says when neither can be", () => {
+    expect(commandRefusal("cards.minimize-all", HOME, CLEAR)).toBeNull();
+    const emptied = { ...HOME, cards: [card("a", { minimized: true })] };
+    expect(commandRefusal("cards.minimize-all", emptied, CLEAR)).toBeNull();
+    expect(commandRefusal("cards.minimize-all", { ...HOME, cards: [] }, CLEAR)).toBe(
+      "No card is shown or put aside",
+    );
+    // A card this window is putting aside right now is not yet one to bring back.
+    expect(
+      commandRefusal("cards.minimize-all", { ...emptied, goingAsideCardIds: ["a"] }, CLEAR),
+    ).toBe("No card is shown or put aside");
+    expect(commandRefusal("cards.minimize-all", { ...HOME, view: "settings" }, CLEAR)).toBe(
+      "Settings is open",
+    );
+    expect(commandRefusal("cards.minimize-all", { ...HOME, recordingKeys: true }, CLEAR)).toBe(
+      "Settings is recording a key",
+    );
+    // Each card's put aside is a change on the first mate's computer.
+    const closed = {
+      role: "view",
+      name: "Mac mini",
+      address: "192.168.1.30",
+      joinedAt: 0,
+      contact: "closed",
+      readOnly: null,
+      heardAt: null,
+      caughtUp: 1,
+    } as const;
+    expect(commandRefusal("cards.minimize-all", { ...HOME, thisMac: closed }, CLEAR)).toBe(
+      "Changes are off until Mac mini is back",
+    );
+  });
+
+  it("moves between the window's parts from home or Settings, but not during a recording", () => {
+    for (const id of ["regions.next", "regions.previous"] as const) {
+      expect(commandRefusal(id, { ...HOME, view: "settings" }, CLEAR)).toBeNull();
+      expect(commandRefusal(id, { ...HOME, cards: [] }, CLEAR)).toBeNull();
+      expect(commandRefusal(id, { ...HOME, recording: true }, CLEAR)).toBe(
+        "A recording is running",
+      );
+      expect(commandRefusal(id, HOME, { ...CLEAR, dialogOpen: true })).toBe(
+        "Close the open dialog first",
+      );
+    }
+  });
+
+  it("shows what's new from home or Settings once a release note was shown, and says so before", () => {
+    expect(commandRefusal("whats-new.show", { ...HOME, view: "settings" }, CLEAR)).toBeNull();
+    expect(commandRefusal("whats-new.show", { ...HOME, cards: [] }, CLEAR)).toBeNull();
+    const none = { version: "0.1.28", name: "stable 0.1.28", notes: [] };
+    expect(commandRefusal("whats-new.show", { ...HOME, releaseNotes: none }, CLEAR)).toBe(
+      "No release notes yet",
+    );
+    // Before the notes are read, it claims none.
+    expect(commandRefusal("whats-new.show", { ...HOME, releaseNotes: null }, CLEAR)).toBe(
+      "No release notes yet",
+    );
+  });
+
+  it("gives the main message's own reasons", () => {
+    const firstRun = { welcomedAt: null, firstTurnAt: null, gateOpen: true };
+    expect(commandRefusal("focus.main-message", { ...HOME, firstRun }, CLEAR)).toBe(
+      "Connect a subscription first",
+    );
+    expect(commandRefusal("focus.main-message", { ...HOME, recording: true }, CLEAR)).toBe(
+      "A recording is running",
+    );
+    // Before the first read of the gate settles, nobody knows yet whether it is up.
+    expect(commandRefusal("focus.main-message", { ...HOME, firstRunSettled: false }, CLEAR)).toBe(
+      "Infinitary is still starting",
+    );
+  });
+});
+
+describe("why a panel's command cannot run now", () => {
+  const id = panelCommandId("reading", "find");
+  const facts: WindowFacts = {
+    ...CLEAR,
+    panelCommand: (_id, recording) => (recording ? "A recording is running" : null),
+  };
+
+  it("holds it with every other command, then asks its panel", () => {
+    expect(commandRefusal(id, HOME, facts)).toBeNull();
+    expect(commandRefusal(id, { ...HOME, commandSearchOpen: true }, facts)).toBe(
+      "Command search is open",
+    );
+    expect(commandRefusal(id, { ...HOME, recordingKeys: true }, facts)).toBe(
+      "Settings is recording a key",
+    );
+    expect(commandRefusal(id, { ...HOME, recording: true }, facts)).toBe("A recording is running");
+    expect(commandRefusal(id, HOME, { ...CLEAR, dialogOpen: true })).toBe(
+      "Close the open dialog first",
+    );
+  });
+});

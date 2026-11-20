@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "linux-joins-by-command",
+      "kind": "feature",
+      "area": "devices",
+      "title": "A Linux computer with no screen runs your first mate's work through Run a command there",
+      "body": "Run a command there now works on Linux. It uses the Infinitary already installed there, or installs the Infinitary package on Ubuntu 24.04 and 26.04 after you type the account's password. On other Linux systems it names anything missing, with the one line that installs it. After joining, the work keeps running when you log out, or the command prints the one line an administrator runs to allow it. Opening Infinitary's window on a Linux computer with no screen now tells you to use Run a command there, instead of crashing.",
+      "noPicture": "Everything changes in the other computer's Terminal; no view in the app looks different.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

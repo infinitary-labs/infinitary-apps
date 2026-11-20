@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "kept-report-after-provider-failure",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate's report survives a failed turn",
+      "body": "When a crewmate reports and its AI provider then fails before the turn ends, the report is now kept on the task. Your first mate hears what it said, and the crewmate checks what is already done and reports again instead of redoing the work.",
+      "noPicture": "This changes what the first mate and the crewmate hear after a provider failure, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

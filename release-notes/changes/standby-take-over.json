@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "standby-take-over",
+      "kind": "feature",
+      "title": "Take over from a computer that keeps a copy when your first mate's computer is gone",
+      "body": "When your first mate's computer is out of reach, a Mac that keeps a copy offers Take over in Settings → Devices. Only your click, confirmed with Touch ID or your password, starts it: that Mac brings in a newer copy from another computer first, then becomes your first mate's computer, and your other computers follow it. An old computer that comes back steps down by itself and lists what never reached the new one. If two answer as your first mate at once, merges, pushes and secrets wait until you keep one.",
+      "area": "devices",
+      "picture": {
+        "dark": "standby-take-over-dark.webp",
+        "light": "standby-take-over-light.webp",
+        "alt": "Settings, Devices, on a MacBook Pro that was the first mate's computer, with a Stepped down section saying Mac Studio took over"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

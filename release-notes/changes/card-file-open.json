@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "card-file-open",
+      "kind": "feature",
+      "title": "Open saved files from their cards",
+      "body": "After you save a file from a card, Save becomes Open. It opens the saved file in one click, including any edits you made, and remembers it after you restart. Save all offers Open folder, and you can save a fresh copy if the saved one is moved or deleted.",
+      "area": "cards",
+      "picture": {
+        "dark": "card-file-open-dark.webp",
+        "light": "card-file-open-light.webp",
+        "alt": "A card showing landlord-letter.txt saved in Downloads, with an Open button"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

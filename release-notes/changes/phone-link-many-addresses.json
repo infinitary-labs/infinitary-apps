@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-link-many-addresses",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Adding a phone works on a Mac with many network addresses",
+      "body": "On a Mac with many network addresses, choosing A phone in Settings → Devices showed an error instead of a code. It now shows the code, offering the phone the first nine addresses. Once the phone joins, it learns every address of your Mac.",
+      "noPicture": "The panel with the code to add a phone looks as it always has; it now appears where the error did.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

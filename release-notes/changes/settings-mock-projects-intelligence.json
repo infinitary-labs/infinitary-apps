@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "settings-mock-projects-intelligence",
+      "reason": "The design skill's click-through Settings mock now draws the Projects and Intelligence tabs in place of the retired Subscriptions tab; the mock is a design reference for building the app and is never shown to a person using it."
+    }
+  ]
+}

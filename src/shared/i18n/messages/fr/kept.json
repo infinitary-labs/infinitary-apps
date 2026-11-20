@@ -1,0 +1,17 @@
+{
+  "keptCap": "Fusion impossible pour l’instant : elle attend votre réponse au sujet de ses tentatives de réparation. Votre fusion est conservée pour après.",
+  "keptChecks": "Votre fusion attend : les vérifications n’ont pas toutes réussi. Votre approbation est conservée. Si une correction change le travail, son équipier vous redemande ; sinon la fusion s’exécute quand ses vérifications réussissent.",
+  "keptChecksFailed": "Votre fusion attend une correction : ses vérifications ont échoué. Une correction apporte une nouvelle version avec de nouvelles vérifications : si elle a changé le travail, son équipier vous redemande sur une nouvelle carte ; sinon votre fusion s’exécute dès qu’elles réussissent.",
+  "keptConflict": "Fusion impossible pour l’instant : elle ne s’accorde pas avec un travail plus récent du projet. Votre fusion est conservée et s’exécutera dès que son équipier l’aura mise à jour et que ses vérifications auront réussi.",
+  "keptDraft": "Fusion impossible pour l’instant : sa demande de tirage est un brouillon. Votre fusion est conservée et s’exécutera dès qu’elle sera prête pour la revue.",
+  "keptEvidence": "Fusion impossible pour l’instant : son équipier n’a pas pu dire si sa dernière modification préservait le travail que vous avez approuvé, alors un autre équipier vérifie. Votre fusion est conservée et s’exécutera si cette vérification confirme que le travail est toujours celui que vous avez approuvé.",
+  "keptGuidance": "Fusion impossible pour l’instant : son équipier n’a pas dit si vos derniers mots changent le travail que vous avez approuvé. Votre fusion est conservée et s’exécutera dès qu’il aura dit que non.",
+  "keptHostQueue": "En attente de la file de fusion : {place} a placé cette version dans la file de fusion de votre projet. Votre fusion est conservée. {place} la fusionnera une fois les vérifications de la file réussies.",
+  "keptHostRemoved": "Fusion impossible pour l’instant : {place} a retiré cette version de la file de fusion de votre projet sans la fusionner. Votre fusion est conservée. Une version corrigée par son équipier retournera dans la file.",
+  "keptProtected": "Fusion impossible pour l’instant : {place} la retient pour une revue requise ou une autre règle de la branche principale. Votre fusion est conservée et s’exécutera dès que {place} l’autorisera.",
+  "keptQueueOwn": "En attente de la vérification groupée : cette version est fusionnée avec vos autres modifications approuvées, en une seule demande de tirage groupée. Votre fusion est conservée. L’app fusionne le lot une fois ses vérifications réussies.",
+  "keptRefused": "Fusion impossible pour l’instant : {place} l’a refusée. Votre fusion est conservée et s’exécutera de nouveau dès que son équipier aura corrigé la cause.",
+  "keptRepair": "Fusion impossible pour l’instant : elle a changé après la carte que vous avez approuvée. Votre fusion est conservée et s’exécutera dès que son équipier aura montré que le travail est toujours celui que vous avez approuvé.",
+  "keptSignIn": "Fusion impossible pour l’instant : la connexion {place} de l’app est nécessaire. Votre fusion est conservée et s’exécutera dès que vous vous reconnecterez.",
+  "keptUnclear": "Fusion impossible pour l’instant : {place} n’a pas donné de réponse claire. Votre fusion est conservée et l’app réessaie sous peu."
+}

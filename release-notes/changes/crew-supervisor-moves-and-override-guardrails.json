@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crew-supervisor-moves-and-override-guardrails",
+      "reason": "Internal: tests pin how the crew supervisor moves a started task - where it could move, each refusal before anything is written, a cancelled move and a move that cannot reopen - and how it reads the captain's words for an override, before that code moves out of the supervisor; only tests change and nothing a person sees changes."
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "saved-story-after-closed-pr",
+      "reason": "Repairs a saved change story whose earlier pull request had closed. Shared pull request stories first ship in this release, so no released build has the refusal this fixes.",
+      "covers": ["7209c9fde139f02307b6e91cb8c335cbaa3b4db3"]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "run-record-evidence-kinds",
+      "reason": "Internal: a Careful crewmate's run record refuses a file that is not a .txt, .json or .log transcript, a picture or a recording with words naming the kinds it keeps, instead of checking it as a picture, and the Careful guidance names the same extensions; nothing a person sees changes."
+    }
+  ]
+}

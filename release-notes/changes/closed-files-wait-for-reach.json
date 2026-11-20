@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "closed-files-wait-for-reach",
+      "reason": "A closed task's leftover files on a computer out of reach now wait for that computer to come back instead of being asked, and warned about with a trace, at every clean-up pass; the files still go at that computer's next contact, so nothing a person sees changes, only the run log and the pass's own cost."
+    }
+  ]
+}

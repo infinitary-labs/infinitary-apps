@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "retried-answer-keeps-its-report",
+      "kind": "fix",
+      "title": "A cut-off answer that comes through is kept",
+      "body": "If a crewmate's answer is cut off and then comes through, its report is kept. Before, that turn was counted as failed and the crewmate was given the same work again.",
+      "area": "crewmates",
+      "noPicture": "No view changes: the report arrives instead of a false failure, which is the absence of a line.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

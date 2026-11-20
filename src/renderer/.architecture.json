@@ -1,0 +1,540 @@
+{
+  "name": "renderer",
+  "about": "What the window draws, with main.tsx starting it.",
+  "parts": [
+    {
+      "name": "app",
+      "path": "src/renderer/src/app",
+      "about": "The window's frame: the home, the composer, the top bar and the store"
+    },
+    {
+      "name": "cards",
+      "path": "src/renderer/src/cards",
+      "about": "Cards, their threads and the task record"
+    },
+    {
+      "name": "character",
+      "path": "src/renderer/src/character",
+      "about": "The first mate's character and the crew orbit"
+    },
+    {
+      "name": "design",
+      "path": "src/renderer/src/design",
+      "about": "The design library every surface and panel draws with"
+    },
+    {
+      "name": "plugins",
+      "path": "src/renderer/src/plugins",
+      "about": "The rails, the panel mounts and the frames they draw in"
+    },
+    {
+      "name": "settings",
+      "path": "src/renderer/src/settings",
+      "about": "The settings screen and its tabs, and the pages the phone's Settings shows"
+    },
+    {
+      "name": "voice",
+      "path": "src/renderer/src/voice",
+      "about": "Listening: the microphone and speech to text"
+    },
+    {
+      "name": "personal",
+      "path": "src/renderer/src/personal",
+      "about": "The personal workspace's panels as the window draws them"
+    },
+    {
+      "name": "frameRealm",
+      "path": "src/renderer/src/frameRealm",
+      "about": "What runs inside a panel's frame: its bridge to the host and its React"
+    },
+    {
+      "name": "devices",
+      "path": "src/renderer/src/devices",
+      "about": "Remote control, joining another Mac and nearby Macs"
+    },
+    {
+      "name": "accounts",
+      "path": "src/renderer/src/accounts",
+      "about": "Sign-in chips and custom providers"
+    },
+    {
+      "name": "attachments",
+      "path": "src/renderer/src/attachments",
+      "about": "Files dropped or pasted into the composer and threads"
+    }
+  ],
+  "outside": [
+    {
+      "name": "shared",
+      "path": "src/shared",
+      "about": "Shapes, channels and words every side reads"
+    },
+    {
+      "name": "preload",
+      "path": "src/preload",
+      "about": "window.infinitary, the window's bridge to the app"
+    },
+    {
+      "name": "panels",
+      "path": "src/panels",
+      "about": "The app's own side panels"
+    }
+  ],
+  "links": [
+    {
+      "from": "app",
+      "to": "accounts",
+      "why": "shows the first sign-in chips"
+    },
+    {
+      "from": "app",
+      "to": "attachments",
+      "why": "takes dropped and pasted files"
+    },
+    {
+      "from": "app",
+      "to": "cards",
+      "why": "lays out and acts on cards"
+    },
+    {
+      "from": "app",
+      "to": "character",
+      "why": "draws the first mate and the crew orbit"
+    },
+    {
+      "from": "app",
+      "to": "design",
+      "why": "draws with the design library"
+    },
+    {
+      "from": "app",
+      "to": "devices",
+      "why": "shows remote control and joining another Mac"
+    },
+    {
+      "from": "app",
+      "to": "personal",
+      "why": "lists panel drafts"
+    },
+    {
+      "from": "app",
+      "to": "plugins",
+      "why": "mounts the rails and their panels"
+    },
+    {
+      "from": "app",
+      "to": "settings",
+      "why": "opens the settings screen"
+    },
+    {
+      "from": "app",
+      "to": "voice",
+      "why": "listens through the voice input"
+    },
+    {
+      "from": "accounts",
+      "to": "app",
+      "why": "reads the window's store"
+    },
+    {
+      "from": "accounts",
+      "to": "design",
+      "why": "draws with the design library"
+    },
+    {
+      "from": "accounts",
+      "to": "devices",
+      "why": "reads where the first mate runs"
+    },
+    {
+      "from": "attachments",
+      "to": "app",
+      "why": "reads the window's store"
+    },
+    {
+      "from": "attachments",
+      "to": "design",
+      "why": "uses the composer field and file controls"
+    },
+    {
+      "from": "attachments",
+      "to": "devices",
+      "why": "words places on another Mac"
+    },
+    {
+      "from": "cards",
+      "to": "app",
+      "why": "reads the store and key hints"
+    },
+    {
+      "from": "cards",
+      "to": "attachments",
+      "why": "takes files into a card's thread"
+    },
+    {
+      "from": "cards",
+      "to": "character",
+      "why": "reads the crew board and reduced motion"
+    },
+    {
+      "from": "cards",
+      "to": "design",
+      "why": "draws with the design library"
+    },
+    {
+      "from": "cards",
+      "to": "devices",
+      "why": "shows remote control on a task's browser"
+    },
+    {
+      "from": "cards",
+      "to": "plugins",
+      "why": "mounts preview frames and runs app actions"
+    },
+    {
+      "from": "character",
+      "to": "app",
+      "why": "reads key hints and model names"
+    },
+    {
+      "from": "character",
+      "to": "design",
+      "why": "uses motion and task marks"
+    },
+    {
+      "from": "character",
+      "to": "plugins",
+      "why": "opens and lights tasks"
+    },
+    {
+      "from": "character",
+      "to": "voice",
+      "why": "follows the live voice level"
+    },
+    {
+      "from": "design",
+      "to": "character",
+      "why": "shares the character's motion"
+    },
+    {
+      "from": "design",
+      "to": "devices",
+      "why": "reads where the first mate runs"
+    },
+    {
+      "from": "design",
+      "to": "plugins",
+      "why": "registers contributions and runs app actions"
+    },
+    {
+      "from": "design",
+      "to": "voice",
+      "why": "follows the live voice level"
+    },
+    {
+      "from": "devices",
+      "to": "accounts",
+      "why": "shares the sign-in chips' styles"
+    },
+    {
+      "from": "devices",
+      "to": "app",
+      "why": "reads the window's store"
+    },
+    {
+      "from": "devices",
+      "to": "design",
+      "why": "draws with the design library"
+    },
+    {
+      "from": "devices",
+      "to": "settings",
+      "why": "shares the devices tab's styles"
+    },
+    {
+      "from": "frameRealm",
+      "to": "design",
+      "why": "gives panels the design library"
+    },
+    {
+      "from": "frameRealm",
+      "to": "personal",
+      "why": "draws a panel's body inside its boundary"
+    },
+    {
+      "from": "personal",
+      "to": "app",
+      "why": "reads the store and key hints"
+    },
+    {
+      "from": "personal",
+      "to": "design",
+      "why": "draws a background process's states"
+    },
+    {
+      "from": "personal",
+      "to": "plugins",
+      "why": "mounts framed panels and their actions"
+    },
+    {
+      "from": "plugins",
+      "to": "app",
+      "why": "reads the store and the panel stack"
+    },
+    {
+      "from": "plugins",
+      "to": "character",
+      "why": "shows the crew summary on a peek"
+    },
+    {
+      "from": "plugins",
+      "to": "design",
+      "why": "draws rails and menus"
+    },
+    {
+      "from": "plugins",
+      "to": "devices",
+      "why": "words places on another Mac"
+    },
+    {
+      "from": "plugins",
+      "to": "personal",
+      "why": "mounts personal panels"
+    },
+    {
+      "from": "plugins",
+      "to": "settings",
+      "why": "registers the settings tabs"
+    },
+    {
+      "from": "plugins",
+      "to": "frameRealm",
+      "why": "boots it in each panel's frame"
+    },
+    {
+      "from": "settings",
+      "to": "accounts",
+      "why": "shows sign-in chips and custom providers"
+    },
+    {
+      "from": "settings",
+      "to": "app",
+      "why": "reads the store and key hints"
+    },
+    {
+      "from": "settings",
+      "to": "cards",
+      "why": "shows task keys"
+    },
+    {
+      "from": "settings",
+      "to": "design",
+      "why": "draws with the design library"
+    },
+    {
+      "from": "settings",
+      "to": "devices",
+      "why": "lists devices and nearby Macs"
+    },
+    {
+      "from": "settings",
+      "to": "plugins",
+      "why": "lists and moves panels, and runs app actions"
+    },
+    {
+      "from": "accounts",
+      "to": "shared",
+      "why": "reads providers and custom API shapes"
+    },
+    {
+      "from": "app",
+      "to": "shared",
+      "why": "reads shapes, channels and words"
+    },
+    {
+      "from": "attachments",
+      "to": "shared",
+      "why": "reads attachment shapes"
+    },
+    {
+      "from": "cards",
+      "to": "shared",
+      "why": "reads card shapes and words"
+    },
+    {
+      "from": "character",
+      "to": "shared",
+      "why": "reads layout settings and task facts"
+    },
+    {
+      "from": "design",
+      "to": "shared",
+      "why": "reads card shapes and risk words"
+    },
+    {
+      "from": "devices",
+      "to": "shared",
+      "why": "reads device shapes and names"
+    },
+    {
+      "from": "frameRealm",
+      "to": "shared",
+      "why": "reads the bridge and panel contracts"
+    },
+    {
+      "from": "personal",
+      "to": "shared",
+      "why": "reads panel manifests and contracts"
+    },
+    {
+      "from": "plugins",
+      "to": "shared",
+      "why": "reads manifests, keys and frame documents"
+    },
+    {
+      "from": "settings",
+      "to": "shared",
+      "why": "reads settings shapes and words"
+    },
+    {
+      "from": "voice",
+      "to": "shared",
+      "why": "reads the recognizer's shapes"
+    },
+    {
+      "from": "accounts",
+      "to": "preload",
+      "why": "signs in and adds custom providers"
+    },
+    {
+      "from": "app",
+      "to": "preload",
+      "why": "reads cards, allowances and devices"
+    },
+    {
+      "from": "attachments",
+      "to": "preload",
+      "why": "reads dropped files"
+    },
+    {
+      "from": "cards",
+      "to": "preload",
+      "why": "acts on cards, tasks and frames"
+    },
+    {
+      "from": "design",
+      "to": "preload",
+      "why": "reaches panel frames"
+    },
+    {
+      "from": "devices",
+      "to": "preload",
+      "why": "finds and joins nearby Macs"
+    },
+    {
+      "from": "personal",
+      "to": "preload",
+      "why": "reads personal panels and integrations"
+    },
+    {
+      "from": "plugins",
+      "to": "preload",
+      "why": "mounts frames and reads tasks and devices"
+    },
+    {
+      "from": "settings",
+      "to": "preload",
+      "why": "reads and saves settings, devices and sign-ins"
+    },
+    {
+      "from": "voice",
+      "to": "preload",
+      "why": "transcribes speech"
+    },
+    {
+      "from": "plugins",
+      "to": "panels",
+      "why": "draws the app's own panels in frames"
+    },
+    {
+      "from": "panels",
+      "to": "design",
+      "why": "draw with the design library"
+    },
+    {
+      "from": "shared",
+      "to": "panels",
+      "why": "lists their manifests"
+    }
+  ],
+  "machines": [
+    {
+      "name": "the first mate's character",
+      "in": "character",
+      "about": "Which pose the first mate's character holds, each move one clip",
+      "states": ["idle", "listening", "working", "an emote"],
+      "moves": [
+        {
+          "from": "idle",
+          "to": "listening",
+          "why": "attend: voice or typing arrives",
+          "by": "character"
+        },
+        {
+          "from": "working",
+          "to": "listening",
+          "why": "attend: voice or typing arrives",
+          "by": "character"
+        },
+        {
+          "from": "an emote",
+          "to": "listening",
+          "why": "attend: voice or typing arrives",
+          "by": "character"
+        },
+        {
+          "from": "listening",
+          "to": "idle",
+          "why": "release: attention leaves while nothing runs",
+          "by": "character"
+        },
+        {
+          "from": "listening",
+          "to": "working",
+          "why": "intake: the turn was submitted, or attention leaves while busy",
+          "by": "character"
+        },
+        {
+          "from": "idle",
+          "to": "working",
+          "why": "engage: the first mate's own turn begins",
+          "by": "character"
+        },
+        {
+          "from": "working",
+          "to": "idle",
+          "why": "settle: the turn ended",
+          "by": "character"
+        },
+        {
+          "from": "idle",
+          "to": "an emote",
+          "why": "a reply or a fidget plays",
+          "by": "character"
+        },
+        {
+          "from": "an emote",
+          "to": "idle",
+          "why": "return: the emote ends",
+          "by": "character"
+        },
+        {
+          "from": "an emote",
+          "to": "working",
+          "why": "return: the emote ends while a turn runs",
+          "by": "character"
+        }
+      ]
+    }
+  ]
+}

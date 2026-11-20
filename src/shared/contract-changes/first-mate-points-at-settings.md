@@ -1,0 +1,4 @@
+A card's open effect may carry `section`, `item`, `phone` and `fromHome`: the Settings section it opens, what that section shows on arrival (a project, a computer, a Secrets page, the Inbox or a kept job), that a Devices arrival makes a phone's link, and that the act there is only in the first mate's own computer's Settings.
+A view without the change ignores the four fields and opens the effect's target as before, where the captain finds the place by hand.
+The home answers two new requests, `inf:tasks:show` and `inf:settings:show`, which open a task's record or a Settings place in the captain's desktop windows, and pushes the new `task_record_shown` and `settings_shown` events they raise.
+A view without the change, and the iPhone and iPad app, ignore an event type they do not know, so the first mate's pointing reaches only desktop windows that have it.

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "quieter-projects-list",
+      "kind": "improvement",
+      "title": "A quieter projects list",
+      "body": "Settings → Projects shows your projects in one list, and each row says only what is set differently from a new project, such as merges on its own or local merge. A project's folder shows only when it sits outside your projects folder. Where new projects go is now one line under Add project.",
+      "area": "projects",
+      "picture": {
+        "dark": "quieter-projects-list-dark.webp",
+        "light": "quieter-projects-list-light.webp",
+        "alt": "Settings, Projects, one list of projects where most rows show only a name, a few show words such as merges on its own, and the projects folder sits on one line under Add project"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-scene-own-thread",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "The crew on your iPhone and iPad keep moving smoothly",
+      "body": "On your iPhone and iPad, the first mate and the crew at the center now keep moving smoothly while the app opens a card, reads a large task list or updates Home, instead of pausing for a moment.",
+      "noPicture": "This changes how steadily the iPhone and iPad scene moves, which still pictures and the desktop's hero pictures do not show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

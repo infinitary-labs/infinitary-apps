@@ -1,0 +1,15 @@
+diff --git a/out/AppUpdater.js b/out/AppUpdater.js
+index d6d5debc7943011135e97124b755a41268199313..f3483cf7bf2301db42764b800da975446cab6ff5 100644
+--- a/out/AppUpdater.js
++++ b/out/AppUpdater.js	
+@@ -383,8 +383,8 @@ class AppUpdater extends events_1.EventEmitter {
+             this.clientPromise = this.configOnDisk.value.then(it => (0, providerFactory_1.createClient)(it, this, this.createProviderRuntimeOptions()));
+         }
+         const client = await this.clientPromise;
+-        const stagingUserId = await this.stagingUserIdPromise.value;
+-        client.setRequestHeaders(this.computeFinalHeaders({ "x-user-staging-id": stagingUserId }));
++        // Infinitary: a feed read carries no per-install identifier (docs/sharing.md).
++        client.setRequestHeaders(this.computeFinalHeaders({}));
+         return {
+             info: await client.getLatestVersion(),
+             provider: client,

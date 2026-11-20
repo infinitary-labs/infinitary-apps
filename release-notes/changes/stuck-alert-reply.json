@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "stuck-alert-reply",
+      "kind": "improvement",
+      "title": "Reply to a stuck-task alert",
+      "body": "The alert for a task that stopped moving now has a reply box, and your first mate answers you there. Its buttons are Nudge, Keep waiting and Discard: Nudge tells the task to carry on, and Keep waiting closes the alert and leaves the task as it is. Drop task is no longer on the alert; ask for it, or anything else, in a reply. The alert stays up until your first mate answers.",
+      "area": "cards",
+      "picture": {
+        "dark": "stuck-alert-reply-dark.webp",
+        "light": "stuck-alert-reply-light.webp",
+        "alt": "A stuck-task alert with Nudge, Keep waiting and Discard, and its thread with the captain's question and the first mate's answer"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

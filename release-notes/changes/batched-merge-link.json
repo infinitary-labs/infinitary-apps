@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "batched-merge-link",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "A batched change's card links to its changes",
+      "body": "In a project whose approved changes merge together in batches, a change has no pull request of its own, so its merge card used to give you nothing to open. The branch name on its card and on the task's Info tab now opens the change's files and commits where the project lives, on GitHub or GitLab. The merge button reads Merge in the next batch, which is what a click does: it puts the change in line, and the app merges it with the next batch once the checks pass.",
+      "picture": {
+        "dark": "batched-merge-link-dark.webp",
+        "light": "batched-merge-link-light.webp",
+        "alt": "A merge card whose branch name is a link beside the checks, with its button reading Merge in the next batch."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

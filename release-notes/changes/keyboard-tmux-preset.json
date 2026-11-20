@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "keyboard-tmux-preset",
+      "kind": "feature",
+      "title": "A keyboard preset with a prefix key",
+      "body": "Settings, Keyboard offers one more preset, modeled on a popular terminal tool: the default preset's plain letter keys for moving around, plus a prefix key, Control+B, that works anywhere, even in the middle of a sentence. Press the prefix, then N or P for the next or previous card, Z to maximize a card, D to put it aside, an arrow to move to that part of the window, or a colon to search commands. You change the prefix in one place, the new Prefix row, and every key that starts with it moves along.",
+      "area": "settings",
+      "picture": {
+        "dark": "keyboard-tmux-preset-dark.webp",
+        "light": "keyboard-tmux-preset-light.webp",
+        "alt": "Keyboard settings with the new preset chosen in the Preset row, the Prefix row below it showing Control+B with Record and Reset, and Search commands listing Control+B then colon among its keys"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

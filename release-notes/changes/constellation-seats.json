@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "constellation-seats",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Each task split into parts gets its own place around Firstmate",
+      "body": "Only a task the app runs as a set of parts draws as a constellation now; a task that just holds a plan and its build shows its crewmates as usual. Each constellation keeps its own place on the inner circle instead of piling onto another, and moves to the computer its parts run on. Pointing at a constellation's ring or a finished part shows which task it is and opens it, and a part names the task it belongs to. A task shows Blocked by only while another task really holds it.",
+      "picture": {
+        "dark": "constellation-seats-dark.webp",
+        "light": "constellation-seats-light.webp",
+        "alt": "Firstmate with two small constellations on opposite sides, each a ring with a finished part and a crewmate, among single crewmates around it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

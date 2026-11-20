@@ -1,0 +1,107 @@
+[data-ambient-control] {
+  position: relative;
+  display: flex;
+  -webkit-app-region: no-drag;
+}
+
+.ambient-mark line {
+  transform-origin: center;
+}
+
+[data-ambient-control][data-paused] .ambient-mark {
+  color: var(--fg-3);
+}
+
+[data-ambient-control][data-paused] .ambient-mark line {
+  transform: scaleY(0.01);
+  transition: transform var(--dur-med) var(--ease-drift);
+}
+
+[data-ambient-control][data-hushed] .ambient-mark {
+  opacity: 0.4;
+}
+
+.ambient-volume-reveal {
+  position: absolute;
+  inset-inline-end: 100%;
+  inset-block-start: 50%;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  /* The button's full height, so no seam lies between the button and the pill. */
+  block-size: 100%;
+  padding-inline-end: 6px;
+  opacity: 0;
+  pointer-events: none;
+  translate: var(--move-summary) -50%;
+  transition:
+    opacity var(--dur-quick) var(--ease-out),
+    translate var(--dur-quick) var(--ease-out);
+}
+
+[dir="rtl"] .ambient-volume-reveal {
+  translate: calc(-1 * var(--move-summary)) -50%;
+}
+
+.ambient-volume-reveal[data-open] {
+  /* The top bar drags the window; on a Mac a pointer over a drag point
+     leaves the page, which would close the open track (docs/ambient-music.md). */
+  -webkit-app-region: no-drag;
+  opacity: 1;
+  pointer-events: auto;
+  translate: 0 -50%;
+}
+
+.ambient-volume-pill {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 28px;
+  padding-inline: var(--space-2);
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-pill);
+  background: var(--bg-2);
+  color: var(--fg-2);
+  font: var(--text-xs) var(--font-mono);
+}
+
+.ambient-volume-pill span {
+  min-inline-size: 4ch;
+  text-align: end;
+}
+
+.ambient-volume-pill input {
+  appearance: none;
+  width: 64px;
+  height: 20px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.ambient-volume-pill input::-webkit-slider-runnable-track {
+  height: 2px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(
+    90deg,
+    var(--accent) var(--ambient-fill),
+    var(--line-2) var(--ambient-fill)
+  );
+}
+
+.ambient-volume-pill input:dir(rtl)::-webkit-slider-runnable-track {
+  background: linear-gradient(
+    270deg,
+    var(--accent) var(--ambient-fill),
+    var(--line-2) var(--ambient-fill)
+  );
+}
+
+.ambient-volume-pill input::-webkit-slider-thumb {
+  appearance: none;
+  width: 8px;
+  height: 8px;
+  margin-block-start: -3px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+}

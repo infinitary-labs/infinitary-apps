@@ -1,0 +1,18 @@
+/* Finding words in the shown card (cardFind.ts): every match on the window's
+   own words, and the current one apart. A card's page draws its own the same
+   way (FRAME_FIND_SCRIPT). */
+::highlight(inf-find) {
+  background: var(--accent-dim);
+}
+::highlight(inf-find-current) {
+  background: var(--accent);
+  color: var(--bg-0);
+}
+/* The field draws the focus ring round all of it, its buttons included;
+   the words' own box draws none. */
+[data-card-find]:has(> input:focus-visible) {
+  box-shadow: var(--focus-ring);
+}
+[data-card-find] > input:focus-visible {
+  box-shadow: none;
+}

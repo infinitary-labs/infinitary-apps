@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "freeze-recorder-test-arms-watchdog",
+      "reason": "Test only: the freeze recorder's integration test arms the watchdog before each recorder starts, as the app's entry does, instead of waiting a fixed 150 ms for its debugger, which on a busy Linux runner came on after the test's stall had begun and left the stall unnamed. Nothing in the shipped app changes."
+    }
+  ]
+}

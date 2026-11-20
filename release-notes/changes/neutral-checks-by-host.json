@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "neutral-checks-by-host",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A finished neutral check on GitHub no longer holds your merge",
+      "body": "When every check on a GitHub pull request has finished and one ended neutral, such as a coverage report, the change now counts as checked and its merge card goes up; the checks still show that one as neutral. On GitLab, a manual job nobody has started still holds the merge, and the crewmate now says it is waiting to be started and names the job, instead of waiting for checks to finish.",
+      "noPicture": "The visible checks cell keeps its words for a neutral check; the change is whether the merge goes through, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

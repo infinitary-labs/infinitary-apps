@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-shared-cache-words",
+      "reason": "Test-only repair: before its first simulator starts, the phone check removes the pinned runtime's empty host cache folder, so the simulator's kept log spells out the shared cache's words and the display and preview observers can recover lines the live log dropped; nothing in the app changes."
+    }
+  ]
+}

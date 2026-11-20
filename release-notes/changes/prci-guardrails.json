@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "prci-guardrails",
+      "reason": "Internal: tests pin the merge, refusal and review paths of the checks and merge service before it is split, and its tests share one stand-in for where a project lives; nothing a person sees changes."
+    }
+  ]
+}

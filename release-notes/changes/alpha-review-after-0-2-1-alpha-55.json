@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "alpha-review-after-0-2-1-alpha-55",
+      "reason": "Release review after alpha 0.2.1-alpha.55: pins stable 0.2.1's record with the captain's highlight picks; ranks per-model reasoning, task card tabs and crewmates grouped by computer as highlights; rewords five notes in plain words; turns the task browser's new page actions into a note. Nothing in the app changes."
+    }
+  ]
+}

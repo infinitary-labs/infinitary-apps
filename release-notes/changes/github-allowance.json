@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "github-allowance",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Checks keep being watched within GitHub's hourly limit",
+      "body": "Your crew now re-reads pull request checks and workflow runs from GitHub without using up your hourly GitHub limit when nothing has changed. If the limit does run out, the app waits for it to come back and keeps watching, instead of stopping and waking every crewmate.",
+      "noPicture": "This changes how the app reads GitHub in the background, with no new screen or control.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

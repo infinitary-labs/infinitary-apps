@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "panel-journey-holds-place-until-draft-read",
+      "reason": "The personal-panels journey holds each build's place until it has read the draft drawn out of sight, so a slow computer no longer lets the draft go between two of its looks; a test-only change with nothing a person notices."
+    }
+  ]
+}

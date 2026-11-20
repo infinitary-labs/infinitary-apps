@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "first-mate-change-from-line",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Work your first mate started on its own no longer shows another task's message as \"You asked\"",
+      "body": "When your first mate starts a fix on its own after a crewmate's report, its cards now read \"From\" the task it came from, instead of quoting the message you wrote for that other task.",
+      "noPicture": "The From line looks as it always has; only which line a first-mate-started change shows is different.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

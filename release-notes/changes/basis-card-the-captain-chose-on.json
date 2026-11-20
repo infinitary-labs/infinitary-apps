@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "basis-card-the-captain-chose-on",
+      "kind": "fix",
+      "title": "A build starts from the design you chose, not a later note",
+      "body": "When work builds on a task that showed you a design and then built it, the new crewmate now gets that design card with your choice and settings. Before, a note Firstmate added to that task afterwards could take the design's place, and your choice and settings were left out.",
+      "area": "crewmates",
+      "noPicture": "Nothing on screen changes: the change is in what a new crewmate receives.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

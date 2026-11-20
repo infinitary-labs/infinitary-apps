@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "pin-published-0-2-0",
+      "reason": "Pins the published manifest for stable 0.2.0, promoted from 0.2.0-alpha.50, after its private tag existed. Nothing in the app changes."
+    }
+  ]
+}

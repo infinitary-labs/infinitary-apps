@@ -1,0 +1,12 @@
+{
+  "entries": [{
+    "id": "forge-host-integrations",
+    "kind": "feature",
+    "area": "settings",
+    "title": "GitLab and GitHub Enterprise join Integrations",
+    "body": "Manage each GitLab and GitHub Enterprise sign-in in Integrations, beside GitHub. Your first mate and crew can read each host, and every change through an integration asks you first. Projects keeps the link to Integrations and other computers’ own sign-ins.",
+    "picture": {"dark": "forge-host-integrations-dark.webp", "light": "forge-host-integrations-light.webp", "alt": "Integrations shows separate GitLab, self-hosted GitLab and GitHub Enterprise rows, each signed in as octo."},
+    "provenance": {"origin": "change"}
+  }],
+  "exclusions": []
+}

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "project-settings-page",
+      "kind": "improvement",
+      "area": "projects",
+      "title": "Each project opens its own settings page",
+      "body": "In Settings → Projects, choosing a project now opens a page of its own instead of a long list inside the row. Its repositories sit in tabs at the top of one panel, and each repository's settings are grouped under Changes, Tasks and Details. Press Esc to go back to your projects.",
+      "picture": {
+        "dark": "project-settings-page-dark.webp",
+        "light": "project-settings-page-light.webp",
+        "alt": "A project's settings page with Back, the project's name and key, its Name box, and a Repositories panel with a tab for each repository above its Changes settings"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

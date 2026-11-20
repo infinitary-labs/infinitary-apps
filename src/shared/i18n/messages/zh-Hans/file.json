@@ -1,0 +1,12 @@
+{
+  "fileAdd": "添加文件",
+  "fileCancel": "取消准备 {name}",
+  "fileDropHere": "拖放文件以添加",
+  "filePathsAnnounce": {
+    "plural": "count",
+    "other": "已将 {count} 个文件路径添加为文本"
+  },
+  "filePreparing": "正在准备",
+  "fileReady": "已就绪",
+  "fileReadyAnnounce": "{name} 已就绪"
+}

@@ -1,0 +1,41 @@
+{
+  "projectsHost": "プロジェクトのホスト",
+  "projectsMoveAfterNew": "単独のプロジェクト（{key}）",
+  "projectsMoveAfterRevive": "再び単独のプロジェクト（{key}）",
+  "projectsMoveApply": "移動を適用",
+  "projectsMoveAsks": {
+    "plural": "count",
+    "other": "一等航海士がこれらのリポジトリの移動を求めています。「移動を適用」をクリックするまで、何も移動しません。"
+  },
+  "projectsMoveAutomations": {
+    "plural": "count",
+    "other": "一覧から外れるプロジェクトに関する自動化{count}件は、以後 {project} に関するものになります。"
+  },
+  "projectsMoveColumnAfter": "クリック後",
+  "projectsMoveColumnNow": "現在のプロジェクト",
+  "projectsMoveColumnRepository": "リポジトリ",
+  "projectsMoveDirections": "{project} のいずれかのリポジトリに保存された方針は、以後これらを含むすべてのリポジトリに適用されます。",
+  "projectsMoveFinishedTasks": {
+    "plural": "count",
+    "other": "完了したタスク{count}件も、キーはそのままで移動します。"
+  },
+  "projectsMoveKeeps": "それぞれ名前、フォルダ、設定はそのままです。",
+  "projectsMoveLeaves": {
+    "plural": "count",
+    "other": "次の{count}件のプロジェクトが一覧から外れます。そのタスクキーは今後誰も使えません："
+  },
+  "projectsMoveListMore": {
+    "plural": "count",
+    "other": "{first} ほか{count}件"
+  },
+  "projectsMoveListTwo": "{first} と {second}",
+  "projectsMoveNoOpenTask": "移動する未完了のタスクはありません。",
+  "projectsMoveNoTask": "移動するタスクはありません。",
+  "projectsMoveNotNow": "今はしない",
+  "projectsMoveOpenTasks": {
+    "plural": "count",
+    "other": "未完了のタスク{count}件が {project} に加わります。キーはそのままです："
+  },
+  "projectsMoveTitleInto": "{repositories} を {project} に移動しますか？",
+  "projectsMoveTitleOwn": "{repositories} を単独のプロジェクトに移動しますか？"
+}

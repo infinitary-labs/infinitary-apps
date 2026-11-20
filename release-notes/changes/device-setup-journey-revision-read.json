@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "device-setup-journey-revision-read",
+      "reason": "Test-only repair: the computer setup journey reads the card's rows again when a card revision replaces the body page mid-read, with no app behavior change."
+    }
+  ]
+}

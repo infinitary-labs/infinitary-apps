@@ -1,0 +1,47 @@
+{
+  "projectsHost": "the project's host",
+  "projectsMoveAfterNew": "A project of its own ({key})",
+  "projectsMoveAfterRevive": "Its own project again ({key})",
+  "projectsMoveApply": "Apply move",
+  "projectsMoveAsks": {
+    "plural": "count",
+    "one": "Your first mate asks to move this repository. Nothing moves until you click Apply move.",
+    "other": "Your first mate asks to move these repositories. Nothing moves until you click Apply move."
+  },
+  "projectsMoveAutomations": {
+    "plural": "count",
+    "one": "{count} automation about the projects that leave the list is then about {project}.",
+    "other": "{count} automations about the projects that leave the list are then about {project}."
+  },
+  "projectsMoveColumnAfter": "After your click",
+  "projectsMoveColumnNow": "Project now",
+  "projectsMoveColumnRepository": "Repository",
+  "projectsMoveDirections": "Directions saved for any repository in {project} then reach every one of them, these included.",
+  "projectsMoveFinishedTasks": {
+    "plural": "count",
+    "one": "{count} finished task follows, keys kept.",
+    "other": "{count} finished tasks follow, keys kept."
+  },
+  "projectsMoveKeeps": "Each keeps its name, folder and settings.",
+  "projectsMoveLeaves": {
+    "plural": "count",
+    "one": "This project leaves the project list, and nobody can take its key again:",
+    "other": "These {count} projects leave the project list, and nobody can take their keys again:"
+  },
+  "projectsMoveListMore": {
+    "plural": "count",
+    "one": "{first} and {count} more",
+    "other": "{first} and {count} more"
+  },
+  "projectsMoveListTwo": "{first} and {second}",
+  "projectsMoveNoOpenTask": "No open task moves.",
+  "projectsMoveNoTask": "No task moves.",
+  "projectsMoveNotNow": "Not now",
+  "projectsMoveOpenTasks": {
+    "plural": "count",
+    "one": "{count} open task joins {project}, keys kept:",
+    "other": "{count} open tasks join {project}, keys kept:"
+  },
+  "projectsMoveTitleInto": "Move {repositories} into {project}?",
+  "projectsMoveTitleOwn": "Move {repositories} into a project of its own?"
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "required-action-thread-answer",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Your first mate's answer on a step for you counts as its answer",
+      "body": "When you ask a question under a card for a step only you can do, your first mate's answer in that card's conversation now counts. After you finish the step, it no longer asks itself for an answer again or puts up an extra card.",
+      "noPicture": "This changes how an answer is counted, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

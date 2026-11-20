@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "task-browser-saved-page-storage",
+      "reason": "Internal, behind the development-only task browser gate: a website sign-in saved on this Mac also keeps the site's own page storage, so a site that keeps its sign-in there is remembered too; an installed app shows none of it."
+    }
+  ]
+}

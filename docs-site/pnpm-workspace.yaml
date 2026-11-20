@@ -1,0 +1,11 @@
+# The docs site is its own package with its own lockfile, outside the app's
+# workspace (docs/docs-site.md), so a change here never moves the app's
+# dependencies and the app's install never reaches the site's.
+packages:
+  - "."
+allowBuilds:
+  esbuild: true
+  sharp: false
+  # Cloudflare's local runtime, which the publish rehearsal and the local
+  # serving check run; its install step checks the platform binary.
+  workerd: true

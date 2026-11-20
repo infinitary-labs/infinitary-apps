@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "check-line-before-adding-a-mac",
+      "kind": "feature",
+      "title": "Say this is the Mac before anything is sent",
+      "body": "The first time you add a Mac by its address, Firstmate shows the check line and waits. Nothing is sent until you say this is the Mac. Cancel sends nothing. Your yes is remembered in Firstmate, not in your SSH settings. A Mac that later answers unlike before is refused, and nothing is sent.",
+      "area": "devices",
+      "picture": {
+        "dark": "check-line-before-adding-a-mac-dark.webp",
+        "light": "check-line-before-adding-a-mac-light.webp",
+        "alt": "Settings, Devices, asking you to compare the check line before adding a Mac, with This is the Mac and Cancel"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

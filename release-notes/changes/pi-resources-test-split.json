@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "pi-resources-test-split",
+      "reason": "Internal: the served prompt pins move unchanged from one test file into three, the first mate's prompt and the crewmate's prompt each in their own beside the pins of what reaches every agent, under the code size warning line; no test is lost and nothing a person sees changes."
+    }
+  ]
+}

@@ -1,0 +1,129 @@
+{
+  "about": "Trimmed from a passing swept batch's full check: one Linux parallel group's journey-timing.json, its first three files. Test inputs, not a claim about current journey times.",
+  "schemaVersion": 1,
+  "run": "42400579613",
+  "attempt": "1",
+  "revision": "a15cd4dc8db3b0b1b3996974b333f5c7cfbd9df1",
+  "platform": "Linux",
+  "architecture": "X64",
+  "lane": "parallel",
+  "suite": "full",
+  "shard": "1",
+  "job": "source-desktop",
+  "artifactSuffix": "source",
+  "requestedFiles": [],
+  "jobStartedAt": 1794075520000,
+  "testStepStartedAt": 1794075613000,
+  "observedAt": 1794076587527,
+  "testStepOutcome": "success",
+  "reportState": "present",
+  "complete": true,
+  "successful": true,
+  "configuredWorkers": 2,
+  "actualWorkers": 2,
+  "selectedFiles": [
+    "tests/e2e/activity-runs.spec.ts",
+    "tests/e2e/activity-updates.spec.ts",
+    "tests/e2e/add-project.spec.ts"
+  ],
+  "missingFiles": [],
+  "stats": {
+    "startTime": "2026-11-07T18:20:15.391Z",
+    "duration": 970574.66,
+    "expected": 168,
+    "skipped": 3,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "timing": {
+    "jobObservedMs": 1067527,
+    "setupMs": 93000,
+    "testStepObservedMs": 974527,
+    "playwrightMs": 970574.66
+  },
+  "files": [
+    {
+      "file": "tests/e2e/activity-runs.spec.ts",
+      "project": "application",
+      "outcomes": {
+        "skipped": 1
+      },
+      "tests": 1,
+      "missing": 0,
+      "attempts": [
+        {
+          "startMs": 1794075801271,
+          "durationMs": 6,
+          "status": "skipped",
+          "worker": 5,
+          "retry": 0
+        }
+      ],
+      "startMs": null,
+      "endMs": null,
+      "elapsedMs": null,
+      "workMs": 0,
+      "skipped": 1
+    },
+    {
+      "file": "tests/e2e/activity-updates.spec.ts",
+      "project": "renderer",
+      "outcomes": {
+        "expected": 1
+      },
+      "tests": 1,
+      "missing": 0,
+      "attempts": [
+        {
+          "startMs": 1794075669280,
+          "durationMs": 18594,
+          "status": "passed",
+          "worker": 2,
+          "retry": 0
+        }
+      ],
+      "startMs": 1794075669280,
+      "endMs": 1794075687874,
+      "elapsedMs": 18594,
+      "workMs": 18594,
+      "skipped": 0
+    },
+    {
+      "file": "tests/e2e/add-project.spec.ts",
+      "project": "application",
+      "outcomes": {
+        "expected": 3
+      },
+      "tests": 3,
+      "missing": 0,
+      "attempts": [
+        {
+          "startMs": 1794075800338,
+          "durationMs": 8371,
+          "status": "passed",
+          "worker": 4,
+          "retry": 0
+        },
+        {
+          "startMs": 1794075808778,
+          "durationMs": 7492,
+          "status": "passed",
+          "worker": 4,
+          "retry": 0
+        },
+        {
+          "startMs": 1794075816297,
+          "durationMs": 6192,
+          "status": "passed",
+          "worker": 4,
+          "retry": 0
+        }
+      ],
+      "startMs": 1794075800338,
+      "endMs": 1794075822489,
+      "elapsedMs": 22151,
+      "workMs": 22055,
+      "skipped": 0
+    }
+  ]
+}

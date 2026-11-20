@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "sent-back-linux-reproof",
+      "reason": "Project checks only: a change sent back from its merge batch requests every Linux test and journey the batch runs before it goes back in line, through a new Linux-only verification request. Nothing in the app changes."
+    }
+  ]
+}

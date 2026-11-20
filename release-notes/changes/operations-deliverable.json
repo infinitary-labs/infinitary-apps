@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "operations-deliverable",
+      "kind": "feature",
+      "highlight": 2,
+      "area": "tasks",
+      "title": "Operations finish with the effect you asked for",
+      "body": "Your first mate can start an operation for work such as deploying an already chosen build or restarting a service. It checks what took effect and records the work as finished, without treating it as a code change or an answer to dismiss. Operations ask for medium intelligence, appear as Operation in task details, and are grouped as Operations in Usage. Sensitive actions still ask for your consent.",
+      "picture": {
+        "dark": "operations-deliverable-dark.webp",
+        "light": "operations-deliverable-light.webp",
+        "alt": "The task details identify the result as Operation, with its project beneath it."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

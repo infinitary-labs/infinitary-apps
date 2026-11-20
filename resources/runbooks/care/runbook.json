@@ -1,0 +1,34 @@
+{
+  "id": "care",
+  "name": "Rigor levels",
+  "description": "What each rigor level asks of a change: Quick, Default and Careful.",
+  "firstmate": "guide.md",
+  "crew": [
+    {
+      "file": "quick.json",
+      "when": {
+        "care": [
+          "quick"
+        ]
+      }
+    },
+    {
+      "file": "default.json",
+      "when": {
+        "care": [
+          "standard",
+          "reviewed"
+        ]
+      }
+    },
+    {
+      "file": "careful.json",
+      "when": {
+        "care": [
+          "reviewed"
+        ]
+      }
+    }
+  ],
+  "skills": "skills"
+}

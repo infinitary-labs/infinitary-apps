@@ -1,0 +1,27 @@
+{
+  "entries": [
+    {
+      "id": "require-pull-request-checks",
+      "kind": "improvement",
+      "area": "projects",
+      "title": "A project with no pull request checks merges without waiting for them",
+      "body": "When a crewmate finds that a project on GitHub or GitLab runs no checks on its pull requests, it records that once for the whole project. Its later changes then show their merge card right away, and one click merges them, instead of each change waiting for checks that never come. Settings → Projects shows this as Require pull request checks, which you can turn off or back on yourself. The first check that runs on any of the project's changes turns it back on, and Activity says which check ran.",
+      "picture": {
+        "dark": "require-pull-request-checks-dark.webp",
+        "light": "require-pull-request-checks-light.webp",
+        "alt": "A project's settings with Require pull request checks turned off, saying the project runs no checks so its changes merge without waiting for any"
+      },
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "backlog-keeps-merge-click",
+      "kind": "improvement",
+      "area": "tasks",
+      "title": "Moving a task back to the backlog keeps your merge click",
+      "body": "If you clicked Merge on a task and then move it back to the backlog, your click now stands: the change merges once its checks allow, while the task waits there. Stopping a crewmate still takes the click back.",
+      "noPicture": "Nothing new is drawn: the task moves to the backlog as before, and the change merges later with the same Activity line as any kept merge click.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

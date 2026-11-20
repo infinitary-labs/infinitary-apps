@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "check-for-updates",
+      "kind": "feature",
+      "title": "Check for updates whenever you like",
+      "body": "Settings → General now has a Check for updates button beside Version, on every copy, including Homebrew and Linux. It looks for a new release right away, instead of waiting for the next quiet check, and says what it found: that you have the latest release, that a newer version is available, or that updates could not be checked. When a version is available, Show update opens the update notice, where installing still waits for your click. Check for updates is also in command search.",
+      "area": "updates",
+      "picture": {
+        "dark": "check-for-updates-dark.webp",
+        "light": "check-for-updates-light.webp",
+        "alt": "The Version row in Settings with Check for updates and the line Version 0.1.31 is available, beside Show update"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

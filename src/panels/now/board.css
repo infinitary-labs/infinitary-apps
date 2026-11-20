@@ -1,0 +1,741 @@
+/* The task board, the Tasks panel's card (./cards/board.tsx;
+   docs/task-board.md; the design skill's components/now/TaskBoard): under
+   the app's own title row, one row of its own - the count, the project
+   chips and Find - and its views, then Waiting on you above the view - the
+   Board's three columns, or one lane as a paged list - the foot and its
+   live line. The card fills the stage's height, so the board's own rows
+   and its foot stay while its body scrolls; a page bounds what it draws. */
+
+.fm-board {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--fg-2);
+}
+
+.fm-board-chrome {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--line-1);
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.fm-board-n {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+}
+
+.fm-board-chips {
+  display: flex;
+  gap: var(--space-1);
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.fm-board-chip {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+  background: transparent;
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-pill);
+  padding: 2px var(--space-2);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.fm-board-chip:hover {
+  color: var(--fg-2);
+}
+
+.fm-board-chip[aria-pressed="true"] {
+  color: var(--fg-1);
+  background: var(--accent-dim);
+  border-color: var(--accent);
+}
+
+/* Find, and the key of Find on task board at its far end while it is empty
+   and has no focus, as a card's empty reply field shows its key. */
+.fm-board-find-field {
+  position: relative;
+  display: flex;
+  flex: 0 1 220px;
+  min-width: 120px;
+  margin-inline-start: auto;
+}
+
+.fm-board-find {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  color: var(--fg-1);
+  background: var(--surface-input);
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-m);
+  padding: var(--space-1) var(--space-2);
+  outline: none;
+}
+
+.fm-board-find:focus {
+  border-color: var(--line-2);
+  box-shadow: var(--focus-ring);
+}
+
+.fm-board-find-field > .fm-board-key {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  inset-inline-end: var(--space-2);
+  display: flex;
+  align-items: center;
+  color: var(--fg-3);
+  pointer-events: none;
+}
+
+.fm-board-find:focus + .fm-board-key,
+.fm-board-find:not(:placeholder-shown) + .fm-board-key {
+  display: none;
+}
+
+/* A command's key inside a control, after its words: quiet mono in the
+   control's own color at six tenths, as a text button's key is. */
+.fm-board-key {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: color-mix(in srgb, currentColor 60%, transparent);
+  white-space: nowrap;
+}
+
+/* The views: Board, Backlog, Done · 7d, and Earlier matches while Find has
+   words, each with its whole count; the pressed one is the view shown. */
+.fm-board-views {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-4);
+  border-bottom: 1px solid var(--line-1);
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.fm-board-view {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-m);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.fm-board-view:hover {
+  color: var(--fg-1);
+  background: var(--bg-3);
+}
+
+.fm-board-view[aria-pressed="true"] {
+  color: var(--fg-1);
+  background: var(--accent-dim);
+  border-color: var(--accent);
+}
+
+/* The body scrolls as one, never past a page of tiles: down for Waiting on
+   you and the view, sideways once the columns reach their narrowest. Text
+   never shrinks. */
+.fm-board-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.fm-board-lane-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 24px;
+}
+
+.fm-board-lane-label {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--fg-3);
+  white-space: nowrap;
+}
+
+.fm-board-lane-note {
+  margin-inline-start: auto;
+  font-size: var(--text-sm);
+  color: var(--fg-3);
+  white-space: nowrap;
+}
+
+.fm-board-empty {
+  font-size: var(--text-sm);
+  color: var(--fg-3);
+  padding: var(--space-1) 0;
+}
+
+.fm-board-rule {
+  border: none;
+  border-top: 1px solid var(--line-1);
+  margin: 0;
+}
+
+/* The Board's three columns of work not yet done: Backlog, Queued and Working. */
+.fm-board-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(min-content, 1fr));
+  gap: var(--space-3);
+}
+
+/* A column's foot: where its page sits and Previous and Next. */
+.fm-board-column-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--line-1);
+}
+
+.fm-board-column-foot > .fm-board-n {
+  margin-inline-end: auto;
+}
+
+/* Previous, Next and Show all: quiet text buttons. One at a lane's end
+   stays, dim, so focus stays on it. */
+.fm-board-pager {
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+.fm-board-page {
+  padding: 2px var(--space-2);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+  background: transparent;
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-m);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.fm-board-page:hover {
+  color: var(--fg-1);
+  background: var(--bg-3);
+}
+
+.fm-board-page[aria-disabled="true"] {
+  color: var(--fg-3);
+  background: transparent;
+  opacity: 0.5;
+  cursor: default;
+}
+
+.fm-board-page[aria-pressed="true"] {
+  color: var(--fg-1);
+  background: var(--accent-dim);
+  border-color: var(--accent);
+}
+
+/* A lane as a list: its head and foot stay while a page of rows scrolls
+   between them, the list filling what Waiting on you leaves of the body. */
+.fm-board-list {
+  flex: 1 0 200px;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.fm-board-list-head .fm-board-pager,
+.fm-board-list-head .fm-board-lane-note {
+  margin-inline-start: auto;
+}
+
+.fm-board-list-head .fm-board-lane-note + .fm-board-pager {
+  margin-inline-start: var(--space-2);
+}
+
+.fm-board-list-note {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  color: var(--fg-3);
+}
+
+.fm-board-list-rows {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.fm-board-list-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--line-1);
+  flex-shrink: 0;
+}
+
+.fm-board-list-foot > .fm-board-n {
+  margin-inline-end: auto;
+}
+
+.fm-board-column {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 156px;
+}
+
+.fm-board-column + .fm-board-column {
+  border-inline-start: 1px solid var(--line-1);
+  padding-inline-start: var(--space-3);
+}
+
+/* A tile and what rides with it: its ⋯ menu and a move's confirmation. */
+.fm-board-card {
+  position: relative;
+  min-width: 0;
+}
+
+.fm-board-tile {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  text-align: start;
+  font: inherit;
+  color: inherit;
+  background: var(--bg-1);
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-m);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.fm-board-tile:hover,
+.fm-board-tile[data-board-lit] {
+  background: var(--bg-3);
+}
+
+.fm-board-tile[data-board-movable] {
+  cursor: grab;
+}
+
+/* The ⋯ menu shows on hover or focus, over the head's right end, and
+   stays while it is open. */
+.fm-board-more {
+  position: absolute;
+  top: var(--space-1);
+  inset-inline-end: var(--space-1);
+  opacity: 0;
+  background: var(--bg-3);
+  border-radius: var(--radius-s);
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.fm-board-card:hover .fm-board-more,
+.fm-board-card:focus-within .fm-board-more,
+.fm-board-more:has([aria-expanded="true"]) {
+  opacity: 1;
+}
+
+/* The selected tile: the turn's hint, tinted as an open row is. Focus is
+   the ring drawn over it, never the tint. */
+.fm-board-tile[data-board-selected] {
+  background: var(--accent-dim);
+  border-color: var(--line-2);
+}
+
+.fm-board-tile-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+}
+
+.fm-board-tile-key {
+  color: var(--fg-2);
+  white-space: nowrap;
+}
+
+.fm-board-tile-word {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.fm-board-tile-word[data-board-word="urgent"] {
+  color: var(--warn);
+}
+
+.fm-board-tile-project {
+  margin-inline-start: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  max-width: 50%;
+}
+
+@container (max-width: 199px) {
+  .fm-board-tile-project {
+    display: none;
+  }
+}
+
+.fm-board-tile-title {
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+  color: var(--fg-1);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.fm-board-tile-status {
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  color: var(--fg-3);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.fm-board-tile:hover .fm-board-tile-status,
+.fm-board-tile:focus-visible .fm-board-tile-status {
+  -webkit-line-clamp: unset;
+}
+
+.fm-board-tile-since {
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
+  color: var(--fg-3);
+}
+
+.fm-board-tile-status[data-board-failed] {
+  color: var(--warn);
+}
+
+.fm-board-tile-word-status {
+  color: var(--fg-2);
+}
+
+/* A row of a list or of Waiting on you: the same face on one line - the
+   head, the title, the status - with no card around it; stacked when the
+   rows are narrow. */
+.fm-board-rows {
+  container: board-rows / inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Waiting on you: up to three rows above the view. */
+.fm-board-band .fm-board-rows {
+  margin-top: var(--space-1);
+}
+
+.fm-board-tile[data-board-row] {
+  display: grid;
+  grid-template-columns: minmax(0, 12rem) minmax(0, 1fr) minmax(0, 14rem);
+  align-items: center;
+  column-gap: var(--space-3);
+  padding: var(--space-1) var(--space-3);
+  padding-inline-end: calc(var(--space-3) + 28px);
+  background: transparent;
+  border-color: transparent;
+}
+
+.fm-board-tile[data-board-row]:hover,
+.fm-board-tile[data-board-row][data-board-lit] {
+  background: var(--bg-3);
+}
+
+.fm-board-tile[data-board-row][data-board-selected] {
+  background: var(--accent-dim);
+  border-color: var(--line-2);
+}
+
+.fm-board-tile[data-board-row] .fm-board-tile-project {
+  margin-inline-start: 0;
+}
+
+.fm-board-tile[data-board-row] .fm-board-tile-title,
+.fm-board-tile[data-board-row] .fm-board-tile-status,
+.fm-board-tile[data-board-row]:hover .fm-board-tile-status,
+.fm-board-tile[data-board-row]:focus-visible .fm-board-tile-status {
+  -webkit-line-clamp: 1;
+}
+
+.fm-board-rows .fm-board-more {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+@container board-rows (max-width: 559px) {
+  .fm-board-tile[data-board-row] {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--space-1);
+  }
+
+  .fm-board-rows .fm-board-more {
+    top: var(--space-1);
+    transform: none;
+  }
+}
+
+/* A move asking once on the tile where it landed: dashed, its status
+   unchanged, the sentence, Cancel, then the confirm. */
+.fm-board-card[data-board-pending] .fm-board-tile {
+  border-style: dashed;
+  border-color: var(--line-2);
+  border-bottom: none;
+  border-radius: var(--radius-m) var(--radius-m) 0 0;
+  cursor: default;
+}
+
+.fm-board-confirm {
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-1);
+  border: 1px dashed var(--line-2);
+  border-top: 1px solid var(--line-1);
+  border-radius: 0 0 var(--radius-m) var(--radius-m);
+}
+
+.fm-board-confirm-text {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  color: var(--fg-2);
+}
+
+/* Cancel, then the confirm: side by side, or stacked in a narrow column. */
+.fm-board-confirm-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.fm-board-confirm-acts > span {
+  display: flex;
+  flex: 1 1 auto;
+}
+
+/* While a tile is in the air: it stays at 40%, a ghost follows the
+   pointer, and each lane says whether it takes the tile - accepting lanes
+   tinted, the one under the pointer an accent hairline, or a warn hairline
+   when it refuses. */
+.fm-board[data-board-dragging] {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.fm-board-card[data-board-lifted] {
+  opacity: 0.4;
+}
+
+.fm-board-lane {
+  position: relative;
+  isolation: isolate;
+}
+
+.fm-board-lane::before {
+  content: "";
+  position: absolute;
+  inset: calc(-1 * var(--space-1));
+  z-index: -1;
+  border-radius: var(--radius-m);
+  pointer-events: none;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.fm-board-column + .fm-board-column::before {
+  inset-inline-start: calc(var(--space-3) / 2);
+}
+
+.fm-board-lane[data-board-accepts="yes"]::before {
+  background: var(--accent-dim);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+
+.fm-board-lane[data-board-accepts="yes"][data-board-over]::before {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.fm-board-lane[data-board-accepts="no"][data-board-over]::before {
+  box-shadow: inset 0 0 0 1px var(--warn);
+}
+
+.fm-board-ghost {
+  position: fixed;
+  z-index: 1000;
+  margin: 0;
+  pointer-events: none;
+  background: var(--bg-2);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-2);
+  cursor: grabbing;
+}
+
+/* The Drop task tray, in the foot only while a tile is in the air. */
+.fm-board-tray {
+  padding: 2px var(--space-3);
+  border: 1px dashed var(--line-2);
+  border-radius: var(--radius-m);
+  color: var(--fg-3);
+  white-space: nowrap;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+
+.fm-board-tray[data-board-accepts="yes"][data-board-over] {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: var(--danger-dim);
+}
+
+.fm-board-tray[data-board-accepts="no"][data-board-over] {
+  border-color: var(--warn);
+}
+
+.fm-board-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--line-1);
+  flex-shrink: 0;
+  font-size: var(--text-sm);
+  color: var(--fg-3);
+}
+
+.fm-board-dropped-toggle {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--fg-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.fm-board-dropped-toggle:hover,
+.fm-board-dropped-toggle[aria-pressed="true"] {
+  color: var(--fg-1);
+}
+
+.fm-board-hint {
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  white-space: nowrap;
+}
+
+/* The live line: what each move did, or why it was refused, read once. */
+.fm-board-live {
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  color: var(--fg-2);
+  flex-shrink: 0;
+}
+
+.fm-board-live:empty {
+  padding: 0;
+}
+
+.fm-board-live[data-board-live="refused"] {
+  color: var(--warn);
+}
+
+/* Start waits are complete facts, not a preview that needs a hover. */
+.fm-board-tile-status[data-board-queue-wait] {
+  display: block;
+  overflow: visible;
+  overflow-wrap: anywhere;
+}
+
+/* Group only kanban names; the recorded event keeps its room at narrow widths. */
+.fm-board-wait {
+  display: block;
+  min-width: 0;
+}
+.fm-board-wait-head {
+  contain: inline-size;
+  display: flex;
+  min-width: 0;
+}
+.fm-board-wait-names {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}
+.fm-board-wait-event {
+  display: block;
+  white-space: nowrap;
+}
+.fm-board-tile:not([data-board-row]) .fm-board-tile-status[data-board-structured-wait] {
+  -webkit-line-clamp: 2;
+}
+
+/* The dated event, not an unbounded wait name, owns a kanban tile's intrinsic minimum.
+   Keep the existing project-label query inside its full-width head; list rows keep their owner. */
+.fm-board-tile:has([data-board-structured-wait]) {
+  container-type: normal;
+  min-width: min-content;
+}
+.fm-board-tile:has([data-board-structured-wait]) > .fm-board-tile-head {
+  container-type: inline-size;
+  width: 100%;
+}

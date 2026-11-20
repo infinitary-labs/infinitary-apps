@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "computer-readings-live",
+      "reason": "The computer sends its processor and memory readings outside the numbered pushes and no longer sends them to phones, which never showed them; the computer screens and panels show the same readings, and the phone shows nothing different."
+    }
+  ]
+}

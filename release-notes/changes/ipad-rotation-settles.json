@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "ipad-rotation-settles",
+      "reason": "When the iPad turns, the top bar's tab strip, and a tab other than Home, now change once the turn has ended instead of in the middle of it, with Home coming in just before a turn to landscape, so the phone check's wait for the app to settle after a rotation no longer hangs; the screen ends the turn looking the same."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "placed-contract-disk-flushes",
+      "reason": "The placed Claude contract tests no longer wait on a disk flush for each call they drive, so the case of 200 calls stays well inside its time limit on a loaded test machine; nothing a person sees changes."
+    }
+  ]
+}

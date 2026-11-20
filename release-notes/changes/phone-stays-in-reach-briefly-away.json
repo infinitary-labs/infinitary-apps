@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-stays-in-reach-briefly-away",
+      "kind": "fix",
+      "title": "The phone app stays connected when you switch away briefly",
+      "body": "Leaving Infinitary on iPhone or iPad for a moment no longer drops its connection to your computer. Come back within about half a minute and it is still in reach, with anything that changed meanwhile already there, instead of reconnecting.",
+      "area": "devices",
+      "noPicture": "The change is that nothing happens on return: the app shows the same in-reach view it showed before.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

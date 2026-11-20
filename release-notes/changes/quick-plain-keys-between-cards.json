@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "quick-plain-keys-between-cards",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Quick presses of a plain card key are no longer lost",
+      "body": "With a preset that moves with plain letter keys while you are not typing, pressing the next or previous card key several times in quick succession now moves one card for every press. Before, presses that came while the next card was still opening could be dropped.",
+      "noPicture": "Each card looks the same; the fix only keeps quick presses from being dropped while a card opens, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "board-drag-press-test",
+      "reason": "A board journey's drag helper now finds and presses its tile in one step, so a redraw cannot move another tile under the press; tests only."
+    }
+  ]
+}

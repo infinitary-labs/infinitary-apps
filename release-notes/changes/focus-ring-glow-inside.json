@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "focus-ring-glow-inside",
+      "kind": "fix",
+      "area": "cards",
+      "title": "The keyboard's outline keeps its glow inside cards",
+      "body": "When you reach a card's words, the Activity list or the Models heading in Settings with the keyboard, its outline now glows softly inside its edge. Before, only the thin line showed, because the edge cut off the glow.",
+      "picture": {
+        "dark": "focus-ring-glow-inside-dark.webp",
+        "light": "focus-ring-glow-inside-light.webp",
+        "alt": "A card's words reached with the keyboard, outlined and softly lit inside the edge on every side."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

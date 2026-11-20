@@ -1,0 +1,51 @@
+{
+  "crewmateApp": "앱에서",
+  "crewmateBrief": "지시서",
+  "crewmateCard": "카드",
+  "crewmateChange": "끌어오기 요청",
+  "crewmateClosed": "이 작업은 닫혔어요. 대화는 진행된 그대로 보여요.",
+  "crewmateCompacted": "대화가 맞도록 줄어들었어요.",
+  "crewmateCut": {
+    "plural": "count",
+    "other": "{count}자가 더 있지만 보이지 않아요."
+  },
+  "crewmateEarlier": {
+    "plural": "count",
+    "other": "앞의 {count}줄은 보이지 않아요."
+  },
+  "crewmateEmpty": "아직 보여 줄 대화 내용이 없어요.",
+  "crewmateFailed": "이번 차례가 실패했어요:",
+  "crewmateField": "선원에게 보낼 메시지",
+  "crewmateFirstmate": "일등항해사",
+  "crewmateFold": "접기",
+  "crewmateIdle": "쉬는 중",
+  "crewmateInterruptHint": "눌러서 중단",
+  "crewmateMoreLines": {
+    "plural": "count",
+    "other": "+{count}줄"
+  },
+  "crewmateNoOutput": "출력 없음",
+  "crewmateNoResult": "결과 없음",
+  "crewmateOpen": "펼치기",
+  "crewmatePaused": "멈춤 · 선장님이 브라우저를 쥐고 있어요",
+  "crewmatePicture": "선원의 호출에 대한 답으로 온 그림",
+  "crewmatePictureLarger": "크게 보기",
+  "crewmatePictureSmaller": "작게 보기",
+  "crewmatePlaceholderIdle": "선원에게 다음에 할 일을 알려 주세요",
+  "crewmatePlaceholderWorking": "선원에게 말을 전하세요. 다음 단계에서 들어요",
+  "crewmatePlan": "계획",
+  "crewmateProgress": "진행 상황",
+  "crewmateQueued": "대기 중",
+  "crewmateReport": "보고",
+  "crewmateRunning": "실행 중…",
+  "crewmateSendsTo": "선원에게",
+  "crewmateShowCard": "카드 보기",
+  "crewmateStop": "중지",
+  "crewmateStoppedApp": "이번 차례가 중지됐어요.",
+  "crewmateStoppedCaptain": "선장님이 이번 차례를 중지했어요.",
+  "crewmateStoppedFirstmate": "일등항해사가 이번 차례를 중지했어요.",
+  "crewmateStopping": "중지하는 중…",
+  "crewmateUnreadable": "이 선원의 대화를 읽을 수 없었어요.",
+  "crewmateWaiting": "선장님을 기다림",
+  "crewmateWorking": "작업 중…"
+}

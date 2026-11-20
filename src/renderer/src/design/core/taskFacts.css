@@ -1,0 +1,500 @@
+/* The shared task facts (FI3-565 piece 2): the crew summary's rows, read the
+   same way wherever a task's facts are shown. Each fact is a row with its
+   uppercase micro label in a side column, then the fact strip under a
+   hairline - the merge card's own shape (FI3-1159). The task record draws
+   that strip in its own slot just above the action bar. The surface sets
+   the width and decides whether a long line ends in an ellipsis or wraps. */
+.fm-task-facts {
+  font-size: var(--text-sm);
+  line-height: 1.35;
+  color: var(--fg-2);
+}
+/* One fact: its label in a side column, its line beside it. */
+.fm-task-facts .row {
+  display: grid;
+  /* Wide enough for PROGRESS, the longest label (the captain's pick, FI3-734). */
+  grid-template-columns: 66px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: baseline;
+}
+.fm-task-facts .row + .row {
+  margin-top: 6px;
+}
+.fm-task-facts .now {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.fm-task-facts .age {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+  /* The record's ages are Tab stops: the ring follows a rounded box. */
+  border-radius: var(--radius-s);
+}
+/* The checks' words are a Tab stop on the record, showing their start and reading. */
+.fm-task-facts .checks {
+  border-radius: var(--radius-s);
+}
+/* The age keeps the line's right edge, whatever the note's length. */
+.fm-task-facts .now .age,
+.fm-task-facts .plan .age {
+  margin-inline-start: auto;
+}
+.fm-task-facts .title {
+  color: var(--fg-1);
+  font-weight: var(--weight-medium);
+}
+/* The fact strip (FI3-1159): the model, its intelligence level and its
+   reasoning (FI3-439), the change, its checks and a review, each cell a
+   micro label over a one-line value, the cells wrapping whole - the merge
+   card's strip (`.inf-facts` in frameStylesheet.ts) in the window's own
+   type, with the footnote under it. A hairline parts it from the rows. */
+.fm-task-facts .strip {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-1);
+}
+.fm-task-facts .cells {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+}
+.fm-task-facts .cell {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  max-width: 100%;
+}
+.fm-task-facts .cell .value {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  white-space: nowrap;
+}
+/* INF-1555 F14: the refusal's reason remains inside the summary/record, not outside its edge. */
+.fm-task-facts .cell [data-check-read-problem] {
+  align-items: flex-start;
+  white-space: normal;
+}
+.fm-task-facts [data-check-read-problem] [data-task-fact-checks] {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.fm-task-facts [data-check-read-problem] > .dot {
+  margin-top: var(--space-1);
+}
+/* The record's own cells that read dim mono (INF-2261): Use, and a run in the load line. */
+.fm-task-facts .cell.dim .value {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+/* A value too long for its cell (a model's name) ends in an ellipsis; its title has it whole. */
+.fm-task-facts .cell [data-task-fact="model"],
+.fm-task-facts .cell [data-task-fact="change"] {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fm-task-facts .cell .dot {
+  flex: none;
+}
+/* The hover preview's footer (INF-2528): one row that never wraps. The
+   model's name gives way first, down to its label's width, then a long
+   branch name, each ending in an ellipsis; the badge and the checks'
+   state keep their width, and no label runs into the next. A review's
+   verdict takes its own row under it. */
+.fm-task-facts .cells.summary {
+  flex-wrap: nowrap;
+}
+.fm-task-facts .cells + .cells {
+  margin-top: var(--space-2);
+}
+.fm-task-facts .cells.summary .cell {
+  flex: none;
+}
+/* The model takes the room the other cells leave, no less than its label
+   and no more than its name; the change takes its whole width before it. */
+.fm-task-facts .cells.summary .cell.model {
+  flex: 1 1 0;
+  min-width: min-content;
+  max-width: max-content;
+}
+/* Its name adds nothing to the cell's narrowest width, so the label sets it. */
+.fm-task-facts .cells.summary .cell.model .value {
+  display: grid;
+  grid-template-columns: minmax(0, max-content);
+}
+.fm-task-facts .cells.summary .cell.change {
+  flex: 0 1 auto;
+}
+.fm-task-facts .cells.summary .value > * {
+  flex: none;
+}
+.fm-task-facts .cells.summary .value > :is([data-task-fact="model"], [data-task-fact="change"]) {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.fm-task-facts .cell .state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.fm-task-facts .cell .age::before {
+  content: "·";
+  margin-inline-end: var(--space-1);
+  font-family: var(--font-ui);
+}
+.fm-task-facts :is(.title, .note, .reason) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+/* Why the model, and why the reasoning is lower: two lines at most. */
+.fm-task-facts .reason {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin-top: 6px;
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  color: var(--fg-3);
+  white-space: normal;
+}
+/* A pull request, wherever it is named, links to its page (the design
+   skill's TaskRecord, "Pull request links"): the accent, underlined while
+   the pointer rests on it. */
+.fm-task-facts :is(.cell a, .change-link) {
+  color: var(--accent);
+  text-decoration: none;
+}
+.fm-task-facts :is(.cell a, .change-link):hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.fm-task-facts :is(.cell a, .change-link):focus-visible {
+  outline: none;
+  border-radius: var(--radius-s);
+  box-shadow: var(--focus-ring);
+}
+/* The task's own browser (docs/task-browser.md): its site, who drives it or
+   what stopped it, and Open, parted by dots like the delivery line. */
+.fm-task-facts .browser {
+  margin-top: 6px;
+}
+.fm-task-facts .browser-line {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.fm-task-facts .browser-line > * + *::before {
+  content: "·";
+  margin: 0 var(--space-2);
+  color: var(--fg-3);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+}
+.fm-task-facts .browser-line .site {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-1);
+}
+.fm-task-facts .browser-line .link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--accent);
+  cursor: pointer;
+}
+.fm-task-facts .browser-line .link:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.fm-task-facts .browser-line .link:focus-visible {
+  outline: none;
+  border-radius: var(--radius-s);
+  box-shadow: var(--focus-ring);
+}
+/* The record's Pull requests row (INF-2490): one line per pull request, parted like the Browser line. */
+.fm-task-facts .pull-requests {
+  margin-top: 6px;
+}
+.fm-task-facts .pull-request-list {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.fm-task-facts .pull-request-line {
+  overflow-wrap: anywhere;
+}
+.fm-task-facts .pull-request-line + .pull-request-line {
+  margin-top: 4px;
+}
+.fm-task-facts .pull-request-line > * + *::before {
+  content: "·";
+  margin: 0 var(--space-2);
+  color: var(--fg-3);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+}
+.fm-task-facts .pull-request-line .number {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+.fm-task-facts .pull-request-line span.number {
+  color: var(--fg-1);
+}
+/* The uppercase micro label beside each line, or over each value of the strip. */
+.fm-task-facts .label {
+  font-size: var(--text-xs);
+  line-height: 1;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.fm-task-facts .cell .label {
+  white-space: nowrap;
+}
+/* On the task record the row of facts ends the Info body under its
+   hairline and scrolls with it (INF-2261), a little further from the rows
+   above than the summary's. */
+.fm-record-strip .strip {
+  margin-top: 14px;
+  padding-top: 12px;
+}
+/* On the task record the line has the card's width and may wrap: Now to
+   three lines (Activity has all of it), the model's name whole. */
+.fm-record-facts .now .note {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+/* The plan (FI3-734). On the summary: the count and the current item on the
+   Progress line, then one dot per item on a line under it, its short label
+   beneath. On the record: the whole list under the facts. */
+.fm-task-facts .plan {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.fm-task-facts .plan .count {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+}
+.fm-task-facts .plan .current {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fm-task-facts .plan .current::before {
+  content: "·";
+  margin-inline-end: var(--space-2);
+  color: var(--fg-3);
+}
+.fm-task-facts .plan-dots {
+  display: flex;
+  align-items: start;
+  margin-top: 8px;
+  padding: 0 2px;
+}
+.fm-task-facts .plan-dots .dot {
+  flex: 1 1 0;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 0 12px 15px;
+  justify-items: center;
+  position: relative;
+}
+.fm-task-facts .plan-dots[data-stagger] .dot {
+  grid-template-rows: 15px 12px 15px;
+}
+/* The line, one segment per dot from the dot before it; filled in behind a finished dot. */
+.fm-task-facts .plan-dots .dot::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: -50%;
+  inset-inline-end: 50%;
+  top: 5.5px;
+  border-top: 1px solid var(--line-2);
+}
+.fm-task-facts .plan-dots[data-stagger] .dot::before {
+  top: 20.5px;
+}
+.fm-task-facts .plan-dots .dot:first-child::before {
+  display: none;
+}
+.fm-task-facts .plan-dots .dot[data-plan-prev="done"]::before {
+  border-color: var(--fg-3);
+}
+.fm-task-facts .plan-dots .mark {
+  grid-row: 2;
+  width: 12px;
+  height: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: var(--bg-2);
+  border-radius: 50%;
+}
+.fm-task-facts .plan-dots .short {
+  grid-row: 3;
+  width: max-content;
+  max-width: calc(100% - 4px);
+  font-size: var(--text-xs);
+  line-height: 15px;
+  color: var(--fg-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+.fm-task-facts .plan-dots[data-stagger] .short {
+  max-width: calc(200% - 6px);
+}
+.fm-task-facts .plan-dots[data-stagger] .dot:nth-child(odd) .short {
+  grid-row: 1;
+}
+.fm-task-facts .plan-dots[data-stagger] .dot:first-child .short {
+  justify-self: start;
+}
+.fm-task-facts .plan-dots[data-stagger] .dot:last-child .short {
+  justify-self: end;
+}
+.fm-task-facts .plan-dots .dot[data-plan-item="done"] .short {
+  color: var(--fg-2);
+}
+.fm-task-facts .plan-dots .dot[data-plan-item="current"] .short {
+  color: var(--fg-1);
+  font-weight: var(--weight-medium);
+}
+/* The record's list under the Progress line, a hairline running behind the marks. */
+.fm-task-facts .plan-list {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  margin-top: 6px;
+}
+.fm-task-facts .plan-list::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 5.5px;
+  top: 12px;
+  bottom: 12px;
+  border-inline-start: 1px solid var(--line-1);
+}
+/* Its marks start on the card's one left edge, under the labels (FI3-1159). */
+.fm-task-facts .plan-list .item {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  column-gap: var(--space-2);
+  align-items: center;
+  padding: 3px 0;
+  position: relative;
+}
+.fm-task-facts .plan-list .mark {
+  display: inline-flex;
+  width: 12px;
+  height: 12px;
+  align-items: center;
+  justify-content: center;
+}
+.fm-task-facts .plan-list .mark svg {
+  background: var(--bg-2);
+  border-radius: 50%;
+}
+.fm-task-facts .plan-list .label-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.fm-task-facts .plan-list .item[data-plan-item="current"] .label-text {
+  color: var(--fg-1);
+  font-weight: var(--weight-medium);
+}
+.fm-task-facts .plan-list .item[data-plan-item="next"] .label-text,
+.fm-task-facts .plan-list .item[data-plan-item="skipped"] .label-text,
+.fm-task-facts .plan-list .skipped {
+  color: var(--fg-3);
+}
+.fm-task-facts .plan-list .earlier {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: var(--accent);
+  cursor: pointer;
+  text-align: start;
+}
+.fm-task-facts .plan-list .earlier:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+/* Why this model (INF-1714): the record's own disclosure under the strip,
+   in the footnote's size and color; the chosen model's rule is lit. */
+.fm-task-facts .why {
+  margin-top: 6px;
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  color: var(--fg-3);
+}
+.fm-task-facts .why summary {
+  width: fit-content;
+  color: var(--fg-2);
+  cursor: pointer;
+  border-radius: var(--radius-s);
+}
+.fm-task-facts .why summary:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.fm-task-facts .why-line {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+}
+.fm-task-facts .why-list {
+  display: grid;
+  gap: 6px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.fm-task-facts .why-candidate {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-inline-start: var(--space-2);
+  border-inline-start: 2px solid var(--line-2);
+}
+.fm-task-facts .why-candidate[data-picked] {
+  border-inline-start-color: var(--accent);
+}
+.fm-task-facts .why-name {
+  color: var(--fg-1);
+}
+
+.fm-task-facts .wait-schedule {
+  display: block;
+  flex-basis: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.fm-task-facts [data-task-watch-schedules] {
+  flex-wrap: wrap;
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "background-job-named",
+      "reason": "What a crewmate and the first mate are told: a Pi crewmate's background job on a computer that runs work is named by its command, or by that computer's name, instead of as a Claude client's work. No screen changes."
+    }
+  ]
+}

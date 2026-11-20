@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "mac-installer-updates",
+      "kind": "feature",
+      "highlight": 1,
+      "title": "Install and update on Mac without Homebrew",
+      "body": "Open the disk image and drag Infinitary into Applications. Choose Stable or Alpha beside Version in Settings → General. When an update is available, choose Update and restart; Infinitary shows progress, checks the download, and keeps your saved work. Switching channels never installs an older version. Homebrew installations remain supported and keep using their usual Homebrew upgrade command.",
+      "area": "updates",
+      "picture": {
+        "dark": "mac-installer-updates-dark.webp",
+        "light": "mac-installer-updates-light.webp",
+        "alt": "The stable update notice offers View release and Update and restart."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

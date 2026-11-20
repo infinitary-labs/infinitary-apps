@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "started-from-reply",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "A card's thread names the work your reply under it started",
+      "body": "When you reply under a card and your first mate starts work from it, the card's thread now gets a line saying which task it started, with a link to that task. The line shows under a card its crewmate already ended too, so you can see where your words went before you close it.",
+      "picture": {
+        "dark": "started-from-reply-dark.webp",
+        "light": "started-from-reply-light.webp",
+        "alt": "An ended card's thread with the line Your first mate started SCR-2 from your reply here, under the line saying its crewmate ended the card."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

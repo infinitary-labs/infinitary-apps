@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "kept-merge-waits-for-your-words",
+      "kind": "improvement",
+      "title": "A kept merge waits when you say something new",
+      "body": "If you write to a crewmate after you click merge, by replying under its card or asking Firstmate, the merge waits until the crewmate says whether your words change the work. If they do, it asks you again on a new card.",
+      "area": "cards",
+      "noPicture": "The only thing on screen is one Activity line; the change is that a merge waits.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

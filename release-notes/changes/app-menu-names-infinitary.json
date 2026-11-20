@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "app-menu-names-infinitary",
+      "kind": "fix",
+      "title": "The Mac app menu spells Infinitary with a capital I",
+      "body": "About, Hide and Quit in the Infinitary menu now read About Infinitary, Hide Infinitary and Quit Infinitary, matching the name in the Dock and the menu bar.",
+      "area": "other",
+      "noPicture": "The app menu is drawn by macOS outside the window, where the hero picture cannot photograph it.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "mergedAt": "已于 {at} 合并",
+  "mergedChangeOn": "已在 {place} 上合并 {change}",
+  "mergedChangeOnHost": "已在项目的托管平台上合并 {change}",
+  "mergedChangeWhereItLives": "已在项目托管处合并 {change}",
+  "mergedInCommit": "已通过提交 {commit} 合并",
+  "mergedInPull": "已通过拉取请求 {change} 合并",
+  "mergedOn": "已在 {place} 上合并",
+  "mergedOnItsOwnAt": "已于 {at} 自动合并",
+  "mergedWhereItLives": "已在项目托管处合并",
+  "mergedWithBatchOn": "已随批量拉取请求 {change} 在 {place} 上合并",
+  "mergedWithBatchWhereItLives": "已随批量拉取请求 {change} 在项目托管处合并"
+}

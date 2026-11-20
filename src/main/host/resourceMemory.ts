@@ -1,0 +1,205 @@
+import { execFile } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import { promisify } from "node:util";
+import { hostEnv } from "@core/hostEnv";
+import { hostPlatform } from "@core/platform";
+import { settingFrom } from "@shared/envSettings";
+import {
+  type MacMemoryPressure,
+  macMemoryPressureSchema,
+  type ResourceMemory,
+  validResourceMemory,
+} from "@shared/resources";
+
+const execFileAsync = promisify(execFile);
+/** Both reads finished in under 10 ms on the Mac this rule was measured on. */
+const MAC_READ_MS = 1_000;
+const MAC_READ_BYTES = 64 * 1024;
+
+/** Inactive and speculative bytes from one `vm_stat` text, or nothing it does not say. */
+export function macPagesFromVmStat(
+  text: string,
+): { inactiveBytes: number; speculativeBytes: number } | null {
+  const page = /page size of (\d+) bytes/.exec(text);
+  const inactive = /^Pages inactive:\s+(\d+)\./m.exec(text);
+  const speculative = /^Pages speculative:\s+(\d+)\./m.exec(text);
+  if (!page || !inactive || !speculative) return null;
+  const pageSize = Number(page[1]);
+  const inactivePages = Number(inactive[1]);
+  const speculativePages = Number(speculative[1]);
+  if (!Number.isInteger(pageSize) || pageSize <= 0 || pageSize > 1024 * 1024) return null;
+  if (!Number.isInteger(inactivePages) || inactivePages < 0) return null;
+  if (!Number.isInteger(speculativePages) || speculativePages < 0) return null;
+  const inactiveBytes = inactivePages * pageSize;
+  const speculativeBytes = speculativePages * pageSize;
+  if (!Number.isSafeInteger(inactiveBytes) || !Number.isSafeInteger(speculativeBytes)) return null;
+  return { inactiveBytes, speculativeBytes };
+}
+
+/**
+ * `kern.memorystatus_vm_pressure_level`: 1 normal, 2 warning, 4 critical.
+ * Any other reported level is not normal, so inactive memory does not count.
+ */
+export function macPressureFromSysctl(text: string): MacMemoryPressure | null {
+  const value = Number(text.trim());
+  if (value === 1) return "normal";
+  if (value === 2) return "warning";
+  if (Number.isInteger(value) && value > 0) return "critical";
+  return null;
+}
+
+/**
+ * The pressure level a development or end-to-end run stands in for macOS's
+ * with INFINITARY_MEMORY_PRESSURE (`normal`, `warning` or `critical`), as it
+ * does the microphone's answer: the computer running a test is not the one
+ * the test describes, and its own load would otherwise wake the app's first
+ * mate partway through. A packaged build always reads macOS.
+ */
+export function memoryPressureStandIn(
+  env: Readonly<Record<string, string | undefined>>,
+  packaged: boolean,
+): MacMemoryPressure | undefined {
+  if (packaged) return undefined;
+  const standIn = macMemoryPressureSchema.safeParse(settingFrom(env, "MEMORY_PRESSURE")?.trim());
+  return standIn.success ? standIn.data : undefined;
+}
+
+/** `vm.swapusage` reports occupancy independently of installed memory. */
+export function macSwapFromSysctl(text: string): number | undefined {
+  const match = /used\s*=\s*([\d.]+)([KMG])/.exec(text);
+  if (!match) return undefined;
+  const bytes =
+    Number(match[1]) * ({ K: 1024, M: 1024 ** 2, G: 1024 ** 3 }[match[2] ?? ""] ?? Number.NaN);
+  return Number.isFinite(bytes) && bytes >= 0 ? Math.round(bytes) : undefined;
+}
+
+/** Linux /proc/meminfo reports KiB; a failed read omits only swap. */
+export function linuxSwapFromMeminfo(text: string): number | undefined {
+  const total = /^SwapTotal:\s+(\d+) kB$/m.exec(text);
+  const free = /^SwapFree:\s+(\d+) kB$/m.exec(text);
+  if (!total || !free) return undefined;
+  const used = (Number(total[1]) - Number(free[1])) * 1024;
+  return Number.isSafeInteger(used) && used >= 0 ? used : undefined;
+}
+
+async function readLinuxSwap(): Promise<number | undefined> {
+  try {
+    return linuxSwapFromMeminfo(await readFile("/proc/meminfo", "utf8"));
+  } catch {
+    return undefined;
+  }
+}
+
+export type MacMemoryFacts = {
+  swapUsedBytes?: number;
+  inactiveBytes?: number;
+  speculativeBytes?: number;
+  memoryPressure?: MacMemoryPressure;
+};
+
+/** Keep a failed or oversized Mac read from discarding Electron's facts. */
+export function withMacMemoryFacts(
+  base: ResourceMemory,
+  facts: MacMemoryFacts | null,
+): ResourceMemory {
+  if (!facts) return base;
+  const reading: ResourceMemory = { ...base, ...facts };
+  if (validResourceMemory(reading)) return reading;
+  if (!facts.memoryPressure) return base;
+  const pressureOnly: ResourceMemory = { ...base, memoryPressure: facts.memoryPressure };
+  return validResourceMemory(pressureOnly) ? pressureOnly : base;
+}
+
+async function readText(file: string, args: string[]): Promise<string | null> {
+  try {
+    const { stdout } = await execFileAsync(file, args, {
+      encoding: "utf8",
+      timeout: MAC_READ_MS,
+      maxBuffer: MAC_READ_BYTES,
+      env: hostEnv(),
+      windowsHide: true,
+    });
+    return stdout;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fresh inactive pages and pressure. A miss is omitted facts, never a failed
+ * sample. A stood-in `pressure` (`memoryPressureStandIn`) replaces macOS's.
+ */
+export async function readMacMemoryFacts(
+  pressure?: MacMemoryPressure,
+): Promise<MacMemoryFacts | null> {
+  if (hostPlatform() !== "darwin") return null;
+  const [pagesText, pressureText, swapText] = await Promise.all([
+    readText("/usr/bin/vm_stat", []),
+    pressure ? null : readText("/usr/sbin/sysctl", ["-n", "kern.memorystatus_vm_pressure_level"]),
+    readText("/usr/sbin/sysctl", ["-n", "vm.swapusage"]),
+  ]);
+  const pages = pagesText ? macPagesFromVmStat(pagesText) : null;
+  const memoryPressure = pressure ?? (pressureText ? macPressureFromSysctl(pressureText) : null);
+  const swapUsedBytes = swapText ? macSwapFromSysctl(swapText) : undefined;
+  if (!pages && !memoryPressure && swapUsedBytes === undefined) return null;
+  return {
+    ...(swapUsedBytes === undefined ? {} : { swapUsedBytes }),
+    ...pages,
+    ...(memoryPressure ? { memoryPressure } : {}),
+  };
+}
+
+/**
+ * Electron's memory facts on `platform` as a reading in bytes, or nothing
+ * for a platform Infinitary reads none on or a reading out of bounds.
+ * Electron reports KiB. Keep unlike OS estimates unlike: Linux's
+ * `MemAvailable` beside its free memory, a Mac's purgeable and file-backed
+ * memory. On Windows Electron's free memory is Windows' available physical
+ * memory, its free, zeroed and standby pages, the same estimate as Linux's
+ * `MemAvailable`, and Electron reads no other, so it is both. Its swap
+ * figures there are the page file's commit limit, not swap in use, so a
+ * Windows reading leaves swap out.
+ */
+export function electronMemoryReading(
+  memory: Electron.SystemMemoryInfo,
+  platform: NodeJS.Platform,
+): ResourceMemory | null {
+  const base = { totalBytes: memory.total * 1024, freeBytes: memory.free * 1024 };
+  const reading: ResourceMemory | null =
+    platform === "linux"
+      ? { ...base, availableBytes: memory.available * 1024 }
+      : platform === "darwin"
+        ? {
+            ...base,
+            purgeableBytes: memory.purgeable * 1024,
+            fileBackedBytes: memory.fileBacked * 1024,
+          }
+        : platform === "win32"
+          ? { ...base, availableBytes: memory.free * 1024 }
+          : null;
+  return reading && validResourceMemory(reading) ? reading : null;
+}
+
+/**
+ * This computer's memory facts in bytes (`electronMemoryReading`), with
+ * Linux's swap and the Mac's own reads. A stood-in `pressure` replaces
+ * macOS's level (`memoryPressureStandIn`).
+ */
+export async function readResourceMemory(
+  pressure?: MacMemoryPressure,
+): Promise<ResourceMemory | null> {
+  const platform = hostPlatform();
+  try {
+    const reading = electronMemoryReading(process.getSystemMemoryInfo(), platform);
+    if (!reading) return null;
+    if (platform === "linux") {
+      const swapUsedBytes = await readLinuxSwap();
+      return { ...reading, ...(swapUsedBytes === undefined ? {} : { swapUsedBytes }) };
+    }
+    if (platform === "darwin")
+      return withMacMemoryFacts(reading, await readMacMemoryFacts(pressure));
+    return reading;
+  } catch {
+    return null;
+  }
+}

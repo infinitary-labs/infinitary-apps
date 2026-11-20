@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "custom-connection-picture-retention",
+      "kind": "fix",
+      "title": "Custom connections keep pictures available for comparison",
+      "body": "A model on a custom connection keeps the pictures it opened until the conversation is shortened normally. Opening a third picture no longer hides earlier ones or changes earlier requests. If shortening removes pictures, the model gets an accurate note that their visual detail is no longer available.",
+      "area": "subscriptions",
+      "noPicture": "The repair changes what a custom model receives, not the appearance of a screen.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

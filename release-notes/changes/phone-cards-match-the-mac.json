@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-cards-match-the-mac",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Cards on iPhone and iPad work like the cards on your Mac",
+      "body": "On iPhone and iPad, a card now sits on a raised surface and can be put aside and brought back. A merge card shows its risk as seven dots you can open, its facts above the choices and what you must do after merging. Words you type in the reply field go with the choice you press, and a reply can carry photos from your library or camera. The thread names who wrote each message and when, pull request links open in your browser, and a task key opens its task. On iPad, a card can fill the screen.",
+      "noPicture": "The phone checks take the pictures of the new card; this note gains them once they run.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

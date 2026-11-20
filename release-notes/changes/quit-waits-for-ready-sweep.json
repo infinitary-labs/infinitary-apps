@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "quit-waits-for-ready-sweep",
+      "reason": "Internal: the crew supervisor's quit starts no queued task and waits, within its existing two-second bound, for a ready sweep already running, so the account evaluation's probe no longer writes to a closed database; nothing a person notices."
+    }
+  ]
+}

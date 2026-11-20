@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "agents-reach-journey",
+      "reason": "Internal: an end-to-end journey runs the captain's override, a fixed limit's refusal, the rerun limit, the weekly reach audit and the export's counts on the GitHub stand-in, and the override's words move into the holds module unchanged; nothing a person sees changes."
+    }
+  ]
+}

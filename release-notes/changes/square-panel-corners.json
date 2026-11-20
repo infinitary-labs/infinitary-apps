@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "square-panel-corners",
+      "kind": "fix",
+      "title": "Panels on the sides no longer cut their corners round",
+      "body": "A panel on either side of the window has no background or border, so its rows and scroll bar now run square to its edges instead of being trimmed by an invisible rounded corner.",
+      "area": "settings",
+      "picture": {
+        "dark": "square-panel-corners-dark.webp",
+        "light": "square-panel-corners-light.webp",
+        "alt": "The bottom of the Tasks panel, its last rows and scroll bar ending square at the panel's edge"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

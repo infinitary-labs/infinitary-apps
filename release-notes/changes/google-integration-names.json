@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "google-integration-names",
+      "kind": "fix",
+      "title": "Every integration keeps a name of its own",
+      "body": "A server can no longer take Google's name, even while Google is signed out, and restoring a server's original name can no longer make it share a name with another connection. A server an older version let take the name is renamed with an explanation, and Google signs in beside it. Two servers added at once always get distinct names.",
+      "area": "settings",
+      "picture": {
+        "dark": "google-integration-names-dark.webp",
+        "light": "google-integration-names-light.webp",
+        "alt": "Integrations shows Google signed in beside Google MCP server, with an explanation of the server's new name."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

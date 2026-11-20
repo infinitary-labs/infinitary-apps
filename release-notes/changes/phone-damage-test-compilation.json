@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-damage-test-compilation",
+      "reason": "Keep the app-hosted damaged-record test inside its simulator-only helper's compilation boundary and verify actual fixture truncation; no production behavior changes."
+    }
+  ]
+}

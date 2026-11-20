@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "task-catching-up",
+      "kind": "fix",
+      "title": "Tasks on another computer say catching up after a restart, not out of reach",
+      "body": "After Infinitary restarts, a task that runs on another of your computers takes a moment to catch up with what happened there. Its Tasks row used to say out of reach while that computer was connected. It now says catching up in the quiet color, and resting on the row shows since when. Out of reach is kept for a computer Infinitary cannot reach.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-catching-up-dark.webp",
+        "light": "task-catching-up-light.webp",
+        "alt": "The Tasks panel with two tasks on the Mac mini reading catching up in the quiet color, beside a task on this computer"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

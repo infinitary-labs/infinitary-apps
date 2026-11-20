@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "integration-action-approval",
+      "kind": "feature",
+      "area": "settings",
+      "title": "Choose how each integration action is allowed",
+      "body": "Every integration action starts by asking you, including connections you already have. The app shows your crewmate’s reason and the exact call. Choose Always allow or Only this time; changes and sends highlight Only this time. Change an action’s allowance in Integrations, beside its Off switch.",
+      "picture": {
+        "dark": "integration-action-approval-dark.webp",
+        "light": "integration-action-approval-light.webp",
+        "alt": "An integration approval card shows the crewmate’s reason, the exact call, and Always allow, Only this time and Not now."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

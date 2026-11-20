@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "self-resolving-stalls",
+      "kind": "improvement",
+      "area": "firstmate",
+      "title": "The fleet looks for a way around blocked work",
+      "body": "Your first mate tries available solutions before asking you. When it needs another view, a read-only crewmate looks for alternatives. When a task stays stuck, its card says what the task still waits on and what your first mate already tried.",
+      "picture": {
+        "dark": "self-resolving-stalls-dark.webp",
+        "light": "self-resolving-stalls-light.webp",
+        "alt": "A stuck task's card saying what the task still waits on and the one attempt the first mate recorded to get around it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "waiting-on-checks-look",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "A crewmate waiting on its checks looks different",
+      "body": "When a crewmate is waiting for a pull request's checks, it still counts as working, but it glows a dimmer orange and turns slowly inside a thin blue ring. In Tasks, on the task board, in the summary and on the task's record, its dot is orange inside a blue ring, and its row in Tasks ends with \"checks\". It turns back to bright orange as soon as it starts working again.",
+      "picture": {
+        "dark": "waiting-on-checks-look-dark.webp",
+        "light": "waiting-on-checks-look-light.webp",
+        "alt": "A task in Tasks reading \"Check the map · checks\" with an orange dot inside a blue ring, and its summary beside it saying Working · Waiting for checks with checks running"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

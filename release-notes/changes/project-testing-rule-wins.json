@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "project-testing-rule-wins",
+      "reason": "One sentence in the ranking served beside global instructions: a project's own instructions win over crew rules on how tests are written and run. The result a person notices, crewmates following their project's testing rule over the crew default, belongs to the note for the crew's default testing passage."
+    }
+  ]
+}

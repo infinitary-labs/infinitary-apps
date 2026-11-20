@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "asked-bubble",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Your words are easier to pick out on cards",
+      "body": "The You asked line puts your words in a soft grey bubble, without quotation marks, on Mac, iPhone and iPad. Click or tap a long question’s bubble to expand it, and again to fold it, without a separate link. Its time and the revised time no longer start with a zero.",
+      "picture": {
+        "dark": "asked-bubble-dark.webp",
+        "light": "asked-bubble-light.webp",
+        "alt": "The You asked label sits above the captain’s words in a soft grey bubble."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

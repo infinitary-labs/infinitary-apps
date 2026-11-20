@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "artifact-parts",
+      "reason": "Internal: a crewmate can list a large CI artifact's files and save only selected ones, through the same download tool and sign-in; nothing a person sees in the app changes."
+    }
+  ]
+}

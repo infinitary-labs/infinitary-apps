@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "handed-result-notes-release",
+      "reason": "Test-only: the handed-result tests' stand-in card host now answers the notes release a close calls, and its four closing tests check that an answered close keeps the task's notes and then releases them. A person notices nothing new."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "session-host-integrations-there",
+      "reason": "Moves how a computer that runs work asks its home for the integrations command into its own file, so the session host stays under the size limit; the command answers exactly as before."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-catch-up-board-view-test",
+      "reason": "The phone catch-up test compares the board it holds with a fresh read of the same view, the board without its closed rows unless a whole board replaced it; only a test changes, and nothing a person sees changes."
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "entries": [{
+    "id": "queue-label",
+    "kind": "feature",
+    "area": "projects",
+    "title": "Queue a change with a label",
+    "body": "Teammates who do not use Infinitary can now put a change in the batch queue on GitHub or GitLab by adding the infinitary-queue label. The queue takes it only from someone allowed to merge, at the version the label went on, and a later push needs the label again. On GitLab, the label is read the next time the queue starts. Your first mate offers the queue update to projects that use it.",
+    "noPicture": "This adds a label the queue reads on GitHub and GitLab, not a change to any screen.",
+    "provenance": { "origin": "change" }
+  }],
+  "exclusions": []
+}

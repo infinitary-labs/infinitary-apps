@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "personal-runbook-copies",
+      "kind": "feature",
+      "title": "Make a built-in runbook yours",
+      "body": "Ask your first mate to copy a built-in runbook into your personal workspace, then edit its guidance there. The copy starts off. Turning it on turns the built-in off with one Activity line naming both. Our original stays available: turn your copy off and ours back on to restore it. Your copy stays yours across app updates.",
+      "area": "crewmates",
+      "noPicture": "The change makes guidance files editable in your personal workspace; copies use the existing runbook switches without changing their appearance.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

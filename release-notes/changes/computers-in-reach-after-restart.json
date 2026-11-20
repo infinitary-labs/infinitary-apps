@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "computers-in-reach-after-restart",
+      "kind": "fix",
+      "area": "devices",
+      "title": "A computer that reconnects while your first mate starts again shows in reach",
+      "body": "When your first mate started again, after an update say, a computer that ran work and reconnected at that moment could show as out of reach in Settings → Devices, and get no work, until it dropped and reconnected. It now shows in reach and takes work as soon as it reconnects.",
+      "noPicture": "This changes which existing state a computer's row shows after a restart, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

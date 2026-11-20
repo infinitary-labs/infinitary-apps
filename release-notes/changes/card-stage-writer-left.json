@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "card-stage-writer-left",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A card another crewmate revised shows its newest version when that crewmate's task ends",
+      "body": "When a crewmate revised a card on another task and its own task was then cancelled, failed or closed, the card could keep showing its old version until you restarted the app. The card now shows the newest version as that task ends.",
+      "noPicture": "The card looks as it always did; the fix changes only when its newer version reaches the screen.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

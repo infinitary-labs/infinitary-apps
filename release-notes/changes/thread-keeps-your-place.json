@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "thread-keeps-your-place",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "A card's thread keeps your place while you read",
+      "body": "Scroll up in a card's thread to reread an earlier reply, and it stays where you are while the crew works: new messages, a crewmate starting a command and the working line no longer pull you to the bottom. A small arrow at the foot of the thread takes you down, and counts the messages that arrived below. At the bottom the thread still follows, and a reply too long to fit opens at its first line. On the phone, the card's back keeps your place the same way.",
+      "picture": {
+        "dark": "thread-keeps-your-place-dark.webp",
+        "light": "thread-keeps-your-place-light.webp",
+        "alt": "A card beside its thread, scrolled up to an earlier long reply, with a small ↓ 2 new button floating over the foot of the messages."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

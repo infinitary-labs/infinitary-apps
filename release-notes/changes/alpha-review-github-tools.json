@@ -1,0 +1,28 @@
+{
+  "entries": [
+    {
+      "id": "crew-github-tools",
+      "kind": "feature",
+      "title": "Crewmates can work with your project on GitHub",
+      "body": "A crewmate can read its own project on GitHub. On work that ships, it can also make changes there, such as a comment or a rerun of a failed check. It uses your GitHub sign-in in the app and cannot reach other projects, settings or secrets.",
+      "area": "crewmates",
+      "noPicture": "Nothing in the app changes: the crewmate's work happens on GitHub.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": ["1ed081f4732fe32bcdac2489895ad702bda47967"]
+      }
+    },
+    {
+      "id": "claude-background-work-not-idle",
+      "kind": "fix",
+      "title": "A Claude crewmate waiting on its own work is not called idle",
+      "body": "While a command a Claude crewmate started in the background is still running, it is not shown or nudged as idle, for up to two hours.",
+      "area": "crewmates",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": ["1ed081f4732fe32bcdac2489895ad702bda47967"]
+      }
+    }
+  ]
+}

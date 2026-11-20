@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "alpha-review-after-0-3-1-alpha-68",
+      "reason": "Release review after alpha 0.3.1-alpha.68: ranks cards from another computer keeping their risk chart as the highlight. Nothing in the app changes."
+    }
+  ]
+}

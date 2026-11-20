@@ -1,0 +1,747 @@
+import { describe, expect, it } from "vitest";
+import {
+  type IdleTurn,
+  idleTurn,
+  type ReportSortFacts,
+  type ReportSortRule,
+  sortReport,
+  type Witnesses,
+} from "./reportSort";
+
+/**
+ * The whose-turn rule as a table (S7c, R4.8's restated rule). Every branch,
+ * and the order between them: the order IS the rule, so each case names the
+ * facts that would have answered differently one step later.
+ */
+
+/** Nothing is true: an unobservable backend with a quiet, empty task. */
+const NOTHING: ReportSortFacts = {
+  threadAwaitingAuthor: false,
+  decisionCardOpen: false,
+  captainGateOwed: false,
+  filedFollowups: false,
+  jobsRunning: false,
+  deliverable: false,
+  pendingSettle: false,
+  timedWait: false,
+  checksWatched: false,
+  accountHeld: false,
+  waitsOnUnstarted: false,
+  workObservable: false,
+};
+
+const facts = (over: Partial<ReportSortFacts> = {}): ReportSortFacts => ({ ...NOTHING, ...over });
+
+describe("sortReport", () => {
+  it("INF-1879: a saved answer stays the captain’s turn without a live card, regardless of elapsed idle or finished reports", () => {
+    const waiting = facts({
+      answerReady: true,
+      finished: true,
+      finishedNoCard: true,
+      captainGateOwed: true,
+    });
+    expect(sortReport(waiting)).toMatchObject({ rule: "captain-card", wake: false });
+    expect(idleTurn(waiting)).toBe("captain");
+    expect(sortReport({ ...waiting, threadAwaitingAuthor: true }).rule).toBe("thread-unanswered");
+  });
+  it.each([false, true])(
+    "an internal step wakes independently of backend observability (%s)",
+    (workObservable) => {
+      expect(sortReport(facts({ internalStep: true, workObservable }))).toMatchObject({
+        rule: "step-answered",
+        wake: true,
+        verdict: "captain",
+      });
+    },
+  );
+
+  it.each([
+    ["threadAwaitingAuthor", "thread-unanswered"],
+    ["decisionCardOpen", "captain-card"],
+    ["finishedCardUp", "captain-card"],
+    ["jobsRunning", "still-moving"],
+    ["deliverable", "still-moving"],
+    ["pendingSettle", "still-moving"],
+    ["timedWait", "still-moving"],
+    ["checksWatched", "still-moving"],
+    ["waitsOnUnderway", "still-moving"],
+    ["accountHeld", "still-moving"],
+    ["outOfReach", "still-moving"],
+    ["captainGateOwed", "captain-gate"],
+    ["needsFirstmate", "needs-firstmate"],
+    ["waitedOn", "waited-on"],
+    ["reviewReread", "review-reread"],
+    ["finished", "finished"],
+    ["filedFollowups", "filed-followups"],
+    ["waitsOnUnstarted", "waits-unstarted"],
+  ] as const)("an internal step preserves %s precedence", (witness, rule) => {
+    expect(sortReport(facts({ internalStep: true, [witness]: true })).rule).toBe(rule);
+  });
+
+  // INF-1554 F3: existing owners are not displaced by repeated waits or findings.
+  it.each([
+    "decisionCardOpen",
+    "finishedCardUp",
+    "jobsRunning",
+    "deliverable",
+    "pendingSettle",
+    "timedWait",
+    "checksWatched",
+    "waitsOnUnderway",
+    "accountHeld",
+    "outOfReach",
+  ] as const)("recovery respects %s", (witness) => {
+    expect(sortReport(facts({ recovery: true, [witness]: true }))).toMatchObject({
+      wake: false,
+      rule:
+        witness === "decisionCardOpen" || witness === "finishedCardUp"
+          ? "captain-card"
+          : "still-moving",
+    });
+  });
+  it("INF-1554 F3: an unowned typed stall still wakes recovery", () => {
+    expect(sortReport(facts({ recovery: true }))).toMatchObject({ wake: true, rule: "recovery" });
+  });
+
+  const cases: Array<{
+    name: string;
+    facts: ReportSortFacts;
+    rule: ReportSortRule;
+    verdict: "routine" | "captain";
+    wake: boolean;
+  }> = [
+    {
+      // The captain has spoken since that card went up, so the card no
+      // longer holds the turn: the author owes him an answer in the thread.
+      name: "0. the captain replied in a thread and has no answer: the crewmate's turn",
+      facts: facts({
+        threadAwaitingAuthor: true,
+        decisionCardOpen: true,
+        filedFollowups: true,
+        workObservable: true,
+      }),
+      rule: "thread-unanswered",
+      verdict: "routine",
+      wake: false,
+    },
+    {
+      // FI3-710: the crewmate's own request, on a backend the host cannot
+      // watch, with its card still up and a declared wait beside it.
+      name: "0a. the report asks the Firstmate to act: wake, whatever card is up",
+      facts: facts({
+        needsFirstmate: true,
+        decisionCardOpen: true,
+        captainWait: true,
+        jobsRunning: true,
+      }),
+      rule: "needs-firstmate",
+      verdict: "captain",
+      wake: true,
+    },
+    {
+      // INF-735: work the first mate holds on this task's finding hears of
+      // the report whatever card is up or still moves.
+      name: "0b. started work waits on this task through the first mate's link: wake",
+      facts: facts({
+        waitedOn: true,
+        decisionCardOpen: true,
+        checksWatched: true,
+        jobsRunning: true,
+        workObservable: true,
+      }),
+      rule: "waited-on",
+      verdict: "captain",
+      wake: true,
+    },
+    {
+      // INF-1876: the review's findings verdict is a typed record on the
+      // task, and only the Firstmate steers the reviewer to the head the
+      // report brings - whatever card is up or still moves.
+      name: "0c. the task's open review returned findings: wake, whatever card is up",
+      facts: facts({
+        reviewReread: true,
+        decisionCardOpen: true,
+        checksWatched: true,
+        jobsRunning: true,
+        workObservable: true,
+      }),
+      rule: "review-reread",
+      verdict: "captain",
+      wake: true,
+    },
+    {
+      name: "1. a decision card is open: the captain's turn",
+      facts: facts({ decisionCardOpen: true, workObservable: true }),
+      rule: "captain-card",
+      verdict: "routine",
+      wake: false,
+    },
+    {
+      // A note's crewmate that declared it waits on him (FI3-435): its gate
+      // counts as a card up, whatever the backend.
+      name: "1'. its crewmate declared a wait on the captain: the captain's turn",
+      facts: facts({ decisionCardOpen: true, captainWait: true }),
+      rule: "captain-card",
+      verdict: "routine",
+      wake: false,
+    },
+    {
+      // Its browser in the captain's hands (docs/task-browser.md, "Taking
+      // control"): his Return control is the crewmate's next wake.
+      name: "1''. its browser is in the captain's hands: the captain's turn",
+      facts: facts({ decisionCardOpen: true, browserWithCaptain: true, workObservable: true }),
+      rule: "captain-card",
+      verdict: "routine",
+      wake: false,
+    },
+    {
+      // INF-731: finished means the captain closed its card, so while one of
+      // its own is up his close is the next move, and the report wakes no one.
+      name: "1'''. it declared its work finished with its own card still up: the captain's turn",
+      facts: facts({ finished: true, finishedCardUp: true, workObservable: true }),
+      rule: "captain-card",
+      verdict: "routine",
+      wake: false,
+    },
+    {
+      // The crewmate's declaration, on a backend the host cannot watch too.
+      name: "1a. the report declared its work finished: wake, so the Firstmate closes it",
+      facts: facts({ finished: true, jobsRunning: true }),
+      rule: "finished",
+      verdict: "captain",
+      wake: true,
+    },
+    {
+      name: "2. the report filed follow-ups: wake",
+      facts: facts({ filedFollowups: true }),
+      rule: "filed-followups",
+      verdict: "captain",
+      wake: true,
+    },
+    {
+      // FI3-671: on a backend the host cannot watch too - only the Firstmate
+      // or the captain starts the work it waits on.
+      name: "2a. it waits on work nobody has started: wake, whatever the backend",
+      facts: facts({ waitsOnUnstarted: true }),
+      rule: "waits-unstarted",
+      verdict: "captain",
+      wake: true,
+    },
+    {
+      name: "2a'. the same wait on a backend the host watches: wake",
+      facts: facts({ waitsOnUnstarted: true, workObservable: true }),
+      rule: "waits-unstarted",
+      verdict: "captain",
+      wake: true,
+    },
+    {
+      name: "3a. a job is running: the crewmate's turn",
+      facts: facts({ jobsRunning: true, workObservable: true }),
+      rule: "still-moving",
+      verdict: "routine",
+      wake: false,
+    },
+    {
+      name: "3b. guidance its lane will still deliver: the crewmate's turn",
+      facts: facts({ deliverable: true, workObservable: true }),
+      rule: "still-moving",
+      verdict: "routine",
+      wake: false,
+    },
+    {
+      name: "3c. a settle holds the boundary: the crewmate's turn",
+      facts: facts({ pendingSettle: true, workObservable: true }),
+      rule: "still-moving",
+      verdict: "routine",
+      wake: false,
+    },
+    {
+      name: "3d. a timed wait on its gate: the crewmate's turn",
+      facts: facts({ timedWait: true, workObservable: true }),
+      rule: "still-moving",
+      verdict: "routine",
+      wake: false,
+    },
+    {
+      name: "3d'. the host watches its change's checks: the crewmate's turn when they finish",
+      facts: facts({ checksWatched: true, workObservable: true }),
+      rule: "still-moving",
+      verdict: "routine",
+      wake: false,
+    },
+    {
+      // FI3-250: on a backend the host watches too - the work's close is
+      // what moves it, and the sweep turns that close into its steer.
+      name: "3d''. it waits on work underway: the crewmate's turn when that work closes",
+      facts: facts({ waitsOnUnderway: true, workObservable: true }),
+      rule: "still-moving",
+      verdict: "routine",
+      wake: false,
+    },
+    {
+      name: "3e. a cut-off holds its account: the crewmate's turn when it serves again",
+      facts: facts({ accountHeld: true, workObservable: true }),
+      rule: "still-moving",
+      verdict: "routine",
+      wake: false,
+    },
+    {
+      // Its turn goes on there unseen; it catches up here once that
+      // computer is back (docs/helper.md, "Holding a conversation").
+      name: "3f. the computer it runs on is out of reach: the crewmate's turn when it is back",
+      facts: facts({ outOfReach: true, workObservable: true }),
+      rule: "still-moving",
+      verdict: "routine",
+      wake: false,
+    },
+    {
+      // A round cap before the Firstmate's card: the crewmate cannot act,
+      // so the turn is the Firstmate's whatever the backend.
+      name: "4. held for the captain with no card up: the Firstmate's turn, wake",
+      facts: facts({ captainGateOwed: true }),
+      rule: "captain-gate",
+      verdict: "captain",
+      wake: true,
+    },
+    {
+      name: "5. provably stopped: nobody's turn, wake now",
+      facts: facts({ workObservable: true }),
+      rule: "stopped",
+      verdict: "captain",
+      wake: true,
+    },
+    {
+      // INF-11: a report nothing holds is never routine, on any backend.
+      name: "6. the host cannot tell: nothing it sees holds the turn, so wake now",
+      facts: NOTHING,
+      rule: "cannot-tell",
+      verdict: "captain",
+      wake: true,
+    },
+  ];
+
+  for (const entry of cases) {
+    it(entry.name, () => {
+      const sorted = sortReport(entry.facts);
+      expect(sorted.rule).toBe(entry.rule);
+      expect(sorted.verdict).toBe(entry.verdict);
+      expect(sorted.wake).toBe(entry.wake);
+      expect(sorted.reason).not.toBe("");
+    });
+  }
+
+  it("a decision card outranks everything, including filings", () => {
+    expect(
+      sortReport(
+        facts({
+          decisionCardOpen: true,
+          filedFollowups: true,
+          jobsRunning: true,
+          workObservable: true,
+        }),
+      ).rule,
+    ).toBe("captain-card");
+  });
+
+  it("filings outrank a crewmate that is still moving", () => {
+    expect(sortReport(facts({ filedFollowups: true, jobsRunning: true })).rule).toBe(
+      "filed-followups",
+    );
+  });
+
+  it("a wait on unstarted work sits after a card and filings, and before a crewmate still moving", () => {
+    expect(sortReport(facts({ waitsOnUnstarted: true, decisionCardOpen: true })).rule).toBe(
+      "captain-card",
+    );
+    expect(sortReport(facts({ waitsOnUnstarted: true, filedFollowups: true })).rule).toBe(
+      "filed-followups",
+    );
+    for (const moving of ["jobsRunning", "checksWatched", "accountHeld", "outOfReach"] as const) {
+      expect(sortReport(facts({ waitsOnUnstarted: true, [moving]: true })).rule, moving).toBe(
+        "waits-unstarted",
+      );
+    }
+  });
+
+  // INF-735, the captain's "file a fix so a hold on another task's finding
+  // ends when that task reports it": INF-621 reported the finding PR #184's
+  // task waited for while it still moved, and that task stayed held 2,393
+  // minutes for INF-621's close.
+  it("work held on the reporting task outranks every quiet row but the captain's unanswered reply", () => {
+    for (const quiet of [
+      "decisionCardOpen",
+      "finishedCardUp",
+      "jobsRunning",
+      "deliverable",
+      "pendingSettle",
+      "timedWait",
+      "checksWatched",
+      "waitsOnUnderway",
+      "accountHeld",
+      "outOfReach",
+    ] as const) {
+      expect(sortReport(facts({ waitedOn: true, [quiet]: true })).rule, quiet).toBe("waited-on");
+    }
+    expect(sortReport(facts({ waitedOn: true, threadAwaitingAuthor: true })).rule).toBe(
+      "thread-unanswered",
+    );
+    expect(sortReport(facts({ waitedOn: true, needsFirstmate: true })).rule).toBe(
+      "needs-firstmate",
+    );
+  });
+
+  // INF-4667's finding 2: 29 of the day's 46 waited-on wakes with nothing
+  // to do were a turn's closing text while a run or job still moved.
+  it("a waited-on task's closing text wakes nobody while a witness moves; a report call still wakes", () => {
+    for (const moving of [
+      "jobsRunning",
+      "deliverable",
+      "pendingSettle",
+      "timedWait",
+      "checksWatched",
+      "mergeInLine",
+      "waitsOnUnderway",
+    ] as const) {
+      expect(
+        sortReport(facts({ waitedOn: true, closingText: true, [moving]: true })),
+        moving,
+      ).toMatchObject({ rule: "still-moving", wake: false });
+      expect(sortReport(facts({ waitedOn: true, [moving]: true })).rule, moving).toBe("waited-on");
+    }
+    // Nothing moves, or only a cut-off or an unreachable computer holds it:
+    // the closing text is all the first mate will hear.
+    for (const held of [{}, { accountHeld: true }, { outOfReach: true }]) {
+      expect(sortReport(facts({ waitedOn: true, closingText: true, ...held })).rule).toBe(
+        "waited-on",
+      );
+    }
+  });
+
+  // INF-1876: a review the host raised on the task is work it waits on, for
+  // the ladder alone: an idle builder is never nudged while its reviewer
+  // reads, and its report sorts as any other until a verdict is recorded.
+  it("an open review is a moving witness for the idle ladder, never for the report's sort", () => {
+    expect(idleTurn(facts({ reviewOpen: true }))).toBe("moving");
+    expect(idleTurn(facts({ reviewOpen: true, decisionCardOpen: true }))).toBe("captain");
+    expect(idleTurn(facts({ reviewOpen: true, askedFirstmate: true }))).toBe("asked");
+    expect(sortReport(facts({ reviewOpen: true, workObservable: true })).rule).toBe("stopped");
+  });
+
+  // INF-1876: a builder's report while its review's finding card is on the
+  // captain's screen still reaches the Firstmate, who alone steers the
+  // reviewer to the head it brings; the captain's unanswered reply, the
+  // crewmate's own ask and a recorded wait keep their places above it.
+  it("an open review's findings outrank every quiet row but the three above it", () => {
+    for (const quiet of [
+      // INF-1892's saved-answer witness retains INF-1876's review reread priority.
+      "answerReady",
+      "decisionCardOpen",
+      "finishedCardUp",
+      "jobsRunning",
+      "deliverable",
+      "pendingSettle",
+      "timedWait",
+      "checksWatched",
+      "waitsOnUnderway",
+      "accountHeld",
+      "outOfReach",
+    ] as const) {
+      expect(sortReport(facts({ reviewReread: true, [quiet]: true })).rule, quiet).toBe(
+        "review-reread",
+      );
+    }
+    expect(sortReport(facts({ reviewReread: true, threadAwaitingAuthor: true })).rule).toBe(
+      "thread-unanswered",
+    );
+    expect(sortReport(facts({ reviewReread: true, needsFirstmate: true })).rule).toBe(
+      "needs-firstmate",
+    );
+    expect(sortReport(facts({ reviewReread: true, waitedOn: true })).rule).toBe("waited-on");
+  });
+
+  // INF-799 piece 2, the captain's Approve and build on "Plan task-graph
+  // programs": each part's checked result resolves the script's await, so a
+  // part answering its program is the program's to read, never a wake; it is
+  // an internal step, and its row sits before the internal step's own.
+  it("a program's part answering its call is the program's turn, after filings and before a crewmate still moving", () => {
+    expect(sortReport(facts({ programPart: true, internalStep: true }))).toMatchObject({
+      rule: "program-part",
+      verdict: "routine",
+      wake: false,
+    });
+    expect(sortReport(facts({ programPart: true, filedFollowups: true })).rule).toBe(
+      "filed-followups",
+    );
+    expect(sortReport(facts({ programPart: true, decisionCardOpen: true })).rule).toBe(
+      "captain-card",
+    );
+    expect(sortReport(facts({ programPart: true, needsFirstmate: true })).rule).toBe(
+      "needs-firstmate",
+    );
+    expect(sortReport(facts({ programPart: true, jobsRunning: true })).rule).toBe("program-part");
+  });
+
+  it("a wait on work underway reads after a card, filings and a wait on unstarted work", () => {
+    expect(sortReport(facts({ waitsOnUnderway: true, decisionCardOpen: true })).rule).toBe(
+      "captain-card",
+    );
+    expect(sortReport(facts({ waitsOnUnderway: true, filedFollowups: true })).rule).toBe(
+      "filed-followups",
+    );
+    expect(sortReport(facts({ waitsOnUnderway: true, waitsOnUnstarted: true })).rule).toBe(
+      "waits-unstarted",
+    );
+    expect(sortReport(facts({ waitsOnUnderway: true })).reason).toBe(
+      "it waits on work underway; the crewmate's turn continues when that work closes.",
+    );
+  });
+
+  // INF-11, from the captain's words "make this missed escalation
+  // structurally impossible": a report stays quiet only while a witness
+  // holds its turn - a card on his screen, a reply its crewmate owes, or
+  // work that moves on its own. Every combination of the facts is tried.
+  it("never leaves a report quiet without a witness that holds its turn (INF-11)", () => {
+    const flags = [
+      "threadAwaitingAuthor",
+      "decisionCardOpen",
+      "captainWait",
+      "finishedCardUp",
+      "browserWithCaptain",
+      "captainGateOwed",
+      "deliverable",
+      "jobsRunning",
+      "pendingSettle",
+      "timedWait",
+      "checksWatched",
+      "accountHeld",
+      "outOfReach",
+      "waitsOnUnstarted",
+      "waitsOnUnderway",
+      "filedFollowups",
+      "finished",
+      "needsFirstmate",
+      "workObservable",
+      "internalStep",
+    ] as const;
+    const holds = (over: ReportSortFacts) =>
+      over.threadAwaitingAuthor ||
+      over.decisionCardOpen ||
+      over.finishedCardUp === true ||
+      over.deliverable ||
+      over.jobsRunning ||
+      over.pendingSettle ||
+      over.timedWait ||
+      over.checksWatched ||
+      over.accountHeld ||
+      over.outOfReach === true ||
+      over.waitsOnUnderway === true;
+    const unheld: string[] = [];
+    for (let mask = 0; mask < 1 << flags.length; mask += 1) {
+      const over = facts(
+        Object.fromEntries(flags.map((flag, bit) => [flag, (mask & (1 << bit)) !== 0])),
+      );
+      const sorted = sortReport(over);
+      if (
+        sorted.verdict !== (sorted.wake ? "captain" : "routine") ||
+        (!sorted.wake && !holds(over))
+      )
+        unheld.push(`${sorted.rule} at ${flags.filter((_, bit) => mask & (1 << bit)).join("+")}`);
+    }
+    expect(unheld).toEqual([]);
+  });
+
+  it("an unobservable backend can never be called stopped", () => {
+    for (const over of [{}, { jobsRunning: true }, { decisionCardOpen: true }]) {
+      expect(sortReport(facts(over)).rule).not.toBe("stopped");
+    }
+  });
+
+  it("a card the captain gate names holds the turn above the gate's own wait", () => {
+    expect(sortReport(facts({ decisionCardOpen: true, captainGateOwed: true })).rule).toBe(
+      "captain-card",
+    );
+  });
+
+  it("a crewmate still moving is its own turn even while the gate holds it", () => {
+    expect(sortReport(facts({ captainGateOwed: true, jobsRunning: true })).rule).toBe(
+      "still-moving",
+    );
+  });
+
+  it("a declared wait says so on the record, not that a card is up", () => {
+    expect(sortReport(facts({ decisionCardOpen: true, captainWait: true })).reason).toContain(
+      "declared that it waits on the captain",
+    );
+  });
+
+  it("a decision card up outranks a finished declaration", () => {
+    expect(sortReport(facts({ decisionCardOpen: true, finished: true })).rule).toBe("captain-card");
+  });
+
+  it("a request for the Firstmate sits after an unanswered reply and before every quiet row (FI3-710)", () => {
+    // The captain's reply is answered first: the crewmate's turn, no wake.
+    expect(sortReport(facts({ needsFirstmate: true, threadAwaitingAuthor: true })).rule).toBe(
+      "thread-unanswered",
+    );
+    for (const quiet of [
+      "decisionCardOpen",
+      "finishedCardUp",
+      "jobsRunning",
+      "deliverable",
+      "pendingSettle",
+      "timedWait",
+      "checksWatched",
+      "waitsOnUnderway",
+      "accountHeld",
+      "outOfReach",
+    ] as const) {
+      expect(sortReport(facts({ needsFirstmate: true, [quiet]: true })).rule, quiet).toBe(
+        "needs-firstmate",
+      );
+    }
+    // Beside a waking declaration it names the rule, and the wake is one.
+    expect(
+      sortReport(facts({ needsFirstmate: true, finished: true, filedFollowups: true })),
+    ).toEqual(expect.objectContaining({ rule: "needs-firstmate", wake: true }));
+    // Without it the same open card holds the report quiet, as before.
+    expect(sortReport(facts({ decisionCardOpen: true })).wake).toBe(false);
+  });
+});
+
+describe("sortReport on a started task in the backlog (INF-2062)", () => {
+  it("wakes nobody for a repeated wait, a moving job or a plain report", () => {
+    for (const over of [
+      {},
+      { timedWait: true },
+      { jobsRunning: true },
+      { captainGateOwed: true },
+    ]) {
+      expect(sortReport(facts({ inBacklog: true, ...over }))).toMatchObject({
+        rule: "in-backlog",
+        verdict: "routine",
+        wake: false,
+      });
+    }
+  });
+
+  it("still wakes the first mate for needs_firstmate, finished work and filed follow-ups", () => {
+    expect(sortReport(facts({ inBacklog: true, needsFirstmate: true }))).toMatchObject({
+      rule: "needs-firstmate",
+      wake: true,
+    });
+    for (const over of [{ finished: true }, { filedFollowups: true }]) {
+      const sorted = sortReport(facts({ inBacklog: true, ...over }));
+      expect(sorted.rule).not.toBe("in-backlog");
+      expect(sorted.wake).toBe(true);
+    }
+  });
+});
+
+describe("idleTurn: the same witnesses, read the same way, for an idle crewmate", () => {
+  const QUIET: Witnesses = {
+    threadAwaitingAuthor: false,
+    decisionCardOpen: false,
+    captainGateOwed: false,
+    deliverable: false,
+    jobsRunning: false,
+    pendingSettle: false,
+    timedWait: false,
+    checksWatched: false,
+    accountHeld: false,
+    waitsOnUnstarted: false,
+  };
+  const idle = (over: Partial<Witnesses>): IdleTurn => idleTurn({ ...QUIET, ...over });
+
+  // INF-2062: a started task in the backlog waits for a Start, so the ladder fires nothing for it.
+  it("leaves a started task in the backlog to the captain, whatever else stands", () => {
+    expect(idle({ inBacklog: true })).toBe("captain");
+    expect(idle({ inBacklog: true, captainGateOwed: true, threadAwaitingAuthor: true })).toBe(
+      "captain",
+    );
+  });
+
+  it("answers in the sort's order", () => {
+    expect(idle({})).toBe("nobody");
+    expect(idle({ threadAwaitingAuthor: true, decisionCardOpen: true })).toBe("thread");
+    expect(idle({ decisionCardOpen: true, captainGateOwed: true, jobsRunning: true })).toBe(
+      "captain",
+    );
+    for (const moving of [
+      "deliverable",
+      "jobsRunning",
+      "pendingSettle",
+      "timedWait",
+      "checksWatched",
+    ] as const) {
+      expect(idle({ [moving]: true, captainGateOwed: true }), moving).toBe("moving");
+    }
+    expect(idle({ captainGateOwed: true })).toBe("owed");
+    // A cut-off holds only the crewmate's own turn: a card still owed is owed.
+    expect(idle({ accountHeld: true, captainGateOwed: true })).toBe("owed");
+    expect(idle({ accountHeld: true })).toBe("moving");
+    // So does a computer out of reach: its turn goes on there.
+    expect(idle({ outOfReach: true, captainGateOwed: true })).toBe("owed");
+    expect(idle({ outOfReach: true })).toBe("moving");
+  });
+
+  it("a wait on unstarted work leaves the idle turn as it was: the report's wake carries it", () => {
+    expect(idle({ waitsOnUnstarted: true })).toBe("nobody");
+    expect(idle({ waitsOnUnstarted: true, jobsRunning: true })).toBe("moving");
+  });
+
+  it("a wait on work underway is moving: no rung climbs until that work closes (FI3-250)", () => {
+    expect(idle({ waitsOnUnderway: true })).toBe("moving");
+    expect(idle({ waitsOnUnderway: true, decisionCardOpen: true })).toBe("captain");
+    // Like every moving witness, it reads before a card the gate owes.
+    expect(idle({ waitsOnUnderway: true, captainGateOwed: true })).toBe("moving");
+  });
+
+  // INF-1428, the captain's "File for later" on friction 5 (idle nags), built
+  // as INF-1670's piece 2: work declared finished with no card of its own
+  // up leaves its crewmate nothing to do, so it is never nudged; the
+  // Firstmate's close is raised as its request until the Firstmate acts.
+  it("finished with no card up is the first mate's turn until it acts, and never a nudge", () => {
+    expect(idle({ finishedNoCard: true, askedFirstmate: true })).toBe("asked");
+    expect(idle({ finishedNoCard: true })).toBe("captain");
+    expect(idle({ finishedNoCard: true, captainGateOwed: true })).toBe("captain");
+    // The captain's unanswered reply is still the crewmate's to answer first.
+    expect(idle({ finishedNoCard: true, askedFirstmate: true, threadAwaitingAuthor: true })).toBe(
+      "thread",
+    );
+  });
+
+  it("a thread its account's cut-off holds is not nudged: nothing could answer it yet", () => {
+    expect(idle({ threadAwaitingAuthor: true, accountHeld: true })).toBe("moving");
+  });
+
+  it("a thread whose computer is out of reach is not nudged: its answer comes once it is back", () => {
+    expect(idle({ threadAwaitingAuthor: true, outOfReach: true })).toBe("moving");
+  });
+
+  it("a reply its lane will still deliver is not a stranded thread", () => {
+    expect(idle({ threadAwaitingAuthor: true, deliverable: true })).toBe("moving");
+    expect(idle({ threadAwaitingAuthor: true, deliverable: true, decisionCardOpen: true })).toBe(
+      "captain",
+    );
+  });
+
+  it("agrees with the sort on every witness the two share", () => {
+    const shared: Array<[Partial<Witnesses>, ReportSortRule, IdleTurn]> = [
+      [{ threadAwaitingAuthor: true }, "thread-unanswered", "thread"],
+      [{ decisionCardOpen: true }, "captain-card", "captain"],
+      [{ finishedCardUp: true }, "captain-card", "captain"],
+      [{ timedWait: true }, "still-moving", "moving"],
+      [{ checksWatched: true }, "still-moving", "moving"],
+      [{ accountHeld: true }, "still-moving", "moving"],
+      [{ accountHeld: true, captainGateOwed: true }, "captain-gate", "owed"],
+      [{ outOfReach: true }, "still-moving", "moving"],
+      [{ outOfReach: true, captainGateOwed: true }, "captain-gate", "owed"],
+      [{ captainGateOwed: true }, "captain-gate", "owed"],
+      [{}, "stopped", "nobody"],
+    ];
+    for (const [over, rule, turn] of shared) {
+      expect(sortReport(facts({ ...over, workObservable: true })).rule).toBe(rule);
+      expect(idle(over)).toBe(turn);
+    }
+  });
+});

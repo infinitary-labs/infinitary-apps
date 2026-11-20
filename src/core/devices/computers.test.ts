@@ -1,0 +1,679 @@
+import { X509Certificate } from "node:crypto";
+import type { IncomingMessage } from "node:http";
+import type { NetworkInterfaceInfo } from "node:os";
+import { join } from "node:path";
+import {
+  computerPresenceOf,
+  type DeviceKind,
+  type DeviceView,
+  parsePairingLink,
+} from "@shared/devices";
+import { PROTOCOL_VERSION } from "@shared/ipc";
+import { WORK_REACH_GRACE_MS, WORK_SETUP_LIVE } from "@shared/workSetup";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { freshDatabase, rowsRead } from "../../../tests/helpers/database";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import {
+  DeviceOutOfReachError,
+  type RunningDeviceVersion,
+  type ViewDeviceContact,
+  type WorkDeviceContact,
+  type WorkDeviceVersion,
+} from "../connection/connection";
+import { foldProof } from "../helper/fromWindow";
+import { type WorkDeviceLink, WorkDevices } from "../placed/workDevices";
+import { seedTask } from "../tasks/seedTask";
+import { TaskService } from "../tasks/taskService";
+import { RepoRegistry } from "../workspace/repoRegistry";
+import { Computers, type DeviceUpdateEvent } from "./computers";
+import { createKeyIdentity, type KeyIdentity } from "./identity";
+import { DevicePairing, type DevicePairingOptions } from "./pairing";
+
+/**
+ * Settings -> Devices' list while this Mac's network moves (docs/devices.md,
+ * "Where devices find this Mac" and "Finding the home again"): the real
+ * pairing following a stand-in network on a clock the test moves, the real
+ * `WorkDevices` and `Computers`, and a stand-in for where the connection
+ * listens, since a test never listens on this Mac's own network
+ * (docs/e2e-contracts.md). That the connection listens anew when pairing's
+ * address moves is src/core/connection/connection.test.ts.
+ */
+
+const PORT = 47_623;
+
+function manualClock() {
+  let now = 5_000_000;
+  const timers: { at: number; run: () => void }[] = [];
+  return {
+    now: () => now,
+    schedule: ((ms, run) => {
+      const timer = { at: now + ms, run };
+      timers.push(timer);
+      return () => {
+        const index = timers.indexOf(timer);
+        if (index >= 0) timers.splice(index, 1);
+      };
+    }) satisfies DevicePairingOptions["schedule"],
+    advance(ms: number) {
+      now += ms;
+      for (const timer of timers.filter((candidate) => candidate.at <= now)) {
+        timers.splice(timers.indexOf(timer), 1);
+        timer.run();
+      }
+    },
+  };
+}
+
+/** This Mac on one network, at `address`, as `os.networkInterfaces()` lists it. */
+const network = (address: string): NodeJS.Dict<NetworkInterfaceInfo[]> => ({
+  en0: [
+    {
+      address,
+      netmask: "255.255.255.0",
+      family: "IPv4",
+      mac: "00:00:00:00:00:00",
+      internal: false,
+      cidr: `${address}/24`,
+    },
+  ],
+});
+
+/** A request on a TLS socket where `device` showed its key, dialed to this Mac at `to`. */
+const shown = (device: KeyIdentity, to?: string) =>
+  ({
+    headers: {},
+    socket: {
+      remoteAddress: "192.168.65.30",
+      ...(to ? { localAddress: to, localPort: PORT } : {}),
+      getPeerX509Certificate: () => new X509Certificate(device.cert),
+    },
+  }) as unknown as IncomingMessage;
+
+/**
+ * The connection as `WorkDevices` reads it, listening where the test moves
+ * it, and telling each computer's work come and go as the test says.
+ */
+function connectionAt(first: string[]) {
+  let at = first;
+  const listeners = new Set<(listening: string[]) => void>();
+  const workListeners = new Set<(contact: WorkDeviceContact) => void>();
+  const viewListeners = new Set<(contact: ViewDeviceContact) => void>();
+  /** What each live frame to a Mac's window said, and the Macs whose window is connected. */
+  const live: { deviceId: string; channel: string; payload: unknown }[] = [];
+  const viewsIn = new Set<string>();
+  /** What each connection's hello said of its version, as the connection lists them. */
+  const running: RunningDeviceVersion[] = [];
+  const versionListeners = new Set<(deviceId: string, version: WorkDeviceVersion | null) => void>();
+  const link: WorkDeviceLink = {
+    runningVersions: () => [...running],
+    onWorkVersion: (listener) => {
+      versionListeners.add(listener);
+      return () => versionListeners.delete(listener);
+    },
+    ask: async () => {
+      throw new DeviceOutOfReachError();
+    },
+    onWorkDevice: (listener) => {
+      workListeners.add(listener);
+      return () => workListeners.delete(listener);
+    },
+    onViewDevice: (listener) => {
+      viewListeners.add(listener);
+      return () => viewListeners.delete(listener);
+    },
+    listening: () => [...at],
+    liveToView: (deviceId, channel, payload) => {
+      live.push({ deviceId, channel, payload });
+      return viewsIn.has(deviceId);
+    },
+    onListening: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+  };
+  return {
+    link,
+    listensAt(next: string[]) {
+      at = next;
+      for (const listener of [...listeners]) listener([...at]);
+    },
+    tell(contact: WorkDeviceContact) {
+      for (const listener of [...workListeners]) listener(contact);
+    },
+    live,
+    running,
+    /** A computer's work says its version at its welcome. */
+    tellVersion(deviceId: string, version: WorkDeviceVersion) {
+      for (const listener of [...versionListeners]) listener(deviceId, version);
+    },
+    tellView(contact: ViewDeviceContact) {
+      if (contact.contact === "in-reach") viewsIn.add(contact.deviceId);
+      else viewsIn.delete(contact.deviceId);
+      for (const listener of [...viewListeners]) listener(contact);
+    },
+  };
+}
+
+const stops: (() => void)[] = [];
+afterEach(() => {
+  for (const stop of stops.splice(0).reverse()) stop();
+});
+
+/**
+ * The real pairing, `WorkDevices` and `Computers` on this Mac at `address`,
+ * with the connection listening there, and another Mac that joined with a
+ * command after dialing this Mac at that address, as its command said.
+ */
+function homeAt(address: string, home?: { app?: string; contract: string }) {
+  const userData = scratchDir("infinitary-computers-");
+  const clock = manualClock();
+  let interfaces = network(address);
+  const pairing = new DevicePairing({
+    dir: join(userData, "devices"),
+    ...clock,
+    onProblem: () => {},
+    interfaces: () => interfaces,
+    port: PORT,
+    ownUid: 501,
+  });
+  stops.push(() => pairing.dispose());
+  const db = freshDatabase();
+  stops.push(() => db.close());
+  const work = new WorkDevices();
+  const connection = connectionAt([`127.0.0.1:${PORT}`, `${address}:${PORT}`]);
+  stops.push(work.attach(connection.link));
+  const pushed: DeviceView[][] = [];
+  const lines: DeviceUpdateEvent[] = [];
+  const moved: string[] = [];
+  const tasks = new TaskService({ db, now: clock.now });
+  const computers = new Computers({
+    pairing,
+    work,
+    tasks,
+    repos: new RepoRegistry(db, join(userData, "fleet")),
+    stopTasks: async () => {},
+    runsOnMoved: (taskId) => moved.push(taskId),
+    bringHome: async () => {},
+    emit: (list) => pushed.push(list),
+    emitUpdate: (line) => lines.push(line),
+    onProblem: () => {},
+    now: clock.now,
+    schedule: clock.schedule,
+    bootedAt: () => 0,
+    ...(home ? { home } : {}),
+  });
+  const key = createKeyIdentity("Mac mini");
+  const { link } = pairing.invite({ kind: "work", command: "another-mac" });
+  expect(parsePairingLink(link).at).toBe(`${address}:${PORT}`);
+  const joined = pairing.claim(
+    {
+      code: parsePairingLink(link).code,
+      kind: "work",
+      name: "Mac mini",
+      user: { name: "sam", uid: 501 },
+    },
+    shown(key, `::ffff:${address}`),
+  );
+  if (!joined.ok) throw new Error(joined.reason);
+  return {
+    clock,
+    pairing,
+    connection,
+    computers,
+    pushed,
+    lines,
+    moved,
+    db,
+    tasks,
+    key,
+    deviceId: joined.grant.deviceId,
+    /** This Mac moves to another network. */
+    moveTo: (next: string) => {
+      interfaces = network(next);
+    },
+  };
+}
+
+describe("a Mac that both controls this Firstmate and runs work", () => {
+  it("reads its work, and whether Firstmate is open on it, on one row", () => {
+    const { pairing, connection, computers, deviceId: miniId } = homeAt("192.168.65.2");
+    const joined = pairing.claim(
+      {
+        code: parsePairingLink(pairing.invite({ kind: "mac" }).link).code,
+        kind: "mac",
+        name: "iMac",
+        user: { name: "sam", uid: 501 },
+        window: true,
+      },
+      shown(createKeyIdentity("iMac"), "::ffff:192.168.65.9"),
+    );
+    if (!joined.ok) throw new Error(joined.reason);
+    const deviceId = joined.grant.deviceId;
+    const imac = () => computers.list().find((device) => device.id === deviceId);
+    expect(imac()).toMatchObject({ kind: "mac", inReach: false, controlling: false, tasks: 0 });
+    // INF-1066: a native view receives only public identity/reach from these real pairing readings.
+    expect(computerPresenceOf(computers.list())).toEqual([
+      { id: miniId, name: "Mac mini", inReach: false },
+      { id: deviceId, name: "iMac", inReach: false },
+    ]);
+    // Its work in reach, then Firstmate opened there.
+    connection.tell({ deviceId, contact: "in-reach" });
+    expect(imac()).toMatchObject({ inReach: true, controlling: false });
+    expect(computerPresenceOf(computers.list())).toEqual([
+      { id: miniId, name: "Mac mini", inReach: false },
+      { id: deviceId, name: "iMac", inReach: true },
+    ]);
+    connection.tellView({ deviceId, contact: "in-reach" });
+    expect(imac()).toMatchObject({ inReach: true, controlling: true, runs: [] });
+    // Closing its window leaves its work in reach.
+    connection.tellView({ deviceId, contact: "gone" });
+    expect(imac()).toMatchObject({ inReach: true, controlling: false });
+  });
+});
+
+/**
+ * Each copy's version (docs/devices.md, "Each copy's version"; INF-5372's plan,
+ * piece 1): the version each app open on a device said in its hello, measured
+ * against this computer's, beside its work's. The user's three copies: a Mac
+ * that runs work, a Mac user that only controls, still on 0.8.3, and a phone.
+ */
+describe("each copy's version", () => {
+  const HOME = { app: "0.8.4", contract: PROTOCOL_VERSION };
+  /** A device that joined with `kind`, as pairing keeps one, said to be `system` by its hello. */
+  const joinAs = (
+    pairing: DevicePairing,
+    kind: DeviceKind,
+    name: string,
+    system: "macos" | "ios",
+  ) => {
+    const joined = pairing.claim(
+      {
+        code: parsePairingLink(pairing.invite({ kind }).link).code,
+        kind,
+        name,
+        ...(kind === "mac" ? { user: { name: "sam", uid: 501 }, window: true } : {}),
+      },
+      shown(createKeyIdentity(name), "::ffff:192.168.65.9"),
+    );
+    if (!joined.ok) throw new Error(joined.reason);
+    pairing.noteSystem(joined.grant.deviceId, { system });
+    return joined.grant.deviceId;
+  };
+
+  it("lists the version of each app open now, marks one behind this computer's, and leaves a phone's unmeasured", () => {
+    const { pairing, connection, computers } = homeAt("192.168.65.2", HOME);
+    const second = joinAs(pairing, "view", "MacBook Pro", "macos");
+    const imac = joinAs(pairing, "mac", "iMac", "macos");
+    const phone = joinAs(pairing, "view", "Kun's iPhone", "ios");
+    const row = (id: string) => computers.list().find((device) => device.id === id);
+    const open = (deviceId: string, version: string | null) => {
+      connection.running.push({ deviceId, role: "view", version });
+      connection.tellView({ deviceId, contact: "in-reach" });
+    };
+    // Nothing open: nothing is said of any app's version.
+    expect(row(second)?.appVersion).toBeUndefined();
+
+    open(second, "0.8.3");
+    expect(row(second)?.appVersion).toEqual({ app: "0.8.3", than: "older" });
+    open(phone, "0.1.0 (212)");
+    expect(row(phone)?.appVersion).toEqual({ app: "0.1.0 (212)" });
+
+    // A Mac's work and its window, both on this computer's version.
+    connection.tell({ deviceId: imac, contact: "in-reach" });
+    connection.tellVersion(imac, { contract: PROTOCOL_VERSION, app: "0.8.4", takesWork: true });
+    open(imac, "0.8.4");
+    expect(row(imac)).toMatchObject({
+      workVersion: "0.8.4",
+      appVersion: { app: "0.8.4", same: true },
+    });
+    expect(row(imac)?.otherVersion).toBeUndefined();
+
+    // A second app of the same device, from before apps said their version, reads as the older.
+    open(imac, null);
+    expect(row(imac)?.appVersion).toEqual({});
+  });
+});
+
+/**
+ * One computer, one row (docs/devices.md, "One computer, one entry"; INF-4835's
+ * piece 3, captain: "Fold them into one row by itself, keeping the one that
+ * runs work"): a Mac on the list twice, once for its window and once for
+ * its work, asks with its window to fold the window's entry into the work's,
+ * signed with the work's key, as `foldProof` writes it on that Mac.
+ */
+describe("a Mac on your list twice", () => {
+  const ADDRESS = "192.168.65.2";
+
+  /** Another Mac claims a `mac` link as `user`, keeping the grant its window or work would keep. */
+  function claimMac(home: ReturnType<typeof homeAt>, user: string, kind: DeviceKind = "mac") {
+    const identity = createKeyIdentity("iMac");
+    const joined = home.pairing.claim(
+      {
+        code: parsePairingLink(home.pairing.invite({ kind }).link).code,
+        kind,
+        name: "iMac",
+        user: { name: user, uid: 501 },
+        window: true,
+      },
+      shown(identity, "::ffff:192.168.65.9"),
+    );
+    if (!joined.ok) throw new Error(joined.reason);
+    return {
+      version: 1 as const,
+      name: "iMac",
+      joinedAt: 0,
+      grant: {
+        at: `${ADDRESS}:${PORT}`,
+        homeKey: home.pairing.identity().pin,
+        deviceId: joined.grant.deviceId,
+        kind: joined.grant.kind,
+        key: identity.key,
+        cert: identity.cert,
+      },
+    };
+  }
+
+  it("folds the window's row into the one its work keeps, moving each live task's Runs on, with one feed line", async () => {
+    const home = homeAt(ADDRESS);
+    const window = claimMac(home, "sam");
+    const work = claimMac(home, "sam");
+    seedTask(home.tasks, {
+      id: "waits",
+      title: "Fix the footer",
+      status: "queued",
+      shape: { kind: "fix", runs_on_ask: window.grant.deviceId },
+    });
+    seedTask(home.tasks, {
+      id: "here",
+      title: "Fix the header",
+      status: "queued",
+      shape: { kind: "fix", runs_on_ask: "this-mac" },
+    });
+    home.connection.tell({ deviceId: work.grant.deviceId, contact: "in-reach" });
+    home.connection.tellView({ deviceId: window.grant.deviceId, contact: "in-reach" });
+    const fold = foldProof(window, work);
+    if (!fold) throw new Error("no fold");
+
+    const kept = await home.computers.foldAsked([fold], {
+      kind: "captain",
+      view: window.grant.deviceId,
+    });
+
+    expect(kept).toMatchObject({ id: work.grant.deviceId, name: "iMac", kind: "mac" });
+    expect(home.computers.list().map((device) => device.id)).toEqual([
+      home.deviceId,
+      work.grant.deviceId,
+    ]);
+    expect(home.tasks.get("waits")?.shape?.runs_on_ask).toBe(work.grant.deviceId);
+    expect(home.tasks.get("here")?.shape?.runs_on_ask).toBe("this-mac");
+    // The task that moved goes where it would start now, as after any change to its Runs on.
+    expect(home.moved).toEqual(["waits"]);
+    expect(home.lines).toEqual([
+      expect.objectContaining({ deviceId: work.grant.deviceId, stage: "done", tone: "info" }),
+    ]);
+  });
+
+  it("refuses a fold not signed by the row it keeps, another user's row, a phone's ask, and a row with a working copy", async () => {
+    const home = homeAt(ADDRESS);
+    const window = claimMac(home, "sam");
+    const work = claimMac(home, "sam");
+    const other = claimMac(home, "alex");
+    const asWindow = { kind: "captain" as const, view: window.grant.deviceId };
+    const listed = () => home.computers.list().map((device) => device.id);
+    const before = listed();
+
+    // Signed by the window's own key, not the work's.
+    const forged = foldProof(window, { ...work, grant: { ...work.grant, key: window.grant.key } });
+    await expect(home.computers.foldAsked([forged], asWindow)).rejects.toThrow(/not signed/);
+    // Another user on the same Mac stays its own row.
+    await expect(home.computers.foldAsked([foldProof(window, other)], asWindow)).rejects.toThrow(
+      /same user|one user/,
+    );
+    // Asked by no window at all.
+    await expect(
+      home.computers.foldAsked([foldProof(window, work)], { kind: "captain" }),
+    ).rejects.toThrow(/own window/);
+    // The row that would go keeps a working copy there.
+    seedTask(home.tasks, {
+      id: "there",
+      title: "Fix the footer",
+      status: "idle",
+      worktreeDir: "/work/footer",
+      deviceId: window.grant.deviceId,
+    });
+    await expect(home.computers.foldAsked([foldProof(window, work)], asWindow)).rejects.toThrow(
+      /working copy/,
+    );
+    expect(listed()).toEqual(before);
+    expect(home.lines).toEqual([]);
+  });
+
+  it("removes a row only its window holds, waiting to be removed when it is back, once that window connects", async () => {
+    const home = homeAt(ADDRESS);
+    const window = claimMac(home, "sam");
+    const id = window.grant.deviceId;
+    await home.computers.remove(id, "when-back");
+    expect(home.computers.list().find((device) => device.id === id)).toMatchObject({
+      removal: "when-back",
+    });
+
+    home.connection.tellView({ deviceId: id, contact: "in-reach" });
+    // Its work connecting while that removal runs starts no second one.
+    home.connection.tell({ deviceId: id, contact: "in-reach" });
+
+    await vi.waitFor(() =>
+      expect(home.computers.list().map((device) => device.id)).toEqual([home.deviceId]),
+    );
+    const stages = home.pushed.flatMap((list) =>
+      list.filter((device) => device.id === id).map((device) => device.removal),
+    );
+    expect(stages).toContain("cleaning-up");
+    expect(stages).not.toContain("bringing-work");
+  });
+});
+
+// The captain's ask (INF-4835): "Set it up again by itself, and say why when it still cannot".
+describe("a Mac whose window is connected and whose work is not in reach", () => {
+  function joinedMac() {
+    const home = homeAt("192.168.65.2");
+    // Joined with its window from another Mac, dialing this Mac on the local network.
+    const joined = home.pairing.claim(
+      {
+        code: parsePairingLink(home.pairing.invite({ kind: "mac" }).link).code,
+        kind: "mac",
+        name: "iMac",
+        user: { name: "sam", uid: 501 },
+        window: true,
+      },
+      shown(createKeyIdentity("iMac"), "::ffff:192.168.65.2"),
+    );
+    if (!joined.ok) throw new Error(joined.reason);
+    const deviceId = joined.grant.deviceId;
+    const imac = () => home.pushed.at(-1)?.find((device) => device.id === deviceId);
+    const listed = () => home.computers.list().find((device) => device.id === deviceId);
+    return { ...home, deviceId, imac, listed };
+  }
+
+  it("says why its window could not set up its work, until its work is in reach or its window goes", () => {
+    const { connection, computers, deviceId, listed } = joinedMac();
+    connection.tellView({ deviceId, contact: "in-reach" });
+    // Nothing is said before its window says what it found.
+    expect(listed()).toMatchObject({ inReach: false, controlling: true });
+    expect(listed()).not.toHaveProperty("workSetup");
+
+    computers.heardWorkSetup(deviceId, { state: "blocked", reason: "background-off" });
+    expect(listed()?.workSetup).toEqual({ state: "blocked", reason: "background-off" });
+
+    // Its work reaches this Mac: nothing more to say.
+    connection.tell({ deviceId, contact: "in-reach" });
+    expect(listed()).not.toHaveProperty("workSetup");
+    connection.tell({ deviceId, contact: "gone" });
+    expect(listed()?.workSetup).toEqual({ state: "blocked", reason: "background-off" });
+    // Its window goes: what it found is said again at its next connection.
+    connection.tellView({ deviceId, contact: "gone" });
+    expect(listed()).not.toHaveProperty("workSetup");
+    connection.tellView({ deviceId, contact: "in-reach" });
+    expect(listed()).not.toHaveProperty("workSetup");
+  });
+
+  it("reads a run its window found or asked for as starting, then from the work's own contact as held on the local network", () => {
+    const { clock, connection, computers, deviceId, imac, listed } = joinedMac();
+    connection.tellView({ deviceId, contact: "in-reach" });
+    // Its window's own connection never says its work's dial reached this Mac.
+    expect(listed()).toMatchObject({ heldOnLocalNetwork: true });
+
+    computers.heardWorkSetup(deviceId, { state: "running" });
+    expect(imac()?.workSetup).toEqual({ state: "starting" });
+    clock.advance(WORK_REACH_GRACE_MS);
+    // The list is pushed again once the run had its moment.
+    expect(imac()?.workSetup).toEqual({ state: "blocked", reason: "local-network" });
+
+    // Once its work reached this Mac, a later run that does not is not named.
+    connection.tell({ deviceId, contact: "in-reach" });
+    connection.tell({ deviceId, contact: "gone" });
+    computers.heardWorkSetup(deviceId, { state: "running" });
+    clock.advance(WORK_REACH_GRACE_MS);
+    expect(imac()?.workSetup).toEqual({ state: "blocked", reason: "not-reached" });
+
+    // A run asked for that never took the folder is not left setting up.
+    computers.heardWorkSetup(deviceId, { state: "starting" });
+    expect(imac()?.workSetup).toEqual({ state: "starting" });
+    clock.advance(WORK_REACH_GRACE_MS);
+    expect(imac()?.workSetup).toEqual({ state: "blocked", reason: "not-reached" });
+  });
+
+  it("asks its window, connected now, to set its work up again on Fix it", () => {
+    const { connection, computers, deviceId } = joinedMac();
+    expect(computers.fixWork(deviceId)).toBe(false);
+    connection.tellView({ deviceId, contact: "in-reach" });
+    expect(computers.fixWork(deviceId)).toBe(true);
+    expect(connection.live.at(-1)).toEqual({
+      deviceId,
+      channel: WORK_SETUP_LIVE,
+      payload: { deviceId },
+    });
+  });
+
+  it("refuses a report for a computer that is not a Mac with a window", () => {
+    const { computers } = joinedMac();
+    // The Mac mini a command added runs work and has no window here.
+    const mini = computers.list().find((device) => device.kind === "work");
+    expect(() => computers.heardWorkSetup(mini?.id ?? "", { state: "running" })).toThrow();
+  });
+});
+
+describe("your devices while this Mac's network moves", () => {
+  it("says a computer out of reach still looks at the old address once the connection listens where this Mac is now", () => {
+    // Another Mac joined with a command, and last reached this Mac at 192.168.65.2.
+    const { clock, pairing, connection, computers, pushed, key, deviceId, moveTo } =
+      homeAt("192.168.65.2");
+    pairing.admit(shown(key, "::ffff:192.168.65.2"));
+    const mini = () => pushed.at(-1)?.find((device) => device.id === deviceId)?.addressChanged;
+    const unfollow = pairing.followNetwork();
+    stops.push(unfollow);
+    expect(computers.list()[0]).not.toHaveProperty("addressChanged");
+
+    // This Mac moves to another network, and pairing hears it once the move holds.
+    moveTo("192.168.65.77");
+    clock.advance(5_000);
+    clock.advance(5_000);
+    expect(pairing.address()).toBe("192.168.65.77");
+    // Until the connection listens there, nothing says the address changed.
+    expect(mini()).toBeUndefined();
+
+    // It listens where this Mac is now: the list says so, with no link made.
+    connection.listensAt([`127.0.0.1:${PORT}`, `192.168.65.77:${PORT}`]);
+    expect(mini()).toBe(true);
+  });
+
+  it("says macOS holds a computer a command added on the local network until its work is in reach, and a new address strands it first", () => {
+    const { clock, pairing, connection, computers, deviceId, moveTo } = homeAt("192.168.65.2");
+    const mini = () => computers.list().find((device) => device.id === deviceId);
+    // Joined from another Mac at this Mac's local-network address, and never in reach since.
+    expect(mini()).toMatchObject({ inReach: false, heldOnLocalNetwork: true });
+    expect(mini()).not.toHaveProperty("addressChanged");
+
+    // This Mac moves: it is stranded at the old address, which is the way back to say.
+    const unfollow = pairing.followNetwork();
+    stops.push(unfollow);
+    moveTo("192.168.65.77");
+    clock.advance(5_000);
+    clock.advance(5_000);
+    connection.listensAt([`127.0.0.1:${PORT}`, `192.168.65.77:${PORT}`]);
+    expect(mini()).toMatchObject({ addressChanged: true });
+    expect(mini()).not.toHaveProperty("heldOnLocalNetwork");
+    moveTo("192.168.65.2");
+    clock.advance(5_000);
+    clock.advance(5_000);
+    connection.listensAt([`127.0.0.1:${PORT}`, `192.168.65.2:${PORT}`]);
+    expect(mini()).toMatchObject({ heldOnLocalNetwork: true });
+
+    // Its work reaches this Mac once, and nothing holds it from then on, in reach or not.
+    connection.tell({ deviceId, contact: "in-reach" });
+    expect(mini()).toMatchObject({ inReach: true });
+    expect(mini()).not.toHaveProperty("heldOnLocalNetwork");
+    connection.tell({ deviceId, contact: "gone" });
+    expect(mini()).toMatchObject({ inReach: false });
+    expect(mini()).not.toHaveProperty("heldOnLocalNetwork");
+  });
+});
+
+describe("your devices after a task changes", () => {
+  // INF-2240: every task write refreshes this list. Each computer's count
+  // comes from where its running tasks run, never from composing their records.
+  it("counts each computer's running tasks from where they run, without composing a task record", () => {
+    const { computers, pushed, db, tasks, deviceId } = homeAt("192.168.65.2");
+    const tasksOn = (list: DeviceView[] | undefined) =>
+      list?.find((device) => device.id === deviceId)?.tasks;
+    const measured = () => {
+      const parse = vi.spyOn(JSON, "parse");
+      try {
+        let list: DeviceView[] = [];
+        const rows = rowsRead(db, () => {
+          list = computers.list();
+        });
+        return { rows, parses: parse.mock.calls.length, tasks: tasksOn(list) };
+      } finally {
+        parse.mockRestore();
+      }
+    };
+    // Each record keeps what it was asked, as a real one does.
+    const seed = (id: string, status: "idle" | "running" | "queued" | "cancelled", on?: string) =>
+      seedTask(tasks, {
+        id,
+        title: "Fix the footer",
+        status,
+        intent: { goal: "Fix the footer", userWords: "the footer is broken" },
+        ...(on ? { deviceId: on } : {}),
+      });
+    seed("there-0", "idle", deviceId);
+    seed("there-1", "running", deviceId);
+    const before = measured();
+    expect(before.tasks).toBe(2);
+
+    // Twenty more run there and twenty here; ten wait there and ten closed there.
+    for (let index = 0; index < 20; index += 1) {
+      seed(`more-${index}`, "idle", deviceId);
+      seed(`here-${index}`, "idle");
+    }
+    for (let index = 0; index < 10; index += 1) {
+      seed(`waits-${index}`, "queued", deviceId);
+      seed(`closed-${index}`, "cancelled", deviceId);
+    }
+    const after = measured();
+    console.info(JSON.stringify({ intent: "INF-2240 device task counts", before, after }));
+    expect(after.tasks).toBe(22);
+    // One row for each task running there, and no record composed for any of them.
+    expect(after.rows - before.rows).toBe(20);
+    expect(after.parses).toBe(before.parses);
+
+    // A task change pushes the list with the count it moved to.
+    seed("started", "idle", deviceId);
+    expect(tasksOn(pushed.at(-1))).toBe(23);
+    tasks.placement.setDevice("more-0", null);
+    expect(tasksOn(pushed.at(-1))).toBe(22);
+    tasks.close("there-0", { status: "dropped", reason: "cancelled", actor: "host" });
+    expect(tasksOn(pushed.at(-1))).toBe(21);
+    expect(computers.list().find((device) => device.id === deviceId)?.tasks).toBe(21);
+  });
+});

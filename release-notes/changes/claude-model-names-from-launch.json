@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "claude-model-names-from-launch",
+      "kind": "fix",
+      "area": "settings",
+      "title": "Claude models show their names from the moment the app opens",
+      "body": "Settings → Intelligence → Models now names your Claude models, such as Claude Opus 5.5, as soon as the app opens. Before, they showed as codes like claude-opus-5-5 until your first allowance reading arrived, which could take a while on a slow start or a slow network. Your crewmates' model names follow the same names.",
+      "picture": {
+        "dark": "claude-model-names-from-launch-dark.webp",
+        "light": "claude-model-names-from-launch-light.webp",
+        "alt": "The Models board in Settings with one Claude model in each level, named Claude Fable 5.1 in premium, Claude Opus 5.5 in high, Claude Sonnet 5.5 in medium and Claude Haiku 5.5 in low."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

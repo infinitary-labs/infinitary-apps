@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "dns-sd-stand-in-records-first",
+      "reason": "The tests' dns-sd stand-in records each run before it prints anything, so a run the app stops once it has answered is never missing from the test's count. No shipped behavior changed."
+    }
+  ]
+}

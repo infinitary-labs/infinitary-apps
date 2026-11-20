@@ -1,0 +1,13 @@
+{
+  "mergedAt": "Fusionnée à {at}",
+  "mergedChangeOn": "{change} fusionnée sur {place}",
+  "mergedChangeOnHost": "{change} fusionnée chez l’hébergeur du projet",
+  "mergedChangeWhereItLives": "{change} fusionnée là où le projet est hébergé",
+  "mergedInCommit": "Fusionnée dans le commit {commit}",
+  "mergedInPull": "Fusionnée dans la demande de tirage {change}",
+  "mergedOn": "Fusionnée sur {place}",
+  "mergedOnItsOwnAt": "Fusionnée seule à {at}",
+  "mergedWhereItLives": "Fusionnée là où le projet est hébergé",
+  "mergedWithBatchOn": "Fusionnée avec le lot {change} sur {place}",
+  "mergedWithBatchWhereItLives": "Fusionnée avec le lot {change} là où le projet est hébergé"
+}

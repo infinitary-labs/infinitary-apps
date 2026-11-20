@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "run-watch-on-another-computer",
+      "kind": "fix",
+      "title": "Crewmates on another computer hear when a check run ends",
+      "body": "A crewmate whose task runs on another computer can now follow a check run by its number, as a crewmate on this Mac does. The app reads the run every minute and tells the crewmate when its first check fails and when the run ends. Before, the app refused that read for a crewmate on another computer.",
+      "area": "crewmates",
+      "noPicture": "What changes is what a crewmate on another computer is told about a running check run; no screen changes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

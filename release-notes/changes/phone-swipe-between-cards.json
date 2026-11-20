@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "phone-swipe-between-cards",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Swipe anywhere on a card to change cards on an iPhone or iPad",
+      "body": "On your iPhone and iPad, cards now sit side by side, with the edges of the cards before and after showing at the sides. Swipe anywhere on a card to change cards: the row follows your finger and leans a little, a short drag glides back and a longer or quicker one slides on. Sliders and other controls inside a card keep their own drags, and scrolling a card never changes cards. On an iPad the card now uses the screen's width, so its maximize button is gone. The arrows under the card slide the row too, and with Reduce Motion on the next card fades in.",
+      "noPicture": "The change is the iPhone and iPad app's motion, which the desktop app's note picture cannot show.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

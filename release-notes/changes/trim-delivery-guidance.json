@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "trim-delivery-guidance",
+      "reason": "Shortens internal delivery guidance without changing its instructions."
+    }
+  ]
+}

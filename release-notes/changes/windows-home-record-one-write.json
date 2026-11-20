@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "windows-home-record-one-write",
+      "reason": "Windows is not a supported platform yet: a Windows PC's window now puts the home's record in place with its name in one write, and a join keeps what one welcome said in one write, so a program holding the file can no longer leave the window's record nameless and its work unset. A command's fresh join and a run's welcome still write separately. A Mac or Linux computer behaves as before."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-away-read-mark",
+      "reason": "Internal phone journey repair: the away journey waits for the home's read mark of each card it reads before it leaves, so its final rejoin opens on the first card."
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "knowledge-references-record-press-tests",
+      "reason": "Test-only fix: the knowledge references journey now opens the task record's Knowledge used section with a press inside the record's frame, since Chromium can drop a native click into a hidden window's sandboxed frame and leave the section closed, and it checks that the section opened. No shipped behavior changes."
+    }
+  ]
+}

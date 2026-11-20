@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-card-one-text-size",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A card's words keep one size on a wide iPhone or iPad screen",
+      "body": "On a wide screen, such as an iPhone Duo open on its side, a card's words were drawn larger than the same card's words on a narrower screen. They now keep the size your Text Size sets, whatever the card's width, and so do a panel's.",
+      "noPicture": "One picture of a card looks like any card; the fix is that its words keep the same size as the card gets wider.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

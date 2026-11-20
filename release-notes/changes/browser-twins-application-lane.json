@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "browser-twins-application-lane",
+      "reason": "Internal test work: eight journeys that only draw the window move to browser tests on seeded homes booted by a real core, and their originals are deleted; nothing a person sees changes."
+    }
+  ]
+}

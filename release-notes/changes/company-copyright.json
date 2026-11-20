@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "company-copyright",
+      "kind": "improvement",
+      "area": "other",
+      "title": "Infinitary Labs, Inc. holds Infinitary's copyright",
+      "body": "The About window and the app's notice file now name Infinitary Labs, Inc. as the copyright holder.",
+      "noPicture": "This changes one line of text in the system About window, which only a packaged build draws.",
+      "provenance": { "origin": "change", "covers": [] }
+    }
+  ],
+  "exclusions": []
+}

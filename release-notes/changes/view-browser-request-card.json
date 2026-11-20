@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "view-browser-request-card",
+      "kind": "fix",
+      "title": "A crewmate's browser request stays when you control another computer",
+      "body": "When you control Firstmate on another computer, a crewmate's request to take over its task's browser now says to do it on that computer. Its buttons, such as Sign in myself, no longer close the request on both computers or open an empty page here. The button that uses your saved sign-in still works from here, without the empty page. Opening the task's browser here says its page shows only on that computer.",
+      "area": "devices",
+      "picture": {
+        "dark": "view-browser-request-card-dark.webp",
+        "light": "view-browser-request-card-light.webp",
+        "alt": "A request to sign in to the club page, on a computer controlling MacBook Pro, with the line Do this on MacBook Pro. This task's browser shows only there."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

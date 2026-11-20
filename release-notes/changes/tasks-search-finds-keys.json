@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "tasks-search-finds-keys",
+      "kind": "fix",
+      "title": "Tasks search shows every task it finds",
+      "body": "Typing a task key or title now shows planned work and work done this week, not only a count. Questions answered this week are found too.",
+      "area": "tasks",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

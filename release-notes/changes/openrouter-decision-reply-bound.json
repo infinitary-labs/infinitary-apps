@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "openrouter-decision-reply-bound",
+      "reason": "Refuses an OpenRouter decision model's reply past 64 KB before it is read whole or parsed, and lets the person's own model answer instead, as Jev's already does. Real replies are a few kilobytes, so nothing a person sees changes."
+    }
+  ]
+}

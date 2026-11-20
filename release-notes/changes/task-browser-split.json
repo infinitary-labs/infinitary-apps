@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "task-browser-split",
+      "reason": "Split the task browser's module, its unit tests and its journey along their owners, under the code size ceiling; nothing a person sees changes."
+    }
+  ]
+}

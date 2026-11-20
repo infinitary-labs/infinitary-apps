@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "forge-seam-waits-for-backgrounded-push",
+      "reason": "Test only: the forge-seam and forge-signin continuation stand-in crewmates carry on from the push job's exit when the push outlasts the shell's limit, and both journeys' hosts now always take that long."
+    }
+  ]
+}

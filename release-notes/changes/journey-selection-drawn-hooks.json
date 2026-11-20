@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journey-selection-drawn-hooks",
+      "reason": "Internal CI selection: a changed renderer file selects the journeys that read the hooks it draws. No shipped behavior changes."
+    }
+  ]
+}

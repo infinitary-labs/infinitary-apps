@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "advanced-architecture",
+      "kind": "feature",
+      "title": "Try Advanced architecture: a map of your project and what a change moves on it",
+      "body": "Settings › Runbooks now lists Advanced architecture, an experiment that starts off. Turn it on, ask the first mate to map a project, and a crewmate opens a pull request with map files of the project's parts, how they link and the state machines inside them. Then ask what changed since a date, a release or a commit: a card draws the map with every box, link, state and move tagged added, removed or changed, and you go in and out of each part with a click or the keyboard.",
+      "area": "settings",
+      "picture": {
+        "dark": "advanced-architecture-dark.webp",
+        "light": "advanced-architecture-light.webp",
+        "alt": "A card draws a crewmate's turn as a state machine, with its new states tagged added and its renamed states tagged changed"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

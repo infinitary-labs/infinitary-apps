@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-one-boot",
+      "reason": "Internal: the phone check starts each simulated device once and runs its parts on it one after the other, each from a clean app; nothing a person sees changes."
+    }
+  ]
+}

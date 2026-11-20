@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "work-computer-closed-task-files",
+      "kind": "fix",
+      "title": "Closed tasks no longer leave evidence on another computer forever",
+      "body": "A week after a task closes, Firstmate removes its evidence and other leftover files on the computer that ran it, as it already does on this Mac. Files a live task still needs stay, and so do its conversation and cards. If that computer is out of reach or needs a Firstmate update, cleanup waits.",
+      "area": "devices",
+      "noPicture": "Cleanup changes files on disk, not a visible view.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

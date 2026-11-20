@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "standing-override-from-a-reply",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "Your reply under a crewmate's card can tell it to keep going",
+      "body": "When you reply under a crewmate's card, or type in its Crewmate tab, words like \"keep going until the checks pass\" now count the first time. Your first mate records them on the task instead of asking you again on a card of its own. Every later step of that task reads them, so the crewmate does not ask again for what your words already allow, such as using your plan's allowance. Signing, the keychain, writes outside the project and browser hand-offs still ask. The task's Activity shows your words and what they allow, and only your words take them back.",
+      "noPicture": "This changes who acts on your words and when, not a view or control; the Activity line it writes looks as it did.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

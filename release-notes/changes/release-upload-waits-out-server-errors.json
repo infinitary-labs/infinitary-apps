@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-upload-waits-out-server-errors",
+      "reason": "Release work: the release's upload of each download to the download site now waits out a passing server error, such as a 500, and tries the same upload again instead of stopping the alpha at once; the downloads themselves are unchanged."
+    }
+  ]
+}

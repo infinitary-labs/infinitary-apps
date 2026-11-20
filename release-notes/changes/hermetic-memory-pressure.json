@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "hermetic-memory-pressure",
+      "reason": "Internal test isolation: a development or end-to-end run can stand in macOS's memory pressure level, and every test launch reads normal instead of the test computer's own load. An installed app always reads macOS, so nothing a person sees changes."
+    }
+  ]
+}

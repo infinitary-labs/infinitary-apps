@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "packages-link-the-website",
+      "reason": "Release work: every cask on both taps, the Arch recipe, the Nix package and the Ubuntu and Fedora packages name getinfinitary.com as their homepage instead of the tap or the private repository, and the GitHub sign-in code's notes name the renamed sign-in app. The app itself shows nothing new."
+    }
+  ]
+}

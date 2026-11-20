@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "claude-classifier-thinking-room",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Claude has room to finish sorting your task",
+      "body": "Claude Sonnet 5.5 no longer loses its task-sorting answer because its thinking used up a tiny answer limit. Your sorting rules stay the same.",
+      "noPicture": "This repairs the classifier request behind task routing without changing a visible screen.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

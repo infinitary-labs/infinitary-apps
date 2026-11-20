@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "automation-rule-notes",
+      "kind": "feature",
+      "title": "Each automation keeps notes for its next run",
+      "body": "A crewmate that an automation starts reads what earlier runs learned, such as dead ends and what is already filed, and updates the notes for the next run. The notes stay under 8,000 characters. You can read, edit, clear or go back through earlier versions of the notes in Settings → Automation.",
+      "area": "settings",
+      "picture": {
+        "dark": "automation-rule-notes-dark.webp",
+        "light": "automation-rule-notes-light.webp",
+        "alt": "An automation's notes in Settings, with lines its runs wrote and the earlier versions listed"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

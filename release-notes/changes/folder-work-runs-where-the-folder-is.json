@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "folder-work-runs-where-the-folder-is",
+      "kind": "fix",
+      "title": "Work on a project's folder runs on the computer that keeps it",
+      "body": "When your first mate starts a task about a project's folder itself, such as bringing it up to date, the task now runs on the computer that keeps that folder, inside the folder, even when the project's other tasks run on another computer. Such a task opens no pull request.",
+      "area": "tasks",
+      "noPicture": "It changes which computer a task runs on and what its crewmate is told, with no new screen.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

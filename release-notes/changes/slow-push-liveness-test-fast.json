@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "slow-push-liveness-test-fast",
+      "reason": "Test only: the connection test that keeps a device receiving a long push slowly now pings every 100 ms and sends a 20 KB push one piece at a time through its slow relay, so it spans over four heartbeats in about half a second instead of taking over three of the five seconds a unit test may run. It still fails when the heartbeat ping waits behind the whole push. Nothing in the shipped app changes."
+    }
+  ]
+}

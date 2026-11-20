@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "failed-check-verdict",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Failed checks explain whether the change caused them",
+      "body": "A merge card shows the crewmate’s verdict beside each failed check. Open the check to read its evidence. If the cause is still unknown, the card says so.",
+      "picture": {
+        "dark": "failed-check-verdict-dark.webp",
+        "light": "failed-check-verdict-light.webp",
+        "alt": "A failed merge check says Broken on main too beside its name"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

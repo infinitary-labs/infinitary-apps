@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "e2e-newer-home-contract",
+      "reason": "Test-only fix: the journey of a Mac controlling a newer Firstmate on another Mac derives that home's contract from the version window instead of a hardcoded 3.0.0, so it reads as too far apart again. No product behavior changes."
+    }
+  ]
+}

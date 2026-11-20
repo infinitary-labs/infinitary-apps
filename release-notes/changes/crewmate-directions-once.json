@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "crewmate-directions-once",
+      "reason": "A crewmate's first instructions now hold its project's standing directions once instead of twice, and every later turn still carries them whole. Only the length of the crewmate's own instructions changes; nothing it does, and nothing the app shows beyond the brief in the Crewmate tab, is different."
+    }
+  ]
+}

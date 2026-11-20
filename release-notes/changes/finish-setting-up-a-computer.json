@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "finish-setting-up-a-computer",
+      "kind": "feature",
+      "highlight": 2,
+      "title": "A card helps you finish setting up a Mac that runs work",
+      "body": "The moment another Mac, or another user on this Mac, joins to run work, a card lists what it still needs: a subscription of its own, its own GitHub sign-in, and a project to run. Each row has a button that opens that step in Settings, the rows tick off as you go, and the card goes away by itself once the Mac is set up. A task for a Mac with no sign-ins now waits and starts by itself once you sign it in, and a project on GitHub set to run on a Mac without its own GitHub sign-in asks for that sign-in before anything fails.",
+      "area": "devices",
+      "picture": {
+        "dark": "finish-setting-up-a-computer-dark.webp",
+        "light": "finish-setting-up-a-computer-light.webp",
+        "alt": "The card Finish setting up Running as Builder, listing a subscription of its own, its own GitHub sign-in and a project that runs there, with Add a subscription, Sign in to GitHub and Choose a project buttons"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

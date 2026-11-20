@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "activity-pointer-during-update",
+      "kind": "fix",
+      "title": "Activity lines respond when an update arrives during your press",
+      "body": "In a task's record, an update between pressing and releasing an Activity line could lose the click. The line now stays in place so your press opens or closes it, even when more details arrive beneath it.",
+      "area": "tasks",
+      "noPicture": "The record looks unchanged; the fix preserves a pointer press across a live update, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

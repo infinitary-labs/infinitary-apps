@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "one-panel-rule",
+      "reason": "Internal: the personal workspace decides what a panel is by one rule (a folder holding panel.tsx or server.ts, now or in its last commit) for loading, the build's attribution and the last-commit copy; panels look and load the same."
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "story-follows-a-push",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "A pull request's story follows a later push",
+      "body": "When a crewmate pushes another fix after publishing its pull request's story, the app now republishes that same story at the new version itself. The merge card appears without the crewmate writing the story again, and the merge carries the story you saw.",
+      "noPicture": "The merge card looks the same as before; the change is that it appears after a push instead of being held for a rewritten story.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

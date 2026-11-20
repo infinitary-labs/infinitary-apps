@@ -1,0 +1,23 @@
+{
+  "exclusions": [
+    {
+      "id": "alpha-review-after-0-2-2-alpha-57",
+      "reason": "Release review after alpha 0.2.2-alpha.57: ranks the Crewmate tab, GitLab merge requests and global instructions and skills as highlights; rewords six notes in plain words; adds exclusions for three internal changes the notes check found uncovered. Nothing in the app changes."
+    },
+    {
+      "id": "rigor-describes-instruction-resources",
+      "reason": "Documentation only: the delivery rigor page describes project instruction resources. Nothing in the app changes.",
+      "covers": ["6e7b08d7644bf5c31f6221b0b612fc62123d2228"]
+    },
+    {
+      "id": "biome-deleted-test-exclusion",
+      "reason": "Lint configuration only: removes an exclusion for a test file that no longer exists. Nothing in the app changes.",
+      "covers": ["847df55556457646a8d00f6f26080f52054b4bc0"]
+    },
+    {
+      "id": "crew-stale-comment-corrections",
+      "reason": "Code comments only: corrects stale comments about tools and the Firstmate's model. Nothing in the app changes.",
+      "covers": ["195053d12ec320ead5fa84f8336b0737553e3107"]
+    }
+  ]
+}

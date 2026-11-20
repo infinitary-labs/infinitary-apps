@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "key-summary-failure-evidence",
+      "reason": "Internal test diagnostics: attach the keyboard task-key and scroll timeline only when the regression journey fails. No product behavior changes."
+    }
+  ]
+}

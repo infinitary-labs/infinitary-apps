@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "knowledge-expand-opens-directions",
+      "kind": "improvement",
+      "area": "firstmate",
+      "title": "Opening Knowledge from its panel shows your directions first",
+      "body": "The open button at the top of the Knowledge panel, beside its count of directions, now opens the Knowledge browser on the Directions tab instead of the graph. The Graph link under the panel still opens your map of concepts.",
+      "picture": {
+        "dark": "knowledge-expand-opens-directions-dark.webp",
+        "light": "knowledge-expand-opens-directions-light.webp",
+        "alt": "The Knowledge browser with the Directions tab selected, listing six directions, two tagged with the harbor project."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

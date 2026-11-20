@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "review-holds-across-updates",
+      "kind": "improvement",
+      "title": "A passed review holds when only the rest of your project moved",
+      "body": "On a task with Careful care, bringing the work up to date with your project's newest work no longer starts its review over when the change itself is the same. An edit to any of its lines, or to a line right beside them, still asks for a fresh review. The checks still have to pass before it merges.",
+      "area": "tasks",
+      "noPicture": "Nothing new on screen: the review named on the task stays the one that passed, and the merge goes on.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

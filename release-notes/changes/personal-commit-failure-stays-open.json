@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "personal-commit-failure-stays-open",
+      "kind": "fix",
+      "title": "Work in your personal workspace the app could not commit stays open",
+      "body": "When the app cannot commit what a crewmate made in your personal workspace, such as a panel, the task no longer closes as Built in place. It stays open with the crewmate's files kept as they are, and Firstmate is told why. A new panel appears only once its commit works. The crewmate's next report tries the commit again and closes the task when it works.",
+      "area": "tasks",
+      "noPicture": "It shows only when a commit fails, which is rare: the task then stays in Tasks instead of reading Built in place.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

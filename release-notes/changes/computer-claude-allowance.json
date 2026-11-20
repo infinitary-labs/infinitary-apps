@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "computer-claude-allowance",
+      "reason": "Internal, behind the development-only multi-machine gate: a Claude account on a computer that runs work shows the allowance read there in Settings -> Intelligence, or why it is not read there, and an installed app shows none of it."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-launcher-helpers-select-check",
+      "reason": "Internal CI only: a change to a file the phone check's launcher loads or reads, such as its Photos wait, its timers or its scratch folders, now selects the phone check on request, and a unit test keeps every module the launcher loads on that list. No product change."
+    }
+  ]
+}

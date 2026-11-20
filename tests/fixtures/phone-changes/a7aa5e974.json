@@ -1,0 +1,14 @@
+{
+  "commit": "a7aa5e974bf884533154f35ba638118e295bd8bf",
+  "subject": "fix(ci): run a placed virtual Mac's phone check without the Mac check lease",
+  "paths": [
+    ".github/workflows/phone.yml",
+    "docs/ios.md",
+    "docs/testing.md",
+    "release-notes/changes/phone-check-off-lease-in-virtual-mac.json",
+    "tests/mac-check-lock.test.ts",
+    "tests/phone-ci.test.ts"
+  ],
+  "testDiff": "",
+  "testFiles": {}
+}

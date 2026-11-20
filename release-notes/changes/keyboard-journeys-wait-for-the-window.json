@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "keyboard-journeys-wait-for-the-window",
+      "reason": "The Keyboard settings, task board and Tasks search journeys, and the helper that runs a command from command search, wait until the window, search or field is ready before pressing keys, and the task board journey reads the summary's placement as the app makes it when scroll bars take no room. Test code and one docs sentence only; nothing a person notices changes."
+    }
+  ]
+}

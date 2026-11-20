@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "folder-move-asks-the-disk",
+      "reason": "Internal: the one-time folder move asks the disk whether it clones instead of comparing the disk's kind to a number that only some startups give APFS. Every real Mac read so far gives APFS that number, so nobody using the app notices; it fixes the move's test on virtual Macs that number it otherwise."
+    }
+  ]
+}

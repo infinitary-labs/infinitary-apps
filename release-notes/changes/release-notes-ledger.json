@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "release-notes-ledger",
+      "reason": "Adds the release-notes ledger, release check and version tracking; nothing in this change is shown in the app yet, and the startup release note that uses it ships later."
+    }
+  ]
+}

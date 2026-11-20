@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "heavy-run-memory-accounting",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A lone heavy run no longer waits for more free memory",
+      "body": "When nothing else is running, a heavy run starts if it fits your computer's installed memory and memory pressure is normal. Further heavy runs count a running program's memory once instead of twice.",
+      "noPicture": "This changes background admission without changing any screen or control.",
+      "provenance": {
+        "origin": "change",
+        "covers": []
+      }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-check-both-at-once",
+      "reason": "Internal CI: the pull request's phone check builds once and runs the iPhone and the iPad simulators side by side under one Mac check lease; the app is unchanged."
+    }
+  ]
+}

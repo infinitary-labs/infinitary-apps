@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "record-press-journey-waits-for-reveal",
+      "reason": "Test only: the journey for a press on a task record's bar before its body draws now waits for the record to appear, which since INF-510 happens when its hold ends, before pressing. No shipped behavior changed."
+    }
+  ]
+}

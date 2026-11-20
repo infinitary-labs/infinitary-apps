@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "browser-twin-crew-planes",
+      "reason": "Internal test work: the crowded-orbit journey moves to a browser test on a seeded home with 48 idle crew booted by a real core, and the journey is deleted; nothing a person sees changes."
+    }
+  ]
+}

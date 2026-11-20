@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "from-the-command",
+      "kind": "improvement",
+      "title": "See which messages came from infinitary-axi",
+      "body": "A message, a reply under a card or a choice sent from infinitary-axi now says so. Your first mate reads it as yours, sent from your terminal, a script or one of your own agents, and the conversation and card threads show From infinitary-axi beside your line.",
+      "area": "firstmate",
+      "picture": {
+        "dark": "from-the-command-dark.webp",
+        "light": "from-the-command-light.webp",
+        "alt": "Your last message above the input with From infinitary-axi beside it, and your first mate's reply under it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

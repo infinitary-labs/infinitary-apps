@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "still-firstmate-theme",
+      "kind": "fix",
+      "title": "The still Firstmate follows a theme switch",
+      "body": "When your Mac's Reduce motion setting is on, Firstmate is one still picture. Switching between dark and light while it is on screen, for example by asking Firstmate to switch, now redraws that picture in the new theme's colors. Before, it kept the old theme's colors on the new background.",
+      "area": "firstmate",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

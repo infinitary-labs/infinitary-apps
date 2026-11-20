@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "fewer-pauses-held-and-card-reads",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Fewer short pauses when a task closes or a card is read",
+      "body": "The app no longer stops answering for a moment when a task closes or once an hour while it decides which closed tasks' files to keep. Looking up one task's answered cards, as a review or a new task's brief does, no longer reads every answered card first.",
+      "noPicture": "This shortens two reads the app does in the background, with no changed view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "linux-releases",
+      "kind": "feature",
+      "highlight": 1,
+      "title": "Firstmate 3000 for Linux, and it updates itself",
+      "body": "Every alpha and stable now comes for Linux on x64: a package for Ubuntu, one for Fedora, a recipe for Arch and Omarchy, a package for NixOS, and an AppImage for any other Linux. When a new version is out, the update notice installs it on Ubuntu and Fedora after asking for your password, replaces an AppImage with no password, and shows the command to run on Arch, Omarchy and NixOS. Every download is checked against its published checksum before anything installs it.",
+      "area": "updates",
+      "picture": {
+        "dark": "linux-releases-dark.webp",
+        "light": "linux-releases-light.webp",
+        "alt": "The update notice on Linux: a new alpha version is available above the one installed, with an Install button that asks for your password"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

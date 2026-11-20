@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "careful-reuse-early-check-run",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A careful change no longer runs a passing check again only because you approved it afterwards",
+      "body": "When a check on a careful change already passed on the same version before you approved what it uses, that run now counts as its proof once you approve. Before, the reviewer could ask for the same check to run again, spending its time and cost a second time.",
+      "noPicture": "This changes which runs count as proof, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

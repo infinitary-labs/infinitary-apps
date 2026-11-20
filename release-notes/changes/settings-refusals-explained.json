@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "settings-refusals-explained",
+      "kind": "fix",
+      "title": "More settings say why a change was not saved",
+      "body": "When a change to the look, Your panels, Firstmate's model, Diagnostics or an account cannot be saved, the setting now says why beside it and shows what is saved. Before, some of these looked changed until the app restarted, and others stayed as they were without a word.",
+      "area": "settings",
+      "picture": {
+        "dark": "settings-refusals-explained-dark.webp",
+        "light": "settings-refusals-explained-light.webp",
+        "alt": "An account rename that could not be saved, with the reason under the account and its saved name still shown"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

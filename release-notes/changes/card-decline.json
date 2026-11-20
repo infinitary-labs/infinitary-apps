@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "card-decline",
+      "kind": "fix",
+      "title": "Every question has a way to say no",
+      "body": "Some questions from before the last update lost their Not now button and had no way to close. Those buttons are back on questions that have not changed since. Every question from your first mate or a crewmate now also has Decline to the left of its choices, unless it already offers its own way to say no: it answers no to every choice and lets the card finish. Decline is in command search too, and a question's record offers it in place of Dismiss.",
+      "area": "cards",
+      "picture": {
+        "dark": "card-decline-dark.webp",
+        "light": "card-decline-light.webp",
+        "alt": "A question from the first mate asking which checklist the launch should use, with Decline at the bottom left and the two choices at the bottom right"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

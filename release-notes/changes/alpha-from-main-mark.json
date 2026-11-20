@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "alpha-from-main-mark",
+      "reason": "Release process only: the release crewmate cuts an alpha from the newest commit main's full check passed, and the project's pages say how a red run reaches a repair; the app does not change."
+    }
+  ]
+}

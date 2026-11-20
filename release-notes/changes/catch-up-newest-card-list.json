@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "catch-up-newest-card-list",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Your phone and other Macs catch up faster after a short time away",
+      "body": "When your iPhone, iPad or another Mac reconnects after a short time away, your computer now sends only your newest cards and task board, not every version it showed meanwhile. When catching up would still send more than reading everything again, it reads everything again instead.",
+      "noPicture": "Nothing on screen changes; the same cards and tasks arrive with fewer bytes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

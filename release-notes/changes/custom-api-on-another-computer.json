@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "custom-api-on-another-computer",
+      "kind": "fix",
+      "title": "Add a custom API on another computer",
+      "body": "Each computer in Settings → Intelligence has a Custom API chip while it is in reach. The connection is saved on that computer, and its checked models join the Models board tagged with that computer.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "custom-api-on-another-computer-dark.webp",
+        "light": "custom-api-on-another-computer-light.webp",
+        "alt": "A model saved on another computer, tagged with that computer, placed at medium on the Models board"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

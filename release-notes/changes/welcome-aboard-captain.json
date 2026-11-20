@@ -1,0 +1,30 @@
+{
+  "entries": [
+    {
+      "id": "welcome-aboard-captain",
+      "kind": "improvement",
+      "title": "The first screen says welcome aboard Infinitary",
+      "body": "On a new setup, the first screen says Welcome aboard Infinitary, Captain. Your first mate asks to be set up on a computer that stays on, and says your other devices need that first mate awake. The subscription choices stay the same.",
+      "area": "firstmate",
+      "picture": {
+        "dark": "welcome-aboard-captain-dark.webp",
+        "light": "welcome-aboard-captain-light.webp",
+        "alt": "The first screen, with the first mate above Welcome aboard Infinitary, Captain, and a short line about the crew."
+      },
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "how-we-work",
+      "kind": "improvement",
+      "title": "The welcome card is titled How we work",
+      "body": "After you connect a subscription, the first card is titled How we work. It still walks through the same five parts, with the same three starters.",
+      "area": "cards",
+      "picture": {
+        "dark": "how-we-work-dark.webp",
+        "light": "how-we-work-light.webp",
+        "alt": "The How we work card, open on its first part, with Back, Next and three starters."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

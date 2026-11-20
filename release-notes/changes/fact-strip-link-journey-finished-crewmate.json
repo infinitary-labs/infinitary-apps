@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "fact-strip-link-journey-finished-crewmate",
+      "reason": "Internal test fix: card-facts-link.spec.ts seeds its task as a finished crewmate with its working copy kept, so the app no longer restarts it at launch and the strip's Model cell no longer leaves and returns under the press. No user-facing behavior changes."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "panels-journey-waits-for-drawn-rails",
+      "reason": "The panels journey now reads where a panel's header is only after every open panel on the rails has drawn its page, so its drag no longer presses where a header was before the panel above it grew; nothing a person sees changes."
+    }
+  ]
+}

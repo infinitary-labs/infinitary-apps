@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "gpt-6-2-sol-astra-codex",
+      "kind": "improvement",
+      "area": "subscriptions",
+      "title": "GPT-6.2 Sol and Astra can join your Codex models",
+      "body": "Models keeps GPT-6.2 Sol and GPT-6.2 Astra for Codex accounts whose plan offers them; before, Infinitary read your plan's model list in a way that left them out. They appear once Infinitary can run them, with no update needed, and start in no level, so your crew uses them only once you place them.",
+      "noPicture": "The two rows come from the live Codex catalog, which the offline picture launcher cannot reach, and the Models board itself looks the same.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

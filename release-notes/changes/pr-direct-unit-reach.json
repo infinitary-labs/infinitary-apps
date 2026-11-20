@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "pr-direct-unit-reach",
+      "reason": "Internal CI: the pull request's build check runs the unit tests that read each changed file."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "docs-site-publish",
+      "reason": "Adds the run that publishes the docs site at docs.getinfinitary.com from main; nothing in the app changes."
+    }
+  ]
+}

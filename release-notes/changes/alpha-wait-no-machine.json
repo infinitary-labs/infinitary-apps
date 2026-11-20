@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "alpha-wait-no-machine",
+      "reason": "Main's check now waits for a rolling alpha cut in the alpha run's concurrency group, holding no hosted machine while it waits; only how the project is checked changes."
+    }
+  ]
+}

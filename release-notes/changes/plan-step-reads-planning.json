@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "plan-step-reads-planning",
+      "kind": "fix",
+      "title": "A plan for an idea is always treated as planning",
+      "body": "When Firstmate starts a plan to shape an idea with you, that task is now treated as planning every time, and its record reads Planning under the model. Before, the app sometimes guessed another kind of work for it, which could change the model it got.",
+      "area": "crewmates",
+      "noPicture": "One line of words under the model in a task's record changes; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

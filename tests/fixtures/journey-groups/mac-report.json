@@ -1,0 +1,116 @@
+{
+  "about": "Trimmed from a passing swept batch's full check: the Mac parallel journeys job's Playwright e2e-results.json, its first two files. Test inputs, not a claim about current journey times.",
+  "config": {
+    "metadata": {
+      "actualWorkers": 2
+    }
+  },
+  "suites": [
+    {
+      "title": "../renderer/collapsedRailPanel.spec.ts",
+      "file": "../renderer/collapsedRailPanel.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "left rail: overflowing content leaves collapsed headers whole",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "styles",
+              "projectName": "styles",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2453,
+                  "retry": 0,
+                  "startTime": "2026-11-07T18:21:04.618Z",
+                  "annotations": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "39f1c68ccc6898fe9111-f257ceba9722c94d2a9c",
+          "file": "../renderer/collapsedRailPanel.spec.ts",
+          "line": 13,
+          "column": 3
+        },
+        {
+          "title": "right rail: overflowing content leaves collapsed headers whole",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "styles",
+              "projectName": "styles",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 2350,
+                  "retry": 0,
+                  "startTime": "2026-11-07T18:21:07.081Z",
+                  "annotations": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "39f1c68ccc6898fe9111-47d9b0cf5fd437194bd7",
+          "file": "../renderer/collapsedRailPanel.spec.ts",
+          "line": 13,
+          "column": 3
+        }
+      ]
+    },
+    {
+      "title": "../renderer/detailsReveal.spec.ts",
+      "file": "../renderer/detailsReveal.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [
+        {
+          "title": "an opened section's controls take focus before its fade draws a frame",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 60000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "styles",
+              "projectName": "styles",
+              "results": [
+                {
+                  "workerIndex": 1,
+                  "parallelIndex": 1,
+                  "status": "passed",
+                  "duration": 2408,
+                  "retry": 0,
+                  "startTime": "2026-11-07T18:21:04.616Z",
+                  "annotations": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "5ee1df22ce74de0c1e06-91ecba869f1d5cbb1812",
+          "file": "../renderer/detailsReveal.spec.ts",
+          "line": 18,
+          "column": 1
+        }
+      ]
+    }
+  ]
+}

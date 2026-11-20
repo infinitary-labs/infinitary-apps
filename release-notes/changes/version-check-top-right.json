@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "version-check-top-right",
+      "kind": "improvement",
+      "area": "settings",
+      "title": "Check for updates sits at the top right of Settings' Version section",
+      "body": "In Settings, General, the Check for updates button now sits on the Version title line at the section's top right instead of floating halfway down beside the release notes, and the release notes run the section's full width beneath it.",
+      "picture": {
+        "dark": "version-check-top-right-dark.webp",
+        "light": "version-check-top-right-light.webp",
+        "alt": "Settings' Version section with Check for updates at its top right, on the Version title line, and three release notes running full width below"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

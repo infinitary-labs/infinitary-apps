@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "answered-card-stays-answered",
+      "kind": "fix",
+      "title": "A card you answered no longer comes back as a new question",
+      "body": "When your first mate or a crewmate writes again on a card you already answered, it now acts on your answer instead of asking you the same question. It can still tell you what happened next on that card as a note, and a new question arrives as a card of its own. A card you closed without choosing can still come back.",
+      "area": "cards",
+      "noPicture": "This stops a card from coming back; the cards themselves look the same.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

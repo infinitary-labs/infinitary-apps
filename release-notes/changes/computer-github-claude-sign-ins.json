@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "computer-github-claude-sign-ins",
+      "reason": "Internal, behind the development-only multi-machine gate: a computer that runs work signs in to GitHub from Settings -> Projects and to Claude with a code pasted back from Settings -> Intelligence, and an installed app shows and offers none of it."
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+// An end-to-end spec finds a thing by its place and never by page-wide
+// words (docs/e2e-contracts.md, "Find by place, not by words"). A card is
+// found through `shownCard(page, title)` in tests/e2e/stack.ts, the shown
+// entry's region named by its title: the same words also show in the last
+// turn's reply above the message box, in a task record's card line and in
+// the drawing a stage holds while the next card gets ready, so a page-wide
+// lookup by a card's title matched two things, or the wrong one, once in a
+// few runs. The pager is `pager`/`pagerAt`, a feed line `reportLine` and its
+// siblings in tests/e2e/rails.ts, and other words come from their owner,
+// imported, and are looked up inside the region that shows them. So this
+// rule refuses `page.getByText` with typed words (a string, a template or a
+// regular expression) or a title (a name that says title), and a spec's
+// region found by its name across the page or the stage: a card through
+// `shownCard`, another region through the helper that owns it. A region
+// inside something already found, such as a card body's section, is found
+// by place. A spec whose subject is the words
+// themselves, such as a word that must never reach the screen, says so in
+// a `biome-ignore` naming this rule and why. Runs inside `pnpm check`
+// through biome.json's plugins, as an error since every spec moved.
+
+language js
+
+or {
+  `$page.getByText($text, $...)` where {
+    $page <: or {
+      `page`,
+      `$owner.page`
+    },
+    $text <: or {
+      JsStringLiteralExpression(),
+      JsTemplateExpression(),
+      JsRegexLiteralExpression(),
+      r"(?is).*title.*"
+    },
+    $filename <: r".*tests/e2e/.*",
+    register_diagnostic(span=$text, message="A page-wide lookup by typed words or a card's title also matches the last turn's reply, a record's card line or a drawing the stage holds. Find a card with shownCard(page, title), the pager with pager/pagerAt, a feed line with reportLine and its siblings, and other words imported from their owner inside the region that shows them (docs/e2e-contracts.md, Find by place, not by words).", severity="error")
+  },
+  `$scope.getByRole($role, $...)` where {
+    $role <: r"[\"']region[\"']",
+    $scope <: or {
+      `page`,
+      `$owner.page`,
+      `shownEntry($stage)`,
+      `$stage.locator(SHOWN_ENTRY)`
+    },
+    $filename <: r".*tests/e2e/[^/]*\.spec\.ts",
+    register_diagnostic(span=$role, message="A region found by its name across the page or the stage matches every drawing that carries the name. Find a card with shownCard(page, title) in tests/e2e/stack.ts, and another region through the helper that owns it (docs/e2e-contracts.md, Find by place, not by words).", severity="error")
+  }
+}

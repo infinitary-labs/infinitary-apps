@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "panels-settings",
+      "kind": "feature",
+      "title": "Arrange your panels from Settings or by dragging them",
+      "body": "Settings has a new Panels tab that lists every panel on each side of the window, in order, and lets you move, hide, show or collapse each one, or put them all back where they started. On the home screen you can also drag any panel by its title to another place, on either side. When you pick a panel from a full side's More list, it moves to the end of its group and stays there. Ask your first mate to put one panel just above or below another, and it uses the same order. Settings now lists its tabs down the left side.",
+      "area": "settings",
+      "picture": {
+        "dark": "panels-settings-dark.webp",
+        "light": "panels-settings-light.webp",
+        "alt": "Settings with its tabs down the left side and the Panels tab open, listing each side's panels in order with a switch to show or hide each"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

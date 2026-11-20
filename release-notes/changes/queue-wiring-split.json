@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "queue-wiring-split",
+      "reason": "Internal: the project queue's wiring moves out of the app wiring file into its own module, so that file has room under the size limit again; nothing a person sees changes."
+    }
+  ]
+}

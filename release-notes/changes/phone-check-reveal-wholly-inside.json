@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-check-reveal-wholly-inside",
+      "reason": "Phone check repair: the card journeys' reveal step brings a card element wholly inside the visible card, so the body-field part's on-its-side text box no longer ends a fraction of a point past the card's foot. Test code only, no app behavior change."
+    }
+  ]
+}

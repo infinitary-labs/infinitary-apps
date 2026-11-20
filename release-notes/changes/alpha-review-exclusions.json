@@ -1,0 +1,19 @@
+{
+  "exclusions": [
+    {
+      "id": "phone-springboard-wait-test-only",
+      "reason": "This change adjusts phone-test timing and coverage; it does not change Infinitary's behavior for a person.",
+      "covers": ["703a9f8720b5f3542e990a445139056c416e4047"]
+    },
+    {
+      "id": "remove-retired-upgrade-checks",
+      "reason": "This change removes release checks for a retired upgrade path; it does not change a supported installation or update path.",
+      "covers": ["2d448fc4b4ed65c8cd6cc9123144d4ba151f9a1e"]
+    },
+    {
+      "id": "defer-ios-accessibility-work",
+      "reason": "This change updates project instructions about when accessibility work may be undertaken; it does not change the app.",
+      "covers": ["49a162088aa530bc65d5f1368e86787c9d822217"]
+    }
+  ]
+}

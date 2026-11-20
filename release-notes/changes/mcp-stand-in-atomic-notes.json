@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "mcp-stand-in-atomic-notes",
+      "reason": "Test-only repair: the MCP stand-in publishes complete notes files atomically, with regression coverage for reads during a write. No product behavior changes."
+    }
+  ]
+}

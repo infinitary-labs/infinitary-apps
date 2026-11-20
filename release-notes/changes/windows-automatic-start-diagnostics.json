@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "windows-automatic-start-diagnostics",
+      "reason": "The fresh Windows install check captures more evidence when an Automatic task does not show its start. The installed app is unchanged."
+    }
+  ]
+}

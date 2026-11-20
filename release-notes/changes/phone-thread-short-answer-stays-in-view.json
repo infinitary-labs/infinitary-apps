@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "phone-thread-short-answer-stays-in-view",
+      "kind": "fix",
+      "area": "devices",
+      "title": "A short answer at the end of a card's thread stays in view on your iPhone",
+      "body": "On your iPhone, a short first mate answer at the end of a card's thread could still slip under the card's lower edge, with the jump down arrow in its place, when the message box below grew to show the same answer. A thread you are reading at its end now stays at its end.",
+      "noPicture": "The thread looks as it did; only a short answer that was sometimes hidden under the card's edge now stays in view.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

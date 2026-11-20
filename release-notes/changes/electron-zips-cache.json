@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "electron-zips-cache",
+      "reason": "Internal CI: the Mac check's package step and a release's Mac and Linux package steps read Electron's zips from a checked cache instead of asking GitHub's release server for each zip's checksum file, after a 504 there failed main's check and an alpha; no app change."
+    }
+  ]
+}

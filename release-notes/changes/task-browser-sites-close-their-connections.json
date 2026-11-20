@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "task-browser-sites-close-their-connections",
+      "reason": "Internal, tests only: the task browser journeys close their test sites together with every connection a browser left open, so the watching journey no longer waits on a connection nobody uses after its checks pass. No shipped behavior changed."
+    }
+  ]
+}

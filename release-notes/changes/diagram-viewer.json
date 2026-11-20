@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "diagram-viewer",
+      "kind": "improvement",
+      "title": "Diagrams in a card open full screen, ready to zoom",
+      "body": "A diagram in a card now opens in the picture viewer, like a picture does. On your Mac, click it or press Enter: it opens fitted and larger, and Z shows it at its own size. On your iPhone and iPad it opens full screen, where you can pinch, double-tap to zoom where you tapped, and drag around; tap Done or swipe down to close it.",
+      "area": "cards",
+      "picture": {
+        "dark": "diagram-viewer-dark.webp",
+        "light": "diagram-viewer-light.webp",
+        "alt": "A card's diagram open in the picture viewer, larger than in the card, with its caption under it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

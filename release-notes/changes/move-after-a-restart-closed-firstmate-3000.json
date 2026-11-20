@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "move-after-a-restart-closed-firstmate-3000",
+      "kind": "fix",
+      "title": "Infinitary moves your saved work after a restart closed Firstmate 3000",
+      "body": "When your computer restarted without Firstmate 3000 quitting first, such as after a power cut, Infinitary could keep saying Firstmate 3000 was still open, even after Try again, and never move your saved work into its folder. It now knows the restart closed Firstmate 3000 and moves your saved work.",
+      "area": "updates",
+      "noPicture": "Nothing new appears: the move goes on as it always does, instead of stopping on the page that said Firstmate 3000 was still open.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

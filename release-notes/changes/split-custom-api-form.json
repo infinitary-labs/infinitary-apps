@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-custom-api-form",
+      "reason": "Internal refactor: the custom connection form's source file is split along its owners; nothing a person sees changes."
+    }
+  ]
+}

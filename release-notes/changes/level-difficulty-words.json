@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "level-difficulty-words",
+      "kind": "improvement",
+      "title": "Model levels are named by how hard the task is",
+      "body": "The levels you place models in were High, Med and Low, the same words reasoning uses. They are now Hard, Normal and Simple, with Premium kept, and a task's card shows its Difficulty beside the model and its reasoning.",
+      "area": "settings",
+      "picture": {
+        "dark": "level-difficulty-words-dark.webp",
+        "light": "level-difficulty-words-light.webp",
+        "alt": "The Models board with its levels named Premium, Hard, Normal and Simple, and a model's panel saying it takes hard and normal tasks"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

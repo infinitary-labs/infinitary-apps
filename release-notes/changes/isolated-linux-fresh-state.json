@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "isolated-linux-fresh-state",
+      "reason": "Internal: Linux fresh-state verification runs across four isolated hosted jobs with the same process and home isolation and test coverage; no product behavior changes."
+    }
+  ]
+}

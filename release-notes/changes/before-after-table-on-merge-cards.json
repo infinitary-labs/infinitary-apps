@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "before-after-table-on-merge-cards",
+      "kind": "improvement",
+      "title": "Merge cards compare before and after in a table",
+      "body": "On a merge card for a GitHub or GitLab pull request, each view's pictures now sit in a table with Before and After at the top of their columns, so each label clearly belongs to the pictures under it. Matching pictures share a row, and a new view gets its own table headed New.",
+      "area": "cards",
+      "picture": {
+        "dark": "before-after-table-on-merge-cards-dark.webp",
+        "light": "before-after-table-on-merge-cards-light.webp",
+        "alt": "A merge card view in a boxed table headed Before and After, with the dark and light pictures of each state paired row by row"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

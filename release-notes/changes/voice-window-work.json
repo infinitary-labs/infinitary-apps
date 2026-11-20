@@ -1,0 +1,12 @@
+{
+  "entries": [{
+    "id": "voice-window-work",
+    "kind": "fix",
+    "area": "message-box",
+    "title": "Voice recordings do less work in the window",
+    "body": "Long recordings now prepare their audio away from the window. Voice releases its loaded model after three idle minutes.",
+    "noPicture": "This changes audio processing and idle resource use without changing the visible voice controls.",
+    "provenance": { "origin": "change" }
+  }],
+  "exclusions": []
+}

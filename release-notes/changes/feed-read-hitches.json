@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "feed-read-hitches",
+      "kind": "fix",
+      "title": "The app no longer hitches while Activity updates on a long history",
+      "body": "With a long history of work, the app could pause for a moment several times a minute while it updated Activity and checked which tasks build on others. It now reads only what changed since its last look, so clicks and typing stay smooth however much history you have.",
+      "area": "other",
+      "noPicture": "The change removes short pauses in responsiveness, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

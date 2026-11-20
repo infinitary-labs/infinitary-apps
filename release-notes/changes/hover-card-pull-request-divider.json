@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "hover-card-pull-request-divider",
+      "kind": "improvement",
+      "title": "A line separates a task's pull request from its model",
+      "body": "When you rest on a task, the pull request line now sits under its own line, apart from the model, intelligence and reasoning above it.",
+      "area": "tasks",
+      "picture": {
+        "dark": "hover-card-pull-request-divider-dark.webp",
+        "light": "hover-card-pull-request-divider-light.webp",
+        "alt": "A task summary with a line above Pull request and Checks passed"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

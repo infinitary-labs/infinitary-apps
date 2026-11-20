@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "architecture-map-files",
+      "reason": "Adds the project's own .architecture.json map files, made with the Advanced architecture runbook; they describe how the code is laid out for anyone reading it, and nothing a person sees in the app changes."
+    }
+  ]
+}

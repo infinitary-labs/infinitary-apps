@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "crew-planes-summary-settled",
+      "reason": "The crowded-orbit journey reads the crew summary's box once it has settled, as the other summary journeys do, instead of in the moment between the task record filling it in and the next frame placing it again. No shipped behavior changed."
+    }
+  ]
+}

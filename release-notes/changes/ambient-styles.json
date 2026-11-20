@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "ambient-styles",
+      "kind": "feature",
+      "area": "settings",
+      "title": "Nine styles of ambient music to choose from",
+      "body": "Pick how the ambient music sounds with the new Style choice in Settings → Appearance, or ask your first mate. Star cruise, a soft pattern echoing over a slow pulse, now plays by default. The other eight take you through deep space, a pirate cove, a harbor at dawn and a Pacific island, and the sea styles carry soft waves under the music. Every style still follows your crew, chimes when something waits for you and sparkles when a task merges.",
+      "picture": {
+        "dark": "ambient-styles-dark.webp",
+        "light": "ambient-styles-light.webp",
+        "alt": "The Sound group in Settings → Appearance, with Ambient music on, the new Style choice on Star cruise, and Volume at 40%"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

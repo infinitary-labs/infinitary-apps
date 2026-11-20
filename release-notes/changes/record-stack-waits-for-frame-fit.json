@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "record-stack-waits-for-frame-fit",
+      "reason": "Test only: the task record stack journey checks that the whole document fits after Chromium applies the frame height. No shipped behavior changed."
+    }
+  ]
+}

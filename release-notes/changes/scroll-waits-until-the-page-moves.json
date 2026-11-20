@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "scroll-waits-until-the-page-moves",
+      "kind": "fix",
+      "title": "A crewmate reads a page where it scrolled to",
+      "body": "When the computer is busy, a crewmate that scrolls a page in its browser now waits for the page to move before reading it. Before, it could read the page as it was before the scroll, then scroll again or miss part of the page.",
+      "area": "crewmates",
+      "noPicture": "Nothing on screen changes: the crewmate reads the page after it has moved.",
+      "provenance": {
+        "origin": "change",
+        "covers": [
+          "6de83a2d7dca1873f924f60aa6afd86dda56befa",
+          "d53f667e76f12a90b894c214f8fe18cac6e32b99"
+        ]
+      }
+    }
+  ],
+  "exclusions": []
+}

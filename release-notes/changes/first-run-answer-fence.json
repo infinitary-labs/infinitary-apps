@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "first-run-answer-fence",
+      "reason": "Internal: the window could open the main input a few milliseconds before the welcome card the core had already sent, because an answer can overtake an earlier push; it now waits for the pushes sent before that answer. Nobody can see a gap that short, so nothing a person notices changes."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-orbiting-tap-reads-after-pace",
+      "reason": "Test-only repair: the phone journey that taps an orbiting crewmate now waits for the crew to ride at pace before each look at the crewmate, and taps right after the look that finds it in full view, so a long wait no longer lets its orbit carry it out of view before the tap. No app behavior changes."
+    }
+  ]
+}

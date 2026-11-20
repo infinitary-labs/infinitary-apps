@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "task-board-freeze",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "The task board opens without a pause on a long history",
+      "body": "To show what took over each dropped task's work, the task board read that task's whole history, one dropped task at a time. With a long history, opening the board stopped the app from answering for a moment. The board now looks that up once for all of them.",
+      "noPicture": "This removes time the window spends busy; nothing on screen changes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

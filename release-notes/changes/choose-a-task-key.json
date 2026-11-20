@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "choose-a-task-key",
+      "kind": "feature",
+      "highlight": 1,
+      "title": "Choose a task key when you add a project",
+      "body": "Settings → Projects has a Task key field where you add a project. The next project you add numbers its tasks with those letters, such as INF-1, instead of letters taken from its name. When Firstmate asks to add a project, it can name a key too, and its card shows it. A key another project already has is refused, and nothing is added.",
+      "area": "projects",
+      "picture": {
+        "dark": "choose-a-task-key-dark.webp",
+        "light": "choose-a-task-key-light.webp",
+        "alt": "Firstmate's card asking to add infinitary from GitHub names its task key, INF, beside where the project comes from"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "phone-card-words-before-pictures",
+      "kind": "fix",
+      "title": "A card with a picture shows its words on your phone right away",
+      "body": "On iPhone and iPad, a card with a picture showed only a sliver of its words until every picture had arrived, which could take a while when your phone had just come back in reach. The card's words now show as soon as the card opens, and its pictures fill in when they arrive.",
+      "area": "devices",
+      "noPicture": "The difference is how soon the words appear while a picture is still on its way; once the picture arrives the card looks as it did before.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

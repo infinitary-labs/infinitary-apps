@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "host-card-default-right-edge",
+      "kind": "fix",
+      "title": "The recommended button is at the right on every card",
+      "body": "Cards the app writes itself, such as the card about a stuck task, Ask again, Apply change and the card that adds a panel, now show their recommended button at the right edge, like every other card.",
+      "area": "cards",
+      "picture": {
+        "dark": "host-card-default-right-edge-dark.webp",
+        "light": "host-card-default-right-edge-light.webp",
+        "alt": "A card about a stuck task whose buttons read Drop task, Discard and Continue from left to right, with the recommended Continue at the right edge"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

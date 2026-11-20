@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "closed-replied-card-stays-closed",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A card you replied to stays closed when you close it",
+      "body": "After you reply to a card, it moves to the back of your cards. If you close it there, the crewmate's answer no longer brings it back.",
+      "noPicture": "The fix is that a closed card stays gone, which leaves nothing new on screen to show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

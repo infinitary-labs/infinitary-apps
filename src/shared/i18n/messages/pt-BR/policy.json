@@ -1,0 +1,8 @@
+{
+  "policyAsksFirst": "Pergunta antes",
+  "policyCareBound": "A mesclagem local usa o cuidado Padrão; o Cuidadoso continua pedido para solicitações de pull.",
+  "policyHelper": "Peça ao seu imediato para mudar isto nesta tarefa.",
+  "policySourceParent": "Tarefa principal",
+  "policySourceProject": "Ajuste do projeto",
+  "policySourceTask": "Esta tarefa"
+}

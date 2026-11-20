@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "lost-review-return-goes-again",
+      "kind": "fix",
+      "title": "A fix reaches its reviewer by itself after a dropped connection",
+      "body": "When a task on another computer finishes a fix for its reviewer and that computer drops its connection just then, the fix now goes to the reviewer by itself once the computer is back, with nothing for your first mate to recover. A second drop on that retry tells your first mate.",
+      "area": "devices",
+      "noPicture": "Nothing new appears on screen: a review that used to wait for the first mate now carries on by itself.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

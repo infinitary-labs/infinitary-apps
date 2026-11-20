@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "infinitary-one-time-move",
+      "reason": "Step 3 of the Infinitary rename: the one-time move of saved work into Infinitary's folder, with its hand-over window, is built but asleep, because only an app with Infinitary's identity wakes it; Firstmate 3000 now also remembers start at login in its folder. Nothing a person sees changes."
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "ambient-cold-sleep",
+      "kind": "feature",
+      "area": "settings",
+      "title": "Cold sleep, a piano style for the ambient music",
+      "body": "Pick Cold sleep under Space in the Style choice in Settings → Appearance, or ask your first mate. A soft felt piano plays in a vast, cold room over a low drone, like a ship with everyone asleep. As your crew works, a slow heartbeat and a broken chord come in, and with three or more at work a high piano answers.",
+      "picture": {
+        "dark": "ambient-cold-sleep-dark.webp",
+        "light": "ambient-cold-sleep-light.webp",
+        "alt": "The Sound group in Settings → Appearance, with Ambient music on and the Style choice on Cold sleep, described as mostly piano"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "targeted-journey-fallbacks",
+      "reason": "Internal merge-time coverage: three Mac journey fallback rows and unconditional Linux device journeys; no product behavior changes."
+    }
+  ]
+}

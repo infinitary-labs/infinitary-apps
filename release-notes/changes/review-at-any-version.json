@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "review-at-any-version",
+      "kind": "improvement",
+      "title": "Review carefully starts the review right away",
+      "body": "When you choose Review carefully, a reviewer starts on the version shown on the card. Your first mate can request a review of a task's change before or after a pull request. The task's record keeps the review's findings and risk assessment.",
+      "area": "tasks",
+      "noPicture": "The review starts behind the merge card as soon as you press Review carefully; no view changes shape.",
+      "provenance": {
+        "origin": "change"
+      },
+      "highlight": 3
+    }
+  ],
+  "exclusions": []
+}

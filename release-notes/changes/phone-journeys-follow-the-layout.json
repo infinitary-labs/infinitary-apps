@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-journeys-follow-the-layout",
+      "reason": "The phone check's journeys choose their layout steps from the layout the app shows instead of the kind of device; only the phone tests change, and nothing a person sees in the app changes."
+    }
+  ]
+}

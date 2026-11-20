@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "claude-crew-agents-box",
+      "reason": "Adds a test that a Claude crewmate in the hermetic test box is offered only the client's own agents, and documents it. No shipped behavior changed."
+    }
+  ]
+}

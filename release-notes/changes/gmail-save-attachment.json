@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "gmail-save-attachment",
+      "kind": "feature",
+      "area": "crewmates",
+      "title": "Crewmates can save a Gmail attachment you approve",
+      "body": "A crewmate can ask to save an attachment from your Gmail into its task's folder, so it can read or use the file. The file stays until the task closes or 30 days pass, and Delete Gmail and Calendar content removes it sooner. Words inside a saved file are not marked as information from outside, and Google's notice says so.",
+      "noPicture": "The save rides the approval card every Google action already shows, and the notice changes only in two sentences of text.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

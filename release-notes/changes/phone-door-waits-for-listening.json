@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-door-waits-for-listening",
+      "reason": "Fixes join by its address and infinitary link before either is released: the computer's door now answers a link only once the connection listens for it, so a busy computer no longer refuses the phone's one try. The unreleased join-by-its-address note already describes it working, and the phone check's test home now attaches its connection as the app does."
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "key-reminder",
+      "kind": "feature",
+      "title": "A click shows the key that does the same",
+      "body": "After you click a button that has a keyboard shortcut, the bottom of the window shows that shortcut for about two seconds. Once you press the shortcut yourself, it stops showing for that action. Turn it off in Settings, Keyboard.",
+      "area": "settings",
+      "picture": {
+        "dark": "key-reminder-dark.webp",
+        "light": "key-reminder-light.webp",
+        "alt": "After a click on Put aside, the bottom of the window shows its key Q, used when not typing"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "alpha-journey-repairs",
+      "reason": "Repairs the end-to-end tests that stopped an alpha's Mac checks, including one that failed intermittently. No shipped behavior changed."
+    }
+  ]
+}

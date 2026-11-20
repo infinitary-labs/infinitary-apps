@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "shell-tests-split",
+      "reason": "Split the shell's unit tests along their owners, under the code size warning line; every test moved unchanged and nothing a person sees changes."
+    }
+  ]
+}

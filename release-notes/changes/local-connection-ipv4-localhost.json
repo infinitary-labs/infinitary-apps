@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "local-connection-ipv4-localhost",
+      "kind": "fix",
+      "title": "Custom connections to localhost reach more local servers",
+      "body": "A custom connection to localhost now reaches a server on this computer that answers on only one of its two local addresses. Before, it sometimes said the server could not be reached. Every address is still checked to stay on this computer.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "local-connection-ipv4-localhost-dark.webp",
+        "light": "local-connection-ipv4-localhost-light.webp",
+        "alt": "A local server's model listed after Fetch from server for a localhost address in a custom connection."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

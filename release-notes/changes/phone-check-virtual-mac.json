@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-check-virtual-mac",
+      "reason": "Pull-request CI only: a repository variable can move the phone check's iPhone and iPad gates into a fresh virtual Mac on their own runner, with no application change; unset, the check runs as before."
+    }
+  ]
+}

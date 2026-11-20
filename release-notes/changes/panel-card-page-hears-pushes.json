@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "panel-card-page-hears-pushes",
+      "kind": "fix",
+      "area": "devices",
+      "title": "A panel's card on your iPhone or iPad stays up to date",
+      "body": "A card a panel puts up on Home now follows your computer while it shows, as it does on your computer: when the tasks or the panel's own data it shows change, the card shows the change. Before, it kept what it first read until it was shown again.",
+      "noPicture": "The card looks as it did; it now changes while it shows, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

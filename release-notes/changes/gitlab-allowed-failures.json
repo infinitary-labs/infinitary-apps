@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "gitlab-allowed-failures",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A GitLab job allowed to fail no longer holds your merge",
+      "body": "When a GitLab job that your project allows to fail fails or is cancelled, GitLab still passes the pipeline, and now the app does too: the checks read passed, the merge card goes up and the merge goes through. The checks still name that job as allowed to fail, on the desktop and the phone.",
+      "picture": {
+        "dark": "gitlab-allowed-failures-dark.webp",
+        "light": "gitlab-allowed-failures-light.webp",
+        "alt": "A merge card whose checks read passed, with 2 passed and 1 allowed to fail beneath"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

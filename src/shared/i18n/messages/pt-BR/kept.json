@@ -1,0 +1,17 @@
+{
+  "keptCap": "Ainda não é possível mesclar: ela aguarda sua resposta sobre as tentativas de correção. Sua mesclagem fica guardada para depois disso.",
+  "keptChecks": "Sua mesclagem aguarda: nem todas as verificações passaram. Sua aprovação está guardada. Se uma correção mudar o trabalho, o tripulante pergunta de novo; caso contrário, a mesclagem acontece quando as verificações passarem.",
+  "keptChecksFailed": "Sua mesclagem aguarda uma correção: as verificações falharam. Uma correção traz uma nova versão com novas verificações: se ela mudar o trabalho, o tripulante pergunta de novo em um novo cartão; caso contrário, sua mesclagem acontece assim que elas passarem.",
+  "keptConflict": "Ainda não é possível mesclar: há trabalho mais recente no projeto que não combina com ela. Sua mesclagem está guardada e acontece assim que o tripulante a atualizar e as verificações passarem.",
+  "keptDraft": "Ainda não é possível mesclar: a solicitação de pull é um rascunho. Sua mesclagem está guardada e acontece assim que ela estiver pronta para revisão.",
+  "keptEvidence": "Ainda não é possível mesclar: o tripulante não soube dizer se a última alteração manteve o trabalho que você aprovou, então outro tripulante está conferindo. Sua mesclagem está guardada e acontece se essa conferência mostrar que o trabalho continua sendo o que você aprovou.",
+  "keptGuidance": "Ainda não é possível mesclar: o tripulante ainda não disse se suas palavras mais recentes mudam o trabalho que você aprovou. Sua mesclagem está guardada e acontece assim que ele disser que não mudam.",
+  "keptHostQueue": "Aguardando a fila de mesclagem: o {place} colocou esta versão na fila de mesclagem do seu projeto. Sua mesclagem está guardada. O {place} vai mesclá-la depois que as verificações da fila passarem.",
+  "keptHostRemoved": "Ainda não é possível mesclar: o {place} tirou esta versão da fila de mesclagem do seu projeto sem mesclá-la. Sua mesclagem está guardada. Uma versão corrigida pelo tripulante volta para a fila.",
+  "keptProtected": "Ainda não é possível mesclar: o {place} a retém por uma revisão obrigatória ou outra regra do branch principal. Sua mesclagem está guardada e acontece assim que o {place} permitir.",
+  "keptQueueOwn": "Aguardando a verificação em lote: esta versão é mesclada com suas outras alterações aprovadas, como uma única solicitação de pull em lote. Sua mesclagem está guardada. O app mescla o lote depois que as verificações passarem.",
+  "keptRefused": "Ainda não é possível mesclar: o {place} recusou. Sua mesclagem está guardada e acontece de novo assim que o tripulante corrigir a causa.",
+  "keptRepair": "Ainda não é possível mesclar: ela mudou depois do cartão que você aprovou. Sua mesclagem está guardada e acontece assim que o tripulante mostrar que o trabalho continua sendo o que você aprovou.",
+  "keptSignIn": "Ainda não é possível mesclar: o app precisa do login no {place}. Sua mesclagem está guardada e acontece assim que você fizer login de novo.",
+  "keptUnclear": "Ainda não é possível mesclar: o {place} não deu uma resposta clara. Sua mesclagem está guardada e o app tenta de novo em breve."
+}

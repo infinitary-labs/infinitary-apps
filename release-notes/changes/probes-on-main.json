@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "probes-on-main",
+      "reason": "Internal CI routing: move probe tests off pull requests and run the full probe cohort on main, retaining full release verification."
+    }
+  ]
+}

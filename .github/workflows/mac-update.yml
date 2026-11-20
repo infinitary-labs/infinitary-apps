@@ -1,0 +1,147 @@
+name: Update from the last published alpha
+
+# INF-1900 direction D (docs/alpha.md, "The update check"): on Apple silicon,
+# a disposable virtual Mac installs the version alpha subscribers have now from its
+# public disk image and updates it through a local alpha feed. After signing,
+# the release calls it with the signing job's handoff, and the release's own
+# signed zip must replace the installed app, restart it as the new version and
+# keep its saved work. It builds, signs and sends nothing.
+# Intel is a best-effort side effect of the universal build, never a hosted
+# Mac run (the captain, INF-1900).
+
+on:
+  workflow_call:
+    inputs:
+      trigger:
+        description: What started the caller's run, which every job name here leads with (scripts/ci-job-names.mjs)
+        type: string
+        required: true
+      ref:
+        required: true
+        type: string
+      version:
+        description: The release's version, which the local alpha feed offers
+        required: true
+        type: string
+      handoff_id:
+        description: The signing job's handoff artifact
+        required: true
+        type: string
+      zip_name:
+        required: true
+        type: string
+      zip_sha256:
+        required: true
+        type: string
+      runner:
+        description: A publishing release's light queue; empty takes the light kind's queue
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  update:
+    name: ${{ format('{0} · Apply published-alpha update (Mac; Apple silicon)', inputs.trigger) }}
+    # A publishing release's light queue, else the light kind's
+    # (docs/testing.md, "Each Mac job's kind and size").
+    runs-on: ${{ inputs.runner || fromJSON(vars.MAC_QUEUES || '{}').light || 'mini-mac-virtual' }}
+    timeout-minutes: 45
+    steps:
+      # A refused checkout waits until GitHub takes the job's token again,
+      # then runs once more (docs/testing.md, "GitHub refusing a job's token").
+      - id: checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        continue-on-error: true
+        with: &update-checkout
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        env:
+          TOKEN: ${{ github.token }}
+        run: &wait-for-token |
+          # Asks the address the checkout's fetch reads, with the job's token
+          # as the checkout sends it, every 15 seconds for up to 10 minutes,
+          # then lets the checkout try once more. A failure GitHub's token
+          # did not cause, such as a missing commit, is tried again at once.
+          url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/info/refs?service=git-upload-pack"
+          patience="${CHECKOUT_PATIENCE_SECONDS:-600}"
+          pause="${CHECKOUT_PAUSE_SECONDS:-15}"
+          started=$SECONDS
+          while :; do
+            # The token reaches curl on its input, never on its command line.
+            answer="$(printf 'user = "x-access-token:%s"\n' "$TOKEN" |
+              curl --silent --location --output /dev/null --write-out '%{http_code}' \
+                --connect-timeout 30 --max-time 60 --config - --url "$url")" || true
+            if [[ "$answer" == 2?? ]]; then exit 0; fi
+            waited=$((SECONDS - started))
+            if ((waited >= patience)); then
+              echo "::warning title=GitHub still refuses the job's token::It answered $answer after ${waited}s; the checkout tries once more."
+              exit 0
+            fi
+            echo "GitHub answered $answer to the job's token after ${waited}s; asking again in ${pause}s"
+            sleep "$pause"
+          done
+      - name: Check out again
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: *update-checkout
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Refuse the physical Mac before installing or changing the guest
+        run: node scripts/installer-environment.ts
+      - uses: ./.github/actions/electron-download
+      - run: pnpm install --frozen-lockfile
+      - name: Confirm the native architecture
+        run: node -e 'if(process.arch !== "arm64") throw new Error("This runner is not Apple silicon");'
+      # By the immutable id the signing job recorded; the next step is the gate.
+      - name: Fetch the release's signed zip
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          artifact-ids: ${{ inputs.handoff_id }}
+          path: ${{ runner.temp }}/handoff-download
+          merge-multiple: true
+      - name: Check it is the zip the signing job handed over
+        id: zip
+        env:
+          ZIP_NAME: ${{ inputs.zip_name }}
+          ZIP_SHA256: ${{ inputs.zip_sha256 }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          ZIP="$RUNNER_TEMP/handoff-download/zip/$ZIP_NAME"
+          [[ "$ZIP_NAME" == "Infinitary-$VERSION-universal.zip" ]]
+          [[ "$(shasum -a 256 "$ZIP" | awk '{print $1}')" == "$ZIP_SHA256" ]]
+          echo "path=$ZIP" >> "$GITHUB_OUTPUT"
+      - name: Update the published alpha to this release
+        env:
+          UPDATE_TARGET_VERSION: ${{ inputs.version }}
+          UPDATE_TARGET_ZIP: ${{ steps.zip.outputs.path }}
+          INSTALLER_EVIDENCE: ${{ runner.temp }}/update-evidence
+        run: node scripts/check-update-from-alpha.mjs
+      # GitHub ends a job as lost when the runner's lease renewals stop reaching its
+      # job service, even after every step passed, and the virtual Mac's runner log
+      # is deleted with it; read the renewals and the path to that service while the
+      # job can still upload them (docs/alpha.md, "The update check").
+      - name: Read the runner's link to GitHub's job service
+        if: always()
+        timeout-minutes: 5
+        env:
+          INSTALLER_EVIDENCE: ${{ runner.temp }}/update-evidence
+        run: node scripts/runner-link-readings.ts
+      - name: Keep the observed results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: update-evidence-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/update-evidence
+          if-no-files-found: ignore

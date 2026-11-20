@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "batch-stop-at-failed-code-checks",
+      "reason": "This change stops the project's own merge batch checks early when their code checks fail; it changes how the project is checked, not the app."
+    }
+  ]
+}

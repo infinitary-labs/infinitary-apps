@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "holder-stop-confirms-birth",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A finished task ends only programs it can still identify",
+      "body": "When a task closes, Infinitary ends a program still using the task's folders only after confirming it is the same program it found. If the computer cannot list its programs at that moment, the program keeps running and the task's record names it, so a later cleanup can end it. Before, the app could send the stop without that check, and reach another program that had taken the same number.",
+      "noPicture": "This happens in the background when a task closes, and shows only as one line in the task's record.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

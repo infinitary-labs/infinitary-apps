@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "devices-split-guardrails",
+      "reason": "Tests only: browser tests of the Devices tab, a check that every Mac-only unit case sits in a file the Mac lane runs, and a check that a devices change selects every device journey, with no app behavior change."
+    }
+  ]
+}

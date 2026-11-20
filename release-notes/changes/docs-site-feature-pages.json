@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "docs-site-feature-pages",
+      "reason": "Adds five documentation site pages, Integrations, Knowledge, Runbooks, Secrets and The crew's browser, and links to them from existing pages; nothing in the app changes."
+    }
+  ]
+}

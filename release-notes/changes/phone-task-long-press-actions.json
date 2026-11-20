@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "phone-task-long-press-actions",
+      "kind": "fix",
+      "area": "devices",
+      "title": "A long press on a task on iPhone and iPad offers what your Mac's Tasks list offers",
+      "body": "On iPhone and iPad, a long press on a task in Tasks now offers at least what resting the pointer on the same task offers on your Mac. A finished or dropped task, which offered only Open record, can now be pinned and unpinned there too. A task in Backlog offers Start, or Try again after a start that failed, which starts it at once as on your Mac, and a held task can be started from it.",
+      "noPicture": "The desktop's hero recipe cannot take a picture of the phone's menu; the phone check's pictures of it stay with the change.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "program-shapes",
+      "kind": "feature",
+      "area": "tasks",
+      "title": "Ask the first mate to loop until a goal is met",
+      "body": "Ask the first mate to keep at a goal until it is met, such as \"loop until the tests pass\", or say \"use a workflow\", and it files the work as one program: rounds that each continue the last until the goal is met, an audit that checks every finding, deep research that brings its answers together, or a change made item by item. You review one result at the end.",
+      "noPicture": "A program shows as an ordinary task with its pieces as child tasks, so there is no new view.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

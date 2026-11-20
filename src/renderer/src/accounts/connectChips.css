@@ -1,0 +1,183 @@
+/* The provider chip row and sign-in aside (design skill
+   components/core/ConnectChips): one row, the Firstmate-capable providers,
+   then - a hairline apart, under "crew only" - any that only run crew.
+   Shared by the first-launch gate on the stage and the Intelligence tab's
+   "Add account" foot. */
+
+.fm-connect-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.fm-connect-chips[data-connect-chips="stage"] {
+  justify-content: center;
+  gap: 8px;
+}
+
+.fm-connect-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-pill);
+  padding: 3px 10px;
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  color: var(--fg-2);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+
+.fm-connect-chips[data-connect-chips="stage"] .fm-connect-chip {
+  padding: 4px 12px 4px 9px;
+  font-size: var(--text-sm);
+  color: var(--fg-1);
+  background: var(--bg-1);
+}
+
+.fm-connect-chip:hover:not(:disabled, [aria-disabled="true"]) {
+  background: var(--bg-3);
+  color: var(--fg-1);
+  border-color: var(--line-2);
+}
+
+/* A chip off for a reason stays a Tab stop (aria-disabled) and looks the same. */
+.fm-connect-chip:disabled,
+.fm-connect-chip[aria-disabled="true"] {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.fm-connect-chip-note {
+  font-family: var(--font-mono);
+  color: var(--fg-3);
+}
+
+/* Claude: the same chip at the tertiary tone, after the hairline. */
+.fm-connect-label ~ .fm-connect-chip {
+  color: var(--fg-3);
+}
+
+.fm-connect-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.fm-connect-chips[data-connect-chips="stage"] .fm-connect-group {
+  gap: 8px;
+}
+
+.fm-connect-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--line-1);
+  margin: 0 4px;
+}
+
+.fm-connect-label {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--fg-3);
+  margin-inline-end: 2px;
+}
+
+/* An account connected while the gate is up: the row in place of its chip. */
+.fm-connect-account {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+  padding: 4px 2px;
+  /* A Tab stop of its own: the ring follows a rounded box. */
+  border-radius: var(--radius-s);
+}
+
+.fm-connect-account b {
+  color: var(--fg-1);
+  font-weight: 500;
+}
+
+.fm-connect-account-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-pill);
+  background: var(--ok);
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+/* Connected, but it cannot answer yet (no client, not signed in): the hollow ring. */
+.fm-connect-account[data-unavailable="true"] .fm-connect-account-dot {
+  box-sizing: border-box;
+  background: transparent;
+  border: 1px solid var(--fg-2);
+  box-shadow: none;
+}
+
+.fm-connect-aside {
+  padding: 0 var(--space-4) var(--space-3);
+}
+
+.fm-connect-aside-frame {
+  width: min(560px, 100%);
+  margin: var(--space-4) auto 0;
+  text-align: start;
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-m);
+  background: var(--bg-1);
+  padding-top: var(--space-3);
+}
+
+/* A provider's code step (INF-838), after Settings -> Integrations' sign-in. */
+.fm-code-step {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.fm-code-step-line {
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+}
+
+.fm-code-step-code {
+  font-family: var(--font-mono);
+  color: var(--fg-1);
+  letter-spacing: 0.12em;
+  background: var(--bg-3);
+  border-radius: var(--radius-s);
+  padding: 2px 8px;
+  margin-inline-start: var(--space-2);
+}
+
+.fm-code-step-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.fm-code-step-waiting {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--fg-3);
+}
+
+.fm-code-step-error {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--danger);
+}

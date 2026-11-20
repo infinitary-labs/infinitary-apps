@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "record-copy-past-limit",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A long-running crewmate on another computer keeps showing its latest work",
+      "body": "A crewmate's conversation on another computer could stop updating in its Crewmate tab after many sessions. It now keeps coming over however long the crewmate works there.",
+      "noPicture": "Nothing on screen looks different; the Crewmate tab now keeps showing new work where it used to stop.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

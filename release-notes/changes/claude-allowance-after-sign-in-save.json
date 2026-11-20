@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "claude-allowance-after-sign-in-save",
+      "kind": "fix",
+      "title": "Your Claude allowance keeps updating after Claude Code renews its sign-in",
+      "body": "On a Mac, after you chose Always Allow, your Claude allowance could stop updating every few hours with a note that macOS did not allow reading your sign-in, until you pressed Refresh and approved the macOS password window again. Infinitary now keeps reading it in the background each time Claude Code renews its sign-in.",
+      "area": "subscriptions",
+      "noPicture": "Nothing on screen changes; the allowance simply keeps updating instead of going stale.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

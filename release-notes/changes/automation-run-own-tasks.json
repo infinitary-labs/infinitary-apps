@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "automation-run-own-tasks",
+      "kind": "fix",
+      "area": "settings",
+      "title": "Each automation run lists only the tasks it started",
+      "body": "When two automations ran at the same time, such as two nightly audits, each run's history listed the tasks of both. Each run now lists only the tasks its own automation started.",
+      "noPicture": "The run history looks the same; only which tasks a run lists changes.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

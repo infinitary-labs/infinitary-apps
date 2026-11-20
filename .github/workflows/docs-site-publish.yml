@@ -1,0 +1,262 @@
+name: docs-site-publish
+run-name: docs-site-publish ${{ inputs.commit || github.sha }} (${{ inputs.dispatch_id || 'merge' }})
+
+# Publishes docs.getinfinitary.com (docs/docs-site.md, "Publishing"). It runs
+# when a merge to main changes the docs site or the design system files it
+# reads, after each stable release (the What's new page is built from the
+# release tags, so a new stable tag needs a new build), or on a manual run on
+# main naming main's newest version. Only the authorized operator's merges,
+# releases and runs publish, and only main's newest version; it never runs on
+# a pull request or a task branch. It builds and
+# checks the site, refuses an address it does not own, publishes the Worker
+# infinitary-docs and fails unless the live site passes every check.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs-site/**"
+      - ".claude/skills/infinitary-design/tokens/colors.css"
+      - ".claude/skills/infinitary-design/tokens/fonts.css"
+      - ".claude/skills/infinitary-design/assets/fonts/**"
+      - ".claude/skills/infinitary-design/assets/app-icon.svg"
+      - ".github/workflows/docs-site-publish.yml"
+      - "scripts/docs-site-whats-new.ts"
+      - "release-notes/archive.json"
+      - "release-notes/releases/**"
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: Full commit id on main to publish (must be main's newest version)
+        required: true
+        type: string
+      dispatch_id:
+        description: Unique identifier used to follow this run
+        required: true
+        type: string
+  # The release run creates its tags with the job's own token, and GitHub
+  # starts no run for those tag pushes, so the publish follows the release
+  # run's end instead. Only a successful stable release publishes (the
+  # "Confirm what this run publishes" step reads the run's jobs).
+  workflow_run:
+    workflows: [release]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+# One publish at a time, never cancelled midway. queue: max keeps every
+# waiting run; by default GitHub keeps one and cancels the run it replaces,
+# which could drop a publish.
+concurrency:
+  group: docs-getinfinitary-live
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  # Its name leads with what started it (scripts/ci-job-names.mjs).
+  publish:
+    name: ${{ github.event_name == 'push' && 'Main push' || github.event_name == 'workflow_run' && 'Requested stable' || 'Manual request' }} · Publish the docs site (Linux)
+    if: >-
+      github.repository == 'infinitary-labs/infinitary-apps' &&
+      github.ref == 'refs/heads/main' &&
+      github.actor == 'kunchenguid' &&
+      (github.event_name != 'workflow_run' ||
+        (github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.head_branch == 'main'))
+    # The key lives only in this environment, which lets only main's runs
+    # read it, so no other branch's workflow can reach it.
+    environment: docs-site
+    # A machine GitHub hosts and deletes after the job, so the publishing key
+    # never reaches a machine that outlives it.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      WRANGLER_SEND_METRICS: "false"
+      ASTRO_TELEMETRY_DISABLED: "1"
+    steps:
+      # A release run that is not a stable release (an alpha, or a rehearsal)
+      # publishes nothing; its jobs' names lead with what started it
+      # (scripts/ci-job-names.mjs).
+      - name: Confirm what this run publishes
+        id: release
+        if: github.event_name == 'workflow_run'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN: ${{ github.event.workflow_run.id }}
+        run: |
+          names="$(gh api --paginate "repos/$GITHUB_REPOSITORY/actions/runs/$RUN/jobs?filter=latest&per_page=100" --jq '.jobs[].name')"
+          if grep -q '^Requested stable · ' <<<"$names"; then
+            echo "stable=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "stable=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Confirm the selected commit is what this run checked out
+        env:
+          SELECTED: ${{ inputs.commit || github.sha }}
+          RUN_SHA: ${{ github.sha }}
+        run: |
+          if [[ ! "$SELECTED" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::commit must be a full 40-character commit id"; exit 1
+          fi
+          if [[ "$SELECTED" != "$RUN_SHA" ]]; then
+            echo "::error::Selected $SELECTED but main is at $RUN_SHA. Run again with the commit you mean to publish."
+            exit 1
+          fi
+
+      # Every commit and tag: the What's new page is built from the release tags.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.commit || github.sha }}
+          fetch-depth: 0
+
+      # A run waits its turn in the queue, and a run can be re-run later, so
+      # main may have moved on. A merge run that is no longer newest stops
+      # green only when a newer merge changed the paths this run starts on,
+      # since that merge's own run publishes; when main moved on only with
+      # other files, no run follows, so this one publishes the site, which
+      # matches main's newest version. A release or manual run of anything
+      # older fails, so it is run again rather than leaving the page stale.
+      - name: Confirm the commit is main's newest version
+        id: newest
+        env:
+          COMMIT: ${{ inputs.commit || github.sha }}
+          EVENT: ${{ github.event_name }}
+          STABLE: ${{ steps.release.outputs.stable }}
+          # The push trigger's paths, which the workflow test holds equal.
+          SITE_PATHS: >-
+            docs-site/**
+            .claude/skills/infinitary-design/tokens/colors.css
+            .claude/skills/infinitary-design/tokens/fonts.css
+            .claude/skills/infinitary-design/assets/fonts/**
+            .claude/skills/infinitary-design/assets/app-icon.svg
+            .github/workflows/docs-site-publish.yml
+            scripts/docs-site-whats-new.ts
+            release-notes/archive.json
+            release-notes/releases/**
+        run: |
+          if [[ "$EVENT" == "workflow_run" && "$STABLE" != "true" ]]; then
+            echo "::notice::The release run was not a stable release. Nothing published."
+            { echo "## Not a stable release"; echo "Only a stable release changes the What's new page. Nothing published by this run."; } >> "$GITHUB_STEP_SUMMARY"
+            echo "publish=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          tip="$(git ls-remote origin refs/heads/main | cut -f1)"
+          if [[ ! "$tip" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Could not read main's newest version."; exit 1
+          fi
+          if [[ "$tip" == "$COMMIT" ]]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if [[ "$EVENT" == "push" ]]; then
+            git fetch -q origin "$tip"
+            # read -ra splits the list without expanding docs-site/** against
+            # the files of this older checkout; git matches each glob itself.
+            read -ra paths <<<"$SITE_PATHS"
+            pathspecs=()
+            for path in "${paths[@]}"; do pathspecs+=(":(glob)$path"); done
+            if git diff --quiet "$COMMIT" "$tip" -- "${pathspecs[@]}"; then
+              echo "::notice::main moved on to $tip without changing the site; publishing."
+              echo "publish=true" >> "$GITHUB_OUTPUT"; exit 0
+            fi
+            echo "::notice::main has moved on to $tip, which changes the site; its own run publishes it. Nothing published here."
+            { echo "## Superseded"; echo "main moved on to \`$tip\`, which changes the site. Nothing published by this run."; } >> "$GITHUB_STEP_SUMMARY"
+            echo "publish=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          echo "::error::$COMMIT is not main's newest version ($tip). Run again with the newest version."
+          exit 1
+
+      - uses: ./.github/actions/pnpm
+        if: steps.newest.outputs.publish == 'true'
+        with:
+          working-directory: docs-site
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        if: steps.newest.outputs.publish == 'true'
+        with:
+          node-version: 24
+      - name: Install the site's own packages
+        if: steps.newest.outputs.publish == 'true'
+        run: pnpm --dir docs-site install --frozen-lockfile
+      - name: Build the site
+        if: steps.newest.outputs.publish == 'true'
+        run: pnpm --dir docs-site build
+      - name: Test the publish checks
+        if: steps.newest.outputs.publish == 'true'
+        run: pnpm --dir docs-site test
+      - uses: ./.github/actions/browser-chromium
+        if: steps.newest.outputs.publish == 'true'
+        with:
+          working-directory: docs-site
+      - name: Check the built site
+        if: steps.newest.outputs.publish == 'true'
+        run: pnpm --dir docs-site check
+      - name: Rehearse the publish
+        if: steps.newest.outputs.publish == 'true'
+        run: pnpm --dir docs-site rehearse
+
+      - name: Preflight - confirm the account and zone, and that the address is ours or free
+        if: steps.newest.outputs.publish == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DOCS_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm --dir docs-site preflight
+
+      - name: Record the version serving now
+        if: steps.newest.outputs.publish == 'true'
+        working-directory: docs-site
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DOCS_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          # Only times and version ids: the plain listing names each
+          # deployment's author by email address.
+          {
+            echo "## Before"
+            echo '```'
+            if pnpm exec wrangler deployments list --json > "$RUNNER_TEMP/deployments.json" 2>/dev/null; then
+              node -e '
+                const text = require("node:fs").readFileSync(process.argv[1], "utf8");
+                const deployments = JSON.parse(text.slice(text.indexOf("[")));
+                for (const d of deployments.slice(-5))
+                  console.log(d.created_on, d.versions.map((v) => `${v.version_id} (${v.percentage}%)`).join(", "));
+              ' "$RUNNER_TEMP/deployments.json"
+            else
+              echo "No earlier version (first publish)."
+            fi
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish
+        if: steps.newest.outputs.publish == 'true'
+        working-directory: docs-site
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DOCS_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          COMMIT: ${{ inputs.commit || github.sha }}
+        run: |
+          pnpm exec wrangler deploy --message "docs-site $COMMIT" 2>&1 | tee "$RUNNER_TEMP/publish.log"
+          {
+            echo "## Published"
+            echo "Commit: \`$COMMIT\`"
+            echo '```'
+            grep -E "Current Version ID|Uploaded|docs.getinfinitary.com" "$RUNNER_TEMP/publish.log" || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check the live site
+        if: steps.newest.outputs.publish == 'true'
+        run: |
+          # A new custom domain can take a few minutes to get its certificate.
+          # The publish counts only when every check passes; otherwise this fails.
+          for attempt in 1 2 3 4 5 6 7 8 9 10; do
+            if node docs-site/scripts/check-live.mjs --origin https://docs.getinfinitary.com > "$RUNNER_TEMP/live.log" 2>&1; then
+              cat "$RUNNER_TEMP/live.log"
+              { echo "## Live checks"; echo '```'; cat "$RUNNER_TEMP/live.log"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "attempt $attempt: not passing yet"; tail -n 8 "$RUNNER_TEMP/live.log"
+            sleep 30
+          done
+          cat "$RUNNER_TEMP/live.log"
+          echo "::error::The live site did not pass its checks. The publish is not complete; see docs/docs-site.md, \"Restore an earlier version\"."
+          exit 1

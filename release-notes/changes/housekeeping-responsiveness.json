@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "housekeeping-responsiveness",
+      "kind": "fix",
+      "area": "message-box",
+      "title": "Fewer pauses while you use Infinitary",
+      "body": "Infinitary gives your input a turn between its housekeeping checks and groups their updates. Moving between a card, a panel and your message no longer makes the window wait for housekeeping to finish.",
+      "noPicture": "The layout is unchanged; the improvement is responsiveness during housekeeping and focus changes, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

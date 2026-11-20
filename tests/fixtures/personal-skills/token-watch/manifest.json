@@ -1,0 +1,7 @@
+{
+  "title": "Tokens",
+  "placement": { "x": "right", "y": "bottom" },
+  "size": "content",
+  "order": 60,
+  "sql": ["v_usage_v1"]
+}

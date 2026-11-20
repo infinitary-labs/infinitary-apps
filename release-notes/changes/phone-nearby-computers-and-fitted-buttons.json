@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "phone-nearby-computers-and-fitted-buttons",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "On iPhone and iPad, a clearer way to join, and the computers on your network listed",
+      "body": "In the Infinitary phone app, Join by its address now lists the computers on your network with Remote Login on. Type your account once, tap your computer, and its whole address is filled in for you. A computer that is not listed can still be found: one line offers to try every address on your network, and asks before it looks. The phone's buttons now take the Mac's shape, each only as wide as its words, with the main one last and filled. The welcome screen offers its three ways to join as rows in one list, each with a line saying what it does.",
+      "picture": {
+        "dark": "phone-nearby-computers-and-fitted-buttons-dark.webp",
+        "light": "phone-nearby-computers-and-fitted-buttons-light.webp",
+        "alt": "Infinitary's welcome screen on iPad: one list with Scan the code, Paste its link and Join by its address, each with a symbol, a line saying what it does and a chevron, and the line to open A phone in Devices under it."
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

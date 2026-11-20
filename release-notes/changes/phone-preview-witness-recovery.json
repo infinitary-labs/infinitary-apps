@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-preview-witness-recovery",
+      "reason": "Test-only repair: observe the real Photos preview through the owned simulator's existing broad stream and kept log when the narrow stream omits it, including the kept log's unreadable record of it on the phone check's virtual Mac, without changing native assertions, actions or waits."
+    }
+  ]
+}

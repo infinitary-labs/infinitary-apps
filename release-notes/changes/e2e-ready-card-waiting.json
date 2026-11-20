@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "e2e-ready-card-waiting",
+      "reason": "Test-only fix: the round-cap and declared-wait journeys follow FI3-702, where only a ready card lists a task under Waiting on you and a cardless held record shows its latest report. The obsolete waiting-group claim is deleted and its doc sentence corrected. No product behavior changes."
+    }
+  ]
+}

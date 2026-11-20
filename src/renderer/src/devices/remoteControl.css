@@ -1,0 +1,61 @@
+/* The app while it controls Firstmate on another Mac (design skill
+   components/devices/RemoteControl): the top line at the top bar's left,
+   and the one pill centred under the top bar. */
+
+.fm-remote-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.fm-remote-lead {
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+}
+
+.fm-remote-name {
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--fg-1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fm-remote-time {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--fg-1);
+}
+
+.fm-remote-pill {
+  position: absolute;
+  top: 56px;
+  left: 50%; /* physical: centred with translateX(-50%), which mirrors to itself */
+  transform: translateX(-50%);
+  max-width: calc(100% - 2 * var(--space-6));
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 14px;
+  background: var(--bg-1);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  color: var(--fg-1);
+  pointer-events: none;
+  z-index: 20;
+  opacity: 1;
+  transition: opacity var(--dur-slow) var(--ease-out);
+}
+
+.fm-remote-pill[data-fading="true"] {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fm-remote-pill {
+    transition: none;
+  }
+}

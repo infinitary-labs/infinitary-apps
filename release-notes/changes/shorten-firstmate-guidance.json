@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "shorten-firstmate-guidance",
+      "reason": "Internal wording trim of first mate guidance; nothing a person sees changes."
+    }
+  ]
+}

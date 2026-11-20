@@ -1,0 +1,21 @@
+{
+  "welcomeActivity": "船員會在背景工作，並在這裡回報。",
+  "welcomeBack": "上一步",
+  "welcomeBox": "在這張卡片下方的訊息框輸入你想完成的事。",
+  "welcomeCard": "我會用像這張一樣的卡片，帶回答案和選項。",
+  "welcomeEnd": "就是這些。要開始的話，請按下方的一個開場句。",
+  "welcomeFigure": "你的視窗，每按一次介紹一個部分：訊息框、卡片、動態和任務",
+  "welcomeLabelActivity": "動態",
+  "welcomeLabelBox": "訊息框",
+  "welcomeLabelTasks": "任務",
+  "welcomeNext": "下一步",
+  "welcomeStarterClone": "複製一個專案",
+  "welcomeStarterCloneWords": "複製這個網址的專案：",
+  "welcomeStarterFolder": "在我電腦上的資料夾裡工作",
+  "welcomeStarterFolderWords": "在這個資料夾裡工作：",
+  "welcomeStarterNew": "開始一個新專案",
+  "welcomeStarterNewWords": "開始一個新專案，名稱是：",
+  "welcomeStartersLead": "要開始的話，請按一個開場句，然後把句子寫完：",
+  "welcomeTasks": "每個要求都會在這裡留下紀錄。",
+  "welcomeTitle": "我們的合作方式"
+}

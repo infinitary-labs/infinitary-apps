@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "pinned-task-brings-its-parts",
+      "kind": "improvement",
+      "title": "A pinned task brings its parts into Pinned",
+      "body": "When you pin a task that has parts, they now list under it in the Pinned section of Tasks instead of staying scattered in their own groups. The parts themselves stay unpinned: unpin the task and each one goes back under its state. The Tasks tab on your phone shows the same.",
+      "area": "tasks",
+      "picture": {
+        "dark": "pinned-task-brings-its-parts-dark.webp",
+        "light": "pinned-task-brings-its-parts-light.webp",
+        "alt": "The Tasks panel with a pinned task in Pinned and its three parts indented under it, while an unrelated task stays in Working"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

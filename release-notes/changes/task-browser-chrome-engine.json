@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "task-browser-chrome-engine",
+      "reason": "Adds Google Chrome as a second task browser engine behind a switch that is off and that no setting offers; with it off every task browser opens in the built-in engine as before, so nothing a person sees changes."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "record-narrow-model-journey",
+      "reason": "Internal: the narrow-window journey scrolls the task card's Info body to its row of facts before checking that the model reads whole, so the check no longer depends on where the body was left scrolled; nothing a person sees changes."
+    }
+  ]
+}

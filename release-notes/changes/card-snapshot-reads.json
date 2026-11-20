@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-snapshot-reads",
+      "reason": "Internal: drawing the card stack reads each task once and reuses its compiled statements, so the freeze check stops catching the stack's reads on a slow test computer; a snapshot takes about a millisecond less, which nobody notices."
+    }
+  ]
+}

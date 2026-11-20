@@ -1,0 +1,118 @@
+/*
+ * The docs site in Infinitary's own look (docs/docs-site.md, "The look").
+ * The colors and the two faces come from the design system's token files by
+ * path, so this sheet copies no value a token defines: it only says which
+ * token each of Starlight's own names takes. Dark is the default; light
+ * follows the visitor's system or choice, through the same data-theme="light"
+ * the tokens already answer to.
+ */
+@import "../../../.claude/skills/infinitary-design/tokens/colors.css";
+@import "../../../.claude/skills/infinitary-design/tokens/fonts.css";
+
+:root,
+:root[data-theme="light"] {
+  --sl-font: "Space Grotesk", system-ui, sans-serif;
+  --sl-font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --sl-color-accent-low: var(--accent-dim);
+  --sl-color-accent: var(--accent-strong);
+  --sl-color-accent-high: var(--accent);
+  --sl-color-text-accent: var(--accent);
+  --sl-color-text-invert: var(--bg-0);
+
+  --sl-color-white: var(--fg-1);
+  --sl-color-gray-1: var(--fg-1);
+  --sl-color-gray-2: var(--fg-2);
+  --sl-color-gray-3: var(--fg-2);
+  --sl-color-gray-4: var(--fg-3);
+  --sl-color-gray-5: var(--bg-3);
+  --sl-color-gray-6: var(--bg-2);
+  --sl-color-gray-7: var(--bg-1);
+  --sl-color-black: var(--bg-0);
+
+  --sl-color-bg: var(--bg-0);
+  --sl-color-bg-nav: var(--bg-1);
+  --sl-color-bg-sidebar: var(--bg-0);
+  --sl-color-bg-inline-code: var(--bg-2);
+  --sl-color-bg-accent: var(--accent);
+  --sl-color-hairline-light: var(--line-1);
+  --sl-color-hairline: var(--line-1);
+  --sl-color-hairline-shade: var(--line-2);
+}
+
+/* The design system's focus ring on every control a key reaches. */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* The current page in the sidebar reads as the app's selected row: the accent on its dim fill. */
+.sidebar-content a[aria-current="page"],
+.sidebar-content a[aria-current="page"]:hover,
+.sidebar-content a[aria-current="page"]:focus {
+  background-color: var(--accent-dim);
+  color: var(--accent);
+}
+
+/*
+ * A page's pictures come in dark and light pairs (docs/docs-site.md,
+ * "Pictures"): each shows only in its own theme, on a hairline mat like the
+ * app's release-note pictures.
+ */
+.picture-dark,
+.picture-light {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--line-1);
+  border-radius: 8px;
+}
+:root[data-theme="light"] .picture-dark,
+:root:not([data-theme="light"]) .picture-light {
+  display: none;
+}
+
+/*
+ * The marks beside each task, drawn on the Tasks and crewmates page with the
+ * shapes and colors the app gives them (TaskStatusMark in the app's design
+ * code), so each follows the site's theme. A mark that starts a list item
+ * stands in that item's bullet, so its lines wrap under the words.
+ */
+.task-mark {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.125em;
+  color: var(--fg-2);
+}
+li:has(> .task-mark:first-child) {
+  position: relative;
+  list-style: none;
+}
+li > .task-mark:first-child {
+  position: absolute;
+  inset-inline-start: -1.5em;
+  top: calc((1lh - 1em) / 2);
+  margin: 0;
+}
+.task-mark-hot {
+  color: var(--warn);
+}
+.task-mark-calm {
+  color: var(--accent);
+}
+.task-mark-ok {
+  color: var(--ok);
+}
+.task-mark-lava {
+  color: var(--danger);
+}
+.task-mark-dim {
+  color: var(--fg-3);
+}
+.task-mark-ring {
+  stroke: var(--accent);
+}
+.task-mark-track {
+  stroke: var(--line-2);
+}

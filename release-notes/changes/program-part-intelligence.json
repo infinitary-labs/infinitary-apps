@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "program-part-intelligence",
+      "kind": "improvement",
+      "area": "tasks",
+      "title": "Choose intelligence for each part of a program",
+      "body": "Programs can use different intelligence levels for different parts. Built-in playbooks recommend levels for planning, building, checking, research and migration.",
+      "noPicture": "This changes program routing and guidance, not the layout or controls of a screen.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

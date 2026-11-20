@@ -1,0 +1,10 @@
+{
+  "title": "Pull request checks",
+  "integrations": [
+    {
+      "integration": "github",
+      "actions": ["read"],
+      "why": "Shows the checks on your open pull requests."
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "closed-note-stays-closed",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A note you closed stays closed",
+      "body": "A note you closed no longer comes back when its task is dropped later, or when a crewmate picks its work up again after an update. Reading the note of a crewmate that has already finished no longer starts it again: your first mate closes its task instead.",
+      "noPicture": "The change is that a closed note no longer reappears, which leaves nothing new on screen to show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

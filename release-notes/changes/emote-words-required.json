@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "emote-words-required",
+      "kind": "improvement",
+      "title": "Firstmate's gestures now say what happened",
+      "body": "Every gesture Firstmate makes now comes with a few words, up to 40 characters, that tell you what you should know about what happened, such as \"Sent the meter fix to a crewmate\". The words show just above the character and fade after a few seconds. The app's own small reactions, such as the nod when your message is passed on to a crewmate, stay wordless. Words that arrive while a card covers the character still pass unseen.",
+      "highlight": 2,
+      "area": "firstmate",
+      "picture": {
+        "dark": "emote-words-required-dark.webp",
+        "light": "emote-words-required-light.webp",
+        "alt": "The words Sent the meter fix to a crewmate above the Firstmate character"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

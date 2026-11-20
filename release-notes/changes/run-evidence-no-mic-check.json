@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "run-evidence-no-mic-check",
+      "reason": "Test-only repair: the run-evidence test's own Playwright runs turn off the e2e microphone check, which in a slow virtual Mac booted Electron before their first spec and outlasted the test's wait. No shipped behavior changed."
+    }
+  ]
+}

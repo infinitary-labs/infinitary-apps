@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "no-old-dropped-line-on-answers",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Closing a task carried on by another no longer brings back an old card",
+      "body": "When your first mate closed a task as carried on by another task, an answer you had already accepted could come back with a weeks-old line saying some other task was dropped. That old line no longer appears, and the card stays where you left it.",
+      "noPicture": "The fix stops an old card from coming back; nothing new appears on screen.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "claude-allowance-back-after-early-reset",
+      "kind": "fix",
+      "area": "subscriptions",
+      "title": "Claude works again as soon as an early limit reset gives your allowance back",
+      "body": "After Claude stopped a turn on a spent limit, such as the Fable limit, and you then used a reset that gives that limit back early, Infinitary kept showing that limit at 0 and kept your Claude account paused until the original reset time. Now the next allowance reading that shows the allowance back clears the 0 and lets your first mate and crewmates use Claude again.",
+      "noPicture": "The meter clears only after a real Claude refusal followed by an early reset, which the app's test launcher cannot stage.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

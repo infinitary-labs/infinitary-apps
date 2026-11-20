@@ -1,0 +1,99 @@
+import type { FmEvent } from "@shared/events";
+import type { CrewSupervisor } from "./orchestrator/crewSupervisor";
+import type { FirstmateAgent } from "./orchestrator/firstmateAgent";
+import { TeamQueueLeft } from "./orchestrator/teamQueueLeft";
+import type { TaskService } from "./tasks/taskService";
+import { ProjectChanges } from "./workspace/projectChanges";
+import { ProjectContributions } from "./workspace/projectContributions";
+import { ProjectSetups } from "./workspace/projectSetups";
+import type { RepoRegistry } from "./workspace/repoRegistry";
+import { moveImpact } from "./workspace/repositoryMove";
+
+/** Home wiring for project cards and fork routing; each existing owner retains its writes. */
+export function startHomeProjects({
+  repos,
+  tasks,
+  devices,
+  forgeFor,
+  supervisor,
+  broadcastEvent,
+  notify,
+  automationsAbout,
+}: {
+  repos: RepoRegistry;
+  tasks: TaskService;
+  devices: ConstructorParameters<typeof ProjectSetups>[0]["devices"];
+  forgeFor: ConstructorParameters<typeof ProjectContributions>[0]["forgeFor"] &
+    ConstructorParameters<typeof TeamQueueLeft>[0]["forgeFor"];
+  supervisor: Pick<CrewSupervisor, "cards" | "hostOps">;
+  broadcastEvent: (event: FmEvent) => void;
+  notify: (notice: Parameters<FirstmateAgent["notifyOp"]>[0]) => void;
+  /** How many automations are about a project, for a move card (INF-5005). */
+  automationsAbout: (projectId: string) => number;
+}) {
+  const projectContributions = new ProjectContributions({
+    repos,
+    tasks,
+    broadcastEvent,
+    forgeFor,
+    hasWorkingCopy: (repoId) =>
+      tasks
+        .listLive()
+        .some(
+          (record) =>
+            record.repoId === repoId &&
+            (Boolean(record.worktreeDir) || record.activity === "starting"),
+        ),
+    raise: (card) => supervisor.cards.hostCards.raiseHostCard(card),
+    note: (text, outcome) => {
+      broadcastEvent({ type: "firstmate_note", text });
+      notify({ facts: { kind: "project-change", outcome, title: text } });
+    },
+  });
+  const projectSetups = new ProjectSetups({
+    repos,
+    devices,
+    raiseCard: (card) => supervisor.cards.hostCards.raiseHostCard(card),
+    tell: (facts) => notify({ facts }),
+    broadcast: (event) => broadcastEvent(event),
+  });
+  supervisor.hostOps.setProjectSetup({
+    add: (offer, answers) => {
+      void projectSetups.add(offer, answers).catch((error: unknown) => {
+        broadcastEvent({
+          type: "firstmate_note",
+          text: `Could not add the project: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      });
+    },
+    decline: (offer) => projectSetups.decline(offer),
+  });
+  const projectChanges = new ProjectChanges({
+    repos,
+    devices,
+    joining: (move) =>
+      moveImpact(move, {
+        tasksJoining: (joining) => tasks.tasksJoining(joining),
+        automationsAbout,
+      }),
+    raiseCard: (card) => supervisor.cards.hostCards.raiseHostCard(card),
+    tell: (facts) => notify({ facts }),
+  });
+  // A project that still carries the team queue's files is looked at once,
+  // at start or after a merge in it, and offered their removal (docs/forge.md,
+  // "A project that still carries the team queue's files").
+  const teamQueueLeft = new TeamQueueLeft({
+    repos,
+    forgeFor,
+    tell: (facts) => notify({ facts }),
+    withdrawCard: (id, reason) => supervisor.cards.hostCards.withdrawHostCard(id, reason),
+  });
+  tasks.onChange((change) => {
+    for (const event of change.events) {
+      if (event.kind !== "merged" && event.kind !== "landed") continue;
+      const repoId = tasks.get(event.taskId)?.repoId;
+      if (repoId) void teamQueueLeft.look(repoId);
+    }
+  });
+  return { projectContributions, projectSetups, projectChanges, teamQueueLeft };
+}

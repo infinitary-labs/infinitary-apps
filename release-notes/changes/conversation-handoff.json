@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "conversation-handoff",
+      "kind": "fix",
+      "title": "Keep talking after changing your first mate’s model",
+      "body": "A message arriving during a model change no longer ends the conversation.",
+      "area": "firstmate",
+      "noPicture": "This fixes conversation continuity during a model change without changing the interface.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

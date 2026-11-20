@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "your-panels-in-frames",
+      "kind": "improvement",
+      "area": "other",
+      "title": "A panel you made can no longer slow down or break the rest of the app",
+      "body": "Each panel a crewmate builds for you now draws on its own, apart from the app, the same way a panel you add from elsewhere does. If a panel hangs or fails to draw, only that panel stops and says so, and the rest of the app keeps working. Your panels look and work as before, and their saved data is unchanged.",
+      "noPicture": "Panels draw the same as before; the change is where their code runs, not how they look.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

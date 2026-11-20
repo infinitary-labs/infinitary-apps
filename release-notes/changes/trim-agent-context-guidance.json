@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "trim-agent-context-guidance",
+      "reason": "Shortens agent instructions without changing a visible view."
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "phone-settings-sections",
+      "kind": "improvement",
+      "area": "settings",
+      "title": "Phone Settings follows the computer's sections",
+      "body": "Settings on iPhone and iPad opens on General, Appearance and Devices. Open a section to read the version, choose this device's theme or manage secret approvals under This phone. Back returns to the list, and Done closes from any page.",
+      "provenance": {
+        "origin": "change"
+      },
+      "picture": {
+        "dark": "phone-settings-sections-dark.png",
+        "light": "phone-settings-sections-light.png",
+        "alt": "Settings on iPhone lists General, Appearance and Devices with their current state and a chevron, under Done."
+      }
+    }
+  ],
+  "exclusions": []
+}

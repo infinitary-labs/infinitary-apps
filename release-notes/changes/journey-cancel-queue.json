@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journey-cancel-queue",
+      "reason": "Internal CI: change the runner queue for journey request cancellation."
+    }
+  ]
+}

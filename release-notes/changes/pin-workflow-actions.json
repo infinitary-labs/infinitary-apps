@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "pin-workflow-actions",
+      "reason": "Internal: pin GitHub Actions to the same upstream commits without changing how Infinitary is built, checked, or published."
+    }
+  ]
+}

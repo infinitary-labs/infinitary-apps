@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "now-panel-now-stays-own-doing",
+      "reason": "Test only: the Tasks panel journey now expects a task's Now to keep the crewmate's report headline after the captain asks about the task, as INF-557's Now rule says, instead of the ask itself. No shipped behavior changed."
+    }
+  ]
+}

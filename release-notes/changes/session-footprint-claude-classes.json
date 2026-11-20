@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "session-footprint-claude-classes",
+      "reason": "Internal development tool: the offline session footprint measurement now sorts the Claude client's session lines into their content classes instead of counting them as framing. Nothing in the app changes."
+    }
+  ]
+}

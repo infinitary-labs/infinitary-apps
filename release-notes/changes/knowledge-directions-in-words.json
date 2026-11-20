@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "knowledge-directions-in-words",
+      "kind": "feature",
+      "highlight": 1,
+      "area": "firstmate",
+      "title": "The Knowledge panel shows your directions",
+      "body": "The Knowledge panel lists up to four of your directions in their own words, with project names as quiet tags. Below them, All directions opens the full list and Graph opens your map of concepts. In the Knowledge browser, the Directions tab lists every direction with a Project filter; select one to see whether it is an instruction in your own words or advice, which project it applies to, and, under History, every change made to it in Knowledge.",
+      "provenance": { "origin": "change" },
+      "picture": {
+        "dark": "knowledge-directions-in-words-dark.webp",
+        "light": "knowledge-directions-in-words-light.webp",
+        "alt": "The Knowledge panel has one heading, four direction lines, two with a quiet project tag, and links to all five directions and a graph of nine concepts."
+      }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "task-browser-late-local-refusal",
+      "reason": "Test-only: the local-page browser scenario reads a refused local host from later browser replies without changing the existing journey assertion or browser security."
+    }
+  ]
+}

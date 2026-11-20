@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "working-copies-test-budget",
+      "reason": "Runs the working-copies tests' git at the test run's own priority and gives the file a measured 10 s budget, so they stop timing out on a loaded Mac. No shipped behavior changed."
+    }
+  ]
+}

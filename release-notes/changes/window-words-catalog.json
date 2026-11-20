@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "window-words-catalog",
+      "reason": "Internal: the window's shell, cards, panel chrome, shared parts and keyboard command words move into the translation catalog, frames carry the app's language and direction, and the stylesheets use logical sides for right-to-left; English reads exactly as before and no other language ships yet."
+    }
+  ]
+}

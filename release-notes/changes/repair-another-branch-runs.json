@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "repair-another-branch-runs",
+      "reason": "Internal: a crewmate's check repair declared at a version another branch is still at, such as an evidence branch whose dispatched runs have not started yet, now stays open until those runs report and is settled from their result, instead of being set aside at once; only the crewmate's tool answers and its repair count change."
+    }
+  ]
+}

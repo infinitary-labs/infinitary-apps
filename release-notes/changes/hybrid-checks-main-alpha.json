@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "hybrid-checks-main-alpha",
+      "reason": "Project development and release automation only: focused checks count ordinary coverage once, edited unit files run three total rounds locally without PR repeat jobs, and successful rolling-main proof is reused by automatic alpha cuts; no app view changes."
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "work-computer-starts-stay-connected",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Starting several tasks on another computer no longer drops its connection",
+      "body": "When several tasks that continue earlier work start on another computer at once, each now sends only the work that computer is missing, and they take turns. Infinitary no longer drops that computer's connection partway through, so those tasks start without failing.",
+      "noPicture": "The change is in how work travels between two computers; nothing on screen looks different.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

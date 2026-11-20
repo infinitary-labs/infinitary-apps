@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "devices-small-fixes",
+      "reason": "Four small fixes inside multi-machine support (a spent allowance named as such, Remove only for a Mac that left, the joined note going once signed in, Remove clearing what it left) made before it reached any installed build. It first ships in this release, so a person meets it already fixed, and the your-devices note describes it."
+    }
+  ]
+}

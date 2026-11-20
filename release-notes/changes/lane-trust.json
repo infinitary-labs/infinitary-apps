@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "lane-trust",
+      "reason": "Internal: a card's height check no longer interrupts a scroll under way, which only showed on a slow computer, and the virtual Mac test runner checks its microphone access before the journeys."
+    }
+  ]
+}

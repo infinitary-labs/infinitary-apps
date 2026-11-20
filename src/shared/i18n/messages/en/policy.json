@@ -1,0 +1,8 @@
+{
+  "policyAsksFirst": "Asks first",
+  "policyCareBound": "Local merge uses Default rigor; Careful remains requested for pull requests.",
+  "policyHelper": "Ask your first mate to change these for this task.",
+  "policySourceParent": "Parent task",
+  "policySourceProject": "Project setting",
+  "policySourceTask": "This task"
+}

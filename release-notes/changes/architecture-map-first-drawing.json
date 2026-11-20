@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "architecture-map-first-drawing",
+      "reason": "Test only: the architecture map's browser test waits for the frame's first drawing before it zooms, drags or pinches the map, so the map's first refit can no longer undo them on a busy computer. Nothing a person using the app notices."
+    }
+  ]
+}

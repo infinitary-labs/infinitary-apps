@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "past-card-wheel-at-rest",
+      "reason": "Internal: the reading-place journey turns the wheel on a past card only once the stage has come to rest, since until the card's body draws the stage keeps the record's drawing in front of it behind a shield. No product behavior changes."
+    }
+  ]
+}

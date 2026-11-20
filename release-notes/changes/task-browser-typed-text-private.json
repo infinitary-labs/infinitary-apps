@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "task-browser-typed-text-private",
+      "reason": "Internal, behind the development-only task browser gate: once the captain hands a task's browser back, text he typed into the page - card details on an unpaid or failed payment included - reads to the crewmate as filled with its value hidden, and a picture of such a page is refused; an installed app shows none of it."
+    }
+  ]
+}

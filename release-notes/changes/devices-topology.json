@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "devices-topology",
+      "kind": "feature",
+      "title": "See your devices around home",
+      "body": "Settings → Devices shows which computers and phones are connected to your home computer, connecting, or out of reach. A connected device can show that work is not ready, and setup progress appears without changing its connection state. Select a device for its details and actions, or switch to a list without losing your selection.",
+      "area": "devices",
+      "picture": {
+        "dark": "devices-topology-dark.webp",
+        "light": "devices-topology-light.webp",
+        "alt": "The Devices map with eight paired devices around the cyan home computer and a connection legend underneath"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

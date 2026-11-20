@@ -1,0 +1,955 @@
+import { describe, expect, it, vi } from "vitest";
+import type { LaneHold } from "../orchestrator/crewRuntime";
+import {
+  type CrewDelegate,
+  closingSentenceMissing,
+  createCrewTools,
+  groupSpawnArgs,
+  reviewAssignedWords,
+} from "./crewTools";
+import { piToolsOf } from "./toolSpec";
+
+/**
+ * The crew control plane: each tool routes into the delegate and every
+ * failure surfaces as a thrown error (a loud tool error to the agent),
+ * never a silent fallback.
+ */
+
+type AnyTool = {
+  name: string;
+  execute: (
+    id: string,
+    params: Record<string, unknown>,
+  ) => Promise<{
+    content: { type: string; text: string }[];
+  }>;
+};
+
+function toolset(overrides: Partial<CrewDelegate> = {}) {
+  const delegate: CrewDelegate = {
+    commission: vi.fn(async () => ({ taskId: "ab12cd34", crewmate: "starting" })),
+    steerCrewmate: vi.fn(async () => "mid-turn" as const),
+    interruptCrewmate: vi.fn(async () => {}),
+    crewStatus: vi.fn(() => []),
+    isCaptainTurn: vi.fn(() => true),
+    settleTask: vi.fn(async () => ({ text: "settled" })),
+    closeDone: vi.fn(async () => ({ text: "closed" })),
+    ...overrides,
+  };
+  const tools = piToolsOf(createCrewTools(delegate)) as unknown as AnyTool[];
+  const byName = new Map(tools.map((tool) => [tool.name, tool]));
+  return { delegate, byName };
+}
+
+describe("crew tools", () => {
+  it("exposes exactly the closed set", () => {
+    const { byName } = toolset();
+    expect([...byName.keys()].sort()).toEqual([
+      "crew_status",
+      "interrupt_crewmate",
+      "move_task",
+      "settle_task",
+      "spawn_crewmate",
+      "steer_crewmate",
+    ]);
+  });
+
+  it("spawn carries the structured intent and returns the admission handle immediately", async () => {
+    const { delegate, byName } = toolset();
+    const result = await byName.get("spawn_crewmate")?.execute("t1", {
+      title: "Fix meter",
+      goal: "The meter reads correctly and its test passes",
+      user_words: "the meter is broken, fix it",
+      repo_id: "r1",
+      constraints: [
+        { kind: "tests-required" },
+        { kind: "free", text: "keep the public API stable" },
+      ],
+      delivery_note: "single commit",
+      shape: { kind: "fix" },
+    });
+    expect(delegate.commission).toHaveBeenCalledWith({
+      title: "Fix meter",
+      intent: {
+        goal: "The meter reads correctly and its test passes",
+        userWords: "the meter is broken, fix it",
+        constraints: [
+          { kind: "tests-required" },
+          { kind: "free", text: "keep the public API stable" },
+        ],
+        deliveryNote: "single commit",
+      },
+      repoId: "r1",
+      shape: { kind: "fix" },
+    });
+    // INF-3060: the answer comes once the task is recorded; its start runs behind it.
+    expect(result?.content[0]?.text).toBe(
+      "Recorded task ab12cd34; it is starting now, and its tile shows any wait, such as for room on its computer. You hear an [fm-op] if it cannot start or waits for something its tile does not name.",
+    );
+  });
+
+  it("carries a declared skip reason into the commission without judging it", async () => {
+    const { delegate, byName } = toolset();
+    await byName.get("spawn_crewmate")?.execute("t1", {
+      title: "Rename label",
+      goal: "The label says Close",
+      user_words: "rename the label",
+      shape: { skipped_plan_because: "One label; no rule changes; inspect the screen" },
+    });
+    expect(delegate.commission).toHaveBeenCalledWith({
+      title: "Rename label",
+      intent: { goal: "The label says Close", userWords: "rename the label" },
+      shape: { skipped_plan_because: "One label; no rule changes; inspect the screen" },
+    });
+  });
+
+  // Intent: INF-1177 piece 2, declared facts replace a lesson-only spawn path.
+  it.each([true, false])(
+    "carries ongoing %s and requested intelligence through the spawn adapter",
+    async (ongoing) => {
+      const { delegate, byName } = toolset();
+      await byName.get("spawn_crewmate")?.execute("subject", {
+        title: "Teach chess",
+        goal: "Practise rook moves",
+        user_words: "teach me chess",
+        personal_ui: true,
+        shape: { ongoing, intelligence: "high" },
+      });
+      expect(delegate.commission).toHaveBeenCalledWith(
+        expect.objectContaining({ shape: { ongoing, intelligence: "high" } }),
+      );
+    },
+  );
+
+  it("spawn marks a personal-ui ask on the intent and leaves the binding to the host", async () => {
+    const { delegate, byName } = toolset();
+    await byName.get("spawn_crewmate")?.execute("t1", {
+      title: "Tokyo clock",
+      goal: "A Tokyo clock panel exists",
+      user_words: "make me a tokyo clock panel",
+      personal_ui: true,
+    });
+    expect(delegate.commission).toHaveBeenCalledWith({
+      title: "Tokyo clock",
+      intent: {
+        goal: "A Tokyo clock panel exists",
+        userWords: "make me a tokyo clock panel",
+        kind: "personal-ui",
+      },
+    });
+    // The flag off is no kind at all, not a kind of "false".
+    await byName.get("spawn_crewmate")?.execute("t2", {
+      title: "Fix meter",
+      goal: "g",
+      user_words: "w",
+      personal_ui: false,
+    });
+    expect(delegate.commission).toHaveBeenLastCalledWith({
+      title: "Fix meter",
+      intent: { goal: "g", userWords: "w" },
+    });
+  });
+
+  it("carries the work shape's facts through, premium ask included (v2.8)", async () => {
+    // The Firstmate reports facts; the host computes the tier from them.
+    const { delegate, byName } = toolset();
+    await byName.get("spawn_crewmate")?.execute("t1", {
+      title: "Redesign the dock",
+      goal: "The dock layout is settled",
+      user_words: "use premium for this, the dock layout is a mess",
+      shape: { premium_ask: true, basis: "FM3K-12" },
+    });
+    expect(delegate.commission).toHaveBeenCalledWith(
+      expect.objectContaining({ shape: { premium_ask: true, basis: "FM3K-12" } }),
+    );
+  });
+
+  // INF-3141 (the captain's direction 1): a review ask's answer names the
+  // version it assigned and says when edits not yet committed are unseen.
+  it("answers a review ask with the version it assigned", async () => {
+    const review = { head: "0123456789abcdef0123456789abcdef01234567", uncommitted: true };
+    const { byName } = toolset({
+      commission: vi.fn(async () => ({ taskId: "ab12cd34", crewmate: "starting", review })),
+    });
+    const result = await byName.get("spawn_crewmate")?.execute("t1", {
+      title: "Review",
+      goal: "Review the meter fix",
+      user_words: "fix the meter",
+      shape: { review_of: "INF-7" },
+    });
+    // The answer returns while the review starts (INF-3060) and ends with
+    // the version it assigned (INF-3141).
+    const text = result?.content[0]?.text ?? "";
+    expect(text.startsWith("Recorded task ab12cd34;")).toBe(true);
+    expect(text.endsWith(reviewAssignedWords(review))).toBe(true);
+    expect(reviewAssignedWords(review)).toContain("0123456");
+    expect(reviewAssignedWords(review)).toContain("edits not yet committed");
+  });
+
+  it("carries the first mate's declaration that the work is on the project's folder (INF-567)", async () => {
+    // The captain's approved plan: the first mate declares folder work by its own judgment.
+    const { delegate, byName } = toolset();
+    await byName.get("spawn_crewmate")?.execute("t1", {
+      title: "Bring the business folder up to date",
+      goal: "The business folder is clean, on main and at origin's main",
+      user_words: "bring the business folder up to date",
+      repo_id: "r1",
+      shape: { in_folder: true },
+    });
+    expect(delegate.commission).toHaveBeenCalledWith(
+      expect.objectContaining({ repoId: "r1", shape: { in_folder: true } }),
+    );
+  });
+
+  it("carries a task-level delivery ask through, without touching the repo", async () => {
+    const { delegate, byName } = toolset();
+    await byName.get("spawn_crewmate")?.execute("t1", {
+      title: "Fix the meter",
+      goal: "The meter test passes",
+      user_words: "fix it but don't open a PR, land it locally",
+      repo_id: "r1",
+      shape: { delivery_ask: "local-only" },
+    });
+    expect(delegate.commission).toHaveBeenCalledWith(
+      expect.objectContaining({
+        repoId: "r1",
+        shape: { delivery_ask: "local-only" },
+      }),
+    );
+  });
+
+  it("carries a task-level autonomy ask through, in both directions", async () => {
+    const { delegate, byName } = toolset();
+    await byName.get("spawn_crewmate")?.execute("t1", {
+      title: "Fix the meter",
+      goal: "The meter test passes",
+      user_words: "merge it yourself when it's green",
+      repo_id: "r1",
+      shape: { autonomy_ask: true },
+    });
+    expect(delegate.commission).toHaveBeenCalledWith(
+      expect.objectContaining({ repoId: "r1", shape: { autonomy_ask: true } }),
+    );
+
+    // `false` is an ask too - "ask me before merging this one" on an
+    // autonomous repository - so it must reach the shape, not be dropped
+    // as a falsy value the way an omitted flag is.
+    await byName.get("spawn_crewmate")?.execute("t2", {
+      title: "Fix the meter",
+      goal: "The meter test passes",
+      user_words: "ask me before merging this one",
+      repo_id: "r1",
+      shape: { autonomy_ask: false },
+    });
+    expect(delegate.commission).toHaveBeenLastCalledWith(
+      expect.objectContaining({ shape: { autonomy_ask: false } }),
+    );
+  });
+
+  it("carries the computer the captain named for this task through, trimmed", async () => {
+    const { delegate, byName } = toolset();
+    await byName.get("spawn_crewmate")?.execute("t1", {
+      title: "Fix the meter",
+      goal: "The meter test passes",
+      user_words: "run this one on the mini",
+      repo_id: "r1",
+      shape: { runs_on_ask: " mini-id " },
+    });
+    expect(delegate.commission).toHaveBeenCalledWith(
+      expect.objectContaining({ repoId: "r1", shape: { runs_on_ask: "mini-id" } }),
+    );
+  });
+
+  it("carries an exact model override through", async () => {
+    const { delegate, byName } = toolset();
+    await byName.get("spawn_crewmate")?.execute("t1", {
+      title: "Redesign the dock",
+      goal: "The dock layout is settled",
+      user_words: "use gpt-6-astra for this",
+      shape: { override_model_id: "gpt-6-astra" },
+    });
+    expect(delegate.commission).toHaveBeenCalledWith(
+      expect.objectContaining({ shape: { override_model_id: "gpt-6-astra" } }),
+    );
+  });
+
+  it("carries the reasoning effort the user named for the work through (FI3-1812)", async () => {
+    const { delegate, byName } = toolset();
+    await byName.get("spawn_crewmate")?.execute("t1", {
+      title: "Redesign the dock",
+      goal: "The dock layout is settled",
+      user_words: "run this one at extra high reasoning",
+      shape: { override_reasoning: "xhigh" },
+    });
+    expect(delegate.commission).toHaveBeenCalledWith(
+      expect.objectContaining({ shape: { override_reasoning: "xhigh" } }),
+    );
+  });
+
+  // FI3-444: a named model is never confirmed before the start says which
+  // model took it; since INF-3060 that is the started wake, not the answer.
+  it("tells the first mate it hears which model took the work when the user named one (FI3-444)", async () => {
+    const { byName } = toolset();
+    const result = await byName.get("spawn_crewmate")?.execute("t1", {
+      title: "Teach the colors",
+      goal: "First run teaches the working and idle colors",
+      user_words: "start it with a fable crewmate",
+      shape: { override_model_id: "claude-fable-5-1" },
+    });
+    expect(result?.content[0]?.text).toBe(
+      "Recorded task ab12cd34; it is starting now, and its tile shows any wait, such as for room on its computer. You hear an [fm-op] if it cannot start or waits for something its tile does not name, and which model took it once it runs.",
+    );
+  });
+
+  it("says a queued spawn's model is known only once it starts, when the user named one", async () => {
+    const { byName } = toolset({
+      commission: vi.fn(async () => ({ taskId: "ab12cd34", crewmate: "queued" })),
+    });
+    const spawn = async (shape?: Record<string, unknown>) =>
+      (
+        await byName.get("spawn_crewmate")?.execute("t1", {
+          title: "Teach the colors",
+          goal: "First run teaches the working and idle colors",
+          user_words: "after the audit, on fable",
+          blocked_by: ["FI3-430"],
+          ...(shape ? { shape } : {}),
+        })
+      )?.content[0]?.text;
+    expect(await spawn({ override_model_id: "claude-fable-5-1" })).toBe(
+      "Queued task ab12cd34; it starts when its wait ends and you will hear about it as [fm-op] messages. Which model takes it is known only once it starts.",
+    );
+    expect(await spawn()).toBe(
+      "Queued task ab12cd34; it starts when its wait ends and you will hear about it as [fm-op] messages.",
+    );
+  });
+
+  it("carries an escalation through on a captain turn (S4)", async () => {
+    const { delegate, byName } = toolset();
+    const result = await byName.get("spawn_crewmate")?.execute("t1", {
+      title: "Fix the meter test",
+      goal: "The meter test is really fixed",
+      user_words: "that is not a fix, try again with something smarter",
+      shape: { escalate_from: "FM3K-12" },
+    });
+    expect(delegate.commission).toHaveBeenCalledWith(
+      expect.objectContaining({ shape: { escalate_from: "FM3K-12" } }),
+    );
+    expect(result?.content[0]?.text).toContain("Recorded task ab12cd34");
+  });
+
+  it("refuses escalate_from on a turn that is not the captain's (Q2)", async () => {
+    // Nothing climbs a tier without a human saying so, and the refusal
+    // stops the whole spawn: quietly starting a duplicate at the tier that
+    // already failed would be the worst of both.
+    const { delegate, byName } = toolset({ isCaptainTurn: vi.fn(() => false) });
+    const result = await byName.get("spawn_crewmate")?.execute("t1", {
+      title: "Fix the meter test",
+      goal: "The meter test is really fixed",
+      user_words: "[fm-op] crewmate 2 reported: I am blocked on this",
+      shape: { escalate_from: "FM3K-12" },
+    });
+    expect(delegate.commission).not.toHaveBeenCalled();
+    expect(result?.content[0]?.text).toContain("Nothing was spawned");
+    // The ways out are structured data the Firstmate carries as the card's
+    // actions (contract v3.6, captain lock 3), not a recipe in the prose.
+    expect(result?.content[0]?.text).toContain('"held": "escalation-needs-captain"');
+    expect(result?.content[0]?.text).toContain('"label": "Try a premium model"');
+    expect(result?.content[0]?.text).toContain('"premium_ask": true');
+    expect(result?.content[0]?.text).not.toContain("one decision card whose default");
+  });
+
+  it("keeps a single stronger-model refusal way when premium quota is exhausted", async () => {
+    const { byName } = toolset({
+      isCaptainTurn: vi.fn(() => false),
+      escalationEligible: vi.fn(() => true),
+      premiumCanServe: vi.fn(() => false),
+    });
+    const result = await byName.get("spawn_crewmate")?.execute("t1", {
+      title: "Blocked attempt",
+      goal: "Fixed",
+      user_words: "I am blocked",
+      shape: { escalate_from: "FM3K-12" },
+    });
+    expect(result?.content[0]?.text).toContain('"label": "Try a stronger model"');
+    expect(result?.content[0]?.text).not.toContain('"label": "Try a premium model"');
+    expect(result?.content[0]?.text).not.toContain('"premium_ask"');
+  });
+
+  it("omits both model refusal ways when the rejected lineage has no rung left", async () => {
+    const { byName } = toolset({
+      isCaptainTurn: vi.fn(() => false),
+      escalationEligible: vi.fn(() => false),
+    });
+    const result = await byName.get("spawn_crewmate")?.execute("t1", {
+      title: "Blocked attempt",
+      goal: "Fixed",
+      user_words: "I am blocked",
+      shape: { escalate_from: "FM3K-12" },
+    });
+    expect(result?.content[0]?.text).not.toContain("Try a premium model");
+    expect(result?.content[0]?.text).toContain("Retry with the captain's guidance");
+  });
+
+  it("passes no shape at all when the spawn carries none of its facts", async () => {
+    // Absent is absent: an empty shape would read as "the captain said
+    // nothing about any of this", which is exactly what undefined means.
+    const { delegate, byName } = toolset();
+    await byName.get("spawn_crewmate")?.execute("t1", {
+      title: "Notes",
+      goal: "A summary exists",
+      user_words: "summarize",
+    });
+    expect(delegate.commission).toHaveBeenCalledWith(
+      expect.not.objectContaining({ shape: expect.anything() }),
+    );
+  });
+
+  it("spawns a step the captain gave no words for with none, never borrowing another task's (INF-1939)", async () => {
+    const { delegate, byName } = toolset();
+    await byName.get("spawn_crewmate")?.execute("t1", {
+      title: "Check main",
+      goal: "Report whether main fails too",
+    });
+    expect(delegate.commission).toHaveBeenCalledWith(
+      expect.objectContaining({
+        intent: { goal: "Report whether main fails too", userWords: "" },
+      }),
+    );
+  });
+
+  it("spawn validates the intent loudly at the tool boundary", async () => {
+    const { delegate, byName } = toolset();
+    await expect(
+      byName.get("spawn_crewmate")?.execute("t1", { title: "x", goal: " ", user_words: "y" }),
+    ).rejects.toThrow(/goal is required/);
+    await expect(
+      byName.get("spawn_crewmate")?.execute("t1", {
+        title: "x",
+        goal: "g",
+        user_words: "y",
+        constraints: [{ kind: "free" }],
+      }),
+    ).rejects.toThrow(/needs its text/);
+    expect(delegate.commission).not.toHaveBeenCalled();
+  });
+
+  it("steer routes the data plane and surfaces finished-task errors", async () => {
+    const { delegate, byName } = toolset();
+    await byName.get("steer_crewmate")?.execute("t1", { task_id: "ab12", message: "go blue" });
+    expect(delegate.steerCrewmate).toHaveBeenCalledWith("ab12", "go blue", { mode: "expected" });
+    // INF-2214: the captain chose expected by default, with an explicit exception.
+    await byName.get("steer_crewmate")?.execute("t2", {
+      task_id: "ab12",
+      message: "For context only.",
+      response_mode: "guidance-only",
+    });
+    expect(delegate.steerCrewmate).toHaveBeenLastCalledWith("ab12", "For context only.", {
+      mode: "guidance-only",
+    });
+
+    const failing = toolset({
+      steerCrewmate: vi.fn(async () => {
+        throw new Error("Task ab12 is completed and no longer steerable.");
+      }),
+    });
+    await expect(
+      failing.byName.get("steer_crewmate")?.execute("t1", { task_id: "ab12", message: "x" }),
+    ).rejects.toThrow(/no longer steerable/);
+  });
+
+  it("steer hands another task's reported files on before the guidance, and refuses when that fails (INF-992)", async () => {
+    // INF-992 direction B: "a second task can hand files to the waiting task".
+    const handFiles = vi.fn(
+      async () => "Files handed to you from INF-1: /t/temp/handover/a.pdf (2 KB).",
+    );
+    const { delegate, byName } = toolset({ handFiles });
+    await byName.get("steer_crewmate")?.execute("t1", {
+      task_id: "ab12",
+      message: "Use the W-9 from INF-1.",
+      files_from: "INF-1",
+    });
+    expect(handFiles).toHaveBeenCalledWith("INF-1", "ab12");
+    expect(delegate.steerCrewmate).toHaveBeenCalledWith(
+      "ab12",
+      "Use the W-9 from INF-1.\n\nFiles handed to you from INF-1: /t/temp/handover/a.pdf (2 KB).",
+      { mode: "expected" },
+    );
+    const refused = toolset({
+      handFiles: vi.fn(async () => {
+        throw new Error("INF-1 has no reported files to hand on.");
+      }),
+    });
+    await expect(
+      refused.byName.get("steer_crewmate")?.execute("t1", {
+        task_id: "ab12",
+        message: "x",
+        files_from: "INF-1",
+      }),
+    ).rejects.toThrow(/no reported files/);
+    expect(refused.delegate.steerCrewmate).not.toHaveBeenCalled();
+  });
+
+  // INF-3075's review of INF-3060: a steer to a task still starting is kept
+  // for it, and one behind a hand-over goes out after it, in order.
+  it("steer says a message to a task not started yet, or behind a hand-over, is recorded, not lost", async () => {
+    const answer = async (delivery: "recorded-queued" | "after-files") => {
+      const { byName } = toolset({ steerCrewmate: vi.fn(async () => delivery) });
+      const result = await byName
+        .get("steer_crewmate")
+        ?.execute("t1", { task_id: "ab12", message: "change course" });
+      return JSON.stringify(result?.content ?? []);
+    };
+    const queued = await answer("recorded-queued");
+    expect(queued).toContain("has not started yet");
+    expect(queued).toContain("right after its brief once it starts");
+    expect(queued).toContain("Do not resend");
+    const after = await answer("after-files");
+    expect(after).toContain("right after your earlier message with files");
+    expect(after).toContain("Do not resend");
+  });
+
+  // INF-4165 finding 2: one sentence once answered five different holds.
+  it("steer answers a kept message with the hold that keeps it", async () => {
+    const answer = async (hold?: LaneHold) => {
+      const laneHold = vi.fn(() => hold);
+      const { byName } = toolset({
+        steerCrewmate: vi.fn(async () => "recorded-held" as const),
+        laneHold,
+      });
+      const result = await byName
+        .get("steer_crewmate")
+        ?.execute("t1", { task_id: "ab12", message: "change course" });
+      expect(laneHold).toHaveBeenCalledWith("ab12");
+      return JSON.stringify(result?.content ?? []);
+    };
+    const cost = await answer({
+      kind: "cost-limit",
+      holder: "p1",
+      holderKey: "INF-7",
+      limitUsd: 300,
+      cardId: "card-cost-p1",
+    });
+    expect(cost).toContain("under INF-7, which passed its $300 cost limit");
+    expect(cost).toContain("card-cost-p1");
+    expect(cost).not.toContain("account is not answering");
+    expect(await answer({ kind: "account" })).toContain("account is not answering");
+    expect(await answer({ kind: "out-of-reach" })).toContain("out of reach");
+    expect(await answer({ kind: "update" })).toContain("being updated");
+    expect(await answer({ kind: "move" })).toContain("moving to another computer");
+    expect(await answer({ kind: "hand-over" })).toContain("files handed over");
+    for (const hold of [undefined, { kind: "move" } as const]) {
+      const text = await answer(hold);
+      expect(text).not.toContain("account");
+      expect(text).toContain("Do not resend");
+    }
+  });
+
+  it("interrupt carries the lifecycle mode", async () => {
+    const { delegate, byName } = toolset();
+    await byName.get("interrupt_crewmate")?.execute("t1", { task_id: "ab12", mode: "interrupt" });
+    expect(delegate.interruptCrewmate).toHaveBeenCalledWith("ab12", "interrupt");
+    await byName.get("interrupt_crewmate")?.execute("t1", {
+      task_id: "ab12",
+      mode: "cancel",
+      closing_sentence: "The captain no longer needs the meter fix.",
+    });
+    expect(delegate.interruptCrewmate).toHaveBeenCalledWith(
+      "ab12",
+      "cancel",
+      "The captain no longer needs the meter fix.",
+    );
+  });
+
+  // INF-1713: the captain asks for a started task to move to another
+  // computer, and can take the ask back before it crosses.
+  it("move_task names the computer, or null to cancel, and answers the host's words", async () => {
+    const moveTask = vi.fn(async (_task: string, to: string | null) => ({
+      ok: true,
+      text: to ? `Moving to ${to}.` : "It stays.",
+    }));
+    const { byName } = toolset({ moveTask });
+    const moved = await byName
+      .get("move_task")
+      ?.execute("t1", { task_id: "ab12", computer: " Mac mini " });
+    expect(moveTask).toHaveBeenCalledWith("ab12", "Mac mini", undefined);
+    expect(moved?.content[0]?.text).toBe("Moving to Mac mini.");
+    // Ignored files the move must carry ride as named (INF-1772 R7).
+    await byName
+      .get("move_task")
+      ?.execute("t1", { task_id: "ab12", computer: "Mac mini", keep: [".env.local"] });
+    expect(moveTask).toHaveBeenLastCalledWith("ab12", "Mac mini", [".env.local"]);
+    const cancelled = await byName
+      .get("move_task")
+      ?.execute("t1", { task_id: "ab12", computer: "Mac mini", cancel: true });
+    expect(moveTask).toHaveBeenLastCalledWith("ab12", null, undefined);
+    expect(cancelled?.content[0]?.text).toBe("It stays.");
+    const unnamed = await byName.get("move_task")?.execute("t1", { task_id: "ab12" });
+    expect(unnamed?.content[0]?.text).toMatch(/Name the computer/);
+    expect(moveTask).toHaveBeenCalledTimes(3);
+    // Off a computer out of reach, on the captain's yes to what stays behind.
+    await byName
+      .get("move_task")
+      ?.execute("t1", { task_id: "ab12", computer: "Mac mini", leave_behind: true });
+    expect(moveTask).toHaveBeenLastCalledWith("ab12", "Mac mini", undefined, true);
+  });
+
+  // INF-547: a close of started work the captain did not click carries the
+  // first mate's one sentence, so it is refused without one.
+  it("refuses a cancel or a settle that closes work without its sentence", async () => {
+    const { delegate, byName } = toolset();
+    const cancel = await byName
+      .get("interrupt_crewmate")
+      ?.execute("t1", { task_id: "ab12", mode: "cancel", closing_sentence: "  " });
+    expect(cancel?.content[0]?.text).toBe(closingSentenceMissing("cancel"));
+    expect(delegate.interruptCrewmate).not.toHaveBeenCalled();
+    for (const mode of ["merge-pr", "land", "discard"] as const) {
+      const settled = await byName.get("settle_task")?.execute("t1", { task_id: "ab12", mode });
+      expect(settled?.content[0]?.text).toBe(closingSentenceMissing(mode));
+    }
+    for (const why of ["released", "finished", "merged"] as const) {
+      const settled = await byName
+        .get("settle_task")
+        ?.execute("t1", { task_id: "ab12", mode: "done", why });
+      expect(settled?.content[0]?.text).toBe(closingSentenceMissing("done"));
+    }
+    expect(delegate.settleTask).not.toHaveBeenCalled();
+    expect(delegate.closeDone).not.toHaveBeenCalled();
+  });
+
+  it("settle_task routes PR merge, local land, and discard", async () => {
+    const { delegate, byName } = toolset();
+    const sentence = "The meter fix is merged.";
+    await byName
+      .get("settle_task")
+      ?.execute("t0", { task_id: "ab12", mode: "merge-pr", closing_sentence: sentence });
+    expect(delegate.settleTask).toHaveBeenCalledWith(
+      "ab12",
+      "merge-pr",
+      undefined,
+      undefined,
+      sentence,
+    );
+
+    const landed = await byName
+      .get("settle_task")
+      ?.execute("t1", { task_id: "ab12", mode: "land", closing_sentence: sentence });
+    expect(delegate.settleTask).toHaveBeenCalledWith(
+      "ab12",
+      "land",
+      undefined,
+      undefined,
+      sentence,
+    );
+    expect(landed?.content[0]?.text).toBe("settled");
+
+    await byName.get("settle_task")?.execute("t1", {
+      task_id: "ab12",
+      mode: "discard",
+      confirm: true,
+      closing_sentence: sentence,
+    });
+    expect(delegate.settleTask).toHaveBeenCalledWith("ab12", "discard", true, undefined, sentence);
+
+    await byName.get("settle_task")?.execute("t1", {
+      task_id: "ab12",
+      mode: "merge-pr",
+      proceed_with_open: true,
+      closing_sentence: sentence,
+    });
+    expect(delegate.settleTask).toHaveBeenCalledWith("ab12", "merge-pr", undefined, true, sentence);
+
+    expect(delegate.closeDone).not.toHaveBeenCalled();
+  });
+
+  // INF-3169 piece 2: answered, finished, released, carried_on and merged are one done close, naming why.
+  it("settle_task done carries why, its facts and the captain's words to the one close", async () => {
+    const { delegate, byName } = toolset();
+    const sentence = "Version 1.2.3 shipped the meter fix.";
+    const released = await byName.get("settle_task")?.execute("t2", {
+      task_id: "ab12",
+      mode: "done",
+      why: "released",
+      evidence: "v1.2.3 published and verified",
+      captain_words: "turn",
+      closing_sentence: sentence,
+    });
+    expect(delegate.closeDone).toHaveBeenCalledWith("ab12", {
+      why: "released",
+      evidence: "v1.2.3 published and verified",
+      captainWordsFrom: "turn",
+      closingSentence: sentence,
+    });
+    expect(released?.content[0]?.text).toBe("closed");
+
+    await byName.get("settle_task")?.execute("t3", {
+      task_id: "ab12",
+      mode: "done",
+      why: "merged",
+      delivered_in: " #65 ",
+      closing_sentence: sentence,
+    });
+    expect(delegate.closeDone).toHaveBeenLastCalledWith("ab12", {
+      why: "merged",
+      deliveredIn: "#65",
+      closingSentence: sentence,
+    });
+    expect(delegate.settleTask).not.toHaveBeenCalled();
+  });
+
+  // INF-1825: work another task carries on closes through carried_by, and an answer, with no closing sentence required.
+  it("settle_task done closes an answer or carried-on work without a closing sentence", async () => {
+    const { delegate, byName } = toolset();
+    await byName.get("settle_task")?.execute("t1", {
+      task_id: "ab12",
+      mode: "done",
+      why: "carried_on",
+      carried_by: " INF-1737 ",
+    });
+    expect(delegate.closeDone).toHaveBeenLastCalledWith("ab12", {
+      why: "carried_on",
+      carriedBy: "INF-1737",
+    });
+    await byName
+      .get("settle_task")
+      ?.execute("t1", { task_id: "ab12", mode: "done", why: "answered" });
+    expect(delegate.closeDone).toHaveBeenLastCalledWith("ab12", { why: "answered" });
+    expect(delegate.settleTask).not.toHaveBeenCalled();
+  });
+
+  it("settle_task carries a structured refusal in its details", async () => {
+    const refusal = {
+      refused: "children-open" as const,
+      task: { id: "ab12", key: "SCR-1", title: "Parent" },
+      tasks: [{ id: "cd34", key: "SCR-2", title: "Child" }],
+      ways: [
+        {
+          label: "Merge the pull request, keeping it planned",
+          tool: "settle_task" as const,
+          args: { task_id: "ab12", mode: "merge-pr", proceed_with_open: true },
+        },
+      ],
+      text: "Cannot close SCR-1 while its child is still open.",
+    };
+    const { byName } = toolset({
+      settleTask: vi.fn(async () => ({ text: refusal.text, refusal })),
+    });
+    const result = (await byName.get("settle_task")?.execute("t1", {
+      task_id: "ab12",
+      mode: "merge-pr",
+      closing_sentence: "The parent's work is merged.",
+    })) as unknown as {
+      content: { text: string }[];
+      details: { refusal?: unknown };
+    };
+    expect(result.content[0]?.text).toBe(refusal.text);
+    expect(result.details.refusal).toEqual(refusal);
+  });
+
+  it("crew_status returns fresh structured state or a calm empty note", async () => {
+    const { byName } = toolset({
+      crewStatus: vi.fn(() => [
+        {
+          taskId: "ab12",
+          title: "Fix meter",
+          status: "idle",
+          branch: "fm/task-ab12",
+          repoName: "meter-scan",
+          autonomy: false,
+        },
+      ]),
+    });
+    const result = await byName.get("crew_status")?.execute("t1", {});
+    expect(result?.content[0]?.text).toContain('"taskId": "ab12"');
+
+    const empty = toolset();
+    const none = await empty.byName.get("crew_status")?.execute("t1", {});
+    expect(none?.content[0]?.text).toBe("No crew right now.");
+  });
+});
+
+describe("spawn_crewmate on the graph (task-system P2)", () => {
+  it("carries parent, blocked_by and priority, and after_task stays an alias", async () => {
+    const { delegate, byName } = toolset();
+    await byName.get("spawn_crewmate")?.execute("t1", {
+      title: "Step two",
+      goal: "Two is done",
+      user_words: "do two after one",
+      parent: "SCR-1",
+      blocked_by: ["SCR-2", "ab12cd34"],
+      priority: 0,
+    });
+    expect(delegate.commission).toHaveBeenCalledWith({
+      title: "Step two",
+      intent: { goal: "Two is done", userWords: "do two after one" },
+      parent: "SCR-1",
+      blockedBy: ["SCR-2", "ab12cd34"],
+      priority: 0,
+    });
+    await byName.get("spawn_crewmate")?.execute("t2", {
+      title: "Step three",
+      goal: "Three is done",
+      user_words: "then three",
+      start_after: { after_task: "SCR-3" },
+      blocked_by: [],
+    });
+    expect(delegate.commission).toHaveBeenLastCalledWith({
+      title: "Step three",
+      intent: { goal: "Three is done", userWords: "then three" },
+      startAfter: { afterTask: "SCR-3" },
+    });
+  });
+});
+
+/**
+ * spawn_crewmate's grouped parameters (contract v4.12, primitives P7): the
+ * work-shape facts ride `shape`, the waits `start_after`, one level deep;
+ * a call in the flat shape a durable session or a recording still carries
+ * reads exactly as the grouped one does.
+ */
+describe("spawn_crewmate's groups (contract v4.12, primitives P7)", () => {
+  type Schema = {
+    description?: string;
+    type?: string;
+    properties?: Record<string, Schema>;
+    items?: Schema;
+  };
+  const spawnSchema = () => {
+    const tools = createCrewTools(toolset().delegate) as unknown as {
+      name: string;
+      parameters: Schema;
+    }[];
+    return tools.find((tool) => tool.name === "spawn_crewmate")?.parameters as Schema;
+  };
+
+  it("serves seventeen top-level parameters, the two groups one level deep", () => {
+    const properties = spawnSchema().properties ?? {};
+    expect(Object.keys(properties)).toHaveLength(17);
+    expect(Object.keys(properties.shape?.properties ?? {})).toEqual([
+      "ongoing",
+      "intelligence",
+      "kind",
+      "delivery_ask",
+      "basis",
+      "premium_ask",
+      "override_model_id",
+      "override_speed",
+      "override_reasoning",
+      "escalate_from",
+      "rigor_ask",
+      "autonomy_ask",
+      "runs_on_ask",
+      "internal_step",
+      "in_folder",
+      "skipped_plan_because",
+      "review_of",
+    ]);
+    expect(Object.keys(properties.start_after?.properties ?? {})).toEqual([
+      "after_task",
+      "when_quota_resets",
+      "at_time",
+    ]);
+    // Since v4.13 every field's rule rides its group's own description, the
+    // level a Claude seat's client serves, and no field keeps one of its own.
+    for (const group of ["shape", "start_after"]) {
+      const description = properties[group]?.description ?? "";
+      for (const [name, field] of Object.entries(properties[group]?.properties ?? {})) {
+        expect(description, `${group} states ${name}'s rule`).toMatch(
+          new RegExp(`^${name}: \\S`, "m"),
+        );
+        expect(field.description, `${group}.${name} is described on its group`).toBeUndefined();
+        expect(field.type, `${group}.${name} nests no further`).not.toBe("object");
+      }
+    }
+  });
+
+  // INF-4362: a merge filed as an operation had no merge card, so its
+  // crewmate merged from its shell; create_task's constraints point here.
+  // A first mate read "never a merge" as the operation not merging itself
+  // and asked it to prepare the skip card, so the words name both routes: the
+  // task that owns the pull request, or a new one of another kind.
+  it("tells the first mate an operation is never a merge, past branch rules included", () => {
+    const constraints = spawnSchema().properties?.constraints?.description ?? "";
+    expect(constraints).toMatch(
+      /^kind: .*operation: named effect; never code, merge or prepare a merge card\./m,
+    );
+    expect(constraints).toContain("Steer the pull request's owning crewmate to its merge card");
+    expect(constraints).toContain("or start one without this kind");
+    expect(constraints).toContain("check_change skipRules");
+  });
+
+  const flat = {
+    title: "Fix the meter test",
+    goal: "The meter test is really fixed",
+    user_words: "that is not a fix; ship it reviewed, after SCR-3",
+    escalate_from: "FM3K-12",
+    rigor_ask: "reviewed",
+    autonomy_ask: false,
+    after_task: "SCR-3",
+  };
+  const grouped = {
+    title: flat.title,
+    goal: flat.goal,
+    user_words: flat.user_words,
+    shape: { escalate_from: "FM3K-12", rigor_ask: "reviewed", autonomy_ask: false },
+    start_after: { after_task: "SCR-3" },
+  };
+
+  it("reads a flat call from before v4.12 exactly as the grouped one", async () => {
+    const fromFlat = toolset();
+    const fromGrouped = toolset();
+    await fromFlat.byName.get("spawn_crewmate")?.execute("t1", flat);
+    await fromGrouped.byName.get("spawn_crewmate")?.execute("t1", grouped);
+    const expected = {
+      title: flat.title,
+      intent: { goal: flat.goal, userWords: flat.user_words },
+      shape: { escalate_from: "FM3K-12", rigor_ask: "reviewed", autonomy_ask: false },
+      startAfter: { afterTask: "SCR-3" },
+    };
+    expect(fromFlat.delegate.commission).toHaveBeenCalledWith(expected);
+    expect(fromGrouped.delegate.commission).toHaveBeenCalledWith(expected);
+  });
+
+  it("holds a flat escalation to the captain's turn as it holds a grouped one", async () => {
+    for (const args of [flat, grouped]) {
+      const { delegate, byName } = toolset({ isCaptainTurn: vi.fn(() => false) });
+      const result = await byName.get("spawn_crewmate")?.execute("t1", args);
+      expect(delegate.commission).not.toHaveBeenCalled();
+      expect(result?.content[0]?.text).toContain("Nothing was spawned");
+    }
+  });
+
+  it("still refuses two waits at once, whichever shape carries them", async () => {
+    const { byName } = toolset();
+    await expect(
+      byName.get("spawn_crewmate")?.execute("t1", {
+        ...grouped,
+        start_after: { after_task: "SCR-3", at_time: "2026-10-01T09:00:00Z" },
+      }),
+    ).rejects.toThrow(/at most one/);
+    await expect(
+      byName.get("spawn_crewmate")?.execute("t1", {
+        ...grouped,
+        start_after: undefined,
+        at_time: "2026-10-01T09:00:00Z",
+        when_quota_resets: "codex",
+      }),
+    ).rejects.toThrow(/at most one/);
+  });
+
+  it("groups flat args, keeps the group's own value, and carries no field of the wrong type", () => {
+    expect(
+      groupSpawnArgs({
+        title: "t",
+        basis: "FM3K-1",
+        premium_ask: "yes",
+        shape: { basis: "FM3K-2" },
+        at_time: "2026-10-01T09:00:00Z",
+      }),
+    ).toEqual({
+      title: "t",
+      shape: { basis: "FM3K-2" },
+      start_after: { at_time: "2026-10-01T09:00:00Z" },
+    });
+    expect(groupSpawnArgs(grouped)).toEqual(grouped);
+  });
+});

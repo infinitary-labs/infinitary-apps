@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "folder-move-no-freeze",
+      "kind": "fix",
+      "area": "other",
+      "title": "Bringing over Firstmate 3000's work no longer freezes Infinitary",
+      "body": "On a computer that runs work for another one, choosing to bring Firstmate 3000's work could freeze Infinitary at full processor use. Now Bring stops with nothing changed and says what works instead: keep Infinitary's own work, or first remove the computer in Your devices on the computer it runs work for. A rare internal fault now ends the app instead of freezing it.",
+      "noPicture": "The fix removes a freeze; the message shown instead appears only in this rare setup.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "dictation-keeps-your-language",
+      "kind": "fix",
+      "title": "Dictation keeps the language you speak",
+      "body": "When you dictate in Chinese, Japanese, Korean, Spanish, French, German or another language, the message box now shows your words in that language, instead of an English translation or nothing at all. Your words take a little longer to appear after you stop talking while Infinitary works out which language you spoke.",
+      "area": "message-box",
+      "picture": {
+        "dark": "dictation-keeps-your-language-dark.webp",
+        "light": "dictation-keeps-your-language-light.webp",
+        "alt": "The message box holds a dictated request in Chinese characters, as it was spoken"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

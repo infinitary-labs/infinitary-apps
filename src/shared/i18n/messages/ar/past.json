@@ -1,0 +1,12 @@
+{
+  "pastEndingAnOption": "خيار",
+  "pastEndingAuthorWithdrawal": "سحبها كاتبها",
+  "pastEndingCrewmateChose": "اختار فرد الطاقم {label}",
+  "pastEndingDismissed": "أُغلقت دون اختيار",
+  "pastEndingDuplicate": "أُغلقت بوصفها مكررة",
+  "pastEndingFirstmateChose": "اختار نائب القبطان {label}",
+  "pastEndingHostWithdrawal": "أزالها التطبيق",
+  "pastEndingTaskRetired": "أُزيلت عند انتهاء المهمة",
+  "pastEndingUnknown": "أُغلقت",
+  "pastEndingYouChose": "اخترت {label}"
+}

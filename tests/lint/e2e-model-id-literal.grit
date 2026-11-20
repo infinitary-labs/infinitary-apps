@@ -1,0 +1,22 @@
+// An end-to-end spec takes a model id from the product's own tables
+// (STARTER_SLOTS, CLAUDE_MODELS) and never types one (docs/testing.md, "The
+// e2e assertion contract"): the catalog moves whenever a provider ships a
+// model, and every typed copy is one more file that breaks that day. The
+// catalog specs are exempt because the catalog is their subject. Runs inside
+// `pnpm check` through biome.json's plugins, as an error since the migration
+// landed.
+
+language js
+
+or {
+  JsStringLiteralExpression() as $literal,
+  JsTemplateExpression() as $literal,
+  JsRegexLiteralExpression() as $literal,
+  JsLiteralMemberName() as $literal
+} where {
+  $literal <: includes "-",
+  $literal <: r"(?is).*\b(?:claude-(?:fable|opus|sonnet|haiku)-\d|gpt-\d|grok-\d|gemini-\d|kimi-k\d).*",
+  $filename <: r".*tests/e2e/.*",
+  not $filename <: r".*tests/e2e/(?:model-lists|decision-models|phase5-model-catalog)\.spec\.ts",
+  register_diagnostic(span=$literal, message="A model id typed into a spec breaks the day a provider ships a model. Read it from the product's table - STARTER_SLOTS or CLAUDE_MODELS - so the catalog moves in one place (docs/testing.md, the e2e assertion contract).", severity="error")
+}

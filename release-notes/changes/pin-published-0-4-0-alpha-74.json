@@ -1,0 +1,9 @@
+{
+  "exclusions": [
+    {
+      "id": "pin-published-0-4-0-alpha-74",
+      "reason": "Pins the published manifest for 0.4.0-alpha.74, cut from the reviewed source 9672aefcd, after its private tag existed. Nothing in the app changes.",
+      "covers": ["1e02668b95be1862a8fc6e61fc5a6405ab90c2e9"]
+    }
+  ]
+}

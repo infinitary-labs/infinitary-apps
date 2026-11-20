@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "card-own-key-links",
+      "kind": "fix",
+      "title": "Every task key on a card is a link, its own task's too",
+      "body": "A card used to leave its own task's key as plain text in its title, body and thread while every other task key there was a link. Now each task key on a card is a link: rest on the card's own key for the task's summary, or click it to open the task's record in front of the card. Cards on the phone link it the same way.",
+      "area": "cards",
+      "picture": {
+        "dark": "card-own-key-links-dark.webp",
+        "light": "card-own-key-links-light.webp",
+        "alt": "A card whose title, body and thread each show its own task's key as a link, like the other task's key beside it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "workflow-evidence-file",
+      "reason": "Internal: crewmates can stream one large workflow recording into task evidence through the existing app-owned sign-in; no screen changes."
+    }
+  ]
+}

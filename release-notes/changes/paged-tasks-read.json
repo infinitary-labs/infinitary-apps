@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "paged-tasks-read",
+      "reason": "A long task record is read one field at a time instead of being compressed. Nothing a person sees or receives changes."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "instruction-room",
+      "reason": "Internal: repeated first mate and crewmate instructions point to their existing rule owners, restoring fixed-context room without changing permissions, tools or visible behavior."
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "closed-task-files-cleanup",
+      "kind": "improvement",
+      "area": "tasks",
+      "title": "Finished tasks' leftover files are removed after a week",
+      "body": "A week after a task closes, the app removes the pictures, logs and other files its crewmate saved while working, so they no longer fill your Mac. A task's record, its cards and their pictures stay, and files stay while other open work still builds on that task.",
+      "noPicture": "Nothing on screen changes: the app frees disk space in the background.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

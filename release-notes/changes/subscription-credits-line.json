@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "subscription-credits-line",
+      "kind": "feature",
+      "area": "subscriptions",
+      "title": "See whether a subscription keeps going on credits",
+      "body": "Claude, ChatGPT and Copilot rows in Subscriptions now say whether the provider keeps answering on credits after your plan's allowance runs out, how much is left or used, and where to change it. A Claude reply that failed while extra usage was still answering no longer counts as a used-up allowance.",
+      "picture": {
+        "dark": "subscription-credits-line-dark.webp",
+        "light": "subscription-credits-line-light.webp",
+        "alt": "A Claude row in Subscriptions with its session used up and a line under the meters saying extra usage is answering, 12% of the monthly limit used, and to change it on claude.ai"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

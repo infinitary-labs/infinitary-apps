@@ -1,0 +1,12 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "alpha-font-recovery-review-1942",
+      "reason": "Release review only: include and review the font-card fixture readiness repair and intervening internal journey-allocation change; maintain editorial coverage without app behavior changes.",
+      "covers": [
+        "767572e33822f125b7842b92b96463f313c307a2"
+      ]
+    }
+  ]
+}

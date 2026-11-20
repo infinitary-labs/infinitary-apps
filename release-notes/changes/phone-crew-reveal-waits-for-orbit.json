@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-crew-reveal-waits-for-orbit",
+      "reason": "The iPhone scene journey waits for an orbiting crewmate's orbit to carry it out from under the first mate, instead of spending its drags on it, and reads it for a drag only at the crew's own pace; a test-only change with nothing a person notices."
+    }
+  ]
+}

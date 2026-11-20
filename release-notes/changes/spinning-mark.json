@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "spinning-mark",
+      "kind": "improvement",
+      "area": "message-box",
+      "title": "The first mate's mark turns orange and spins while it works",
+      "body": "While your first mate works on a message, its mark above the message box turns orange and spins, in place of the three dots. Working… still shows until the reply arrives, and if the first mate keeps working after replying, the mark beside the reply keeps spinning. When the work is done the mark settles and turns back to blue. The same mark spins on iPhone and iPad.",
+      "picture": {
+        "dark": "spinning-mark-dark.webp",
+        "light": "spinning-mark-light.webp",
+        "alt": "Two messages above the message box: the older reply has a blue hexagon mark, and the newest shows an orange hexagon mark beside Working…."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

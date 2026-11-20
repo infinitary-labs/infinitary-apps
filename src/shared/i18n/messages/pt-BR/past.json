@@ -1,0 +1,12 @@
+{
+  "pastEndingAnOption": "uma opção",
+  "pastEndingAuthorWithdrawal": "Retirado pelo autor",
+  "pastEndingCrewmateChose": "O tripulante dela escolheu {label}",
+  "pastEndingDismissed": "Fechado sem escolha",
+  "pastEndingDuplicate": "Fechado como duplicado",
+  "pastEndingFirstmateChose": "Seu imediato escolheu {label}",
+  "pastEndingHostWithdrawal": "Removido pelo app",
+  "pastEndingTaskRetired": "Removido quando a tarefa terminou",
+  "pastEndingUnknown": "Fechado",
+  "pastEndingYouChose": "Você escolheu {label}"
+}

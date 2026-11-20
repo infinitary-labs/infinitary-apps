@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "stuck-card-back-to-backlog",
+      "kind": "improvement",
+      "title": "Park a stuck task in the backlog from its alert",
+      "body": "When a crewmate stays stuck on something that will not change soon, its alert now offers Back to backlog in place of Keep waiting. The task stops asking for attention, keeps its work, and your first mate can park it the same way. If news reaches a parked task, such as a finished check, your first mate hears once and can start it again.",
+      "area": "tasks",
+      "picture": {
+        "dark": "stuck-card-back-to-backlog-dark.webp",
+        "light": "stuck-card-back-to-backlog-light.webp",
+        "alt": "A stuck task's alert offering Back to backlog, Discard and Nudge"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

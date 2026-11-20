@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "answering-card-counts",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "A crewmate's card that answers your message now counts as the answer",
+      "body": "When your first mate starts work from your choice on its card, the card that work's crewmate shows can now be the answer to your message. A choice you make while your first mate is still replying counts too. If the notice saying your first mate has not answered is already up, it goes away once a card that answers your message appears.",
+      "noPicture": "The cards look the same; what changed is when the app's notice appears, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

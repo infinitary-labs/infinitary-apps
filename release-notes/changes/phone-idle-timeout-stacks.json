@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-idle-timeout-stacks",
+      "reason": "The phone check samples the app and the simulator's keyboard and display processes when its tests report the app never went idle; this changes only how the project is checked, not the app."
+    }
+  ]
+}

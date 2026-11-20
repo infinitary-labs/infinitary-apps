@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "runbook-guidance-repairs",
+      "reason": "Internal: the Common workflows guidance carries the operation line again, and Casual projects names the Common workflows skip rule instead of a rule above it; a live check found the first mate behaving the same without either."
+    }
+  ]
+}

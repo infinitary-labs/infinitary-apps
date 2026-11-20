@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "alpha-review-after-0-1-29-alpha-32",
+      "reason": "Release review after 0.1.29-alpha.32: ranks the Activity reports note as the lead highlight and rewrites two notes into plain language. Nothing in the app changes. Multi-machine support and the task browser stay unannounced."
+    }
+  ]
+}

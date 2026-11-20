@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "panels-work-with-your-tasks",
+      "kind": "feature",
+      "title": "Your panels can work with your tasks",
+      "body": "A panel Firstmate builds for you, or one you add, can now list your tasks with the app's own status marks, open a task when you click it, and show who is on it when you rest on it. It can queue, start or drop a task when you click in it; one you add asks you first, on the card that adds it. A collapsed panel now says what it holds in its header, and a panel's card stays as you left it while you page through your cards.",
+      "area": "tasks",
+      "picture": {
+        "dark": "panels-work-with-your-tasks-dark.webp",
+        "light": "panels-work-with-your-tasks-light.webp",
+        "alt": "A Task desk panel listing three tasks with their status marks and Queue buttons, and the crew summary of the task the pointer rests on beside it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

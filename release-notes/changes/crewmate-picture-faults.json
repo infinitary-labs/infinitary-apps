@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "crewmate-picture-faults",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "Crewmates fix what looks wrong in their pictures before asking you to merge",
+      "body": "Before a crewmate shows you a change, it looks at each of its pictures as someone using that screen would: covered or clipped words, crowded spacing, things out of line. It fixes anything its change caused and takes the picture again, and it can't put the change up for your merge until it has.",
+      "noPicture": "This changes what crewmates check before a merge card appears, not how any screen looks.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

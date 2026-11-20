@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "address-check-cleanup",
+      "reason": "Internal consolidation of connection and sign-in address checks, preserving every existing caller policy and behavior."
+    }
+  ]
+}

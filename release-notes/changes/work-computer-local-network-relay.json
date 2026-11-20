@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "work-computer-local-network-relay",
+      "reason": "A device, and an app controlling Firstmate on another Mac, reach their home through macOS's own nc, so adding a Mac by its address over Remote Login now joins on a shared local network, where macOS local network privacy had refused the copy's dial back on a headless Mac; part of the development-only multi-machine feature, which remains unavailable in released apps."
+    }
+  ]
+}

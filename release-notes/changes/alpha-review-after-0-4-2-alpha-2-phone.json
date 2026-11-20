@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "alpha-review-after-0-4-2-alpha-2-phone",
+      "reason": "Release review for the alpha after 0.4.2-alpha.2, after the captain chose to hide the A phone button until TestFlight: the phone note becomes an exclusion and its hero pair leaves the ledger, since installed builds no longer show the button. Nothing in the app changes."
+    }
+  ]
+}

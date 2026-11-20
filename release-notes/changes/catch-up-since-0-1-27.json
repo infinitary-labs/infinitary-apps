@@ -1,0 +1,240 @@
+{
+  "entries": [
+    {
+      "id": "model-levels-settings",
+      "kind": "feature",
+      "title": "Choose models by level in Settings",
+      "body": "Settings lets you choose models by level, and drag them into the order you want.",
+      "area": "subscriptions",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": [
+          "281685a94747e532f063cfdcb27031c3901ea59b"
+        ]
+      }
+    },
+    {
+      "id": "task-status-agrees",
+      "kind": "improvement",
+      "title": "Task status reads the same everywhere",
+      "body": "Every view of a task now shares one set of facts, so status no longer differs between the board and the crew summary.",
+      "area": "tasks",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": [
+          "76674fefe452e3163acce6a5900358497dc76883",
+          "00989e267802144ccb14e2ebf0e33ae2dd070681"
+        ]
+      }
+    },
+    {
+      "id": "claude-usage-recovers",
+      "kind": "fix",
+      "title": "Claude usage recovers when you change the saved login",
+      "body": "A spent-allowance hold and a declined usage read clear once the saved Claude login changes.",
+      "area": "subscriptions",
+      "noPicture": "Nothing new on screen: the usage reading simply comes back.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": [
+          "0d31d4e729701bd15568b0e3e3b6427edbc45a09",
+          "71ab306082aa9c40bc6ef93efcb5e01eb1950f8d"
+        ]
+      }
+    },
+    {
+      "id": "clone-sign-in-way",
+      "kind": "fix",
+      "title": "Cloning a project offers the sign-in way again",
+      "body": "The clone flow shows how to sign in through the shared actions.",
+      "area": "projects",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": [
+          "72db381ec64bb5c1867d6bfa32cd2aad3340b948"
+        ]
+      }
+    },
+    {
+      "id": "card-thread-header",
+      "kind": "fix",
+      "title": "Card threads no longer repeat the author, model and close",
+      "body": "The thread head drops the repeat of what the card already shows.",
+      "area": "cards",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": [
+          "2a8f8a16a6b98f5a21703e58ac256a3e1c92abda"
+        ]
+      }
+    },
+    {
+      "id": "localhost-subdomain-links",
+      "kind": "fix",
+      "title": "Links to localhost subdomains open safely",
+      "body": "HTTP links to subdomains of localhost open through the same safe check as other links.",
+      "area": "cards",
+      "noPicture": "Nothing on screen changes: the link opens through the same safe check.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": [
+          "5bd2cd21b13634b1bbe67a11a5689bc782da6360"
+        ]
+      }
+    },
+    {
+      "id": "cancelled-duplicate-check",
+      "kind": "fix",
+      "title": "A cancelled duplicate check no longer decides a pull request",
+      "body": "A later run of the same check now decides the result.",
+      "area": "crewmates",
+      "noPicture": "Nothing on screen changes: the later check now decides the result.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": [
+          "fb10ad57fe928d84436aee21e5fc0cf51e702c43"
+        ]
+      }
+    },
+    {
+      "id": "custom-api-long-replies",
+      "kind": "fix",
+      "title": "Custom providers finish long streamed replies",
+      "body": "Turns on a custom API provider no longer stop before a long streamed reply ends.",
+      "area": "subscriptions",
+      "noPicture": "Nothing new on screen: a long reply now simply finishes.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": [
+          "256a13f2060a5c6ed82d0666533e7503f07ba8eb"
+        ]
+      }
+    },
+    {
+      "id": "abandoned-attempts-close-prs",
+      "kind": "fix",
+      "title": "Abandoned attempts close their pull requests",
+      "body": "When a crewmate abandons an attempt, its open pull request is closed.",
+      "area": "crewmates",
+      "noPicture": "The change happens on GitHub, not in the app.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": [
+          "d0968f64d102aea9f5f02c9fd1e13709ab1669cf"
+        ]
+      }
+    },
+    {
+      "id": "jev-cancel-and-size",
+      "kind": "fix",
+      "title": "A cancelled decision stops its model request",
+      "body": "A cancel now stops the decision model's request, and replies past 64 KB are refused.",
+      "area": "firstmate",
+      "noPicture": "Nothing on screen changes: a cancel now stops the work behind it.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": [
+          "616b64254acc3aeb7736aa896f206b925f1b6552"
+        ]
+      }
+    },
+    {
+      "id": "firstmate-leaner-instructions",
+      "kind": "improvement",
+      "title": "The Firstmate starts each turn with leaner instructions",
+      "body": "The fixed instructions and tool list are trimmed.",
+      "area": "firstmate",
+      "noPicture": "Nothing on screen changes: Firstmate's own instructions are shorter.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": [
+          "9352cb6a0367d9a8c4e04b9b8af2d9e5643af9a2"
+        ]
+      }
+    },
+    {
+      "id": "pi-1-0",
+      "kind": "maintenance",
+      "title": "Model library upgraded to Pi 1.0",
+      "body": "The app now runs on Pi 1.0.",
+      "area": "other",
+      "provenance": {
+        "origin": "release-review",
+        "covers": [
+          "db2b1864400cb86d6a98d044e1055b2deb5aaa0d"
+        ]
+      }
+    },
+    {
+      "id": "read-closed-cards-again",
+      "kind": "feature",
+      "title": "Read a closed card again",
+      "body": "A closed card can be reopened from the stage as a read-only past card.",
+      "highlight": 1,
+      "area": "cards",
+      "picture": {
+        "dark": "read-closed-cards-again-dark.webp",
+        "light": "read-closed-cards-again-light.webp",
+        "alt": "A closed plan brought back on the stage as a past card, with the choice you made marked and nothing on it to click"
+      },
+      "provenance": {
+        "origin": "release-review",
+        "covers": [
+          "be1b31687cb9d6214746126780bcb7a1b6aa6521"
+        ]
+      }
+    },
+    {
+      "id": "replies-under-kept-notes",
+      "kind": "fix",
+      "title": "Replies under a finished task's kept note reach that note's thread",
+      "body": "A reply under a note kept after its task finished is answered in the same thread.",
+      "area": "cards",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": [
+          "62d15ad1bcd06215049be547d99eafb8b4e8ac7d"
+        ]
+      }
+    },
+    {
+      "id": "tasks-filter-earlier-work",
+      "kind": "improvement",
+      "title": "The Tasks filter finds earlier closed and dropped work",
+      "body": "Searching Tasks now includes work that was closed or dropped earlier.",
+      "area": "tasks",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": {
+        "origin": "release-review",
+        "covers": [
+          "620ad67eb5d0b55a8b0e01cbc91790e83cd0f9c7"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "unreleased-tests-and-docs",
+      "reason": "Test, end-to-end and documentation changes with no effect on the shipped app, reviewed when the notes ledger began.",
+      "covers": [
+        "519291cdbc24b95d054bb362fc2e34be38007f5b",
+        "79e0786898ee27621306dfaec7cae735ec209e4a",
+        "808aa33d8aa10fa32ee9c2fb58182d1e0d16a20f",
+        "b504a8e7f7eff38c47bcec0a3c9d9facaaa1f411",
+        "6a9d4f43c80a701e19836d00093837121153d556",
+        "cdb174143e27c2cd9419a3a3957ffdf8c493c10f",
+        "4e50c30e1bae9ebaa47fadb08c547bb9ae4a57ec",
+        "d6bfccac494ddef4e9836a0cd09271ef5f77e2f1",
+        "e3d0e388c00f950231c2f4d89368cfb97e3ecbb7",
+        "e6adece019cc7823924a6cde3e9c9b360356d6d4",
+        "bff740fe636492c0b8e325868d8564239be68fdd",
+        "103a0913018b454d7027b70da8a9c422f141a194"
+      ]
+    }
+  ]
+}

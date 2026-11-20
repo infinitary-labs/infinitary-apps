@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-chooser-placement",
+      "reason": "The phone check's chooser now places edits outside a function, overloads and generated files on the parts that read them and reads a branch from its merge point with main; this changes only how the project's own checks pick what to run, so nothing in the app changes."
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "work-notice-folds",
+      "kind": "fix",
+      "area": "devices",
+      "title": "The notice about this computer's work can be put away, and no longer shows through cards",
+      "body": "On a computer that controls another and runs its work, the notice saying why that work cannot run now has Not now, which folds it into a quiet line at the top that opens it again. It checks again by itself when you come back to the window, so it clears after you allow Infinitary in System Settings. Its Try again no longer shows inside a maximized card.",
+      "picture": {
+        "dark": "work-notice-folds-dark.webp",
+        "light": "work-notice-folds-light.webp",
+        "alt": "The notice under the message box saying this computer cannot run work for MacBook Pro, with Not now beside Try again"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

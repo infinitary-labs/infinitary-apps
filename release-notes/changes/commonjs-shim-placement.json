@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "commonjs-shim-placement",
+      "reason": "Build fix: electron-vite's CommonJS shim now goes after each main chunk's real imports, never inside a string or comment that reads like an import, and an end-to-end test holds the personal workspace's seeded files equal to their source. Today's main already seeds them intact, so nothing a person sees changes."
+    }
+  ]
+}

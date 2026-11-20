@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "whole-region-capture",
+      "reason": "Internal capture helper, Usage evidence caller and contributor recipe now wait for reveal and require the entire intended crop inside its visible scrolling region; card rendering and the released app are unchanged."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "placed-cutoff-first-turn-settle",
+      "reason": "Test-only repair: the placed cut-off test waits for a dispatched task's first turn, which starts after the other computer answers its install, instead of reading the turns after a fixed 15 ms. No shipped behavior changed."
+    }
+  ]
+}

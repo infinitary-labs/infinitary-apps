@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "phone-text-boxes-above-keyboard",
+      "kind": "fix",
+      "area": "devices",
+      "title": "On iPhone and iPad, what you type stays above the keyboard",
+      "body": "On iPhone and iPad, upright or on its side, the message box and a card's reply box now stay in view above the keyboard while you type. A reply that grows to several lines keeps its last line showing. On an iPhone on its side, the page arrows and the message box step out of the way while you reply to a card. Scrolling a card now closes the keyboard.",
+      "picture": {
+        "dark": "phone-text-boxes-above-keyboard-dark.webp",
+        "light": "phone-text-boxes-above-keyboard-light.webp",
+        "alt": "An iPhone card with the keyboard up, its three-line reply showing whole above the page arrows and the message box"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

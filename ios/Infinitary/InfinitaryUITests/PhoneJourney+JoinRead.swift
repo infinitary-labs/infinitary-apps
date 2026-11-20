@@ -1,0 +1,300 @@
+import XCTest
+
+/// The join-read part (scripts/phone-test-plan.ts): its test and the steps only it takes.
+extension PhoneJourney {
+    /// INF-2125 direction C, the first of the join tests split from testJoinAndRecover: a wrong Mac, joining and reading.
+    /// Data: the disposable home's join note and a review finding. Completion: the phone reads both cards and its own
+    /// sheets, keeps the strip at the largest type, and keeps its connection when idle, streamed to or made inactive.
+    func testJoinAndRead() async throws {
+        try await launchFresh()
+        try await appearances("join", showing: app.staticTexts["Welcome aboard Infinitary"])
+        try await submitLink("wrong-link", typed: true)
+        XCTAssertTrue(app.staticTexts["This is not the computer your link names. Nothing was sent."].waitForPresence(timeout: 15))
+        let refused = try await home("state", method: "GET")
+        XCTAssertEqual((refused["devices"] as? [Any])?.count, 0)
+        picture("wrong-mac")
+        // The one join typed into the paste field, so a pasted link's whole way in stays checked.
+        try await join(typed: true)
+        // INF-63 accepted B survives the move from the read-only list to native card chrome.
+        // Finish the finding before the feed snapshot used by the foundation's Activity checks.
+        _ = try await home("review-finding")
+        showCard("Review the phone connection finding")
+        XCTAssertTrue(app.staticTexts["Review finding"].waitForPresence(timeout: 10))
+        // INF-2714: the first mate's card is its own, so its head carries no task's key or title.
+        XCTAssertFalse(app.buttons["card-task-key"].exists)
+        XCTAssertFalse(app.staticTexts["Check the phone connection"].exists)
+        XCTAssertTrue(app.webViews.staticTexts["The review needs your choice on the Mac."].waitForPresence(timeout: 10))
+        // INF-64 piece 4's approved native choices replace the foundation's read-only absence check.
+        let keepFinding = app.buttons["card-action-keep"]
+        XCTAssertTrue(keepFinding.waitForPresence(timeout: 10))
+        // INF-1083: body text exists before its drawn acknowledgement enables the native footer.
+        waitUntilEnabled(keepFinding)
+        XCTAssertTrue(keepFinding.isEnabled)
+        picture("review-finding")
+        tapOnPhone(app.buttons["put-aside-card"])
+        XCTAssertTrue(cardHeading("Your phone is reading your Mac").waitForPresence(timeout: 10))
+        let first = try await home("state", method: "GET")
+        let devices = try XCTUnwrap(first["devices"] as? [[String: Any]])
+        let phone = try XCTUnwrap(devices.first)
+        XCTAssertEqual(phone["kind"] as? String, "view")
+        XCTAssertEqual(phone["system"] as? String, "ios")
+        XCTAssertTrue(app.staticTexts["Your phone is reading your Mac"].exists)
+        XCTAssertFalse(app.buttons["Merge"].exists)
+        XCTAssertTrue(app.webViews.staticTexts["This card belongs to the disposable test home."].firstMatch.waitForPresence(timeout: 10))
+        verifyPhoneComposerBounds(app: app)
+        picture("cards")
+        try await appearances("cards", showing: app.staticTexts["Your phone is reading your Mac"])
+        // INF-1062: the computer's name leaves the bar for its sheet, and Leave stays behind that sheet (INF-209).
+        XCTAssertFalse(app.staticTexts["home-name"].exists, "The bar no longer carries the computer's name")
+        XCTAssertFalse(app.buttons["leave"].exists)
+        // INF-355: details must also work as the first hardware chord after relaunch.
+        app.terminate(); try await launchPhoneApp(app)
+        reach("Live", timeout: 20)
+        try await pressPhoneKey("i", modifiers: .command, in: app)
+        XCTAssertTrue(app.buttons["close-computer-details"].waitForPresence(timeout: 10))
+        XCTAssertEqual(app.staticTexts["home-name"].label, "Test Mac mini")
+        XCTAssertTrue(app.staticTexts["Live"].exists, "The computer's sheet says its reach")
+        XCTAssertTrue(app.staticTexts["reached-address"].label.hasPrefix("127.0.0.1:"), "The sheet names the route reached, not the saved preference")
+        XCTAssertTrue(app.buttons["leave"].exists)
+        tapOnPhone(app.buttons["close-computer-details"])
+        // INF-1062, the captain's pick: Settings at the bar's left is this phone's own sheet, with no Leave in it.
+        try await pressPhoneKey(",", modifiers: .command, in: app)
+        XCTAssertTrue(app.buttons["close-phone-settings"].waitForPresence(timeout: 10), app.debugDescription)
+        // Accepted phone Settings plan: the same section list on iPhone and iPad, with keyboard reach to each page.
+        // Real data: this part's joined disposable home, the built version and this install's saved Theme.
+        // Completion: each destination's content, Back restoring the list, and Done closing the sheet.
+        let general = app.buttons["phone-settings-general"]
+        let appearance = app.buttons["phone-settings-appearance"]
+        let integrations = app.buttons["phone-settings-integrations"]
+        let devicesSection = app.buttons["phone-settings-devices"]
+        XCTAssertTrue(general.waitForPresence(timeout: 10), app.debugDescription)
+        // INF-3454: Integrations joins the list once the computer answers its connections, in the desktop's place.
+        XCTAssertTrue(integrations.waitForPresence(timeout: 20), app.debugDescription)
+        // INF-3563: the five sections the computer answers join the list together. INF-4241: their order, each in the
+        // desktop's place, is the settings-pages part's to read (testSettingsPages); the keys below need them listed.
+        let computerSections = ["projects", "intelligence", "runbooks", "usage", "automation"].map { app.buttons["phone-settings-\($0)"] }
+        for row in computerSections { XCTAssertTrue(row.waitForPresence(timeout: 20), app.debugDescription) }
+        XCTAssertFalse(app.staticTexts["app-version"].exists, "Version content lives on General, not the list")
+        XCTAssertFalse(app.segmentedControls["phone-theme"].exists)
+        XCTAssertFalse(app.buttons["leave"].exists)
+        // The list starts on General. As PhoneKeys owns, Xcode emits the physical Return for LF, not CR.
+        // Unmodified keys have no BackBoard registration; send each physical key once and prove its result.
+        waitForSteadyTarget(general)
+        app.typeKey("\n", modifierFlags: [])
+        XCTAssertTrue(app.staticTexts["app-version"].waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.staticTexts["app-version"].label.hasPrefix("Version "), app.staticTexts["app-version"].label)
+        try await settingsBack()
+        waitForSteadyTarget(appearance)
+        app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: [])
+        app.typeKey("\n", modifierFlags: [])
+        try await phoneTheme()
+        try await phoneFoldSplit()
+        try await settingsBack()
+        XCTAssertTrue(app.staticTexts["Theme: Device"].exists, "The list reads the current saved choice")
+        // INF-4241: the list's Google line is the google part's to read (testGoogleSignInAndOut).
+        waitForSteadyTarget(integrations)
+        // Down passes the five sections the computer answers (the settings-pages part opens them) to Integrations.
+        for _ in 0...computerSections.count { app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: []) }
+        app.typeKey("\n", modifierFlags: [])
+        XCTAssertTrue(app.descendants(matching: .any)["google-section"].waitForPresence(timeout: 10), app.debugDescription)
+        try await settingsBack()
+        waitForSteadyTarget(devicesSection)
+        app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: [])
+        app.typeKey("\n", modifierFlags: [])
+        let device = UIDevice.current.userInterfaceIdiom == .pad ? "This iPad" : "This phone"
+        XCTAssertTrue(app.staticTexts[device].waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.staticTexts["Conversation stays on your computer."].exists)
+        XCTAssertFalse(app.segmentedControls["phone-theme"].exists)
+        tapOnPhone(app.buttons["close-phone-settings"])
+        XCTAssertTrue(app.buttons["close-phone-settings"].waitForAbsence(timeout: 10))
+        let settings = app.buttons["phone-settings"]
+        XCTAssertTrue(waitForPhonePress(settings)); XCTAssertEqual(settings.label, "Settings")
+        let strip = [app.buttons["tab-home"], app.buttons["tab-tasks"], app.buttons["tab-activity"]]
+        XCTAssertLessThan(settings.frame.maxX, strip[0].frame.minX, "Settings sits left of the strip")
+        // INF-1328: the segmented control draws its tabs edge to edge, in order and never overlapping.
+        XCTAssertLessThanOrEqual(strip[0].frame.maxX, strip[1].frame.minX); XCTAssertLessThanOrEqual(strip[1].frame.maxX, strip[2].frame.minX)
+        XCTAssertLessThan(strip[2].frame.maxX, app.buttons["computer-details"].frame.minX, "The computer sits right of the strip")
+        XCTAssertTrue(strip[0].isSelected, "Home is the lit tab")
+        // INF-1541 piece 1: the card's heading redraws at the largest type before the strip is read against it.
+        let heading = app.staticTexts["Your phone is reading your Mac"]
+        let standard = waitForRedraw(heading, from: nil)
+        // INF-4713's Approve and build: the card's body follows the device's Text Size too, so at the largest standard
+        // size its words draw taller than at the default; before, they kept the Mac's sizes at every Text Size.
+        waitForShownBodyRevealed()
+        let words = app.webViews.matching(identifier: "card-body").firstMatch.staticTexts["This card belongs to the disposable test home."]
+        XCTAssertTrue(words.waitForPresence(timeout: 10), app.debugDescription)
+        let standardWords = words.frame.height
+        _ = try await home("display-large", budget: displayBudget)
+        let largest = waitForRedraw(heading, from: standard)
+        let grown = NSPredicate { _, _ in words.exists && words.frame.height > standardWords }
+        XCTAssertEqual(waitForPhonePredicate(grown, object: nil, timeout: 10), .completed,
+                       "At the largest standard Text Size the card's words stayed \(standardWords) points tall")
+        XCTAssertTrue(waitForPhonePress(app.buttons["computer-details"]))
+        // INF-1062: growing words once truncated Activity and lost a tap on the computer; the bar's computer stays
+        // pressable at the largest standard type. INF-4241: that the strip keeps the bar's own size through a change of
+        // type size is PhoneShellTests' testTabStripKeepsItsSizeFromLaunch.
+        picture("cards-largest-standard-type")
+        computerDetails()
+        XCTAssertTrue(waitForPhonePress(app.buttons["leave"]))
+        picture("computer-details-largest-standard-type")
+        tapOnPhone(app.buttons["close-computer-details"])
+        _ = try await home("display-light", budget: displayBudget)
+        _ = waitForRedraw(heading, from: largest)
+        if phoneTurnedLayout(app) == .wide {
+            // INF-1541 piece 1: turned, the card's heading moves onto the stage beside the sidebar, and back upright.
+            turnPhone(to: .landscapeLeft, in: app, moving: heading)
+            XCTAssertEqual(phoneShownLayout(app), .wide, "Turned, the app shows the layout read before the turn")
+            let sidebar = phoneSidebar(app)
+            XCTAssertTrue(sidebar.waitForPresence(timeout: 10), app.debugDescription)
+            XCTAssertTrue(app.staticTexts["Your phone is reading your Mac"].exists)
+            XCTAssertLessThanOrEqual(sidebar.frame.maxX, app.scrollViews["card-scroll"].frame.minX)
+            try await appearances("ipad-landscape", showing: app.staticTexts["Your phone is reading your Mac"])
+            // INF-589 item 16: Tasks and Activity are a segmented pair at the sidebar's top, each scrolling alone.
+            // INF-944 item 6: in the tabs' order, Tasks then Activity, opening on Tasks.
+            let tasksRail = phoneSidebarRail("Tasks", in: sidebar), activityRail = phoneSidebarRail("Activity", in: sidebar)
+            XCTAssertLessThan(tasksRail.frame.midX, activityRail.frame.midX, "Tasks comes before Activity")
+            XCTAssertTrue(tasksRail.isSelected)
+            let waiting = phoneTasksColumn(sidebar)
+            XCTAssertTrue(waiting.waitForPresence(timeout: 10), "The sidebar opens on Tasks")
+            XCTAssertTrue(waitForPhonePress(waiting))
+            XCTAssertLessThanOrEqual(tasksRail.frame.maxY, waiting.frame.minY, "The pair sits at the sidebar's top")
+            picture("ipad-landscape-tasks")
+            tapOnPhone(activityRail)
+            let activity = sidebar.staticTexts.matching(identifier: "activity-text").firstMatch
+            XCTAssertTrue(activity.waitForPresence(timeout: 10), "Activity opens at once")
+            XCTAssertFalse(waiting.exists)
+            XCTAssertLessThanOrEqual(activityRail.frame.maxY, activity.frame.minY)
+            tapOnPhone(tasksRail)
+            XCTAssertTrue(waiting.waitForPresence(timeout: 10))
+            XCTAssertFalse(activity.exists)
+            turnPhone(to: .portrait, in: app, moving: heading)
+            XCTAssertTrue(sidebar.waitForAbsence(timeout: 10))
+        }
+        // INF-136 #2: no product traffic for longer than both former pairing deadlines.
+        let idle = try await home("idle")
+        let idleBefore = try XCTUnwrap(idle["before"] as? [String: Int])
+        let idleAfter = try XCTUnwrap(idle["after"] as? [String: Int])
+        XCTAssertEqual(idleAfter["connections"], idleBefore["connections"], "An idle phone must keep its existing connection")
+        // INF-136 #1/#12: a card revision witnesses processing all preceding stream pushes.
+        let stream = try await home("stream")
+        XCTAssertTrue(app.staticTexts["Streaming finished"].waitForPresence(timeout: 10))
+        let streamed = try await home("state", method: "GET")
+        let beforeStream = try XCTUnwrap(stream["before"] as? [String: Int])
+        let afterStream = try XCTUnwrap(streamed["readings"] as? [String: Int])
+        XCTAssertEqual(afterStream["feed"], beforeStream["feed"], "Streaming does not change Activity")
+        XCTAssertEqual(afterStream["cards"], beforeStream["cards"], "The push already carries the card snapshot")
+        _ = try await home("stream-reset")
+        XCTAssertTrue(app.staticTexts["Your phone is reading your Mac"].waitForPresence(timeout: 10))
+        // INF-136 #9: Control Center makes the scene inactive, not backgrounded.
+        let beforeInactive = try await home("state", method: "GET")
+        // INF-1646: a starved SpringBoard can stall on the pull's first touch, and the system keeps only its first ~180 ms of touches.
+        // A default-speed pull lasts over a second, so its lift is dropped and Control Center never finishes opening; this pull lifts
+        // within a tenth of a second and waits whole in that queue, so Control Center opens once SpringBoard resumes.
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.01)).press(forDuration: 0.05,
+            thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.65)),
+            withVelocity: XCUIGestureVelocity(rawValue: 20_000), thenHoldForDuration: 0)
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        // A fresh simulator has no connectivity controls; the container itself witnesses the overlay.
+        let controlCenter = springboard.otherElements["cc-root-folder-view"]
+        XCTAssertTrue(controlCenter.waitForPresence(timeout: 10), springboard.debugDescription)
+        // Dismiss the empty simulator's overlay without invoking iPad's Home/window gesture.
+        tapOnPhone(springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.9)))
+        XCTAssertTrue(controlCenter.waitForAbsence(timeout: 10))
+        app.activate()
+        reach("Live", timeout: 10)
+        let afterInactive = try await home("state", method: "GET")
+        XCTAssertEqual((afterInactive["readings"] as? [String: Int])?["connections"],
+            (beforeInactive["readings"] as? [String: Int])?["connections"], "An inactive scene keeps its connection")
+    }
+
+    /// Back uses the system's Command-[ chord, witnessed through the existing key owner before one press.
+    private func settingsBack() async throws {
+        let back = app.buttons["phone-settings-back"]
+        XCTAssertTrue(back.waitForPresence(timeout: 10), app.debugDescription)
+        waitForSteadyTarget(back)
+        try await pressPhoneKey("[", modifiers: .command, in: app)
+        XCTAssertTrue(app.buttons["phone-settings-general"].waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(back.waitForAbsence(timeout: 10), "Back leaves the destination once its navigation transition finishes")
+    }
+
+    /// The captain's Approve and build on the phone's own theme, from Settings open on a light simulator: Dark drawn
+    /// dark across the whole screen with the simulator still light, still dark after a relaunch, and Device chosen by
+    /// keyboard (the left arrow) follows the simulator's light again. Leaves Settings open, drawing light.
+    /// Data: the join part's test home and its one card. Resources: this part's own simulator; no account or signing.
+    func phoneTheme() async throws {
+        let theme = app.segmentedControls["phone-theme"]
+        XCTAssertTrue(theme.waitForPresence(timeout: 10), app.debugDescription)
+        try await appearances("phone-settings-appearance", showing: theme)
+        let device = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
+        XCTAssertEqual(app.staticTexts["phone-theme-scope"].label, "Set on this \(device) only. Test Mac mini keeps its own.")
+        // INF-4713: under Theme, one line names where the size of Infinitary's words is set, with no control of its own.
+        XCTAssertEqual(app.staticTexts["phone-text-size"].label,
+                       "Infinitary follows this \(device)'s Text Size. For Infinitary alone, use Text Size in Control Center.")
+        XCTAssertEqual(theme.buttons.allElementsBoundByIndex.map(\.label), ["Device", "Dark", "Light"])
+        XCTAssertTrue(theme.buttons["Device"].isSelected, "A new install matches the device")
+        tapOnPhone(theme.buttons["Dark"])
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: theme.buttons["Dark"], timeout: 10), .completed)
+        try drawn("phone-theme-dark", dark: true)
+        app.terminate(); try await launchPhoneApp(app)
+        reach("Live", timeout: 20)
+        XCTAssertTrue(app.staticTexts["Your phone is reading your Mac"].waitForPresence(timeout: 10), app.debugDescription)
+        try drawn("phone-theme-dark-relaunched", dark: true)
+        try await pressPhoneKey(",", modifiers: .command, in: app)
+        let appearance = app.buttons["phone-settings-appearance"]
+        XCTAssertTrue(appearance.waitForPresence(timeout: 10), "Command-Comma opens the list after relaunch")
+        XCTAssertFalse(theme.exists)
+        tapOnPhone(appearance)
+        XCTAssertTrue(theme.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(theme.buttons["Dark"].isSelected, "The choice survives a relaunch")
+        waitForSteadyTarget(theme)
+        // BackBoard publishes only chords with a modifier, so an unmodified arrow has no registration to wait for; as
+        // INF-1066's browsing keys, it is one actual input with visible-result proof, no wait or retry.
+        app.typeKey(XCUIKeyboardKey.leftArrow.rawValue, modifierFlags: [])
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: theme.buttons["Device"], timeout: 10),
+                       .completed, "In Settings the left arrow moves the theme from Dark to Device")
+        try drawn("phone-theme-device", dark: false)
+    }
+
+    /// The captain's Split at the fold switch by keys, on a simulator told at launch that it has seen a fold, as an open
+    /// iPhone Duo would: Theme holds focus as Appearance opens, the down arrow passes Language to the switch, Space and
+    /// Return each flip it, and the choice it was left at survives a relaunch. Leaves Appearance open with the switch off.
+    /// Data: the join part's test home. Resources: this part's own simulator; no account or signing.
+    func phoneFoldSplit() async throws {
+        app.launchEnvironment["INFINITARY_FOLD_SEEN"] = "1"
+        app.terminate(); try await launchPhoneApp(app)
+        app.launchEnvironment.removeValue(forKey: "INFINITARY_FOLD_SEEN")
+        reach("Live", timeout: 20)
+        try await openAppearanceByKeys()
+        let split = app.switches["phone-fold-split"]
+        XCTAssertTrue(split.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(split.value as? String, "1", "Split at the fold starts on")
+        waitForSteadyTarget(app.segmentedControls["phone-theme"])
+        // As phoneTheme's arrow, each unmodified key is one actual input with visible-result proof, no wait or retry.
+        app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: [])
+        app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: [])
+        app.typeKey(" ", modifierFlags: [])
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == '0'"), object: split, timeout: 10), .completed,
+                       "Down past Language reaches the switch and Space turns it off: \(app.debugDescription)")
+        // As PhoneKeys owns, Xcode emits the physical Return for LF, not CR.
+        app.typeKey("\n", modifierFlags: [])
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == '1'"), object: split, timeout: 10), .completed,
+                       "Return turns the switch back on")
+        app.typeKey(" ", modifierFlags: [])
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == '0'"), object: split, timeout: 10), .completed,
+                       "Space turns it off again")
+        app.terminate(); try await launchPhoneApp(app)
+        reach("Live", timeout: 20)
+        try await openAppearanceByKeys()
+        XCTAssertTrue(split.waitForPresence(timeout: 10), "The switch stays once a fold was seen: \(app.debugDescription)")
+        XCTAssertEqual(split.value as? String, "0", "The choice survives a relaunch")
+    }
+
+    /// Command-Comma opens Settings' list and Appearance opens from it.
+    private func openAppearanceByKeys() async throws {
+        try await pressPhoneKey(",", modifiers: .command, in: app)
+        let appearance = app.buttons["phone-settings-appearance"]
+        XCTAssertTrue(appearance.waitForPresence(timeout: 10), app.debugDescription)
+        tapOnPhone(appearance)
+        XCTAssertTrue(app.segmentedControls["phone-theme"].waitForPresence(timeout: 10), app.debugDescription)
+    }
+}

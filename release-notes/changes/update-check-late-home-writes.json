@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "update-check-late-home-writes",
+      "reason": "Internal: the Mac update checks remove the app's saved data from their disposable home strictly and name, instead of failing on, files another program writes into that home while it is removed; nothing a person sees changes."
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "automation-schedules",
+      "kind": "feature",
+      "highlight": 2,
+      "title": "Automation shows the prompts Firstmate runs on a schedule",
+      "body": "Settings has a new Automation tab. It lists every schedule, whether you made it or asked Firstmate to. You can read, rename, edit, pause, resume and delete each one, preview its next run dates, and see when it last ran. A one-time reminder stays listed as done after it runs.",
+      "area": "settings",
+      "picture": {
+        "dark": "automation-schedules-dark.webp",
+        "light": "automation-schedules-light.webp",
+        "alt": "Settings → Automation listing three schedules, with Morning briefing open to its name, daily time, prompt, and Save, Preview, Pause and Delete."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

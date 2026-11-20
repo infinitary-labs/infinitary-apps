@@ -1,0 +1,13 @@
+{
+  "mergedAt": "{at}에 병합됨",
+  "mergedChangeOn": "{place}에서 {change} 병합됨",
+  "mergedChangeOnHost": "프로젝트 호스트에서 {change} 병합됨",
+  "mergedChangeWhereItLives": "프로젝트가 있는 곳에서 {change} 병합됨",
+  "mergedInCommit": "커밋 {commit}에서 병합됨",
+  "mergedInPull": "끌어오기 요청 {change}에서 병합됨",
+  "mergedOn": "{place}에서 병합됨",
+  "mergedOnItsOwnAt": "{at}에 알아서 병합됨",
+  "mergedWhereItLives": "프로젝트가 있는 곳에서 병합됨",
+  "mergedWithBatchOn": "{place}에서 일괄 끌어오기 요청 {change}와 함께 병합됨",
+  "mergedWithBatchWhereItLives": "프로젝트가 있는 곳에서 일괄 끌어오기 요청 {change}와 함께 병합됨"
+}

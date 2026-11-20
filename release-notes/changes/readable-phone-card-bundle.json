@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "readable-phone-card-bundle",
+      "reason": "This change generates the phone app's card bundle unminified so parallel changes merge cleanly; the cards behave the same for a person."
+    }
+  ]
+}

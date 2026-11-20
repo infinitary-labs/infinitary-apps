@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "one-crewmate-per-task",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A task never runs two crewmates at once",
+      "body": "A task could open a second crewmate beside the one it already had, such as when it moved to another model while it was reopening, and the two worked in the same copy of the project. A task now reopens one crewmate, and a later reopen joins the one it has.",
+      "noPicture": "The fix changes how a task's crewmate reopens and shows no different view.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

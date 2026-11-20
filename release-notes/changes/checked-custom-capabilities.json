@@ -1,0 +1,23 @@
+{
+  "entries": [
+    {
+      "id": "checked-custom-capabilities",
+      "kind": "feature",
+      "title": "Check reasoning and caching on your custom connections",
+      "body": "Each model has consistently sized fields for its ID, limits, checked reasoning profile and cache setting. Save checks your choices before they become available, and Usage keeps reported cache counts. Existing connections need a fresh check before use; reasoning and explicit caching stay off until you choose them.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "checked-custom-capabilities-dark.webp",
+        "light": "checked-custom-capabilities-light.webp",
+        "alt": "A cropped custom model row shows its reasoning profile, Short cache retention and the notice about checks and possible charges"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "pi-ownership-cleanup",
+      "reason": "Internal delegation of capability resolution, local input estimation and native TypeSafe classification, plus deletion of the approved dormant filesystem tools and their exclusive tests. Product safety boundaries and routing remain in Firstmate."
+    }
+  ]
+}

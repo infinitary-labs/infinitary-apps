@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "story-override-at-merge",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Your go-ahead without the change story now reaches the merge",
+      "body": "When you tell your first mate a task may go ahead without its change story, the merge now goes through as well, instead of stopping to ask for a story you already set aside. Passing checks, your merge approval and the rules where your project lives still apply.",
+      "noPicture": "Nothing on screen changes; the merge now proceeds where it used to stop with a refusal.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

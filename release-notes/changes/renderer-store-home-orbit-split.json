@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "renderer-store-home-orbit-split",
+      "reason": "Internal: splits the window's store, its tests, the home screen and the crew orbit into smaller files along their owners, under the 2,000-line bar; nothing a person sees changes."
+    }
+  ]
+}

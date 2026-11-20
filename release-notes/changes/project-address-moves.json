@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "project-address-moves",
+      "kind": "fix",
+      "title": "Tasks follow a project to its new address",
+      "body": "Work on another computer keeps its edits and uses the new address when it resumes. A branch from unrelated history no longer stops the whole batch, and saved pull request numbers are not looked up in a different repository.",
+      "area": "projects",
+      "noPicture": "The change affects where work is sent and how batches are assembled, with no new screen or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

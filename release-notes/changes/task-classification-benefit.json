@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "task-classification-benefit",
+      "kind": "improvement",
+      "title": "Settings says how task classification helps you",
+      "body": "In Settings, under Decisions, the Task classification row now says what you gain from it: each new task runs on a model that fits the work, so easy tasks spend less of your plan's allowance. The row reads this way in every language Infinitary speaks.",
+      "area": "settings",
+      "noPicture": "Only the one line of words under a Settings row changes, and this note quotes it.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "window-joins-run",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Infinitary's window opens beside a command",
+      "body": "When Infinitary already runs with no window, started by a command on the same computer and account, opening Infinitary now shows that first mate, its cards and its crew, instead of a page saying a command started it. Your crew keeps working in the command. The window follows your first mate's theme, text size, panel layout and keys, and a change in either reaches the other. Show in Dock applies to this window, Start at login is changed from it, card notifications come from it, and Update and restart saves your crew's work first.",
+      "noPicture": "The window looks as it always does; what changed is that it opens to the running first mate instead of a page that only says a command runs it.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

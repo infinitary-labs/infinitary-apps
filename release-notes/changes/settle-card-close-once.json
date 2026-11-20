@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "settle-card-close-once",
+      "reason": "Drops a sentence from the first mate's settle_task description that its prompt already says, to keep its fixed context inside the budget; nothing a person notices changes."
+    }
+  ]
+}

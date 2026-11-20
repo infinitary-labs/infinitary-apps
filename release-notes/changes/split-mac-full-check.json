@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-mac-full-check",
+      "reason": "CI only: the full check's one Mac job becomes three jobs (native tests, replay and package; parallel journeys; desktop journeys) that ask for a smaller Mac kind of their own, with the alpha proof, the journey timing reader and the testing docs following; nothing a person sees in the app changes."
+    }
+  ]
+}

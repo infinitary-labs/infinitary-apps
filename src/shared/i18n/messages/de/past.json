@@ -1,0 +1,12 @@
+{
+  "pastEndingAnOption": "eine Option",
+  "pastEndingAuthorWithdrawal": "Vom Verfasser zurückgezogen",
+  "pastEndingCrewmateChose": "Sein Crewmitglied hat „{label}“ gewählt",
+  "pastEndingDismissed": "Ohne Wahl geschlossen",
+  "pastEndingDuplicate": "Als Duplikat geschlossen",
+  "pastEndingFirstmateChose": "Dein erster Offizier hat „{label}“ gewählt",
+  "pastEndingHostWithdrawal": "Von der App entfernt",
+  "pastEndingTaskRetired": "Entfernt, als die Aufgabe endete",
+  "pastEndingUnknown": "Geschlossen",
+  "pastEndingYouChose": "Du hast „{label}“ gewählt"
+}

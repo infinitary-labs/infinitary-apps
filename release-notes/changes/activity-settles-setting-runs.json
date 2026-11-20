@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "activity-settles-setting-runs",
+      "kind": "improvement",
+      "area": "settings",
+      "title": "Activity shows one line for a run of changes to one setting",
+      "body": "Dragging the window wash slider, pressing a size key a few times or folding a panel and opening it again used to write a line for every step. Now a run of your own changes to one setting is one line, such as \"window wash 48% → 76%\", and a run that ends where it started leaves no line. A change Firstmate makes for you is still a line of its own.",
+      "picture": {
+        "dark": "activity-settles-setting-runs-dark.png",
+        "light": "activity-settles-setting-runs-light.png",
+        "alt": "Activity with a crewmate's lines and, under them, one line for a whole drag of the window wash: Captain · window wash 0% → 76%"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

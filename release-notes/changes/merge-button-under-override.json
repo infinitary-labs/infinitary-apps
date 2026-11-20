@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "merge-button-under-override",
+      "kind": "fix",
+      "area": "cards",
+      "title": "The merge button says it merges now when your words pass the checks",
+      "body": "When you tell the first mate to merge a change even though its checks failed or are still running, the button on its card now reads Merge the pull request, because clicking it merges right away. It used to read Merge after fixing errors or Merge when checks pass, though the click merged at once.",
+      "picture": {
+        "dark": "merge-button-under-override-dark.webp",
+        "light": "merge-button-under-override-light.webp",
+        "alt": "A completion card whose checks failed, with an Override row naming the checks and its button reading Merge the pull request beside Discard."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

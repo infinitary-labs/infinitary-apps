@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "card-option-words-flow",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A card's choices read as one line of words again",
+      "body": "When a choice on a card named a task or carried the Recommended tag, its words could split into narrow side-by-side columns. Each choice now reads as one paragraph, its task links and tags in line with the words, and a long choice wraps under its first word.",
+      "picture": {
+        "dark": "card-option-words-flow-dark.webp",
+        "light": "card-option-words-flow-light.webp",
+        "alt": "A decision card with three choices, each a bold lead and its words on one or two lines, a task link and a Recommended tag in line"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

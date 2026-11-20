@@ -1,0 +1,35 @@
+{
+  "entries": [
+    {
+      "id": "bf-c6630d027",
+      "kind": "fix",
+      "title": "Verify-app reads x64ArchFiles; add a no-publish release dry run",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "c6630d02777c54367feb57cea7d514219d8a0317"
+        ]
+      }
+    },
+    {
+      "id": "bf-7daabe5cd",
+      "kind": "fix",
+      "title": "A closed task's worktree always goes, unlanded work saved first",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "7daabe5cd6b5cdece097902a9f33a019950e918e"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-1-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.1: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "6221e63d7e2c5decdfe9ec6eb66d25a96602473b"
+      ]
+    }
+  ]
+}

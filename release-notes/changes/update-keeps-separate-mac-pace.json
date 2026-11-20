@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "update-keeps-separate-mac-pace",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Updating another Mac keeps its crewmates at their normal pace",
+      "body": "Updating a Mac you added by its address in Settings → Devices could leave a crewmate there running its builds and tests below everything else on that Mac, so they ran slowly and their tests could fail with nothing wrong in your project. An update now keeps them at that Mac's normal priority.",
+      "noPicture": "Nothing on screen changes: a crewmate on another Mac keeps finishing its builds and tests at the same pace after that Mac is updated.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

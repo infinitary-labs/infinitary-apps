@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "phone-photos-failure-log",
+      "reason": "Phone check tooling: when a part's wait for the test phone's Photos fails, the check now keeps that wait's log output and the simulator's log since boot. Nothing in the app changed."
+    }
+  ]
+}

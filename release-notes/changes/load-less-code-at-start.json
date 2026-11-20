@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "load-less-code-at-start",
+      "kind": "improvement",
+      "area": "other",
+      "title": "Infinitary opens sooner",
+      "body": "The app reads much less code before it can start, and keeps what it compiled for the next start. Every open after the first of a new version, including the everyday one, shows its window about four tenths of a second sooner.",
+      "noPicture": "This changes how soon the existing window appears, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-task-protocol",
+      "reason": "Internal refactor: the task protocol's source file is split along its owners; nothing a person sees changes."
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "save-and-defer",
+      "kind": "feature",
+      "title": "Save a plan for later",
+      "body": "A plan now ends in three buttons: Approve and build, Save and defer, and Abandon. Save and defer keeps the agreed plan and puts its build under planned in Tasks, where it waits until you press Start or ask Firstmate to build it. Abandon closes the plan and keeps nothing waiting. A prototype offers Build it beside the same two, and Save and defer keeps the settings you left on it.",
+      "highlight": 1,
+      "area": "cards",
+      "picture": {
+        "dark": "save-and-defer-dark.webp",
+        "light": "save-and-defer-light.webp",
+        "alt": "A plan card ending in Abandon, Save and defer and Approve and build"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

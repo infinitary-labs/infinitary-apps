@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-confirm-keeps-evidence",
+      "reason": "Internal CI change: the merge batch's confirm job keeps a failed journey's trace, screenshot and error context on its run, as the batch's own journey jobs already do. No app behavior changes."
+    }
+  ]
+}

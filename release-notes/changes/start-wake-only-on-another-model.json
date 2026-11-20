@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "start-wake-only-on-another-model",
+      "reason": "Changes what the first mate is told when a task it started is running: it is woken only when the task started on another model than the one asked for, and reads each task's model from its crew list instead. Nothing a person sees changes."
+    }
+  ]
+}

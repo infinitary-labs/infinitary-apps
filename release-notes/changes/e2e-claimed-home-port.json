@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "e2e-claimed-home-port",
+      "reason": "Give each end-to-end home a loopback port no other process in the run can be listening on, so the guardrail's probe reads only its own app; the app is unchanged."
+    }
+  ]
+}

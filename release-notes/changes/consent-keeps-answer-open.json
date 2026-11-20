@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "consent-keeps-answer-open",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Allowing a crewmate's request no longer ends its task",
+      "body": "When a crewmate that is finding something out asks your permission first, such as to sign a test app, choosing Allow now lets it carry on to its answer. Before, that choice marked the task done before the work had happened. Your choice on its answer still closes the task.",
+      "picture": {
+        "dark": "consent-keeps-answer-open-dark.webp",
+        "light": "consent-keeps-answer-open-light.webp",
+        "alt": "A task's record after you allowed its crewmate's request: still waiting on you, with the crewmate's answer card as its Now line"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

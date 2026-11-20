@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "chromium-integration-checks",
+      "reason": "Install Chromium in test workflow lanes; this changes only internal checks."
+    }
+  ]
+}

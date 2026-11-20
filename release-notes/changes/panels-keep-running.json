@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "panels-keep-running",
+      "kind": "fix",
+      "area": "other",
+      "title": "Panels keep running when the app is busy",
+      "body": "A side panel no longer says \"This panel stopped responding.\" when the app itself is busy for a few seconds. A panel that really stops reloads once on its own, and Retry appears only if it stops again. Cards with their own scripts no longer stop when the app is busy either.",
+      "noPicture": "Nothing new appears: a panel keeps drawing where it used to show the stopped line.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

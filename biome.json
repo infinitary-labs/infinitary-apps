@@ -1,0 +1,575 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.8/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "src/**",
+      "tests/**",
+      "*.ts",
+      "*.tsx",
+      "*.json",
+      "*.md",
+      "!.claude",
+      "!.lavish",
+      "!src/core/runbooks/parts/map.js",
+      "!src/core/runbooks/parts/map.*.js"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "style": {
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "patterns": [
+              {
+                "group": ["@earendil-works/pi-coding-agent", "@earendil-works/pi-ai"],
+                "message": "Pi APIs are reachable only through the adapter seam in src/core/pi/ (docs/architecture.md §17 cross-cutting rules)."
+              },
+              {
+                "group": ["@anthropic-ai/claude-agent-sdk", "@anthropic-ai/sdk"],
+                "message": "Claude's client is reachable only through the adapter seam in src/core/claude/ (account-broker phase 7)."
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "trailingCommas": "all",
+      "semicolons": "always"
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["src/**"],
+      "plugins": ["./tests/lint/platform-reader.grit"]
+    },
+    {
+      "includes": ["tests/e2e/**"],
+      "plugins": [
+        "./tests/lint/e2e-no-ms-budgets.grit",
+        "./tests/lint/e2e-structural-selectors.grit",
+        "./tests/lint/e2e-measured-box.grit",
+        "./tests/lint/e2e-layout-state.grit",
+        "./tests/lint/e2e-model-id-literal.grit",
+        "./tests/lint/e2e-feed-line-prose.grit",
+        "./tests/lint/e2e-run-evidence-path.grit",
+        "./tests/lint/e2e-typed-keys.grit",
+        "./tests/lint/e2e-firstmate-pose.grit",
+        "./tests/lint/e2e-frame-door.grit",
+        "./tests/lint/e2e-bare-focus.grit",
+        "./tests/lint/e2e-text-lookup.grit",
+        "./tests/lint/e2e-scenario-imports.grit"
+      ]
+    },
+    {
+      "includes": ["src/core/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["electron", "electron/*", "electron/**"],
+                    "message": "src/core/ is the Electron-free application core (daemon study D1): it must run under any host. Reach the desktop shell through HostCapabilities (src/core/host.ts) instead."
+                  },
+                  {
+                    "group": [
+                      "../main/**",
+                      "../../main/**",
+                      "../../../main/**",
+                      "../../../../main/**"
+                    ],
+                    "message": "src/core/ may not import the host tree (src/main/): the dependency runs host -> core, never back."
+                  },
+                  {
+                    "group": ["@earendil-works/pi-coding-agent", "@earendil-works/pi-ai"],
+                    "message": "Pi APIs are reachable only through the adapter seam in src/core/pi/ (docs/architecture.md §17 cross-cutting rules)."
+                  },
+                  {
+                    "group": ["@anthropic-ai/claude-agent-sdk", "@anthropic-ai/sdk"],
+                    "message": "Claude's client is reachable only through the adapter seam in src/core/claude/ (account-broker phase 7)."
+                  },
+                  {
+                    "group": [
+                      "./decisions/jev/**",
+                      "../decisions/jev/**",
+                      "../../decisions/jev/**",
+                      "../../../decisions/jev/**"
+                    ],
+                    "message": "A native decision model's client and key store are reachable only through src/core/decisions/ (S7b): nothing else may build a request to that endpoint or read that key."
+                  },
+                  {
+                    "group": [
+                      "./forge/providers/**",
+                      "../forge/providers/**",
+                      "../../forge/providers/**",
+                      "../../../forge/providers/**"
+                    ],
+                    "message": "A forge provider file is reachable only through src/core/forge/index.ts (git integration PR 1.1): only src/core/forge/ may import one, its home wiring (src/core/forge/homeForges.ts) among them."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/core/decisions/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["electron", "electron/*", "electron/**"],
+                    "message": "src/core/ is the Electron-free application core (daemon study D1): it must run under any host. Reach the desktop shell through HostCapabilities (src/core/host.ts) instead."
+                  },
+                  {
+                    "group": [
+                      "../main/**",
+                      "../../main/**",
+                      "../../../main/**",
+                      "../../../../main/**"
+                    ],
+                    "message": "src/core/ may not import the host tree (src/main/): the dependency runs host -> core, never back."
+                  },
+                  {
+                    "group": ["@earendil-works/pi-coding-agent", "@earendil-works/pi-ai"],
+                    "message": "Pi APIs are reachable only through the adapter seam in src/core/pi/ (docs/architecture.md §17 cross-cutting rules)."
+                  },
+                  {
+                    "group": ["@anthropic-ai/claude-agent-sdk", "@anthropic-ai/sdk"],
+                    "message": "Claude's client is reachable only through the adapter seam in src/core/claude/ (account-broker phase 7)."
+                  },
+                  {
+                    "group": [
+                      "./forge/providers/**",
+                      "../forge/providers/**",
+                      "../../forge/providers/**",
+                      "../../../forge/providers/**"
+                    ],
+                    "message": "A forge provider file is reachable only through src/core/forge/index.ts (git integration PR 1.1): only src/core/forge/ may import one, its home wiring (src/core/forge/homeForges.ts) among them."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/core/pi/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["electron", "electron/*", "electron/**"],
+                    "message": "src/core/ is the Electron-free application core (daemon study D1): it must run under any host. Reach the desktop shell through HostCapabilities (src/core/host.ts) instead."
+                  },
+                  {
+                    "group": [
+                      "../main/**",
+                      "../../main/**",
+                      "../../../main/**",
+                      "../../../../main/**"
+                    ],
+                    "message": "src/core/ may not import the host tree (src/main/): the dependency runs host -> core, never back."
+                  },
+                  {
+                    "group": [
+                      "./forge/providers/**",
+                      "../forge/providers/**",
+                      "../../forge/providers/**",
+                      "../../../forge/providers/**"
+                    ],
+                    "message": "A forge provider file is reachable only through src/core/forge/index.ts (git integration PR 1.1): only src/core/forge/ may import one, its home wiring (src/core/forge/homeForges.ts) among them."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/core/claude/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["electron", "electron/*", "electron/**"],
+                    "message": "src/core/ is the Electron-free application core (daemon study D1): it must run under any host. Reach the desktop shell through HostCapabilities (src/core/host.ts) instead."
+                  },
+                  {
+                    "group": [
+                      "../main/**",
+                      "../../main/**",
+                      "../../../main/**",
+                      "../../../../main/**"
+                    ],
+                    "message": "src/core/ may not import the host tree (src/main/): the dependency runs host -> core, never back."
+                  },
+                  {
+                    "group": [
+                      "./forge/providers/**",
+                      "../forge/providers/**",
+                      "../../forge/providers/**",
+                      "../../../forge/providers/**"
+                    ],
+                    "message": "A forge provider file is reachable only through src/core/forge/index.ts (git integration PR 1.1): only src/core/forge/ may import one, its home wiring (src/core/forge/homeForges.ts) among them."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/core/forge/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["electron", "electron/*", "electron/**"],
+                    "message": "src/core/ is the Electron-free application core (daemon study D1): it must run under any host. Reach the desktop shell through HostCapabilities (src/core/host.ts) instead."
+                  },
+                  {
+                    "group": [
+                      "../main/**",
+                      "../../main/**",
+                      "../../../main/**",
+                      "../../../../main/**"
+                    ],
+                    "message": "src/core/ may not import the host tree (src/main/): the dependency runs host -> core, never back."
+                  },
+                  {
+                    "group": ["@earendil-works/pi-coding-agent", "@earendil-works/pi-ai"],
+                    "message": "Pi APIs are reachable only through the adapter seam in src/core/pi/ (docs/architecture.md §17 cross-cutting rules)."
+                  },
+                  {
+                    "group": ["@anthropic-ai/claude-agent-sdk", "@anthropic-ai/sdk"],
+                    "message": "Claude's client is reachable only through the adapter seam in src/core/claude/ (account-broker phase 7)."
+                  },
+                  {
+                    "group": [
+                      "./decisions/jev/**",
+                      "../decisions/jev/**",
+                      "../../decisions/jev/**",
+                      "../../../decisions/jev/**"
+                    ],
+                    "message": "A native decision model's client and key store are reachable only through src/core/decisions/ (S7b): nothing else may build a request to that endpoint or read that key."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+        "tests/**/*.test.ts",
+        "tests/**/*.test.tsx",
+        "!tests/helpers/customApiCaFixture.ts",
+        "!tests/helpers/sshServer.ts",
+        "!src/core/pi/customApiCertificates.integration.test.ts",
+        "!src/core/pi/customApiToken.integration.test.ts",
+        "!src/core/integrations/providers/mcp/mcpIntegration.test.ts",
+        "!src/core/claude/claudeAccess.integration.test.ts",
+        "!src/core/claude/claudeCostReports.integration.test.ts",
+        "!src/core/placed/placedClaudeCost.integration.test.ts",
+        "!src/core/claude/claudeAttribution.integration.test.ts",
+        "!src/core/claude/claudeCommandTimeLimit.integration.test.ts",
+        "!src/core/claude/claudeSeatOverflow.integration.test.ts",
+        "!src/core/pi/seatCompaction.integration.test.ts",
+        "!src/core/claude/claudeAutoMemory.integration.test.ts",
+        "!src/core/claude/claudeEntrypoint.integration.test.ts",
+        "!src/core/claude/claudeClassifierSession.integration.test.ts",
+        "!src/core/claude/claudeCrewAgents.integration.test.ts",
+        "!src/core/claude/claudeCrewContract.integration.test.ts",
+        "!src/core/claude/claudeProjectResources.integration.test.ts",
+        "!src/core/claude/claudeToolWait.integration.test.ts",
+        "!src/core/claude/claudeCrewCard.integration.test.ts",
+        "!src/core/claude/claudeToolNames.integration.test.ts",
+        "!src/core/claude/claudeSession.contract.integration.test.ts",
+        "!src/core/claude/claudeRollingSession.integration.test.ts",
+        "!src/core/claude/claudeSession.integration.test.ts",
+        "!src/core/claude/interruptWedge.integration.test.ts",
+        "!src/core/claude/claudeClientExit.integration.test.ts",
+        "!src/core/claude/claudeCli.test.ts",
+        "!src/core/claude/claudeFirstmateSeat.live.test.ts",
+        "!src/core/claude/claudeFirstmateSession.integration.test.ts",
+        "!src/core/claude/claudeLoginProbe.test.ts",
+        "!src/core/claude/claudeModelProbe.test.ts",
+        "!src/core/claude/claudeRenewProbe.test.ts",
+        "!src/core/claude/claudeToolSurface.test.ts",
+        "!src/core/batches/combine.test.ts",
+        "!src/core/core.boot.test.ts",
+        "!src/core/core.capture.test.ts",
+        "!src/core/core.connection.test.ts",
+        "!src/core/dispatcher.media.test.ts",
+        "!src/core/dispatcher.placement.test.ts",
+        "!src/core/core.contract.test.ts",
+        "!src/core/core.projects.test.ts",
+        "!src/core/core.settings.test.ts",
+        "!src/core/core.wiring.test.ts",
+        "!src/core/forge/providers/plainGit.test.ts",
+        "!src/core/forge/signIns.test.ts",
+        "!src/core/hostEnv.gitSignIn.test.ts",
+        "!src/core/hostEnv.test.ts",
+        "!src/core/jobs/jobManager.test.ts",
+        "!src/core/placed/processResources.integration.test.ts",
+        "!src/core/placed/placementFacts.integration.test.ts",
+        "!src/core/placed/loadLine.integration.test.ts",
+        "!src/core/placed/windowsProcesses.integration.test.ts",
+        "!src/core/orchestrator/captainOverrides.checks.test.ts",
+        "!src/core/orchestrator/captainOverrides.mergeClick.test.ts",
+        "!src/core/orchestrator/crewBrief.context.test.ts",
+        "!src/core/orchestrator/crewPrograms.test.ts",
+        "!src/core/orchestrator/crewmatePrograms.test.ts",
+        "!src/core/orchestrator/crewTurns.whoseTurn.test.ts",
+        "!src/core/orchestrator/crewTurns.workspace.test.ts",
+        "!src/core/orchestrator/crewWatch.git.test.ts",
+        "!src/core/orchestrator/idleLadder.waits.test.ts",
+        "!src/core/orchestrator/idleLadder.mergeLine.test.ts",
+        "!src/core/orchestrator/ownBatchChange.test.ts",
+        "!src/core/orchestrator/inPlaceWork.folders.test.ts",
+        "!src/core/orchestrator/intake.git.test.ts",
+        "!src/core/orchestrator/reviews.tier.test.ts",
+        "!src/core/orchestrator/settleOwners.keptMerge.test.ts",
+        "!src/core/orchestrator/settleOwners.keptMergeRepairs.test.ts",
+        "!src/core/orchestrator/starts.automatic.test.ts",
+        "!src/core/orchestrator/starts.lost.test.ts",
+        "!src/core/orchestrator/taskMoves.computer.test.ts",
+        "!src/core/program/programRunner.crew.test.ts",
+        "!src/core/orchestrator/reviews.test.ts",
+        "!src/core/orchestrator/reviews.wakes.test.ts",
+        "!src/core/orchestrator/crewBrief.test.ts",
+        "!src/core/orchestrator/firstmateAgent.actions.test.ts",
+        "!src/core/orchestrator/firstmateAgent.capture.test.ts",
+        "!src/core/orchestrator/firstmateAgent.context.test.ts",
+        "!src/core/orchestrator/firstmateAgent.delivery.test.ts",
+        "!src/core/orchestrator/firstmateAgent.flagship.test.ts",
+        "!src/core/orchestrator/firstmateAgent.inbox.test.ts",
+        "!src/core/orchestrator/holdRules.inbox.test.ts",
+        "!src/core/orchestrator/firstmateAgent.knowledge.test.ts",
+        "!src/core/orchestrator/firstmateAgent.lane.test.ts",
+        "!src/core/orchestrator/firstmateAgent.provenance.test.ts",
+        "!src/core/orchestrator/firstmateAgent.reply.test.ts",
+        "!src/core/orchestrator/firstmateAgent.seat.test.ts",
+        "!src/core/orchestrator/firstmateAgent.tools.test.ts",
+        "!src/core/orchestrator/firstmateAgent.turns.test.ts",
+        "!src/core/orchestrator/changeChecks.test.ts",
+        "!src/core/orchestrator/changeCutover.test.ts",
+        "!src/core/orchestrator/changeMerge.test.ts",
+        "!src/core/orchestrator/changePublication.test.ts",
+        "!src/core/orchestrator/changePublication.stories.test.ts",
+        "!src/core/orchestrator/changePublication.mergedStory.test.ts",
+        "!src/core/orchestrator/mergeReviews.test.ts",
+        "!tests/gitlabMergeReview.test.ts",
+        "!src/core/orchestrator/settleService.test.ts",
+        "!src/core/orchestrator/handedResult.test.ts",
+        "!src/core/placed/placedCallbacks.test.ts",
+        "!src/core/placed/placedReach.test.ts",
+        "!src/core/placed/placedRestartRecovery.test.ts",
+        "!src/core/placed/placedJobs.test.ts",
+        "!src/core/placed/placedWorkingCopies.test.ts",
+        "!src/core/placed/placedLostStarts.test.ts",
+        "!src/core/placed/placedSignIns.test.ts",
+        "!src/core/placed/placedOutside.test.ts",
+        "!src/core/placed/placedRunsOn.test.ts",
+        "!src/core/placed/placedComputers.test.ts",
+        "!src/core/placed/placedPersonal.test.ts",
+        "!src/core/placed/placedAccounts.test.ts",
+        "!src/core/placed/placedCutOff.test.ts",
+        "!src/core/helper/workingCopies.test.ts",
+        "!src/core/folderMove/copy.test.ts",
+        "!src/core/folderMove/move.test.ts",
+        "!src/core/homeMove/homeMove.test.ts",
+        "!src/core/standby/standby.test.ts",
+        "!src/core/tasks/taskTemp.integration.test.ts",
+        "!src/core/tasks/keptRunning.integration.test.ts",
+        "!src/core/tasks/leftoverPrograms.integration.test.ts",
+        "!src/core/helper/cleanUp.test.ts",
+        "!src/core/helper/fromHome.test.ts",
+        "!src/core/devices/joinCommand.test.ts",
+        "!src/core/devices/remoteLogin.test.ts",
+        "!src/core/devices/remoteLoginDownload.test.ts",
+        "!src/core/devices/remoteLoginForward.test.ts",
+        "!src/core/devices/remoteLoginFound.test.ts",
+        "!src/core/devices/remoteLoginLink.test.ts",
+        "!src/core/devices/remoteLoginPassword.test.ts",
+        "!src/core/devices/remoteLoginUbuntu.test.ts",
+        "!src/core/devices/remoteLoginUpdate.test.ts",
+        "!src/core/devices/ubuntuPackage.test.ts",
+        "!src/core/devices/sshConnections.test.ts",
+        "!src/core/helper/connect.test.ts",
+        "!src/core/devices/relay.test.ts",
+        "!src/core/devices/dnsSd.test.ts",
+        "!src/core/devices/computerUpdate.test.ts",
+        "!src/core/devices/farSystems.test.ts",
+        "!src/core/devices/phoneDoor.test.ts",
+        "!src/core/personal/panelInstructions.test.ts",
+        "!src/core/personal/liveWorkspace.test.ts",
+        "!src/core/personal/personalExtensions.test.ts",
+        "!src/core/personal/sequencesSkill.test.ts",
+        "!src/core/personal/workspace.test.ts",
+        "!src/core/pi/personalizeTool.test.ts",
+        "!src/core/plugins/pluginInstaller.test.ts",
+        "!src/core/sql/sqlService.test.ts",
+        "!src/core/recordReads/recordReader.integration.test.ts",
+        "!src/core/files/fileReachLocks.integration.test.ts",
+        "!src/core/program/programRunner.test.ts",
+        "!src/core/axi/channel.test.ts",
+        "!src/core/axi/captainCommands.test.ts",
+        "!src/core/integrations/providers/inbox.test.ts",
+        "!src/core/secrets/protected.test.ts",
+        "!src/core/secrets/elsewhere.test.ts",
+        "!src/core/secrets/bring.test.ts",
+        "!src/core/utilityQos.test.ts",
+        "!src/core/workspace/repoRegistry.test.ts",
+        "!src/core/workspace/projectContributions.test.ts",
+        "!src/core/workspace/git.test.ts",
+        "!src/core/workspace/gitWorktreeCommands.test.ts",
+        "!src/core/knowledge/knowledgeSources.integration.test.ts",
+        "!src/core/workspace/workspaceService.test.ts",
+        "!src/core/workspace/naming.test.ts",
+        "!tests/naming-replacement.test.ts",
+        "!tests/catalog-merges.test.ts",
+        "!src/core/workspace/worktreePool.test.ts",
+        "!src/core/workspace/workMove.test.ts",
+        "!src/main/host/darwinKeychain.scratch.test.ts",
+        "!src/main/host/darwinSecretCustody.scratch.test.ts",
+        "!src/main/host/darwinFreshAuthentication.test.ts",
+        "!src/main/host/linuxSecretCustody.test.ts",
+        "!src/main/host/chrome/chromeEngine.integration.test.ts",
+        "!src/main/host/linuxSecretCustody.thread.test.ts",
+        "!src/main/host/linuxFreshAuthentication.test.ts",
+        "!src/main/host/claudeKeychainAccess.integration.test.ts",
+        "!src/main/host/keychainProcess.integration.test.ts",
+        "!src/main/faultSignals.integration.test.ts",
+        "!tests/bench-attempt.test.ts",
+        "!tests/eval-auth-turn-taking.test.ts",
+        "!tests/account-eval.test.ts",
+        "!tests/stall-recovery-eval.test.ts",
+        "!tests/careful-live-eval.test.ts",
+        "!tests/bench-patch-pool.test.ts",
+        "!tests/cask-consumers.test.ts",
+        "!tests/installed-update-fixtures.test.ts",
+        "!tests/installer-packaging.test.ts",
+        "!tests/detach-disk-image.test.ts",
+        "!tests/apt-install.test.ts",
+        "!tests/installer-reuse.test.ts",
+        "!tests/e2e-contract-lint.test.ts",
+        "!tests/e2e-lanes.test.ts",
+        "!tests/failure-annotations.test.ts",
+        "!tests/batch-read.test.ts",
+        "!tests/journey-groups.test.ts",
+        "!tests/checks-mode.test.ts",
+        "!tests/ensure-electron-installed.test.ts",
+        "!tests/electron-builder-tools.test.ts",
+        "!tests/pnpm-action.test.ts",
+        "!tests/check-installed-packages.test.ts",
+        "!tests/checkout-patience.test.ts",
+        "!tests/docs-site-publish-workflow.test.ts",
+        "!tests/typecheck.test.ts",
+        "!tests/export-tasks.test.ts",
+        "!tests/corpus-tools-plain-node.test.ts",
+        "!tests/generate-self-source.test.ts",
+        "!tests/install-clones.test.ts",
+        "!tests/mac-app-launcher.test.ts",
+        "!tests/local-codesign.test.ts",
+        "!tests/mac-check-lock.test.ts",
+        "!tests/journey-timing-workflow.test.ts",
+        "!tests/heavy-run-place.test.ts",
+        "!tests/heavy-run-place-phone.test.ts",
+        "!tests/phone-activity.test.ts",
+        "!tests/phone-failure-logs.test.ts",
+        "!tests/wait-window.test.ts",
+        "!tests/load-clock.test.ts",
+        "!tests/control-connection.test.ts",
+        "!tests/starve-check.test.ts",
+        "!tests/phone-scene-projection.test.ts",
+        "!tests/phone-reading-note.test.ts",
+        "!tests/phone-settings-pages.test.ts",
+        "!tests/virtual-mac-phone.test.ts",
+        "!tests/phone-release-process.test.ts",
+        "!tests/phone-certificates.test.ts",
+        "!tests/helpers/phoneCertificateFixture.ts",
+        "!tests/mockClaudeClient.test.ts",
+        "!tests/module-runner.test.ts",
+        "!tests/release-contract.test.ts",
+        "!tests/release-workflows-alpha-cut.test.ts",
+        "!tests/release-workflows-handoff.test.ts",
+        "!tests/release-workflows-installers.test.ts",
+        "!tests/release-workflows-journey-requests.test.ts",
+        "!tests/release-workflows-journey-suites.test.ts",
+        "!tests/release-workflows-linux-actions.test.ts",
+        "!tests/release-workflows-main-check.test.ts",
+        "!tests/release-workflows-pr-checks.test.ts",
+        "!tests/release-workflows-rehearsal.test.ts",
+        "!tests/release-workflows-resolve.test.ts",
+        "!tests/release-workflows-runners.test.ts",
+        "!tests/release-workflows-verification.test.ts",
+        "!tests/release-workflows-verify-evidence.test.ts",
+        "!tests/release-publication.test.ts",
+        "!tests/release-notes.test.ts",
+        "!tests/replay-captain-session.test.ts",
+        "!tests/replay-synthetic-recordings.test.ts",
+        "!tests/replay-claude-session.test.ts",
+        "!tests/replay-gate-catches-lint.test.ts",
+        "!tests/replay-gate-catches-lock-refusal.test.ts",
+        "!tests/run-temp-root.test.ts",
+        "!tests/stop-child-tree.test.ts",
+        "!tests/test-workload.test.ts",
+        "!tests/universal-file-types.test.ts",
+        "!tests/run-evidence-playwright.test.ts",
+        "!tests/e2e/scenarios/mergeShell.test.ts",
+        "!src/core/freeze/freezeRecorder.integration.test.ts",
+        "!src/core/panels/panelRuntimes.integration.test.ts",
+        "!tests/scale-check.test.ts",
+        "!tests/browser-fresh-home.test.ts",
+        "!tests/bundled-packages.test.ts",
+        "!tests/compile-cache.test.ts"
+      ],
+      "plugins": ["./tests/lint/unit-cohort.grit"]
+    }
+  ]
+}

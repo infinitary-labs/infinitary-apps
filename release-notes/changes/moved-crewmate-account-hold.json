@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "moved-crewmate-account-hold",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Crewmates can carry on after switching accounts",
+      "body": "When a crewmate on another computer switches to a new account for the same model, the old account’s allowance no longer keeps the crewmate paused.",
+      "noPicture": "The fix changes which account receives the next message, not the appearance of any screen.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

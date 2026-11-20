@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "card-annotations-phone",
+      "kind": "feature",
+      "area": "cards",
+      "title": "Point at parts of a card on your iPhone and iPad",
+      "body": "On your iPhone and iPad, tap Point at beside the reply box and tap a part of a card, or select words and choose Annotate. Queue it as-is or add a comment, then send several notes together with your reply. A note you sent shows its part again when you tap it.",
+      "picture": {
+        "dark": "card-annotations-phone-dark.webp",
+        "light": "card-annotations-phone-light.webp",
+        "alt": "Two notes queued above a card's reply box on an iPhone: a paragraph with a comment and a selected word"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

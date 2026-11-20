@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-board-backlog-column",
+      "kind": "fix",
+      "title": "The task board shows your backlog again",
+      "body": "Backlog is the board's first column again, beside Queued and Working. It shows your first five tasks, and Browse all opens the whole backlog. You can drag a task into it or out of it again. This week's done work now opens from its Done · 7d button, which keeps its count.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-board-backlog-column-dark.webp",
+        "light": "task-board-backlog-column-light.webp",
+        "alt": "The task board with Backlog, Queued and Working columns, and Board, Backlog and Done · 7d buttons with their counts"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

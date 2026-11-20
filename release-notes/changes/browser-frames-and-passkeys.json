@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "browser-frames-and-passkeys",
+      "kind": "feature",
+      "title": "A crewmate can fill in forms inside a page's frames",
+      "body": "Many sites put their payment form or sign-in box in a frame from another site. A crewmate's browser now reads and fills those too, and leaves a human check such as \"Verify you are human\" to you. When a site asks for a passkey, the browser now tells it at once that none is available, so the site offers a password or a code instead of waiting. A crewmate that asked you to take over its browser can also take the request back and keep its pages.",
+      "area": "crewmates",
+      "noPicture": "Nothing on screen changes: the crewmate reads and fills frames it could not reach before, and tells you what a site asked.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

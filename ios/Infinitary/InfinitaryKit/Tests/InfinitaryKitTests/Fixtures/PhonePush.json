@@ -1,0 +1,53 @@
+{
+  "source": "Sealed by sealCardPush and sealWithdrawal in src/core/phonePush.ts, the computer's own sealing, under `key`.",
+  "key": "oNs7mZhA3wzAypQhUqwm_RMYpEqs-gI0LeIgqHMlzdA",
+  "card": {
+    "sealed": "Ur-bq-Ez82sRol4-ANSAKW1HxgOsDM_b2qqD7mTHmBe7-t_3Tl1XbuArTorTP6ectrR3WjjkbcaiZIE_1-LTobuNWJpdaUZGqKhwohpMAJB6EaeWUAG3k4KzrPeh5_JR1oUA4o7pQzylBQ4StP1xRGB8RfXPyzbFhZ_FnSPBXXSFStYT3YbT6Io17kTxaNDg-kV5Bq0VWYmx9MCoVDA",
+    "opens": {
+      "v": 1,
+      "kind": "card",
+      "cardId": "card-7f3a9c1e-plan-launch-week",
+      "title": "Plan the launch week",
+      "body": "Three dates fit; pick one."
+    }
+  },
+  "reply": {
+    "sealed": "GKxncEYn359E6Km6ID_KwXx_pNHL06qJ3Dp1i5ZP1jVfD7hUSRMCghrhActJUXjdLtTIHFqwBfd_QnxweNGz9ipO6BMlAzq_OzUTp0UtrdsCrgjQ23ay1PYeVu4OllNzX01cF8HDVzWd8pS1Jom7hMKoc2SMnVoynWCLaEOBFEc5t1iq1uFNzrVo4qu1I68gR8UkJKOo-vvu8Weu3BqAPs1jdMsotmqoQJK70DTdl9nFEox3uDinLVJXkowUxnQf0mSoI_ZkNb93o7BK3eVPSAuqljp-Fmi7WiUKZP6FU-_N0H8LuhrULeA_pQWkBcsPuXd9wrYGu5s",
+    "opens": {
+      "v": 1,
+      "kind": "reply",
+      "cardId": "card-2b81d0aa-review-onboarding",
+      "title": "Überarbeitung des Onboardings – 初回起動の見直し",
+      "body": "I moved the welcome step after sign-in, as you asked.",
+      "push": "q3Vn8yLk0TfA"
+    }
+  },
+  "otherKey": {
+    "sealed": "wyRPDjr4fj78J9BNdqRqMsvNGk898SxID1izdpAclgCSJOSffZn99a4oiRdNsraWA0MyXasKXHOE8_Kyr6sY-seXTu3onFt3dS6DdtbmEu3I55YFB_uHfFrk53qfjOmRpNwohmhngAdPW23YbVgNiPQj1nygKeZsTClAYOGWV06s7x7mxp20hJ-yJ029RpOu7ioK60zJB8Ar0L_kfvI"
+  },
+  "withdrawal": {
+    "sealed": "HPnFTNcLar6HOazA6WkGyyhk9vf3RVS5qPUbDpd4T-X08JUKPDhlISxrtZx9Tdp2eX8PlE_fJ79p1BB0G8K66afLvWvxWy-tQt1WMbUDcbIdG-XKHnFPib4dtoklSMGbG2bFJe--Pv4Qi59ZURuTFF-UxVonwPag8tHsmbcM-wNYNHUEGOe-S9Om34-sm2ljZo6KYTxgGPSo8AKiA02YYamsGUxsErHGJH5iNSzyG0RY03LAZeqNAtuzlSIR_LfAvp0zD04-HQTLMB1fU_lx0ICEpqiypO9h1VTy",
+    "opens": {
+      "v": 1,
+      "kind": "withdraw",
+      "cards": [
+        {
+          "cardId": "card-2b81d0aa-review-onboarding",
+          "pushes": [
+            "q3Vn8yLk0TfA"
+          ]
+        },
+        {
+          "cardId": "card-7f3a9c1e-plan-launch-week",
+          "pushes": [
+            "Hs2pW9cXe4Rm",
+            "b7JtQ0uZa1Nd"
+          ]
+        }
+      ]
+    }
+  },
+  "otherKeyWithdrawal": {
+    "sealed": "BBc4OugOzwLuiyqQJXmC5oDHqPLvk_x0ph9wk88ckIaO43MoLdftS2sq0B24opDX5wqc58OhVzfsOHEKlEd9exrx3CazJU8kYHhNkSSTin4DUyvGWQVdLJWMWHocDSS1TC3gCxCdTLcq0-B1HNjINqCyKPMZO6Wgv-UVyXEbHkUvKbNzBBCShcvFABaeHa6T2MFE-fX4ukm1P9hILu9TpXmq76mN2OOPBrp8rVKC5PighSQMxwoxVwpVeQTiiyOWIhtMNiGQvARRo4YJaFH7DJ5hxG-6EGFDRdmn"
+  }
+}

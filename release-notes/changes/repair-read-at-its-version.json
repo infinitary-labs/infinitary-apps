@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "repair-read-at-its-version",
+      "reason": "Internal crew bookkeeping: a crewmate's check repair declared at a version its pull request has moved past is now settled from that version's own checks, so its next repair is no longer refused. Nothing a person sees changes."
+    }
+  ]
+}

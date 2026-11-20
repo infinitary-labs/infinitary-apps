@@ -1,0 +1,348 @@
+name: Batch checks
+
+# The swept batch on a batch pull request's version (docs/testing.md, "The
+# swept batch"), called by batch-pull-request.yml: the alpha's full check -
+# every Linux journey on GitHub's hosted machines and every journey on the
+# mini's release check line, without the phone check - and the critical path
+# and the Linux startup fixtures in jobs of their own. The batch's branch
+# holds its changes, one commit each, so every job checks out that version.
+#
+# When a Linux test group fails, its own confirm in the sweep reads that
+# failed job's log for the test files it names (scripts/batch-failures.mjs)
+# and runs those files three rounds on the same version once the test groups
+# ended, while the other checks run on (verify.yml's linux-tests-confirm;
+# INF-4382). Once every check ended, the failures job reads every other
+# failed job, and the later confirm runs their files on the platform whose
+# job failed (the captain's pick on INF-3012, "A only: the confirm step").
+# The last job passes once every check passed, or once every failed job's
+# files passed their confirm, and names the tree of the batch's version and
+# the main version the batch left main at, which main's check and the
+# alpha's proof follow (scripts/batch.mjs, scripts/main-alpha-proof.mjs).
+#
+# The batch stops at its first code-check failure (the captain's pick on
+# INF-3925), and once a confirm fails again on the test files it named (the
+# captain's pick on INF-5113): the watch job reads this run until every other
+# job ended, and on either failure a stop job per sweep job and per Windows
+# job enters that job's own concurrency group with cancel-in-progress and
+# cancels it, and the stopped job then fails naming what failed, so the batch
+# ends failed minutes after it did with one red line of its own that points
+# at the real failure (scripts/batch-stop.mjs). A confirm that failed before
+# it ran a test file, its failed job's log naming none, never stops it. The
+# critical path, the startup fixtures and the confirms end in a few minutes
+# and run on.
+#
+# Its jobs lead with the trigger its caller names, Merge batch
+# (scripts/ci-job-names.mjs).
+
+on:
+  workflow_call:
+    inputs:
+      trigger:
+        description: What started the caller's run, which every job name here leads with (scripts/ci-job-names.mjs)
+        required: true
+        type: string
+      head:
+        description: The batch pull request's version, a full commit id, which every job checks out
+        required: true
+        type: string
+
+# verify.yml reads its caller's run, and the failures job reads this run's logs.
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  # The tree the batch's version holds, which the last job names, and the
+  # main version the batch left main at: where the batch's version and main
+  # part. Git reads both from the commits alone, fetched without their trees
+  # or files, as every job's checkout fetches from the same place. GitHub's
+  # compare answer would build the batch's whole diff first, which it can
+  # refuse under heavy load, holding the batch on one reading (INF-4683).
+  batch:
+    name: ${{ format('{0} · Read the batch', inputs.trigger) }}
+    runs-on: ubuntu-24.04
+    outputs:
+      tree: ${{ steps.read.outputs.tree }}
+      base: ${{ steps.read.outputs.base }}
+    steps:
+      # The sign-in stays in the fetch's own command; nothing keeps it. The
+      # reads after it take only the fetched commits and fetch nothing more.
+      - id: read
+        env:
+          HEAD: ${{ inputs.head }}
+          MAIN: ${{ github.event.repository.default_branch }}
+          SERVER: ${{ github.server_url }}
+          REPOSITORY: ${{ github.repository }}
+          TOKEN: ${{ github.token }}
+        run: |
+          git init --quiet
+          git remote add origin "$SERVER/$REPOSITORY"
+          git -c "http.$SERVER/.extraheader=AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TOKEN" | base64 -w0)" \
+            fetch --quiet --no-tags --filter=tree:0 origin "$HEAD" "+refs/heads/$MAIN:refs/remotes/origin/$MAIN"
+          export GIT_NO_LAZY_FETCH=1
+          tree=$(git log -1 --format=%T "$HEAD")
+          base=$(git merge-base "origin/$MAIN" "$HEAD")
+          echo "tree=$tree" >> "$GITHUB_OUTPUT"
+          echo "base=$base" >> "$GITHUB_OUTPUT"
+
+  # The alpha's full check on the batch's version, without the phone check:
+  # hosted Linux, and the Mac lanes on the release split line.
+  sweep:
+    needs: batch
+    name: ${{ format('{0} · Desktop checks', inputs.trigger) }}
+    uses: ./.github/workflows/verify.yml
+    with:
+      trigger: ${{ inputs.trigger }}
+      ref: ${{ inputs.head }}
+      profile: stable
+      all_journeys: true
+      hosted: true
+      fleet_tests: true
+      mac_runner: ${{ fromJSON(vars.MAC_QUEUES || '{}').release_split || '' }}
+      confirm: true
+
+  # The critical path (INF-2507; docs/testing.md, "The critical path") on the
+  # batch's version, in a job of its own, so the batch's check runs it
+  # whatever part of the full check the sweep runs (the captain, on INF-2508:
+  # "the e2e journey + browser tests should all run during the sweep batch").
+  critical-path:
+    needs: batch
+    name: ${{ format('{0} · Critical-path journey', inputs.trigger) }}
+    uses: ./.github/workflows/source-journeys.yml
+    with:
+      trigger: ${{ inputs.trigger }}
+      ref: ${{ inputs.head }}
+      hosted: true
+      suite: affected
+      lane: desktop
+      files: tests/e2e/critical-path.spec.ts
+      artifact-suffix: critical-path
+
+  # The Linux automatic startup fixtures on the batch's version (the
+  # captain's pick on INF-3052, "In the batch check, beside the critical-path
+  # journey"), so they run before a merge.
+  startup:
+    needs: batch
+    name: ${{ format('{0} · Linux startup', inputs.trigger) }}
+    uses: ./.github/workflows/linux-startup.yml
+    with:
+      trigger: ${{ inputs.trigger }}
+      ref: ${{ inputs.head }}
+
+  # Whether the batch touches Windows-relevant files (scripts/windows-paths.ts),
+  # since the main version it left: the captain's pick on INF-4243, "On each
+  # combined batch that touches Windows-relevant files".
+  windows-paths:
+    needs: batch
+    name: ${{ format('{0} · Read the Windows-relevant files', inputs.trigger) }}
+    runs-on: ubuntu-24.04
+    outputs:
+      windows: ${{ steps.read.outputs.windows }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.head }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - id: read
+        env:
+          BASE: ${{ needs.batch.outputs.base }}
+        run: node scripts/windows-paths.ts --base "$BASE"
+
+  # The Windows installer, built and checked on a fresh Windows 11 virtual
+  # machine (windows.yml, docs/windows.md), when the batch reaches it.
+  windows:
+    needs: windows-paths
+    if: ${{ needs.windows-paths.outputs.windows == 'true' }}
+    name: ${{ format('{0} · Windows installer', inputs.trigger) }}
+    uses: ./.github/workflows/windows.yml
+    with:
+      trigger: ${{ inputs.trigger }}
+      ref: ${{ inputs.head }}
+
+  # Reads this run until every other job ended, and names a stop: the
+  # sweep's code checks failed, or a confirm failed again on the test files
+  # it named. It never fails the batch itself: a watch that cannot read the
+  # run leaves the batch to run on.
+  watch:
+    needs: batch
+    name: ${{ format('{0} · Watch for a stop', inputs.trigger) }}
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    outputs:
+      stop: ${{ steps.watch.outputs.stop }}
+      failed: ${{ steps.watch.outputs.failed }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.head }}
+          sparse-checkout: scripts/batch-stop.mjs
+          sparse-checkout-cone-mode: false
+      - id: watch
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        with:
+          script: |
+            const {pathToFileURL} = require('node:url');
+            const {watch} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/batch-stop.mjs`).href);
+            await watch({github, context, core});
+
+  # After failed code checks or a confirm that failed again: each sweep job's own concurrency group
+  # (verify.yml's lanes and test groups, source-journeys.yml's journey
+  # groups) and each Windows job's (windows.yml's build and check), entered with cancel-in-progress, which cancels that job, queued
+  # or running. Each stop passes, so the stops add no red line of their own
+  # beside the real failure; the stopped job below holds the batch failed.
+  stop:
+    needs: watch
+    if: ${{ !cancelled() && (needs.watch.outputs.stop == 'code-checks' || needs.watch.outputs.stop == 'confirm') }}
+    name: ${{ format('{0} · Stop after {1} ({2})', inputs.trigger, needs.watch.outputs.stop == 'confirm' && 'a failed confirm' || 'failed code checks', matrix.job) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        job:
+          - verify-lane-mac
+          - verify-lane-parallel
+          - verify-lane-desktop
+          - verify-tests-Unit tests-1
+          - verify-tests-Unit tests-2
+          - verify-tests-Unit tests-3
+          - verify-tests-Integration tests-1
+          - verify-tests-Integration tests-2
+          - verify-tests-Environment checks-1
+          - verify-tests-Environment checks-2
+          - verify-tests-Browser tests-1
+          - journeys-full-source-parallel-1
+          - journeys-full-source-parallel-2
+          - journeys-full-source-parallel-3
+          - journeys-full-source-parallel-4
+          - journeys-full-source-parallel-5
+          - journeys-full-source-parallel-6
+          - journeys-full-source-desktop-1
+          - journeys-full-source-desktop-2
+          - journeys-full-source-desktop-3
+          - windows-build
+          - windows-check
+    concurrency:
+      group: ${{ format('batch-stop-{0}-{1}-{2}', github.run_id, github.run_attempt, matrix.job) }}
+      cancel-in-progress: true
+    runs-on: ubuntu-24.04
+    steps:
+      - env:
+          JOB: ${{ matrix.job }}
+          STOP: ${{ needs.watch.outputs.stop }}
+        run: |
+          if [ "$STOP" = confirm ]; then
+            echo "::notice::A confirm failed again, so this batch stopped its $JOB job."
+          else
+            echo "::notice::The code checks failed, so this batch stopped its $JOB job."
+          fi
+
+  # After the stops: one failed job that names what failed - the code
+  # checks, or the confirm and the test files that failed again - the
+  # batch's own verdict. A cancelled job is no verdict on the batch, so
+  # without a failed job of its own the batch would read only as its failed
+  # check among the jobs the stops cancelled; this one says which check
+  # failed and where its reason is.
+  stopped:
+    needs: [watch, stop]
+    if: ${{ !cancelled() && (needs.watch.outputs.stop == 'code-checks' || needs.watch.outputs.stop == 'confirm') }}
+    name: ${{ format('{0} · Batch stopped because {1}', inputs.trigger, needs.watch.outputs.stop == 'confirm' && 'a confirm failed again' || 'the code checks failed') }}
+    runs-on: ubuntu-24.04
+    steps:
+      - env:
+          FAILED: ${{ needs.watch.outputs.failed }}
+          STOP: ${{ needs.watch.outputs.stop }}
+        run: |
+          if [ "$STOP" = confirm ]; then
+            echo "::error title=A confirm failed again::${FAILED:-A confirm failed again}. Its own error lines say why; the batch stopped its other checks, which show as cancelled."
+          else
+            echo "::error title=The code checks failed::${FAILED:-The code checks failed}. Their own error lines say why; the batch stopped its other checks, which show as cancelled."
+          fi
+          exit 1
+
+  # Once every check ended: the failed jobs no test group's own confirm
+  # took, which the later confirm runs again. Its output `left` is
+  # `nothing` when the test groups' confirms took every failed job,
+  # `confirm` with the other jobs and files, or `unanswerable` when one of
+  # those jobs' logs named no test file; its output `grouped` is `passed`
+  # when every test group's confirm that ran passed, and `failed` otherwise.
+  failures:
+    needs: [sweep, critical-path, startup]
+    if: ${{ !cancelled() && (needs.sweep.result == 'failure' || needs.critical-path.result == 'failure' || needs.startup.result == 'failure') }}
+    name: ${{ format('{0} · Read the failures', inputs.trigger) }}
+    runs-on: ubuntu-24.04
+    outputs:
+      left: ${{ steps.read.outputs.left }}
+      jobs: ${{ steps.read.outputs.jobs }}
+      files: ${{ steps.read.outputs.files }}
+      grouped: ${{ steps.read.outputs.grouped }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.head }}
+          # The failure reader and the job names it reads the run by.
+          sparse-checkout: |
+            scripts/batch-failures.mjs
+            scripts/batch-pull.mjs
+          sparse-checkout-cone-mode: false
+      - id: read
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        with:
+          script: |
+            const {pathToFileURL} = require('node:url');
+            const {failures} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/batch-failures.mjs`).href);
+            await failures({github, context, core});
+
+  # The later confirm: each failed test file three rounds on the batch's
+  # version, for the failed jobs no test group's confirm took, on Linux when
+  # a Linux job failed and on the Mac when a Mac job did, the same machines
+  # the sweep took (.github/actions/batch-confirm, scripts/batch-confirm.ts).
+  confirm-later:
+    needs: failures
+    if: ${{ !cancelled() && needs.failures.outputs.left == 'confirm' }}
+    name: ${{ format('{0} · Confirm failed tests ({1}, later failures)', inputs.trigger, matrix.platform == 'mac' && 'Mac' || 'Linux') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(contains(needs.failures.outputs.jobs, '(Mac)') && (contains(needs.failures.outputs.jobs, '(Linux') && '["linux","mac"]' || '["mac"]') || '["linux"]') }}
+    runs-on: ${{ matrix.platform == 'mac' && (fromJSON(vars.MAC_QUEUES || '{}').release_split || fromJSON(vars.MAC_QUEUES || '{}').split || vars.MAC_RUNNER || 'macos-15') || 'ubuntu-24.04' }}
+    timeout-minutes: 60
+    steps:
+      - name: Checkout the keep-awake action
+        if: matrix.platform == 'mac'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.head }}
+          sparse-checkout: .github/actions/keep-mac-awake
+          fetch-depth: 1
+      - name: Keep the Mac awake
+        if: matrix.platform == 'mac'
+        uses: ./.github/actions/keep-mac-awake
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.head }}
+          path: Application Support/firstmate
+      - uses: ./Application Support/firstmate/.github/actions/batch-confirm
+        with:
+          files: ${{ needs.failures.outputs.files }}
+          platform: ${{ matrix.platform }}
+          artifact: ${{ format('confirm-later-failures-{0}', matrix.platform) }}
+
+  # Passes once the sweep, the critical path and the startup fixtures all
+  # passed, or once every failed job's files passed their confirm: each
+  # test group's own confirm that ran, and the later one unless those took
+  # every failed job. It names the tree they built and the main version the
+  # batch left main at, which main's sort and the alpha's proof read. The
+  # Windows installer check must pass whenever it ran: the confirm reruns
+  # test files, never an installer.
+  passed:
+    needs: [batch, sweep, critical-path, startup, failures, confirm-later, windows-paths, windows]
+    if: ${{ !cancelled() && needs.windows-paths.result == 'success' && (needs.windows.result == 'success' || needs.windows.result == 'skipped') && (needs.sweep.result == 'success' && needs.critical-path.result == 'success' && needs.startup.result == 'success' || needs.failures.outputs.grouped == 'passed' && (needs.failures.outputs.left == 'nothing' || needs.confirm-later.result == 'success')) }}
+    name: ${{ format('{0} · Batch passed (tree {1}; base {2})', inputs.trigger, needs.batch.outputs.tree, needs.batch.outputs.base) }}
+    runs-on: ubuntu-24.04
+    steps:
+      - env:
+          TREE: ${{ needs.batch.outputs.tree }}
+        run: echo "The batch checks passed on tree $TREE."

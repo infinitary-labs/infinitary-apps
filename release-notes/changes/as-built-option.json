@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "as-built-option",
+      "kind": "feature",
+      "area": "cards",
+      "title": "Review findings show which option is how the code works today",
+      "body": "When a review leaves a finding for you to decide, its question always includes an option for what the code does now, and that option carries an As built tag beside any Recommended one. You can see at a glance whether a choice keeps things as they are or changes them.",
+      "picture": {
+        "dark": "as-built-option-dark.webp",
+        "light": "as-built-option-light.webp",
+        "alt": "A review finding card whose question shows a Recommended tag on one option and an outlined As built tag on the option the code does today."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

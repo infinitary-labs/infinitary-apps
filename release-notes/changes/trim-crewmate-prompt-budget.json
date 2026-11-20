@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "trim-crewmate-prompt-budget",
+      "reason": "Shortens the wording of two crewmate tool descriptions to bring the fixed prompt back under its budget; no rule is removed and nothing a person sees changes."
+    }
+  ]
+}

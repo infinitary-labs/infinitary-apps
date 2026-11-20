@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "remote-login-test-budget",
+      "reason": "Splits the Remote Login download-fallback test per failure and re-measures the file's budgets (15 s, and 30 s on the Mac's download cases), so it stops timing out in the Mac's unit stage. No shipped behavior changed."
+    }
+  ]
+}

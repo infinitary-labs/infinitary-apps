@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "captain-sized-record-cards",
+      "reason": "The record the freeze journey and the latency check seed gains goals, answered cards, links, delivery records and open cards at the measured counts of a long-used record; only tests change, so nothing a person sees changes."
+    }
+  ]
+}

@@ -1,0 +1,434 @@
+{
+  "entries": [
+    {
+      "id": "bf-ade556eb7",
+      "kind": "feature",
+      "title": "Animate stage replacements after first draw",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "ade556eb740303a56f838b35d40b16f5b574f17e"
+        ]
+      }
+    },
+    {
+      "id": "bf-5cb446071",
+      "kind": "feature",
+      "title": "Move task records onto the solid stack",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "5cb44607177b620f7a8a4e34ecb657f62ca802e7"
+        ]
+      }
+    },
+    {
+      "id": "bf-47bcb2129",
+      "kind": "feature",
+      "title": "Add five sky fidgets to the Firstmate's pool",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "47bcb2129418aee0b0270cd6e210692ccedc8497"
+        ]
+      }
+    },
+    {
+      "id": "bf-606276fac",
+      "kind": "feature",
+      "title": "Show model names with a persisted visibility switch",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "606276fac804632f946ad889ac34813b5ac68cc3"
+        ]
+      }
+    },
+    {
+      "id": "bf-0af10de8c",
+      "kind": "feature",
+      "title": "Add checked isolated gateway connections",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "0af10de8ca5e54aae22f406f4187084baa79ee57"
+        ]
+      }
+    },
+    {
+      "id": "bf-cd11f3eae",
+      "kind": "feature",
+      "title": "Expose workflow logs and artifact downloads",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "cd11f3eae990ffec29ba5b5ecca156f6894db030"
+        ]
+      }
+    },
+    {
+      "id": "bf-a3579b198",
+      "kind": "feature",
+      "title": "Reveal disclosures settings and fresh activity in place",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "a3579b198d592fa6e2282d0b6e5775254151700e"
+        ]
+      }
+    },
+    {
+      "id": "bf-044642a76",
+      "kind": "feature",
+      "title": "Add GitHub sign-in code copying",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "044642a7643ea680fc135aef3d9b08e510483eb4"
+        ]
+      }
+    },
+    {
+      "id": "bf-e66e8b18b",
+      "kind": "feature",
+      "title": "Add guarded custom API transport",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "e66e8b18bbfd9dc911bd3a6d1f2c08818f818a92"
+        ]
+      }
+    },
+    {
+      "id": "bf-0193834de",
+      "kind": "feature",
+      "title": "Publish alpha and stable through one signed channel workflow",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "0193834de512944438ebaba2bf8b30af30850d21"
+        ]
+      }
+    },
+    {
+      "id": "bf-f468d3f6f",
+      "kind": "feature",
+      "title": "Typed stable and alpha casks with a forward-only targets writer",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "f468d3f6fcde818950f616b9edad3a765d4b3c9f"
+        ]
+      }
+    },
+    {
+      "id": "bf-8e5cc2f78",
+      "kind": "feature",
+      "title": "Show a Thinking label above the Firstmate on the captain's first turn",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "8e5cc2f78d033ea80f66e991a68a17fea3a9fef0"
+        ]
+      }
+    },
+    {
+      "id": "bf-f80a15368",
+      "kind": "feature",
+      "title": "Refuse incompatible saved data before startup",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "f80a153680d32113a6794993e05755c7c97c33d0"
+        ]
+      }
+    },
+    {
+      "id": "bf-159bfd249",
+      "kind": "feature",
+      "title": "Offer each installation its own channel's updates",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "159bfd249ac08f314eca5aa998caefcbbcaeec07"
+        ]
+      }
+    },
+    {
+      "id": "bf-dc5b94e20",
+      "kind": "fix",
+      "title": "Derive task waiting from reachable ready choices",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "dc5b94e2039d3960279ec8f89b82db2310b6865e"
+        ]
+      }
+    },
+    {
+      "id": "bf-bbd6073ec",
+      "kind": "fix",
+      "title": "Prefer captain intent in completion-card Why",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "bbd6073ecef6551c8e9bc258c597f1b314a2961e"
+        ]
+      }
+    },
+    {
+      "id": "bf-0443c1719",
+      "kind": "fix",
+      "title": "Refuse undeclared choices before resolution",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "0443c17197a58b1320a18d8f15dcde246977c023"
+        ]
+      }
+    },
+    {
+      "id": "bf-2ca0f1f88",
+      "kind": "fix",
+      "title": "Remove transport wrappers from refused requests",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "2ca0f1f8812af2d3f1ae9c8d97a5b6338da8b061"
+        ]
+      }
+    },
+    {
+      "id": "bf-ffab5711b",
+      "kind": "fix",
+      "title": "Retire choices when crew tasks close",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "ffab5711bcdd4152e65b579bbd315f7dda0c3015"
+        ]
+      }
+    },
+    {
+      "id": "bf-e889c3c45",
+      "kind": "fix",
+      "title": "Stop viewport-height padding feedback",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "e889c3c45998d7f20359f8e2af1720c9e1bc6979"
+        ]
+      }
+    },
+    {
+      "id": "bf-d6a27efbc",
+      "kind": "fix",
+      "title": "Submit current settings with prototype build approval",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "d6a27efbc6f9b92693c3b60efff8b277786170d6"
+        ]
+      }
+    },
+    {
+      "id": "bf-518bc240a",
+      "kind": "fix",
+      "title": "Use current answer holds for handoff witnesses",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "518bc240a78ffed455b82963e6b0ec416b99b74b"
+        ]
+      }
+    },
+    {
+      "id": "bf-5dd17ba2d",
+      "kind": "fix",
+      "title": "Avoid unused Pi startup",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "5dd17ba2d6bea38aa23e1e984ffcde3e8b02ffab"
+        ]
+      }
+    },
+    {
+      "id": "bf-3e19d5792",
+      "kind": "fix",
+      "title": "Apply approved orbit capacities and motion",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "3e19d5792380a9a90458d305d38aacb2ee5e7577"
+        ]
+      }
+    },
+    {
+      "id": "bf-7b54b3df4",
+      "kind": "fix",
+      "title": "Keep indicators active during evidenced background work",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "7b54b3df49313de13f81f4af0941530381eebea0"
+        ]
+      }
+    },
+    {
+      "id": "bf-ab785d80e",
+      "kind": "fix",
+      "title": "Show task keys and updates without titles",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "ab785d80e865ccabe8f70572b17c178c995bf8e0"
+        ]
+      }
+    },
+    {
+      "id": "bf-a58481495",
+      "kind": "fix",
+      "title": "Commit the welcome before fresh readiness",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "a58481495cf61587a4640144289783fc0034ad4e"
+        ]
+      }
+    },
+    {
+      "id": "bf-bb1c8de4b",
+      "kind": "fix",
+      "title": "Share reduced-motion durations across shell and frames",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "bb1c8de4b8a9db1534342adcf5319db4bf74b66a"
+        ]
+      }
+    },
+    {
+      "id": "bf-c972e707d",
+      "kind": "fix",
+      "title": "Prevent fractional-height document scrollbars",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "c972e707db2c9f8f6efc685f26d6cf13bcbc1e68"
+        ]
+      }
+    },
+    {
+      "id": "bf-f4476ea7e",
+      "kind": "fix",
+      "title": "Stabilize content-frame scrollbar widths",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "f4476ea7ed2fbc315f38a35b06b94204c2e2397a"
+        ]
+      }
+    },
+    {
+      "id": "bf-cd1f1372c",
+      "kind": "fix",
+      "title": "Align approval badge accent with switch",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "cd1f1372c0683501cffe5c9658d5ccc0537889e3"
+        ]
+      }
+    },
+    {
+      "id": "bf-fd272cece",
+      "kind": "fix",
+      "title": "Disable WebSockets for offline core loading",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "fd272cece2c4b215f850c2196cae0270d7ad3d31"
+        ]
+      }
+    },
+    {
+      "id": "bf-069425850",
+      "kind": "fix",
+      "title": "Explain refused saves and recover saved values",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "0694258503aaac2bf8259ea7ec62bb7a89e98d17"
+        ]
+      }
+    },
+    {
+      "id": "bf-e52be5ec8",
+      "kind": "fix",
+      "title": "Keep side padding within minimum window",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "e52be5ec8aafdd741775bf2ee2e38d70d8a7dfb6"
+        ]
+      }
+    },
+    {
+      "id": "bf-90db7a4c4",
+      "kind": "fix",
+      "title": "Keep transport details out of failure messages",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "90db7a4c49f0fecef8b899a5781671b3ec989458"
+        ]
+      }
+    },
+    {
+      "id": "bf-97c93aa48",
+      "kind": "fix",
+      "title": "Preserve specification delivery and history",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "97c93aa48d46b4477f957533f80dd4abaead8251"
+        ]
+      }
+    },
+    {
+      "id": "bf-139d9ad5d",
+      "kind": "fix",
+      "title": "Preserve staged files when seeding project history",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "139d9ad5d02607bf5e8857e13574b8db5a221fb7"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-25-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.25: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "c1adf924fac2793b19c2bceb89ae939e4b989a13",
+        "806861a896ae465f7ead03a5904c2d0adac25624",
+        "b6d6005d64650bde2c06663bcc3b2aff8d9e8ca7",
+        "a8d6985d8125a3b028a8d20baeb0fda316b77fca",
+        "b7c9b064de4c1b27ab5dde99b8c2b104c9cff8c9",
+        "93f0119a57d7ccf1528728cc537fa6d4d85dfd16",
+        "68fa893c0dbdc0c8a93caa58e97be141c2bff295",
+        "e8e5e92f1deed57165afb88c845629565a951c01",
+        "86624ccdf85398de9f59ed7ef46b203f675c3233",
+        "bf59ad99381afd7f5f431cbef302a6fbec2427de",
+        "bcb162fbbcfe77af2257d0d8b496ece17d625fec",
+        "4ebfa08550ffb27b1a5d21542f26da9946c451d2",
+        "23b9e255305fb58525ef19fe2cee2b9846effca7",
+        "c6603a04b2e48fc28f1c6ea2ea21da38abf14bde",
+        "758ee61d9c380812d81ccd978c1d37408622503c"
+      ]
+    }
+  ]
+}

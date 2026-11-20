@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "no-pause-while-work-runs",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Less waiting in the window with a long task history",
+      "body": "With a long history of finished tasks, the app reread all of it every couple of seconds and whenever a task changed, just to learn whether any work was running. It now checks only what it needs, so the window spends less time busy and answers your typing and clicks a little sooner.",
+      "noPicture": "This shortens time the window spends busy, which no single picture can show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "phone-take-over",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Take over from your iPhone or iPad when your first mate's computer is gone",
+      "body": "When your first mate's computer is out of reach, the computer's sheet on your iPhone or iPad lists each computer that keeps a copy, with when its copy is from and what it hears from your first mate's computer, as its own window shows it. Tap Take over and confirm with Face ID or your passcode, and that computer becomes your first mate's computer. Your phone then finds your first mate there by itself, with no new link, and keeps following it if the old computer comes back.",
+      "picture": {
+        "dark": "phone-take-over-dark.webp",
+        "light": "phone-take-over-light.webp",
+        "alt": "The phone's computer sheet lists a computer that keeps a copy, with when its copy is from, that it cannot reach the first mate's computer either, and Take over"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

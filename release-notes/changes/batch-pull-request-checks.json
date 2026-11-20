@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batch-pull-request-checks",
+      "reason": "This project's checks can run on a pushed branch and on a batch pull request; this changes only internal checks."
+    }
+  ]
+}

@@ -1,0 +1,208 @@
+import { execFileSync, spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { checkCommands } from "./check.ts";
+import { writeCompiledMessages } from "./generate-messages.ts";
+import { jobCores, jobMemory } from "./job-cores.ts";
+
+/**
+ * The quick check a crewmate runs before every push (INF-2588's report, fix 1;
+ * INF-2674's typecheck fix; INF-2970's fix to run the pull request check's
+ * lints here too): Biome on only the files this branch changed, the adherence
+ * lint on its renderer files, every node script `pnpm check` runs (the
+ * project lints and the generated-file checks), the release-notes check the
+ * pull request runs first, the phone contract flag, and the whole-project
+ * typecheck. Together they take
+ * seconds, so they run side by side, as many at once as the job has cores and
+ * the computer's memory holds (`quickCheckLanes`), and print in order. It is
+ * not gated by CI mode, so the Mac mini can
+ * run it; the full lint and the typecheck also stay in the pull request's
+ * `typecheck-lint-build` check (INF-2074, docs/testing.md "Where the heavy
+ * checks run").
+ */
+// Its stderr rides a failure's message, so a probe that misses prints nothing.
+const git = (args: string[], cwd?: string) =>
+  execFileSync("git", args, {
+    cwd,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+    stdio: ["ignore", "pipe", "pipe"],
+  }).trim();
+
+/**
+ * The commit the branch grew from: its merge base with main, or HEAD's own
+ * commit in a checkout with no main to compare with, such as the main
+ * check's one-commit checkout of a push, where nothing is committed since.
+ */
+export function baseRef(cwd?: string): string {
+  for (const ref of ["origin/main", "main"]) {
+    try {
+      return git(["merge-base", "HEAD", ref], cwd);
+    } catch {
+      // Try the next name.
+    }
+  }
+  return git(["rev-parse", "HEAD"], cwd);
+}
+
+/** Files that exist now and differ from the branch's base, committed or not. */
+export function changedFiles(base = baseRef()): string[] {
+  const tracked = git(["diff", "--name-only", "--diff-filter=ACMR", base]).split("\n");
+  const untracked = git(["ls-files", "--others", "--exclude-standard"]).split("\n");
+  return [...new Set([...tracked, ...untracked])].filter(Boolean);
+}
+
+/**
+ * The node scripts `pnpm check` runs after its whole-project Biome, read from
+ * package.json (`checkCommands`) so a lint added there runs here too. `checks-mode.ts` is left
+ * out: it is the CI-mode refusal this quick check exists to step around, and
+ * so is the build of the catalogs' compiled modules, which runs first, before
+ * the steps that read them start side by side.
+ */
+export function checkScripts(check: string): string[][] {
+  return checkCommands(check)
+    .filter(([program, script]) => program === "node" && script?.startsWith("scripts/"))
+    .filter(([, script]) => script !== "scripts/checks-mode.ts")
+    .filter(([, script, flag]) => !(script === "scripts/generate-messages.ts" && flag === "--compiled"))
+    .map(([, ...args]) => args);
+}
+
+export interface Step {
+  label: string;
+  command: string;
+  args: string[];
+}
+
+/**
+ * Biome on every changed file, so Biome's own configuration picks which of
+ * them it checks, as it does for the whole-project Biome in `pnpm check`: its
+ * `files.includes` and the languages it knows. A list of extensions here
+ * dropped .mjs sources, so a formatting slip in one passed this
+ * check and failed the pull request's (INF-3297).
+ */
+export function biomeStep(files: string[]): Step | undefined {
+  if (!files.length) return undefined;
+  return {
+    label: "biome",
+    command: "pnpm",
+    args: [
+      "exec",
+      "biome",
+      "check",
+      "--no-errors-on-unmatched",
+      "--files-ignore-unknown=true",
+      ...files,
+    ],
+  };
+}
+
+function run(step: Step): Promise<{ step: Step; ok: boolean; output: string }> {
+  return new Promise((done) => {
+    const child = spawn(step.command, step.args, { stdio: ["ignore", "pipe", "pipe"] });
+    let output = "";
+    child.stdout.on("data", (chunk) => {
+      output += chunk;
+    });
+    child.stderr.on("data", (chunk) => {
+      output += chunk;
+    });
+    child.on("error", (error) => done({ step, ok: false, output: `${output}${error.message}\n` }));
+    child.on("close", (status) => done({ step, ok: status === 0, output }));
+  });
+}
+
+/**
+ * The steps side by side, `atOnce` of them at a time, answered in the steps'
+ * own order. Started all at once they are about thirty programs, the
+ * typecheck among them, and they hold more memory than a small computer
+ * has: on the two-processor Linux runner the kernel ended the largest test
+ * beside the test that runs this command.
+ */
+export async function sideBySide<Result>(
+  steps: readonly Step[],
+  atOnce: number,
+  start: (step: Step) => Promise<Result>,
+): Promise<Result[]> {
+  const results: Result[] = [];
+  const waiting = [...steps.entries()];
+  const lane = async () => {
+    for (let next = waiting.shift(); next; next = waiting.shift())
+      results[next[0]] = await start(next[1]);
+  };
+  await Promise.all(Array.from({ length: Math.max(1, atOnce) }, lane));
+  return results;
+}
+
+/**
+ * The memory one lane may need: room for the largest step, the typecheck
+ * from a cold start, which peaked at 1.9 GB on an arm64 Linux guest and on a
+ * Mac. Each generated-file check that loads the app through a Vite module
+ * runner peaks near 0.9 GB, so a lane per core is not enough of a bound.
+ */
+export const LANE_MEMORY_BYTES = 2 * 1024 ** 3;
+
+/**
+ * How many steps run at once: one for each core the job has and for each
+ * `LANE_MEMORY_BYTES` of the computer's memory, whichever gives fewer, and
+ * always one. INF-5001: by cores alone the quick check ran eleven steps at once
+ * on the compute Macs' Linux guests, which have 11 cores and 9 GB with no
+ * swap. Beside the three files the integration cohort ran with
+ * tests/checks-mode.test.ts, the guest ran out of memory, and the generated
+ * contract's check stopped at Vite's 60-second module fetch.
+ */
+export function quickCheckLanes({ cores, memoryBytes }: { cores: number; memoryBytes: number }): number {
+  return Math.max(1, Math.min(cores, Math.floor(memoryBytes / LANE_MEMORY_BYTES)));
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const base = baseRef();
+  const files = changedFiles(base);
+  const renderer = files.filter((file) => /^src\/renderer\/.*\.tsx?$/.test(file));
+  const scripts = JSON.parse(readFileSync("package.json", "utf8")).scripts as Record<string, string>;
+  console.log(`check:changed: ${files.length} changed file(s)`);
+  writeCompiledMessages();
+  const steps: Step[] = [];
+  const biome = biomeStep(files);
+  if (biome) steps.push(biome);
+  if (renderer.length)
+    steps.push({
+      label: "adherence",
+      command: "pnpm",
+      args: [
+        "exec",
+        "eslint",
+        "--config",
+        "eslint.adherence.config.mjs",
+        "--no-config-lookup",
+        ...renderer,
+      ],
+    });
+  for (const args of checkScripts(scripts.check ?? ""))
+    steps.push({ label: args.join(" "), command: "node", args });
+  // The pull request's first step. It reads commits, so it waits for the
+  // branch's first one; before that there is nothing to push.
+  if (base !== git(["rev-parse", "HEAD"]))
+    steps.push({
+      label: "release notes",
+      command: "node",
+      args: ["scripts/release-notes.ts", "change", "--base", base],
+    });
+  else console.log("check:changed: no commit since main yet, so the release-notes check waits");
+  // The phone contract flag, which names the phone build a moved major or
+  // view floor needs before the next alpha; it prints and never fails.
+  steps.push({
+    label: "phone contract",
+    command: "node",
+    args: ["scripts/phone-contract-flag.ts", "--base", base],
+  });
+  // Called directly, not through `pnpm typecheck`, which CI mode refuses.
+  steps.push({ label: "typecheck", command: "node", args: ["scripts/typecheck.ts", "--pretty"] });
+  const lanes = quickCheckLanes({ cores: jobCores(), memoryBytes: jobMemory() });
+  const results = await sideBySide(steps, lanes, run);
+  for (const { step, ok, output } of results) {
+    process.stdout.write(output);
+    if (!ok) console.error(`check:changed: ${step.label} failed`);
+  }
+  process.exitCode = results.every((result) => result.ok) ? 0 : 1;
+}

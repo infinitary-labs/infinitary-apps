@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "computer-names-only-beside-crewmates",
+      "kind": "fix",
+      "title": "Computer names show only beside computers with crewmates",
+      "body": "With more than one computer set up to run work, the main screen named every computer, even one with no crewmates near it. Now a computer is named only when it has crewmates, and crewmates on this computer alone show no names.",
+      "area": "devices",
+      "noPicture": "The change takes names away from the main screen, so a picture of it shows only their absence.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

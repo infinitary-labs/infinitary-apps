@@ -1,0 +1,13 @@
+name: Install the browser layer's Chromium
+description: Install the headless Chromium the vitest browser project draws the window in (docs/testing.md, "The browser layer").
+inputs:
+  working-directory:
+    description: Checkout containing the installed dependencies.
+    default: .
+runs:
+  using: composite
+  steps:
+    - name: Install Chromium for the browser tests
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: pnpm exec playwright install --only-shell chromium

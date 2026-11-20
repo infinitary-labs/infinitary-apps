@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "checks-switch-placement",
+      "kind": "improvement",
+      "area": "projects",
+      "title": "Require pull request checks sits right below Where changes go",
+      "body": "In Settings → Projects, a project's Require pull request checks switch now comes right after Where changes go, before Ask before merging.",
+      "picture": {
+        "dark": "checks-switch-placement-dark.webp",
+        "light": "checks-switch-placement-light.webp",
+        "alt": "A project's settings with Require pull request checks on, right below Where changes go and above Ask before merging"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

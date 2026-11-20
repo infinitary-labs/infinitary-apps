@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "times-in-your-local-time",
+      "kind": "improvement",
+      "title": "Firstmate and crewmates give times in your local time",
+      "body": "When Firstmate or a crewmate tells you a time of day, it now uses your Mac's time zone. A time a website gives in UTC is converted first.",
+      "area": "firstmate",
+      "noPicture": "Nothing on screen changes: the change is in the words Firstmate and crewmates write.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

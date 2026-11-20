@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-browser-kept-sign-ins",
+      "kind": "feature",
+      "title": "Each computer keeps your website sign-ins in its own browser profile",
+      "body": "When a task asks you to sign in to a website, the page now opens in a browser profile that computer keeps, so your sign-in stays there instead of being copied to a file. As you hand the browser back, choose for later tasks: Ask me each time, or Use it without asking. A task you have not allowed stays signed out. Settings lists the sites each computer is signed in to, with that choice and Remove, which signs the site out there, and Remove all, which signs that computer out of every site. Sign-ins saved the old way are no longer used, so sign in once more where you need them.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-browser-kept-sign-ins-dark.webp",
+        "light": "task-browser-kept-sign-ins-light.webp",
+        "alt": "A task browser under your control, asking whether later tasks should ask each time or use the sign-in without asking as you return control"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

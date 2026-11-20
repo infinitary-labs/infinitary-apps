@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "link-tests-stay-on-loopback",
+      "reason": "Test-only: the connection tests' stand-in homes offer only their own loopback port, so a device whose home quit no longer dials this computer's own addresses at the app's port; the app itself is unchanged."
+    }
+  ]
+}

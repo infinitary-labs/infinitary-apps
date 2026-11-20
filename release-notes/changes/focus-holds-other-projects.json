@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "focus-holds-other-projects",
+      "kind": "feature",
+      "area": "projects",
+      "title": "Focus keeps other projects' cards and activity out of the way",
+      "body": "While the window is focused on one project, cards about other projects' tasks step off the stack, and Activity shows only that project's lines beside Firstmate's and your own. Nothing is closed, and every project still notifies you. Pick the project or All projects and the cards come back where they were, the ones that arrived meanwhile marked new. A card Firstmate shows you, or one you open from a task, still comes to the front.",
+      "noPicture": "The change is what leaves the window under focus, and a still picture of what stays cannot show what went.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

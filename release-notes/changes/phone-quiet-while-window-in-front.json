@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-quiet-while-window-in-front",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Your phone stays quiet while you work in Infinitary on your Mac",
+      "body": "When Infinitary keeps running in the background and you open its window, your paired phone no longer gets a push for each new card while that window is in front. The same holds while you work in Infinitary on another Mac that controls your first mate. Pushes come again as soon as you switch away or close the window.",
+      "noPicture": "This changes when a phone push is sent, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

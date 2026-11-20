@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-appearance-pictures",
+      "reason": "Test-only: phone journey appearance pictures wait for observed pixels and attach that exact frame; no product appearance changes."
+    }
+  ]
+}

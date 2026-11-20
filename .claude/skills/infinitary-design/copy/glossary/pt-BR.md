@@ -1,0 +1,151 @@
+# Portuguese, Brazil (`pt-BR`)
+
+This file is read by anyone in Brazil who uses Infinitary, most of whom have never opened a terminal.
+The register is calm, plain and warm Brazilian Portuguese, the way a careful colleague talks, never cute and never salesy.
+The person is addressed as "você", with verbs in the third person singular and "seu/sua" for what belongs to them.
+Where grammar forces a gender for the person, the masculine default is used ("Bem-vindo", "capitão"), as Brazilian software usually does.
+Quotation marks are curly double quotes “ ”, a decimal comma is used ("1,6 GB"), a space sits between a number and its unit ("3 min", "1,6 GB"), and "%" sits right after the number.
+The plural forms are "one", "many" and "other"; "many" repeats the "other" wording because the count is shown in digits ("1.000.000 linhas"), never spelled out as "1 milhão de".
+
+## Terms
+
+| English | Portuguese (Brazil) | Note |
+| --- | --- | --- |
+| a panel by <name> | um painel de <nome> | |
+| A phone (the item under Devices) | Um celular |  |
+| a stronger model | um modelo mais forte | |
+| account | conta | |
+| app | app | Short and common in Brazil; "o app". |
+| Appearance | Aparência | |
+| Approves secret uses (switch) | Aprova usos de segredos | The computer's Settings → Devices should show the same words. |
+| automation | automação | The Settings section and each scheduled prompt in it; feminine ("criada pelo seu imediato"). |
+| backlog | backlog | Common in Brazilian software teams. |
+| batch | lote | "solicitação de pull em lote", "verificação em lote". |
+| branch | branch | GitHub's Portuguese docs keep "branch"; masculine ("o branch principal"). |
+| bring up to date | atualizar | Replaces rebase and conflict; "não foi possível atualizá-la". |
+| browser | navegador | |
+| built in place | feito no local | |
+| captain | capitão | The usual word a ship's crew uses; masculine default form, see Register; lowercase in the middle of a sentence, also as a form of address. |
+| card | cartão | |
+| claim (a recorded relationship) | afirmação | "Afirmação registrada". |
+| clone | clonar | "clonado", never "copiado". |
+| command search | busca de comandos | |
+| commit | commit | GitHub's Portuguese docs keep "commit"; masculine. |
+| computer | computador | For every computer, Mac, Linux or Windows. |
+| concept / finding | conceito / constatação | "constatação" keeps the card's "Constatação {id}". |
+| conflict (avoided) | não combina com trabalho mais recente | The keptConflict line says newer work in the project does not fit with it, then "atualizar". |
+| connection (to a server) | conexão | Feminine, so its status agrees: "Pronta", "Verificada", "Pausada". |
+| conversation | conversa | Also used for a card's thread. |
+| cost limit | limite de custo | A project's estimated-dollar cap, never the plan's allowance ("franquia"). |
+| credits (a provider's, paid past the allowance) | créditos | ChatGPT's Codex credits; Claude's are called extra usage. |
+| crew | tripulação | |
+| crewmate | tripulante | Masculine by default ("o tripulante"). |
+| custom API | API personalizada | Feminine: "uma API personalizada". |
+| decision record | registro de decisões | What Contribution sends; "anonimizados" for redacted. |
+| default (a card question's option a skip sends) | padrão | The option a skipped card question sends. |
+| delivery | entrega | |
+| demo / recording | demonstração / gravação | Never "vídeo" or "clipe". |
+| Devices | Dispositivos | |
+| Diagnostics (Sharing) | Diagnóstico | The Sharing switch's name, also inside sentences: "enquanto Diagnóstico estiver desligado". |
+| direction (a standing instruction in Knowledge) | diretriz | Feminine; "diretrizes" in the plural. |
+| discard | descartar | |
+| draft | rascunho | As in GitHub's Portuguese docs. |
+| extra usage (Claude's credits past the allowance) | uso extra | |
+| feed / activity | Atividade | |
+| fetch (a server's list of models) | buscar | "Buscar no servidor", "Buscando…". |
+| file (to the backlog) | registrar no backlog | "Por que foi registrada". |
+| fingerprint (a computer's key) | impressão digital |  |
+| first mate | imediato | The Brazilian naval term for a ship's second-in-command; a common noun, lowercase: "seu imediato", "Imediato" only as a short label. |
+| fold (where an iPhone Duo folds) | a dobra | |
+| font (Settings → Appearance) | fonte | |
+| forget (a computer, on the phone) | Esquecer | Pairs with "Sair" for Leave. |
+| gate | crivo | What work passes before it merges: "passar por um crivo"; never "verificações", which are the checks. |
+| Got it / Done | Entendi / Concluído | |
+| header (a request's) | cabeçalho | |
+| held (a batch that stopped) | retido | "Lote retido", "Retido desde as {since}"; the same verb as "a retém" on a merge a rule holds. |
+| hold (on a task) | retenção | "está retida", "quando a retenção acabar"; as in "a retém" for a merge. |
+| Infinitary | Infinitary | Never translated; masculine article: "o Infinitary". |
+| Intelligence | Inteligência | |
+| issue (where the project lives) | issue | As GitHub's Portuguese docs keep it; feminine: "Abrir a issue". |
+| join (the phone joins a computer) | conectar-se a |  |
+| key (an integration's key) | chave | "chave do Linear", "chave de API". |
+| Knowledge (the panel) | Conhecimento | The panel's name: "Abrir Conhecimento", "o Conhecimento". |
+| land, ship (avoided) | mesclar | |
+| level (a model's slot) | nível | "slot" is never said: "Níveis dos modelos", "seu modelo mais barato com nível". |
+| live validation | validação ao vivo | Trying the change for real; kept apart from the checks. |
+| log (a check's kept output) | o log | "Registro" already names the task's record. |
+| machine (avoided) | computador | Also in the voice consent line, where the English says "this machine". |
+| merge | mesclar, mesclagem | GitHub's Portuguese docs say "mesclar uma solicitação de pull"; the noun is "mesclagem". |
+| merge queue (the host's own) | fila de mesclagem | |
+| Merges on its own / Asks first | Mescla por conta própria / Pergunta antes | |
+| message box / main message | caixa de mensagem / mensagem principal | |
+| model | modelo | |
+| Not now | Agora não | |
+| out of reach | fora de alcance | |
+| panel | painel | |
+| passcode (iOS) | código | iOS says "Face ID e Código". |
+| phone | celular | The Brazilian everyday word. |
+| picture | imagem | |
+| plan | plano | |
+| PR #N | PR #N | Stays as it is, in mono. |
+| Premium / Hard / Normal / Simple (a task's level), Difficulty | Premium / Difícil / Normal / Simples, Dificuldade | How hard the task is, never a reasoning word. |
+| preset (keyboard) | predefinição | As in Apple's Brazilian Portuguese. |
+| project | projeto | |
+| prompt (an automation's) | pedido | What the first mate is told on a schedule, as in "Pedido da tarefa". |
+| provider | provedor | |
+| pull request | solicitação de pull | GitHub's own Portuguese docs say "solicitação de pull"; feminine. |
+| purge (task data) | excluir | "Excluir dados das tarefas", "{count} tarefas excluídas"; plainer than "purgar". |
+| push | push, fazer push | As in GitHub's Portuguese docs: "Fez push do branch". |
+| queued | na fila | "Enter põe na fila". |
+| Quick answer (a card's mark) | Resposta rápida | The chip on a quick answer's card. |
+| quota, rate limit, usage (avoided) | franquia | |
+| rail | barra lateral | The column of panels at a window's side. |
+| reach (another computer) | alcançar | "Não foi possível alcançar o {host}", matching "fora de alcance". |
+| reading (of the allowance) | leitura, ler | "a última leitura está desatualizada", "lendo…". |
+| Reasoning | Raciocínio | |
+| rebase merges, merge commits (the host's settings) | mesclagens com rebase, commits de mesclagem | Named only as the settings where the project lives, as GitHub's Portuguese docs say them; the app's own action stays "atualizar". |
+| released (a task's close) | publicada | Closed through an outside release process. |
+| remote, origin (avoided) | onde o projeto fica | |
+| Remove / Leave (a device) | Remover / Sair | |
+| repo (avoided) | projeto | |
+| report | relatório, relatar | The verb in feed lines: "Relatou: ...". |
+| repository (one of a project's) | repositório | "Adicionar um repositório", "2 repositórios". Names one of a project's repositories; what work belongs to stays projeto. |
+| resets | renova | "renova sex." for an allowance. |
+| review | revisão | |
+| revision (of a knowledge record) | versão | Kept apart from "revisão", which is review. |
+| rigor levels | Rápido, Padrão, Cuidadoso | "{care} rigor" is "Cuidado {care}"; the feed says "cuidado: Rápido". |
+| run (an automation's) | execução, executar | "Próxima execução", "Última execução"; an automation that is on is "em execução". |
+| Runbooks | Manuais | |
+| Runs on | Roda em | |
+| Secrets | Segredos | The Settings section's name. |
+| send back (a change out of a batch) | devolver | "Devolver com um motivo"; the change "volta" to its crewmate. |
+| server, address (a custom API's) | servidor, endereço | Said only where English names the person's own server and its address. |
+| session (avoided in sentences) | conversa | "sessão" survives only as the crewmate's log name and a search word. |
+| Settings | Ajustes | Follows Apple's Brazilian Portuguese; macOS's own is "Ajustes do Sistema". |
+| sign-in / sign in | login, fazer login | "seu login do GitHub", "faça login de novo". |
+| start | iniciar, começar | |
+| starter | ponto de partida | |
+| Steer (button) | Orientar |  |
+| stop | parar | |
+| story (a change's) | história | |
+| subscription | assinatura | |
+| tab | aba | |
+| task | tarefa | Feminine, so feed lines agree: "Iniciada", "Concluída", "Mesclada". |
+| task board / its lanes | quadro de tarefas / Aguardando você, Backlog, Na fila, Trabalhando, Concluídas · 7 d | |
+| Text size; Text Size, Control Center (iOS's own names) | Tamanho do texto; Tamanho do Texto, Central de Controle | iOS's own Portuguese names for the control. |
+| the checks | as verificações | "As verificações passaram", "As verificações falharam", "As verificações estão em execução". |
+| the record (a task's record) | o registro, registro da tarefa | |
+| Theme: Device / Dark / Light | Tema: Dispositivo / Escuro / Claro |  |
+| this computer | este computador | |
+| thread (a card's) | conversa | "conversa do cartão". |
+| token, credential (avoided) | login, chave | "tokens" stays only where it means billed model text. |
+| Turn on / Turn off | Ativar / Desativar | Also for "Enable…": "Ativar…". |
+| unmerged work | trabalho não mesclado | What another computer still holds when it is removed: "O trabalho não mesclado dele vem primeiro para este computador". |
+| Usage (Settings section) | Uso | The section's name only; never for the allowance. |
+| where the project lives | onde o projeto fica | "o host do projeto" where the English says the project's host. |
+| window wash | véu da janela | The theme color laid over the blurred background. |
+| working copy | cópia de trabalho | |
+| workspace (the personal one) | espaço de trabalho | Never "área de trabalho", which is the desktop. |
+| worktree (avoided) | cópia de trabalho | |
+| your plan's allowance | a franquia do seu plano | "franquia" is the everyday Brazilian word for what a plan allows; avoids "cota" and "limite de uso". |
+| your project | seu projeto | |

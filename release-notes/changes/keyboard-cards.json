@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "keyboard-cards",
+      "kind": "feature",
+      "title": "Read, answer and choose on a card from the keyboard",
+      "body": "Once F6 lands on a card, the arrow and page keys scroll it, and ⌘K finds Go to the card's body and Go to the card's buttons. A card's pictures are Tab stops that Enter opens, and a task key the keyboard reaches opens its summary as resting the pointer does. When ⌘K or a picture closes, you're back in the card's field you were typing in, cursor and all, and Escape takes you out of a card's body.",
+      "highlight": 3,
+      "area": "cards",
+      "picture": {
+        "dark": "keyboard-cards-dark.webp",
+        "light": "keyboard-cards-light.webp",
+        "alt": "A card with the keyboard on a task key in its words, the key ringed and the task's summary open beside the card"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

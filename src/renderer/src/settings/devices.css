@@ -1,0 +1,418 @@
+/* Settings -> Devices (design skill components/devices/DevicesTab): the
+   link panel at the top, the Your devices list box with a row per device in
+   components/machines/MachineRow's shape and the chip foot, then where
+   devices find this Mac. The layout rules inline styles cannot express live
+   here. */
+
+.fm-devices-say {
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+  margin: -4px 0 12px;
+}
+
+.fm-devices-box {
+  background: var(--bg-1);
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-m);
+  overflow: hidden;
+}
+
+.fm-devices-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--line-1);
+  min-width: 0;
+}
+
+/* A Secrets question under a phone's switch makes the row tall; the dot and Remove stay beside the
+   phone's name instead of drifting down beside the question (docs/secrets.md, "Asking in place"). */
+.fm-devices-row:has([data-secret-question]) {
+  align-items: flex-start;
+}
+
+.fm-devices-row:has([data-secret-question]) .fm-devices-dot {
+  margin-top: 6px;
+}
+
+.fm-devices-box > .fm-devices-row:first-child {
+  border-top: 0;
+}
+
+.fm-devices-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--idle);
+}
+
+.fm-devices-dot[data-tone="ok"] {
+  background: var(--ok);
+  box-shadow: 0 0 8px var(--ok);
+}
+
+.fm-devices-dot[data-tone="warn"] {
+  background: var(--warn);
+}
+
+.fm-devices-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.fm-devices-name {
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--fg-1);
+  overflow-wrap: anywhere;
+}
+
+.fm-devices-detail {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+}
+
+/* Each part of the detail line moves to the next line whole; a part wider than the row wraps inside itself. */
+.fm-devices-detail-part {
+  display: inline-block;
+  max-width: 100%;
+}
+
+.fm-devices-summary {
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+}
+
+/* A paired phone's Approves secret uses switch (components/devices/DevicesTab,
+   "Approving secret uses"), with the line that says where it stands. */
+.fm-devices-approvals {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+/* What a computer on another version of Firstmate has (components/devices/
+   DevicesTab, "Another version"): warn while it takes no new work. */
+.fm-devices-version {
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+}
+
+.fm-devices-version[data-tone="warn"] {
+  color: var(--warn);
+}
+
+/* The mono state on a row's right (components/machines/MachineRow): its
+   tasks in the accent, idle, connecting, or out of reach in warn. */
+.fm-devices-state {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  color: var(--fg-3);
+}
+
+.fm-devices-state[data-tone="busy"] {
+  color: var(--accent);
+}
+
+.fm-devices-state[data-tone="warn"] {
+  color: var(--warn);
+}
+
+.fm-devices-question {
+  font-size: var(--text-sm);
+  color: var(--fg-1);
+}
+
+.fm-devices-question + .fm-devices-question {
+  color: var(--fg-2);
+}
+
+.fm-devices-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-top: 1px solid var(--line-1);
+}
+
+.fm-devices-foot-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+/* + A Mac's question, under the chip foot: how to add it. */
+.fm-devices-aside {
+  padding: 14px 18px;
+  border-top: 1px solid var(--line-1);
+}
+
+.fm-devices-worker-update:not(:empty) {
+  padding: 0 18px 14px 46px;
+}
+
+.fm-devices-worker-update > .fm-devices-aside {
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-m);
+  background: var(--bg-2);
+}
+
+.fm-devices-aside-say {
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+  margin-top: 2px;
+}
+
+.fm-devices-aside-say[data-tone="warn"] {
+  color: var(--warn);
+}
+
+.fm-devices-aside-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* Macs nearby, under the address field (components/devices/AddAMac,
+   "Nearby"): a micro label, then one row per Mac, each a button that fills
+   the field; the list is one Tab stop. */
+.fm-devices-nearby {
+  margin-top: 14px;
+}
+
+.fm-devices-nearby-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.fm-devices-nearby-list {
+  list-style: none;
+  margin: 0 -10px;
+  padding: 0;
+}
+
+.fm-devices-nearby-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: transparent;
+  font-family: var(--font-ui);
+  text-align: start;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.fm-devices-nearby-row:hover {
+  background: var(--bg-2);
+}
+
+/* A column wide enough for a Mac's usual name, so the addresses line up. */
+.fm-devices-nearby-name {
+  flex: 0 0 160px;
+  font-size: var(--text-sm);
+  color: var(--fg-1);
+  overflow-wrap: anywhere;
+}
+
+.fm-devices-nearby-address {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+  overflow-wrap: anywhere;
+}
+
+.fm-devices-check {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-s);
+  background: var(--accent-dim);
+  color: var(--fg-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.fm-devices-panel {
+  background: var(--bg-1);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-m);
+  padding: 14px 18px;
+  margin-bottom: 32px;
+}
+
+.fm-devices-panel[data-panel-state="joined"],
+.fm-devices-panel[data-panel-state="expired"] {
+  border-color: var(--line-2);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fm-devices-panel-say {
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+  margin: -6px 0 10px;
+}
+
+/* A home's firewall that may keep its devices out (components/devices/DevicesTab). */
+.fm-devices-firewall {
+  margin: 0 0 12px;
+}
+
+/* Under the Address row, clear of its box. */
+.fm-devices-firewall[data-under="address"] {
+  margin-top: 10px;
+}
+
+.fm-devices-firewall-say {
+  font-size: var(--text-sm);
+  color: var(--warn);
+  margin-bottom: 6px;
+}
+
+.fm-devices-firewall-way {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-1);
+  background: var(--bg-0);
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-s);
+  padding: 7px 10px;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.fm-devices-panel-line {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.fm-devices-link {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-1);
+  background: var(--bg-0);
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-s);
+  padding: 7px 10px;
+  user-select: all;
+}
+
+.fm-devices-panel-foot {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.fm-devices-count {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+}
+
+.fm-devices-ways-foot {
+  padding: 12px 18px;
+  border-top: 1px solid var(--line-1);
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+}
+
+.fm-devices-ways-foot p {
+  margin: 0;
+}
+
+.fm-devices-ways-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.fm-devices-address {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-1);
+  white-space: nowrap;
+}
+
+select.fm-devices-address {
+  background: var(--bg-0);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-s);
+  padding: 6px 8px;
+}
+
+/* A project's Runs on, the same kind of select as the address (components/devices/RunsOn). */
+select.fm-runs-on {
+  font-size: var(--text-sm);
+  color: var(--fg-1);
+  background: var(--bg-0);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-s);
+  padding: 6px 8px;
+  max-width: 100%;
+}
+
+/* A scanner needs a quiet white margin in either theme. The code is never cached. */
+.inf-phone-code {
+  display: block;
+  width: calc(var(--space-8) * 4);
+  max-width: 100%;
+  height: auto;
+  margin-block: var(--space-3);
+}
+
+/* The Ready list for moving your first mate (components/devices/DevicesTab,
+   "Moving your first mate"): one line per gap, a gap that blocks in warn. */
+.fm-devices-move-gaps {
+  margin: 8px 0 0;
+  padding-inline-start: 18px;
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+}
+
+.fm-devices-move-gaps li + li {
+  margin-top: 4px;
+}
+
+.fm-devices-move-gaps li[data-level="blocks"] {
+  color: var(--warn);
+}
+
+.fm-devices-move-count {
+  margin-inline-start: 8px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+}

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "project-tests-follow-crew-default",
+      "reason": "This project's own testing policy gives way to the crew's default rule on tests, keeping two rulings, and its runner-dependent integration tests move to a probe lane the pull request checks run only where a change reaches them. Documents and CI only; no shipped behavior changed."
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "paused-panel-update",
+      "kind": "feature",
+      "title": "Panels made for an earlier version say so, with Update panel",
+      "body": "When a panel of yours was made for an earlier version of the app, it now says its background work is paused instead of quietly showing nothing new. Update panel asks your first mate to update it, and the panel runs again once it is updated.",
+      "area": "other",
+      "picture": {
+        "dark": "paused-panel-update-dark.webp",
+        "light": "paused-panel-update-light.webp",
+        "alt": "A Counter panel says its background work is paused because it was made for an earlier version of the app, beside an Update panel button."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

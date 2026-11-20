@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "idle-nudge-quiet-for-wait-with-end",
+      "reason": "A crewmate that reported a wait naming its end is no longer sent the idle reminder to finish or say what blocks it, and the first mate's later wake about it says why. Only what a crewmate and the first mate are told changes; nothing on screen changes, and the first mate's wakes and the stuck card keep their times."
+    }
+  ]
+}

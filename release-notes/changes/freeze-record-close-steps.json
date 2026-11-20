@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "freeze-record-close-steps",
+      "reason": "The alpha-only freeze record now notes the garbage collections in each stall and names each part of a task's close, so a slow close can be traced; nothing a person sees or does changes."
+    }
+  ]
+}

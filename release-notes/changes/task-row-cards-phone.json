@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "task-row-cards-phone",
+      "kind": "fix",
+      "title": "Tasks open the card you need on your iPhone and iPad",
+      "body": "On your iPhone and iPad, tapping a Tasks row shows its waiting decision, then its newest available card, such as a note. A row opens the task's record only when the task has no card to show.",
+      "area": "tasks",
+      "noPicture": "This changes where a tap takes you, not how the task or card looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

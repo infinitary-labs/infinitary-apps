@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journey-pictures-in-run-folder",
+      "reason": "Internal test fix: request-merge.spec.ts and card-action-feedback.spec.ts save their pictures and JSON in each run's own folder instead of the app's data folder, lab/ or release-notes/pictures/. No user-facing behavior changes."
+    }
+  ]
+}

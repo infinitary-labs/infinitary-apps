@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "node-version-stand-in-waits-for-job",
+      "reason": "Test-only: the login-search-path stand-in waits out a node that runs past the shell's limit and reports the version from the job's exit wake."
+    }
+  ]
+}

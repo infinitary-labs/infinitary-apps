@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "pinned-stars-more-room",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Pinned crewmates' stars no longer crowd each other or the orbit",
+      "body": "The stars of pinned tasks' crewmates keep more room between each other and hang a little farther from the orbit, so a sky with many pinned tasks no longer draws them on top of one another or against the crewmates still travelling. The iPhone and iPad app places them the same way.",
+      "picture": {
+        "dark": "pinned-stars-more-room-dark.webp",
+        "light": "pinned-stars-more-room-light.webp",
+        "alt": "The first mate with nineteen crewmates on its orbit and eleven pinned crewmates hanging as stars in the four corners of the sky, each star well apart from its neighbours and clear of the orbit."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-check-paths-filter",
+      "reason": "CI only: the project's phone check chooses its parts on the Mac job, with no Linux job before it and no change to the app."
+    }
+  ]
+}

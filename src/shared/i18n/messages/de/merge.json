@@ -1,0 +1,12 @@
+{
+  "mergeButtonAfterFixing": "Nach dem Beheben der Fehler zusammenführen",
+  "mergeButtonBatch": "Im nächsten Bündel zusammenführen",
+  "mergeButtonBranch": "Branch zusammenführen",
+  "mergeButtonPullRequest": "Pull Request zusammenführen",
+  "mergeButtonWhenChecksPass": "Zusammenführen, sobald die Überprüfungen erfolgreich sind",
+  "mergeContinues": "Die Aufgabe geht nach diesem Zusammenführen weiter.",
+  "mergeHeldOther": "Nachdem diese Karte erschienen ist, wurde ein anderer Pull Request zur aktuellen Änderung dieser Aufgabe. Zusammenführen ist wieder verfügbar, sobald die Karte ihn zeigt.",
+  "mergeHeldPushed": "Nachdem diese Karte erschienen ist, wurde eine neuere Version gepusht. Zusammenführen ist wieder verfügbar, sobald die Karte die neuere Version zeigt.",
+  "mergeSetByFirstMate": "Von deinem ersten Offizier für diese Aufgabe festgelegt.",
+  "mergeSetInProject": "In den Einstellungen dieses Projekts festgelegt."
+}

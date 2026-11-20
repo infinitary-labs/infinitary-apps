@@ -1,0 +1,147 @@
+{
+  "entries": [
+    {
+      "id": "bf-035fc9934",
+      "kind": "feature",
+      "title": "Show the model name beside the task key",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "035fc993479134cefe37652afc9def4ff09ab162"
+        ]
+      }
+    },
+    {
+      "id": "bf-7af23036d",
+      "kind": "feature",
+      "title": "Step Quick reasoning down from the served model level",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "7af23036d0c1b1c854b2d06b2eeb94096aab130e"
+        ]
+      }
+    },
+    {
+      "id": "bf-1cc53c1dc",
+      "kind": "feature",
+      "title": "The host watches a change's checks and wakes the crewmate once",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "1cc53c1dc4866eac77f318d40a48bf1bccd6434c"
+        ]
+      }
+    },
+    {
+      "id": "bf-0b2200018",
+      "kind": "feature",
+      "title": "Safely refresh managed checkouts after merge",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "0b22000188fc650b66f5ba7f546141db5b12363a"
+        ]
+      }
+    },
+    {
+      "id": "bf-9fbc13d90",
+      "kind": "feature",
+      "title": "The main window is translucent on macOS",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "9fbc13d90d380c7573d8ad50ae3a11167e6d4f80",
+          "37af413157061f9f7fbced4eee097ac617851bb8"
+        ]
+      }
+    },
+    {
+      "id": "bf-dc8c37f66",
+      "kind": "fix",
+      "title": "Refuse figure type below 11px at emit boundary",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "dc8c37f66b0eba032702bec2e277361ce654d26a"
+        ]
+      }
+    },
+    {
+      "id": "bf-76b59dc44",
+      "kind": "fix",
+      "title": "Keep the client's per-turn reminders off the seat and pin what it adds",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "76b59dc442f6a8413bfbd4bdf0e7cf6f90fd4cda"
+        ]
+      }
+    },
+    {
+      "id": "bf-a56e604d1",
+      "kind": "fix",
+      "title": "Start a new seat session when its instructions change",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "a56e604d1f5d0b024f0dcf79f41ddaf449e579c8"
+        ]
+      }
+    },
+    {
+      "id": "bf-c04cdb4a4",
+      "kind": "fix",
+      "title": "Keep crewmates off the person's keychains and signing material",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "c04cdb4a448926329ce97167fbdd170732c84989"
+        ]
+      }
+    },
+    {
+      "id": "bf-ebf83cef0",
+      "kind": "fix",
+      "title": "Record and announce a seat move picked in Settings",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "ebf83cef00716d9b0f10a3ac6a3183dc8e10b9ab"
+        ]
+      }
+    },
+    {
+      "id": "bf-b15928211",
+      "kind": "fix",
+      "title": "Say a GitHub merge conflict as work to bring up to date",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "b1592821139f829db0f892cce7ba8d06c61627a0"
+        ]
+      }
+    },
+    {
+      "id": "bf-a59ca1273",
+      "kind": "fix",
+      "title": "Tolerate legacy settlement test doubles",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "a59ca127374388e40f89ea5df02fb07f2143c8ba"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-15-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.15: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "ee6173bad9217844f281c3c47215d75ad2da8fb7",
+        "949efd67a204a7c1f479f1e3e3a9bd164a4df901"
+      ]
+    }
+  ]
+}

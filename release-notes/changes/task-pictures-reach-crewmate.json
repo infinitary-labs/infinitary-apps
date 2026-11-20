@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "task-pictures-reach-crewmate",
+      "kind": "fix",
+      "title": "Pictures you attach stay with the task and reach its crewmate",
+      "body": "A picture you paste, drop or add to a message now stays with the task that message becomes. The crewmate that takes the task sees it from the start, even when the task starts after the app was closed and opened again.",
+      "area": "tasks",
+      "noPicture": "Nothing on screen changes: the picture reaches the crewmate's work instead of being left behind.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

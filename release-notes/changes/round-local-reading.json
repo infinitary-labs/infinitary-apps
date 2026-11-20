@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "round-local-reading",
+      "kind": "fix",
+      "area": "message-box",
+      "title": "Read the conversation round you point at",
+      "body": "Hovering a recent message or focusing its reply now brightens that round, not the other one.",
+      "picture": {
+        "dark": "round-local-reading-dark.webp",
+        "light": "round-local-reading-light.webp",
+        "alt": "The upper conversation round is bright while the lower round stays quiet above the message box."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

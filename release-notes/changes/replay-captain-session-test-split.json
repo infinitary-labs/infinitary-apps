@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "replay-captain-session-test-split",
+      "reason": "Internal: the replay harness test's recordings written line by line move into their own test file, unchanged, under the code size warning line; no test is lost and nothing a person sees changes."
+    }
+  ]
+}

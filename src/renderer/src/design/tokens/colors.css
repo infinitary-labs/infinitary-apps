@@ -1,0 +1,104 @@
+/* Infinitary — color system. Dark ("deep space") is the default theme; light opts in via [data-theme="light"]. */
+:root {
+  /* base */
+  --bg-0: #05070d; /* void — the opaque fallback behind --material-tint */
+  --material-tint: rgba(5, 7, 13, 1); /* opaque tint mixed toward clear by wash percentage */
+  --bg-1: #0a0e18; /* surface — panels, input shell */
+  --bg-2: #0f1424; /* raised — cards */
+  --bg-3: #161c30; /* overlay hover */
+  --line-1: rgba(150, 180, 255, 0.2); /* hairline borders, set for the material */
+  --line-2: rgba(150, 180, 255, 0.24); /* focused / active borders */
+  --fg-1: #e9eef8; /* primary text */
+  --fg-2: #98a4bd; /* secondary text */
+  --fg-3: #7a86a0; /* tertiary / placeholder, lifted for the material */
+  /* accent — ice cyan, the Firstmate's light */
+  --accent: #7fdcff;
+  --accent-strong: #38aae6;
+  --accent-dim: rgba(127, 220, 255, 0.14);
+  --accent-glow: rgba(127, 220, 255, 0.35);
+  /* semantic — two chromatic families only: ice cyan (calm) and ember (hot) */
+  --ok: #7fdcff; /* calm cyan — done, pace ahead (same family as accent) */
+  --ok-dim: rgba(127, 220, 255, 0.14);
+  --hot: #ffa257; /* ember — the one hot color: energy, sun, fire */
+  --hot-dim: rgba(255, 162, 87, 0.14);
+  --hot-glow: rgba(255, 148, 66, 0.35);
+  --warn: #ffa257; /* attention, pace behind — ember */
+  --warn-dim: rgba(255, 162, 87, 0.14);
+  --danger: #ff6b52; /* lava — errors, exhausted quota (hot family, redder) */
+  --danger-dim: rgba(255, 107, 82, 0.12);
+  --captain: #b99aff; /* violet — the captain's own activity */
+  --captain-dim: rgba(185, 154, 255, 0.14);
+  --idle: #5d6884; /* dormant crewmates, inactive */
+  /* intelligence slots - celestial: supernova (lava) / sun / earth / moon.
+     supernova sits above the sun and is the one slot the app never reaches
+     for on its own. --bucket-* aliases keep older mocks working. */
+  --slot-premium: #ff6b52;
+  --slot-high: #ffa257;
+  --slot-medium: #7fdcff;
+  --slot-low: #8a93a8;
+  --bucket-premium: var(--slot-premium);
+  --bucket-high: var(--slot-high);
+  --bucket-medium: var(--slot-medium);
+  --bucket-low: var(--slot-low);
+  /* wireframe characters (canvas) */
+  --wire-accent: #7fdcff;
+  --wire-hot: #ffa257;
+  --wire-dim: #2e6a8c; /* far side — same cyan family, darker */
+  --wire-boost: 1; /* @kind other */ /* alpha multiplier — raised in light theme where thin lines wash out */
+  --halo-boost: 1.2; /* @kind other */ /* the Firstmate's halo, lifted so it reads over the material */
+  color-scheme: dark;
+}
+[data-theme="light"] {
+  --bg-0: #eef1f7;
+  --material-tint: rgba(238, 241, 247, 1);
+  --bg-1: #f7f9fc;
+  --bg-2: #ffffff;
+  --bg-3: #e7ecf5;
+  --line-1: rgba(30, 50, 90, 0.18);
+  --line-2: rgba(30, 50, 90, 0.26);
+  --fg-1: #151b2b;
+  --fg-2: #4d5a75;
+  --fg-3: #6c7891;
+  --accent: #0e8fd0;
+  --accent-strong: #0a72a8;
+  --accent-dim: rgba(14, 143, 208, 0.1);
+  --accent-glow: rgba(14, 143, 208, 0.25);
+  --ok: #0e8fd0;
+  --ok-dim: rgba(14, 143, 208, 0.1);
+  --hot: #d97a1f;
+  --hot-dim: rgba(217, 122, 31, 0.12);
+  --hot-glow: rgba(217, 122, 31, 0.28);
+  --warn: #d97a1f;
+  --warn-dim: rgba(217, 122, 31, 0.12);
+  --danger: #cf4a2e;
+  --danger-dim: rgba(207, 74, 46, 0.1);
+  --captain: #7254c9;
+  --captain-dim: rgba(114, 84, 201, 0.12);
+  --idle: #8b96ad;
+  --slot-premium: #cf4a2e;
+  --slot-high: #d97a1f;
+  --slot-medium: #0e8fd0;
+  --slot-low: #8b96ad;
+  --bucket-premium: var(--slot-premium);
+  --bucket-high: var(--slot-high);
+  --bucket-medium: var(--slot-medium);
+  --bucket-low: var(--slot-low);
+  --wire-accent: #0a72a8;
+  --wire-hot: #e8760a;
+  --wire-dim: #82b4cf; /* far side — same cyan family, lighter/desaturated */
+  --wire-boost: 1.4; /* @kind other */
+  --halo-boost: 1.2; /* @kind other */
+  color-scheme: light;
+}
+/* Semantic aliases — declared on BOTH theme scopes so var() re-resolves inside [data-theme="light"] (aliases declared only on :root would freeze to dark values). */
+:root,
+[data-theme="light"] {
+  --surface-card: var(--bg-2);
+  --surface-input: var(--bg-1);
+  --text-body: var(--fg-1);
+  --text-muted: var(--fg-2);
+  --text-faint: var(--fg-3);
+  --focus-ring: 0 0 0 1px var(--line-2), 0 0 24px -6px var(--accent-glow);
+  /* The same ring, drawn inside an edge that cuts it. */
+  --focus-ring-inset: inset 0 0 0 1px var(--line-2), inset 0 0 24px -6px var(--accent-glow);
+}

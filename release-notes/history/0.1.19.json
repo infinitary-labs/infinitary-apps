@@ -1,0 +1,57 @@
+{
+  "entries": [
+    {
+      "id": "bf-a44977c66",
+      "kind": "feature",
+      "title": "Show crew filings on the quiet ledger (contract 4.21)",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "a44977c66f3a41680e8e373a5bbe60cca10ef2d7"
+        ]
+      }
+    },
+    {
+      "id": "bf-dc42ea1e7",
+      "kind": "fix",
+      "title": "Draw figure type at true size in the usual card (contract 4.20)",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "dc42ea1e7b6f0cedb67f8fd009387f7c72d9a904"
+        ]
+      }
+    },
+    {
+      "id": "bf-9125c5cc2",
+      "kind": "fix",
+      "title": "A parent only for an ask of more than one step (contract 4.19)",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "9125c5cc2b367162f557cf6e85a9508588d0e88e"
+        ]
+      }
+    },
+    {
+      "id": "bf-e0f86f856",
+      "kind": "fix",
+      "title": "Take keep and drop off the record",
+      "provenance": {
+        "origin": "changelog-backfill",
+        "covers": [
+          "e0f86f85612197edca5eb44b5e11c3d1ef9682b2"
+        ]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "bf-0-1-19-unlisted",
+      "reason": "Not listed in the generated stable changelog for 0.1.19: internal, documentation, test or tooling work that release-please does not publish.",
+      "covers": [
+        "0a431c66671a0fb08e1115fe56d29876979ec155"
+      ]
+    }
+  ]
+}

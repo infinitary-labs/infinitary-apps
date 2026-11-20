@@ -1,0 +1,8 @@
+{
+  "policyAsksFirst": "先問過你",
+  "policyCareBound": "本機合併使用預設謹慎度；pull request 仍要求謹慎。",
+  "policyHelper": "請你的大副為這項任務變更這些設定。",
+  "policySourceParent": "上層任務",
+  "policySourceProject": "專案設定",
+  "policySourceTask": "這項任務"
+}

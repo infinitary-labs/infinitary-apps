@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crew-supervisor-placement-guardrails",
+      "reason": "Internal: tests pin where the crew supervisor places a task and what it says while the task waits for a computer, before that code moves out of the supervisor; only tests change and nothing a person sees changes."
+    }
+  ]
+}

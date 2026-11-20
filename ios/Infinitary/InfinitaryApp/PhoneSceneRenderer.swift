@@ -1,0 +1,344 @@
+import Metal
+import QuartzCore
+import SwiftUI
+import UIKit
+
+/// INF-2566 (the captain's approved B): the crew scene draws on a render thread of its own, on its own display clock,
+/// so work on the main thread (a board read, a card's web view, SwiftUI's layout) no longer holds the motion.
+/// The main thread only hands it new inputs - the roster, the state, the pan - when they change; it never observes
+/// a display tick. The painters are the scene's own (`ScenePen`), so the drawing and the motion stay the desktop's.
+/// The pen records each frame for the graphics chip (`PenBatch`, `ScenePenGPU`, INF-3851 piece 2), which draws it
+/// straight into the drawable, so this thread paints no pixels itself.
+final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
+    /// Everything one frame draws from that the main thread owns.
+    struct Input {
+        var roster: PhoneSceneRoster
+        var state: PhoneCharacter.State
+        /// The first mate shortening its conversation (CharacterCinch).
+        var fold = CharacterFold()
+        /// A settled drawing: Reduce Motion, hidden, behind a record or in the background.
+        var still: Bool
+        /// The clock advances; a stopped clock leaves the scene standing where it is, as under an open summary.
+        var running: Bool
+        /// Where the scene's origin sits in the scroller's content.
+        var offset: CGSize
+        var palette: CharacterPainter.Palette
+        /// The crewmate keyboard browsing selected, by its touch identity.
+        var selection: String?
+        /// The crewmate whose summary is open, by task and computer, which wears the desktop's corner brackets.
+        var bracketed: (task: String, computer: String)?
+        /// Names the drawing for the DEBUG frame sample (`characterEvidenceSource`).
+        var source = ""
+    }
+
+    let character = CharacterMotion()
+    let crew = PhoneSceneMotion()
+
+    private let lock = NSLock()
+    // Guarded by `lock`: written on the main thread, read by the render thread at each frame.
+    private var input: Input?
+    private var pan = CGPoint.zero
+    private var size = CGSize.zero
+    private var scale: CGFloat = 1
+    private var layer: CAMetalLayer?
+    private var device: MTLDevice?
+    private var thread: Thread?
+    /// Each attached surface's render thread; a thread whose surface has gone draws nothing more and ends.
+    private var generation = 0
+    /// The most frames a second the surface's screen shows.
+    private var screenRate = 60
+
+    // The render thread's own.
+    private var now = 0.0
+    private var last: Double?
+    private var rate: Float?
+    private let cache = CharacterPainter.Cache()
+    /// Built on the render thread at its first frame, since compiling the shaders takes a moment the main thread should not wait.
+    private var gpu: ScenePenGPU?
+    private var built: MTLDevice?
+    private var queue: MTLCommandQueue?
+    private let batch = PenBatch()
+    /// Each frame in flight keeps its own buffers until the graphics chip has drawn it.
+    private let slots = (0..<PhoneSceneRenderer.buffers).map { _ in ScenePenGPU.Slot() }
+    private var next = 0
+    private let inFlight = DispatchSemaphore(value: PhoneSceneRenderer.buffers)
+    private static let buffers = 3
+
+    // MARK: main thread
+
+    /// Starts the render thread for this surface's layer. The motion lives on with the renderer across surfaces.
+    @MainActor func attach(_ layer: CAMetalLayer) {
+        let device = MTLCreateSystemDefaultDevice()
+        layer.device = device
+        layer.pixelFormat = ScenePenGPU.pixelFormat
+        layer.framebufferOnly = true
+        layer.isOpaque = false
+        layer.colorspace = PenColor.space
+        layer.maximumDrawableCount = PhoneSceneRenderer.buffers
+        // INF-3851: the screen's full rate, up to 120, or 30 while Low Power Mode is on (`PhoneSceneRate`).
+        let screen = (layer.delegate as? UIView)?.window?.screen.maximumFramesPerSecond ?? UIScreen.main.maximumFramesPerSecond
+        let generation = lock.withLock { () -> Int in
+            self.generation += 1
+            return self.generation
+        }
+        let thread = Thread { [self] in run(generation) }
+        thread.name = "crew-scene-render"
+        thread.qualityOfService = .userInteractive
+        lock.withLock {
+            self.layer = layer; self.device = device
+            self.thread = thread; screenRate = screen
+        }
+        thread.start()
+    }
+
+    @MainActor func detach() {
+        let thread = lock.withLock { () -> Thread? in
+            generation += 1; layer = nil
+            defer { self.thread = nil }
+            return self.thread
+        }
+        // Wakes the thread's run loop, which then sees its surface gone and ends.
+        guard let thread else { return }
+        perform(#selector(resume), on: thread, with: nil, waitUntilDone: false)
+    }
+
+    @MainActor func update(_ input: Input) {
+        lock.withLock { self.input = input }
+        wake()
+    }
+
+    /// The scroller's offset, straight from its geometry change, never through a SwiftUI update.
+    @MainActor func pan(to point: CGPoint) {
+        let changed = lock.withLock { () -> Bool in
+            defer { pan = point }
+            return pan != point
+        }
+        if changed { wake() }
+    }
+
+    @MainActor func layout(size: CGSize, scale: CGFloat) {
+        lock.withLock { self.size = size; self.scale = scale }
+        wake()
+    }
+
+    /// A stopped clock still draws once for each change of its inputs.
+    private func wake() {
+        guard let thread = lock.withLock({ self.thread }) else { return }
+        perform(#selector(resume), on: thread, with: nil, waitUntilDone: false)
+    }
+
+    // MARK: render thread
+
+    private func current(_ generation: Int) -> Bool { lock.withLock { self.generation == generation } }
+
+    private func run(_ generation: Int) {
+        let tick = Tick(self, generation: generation)
+        let link = CADisplayLink(target: tick, selector: #selector(Tick.tick(_:)))
+        rate = nil
+        pace(link)
+        link.add(to: .current, forMode: .default)
+        Thread.current.threadDictionary[Self.linkKey] = link
+        while current(generation) {
+            _ = RunLoop.current.run(mode: .default, before: .distantFuture)
+        }
+        link.invalidate()
+        Thread.current.threadDictionary.removeObject(forKey: Self.linkKey)
+    }
+    private static let linkKey = "crew-scene-link"
+
+    /// Runs on the render thread, whose own display link it starts again.
+    @objc private func resume() { (Thread.current.threadDictionary[Self.linkKey] as? CADisplayLink)?.isPaused = false }
+
+    /// A display link retains its target, so the renderer is reached weakly.
+    private final class Tick: NSObject {
+        weak var renderer: PhoneSceneRenderer?
+        let generation: Int
+        init(_ renderer: PhoneSceneRenderer, generation: Int) { self.renderer = renderer; self.generation = generation }
+        @objc func tick(_ link: CADisplayLink) {
+            guard let renderer, renderer.current(generation) else { link.isPaused = true; return }
+            renderer.frame(link)
+        }
+    }
+
+    private func frame(_ link: CADisplayLink) {
+        let (input, pan, size, scale, layer, device) = lock.withLock { (self.input, self.pan, self.size, self.scale, self.layer, self.device) }
+        guard let input, let layer else { link.isPaused = true; return }
+        if let device, built !== device {
+            // A device whose shaders fail to build draws nothing, as one with no device did, and is not tried again.
+            built = device; gpu = ScenePenGPU(device: device); queue = gpu?.device.makeCommandQueue()
+        }
+        pace(link)
+        // The clock advances by elapsed time and excludes time stopped, as the main-thread clock did.
+        if input.running {
+            if let last { now += max(0, link.timestamp - last) }
+            last = link.timestamp
+        } else {
+            last = nil; link.isPaused = true
+        }
+        draw(input, pan: pan, size: size, scale: scale, into: layer)
+    }
+
+    /// Asks the display link for the rate Low Power Mode calls for, changing it only when the rate changes.
+    private func pace(_ link: CADisplayLink) {
+        let screen = lock.withLock { screenRate }
+        let lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
+        let wanted = PhoneSceneRate.rate(lowPower: lowPower, screen: screen)
+        guard wanted != rate else { return }
+        rate = wanted
+        link.preferredFrameRateRange = PhoneSceneRate.range(lowPower: lowPower, screen: screen)
+    }
+
+    private func draw(_ input: Input, pan: CGPoint, size: CGSize, scale: CGFloat, into layer: CAMetalLayer) {
+        let width = Int((size.width * scale).rounded(.up)), height = Int((size.height * scale).rounded(.up))
+        guard width > 0, height > 0, let queue, let gpu else { return }
+        if layer.drawableSize != CGSize(width: width, height: height) {
+            CATransaction.begin(); CATransaction.setDisableActions(true)
+            layer.drawableSize = CGSize(width: width, height: height)
+            CATransaction.commit()
+        }
+        // The painters draw top down in points, as a Canvas does, into the batch rather than into pixels.
+        batch.reset(width: width, height: height, scale: scale)
+        var pen = ScenePen(batch)
+        pen.translateBy(x: input.offset.width - pan.x, y: input.offset.height - pan.y)
+        paint(input, in: &pen)
+        inFlight.wait()
+        guard let drawable = layer.nextDrawable(), let commands = queue.makeCommandBuffer() else { inFlight.signal(); return }
+        next = (next + 1) % slots.count
+        gpu.encode(batch, into: drawable.texture, slot: slots[next], commands: commands)
+        commands.addCompletedHandler { [inFlight] _ in inFlight.signal() }
+        commands.present(drawable)
+        commands.commit()
+    }
+
+    /// The scene as the Canvas drew it: the warp's backdrop, the crew, the first mate, then the selection and brackets.
+    func paint(_ input: Input, in pen: inout ScenePen) {
+        #if DEBUG
+        let started = ProcessInfo.processInfo.systemUptime
+        #endif
+        let roster = input.roster, still = input.still, now = still ? 0 : self.now
+        let pose = still ? CharacterPose.still(input.state, folding: input.fold.folding, at: 0)
+            : character.advance(to: now, state: input.state, fold: input.fold)
+        // A warp takes the home crew along (CharacterWarp), as the first mate's 280-point drawing plays it.
+        let frame = crew.frame(roster: roster, now: now, settled: still, warp: CharacterWarp.frame(pose, coreR: 280 * 0.27))
+        let palette = input.palette
+        // A warp's wormhole and stars lie behind every crewmate and the first mate.
+        if let warp = crew.warp {
+            CharacterWarp.drawBackdrop(warp, at: CGPoint(x: roster.homeX, y: roster.height / 2), riders: crew.riders,
+                                       scale: PhoneSceneRoster.ringScale, palette: palette, in: &pen)
+        }
+        PhoneCrewPainter.draw(frame, roster: roster, now: now, still: still, in: &pen, palette: palette)
+        var firstmate = pen
+        firstmate.translateBy(x: roster.homeX - 140, y: roster.height / 2 - 140)
+        CharacterPainter.draw(pose, in: &firstmate, size: CGSize(width: 280, height: 280), cache: cache, palette: palette, source: input.source)
+        PhoneCrewPainter.drawMarks(frame, selection: input.selection, bracketed: input.bracketed, in: &pen, palette: palette)
+        #if DEBUG
+        // The scene scope excludes the nested first mate's separate character reading.
+        CharacterFrameMetrics.shared.record(start: started, source: input.source, mode: pose.mode.rawValue, heat: pose.heat, rotation: pose.a, drawing: .scene)
+        #endif
+    }
+}
+
+/// The scene's surface: a Metal layer the render thread fills. It takes no touches and holds no accessibility;
+/// `PhoneSceneTouches` answers both in the scroller's content.
+final class PhoneSceneSurfaceView: UIView {
+    override class var layerClass: AnyClass { CAMetalLayer.self }
+    var metalLayer: CAMetalLayer { layer as! CAMetalLayer }
+    var renderer: PhoneSceneRenderer?
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        isUserInteractionEnabled = false; isOpaque = false; backgroundColor = .clear
+        accessibilityElementsHidden = true
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        renderer?.layout(size: bounds.size, scale: window?.screen.scale ?? traitCollection.displayScale)
+    }
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        metalLayer.contentsScale = window?.screen.scale ?? traitCollection.displayScale
+        setNeedsLayout()
+    }
+}
+
+/// INF-3462, the captain's "never clipped" and "it can sit underneath other elements": the crew scene's stage hands up
+/// its frame and its drawing's inputs, and Home draws the scene from them as its bottom layer, across the whole window.
+/// The bars, the messages, the message box, the sidebar and the keyboard draw over it, and nothing cuts it at the stage's
+/// edge. The stage keeps its touch, so tapping a crewmate, panning and crew browsing stay in the middle space. With a card
+/// up the stage leaves Home, its frame with it, and nothing is drawn.
+struct PhoneSceneBackdrop {
+    let stage: Anchor<CGRect>
+    let renderer: PhoneSceneRenderer
+    let roster: PhoneSceneRoster
+    let state: PhoneCharacter.State
+    let fold: CharacterFold
+    let still: Bool
+    let running: Bool
+    /// Where the scroller has panned the scene, measured from the stage's corner.
+    let offset: CGSize
+    let selection: String?
+    let bracketed: (task: String, computer: String)?
+
+    struct Key: PreferenceKey {
+        static let defaultValue: PhoneSceneBackdrop? = nil
+        static func reduce(value: inout PhoneSceneBackdrop?, nextValue: () -> PhoneSceneBackdrop?) { value = value ?? nextValue() }
+    }
+}
+
+extension View {
+    /// Draws the crew scene a stage inside this view hands up, under this view and across the whole window.
+    func phoneSceneBackdrop() -> some View {
+        backgroundPreferenceValue(PhoneSceneBackdrop.Key.self) { backdrop in
+            GeometryReader { window in
+                if let backdrop {
+                    // The stage's corner in the window's space, so the scene sits where the stage shows it.
+                    let stage = window[backdrop.stage]
+                    PhoneSceneSurface(renderer: backdrop.renderer, roster: backdrop.roster, state: backdrop.state, fold: backdrop.fold,
+                                      still: backdrop.still, running: backdrop.running,
+                                      offset: CGSize(width: backdrop.offset.width + stage.minX, height: backdrop.offset.height + stage.minY),
+                                      selection: backdrop.selection, bracketed: backdrop.bracketed)
+                        // One surface per renderer: a new scene attaches its own drawing rather than borrowing the last one's.
+                        .id(ObjectIdentifier(backdrop.renderer))
+                }
+            }
+            .ignoresSafeArea().allowsHitTesting(false).accessibilityHidden(true)
+        }
+    }
+}
+
+/// Hands the scene's inputs to its renderer whenever SwiftUI updates them; nothing here runs per frame.
+struct PhoneSceneSurface: UIViewRepresentable {
+    let renderer: PhoneSceneRenderer
+    let roster: PhoneSceneRoster
+    let state: PhoneCharacter.State
+    var fold = CharacterFold()
+    let still: Bool
+    let running: Bool
+    var offset: CGSize = .zero
+    var selection: String?
+    var bracketed: (task: String, computer: String)?
+
+    func makeUIView(context: Context) -> PhoneSceneSurfaceView {
+        let view = PhoneSceneSurfaceView()
+        view.renderer = renderer
+        renderer.attach(view.metalLayer)
+        return view
+    }
+
+    func updateUIView(_ view: PhoneSceneSurfaceView, context: Context) {
+        #if DEBUG
+        let source = context.environment.characterEvidenceSource
+        #else
+        let source = ""
+        #endif
+        renderer.update(.init(roster: roster, state: state, fold: fold, still: still, running: running, offset: offset,
+                              palette: CharacterPainter.Palette(context.environment), selection: selection, bracketed: bracketed, source: source))
+    }
+
+    static func dismantleUIView(_ view: PhoneSceneSurfaceView, coordinator: ()) {
+        view.renderer?.detach()
+        view.renderer = nil
+    }
+}

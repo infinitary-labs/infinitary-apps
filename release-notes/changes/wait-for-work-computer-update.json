@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "wait-for-work-computer-update",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Tasks on another computer wait for its update instead of failing",
+      "body": "When this Mac is updated a few minutes before a computer that runs your work, a project's task already working there no longer closes as failed because that computer cannot yet check the project's address before its next turn. The task waits, open, until that computer is updated, then carries on by itself, with anything the first mate told it meanwhile.",
+      "noPicture": "Nothing new appears on screen: a task that used to close as failed stays open, and the feed shows one line saying it waits for the update.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "story-destinations-held-note",
+      "reason": "Test-only: the story-destinations journey's four note sections now expect a self-merging note to stay held until its merge and show once after it, matching INF-2533's rule. A person notices nothing new."
+    }
+  ]
+}

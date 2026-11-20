@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "card-returns-at-turn-end",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A card you replied under comes back only when its crewmate is done",
+      "body": "A card you replied under or put aside could come back while its crewmate was still updating it, so you saw a stale version. It now comes back once, when the crewmate finishes, showing its latest words. New cards still appear as soon as a crewmate reports them.",
+      "noPicture": "The card looks the same; what changes is when it comes back, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

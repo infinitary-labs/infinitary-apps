@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-every-device-passes-test",
+      "reason": "Project test only: the test of the phone check's every-device gate call now expects the run's passes file, as the single-device calls do; nothing in the app changes."
+    }
+  ]
+}

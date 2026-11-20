@@ -1,0 +1,12 @@
+{
+  "pastEndingAnOption": "一個選項",
+  "pastEndingAuthorWithdrawal": "已由作者撤回",
+  "pastEndingCrewmateChose": "它的船員選了{label}",
+  "pastEndingDismissed": "未做選擇就關閉",
+  "pastEndingDuplicate": "因重複而關閉",
+  "pastEndingFirstmateChose": "你的大副選了{label}",
+  "pastEndingHostWithdrawal": "已由程式撤下",
+  "pastEndingTaskRetired": "任務結束時已撤下",
+  "pastEndingUnknown": "已關閉",
+  "pastEndingYouChose": "你選了{label}"
+}

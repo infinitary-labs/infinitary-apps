@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "project-copy-up-to-date-after-merge",
+      "kind": "fix",
+      "title": "Your project's folder is up to date after a merge",
+      "body": "After the app merges a pull request, it brings your project's folder on this computer up to date. When a crewmate started or looked for changes at the same moment, this sometimes failed and Activity said the folder was not refreshed. Now it is brought up to date either way.",
+      "area": "projects",
+      "noPicture": "The result is a folder on disk and an Activity line after a merge; no view changes.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

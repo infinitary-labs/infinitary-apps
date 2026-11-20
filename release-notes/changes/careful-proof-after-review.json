@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "careful-proof-after-review",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "Careful work proves itself once, after its review",
+      "body": "A change you ask to ship carefully now has its code reviewed first, then shows it working once, and a reviewer reads that proof once before the pull request opens. Fixes during the review no longer run the whole proof again, and a later fix to wording or comments keeps the proof already shown, so careful work reaches its pull request sooner. What careful work proves is unchanged.",
+      "noPicture": "Nothing on screen changes; the crew works in a different order.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

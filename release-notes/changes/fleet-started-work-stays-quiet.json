@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "fleet-started-work-stays-quiet",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Work your first mate started on its own closes without a note",
+      "body": "When your first mate starts a task you did not ask for, such as a helper another task needs, dropping or finishing it no longer puts a note on your stack. Its closing sentence stays on the task's record and in Activity. A merge or release of such work still leaves its one note.",
+      "noPicture": "The change removes a note from the stack; nothing new appears in its place.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

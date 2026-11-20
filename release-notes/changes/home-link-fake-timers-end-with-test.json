@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "home-link-fake-timers-end-with-test",
+      "reason": "Test-only: the home link's expired-request test fakes the clock only while it still runs, so a timed-out run fails no other test. No shipped product surface changes."
+    }
+  ]
+}

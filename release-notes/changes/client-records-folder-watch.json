@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "client-records-folder-watch",
+      "reason": "The Claude steer tests' transcript wait watches each project folder before reading it, so a line the client writes while Node 24.21's recursive watch on Linux was still setting up no longer stalls the test; test only, nothing a person notices."
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "settleCannotMerge": "Cannot merge: {problem}",
+  "settleCouldNotDiscard": "Could not discard: {problem}",
+  "settleDiscardedPullOpen": "Discarded. Its pull request is still open where the project lives: {problem}",
+  "settleDiscardedPullOpenThen": "Discarded. Its pull request is still open where the project lives: {problem}. {followup}",
+  "settleDiscarding": "Discarding",
+  "settleDiscardingAfterTurn": "Discarding once its crewmate finishes what it is doing",
+  "settleMerging": "Merging",
+  "settleMergingAfterTurn": "Merging once its crewmate finishes what it is doing",
+  "settleMergingChange": "Merging {change}",
+  "settleMergingChangeAfterTurn": "Merging {change} once its crewmate finishes what it is doing"
+}

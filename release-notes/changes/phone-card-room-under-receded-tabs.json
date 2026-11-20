@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "phone-card-room-under-receded-tabs",
+      "kind": "fix",
+      "area": "devices",
+      "title": "On iPhone a card grows when the tabs shrink, and the tabs come back",
+      "body": "In Infinitary on iPhone with iOS 26, when you scroll down a card the tabs shrink and the message box moves down beside them, and the card now grows into the space they leave instead of leaving an empty band. Once you close the last card, the tabs and the message box return to full size. With no cards left, the screen shows just your first mate, as on your Mac.",
+      "picture": {
+        "dark": "phone-card-room-under-receded-tabs-dark.webp",
+        "light": "phone-card-room-under-receded-tabs-light.webp",
+        "alt": "The foot of a card on iPhone with the tabs shrunk to one round Cards button: the card's choices, then the 1 of 2 pager sitting directly on the message box beside the round button, with no empty band between them."
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

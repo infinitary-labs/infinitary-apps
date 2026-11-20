@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "demo-recorder-posters",
+      "reason": "Internal demo capture helper: settled action-start posters and paced keyboard capture; no app behavior changes."
+    }
+  ]
+}

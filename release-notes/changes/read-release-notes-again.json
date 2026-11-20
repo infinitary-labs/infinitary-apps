@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "read-release-notes-again",
+      "kind": "feature",
+      "title": "Read the release notes again after closing them",
+      "body": "What’s New in the new Help menu opens the latest release note again, even after you closed it. Typing “what’s new” or “release notes” in command search (⌘K) does the same, and so does asking Firstmate. Settings → General shows the version you are running and lists every release note you were shown; choose one to read it again.",
+      "highlight": 2,
+      "area": "updates",
+      "picture": {
+        "dark": "read-release-notes-again-dark.webp",
+        "light": "read-release-notes-again-light.webp",
+        "alt": "Settings → General with a Version row naming stable 0.1.28 and listing the four release notes it was shown, by version and date"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

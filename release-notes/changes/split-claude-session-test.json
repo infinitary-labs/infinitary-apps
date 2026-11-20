@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-claude-session-test",
+      "reason": "Tests moved unchanged into a second file along their owners; nothing a person sees changes."
+    }
+  ]
+}

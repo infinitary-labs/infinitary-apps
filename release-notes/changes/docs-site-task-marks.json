@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "docs-site-task-marks",
+      "reason": "Explains the marks beside each task on the documentation site's Tasks and crewmates page; nothing in the app changes."
+    }
+  ]
+}

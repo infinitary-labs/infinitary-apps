@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "review-history-carried",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Careful reviews remember your earlier answers",
+      "body": "When a crewmate reviews a change again, it now reads every earlier round of findings and every answer you gave on that change, word for word. That keeps it from raising again a finding you declined, and shows it which proof gaps you already accepted.",
+      "noPicture": "This changes what the reviewing crewmate and the first mate read, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

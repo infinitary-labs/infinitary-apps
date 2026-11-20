@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "released-close-delivered-elsewhere",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A task whose work went in through another pull request can now be closed",
+      "body": "When a task's own pull request closed without merging, or its work was squashed into another pull request that merged, the first mate could not close it as delivered. It now closes it once that delivery is checked, as long as none of the task's own pull requests is still open. The task's commits are saved with it, so nothing is lost.",
+      "noPicture": "The change is which tasks the first mate can close; no screen looks different.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

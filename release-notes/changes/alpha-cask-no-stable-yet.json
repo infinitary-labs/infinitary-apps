@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "alpha-cask-no-stable-yet",
+      "reason": "Release distribution: until Infinitary's tap has a stable version, the alpha Homebrew cask's install message no longer tells people to switch to a stable cask that does not exist yet; no app screen changes."
+    }
+  ]
+}

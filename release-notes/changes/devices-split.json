@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "devices-split",
+      "reason": "Restructure only: the Devices tab, its Remote Login tests and its journeys split into smaller files by owner, with no app behavior change."
+    }
+  ]
+}

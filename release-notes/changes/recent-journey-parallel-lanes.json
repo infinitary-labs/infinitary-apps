@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "recent-journey-parallel-lanes",
+      "reason": "Moves reviewed isolated journeys from the serial desktop lane to parallel application checks; no product behavior changes."
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "mergeButtonAfterFixing": "エラーを修正してからマージ",
+  "mergeButtonBatch": "次の一括プルリクエストでマージ",
+  "mergeButtonBranch": "ブランチをマージ",
+  "mergeButtonPullRequest": "プルリクエストをマージ",
+  "mergeButtonWhenChecksPass": "チェックに合格したらマージ",
+  "mergeContinues": "このマージの後もタスクは続きます。",
+  "mergeHeldOther": "このカードの表示後に、別のプルリクエストがこのタスクの現在の変更になりました。カードがそれを表示すると、マージが戻ります。",
+  "mergeHeldPushed": "このカードの表示後に新しいバージョンがプッシュされました。カードが新しいバージョンを表示すると、マージが戻ります。",
+  "mergeSetByFirstMate": "このタスクのために一等航海士が設定しました。",
+  "mergeSetInProject": "このプロジェクトの設定で決まっています。"
+}

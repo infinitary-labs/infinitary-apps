@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "keyboard-emacs-linux",
+      "kind": "feature",
+      "title": "The Control-key preset comes to Linux",
+      "body": "On Linux, Settings, Keyboard now offers the preset built on Control and Alt keys, with keys made for Linux. While you type a message, Ctrl+X, Ctrl+C and Ctrl+V cut, copy and paste as in every other app; anywhere else, Ctrl+X starts a second key and Ctrl+V moves down a page. Ctrl+G cancels and leaves a message, Alt+X searches commands, and Ctrl+K deletes to the end of the line in a message.",
+      "area": "settings",
+      "picture": {
+        "dark": "keyboard-emacs-linux-dark.webp",
+        "light": "keyboard-emacs-linux-light.webp",
+        "alt": "Keyboard settings on Linux with the Emacs preset chosen in the Preset row and the search narrowed to Ctrl+X, showing rows such as Go to the next part of the window with Ctrl+X then O, when not typing"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

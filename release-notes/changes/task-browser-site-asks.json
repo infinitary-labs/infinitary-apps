@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "task-browser-site-asks",
+      "kind": "feature",
+      "title": "A site in a task's browser can ask you for your camera, notifications or clipboard",
+      "body": "When you have control of a task's browser and the site asks to use your camera or microphone, send you notifications or read your clipboard, a row above the page asks you, with Allow once and Not now. What you allow lasts until you return control, so the crewmate never uses a page with your camera on. When the site asks for a passkey, the browser tells it none is available, so it offers a password or a code, and a line above the page tells you why.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "task-browser-site-asks-dark.webp",
+        "light": "task-browser-site-asks-light.webp",
+        "alt": "A task's browser under your control, with a row above the page saying the site asks to send you notifications, and Allow once and Not now buttons"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

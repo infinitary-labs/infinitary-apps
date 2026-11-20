@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "ask-chain-sweep",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Less waiting when the first mate finishes",
+      "body": "The first mate no longer reloads the same messages repeatedly while checking which questions still need an answer.",
+      "noPicture": "This removes repeated background reads without changing any screen or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

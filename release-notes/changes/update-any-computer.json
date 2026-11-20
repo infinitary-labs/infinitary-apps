@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "update-any-computer",
+      "reason": "Internal, behind the development-only multi-machine gate: Settings -> Devices saying when a computer that runs work has another version of Firstmate, and Update bringing a computer added by a command or running as another user to this Mac's version over the network. An installed app shows and offers none of it."
+    }
+  ]
+}

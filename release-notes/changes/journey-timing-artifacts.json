@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journey-timing-artifacts",
+      "reason": "Internal CI repair: journey placement takes timings only from passing verification runs with an unexpired e2e-results artifact, not installer-only runs. No app behavior changes."
+    }
+  ]
+}

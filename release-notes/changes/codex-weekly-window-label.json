@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "codex-weekly-window-label",
+      "kind": "fix",
+      "title": "A Codex plan that reports only its week shows a weekly meter",
+      "body": "Some Codex plans report only their 7-day allowance. Settings showed it as a session meter that reset days later. It now reads weekly.",
+      "area": "subscriptions",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

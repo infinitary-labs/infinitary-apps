@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "large-batch-stories",
+      "kind": "fix",
+      "area": "projects",
+      "title": "A large batch of your changes opens its pull request with every story",
+      "body": "When the stories of a batch's changes are together too long for one description on GitHub, the batch's pull request still opens. Its description lists every change and holds the stories that fit, and the rest follow in order in comments the app keeps up to date. Before, GitHub refused such a batch on every try, and its changes waited without merging.",
+      "noPicture": "This changes what the batch's pull request carries where your project lives, not a view in the app.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

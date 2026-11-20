@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "ssh-connection-test-waits-for-route",
+      "reason": "Internal test repair: the SSH connection tests now wait until this Mac has read a connection's route, witnessed by a beat the stand-in writes down with that connection's socket, before they drop it or read its state, and the changed-host stop waits as long as its sibling waits on SSH's own work. No user-facing behavior changes."
+    }
+  ]
+}

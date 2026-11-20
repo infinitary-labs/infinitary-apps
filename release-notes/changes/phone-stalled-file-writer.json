@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-stalled-file-writer",
+      "reason": "Test-only repair: the native stalled-file check writes its delayed file from a thread of its own and ends the reader's stall only after the write, so busy Swift task threads can no longer hold the write past the wait's wall cap; no app behavior, limit or assertion changes."
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "click-opens-window-while-crew-works",
+      "kind": "fix",
+      "area": "other",
+      "title": "Infinitary opens when you click it while your crew keeps working",
+      "body": "After you quit Infinitary's window, your crew keeps working in the background. Clicking Infinitary in the Dock, Spotlight or Finder then opened nothing on a Mac; it now opens the window again. Update and restart also installs the new version and brings the window back, where it used to stay on the old version with no window.",
+      "noPicture": "The window that opens is the usual one; what changed is that a click and an update now open it.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

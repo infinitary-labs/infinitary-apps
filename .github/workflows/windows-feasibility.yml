@@ -1,0 +1,92 @@
+name: Windows feasibility observations
+
+# Opt-in investigation, not Windows support and not a release/merge gate.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-feasibility-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  observe:
+    name: Manual request · Windows feasibility observations (not parity qualification)
+    runs-on: windows-2025
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - name: Isolate all app data and record the machine
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP 'fm-windows-feasibility'
+          New-Item -ItemType Directory -Force "$root/evidence", "$root/home", "$root/roaming", "$root/local" | Out-Null
+          "FM_WINDOWS_EVIDENCE=$root/evidence" >> $env:GITHUB_ENV
+          "HOME=$root/home" >> $env:GITHUB_ENV
+          "USERPROFILE=$root/home" >> $env:GITHUB_ENV
+          "APPDATA=$root/roaming" >> $env:GITHUB_ENV
+          "LOCALAPPDATA=$root/local" >> $env:GITHUB_ENV
+          "PI_OFFLINE=1" >> $env:GITHUB_ENV
+          "INFINITARY_LOCAL_CODESIGN_DIR=$root/unused-signing" >> $env:GITHUB_ENV
+          Get-ComputerInfo -Property WindowsProductName,WindowsVersion,OsBuildNumber,OsArchitecture | ConvertTo-Json > "$root/evidence/machine.json"
+          git rev-parse HEAD > "$root/evidence/version.txt"
+          whoami /groups > "$root/evidence/groups.txt"
+          node --version
+          pnpm --version
+      - name: Attempt the unchanged dependency install
+        id: install
+        continue-on-error: true
+        timeout-minutes: 12
+        run: |
+          pnpm install --frozen-lockfile 2>&1 | Tee-Object "$env:FM_WINDOWS_EVIDENCE/install.txt"
+          exit $LASTEXITCODE
+      - name: Attempt the unchanged source build
+        id: build
+        continue-on-error: true
+        timeout-minutes: 8
+        run: |
+          pnpm build 2>&1 | Tee-Object "$env:FM_WINDOWS_EVIDENCE/build.txt"
+          exit $LASTEXITCODE
+      - name: Observe production boundaries with disposable state
+        timeout-minutes: 12
+        run: |
+          foreach ($probe in @('native','shell','privateFiles','transport','crew','desktop','browser')) {
+            $stdout = "$env:FM_WINDOWS_EVIDENCE/$probe.stdout.txt"
+            $stderr = "$env:FM_WINDOWS_EVIDENCE/$probe.stderr.txt"
+            $p = Start-Process node -ArgumentList @('scripts/windows-feasibility.mjs', $probe) -NoNewWindow -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+            if (-not $p.WaitForExit(100000)) {
+              # Cleanup belongs to the observation runner, not the product.
+              taskkill /PID $p.Id /T /F
+              "Observation timed out; its disposable process tree was stopped." | Out-File "$env:FM_WINDOWS_EVIDENCE/$probe.timeout.txt"
+            }
+            Get-Content $stdout
+            Get-Content $stderr
+          }
+      - name: Summarize collection without claiming Windows support
+        if: always()
+        env:
+          INSTALL_RESULT: ${{ steps.install.outcome }}
+          BUILD_RESULT: ${{ steps.build.outcome }}
+        run: |
+          "# Windows feasibility observations" >> $env:GITHUB_STEP_SUMMARY
+          "Install: $env:INSTALL_RESULT; build: $env:BUILD_RESULT." >> $env:GITHUB_STEP_SUMMARY
+          "This job collects failures as data. Its success is not Windows qualification." >> $env:GITHUB_STEP_SUMMARY
+          "Windows Server, hosted administrator; not an ordinary-user Windows 11 desktop." >> $env:GITHUB_STEP_SUMMARY
+          "No installer, real accounts, speech model download, permission changes or publishing." >> $env:GITHUB_STEP_SUMMARY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: windows-feasibility
+          path: ${{ runner.temp }}/fm-windows-feasibility/evidence
+          retention-days: 1
+          if-no-files-found: error

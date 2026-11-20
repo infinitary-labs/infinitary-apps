@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "careful-review-waits-for-brief",
+      "reason": "Test only: the careful-review journey now waits for the reviewer's first request carrying its brief before reading it, so it no longer fails when it runs beside other journeys. No shipped behavior changed."
+    }
+  ]
+}

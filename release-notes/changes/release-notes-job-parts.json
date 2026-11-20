@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "release-notes-job-parts",
+      "reason": "The release workflow's notes job runs its check and its catalog side by side. Nothing in the app changes."
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "task-facts-test-isolated",
+      "reason": "Test-only: the task facts test, which mocks the crew board, now runs in the isolated unit project, so a file that loaded the real crew summary first no longer breaks its reviewer case. No shipped product surface changes."
+    }
+  ]
+}

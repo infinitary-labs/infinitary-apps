@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "openrouter-only-crewmates",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Crewmates start when OpenRouter is your only sign-in",
+      "body": "With only an OpenRouter key signed in, a crewmate your first mate started stopped at once and asked you to sign in again, though the key was fine. It now starts on one of OpenRouter's models under that key. When no signed-in model can take a task, your first mate says so instead of starting a crewmate that cannot answer.",
+      "noPicture": "The fix changes which model a crewmate starts on; what a person sees is an ordinary crewmate at work instead of a sign-in card.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

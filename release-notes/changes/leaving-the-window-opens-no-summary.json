@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "leaving-the-window-opens-no-summary",
+      "kind": "fix",
+      "title": "Leaving the window no longer opens a task's summary",
+      "body": "Moving the pointer out of the window across a task in Activity or Tasks used to open that task's summary, which then stayed open. The summary now closes as the pointer leaves.",
+      "area": "tasks",
+      "noPicture": "The fix is a summary that no longer appears, so there is nothing new to show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-check-parts-within-budget",
+      "reason": "Internal CI only: a pull request's phone check runs the closest parts within six minutes and skips unused setup; the nightly check of main runs every part. No product change."
+    }
+  ]
+}

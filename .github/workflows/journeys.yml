@@ -1,0 +1,490 @@
+name: journeys
+
+# A test runs on the Mac only when it needs a Mac (docs/principles.md,
+# 2026-10-28): every chosen journey runs on Linux, at most one job per PC
+# place (INF-1720), and the Mac runs only the chosen tests tagged
+# MAC_ONLY_TAG (tests/e2e/tags.ts). Every Linux job runs on the label
+# LINUX_RUNNER names, as ci.yml's do, hosted Ubuntu when it is unset. Every
+# alpha still runs the full Mac suite; main's desktop release check (main.yml)
+# runs only the tagged tests there (INF-2480).
+# INF-800: on request, the journeys a branch names, placed the same way
+# (docs/testing.md, "Journeys on request").
+# INF-2139 (captain: "let's pull journeys and phone checks off PRs now"): a
+# pull request no longer starts this workflow, and main's desktop release
+# check and the alpha run every journey through verify.yml, so only a request
+# starts it; INF-2539 removed its pull-request paths.
+# An outside contributor's pull request is the one exception (docs/public-ci.md,
+# "Outside contributors"): a contributor cannot request a run, so contributors.yml calls
+# this workflow with hosted, which runs every job on GitHub's own machines and
+# never on the project's.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mac_runner:
+        description: Optional Mac runner label for an isolated proof; unset keeps the project runner
+        type: string
+      files:
+        description: Journey files to run, by name or path, separated by spaces or commas
+        required: true
+        type: string
+      platforms:
+        description: Linux portable proof, Mac native proof, or both; omit Mac when already proven locally
+        type: choice
+        options: [linux, mac, both]
+        default: linux
+      base:
+        description: Comparison ref for directly edited journey files, which run three total rounds
+        type: string
+        default: origin/main
+      mac_all:
+        description: Run every named journey on the Mac too, not only its tests that need a Mac
+        type: boolean
+        default: false
+      mac_once:
+        description: Run each edited named journey once on the Mac too, every test, beside the rounds of its tests that need a Mac
+        type: boolean
+        default: false
+      browser_engine:
+        description: The task browser's engine for the chosen Mac journeys; chrome needs Google Chrome on the Mac (docs/task-browser.md)
+        type: choice
+        options: [built-in, chrome]
+        default: built-in
+      starve:
+        description: Run the chosen Mac journeys under the load controller (scripts/starve-check.py)
+        type: boolean
+        default: false
+      perf:
+        description: Hold waits to their budgets on the wall clock, for a quiet run
+        type: boolean
+        default: false
+  # contributors.yml's call for an outside contributor's pull request, with hosted set.
+  # It declares every input the jobs read, so a call reads each as a request does.
+  workflow_call:
+    inputs:
+      trigger:
+        description: What started the caller's run, which every job name here leads with (scripts/ci-job-names.mjs)
+        type: string
+        default: ''
+      hosted:
+        description: Run every job on GitHub's hosted Ubuntu and Mac, whatever the runner variables and mac_runner say
+        type: boolean
+        default: false
+      mac_runner:
+        type: string
+        default: ''
+      files:
+        description: Journey files to run, by name or path, separated by spaces or commas
+        required: true
+        type: string
+      platforms:
+        description: linux, mac or both
+        type: string
+        default: linux
+      base:
+        description: Comparison ref for directly edited journey files, which run three total rounds
+        type: string
+        default: origin/main
+      mac_all:
+        type: boolean
+        default: false
+      mac_once:
+        description: Run each edited named journey once on the Mac too, every test, beside the rounds of its tests that need a Mac
+        type: boolean
+        default: false
+      browser_engine:
+        type: string
+        default: built-in
+      starve:
+        type: boolean
+        default: false
+      perf:
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: read
+
+# INF-3380 (the captain's direction A): a first-attempt request on a task branch replaces the
+# branch's older request of the same selection, waiting or running; a request naming other
+# journeys runs beside it, and main and a rerun are never replaced, so another task's request on
+# main never cancels one (INF-941). INF-3635: the run carries no concurrency group, because a
+# group named for the selection grew with the file list, and GitHub refuses a group name of 400
+# characters or more by failing the run with no job; no expression can shorten it. The
+# replace-older-request job below does the replacing with the selection's hash instead.
+
+jobs:
+  # INF-3635: name this request by a hash of its branch and every input, mark the run with an
+  # artifact of that name, then keep only the newest live first-attempt run holding it. Every run
+  # marks itself before it looks, so whichever looks last sees both and the older one stops.
+  replace-older-request:
+    name: Manual request · Replace an older request of the same journeys
+    # A contributor's call is replaced by contributors.yml's own group for its pull request.
+    if: github.ref != 'refs/heads/main' && github.run_attempt == '1' && !inputs.hosted
+    runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').light_gate || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
+    # Replacing is housekeeping: it never decides whether the named journeys passed.
+    continue-on-error: true
+    permissions:
+      actions: write
+    steps:
+      - id: mark
+        name: Name this request by its selection
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        env:
+          SELECTION: ${{ toJSON(inputs) }}
+        with:
+          script: |
+            const selection = JSON.parse(process.env.SELECTION);
+            // GitHub leaves an unset input with no default out of inputs, so an empty one is the same request.
+            const set = Object.keys(selection).sort().filter(name => selection[name] !== '' && selection[name] !== null);
+            const key = JSON.stringify([context.ref, set.map(name => [name, selection[name]])]);
+            const name = `journeys-request-${require('node:crypto').createHash('sha256').update(key).digest('hex')}`;
+            require('node:fs').writeFileSync(`${process.env.RUNNER_TEMP}/journeys-request.json`, JSON.stringify({ref: context.ref, inputs: selection}, null, 2));
+            core.setOutput('name', name);
+            core.info(`${context.ref} ${JSON.stringify(selection)} is ${name}`);
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: ${{ steps.mark.outputs.name }}
+          path: ${{ runner.temp }}/journeys-request.json
+          retention-days: 1
+      - name: Cancel the older requests of this selection
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        env:
+          MARK: ${{ steps.mark.outputs.name }}
+        with:
+          script: |
+            const marks = await github.paginate(github.rest.actions.listArtifactsForRepo, {
+              ...context.repo, name: process.env.MARK, per_page: 100
+            });
+            const live = [context.runId];
+            for (const run_id of new Set(marks.map(mark => mark.workflow_run?.id).filter(Boolean))) {
+              if (run_id === context.runId) continue;
+              const { data: run } = await github.rest.actions.getWorkflowRun({ ...context.repo, run_id });
+              // A rerun keeps its place, as it did in the group of its own run.
+              if (run.status !== 'completed' && run.run_attempt === 1) live.push(run.id);
+            }
+            const newest = Math.max(...live);
+            // This run, when a newer request holds its selection, cancels itself last.
+            const replaced = live.filter(id => id !== newest && id !== context.runId);
+            if (newest !== context.runId) replaced.push(context.runId);
+            for (const run_id of replaced) {
+              core.info(`Run ${run_id} requested this selection before run ${newest}; cancelling it.`);
+              try {
+                await github.rest.actions.cancelWorkflowRun({ ...context.repo, run_id });
+              } catch (error) {
+                // It ended between the reading and the cancel.
+                if (error.status !== 409) throw error;
+              }
+            }
+            if (!replaced.length) core.info('No older request of this selection is still going.');
+  choose-journeys:
+    name: ${{ format('{0} · Choose and place app journeys', inputs.trigger || 'Manual request') }}
+    # The PC's gate label (docs/testing.md, DOP-157): its runners take only gate jobs.
+    runs-on: ${{ inputs.hosted && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').gate || vars.LINUX_RUNNER && format('{0}-gate', vars.LINUX_RUNNER) || 'ubuntu-24.04' }}
+    defaults:
+      run:
+        working-directory: Application Support/firstmate
+    outputs:
+      count: ${{ steps.select.outputs.count }}
+      files: ${{ steps.select.outputs.files }}
+      linux-count: ${{ steps.select.outputs.linux-count }}
+      linux: ${{ steps.select.outputs.linux }}
+    steps:
+      # Pick the named journeys without taking a Mac runner.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          path: Application Support/firstmate
+          fetch-depth: 0
+      - uses: ./Application Support/firstmate/.github/actions/pnpm
+        with:
+          working-directory: Application Support/firstmate
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
+          cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
+      - uses: ./Application Support/firstmate/.github/actions/node-headers
+      - uses: ./Application Support/firstmate/.github/actions/electron-download
+        with:
+          working-directory: Application Support/firstmate
+      - run: pnpm install --frozen-lockfile
+        # Scope Node headers to this install, never to Electron rebuilds.
+        env:
+          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
+      # INF-850: GitHub's search by result has answered no verify.yml run
+      # while its plain list held passing ones, so the chooser reads the
+      # plain list, newest first, and takes the first passing run with times.
+      # INF-1443: that list with each run's pull requests has run past
+      # GitHub's time limit and answered 502; leaving them out drops no run,
+      # and the chooser never reads them.
+      # INF-1578: an installer-only verify can pass without journey times;
+      # keep looking until a passing run has every journey's time unexpired.
+      # INF-2779: since the Mac journeys run in two jobs, a run keeps each
+      # lane's result as e2e-results-<lane>, and needs both; a run from
+      # before it kept one e2e-results. INF-2987: since the mac job runs a
+      # group of the parallel lanes too, a run keeps e2e-results-mac as well,
+      # and needs all three.
+      - id: timing-run
+        name: Find the newest passing full verification
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        with:
+          script: |
+            const TIMES = [['e2e-results-parallel', 'e2e-results-desktop', 'e2e-results-mac'], ['e2e-results-parallel', 'e2e-results-desktop'], ['e2e-results']];
+            const pages = github.paginate.iterator(github.rest.actions.listWorkflowRuns, {
+              ...context.repo, workflow_id: 'verify.yml', exclude_pull_requests: true, per_page: 100
+            });
+            let run;
+            let kept;
+            for await (const { data } of pages) {
+              for (const candidate of data) {
+                if (candidate.conclusion !== 'success') continue;
+                const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+                  ...context.repo, run_id: candidate.id, per_page: 100
+                });
+                const live = artifacts.filter(artifact => !artifact.expired);
+                kept = TIMES.map(names => names.map(name => live.find(artifact => artifact.name === name)))
+                  .find(found => found.every(Boolean));
+                if (kept) {
+                  run = candidate;
+                  break;
+                }
+              }
+              if (run) break;
+            }
+            if (!run) {
+              await core.summary.addRaw('No historical timings: schedule every explicitly selected file conservatively.').write();
+              return;
+            }
+            core.setOutput('id', run.id);
+            core.setOutput('artifacts', kept.map(artifact => artifact.id).join(','));
+            await core.summary.addRaw(`Journey times: [passing verify run ${run.id}](${run.html_url})\n`).write();
+      # Each artifact in a folder of its own, which journey-budget.ts reads whole.
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        if: steps.timing-run.outputs.id != ''
+        with:
+          artifact-ids: ${{ steps.timing-run.outputs.artifacts }}
+          run-id: ${{ steps.timing-run.outputs.id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/journey-times
+      # Optional Linux observations augment, never replace, the conservative
+      # Mac timings above. Only successful default-branch runs can train placement.
+      - id: linux-timing-runs
+        name: Find comparable Linux timing observations
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        with:
+          script: |
+            const fs = require('node:fs');
+            const root = process.env.RUNNER_TEMP;
+            fs.mkdirSync(`${root}/linux-journey-times`, {recursive: true});
+            const jobs = [];
+            for (const [key, workflow] of [['verify', 'verify.yml'], ['journeys', 'journeys.yml']]) {
+              const pages = github.paginate.iterator(github.rest.actions.listWorkflowRuns, {
+                ...context.repo, workflow_id: workflow,
+                branch: context.payload.repository.default_branch,
+                exclude_pull_requests: true, per_page: 100
+              });
+              let found = false;
+              for await (const {data} of pages) {
+                for (const run of data) {
+                  if (run.conclusion !== 'success') continue;
+                  const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+                    ...context.repo, run_id: run.id, per_page: 100
+                  });
+                  if (!artifacts.some(a => !a.expired && a.name.startsWith('journey-timing-Linux-'))) {
+                    found = true; // No compatible reports: retain the conservative placement.
+                    break;
+                  }
+                  jobs.push(...await github.paginate(github.rest.actions.listJobsForWorkflowRunAttempt, {
+                    ...context.repo, run_id: run.id, attempt_number: run.run_attempt, per_page: 100
+                  }));
+                  core.setOutput(key, run.id);
+                  found = true;
+                  break;
+                }
+                if (found) break;
+              }
+            }
+            fs.writeFileSync(`${root}/linux-journey-jobs.json`, JSON.stringify(jobs));
+      # INF-3622: execution never reads these observations (no --apply-linux),
+      # so an archive this runner cannot fetch leaves the advisory candidate
+      # unmeasured instead of failing the chooser. Run 42921411028's archive sat
+      # on a storage host the PC's resolver stopped answering, and every proof
+      # request failed here before choosing a journey. The failed step and its
+      # error stay on the run; the selection and executed placement are unchanged.
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        if: steps.linux-timing-runs.outputs.verify != ''
+        continue-on-error: true
+        with:
+          pattern: journey-timing-Linux-*
+          run-id: ${{ steps.linux-timing-runs.outputs.verify }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/linux-journey-times/verify
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        if: steps.linux-timing-runs.outputs.journeys != ''
+        continue-on-error: true
+        with:
+          pattern: journey-timing-Linux-*
+          run-id: ${{ steps.linux-timing-runs.outputs.journeys }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/linux-journey-times/journeys
+      - id: select
+        name: Choose and place the journeys
+        run: |
+          node scripts/affected-journeys.ts --named "$NAMED" --json > "$RUNNER_TEMP/affected.json"
+          node scripts/journey-budget.ts --selection "$RUNNER_TEMP/affected.json" --timings "$RUNNER_TEMP/journey-times" --linux-timings "$RUNNER_TEMP/linux-journey-times" --linux-jobs "$RUNNER_TEMP/linux-journey-jobs.json" --platforms "$PLATFORMS" $EVERY > "$RUNNER_TEMP/placement.json"
+        env:
+          NAMED: ${{ inputs.files }}
+          PLATFORMS: ${{ inputs.platforms || 'linux' }}
+          # mac_once places every named file on the Mac too, so an edited
+          # journey with no test that needs a Mac still has its Mac round.
+          EVERY: ${{ (inputs.mac_all || inputs.mac_once) && '--every-on-mac' || '' }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: journey-placement
+          path: |
+            ${{ runner.temp }}/affected.json
+            ${{ runner.temp }}/placement.json
+          retention-days: 14
+  linux-overflow:
+    needs: choose-journeys
+    if: needs.choose-journeys.outputs.linux-count != '0'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.choose-journeys.outputs.linux) }}
+    # Each group's one-based part comes with it from journey-budget.ts, and
+    # whether it holds a journey whose far computer is this one (farLinux).
+    name: ${{ format('{0} · Selected journeys (Linux; part {1})', inputs.trigger || 'Manual request', matrix.part) }}
+    uses: ./.github/workflows/source-journeys.yml
+    with:
+      trigger: ${{ inputs.trigger || 'Manual request' }}
+      hosted: ${{ inputs.hosted || false }}
+      part: ${{ matrix.part }}
+      ref: ${{ github.sha }}
+      artifact-suffix: overflow-${{ strategy.job-index }}
+      suite: affected
+      lane: ${{ matrix.lane }}
+      files: ${{ matrix.files }}
+      far-linux: ${{ matrix.farLinux }}
+      repeat-base: ${{ inputs.base || 'origin/main' }}
+  affected-journeys:
+    needs: choose-journeys
+    name: ${{ format('{0} · Selected app journeys (Mac)', inputs.trigger || 'Manual request') }}
+    # The implicit success() skips on chooser failure; zero skips by this
+    # job's own condition, so its check passes without taking a Mac runner.
+    if: needs.choose-journeys.outputs.count != '0'
+    runs-on: ${{ inputs.hosted && 'macos-15' || inputs.mac_runner || fromJSON(vars.MAC_QUEUES || '{}').journeys || vars.MAC_RUNNER || 'macos-15' }}
+    # Every crewmate works under "Application Support", and so does this job
+    # (verify.yml): a check that only fails from a path with a space fails
+    # here, not only in a working copy.
+    defaults:
+      run:
+        working-directory: Application Support/firstmate
+    steps:
+      - name: Checkout the keep-awake action
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          sparse-checkout: .github/actions/keep-mac-awake
+          fetch-depth: 1
+      - name: Keep the Mac awake
+        uses: ./.github/actions/keep-mac-awake
+      # The requested branch, with the history the comparison with its base
+      # needs (scripts/journey-runs.ts --base).
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          path: Application Support/firstmate
+          fetch-depth: 0
+      - uses: ./Application Support/firstmate/.github/actions/pnpm
+        with:
+          working-directory: Application Support/firstmate
+      # No package cache on a Mac (INF-724): a saved one is reachable only
+      # from its own branch and runner slot, so later jobs almost never read
+      # it back, and saving it took about 2 minutes; an install takes 10 s.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - uses: ./Application Support/firstmate/.github/actions/electron-download
+        with:
+          working-directory: Application Support/firstmate
+      - run: pnpm install --frozen-lockfile
+      # No development signing: running on the Mac, or running every named
+      # test there (mac_all), never asks for a custom signature. Every journey
+      # is an isolated source test on Electron's supplied signature; the
+      # signing proof is verify.yml's own stage (docs/testing.md).
+      # Playwright's window recorder is not part of an install; a journey
+      # that records would otherwise fetch it in the middle of its test.
+      - run: pnpm exec playwright install ffmpeg
+      # The pinned encoder a demo journey records with, from the Actions cache.
+      - uses: ./Application Support/firstmate/.github/actions/demo-encoder
+        with:
+          working-directory: Application Support/firstmate
+      # A Chrome-engine request needs Google Chrome where the engine looks
+      # for it; a Mac test machine without it gets Google's own stable build
+      # (docs/task-browser.md, "Installed browser engines").
+      - name: Install Google Chrome for a Chrome-engine request
+        if: inputs.browser_engine == 'chrome'
+        run: |
+          if [ -x "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" ]; then exit 0; fi
+          dmg="$RUNNER_TEMP/googlechrome.dmg"
+          mount="$RUNNER_TEMP/googlechrome"
+          curl --fail --silent --show-error --location --retry 3 -o "$dmg" https://dl.google.com/chrome/mac/universal/stable/GGRO/googlechrome.dmg
+          hdiutil attach -nobrowse -readonly -mountpoint "$mount" "$dmg"
+          ditto "$mount/Google Chrome.app" "/Applications/Google Chrome.app"
+          hdiutil detach "$mount"
+          "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --version
+      - id: e2e
+        name: Build, then run the chosen journeys
+        # --no-deps: the desktop lane is the other lanes' teardown and a
+        # teardown project ignores the file filter (docs/testing.md). ONLY
+        # keeps the tests tagged MAC_ONLY_TAG; Linux runs the rest, and with
+        # mac_once each edited file's other tests run once here too. After the
+        # rounds pass, each later test of a directly edited file that shares
+        # one app runs by itself (scripts/journey-runs.ts, INF-2340).
+        # The run ends at 75 minutes and the command at 90 (INF-1083, the
+        # captain's check limits); a stuck wait ends sooner, at its own cap.
+        timeout-minutes: 90
+        run: |
+          test -n "$FILES"
+          if [ "$INFINITARY_TASK_BROWSER_ENGINE" = chrome ] && [ ! -x "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" ]; then
+            echo "::error::Google Chrome is not installed on this Mac, so the journeys would open the built-in engine."
+            exit 1
+          fi
+          pnpm build
+          if [ "$STARVE" = true ]; then
+            # The requested load experiment has its own limit (docs/testing.md, "Journeys on request").
+            python3 scripts/starve-check.py --timeout 900 -- node scripts/journey-runs.ts --base "$BASE" --files "$FILES" $ONCE --alone-out playwright-report/alone $ALONE_TAG -- $ONLY
+          else
+            node scripts/journey-runs.ts --base "$BASE" --files "$FILES" $ONCE --alone-out playwright-report/alone $ALONE_TAG -- $ONLY
+          fi
+        env:
+          BASE: ${{ inputs.base || 'origin/main' }}
+          # With mac_once a named file may hold no test that needs a Mac, so
+          # its tagged rounds pass with none (INF-4500, addition 3).
+          ONLY: ${{ !inputs.mac_all && (inputs.mac_once && '--grep @mac-only --pass-with-no-tests' || '--grep @mac-only') || '' }}
+          # Each edited file's other tests once, after its tagged rounds.
+          ONCE: ${{ inputs.mac_once && !inputs.mac_all && '--edited-once-except @mac-only' || '' }}
+          # The edited files' run-alone pass keeps the same tests (INF-2340).
+          ALONE_TAG: ${{ !inputs.mac_all && '--alone-tag @mac-only' || '' }}
+          STARVE: ${{ inputs.starve }}
+          # Off unless the request names Chrome (src/main/host/engineChoice.ts).
+          INFINITARY_TASK_BROWSER_ENGINE: ${{ inputs.browser_engine == 'chrome' && 'chrome' || 'built-in' }}
+          INFINITARY_E2E_RUN_MINUTES: 75
+          INFINITARY_PERF_BUDGETS: ${{ inputs.perf && '1' || '' }}
+          FILES: ${{ needs.choose-journeys.outputs.files }}
+          PLAYWRIGHT_JSON_OUTPUT_FILE: playwright-report/journeys-results.json
+      - name: Keep the run-alone result
+        if: ${{ always() && steps.e2e.outcome != 'skipped' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: e2e-alone-mac
+          path: Application Support/firstmate/playwright-report/alone/
+          if-no-files-found: ignore
+          retention-days: 14
+      - name: Keep the failed journeys' evidence
+        if: ${{ always() && steps.e2e.outcome == 'failure' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: journeys-failures
+          path: Application Support/firstmate/test-results/
+          if-no-files-found: ignore
+          retention-days: 7

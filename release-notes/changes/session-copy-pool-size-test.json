@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "session-copy-pool-size-test",
+      "reason": "Internal: repairs a unit test that measured Node's shared allocation pool, which grew to 64 KiB in Node 24.22, instead of the transcript's first read; nothing in the app changes."
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "downgrade-names-a-paused-sign-in",
+      "kind": "fix",
+      "title": "Activity names the sign-in behind a weaker model",
+      "body": "When a task gets a weaker model than it asked for because a subscription needs you to sign in again, the line in Activity now says so, for example \"Claude's high models are paused until you sign in again.\" Before, it said those models had used up their allowance, even when the allowance was fine.",
+      "area": "crewmates",
+      "noPicture": "Activity shows this line cut to one row at its fixed width, and the whole sentence only on hover, which a picture cannot hold.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

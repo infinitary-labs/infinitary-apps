@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "pr-release-notes-step",
+      "reason": "Adds a pull request check step that refuses a change with no release note or exclusion file and checks the notes ledger. Project tooling only; nothing in the app changes."
+    }
+  ]
+}

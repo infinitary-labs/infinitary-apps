@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-steady-alternating-picture",
+      "reason": "Test only: the phone check's wait before a tap now also counts a target as holding still when its frame stays put and the screen picture alternates between the same two pictures, as XCTest's pictures of the iPad's glass popovers do while the screen is still. No shipped behavior changed."
+    }
+  ]
+}

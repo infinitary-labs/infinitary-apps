@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "firstmate-same-ask-retry",
+      "kind": "fix",
+      "title": "Retry keeps your original message",
+      "body": "When your first mate hits a problem, Retry now continues with your original message and pictures instead of recording your request twice.",
+      "area": "firstmate",
+      "noPicture": "This changes saved-message recovery after a failure, with no new or changed visual controls.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

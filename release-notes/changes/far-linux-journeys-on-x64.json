@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "far-linux-journeys-on-x64",
+      "reason": "Project checks only: a journey request's Linux part holding a journey that reaches this computer over SSH, or runs the command for another computer here, stays on the x64 Linux places instead of overflowing to an arm64 guest. No app behavior change."
+    }
+  ]
+}

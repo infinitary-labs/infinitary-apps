@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "one-memory-figure",
+      "reason": "The home works out one memory-used figure and Automatic's room does not change. Panels lose the raw memory counts: they receive installed memory, the figure, and pressure. The Computers panel is updated separately and keeps its old math only when a reading has no figure."
+    }
+  ]
+}

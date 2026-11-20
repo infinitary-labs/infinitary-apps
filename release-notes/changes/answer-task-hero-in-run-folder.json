@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "answer-task-hero-in-run-folder",
+      "reason": "Internal test fix: answer-task.spec.ts saves its answer-card-stays hero pair in each run's own folder instead of rewriting release-notes/pictures/. No user-facing behavior changes."
+    }
+  ]
+}

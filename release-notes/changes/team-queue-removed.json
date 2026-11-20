@@ -1,0 +1,23 @@
+{
+  "entries": [
+    {
+      "id": "team-queue-removed",
+      "kind": "removal",
+      "area": "projects",
+      "title": "Batched pull requests no longer use a queue inside your project",
+      "body": "Infinitary no longer sets up or reads a queue inside a project. Every project set to batched pull requests now merges your approved changes together as one batch pull request, including a project that still carries the old queue's files. Settings → Projects no longer shows the queue's key, its paused batch or its setup steps. If a project still carries those files, your first mate offers once to have a crewmate remove them with a pull request, and tells you when a rule on the main branch still asks for the old queue's check.",
+      "noPicture": "The change removes panels that showed only for a project carrying the old queue's files; what remains is the Projects tab as every other batched project already showed it.",
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "team-queue-removed-other-computers",
+      "kind": "removal",
+      "area": "devices",
+      "title": "Update Infinitary on the computers that run work for you",
+      "body": "This version changes how your computers work together. A computer that runs work for you takes no new work until it runs this version too, and you can update it from Devices. A computer or phone that shows your first mate keeps working as before.",
+      "noPicture": "This changes which versions of Infinitary work together, not the layout or words of a screen.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

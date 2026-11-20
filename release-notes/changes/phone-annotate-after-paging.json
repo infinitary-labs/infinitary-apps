@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-annotate-after-paging",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Annotate works on every card on your iPhone and iPad",
+      "body": "On your iPhone and iPad, choosing Annotate on words you selected now opens the note editor on a card you reached with the arrows or a swipe. Before, Annotate showed in the menu there and did nothing.",
+      "noPicture": "The note editor looks as it did; only a card reached by moving between cards now opens it.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

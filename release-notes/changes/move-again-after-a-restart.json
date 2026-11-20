@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "move-again-after-a-restart",
+      "kind": "fix",
+      "title": "A computer restarted during the move to Infinitary starts again",
+      "body": "A computer that restarted while it moved your saved work into Infinitary's folder could stay out of reach for good, and Infinitary could keep saying it was already moving your saved work. After the restart, the move now starts again and the computer comes back in reach.",
+      "area": "devices",
+      "noPicture": "Nothing on screen changes: the computer comes back in reach on its own after the restart.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

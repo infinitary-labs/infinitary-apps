@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "thread-reply-settings-collapsed",
+      "kind": "fix",
+      "title": "Your replies in a card's thread show only your words",
+      "body": "When you reply under a card that asks questions or has a preview's settings, the thread used to show those settings as if you had typed them. Your words now stand alone, with one quiet \"settings\" line under them that stays closed until you open it. Opened, it lists each setting on its own row. Whoever wrote the card still receives your settings with your words, as before.",
+      "area": "cards",
+      "noPicture": "Recorded before notes kept pictures; a release review takes one if this becomes a highlight.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "phone-pin-xcode-27",
+      "reason": "Internal: every Mac's phone check now uses one pinned Xcode 27.1 with the iOS 27.0 simulator, named in scripts/phone-pin.json, and the shared virtual Mac image is built from that Xcode. Nothing in the app changes."
+    }
+  ]
+}

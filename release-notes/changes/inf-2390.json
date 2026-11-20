@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "inf-2390",
+      "reason": "Repairs the internal main-workflow contract test to require the existing push and manual triggers; no app or workflow behavior changes."
+    }
+  ]
+}

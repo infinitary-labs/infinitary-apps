@@ -1986,16 +1986,21 @@ export async function startPhoneHome(
           result = { draft, changes: structuredClone(draftChanges) };
           break;
         }
-        // Waits until the card's draft holds these values for each named question and these words, on the computer's own
-        // events, then answers as draft-state does.
+        // Waits until the card's draft holds these values for each named question and these words, or is gone, on the
+        // computer's own events, then answers as draft-state does.
         case "POST draft-wait": {
           let body = "";
           for await (const chunk of request) body += chunk.toString();
-          const want = JSON.parse(body) as { answers?: Record<string, string[]>; words?: string };
+          const want = JSON.parse(body) as {
+            answers?: Record<string, string[]>;
+            words?: string;
+            gone?: boolean;
+          };
           const read = () =>
             core.services.cardDrafts.read().find((one) => one.cardId === "phone-draft-card");
           const holds = () => {
             const draft = read();
+            if (want.gone) return !draft;
             if (!draft) return false;
             if (want.words !== undefined && draft.words !== want.words) return false;
             return Object.entries(want.answers ?? {}).every(([name, values]) => {

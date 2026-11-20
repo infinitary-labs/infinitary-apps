@@ -56,9 +56,18 @@ export class CrewFacts {
     // A renewed conversation's reason rides the next full turn (`runTurn`),
     // never a turn of its own and never a mid-turn steer; why the app
     // stopped a turn part way is a turn of its own, never a mid-turn steer.
+    // A context or refusal restart that waited for a model, with no crewmate
+    // here, is the turn of its own that opens its new conversation, its
+    // brief and guidance served (`CrewSessions.waitingRestart`).
+    const sessionFile = task ? undefined : this.core.options.tasks.get(taskId)?.sessionFile;
+    const waited = (row: InboxRow) =>
+      row.facts?.kind === "conversation-restart" &&
+      (row.facts.restart.changed === "context" || row.facts.restart.changed === "refused") &&
+      sessionFile !== undefined &&
+      row.facts.restart.from === sessionFile;
     const rest = rows.filter(
       (row) =>
-        row.facts?.kind !== "conversation-restart" &&
+        (row.facts?.kind !== "conversation-restart" || waited(row)) &&
         !(running && row.facts?.kind === "turn-resumed"),
     );
     // A policy, override or kept-copy notice alone is guidance, not permission to resume or start.

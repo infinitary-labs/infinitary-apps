@@ -1373,13 +1373,11 @@ export class CrewSupervisor {
     if (!this.moves.mayRouteAgain(taskId)) return undefined;
     return this.moves.routeAgainIfLeft(taskId, { machine, attach }).then((routed) => {
       if (!routed || routed === "wait" || routed === "stale") return routed;
-      const commit = routed.commit;
-      if (!commit) return undefined;
       return {
         model: routed.model,
         ...(routed.binding ? { accountId: routed.binding } : {}),
         thinking: { level: routed.thinkingLevel, ...(routed.quick ? { quick: true } : {}) },
-        commit,
+        commit: routed.commit,
       };
     });
   }
@@ -1387,12 +1385,18 @@ export class CrewSupervisor {
   /**
    * A task's conversation did not open again on its computer in the
    * session this crewmate holds (`PlacedHost.letGo`): the crewmate lets it
-   * go, between turns, so its next turn opens a new one by the ordinary
-   * resume.
+   * go, so its next turn opens a new one by the ordinary resume, once a
+   * turn it was in has ended.
    */
-  placedLetGo(taskId: string): void {
+  placedLetGo(taskId: string, held?: TaskRuntime): void {
     const task = this.tasks.get(taskId);
-    if (!task || task.turn.closing) return;
+    if (!task || task.turn.closing || (held && task !== held)) return;
+    // A turn still out ends first through its own end - taken, failed or
+    // given back to the lane - so none of its rows is lost with the session.
+    if (task.turn.busy) {
+      void this.turns.untilTurnOver(task).then(() => this.placedLetGo(taskId, task));
+      return;
+    }
     this.sessions.releaseSession(task);
     this.tasks.delete(taskId);
     this.facts.broadcastCrewCounts();

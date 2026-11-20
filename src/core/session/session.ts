@@ -148,7 +148,13 @@ export type ContractStamp = {
 export type SessionShape =
   | {
       turns: "rolling";
-      record: { dir: string; resume?: SessionResume; stamp?: ContractStamp };
+      record: {
+        dir: string;
+        resume?: SessionResume;
+        stamp?: ContractStamp;
+        /** Only reattach to the conversation held on a computer that runs work (`CrewmateSpec.reattach`). */
+        reattach?: boolean;
+      };
     }
   | { turns: "one" };
 

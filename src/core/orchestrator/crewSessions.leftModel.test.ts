@@ -64,15 +64,16 @@ function signIns(models: Ref[]) {
 
 /**
  * The real routing stack over sign-ins serving `models` (Sol and Terra on
- * one Codex sign-in unless given), seeded from the starter map.
+ * one Codex sign-in unless given), seeded from the starter map. The Models
+ * board offers `offered` - these and any a computer that runs work serves.
  */
-function realRouting(models: Ref[] = [sol, terra]) {
+function realRouting(models: Ref[] = [sol, terra], offered: Ref[] = models) {
   let slots: ModelSlots | undefined;
   const make = (db: ReturnType<typeof openInMemoryDatabase>) => {
     const settings = new SettingsStore(db);
     slots = new ModelSlots({
       settings,
-      accounts: () => signIns(models),
+      accounts: () => signIns(offered),
       quotaModels: () => undefined,
     });
     // First activation: the starter map places Sol at high and Terra at medium.
@@ -766,4 +767,137 @@ it("waits rather than let the starter map stand in when the only model on the le
   expect(await relaunchAndSteer(h, taskId, sol, accounts)).toBeUndefined();
   expect(routedModels(h, taskId)).toEqual([luna.id]);
   expect(waitNotes(h, taskId)).toHaveLength(1);
+});
+
+// INF-5438 finding 3 and 4: a context-limit restart that waited for a model
+// opens fresh by itself once an account can serve one - with no new message
+// and no relaunch - its brief served on its first turn.
+it("opens a restart that waited for a model once an account serves one, with no message or relaunch", async () => {
+  const routing = realRouting();
+  let terraSignedIn = false;
+  const accountFor = (crew?: { model?: string }) =>
+    crew?.model === terra.id && !terraSignedIn ? undefined : "acct-codex";
+  const accounts: AccountAttachment = {
+    selectForSpawn: vi.fn(async (_task: string, _provider: string, crew?: { model?: string }) =>
+      accountFor(crew),
+    ),
+    pickForSpawn: vi.fn(async (_task: string, _provider: string, crew?: { model?: string }) => {
+      const accountId = accountFor(crew);
+      return { ...(accountId ? { accountId } : {}), record: () => {}, selected: () => {} };
+    }),
+    reselectForResume: vi.fn(async (_taskId: string, held: string | null) => ({
+      ...(held ? { accountId: held } : {}),
+      changed: false,
+    })),
+    labelOf: () => "personal",
+    // What a pick reads of the accounts: Terra's sign-in is part of it.
+    servingState: () => `terra:${terraSignedIn}`,
+  };
+  const crewmate = fakeCrewmate({ model: sol });
+  const fresh = fakeCrewmate({ model: terra, sessionId: "s2" });
+  const h = setup(crewmate, { realRouter: routing.make, accounts, crewmates: [fresh] });
+  const { taskId } = await h.supervisor.intake.commission({
+    title: "Read the big logs",
+    intent: intentOf("read every log part and report"),
+  });
+  await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
+  routing.takeSolOffEveryLevel();
+  crewmate.emit({
+    type: "turn_failed",
+    taskId,
+    error: "This request exceeds the context window. Shorten it before trying again.",
+    contextOverflow: true,
+  });
+  crewmate.emit({ type: "turn_end", taskId });
+  crewmate.finishPrompt();
+  await tick();
+  await tick();
+  expect(h.sessionSpecs).toHaveLength(1);
+  expect(waitNotes(h, taskId)).toHaveLength(1);
+
+  // Terra's sign-in arrives; the lane's next sweep opens the restart fresh.
+  terraSignedIn = true;
+  await h.supervisor.watch.sweepInbox(Date.now() + 60_000);
+  await vi.waitFor(() => expect(h.sessionSpecs).toHaveLength(2));
+  expect(h.sessionSpecs[1]?.model).toEqual(terra);
+  expect(routedModels(h, taskId)).toEqual([sol.id, terra.id]);
+  await vi.waitFor(() => expect(fresh.promptCalls).toHaveLength(1));
+  expect(fresh.promptCalls[0]).toContain("read every log part and report");
+  await h.supervisor.disposeAll();
+});
+
+// INF-5438 finding 4: a wait on a computer that runs work ends when a model
+// only that computer serves takes a level, though nothing here changed.
+it("stops waiting on a computer that runs work once a model only it serves takes a level", async () => {
+  // The board offers Luna, which only that computer's sign-in serves.
+  const routing = realRouting([sol, terra], [sol, terra, luna]);
+  const crewmate = fakeCrewmate({ model: sol });
+  const h = setup(crewmate, { realRouter: routing.make });
+  const taskId = await startedOnSol(h, crewmate);
+  h.tasks.placement.setDevice(taskId, "mini");
+  routing.takeSolOffEveryLevel();
+  // That computer lists Sol, Terra and Luna, but its account serves only
+  // Luna, which the person took off every level.
+  routing.takeOffEveryLevel(luna);
+  const machines = {
+    served: async () => ({
+      available: [sol, terra, luna],
+      catalog: [],
+      note: "the computer's own sign-ins",
+      accounts: new Map(),
+      modelAccounts: new Map([[offeringKey(luna), "acct-there"]]),
+    }),
+    servedState: () => "luna",
+  } as unknown as CrewMachines;
+  const relaunched = reboot(h, vi.fn(), { router: h.router as unknown as Router, machines });
+  expect(await relaunched.reopenModel(taskId, "mini", false)).toBe("wait");
+  expect(relaunched.moves.waitsForModel(taskId)).toBe(true);
+
+  routing.placeHigh(luna);
+  expect(relaunched.moves.waitsForModel(taskId)).toBe(false);
+  await relaunched.disposeAll();
+});
+
+// INF-5438 finding 6: on this Mac a replacement routes only to an account
+// that lists it, so the conversation opens on the model it announces.
+it("waits rather than announce a model the account picked does not list", async () => {
+  const routing = realRouting();
+  const crewmate = fakeCrewmate({ model: sol });
+  const h = setup(crewmate, { realRouter: routing.make });
+  const taskId = await startedOnSol(h, crewmate);
+  routing.takeSolOffEveryLevel();
+  // The Codex account is picked for Terra but lists only Sol.
+  const accounts: AccountAttachment = {
+    selectForSpawn: vi.fn(async () => "acct-codex"),
+    pickForSpawn: vi.fn(async () => ({
+      accountId: "acct-codex",
+      record: () => {},
+      selected: () => {},
+    })),
+    reselectForResume: vi.fn(async (_taskId: string, held: string | null) => ({
+      ...(held ? { accountId: held } : {}),
+      changed: false,
+    })),
+    labelOf: () => "personal",
+    serves: (_accountId, model) => model.id === sol.id,
+  };
+  expect(await relaunchAndSteer(h, taskId, terra, accounts)).toBeUndefined();
+  expect(routedModels(h, taskId)).toEqual([sol.id]);
+  expect(reroutedNotes(h, taskId)).toEqual([]);
+  expect(waitNotes(h, taskId)).toHaveLength(1);
+});
+
+// INF-5438 finding 6: the move is recorded only once the conversation opened
+// on the model routing chose; one that opened on another records nothing.
+it("records no move when the conversation opens on another model than routing chose", async () => {
+  const routing = realRouting();
+  const crewmate = fakeCrewmate({ model: sol });
+  const h = setup(crewmate, { realRouter: routing.make });
+  const taskId = await startedOnSol(h, crewmate);
+  routing.takeSolOffEveryLevel();
+  // The runtime could not resolve Terra and opened on Sol.
+  const asked = await relaunchAndSteer(h, taskId, sol);
+  expect(asked?.model).toEqual(terra);
+  expect(routedModels(h, taskId)).toEqual([sol.id]);
+  expect(reroutedNotes(h, taskId)).toEqual([]);
 });

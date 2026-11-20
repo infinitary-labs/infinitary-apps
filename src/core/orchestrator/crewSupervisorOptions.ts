@@ -168,6 +168,14 @@ export type AccountAttachment = {
   labelOf(accountId: string): string | undefined;
   /** Where a Claude account's access comes from when it is not a subscription. */
   accessOf?(accountId: string): ClaudeAccessSource | undefined;
+  /**
+   * What a pick reads of this Mac's accounts, as one comparable string - each
+   * account, whether it is on, connected or withheld, and the models it
+   * lists - so a wait for a model tries again once one could serve.
+   */
+  servingState?(): string;
+  /** Whether the account lists the model, so a conversation bound to it opens on that model. */
+  serves?(accountId: string, model: { provider: string; id: string }): boolean;
 };
 
 export type CrewSupervisorOptions = {

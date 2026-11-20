@@ -379,6 +379,32 @@ describe("a task that runs on a computer that runs work", () => {
     ).toEqual(CLAUDE_CATALOG.map(() => "acct_claude_there"));
   });
 
+  // INF-5438 finding 10: a model binds the account there whose own list names
+  // it, ahead of a pinned one that lists nothing and only stands in with this
+  // Mac's catalog.
+  it("binds a model to the account there that lists it before a pinned one that lists none", async () => {
+    const [first, second] = CLAUDE_CATALOG;
+    if (!first || !second) throw new Error("The Claude catalog lists fewer than two models.");
+    const at = await world(undefined, {
+      routing: {
+        ...THIS_MAC_ON_CODEX,
+        catalogModels: [...THIS_MAC_ON_CODEX.catalogModels, ...CLAUDE_CATALOG],
+      },
+      signedInTo: [
+        computerAccount("acct_claude_unlisted", CLAUDE_PROVIDER_ID, { pinned: true }),
+        computerAccount("acct_claude_listed", CLAUDE_PROVIDER_ID),
+      ],
+      served: [
+        { accountId: "acct_claude_unlisted", models: [] },
+        { accountId: "acct_claude_listed", models: [{ provider: first.provider, id: first.id }] },
+      ],
+    });
+    const pool = await at.home().placed.served(at.deviceId);
+    expect(pool.modelAccounts?.get(`${first.provider}/${first.id}`)).toBe("acct_claude_listed");
+    // A model only the catalog stands in for still binds the account that lists none.
+    expect(pool.modelAccounts?.get(`${second.provider}/${second.id}`)).toBe("acct_claude_unlisted");
+  });
+
   it("starts a task on a computer signed in only to OpenRouter, on one of that account's OpenRouter models there (FI3-1355)", async () => {
     // OpenRouter is the one subscription this Mac's catalog does not list:
     // the computer's own list is what its tasks route among.

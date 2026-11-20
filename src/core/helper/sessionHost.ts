@@ -277,6 +277,8 @@ type Held = {
   account: string | undefined;
   /** The session the open conversation started over from, until a turn of it finishes (`PlacedState.renewal`). */
   renewal: SessionRenewal | undefined;
+  /** The renewal a conversation let go of for the home to open again carries into that open (`holdReopen`). */
+  heldRenewal?: SessionRenewal;
   opening: Promise<void> | null;
   unsubscribe: (() => Promise<void>) | null;
   readonly orders: Map<string, unknown>;
@@ -584,7 +586,8 @@ export class SessionHost {
     switch (channel) {
       case "inf:session:open": {
         const [open] = request as WorkOrderRequest<"inf:session:open">;
-        return { state: await this.open(held, open.spec) };
+        const state = await this.open(held, open.spec);
+        return state ? { state } : { needsOpen: true };
       }
       case "inf:session:prompt": {
         const [prompt] = request as WorkOrderRequest<"inf:session:prompt">;
@@ -866,7 +869,23 @@ export class SessionHost {
     }
   }
 
-  private async open(held: Held, spec: PlacedSpec): Promise<PlacedState> {
+  /**
+   * Opens the task's conversation from `spec`. A `reattach` open keeps only
+   * the conversation held, running or idle with the same contract, and
+   * otherwise opens nothing and answers undefined, so the home routes the
+   * new conversation first (`reattach-only-open.md`).
+   */
+  private async open(held: Held, spec: PlacedSpec): Promise<PlacedState>;
+  private async open(
+    held: Held,
+    spec: PlacedSpec,
+    reattach: boolean,
+  ): Promise<PlacedState | undefined>;
+  private async open(
+    held: Held,
+    spec: PlacedSpec,
+    reattach = spec.reattach === true,
+  ): Promise<PlacedState | undefined> {
     if (held.state.closed)
       throw new Error("This task's conversation was closed here, so it opens no more.");
     const sourceFacts = sourceContext(await this.options.source?.(), spec.homeSource);
@@ -886,8 +905,9 @@ export class SessionHost {
         this.recordJobs(held, true);
         return this.stateOf(held);
       }
+      if (reattach) return undefined;
       await this.releaseConversation(held);
-    }
+    } else if (reattach) return undefined;
     const opening = (async () => {
       const binding = await this.options.bind(spec.binding);
       const factory = this.options.factories[binding.backend];
@@ -1011,7 +1031,8 @@ export class SessionHost {
       held.personal = personal?.held;
       held.backend = binding.backend;
       held.account = this.options.accounts?.of(binding);
-      held.renewal = session.takeRenewal();
+      held.renewal = session.takeRenewal() ?? held.heldRenewal;
+      held.heldRenewal = undefined;
       held.unsubscribe = await followCompletions(
         session,
         (event) => {
@@ -1130,6 +1151,11 @@ export class SessionHost {
         changed.push(name.split(sep).join("/"));
     }
     let state: PlacedState | undefined;
+    // The home opens it again itself, after routing it (`reattach-only-open.md`).
+    if (reopen && asked.holdReopen) {
+      held.heldRenewal = reopen.renewal;
+      return { status: replaced > 0 ? "changed" : "unchanged", files: changed, reopen: true };
+    }
     if (reopen) {
       try {
         state = await this.open(held, {

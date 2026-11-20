@@ -70,7 +70,14 @@ export class PlacedAccounts
     const pool =
       actualComputerPool(who, catalogWhereUnlisted(signIns, models), models, now) ??
       computerPool(who, signIns, models, now);
-    return { ...pool, deviceId: machine };
+    // A model binds an account whose list names it before one that lists
+    // nothing and only stands in with the catalog.
+    const listed = actualComputerPool(who, signIns, models, now)?.modelAccounts;
+    const modelAccounts: ReadonlyMap<string, string> | undefined =
+      pool.modelAccounts && listed
+        ? new Map([...pool.modelAccounts, ...listed])
+        : pool.modelAccounts;
+    return { ...pool, ...(modelAccounts ? { modelAccounts } : {}), deviceId: machine };
   }
 
   /** What that computer last said of its sign-ins, as one comparable string. */

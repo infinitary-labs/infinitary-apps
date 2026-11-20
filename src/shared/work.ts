@@ -287,6 +287,13 @@ export const placedSpecSchema = z.object({
   secretUses: z.boolean().optional(),
   /** With `secretUses`, asks to keep a secret raised on the home (`secret-asks-elsewhere.md`). */
   secretAsks: z.boolean().optional(),
+  /**
+   * Only reattach to the conversation held there (`reattach-only-open.md`):
+   * one held and running, or idle with the same contract, answers its
+   * state; otherwise nothing opens and the answer says `needsOpen`, so the
+   * home routes the new conversation before it asks for one.
+   */
+  reattach: z.boolean().optional(),
 });
 export type PlacedSpec = z.infer<typeof placedSpecSchema>;
 
@@ -1332,7 +1339,11 @@ export const workOrders = {
   "inf:session:open": {
     effect: "change",
     request: ordered({ spec: placedSpecSchema }),
-    response: z.object({ state: placedStateSchema }),
+    /** `state` always, but for a `reattach` open that found none to keep: `needsOpen` (`reattach-only-open.md`). */
+    response: z.object({
+      state: placedStateSchema.optional(),
+      needsOpen: z.literal(true).optional(),
+    }),
   },
   /** Starts a turn; answers once it has started, and its end is an event. */
   "inf:session:prompt": {
@@ -1418,7 +1429,7 @@ export const workOrders = {
    * results of the calls that fetched a kind's words before they were
    * fenced (`legacy`). `waiting` while it works; a conversation open there
    * is let go of and opened again from its files, and `state` is its own
-   * after. `files` names what changed under its record's folder, by the
+   * after, unless `holdReopen` leaves the open to the home. `files` names what changed under its record's folder, by the
    * names `inf:session:copy` uses, for the home to copy whole.
    */
   "inf:session:delete-outside": {
@@ -1447,11 +1458,18 @@ export const workOrders = {
        * removed first.
        */
       files: z.array(z.string().regex(HANDOVER_FILE_NAME)).max(1024).optional(),
+      /**
+       * The conversation it lets go of is not opened again there; the
+       * answer says `reopen`, and the home opens it (`reattach-only-open.md`).
+       */
+      holdReopen: z.boolean().optional(),
     }),
     response: z.object({
       status: z.enum(["changed", "unchanged", "waiting"]),
       files: z.array(z.string().min(1).max(1024)).max(1024),
       state: placedStateSchema.optional(),
+      /** With `holdReopen`: the conversation was let go of, for the home to open again. */
+      reopen: z.literal(true).optional(),
     }),
   },
   /**

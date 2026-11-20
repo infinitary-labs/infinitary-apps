@@ -172,6 +172,8 @@ export class Router {
       /** The decision ledger every routing decision is recorded in. */
       decisions: DecisionStore;
       availableModels: () => PiModelRef[];
+      /** Whether this Mac's pool is read, so an empty one is known empty. */
+      poolRead?: () => boolean;
       /** The slot record; omitted means every available model routes at medium. */
       slots?: ModelSlots;
       /** Resolves a candidate's def so it is checked before it is chosen. */
@@ -559,7 +561,8 @@ export class Router {
    * (`ModelSlots.routable`), those defaults include it among `available` -
    * this Mac's models, or a computer's own pool. With no slot record, or
    * nothing yet known to be available on this Mac, every model counts as
-   * held; a computer's pool known to be empty holds none but a pin or level.
+   * held; a pool known to be empty - a computer's, or this Mac's once every
+   * account said what it serves - holds none but a pin or level.
    */
   holdsAtALevel(ref: PiModelRef, available?: readonly PiModelRef[]): boolean {
     const key = servedModelKey(ref);
@@ -569,7 +572,7 @@ export class Router {
     if (!slots || slots.slotsOf(ref).length > 0) return true;
     const models = [...(available ?? this.options.availableModels())];
     // Nothing known here yet holds it; a computer's pool known to be empty does not.
-    if (models.length === 0) return available === undefined;
+    if (models.length === 0) return available === undefined && this.options.poolRead?.() !== true;
     const routable = slots.routable(models);
     if (routable.placed === true) return false;
     return routable.models.some((model) => servedModelKey(model) === key);
@@ -577,13 +580,19 @@ export class Router {
 
   /**
    * What routing reads here of Settings and the models, for a wait to compare
-   * (`TaskMoves.waitsForModel`): the pins and levels, what each level holds,
-   * and the models this Mac's accounts serve.
+   * (`TaskMoves.waitsForModel`): the pins and levels, the slot record - a
+   * model only another computer serves included - what each level holds
+   * here, the models this Mac's accounts serve, and which models' allowance
+   * is spent.
    */
   routingState(): string {
     const available = this.options.availableModels();
     return JSON.stringify([
       this.options.settings.getRoutingSettings(),
+      this.options.slots?.state() ?? null,
+      (this.options.quota.latestModels()?.models ?? []).map(
+        (model) => `${model.provider}/${model.id}:${model.effectivePercentRemaining === 0}`,
+      ),
       (this.options.slots?.routable(available).models ?? []).map(
         (model) => `${servedModelKey(model)}@${model.slot}`,
       ),

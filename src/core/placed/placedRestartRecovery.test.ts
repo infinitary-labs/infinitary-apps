@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   api,
   gate,
+  MODEL,
   model,
   OTHER_MODEL,
   PROVIDER,
@@ -121,7 +122,7 @@ describe("reopening after a work computer restarts, when the task's model left e
   it("records the move only once that computer answers the conversation open on the new model", async () => {
     const at = await world();
     const taskId = "t-rerouted";
-    model([{ text: "Started." }, { text: "On the other model." }]);
+    model([{ text: "Started on it." }, { text: "On the other model." }]);
     await at.start(taskId);
     const home = at.home();
     await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
@@ -158,5 +159,103 @@ describe("reopening after a work computer restarts, when the task's model left e
     await expect.poll(() => letGo.mock.calls.length).toBe(1);
     expect(letGo).toHaveBeenCalledWith(taskId);
     expect(api.requests.length).toBe(requests);
+  });
+
+  // INF-5438 finding 7: a conversation let go of while its turn is still out
+  // there lets that turn end through its own end first, so its words are
+  // answered once and none is lost with the session.
+  it("lets a task go only once the turn it is in has ended", async () => {
+    const at = await world();
+    const taskId = "t-cut";
+    const answer = gate();
+    model([{ held: answer.held, text: "The footer is fixed." }]);
+    try {
+      await at.start(taskId);
+      await expect.poll(() => api.openRequests()).toBe(1);
+      const home = at.home();
+      const released = vi.spyOn(home.supervisor.sessions, "releaseSession");
+
+      home.supervisor.placedLetGo(taskId);
+      expect(released).not.toHaveBeenCalled();
+      answer.open();
+      await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("The footer is fixed.");
+      await expect.poll(() => released.mock.calls.length).toBe(1);
+      // The brief its turn served is answered, not left on the lane.
+      expect(home.inbox.allFor(taskId)).toEqual([]);
+    } finally {
+      answer.open();
+    }
+  });
+
+  // INF-5438 finding 1: a resume asks the computer only to reattach first,
+  // and routes only once it answers that no conversation is held there, so
+  // nothing new opens on a model that left every level.
+  it("routes a resumed task only after its computer answers that it holds no conversation", async () => {
+    const at = await world();
+    const taskId = "t-resumed";
+    model([{ text: "Started on it." }, { text: "On the other model." }]);
+    await at.start(taskId);
+    await expect.poll(() => at.home().tasks.get(taskId)?.activity).toBe("idle");
+    await at.stopComputer();
+    await at.restartHome();
+    await at.restartComputer();
+    await at.inReach(taskId);
+    const home = at.home();
+    const opens: { reattach: boolean; model?: string }[] = [];
+    const ask = home.devices.ask.bind(home.devices);
+    vi.spyOn(home.devices, "ask").mockImplementation((device, channel, args) => {
+      if (channel === "inf:session:open") {
+        const [open] = args as [{ spec: { reattach?: boolean; model?: { id: string } } }];
+        opens.push({
+          reattach: open.spec.reattach === true,
+          ...(open.spec.model ? { model: open.spec.model.id } : {}),
+        });
+      }
+      return ask(device, channel, args);
+    });
+    const commit = vi.fn(() => true);
+    const routed = vi
+      .spyOn(home.supervisor.moves, "routeAgainIfLeft")
+      .mockImplementation(async () => {
+        // Asked only once the computer said it holds nothing to reattach to.
+        expect(opens).toEqual([{ reattach: true }]);
+        return {
+          model: { provider: PROVIDER, id: OTHER_MODEL },
+          thinkingLevel: "low",
+          providerName: "Stub",
+          commit,
+        };
+      });
+
+    await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("On the other model.");
+    expect(routed).toHaveBeenCalledTimes(1);
+    // The one conversation opened anew opened on the model routing chose.
+    expect(opens).toEqual([{ reattach: true }, { reattach: false, model: OTHER_MODEL }]);
+    expect(commit).toHaveBeenCalledTimes(1);
+    expect(api.requests.at(-1)?.body.model).toBe(OTHER_MODEL);
+  });
+
+  it("reattaches a resumed task to the conversation its computer holds, routing nothing", async () => {
+    const at = await world();
+    const taskId = "t-held";
+    model([{ text: "Started on it." }, { text: "Still on the first model." }]);
+    await at.start(taskId);
+    await expect.poll(() => at.home().tasks.get(taskId)?.activity).toBe("idle");
+    // Only this Mac restarts: the computer still holds the idle conversation.
+    await at.restartHome();
+    await at.inReach(taskId);
+    const home = at.home();
+    const routed = vi.spyOn(home.supervisor.moves, "routeAgainIfLeft").mockResolvedValue({
+      model: { provider: PROVIDER, id: OTHER_MODEL },
+      thinkingLevel: "low",
+      providerName: "Stub",
+      commit: () => true,
+    });
+
+    await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Still on the first model.");
+    expect(routed).not.toHaveBeenCalled();
+    expect(api.requests.at(-1)?.body.model).toBe(MODEL);
   });
 });

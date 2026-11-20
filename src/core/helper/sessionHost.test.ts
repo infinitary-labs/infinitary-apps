@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { PROTOCOL_VERSION } from "@shared/ipc";
+import { fenceClosing, fenceOpening } from "@shared/outsideData";
 import {
   type PlacedSpec,
   placedTaskFolders,
@@ -403,7 +404,7 @@ describe("a conversation held on a computer that runs work", () => {
         },
       },
     ]);
-    expect(again.state.resume).toBe(held.state.resume);
+    expect(again.state?.resume).toBe(held.state.resume);
     await at.order("inf:session:prompt", [{ orderId: "rows:2", task: TASK, text: "Continue." }]);
     await at.ended(2);
     expect(api.requests.at(-1)?.body.tools?.map((tool) => tool.name)).toContain("prepare_change");
@@ -425,10 +426,78 @@ describe("a conversation held on a computer that runs work", () => {
         spec: { ...at.spec, model: { provider: PROVIDER, id: OTHER_MODEL } },
       },
     ]);
-    expect(again.state.model).toEqual({ provider: PROVIDER, id: OTHER_MODEL });
+    expect(again.state?.model).toEqual({ provider: PROVIDER, id: OTHER_MODEL });
     await at.order("inf:session:prompt", [{ orderId: "rows:2", task: TASK, text: "Continue." }]);
     await at.ended(2);
     expect(api.requests.at(-1)?.body.model).toBe(OTHER_MODEL);
+  });
+
+  // INF-5438 finding 1: an open asked only to reattach never creates or
+  // replaces a conversation there; it answers that a new one is needed, so
+  // the home routes first (`reattach-only-open.md`).
+  it("answers that a new conversation is needed when asked only to reattach and nothing is held", async () => {
+    const at = await placed();
+    const answer = await at.order("inf:session:open", [
+      { orderId: `open:${TASK}:1`, task: TASK, spec: { ...at.spec, reattach: true } },
+    ]);
+    expect(answer).toEqual({ needsOpen: true });
+    const roster = await at.order("inf:session:roster", []);
+    expect(roster.tasks.find((entry) => entry.task === TASK)?.open).not.toBe(true);
+  });
+
+  it("keeps an idle conversation's model when asked only to reattach on another", async () => {
+    const at = await placed();
+    await at.open();
+    model([{ text: "Started." }, { text: "Still on the first model." }]);
+    await at.order("inf:session:prompt", [{ orderId: "rows:1", task: TASK, text: "Start." }]);
+    await at.ended(1);
+
+    const asked = await at.order("inf:session:open", [
+      {
+        orderId: `open:${TASK}:2`,
+        task: TASK,
+        spec: { ...at.spec, model: { provider: PROVIDER, id: OTHER_MODEL }, reattach: true },
+      },
+    ]);
+    expect(asked).toEqual({ needsOpen: true });
+    // The conversation it held is the one that answers the next turn.
+    await at.order("inf:session:prompt", [{ orderId: "rows:2", task: TASK, text: "Continue." }]);
+    await at.ended(2);
+    expect(api.requests.at(-1)?.body.model).toBe(MODEL);
+  });
+
+  // INF-5438 finding 2: a cleanup that lets the conversation go leaves it
+  // closed for the home to open again after routing it, rather than opening
+  // it there again on the model it had.
+  it("opens nothing again after a cleanup the home asked to hold the reopen of", async () => {
+    const at = await placed();
+    await at.open();
+    model([{ text: "Read the mail." }]);
+    await at.order("inf:session:prompt", [{ orderId: "rows:1", task: TASK, text: "Read it." }]);
+    await at.ended(1);
+    const read = Date.parse("2026-11-01T00:00:00.000Z");
+    const sessions = placedTaskFolders(join(at.dataDir, "tasks"), TASK).sessions;
+    const [file] = readdirSync(sessions).filter((name) => name.endsWith(".jsonl"));
+    if (!file) throw new Error("The conversation saved no record.");
+    const fence = { label: "gmail", value: "0123456789abcdef", at: read };
+    writeFileSync(
+      join(sessions, file),
+      `${readFileSync(join(sessions, file), "utf8")}${JSON.stringify({ type: "note", text: `${fenceOpening(fence)} a message ${fenceClosing(fence.label, fence.value)}` })}\n`,
+    );
+
+    const answer = await at.order("inf:session:delete-outside", [
+      {
+        orderId: "outside:1",
+        task: TASK,
+        kinds: [{ label: fence.label, until: read + 1, note: "A message was removed." }],
+        legacy: [],
+        holdReopen: true,
+      },
+    ]);
+    expect(answer).toMatchObject({ status: "changed", reopen: true });
+    expect(answer).not.toHaveProperty("state");
+    const roster = await at.order("inf:session:roster", []);
+    expect(roster.tasks.find((entry) => entry.task === TASK)?.open).not.toBe(true);
   });
 
   // Intent: INF-311's accepted whole-call deadline includes waiting for prior events.

@@ -237,7 +237,11 @@ type RoutingRow = {
   rule: string | null;
   served: string | null;
   at: number;
-  /** `latestChosenSlots` only: the facts' named flag, as SQLite reads a JSON boolean. */
+  /**
+   * `latestChosenSlots` only: the facts' named flag, as SQLite reads a JSON
+   * boolean; a row from before it was written reads its selection's
+   * `named`, and one with neither is null.
+   */
   named?: number | null;
 };
 
@@ -552,7 +556,8 @@ export class DecisionStore {
       this.db,
       `SELECT latest.id, latest.task_id, latest.provider, latest.model, latest.bucket,
          latest.rule, latest.served, latest.at,
-         json_extract(latest.facts_json, '$.named') AS named
+         COALESCE(json_extract(latest.facts_json, '$.named'),
+           json_extract(latest.facts_json, '$.selection.decidedBy') = 'named') AS named
        FROM json_each(?) AS asked CROSS JOIN decisions AS latest
        WHERE latest.id = (
          SELECT id FROM decisions WHERE kind = 'routing' AND task_id = asked.value

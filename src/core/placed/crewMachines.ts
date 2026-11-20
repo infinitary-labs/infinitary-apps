@@ -2,7 +2,7 @@ import type { CutOffClass } from "@shared/authFailure";
 import type { InvokeRequest, InvokeResponse } from "@shared/ipc";
 import type { ComputerSignIns, signInPlace } from "@shared/signIns";
 import type { placedTaskFolders, WorkingCopyBase, WorkOrderResponse } from "@shared/work";
-import type { ContractChangeName } from "../connection/contractChanges";
+import { type ContractChangeName, contractChange } from "../connection/contractChanges";
 import type { JobExit } from "../jobs/jobManager";
 import type { ComputerPool } from "../routing/computerPool";
 import type { PersonalVersion } from "../session/personalSet";
@@ -17,6 +17,26 @@ import type { PlacedCopy } from "./placedCopies";
  * view of placed work, what it does for a placed task, and where a task's
  * browser there is heard.
  */
+
+/**
+ * A computer that keeps only the conversation it holds when asked to
+ * reattach, and otherwise opens nothing until the home routes a new one
+ * (`reattach-only-open.md`).
+ */
+export const REATTACH_ONLY_OPEN = contractChange("reattach-only-open");
+
+/**
+ * A reattach-only open found no conversation to keep there: nothing opened,
+ * and the home routes the new conversation and asks for it
+ * (`reattach-only-open.md`).
+ */
+export class NeedsNewConversation extends Error {
+  constructor(taskId: string) {
+    // i18n-exempt: an internal signal the home catches; no person reads it.
+    super(`Task ${taskId} holds no conversation to reattach to there, so a new one opens.`);
+    this.name = "NeedsNewConversation";
+  }
+}
 
 /** What the supervisor does for the placed tasks (`CrewSupervisor`). */
 export type PlacedHost = {
@@ -111,6 +131,12 @@ export type CrewMachines = {
    * True while the roster is unread, since nothing new can open then.
    */
   conversationOpen?(machine: string, taskId: string): boolean;
+  /**
+   * Whether that computer opens only the conversation it holds when asked to
+   * reattach, and answers that a new one is needed otherwise
+   * (`reattach-only-open.md`), so the home routes before anything new opens.
+   */
+  reattachOnly?(machine: string): boolean;
   /**
    * What that computer last said it serves, for a wait for a model to
    * compare (`TaskMoves.waitsForModel`); a sign-in it adds or an allowance

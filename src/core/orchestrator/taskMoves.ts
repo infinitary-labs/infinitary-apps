@@ -65,14 +65,13 @@ export type RoutedAgain = {
   quick?: true;
   providerName: string;
   /**
-   * On a computer that runs work, the move is recorded only once that
-   * computer answers that a conversation opened on this model: `commit`
-   * writes it then, and answers false when a stop, a close or another move
-   * took the task meanwhile. A conversation it reattached to, still on the
-   * old model, records nothing. Absent here, where the move is recorded as
-   * it is chosen.
+   * The move is recorded only once a conversation opened on this model -
+   * here, or as a computer that runs work answers: `commit` writes it then,
+   * and answers false when a stop, a close or another move took the task
+   * meanwhile. A conversation that opened on another model, or one
+   * reattached to on the old model, records nothing.
    */
-  commit?: () => boolean;
+  commit: () => boolean;
 };
 
 /**
@@ -446,10 +445,9 @@ export class TaskMoves {
    * builder's provider (R9) - among the models that computer's sign-ins
    * serve. A custom connection routes only among its own models. It answers
    * the model the conversation opens with, its effort, and on this Mac its
-   * account; here the new routing row, the record's model and account and
-   * one timeline and feed line commit together, and on a computer that runs
-   * work only once that computer answers the conversation opened on it
-   * (`RoutedAgain.commit`). Undefined keeps the routed model: a level, a
+   * account; the new routing row, the record's model and account and one
+   * timeline and feed line commit together, only once the conversation
+   * opened on it (`RoutedAgain.commit`). Undefined keeps the routed model: a level, a
    * pin or the defaults standing in for levels still hold it, the newest
    * model chosen was named and served (at the start or by a move), or it
    * never routed. "wait" says no other model on the levels that one of the
@@ -573,12 +571,12 @@ export class TaskMoves {
         const binding = pool
           ? (pool.modelAccounts?.get(offeringKey(to)) ?? pool.accounts.get(to.provider))
           : undefined;
+        // Here, the account picked must list the model, or it would open on another.
         const serves = pool
           ? binding !== undefined
-          : custom ||
-            !this.options.accounts ||
-            accountId !== undefined ||
-            this.options.accountlessServes?.(to) === true;
+          : accountId !== undefined
+            ? this.options.accounts?.serves?.(accountId, to) !== false
+            : custom || !this.options.accounts || this.options.accountlessServes?.(to) === true;
         if (!serves) {
           passed.add(offeringKey(to));
           found = look();
@@ -611,7 +609,6 @@ export class TaskMoves {
           this.modelWaits.delete(taskId);
           return true;
         };
-        if (local) commit();
         const level = now.preview.result.servedBucket ?? now.preview.result.bucket;
         const chosen =
           record.shape?.override_reasoning ?? router.reasoningChoice(to, level) ?? undefined;
@@ -622,7 +619,7 @@ export class TaskMoves {
           thinkingLevel: chosen ?? levelDefaultReasoning(level),
           ...(record.shape?.rigor === "quick" && !chosen ? { quick: true as const } : {}),
           providerName: this.providerName(to.provider),
-          ...(local ? {} : { commit }),
+          commit,
         };
       }
       if (stale()) return "stale";
@@ -682,8 +679,9 @@ export class TaskMoves {
 
   /**
    * What a wait for a model compares: where it opens, the task's newest
-   * routing choice (a move writes a newer one), the routing settings,
-   * levels and models here, and what that computer last said it serves.
+   * routing choice (a move writes a newer one), the routing settings, slot
+   * record, levels, models and spent allowance here, and the accounts of
+   * where it opens - this Mac's, or what that computer last said it serves.
    */
   private modelsNow(taskId: string, machine: string): string {
     const routed = this.options.router?.servedChoice(taskId);
@@ -691,7 +689,9 @@ export class TaskMoves {
       machine,
       routed ? offeringKey(routed.model) : "",
       this.options.router?.routingState() ?? "",
-      machine === LOCAL_MACHINE_ID ? "" : (this.options.machines?.servedState?.(machine) ?? ""),
+      machine === LOCAL_MACHINE_ID
+        ? (this.options.accounts?.servingState?.() ?? "")
+        : (this.options.machines?.servedState?.(machine) ?? ""),
     ].join("\n");
   }
 

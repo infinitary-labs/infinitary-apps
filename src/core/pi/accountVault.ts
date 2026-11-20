@@ -1069,6 +1069,21 @@ export class AccountVault {
   }
 
   /**
+   * Whether the pool above is read: every enabled account has said what it
+   * serves - a Pi runtime that settled, another client's status - so an
+   * empty pool is known empty, not yet unread.
+   */
+  poolRead(): boolean {
+    return this.liveAccounts().every(
+      (account) =>
+        !account.enabled ||
+        (backendForProvider(account.providerId) === "pi"
+          ? this.pi.settledRuntime(account.id) !== undefined
+          : this.lastStatus.has(account.id)),
+    );
+  }
+
+  /**
    * The same pool, still attributed to the account that serves it. The union
    * above loses that. Slots are keyed by offering (provider/model), not
    * account; this attributed form is how Settings lists who can serve a

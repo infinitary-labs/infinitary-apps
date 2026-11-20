@@ -206,6 +206,7 @@ export function startHomeRouting(options: {
     settings,
     decisions: ledger,
     availableModels,
+    poolRead: () => vault.poolRead(),
     slots,
     capabilityFor,
     withheldModels: () => vault.withheldModels(),

@@ -449,7 +449,14 @@ export async function placed(
     },
     /** Whether the run had its conversations keep a crewmate's builds and tests below the UI. */
     belowUi: () => belowUi,
-    open: () => order("inf:session:open", [{ orderId: `open:${TASK}:1`, task: TASK, spec }]),
+    /** The home opens the conversation: one it holds, or a new one on `spec`. */
+    open: async () => {
+      const answer = await order("inf:session:open", [
+        { orderId: `open:${TASK}:1`, task: TASK, spec },
+      ]);
+      if (!answer.state) throw new Error("The computer opened no conversation.");
+      return { state: answer.state };
+    },
     /** The home's turn ends: the computer said `turn_ended` for this turn. */
     ended: (turn: number) =>
       expect

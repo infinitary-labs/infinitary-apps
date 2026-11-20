@@ -13,6 +13,7 @@ import { isRetiredProvider } from "@shared/providers";
 import { isFolderRepair, levelDefaultReasoning } from "@shared/routingPolicy";
 import { capWithOverflow } from "../overflow";
 import { crewmateHandoverDir, crewmateSessionsDir, crewmateTempDir } from "../paths";
+import { NeedsNewConversation } from "../placed/crewMachines";
 import { crewRunbookText } from "../runbooks/runbooks";
 import { OpenReads } from "../session/openReads";
 import { LOCAL_MACHINE_ID, type ModelSession, type SessionSpec } from "../session/session";
@@ -602,6 +603,8 @@ export class CrewSessions {
     taskId: string,
     move?: MoveTarget,
     restart?: CrewmateRestart,
+    /** The computer answered that it holds no conversation to reattach to. */
+    known = false,
   ): Promise<TaskRuntime> {
     const record = this.core.options.tasks.get(taskId);
     if (!record) throw new Error(`Unknown task "${taskId}".`);
@@ -660,13 +663,26 @@ export class CrewSessions {
     // conversation open on its computer waits for no model, and its move
     // is recorded only if that computer opens a new conversation on it.
     const moving = fresh?.changed === "computer";
+    // A computer that opens only what it holds is asked that first, on the
+    // model and backend it holds, and this routes only once it answers that
+    // a new conversation is needed (`reattach-only-open.md`).
+    const reattaching =
+      !known &&
+      !move &&
+      !fresh &&
+      machine !== LOCAL_MACHINE_ID &&
+      this.core.options.machines?.reattachOnly?.(machine) === true;
+    // An older computer's open may reattach to a conversation open there.
     const attach =
+      !known &&
+      !reattaching &&
       machine !== LOCAL_MACHINE_ID &&
       !fresh &&
       this.core.options.machines?.conversationOpen?.(machine, record.id) === true;
-    const routedAgain = move
-      ? undefined
-      : await this.core.moves.routeAgainIfLeft(record.id, { machine, ownMove: moving, attach });
+    const routedAgain =
+      move || reattaching
+        ? undefined
+        : await this.core.moves.routeAgainIfLeft(record.id, { machine, ownMove: moving, attach });
     if (routedAgain === "wait") {
       // A restart that waits for a model is kept on the lane, so it opens
       // fresh once one can take it (`waitingRestart`).
@@ -780,6 +796,7 @@ export class CrewSessions {
           machineId: machine,
           cwd,
           ...(fresh ? {} : { resumeToken: record.sessionFile }),
+          ...(reattaching ? { reattach: true } : {}),
           ...(move
             ? { model: move.model, thinkingLevel: move.thinkingLevel }
             : rerouted
@@ -798,13 +815,16 @@ export class CrewSessions {
       );
     } catch (caught) {
       if (this.core.tasks.get(record.id) === task) this.core.tasks.delete(record.id);
+      // Nothing is held there: a new conversation opens, routed first.
+      if (reattaching && caught instanceof NeedsNewConversation)
+        return this.openResumed(taskId, move, restart, true);
       throw caught;
     }
     task.session = session;
-    // There, the move is recorded once the conversation opened on its model;
-    // one it reattached to, still on the old model, records nothing.
+    // The move is recorded once the conversation opened on its model; one
+    // that opened on another, or reattached to on the old model, records nothing.
     const opened = session.modelRef();
-    if (rerouted?.commit && opened && offeringKey(opened) === offeringKey(rerouted.model))
+    if (rerouted && opened && offeringKey(opened) === offeringKey(rerouted.model))
       rerouted.commit();
     this.endIfLetGo(task);
     task.unsubscribe = await this.core.toolHooks.follow(task, session);

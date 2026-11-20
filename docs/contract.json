@@ -91869,6 +91869,9 @@
                     },
                     "secretAsks": {
                       "type": "boolean"
+                    },
+                    "reattach": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -92062,11 +92065,12 @@
                 "controlProfile",
                 "streaming"
               ]
+            },
+            "needsOpen": {
+              "type": "boolean",
+              "const": true
             }
-          },
-          "required": [
-            "state"
-          ]
+          }
         }
       },
       "inf:session:prompt": {
@@ -92769,6 +92773,9 @@
                     "type": "string",
                     "pattern": "^[0-9a-f]{16}-[A-Za-z0-9_-]{1,100}\\.[A-Za-z0-9]{1,16}$"
                   }
+                },
+                "holdReopen": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -92972,6 +92979,10 @@
                 "controlProfile",
                 "streaming"
               ]
+            },
+            "reopen": {
+              "type": "boolean",
+              "const": true
             }
           },
           "required": [

@@ -61,6 +61,23 @@ export class AccountSelector {
 
   constructor(private readonly options: AccountSelectorOptions) {}
 
+  /** What a pick reads of the accounts, as one comparable string (`AccountAttachment.servingState`). */
+  servingState(): string {
+    const pool = this.options.pool;
+    return JSON.stringify([
+      pool
+        .list()
+        .map((account) => [
+          account.id,
+          account.providerId,
+          account.enabled,
+          pool.connectedSync(account.id) ?? null,
+          pool.withheldReason(account.id) ?? null,
+        ]),
+      this.options.accountModels?.() ?? null,
+    ]);
+  }
+
   /**
    * Pick the account of `piProviderId` serving a task spawn, and record why.
    * A crewmate's spawn names its `crew` model: the accounts are read in that

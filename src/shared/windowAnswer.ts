@@ -1,5 +1,12 @@
-import type { KeyReminders } from "@shared/keyReminders";
-import { type WindowAnswer, type WindowChannel, windowAskSchema } from "@shared/windowAsks";
+import { parseInvokeRequest } from "./ipc";
+import type { KeyReminders } from "./keyReminders";
+import {
+  namedFieldsOver,
+  WINDOW_VALUE_OF,
+  type WindowAnswer,
+  type WindowChannel,
+  windowAskSchema,
+} from "./windowAsks";
 
 /** This window's key reminder, which only its own program keeps (docs/keyboard.md, "The key reminder"). */
 export type WindowKeyReminders = {
@@ -14,7 +21,8 @@ export function answerKeyReminders(
   args: readonly unknown[],
 ): KeyReminders {
   if (!reminders) throw new Error("This window keeps no key reminder yet. Ask again in a moment.");
-  if (channel === "inf:keyboard:reminders:set") return reminders.setOn(args[0] === true);
+  if (channel === "inf:keyboard:reminders:set")
+    return reminders.setOn(parseInvokeRequest(channel, args)[0]);
   return reminders.current();
 }
 
@@ -34,7 +42,21 @@ export async function answerWindowAsk(
   if (!asked.success || asked.data.deviceId !== ownId) return;
   let said: WindowAnswer;
   try {
-    said = { ok: true, result: await answer(asked.data.channel, asked.data.args) };
+    const { channel, args, fields } = asked.data;
+    const wholeRead = WINDOW_VALUE_OF[channel];
+    // A change to a shared value applies only the named fields over this
+    // window's own value now, so its own edit since the ask was written stays.
+    const request =
+      fields && wholeRead
+        ? [
+            namedFieldsOver(
+              (await answer(wholeRead, [])) as Record<string, unknown>,
+              args[0] as Record<string, unknown>,
+              fields,
+            ),
+          ]
+        : args;
+    said = { ok: true, result: await answer(channel, request) };
   } catch (error) {
     const message = (error instanceof Error ? error.message : String(error)).slice(0, 400);
     said = { ok: false, message: message || "The window could not do it." };

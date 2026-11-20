@@ -25,7 +25,6 @@ import { type AuthPromptView, providerServesRole } from "@shared/providers";
 import { releaseNoteToShow } from "@shared/releaseTracking";
 import type { RemoteLoginRefusedAnswer } from "@shared/remoteLogin";
 import { opensPullRequest, repoRemovalRefusal } from "@shared/repos";
-import { isWindowChannel } from "@shared/windowAsks";
 import { resolveWorkComputer } from "@shared/workComputer";
 import { WORK_SETUP_ONLY } from "@shared/workSetup";
 import { asAView, askedFromAView } from "./askedFromAView";
@@ -187,7 +186,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     options.viewWindows ??
     new ViewWindows({
       liveToView: (deviceId, channel, payload, change) =>
-        services.workDevices.liveToView(deviceId, channel, payload, change),
+        services.workDevices.liveToView(deviceId, channel, payload, change, true),
     });
   /** The panel library as this run read it, which its build fixed (`inf:plugins:library`). */
   let panelLibrary: Promise<PanelLibraryFile[]> | undefined;
@@ -1548,6 +1547,8 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
   // Its own queue still takes the readiness snapshot after the previous download.
   let voiceTail = Promise.resolve();
   let setupTail = Promise.resolve();
+  /** Each window's own changes, in order (`route`). */
+  const windowTails = new Map<string, Promise<void>>();
   // A work request is a device's own, about the conversation it holds; it
   // never touches the action catalog.
   const answerWork = async <C extends WorkInvokeChannel>(
@@ -1636,16 +1637,6 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       const [id, answer] = parseInvokeRequest("inf:view:answer", rawArgs);
       return Promise.resolve(viewWindows.answered(id, answer, actor) as InvokeResponse<C>);
     }
-    // A read the first mate asks of a window's own computer (`./viewWindows.ts`).
-    if (
-      actor?.kind === "firstmate" &&
-      actor.window &&
-      isWindowChannel(channel) &&
-      invokeContract[channel].effect === "read"
-    )
-      return viewWindows.ask(actor.window, channel, rawArgs as unknown[]) as Promise<
-        InvokeResponse<C>
-      >;
     if (actor?.kind === "device")
       return Promise.reject(
         new Error(`${channel} is not a request a computer that runs work asks.`),
@@ -1695,6 +1686,23 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
         () => undefined,
         () => undefined,
       );
+      return result;
+    }
+    // A change asked of a paired Mac's window waits on that connection, so
+    // it holds only that window's other changes, never this computer's.
+    const window = actor?.kind === "firstmate" ? actor.window : undefined;
+    if (window) {
+      const result = (windowTails.get(window.deviceId) ?? Promise.resolve()).then(() =>
+        dispatch(channel, rawArgs, actor),
+      );
+      const settled = result.then(
+        () => undefined,
+        () => undefined,
+      );
+      windowTails.set(window.deviceId, settled);
+      void settled.then(() => {
+        if (windowTails.get(window.deviceId) === settled) windowTails.delete(window.deviceId);
+      });
       return result;
     }
     const result = catalogTail.then(() => dispatch(channel, rawArgs, actor));

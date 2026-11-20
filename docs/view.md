@@ -169,10 +169,15 @@ A card's demo recording plays in this app's picture viewer a range at a time (a 
 A window's own settings are its computer's, so the first mate changes them at the window the captain names, never at its own computer's in their place (the captain's pick on the Settings parity review).
 `app_state` marks those lines `window: true`: a window's look and layout, its update check and channel, and its key reminder (`WINDOW_CHANNELS`, `src/shared/windowAsks.ts`).
 `app_change` takes the Mac by its name or id in `computer`, from the computers that control this one; left out, it means this computer.
-The core asks that Mac's windows one live frame (`inf:view:ask`, `ViewWindows`, `src/core/viewWindows.ts`), only those that list the `window-asks` contract change, and the window answers as its own Settings would, through the same `ViewBackend.dispatch` and the same key reminder store (`answerWindowAsk`, `src/main/view/windowAsks.ts`), by `inf:view:answer`.
-The core hears that answer only from the window it asked, as the captain at that computer, and runs the catalog line's checks, trail and operation as for any change; the trail names the computer ("usage shown in usd on Studio").
-The key reminder only a window's own program keeps, so the first mate's computer asks its own window for it through the local door (`LocalWindow`), and a reminder no window answers reads as unknown in `app_state`.
-A window that is not connected, or does not answer within thirty seconds (`WINDOW_ANSWER_WAIT_MS`), leaves the change unmade and the first mate told so in plain words.
+The core sends one live frame (`inf:view:ask`, `ViewWindows`, `src/core/viewWindows.ts`) to one connection of that Mac, the newest that lists the `window-asks` contract change, so the ask's id reaches no other connection and the change runs once.
+The window answers as its own Settings would, through the same `ViewBackend.dispatch` and the same key reminder store (`answerWindowAsk`, `src/shared/windowAnswer.ts`), by `inf:view:answer`.
+A change to the look or the layout carries the named action's fields, and the window applies those fields over its own value as it is then, so an edit made in its own Settings since the first mate read it stays.
+The core hears the answer only from the window it asked, as the captain at that computer, and uses it only once it matches the request's answer in the contract.
+It runs the catalog line's checks, trail and operation as for any change, taking the value after from the window's own answer rather than a second read, and the trail names the computer ("usage shown in usd on Studio"); Check for updates there is a line of its own too.
+A window's changes wait only on that window's other changes, never on this computer's Settings writes.
+The key reminder only a window's own program keeps, so the first mate's computer asks its own window for it through the local door (`LocalWindow`, and the window beside a command), and a reminder no window answers reads as unknown in `app_state`.
+When no such window is connected, nothing is sent and nothing changes, and the first mate is told so.
+When a window was asked but did not answer within thirty seconds (`WINDOW_ANSWER_WAIT_MS`), or answered what the contract does not admit, the change may or may not have been made there, and the first mate is told to look before asking again.
 
 ## The first mate's own words
 
@@ -444,7 +449,7 @@ The first-launch gate stays derived (`docs/first-launch.md`); the line only says
 
 ## Tests
 
-- `src/core/viewWindows.test.ts` and `src/main/view/windowAsks.test.ts`: an ask answered only by the window asked, a window not connected or silent, and a window answering its own ask; `src/core/core.settingsParity.test.ts`: a window's own setting changed at the named Mac's window and not at the first mate's computer, and the key reminder asked of this computer's window.
+- `src/core/viewWindows.test.ts` and `src/shared/windowAnswer.test.ts`: an ask answered only by the window asked, a window not connected or silent, and a window answering its own ask; `src/core/core.settingsParity.test.ts`: a window's own setting changed at the named Mac's window and not at the first mate's computer, and the key reminder asked of this computer's window.
 - `src/main/shell.test.ts`, "names that Mac where its own refusals and feed lines say this computer", and `src/main/shell.localWindow.test.ts`, "shows its first mate's own refusals and feed lines as its core wrote them": a view names the first mate's computer in each refusal shape, a refused request, a line it marked, a task's record and its own cards, in every answer and push they ride, and leaves the captain's and a crewmate's words; the first mate's own window shows each as written.
 - `src/main/view/namedHere.test.ts`: what naming changes - a line's fact and its places, a record's own lines with the pull request they link, its timeline readings and problem, a host card's title, body and change bar, and the brief and a crewmate's words left as written.
   `src/core/tasks/taskFeed.test.ts`, "the first mate's own words on the feed", and `src/core/tasks/recordActivity.test.ts`, "marks the lines in the first mate's computer's own words": which lines the core marks.

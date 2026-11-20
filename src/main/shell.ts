@@ -32,13 +32,13 @@ import { DEFAULT_SAVED_KEYMAP, type SavedKeymap, type SavedKeymapRead } from "@s
 import type { PanelFiles, PanelFilesRequest } from "@shared/personal/panelFiles";
 import type { KeySystem } from "@shared/platform";
 import { DEFAULT_SHELL_PREFERENCES, type ShellPreferences } from "@shared/preferences";
+import type { WindowKeyReminders } from "@shared/windowAnswer";
 import type { WorkSetupReport } from "@shared/workSetup";
 import { type BesideOptions, BesideWindow } from "./besideWindow";
 import type { PictureSource } from "./frames/frameProtocol";
 import { InstalledKeymap, type SizeCommandHandlers } from "./keyboard";
 import { LocalWindow, type LocalWindowOptions } from "./view/localWindow";
 import { ViewBackend, type ViewBackendOptions } from "./view/viewBackend";
-import type { WindowKeyReminders } from "./view/windowAsks";
 import { type PreferenceSource, sizeCommands } from "./windowSize";
 
 /**
@@ -719,6 +719,7 @@ export class Shell {
       broadcast: this.options.broadcast,
       notifications: this.options.notifications,
       updates: this.options.updates,
+      ...(this.options.keyReminders ? { keyReminders: this.options.keyReminders } : {}),
       ...(this.options.openPage ? { openPage: this.options.openPage } : {}),
       relaunch: (how) => {
         if (this.mode?.kind === "beside") this.options.relaunch(how);

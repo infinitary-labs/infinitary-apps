@@ -4,9 +4,9 @@ import { dialLocalDoor } from "@core/connection/localDoor";
 import { HomeLink, type HomeLinkOptions, type HomeLinkState } from "@core/devices/homeLink";
 import type { DeviceGrant } from "@shared/devices";
 import type { CoreInvokeChannel, InvokeResponse, PushChannel } from "@shared/ipc";
+import { answerKeyReminders, answerWindowAsk, type WindowKeyReminders } from "@shared/windowAnswer";
 import { WINDOW_ASK_LIVE, WINDOW_ASK_WORDS, WINDOW_ONLY_CHANNELS } from "@shared/windowAsks";
 import { BrowserWatches, isBrowserWatchChannel } from "./browserWatches";
-import { answerKeyReminders, answerWindowAsk, type WindowKeyReminders } from "./windowAsks";
 
 /**
  * The window on the first mate's own computer as a view of it

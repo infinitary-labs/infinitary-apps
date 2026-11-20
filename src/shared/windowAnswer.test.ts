@@ -1,6 +1,6 @@
 import { WINDOW_ASK_LIVE, type WindowAnswer } from "@shared/windowAsks";
 import { describe, expect, it } from "vitest";
-import { answerKeyReminders, answerWindowAsk } from "./windowAsks";
+import { answerKeyReminders, answerWindowAsk } from "./windowAnswer";
 
 /**
  * The captain's pick (add-window-target): a window answers the first mate's
@@ -13,7 +13,10 @@ describe("a window's answer to the first mate", () => {
     channel,
     args,
   });
-  const answering = async (payload: unknown, answer: () => Promise<unknown>) => {
+  const answering = async (
+    payload: unknown,
+    answer: (channel: string, args: readonly unknown[]) => Promise<unknown>,
+  ) => {
     const sent: [string, WindowAnswer][] = [];
     await answerWindowAsk(payload, "studio", answer, async (id, said) => {
       sent.push([id, said]);
@@ -40,6 +43,26 @@ describe("a window's answer to the first mate", () => {
     expect(ran).toBe(false);
   });
 
+  it("applies a change's named fields over its own value now, keeping its own edit since", async () => {
+    // The first mate read dark; this window's own Settings chose light since.
+    let own: Record<string, unknown> = { theme: "light", usageUnit: "tokens" };
+    const applied: unknown[] = [];
+    const sent = await answering(
+      {
+        ...ask("studio", "inf:settings:appearance:set", [{ theme: "dark", usageUnit: "usd" }]),
+        fields: ["usageUnit"],
+      },
+      async (channel: string, args: readonly unknown[]) => {
+        if (channel === "inf:settings:appearance:get") return own;
+        applied.push(args[0]);
+        own = args[0] as Record<string, unknown>;
+        return own;
+      },
+    );
+    expect(applied).toEqual([{ theme: "light", usageUnit: "usd" }]);
+    expect(sent).toEqual([["ask-1", { ok: true, result: { theme: "light", usageUnit: "usd" } }]]);
+  });
+
   it("switches the window's own key reminder", () => {
     let on = true;
     const reminders = {
@@ -56,5 +79,9 @@ describe("a window's answer to the first mate", () => {
       on: false,
     });
     expect(() => answerKeyReminders(null, "inf:keyboard:reminders", [])).toThrow("no key reminder");
+    expect(() => answerKeyReminders(reminders, "inf:keyboard:reminders:set", ["off"])).toThrow(
+      "malformed request",
+    );
+    expect(on).toBe(false);
   });
 });

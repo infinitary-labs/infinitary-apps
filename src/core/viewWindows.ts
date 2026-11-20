@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { invokeContract, parseInvokeRequest } from "@shared/ipc";
 import {
   WINDOW_ANSWER_WAIT_MS,
   WINDOW_ASK_LIVE,
@@ -24,9 +25,10 @@ type Waiting = {
 /**
  * The windows the first mate asks (docs/view.md, "What the first mate asks
  * of a window"): one ask goes to one computer's window as a live frame, and
- * that window's own answer, by the ask's id, resolves it. A window that is
+ * that window's own answer, by the ask's id, resolves it. The id goes to one
+ * connection alone, so only that connection can answer it. A window that is
  * not connected, or is from before, is never asked; one that does not answer
- * in time leaves the ask unanswered, and nothing is known to have changed.
+ * in time may or may not have made the change, and the first mate says so.
  */
 export class ViewWindows {
   private readonly waiting = new Map<string, Waiting>();
@@ -45,12 +47,16 @@ export class ViewWindows {
     window: { deviceId: string; name: string },
     channel: WindowChannel,
     args: readonly unknown[],
+    fields?: readonly string[],
   ): Promise<unknown> {
+    // The window is asked only what the contract admits, and its answer is
+    // used only once the contract admits it too.
     const asked: WindowAsk = windowAskSchema.parse({
       id: randomUUID(),
       deviceId: window.deviceId,
       channel,
-      args,
+      args: parseInvokeRequest(channel, args),
+      ...(fields ? { fields } : {}),
     });
     const answered = new Promise<WindowAnswer | null>((resolve) => {
       this.waiting.set(asked.id, { deviceId: window.deviceId, resolve });
@@ -69,7 +75,9 @@ export class ViewWindows {
     const answer = await answered;
     if (!answer) throw new Error(WINDOW_ASK_WORDS.noAnswer(window.name));
     if (!answer.ok) throw new Error(answer.message);
-    return answer.result;
+    const result = invokeContract[channel].response.safeParse(answer.result);
+    if (!result.success) throw new Error(WINDOW_ASK_WORDS.badAnswer(window.name));
+    return result.data;
   }
 
   /**

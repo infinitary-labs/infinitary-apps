@@ -507,9 +507,16 @@ export type HomeConnection = {
   /**
    * A live frame to each welcomed window of one Mac (`role` view), such as
    * its Devices row's Fix it (`work-setup`), or only to those that listed
-   * `change`; false when none is connected.
+   * `change`, or with `one` only to the newest of them; false when none is
+   * connected.
    */
-  liveToView(deviceId: string, channel: string, payload: unknown, change?: string): boolean;
+  liveToView(
+    deviceId: string,
+    channel: string,
+    payload: unknown,
+    change?: string,
+    one?: boolean,
+  ): boolean;
   /** Resolves once listening reflects the latest change to what is paired. */
   settled(): Promise<void>;
   /** Stops listening and following pairing, then drains device closes with a two-second grace. */
@@ -682,6 +689,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
   let nextAsk = 1;
   /** Why changes wait while the first mate moves to another computer; null otherwise. */
   let moving: string | null = null;
+  /** Each ask sent to one window (`liveToView`'s `one`), by its id: only that connection answers it. */
+  const windowAsked = new Map<string, Client>();
   const workListeners = new Set<(contact: WorkDeviceContact) => void>();
   const sentListeners = new Set<(deviceId: string, bytes: number) => void>();
   const tellSent = (deviceId: string, bytes: number) => {
@@ -1221,6 +1230,16 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         });
         return;
       }
+      // A window's answer to an ask comes from the connection it was sent to,
+      // never another window of the same computer.
+      if (channel === "inf:view:answer") {
+        const id = (frame.args as unknown[] | undefined)?.[0];
+        if (typeof id !== "string" || windowAsked.get(id) !== client) {
+          reply({ ok: true, value: { ok: true } });
+          return;
+        }
+        windowAsked.delete(id);
+      }
       try {
         // A paired view is the captain at another Mac: the same actor the
         // desktop adapter stamps, with the contract's reach as the limit, so
@@ -1334,6 +1353,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       });
       ws.on("close", () => {
         clients.delete(client);
+        for (const [id, asked] of windowAsked) if (asked === client) windowAsked.delete(id);
         const heard = client.gone;
         client.gone = [];
         client.pictures.clear();
@@ -1897,8 +1917,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
     },
     moved: (payload) => liveToAll(HOME_MOVED_LIVE, payload),
     goodbye: () => liveToAll(HOME_GOODBYE_LIVE, {}),
-    liveToView: (deviceId, channel, payload, change) => {
-      const windows = [...(run?.clients ?? [])].filter(
+    liveToView: (deviceId, channel, payload, change, one) => {
+      const eligible = [...(run?.clients ?? [])].filter(
         (client) =>
           client.welcomed &&
           !client.closing &&
@@ -1906,6 +1926,11 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           client.device.id === deviceId &&
           (change === undefined || (client.changes?.includes(change) ?? false)),
       );
+      // An ask one window must answer goes to one connection, the newest,
+      // so its id reaches no other and it runs once.
+      const windows = one ? eligible.slice(-1) : eligible;
+      const askId = (payload as { id?: unknown } | null)?.id;
+      if (one && typeof askId === "string" && windows[0]) windowAsked.set(askId, windows[0]);
       for (const client of windows)
         client.out.send(
           JSON.stringify({ t: "live", channel: channelIn(channel, client.spelling), payload }),

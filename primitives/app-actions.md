@@ -22,7 +22,7 @@ Keyboard commands are a separate catalog (`KEYBOARD_COMMANDS` in `src/shared/key
 
 ## What stays outside the catalog
 
-Every changing core request is a catalog line or an excuse in `ACTION_EXCEPTIONS`, and every changing request the window's own program answers (`surface: "host"`) is an excuse in `HOST_ACTION_EXCEPTIONS`.
+Every changing core request is a catalog line or an excuse in `ACTION_EXCEPTIONS`, and every changing request the window's own program answers (`surface: "host"`) is a catalog line, such as the key reminder's switch, or an excuse in `HOST_ACTION_EXCEPTIONS`.
 Each excuse, and each field excuse in `ACTION_FIELD_EXCEPTIONS`, names its ground from the closed set `EXCEPTION_GROUNDS`, then why in words.
 The grounds are a credential (a sign-in, key, secret value or joining link), the captain's consent the app holds for their own click, an act that cannot be undone or ends running work (`destructive`), another computer's own report or act, a recorded captain ruling, a request only the crew or a panel's own code sends (`crew-only`), the window's own program on the computer the captain is at (`window`), and a report, view stamp or conversation nobody chooses (`not-a-setting`).
 The captain's click alone is no ground: a control with none of these is a catalog line.
@@ -105,7 +105,7 @@ The captain's click alone is no ground: a control with none of these is a catalo
 - [`src/shared/actions.test.ts`](../src/shared/actions.test.ts): action permissions, channel parity and per-field claims.
 - [`src/core/core.settings.test.ts`](../src/core/core.settings.test.ts): dispatch, refusals and settled runs.
 - [`src/core/core.settingsParity.test.ts`](../src/core/core.settingsParity.test.ts): the first mate's Settings acts and their refusals in the whole core, and a window's own setting changed at the named computer's window.
-- [`src/core/viewWindows.test.ts`](../src/core/viewWindows.test.ts) and [`src/main/view/windowAsks.test.ts`](../src/main/view/windowAsks.test.ts): an ask answered only by the window asked, and how a window answers.
+- [`src/core/viewWindows.test.ts`](../src/core/viewWindows.test.ts) and [`src/shared/windowAnswer.test.ts`](../src/shared/windowAnswer.test.ts): an ask answered only by the window asked, and how a window answers.
 - [`src/core/preferences/shellPreferences.test.ts`](../src/core/preferences/shellPreferences.test.ts): the one presentation writer.
 - [`tests/e2e/activity-runs.spec.ts`](../tests/e2e/activity-runs.spec.ts): a run of steps is one Activity line.
 

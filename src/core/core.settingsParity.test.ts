@@ -4,7 +4,10 @@ import { ACTIONS, type ActionName } from "@shared/actions";
 import type { DeviceView } from "@shared/devices";
 import type { IntegrationsView } from "@shared/integrations";
 import { knownPanels } from "@shared/panelArrangement";
+import type { Appearance } from "@shared/preferences";
 import type { SecretsView } from "@shared/secrets";
+import type { UpdateStatus } from "@shared/update";
+import { answerKeyReminders, answerWindowAsk } from "@shared/windowAnswer";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { fakeHost, quotaFixture } from "../../tests/helpers/bootedCore";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
@@ -214,6 +217,11 @@ describe("the first mate's Settings actions, driven through the whole core", () 
     expect(check).toHaveBeenCalledTimes(1);
     expect(checked.reply.answer).toEqual({ latest: "10.0.0", available: true });
     expect(checked.lines).toEqual(["checked for updates: 10.0.0 is ready"]);
+    // A check that failed says so, never the status it still holds from before.
+    check.mockResolvedValue({ ...newer, problem: "The release source did not answer." });
+    const failed = await asked("update-check", {});
+    expect(failed.reply.answer).toMatchObject({ problem: "The release source did not answer." });
+    expect(failed.lines).toEqual(["could not check for updates"]);
     check.mockRestore();
     const refused = await tool("app_change").run({
       action: "update-channel",
@@ -595,32 +603,57 @@ describe("the first mate's Settings actions, driven through the whole core", () 
   /**
    * The captain's pick on the review (add-window-target): what the first mate
    * changes of a window's own Settings goes to the window the captain names.
-   * A Mac's window is played here by its own answers to the live frame, as
-   * `ViewBackend` answers it from that Mac's own look.
+   * A Mac's window answers the live frame here through the window's own
+   * answer (`answerWindowAsk`), from a look and key reminder of its own, as
+   * `ViewBackend` answers from that Mac's own look.
    */
   const playWindow = (
     deviceId: string,
-    own: { appearance: Record<string, unknown>; reminders?: boolean },
+    own: {
+      appearance: Appearance;
+      reminders?: boolean;
+      update?: UpdateStatus;
+      /** The window's own Settings edit, made after the first mate read its look. */
+      editsAfterRead?: (appearance: Appearance) => Appearance;
+    },
   ) =>
     vi
       .spyOn(core.services.workDevices, "liveToView")
-      .mockImplementation((to, channel, payload, change) => {
-        const ask = payload as { id: string; deviceId: string; channel: string; args: unknown[] };
-        if (to !== deviceId || channel !== "inf:view:ask" || change !== "window-asks") return false;
-        if (ask.channel === "inf:settings:appearance:set") {
-          own.appearance = ask.args[0] as Record<string, unknown>;
-        }
-        if (ask.channel === "inf:keyboard:reminders:set") own.reminders = ask.args[0] === true;
-        const result = ask.channel.startsWith("inf:keyboard:reminders")
-          ? { on: own.reminders ?? true, pressed: {} }
-          : own.appearance;
-        queueMicrotask(
-          () =>
-            void core.dispatch("inf:view:answer", [ask.id, { ok: true, result }], {
-              kind: "captain",
-              view: deviceId,
-            }),
-        );
+      .mockImplementation((to, channel, payload, change, one) => {
+        if (to !== deviceId || channel !== "inf:view:ask" || change !== "window-asks" || !one)
+          return false;
+        void answerWindowAsk(
+          payload,
+          deviceId,
+          async (asked, args) => {
+            if (asked === "inf:settings:appearance:get") return own.appearance;
+            if (asked === "inf:settings:appearance:set") {
+              own.appearance = args[0] as Appearance;
+              return own.appearance;
+            }
+            if ((asked === "inf:update:check" || asked === "inf:update:status") && own.update)
+              return own.update;
+            return answerKeyReminders(
+              {
+                current: () => ({ on: own.reminders ?? true, pressed: {} }),
+                setOn: (on) => {
+                  own.reminders = on;
+                  return { on, pressed: {} };
+                },
+              },
+              asked,
+              args,
+            );
+          },
+          (id, answer) =>
+            core.dispatch("inf:view:answer", [id, answer], { kind: "captain", view: deviceId }),
+        ).then(() => {
+          // The window's own Settings change something after its look was read.
+          if (own.editsAfterRead) {
+            own.appearance = own.editsAfterRead(own.appearance);
+            own.editsAfterRead = undefined;
+          }
+        });
         return true;
       });
 
@@ -628,7 +661,9 @@ describe("the first mate's Settings actions, driven through the whole core", () 
     const devices = vi
       .spyOn(core.services.computers, "list")
       .mockReturnValue([device({ id: "studio", name: "Studio" })]);
-    const theirs = { appearance: { ...(await appearance()), usageUnit: "tokens" } };
+    const theirs: Parameters<typeof playWindow>[1] = {
+      appearance: { ...(await appearance()), usageUnit: "tokens" },
+    };
     const window = playWindow("studio", theirs);
     try {
       const here = await appearance();
@@ -662,6 +697,39 @@ describe("the first mate's Settings actions, driven through the whole core", () 
         computer: "Laptop",
       });
       expect(unknown.text).toContain("No Mac that controls this one is named Laptop");
+
+      // Its own Settings switch to a light theme after the first mate read its look:
+      // the first mate's change of the usage unit keeps that edit.
+      theirs.editsAfterRead = (look) => ({ ...look, theme: "light" });
+      await tool("app_change").run({
+        action: "usage-unit",
+        value: { unit: "tokens" },
+        evidence: "Back to tokens on Studio.",
+        computer: "Studio",
+      });
+      expect(theirs.appearance).toMatchObject({ theme: "light", usageUnit: "tokens" });
+      expect(await appearance()).toEqual(here);
+
+      // Check for updates there checks that Mac's own app, and says where.
+      theirs.update = {
+        ...(await core.dispatch("inf:update:status", [])),
+        currentVersion: "1.0.0",
+        latestVersion: "1.0.1",
+        updateAvailable: true,
+      };
+      const checked = operations().length;
+      const update = await tool("app_change").run({
+        action: "update-check",
+        value: {},
+        evidence: "Check for updates on Studio.",
+        computer: "Studio",
+      });
+      expect(JSON.parse(update.text).answer).toMatchObject({ latest: "1.0.1", available: true });
+      expect(
+        operations()
+          .slice(checked)
+          .map((task) => task.title),
+      ).toEqual(["checked for updates: 1.0.1 is ready on Studio"]);
     } finally {
       window.mockRestore();
       devices.mockRestore();
@@ -669,7 +737,7 @@ describe("the first mate's Settings actions, driven through the whole core", () 
   });
 
   it("asks this computer's own window for its key reminder, and says when no window answers", async () => {
-    const window = playWindow("local", { appearance: {}, reminders: true });
+    const window = playWindow("local", { appearance: await appearance(), reminders: true });
     try {
       const switched = await asked("key-reminders", { on: false });
       expect(switched.reply.current).toEqual({ on: false });

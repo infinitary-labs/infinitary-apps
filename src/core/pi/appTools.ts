@@ -316,7 +316,9 @@ export function createAppTools(delegate: AppToolsDelegate) {
           if (!line.change || !line.current) return { text: line.line };
           const args = await actionRequest(asked, action, params.value, params.evidence as string);
           const answer = await asked(line.change as CoreInvokeChannel, args);
-          const result = await asked(line.current as CoreInvokeChannel, []);
+          // A window answers its whole value with the change, checked as it
+          // arrives, so a change it made is never lost to a read after it.
+          const result = window ? answer : await asked(line.current as CoreInvokeChannel, []);
           return {
             text: JSON.stringify({
               action,

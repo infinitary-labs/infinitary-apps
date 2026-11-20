@@ -109,9 +109,13 @@ export function createCatalogDispatch({
     // (docs/view.md, "What the first mate asks of a window"); every other is
     // answered here.
     const window = actor.kind === "firstmate" ? actor.window : undefined;
+    // A window applies only the named action's fields over its own value,
+    // so its own edit since the read before is kept.
+    const named =
+      actor.kind === "firstmate" && actor.action ? ACTIONS[actor.action].fields : undefined;
     const call = (asked: string, callArgs: readonly unknown[]): Promise<unknown> =>
       window && isWindowChannel(asked)
-        ? viewWindows.ask(window, asked, callArgs)
+        ? viewWindows.ask(window, asked, callArgs, asked === channel ? named : undefined)
         : WINDOW_ONLY_CHANNELS.has(asked)
           ? Promise.reject(new Error("A key reminder is asked of a window."))
           : Promise.resolve(
@@ -126,11 +130,21 @@ export function createCatalogDispatch({
     // An act run on a read (Check for updates) changes nothing to compare:
     // its trail is its own answer, so it reads nothing before or after.
     const reads = invokeContract[channel].effect !== "change";
+    // Lines that read one value read it once: a window's is asked over the
+    // connection, once for every line.
+    const readOnce = () => {
+      const read = new Map<string, Promise<unknown>>();
+      return (current: string) => {
+        if (!read.has(current)) read.set(current, call(current, []));
+        return read.get(current) as Promise<unknown>;
+      };
+    };
+    const readBefore = readOnce();
     const before = new Map<ActionName, unknown>();
     for (const name of names)
       before.set(
         name,
-        ACTIONS[name].current && !reads ? await call(ACTIONS[name].current as string, []) : null,
+        ACTIONS[name].current && !reads ? await readBefore(ACTIONS[name].current as string) : null,
       );
     // A change to a computer that runs work's own account or project sign-in
     // is read from what that computer says, not this Mac's.
@@ -164,10 +178,13 @@ export function createCatalogDispatch({
       )
         throw new Error("The first mate cannot disconnect the account it is running on.");
       // Several lines share one request, or a request holds the captain's
-      // outbound consent: each line changes only its own fields.
+      // outbound consent: each line changes only its own fields. A window
+      // applies only those fields over its own value, so its other fields,
+      // edited there since the read, are never compared here.
       const fields = ACTIONS[actor.action].fields;
       if (
         fields &&
+        !window &&
         (channel === "inf:settings:decisions:set" ||
           ACTION_NAMES.filter((name) => ACTIONS[name].change === channel).length > 1)
       ) {
@@ -248,6 +265,7 @@ export function createCatalogDispatch({
     }
     if (names.length) automation.said = undefined;
     const result = (await call(channel, args)) as InvokeResponse<C>;
+    const readAfter = readOnce();
     for (const name of names) {
       // An act's trail is what it did, read from its request and answer.
       const trailOf = ACTIONS[name].trailOf;
@@ -256,11 +274,15 @@ export function createCatalogDispatch({
         if (said) trail(name, said, actor);
         continue;
       }
+      // A window's setter answers its whole value, validated, so a change it
+      // acknowledged is never lost to a read after it.
       const after = there
         ? stateThere(name)
-        : ACTIONS[name].current
-          ? await call(ACTIONS[name].current as string, [])
-          : null;
+        : window
+          ? result
+          : ACTIONS[name].current
+            ? await readAfter(ACTIONS[name].current as string)
+            : null;
       if (
         !ACTIONS[name].alwaysTrail &&
         name !== "refresh-usage" &&

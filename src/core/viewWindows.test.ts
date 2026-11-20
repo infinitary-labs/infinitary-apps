@@ -1,3 +1,4 @@
+import { DEFAULT_APPEARANCE } from "@shared/preferences";
 import { WINDOW_ANSWER_WAIT_MS, WINDOW_ASK_LIVE, WINDOW_ASK_WORDS } from "@shared/windowAsks";
 import { describe, expect, it } from "vitest";
 import { ViewWindows, WINDOW_ASKS } from "./viewWindows";
@@ -35,12 +36,31 @@ describe("ViewWindows", () => {
     windows.answered(id, { ok: true, result: "forged" }, { kind: "captain", view: "laptop" });
     windows.answered(id, { ok: true, result: "forged" }, { kind: "captain" });
     windows.answered(id, { ok: true, result: "forged" }, { kind: "firstmate", wake: "captain" });
+    const theirs = { ...DEFAULT_APPEARANCE, usageUnit: "usd" };
+    windows.answered(id, { ok: true, result: theirs }, { kind: "captain", view: "studio" });
+    await expect(result).resolves.toEqual(theirs);
+  });
+
+  it("sends a change's named fields, and refuses an answer the contract does not admit", async () => {
+    const { windows, sent } = setup();
+    const changed = windows.ask(
+      studio,
+      "inf:settings:appearance:set",
+      [{ ...DEFAULT_APPEARANCE, usageUnit: "usd" }],
+      ["usageUnit"],
+    );
+    expect(sent[0]?.payload).toMatchObject({ fields: ["usageUnit"] });
     windows.answered(
-      id,
-      { ok: true, result: { cardSize: "large" } },
+      sent[0]?.payload.id ?? "",
+      { ok: true, result: { usageUnit: "usd" } },
       { kind: "captain", view: "studio" },
     );
-    await expect(result).resolves.toEqual({ cardSize: "large" });
+    await expect(changed).rejects.toThrow(WINDOW_ASK_WORDS.badAnswer("Studio"));
+    // A request the contract does not admit is never sent.
+    await expect(windows.ask(studio, "inf:keyboard:reminders:set", ["on"])).rejects.toThrow(
+      "malformed request",
+    );
+    expect(sent).toHaveLength(1);
   });
 
   it("says plainly when no window is connected, when one does not answer, and what a refusing window said", async () => {

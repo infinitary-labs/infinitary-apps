@@ -43,6 +43,7 @@ import { panelSettingsNow } from "@shared/panelSettings";
 import { personalSnapshotSchema } from "@shared/personal/manifest";
 import { type ShellPreferences, shellPreferencesSchema } from "@shared/preferences";
 import { HOME_GOODBYE_LIVE } from "@shared/standby";
+import { answerKeyReminders, answerWindowAsk, type WindowKeyReminders } from "@shared/windowAnswer";
 import { WINDOW_ASK_LIVE, WINDOW_ONLY_CHANNELS } from "@shared/windowAsks";
 import {
   type DeviceWorkSetup,
@@ -60,7 +61,6 @@ import { projectsListedFrom } from "./projectsListed";
 import { ViewLook } from "./viewLook";
 import { ViewNotices } from "./viewNotices";
 import { type TakeOverOutcome, ViewTakeOver, viewTakeOverWords } from "./viewTakeOver";
-import { answerKeyReminders, answerWindowAsk, type WindowKeyReminders } from "./windowAsks";
 
 /**
  * The app as a view of another Mac (docs/view.md): the main process's

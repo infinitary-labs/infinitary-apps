@@ -3497,6 +3497,17 @@
 "uiVoiceRemove" = "移除 %1$@";
 "uiVoiceSubmit" = "送出";
 "uiVoiceTaskPrompt" = "任務說明";
+"updateChannelNotRecorded" = "Infinitary 無法記錄這次更新的通道，因此未安裝任何內容。";
+"updateDownloadChecksum" = "下載內容與公布的總和檢查碼不符，因此未安裝任何內容。";
+"updateDownloadNoWrite" = "Infinitary 無法寫入 %1$@。請將應用程式移到你擁有的資料夾（例如你的個人資料夾），然後再試一次。";
+"updateDownloadRefused" = "下載未能開始（伺服器回應 %1$@）。請稍後再試。";
+"updateDownloadStopped" = "下載在完成前中斷。請再試一次。";
+"updateDownloadUnreachable" = "Infinitary 無法連線到下載位址。請檢查網路連線後再試一次。";
+"updateInstallerNoStart" = "安裝程式無法啟動，因此未安裝任何內容。";
+"updateWindowsChannelNotPutBack" = "Infinitary 無法還原先前使用的更新通道，請在 設定 → 一般 中檢查通道。";
+"updateWindowsInstallFailed" = "安裝程式在完成前停止，因此保留了這份副本。";
+"updateWindowsNoCopy" = "Infinitary 更新後無法再次開啟。請從 %1$@ 下載安裝程式並執行；你的任務和設定都會保留。";
+"updateWindowsShutdownTimeout" = "Infinitary 關閉花了超過五分鐘，因此更新已停止，未安裝任何內容。";
 "viewFromHomeOnly" = "這只在 %1$@ 的設定裡。請在那裡的這張卡片上選擇。";
 "viewFromHomeOnlyThere" = "這只在大副的電腦的設定裡。請在那裡的這張卡片上選擇。";
 "viewGoogleUpdateThere" = "請先更新 %1$@ 上的 Infinitary，才能從這裡登入 Google。";

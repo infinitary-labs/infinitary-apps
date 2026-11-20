@@ -1,0 +1,13 @@
+{
+  "updateChannelNotRecorded": "Infinitary 无法记录此次更新的渠道，因此未安装任何内容。",
+  "updateDownloadChecksum": "下载内容与其公布的校验和不符，因此未安装任何内容。",
+  "updateDownloadNoWrite": "Infinitary 无法写入 {folder}。请将应用移到你拥有的文件夹（例如你的个人文件夹）中，然后重试。",
+  "updateDownloadRefused": "下载未能开始（服务器返回 {status}）。请稍后重试。",
+  "updateDownloadStopped": "下载在完成前中断了。请重试。",
+  "updateDownloadUnreachable": "Infinitary 无法连接到下载地址。请检查网络连接后重试。",
+  "updateInstallerNoStart": "安装程序无法启动，因此未安装任何内容。",
+  "updateWindowsChannelNotPutBack": "Infinitary 无法恢复之前所用的更新渠道，请在 设置 → 通用 中检查渠道。",
+  "updateWindowsInstallFailed": "安装程序在完成前停止了，因此保留了当前这份副本。",
+  "updateWindowsNoCopy": "Infinitary 更新后无法再次打开。请从 {page} 下载安装程序并运行；你的任务和设置都会保留。",
+  "updateWindowsShutdownTimeout": "Infinitary 关闭用了超过五分钟，因此更新已停止，未安装任何内容。"
+}

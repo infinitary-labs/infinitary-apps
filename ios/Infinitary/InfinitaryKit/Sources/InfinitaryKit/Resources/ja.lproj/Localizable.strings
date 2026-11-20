@@ -3497,6 +3497,17 @@
 "uiVoiceRemove" = "%1$@ を削除";
 "uiVoiceSubmit" = "送信";
 "uiVoiceTaskPrompt" = "タスクの指示";
+"updateChannelNotRecorded" = "Infinitary はアップデートのチャンネルを記録できなかったため、何もインストールしませんでした。";
+"updateDownloadChecksum" = "ダウンロードが公開されたチェックサムと一致しなかったため、何もインストールしませんでした。";
+"updateDownloadNoWrite" = "Infinitary は %1$@ に書き込めません。ホームフォルダなど、自分が所有するフォルダにアプリを移動して、もう一度お試しください。";
+"updateDownloadRefused" = "ダウンロードを開始できませんでした（サーバーの応答: %1$@）。しばらくしてからもう一度お試しください。";
+"updateDownloadStopped" = "ダウンロードが途中で止まりました。もう一度お試しください。";
+"updateDownloadUnreachable" = "Infinitary がダウンロード先に接続できませんでした。接続を確認して、もう一度お試しください。";
+"updateInstallerNoStart" = "インストーラーを起動できなかったため、何もインストールしませんでした。";
+"updateWindowsChannelNotPutBack" = "Infinitary は以前のアップデートチャンネルに戻せませんでした。設定 → 一般 でチャンネルを確認してください。";
+"updateWindowsInstallFailed" = "インストーラーが途中で止まったため、このコピーをそのまま残しました。";
+"updateWindowsNoCopy" = "Infinitary はアップデート後に再び開けませんでした。%1$@ からインストーラーをダウンロードして実行してください。タスクと設定はそのまま残ります。";
+"updateWindowsShutdownTimeout" = "Infinitary の終了に5分以上かかったため、アップデートを中止し、何もインストールしませんでした。";
 "viewFromHomeOnly" = "これは %1$@ の設定にしかありません。そちらでこのカードから選んでください。";
 "viewFromHomeOnlyThere" = "これは一等航海士のコンピューターの設定にしかありません。そちらでこのカードから選んでください。";
 "viewGoogleUpdateThere" = "ここから Google にサインインするには、%1$@ の Infinitary をアップデートしてください。";

@@ -1,0 +1,13 @@
+{
+  "updateChannelNotRecorded": "O Infinitary não conseguiu registrar o canal da atualização, então nada foi instalado.",
+  "updateDownloadChecksum": "O download não correspondeu à soma de verificação publicada, então nada foi instalado.",
+  "updateDownloadNoWrite": "O Infinitary não consegue gravar em {folder}. Mova o app para uma pasta sua, como sua pasta pessoal, e tente de novo.",
+  "updateDownloadRefused": "O download não começou (o servidor respondeu {status}). Tente de novo mais tarde.",
+  "updateDownloadStopped": "O download parou antes de terminar. Tente de novo.",
+  "updateDownloadUnreachable": "O Infinitary não conseguiu acessar o download. Verifique sua conexão e tente de novo.",
+  "updateInstallerNoStart": "O instalador não conseguiu iniciar, então nada foi instalado.",
+  "updateWindowsChannelNotPutBack": "O Infinitary não conseguiu restaurar o canal de atualização que seguia antes; confira o canal em Ajustes → Geral.",
+  "updateWindowsInstallFailed": "O instalador parou antes de terminar, então esta cópia foi mantida.",
+  "updateWindowsNoCopy": "O Infinitary não conseguiu abrir de novo depois da atualização. Baixe o instalador em {page} e execute-o; suas tarefas e ajustes são mantidos.",
+  "updateWindowsShutdownTimeout": "O Infinitary levou mais de cinco minutos para fechar, então a atualização parou e nada foi instalado."
+}

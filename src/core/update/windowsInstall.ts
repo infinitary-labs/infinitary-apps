@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { readFileSync, rmSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import { basename, join } from "node:path";
+import * as m from "@shared/i18n/messages.generated";
 import type { UpdateChannel } from "@shared/update";
 import { WINDOWS_HAND_OVER_WORDS } from "@shared/updateWords";
 import { windowsPowerShell } from "../storage/ownerOnly";
@@ -114,6 +115,7 @@ export function windowsHandOverScript(values: {
 }): string {
   const wait = values.waitSeconds ?? WINDOWS_SHUTDOWN_WAIT_SECONDS;
   const ready = values.readySeconds ?? WINDOWS_REOPEN_READY_SECONDS;
+  // i18n-exempt: a PowerShell script Windows runs, never shown to a person
   return [
     "$ErrorActionPreference = 'Stop'",
     `$exe = ${literal(values.executable)}`,
@@ -264,6 +266,7 @@ export function windowsHandOverScript(values: {
  * encoded, never the command's text), which then belongs to no task and
  * outlives this program. It exits 1 when Windows refused to start it.
  */
+// i18n-exempt: a PowerShell script Windows runs, never shown to a person
 export const RUN_INSTALLER_SCRIPT = [
   "$ErrorActionPreference = 'Stop'",
   "$encoded = $env:INFINITARY_UPDATE_HAND_OVER",
@@ -388,15 +391,10 @@ export function createWindowsInstaller(
           },
         );
       } catch {
-        reject(
-          new UpdateInstallProblem("The installer could not start, so nothing was installed."),
-        );
+        reject(new UpdateInstallProblem(m.updateInstallerNoStart()));
         return;
       }
-      const refused = () =>
-        reject(
-          new UpdateInstallProblem("The installer could not start, so nothing was installed."),
-        );
+      const refused = () => reject(new UpdateInstallProblem(m.updateInstallerNoStart()));
       child.once("error", refused);
       // The script ends once Windows started the hand-over, or refused to.
       child.once("exit", (code) => (code === 0 ? resolve() : refused()));
@@ -424,9 +422,7 @@ export function createWindowsInstaller(
         earlier = await readChannelMarker(options.dataRoot);
         await rememberUpdateChannel(options.dataRoot, plan.channel, plan.version);
       } catch {
-        throw new UpdateInstallProblem(
-          "Infinitary could not record the update's channel, so nothing was installed.",
-        );
+        throw new UpdateInstallProblem(m.updateChannelNotRecorded());
       }
       remembered = true;
       await handOver(file, plan, earlier);

@@ -3497,6 +3497,17 @@
 "uiVoiceRemove" = "%1$@ entfernen";
 "uiVoiceSubmit" = "Senden";
 "uiVoiceTaskPrompt" = "Aufgabentext";
+"updateChannelNotRecorded" = "Infinitary konnte den Kanal des Updates nicht speichern, daher wurde nichts installiert.";
+"updateDownloadChecksum" = "Der Download stimmte nicht mit seiner veröffentlichten Prüfsumme überein, daher wurde nichts installiert.";
+"updateDownloadNoWrite" = "Infinitary kann nicht in %1$@ schreiben. Verschiebe die App in einen Ordner, der dir gehört, etwa deinen Benutzerordner, und versuche es erneut.";
+"updateDownloadRefused" = "Der Download hat nicht begonnen (der Server antwortete %1$@). Versuche es später erneut.";
+"updateDownloadStopped" = "Der Download brach vor dem Ende ab. Versuche es erneut.";
+"updateDownloadUnreachable" = "Infinitary konnte den Download nicht erreichen. Prüfe deine Verbindung und versuche es erneut.";
+"updateInstallerNoStart" = "Das Installationsprogramm konnte nicht starten, daher wurde nichts installiert.";
+"updateWindowsChannelNotPutBack" = "Infinitary konnte den zuvor verwendeten Update-Kanal nicht wiederherstellen. Prüfe den Kanal unter Einstellungen → Allgemein.";
+"updateWindowsInstallFailed" = "Das Installationsprogramm hielt vor dem Ende an, daher blieb diese Kopie erhalten.";
+"updateWindowsNoCopy" = "Infinitary konnte nach dem Update nicht wieder öffnen. Lade das Installationsprogramm von %1$@ herunter und führe es aus; deine Aufgaben und Einstellungen bleiben erhalten.";
+"updateWindowsShutdownTimeout" = "Infinitary brauchte mehr als fünf Minuten zum Beenden, daher wurde das Update abgebrochen und nichts installiert.";
 "viewFromHomeOnly" = "Das gibt es nur in den Einstellungen auf %1$@. Wähle es dort auf dieser Karte.";
 "viewFromHomeOnlyThere" = "Das gibt es nur in den Einstellungen auf dem Computer deines ersten Offiziers. Wähle es dort auf dieser Karte.";
 "viewGoogleUpdateThere" = "Aktualisiere Infinitary auf %1$@, um dich von hier aus bei Google anzumelden.";

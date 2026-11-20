@@ -3622,6 +3622,17 @@ public enum PhoneMessages {
     public static func `uiVoiceRemove`(`name`: String) -> String { PhoneWords.format("uiVoiceRemove", [`name`]) }
     public static func `uiVoiceSubmit`() -> String { PhoneWords.format("uiVoiceSubmit", []) }
     public static func `uiVoiceTaskPrompt`() -> String { PhoneWords.format("uiVoiceTaskPrompt", []) }
+    public static func `updateChannelNotRecorded`() -> String { PhoneWords.format("updateChannelNotRecorded", []) }
+    public static func `updateDownloadChecksum`() -> String { PhoneWords.format("updateDownloadChecksum", []) }
+    public static func `updateDownloadNoWrite`(`folder`: String) -> String { PhoneWords.format("updateDownloadNoWrite", [`folder`]) }
+    public static func `updateDownloadRefused`(`status`: String) -> String { PhoneWords.format("updateDownloadRefused", [`status`]) }
+    public static func `updateDownloadStopped`() -> String { PhoneWords.format("updateDownloadStopped", []) }
+    public static func `updateDownloadUnreachable`() -> String { PhoneWords.format("updateDownloadUnreachable", []) }
+    public static func `updateInstallerNoStart`() -> String { PhoneWords.format("updateInstallerNoStart", []) }
+    public static func `updateWindowsChannelNotPutBack`() -> String { PhoneWords.format("updateWindowsChannelNotPutBack", []) }
+    public static func `updateWindowsInstallFailed`() -> String { PhoneWords.format("updateWindowsInstallFailed", []) }
+    public static func `updateWindowsNoCopy`(`page`: String) -> String { PhoneWords.format("updateWindowsNoCopy", [`page`]) }
+    public static func `updateWindowsShutdownTimeout`() -> String { PhoneWords.format("updateWindowsShutdownTimeout", []) }
     public static func `viewFromHomeOnly`(`mac`: String) -> String { PhoneWords.format("viewFromHomeOnly", [`mac`]) }
     public static func `viewFromHomeOnlyThere`() -> String { PhoneWords.format("viewFromHomeOnlyThere", []) }
     public static func `viewGoogleUpdateThere`(`mac`: String) -> String { PhoneWords.format("viewGoogleUpdateThere", [`mac`]) }
@@ -7311,6 +7322,17 @@ extension PhoneWords {
         "uiVoiceRemove": ["name"],
         "uiVoiceSubmit": [],
         "uiVoiceTaskPrompt": [],
+        "updateChannelNotRecorded": [],
+        "updateDownloadChecksum": [],
+        "updateDownloadNoWrite": ["folder"],
+        "updateDownloadRefused": ["status"],
+        "updateDownloadStopped": [],
+        "updateDownloadUnreachable": [],
+        "updateInstallerNoStart": [],
+        "updateWindowsChannelNotPutBack": [],
+        "updateWindowsInstallFailed": [],
+        "updateWindowsNoCopy": ["page"],
+        "updateWindowsShutdownTimeout": [],
         "viewFromHomeOnly": ["mac"],
         "viewFromHomeOnlyThere": [],
         "viewGoogleUpdateThere": ["mac"],

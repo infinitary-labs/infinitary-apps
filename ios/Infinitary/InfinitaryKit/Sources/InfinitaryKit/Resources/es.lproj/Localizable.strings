@@ -3497,6 +3497,17 @@
 "uiVoiceRemove" = "Quitar %1$@";
 "uiVoiceSubmit" = "Enviar";
 "uiVoiceTaskPrompt" = "Indicación de la tarea";
+"updateChannelNotRecorded" = "Infinitary no pudo guardar el canal de la actualización, así que no se instaló nada.";
+"updateDownloadChecksum" = "La descarga no coincidía con su suma de verificación publicada, así que no se instaló nada.";
+"updateDownloadNoWrite" = "Infinitary no puede escribir en %1$@. Mueve la app a una carpeta tuya, como tu carpeta personal, e inténtalo de nuevo.";
+"updateDownloadRefused" = "La descarga no empezó (el servidor respondió %1$@). Inténtalo de nuevo más tarde.";
+"updateDownloadStopped" = "La descarga se detuvo antes de terminar. Inténtalo de nuevo.";
+"updateDownloadUnreachable" = "Infinitary no pudo acceder a la descarga. Comprueba tu conexión e inténtalo de nuevo.";
+"updateInstallerNoStart" = "El instalador no pudo iniciarse, así que no se instaló nada.";
+"updateWindowsChannelNotPutBack" = "Infinitary no pudo restaurar el canal de actualizaciones que seguía antes; revisa el canal en Configuración → General.";
+"updateWindowsInstallFailed" = "El instalador se detuvo antes de terminar, así que se conservó esta copia.";
+"updateWindowsNoCopy" = "Infinitary no pudo volver a abrirse después de actualizarse. Descarga el instalador desde %1$@ y ejecútalo; tus tareas y ajustes se conservan.";
+"updateWindowsShutdownTimeout" = "Infinitary tardó más de cinco minutos en cerrarse, así que la actualización se detuvo y no se instaló nada.";
 "viewFromHomeOnly" = "Esto solo está en Configuración en %1$@. Elígelo allí en esta tarjeta.";
 "viewFromHomeOnlyThere" = "Esto solo está en Configuración en la computadora de tu primer oficial. Elígelo allí en esta tarjeta.";
 "viewGoogleUpdateThere" = "Actualiza Infinitary en %1$@ para iniciar sesión en Google desde aquí.";

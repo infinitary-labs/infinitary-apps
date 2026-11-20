@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import * as m from "@shared/i18n/messages.generated";
 import { WINDOWS_HAND_OVER_WORDS } from "@shared/updateWords";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -160,9 +161,7 @@ describe("the in-app Windows update", () => {
 
   it("refuses an installer whose bytes do not match the published checksum", async () => {
     const f = installer({ body: () => new Response("an installer someone changed") });
-    await expect(f.install(f.plan, f.saved)).rejects.toThrow(
-      "The download did not match its published checksum, so nothing was installed.",
-    );
+    await expect(f.install(f.plan, f.saved)).rejects.toThrow(m.updateDownloadChecksum());
     expect(f.order).toEqual([]);
     expect(existsSync(updatesIn(f.dataRoot))).toBe(false);
     expect(existsSync(join(f.dataRoot, UPDATE_CHANNEL_MARKER))).toBe(false);
@@ -240,9 +239,7 @@ describe("the in-app Windows update", () => {
     const f = installer({ spawns: "refused" });
     const earlier = `${JSON.stringify({ schemaVersion: 1, channel: "stable", version: "0.8.3" })}\n`;
     writeFileSync(join(f.dataRoot, UPDATE_CHANNEL_MARKER), earlier);
-    await expect(f.install(f.plan, f.saved)).rejects.toThrow(
-      "The installer could not start, so nothing was installed.",
-    );
+    await expect(f.install(f.plan, f.saved)).rejects.toThrow(m.updateInstallerNoStart());
     expect(readFileSync(join(f.dataRoot, UPDATE_CHANNEL_MARKER), "utf8")).toBe(earlier);
   });
 
@@ -261,7 +258,7 @@ describe("the in-app Windows update", () => {
       `${JSON.stringify({ schemaVersion: 1, channel: "stable", version: "0.8.3" })}\n`,
     );
     await expect(f.install(f.plan, f.saved)).rejects.toThrow(
-      "The installer could not start, so nothing was installed. Infinitary could not put back the update channel it followed before, so check the channel in Settings → General.",
+      `${m.updateInstallerNoStart()} ${WINDOWS_HAND_OVER_WORDS.channelNotPutBack}`,
     );
     expect(f.end).not.toHaveBeenCalled();
   });
@@ -271,9 +268,7 @@ describe("the in-app Windows update", () => {
     ["Windows refuses to start the hand-over", "refused"],
   ] as const)("keeps running, and remembers no new channel, when %s", async (_, spawns) => {
     const f = installer({ spawns });
-    await expect(f.install(f.plan, f.saved)).rejects.toThrow(
-      "The installer could not start, so nothing was installed.",
-    );
+    await expect(f.install(f.plan, f.saved)).rejects.toThrow(m.updateInstallerNoStart());
     expect(f.end).not.toHaveBeenCalled();
     expect(existsSync(join(f.dataRoot, UPDATE_CHANNEL_MARKER))).toBe(false);
     expect(readdirSync(f.dataRoot)).toEqual([]);

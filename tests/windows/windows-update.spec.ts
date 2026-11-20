@@ -13,6 +13,7 @@ import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { expect, type Page, test } from "@playwright/test";
 import { runLabelOf } from "@shared/codeNames";
+import * as m from "@shared/i18n/messages.generated";
 import type { TaskDetail } from "@shared/tasks";
 import type { UpdateChannel } from "@shared/update";
 import {
@@ -358,7 +359,7 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
       await installsNothing(
         "wrong-checksum",
         UPDATE_WORDS.restart,
-        "The download did not match its published checksum, so nothing was installed.",
+        m.updateDownloadChecksum(),
         "wrong-checksum",
       );
     });

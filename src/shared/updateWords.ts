@@ -1,3 +1,5 @@
+import * as m from "./i18n/messages.generated.ts";
+
 export const UPDATE_WORDS = {
   channel: "Update channel",
   restart: "Update and restart",
@@ -40,16 +42,19 @@ export function updateResumedWords(computer?: string): string {
  * did not finish (docs/alpha.md, "Updates on Windows"): this copy was kept.
  */
 export const WINDOWS_HAND_OVER_WORDS = {
-  shutdownTimeout:
-    "Infinitary took more than five minutes to close, so the update stopped and nothing was installed.",
-  installFailed: "The installer stopped before it finished, so this copy was kept.",
+  get shutdownTimeout() {
+    return m.updateWindowsShutdownTimeout();
+  },
+  get installFailed() {
+    return m.updateWindowsInstallFailed();
+  },
   /** Said when the update could not put back the channel marker the kept copy followed. */
-  channelNotPutBack:
-    "Infinitary could not put back the update channel it followed before, so check the channel in Settings → General.",
+  get channelNotPutBack() {
+    return m.updateWindowsChannelNotPutBack();
+  },
   /** Shown by the hand-over itself when the copy it would open is missing or does not open. */
-  noCopy: (page: string) =>
-    `Infinitary could not open again after its update. Download the installer from ${page} and run it; your tasks and settings are kept.`,
-} as const;
+  noCopy: (page: string) => m.updateWindowsNoCopy({ page }),
+};
 
 /** The crew's work around this computer's own update, in the update notice and on the Version row. */
 export const UPDATE_WORK_WORDS = {

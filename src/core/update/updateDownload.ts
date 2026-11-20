@@ -4,6 +4,7 @@ import { readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
+import * as m from "@shared/i18n/messages.generated";
 import type { UpdateChannel } from "@shared/update";
 import {
   type BuildDownload,
@@ -37,14 +38,10 @@ export async function downloadChecked(
       redirect: "follow",
     });
   } catch {
-    throw new UpdateInstallProblem(
-      "Infinitary could not reach the download. Check your connection and try again.",
-    );
+    throw new UpdateInstallProblem(m.updateDownloadUnreachable());
   }
   if (!response.ok || !response.body) {
-    throw new UpdateInstallProblem(
-      `The download did not start (the server answered ${response.status}). Try again later.`,
-    );
+    throw new UpdateInstallProblem(m.updateDownloadRefused({ status: String(response.status) }));
   }
   const hash = createHash("sha256");
   const hashing = new Transform({
@@ -64,15 +61,13 @@ export async function downloadChecked(
     const code = (caught as NodeJS.ErrnoException).code;
     throw new UpdateInstallProblem(
       code === "EACCES" || code === "EROFS" || code === "EPERM"
-        ? `Infinitary cannot write in ${dirname(file)}. Move the app to a folder you own, such as your home folder, and try again.`
-        : "The download stopped before it finished. Try again.",
+        ? m.updateDownloadNoWrite({ folder: dirname(file) })
+        : m.updateDownloadStopped(),
     );
   }
   if (hash.digest("hex") !== download.sha256) {
     await rm(file, { force: true });
-    throw new UpdateInstallProblem(
-      "The download did not match its published checksum, so nothing was installed.",
-    );
+    throw new UpdateInstallProblem(m.updateDownloadChecksum());
   }
 }
 

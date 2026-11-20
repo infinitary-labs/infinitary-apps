@@ -72,6 +72,11 @@ function installedVersion(): string | null {
     if ($entry) { [string]$entry.DisplayVersion } else { $null }`);
 }
 
+/** Waits up to a minute until `done` answers true. */
+const within = async (done: () => boolean) => {
+  await expect.poll(done, { timeout: 60_000, intervals: [500] }).toBe(true);
+};
+
 /** The version the window's first mate says this copy is, with its update. */
 const updateStatus = (page: Page) => page.evaluate(() => window.infinitary.update.status());
 
@@ -142,7 +147,12 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
     await test.step("this person's feed of the newer version, trusted for them alone", async () => {
       const work = scratchDir("infinitary-update-feed-");
       const passphrase = randomUUID();
-      const made = makeFeedCertificate(join(work, "feed.pfx"), passphrase);
+      const made = await makeFeedCertificate(
+        join(work, "feed.pfx"),
+        passphrase,
+        within,
+        evidence ? join(evidence, "root-warning-tree.json") : undefined,
+      );
       thumbprint = made.thumbprint;
       // Before the window starts the command: Task Scheduler gives it this person's environment.
       trustSystemStore(true);
@@ -168,9 +178,7 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
       const reading = await read(true);
       // The command reads the feed as Task Scheduler starts it, with the
       // environment Task Scheduler gives it.
-      const scheduled = await readThroughTaskScheduler(publicBuildsUrl, work, async (done) => {
-        await expect.poll(done, { timeout: 60_000, intervals: [500] }).toBe(true);
-      });
+      const scheduled = await readThroughTaskScheduler(publicBuildsUrl, work, within);
       keep(
         "feed-trusted.txt",
         `with the system store: ${reading}\nwithout: ${await read(false)}\nstarted by Task Scheduler: ${JSON.stringify(scheduled)}`,
@@ -322,7 +330,7 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
     if (feed) keep("feed-requests.json", JSON.stringify(feed.asked, null, 2));
     await launched?.close().catch(() => undefined);
     await feed?.close().catch(() => undefined);
-    if (thumbprint) removeFeedCertificate(thumbprint);
+    if (thumbprint) await removeFeedCertificate(thumbprint, within).catch(() => undefined);
     trustSystemStore(false);
   }
 });

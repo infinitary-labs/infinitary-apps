@@ -159,7 +159,9 @@ It runs only on request: nothing a batch or an alpha runs asks for it.
 `build` first points the checkout's release source at the machine's own feed, `https://localhost:8443/` (`scripts/windows-update-source.ts`, `tests/windows/updateVersions.ts`), builds once, and packages two unsigned test versions per channel from that one build, telling them apart only by their version: `0.0.1-alpha.1` and `0.0.1-alpha.2` for alpha, `0.0.1` and `0.0.2` for stable.
 Their release source names no published place, so nothing they find or download comes from a real release, and they stay on the run as the installer does.
 `update` is a matrix of one fresh machine per channel, set up as `check`'s is; it installs the channel's older version as a double-click does and runs `tests/windows/windows-update.spec.ts`.
-The journey serves the feed itself on the machine's loopback addresses (`tests/windows/updateFeed.ts`), with a certificate it makes in this person's own store and trusts for them alone in Trusted People, and sets `NODE_USE_SYSTEM_CA=1` in their environment, where the command Task Scheduler starts reads it; it takes both away when it ends.
+The journey serves the feed itself on the machine's loopback addresses (`tests/windows/updateFeed.ts`), with a certificate it makes in this person's own store and trusts for them alone as one of their own roots, answering Yes to the Security Warning Windows shows first, and sets `NODE_USE_SYSTEM_CA=1` in their environment, where the command Task Scheduler starts reads it; it takes both away when it ends.
+A certificate trusted only in Trusted People is not enough: a Node started by Task Scheduler with that setting reads it, but the installed app refused it.
+Before the window opens, the journey reads the feed from a Node a task of its own starts through Task Scheduler, so a missing setting shows there rather than as an update the app never offers.
 It checks, in order:
 
 1. Git for Windows installs on the person's yes, as in the installer check, and the window, opened again on the person's own data folder, starts the command through Task Scheduler.

@@ -7,7 +7,8 @@ import { join } from "node:path";
  * ride the environment, never a script's text, and it answers JSON.
  */
 
-const powershell = join(
+/** Windows PowerShell 5.1, which every Windows 11 carries. */
+export const powershellPath = join(
   process.env.SystemRoot ?? "C:\\Windows",
   "System32",
   "WindowsPowerShell",
@@ -16,7 +17,7 @@ const powershell = join(
 );
 
 function run(command: string, env: Record<string, string>): string {
-  return execFileSync(powershell, ["-NoProfile", "-NonInteractive", "-Command", command], {
+  return execFileSync(powershellPath, ["-NoProfile", "-NonInteractive", "-Command", command], {
     env: { ...process.env, ...env },
     encoding: "utf8",
     windowsHide: true,

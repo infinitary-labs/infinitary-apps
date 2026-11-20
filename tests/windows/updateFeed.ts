@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:https";
@@ -16,7 +17,7 @@ import {
   UPDATE_FEED_PORT,
   UPDATE_VERSIONS,
 } from "./updateVersions";
-import { ps } from "./windowsMachine";
+import { powershellPath, pressDialogButton, ps } from "./windowsMachine";
 
 /**
  * The Windows update check's own release feed (docs/windows.md, "The update
@@ -145,26 +146,74 @@ export async function startUpdateFeed(options: {
 
 /**
  * The feed's certificate, made in this person's own certificate store and
- * trusted for this person alone (Trusted People, which needs no
- * administrator and asks nothing), with its PFX for the feed. Node reads
- * the Windows store when `NODE_USE_SYSTEM_CA` is 1, which `trustFeed` sets
- * in this person's environment, where Task Scheduler's command reads it.
+ * trusted for this person alone as a root (their own Trusted Root
+ * Certification Authorities, which needs no administrator), with its PFX for
+ * the feed. Node reads the Windows store when `NODE_USE_SYSTEM_CA` is 1,
+ * which `trustSystemStore` sets in this person's environment, where Task
+ * Scheduler's command reads it. Every Node reads this person's roots there;
+ * the Node inside Electron reads no certificate this person trusts only as
+ * Trusted People.
  */
-export function makeFeedCertificate(
+export async function makeFeedCertificate(
   pfxFile: string,
   passphrase: string,
-): { thumbprint: string; pfx: Buffer } {
+  wait: (done: () => boolean) => Promise<void>,
+  treeFile?: string,
+): Promise<{ thumbprint: string; pfx: Buffer }> {
   const thumbprint = ps<string>(
     `
     $ErrorActionPreference = 'Stop'
     $c = New-SelfSignedCertificate -DnsName 'localhost' -CertStoreLocation Cert:\\CurrentUser\\My -NotAfter (Get-Date).AddDays(2) -KeyExportPolicy Exportable -FriendlyName 'Infinitary update check feed'
     $null = Export-PfxCertificate -Cert $c -FilePath $env:FEED_PFX -Password (ConvertTo-SecureString $env:FEED_PASS -AsPlainText -Force)
-    $store = New-Object System.Security.Cryptography.X509Certificates.X509Store('TrustedPeople', 'CurrentUser')
-    $store.Open('ReadWrite'); $store.Add($c); $store.Close()
     $c.Thumbprint`,
     { FEED_PFX: pfxFile, FEED_PASS: passphrase },
   );
+  await changeOwnRoots("add", thumbprint, wait, treeFile);
   return { thumbprint, pfx: readFileSync(pfxFile) };
+}
+
+/**
+ * Adds the certificate in this person's own store to their roots, or takes
+ * it out of them. Windows asks the person first, in a Security Warning of
+ * the process that changes the roots, and the check answers Yes as they would.
+ */
+async function changeOwnRoots(
+  change: "add" | "remove",
+  thumbprint: string,
+  wait: (done: () => boolean) => Promise<void>,
+  treeFile?: string,
+): Promise<void> {
+  const script = `
+    $ErrorActionPreference = 'Stop'
+    $mine = New-Object System.Security.Cryptography.X509Certificates.X509Store('My', 'CurrentUser')
+    $mine.Open('ReadOnly')
+    $c = @($mine.Certificates | Where-Object { $_.Thumbprint -eq $env:THUMB })[0]
+    $mine.Close()
+    $roots = New-Object System.Security.Cryptography.X509Certificates.X509Store('Root', 'CurrentUser')
+    $roots.Open('ReadWrite')
+    if ($env:CHANGE -eq 'add') { $roots.Add($c) } else {
+      foreach ($r in @($roots.Certificates | Where-Object { $_.Thumbprint -eq $env:THUMB })) { $roots.Remove($r) }
+    }
+    $roots.Close()`;
+  const child = spawn(powershellPath, ["-NoProfile", "-Command", script], {
+    env: { ...process.env, THUMB: thumbprint, CHANGE: change },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  const said: string[] = [];
+  child.stdout?.on("data", (chunk) => said.push(String(chunk)));
+  child.stderr?.on("data", (chunk) => said.push(String(chunk)));
+  const ended = new Promise<number | null>((done) => child.once("exit", (code) => done(code)));
+  let exited = false;
+  void ended.then(() => {
+    exited = true;
+  });
+  const pid = child.pid ?? 0;
+  await wait(() => exited || pressDialogButton(pid, "Yes", treeFile));
+  const code = await ended;
+  if (code !== 0)
+    throw new Error(
+      `changing this person's roots (${change}) ended with ${code}: ${said.join("")}`,
+    );
 }
 
 /** Sets `NODE_USE_SYSTEM_CA=1` in this person's environment, as the person's own setting. */
@@ -175,15 +224,17 @@ export function trustSystemStore(on: boolean): void {
 }
 
 /** Takes the feed's certificate out of every store `makeFeedCertificate` put it in. */
-export function removeFeedCertificate(thumbprint: string): void {
+export async function removeFeedCertificate(
+  thumbprint: string,
+  wait: (done: () => boolean) => Promise<void>,
+): Promise<void> {
+  await changeOwnRoots("remove", thumbprint, wait);
   ps(
     `
-    foreach ($name in 'TrustedPeople', 'My') {
-      $store = New-Object System.Security.Cryptography.X509Certificates.X509Store($name, 'CurrentUser')
-      $store.Open('ReadWrite')
-      foreach ($c in @($store.Certificates | Where-Object { $_.Thumbprint -eq $env:THUMB })) { $store.Remove($c) }
-      $store.Close()
-    }
+    $store = New-Object System.Security.Cryptography.X509Certificates.X509Store('My', 'CurrentUser')
+    $store.Open('ReadWrite')
+    foreach ($c in @($store.Certificates | Where-Object { $_.Thumbprint -eq $env:THUMB })) { $store.Remove($c) }
+    $store.Close()
     $true`,
     { THUMB: thumbprint },
   );

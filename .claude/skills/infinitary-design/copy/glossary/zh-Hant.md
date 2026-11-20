@@ -94,6 +94,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | offline, disconnected (never said) | 連絡不上 | Never 離線. |
 | out of reach | 連絡不上 | Avoids 離線 (offline) and 斷線 (disconnected). |
 | panel | 面板 | Counter 個. |
+| part (of a task) | 部分 | 各個部分 for its parts. |
 | personal context (Knowledge) | 個人背景 | What the person tells the first mate about themselves. |
 | phone | 手機 | Standard. |
 | pin (a task) | 釘選 | Taiwan's word, as for a pinned model. |

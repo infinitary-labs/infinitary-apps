@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "panel-commands-in-your-language",
+      "kind": "improvement",
+      "title": "Task and Knowledge commands in your language",
+      "body": "When Infinitary speaks a language other than English, command search and Settings → Keyboard now show the Tasks and Knowledge panels' commands, such as Find a task, Open task board and Open Knowledge, in that language. Command search still finds them by their English names too.",
+      "area": "settings",
+      "picture": {
+        "dark": "panel-commands-in-your-language-dark.webp",
+        "light": "panel-commands-in-your-language-light.webp",
+        "alt": "Command search in Arabic, listing the task board's commands in Arabic for the English word board"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

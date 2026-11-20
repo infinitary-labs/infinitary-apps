@@ -99,6 +99,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | on pace / empty (allowance verdicts) | im Plan / leer | "leer in 2h", "jetzt leer". |
 | out of reach | außer Reichweite | Replaces offline and unreachable. |
 | panel | Panel | Neuter, plural "Panels"; common in German software. |
+| part (of a task) | Teil | Plural "Teile", as in "Alle Teile einklappen". |
 | passcode (iOS) | Code | iOS German says "Face ID & Code". |
 | phone | Telefon | |
 | pin / unpin (a task) | anheften / nicht mehr angeheftet | |
@@ -143,6 +144,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | story (a change's) | Geschichte | |
 | subscription | Abo | The short everyday word. |
 | task | Aufgabe | Feminine. |
+| task board | Aufgabenboard | "Board" alone for the board itself. |
 | task key (a project's task numbering, "INF") | Aufgabenkürzel, Kürzel | Kept apart from "Schlüssel", which is a key that unlocks something. |
 | Text size; Text Size, Control Center (iOS's own names) | Textgröße; Textgröße, Kontrollzentrum | iOS's own German names for the control. |
 | the checks | die Überprüfungen | GitHub's German docs say "Überprüfungen" and "Statusüberprüfungen". |

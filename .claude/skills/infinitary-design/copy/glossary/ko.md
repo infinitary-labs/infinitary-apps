@@ -151,6 +151,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | story (a change's) | 스토리 | |
 | subscription | 구독 | |
 | task | 작업 | |
+| task board | 작업 보드 | 보드 alone for the board itself. |
 | task key (a project's task numbering, "INF") | 작업 키 | The project's own key is 프로젝트의 키 |
 | Text size; Text Size, Control Center (iOS's own names) | 텍스트 크기; 텍스트 크기, 제어 센터 | iOS's own Korean names for the control. |
 | the checks (passed / failed / running) | 검사 (통과 / 실패 / 실행 중) | GitHub's Korean docs call checks 검사; "batch check" is 일괄 검사 |

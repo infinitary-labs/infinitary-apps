@@ -643,6 +643,25 @@ public enum PhoneMessages {
     public static func `commandNoticeWindowStopped`() -> String { PhoneWords.format("commandNoticeWindowStopped", []) }
     public static func `commandNoticeWindowUpdated`() -> String { PhoneWords.format("commandNoticeWindowUpdated", []) }
     public static func `commandNoticeWindowUpdating`() -> String { PhoneWords.format("commandNoticeWindowUpdating", []) }
+    public static func `commandPanelKnowledgeOpen`() -> String { PhoneWords.format("commandPanelKnowledgeOpen", []) }
+    public static func `commandPanelKnowledgeOpenWords`() -> String { PhoneWords.format("commandPanelKnowledgeOpenWords", []) }
+    public static func `commandPanelNowBoard`() -> String { PhoneWords.format("commandPanelNowBoard", []) }
+    public static func `commandPanelNowBoardBacklog`() -> String { PhoneWords.format("commandPanelNowBoardBacklog", []) }
+    public static func `commandPanelNowBoardBacklogWords`() -> String { PhoneWords.format("commandPanelNowBoardBacklogWords", []) }
+    public static func `commandPanelNowBoardDone`() -> String { PhoneWords.format("commandPanelNowBoardDone", []) }
+    public static func `commandPanelNowBoardDoneWords`() -> String { PhoneWords.format("commandPanelNowBoardDoneWords", []) }
+    public static func `commandPanelNowBoardDropped`() -> String { PhoneWords.format("commandPanelNowBoardDropped", []) }
+    public static func `commandPanelNowBoardDroppedWords`() -> String { PhoneWords.format("commandPanelNowBoardDroppedWords", []) }
+    public static func `commandPanelNowBoardFind`() -> String { PhoneWords.format("commandPanelNowBoardFind", []) }
+    public static func `commandPanelNowBoardFindWords`() -> String { PhoneWords.format("commandPanelNowBoardFindWords", []) }
+    public static func `commandPanelNowBoardMove`() -> String { PhoneWords.format("commandPanelNowBoardMove", []) }
+    public static func `commandPanelNowBoardMoveWords`() -> String { PhoneWords.format("commandPanelNowBoardMoveWords", []) }
+    public static func `commandPanelNowBoardWords`() -> String { PhoneWords.format("commandPanelNowBoardWords", []) }
+    public static func `commandPanelNowCollapseParts`() -> String { PhoneWords.format("commandPanelNowCollapseParts", []) }
+    public static func `commandPanelNowCollapsePartsWords`() -> String { PhoneWords.format("commandPanelNowCollapsePartsWords", []) }
+    public static func `commandPanelNowExpandParts`() -> String { PhoneWords.format("commandPanelNowExpandParts", []) }
+    public static func `commandPanelNowExpandPartsWords`() -> String { PhoneWords.format("commandPanelNowExpandPartsWords", []) }
+    public static func `commandPanelNowFind`() -> String { PhoneWords.format("commandPanelNowFind", []) }
     public static func `commandProjectFocusClear`() -> String { PhoneWords.format("commandProjectFocusClear", []) }
     public static func `commandProjectFocusClearWords`() -> String { PhoneWords.format("commandProjectFocusClearWords", []) }
     public static func `commandProjectFocusOpen`() -> String { PhoneWords.format("commandProjectFocusOpen", []) }
@@ -4614,6 +4633,25 @@ extension PhoneWords {
         "commandNoticeWindowStopped": [],
         "commandNoticeWindowUpdated": [],
         "commandNoticeWindowUpdating": [],
+        "commandPanelKnowledgeOpen": [],
+        "commandPanelKnowledgeOpenWords": [],
+        "commandPanelNowBoard": [],
+        "commandPanelNowBoardBacklog": [],
+        "commandPanelNowBoardBacklogWords": [],
+        "commandPanelNowBoardDone": [],
+        "commandPanelNowBoardDoneWords": [],
+        "commandPanelNowBoardDropped": [],
+        "commandPanelNowBoardDroppedWords": [],
+        "commandPanelNowBoardFind": [],
+        "commandPanelNowBoardFindWords": [],
+        "commandPanelNowBoardMove": [],
+        "commandPanelNowBoardMoveWords": [],
+        "commandPanelNowBoardWords": [],
+        "commandPanelNowCollapseParts": [],
+        "commandPanelNowCollapsePartsWords": [],
+        "commandPanelNowExpandParts": [],
+        "commandPanelNowExpandPartsWords": [],
+        "commandPanelNowFind": [],
         "commandProjectFocusClear": [],
         "commandProjectFocusClearWords": [],
         "commandProjectFocusOpen": [],

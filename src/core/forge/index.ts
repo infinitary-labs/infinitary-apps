@@ -282,7 +282,7 @@ export function createForgeResolver(
     if (location.kind === "none") return new NoHostForge(location);
     const bound = bindings[location.kind];
     if (bound) return bound(location);
-    return new PlainGitForge({ ...location, place: forgePlace(location) });
+    return new PlainGitForge({ ...location, place: forgePlace(location) }, repo.origin);
   };
 }
 

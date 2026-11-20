@@ -683,7 +683,10 @@ describe("the commit-name check of a held batch's fix", () => {
 
     // On a project that merges in batches, which carries the fix as its own difference.
     const repoId = tasks.get("ab12cd34")?.repoId as string;
-    repos.configure(repoId, { delivery: "queue-pr", origin: "https://github.com/acme/meter.git" });
+    const origin = "https://github.com/acme/meter.git";
+    run("config", `url.${dir}.insteadOf`, origin);
+    run("remote", "add", "origin", origin);
+    repos.configure(repoId, { delivery: "queue-pr", origin });
     // A call that opens a pull request of its own, as one with a body does, merges the branch
     // whole: a verified base it no longer builds on is not its range, and every commit is named.
     run("checkout", "-b", "elsewhere", "origin/main");
@@ -722,6 +725,9 @@ describe("the route a held batch's fix is published on", () => {
     };
     const title = "fix(parser): read dates with a time zone";
     run("init", "--quiet", "--initial-branch=main");
+    const origin = "https://github.com/acme/meter.git";
+    run("config", `url.${dir}.insteadOf`, origin);
+    run("remote", "add", "origin", origin);
     commit("README.md", "chore: start the meter");
     run("update-ref", "refs/remotes/origin/main", "main");
     // The held batch carries a member whose commit name predates the naming rule.
@@ -751,7 +757,7 @@ describe("the route a held batch's fix is published on", () => {
       id: "repo-meter",
       name: "meter",
       path: dir,
-      origin: "https://github.com/acme/meter.git",
+      origin,
       delivery: "queue-pr",
     });
     insertTask(at.tasks, { repoId: "repo-meter" });

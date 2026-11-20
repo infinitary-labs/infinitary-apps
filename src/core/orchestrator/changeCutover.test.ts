@@ -429,94 +429,122 @@ describe("saved stories at the approved cutover (INF-5135 and INF-5411)", () => 
     },
   );
 
-  it("confirms the pushed story from home after refreshing an unrelated fetched main", async () => {
-    const where = storyForge();
-    const { db, tasks, repos, service, readHead, paths } = setup({
-      forge: where.forge,
-      realRange: true,
-    });
-    const home = join(paths, "home");
-    const next = join(paths, "next");
-    await git(paths, ["init", "-q", "-b", "main", home]);
-    await git(paths, ["init", "-q", "-b", "main", next]);
-    const commit = (dir: string, title: string) =>
-      git(dir, [
-        "-c",
-        "user.name=Test",
-        "-c",
-        "user.email=test@example.com",
-        "commit",
-        "-q",
-        "--allow-empty",
-        "-m",
-        title,
-      ]);
-    await commit(home, "chore: start original project");
-    const oldBase = await git(home, ["rev-parse", "HEAD"]);
-    await git(home, ["update-ref", "refs/remotes/origin/main", oldBase]);
-    await commit(next, "chore: start moved project");
-    const base = await git(next, ["rev-parse", "HEAD"]);
-    const branch = "fm/cutover-change";
-    await git(next, ["switch", "-q", "-c", branch]);
-    const story = staged(base);
-    await commit(next, story.title);
-    const head = await git(next, ["rev-parse", "HEAD"]);
-    await git(home, ["fetch", "-q", next, `refs/heads/${branch}:refs/heads/${branch}`]);
-    // Only a disposable URL: its user info must not be copied into a failure response.
-    const credentialed = newAddress.replace("https://", "https://fixture:placeholder@");
-    const missing = `url.${join(paths, "not-a-repo")}.insteadOf`;
-    await git(home, ["config", missing, credentialed]);
-    await git(home, ["remote", "add", "origin", formerAddress]);
-    const repoId = "cutover-project";
-    seedProject(db, {
-      id: repoId,
-      name: "cutover",
-      path: home,
-      origin: formerAddress,
-      delivery: "queue-pr",
-    });
-    insertTask(tasks, { repoId, repoDir: home, branch });
-    const id = "ab12cd34";
-    readHead.mockResolvedValue(oldBase);
-    expect(await service.publication.prepareStory(id, staged(oldBase))).toMatchObject({
-      revision: 1,
-    });
-    repos.configure(repoId, { origin: credentialed });
-    where.destination(nextDestination);
-    where.pushed(head);
-    readHead.mockResolvedValue(head);
-    expect(await service.publication.prepareStory(id, staged(base, head))).toMatchObject({
-      revision: 1,
-    });
-    await expect(git(home, ["merge-base", head, "refs/remotes/origin/main"])).rejects.toMatchObject(
-      { code: 1 },
-    );
-    const open = () => service.publication.open(id, { title: story.title, presentation: 1 });
-    // An approved move does not itself change the checkout's remote.
-    expect(observe("publication with former checkout origin", await open())).not.toBe(
-      BATCH_OPEN_WORDS.confirmed(branch),
-    );
-    expect(await git(home, ["rev-parse", "refs/remotes/origin/main"])).toBe(oldBase);
-    await git(home, ["remote", "set-url", "origin", credentialed]);
-    const failure = await open();
-    expect(observe("failed fetch diagnostic", failure)).toContain(
-      "Could not refresh the approved project's default branch from origin.",
-    );
-    expect(failure).not.toContain("placeholder");
-    expect(failure).not.toContain("not-a-repo");
-    await git(home, ["config", "--unset", missing]);
-    await git(home, ["config", `url.${next}.insteadOf`, credentialed]);
-    expect(observe("publication from home", await open())).toBe(BATCH_OPEN_WORDS.confirmed(branch));
-    expect(
-      observe(
-        "home default after publication",
-        await git(home, ["rev-parse", "refs/remotes/origin/main"]),
-      ),
-    ).toBe(base);
-    expect(tasks.delivery.changePresentation(id, branch)?.completion).toMatchObject({
-      revision: 1,
-      head,
-    });
-    expect(where.forge.calls.filter((call) => call.startsWith("openChange"))).toEqual([]);
-  });
+  it.each(["unrelated", "shared history", "absent"])(
+    "confirms the pushed story after verifying the approved default ref (%s)",
+    async (cached) => {
+      const where = storyForge();
+      const { db, tasks, repos, service, readHead, paths } = setup({
+        forge: where.forge,
+        realRange: true,
+      });
+      const home = join(paths, "home");
+      const next = join(paths, "next");
+      await git(paths, ["init", "-q", "-b", "main", home]);
+      await git(paths, ["init", "-q", "-b", "main", next]);
+      const commit = (dir: string, title: string) =>
+        git(dir, [
+          "-c",
+          "user.name=Test",
+          "-c",
+          "user.email=test@example.com",
+          "commit",
+          "-q",
+          "--allow-empty",
+          "-m",
+          title,
+        ]);
+      await commit(home, "chore: start original project");
+      const oldBase = await git(home, ["rev-parse", "HEAD"]);
+      if (cached !== "absent") await git(home, ["update-ref", "refs/remotes/origin/main", oldBase]);
+      if (cached === "shared history") {
+        await git(next, ["fetch", "-q", home, "refs/heads/main"]);
+        await git(next, ["reset", "--hard", "FETCH_HEAD"]);
+      }
+      if (cached === "absent") {
+        await git(home, ["switch", "--detach", oldBase]);
+        await git(home, ["branch", "-D", "main"]);
+      }
+      await commit(next, "chore: start moved project");
+      const base = await git(next, ["rev-parse", "HEAD"]);
+      const branch = "fm/cutover-change";
+      await git(next, ["switch", "-q", "-c", branch]);
+      const story = staged(base);
+      await commit(next, story.title);
+      const head = await git(next, ["rev-parse", "HEAD"]);
+      await git(home, ["fetch", "-q", next, `refs/heads/${branch}:refs/heads/${branch}`]);
+      // Only a disposable URL: its user info must not be copied into a failure response.
+      const credentialed = newAddress.replace("https://", "https://fixture:placeholder@");
+      const missing = `url.${join(paths, "not-a-repo")}.insteadOf`;
+      await git(home, ["config", missing, credentialed]);
+      await git(home, ["remote", "add", "origin", formerAddress]);
+      const repoId = "cutover-project";
+      seedProject(db, {
+        id: repoId,
+        name: "cutover",
+        path: home,
+        origin: formerAddress,
+        delivery: "queue-pr",
+      });
+      insertTask(tasks, { repoId, repoDir: home, branch });
+      const id = "ab12cd34";
+      readHead.mockResolvedValue(oldBase);
+      expect(await service.publication.prepareStory(id, staged(oldBase))).toMatchObject({
+        revision: 1,
+      });
+      repos.configure(repoId, { origin: credentialed });
+      where.destination(nextDestination);
+      where.pushed(head);
+      readHead.mockResolvedValue(head);
+      expect(await service.publication.prepareStory(id, staged(base, head))).toMatchObject({
+        revision: 1,
+      });
+      const readCache = () =>
+        git(home, ["rev-parse", "--verify", "refs/remotes/origin/main"]).catch(() => "");
+      if (cached === "unrelated")
+        await expect(
+          git(home, ["merge-base", head, "refs/remotes/origin/main"]),
+        ).rejects.toMatchObject({ code: 1 });
+      if (cached === "shared history")
+        expect(await git(home, ["merge-base", head, "refs/remotes/origin/main"])).toBe(oldBase);
+      expect(observe(`${cached} home default before publication`, await readCache())).toBe(
+        cached === "absent" ? "" : oldBase,
+      );
+      const open = () => service.publication.open(id, { title: story.title, presentation: 1 });
+      // An approved move does not itself change the checkout's remote.
+      expect(observe("publication with former checkout origin", await open())).not.toBe(
+        BATCH_OPEN_WORDS.confirmed(branch),
+      );
+      expect(await readCache()).toBe(cached === "absent" ? "" : oldBase);
+      await git(home, ["remote", "set-url", "origin", credentialed]);
+      const failure = await open();
+      expect(observe("failed fetch diagnostic", failure)).toContain(
+        "Could not refresh the approved project's default branch from origin.",
+      );
+      expect(failure).not.toContain("placeholder");
+      expect(failure).not.toContain("not-a-repo");
+      await git(home, ["config", "--unset", missing]);
+      await git(home, ["config", `url.${next}.insteadOf`, credentialed]);
+      expect(observe("publication from home", await open())).toBe(
+        BATCH_OPEN_WORDS.confirmed(branch),
+      );
+      expect(
+        observe(
+          "home default after publication",
+          await git(home, ["rev-parse", "refs/remotes/origin/main"]),
+        ),
+      ).toBe(base);
+      expect(tasks.delivery.changePresentation(id, branch)?.completion).toMatchObject({
+        revision: 1,
+        head,
+      });
+      // A confirmed tracking ref does not fetch again: the existing FETCH_HEAD is left intact.
+      await git(home, ["fetch", "-q", next, `refs/heads/${branch}`]);
+      expect(await git(home, ["rev-parse", "FETCH_HEAD"])).toBe(head);
+      expect(observe("publication with matching tracking ref", await open())).toBe(
+        BATCH_OPEN_WORDS.confirmed(branch),
+      );
+      expect(await git(home, ["rev-parse", "FETCH_HEAD"])).toBe(head);
+      expect(where.forge.calls.filter((call) => call.startsWith("openChange"))).toEqual([]);
+    },
+  );
 });

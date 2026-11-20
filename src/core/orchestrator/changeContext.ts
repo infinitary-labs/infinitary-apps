@@ -411,20 +411,6 @@ export class ChangeContext {
       await this.options.validateRange(dir, branch, forge, head);
       return { dir };
     }
-    // Measure from the fetched default branch: the task branch starts there
-    // (dispatchBase), and the local one lags whenever this Mac has not
-    // pulled, which would count merged commits as the branch's own.
-    const approvedOrigin = repoId ? this.options.repos.get(repoId)?.origin : undefined;
-    const name = await forge.defaultBranch();
-    const fetched = `refs/remotes/origin/${name}`;
-    const target = (await git(dir, [
-      "rev-parse",
-      "--verify",
-      "--quiet",
-      `${fetched}^{commit}`,
-    ]).catch(() => ""))
-      ? fetched
-      : name;
     // A held batch's declared fix, on its own task's branch, names its own commits from the
     // held version the combine carries it from, never the members' it builds on; any other
     // change names every commit past the default branch (docs/forge.md, "A held batch").
@@ -449,35 +435,65 @@ export class ChangeContext {
             : `its branch no longer builds on the batch's version ${found.lost} it was verified on`
         }, so its own commits cannot be told from the work it carries. This repair stays measured from that version: ${found.unread ? "once it can be read here again, publish or approve this version again" : "build the fix again on it"}, or leave the batch to a new repair built on its current version.`,
       );
-    const base =
-      found?.held ??
-      (await git(dir, ["merge-base", head, target]).catch(async (error) => {
-        if ((error as { code?: unknown }).code !== 1 || !repoId || !approvedOrigin) throw error;
-        // After a repository cutover the fetched ref can still belong to unrelated history.
-        // Never fetch a changed checkout address before it has been approved.
-        const configured = await git(dir, ["config", "--get-all", "remote.origin.url"]).catch(
-          () => undefined,
-        );
-        if (
-          configured !== approvedOrigin ||
-          this.options.repos.get(repoId)?.origin !== approvedOrigin
-        )
-          throw error;
-        await git(
-          dir,
-          ["fetch", "--quiet", "--no-tags", "origin", `+refs/heads/${name}:${fetched}`],
-          {
-            env: { GIT_TERMINAL_PROMPT: "0" },
-            timeoutMs: 30_000,
-          },
-        ).catch(() => {
-          // Git's transport diagnostics can include the configured URL and its sign-in.
-          throw new Error("Could not refresh the approved project's default branch from origin.");
-        });
-        return git(dir, ["merge-base", head, fetched]);
-      }));
+    const base = found?.held ?? (await this.defaultRangeBase(dir, repoId, forge, head));
     await requireNamedRange(dir, base, head, this.options.namingRule?.() ?? null);
     return { dir, ...(found?.held ? { heldBase: found.held } : {}) };
+  }
+
+  /** A tracking ref is reusable only when it equals the approved remote's advertised tip. */
+  private async defaultRangeBase(
+    dir: string,
+    repoId: string | null | undefined,
+    forge: Forge,
+    head: string,
+  ): Promise<string> {
+    const origin = repoId ? this.options.repos.get(repoId)?.origin : undefined;
+    const assertOrigin = async () => {
+      const configured = await git(dir, ["config", "--get-all", "remote.origin.url"]).catch(
+        () => undefined,
+      );
+      if (!repoId || configured !== origin || this.options.repos.get(repoId)?.origin !== origin)
+        throw new Error(
+          "The checkout does not use the approved project address. Update its origin and try again.",
+        );
+    };
+    if (origin) await assertOrigin();
+    const name = await forge.defaultBranch();
+    const tracked = `refs/remotes/origin/${name}`;
+    const remoteRef = `refs/heads/${name}`;
+    const readTracked = () =>
+      git(dir, ["rev-parse", "--verify", "--quiet", `${tracked}^{commit}`]).catch(() => "");
+    const cached = await readTracked();
+    if (!origin) return git(dir, ["merge-base", head, cached || name]);
+    const readOrigin = (args: string[]) =>
+      git(dir, args, {
+        env: { GIT_TERMINAL_PROMPT: "0" },
+        timeoutMs: 30_000,
+      }).catch(() => {
+        // Transport diagnostics may contain the configured URL and its sign-in.
+        throw new Error("Could not refresh the approved project's default branch from origin.");
+      });
+    await assertOrigin();
+    const advertised = await readOrigin([
+      "ls-remote",
+      "--exit-code",
+      "--refs",
+      "origin",
+      remoteRef,
+    ]);
+    const [tip, ref] = advertised.split("\t");
+    if (ref !== remoteRef || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(tip ?? ""))
+      throw new Error("Could not read the approved project's default branch from origin.");
+    await assertOrigin();
+    if (cached !== tip) {
+      await readOrigin(["fetch", "--quiet", "--no-tags", "origin", `+${remoteRef}:${tracked}`]);
+      await assertOrigin();
+      if ((await readTracked()) !== tip)
+        throw new Error(
+          "The approved project's default branch changed during the refresh. Try again.",
+        );
+    }
+    return git(dir, ["merge-base", head, tip]);
   }
 }
 

@@ -937,7 +937,9 @@ A story pinned to an unchanged publication address keeps its ledger.
 A story at the new address needs a new merge card and approval, even for a plain Git branch at the same commit and story revision.
 Returning to a former address does not restore a retired offer.
 Preparing, confirming or merging a plain Git story requires the checkout and story to agree with its approved address.
-If the fetched default branch in the home project folder has no common ancestor with the rebuilt branch, the range check fetches the current default branch and tries again, but only when the folder's origin matches the approved address.
+For a managed origin, the range check compares the home project folder’s cached default branch to the tip advertised by the approved address, fetching when the cached ref is missing or differs.
+It never follows a different checkout address.
+Plain Git writes also refuse a separate push address that differs from the approved read route.
 A declared repair is reset with the former batch: its declaration, the versions that held and its verified base are dropped, so its whole branch goes as an ordinary change once approved again at the new address.
 A move noticed after a combine's reads or during its push leaves its result unsaved, and nothing is pushed to the former address once the move is seen.
 A change that no longer combines is told whether it clashes with the default branch as it is now, which bringing it up to date answers, or only with an approved change ahead of it in the batch, which the combine names (`ahead` on its left-out entry).

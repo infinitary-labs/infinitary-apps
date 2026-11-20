@@ -102390,6 +102390,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     object({ kind: literal("shortcut"), name: string().max(120) }),
     object({ kind: literal("unreadable"), name: string().max(120) })
   ]);
+  const deviceMakeSchema = _enum(["link", "command", "user-command"]);
   const HOST_OPS = [
     "restore-account",
     "move-flagship",
@@ -102445,7 +102446,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
      */
     integration: _enum(["always", "task", "once", "deny"]).optional()
   });
-  const deviceMakeSchema = _enum(["link", "command", "user-command"]);
   const signInOnSchema = object({
     deviceId: string().min(1).max(64),
     providerId: string().min(1).max(256)

@@ -100384,6 +100384,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     object({ kind: literal("shortcut"), name: string().max(120) }),
     object({ kind: literal("unreadable"), name: string().max(120) })
   ]);
+  const deviceMakeSchema = _enum(["link", "command", "user-command"]);
   const HOST_OPS = [
     "restore-account",
     "move-flagship",
@@ -100439,7 +100440,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
      */
     integration: _enum(["always", "task", "once", "deny"]).optional()
   });
-  const deviceMakeSchema = _enum(["link", "command", "user-command"]);
   const signInOnSchema = object({
     deviceId: string().min(1).max(64),
     providerId: string().min(1).max(256)
@@ -112067,7 +112067,13 @@ ${startersHtml()}`;
     name: string().min(1).max(253).optional(),
     firewall: deviceFirewallSchema.optional(),
     /** On a Windows home, its firewall that may keep devices out; absent when none is known to. */
-    windowsFirewall: windowsFirewallSchema.optional()
+    windowsFirewall: windowsFirewallSchema.optional(),
+    /**
+     * False on a home that cannot set a computer up by its address (a Windows
+     * PC): + A computer offers the link and the command instead of the address
+     * form. Absent where it can.
+     */
+    addsByAddress: literal(false).optional()
   });
   strictObject({
     /** The address that answered last, dialed first. */

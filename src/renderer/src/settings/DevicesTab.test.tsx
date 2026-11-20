@@ -349,6 +349,7 @@ describe("Settings -> Devices", () => {
     expect(html.indexOf("data-device-address-question")).toBeLessThan(
       html.indexOf("data-device-other-ways"),
     );
+    // The words as the page escapes them, read from a lone span's markup.
     for (const words of [
       m.settingsDevicesAddOtherWays(),
       m.settingsDevicesAddByLink(),
@@ -356,7 +357,6 @@ describe("Settings -> Devices", () => {
       m.settingsDevicesAddByCommand(),
       m.settingsDevicesAddByCommandWhen(),
     ])
-      // The words as the page escapes them, read from a lone span's markup.
       expect(ways).toContain(renderToStaticMarkup(<span>{words}</span>).slice(6, -7));
     // A package update keeps its own words, with no other ways.
     expect(

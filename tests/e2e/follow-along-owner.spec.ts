@@ -224,10 +224,11 @@ test("a window follows along beside the command its agent started, and never sto
       expect(standIn.runs(LABEL)).toEqual([owned]);
       // The window is that home's view, under the grant the add left.
       await expect
-        .poll(async () =>
-          (await pro.page.evaluate(() => window.infinitary.devices.list())).some(
-            (device) => device.id === deviceId && device.inReach,
-          ),
+        .poll(
+          async () =>
+            (await pro.page.evaluate(() => window.infinitary.devices.list())).some(
+              (device) => device.id === deviceId && device.inReach,
+            ),
           // The work service starts this app's work in a program of its own, which then dials the home.
           { timeout: 60_000 },
         )
@@ -269,10 +270,11 @@ test("a window follows along beside the command its agent started, and never sto
       await expect.poll(() => standIn?.running(LABEL)).toBe(false);
       expect(standIn.runs(LABEL)).toEqual([first, second]);
       await expect
-        .poll(async () =>
-          (await pro.page.evaluate(() => window.infinitary.devices.list())).some(
-            (device) => device.id === deviceId && device.inReach,
-          ),
+        .poll(
+          async () =>
+            (await pro.page.evaluate(() => window.infinitary.devices.list())).some(
+              (device) => device.id === deviceId && device.inReach,
+            ),
           // The work service starts this app's work in a program of its own, which then dials the home.
           { timeout: 60_000 },
         )
@@ -307,10 +309,11 @@ test("a window follows along beside the command its agent started, and never sto
       await expect.poll(() => standIn?.running(LABEL)).toBe(false);
       expect(standIn.runs(LABEL)).toHaveLength(1);
       await expect
-        .poll(async () =>
-          (await pro.page.evaluate(() => window.infinitary.devices.list())).some(
-            (device) => device.id === deviceId && device.inReach,
-          ),
+        .poll(
+          async () =>
+            (await pro.page.evaluate(() => window.infinitary.devices.list())).some(
+              (device) => device.id === deviceId && device.inReach,
+            ),
           // The work service starts this app's work in a program of its own, which then dials the home.
           { timeout: 60_000 },
         )

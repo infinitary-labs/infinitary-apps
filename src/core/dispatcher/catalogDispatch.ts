@@ -146,9 +146,14 @@ export function createCatalogDispatch({
         args[0] === (services.firstmate.boundAccount() ?? services.settings.getFirstmateAccount())
       )
         throw new Error("The first mate cannot disconnect the account it is running on.");
-      // Several lines share one request: each changes only its own fields.
+      // Several lines share one request, or a request holds the captain's
+      // outbound consent: each line changes only its own fields.
       const fields = ACTIONS[actor.action].fields;
-      if (fields && ACTION_NAMES.filter((name) => ACTIONS[name].change === channel).length > 1) {
+      if (
+        fields &&
+        (channel === "inf:settings:decisions:set" ||
+          ACTION_NAMES.filter((name) => ACTIONS[name].change === channel).length > 1)
+      ) {
         const previous =
           channel === "inf:settings:decisions:set" ? (old as { settings: unknown }).settings : old;
         const omit = (value: unknown) =>

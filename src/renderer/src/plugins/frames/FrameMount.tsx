@@ -11,6 +11,7 @@ import type {
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { offerNotTypingKey } from "../../app/focusLanding";
 import { fontFrameStyle, useFontsDrawn } from "../../app/fonts";
+import { useShellStore } from "../../app/store";
 import { Button } from "../../design";
 import { hasShellPainted } from "../../design/reveals";
 import { appReadExecutor } from "../reads/appExecutor";
@@ -382,6 +383,16 @@ export function FrameMount({
       if (mounted) void window.infinitary.plugins.unmountFrame(mounted.mountId).catch(() => {});
     };
   }, [title, template, panelSource, layout, attempt, fontsDrawn]);
+
+  // A mount refused while the link to the first mate was down, or while the
+  // first mate beside this window was on another version around an update,
+  // is asked again once the link comes back; a drawn frame stays as it is.
+  const linkReturns = useShellStore((state) => state.linkReturns);
+  const failedRef = useRef(false);
+  failedRef.current = failure !== null;
+  useEffect(() => {
+    if (linkReturns > 0 && failedRef.current) setAttempt((n) => n + 1);
+  }, [linkReturns]);
 
   useFrameController(
     frameRef,

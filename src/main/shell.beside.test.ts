@@ -20,7 +20,7 @@ import {
 } from "../../tests/helpers/shellStandIns";
 import type { StartEntry } from "./besideRun";
 import { BesideWindow } from "./besideWindow";
-import type { OwnedRun } from "./runCommand";
+import { type OwnedRun, ownedRunOf } from "./runCommand";
 import type { RunStatus } from "./runStatus";
 import { Shell } from "./shell";
 
@@ -1265,6 +1265,7 @@ describe("the window beside a command's first mate", () => {
     // not the run started again, so the join is still not offered.
     await command.stop();
     await command.open().settled();
+    await expect.poll(() => command.asked("inf:own-window:here").length).toBe(2);
     expect(at.shell.followsAdded()).toEqual(starting);
     expect(at.starter.stop).not.toHaveBeenCalled();
     // The service manager would not restart it: the run the window owns still runs, and joins.
@@ -1279,6 +1280,67 @@ describe("the window beside a command's first mate", () => {
     answers.shift()?.(false);
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(at.shell.followsAdded()).toEqual(starting);
+  });
+
+  // The review of INF-5409: a welcome from the run started again is not enough while its
+  // starter has not answered, since a Windows restart can still register or run its task; once it
+  // has, the join names that replacement, and records unreadable at its welcome are read again.
+  it("joins beside the run Restart it started only once its starter answered, and stops that run alone", async () => {
+    const pro = await otherMac({}, { joinsFromAnotherMac: true });
+    const command = commandRun();
+    const answer = command.run.dispatch.getMockImplementation();
+    command.run.dispatch.mockImplementation(((channel: string, args: unknown[]) =>
+      channel === "inf:own-window:here"
+        ? new Promise(() => {})
+        : answer?.(channel as never, args as never)) as never);
+    await command.open().settled();
+    const first = { pid: 41, startedAt: "2026-11-20T08:00:00.000Z", agent: true as const };
+    const again = { pid: 42, startedAt: "2026-11-20T08:05:00.000Z", agent: true as const };
+    const at = besideShell(command.doorDir, {
+      starts: true,
+      readyMs: 2_000,
+      answerWaitMs: 200,
+      records: { running: true, run: first, lastStop: null },
+      ownedRun: () => ownedRunOf(at.command.records),
+    });
+    await at.shell.start();
+    await expect
+      .poll(() => at.shell.thisMac())
+      .toMatchObject({ command: { state: "stopped", ending: "not-answering" } });
+    let settle: (done: boolean) => void = () => {};
+    at.starter.restart.mockImplementation(
+      () =>
+        new Promise<boolean>((resolve) => {
+          settle = resolve;
+        }),
+    );
+    expect(at.shell.restartCommand()).toBe(true);
+    // Its starter ends the run read when Restart it was pressed, by its process.
+    expect(at.starter.restart.mock.calls).toEqual([[{ pid: first.pid }]]);
+    const starting = { follows: false, joins: false, pastes: false, outside: false };
+    // The run started again welcomes the window before its starter answered: nothing is offered,
+    // and no second Restart it or Start it here goes to the starter meanwhile.
+    at.command.records = { running: true, run: again, lastStop: null };
+    await command.stop();
+    await command.open().settled();
+    await expect.poll(() => command.asked("inf:own-window:here").length).toBe(2);
+    expect(at.shell.followsAdded()).toEqual(starting);
+    expect(at.shell.restartCommand()).toBe(false);
+    expect(at.shell.startHere()).toBe(false);
+    // The starter answers while the records cannot be read: still nothing is offered.
+    at.command.records = { running: null, run: null, lastStop: null };
+    settle(true);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(at.shell.followsAdded()).toEqual(starting);
+    // The records come back naming the run started again: the join is offered with no new welcome.
+    at.command.records = { running: true, run: again, lastStop: null };
+    await expect.poll(() => at.shell.followsAdded()).toMatchObject({ joins: true, pastes: true });
+    expect(command.asked("inf:own-window:here")).toHaveLength(2);
+    await expect(at.shell.join(await pro.link("mac"))).resolves.toEqual({ ok: true });
+    await expect.poll(() => at.shell.thisMac().role).toBe("view");
+    const replacement = { pid: again.pid, startedAt: again.startedAt };
+    expect(at.starter.stop.mock.calls).toEqual([[{ forget: true, run: replacement }]]);
+    expect(at.starter.stopped).toEqual([replacement]);
   });
 
   // The review of INF-5409: records that cannot be read say nothing of a command started outside

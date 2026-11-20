@@ -145,6 +145,12 @@ type ShellCore = {
    */
   rereadThrough: number;
   /**
+   * How many times the link to the first mate came back while this window
+   * stayed open: a panel it could not mount is mounted again on each
+   * (FrameMount), as a mount refused during the gap is never retried.
+   */
+  linkReturns: number;
+  /**
    * Whether Settings -> Devices is offered here (`inf:devices:shown`,
    * docs/devices.md): its commands are listed only then. False until read;
    * a computer that controls the first mate reads it from that computer.
@@ -286,6 +292,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
   pendingDeviceForgeSignIn: null,
   thisMac: null,
   rereadThrough: -1,
+  linkReturns: 0,
   devicesShown: false,
   secretsShown: false,
   applyThisMac: (thisMac) => {
@@ -323,17 +330,16 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     // The link came back, here or to the Mac this one controls: what the
     // window asked once is asked again, as a refused read is never retried.
     if (
-      thisMac.role === "home" &&
-      before?.role === "home" &&
-      (thisMac.linkBack ?? 0) > (before.linkBack ?? 0)
-    )
+      (thisMac.role === "home" &&
+        before?.role === "home" &&
+        (thisMac.linkBack ?? 0) > (before.linkBack ?? 0)) ||
+      (isView(thisMac) &&
+        thisMac.contact === "in-reach" &&
+        !(isView(before) && before.contact === "in-reach"))
+    ) {
       readOnceAgain();
-    if (
-      isView(thisMac) &&
-      thisMac.contact === "in-reach" &&
-      !(isView(before) && before.contact === "in-reach")
-    )
-      readOnceAgain();
+      set((s) => ({ linkReturns: s.linkReturns + 1 }));
+    }
   },
   resync: async () => {
     set({ cardsSnapshotLoaded: false });

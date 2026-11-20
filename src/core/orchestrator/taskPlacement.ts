@@ -666,10 +666,20 @@ export class TaskPlacement {
     if (!record) return false;
     const target = this.placementOf(record);
     if (target && !record.deviceId) this.options.tasks.placement.setDevice(taskId, target);
-    const older = !!target && this.options.takesNoWorkUntilUpdated?.(target) === true;
-    if (!older && !this.host.outOfReach(taskId)) return false;
+    if (!(target ? this.waitsForComputer(taskId, target) : this.host.outOfReach(taskId)))
+      return false;
     if (target) this.sayPlacedWait(this.waitSubject(record), target);
     return true;
+  }
+
+  /**
+   * Whether a task that has not started must wait for the computer it runs
+   * on: out of reach, or connected on a version that takes no new work until
+   * it is updated (`takesNoWorkUntilUpdated`), which holds it even in reach.
+   * The start, its outcome words and its settling all read this one fact.
+   */
+  waitsForComputer(taskId: string, device: string): boolean {
+    return this.options.takesNoWorkUntilUpdated?.(device) === true || this.host.outOfReach(taskId);
   }
 
   /**

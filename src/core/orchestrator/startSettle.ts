@@ -183,7 +183,12 @@ export class StartSettle {
     const setup = now.deviceId
       ? await this.core.placement.placedWaitFor(now.deviceId, now.repoId)
       : undefined;
-    if (now.gate || signIn || setup || (now.deviceId && this.core.facts.outOfReach(now.id))) {
+    if (
+      now.gate ||
+      signIn ||
+      setup ||
+      (now.deviceId && this.core.placement.waitsForComputer(now.id, now.deviceId))
+    ) {
       this.core.options.tasks.starts.clearStartAttempt(now.id);
       return;
     }
@@ -223,19 +228,15 @@ export class StartSettle {
         shown: true,
       };
     }
-    // A computer that takes no new work until it is updated holds the start even in reach.
-    const older =
-      now?.status !== "active" &&
-      !!now?.deviceId &&
-      this.core.options.takesNoWorkUntilUpdated?.(now.deviceId) === true;
     if (
       now?.status !== "active" &&
       now?.deviceId &&
-      (older || this.core.facts.outOfReach(taskId))
+      this.core.placement.waitsForComputer(taskId, now.deviceId)
     ) {
       const place = this.core.options.machines?.placeOf(now.deviceId);
       const who = place?.who ?? "the computer it runs on";
-      if (older) return told(noNewWorkStartRefusal(handle, who, HERE.this));
+      if (this.core.options.takesNoWorkUntilUpdated?.(now.deviceId))
+        return told(noNewWorkStartRefusal(handle, who, HERE.this));
       return told(
         `${handle} waits for ${who}, which is out of reach. It never runs on ${HERE.this} instead.`,
       );

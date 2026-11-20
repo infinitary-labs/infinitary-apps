@@ -458,15 +458,16 @@ The captain's merge click on a merge card is an approval of that change, and a r
   A rule-skipping review remains a one-shot click and mints no kept approval.
   Frames and agents cannot mint one - a settle effect runs only from the chrome.
 - **A card behind its change (INF-4031).**
-  One reading, `CardActions.mergeBehind`, says whether an open merge card shows less than its change: a newer version pushed past its offer, another pull request now the task's current change, or only a newer story revision at the same version.
+  One reading, `CardActions.mergeBehind`, says whether an open merge card shows less than its change: a newer version pushed past its offer, another pull request now the task's current change, an offer an earlier version of the app saved without recording where its change lives, or only a newer story revision at the same version.
   The click and the card read it the same way.
-  On the first two, the card refresh (`CardService.refreshSettleFacts`, `settleCardFacts`) takes Merge and Merge anyway off the card and puts one line at its top saying why; its other choices stay, and the app's Decline joins them when no other choice declines.
+  On the first three, the card refresh (`CardService.refreshSettleFacts`, `settleCardFacts`) takes Merge and Merge anyway off the card and puts one line at its top saying why; its other choices stay, and the app's Decline joins them when no other choice declines.
   It redraws the same card at once when the newest published story is at the current version, so the click returns on the new version; otherwise it wakes the card's author once per card and version (`merge-card-behind`), and that author's next merge card revises it.
   Where the project lives keeps a story, the redraw waits until that story's publication is confirmed, and the confirmation is a new reading, so a story saved in one write and confirmed in a later one is redrawn then; an uncertain publication wakes the author instead.
   The redraw skips a task whose own show_merge_card is writing the card, so the two writes never race.
   While the redraw writes, its author's story calls (prepare_change, open_change, emit_card with a story and show_merge_card) wait for it to finish instead of being refused as a story operation already in progress.
   A held card is still the task's open merge card, so the author's next merge card revises it in place, while checks run too.
   A first mate merge card is held and its author woken, never redrawn.
+  An offer an earlier version saved has its own held line, refusal and wake, which say an earlier version showed the card and never that another pull request became current; showing the card again saves an offer that records where its change lives, so Merge returns.
   A click that lands on a card behind its change merges nothing, names the newer version and shows the card as it now stands; a click on a card that changed while the captain read it says so.
   A newer story revision at the same version does not hold Merge: the click merges that version, as above.
 - **Its words (INF-23).**

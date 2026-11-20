@@ -378,6 +378,16 @@ describe("a computer behind a change a turn needs", () => {
     });
     expect(computers.takesNoWorkUntilUpdated(mini)).toBe(false);
     expect(row()?.otherVersion).toMatchObject({ than: "older", takesWork: true });
+
+    // A newer major lists none of this major's changes, yet this Mac is the one behind.
+    const newerMajor = `${Number(PROTOCOL_VERSION.split(".")[0]) + 1}.0.0`;
+    connection.tellVersion(mini, {
+      contract: newerMajor,
+      app: "9.0.0",
+      takesWork: false,
+      changes: [],
+    });
+    expect(computers.takesNoWorkUntilUpdated(mini)).toBe(false);
   });
 });
 

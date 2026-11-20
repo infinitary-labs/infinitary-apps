@@ -149,6 +149,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/orchestrator/changePublication.mergedStory.test.ts` | real git at the run's own priority | 5 s default (Mac slowest case 0.32 s) |
 | `src/core/orchestrator/mergeReviews.test.ts` | a real `git init` per project, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
 | `tests/gitlabMergeReview.test.ts` | a real `git init` for the task's project, at the run's own priority, and the GitLab stand-in on a local port | 5 s default (Mac fastest of five 0.45 s) |
+| `tests/mergeCardWay.test.ts` | a real `git init` for the task's project, at the run's own priority, and the GitHub and GitLab stand-ins on local ports | 5 s default (Mac slowest case 0.6 s) |
 | `src/core/orchestrator/settleService.test.ts` | real git for a pure update and an edited line, at the run's own priority | 15 s |
 | `src/core/workspace/naming.test.ts` | real git for incoming commit range, at the run's own priority | 5 s default |
 | `tests/catalog-merges.test.ts` | real git and the message compiler in a throwaway project holding the real catalogs: two changes adding messages combined, with and without rebuilding the phone's card and panel hosts, and a change from before the catalog move brought up to date; two cases also hold the code the phone's card generator bundles and run it three times | 20 s (Mac slowest case 3.2 s); each card generator case 105 s (Linux check 20.2 s) |

@@ -16,7 +16,7 @@ This is the one home of what the seam is in the code.
 | `holdsCommit(sha)` | whether the Git database holds that exact full commit id (`git/commits`), since the commit reads `checks` uses resolve a longer id by its first 40 characters; a 404 counts only once the repository reads | whether `repository/commits` answers that exact full id, once the project reads | absent | absent |
 | `branchesAt(sha)` | the branches whose head is that version (`branches-where-head`), where a pushed or dispatched run can still start | the branches `repository/commits/:sha/refs` says hold it whose own head it is; a full page is unknown | absent | absent |
 | `pull(number)` | the pull request by its number, open or not, merged or not, with its readiness (`mergeable_state`: clean, conflict, behind, blocked by the branch's rules, computing, draft) | the merge request by its number, with its readiness from `detailed_merge_status` | absent | absent |
-| `putIn(change, headSha)` | merge, only at the checked head, taken only when GitHub answers `merged` | squash merge, only at the checked head (`sha`), taken only when GitLab reads it merged | fast-forward the default branch onto the checked head and send it up, never forced | not through the seam: the local land (`WorkspaceService.landTaskWork`) through the local-only posture |
+| `putIn(change, headSha, way)` | merge the way the project allows, read just before (`way`), only at the checked head, taken only when GitHub answers `merged` | merge with or without squash as the project allows, read just before (`way`), only at the checked head (`sha`), taken only when GitLab reads it merged | fast-forward the default branch onto the checked head and send it up, never forced | not through the seam: the local land (`WorkspaceService.landTaskWork`) through the local-only posture |
 | `close(change)` | close without merging | close without merging | take the sent-up branch back | nothing to close |
 | `openChange` | open a pull request onto the default branch | open a merge request onto the default branch | send the branch up | refused as `unsupported` |
 | `label(change)` / `url(change)` | `#N` and its page | `!N` and its page | the branch, no page | the branch, no page |
@@ -307,7 +307,7 @@ Integrations lists one Bitbucket row with its sign-in's health and account, and 
 
 ## GitLab merge requests
 
-A GitLab project's direct-pr task delivers the way a GitHub one does: the crewmate pushes its branch and calls `open_change`, the checks gate and `check_change` read the pipelines, the check watch follows them, and the captain's merge, or a kept merge approval (FI3-304), squash-merges the checked version.
+A GitLab project's direct-pr task delivers the way a GitHub one does: the crewmate pushes its branch and calls `open_change`, the checks gate and `check_change` read the pipelines, the check watch follows them, and the captain's merge, or a kept merge approval (FI3-304), merges the checked version the way the project allows ("A requested merge").
 `GitLabForge` (`providers/gitlab/gitlabForge.ts`) reaches the project at `/projects/<encoded group/subgroup/name>`, so nested groups keep their whole path, through the same `GitLabClient` and per-host sign-in.
 
 - **Its ordinary change** is a merge request from the project's own branch onto the default branch (`POST /merge_requests`, `source_branch`, `target_branch`, `title`, `description`); a fork's merge request from a branch of the same name is never taken for it.
@@ -720,8 +720,11 @@ The saved-story publisher writes and reads back a comment (GitHub issue comment 
 It never changes the contributor's description or title, pushes to their fork, or opens a replacement request.
 The story comment opens with the crew's title, separate from the contributor's request title.
 The active naming runbook owns its wording; fork merging adds no conventional-title requirement.
+A merge card's click, for the task's own change or a reviewed pull request, reads the merges the project allows where it lives right before anything is sent (`wayToSend`, `src/core/forge/mergeWays.ts`), and picks one as a batch of one does (`mergeWayFor`): a squash where allowed, otherwise a rebase merge, then a merge commit.
+A project that allows none of them holds the merge with nothing sent, and the click's answer names the project's settings to change.
+`putIn` has no way of its own to fall back on: every caller passes the way it read, and GitHub and GitLab refuse one that was not read.
 The verified story supplies the fork's squash commit title, summary and breaking-change footer, without renaming the contributor's request.
-The captain's click merges the reviewed version as its own pull request, by squash under the crew's title, on a batched project too: a pull request named by number joins no batch.
+The captain's click merges the reviewed version as its own pull request, under the crew's title, on a batched project too: a pull request named by number joins no batch.
 Fork stories carry their pull request number beside their branch in the ledger, so a fork using the task's branch name cannot share its story.
 A merge and its attachment receipts read that request's ledger explicitly, even when another change is selected.
 Comment reads use the gateway's smaller-page recovery when a long thread exceeds its response limit.
@@ -1344,7 +1347,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 The app checks new save-point subjects and change titles against the active naming runbook's rule before opening and putting in a change (`docs/runbooks.md`, Commit and PR naming); it holds no form of its own.
 The built-in Commit and PR naming runbook asks for `type(scope): summary` or `type: summary`: the scope is optional and open-ended, the types are `feat`, `fix`, `chore`, `test`, `refactor`, `docs` and `perf`, and a breaking change uses `!` and the `BREAKING CHANGE` footer in its description.
 A runbook that replaces it decides all of this instead, and with no naming runbook on no name is checked.
-An existing change's current title on GitHub or GitLab is checked again when it is put in; GitHub receives an explicit squash request with that title and description, and GitLab a squash whose commit message is the title, a blank line and the description.
+An existing change's current title on GitHub or GitLab is checked again when it is put in; GitHub receives an explicit merge request naming the way the project allows, with that title and description (a rebase merge writes no commit of its own), and GitLab a squash or merge commit whose message is the title, a blank line and the description.
 The app does not rewrite older commits; incoming commits are checked relative to the common base.
 For a change it opens or puts in, that base is measured from the fetched `origin/<default>` when it exists, so a local default branch this Mac has not pulled never makes merged commits look like the branch's own.
 Merge commits are skipped: git names them, and they bring in no work of the branch's own.

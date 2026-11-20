@@ -127,15 +127,15 @@ describe("GitLabForge", () => {
       title: "fix: the meter",
       body: "Why",
     };
-    expect(await forge.putIn(change, change.headSha)).toEqual({ sha: "b".repeat(40) });
+    expect(await forge.putIn(change, change.headSha, "squash")).toEqual({ sha: "b".repeat(40) });
     after = "locked";
     // Still merging is no verdict: a transient failure the merge reads back.
-    await expect(forge.putIn(change, change.headSha)).rejects.toMatchObject({
+    await expect(forge.putIn(change, change.headSha, "squash")).rejects.toMatchObject({
       failure: "transient",
     });
     expect(await forge.pull(4)).toMatchObject({ state: "open", readiness: "computing" });
     after = "failed";
-    await expect(forge.putIn(change, change.headSha)).rejects.toMatchObject({
+    await expect(forge.putIn(change, change.headSha, "squash")).rejects.toMatchObject({
       failure: "refused",
       message: `${HOST} did not confirm the merge of !4: The merge could not be finished`,
     });
@@ -159,13 +159,13 @@ describe("GitLabForge", () => {
       title: "fix: the meter",
       body: "",
     };
-    await expect(forge.putIn(change, change.headSha)).rejects.toMatchObject({
+    await expect(forge.putIn(change, change.headSha, "squash")).rejects.toMatchObject({
       failure: "permission",
       message: `${HOST} answered 401 to PUT ${PROJECT}/merge_requests/4/merge: 401 Unauthorized`,
     });
     expect(rejected).not.toHaveBeenCalled();
     keyAccepted = false;
-    await expect(forge.putIn(change, change.headSha)).rejects.toMatchObject({
+    await expect(forge.putIn(change, change.headSha, "squash")).rejects.toMatchObject({
       failure: "sign-in",
     });
     expect(rejected).toHaveBeenCalledTimes(1);
@@ -301,6 +301,7 @@ describe("GitLabForge", () => {
           squashMessage: "The meter reads on time.",
         },
         change.headSha,
+        "squash",
       );
       expect(JSON.parse(String(fetcher.mock.calls[0]?.[1]?.body))).toMatchObject({
         squash_commit_message: "fix: the meter\n\nThe meter reads on time.",

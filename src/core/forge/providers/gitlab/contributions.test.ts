@@ -203,7 +203,9 @@ describe("approved fork contribution route on GitLab", () => {
   it("cannot merge through a source-bound provider", async () => {
     const { forge, calls } = fixture(true);
     const change = { branch: "contribute/fix", number: 12, url: null, headSha: head };
-    await expect(forge.putIn(change, head)).rejects.toMatchObject({ failure: "permission" });
+    await expect(forge.putIn(change, head, "squash")).rejects.toMatchObject({
+      failure: "permission",
+    });
     expect(calls).toEqual([]);
   });
 });

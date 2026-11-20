@@ -479,10 +479,13 @@ export interface Forge {
     change: ForgeChange,
     headSha: string,
     /**
-     * How a batch merges (docs/forge.md, "Batches of your own"): `rebase` and
-     * `merge` keep one commit per change. Left out, the merge is a squash.
+     * The merge the project allows, as read from where it lives right before
+     * this call (`wayToSend` for a merge card's click, `mergeWayFor` for a
+     * batch; docs/forge.md, "Batches of your own"): `rebase` and `merge` keep
+     * each commit. Never assumed: undefined only where the host has no
+     * `mergeWays` to read, and a host that has them refuses it.
      */
-    way?: MergeWay,
+    way: MergeWay | undefined,
   ): Promise<MergeAnswer | undefined>;
   /**
    * Whether the host's own merge queue holds this change now. Read, never

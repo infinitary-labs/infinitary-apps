@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "merge-the-way-your-project-allows",
+      "kind": "fix",
+      "area": "projects",
+      "title": "Merging follows the merge types your project allows",
+      "body": "When you press Merge on a merge card, Infinitary now checks which merge types your project allows on GitHub or GitLab and uses one of them. A project that turns off squash merges gets a merge commit or a rebase instead of a refused merge. If your project allows none that fit, nothing is sent and the card says which setting to change.",
+      "noPicture": "The merge card looks the same; what changes is the merge it sends to GitHub or GitLab.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

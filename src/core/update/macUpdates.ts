@@ -37,14 +37,18 @@ export type MacUpdateDriver = {
   ) => Promise<void>;
   /**
    * After consent, download and the crew's saved work; owns native
-   * signature verification and graceful shutdown. `stillWanted`, asked
-   * before native staging starts, keeps the copy running when it answers
-   * false: the install answers `false`, with nothing staged and nothing quit.
-   * Once staging starts the copy is committed to it, since a staged update
-   * is applied at the next start.
+   * signature verification and graceful shutdown. `stillWanted` is asked
+   * before native staging starts and again once staged, before shutdown;
+   * false keeps the copy running and nothing quits. The install answers
+   * `unstaged` when it was asked before staging, and `staged` once staged:
+   * Squirrel applies a staged update at the next start, and a later install
+   * quits with no staging. A release that quits never answers.
    */
-  install: (stillWanted?: () => boolean) => Promise<void | false>;
+  install: (stillWanted?: () => boolean) => Promise<void | MacInstallKept>;
 };
+
+/** Where an install that kept the copy running rests: nothing staged, or staged for the next start. */
+export type MacInstallKept = "unstaged" | "staged";
 
 /** What an install or a followed version answers while another is under way. */
 const ALREADY_INSTALLING = "The update is already installing.";
@@ -288,18 +292,18 @@ export function createMacUpdateChecker(options: {
         if (consent === generation) phase = alreadyStaged ? "ready" : "idle";
         return { ok: false, later: true, problem: UPDATE_LATER };
       }
-      let restarted: void | false;
+      let kept: void | MacInstallKept;
       try {
-        restarted = await options.driver.install(stillWanted);
+        kept = await options.driver.install(stillWanted);
       } catch (error) {
         // Nothing replaced this copy: the work it stopped carries on.
         saving.release();
         throw error;
       }
-      // Someone started using the app before it was staged: it stays as it was.
-      if (restarted === false) {
+      // Someone started using the app before it quit: it keeps running, staged or as it was.
+      if (kept) {
         saving.release();
-        if (consent === generation) phase = alreadyStaged ? "ready" : "idle";
+        if (consent === generation) phase = alreadyStaged || kept === "staged" ? "ready" : "idle";
         return { ok: false, later: true, problem: UPDATE_LATER };
       }
       return { ok: true };

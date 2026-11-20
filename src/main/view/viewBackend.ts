@@ -513,6 +513,8 @@ export class ViewBackend {
           this.notices.startOver();
         }
       },
+      // Catching up with the other Mac's version ends with the connection it read it on.
+      onDropped: () => this.follows.lost(),
       onReplayed: () => {
         if (!this.replaying) return;
         this.replaying = false;
@@ -1036,11 +1038,7 @@ export class ViewBackend {
     }
     if (state.contact === "in-reach") this.foldOnce(state);
     // A replay cut short ends with the connection; the next welcome says again.
-    if (state.contact === "lost" || state.contact === "closed") {
-      this.replaying = false;
-      // Catching up with the other Mac's version ends with the connection it read it on.
-      this.follows.lost();
-    }
+    if (state.contact === "lost" || state.contact === "closed") this.replaying = false;
     this.changed();
   }
 

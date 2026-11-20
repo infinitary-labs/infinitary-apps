@@ -78,11 +78,7 @@ export class AppFollowsHome {
   /** The row's Update on the home: catch up and start again as soon as the version is here. */
   askedNow(): void {
     this.now = true;
-    if (this.waiting) {
-      void this.install(this.waiting);
-      return;
-    }
-    this.start();
+    this.resume();
   }
 
   /**
@@ -90,7 +86,7 @@ export class AppFollowsHome {
    * its words were sent: a version waiting for nobody to use it installs now.
    */
   noticed(): void {
-    if (this.waiting && this.options.nobodyHere()) void this.install(this.waiting);
+    if (this.waiting && this.options.nobodyHere()) this.resume();
   }
 
   /** This app no longer controls that home: its own channel's newest is its offer again. */
@@ -100,10 +96,33 @@ export class AppFollowsHome {
     this.options.updates.unfollow?.();
   }
 
+  /**
+   * Installs the version waiting, or catches up if none waits. Behind work
+   * under way it waits its turn: once that ends, the home's version is read
+   * again and the press or the moment it came for still holds.
+   */
+  private resume(): void {
+    if (this.running) {
+      this.again = true;
+      return;
+    }
+    const version = this.waiting;
+    if (version) this.run(() => this.install(version));
+    else this.start();
+  }
+
   /** The catching up, once at a time; a connection that came meanwhile reads again after it. */
   private start(): void {
+    this.run(() => this.catchUp(this.connection));
+  }
+
+  /**
+   * Catching up and installing run one at a time, so an install a lost
+   * connection let go ends before the next connection's tries its version.
+   */
+  private run(work: () => Promise<void>): void {
     if (this.running || this.disposed) return;
-    const run = this.catchUp(this.connection).finally(() => {
+    const run = work().finally(() => {
       if (this.running === run) this.running = null;
       // A press holds only for this catching up: one that ended short of installing lets it go.
       if (!this.waiting) this.now = false;
@@ -177,7 +196,9 @@ export class AppFollowsHome {
   /**
    * Starts again on the version it has, and only that version: the home
    * hears it restarting, or why it did not. Unless the row's Update asked,
-   * whether nobody uses the app is asked again before it quits.
+   * whether nobody uses the app is asked again once the crew's work is
+   * saved, before native staging and once staged, before it quits; false
+   * keeps it running and waiting, staged or not.
    */
   private async install(version: string): Promise<void> {
     const { installFollowed } = this.options.updates;

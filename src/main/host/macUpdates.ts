@@ -206,7 +206,7 @@ export function createMacUpdateDriver(prepareRestart: () => Promise<void>): MacU
     install: async (stillWanted) => {
       // Asked before native staging, which Squirrel applies at the next start whatever
       // follows: someone using the app by then keeps it running, with nothing staged.
-      if (stillWanted && !stillWanted()) return false;
+      if (stillWanted && !stillWanted()) return "unstaged";
       const current = await engine();
       // With autoInstallOnAppQuit=false, the library has only downloaded and checksummed the
       // ZIP. Native staging (including signature verification) starts only after consent.
@@ -234,6 +234,9 @@ export function createMacUpdateDriver(prepareRestart: () => Promise<void>): MacU
             reject(error);
           }
         });
+      // Asked again once staged, before shutdown: someone who came back while Squirrel staged
+      // keeps the app running. The staged fact stays, so a later install quits with no staging.
+      if (stillWanted && !stillWanted()) return "staged";
       // Squirrel's quitAndInstall must not outrun the app's asynchronous task/session shutdown.
       try {
         await prepareRestart();

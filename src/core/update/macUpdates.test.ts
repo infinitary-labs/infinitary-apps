@@ -736,7 +736,7 @@ describe("following the version of the computer this copy controls", () => {
   it("stays running with nothing staged when someone uses the app just before staging, then restarts with no download", async () => {
     const f = following("0.8.3");
     f.driver.install.mockImplementation(async (wanted) =>
-      wanted && !wanted() ? false : undefined,
+      wanted && !wanted() ? "unstaged" : undefined,
     );
     expect(await f.follow("0.8.4")).toEqual({ ok: true });
     expect(await f.installFollowed("0.8.4", stillWanted(true, false))).toMatchObject({
@@ -745,6 +745,21 @@ describe("following the version of the computer this copy controls", () => {
     });
     expect((await f.checker.getStatus()).phase).toBe("idle");
     // Nothing is staged, so a newer version replaces it; this one installs with nothing read again.
+    expect(await f.follow("0.8.4")).toEqual({ ok: true });
+    expect(await f.installFollowed("0.8.4", () => true)).toEqual({ ok: true });
+    expect(f.checkVersion).toHaveBeenCalledTimes(1);
+    expect(f.driver.download).toHaveBeenCalledTimes(1);
+    expect(f.driver.install).toHaveBeenCalledTimes(2);
+  });
+
+  it("stays running, staged, when someone came back while it staged, then restarts with no download or staging", async () => {
+    const f = following("0.8.3");
+    f.driver.install.mockResolvedValueOnce("staged");
+    expect(await f.follow("0.8.4")).toEqual({ ok: true });
+    expect(await f.installFollowed("0.8.4", () => true)).toMatchObject({ ok: false, later: true });
+    expect((await f.checker.getStatus()).phase).toBe("ready");
+    // Staged for the next start, so it stays the version followed.
+    f.checker.unfollow?.();
     expect(await f.follow("0.8.4")).toEqual({ ok: true });
     expect(await f.installFollowed("0.8.4", () => true)).toEqual({ ok: true });
     expect(f.checkVersion).toHaveBeenCalledTimes(1);

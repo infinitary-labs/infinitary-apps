@@ -156,6 +156,34 @@ describe("an app following the version of the computer it controls", () => {
     expect(stillWanted?.()).toBe(false);
   });
 
+  it("tries a newer connection's version only once an install resumed from waiting has ended", async () => {
+    const a = app();
+    let saved: (result: UpdateInstallResult) => void = () => {};
+    a.install.mockImplementationOnce(() => new Promise((resolve) => (saved = resolve)));
+    a.follows.connected();
+    await a.settle();
+    await a.ready({ ok: true });
+    expect(a.told.at(-1)?.step).toBe("waiting");
+    // Nobody uses it now: the install starts and saves the crew's work.
+    a.leave();
+    a.follows.noticed();
+    await a.settle();
+    expect(a.install).toHaveBeenCalledTimes(1);
+    // A new connection meanwhile reads nothing until that install ends.
+    a.homeRuns("0.8.4-alpha.650");
+    a.follows.connected();
+    await a.settle();
+    expect(a.follow).toHaveBeenCalledTimes(1);
+    saved({ ok: false, problem: "Saving work", later: true });
+    await a.settle();
+    expect(a.follow).toHaveBeenLastCalledWith("0.8.4-alpha.650");
+    await a.ready({ ok: true });
+    expect(a.install.mock.calls.map((call) => call[0])).toEqual([
+      "0.8.4-alpha.649",
+      "0.8.4-alpha.650",
+    ]);
+  });
+
   it("says why a copy that only refuses cannot follow, in its own reason", async () => {
     const told: AppFollowReport[] = [];
     const follows = new AppFollowsHome({

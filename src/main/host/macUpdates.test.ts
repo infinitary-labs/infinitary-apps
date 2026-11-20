@@ -39,6 +39,8 @@ vi.mock("electron", async () => {
 vi.mock("electron-updater", async () => {
   const { EventEmitter } = await import("node:events");
   return {
+    // The base of the exact-version feed; macUpdateFeed.test.ts reads that feed through the real one.
+    Provider: class {},
     MacUpdater: class extends EventEmitter {
       autoDownload = true;
       autoInstallOnAppQuit = true;
@@ -228,6 +230,32 @@ describe("Mac updater native effects", () => {
     expect(shutdown).not.toHaveBeenCalled();
     expect(state.quit).not.toHaveBeenCalled();
     expect(autoUpdater.listenerCount("update-downloaded")).toBe(0);
+  });
+  it("keeps running, staged, when someone came back while native staging was pending, and later quits with no staging", async () => {
+    const shutdown = vi.fn(async () => {});
+    const driver = createMacUpdateDriver(shutdown);
+    await driver.check("alpha");
+    let checked!: () => void;
+    const nativeCheck = new Promise<void>((resolve) => {
+      checked = resolve;
+    });
+    vi.mocked(autoUpdater.checkForUpdates).mockImplementation(() => {
+      checked();
+    });
+    let nobodyHere = true;
+    const installing = driver.install(() => nobodyHere);
+    await nativeCheck;
+    // A window came to the front while Squirrel staged.
+    nobodyHere = false;
+    autoUpdater.emit("update-downloaded");
+    expect(await installing).toBe("staged");
+    expect(shutdown).not.toHaveBeenCalled();
+    expect(state.quit).not.toHaveBeenCalled();
+    nobodyHere = true;
+    await driver.install(() => nobodyHere);
+    expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(1);
+    expect(shutdown).toHaveBeenCalledOnce();
+    expect(state.quit).toHaveBeenCalledOnce();
   });
   it("does not stage twice when shutdown must be tried again", async () => {
     const shutdown = vi.fn().mockRejectedValueOnce(new Error("busy")).mockResolvedValue(undefined);

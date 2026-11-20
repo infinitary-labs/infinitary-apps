@@ -203,6 +203,8 @@ function follow(
   /** Each `live` frame, for this connection alone and never numbered. */
   const lives: { channel: string; payload: unknown }[] = [];
   const catchUps: ("replay" | "reload")[] = [];
+  /** How many catch-ups there were each time a welcomed connection closed. */
+  const drops: number[] = [];
   /** Each welcome's count of missed pushes, and the contact it was said under. */
   const welcomes: { missed: number; contact: string }[] = [];
   /** How many pushes had been handled each time a replay ended. */
@@ -241,6 +243,7 @@ function follow(
     onLive: (channel, payload) => lives.push({ channel, payload }),
     onWelcoming: (_catchUp, missed) => welcomes.push({ missed, contact: link.state().contact }),
     onCaughtUp: (catchUp) => catchUps.push(catchUp),
+    onDropped: () => drops.push(catchUps.length),
     onReplayed: () => replayed.push(pushes.length),
     onState: (state) => states.push(state),
     ...(options.onInvoke ? { onInvoke: options.onInvoke } : {}),
@@ -263,6 +266,7 @@ function follow(
     replays,
     lives,
     catchUps,
+    drops,
     welcomes,
     replayed,
     sockets,
@@ -513,6 +517,8 @@ describe("the device's side of the connection", () => {
     expect(air.replays).toEqual([false, true, true, false]);
     // It never said the home was out of reach: the drop was mended at once.
     expect(air.states.some((state) => state.contact === "lost")).toBe(false);
+    // Yet the closed connection's end was told before the next one caught up, so what it started ends.
+    expect(air.drops).toEqual([1]);
   });
 
   // INF-3750's option D: streamed reply pieces filled the journal, so a short drop read everything again.

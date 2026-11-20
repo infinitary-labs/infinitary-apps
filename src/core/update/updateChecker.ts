@@ -108,9 +108,10 @@ export type UpdateChecker = {
   follow?: (version: string) => Promise<AppFollowResult>;
   /**
    * Installs the version `follow` got ready, and refuses when this copy no
-   * longer follows that version. `stillWanted` is asked again once the
-   * crew's work is saved and the update staged, before the app quits: false
-   * keeps the app running, staged, and answers `later`.
+   * longer follows that version. `stillWanted` is asked once the crew's
+   * work is saved, again before native staging and again once staged,
+   * before the app quits: false keeps the app running and answers `later`,
+   * with nothing staged or, past staging, staged for the next start.
    */
   installFollowed?: (version: string, stillWanted: () => boolean) => Promise<UpdateInstallResult>;
   /** Stops following a version, so the channel's own newest is the offer again. */

@@ -569,9 +569,17 @@ export type InstalledUpdateCheckerOptions = {
   work?: CrewWorkForUpdate;
 };
 
-/** Whether this program was opened on a data folder of its own choosing (`--user-data-dir`). */
+/**
+ * Whether this program was opened on a data folder of its own choosing
+ * (`--user-data-dir`), as Chromium reads its switches on Windows: any of
+ * its prefixes, any case, before a lone `--`. The hand-over reads windows'
+ * command lines the same way.
+ */
 export function openedOnSwitch(argv: readonly string[]): boolean {
-  return argv.some((arg) => arg === "--user-data-dir" || arg.startsWith("--user-data-dir="));
+  const end = argv.indexOf("--");
+  return (end === -1 ? argv : argv.slice(0, end)).some((arg) =>
+    /^(--|-|\/)user-data-dir=./i.test(arg),
+  );
 }
 
 /**

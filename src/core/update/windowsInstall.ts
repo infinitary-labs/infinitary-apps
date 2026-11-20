@@ -68,8 +68,19 @@ export type WindowsHandOverResult = {
 /** How the hand-over waits for this program to end before it gives up on the update. */
 export const WINDOWS_SHUTDOWN_WAIT_SECONDS = 300;
 
-/** How long a copy the hand-over opens again may take to fail before it counts as opened. */
-const REOPEN_WATCH_SECONDS = 30;
+/** How long the hand-over waits for a copy it opens to show its window on its data folder. */
+export const WINDOWS_REOPEN_READY_SECONDS = 120;
+
+/**
+ * Windows' own split of a command line into its arguments
+ * (`CommandLineToArgvW`), the split the program it started reads.
+ */
+const ARGUMENT_SPLIT = [
+  '[DllImport("shell32.dll")] static extern System.IntPtr CommandLineToArgvW([MarshalAs(UnmanagedType.LPWStr)] string line, out int count);',
+  '[DllImport("kernel32.dll")] static extern System.IntPtr LocalFree(System.IntPtr memory);',
+  "public static string[] Split(string line) { int count; System.IntPtr argv = CommandLineToArgvW(line, out count); if (argv == System.IntPtr.Zero) return null;",
+  "try { string[] all = new string[count]; for (int i = 0; i < count; i++) all[i] = Marshal.PtrToStringUni(Marshal.ReadIntPtr(argv, i * System.IntPtr.Size)); return all; } finally { LocalFree(argv); } }",
+].join(" ");
 
 /** A PowerShell literal of `text`, in single quotes. */
 const literal = (text: string) => `'${text.replaceAll("'", "''")}'`;
@@ -106,8 +117,11 @@ export function windowsHandOverScript(values: {
   page: string;
   /** How long it waits for this program to end; five minutes but in its own check. */
   waitSeconds?: number;
+  /** How long a copy it opens has to show its window; two minutes but in its own check. */
+  readySeconds?: number;
 }): string {
   const wait = values.waitSeconds ?? WINDOWS_SHUTDOWN_WAIT_SECONDS;
+  const ready = values.readySeconds ?? WINDOWS_REOPEN_READY_SECONDS;
   return [
     "$ErrorActionPreference = 'Stop'",
     `$exe = ${literal(values.executable)}`,
@@ -124,30 +138,51 @@ export function windowsHandOverScript(values: {
     "  } catch { $script:channelKept = $false }",
     "}",
     `function Say([string]$outcome) { try { [IO.File]::WriteAllText($result, (ConvertTo-Json -Compress @{ outcome = $outcome; from = ${literal(values.result.from)}; to = ${literal(values.result.to)}; channelKept = $channelKept })) } catch {} }`,
-    // The data folder a window was opened on, from its command line, as
-    // Chromium reads the switch; the person's own is ''.
-    "function FolderOf([string]$line) { if ($line -match '\"--user-data-dir=([^\"]*)\"' -or $line -match '--user-data-dir=\"([^\"]*)\"' -or $line -match '--user-data-dir=(\\S+)') { $Matches[1] } else { '' } }",
+    `Add-Type -Namespace InfHandOver -Name Arguments -MemberDefinition ${literal(ARGUMENT_SPLIT)}`,
+    "function Canonical([string]$path) { if (-not $path) { return '' }; try { [IO.Path]::GetFullPath($path).TrimEnd('\\') } catch { $null } }",
+    "$want = Canonical $dataDir",
+    // The data folder a process was opened on, as Chromium reads its
+    // command line: the last --user-data-dir switch before a lone --, in
+    // full; '' for the person's own, and $null when its command line
+    // cannot be read, so the process is never taken for one on this folder.
+    "function FolderOf([string]$line) {",
+    "  if (-not $line) { return $null }",
+    "  $parts = [InfHandOver.Arguments]::Split($line)",
+    "  if ($null -eq $parts) { return $null }",
+    "  $folder = ''",
+    "  foreach ($part in ($parts | Select-Object -Skip 1)) {",
+    "    if ($part -eq '--') { break }",
+    "    if ($part -match '^(--|-|/)user-data-dir=(.*)$') { $folder = Canonical $Matches[2]; if ($null -eq $folder) { return $null } }",
+    "  }",
+    "  $folder",
+    "}",
+    // The copy's own top processes opened on this data folder, with their
+    // windows: a command or a work run shows none.
+    "function OnThisFolder {",
+    "  $all = @(Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $exe })",
+    "  $ids = @($all | ForEach-Object { $_.ProcessId })",
+    "  foreach ($p in $all) {",
+    "    if ($ids -contains $p.ParentProcessId) { continue }",
+    "    $folder = FolderOf ([string]$p.CommandLine)",
+    "    if ($null -eq $folder -or $folder -ne $want) { continue }",
+    "    $running = Get-Process -Id $p.ProcessId -ErrorAction SilentlyContinue",
+    "    if ($running -and $running.MainWindowHandle -ne [IntPtr]::Zero) { $running }",
+    "  }",
+    "}",
     "function Recover {",
     "  Add-Type -AssemblyName System.Windows.Forms",
     `  [void][System.Windows.Forms.MessageBox]::Show(${literal(WINDOWS_HAND_OVER_WORDS.noCopy(values.page))}, 'Infinitary')`,
     "  Start-Process $page",
     "}",
     "function Reopen {",
-    "  $all = @(Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $exe })",
-    "  $ids = @($all | ForEach-Object { $_.ProcessId })",
-    "  foreach ($p in $all) {",
-    "    if ($ids -contains $p.ParentProcessId) { continue }",
-    "    if ((FolderOf ([string]$p.CommandLine)) -ne $dataDir) { continue }",
-    "    $running = Get-Process -Id $p.ProcessId -ErrorAction SilentlyContinue",
-    "    if ($running -and $running.MainWindowHandle -ne [IntPtr]::Zero) { Stop-Process -Id $p.ProcessId -Force -ErrorAction SilentlyContinue }",
-    "  }",
+    "  foreach ($window in @(OnThisFolder)) { Stop-Process -Id $window.Id -Force -ErrorAction SilentlyContinue; [void]$window.WaitForExit(10000) }",
     "  $app = Join-Path (Split-Path -Parent $exe) 'resources\\app.asar'",
     "  if (-not ((Test-Path -LiteralPath $exe) -and (Test-Path -LiteralPath $app))) { Recover; return }",
     "  try {",
-    "    if ($dataDir) { $opened = Start-Process -FilePath $exe -ArgumentList ('\"--user-data-dir=' + $dataDir + '\"') -PassThru } else { $opened = Start-Process -FilePath $exe -PassThru }",
-    "    $null = $opened.Handle",
-    `    if (-not $opened.WaitForExit(${REOPEN_WATCH_SECONDS * 1000}) -or $opened.ExitCode -eq 0) { return }`,
-    "  } catch {}",
+    "    if ($dataDir) { Start-Process -FilePath $exe -ArgumentList ('\"--user-data-dir=' + $dataDir + '\"') } else { Start-Process -FilePath $exe }",
+    "  } catch { Recover; return }",
+    `  $deadline = (Get-Date).AddSeconds(${ready})`,
+    "  while ((Get-Date) -lt $deadline) { if (@(OnThisFolder).Count -gt 0) { return }; Start-Sleep -Seconds 1 }",
     "  Recover",
     "}",
     `$old = Get-Process -Id ${values.pid} -ErrorAction SilentlyContinue`,

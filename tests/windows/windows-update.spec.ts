@@ -604,76 +604,147 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
 /**
  * The hand-over's ways back (docs/alpha.md, "When installing cannot
  * finish"), each run directly with stand-ins the journey above cannot
- * reach: a disposable process that outlives the wait, shortened to seconds,
- * stands in for an app still saving; a batch file that records its
- * arguments stands in for the installer; the installed copy opens on a
- * data folder of its own (`--user-data-dir`, with a space in it); and a
- * folder holding the program without its app stands in for a copy that
- * cannot open, whose download page is a batch file that records it opened.
+ * reach. A program the test compiles stands in for the installer, exiting
+ * as it is told and recording its arguments, and for a copy that starts
+ * but never shows a window; a disposable process that outlives the wait,
+ * shortened to seconds, stands in for an app still saving; the installed
+ * copy opens on a data folder of its own (`--user-data-dir`, with a space
+ * and an apostrophe in it) beside a window of its own on another folder,
+ * which must keep running; and a copy without its app cannot open. The
+ * download page is a batch file that records it opened.
  */
 test("the Windows hand-over keeps a copy still saving, reopens a copy on its own data folder and says how to recover one that cannot open", async () => {
-  test.setTimeout(10 * 60_000);
+  test.setTimeout(15 * 60_000);
   const [entry] = removalEntries();
   if (!entry) throw new Error("no removal entry");
   const executable = join(dirname(uninstallerOf(entry)), "Infinitary.exe");
   const root = scratchDir("inf-windows-hand-over-");
   const profile = join(root, "a person's other folder");
+  const sibling = join(root, "a sibling folder");
   mkdirSync(profile, { recursive: true });
+  mkdirSync(sibling, { recursive: true });
   const marker = join(profile, UPDATE_CHANNEL_MARKER);
   const resultFile = join(profile, WINDOWS_HAND_OVER_RESULT);
-  const ran = join(root, "installer-ran.txt");
-  const installer = (code: number) => {
-    const file = join(root, `installer ${code}.cmd`);
-    writeFileSync(file, `@echo off\r\necho %*>"${ran}"\r\nexit /b ${code}\r\n`);
-    return file;
-  };
   const opened = join(root, "page-opened.txt");
   const page = join(root, "download page.cmd");
   writeFileSync(page, `@echo off\r\necho opened>"${opened}"\r\n`);
-  const others = topAppProcesses().map((p) => p.pid);
-  const handOver = (values: Parameters<typeof windowsHandOverScript>[0]) => {
-    const encoded = Buffer.from(windowsHandOverScript(values), "utf16le").toString("base64");
-    const child = spawn(
-      powershellPath,
-      ["-NoProfile", "-NonInteractive", "-EncodedCommand", encoded],
-      {
-        stdio: "ignore",
-      },
-    );
-    const ended = new Promise<number | null>((done) => child.on("exit", (code) => done(code)));
-    return { pid: child.pid ?? 0, ended };
-  };
+
+  // Every process the test starts, stopped when it ends however it ends,
+  // and what each hand-over wrote to its error output.
+  const owned: number[] = [];
+  const errors: string[] = [];
   const end = (pid: number) => {
     try {
       execFileSync("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore" });
     } catch {}
   };
-  const closeProfileWindows = () => {
-    for (const pid of appProcessesOn(executable, profile)) end(pid);
+  const start = (args: string[]) => {
+    const child = spawn(powershellPath, ["-NoProfile", "-NonInteractive", ...args], {
+      stdio: ["ignore", "ignore", "pipe"],
+    });
+    const pid = child.pid ?? 0;
+    owned.push(pid);
+    child.stderr?.on("data", (chunk: Buffer) => errors.push(`${pid}: ${chunk.toString()}`));
+    // An ended process's number may be reused, so it is no longer stopped.
+    const ended = new Promise<number | null>((done) =>
+      child.on("exit", (code) => {
+        if (owned.includes(pid)) owned.splice(owned.indexOf(pid), 1);
+        done(code);
+      }),
+    );
+    return { pid, ended };
   };
+  const handOver = (values: Parameters<typeof windowsHandOverScript>[0]) =>
+    start([
+      "-EncodedCommand",
+      Buffer.from(windowsHandOverScript(values), "utf16le").toString("base64"),
+    ]);
   // The app the hand-over waits for, already ended.
   const endedApp = async () => {
-    const gone = spawn(powershellPath, ["-NoProfile", "-Command", "exit"], { stdio: "ignore" });
-    await new Promise((done) => gone.on("exit", done));
-    return gone.pid ?? 0;
+    const gone = start(["-Command", "exit"]);
+    await gone.ended;
+    return gone.pid;
   };
+
+  // The stand-in program: it records its arguments in ran.txt beside it,
+  // stays running without a window while stay.txt is there, and otherwise
+  // exits with the code in code.txt, or 0.
+  const compiled = join(root, "stand-in", "stand-in.exe");
+  mkdirSync(dirname(compiled), { recursive: true });
+  ps<boolean>(
+    "Add-Type -TypeDefinition $env:STAND_IN_SOURCE -Language CSharp -OutputAssembly $env:STAND_IN_EXE -OutputType WindowsApplication; Test-Path -LiteralPath $env:STAND_IN_EXE",
+    {
+      STAND_IN_EXE: compiled,
+      STAND_IN_SOURCE: [
+        "using System; using System.IO; using System.Threading;",
+        "static class StandIn { static int Main(string[] args) {",
+        "  string here = AppDomain.CurrentDomain.BaseDirectory;",
+        '  File.WriteAllText(Path.Combine(here, "ran.txt"), string.Join(" ", args));',
+        '  if (File.Exists(Path.Combine(here, "stay.txt"))) Thread.Sleep(Timeout.Infinite);',
+        '  string code = Path.Combine(here, "code.txt");',
+        "  return File.Exists(code) ? int.Parse(File.ReadAllText(code).Trim()) : 0;",
+        "} }",
+      ].join("\n"),
+    },
+  );
+  const standIn = (
+    folder: string,
+    name: string,
+    how: { code?: number; stay?: boolean; app?: boolean } = {},
+  ) => {
+    const dir = join(root, folder);
+    mkdirSync(dir, { recursive: true });
+    copyFileSync(compiled, join(dir, name));
+    if (how.code !== undefined) writeFileSync(join(dir, "code.txt"), String(how.code));
+    if (how.stay) writeFileSync(join(dir, "stay.txt"), "");
+    if (how.app) {
+      mkdirSync(join(dir, "resources"), { recursive: true });
+      writeFileSync(join(dir, "resources", "app.asar"), "");
+    }
+    const ran = join(dir, "ran.txt");
+    return {
+      file: join(dir, name),
+      ran: () => (existsSync(ran) ? readFileSync(ran, "utf8") : null),
+    };
+  };
+  const finishes = standIn("installer that finishes", "setup.exe");
+  const stops = standIn("installer that stops", "setup.exe", { code: 3 });
+
   const windowShown = (pid: number) =>
     ps<boolean>(
       "$p = Get-Process -Id ([int]$env:APP_PID) -ErrorAction SilentlyContinue; [bool]($p -and $p.MainWindowHandle -ne [IntPtr]::Zero)",
       { APP_PID: String(pid) },
     );
-  const said = () => JSON.parse(readFileSync(resultFile, "utf8").replace(/^\uFEFF/, ""));
+  const windowOn = async (folder: string) => {
+    await expect
+      .poll(() => appProcessesOn(executable, folder).length, { timeout: 120_000 })
+      .toBe(1);
+    const [pid = 0] = appProcessesOn(executable, folder);
+    await expect.poll(() => windowShown(pid), { timeout: 120_000 }).toBe(true);
+    return pid;
+  };
+  const said = () => JSON.parse(readFileSync(resultFile, "utf8").replace(/^﻿/, ""));
   const result = { from: "0.0.1", to: "0.0.2" };
+  const recovery = WINDOWS_HAND_OVER_WORDS.noCopy(page);
+  let others: number[] = [];
 
   try {
+    await test.step("a window of the installed copy opens on a sibling folder, which the hand-over must leave running", async () => {
+      ps<boolean>(
+        "Start-Process -FilePath $env:APP_EXE -ArgumentList ('\"--user-data-dir=' + $env:APP_DATA + '\"'); $true",
+        { APP_EXE: executable, APP_DATA: sibling },
+      );
+      const pid = await windowOn(sibling);
+      others = [...new Set([pid, ...topAppProcesses().map((p) => p.pid)])];
+      expect(others).toContain(pid);
+    });
+
     await test.step("an app still running after the wait gets nothing installed, its channel back and its copy opened once it ends", async () => {
       writeFileSync(marker, "the channel this update chose");
-      const saving = spawn(powershellPath, ["-NoProfile", "-Command", "Start-Sleep -Seconds 900"], {
-        stdio: "ignore",
-      });
+      const saving = start(["-Command", "Start-Sleep -Seconds 900"]);
       const run = handOver({
-        pid: saving.pid ?? 0,
-        installer: installer(0),
+        pid: saving.pid,
+        installer: finishes.file,
         executable,
         dataDir: profile,
         resultFile,
@@ -687,16 +758,11 @@ test("the Windows hand-over keeps a copy still saving, reopens a copy on its own
       expect(readFileSync(marker, "utf8")).toBe("the channel it followed");
       // Nothing opens while the app it waits for still runs.
       expect(appProcessesOn(executable, profile)).toEqual([]);
-      end(saving.pid ?? 0);
-      await expect
-        .poll(() => appProcessesOn(executable, profile).length, { timeout: 60_000 })
-        .toBe(1);
-      await run.ended;
-      const [reopened = 0] = appProcessesOn(executable, profile);
-      await expect.poll(() => windowShown(reopened), { timeout: 60_000 }).toBe(true);
-      expect(existsSync(ran)).toBe(false);
+      end(saving.pid);
+      await windowOn(profile);
+      expect(await run.ended).toBe(0);
+      expect(finishes.ran()).toBeNull();
       expect(existsSync(opened)).toBe(false);
-      // The person's own copy, and anything else running, is left alone.
       expect(stillRunning(others)).toEqual(others);
       if (evidence) screenshot(join(evidence, "hand-over-timeout-reopened.png"));
     });
@@ -707,54 +773,84 @@ test("the Windows hand-over keeps a copy still saving, reopens a copy on its own
       rmSync(resultFile, { force: true });
       const run = handOver({
         pid: await endedApp(),
-        installer: installer(0),
+        installer: finishes.file,
         executable,
         dataDir: profile,
         resultFile,
         result,
         marker: { file: marker, earlier: null },
         page,
-        waitSeconds: 5,
       });
       expect(await run.ended).toBe(0);
-      expect(readFileSync(ran, "utf8").trim()).toBe("--updated /S");
-      const after = appProcessesOn(executable, profile);
-      expect(after).toHaveLength(1);
-      expect(after).not.toEqual(before);
+      // The installer ran, as an update and without opening the person's own folder.
+      expect(finishes.ran()?.trim()).toBe("--updated /S");
+      const after = await windowOn(profile);
+      expect(after).not.toBe(before[0]);
       expect(stillRunning(before)).toEqual([]);
       expect(existsSync(resultFile)).toBe(false);
       expect(existsSync(opened)).toBe(false);
       expect(stillRunning(others)).toEqual(others);
     });
 
-    await test.step("a copy that cannot open is said in a message, and its download page opens next", async () => {
-      closeProfileWindows();
-      const broken = join(root, "a copy without its app");
-      mkdirSync(broken, { recursive: true });
-      copyFileSync(executable, join(broken, "Infinitary.exe"));
+    const recovered = async (copy: ReturnType<typeof standIn>, readySeconds?: number) => {
+      for (const pid of appProcessesOn(executable, profile)) end(pid);
+      rmSync(opened, { force: true });
+      rmSync(join(dirname(stops.file), "ran.txt"), { force: true });
       const run = handOver({
         pid: await endedApp(),
-        installer: installer(3),
-        executable: join(broken, "Infinitary.exe"),
+        installer: stops.file,
+        executable: copy.file,
         dataDir: profile,
         resultFile,
         result,
         marker: { file: marker, earlier: "the channel it followed" },
         page,
-        waitSeconds: 5,
+        ...(readySeconds ? { readySeconds } : {}),
       });
-      const words = WINDOWS_HAND_OVER_WORDS.noCopy(page);
-      await expect.poll(() => dialogWords(run.pid).join(" "), { timeout: 60_000 }).toContain(words);
-      keep("hand-over-recovery-message.json", JSON.stringify(dialogWords(run.pid), null, 2));
-      if (evidence) screenshot(join(evidence, "hand-over-recovery-message.png"));
+      await expect
+        .poll(() => dialogWords(run.pid).join(" "), { timeout: 120_000 })
+        .toContain(recovery);
+      // The installer ran and stopped with its error before the message.
+      expect(stops.ran()?.trim()).toBe("--updated /S");
       expect(said()).toEqual({ outcome: "install-failed", ...result, channelKept: true });
       expect(existsSync(opened)).toBe(false);
+      return run;
+    };
+
+    await test.step("a copy that starts but never shows a window is said in a message, and its download page opens next", async () => {
+      const copy = standIn("a copy that never shows a window", "Infinitary.exe", {
+        stay: true,
+        app: true,
+      });
+      const run = await recovered(copy, 10);
+      // The hand-over did open it, on the same data folder.
+      expect(copy.ran()).toBe(`--user-data-dir=${profile}`);
       expect(pressDialogButton(run.pid, "OK")).toBe(true);
-      await run.ended;
+      expect(await run.ended).toBe(0);
       await expect.poll(() => existsSync(opened), { timeout: 60_000 }).toBe(true);
-      expect(appProcessesOn(join(broken, "Infinitary.exe"), profile)).toEqual([]);
+      expect(stillRunning(others)).toEqual(others);
+    });
+
+    await test.step("a copy without its app is said in a message without being started, and its download page opens next", async () => {
+      const copy = standIn("a copy without its app", "Infinitary.exe");
+      const run = await recovered(copy);
+      keep("hand-over-recovery-message.json", JSON.stringify(dialogWords(run.pid), null, 2));
+      if (evidence) screenshot(join(evidence, "hand-over-recovery-message.png"));
+      expect(copy.ran()).toBeNull();
+      expect(pressDialogButton(run.pid, "OK")).toBe(true);
+      expect(await run.ended).toBe(0);
+      await expect.poll(() => existsSync(opened), { timeout: 60_000 }).toBe(true);
+      expect(stillRunning(others)).toEqual(others);
     });
   } finally {
-    closeProfileWindows();
+    for (const pid of owned) end(pid);
+    for (const folder of [profile, sibling])
+      for (const pid of appProcessesOn(executable, folder)) end(pid);
+    // Stand-ins a hand-over opened, which outlive it.
+    ps<boolean>(
+      "Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith($env:STAND_IN_ROOT, [StringComparison]::OrdinalIgnoreCase) } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }; $true",
+      { STAND_IN_ROOT: `${root}\\` },
+    );
+    if (errors.length > 0) keep("hand-over-errors.txt", errors.join("\n"));
   }
 });

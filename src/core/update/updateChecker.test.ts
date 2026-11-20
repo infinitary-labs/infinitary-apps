@@ -27,6 +27,7 @@ import {
 import {
   createInstalledUpdateChecker,
   createUpdateChecker,
+  openedOnSwitch,
   pickNewestStableRelease,
 } from "./updateChecker";
 import { UpdateInstallProblem } from "./updateDownload";
@@ -1021,5 +1022,20 @@ describe("updates on Windows", () => {
       problem: "The installer could not start, so nothing was installed.",
     });
     expect(f.work.release).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("a Windows copy opened on a data folder of its own", () => {
+  // The hand-over reopens such a copy on that folder, so the copy reads the
+  // switch as Chromium does, or an update opens the person's own folder instead.
+  it.each([
+    [["Infinitary.exe", "--user-data-dir=C:\\data"], true],
+    [["Infinitary.exe", "-user-data-dir=C:\\data"], true],
+    [["Infinitary.exe", "/USER-DATA-DIR=C:\\data"], true],
+    [["Infinitary.exe", "--user-data-dir"], false],
+    [["Infinitary.exe", "--", "--user-data-dir=C:\\data"], false],
+    [["Infinitary.exe", "run"], false],
+  ])("reads %j as %s", (argv, opened) => {
+    expect(openedOnSwitch(argv)).toBe(opened);
   });
 });

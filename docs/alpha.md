@@ -145,10 +145,11 @@ A Windows installation updates through the same update reader, from the builds f
   An app still running five minutes after the hand-over began has not finished saving, so the hand-over installs nothing; once the app ends it opens it again.
   An installer that exits with an error leaves the copy in place, and the hand-over opens it again.
   Either way the hand-over first puts back the channel marker the kept copy followed, then ends that data folder's windows still open, as the installer would, and only windows: a command or a work run has none, and another data folder's are left alone.
+  It reads each process's data folder as Chromium does, from its command line split as Windows splits it (the last `--user-data-dir=` switch, any prefix or case, before a lone `--`), compares full paths, and leaves alone a process whose command line it cannot read; the app reads its own switch the same way (`openedOnSwitch`).
   The copy then opens fresh on its data folder as above, and the person's own starts its command, which carries the saved work on.
   The hand-over leaves `update-result.json` in the data folder, which the copy it kept reads once as it starts (`takeWindowsHandOverResult`), and its Version row says the update stopped or the installer stopped, beside Try again, until the next attempt; when the marker could not be put back it also asks the person to check the channel in Settings → General.
   A result file the copy cannot remove is said again at its next start rather than stopping it.
-  A copy missing its program or its `resources\app.asar`, or one whose process fails within 30 seconds of opening, is said in a message from the hand-over, with the release page to download the installer from, which it opens next.
+  A copy missing its program or its `resources\app.asar`, or one that shows no window on that data folder within two minutes of opening, is said in a message from the hand-over, with the release page to download the installer from, which it opens next.
 - **A window controlling another computer.**
   It names a newer version of its own copy and its downloads page, and installs nothing: such a PC also runs that computer's work, which the installer would end mid-run (`docs/windows.md`, "Joining another computer").
 - **Development and tests.**

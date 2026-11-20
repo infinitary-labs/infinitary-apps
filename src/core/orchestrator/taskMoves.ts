@@ -337,19 +337,18 @@ export class TaskMoves {
         );
         // A task on a computer that runs work binds that computer's own
         // account there when it reopens; no account of this Mac's is chosen.
-        const selecting =
+        const pick =
           this.host.machineOf(taskId) === LOCAL_MACHINE_ID
-            ? this.options.accounts?.selectForSpawn(taskId, choice.provider, {
-                model: choice.id,
-              })
+            ? await this.pickAccount(taskId, choice)
             : undefined;
-        const accountId = selecting instanceof Promise ? await selecting : selecting;
+        const accountId = pick?.accountId;
         if (runtime && runtime.turn.busy) {
           runtime.turn.queueMove(ask);
           return;
         }
         const current = this.options.tasks.get(taskId);
         if (!current || current.status !== "active" || this.host.disposed()) return;
+        pick?.record();
         this.options.router?.commit(taskId, preview);
         if (runtime) {
           this.host.releaseSession(runtime);
@@ -413,11 +412,13 @@ export class TaskMoves {
    * own), the task runs on a computer that runs work, or routing again finds
    * no other model, only one below the level the task requires, or none an
    * account here serves. The newest row then names a held model, so a later
-   * reopen keeps it and says nothing more.
+   * reopen keeps it and says nothing more. "stale" says a stop, a quit, a
+   * close or a move took the task while it waited, so the reopen opens
+   * nothing; the account it picked is recorded only with the move it commits.
    */
   async routeAgainIfLeft(
     taskId: string,
-  ): Promise<{ accountId?: string; providerName: string } | undefined> {
+  ): Promise<{ accountId?: string; providerName: string } | "stale" | undefined> {
     const router = this.options.router;
     if (!router || this.host.machineOf(taskId) !== LOCAL_MACHINE_ID) return undefined;
     const left = (record: TaskRecord | undefined) => {
@@ -428,9 +429,25 @@ export class TaskMoves {
       if (named && routesNamed(named, routed.model)) return undefined;
       return router.holdsAtALevel(routed.model) ? undefined : routed.model;
     };
-    const asked = this.options.tasks.get(taskId);
-    if (!left(asked)) return undefined;
+    const asked = left(this.options.tasks.get(taskId));
+    if (!asked) return undefined;
+    // A stop, a quit, a close or a move - to another model or computer -
+    // while this waited supersedes the reopen that asked: it opens nothing.
+    const stale = () => {
+      const current = this.options.tasks.get(taskId);
+      const routed = router.servedChoice(taskId);
+      return (
+        !current ||
+        current.status !== "active" ||
+        this.host.disposed() ||
+        this.isMoving(taskId) ||
+        this.host.machineOf(taskId) !== LOCAL_MACHINE_ID ||
+        !routed ||
+        offeringKey(routed.model) !== offeringKey(asked)
+      );
+    };
     return router.inOrder(async () => {
+      if (stale()) return "stale";
       const record = this.options.tasks.get(taskId);
       const from = left(record);
       if (!record || !from) return undefined;
@@ -442,28 +459,33 @@ export class TaskMoves {
         ...(avoidProvider ? { avoidProvider } : {}),
         images,
       });
-      const preview = router.preview(record.prompt, shape, prepared);
-      const choice = preview.result.choice;
-      if (!choice || offeringKey(choice) === offeringKey(from)) return undefined;
-      if (preview.requiresReasoningWait) return undefined;
-      const to = { provider: choice.provider, id: choice.id };
-      const selecting = this.options.accounts?.selectForSpawn(taskId, to.provider, {
-        model: to.id,
-      });
-      const accountId = selecting instanceof Promise ? await selecting : selecting;
-      if (this.options.accounts && !accountId && this.options.accountlessServes?.(to) !== true)
+      const chosen = (preview: RoutePreview) => {
+        const choice = preview.result.choice;
+        if (!choice || preview.requiresReasoningWait) return undefined;
+        if (offeringKey(choice) === offeringKey(from)) return undefined;
+        return { provider: choice.provider, id: choice.id };
+      };
+      const to = chosen(router.preview(record.prompt, shape, prepared));
+      if (!to) return undefined;
+      const pick = await this.pickAccount(taskId, to);
+      if (this.options.accounts && !pick.accountId && this.options.accountlessServes?.(to) !== true)
         return undefined;
-      // Nothing moved it meanwhile: a move, a stop or a quit while the account was chosen.
-      const current = this.options.tasks.get(taskId);
-      if (this.host.disposed() || this.isMoving(taskId) || !current) return undefined;
-      const still = left(current);
-      if (!still || offeringKey(still) !== offeringKey(from)) return undefined;
+      if (stale()) return "stale";
+      // What Settings holds now, after the account was chosen: a level that
+      // took the old model back keeps it, and a replacement that left its
+      // level meanwhile is not the one committed.
+      if (!left(this.options.tasks.get(taskId))) return undefined;
+      const preview = router.preview(record.prompt, shape, prepared);
+      const now = chosen(preview);
+      if (!now || offeringKey(now) !== offeringKey(to)) return undefined;
+      const accountId = pick.accountId;
       const fact = said("crewmateRoutedAgain", {
         left: this.host.modelName(from),
         model: this.host.modelName(to),
       });
       this.options.tasks.atomic(
         () => {
+          pick.record();
           router.commit(taskId, preview);
           this.options.tasks.placement.recordMove(taskId, {
             model: to,
@@ -481,6 +503,22 @@ export class TaskMoves {
       );
       return { ...(accountId ? { accountId } : {}), providerName: this.providerName(to.provider) };
     });
+  }
+
+  /**
+   * The account a move to `model` on this Mac binds, and the write that
+   * records the pick, which the move makes only when it commits.
+   */
+  private async pickAccount(
+    taskId: string,
+    model: { provider: string; id: string },
+  ): Promise<{ accountId?: string; record(): void }> {
+    const accounts = this.options.accounts;
+    if (!accounts) return { record: () => {} };
+    if (accounts.pickForSpawn)
+      return accounts.pickForSpawn(taskId, model.provider, { model: model.id });
+    const accountId = await accounts.selectForSpawn(taskId, model.provider, { model: model.id });
+    return { ...(accountId ? { accountId } : {}), record: () => {} };
   }
 
   /**

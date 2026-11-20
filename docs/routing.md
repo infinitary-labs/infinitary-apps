@@ -78,12 +78,13 @@ Lesson guidance and voice live only in the Lessons runbook (`docs/lessons.md`).
 
 ## A model that left every level
 
-A running task's next conversation on this Mac - a reopen after a quit, or the restart after the model's context limit or repeated refusals - asks for the model of its newest routing choice only while routing would still place that model (`Router.holdsAtALevel`): a level in Settings → Intelligence → Models holds it, or a Settings pin names it.
+A running task's next conversation on the computer the first mate runs on - a reopen after a quit, or the restart after the model's context limit or repeated refusals - asks for the model of its newest routing choice only while routing would still place that model (`Router.holdsAtALevel`): a level in Settings → Intelligence → Models holds it, or a Settings pin names it.
 Only the person's own placements leave a model out: with no slot record, or while the starter map or the listed models stand in for them (`ModelSlots.routable`'s `placed`), every model counts as held.
 Otherwise the task routes again on its own shape before its conversation opens (`TaskMoves.routeAgainIfLeft`), inside `Router.inOrder`, as its start did: a review still prefers a provider other than its builder's (R9).
 The new routing row, the record's model and account, and one timeline and feed line naming the model that left and the one the task uses now commit in one transaction, the line saved as a fact any language words; the conversation then opens as a reopen does, on the newest routing choice and its effort.
 The newest routing row then names a held model, so a later reopen keeps it and says nothing more.
-The task keeps its routed model when it names that model (`override_model_id`), when a custom connection serves it, which never moves to another server on its own, when routing again finds no other model, only one below a level the task requires, or none an account here serves, or when a move, a stop or a quit took the task while it routed.
+The task keeps its routed model when it names that model (`override_model_id`), when a custom connection serves it, which never moves to another server on its own, or when routing again finds no other model, only one below a level the task requires, or none an account here serves, or when the replacement it chose left its level while the account was picked.
+A move, a stop, a quit or a close that takes the task while it routes supersedes the reopen: it opens nothing, and the account it picked is recorded only with a move it commits (`AccountSelector.pickForSpawn`).
 A task on a computer that runs work, and the reopen after a move to another computer, keep the model as before ("Pictures" above, `docs/helper.md`, "Moving a started task").
 
 ## A level's words

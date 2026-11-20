@@ -633,6 +633,10 @@ export class CrewSessions {
       move || fresh?.changed === "computer"
         ? undefined
         : await this.core.moves.routeAgainIfLeft(record.id);
+    // A stop, a quit or a move while it routed again took the task: this
+    // reopen opens nothing for it.
+    if (routedAgain === "stale")
+      throw new Error("This task's crewmate was let go while its conversation opened.");
     const target = move ?? routedAgain;
     // A task on a computer that runs work binds that computer's own
     // account again there; no account of this Mac's is chosen for it.

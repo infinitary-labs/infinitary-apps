@@ -4,7 +4,14 @@ import { wordedLine } from "@shared/i18n/said";
 import type { CorePushChannel } from "@shared/ipc";
 import type { PanelFeedLine } from "@shared/personal/contracts";
 import { type ComputerResourcesView, panelComputerResources } from "@shared/resources";
-import type { ProjectView, TaskBoard, TaskBoardDelta, TaskDetail, TaskView } from "@shared/tasks";
+import type {
+  ProjectView,
+  TaskActivityLine,
+  TaskBoard,
+  TaskBoardDelta,
+  TaskDetail,
+  TaskView,
+} from "@shared/tasks";
 import { presentBoard, presentProjects, presentTask } from "@shared/taskWaiting";
 import { useShellStore } from "../../app/store";
 import { type ReadApi, ReadExecutor } from "./executor";
@@ -213,7 +220,7 @@ export function firstmateReadApi(): ReadApi {
         );
         return presentedFeed;
       }
-      if (name === "tasks.detail") return presentTask(value as TaskDetail, cards);
+      if (name === "tasks.detail") return presentTask(wordedActivity(value as TaskDetail), cards);
       if (name === "tasks.search") rememberFound(value as TaskView[]);
       if (name === "projects.list" && board) {
         return presentProjects(value as ProjectView[], projectBoard(board).tasks);
@@ -232,6 +239,24 @@ export function firstmateReadApi(): ReadApi {
     onEvent: (listener) => window.infinitary.events.on(listener),
     onPush: (channel, listener) => PUSHES[channel](channel, listener),
     onResync,
+  };
+}
+
+/**
+ * A record's Activity with each line the app saved as a fact worded now, in
+ * the window's language (docs/i18n.md, "Saved facts"); a panel reads the words.
+ */
+function wordedActivity(detail: TaskDetail): TaskDetail {
+  const worded = <L extends TaskActivityLine>({ said, ...line }: L) =>
+    (said ? { ...line, text: wordedLine({ text: line.text, said }) } : line) as L;
+  if (!detail.activityLog.some((row) => row.said || row.folded?.some((line) => line.said)))
+    return detail;
+  return {
+    ...detail,
+    activityLog: detail.activityLog.map((row) => ({
+      ...worded(row),
+      ...(row.folded ? { folded: row.folded.map(worded) } : {}),
+    })),
   };
 }
 

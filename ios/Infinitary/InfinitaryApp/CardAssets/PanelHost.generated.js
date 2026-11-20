@@ -105087,7 +105087,14 @@ ${FRAME_KEYBOARD_SCRIPT}
      * "The first mate's own words"). Absent on the captain's and a crewmate's
      * words, and from an older home.
      */
-    saidHere: literal(true).optional()
+    saidHere: literal(true).optional(),
+    /**
+     * The app's own words of `text` saved as a fact (docs/i18n.md, "Saved
+     * facts"), so the window words the line in its own language; `text` keeps
+     * the English for a reader that words nothing itself, such as the phone.
+     * Absent on every other line, and from an older home.
+     */
+    said: saidSchema.optional()
   });
   const taskActionLineSchema = object({
     at: number(),

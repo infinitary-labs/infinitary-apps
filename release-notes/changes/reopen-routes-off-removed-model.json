@@ -5,7 +5,7 @@
       "kind": "fix",
       "area": "crewmates",
       "title": "A running task stops using a model you took off every level",
-      "body": "When you take a model off every level in Settings, a task that was running on it on this Mac now picks another model the next time its conversation opens, such as after you quit and reopen the app or when its conversation grows too long for the model and starts over. Its activity says once which model it moved to. A task you started on a model by name keeps that model.",
+      "body": "When you take a model off every level in Settings, a task running on it on the computer that keeps your tasks picks another model from your levels the next time its conversation opens, such as after you quit and reopen the app or when its conversation grows too long for the model and starts over. Its activity says once which model it moved to. A task keeps the model when you started it on that model by name, when it runs on a custom connection or on another computer, or when no other model on your levels that one of your accounts serves can take it.",
       "picture": {
         "dark": "reopen-routes-off-removed-model-dark.webp",
         "light": "reopen-routes-off-removed-model-light.webp",

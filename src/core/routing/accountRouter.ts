@@ -54,40 +54,47 @@ export class AccountSelector {
    * model's scope and ranked by the crew allowance bands, as routing ranked
    * the model (INF-1714); a decision model's call names none.
    */
-  private recordSpawn(
-    taskId: string,
-    piProviderId: string,
-    crew: { model: string } | undefined,
-    placed: PlacedWorkData | undefined,
-  ): string | undefined {
-    const decision = this.decide(piProviderId, crew, placed);
-    if (!decision) return undefined;
-    this.options.decisions.recordAccount({
-      taskId,
-      provider: piProviderId,
-      accountId: decision.accountId ?? null,
-      reasons: [...decision.reasons, ...this.withheldElsewhere(piProviderId)],
-      facts: {
-        kind: "account-candidates",
-        candidates: decision.candidates,
-        ...(decision.pinned ? { pinned: true as const } : {}),
-      },
-    });
-    if (decision.accountId) {
-      this.options.pool.markSelected(decision.accountId);
-    }
-    return decision.accountId;
-  }
-
   async selectForSpawn(
     taskId: string,
     provider: string,
     crew?: { model: string },
   ): Promise<string | undefined> {
+    const pick = await this.pickForSpawn(taskId, provider, crew);
+    pick.record();
+    return pick.accountId;
+  }
+
+  /**
+   * The account `selectForSpawn` would pick, with the write that records it
+   * kept apart: a move that may still be abandoned after the pick - a stop,
+   * a quit or another move meanwhile - records it only with the move, so an
+   * abandoned move leaves no account decision and marks no account selected.
+   */
+  async pickForSpawn(
+    taskId: string,
+    piProviderId: string,
+    crew?: { model: string },
+  ): Promise<{ accountId?: string; record(): void }> {
     const placed = await this.options.placedWork?.prepare(
       this.options.quota.latest()?.providers ?? [],
     );
-    return this.recordSpawn(taskId, provider, crew, placed);
+    const decision = this.decide(piProviderId, crew, placed);
+    if (!decision) return { record: () => {} };
+    const record = () => {
+      this.options.decisions.recordAccount({
+        taskId,
+        provider: piProviderId,
+        accountId: decision.accountId ?? null,
+        reasons: [...decision.reasons, ...this.withheldElsewhere(piProviderId)],
+        facts: {
+          kind: "account-candidates",
+          candidates: decision.candidates,
+          ...(decision.pinned ? { pinned: true as const } : {}),
+        },
+      });
+      if (decision.accountId) this.options.pool.markSelected(decision.accountId);
+    };
+    return { ...(decision.accountId ? { accountId: decision.accountId } : {}), record };
   }
 
   /** A resume keeps a healthy account; otherwise prepare and bind a serving sibling. */

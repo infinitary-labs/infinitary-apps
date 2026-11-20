@@ -1,5 +1,6 @@
 import { checkSnapshotSchema, checkSnapshotSummary } from "@shared/checkSnapshot";
 import { reportSummary } from "@shared/feed";
+import { type Said, saidSchema } from "@shared/i18n/said";
 import { CREWMATE_TAB_VIA } from "@shared/provenance";
 import { DROP_BEFORE_START, DROPPED_BEFORE_START_ACTIVITY } from "@shared/recordDrop";
 import { withoutIntentLead } from "@shared/rigor";
@@ -101,6 +102,8 @@ export type ActivityContext = {
  * - a host note is news or bookkeeping as its writer declared
  *   (`data.news`); bookkeeping folds, and so does a host note written
  *   before writers declared;
+ * - a note its writer saved as a fact (`data.said`) carries the fact
+ *   (`said`), so the window words it in its own language;
  * - a status line that does not close the task folds;
  * - a `ci` reading with the same result as the last one shown, or with no
  *   change to read, folds;
@@ -177,7 +180,7 @@ export function condenseActivity(
       else rows.push(line);
       continue;
     }
-    const line = (words: string): TaskActivityLine => {
+    const line = (words: string, fact?: Said): TaskActivityLine => {
       const text =
         typeof data.panel === "string"
           ? `${words} From the ${data.panel} panel.`
@@ -193,19 +196,21 @@ export function condenseActivity(
         text,
         ...(span ? { change: span } : {}),
         ...saidHere(event),
+        // The saved fact words the line only while the line is its words alone.
+        ...(fact && text === words ? { said: fact } : {}),
       };
     };
-    const show = (text: string) => {
+    const show = (text: string, fact?: Said) => {
       rows.push({
-        ...line(text),
+        ...line(text, fact),
         ...(pending.length > 0 ? { folded: pending } : {}),
         ...(done.length > 0 ? { actions: done } : {}),
       });
       pending = [];
       done = [];
     };
-    const fold = (text: string) => {
-      pending.push(line(text));
+    const fold = (text: string, fact?: Said) => {
+      pending.push(line(text, fact));
     };
     switch (event.kind) {
       case "note": {
@@ -217,8 +222,13 @@ export function condenseActivity(
             fallback: moved.fallback,
           });
           show(`${words.charAt(0).toUpperCase()}${words.slice(1)}.`);
-        } else if (isNews(event)) show(event.text);
-        else fold(event.text);
+        } else {
+          // A note its writer saved as a fact (`data.said`) is worded where it is shown.
+          const saved = saidSchema.safeParse(data.said);
+          const fact = saved.success ? saved.data : undefined;
+          if (isNews(event)) show(event.text, fact);
+          else fold(event.text, fact);
+        }
         break;
       }
       case "status":

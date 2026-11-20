@@ -43539,6 +43539,86 @@
                   "type": "boolean",
                   "const": true
                 },
+                "said": {
+                  "type": "object",
+                  "properties": {
+                    "m": {
+                      "type": "string"
+                    },
+                    "a": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "time": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "time"
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "m": {
+                                "type": "string"
+                              },
+                              "a": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "time": {
+                                          "type": "number"
+                                        }
+                                      },
+                                      "required": [
+                                        "time"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "m"
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "m"
+                  ]
+                },
                 "folded": {
                   "type": "array",
                   "items": {
@@ -43623,6 +43703,86 @@
                       "saidHere": {
                         "type": "boolean",
                         "const": true
+                      },
+                      "said": {
+                        "type": "object",
+                        "properties": {
+                          "m": {
+                            "type": "string"
+                          },
+                          "a": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "time": {
+                                          "type": "number"
+                                        }
+                                      },
+                                      "required": [
+                                        "time"
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "m": {
+                                      "type": "string"
+                                    },
+                                    "a": {
+                                      "type": "object",
+                                      "propertyNames": {
+                                        "type": "string"
+                                      },
+                                      "additionalProperties": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "object",
+                                            "properties": {
+                                              "time": {
+                                                "type": "number"
+                                              }
+                                            },
+                                            "required": [
+                                              "time"
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  "required": [
+                                    "m"
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "m"
+                        ]
                       }
                     },
                     "required": [

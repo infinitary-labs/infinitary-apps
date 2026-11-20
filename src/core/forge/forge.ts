@@ -243,6 +243,8 @@ export type ForgePull = {
    * read after a merge was sent cannot show that nothing went in.
    */
   mergeNamesNoVersion?: true;
+  /** The host said the merge it took (`ForgeMergeUnconfirmed.mergeTask`) failed: nothing went in. */
+  mergeFailed?: true;
 };
 
 /**
@@ -363,6 +365,22 @@ export class ForgeBaseMoved extends ForgeError {
   }
 }
 
+/**
+ * A merge the host took and has not confirmed, on a host whose merge names
+ * no version: an outcome not yet known, never sent again. `mergeTask` is
+ * the host's own reference to that merge, when it gave one, which a later
+ * read asks how it ended (`Forge.mergeTaskFailed`).
+ */
+export class ForgeMergeUnconfirmed extends ForgeError {
+  constructor(
+    message: string,
+    readonly mergeTask?: string,
+  ) {
+    super("transient", message);
+    this.name = "ForgeMergeUnconfirmed";
+  }
+}
+
 /** When a spent allowance comes back, if that is why the host refused; otherwise undefined. */
 export function allowanceResetOf(caught: unknown): number | undefined {
   return caught instanceof ForgeAllowanceSpent ? caught.resetAt : undefined;
@@ -411,6 +429,11 @@ export interface Forge {
    * never came is never sent again: only a read says how it ended.
    */
   readonly mergeNamesNoVersion?: true;
+  /**
+   * Whether a merge the host took and had not confirmed (`ForgeMergeUnconfirmed.mergeTask`)
+   * failed by the host's own word; false while it runs or once it merged.
+   */
+  mergeTaskFailed?(number: number, task: string): Promise<boolean>;
   /** The selected contributor change publishes its saved story in a comment. */
   readonly storyInComment?: boolean;
   /** Optional read-only workflow evidence; absent on hosts without a reader. */

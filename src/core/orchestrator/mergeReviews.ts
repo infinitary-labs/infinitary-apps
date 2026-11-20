@@ -10,6 +10,8 @@ import {
   type Forge,
   ForgeBaseMoved,
   type ForgeChange,
+  ForgeError,
+  ForgeMergeUnconfirmed,
   type ForgePull,
   forkStoryForge,
   isForkReview,
@@ -884,14 +886,14 @@ export class MergeReviews {
       return merged(sent?.sha, sent?.mergedHead);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
-      const after = dispatched
-        ? await forge.pull?.(review.number).catch(() => undefined)
-        : undefined;
+      // A request the host says never left sent nothing, whatever was marked.
+      const sent = dispatched && !(caught instanceof ForgeError && caught.beforeSend);
+      const after = sent ? await forge.pull?.(review.number).catch(() => undefined) : undefined;
       if (after?.merged && (after.headSha === candidate.headSha || forge.mergeNamesNoVersion))
         return merged(after.mergedSha, after.headSha);
       const stop = guard
         ? ((await this.merges.refusalStop(forge, guard, caught, message)) ??
-          (dispatched ? "outcome" : undefined))
+          (sent ? "outcome" : isTransientForgeFailure(caught) ? "transient" : undefined))
         : /Head branch was modified/i.test(message)
           ? "moved"
           : undefined;
@@ -900,6 +902,9 @@ export class MergeReviews {
         text: `Cannot merge: ${message}`,
         problem: message,
         stop,
+        ...(caught instanceof ForgeMergeUnconfirmed && caught.mergeTask
+          ? { mergeTask: caught.mergeTask }
+          : {}),
         ...(caught instanceof ForgeBaseMoved && (stop === undefined || stop === "computing")
           ? { baseMoved: true }
           : {}),

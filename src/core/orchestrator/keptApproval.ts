@@ -824,7 +824,11 @@ export class KeptApproval {
         retries,
         retryAt,
         ...(handed ? { handed } : {}),
-        ...(result.stop === "outcome" ? {} : { attempt: undefined }),
+        ...(result.stop !== "outcome"
+          ? { attempt: undefined }
+          : current.attempt && result.mergeTask
+            ? { attempt: { ...current.attempt, task: result.mergeTask } }
+            : {}),
       },
     });
     return { wait, head, changed };

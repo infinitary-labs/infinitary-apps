@@ -289,7 +289,11 @@ export type SetupExtras = {
   mergePullRequest?: CrewSupervisorOptions["mergePullRequest"];
   mergeReview?: CrewSupervisorOptions["mergeReview"];
   reviewGate?: CrewSupervisorOptions["reviewGate"];
-  readPull?: (taskId: string, prNumber: number) => Promise<ForgePull | undefined>;
+  readPull?: (
+    taskId: string,
+    prNumber: number,
+    mergeTask?: string,
+  ) => Promise<ForgePull | undefined>;
   mergedStory?: CrewSupervisorOptions["mergedStory"];
   openChange?: (
     taskId: string,

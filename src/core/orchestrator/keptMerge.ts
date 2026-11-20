@@ -322,14 +322,18 @@ export class KeptMerge {
    * means the approval is spent and the task closes once; closed ends it;
    * open clears the token and runs every gate again, except on a host whose
    * merge names no version, where open proves nothing and it waits like an
-   * unreadable one, never sending again.
+   * unreadable one, never sending again, until the host's own word on the
+   * merge it took (`attempt.task`) says it failed.
    */
   private async reconcileAttempt(taskId: string, authorization: MergeAuthorization): Promise<void> {
     const readPull = this.host.readPull;
     let pull: ForgePull | undefined;
     try {
       const number = authorization.target.prNumber;
-      pull = readPull && number !== undefined ? await readPull(taskId, number) : undefined;
+      pull =
+        readPull && number !== undefined
+          ? await readPull(taskId, number, authorization.attempt?.task)
+          : undefined;
     } catch {
       pull = undefined;
     }
@@ -346,7 +350,10 @@ export class KeptMerge {
     // An open read cannot show that a merge sent to a host naming no version
     // did not go in (a 202 still merging, or an answer that never came): it
     // stays read-only, and only a read showing how it ended moves it.
-    if (!pull || (pull.state === "open" && !pull.merged && pull.mergeNamesNoVersion)) {
+    if (
+      !pull ||
+      (pull.state === "open" && !pull.merged && pull.mergeNamesNoVersion && !pull.mergeFailed)
+    ) {
       const retries = (current.retries ?? 0) + 1;
       this.approvals.patchStanding(taskId, {
         waiting: { on: "outcome", head: candidateHead(current), at: now },

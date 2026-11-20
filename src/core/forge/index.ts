@@ -86,6 +86,7 @@ export {
   ForgeAllowanceSpent,
   ForgeBaseMoved,
   ForgeError,
+  ForgeMergeUnconfirmed,
   ForgeWriteError,
   isRedCheckState,
   isSignInForgeFailure,

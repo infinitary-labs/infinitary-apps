@@ -204,7 +204,12 @@ export type SettleServiceHost = {
   namingRule?: () => NamingRule | null;
   closePullRequest?: (taskId: string) => Promise<PrOutcome>;
   /** The pinned pull request by its number, for a kept approval's reconcile (FI3-304). */
-  readPull?: (taskId: string, prNumber: number) => Promise<ForgePull | undefined>;
+  /** `mergeTask` asks the host how a merge it took and had not confirmed ended (`ForgePull.mergeFailed`). */
+  readPull?: (
+    taskId: string,
+    prNumber: number,
+    mergeTask?: string,
+  ) => Promise<ForgePull | undefined>;
   /**
    * The merge card a pull request `readPull` read merged can show, or why it
    * has none (INF-3799), which the merge's wake words as check_change does.

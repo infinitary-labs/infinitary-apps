@@ -16,6 +16,7 @@ import {
   ForgeBaseMoved,
   type ForgeChange,
   ForgeError,
+  ForgeMergeUnconfirmed,
   type ForgePull,
   type ForgeReadiness,
   type ForgeRuleset,
@@ -91,6 +92,12 @@ export type PrOutcome = {
    * not tell.
    */
   skip?: { may: true; rules: SkippedRule[] } | { may: false; why: string };
+  /**
+   * The host's own reference to a merge it took and has not confirmed
+   * (`ForgeMergeUnconfirmed.mergeTask`): kept on the approval's attempt, so
+   * a later read asks the host how it ended.
+   */
+  mergeTask?: string;
 };
 
 /**
@@ -514,14 +521,19 @@ export class ChangeMerge {
       // pull request's own state already says why it cannot merge.
       const baseMoved =
         caught instanceof ForgeBaseMoved && (stop === undefined || stop === "computing");
+      // A request the host says never left sent nothing, whatever was marked.
+      const sent = dispatched && !(caught instanceof ForgeError && caught.beforeSend);
       return {
         ok: false,
         text: `Cannot merge: ${message}`,
         problem: message,
         ...(isTransientForgeFailure(caught) ? { transient: true } : {}),
-        ...(dispatched ? { dispatched: true } : {}),
-        ...(dispatched && forge.mergeNamesNoVersion && isTransientForgeFailure(caught)
+        ...(sent ? { dispatched: true } : {}),
+        ...(sent && forge.mergeNamesNoVersion && isTransientForgeFailure(caught)
           ? { noResend: true }
+          : {}),
+        ...(caught instanceof ForgeMergeUnconfirmed && caught.mergeTask
+          ? { mergeTask: caught.mergeTask }
           : {}),
         ...(baseMoved ? { baseMoved: true } : {}),
         ...(stop ? { stop } : {}),
@@ -909,7 +921,11 @@ export class ChangeMerge {
    * approval's reconcile asks after a restart or an answer that never came.
    * Undefined where the host has no pull requests or the task no change.
    */
-  async pullState(taskId: string, prNumber: number): Promise<ForgePull | undefined> {
+  async pullState(
+    taskId: string,
+    prNumber: number,
+    mergeTask?: string,
+  ): Promise<ForgePull | undefined> {
     const record = this.options.tasks.get(taskId);
     const repo = record?.repoId ? this.options.repos.get(record.repoId) : undefined;
     if (!record || !repo || !opensPullRequest(deliveryForRecord(record, repo.delivery)))
@@ -921,7 +937,14 @@ export class ChangeMerge {
     const elsewhere = this.projectOfNumber(record, prNumber);
     if (elsewhere === null) return undefined;
     const forge = this.options.forgeFor(elsewhere ?? publicationRepo(record, repo));
-    return forge.pull ? this.context.pullOf(forge, prNumber) : undefined;
+    if (!forge.pull) return undefined;
+    const pull = await this.context.pullOf(forge, prNumber);
+    // A merge the host took and had not confirmed, still open: the host's
+    // own word on that merge says whether it failed.
+    if (mergeTask && forge.mergeTaskFailed && pull.state === "open" && !pull.merged) {
+      if (await forge.mergeTaskFailed(prNumber, mergeTask)) return { ...pull, mergeFailed: true };
+    }
+    return pull;
   }
 
   /**

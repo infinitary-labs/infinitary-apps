@@ -8,6 +8,7 @@ import { requireNamed } from "../../../workspace/naming";
 import {
   checkTimes,
   type Forge,
+  ForgeAllowanceSpent,
   ForgeBaseMoved,
   type ForgeChange,
   type ForgeCheck,
@@ -15,6 +16,7 @@ import {
   type ForgeChecks,
   ForgeError,
   type ForgeLocation,
+  ForgeMergeUnconfirmed,
   type ForgePull,
   type ForgeReadiness,
   ForgeWriteError,
@@ -339,37 +341,52 @@ export class BitbucketForge implements Forge {
     );
     // A saved story squashes under its plain summary, never its rendered evidence (INF-228 F2).
     const body = (change.squashMessage ?? change.body)?.trim() ?? "";
-    const now = await this.branchHead(change.branch);
-    if (now !== headSha)
-      throw new ForgeError(
-        "refused",
-        `${this.place} holds a newer version of ${change.branch} than the one whose checks were read, so nothing was merged. Read the pull request again.`,
-        true,
-      );
-    let answer: { status: number; body: unknown };
+    let answer: { status: number; body: unknown; location: string | null };
+    // Whether the merge request left: a failure before it (the branch read,
+    // the sign-in) sent nothing, and says so (`ForgeError.beforeSend`).
+    let left = false;
     try {
-      answer = await this.client.request("POST", `${this.pullRequestPath(id)}/merge`, {
-        type: "pullrequest",
-        message: body ? `${title}\n\n${body}` : title,
-        // A batch keeps one commit per change; anything else is one squashed commit.
-        merge_strategy: way === "squash" ? "squash" : "merge_commit",
-        close_source_branch: false,
-      });
+      const now = await this.branchHead(change.branch);
+      if (now !== headSha)
+        throw new ForgeError(
+          "refused",
+          `${this.place} holds a newer version of ${change.branch} than the one whose checks were read, so nothing was merged. Read the pull request again.`,
+          true,
+        );
+      answer = await this.client.request(
+        "POST",
+        `${this.pullRequestPath(id)}/merge`,
+        {
+          type: "pullrequest",
+          message: body ? `${title}\n\n${body}` : title,
+          // A batch keeps one commit per change; anything else is one squashed commit.
+          merge_strategy: way === "squash" ? "squash" : "merge_commit",
+          close_source_branch: false,
+        },
+        () => {
+          left = true;
+        },
+      );
     } catch (caught) {
+      if (!left) throw sentNothing(caught);
       // A ref moved while Bitbucket merged: nothing merged, and the next read says why.
       if (caught instanceof BitbucketRefusal && caught.status === 409)
         throw new ForgeBaseMoved(caught.message);
       throw caught;
     }
+    // Bitbucket's own reference to a merge still running (a 202), which a
+    // later read asks how it ended.
+    const task = answer.status === 202 ? mergeTaskOf(answer) : undefined;
     // Once the request went out, nothing read after it can say the merge
     // failed: a 202 (Bitbucket still merging in the background), a read
     // that fails or an answer that names no version is an outcome not yet
     // known, which only a later read of the pull request settles; nothing
     // is sent again.
     const unknown = (why: string) =>
-      new ForgeError(
-        "transient",
+      new ForgeMergeUnconfirmed(
+        // i18n-exempt: served to the crewmate in the merge answer, stays English
         `${this.place} was asked to merge #${id} and ${why}; nothing is sent again until a read shows how it ended.`,
+        task,
       );
     let merged = answer.status === 202 ? null : (answer.body as PullRequestJson | null);
     let sha: string | undefined;
@@ -390,6 +407,24 @@ export class BitbucketForge implements Forge {
     // i18n-exempt: served to the crewmate in the merge answer, stays English
     if (!mergedHead) throw unknown("did not name the version it merged");
     return { ...(sha ? { sha } : {}), mergedHead };
+  }
+
+  /**
+   * Bitbucket's word on a merge it took with a 202
+   * (`GET /pullrequests/<N>/merge/task-status/<task>`): a 400 is the merge
+   * failing; a pending or finished one is not a failure.
+   */
+  async mergeTaskFailed(number: number, task: string): Promise<boolean> {
+    try {
+      await this.client.request(
+        "GET",
+        `${this.pullRequestPath(number)}/merge/task-status/${encodeURIComponent(task)}`,
+      );
+      return false;
+    } catch (caught) {
+      if (caught instanceof BitbucketRefusal && caught.status === 400) return true;
+      throw caught;
+    }
   }
 
   async markReady(change: ForgeChange, beforeSend: () => void): Promise<ForgeChange> {
@@ -601,6 +636,22 @@ function numbered(change: ForgeChange, place: string): number {
   if (change.number === undefined)
     throw new ForgeError("unsupported", `${change.branch} has no pull request on ${place}`);
   return change.number;
+}
+
+/** A failure before the merge request left: nothing was sent, which a caller may retry. */
+function sentNothing(caught: unknown): unknown {
+  if (caught instanceof ForgeError && (caught.beforeSend || caught instanceof ForgeAllowanceSpent))
+    return caught;
+  const message = caught instanceof Error ? caught.message : String(caught);
+  return new ForgeError(caught instanceof ForgeError ? caught.failure : "transient", message, true);
+}
+
+/** The task a 202 names, from its body (`task_id`) or the last part of its Location. */
+function mergeTaskOf(answer: { body: unknown; location: string | null }): string | undefined {
+  const named = (answer.body as { task_id?: unknown } | null)?.task_id;
+  if (typeof named === "string" && named) return named;
+  const last = answer.location?.split("?")[0]?.split("/").filter(Boolean).at(-1);
+  return last && answer.location?.includes("/task-status/") ? decodeURIComponent(last) : undefined;
 }
 
 function unreadableError(place: string, what: string): ForgeError {

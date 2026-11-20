@@ -123,6 +123,11 @@ export class KeptForge implements Forge {
   sends = 0;
   /** The host's merge names no version, as Bitbucket's does (`Forge.mergeNamesNoVersion`). */
   mergeNamesNoVersion?: true;
+  /** The merges the host took and then said failed, by its own reference to each. */
+  failedTasks = new Set<string>();
+  async mergeTaskFailed(_number: number, task: string) {
+    return this.failedTasks.has(task);
+  }
   async listProjects() {
     return [];
   }
@@ -314,7 +319,7 @@ export async function approved(
       service().merges.merge(id, guard, beforeDispatch),
     mergeReview: (id, reviewId, guard) => service().reviews.mergeReview(id, reviewId, guard),
     reviewGate: (id, reviewId) => service().reviews.reviewGate(id, reviewId),
-    readPull: (id, prNumber) => service().merges.pullState(id, prNumber),
+    readPull: (id, prNumber, mergeTask) => service().merges.pullState(id, prNumber, mergeTask),
     mergedStory: (id, pull) => service().merges.mergedStory(id, pull),
     openChange: (id, input) => service().publication.open(id, input),
     checkChange: (id, input) => service().checkTool.checkForCrew(id, input),

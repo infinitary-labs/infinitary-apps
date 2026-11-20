@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ForgeBaseMoved, type ForgeChange, ForgeError } from "../../forge";
+import { ForgeBaseMoved, type ForgeChange, ForgeError, ForgeMergeUnconfirmed } from "../../forge";
 import { BitbucketForge } from "./bitbucketForge";
 
 // The task's intent (INF-5193, the captain's "adding bitbucket as another
@@ -253,6 +253,36 @@ describe("a Bitbucket Cloud pull request", () => {
     expect(outcome).toBeInstanceOf(ForgeError);
     expect(outcome).toMatchObject({ failure: "transient" });
     expect(sent.filter((request) => request.method === "POST")).toHaveLength(1);
+  });
+
+  it("says nothing was sent when the branch read before the merge fails", async () => {
+    const { forge, sent } = standIn({
+      [`GET ${REPO}/refs/branches/${encodeURIComponent(BRANCH)}?fields=target.hash`]: () =>
+        Response.json({ type: "error" }, { status: 503 }),
+    });
+    const outcome = await forge.putIn(change, HEAD).catch((error: unknown) => error);
+    expect(outcome).toMatchObject({ failure: "transient", beforeSend: true });
+    expect(sent.some((request) => request.method === "POST")).toBe(false);
+  });
+
+  it("keeps Bitbucket's reference to a merge still running and reads its failure there", async () => {
+    const { forge } = standIn({
+      [`GET ${REPO}/refs/branches/${encodeURIComponent(BRANCH)}?fields=target.hash`]: () =>
+        Response.json({ target: { hash: HEAD } }),
+      [`POST ${REPO}/pullrequests/7/merge`]: () =>
+        new Response(JSON.stringify({ task_id: "merge-1" }), { status: 202 }),
+      [`GET ${REPO}/pullrequests/7`]: () => Response.json(pullRequest({})),
+      [`GET ${REPO}/pullrequests/7/merge/task-status/merge-1`]: () =>
+        Response.json({ type: "error", error: { message: "Merge failed" } }, { status: 400 }),
+      [`GET ${REPO}/pullrequests/7/merge/task-status/merge-2`]: () =>
+        Response.json({ task_status: "PENDING" }),
+      ...commits(HEAD),
+    });
+    const outcome = await forge.putIn(change, HEAD).catch((error: unknown) => error);
+    expect(outcome).toBeInstanceOf(ForgeMergeUnconfirmed);
+    expect(outcome).toMatchObject({ mergeTask: "merge-1" });
+    expect(await forge.mergeTaskFailed(7, "merge-1")).toBe(true);
+    expect(await forge.mergeTaskFailed(7, "merge-2")).toBe(false);
   });
 
   it("replaces only the description, leaving a title a person changed since", async () => {

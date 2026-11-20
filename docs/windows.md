@@ -1,9 +1,9 @@
 # Windows
 
 Infinitary on Windows is one unsigned installer for x64 PCs, built and checked by `.github/workflows/windows.yml`.
-Every alpha publishes it as an unsigned early build for testers ("Published on every alpha" below); a stable carries none, nothing signs it yet, and no update reaches it.
-The installed app offers no update either: it never reads the release source, and the Version row says Infinitary does not update itself on Windows yet (`createInstalledUpdateChecker` in `src/core/update/updateChecker.ts`).
-Windows on Arm, signing, updates and a stable Windows build are later pieces of the Windows plan.
+Every alpha publishes it as an unsigned early build for testers ("Published on every alpha" below); a stable carries none yet, and nothing signs it.
+The installed app updates itself in one click from the installer its channel's release carries, checked against the published SHA-256 (`docs/alpha.md`, "Updates on Windows"); a channel whose release carries no Windows installer offers no update.
+Windows on Arm, signing and a stable Windows build are later pieces of the Windows plan.
 The earlier hosted investigation and what it observed are `docs/windows-feasibility.md`.
 
 ## What is built
@@ -48,7 +48,8 @@ Moving to a newer Git for Windows changes the version, file, address, SHA-256 an
 Infinitary at its first launch on a Windows PC joins a first mate on a Mac, a Linux computer or another Windows PC by a pasted link or by that computer's address (`docs/view.md`, "Joining"), and both controls it and runs its work, as a Mac that joined by its window does (`systemRunsWork` in `src/shared/devices.ts`).
 Its work runs while its person is signed in to Windows, started by their own Task Scheduler with no administrator (`docs/helper.md`, "In the background").
 A second Windows account on a Windows home runs that home's work too, by a line for PowerShell (`docs/devices.md`, "Joining by a command").
-No update reaches a Windows PC (above), so its home sends it none and its row on Settings -> Devices says to install the newer Infinitary on that PC.
+Its home sends it no update, so its row on Settings -> Devices says to install the newer Infinitary on that PC.
+Its window names a newer version of its own copy and installs nothing, since the installer would end the work it runs mid-run (`docs/alpha.md`, "Updates on Windows").
 It says who it is by its user's security identifier, which Windows' own `whoami` reads, since a Windows user has no number (`docs/devices.md`, "Joining").
 Windows refuses to replace a file another program holds open, as one may the moment the file appears, so a join that knows the home's name already, as the window's work setup does, puts the grant the PC keeps (`home.json`) in place with that name in one write (`JoinedHome.join`, `src/core/devices/joinedHome.ts`), and a join keeps the home's name and where the PC runs, heard in its one welcome, in one write too (`JoinedHome.heard`).
 A command's join still puts the grant in place, or a changed address on it, before its dial hears the home, and a run keeps the addresses, the name and where it runs from one welcome each in a write of its own, so each of those writes can still meet a program holding the file.
@@ -87,7 +88,7 @@ A Windows PC that keeps a copy offers Take over while the home is out of reach, 
 
 ## The checks
 
-`windows.yml` has two jobs.
+`windows.yml` has two jobs, and a third on request ("The update check" below).
 `build` runs on the PC's Windows places, a fresh standard account removed when the job ends (`vars.WINDOWS_RUNNER`, default `shell-pc-windows`).
 It installs, builds and packages the installer, and keeps it on the run with its `SHA256SUMS` as the `windows-installer` artifact, and hands its line of `SHA256SUMS` to a calling workflow as the `sums` output; only an alpha's upload job publishes it.
 Both jobs first unpack Git for Windows' portable build, pinned by its SHA-256, and put it first on their own steps' search path, so the job's bash, git and curl are that release's: the places' own Git 2.45.2 has a curl that refuses a plain download (exit 43), and the fresh machine has no Git.
@@ -150,3 +151,33 @@ A rehearsal checks and lists the installer and writes it into its rehearsed buil
 A stable promotion builds no Windows installer: when it hands its version to alpha, alpha's entry names no Windows build until the next alpha.
 The alpha's release notes call it an unsigned early build: Windows warns before it runs, and a PC with Smart App Control on blocks it until the signed build.
 This gives the downloads page the entry it reads; the page lists the installer once its own change is deployed.
+
+## The update check
+
+A request with `update_check` checks the app's own update (`docs/alpha.md`, "Updates on Windows") on the clean machine instead of the installer check.
+It runs only on request: nothing a batch or an alpha runs asks for it.
+`build` first points the checkout's release source at the machine's own feed, `https://localhost:8443/` (`scripts/windows-update-source.ts`, `tests/windows/updateVersions.ts`), builds once, and packages two unsigned test versions per channel from that one build, telling them apart only by their version: `0.0.1-alpha.1` and `0.0.1-alpha.2` for alpha, `0.0.1` and `0.0.2` for stable.
+Their release source names no published place, so nothing they find or download comes from a real release, and they stay on the run as the installer does.
+`update` is a matrix of one fresh machine per channel and round (`rounds`, as for `check`), set up as `check`'s is; it installs the channel's older version as a double-click does and runs `tests/windows/windows-update.spec.ts`.
+Every round takes the same test installers the run built once.
+With more than one round the jobs run one at a time, in order, and a failed round cancels every round after it, none of which has started; one round runs both channels side by side, each to its end.
+With more than one round each job's name ends `; round N`.
+The journey serves the feed itself on the machine's loopback addresses (`tests/windows/updateFeed.ts`), with a certificate it makes in this person's own store and trusts for them alone as one of their own roots, answering Yes to the Security Warning Windows shows first, and sets `NODE_USE_SYSTEM_CA=1` in their environment, where the command Task Scheduler starts reads it; it takes both away when it ends.
+The certificate is its own authority (basic constraints CA true, allowed to sign certificates) naming `localhost` and both loopback addresses, as the Mac's update check's is: the installed app refused a plain self-signed server certificate the runner's own Node accepted.
+Before the window opens, the journey reads the feed from a Node a task of its own starts through Task Scheduler, so a missing setting shows there rather than as an update the app never offers.
+It checks, in order:
+
+1. Git for Windows installs on the person's yes, as in the installer check, and the window, opened again on the person's own data folder, starts the command through Task Scheduler.
+2. The window signs in to the stand-in provider, turns a setting away from its default and asks the first mate for a task, whose crewmate's turn the stand-in keeps running (`tests/e2e/scenarios/updateResume.ts`).
+3. Settings → General's Version row offers the newer version, and the journey takes its hero picture pair there.
+4. The feed offers it with another file's checksum: the row's Update and restart installs nothing and says the download did not match its published checksum, and the older copy goes on: its window and command still run, the turn is still running, and no installer is left in the data folder.
+5. The feed offers it with a download that stops a quarter of the way: the row's Try again installs nothing, says the download stopped, and the older copy goes on the same way.
+6. The feed offers, under the newer installer's name and with its own checksum, Windows' `where.exe`, which exits with an error on the installer's arguments: Try again saves the running turn and the command ends, the hand-over ends the window and opens the kept older copy, whose window starts the command again, which carries the turn on with the words of a turn an update stopped; the journey's window, opened again, finds the row saying the installer stopped beside Try again.
+7. The feed offers it as published: Try again saves the running turn, the command ends, the installer replaces the copy (the journey keeps every process of the hand-over it sees meanwhile), and the new copy's window opens through the Start menu entry, the hand-over ends once it sees that window, and the window starts the command again, which carries the turn on once more.
+8. Opened again, the new copy names the newer version on the same channel, with the same task, now finished by the resumed turn, setting and sign-in, the same Task Scheduler entry, one removal entry for this person, and no installer left in the data folder.
+
+A second test runs the hand-over itself (`windowsHandOverScript`) for the ways back the journey cannot reach, with a program it compiles standing in for the installer (recording its arguments and exiting as told) and a data folder of its own, with a space and an apostrophe in its name, opened with `--user-data-dir`, beside a window of the installed copy it opens on another folder, which every step finds still running: a disposable process still running after a wait shortened to seconds gets nothing installed, its channel marker put back and the copy opened on that folder once the process ends; a finished update runs the installer without `--force-run`, ends that folder's window and opens the copy there again; and an installer that stops beside a copy that starts but never shows a window, or a copy without its app, and a finished installer for the person's own folder that opens no window, each get the message naming the download page, which opens once the message is answered.
+It stops every process it started when it ends, and keeps the hand-overs' error output.
+
+When it ends it takes back the certificate and puts `NODE_USE_SYSTEM_CA` back as it was, and a change it could not take back fails a journey that otherwise passed.
+Its pictures and readings go to the `windows-update-evidence-<channel>` artifact, with `-round-N` after it when the run has more than one round.

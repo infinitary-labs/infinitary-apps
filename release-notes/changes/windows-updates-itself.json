@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "windows-updates-itself",
+      "kind": "feature",
+      "title": "Infinitary on Windows updates itself",
+      "body": "On a Windows PC, Settings → General's Version row now offers Update and restart when a newer version is out on your channel. Infinitary downloads the new installer, checks it against its published checksum, saves the crew's running work and installs it, with no administrator and no questions, then starts again with your tasks, settings and sign-ins as they were. A download that stops or does not match its checksum installs nothing, and your work carries on.",
+      "area": "updates",
+      "picture": {
+        "dark": "windows-updates-itself-dark.webp",
+        "light": "windows-updates-itself-light.webp",
+        "alt": "Settings, General: the Version row on Windows offers Update and restart for a newer alpha, which saves running work first"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

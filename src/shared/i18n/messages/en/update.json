@@ -1,0 +1,13 @@
+{
+  "updateChannelNotRecorded": "Infinitary could not record the update's channel, so nothing was installed.",
+  "updateDownloadChecksum": "The download did not match its published checksum, so nothing was installed.",
+  "updateDownloadNoWrite": "Infinitary cannot write in {folder}. Move the app to a folder you own, such as your home folder, and try again.",
+  "updateDownloadRefused": "The download did not start (the server answered {status}). Try again later.",
+  "updateDownloadStopped": "The download stopped before it finished. Try again.",
+  "updateDownloadUnreachable": "Infinitary could not reach the download. Check your connection and try again.",
+  "updateInstallerNoStart": "The installer could not start, so nothing was installed.",
+  "updateWindowsChannelNotPutBack": "Infinitary could not put back the update channel it followed before, so check the channel in Settings → General.",
+  "updateWindowsInstallFailed": "The installer stopped before it finished, so this copy was kept.",
+  "updateWindowsNoCopy": "Infinitary could not open again after its update. Download the installer from {page} and run it; your tasks and settings are kept.",
+  "updateWindowsShutdownTimeout": "Infinitary took more than five minutes to close, so the update stopped and nothing was installed."
+}

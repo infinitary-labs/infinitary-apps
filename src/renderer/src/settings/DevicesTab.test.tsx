@@ -1035,9 +1035,10 @@ describe("Settings -> Devices", () => {
   });
 
   // INF-4260's plan, piece 10, and review INF-4743 (the captain's pick: say
-  // to install the newer Infinitary on that PC): no update reaches a Windows
-  // PC yet, so the home sends it no build and its row says to install the
-  // newer Infinitary there, with no Update button.
+  // to install the newer Infinitary on that PC): a Windows PC updates itself
+  // only from its own Version row (INF-4258), and the home sends it no build
+  // over the connection, so its row says to install the newer Infinitary
+  // there, with no Update button.
   it("says to install the newer Infinitary on a Windows PC on another version, with no Update", () => {
     const pc: DeviceView = {
       ...MINI,

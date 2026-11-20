@@ -3499,6 +3499,17 @@
 "uiVoiceRemove" = "Retirer %1$@";
 "uiVoiceSubmit" = "Envoyer";
 "uiVoiceTaskPrompt" = "Consigne de la tâche";
+"updateChannelNotRecorded" = "Infinitary n’a pas pu enregistrer le canal de la mise à jour ; rien n’a donc été installé.";
+"updateDownloadChecksum" = "Le téléchargement ne correspondait pas à sa somme de contrôle publiée ; rien n’a donc été installé.";
+"updateDownloadNoWrite" = "Infinitary ne peut pas écrire dans %1$@. Déplacez l’app dans un dossier qui vous appartient, comme votre dossier personnel, puis réessayez.";
+"updateDownloadRefused" = "Le téléchargement n’a pas démarré (le serveur a répondu %1$@). Réessayez plus tard.";
+"updateDownloadStopped" = "Le téléchargement s’est arrêté avant la fin. Réessayez.";
+"updateDownloadUnreachable" = "Infinitary n’a pas pu accéder au téléchargement. Vérifiez votre connexion et réessayez.";
+"updateInstallerNoStart" = "Le programme d’installation n’a pas pu démarrer ; rien n’a donc été installé.";
+"updateWindowsChannelNotPutBack" = "Infinitary n’a pas pu rétablir le canal de mise à jour suivi auparavant ; vérifiez le canal dans Réglages → Général.";
+"updateWindowsInstallFailed" = "Le programme d’installation s’est arrêté avant la fin ; cette copie a donc été conservée.";
+"updateWindowsNoCopy" = "Infinitary n’a pas pu se rouvrir après sa mise à jour. Téléchargez le programme d’installation depuis %1$@ et lancez-le ; vos tâches et réglages sont conservés.";
+"updateWindowsShutdownTimeout" = "Infinitary a mis plus de cinq minutes à se fermer ; la mise à jour s’est donc arrêtée et rien n’a été installé.";
 "viewFromHomeOnly" = "Ceci ne se trouve que dans les Réglages de %1$@. Choisissez-le là-bas sur cette carte.";
 "viewFromHomeOnlyThere" = "Ceci ne se trouve que dans les Réglages de l’ordinateur de votre second. Choisissez-le là-bas sur cette carte.";
 "viewGoogleUpdateThere" = "Mettez Infinitary à jour sur %1$@ pour vous connecter à Google d’ici.";

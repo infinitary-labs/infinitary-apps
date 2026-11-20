@@ -81058,6 +81058,306 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Task prompt`;
   }
+  function updateChannelNotRecorded() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر على Infinitary تسجيل قناة التحديث، لذا لم يُثبَّت شيء.`;
+      case "de":
+        return `Infinitary konnte den Kanal des Updates nicht speichern, daher wurde nichts installiert.`;
+      case "es":
+        return `Infinitary no pudo guardar el canal de la actualización, así que no se instaló nada.`;
+      case "fr":
+        return `Infinitary n’a pas pu enregistrer le canal de la mise à jour ; rien n’a donc été installé.`;
+      case "ja":
+        return `Infinitary はアップデートのチャンネルを記録できなかったため、何もインストールしませんでした。`;
+      case "ko":
+        return `Infinitary가 업데이트 채널을 기록할 수 없어 아무것도 설치하지 않았습니다.`;
+      case "pt-BR":
+        return `O Infinitary não conseguiu registrar o canal da atualização, então nada foi instalado.`;
+      case "zh-Hans":
+        return `Infinitary 无法记录此次更新的渠道，因此未安装任何内容。`;
+      case "zh-Hant":
+        return `Infinitary 無法記錄這次更新的通道，因此未安裝任何內容。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý çöûļð ñöţ ŕéçöŕð ţĥé ûþðáţé'š çĥáññéļ, šö ñöţĥîñĝ ŵáš îñšţáļļéð. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary could not record the update's channel, so nothing was installed.‬`;
+    }
+    return `Infinitary could not record the update's channel, so nothing was installed.`;
+  }
+  function updateDownloadChecksum() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يطابق التنزيل المجموع الاختباري المنشور له، لذا لم يُثبَّت شيء.`;
+      case "de":
+        return `Der Download stimmte nicht mit seiner veröffentlichten Prüfsumme überein, daher wurde nichts installiert.`;
+      case "es":
+        return `La descarga no coincidía con su suma de verificación publicada, así que no se instaló nada.`;
+      case "fr":
+        return `Le téléchargement ne correspondait pas à sa somme de contrôle publiée ; rien n’a donc été installé.`;
+      case "ja":
+        return `ダウンロードが公開されたチェックサムと一致しなかったため、何もインストールしませんでした。`;
+      case "ko":
+        return `다운로드가 공개된 체크섬과 일치하지 않아 아무것도 설치하지 않았습니다.`;
+      case "pt-BR":
+        return `O download não correspondeu à soma de verificação publicada, então nada foi instalado.`;
+      case "zh-Hans":
+        return `下载内容与其公布的校验和不符，因此未安装任何内容。`;
+      case "zh-Hant":
+        return `下載內容與公布的總和檢查碼不符，因此未安裝任何內容。`;
+      case "en-XA":
+        return `[Ţĥé ðöŵñļöáð ðîð ñöţ ɱáţçĥ îţš þûƀļîšĥéð çĥéçķšûɱ, šö ñöţĥîñĝ ŵáš îñšţáļļéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The download did not match its published checksum, so nothing was installed.‬`;
+    }
+    return `The download did not match its published checksum, so nothing was installed.`;
+  }
+  function updateDownloadNoWrite(input2) {
+    const folder = input2.folder;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يستطيع Infinitary الكتابة في ${folder}. انقل التطبيق إلى مجلد تملكه، مثل مجلد المنزل، ثم حاول مرة أخرى.`;
+      case "de":
+        return `Infinitary kann nicht in ${folder} schreiben. Verschiebe die App in einen Ordner, der dir gehört, etwa deinen Benutzerordner, und versuche es erneut.`;
+      case "es":
+        return `Infinitary no puede escribir en ${folder}. Mueve la app a una carpeta tuya, como tu carpeta personal, e inténtalo de nuevo.`;
+      case "fr":
+        return `Infinitary ne peut pas écrire dans ${folder}. Déplacez l’app dans un dossier qui vous appartient, comme votre dossier personnel, puis réessayez.`;
+      case "ja":
+        return `Infinitary は ${folder} に書き込めません。ホームフォルダなど、自分が所有するフォルダにアプリを移動して、もう一度お試しください。`;
+      case "ko":
+        return `Infinitary가 ${folder}에 쓸 수 없습니다. 홈 폴더처럼 본인 소유의 폴더로 앱을 옮긴 후 다시 시도하세요.`;
+      case "pt-BR":
+        return `O Infinitary não consegue gravar em ${folder}. Mova o app para uma pasta sua, como sua pasta pessoal, e tente de novo.`;
+      case "zh-Hans":
+        return `Infinitary 无法写入 ${folder}。请将应用移到你拥有的文件夹（例如你的个人文件夹）中，然后重试。`;
+      case "zh-Hant":
+        return `Infinitary 無法寫入 ${folder}。請將應用程式移到你擁有的資料夾（例如你的個人資料夾），然後再試一次。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý çáññöţ ŵŕîţé îñ ${folder}. Ṁöṽé ţĥé áþþ ţö á ƒöļðéŕ ýöû öŵñ, šûçĥ áš ýöûŕ ĥöɱé ƒöļðéŕ, áñð ţŕý áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary cannot write in ‬${folder}‮. Move the app to a folder you own, such as your home folder, and try again.‬`;
+    }
+    return `Infinitary cannot write in ${folder}. Move the app to a folder you own, such as your home folder, and try again.`;
+  }
+  function updateDownloadRefused(input2) {
+    const status = input2.status;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يبدأ التنزيل (أجاب الخادم بـ ${status}). حاول مرة أخرى لاحقًا.`;
+      case "de":
+        return `Der Download hat nicht begonnen (der Server antwortete ${status}). Versuche es später erneut.`;
+      case "es":
+        return `La descarga no empezó (el servidor respondió ${status}). Inténtalo de nuevo más tarde.`;
+      case "fr":
+        return `Le téléchargement n’a pas démarré (le serveur a répondu ${status}). Réessayez plus tard.`;
+      case "ja":
+        return `ダウンロードを開始できませんでした（サーバーの応答: ${status}）。しばらくしてからもう一度お試しください。`;
+      case "ko":
+        return `다운로드가 시작되지 않았습니다(서버 응답: ${status}). 나중에 다시 시도하세요.`;
+      case "pt-BR":
+        return `O download não começou (o servidor respondeu ${status}). Tente de novo mais tarde.`;
+      case "zh-Hans":
+        return `下载未能开始（服务器返回 ${status}）。请稍后重试。`;
+      case "zh-Hant":
+        return `下載未能開始（伺服器回應 ${status}）。請稍後再試。`;
+      case "en-XA":
+        return `[Ţĥé ðöŵñļöáð ðîð ñöţ šţáŕţ (ţĥé šéŕṽéŕ áñšŵéŕéð ${status}). Ţŕý áĝáîñ ļáţéŕ. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The download did not start (the server answered ‬${status}‮). Try again later.‬`;
+    }
+    return `The download did not start (the server answered ${status}). Try again later.`;
+  }
+  function updateDownloadStopped() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `توقّف التنزيل قبل أن يكتمل. حاول مرة أخرى.`;
+      case "de":
+        return `Der Download brach vor dem Ende ab. Versuche es erneut.`;
+      case "es":
+        return `La descarga se detuvo antes de terminar. Inténtalo de nuevo.`;
+      case "fr":
+        return `Le téléchargement s’est arrêté avant la fin. Réessayez.`;
+      case "ja":
+        return `ダウンロードが途中で止まりました。もう一度お試しください。`;
+      case "ko":
+        return `다운로드가 완료되기 전에 중단되었습니다. 다시 시도하세요.`;
+      case "pt-BR":
+        return `O download parou antes de terminar. Tente de novo.`;
+      case "zh-Hans":
+        return `下载在完成前中断了。请重试。`;
+      case "zh-Hant":
+        return `下載在完成前中斷。請再試一次。`;
+      case "en-XA":
+        return `[Ţĥé ðöŵñļöáð šţöþþéð ƀéƒöŕé îţ ƒîñîšĥéð. Ţŕý áĝáîñ. ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The download stopped before it finished. Try again.‬`;
+    }
+    return `The download stopped before it finished. Try again.`;
+  }
+  function updateDownloadUnreachable() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر على Infinitary الوصول إلى التنزيل. تحقّق من اتصالك وحاول مرة أخرى.`;
+      case "de":
+        return `Infinitary konnte den Download nicht erreichen. Prüfe deine Verbindung und versuche es erneut.`;
+      case "es":
+        return `Infinitary no pudo acceder a la descarga. Comprueba tu conexión e inténtalo de nuevo.`;
+      case "fr":
+        return `Infinitary n’a pas pu accéder au téléchargement. Vérifiez votre connexion et réessayez.`;
+      case "ja":
+        return `Infinitary がダウンロード先に接続できませんでした。接続を確認して、もう一度お試しください。`;
+      case "ko":
+        return `Infinitary가 다운로드에 연결할 수 없습니다. 연결을 확인한 후 다시 시도하세요.`;
+      case "pt-BR":
+        return `O Infinitary não conseguiu acessar o download. Verifique sua conexão e tente de novo.`;
+      case "zh-Hans":
+        return `Infinitary 无法连接到下载地址。请检查网络连接后重试。`;
+      case "zh-Hant":
+        return `Infinitary 無法連線到下載位址。請檢查網路連線後再試一次。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý çöûļð ñöţ ŕéáçĥ ţĥé ðöŵñļöáð. Çĥéçķ ýöûŕ çöññéçţîöñ áñð ţŕý áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary could not reach the download. Check your connection and try again.‬`;
+    }
+    return `Infinitary could not reach the download. Check your connection and try again.`;
+  }
+  function updateInstallerNoStart() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر بدء المثبّت، لذا لم يُثبَّت شيء.`;
+      case "de":
+        return `Das Installationsprogramm konnte nicht starten, daher wurde nichts installiert.`;
+      case "es":
+        return `El instalador no pudo iniciarse, así que no se instaló nada.`;
+      case "fr":
+        return `Le programme d’installation n’a pas pu démarrer ; rien n’a donc été installé.`;
+      case "ja":
+        return `インストーラーを起動できなかったため、何もインストールしませんでした。`;
+      case "ko":
+        return `설치 프로그램을 시작할 수 없어 아무것도 설치하지 않았습니다.`;
+      case "pt-BR":
+        return `O instalador não conseguiu iniciar, então nada foi instalado.`;
+      case "zh-Hans":
+        return `安装程序无法启动，因此未安装任何内容。`;
+      case "zh-Hant":
+        return `安裝程式無法啟動，因此未安裝任何內容。`;
+      case "en-XA":
+        return `[Ţĥé îñšţáļļéŕ çöûļð ñöţ šţáŕţ, šö ñöţĥîñĝ ŵáš îñšţáļļéð. ~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The installer could not start, so nothing was installed.‬`;
+    }
+    return `The installer could not start, so nothing was installed.`;
+  }
+  function updateWindowsChannelNotPutBack() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر على Infinitary إعادة قناة التحديث التي كان يتبعها من قبل، لذا تحقّق من القناة في الإعدادات ← عام.`;
+      case "de":
+        return `Infinitary konnte den zuvor verwendeten Update-Kanal nicht wiederherstellen. Prüfe den Kanal unter Einstellungen → Allgemein.`;
+      case "es":
+        return `Infinitary no pudo restaurar el canal de actualizaciones que seguía antes; revisa el canal en Configuración → General.`;
+      case "fr":
+        return `Infinitary n’a pas pu rétablir le canal de mise à jour suivi auparavant ; vérifiez le canal dans Réglages → Général.`;
+      case "ja":
+        return `Infinitary は以前のアップデートチャンネルに戻せませんでした。設定 → 一般 でチャンネルを確認してください。`;
+      case "ko":
+        return `Infinitary가 이전에 따르던 업데이트 채널로 되돌릴 수 없습니다. 설정 → 일반에서 채널을 확인하세요.`;
+      case "pt-BR":
+        return `O Infinitary não conseguiu restaurar o canal de atualização que seguia antes; confira o canal em Ajustes → Geral.`;
+      case "zh-Hans":
+        return `Infinitary 无法恢复之前所用的更新渠道，请在 设置 → 通用 中检查渠道。`;
+      case "zh-Hant":
+        return `Infinitary 無法還原先前使用的更新通道，請在 設定 → 一般 中檢查通道。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý çöûļð ñöţ þûţ ƀáçķ ţĥé ûþðáţé çĥáññéļ îţ ƒöļļöŵéð ƀéƒöŕé, šö çĥéçķ ţĥé çĥáññéļ îñ Šéţţîñĝš → Ĝéñéŕáļ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary could not put back the update channel it followed before, so check the channel in Settings → General.‬`;
+    }
+    return `Infinitary could not put back the update channel it followed before, so check the channel in Settings → General.`;
+  }
+  function updateWindowsInstallFailed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `توقّف المثبّت قبل أن يكتمل، لذا أُبقيت هذه النسخة.`;
+      case "de":
+        return `Das Installationsprogramm hielt vor dem Ende an, daher blieb diese Kopie erhalten.`;
+      case "es":
+        return `El instalador se detuvo antes de terminar, así que se conservó esta copia.`;
+      case "fr":
+        return `Le programme d’installation s’est arrêté avant la fin ; cette copie a donc été conservée.`;
+      case "ja":
+        return `インストーラーが途中で止まったため、このコピーをそのまま残しました。`;
+      case "ko":
+        return `설치 프로그램이 완료되기 전에 멈춰 이 사본을 그대로 유지했습니다.`;
+      case "pt-BR":
+        return `O instalador parou antes de terminar, então esta cópia foi mantida.`;
+      case "zh-Hans":
+        return `安装程序在完成前停止了，因此保留了当前这份副本。`;
+      case "zh-Hant":
+        return `安裝程式在完成前停止，因此保留了這份副本。`;
+      case "en-XA":
+        return `[Ţĥé îñšţáļļéŕ šţöþþéð ƀéƒöŕé îţ ƒîñîšĥéð, šö ţĥîš çöþý ŵáš ķéþţ. ~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The installer stopped before it finished, so this copy was kept.‬`;
+    }
+    return `The installer stopped before it finished, so this copy was kept.`;
+  }
+  function updateWindowsNoCopy(input2) {
+    const page = input2.page;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر على Infinitary أن يفتح مجددًا بعد تحديثه. نزّل المثبّت من ${page} وشغّله؛ مهامك وإعداداتك محفوظة.`;
+      case "de":
+        return `Infinitary konnte nach dem Update nicht wieder öffnen. Lade das Installationsprogramm von ${page} herunter und führe es aus; deine Aufgaben und Einstellungen bleiben erhalten.`;
+      case "es":
+        return `Infinitary no pudo volver a abrirse después de actualizarse. Descarga el instalador desde ${page} y ejecútalo; tus tareas y ajustes se conservan.`;
+      case "fr":
+        return `Infinitary n’a pas pu se rouvrir après sa mise à jour. Téléchargez le programme d’installation depuis ${page} et lancez-le ; vos tâches et réglages sont conservés.`;
+      case "ja":
+        return `Infinitary はアップデート後に再び開けませんでした。${page} からインストーラーをダウンロードして実行してください。タスクと設定はそのまま残ります。`;
+      case "ko":
+        return `Infinitary가 업데이트 후 다시 열리지 않았습니다. ${page}에서 설치 프로그램을 다운로드해 실행하세요. 작업과 설정은 그대로 유지됩니다.`;
+      case "pt-BR":
+        return `O Infinitary não conseguiu abrir de novo depois da atualização. Baixe o instalador em ${page} e execute-o; suas tarefas e ajustes são mantidos.`;
+      case "zh-Hans":
+        return `Infinitary 更新后无法再次打开。请从 ${page} 下载安装程序并运行；你的任务和设置都会保留。`;
+      case "zh-Hant":
+        return `Infinitary 更新後無法再次開啟。請從 ${page} 下載安裝程式並執行；你的任務和設定都會保留。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý çöûļð ñöţ öþéñ áĝáîñ áƒţéŕ îţš ûþðáţé. Ðöŵñļöáð ţĥé îñšţáļļéŕ ƒŕöɱ ${page} áñð ŕûñ îţ; ýöûŕ ţášķš áñð šéţţîñĝš áŕé ķéþţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary could not open again after its update. Download the installer from ‬${page}‮ and run it; your tasks and settings are kept.‬`;
+    }
+    return `Infinitary could not open again after its update. Download the installer from ${page} and run it; your tasks and settings are kept.`;
+  }
+  function updateWindowsShutdownTimeout() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `استغرق Infinitary أكثر من خمس دقائق ليُغلق، لذا توقّف التحديث ولم يُثبَّت شيء.`;
+      case "de":
+        return `Infinitary brauchte mehr als fünf Minuten zum Beenden, daher wurde das Update abgebrochen und nichts installiert.`;
+      case "es":
+        return `Infinitary tardó más de cinco minutos en cerrarse, así que la actualización se detuvo y no se instaló nada.`;
+      case "fr":
+        return `Infinitary a mis plus de cinq minutes à se fermer ; la mise à jour s’est donc arrêtée et rien n’a été installé.`;
+      case "ja":
+        return `Infinitary の終了に5分以上かかったため、アップデートを中止し、何もインストールしませんでした。`;
+      case "ko":
+        return `Infinitary가 종료되는 데 5분 넘게 걸려 업데이트를 중단했고, 아무것도 설치하지 않았습니다.`;
+      case "pt-BR":
+        return `O Infinitary levou mais de cinco minutos para fechar, então a atualização parou e nada foi instalado.`;
+      case "zh-Hans":
+        return `Infinitary 关闭用了超过五分钟，因此更新已停止，未安装任何内容。`;
+      case "zh-Hant":
+        return `Infinitary 關閉花了超過五分鐘，因此更新已停止，未安裝任何內容。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý ţööķ ɱöŕé ţĥáñ ƒîṽé ɱîñûţéš ţö çļöšé, šö ţĥé ûþðáţé šţöþþéð áñð ñöţĥîñĝ ŵáš îñšţáļļéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary took more than five minutes to close, so the update stopped and nothing was installed.‬`;
+    }
+    return `Infinitary took more than five minutes to close, so the update stopped and nothing was installed.`;
+  }
   function viewFromHomeOnly(input2) {
     const mac = input2.mac;
     switch (currentLanguage()) {
@@ -85498,6 +85798,17 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     uiVoiceRemove,
     uiVoiceSubmit,
     uiVoiceTaskPrompt,
+    updateChannelNotRecorded,
+    updateDownloadChecksum,
+    updateDownloadNoWrite,
+    updateDownloadRefused,
+    updateDownloadStopped,
+    updateDownloadUnreachable,
+    updateInstallerNoStart,
+    updateWindowsChannelNotPutBack,
+    updateWindowsInstallFailed,
+    updateWindowsNoCopy,
+    updateWindowsShutdownTimeout,
     viewFromHomeOnly,
     viewFromHomeOnlyThere,
     viewGoogleUpdateThere,
@@ -88186,6 +88497,17 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "uiVoiceRemove": ["name"],
     "uiVoiceSubmit": [],
     "uiVoiceTaskPrompt": [],
+    "updateChannelNotRecorded": [],
+    "updateDownloadChecksum": [],
+    "updateDownloadNoWrite": ["folder"],
+    "updateDownloadRefused": ["status"],
+    "updateDownloadStopped": [],
+    "updateDownloadUnreachable": [],
+    "updateInstallerNoStart": [],
+    "updateWindowsChannelNotPutBack": [],
+    "updateWindowsInstallFailed": [],
+    "updateWindowsNoCopy": ["page"],
+    "updateWindowsShutdownTimeout": [],
     "viewFromHomeOnly": ["mac"],
     "viewFromHomeOnlyThere": [],
     "viewGoogleUpdateThere": ["mac"],

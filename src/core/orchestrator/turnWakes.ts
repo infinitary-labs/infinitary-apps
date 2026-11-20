@@ -8,6 +8,7 @@
  */
 
 import type { RepetitionNotice, RepetitionOutcome } from "@shared/toolCompletion";
+import { updateResumedWords } from "@shared/updateWords";
 import { type CrewmateRestart, crewmateRestartText } from "./crewSession";
 import { keptReportWords, sameAccountWords } from "./outageWakes";
 import type { KindWords, TypedWake, WakeTask } from "./wakes";
@@ -241,7 +242,7 @@ export const TURN_WORDS: KindWords<TurnFacts> = {
       ...(facts.earlier ? { earlier: facts.earlier } : {}),
     }),
   "turn-resumed": (facts) =>
-    `${facts.stopped === "cost-limit" ? "Your last turn stopped at a safe point when this task passed its cost limit, and the captain let it go on." : facts.stopped === "update" ? `Your last turn stopped part way while Infinitary${facts.computer ? ` on ${facts.computer}` : ""} was updated; it is back now.` : "Your last turn stopped part way when the app closed - a quit or an update; it is open again."} ${RESUME_CHECK}`,
+    `${facts.stopped === "cost-limit" ? "Your last turn stopped at a safe point when this task passed its cost limit, and the captain let it go on." : facts.stopped === "update" ? updateResumedWords(facts.computer) : "Your last turn stopped part way when the app closed - a quit or an update; it is open again."} ${RESUME_CHECK}`,
 };
 
 /** What of a failed hand-over reached the task (INF-3060). */

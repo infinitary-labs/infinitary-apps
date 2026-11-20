@@ -1,0 +1,13 @@
+{
+  "updateChannelNotRecorded": "تعذّر على Infinitary تسجيل قناة التحديث، لذا لم يُثبَّت شيء.",
+  "updateDownloadChecksum": "لم يطابق التنزيل المجموع الاختباري المنشور له، لذا لم يُثبَّت شيء.",
+  "updateDownloadNoWrite": "لا يستطيع Infinitary الكتابة في {folder}. انقل التطبيق إلى مجلد تملكه، مثل مجلد المنزل، ثم حاول مرة أخرى.",
+  "updateDownloadRefused": "لم يبدأ التنزيل (أجاب الخادم بـ {status}). حاول مرة أخرى لاحقًا.",
+  "updateDownloadStopped": "توقّف التنزيل قبل أن يكتمل. حاول مرة أخرى.",
+  "updateDownloadUnreachable": "تعذّر على Infinitary الوصول إلى التنزيل. تحقّق من اتصالك وحاول مرة أخرى.",
+  "updateInstallerNoStart": "تعذّر بدء المثبّت، لذا لم يُثبَّت شيء.",
+  "updateWindowsChannelNotPutBack": "تعذّر على Infinitary إعادة قناة التحديث التي كان يتبعها من قبل، لذا تحقّق من القناة في الإعدادات ← عام.",
+  "updateWindowsInstallFailed": "توقّف المثبّت قبل أن يكتمل، لذا أُبقيت هذه النسخة.",
+  "updateWindowsNoCopy": "تعذّر على Infinitary أن يفتح مجددًا بعد تحديثه. نزّل المثبّت من {page} وشغّله؛ مهامك وإعداداتك محفوظة.",
+  "updateWindowsShutdownTimeout": "استغرق Infinitary أكثر من خمس دقائق ليُغلق، لذا توقّف التحديث ولم يُثبَّت شيء."
+}

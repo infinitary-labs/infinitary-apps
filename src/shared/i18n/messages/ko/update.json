@@ -1,0 +1,13 @@
+{
+  "updateChannelNotRecorded": "Infinitary가 업데이트 채널을 기록할 수 없어 아무것도 설치하지 않았습니다.",
+  "updateDownloadChecksum": "다운로드가 공개된 체크섬과 일치하지 않아 아무것도 설치하지 않았습니다.",
+  "updateDownloadNoWrite": "Infinitary가 {folder}에 쓸 수 없습니다. 홈 폴더처럼 본인 소유의 폴더로 앱을 옮긴 후 다시 시도하세요.",
+  "updateDownloadRefused": "다운로드가 시작되지 않았습니다(서버 응답: {status}). 나중에 다시 시도하세요.",
+  "updateDownloadStopped": "다운로드가 완료되기 전에 중단되었습니다. 다시 시도하세요.",
+  "updateDownloadUnreachable": "Infinitary가 다운로드에 연결할 수 없습니다. 연결을 확인한 후 다시 시도하세요.",
+  "updateInstallerNoStart": "설치 프로그램을 시작할 수 없어 아무것도 설치하지 않았습니다.",
+  "updateWindowsChannelNotPutBack": "Infinitary가 이전에 따르던 업데이트 채널로 되돌릴 수 없습니다. 설정 → 일반에서 채널을 확인하세요.",
+  "updateWindowsInstallFailed": "설치 프로그램이 완료되기 전에 멈춰 이 사본을 그대로 유지했습니다.",
+  "updateWindowsNoCopy": "Infinitary가 업데이트 후 다시 열리지 않았습니다. {page}에서 설치 프로그램을 다운로드해 실행하세요. 작업과 설정은 그대로 유지됩니다.",
+  "updateWindowsShutdownTimeout": "Infinitary가 종료되는 데 5분 넘게 걸려 업데이트를 중단했고, 아무것도 설치하지 않았습니다."
+}

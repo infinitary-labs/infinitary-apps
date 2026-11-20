@@ -590,7 +590,7 @@ The package route refuses a worker already running a kept AppImage, even if an U
 This Mac waits for a welcome on its own version before saying that the updated copy is running.
 When Remote Login or administrator approval is unavailable, the address form gives local update and restart instructions.
 Other computers not added by address are updated over the connection (below, "Another version, and updating").
-No update reaches a Windows PC yet (`docs/windows.md`), so this Mac sends it no copy: its row says it has another version and "Install the newer Infinitary on that computer.", with no Update button, and asking to update it says the same (`installedThere`, `installItThereWords`, `src/shared/devices.ts`).
+A Windows PC that runs work for another computer takes no update yet, and its window there installs none (`docs/windows.md`); this Mac sends it no copy: its row says it has another version and "Install the newer Infinitary on that computer.", with no Update button, and asking to update it says the same (`installedThere`, `installItThereWords`, `src/shared/devices.ts`).
 
 ### Removing it there
 

@@ -1583,6 +1583,7 @@ export async function createServices(
     ...(host.macUpdates ? { macDriver: host.macUpdates } : {}),
     openExternal: (url) => host.openExternal(url),
     ...(host.relaunch ? { relaunch: host.relaunch } : {}),
+    ...(host.endForInstaller ? { endForInstaller: host.endForInstaller } : {}),
     // This computer's crew saves its running work before an update
     // replaces the copy (docs/alpha.md, "Saving work before an update").
     work: {

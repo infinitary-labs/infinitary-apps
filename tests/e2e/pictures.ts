@@ -551,6 +551,19 @@ export async function heroShot(
   page: Page,
   shot: HeroShot,
 ): Promise<HeroPair> {
+  return heroShotShowing(page, shot, (theme) => themed(app, page, theme));
+}
+
+/**
+ * `heroShot` for a window with no Electron app handle, such as an installed
+ * copy a journey reaches through its debugging port: `show` shows each
+ * theme, and with no theme puts the one it found back.
+ */
+export async function heroShotShowing(
+  page: Page,
+  shot: HeroShot,
+  show: (theme?: Theme) => Promise<void>,
+): Promise<HeroPair> {
   const dir = shot.dir ?? PICTURES_DIR;
   mkdirSync(dir, { recursive: true });
   let clip: Box | undefined;
@@ -558,7 +571,7 @@ export async function heroShot(
   let size = { width: 0, height: 0 };
   try {
     for (const theme of ["dark", "light"] as const) {
-      await themed(app, page, theme);
+      await show(theme);
       await shot.ready?.();
       if (!clip) {
         const boxes = await Promise.all(
@@ -580,7 +593,7 @@ export async function heroShot(
       size = readPicture(webp)?.size ?? size;
     }
   } finally {
-    await themed(app, page);
+    await show();
   }
   return { dark: pair.dark ?? "", light: pair.light ?? "", ...size };
 }

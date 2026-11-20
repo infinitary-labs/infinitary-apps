@@ -133,11 +133,13 @@ export function buildsUrlOf(tap: TapNames): string {
 
 /**
  * The installer writes this file into the data root after a successful
- * install or upgrade; the app only reads it. The data root is the run's own
+ * install or upgrade; on a Mac the app only reads it. The data root is the run's own
  * userData, so a development or isolated run never reads the installed
  * app's marker. On Linux the installer is the app itself, which writes the
  * marker after it installs an update, and an Arch or NixOS package carries
- * its own beside the app (docs/alpha.md "Update channels").
+ * its own beside the app. On Windows the app writes it too, just before it
+ * hands its installer over, and puts the earlier one back when the hand-over
+ * fails, or says it could not (`windowsInstall.ts`; docs/alpha.md "Update channels").
  */
 export const UPDATE_CHANNEL_MARKER = "update-channel.json";
 
@@ -387,6 +389,9 @@ export function parseUpdateTargets(payload: unknown, tap: TapNames = TAP): Updat
  */
 export const BUILDS_FILE = TAP.buildsFile;
 export const BUILDS_URL = buildsUrlOf(TAP);
+
+/** The Windows installer's kind under `windows`, then its chip (docs/alpha.md "Updates on Windows"). */
+export const WINDOWS_INSTALLER = "exe";
 
 /** How each Linux build installs (docs/linux-packages.md). */
 export const LINUX_PACKAGES = ["deb", "rpm", "appimage", "arch", "nix"] as const;

@@ -803,6 +803,7 @@ A task runs in a working copy of its own on the computer that runs it, made from
   A project without an origin runs on this Mac only; an origin's address crosses with any name or password in it taken out.
   If the approved address changes, a new turn binds the existing ordinary task's default fetch and push to the new address without moving its branch or edits.
   The separate task remote leaves the shared clone and other tasks' routes alone, so use the branch's default remote rather than the clone's original `origin`.
+  A review of such a task reads the new address's default branch through that remote ("Independent reviews", "Code to read").
   An older computer must update before continuing placed project work because it cannot verify the working copy’s effective fetch and push destinations.
 - **Reading its branch here.**
   Before this Mac's own git reads a placed task's branch - to open its change, to check a declared repair, to merge it, to merge it locally - the branch is brought home as a bundle of only the commits this Mac lacks, into `refs/heads/<branch>` of the task's repository here (`bringBranchHome`, called by `ChangeContext`, `ChangePublication` and `SettleService`).
@@ -930,6 +931,11 @@ This placement applies in every build, without a development gate.
 - **Code to read.**
   `reviewFacts` asks the builder's computer for its committed head, complete changed-file list and change reading (`inf:working-copy:revision`).
   The reading is optional: a computer on an older contract omits it, and a pass from that computer does not carry.
+  The list, the reading and the counted lines are measured from the default branch the clone's `origin` names, except for a task whose own remote names another address, as one that followed its project to a new address does (`WorkspaceService.routedReviewBase`).
+  That task's computer fetches the new address's declared default branch into the task remote's own tracking ref, never `origin`'s, and answers its full ref as `base`; the brief names that ref in place of the default branch, so the reviewer's own diff reads the same base.
+  The clone's `origin` and every other task's remote stay as they were.
+  An unreadable address falls back to the default branch that computer last fetched from it; with none, the read refuses rather than measuring against the former project.
+  A computer on an older contract names no `base` and measures from `origin`'s default branch.
   An open pull request does not replace that head: the review reads the builder's committed version, which must exist on that computer.
   An unavailable computer or missing commit refuses the review rather than using an older home copy.
   The branch does not need to be pushed or brought home for review.

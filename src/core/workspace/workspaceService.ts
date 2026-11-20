@@ -371,12 +371,15 @@ export class WorkspaceService {
     headSha: string,
     /** The approved version a part started on (`shape.built_on`): its own difference is read from there. */
     builtOn?: string,
+    /** The default branch read in place of `origin`'s (`routedReviewBase`). */
+    defaultBranch?: string,
   ): Promise<string[] | null> {
     // A named commit that is not in this checkout has no local checklist.
     // The reviewer reports that gap; it does not substitute another head.
     if (!(await resolveCommit(repoDir, headSha))) return null;
     const base =
-      (await this.builtOnAt(repoDir, builtOn, headSha)) ?? (await reviewDiffBase(repoDir));
+      (await this.builtOnAt(repoDir, builtOn, headSha, defaultBranch)) ??
+      (await reviewDiffBase(repoDir, defaultBranch));
     const out = await git(
       repoDir,
       ["diff", "--ignore-submodules=none", "--name-only", "-z", `${base}...${headSha}`],
@@ -397,13 +400,17 @@ export class WorkspaceService {
     repoDir: string,
     builtOn: string | undefined,
     headSha: string,
+    /** As `reviewChangedFiles`'s. */
+    defaultBranch?: string,
   ): Promise<string | undefined> {
     if (!builtOn) return undefined;
     const sha = await resolveCommit(repoDir, builtOn);
     if (!sha || !(await isAncestor(repoDir, sha, headSha))) return undefined;
-    const fork = await git(repoDir, ["merge-base", await reviewDiffBase(repoDir), headSha]).catch(
-      () => null,
-    );
+    const fork = await git(repoDir, [
+      "merge-base",
+      await reviewDiffBase(repoDir, defaultBranch),
+      headSha,
+    ]).catch(() => null);
     return fork && (await isAncestor(repoDir, fork, sha)) ? sha : undefined;
   }
 
@@ -413,8 +420,13 @@ export class WorkspaceService {
    * A pure update onto newer main keeps the reading; an edited line,
    * dropped line, added change or spacing change does not (INF-148).
    */
-  async reviewChangeReading(repoDir: string, headSha: string): Promise<string | null> {
-    return readChangeReading(repoDir, headSha);
+  async reviewChangeReading(
+    repoDir: string,
+    headSha: string,
+    /** As `reviewChangedFiles`'s. */
+    defaultBranch?: string,
+  ): Promise<string | null> {
+    return readChangeReading(repoDir, headSha, defaultBranch);
   }
 
   /**
@@ -430,12 +442,15 @@ export class WorkspaceService {
     headSha: string,
     /** As `reviewChangedFiles`'s: a part's own lines are counted from the approved version it started on. */
     builtOn?: string,
+    /** As `reviewChangedFiles`'s. */
+    defaultBranch?: string,
   ): Promise<ChangeLineCount | null> {
     if (!(await resolveCommit(repoDir, headSha))) return null;
     try {
       const base = await git(repoDir, [
         "merge-base",
-        (await this.builtOnAt(repoDir, builtOn, headSha)) ?? (await reviewDiffBase(repoDir)),
+        (await this.builtOnAt(repoDir, builtOn, headSha, defaultBranch)) ??
+          (await reviewDiffBase(repoDir, defaultBranch)),
         headSha,
       ]);
       const out = await git(repoDir, [
@@ -459,6 +474,52 @@ export class WorkspaceService {
       return { base, added, deleted };
     } catch {
       return null;
+    }
+  }
+
+  /**
+   * The default branch a review of a task's branch is measured from when
+   * the branch's own remote names another project than this clone's
+   * `origin`. A task that started before its project moved stays in the
+   * clone it started in, whose `origin` still names the former address for
+   * every other task there, while the task's own remote follows the
+   * approved one (docs/helper.md, "Independent reviews"). That remote's
+   * declared default branch is fetched into the remote's own tracking ref,
+   * never `origin`'s, and named. Undefined when the branch follows
+   * `origin`, whose default branch the review reads as before. A failed
+   * read falls back to that remote's default branch as this computer last
+   * read it; with none, it throws, rather than measure against the former
+   * project.
+   */
+  async routedReviewBase(repoDir: string, branch: string): Promise<string | undefined> {
+    const remote = await git(repoDir, ["config", "--get", `branch.${branch}.remote`]).catch(
+      () => "",
+    );
+    if (!remote || remote === "origin" || remote === ".") return undefined;
+    const address = (name: string) =>
+      git(repoDir, ["ls-remote", "--get-url", "--", name]).catch(() => "");
+    const routed = await address(remote);
+    if (!routed || routed === (await address("origin"))) return undefined;
+    const head = `refs/remotes/${remote}/HEAD`;
+    try {
+      const declared = await git(repoDir, ["ls-remote", "--symref", "--", remote, "HEAD"], {
+        timeoutMs: this.options.fetchTimeoutMs ?? REMOTE_TIMEOUT_MS,
+        env: { GIT_TERMINAL_PROMPT: "0" },
+      });
+      const name = /^ref: refs\/heads\/(\S+)\s+HEAD$/m.exec(declared)?.[1];
+      if (!name) throw new Error("The project's approved address declares no default branch.");
+      await this.fetchDefaultBranch(repoDir, name, remote);
+      await git(repoDir, ["symbolic-ref", head, `refs/remotes/${remote}/${name}`]);
+      return `refs/remotes/${remote}/${name}`;
+    } catch (caught) {
+      const kept = await git(repoDir, ["symbolic-ref", "--quiet", head]).catch(() => "");
+      if (kept && (await resolveCommit(repoDir, kept))) return kept;
+      throw (
+        forgeAuthRequired(routed, caught, this.options.knownHosts?.() ?? []) ??
+        new Error(
+          `The default branch at the project's approved address could not be read, so the review has nothing to measure from: ${gitFailure(caught)}`,
+        )
+      );
     }
   }
 
@@ -1461,8 +1522,13 @@ async function assertCheckoutRoot(cwd: string): Promise<void> {
   }
 }
 
-/** The ref a review diff is measured from: fetched default branch, else the local one. */
-async function reviewDiffBase(repoDir: string): Promise<string> {
+/**
+ * The ref a review diff is measured from: the default branch read in place
+ * of `origin`'s when one is named (`routedReviewBase`), else `origin`'s
+ * fetched default branch, else the local one.
+ */
+async function reviewDiffBase(repoDir: string, defaultBranch?: string): Promise<string> {
+  if (defaultBranch) return defaultBranch;
   const name = await defaultBranchName(repoDir);
   const remote = `refs/remotes/origin/${name}`;
   return (await resolveCommit(repoDir, remote)) ? remote : `refs/heads/${name}`;
@@ -1477,9 +1543,14 @@ async function reviewDiffBase(repoDir: string): Promise<string> {
  * to the change asks for a fresh review. Spawned through `git()`, which
  * uses hostEnv.
  */
-export async function readChangeReading(repoDir: string, headSha: string): Promise<string | null> {
+export async function readChangeReading(
+  repoDir: string,
+  headSha: string,
+  /** The default branch read in place of `origin`'s (`routedReviewBase`). */
+  defaultBranch?: string,
+): Promise<string | null> {
   if (!(await resolveCommit(repoDir, headSha))) return null;
-  const base = await reviewDiffBase(repoDir);
+  const base = await reviewDiffBase(repoDir, defaultBranch);
   let diff: string;
   try {
     diff = await git(

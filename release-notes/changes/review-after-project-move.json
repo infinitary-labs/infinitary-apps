@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "review-after-project-move",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Reviews on another computer work after a project moves",
+      "body": "When a project moves to a new address while its task runs on another computer, the task's review now compares the change with the default branch at the new address. Before, the review could not start once the task's branch had been rebuilt there.",
+      "noPicture": "This changes what a review on another computer compares, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -457,22 +457,23 @@ export class WorkingCopies {
     if (!workspace) throw new Error("The source task has no working copy here.");
     const head = headSha ?? (await this.workspace.branchHead(workspace.repoDir, workspace.branch));
     if (!head) throw new Error("The task has no committed revision here.");
-    const from = await this.workspace.builtOnAt(workspace.repoDir, builtOn, head);
+    // A task that followed its project to a new address reads that address's
+    // default branch; the clone's own origin stays the former one's.
+    const base = await this.workspace.routedReviewBase(workspace.repoDir, workspace.branch);
+    const from = await this.workspace.builtOnAt(workspace.repoDir, builtOn, head, base);
     const changedFiles = await this.workspace.reviewChangedFiles(
       workspace.repoDir,
       head,
-      ...(from ? [from] : []),
+      from,
+      base,
     );
     if (!changedFiles) throw new Error("The requested commit is not on this computer.");
-    const changeReading = await this.workspace.reviewChangeReading(workspace.repoDir, head);
-    const changeLines = await this.workspace.changeLines(
-      workspace.repoDir,
-      head,
-      ...(from ? [from] : []),
-    );
+    const changeReading = await this.workspace.reviewChangeReading(workspace.repoDir, head, base);
+    const changeLines = await this.workspace.changeLines(workspace.repoDir, head, from, base);
     return {
       headSha: head,
       ...(from ? { builtOn: from } : {}),
+      ...(base ? { base } : {}),
       changedFiles,
       ...(changeReading ? { changeReading } : {}),
       ...(changeLines ? { changeLines } : {}),

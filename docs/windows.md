@@ -160,7 +160,7 @@ It runs only on request: nothing a batch or an alpha runs asks for it.
 Their release source names no published place, so nothing they find or download comes from a real release, and they stay on the run as the installer does.
 `update` is a matrix of one fresh machine per channel, set up as `check`'s is; it installs the channel's older version as a double-click does and runs `tests/windows/windows-update.spec.ts`.
 The journey serves the feed itself on the machine's loopback addresses (`tests/windows/updateFeed.ts`), with a certificate it makes in this person's own store and trusts for them alone as one of their own roots, answering Yes to the Security Warning Windows shows first, and sets `NODE_USE_SYSTEM_CA=1` in their environment, where the command Task Scheduler starts reads it; it takes both away when it ends.
-A certificate trusted only in Trusted People is not enough: a Node started by Task Scheduler with that setting reads it, but the installed app refused it.
+The certificate is its own authority (basic constraints CA true, allowed to sign certificates) naming `localhost` and both loopback addresses, as the Mac's update check's is: the installed app refused a plain self-signed server certificate the runner's own Node accepted.
 Before the window opens, the journey reads the feed from a Node a task of its own starts through Task Scheduler, so a missing setting shows there rather than as an update the app never offers.
 It checks, in order:
 
@@ -168,7 +168,7 @@ It checks, in order:
 2. The window signs in to the stand-in provider, turns a setting away from its default and asks the first mate for a task.
 3. The feed offers the newer version with another file's checksum: Update and restart installs nothing, says the download did not match its published checksum, and leaves no installer in the data folder.
 4. The feed offers it with a download that stops a quarter of the way: Update and restart installs nothing and says the download stopped.
-5. The feed offers it as published: the window's Update and restart saves the command's work, the command ends, the installer replaces the copy, and the new copy's window opens through the Start menu entry and starts the command again.
+5. The feed offers it as published: the window's Update and restart saves the command's work, the command ends, the installer replaces the copy (the journey keeps every process of the hand-over it sees meanwhile), and the new copy's window opens through the Start menu entry and starts the command again.
 6. Opened again, the new copy names the newer version on the same channel, with the same task, setting and sign-in, the same Task Scheduler entry, one removal entry for this person, and no installer left in the data folder.
 
 Its pictures and readings go to the `windows-update-evidence-<channel>` artifact.

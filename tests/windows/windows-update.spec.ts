@@ -73,30 +73,6 @@ function installedVersion(): string | null {
     if ($entry) { [string]$entry.DisplayVersion } else { $null }`);
 }
 
-/** Electron for this checkout's version, unpacked from the job's Electron cache; "" when it holds none. */
-function electronFromCache(): string {
-  const cache = process.env.electron_config_cache ?? "";
-  const version = (
-    JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8")) as {
-      devDependencies: Record<string, string>;
-    }
-  ).devDependencies.electron;
-  const name = `electron-v${version}-win32-x64.zip`;
-  const zip =
-    cache && existsSync(cache)
-      ? readdirSync(cache, { recursive: true, encoding: "utf8" }).find((entry) =>
-          entry.endsWith(name),
-        )
-      : undefined;
-  if (!zip) return "";
-  const into = scratchDir("infinitary-update-electron-");
-  ps(`Expand-Archive -LiteralPath $env:ZIP -DestinationPath $env:INTO -Force; $true`, {
-    ZIP: join(cache, zip),
-    INTO: into,
-  });
-  return join(into, "electron.exe");
-}
-
 /** Waits up to a minute until `done` answers true. */
 const within = async (done: () => boolean) => {
   await expect.poll(done, { timeout: 60_000, intervals: [500] }).toBe(true);
@@ -205,33 +181,6 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
           )
         ).stdout.trim();
       const reading = await read(true);
-      // The Node inside Electron, the app's own, with the same setting: what
-      // it reads of this person's store and what it answers. Kept, not
-      // asserted: the installed app's own check below is the assertion.
-      // Electron's own zip for this version, from the cache this job's
-      // install reads, unpacked here: the same Node the app runs.
-      const electron = electronFromCache();
-      const electronReading = existsSync(electron)
-        ? (
-            await promisify(execFile)(
-              electron,
-              [
-                "-e",
-                `const tls = require("node:tls"); const { X509Certificate } = require("node:crypto");
-const system = tls.getCACertificates("system");
-const feed = system.filter((pem) => new X509Certificate(pem).subject.includes("localhost")).length;
-fetch(process.argv[1]).then((r) => String(r.status), (e) => String(e.cause?.code ?? "") + " " + String(e.cause ?? e))
-  .then((answer) => console.log(JSON.stringify({ system: system.length, feed, answer })));`,
-                publicBuildsUrl,
-              ],
-              {
-                encoding: "utf8",
-                env: { ...process.env, ELECTRON_RUN_AS_NODE: "1", NODE_USE_SYSTEM_CA: "1" },
-              },
-            )
-          ).stdout.trim()
-        : "no Electron in the job's Electron cache";
-      keep("feed-electron.txt", electronReading);
       // The command reads the feed as Task Scheduler starts it, with the
       // environment Task Scheduler gives it.
       const scheduled = await readThroughTaskScheduler(publicBuildsUrl, work, within);

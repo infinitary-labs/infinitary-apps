@@ -671,6 +671,86 @@ describe("a kept merge whose outcome is unknown on a host naming no version (INF
     },
   );
 
+  // INF-5193 (the review of Bitbucket's merge): a project repointed to
+  // another host while its task still publishes under the old origin never
+  // answers for the pinned repository; a managed project still pointing
+  // there, under another spelling, does.
+  it("reads a closed task's unknown merge back through the project still pointing at its repository, not the one repointed to another host", async () => {
+    const repointed = new KeptForge("gitlab");
+    repointed.merged = true;
+    const h = await approved({
+      referenced: true,
+      forgeFor: (repo, own) => (repo?.host?.kind === "gitlab" ? repointed : own),
+    });
+    h.forge.mergeNamesNoVersion = true;
+    h.forge.refuse = new ForgeMergeUnconfirmed("The host took the merge", "7/merge-task-1");
+    h.supervisor.cardActions.act(h.card.id, "merge");
+    await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("outcome"));
+    h.forge.refuse = undefined;
+    h.crewmate.finishPrompt();
+    await tick();
+    await h.supervisor.settling.closing.closeTask(h.taskId, {
+      status: "dropped",
+      reason: "discarded",
+      actor: "host",
+    });
+    const own = h.tasks.get(h.taskId)?.repoId;
+    if (!own) throw new Error("Missing the task's project");
+    seedDelivery(h.tasks, h.taskId, { publicationOrigin: "https://github.com/o/r.git" });
+    h.repos.configure(own, { origin: "https://gitlab.com/o/r.git" });
+    const { dir } = gitRepo("meter-again");
+    execFileSync("git", ["-C", dir, "remote", "add", "origin", "https://github.com/O/R.git"]);
+    await h.repos.setup({ kind: "adopt", path: dir, name: "meter-again" });
+    // The repointed host reads merged; the pinned repository still reads open.
+    await h.supervisor.settling.kept.reconcileUnsettledSends(Date.now());
+    expect(h.authorization()?.attempt).toMatchObject({ head: APPROVED });
+    expect(h.tasks.unresolvedMergeSends().map((record) => record.id)).toContain(h.taskId);
+    // The pinned repository reads merged: that read settles it, said on GitHub.
+    h.forge.merged = true;
+    await h.supervisor.settling.kept.reconcileUnsettledSends(Date.now() + 3_600_000);
+    expect(h.authorization()?.attempt).toBeUndefined();
+    const note = h.tasks
+      .timeline(h.taskId)
+      .find((event) => event.text.includes("The merge sent earlier"));
+    expect(note?.text).toContain("went in on GitHub");
+    expect(h.forge.sends).toBe(1);
+    await h.supervisor.disposeAll();
+  });
+
+  // INF-5193: a read with no state Bitbucket names is unreadable, so it
+  // releases no reservation and lets no second merge be sent.
+  it("keeps a closed task's unknown merge reserved through a read with no state Bitbucket names", async () => {
+    const h = await approved({ referenced: true });
+    h.forge.mergeNamesNoVersion = true;
+    h.forge.refuse = new ForgeMergeUnconfirmed("The host took the merge", "7/merge-task-1");
+    h.supervisor.cardActions.act(h.card.id, "merge");
+    await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("outcome"));
+    h.forge.refuse = undefined;
+    h.crewmate.finishPrompt();
+    await tick();
+    await h.supervisor.settling.closing.closeTask(h.taskId, {
+      status: "dropped",
+      reason: "discarded",
+      actor: "host",
+    });
+    const pull = h.forge.pull.bind(h.forge);
+    h.forge.pull = async () => {
+      throw new ForgeError(
+        "transient",
+        "Bitbucket answered pull request 7 without a state it names; read it again.",
+      );
+    };
+    await h.supervisor.settling.kept.reconcileUnsettledSends(Date.now());
+    expect(h.authorization()?.attempt).toMatchObject({ head: APPROVED });
+    expect(h.tasks.unresolvedMergeSends().map((record) => record.id)).toContain(h.taskId);
+    h.forge.pull = pull;
+    h.forge.merged = true;
+    await h.supervisor.settling.kept.reconcileUnsettledSends(Date.now() + 3_600_000);
+    expect(h.authorization()?.attempt).toBeUndefined();
+    expect(h.forge.sends).toBe(1);
+    await h.supervisor.disposeAll();
+  });
+
   // INF-5193: the read right after a merge whose answer never came asks the
   // repository the approval pinned, never another managed project whose
   // pull request of the same number was selected while the merge was out.

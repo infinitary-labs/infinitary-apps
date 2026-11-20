@@ -45,7 +45,12 @@ import {
   standingAuthorization,
 } from "./mergeAuthorization";
 import { type MergedStory, mergedStoryOf } from "./mergedStory";
-import { publicationRepo, requestAtRepo, savedRequestAtRepo } from "./publicationRepo";
+import {
+  pinnedRequestRepo,
+  publicationRepo,
+  requestAtRepo,
+  savedRequestAtRepo,
+} from "./publicationRepo";
 import { carryPassedReview } from "./reviewCarry";
 import { taskContributesUpstream } from "./workShape";
 
@@ -1114,18 +1119,12 @@ export class ChangeMerge {
     return guard.unattended && !handed.answered ? hostRemoved(forge, change) : undefined;
   }
 
-  /**
-   * The managed repository a kept approval pinned its pull request in: the
-   * task's own project first, as it publishes, then any other managed one.
-   */
+  /** The managed repository a kept approval pinned its pull request in (`pinnedRequestRepo`). */
   private pinnedRepo(
     record: TaskRecord,
     place: { host: string; owner: string; name: string },
   ): RepoView | undefined {
-    const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
-    return [...(repo ? [repo] : []), ...this.options.repos.list()]
-      .map((item) => publicationRepo(record, item))
-      .find((item) => requestAtRepo(item, place));
+    return pinnedRequestRepo(record, this.options.repos, place);
   }
 
   /**

@@ -328,6 +328,23 @@ describe("a Bitbucket Cloud pull request", () => {
     expect(sent).toHaveLength(asked);
   });
 
+  // INF-5193 (the review of Bitbucket's merge): a read that settles a merge
+  // whose outcome is unknown must be one of the states Bitbucket names; an
+  // answer with none, or an unknown one, is unreadable, never closed.
+  it("reads a declined pull request as closed, and one with no state it names as unreadable", async () => {
+    const { state: _state, ...stateless } = pullRequest({ id: 8 });
+    const { forge } = standIn({
+      [`GET ${REPO}/pullrequests/7`]: () => Response.json(pullRequest({ state: "DECLINED" })),
+      [`GET ${REPO}/pullrequests/8`]: () => Response.json(stateless),
+      [`GET ${REPO}/pullrequests/9`]: () =>
+        Response.json(pullRequest({ id: 9, state: "ARCHIVED" })),
+      ...commits(HEAD),
+    });
+    expect(await forge.pull(7)).toMatchObject({ state: "closed", merged: false });
+    await expect(forge.pull(8)).rejects.toMatchObject({ failure: "transient" });
+    await expect(forge.pull(9)).rejects.toMatchObject({ failure: "transient" });
+  });
+
   it("replaces only the description, leaving a title a person changed since", async () => {
     const { forge, sent } = standIn({
       [`GET ${REPO}/pullrequests/7`]: () => Response.json(pullRequest({})),

@@ -14,7 +14,7 @@ import {
   standingAuthorization,
   wakesFirstmate,
 } from "./mergeAuthorization";
-import { publicationRepo, requestAtRepo } from "./publicationRepo";
+import { pinnedRequestRepo } from "./publicationRepo";
 import type { SettleOutcome, SettleServiceHost } from "./settleHost";
 import type { SettleLocks } from "./settleLocks";
 import { describeStatus, type SettleService } from "./settleService";
@@ -564,9 +564,9 @@ export class KeptMerge {
         const named = this.host.tasks.get(record.id);
         // Said where it was read, and against the version that send was
         // approved at: a push after that click is told (INF-5193).
-        const destination = this.host.repos
-          .list()
-          .find((repo) => named && requestAtRepo(publicationRepo(named, repo), send.target));
+        const destination = named
+          ? pinnedRequestRepo(named, this.host.repos, send.target)
+          : undefined;
         const place =
           (destination?.host
             ? forgePlace({ kind: destination.host.kind, host: destination.host.name })

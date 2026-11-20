@@ -57,6 +57,9 @@ type Endpoint = {
   repository?: { full_name?: string; uuid?: string } | null;
 };
 
+/** The pull request states Bitbucket names: open, merged, declined and superseded. */
+const PULL_REQUEST_STATES = new Set(["OPEN", "MERGED", "DECLINED", "SUPERSEDED"]);
+
 type PullRequestJson = {
   id: number;
   title?: string;
@@ -468,6 +471,14 @@ export class BitbucketForge implements Forge {
 
   async pull(number: number): Promise<ForgePull> {
     const request = await this.pullRequest(number);
+    // Only a state Bitbucket names is a reading: an answer with none, or one
+    // this app does not know, is unreadable, never closed, so it settles no
+    // merge whose outcome is unknown (INF-5193).
+    if (!request.state || !PULL_REQUEST_STATES.has(request.state))
+      throw new ForgeError(
+        "transient",
+        `Bitbucket answered pull request ${number} without a state it names; read it again.`,
+      );
     const merged = request.state === "MERGED";
     const open = request.state === "OPEN";
     const mergedSha = merged

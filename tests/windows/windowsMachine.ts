@@ -160,8 +160,9 @@ export function stillRunning(pids: readonly number[]): number[] {
  * through Windows' accessibility tree, as a person's click would; false
  * while no such button shows. The element carrying the words may be the
  * button's label rather than the button, so the press goes to the nearest
- * element that can be pressed, or, failing that, focuses it and presses
- * Enter as a person's keyboard would. When nothing could be pressed and
+ * element that can be pressed; a classic dialog's button that offers no
+ * such pattern gets its window's own click message; failing both, the
+ * press focuses it and presses Enter as a person's keyboard would. When nothing could be pressed and
  * treeFile is given, the dialog's accessibility tree is written there.
  */
 export function pressDialogButton(pid: number, button: string, treeFile?: string): boolean {
@@ -184,6 +185,14 @@ export function pressDialogButton(pid: number, button: string, treeFile?: string
             $e.GetCurrentPattern($invoke).Invoke()
             $pressed = $true
           } else { $e = $walker.GetParent($e) }
+        }
+        # A classic dialog's button, which offers no pattern while its
+        # window keeps it: the window's own click message presses it.
+        if (-not $pressed -and $candidate.Current.ClassName -eq 'Button' -and $candidate.Current.NativeWindowHandle -ne 0) {
+          if (-not ('InfDialog.Button' -as [type])) {
+            Add-Type -Name Button -Namespace InfDialog -MemberDefinition '[DllImport("user32.dll")] public static extern bool PostMessage(System.IntPtr hWnd, uint msg, System.IntPtr w, System.IntPtr l);'
+          }
+          $pressed = [InfDialog.Button]::PostMessage([System.IntPtr]$candidate.Current.NativeWindowHandle, 0x00F5, [System.IntPtr]::Zero, [System.IntPtr]::Zero)
         }
         if (-not $pressed -and $candidate.Current.IsKeyboardFocusable) {
           $candidate.SetFocus()

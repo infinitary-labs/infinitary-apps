@@ -354,9 +354,12 @@ ${FRAME_QUESTION_SCRIPT}
     if (!focused || !document.hasFocus()) return false;
     // A preview's setting has no control of its own: any field the preview
     // takes words in holds it while the captain types there.
-    if (group.staged) return focused.isContentEditable || (/^(INPUT|TEXTAREA)$/.test(focused.tagName) && kindOf(focused) === "text" && focused.type !== "range" && focused.type !== "color");
+    if (group.staged) return takesWords(focused);
     if (group.controls.indexOf(focused) >= 0) return kindOf(focused) === "text";
     return writeInRows(group).some(function (row) { return form.fields.get(row) === focused; });
+  }
+  function takesWords(element) {
+    return element.isContentEditable || (/^(INPUT|TEXTAREA)$/.test(element.tagName) && kindOf(element) === "text" && element.type !== "range" && element.type !== "color");
   }
   // Another window's change to a question being typed in waits, with the
   // question's answer it arrived over, until typing there stops; the
@@ -395,15 +398,16 @@ ${FRAME_QUESTION_SCRIPT}
         if (!apply || typeof answer.values[0] !== "string") return;
         if (live) delete form.waiting[answer.name];
         if (live && group && typingIn(group)) {
-          form.waiting[answer.name] = { answer: answer, over: JSON.stringify(answerOf(group)) };
+          // Words the captain types in the preview after this arrived are
+          // theirs, even where the preview stages them only later.
+          form.waiting[answer.name] = { answer: answer, over: JSON.stringify(answerOf(group)), staged: true };
           return;
         }
+        // What a press sends is only what the preview stages from it: one
+        // that refuses or fails on the setting keeps its own.
         try {
           applied.push({ apply: apply, value: JSON.parse(answer.values[0]) });
-        } catch (error) {
-          return;
-        }
-        form.staged[answer.name] = answer.values[0];
+        } catch (error) {}
         return;
       }
       if (!group || group.staged) return;
@@ -461,11 +465,16 @@ ${FRAME_QUESTION_SCRIPT}
     } finally {
       form.filling = false;
     }
-    applied.forEach(function (setting) {
-      try {
-        setting.apply(setting.value);
-      } catch (error) {}
-    });
+    form.applying = applied.length > 0;
+    try {
+      applied.forEach(function (setting) {
+        try {
+          setting.apply(setting.value);
+        } catch (error) {}
+      });
+    } finally {
+      form.applying = false;
+    }
     if (applied.length > 0 && form.on) readForm();
   }
 ${FRAME_TAG_SCRIPT}
@@ -550,6 +559,13 @@ ${FRAME_TAG_SCRIPT}
         form.touched[target.name] = true;
       };
       document.addEventListener("input", touch, true);
+      // The captain's words in a preview's field outrank a setting waiting on them.
+      document.addEventListener("input", function (event) {
+        if (form.filling || form.applying || !event.target || !takesWords(event.target)) return;
+        Object.keys(form.waiting).forEach(function (name) {
+          if (form.waiting[name].staged) delete form.waiting[name];
+        });
+      }, true);
       document.addEventListener("change", touch, true);
       document.addEventListener("input", watch, true);
       document.addEventListener("change", watch, true);

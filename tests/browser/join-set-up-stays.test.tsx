@@ -75,8 +75,8 @@ test("beside a first mate started outside the window, an untouched first launch 
   expect(aside.textContent).not.toContain(m.devicesJoinSetUpWaiting());
   expect(aside.textContent).not.toContain(m.devicesJoinSetUpKept());
   await userEvent.click(button(aside, m.devicesJoinCancel()));
-  // No command runs and the window's own is about to start: a pasted link joins, stopping none,
-  // while Join by its address waits for the command, and no line says this computer stays.
+  // An answer where Paste its link works but Join by its address does not, as the shell gives while
+  // no command runs: the chips follow each flag apart, and no line says this computer stays.
   bridge.answer("inf:devices:follow-added", {
     followed: false,
     follows: false,

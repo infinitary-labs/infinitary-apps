@@ -337,6 +337,8 @@ export class Shell {
    * again as this computer's own first mate. False when nothing offers it.
    */
   startHere(): boolean {
+    // A join under way stops no command it did not name, so none starts meanwhile.
+    if (this.switching) return false;
     return this.mode?.kind === "beside" ? this.mode.beside.startHere() : false;
   }
 
@@ -347,6 +349,7 @@ export class Shell {
    * when nothing offers it.
    */
   restartCommand(): boolean {
+    if (this.switching) return false;
     return this.mode?.kind === "beside" ? this.mode.beside.restartCommand() : false;
   }
 
@@ -462,7 +465,8 @@ export class Shell {
    * What joining would stop here, read once so the check and the stop name
    * the same run: this app's own first mate (no `owned`), or beside a command
    * this window starts, the run its own agent started, or `owned: null` while
-   * none runs, which stops no run however one starts meanwhile. Null where
+   * none runs and none it started is on its way (`noCommandRuns`), which
+   * stops no run however one starts meanwhile. Null where
    * joining is refused.
    */
   private joinTarget(): { owned?: OwnedRun | null } | null {
@@ -565,12 +569,10 @@ export class Shell {
    * promises only these.
    */
   followsAdded(): { follows: boolean; joins: boolean; pastes: boolean } {
-    const joins = this.joinable();
-    return {
-      follows: joins && Boolean(this.options.work),
-      joins,
-      pastes: this.joinTarget() !== null,
-    };
+    // One reading for all three, so they never describe two different commands.
+    const target = this.joinTarget();
+    const joins = target !== null && target.owned !== null;
+    return { follows: joins && Boolean(this.options.work), joins, pastes: target !== null };
   }
 
   /**

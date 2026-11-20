@@ -1186,6 +1186,36 @@ describe("the window beside a command's first mate", () => {
     expect(at.startCore).not.toHaveBeenCalled();
   });
 
+  // The review of INF-5409: a command the window has just started may not have written its
+  // record yet, as on Windows, where Task Scheduler accepts the start before the run begins. That is
+  // not a stopped command: no join is offered until the run is known, and the join then stops it.
+  it("offers no join while the command it started has not written its record, then stops that run", async () => {
+    const pro = await otherMac({}, { joinsFromAnotherMac: true });
+    const command = commandRun();
+    let owned: OwnedRun | null = null;
+    const at = besideShell(command.doorDir, {
+      starts: true,
+      records: stopped("signal", 0),
+      ownedRun: () => owned,
+      startedAt: Date.now(),
+      readyMs: 60_000,
+    });
+    await at.shell.start();
+    expect(at.shell.followsAdded()).toEqual({ follows: false, joins: false, pastes: false });
+    await expect(at.shell.join(await pro.link("mac"))).resolves.toEqual({
+      ok: false,
+      refused: "other",
+    });
+    // The run it started writes its record: the join is offered, and stops that run alone.
+    owned = { pid: 4321, startedAt: "2026-11-20T18:00:00.000Z" };
+    at.command.records = { running: true, run: owned, lastStop: null };
+    expect(at.shell.followsAdded()).toEqual({ follows: false, joins: true, pastes: true });
+    await expect(at.shell.join(await pro.link("mac"))).resolves.toEqual({ ok: true });
+    await expect.poll(() => at.shell.thisMac().role).toBe("view");
+    expect(at.starter.stop.mock.calls).toEqual([[{ forget: true, run: owned }]]);
+    expect(at.starter.stopped).toEqual([owned]);
+  });
+
   // INF-1827 offers Join by its address at first launch, and an installed app's first launch
   // stands beside the command its window started: the command's first mate, which keeps this
   // computer's SSH trust and Infinitary's own key, asks the other computer for the link.

@@ -193,10 +193,24 @@ export class BesideWindow {
 
   /**
    * Whether this window starts the command and its records say none runs
-   * now; unreadable records are never read as stopped.
+   * now; unreadable records are never read as stopped. A command this window
+   * started that has not yet written its record, while the wait for it lasts
+   * (`launching`), is not none: it may still open this computer's first mate.
    */
   get noCommandRuns(): boolean {
-    return this.startsCommand && this.options.beside.status().running === false;
+    return (
+      this.startsCommand && this.options.beside.status().running === false && !this.launching()
+    );
+  }
+
+  /** Whether the command this window last started may still be on its way, as `read` waits for it. */
+  private launching(): boolean {
+    const started = this.startedAt;
+    const { beside, now } = this.options;
+    return (
+      started !== null &&
+      now() - started < entryWaitMs(beside.restartWaitMs, this.options.localWindow?.readyMs)
+    );
   }
 
   /** The command running now, when it is this window's starter's own (`BesideOptions.ownedRun`). */

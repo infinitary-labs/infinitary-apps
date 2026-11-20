@@ -661,6 +661,16 @@ test("the Windows installer installs for this person, offers Git, starts the com
     const launched = await launchInstalled({ ownDataDir: dataDir });
     try {
       const { link } = home.pairing.invite({ kind: "mac", at: `127.0.0.1:${home.port}` });
+      // The window started the command through Task Scheduler as it opened, which answers before
+      // the run begins: Paste its link is offered only once that run is known as the window's own
+      // (the review of INF-5409), so the join stops it rather than leaving it beside the view.
+      await expect
+        .poll(() => launched.page.evaluate(() => window.infinitary.devices.followAdded()), {
+          timeout: 120_000,
+        })
+        .toMatchObject({ pastes: true });
+      const [started] = runProcesses();
+      if (!started) throw new Error("the window's command is not running");
       // Joining starts the window over, so its answer may never return to this page.
       await launched.page.evaluate((text) => {
         void window.infinitary.devices.join(text);
@@ -682,6 +692,12 @@ test("the Windows installer installs for this person, offers Git, starts the com
       expect(task?.arguments).toBe("work run");
       expect(task?.logonType).toBe("Interactive");
       await expect.poll(() => home.reached, { timeout: 120_000 }).toContain(device?.id);
+      // The run the window started has gone while the joined work run reaches the home, before
+      // any cleanup below could stop it.
+      await expect
+        .poll(() => runProcesses().map((run) => run.pid), { timeout: 60_000 })
+        .not.toContain(started.pid);
+      expect(workRunProcesses().length).toBe(1);
       if (evidence) screenshot(join(evidence, "window-joined.png"));
 
       home.pairing.remove(device?.id ?? "");

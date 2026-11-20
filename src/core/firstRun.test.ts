@@ -585,7 +585,7 @@ describe("an untouched profile", () => {
           cards: fixture.cardStore,
           repos: { list: () => [] },
         }),
-      hasAccounts: () => accounts,
+      hasConnections: () => accounts,
       ...crewFacts(fixture.tasks),
       createWelcome: () => {},
     });

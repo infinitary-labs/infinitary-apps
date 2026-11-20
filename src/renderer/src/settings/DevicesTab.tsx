@@ -318,9 +318,11 @@ function HomeDevicesTab() {
 
   // Macs nearby (docs/devices.md, "Macs nearby"): looked for while By its
   // address is open, asked again inside the core's minute, and stopped
-  // once it closes.
+  // once it closes. Only once the home said it adds a computer by its
+  // address: never while that is unread, nor on a Windows home.
+  const addsByAddress = addresses !== null && addresses.addsByAddress !== false;
   useEffect(() => {
-    if (!askingAddress) return;
+    if (!askingAddress || !addsByAddress) return;
     let open = true;
     const ask = () => {
       const pushes = nearbyPushes.current;
@@ -340,7 +342,7 @@ function HomeDevicesTab() {
       setNearby(NEARBY_OFF);
       void window.infinitary.devices.nearby(false).catch(() => undefined);
     };
-  }, [askingAddress]);
+  }, [askingAddress, addsByAddress]);
 
   // The countdown ticks while a link is open; the seen times each minute.
   useEffect(() => {

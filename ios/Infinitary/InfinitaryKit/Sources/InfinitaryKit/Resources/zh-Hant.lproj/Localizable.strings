@@ -791,6 +791,7 @@
 "devicesJoinSetUpCopy" = "拷貝";
 "devicesJoinSetUpCopyFailed" = "無法複製位址。請選取後自行複製。";
 "devicesJoinSetUpHead" = "從你大副的電腦上加入這台電腦";
+"devicesJoinSetUpKept" = "這裡已經設定過內容，所以你大副的電腦加入這台電腦後，這個視窗仍保留自己的大副。之後請用「貼上它的連結」或「用位址加入」加入。";
 "devicesJoinSetUpLocal" = "僅限同一網路：";
 "devicesJoinSetUpOff" = "這裡未開啟「遠端登入」。請開啟它，然後加入這台電腦。";
 "devicesJoinSetUpOn" = "這裡已開啟「遠端登入」。";
@@ -799,6 +800,7 @@
 "devicesJoinSetUpSshOff" = "這裡的 SSH 伺服器未開啟。請開啟它，然後加入這台電腦。";
 "devicesJoinSetUpSshOn" = "這裡的 SSH 伺服器已開啟。";
 "devicesJoinSetUpSub" = "在那裡的「設定 → 裝置」中選擇「+ 一台電腦」，或請你的大副來做，然後輸入這個位址。之後它會讓這台電腦保持最新，並自己連到它。";
+"devicesJoinSetUpUnread" = "還找不到這台電腦的位址。請確認它已連上網路；Infinitary 稍後會再找一次。";
 "devicesJoinSetUpWaiting" = "正在等待你大副的電腦加入這台電腦。之後這個視窗會自己打開你的大副。";
 "devicesJoinShows" = "%2$@ 會顯示你的大副。它的卡片、任務和對話都留在那台 %1$@ 上。";
 "devicesJoinTryAgain" = "再試一次";

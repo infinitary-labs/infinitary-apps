@@ -141,7 +141,7 @@ export const setUpHereSchema = z.strictObject({
    * local network address elsewhere, where nothing may announce a name.
    */
   localName: z.string().min(1).max(255).nullable(),
-  /** Whether this computer's SSH server, Remote Login on a Mac, answers on its own loopback. */
+  /** Whether this computer's SSH server, Remote Login on a Mac, answers here; unknown before the keys are read. */
   remoteLogin: z.enum(["on", "off", "unknown"]),
   /** The check line its first mate's computer asks the person to compare, as `lineAt` answers. */
   line: z.string().min(1).max(160).nullable(),
@@ -151,3 +151,11 @@ export const setUpHereSchema = z.strictObject({
   opensSharing: z.boolean(),
 });
 export type SetUpHere = z.infer<typeof setUpHereSchema>;
+
+/**
+ * What a read of `SetUpHere` waits for: whether the way is offered alone;
+ * the account and addresses too, which answer at once; or the keys too,
+ * which wait for this computer's SSH server.
+ */
+export const setUpReadsSchema = z.enum(["offered", "addresses", "keys"]);
+export type SetUpReads = z.infer<typeof setUpReadsSchema>;

@@ -3,7 +3,7 @@ import type { SetUpHere } from "@shared/joinByAddress";
 import { expect, test } from "vitest";
 import { userEvent } from "vitest/browser";
 import { type Answers, fakeBridge } from "./bridge";
-import { button, clipboard, gone, shown, unansweredOf } from "./devicesTab";
+import { button, clipboard, gone, held, shown, unansweredOf } from "./devicesTab";
 import { freshHome } from "./freshHome";
 import { openSize, openWindow } from "./window";
 
@@ -43,7 +43,7 @@ test("a Mac leads with set up from the first mate's computer, its private addres
     // The chip came from the quick read alone: no account, address or key is read while closed.
     const reads = bridge.requests("inf:devices:set-up-here");
     expect(reads.length).toBeGreaterThan(0);
-    expect(reads.every(([details]) => details === false)).toBe(true);
+    expect(reads.every(([what]) => what === "offered")).toBe(true);
     // The window asks to follow along while its first launch is up.
     await expect.poll(() => bridge.requests("inf:devices:follow-added").length).toBeGreaterThan(0);
   }
@@ -53,7 +53,8 @@ test("a Mac leads with set up from the first mate's computer, its private addres
     await userEvent.click(await shown("[data-join-set-up-chip]"));
     const aside = await shown("[data-join-set-up]");
     expect(aside.textContent).toContain(m.devicesJoinSetUpHead());
-    expect(bridge.requests("inf:devices:set-up-here").at(-1)).toEqual([true]);
+    // The addresses are read at once and the keys beside them, not after them.
+    expect(bridge.requests("inf:devices:set-up-here").slice(-2)).toEqual([["addresses"], ["keys"]]);
     const addresses = [...aside.querySelectorAll<HTMLElement>("[data-join-set-up-address]")];
     expect(addresses.map((line) => line.querySelector("code")?.textContent)).toEqual([
       `${here.user}@${here.privateAddress}`,
@@ -98,6 +99,43 @@ test("a Mac leads with set up from the first mate's computer, its private addres
     expect(document.querySelector("[data-join-set-up-line]")).toBeNull();
     await userEvent.click(button(state, m.devicesJoinSetUpOpenSharing()));
     await expect.poll(() => bridge.requests("inf:devices:open-sharing")).toEqual([[]]);
+    await userEvent.click(button(await shown("[data-join-set-up]"), m.devicesJoinCancel()));
+    await gone("[data-join-set-up]");
+  }
+
+  // Section: the addresses show while the keys are still being read, then Remote Login's state.
+  {
+    const keys = held<SetUpHere>();
+    const addressesOnly = { ...here, remoteLogin: "unknown" as const, line: null, lineAt: null };
+    bridge.answer("inf:devices:set-up-here", (what: string) =>
+      what === "keys" ? keys.promise : what === "addresses" ? addressesOnly : here,
+    );
+    await userEvent.click(await shown("[data-join-set-up-chip]"));
+    const aside = await shown("[data-join-set-up]");
+    await expect
+      .poll(() => aside.querySelector("[data-join-set-up-address] code")?.textContent)
+      .toBe(`${here.user}@${here.privateAddress}`);
+    expect(aside.querySelector("[data-join-remote-login]")).toBeNull();
+    keys.resolve(here);
+    await shown('[data-join-remote-login="on"]');
+    await userEvent.click(button(aside, m.devicesJoinCancel()));
+    await gone("[data-join-set-up]");
+  }
+
+  // Section: addresses that cannot be read say so, and a later read shows them.
+  {
+    let fails = true;
+    bridge.answer("inf:devices:set-up-here", (what: string) => {
+      if (what !== "offered" && fails) throw new Error("this computer could not be read");
+      return here;
+    });
+    await userEvent.click(await shown("[data-join-set-up-chip]"));
+    expect((await shown("[data-join-set-up-unread]")).textContent).toBe(m.devicesJoinSetUpUnread());
+    fails = false;
+    await userEvent.click(button(await shown("[data-join-set-up]"), m.devicesJoinCancel()));
+    await userEvent.click(await shown("[data-join-set-up-chip]"));
+    await shown("[data-join-set-up-address]");
+    expect(document.querySelector("[data-join-set-up-unread]")).toBeNull();
   }
 
   expect(unansweredOf(bridge)).toEqual([]);

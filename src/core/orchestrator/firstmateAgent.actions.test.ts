@@ -351,6 +351,39 @@ describe("FirstmateAgent", () => {
     await tick();
   });
 
+  // INF-4926's plan: a card for the address opens the address form on a home that adds a
+  // computer by it, and the link on a Windows PC, which adds none (the served line for each is
+  // `ACTIONS["device-invite"].lineOn`'s, in actions.test.ts). A scripted model stands in: this
+  // shows what the host offers for the home's system, never a real model's pick.
+  it("opens the address form from a Mac home's card and the link from a Windows home's", async () => {
+    for (const platform of ["darwin", "win32"]) {
+      const { agent, session, specs, supervisor } = setup({ platform });
+      agent.bindAppDispatch(
+        async (channel) => (channel === "inf:devices:list" ? [] : true) as never,
+      );
+      await agent.converse("add my mini");
+      const app = specs[0]?.tools.find((entry) => entry.name === "app_change");
+      if (!app) throw new Error("Missing app_change");
+      await app.run({
+        action: "device-invite",
+        value: { how: "address", name: "Mac mini" },
+        evidence: "add my mini",
+      });
+      const offered = supervisor.cards
+        .snapshot()
+        .find((entry) => entry.id.includes("device-invite"));
+      const open = offered?.actions.find((action) => action.default);
+      expect(supervisor.cardActions.act(offered?.id ?? "", open?.id ?? "")).toEqual(
+        platform === "win32"
+          ? { effect: { kind: "open", target: "devices", make: "link" } }
+          : { effect: { kind: "open", target: "devices", addressForm: true } },
+      );
+      session.emitTurnEnd("Offered.");
+      session.resolveNextPrompt();
+      await tick();
+    }
+  });
+
   // Intent: a bug - once the captain clicked Add it on one computer's card,
   // asking to add the next computer was refused under that card's fixed id.
   it("offers a new add card for the next computer once the captain answered the last one", async () => {

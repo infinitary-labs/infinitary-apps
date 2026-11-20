@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { type HomeConnection, startConnection } from "@core/connection/connection";
+import { claimLink } from "@core/devices/dial";
 import { HomeLink } from "@core/devices/homeLink";
 import { JoinedHome } from "@core/devices/joinedHome";
 import { DevicePairing } from "@core/devices/pairing";
@@ -155,6 +156,10 @@ describe("the window beside a command's first mate", () => {
       answerWaitMs?: number;
       /** Each dial of the command's door after this turns true never connects, as at a stuck command. */
       dialHangs?: () => boolean;
+      /** This user's work folder, where a home that added this computer leaves its grant. */
+      workDir?: string;
+      /** Whether the command running is the starter's own: this window or this app's agent started it. */
+      owns?: boolean;
     } = {},
   ) {
     const startCore = vi.fn(async () => ownCore().core);
@@ -212,6 +217,7 @@ describe("the window beside a command's first mate", () => {
         installsUpdates: options.installsUpdates ?? false,
         programReplaced: () => command.programReplaced,
         ...(options.starts ? { starter } : {}),
+        ...(options.owns === undefined ? {} : { ownsCommand: () => options.owns === true }),
         ...(options.startedAt === undefined ? {} : { startedAt: options.startedAt }),
         ...(options.answerWaitMs === undefined ? {} : { answerWaitMs: options.answerWaitMs }),
         stopCommand: () => {
@@ -243,6 +249,7 @@ describe("the window beside a command's first mate", () => {
             },
           }
         : {}),
+      ...(options.workDir ? { work: { dataDir: options.workDir } } : {}),
       broadcast: (channel, payload) => pushes.push({ channel, payload }),
       notifications: {
         supported: () => true,
@@ -1142,5 +1149,39 @@ describe("the window beside a command's first mate", () => {
     expect(at.starter.stop.mock.calls).toEqual([[{ forget: true }]]);
     expect(at.starter.stops).toBe(1);
     expect(at.startCore).not.toHaveBeenCalled();
+  });
+
+  // The review of INF-4930: following along stops the command beside the window by itself, so
+  // only a command this window's starter owns - this window or this app's own agent started it -
+  // and never one the person started by hand, though a grant waits in the work folder.
+  it("follows along beside the command its own agent started, never beside one started by hand", async () => {
+    const pro = await otherMac({}, { joinsFromAnotherMac: true });
+    for (const owns of [false, true]) {
+      const command = commandRun();
+      const fallback = command.run.dispatch.getMockImplementation();
+      command.run.dispatch.mockImplementation((async (channel: string, args: unknown[]) =>
+        channel === "inf:app:first-run"
+          ? { gateOpen: true, firstTurnAt: null, untouched: true }
+          : fallback?.(channel as never, args as never)) as never);
+      await command.open().settled();
+      const workDir = join(scratchDir("infinitary-shell-beside-work-"), "work");
+      const at = besideShell(command.doorDir, { starts: true, owns, workDir });
+      await at.start();
+      const grant = await claimLink(await pro.link("mac"), {
+        kind: "mac",
+        name: "Mac mini",
+        user: { name: "sam", uid: 501 },
+      });
+      new JoinedHome(workDir).join(grant, Date.now());
+      expect(await at.shell.followAdded()).toBe(owns);
+      if (owns) {
+        await expect.poll(() => at.shell.thisMac().role).toBe("view");
+        expect(at.starter.stops).toBe(1);
+      } else {
+        expect(at.shell.thisMac().role).not.toBe("view");
+        expect(at.starter.stops).toBe(0);
+        expect(at.starter.stop).not.toHaveBeenCalled();
+      }
+    }
   });
 });

@@ -229,7 +229,7 @@ export function createAppTools(delegate: AppToolsDelegate) {
                     ...delegate.actor(),
                     evidence: "permission preview",
                   }),
-                line: line.line,
+                line: line.lineOn?.(delegate.platform ?? "darwin") ?? line.line,
                 valueSchema: line.value.toJSONSchema(),
                 // A window's own setting: app_change's computer names which window.
                 ...(line.change && isWindowChannel(line.change) ? { window: true } : {}),

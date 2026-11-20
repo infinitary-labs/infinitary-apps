@@ -4,14 +4,16 @@
       "id": "address-first-add-computer",
       "kind": "improvement",
       "title": "Add a computer by its address first",
-      "body": "In Settings → Devices, + A computer now opens straight to the address form with the computers nearby, since a computer added by its address is kept updated and reached from here by itself. The link and the command sit under it, each saying when to use it. A new Mac or Linux computer's first launch now leads with Set up from your first mate's computer: it shows the address to type there, its private network address first, says whether Remote Login is on, and follows along on its own once it is added. The first mate recommends the address too.",
+      "body": "In Settings → Devices, + A computer now opens straight to the address form, since a computer added by its address is kept updated and reached from here by itself; the link and the command sit under it, each saying when to use it. A Windows PC keeps the link and the command. A new Mac, or an x64 Linux computer, now leads its first launch with Set up from your first mate's computer: its address to type there, private network address first, whether Remote Login is on, and it follows along once added.",
       "area": "devices",
       "picture": {
         "dark": "address-first-add-computer-dark.webp",
         "light": "address-first-add-computer-light.webp",
         "alt": "Settings, Devices, with + A computer's address form open, the computers nearby under it, and the link and the command below as the other ways"
       },
-      "provenance": { "origin": "change" }
+      "provenance": {
+        "origin": "change"
+      }
     }
   ]
 }

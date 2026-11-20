@@ -50,6 +50,12 @@ describe("action permissions and channel parity", () => {
     expect(
       invite.offer?.({ how: "address", address: "sam@mini.local" }, [], { platform: "win32" }),
     ).toMatchObject({ arrival: { make: "link" } });
+    // The line the first mate reads recommends what its card there carries out: the address on a
+    // Mac, the link on a Windows PC.
+    expect(invite.lineOn?.("darwin")).toBe(invite.line);
+    expect(invite.line).toContain("recommending the address");
+    expect(invite.lineOn?.("win32")).toContain("recommending a link");
+    expect(invite.lineOn?.("win32")).not.toContain("recommending the address");
   });
 
   // INF-3116, answer A: the first mate only offers the app's Allow card for

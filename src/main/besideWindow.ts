@@ -75,6 +75,12 @@ export type BesideOptions = {
   status: () => Pick<RunStatus, "running" | "run" | "lastStop">;
   /** Which start entry the app wrote is in place now. */
   startEntry: () => StartEntry;
+  /**
+   * Whether the command running now is the starter's own: this window
+   * started it, or this app's own agent did. Following along stops only such
+   * a command, never one the person started by hand.
+   */
+  ownsCommand?: () => boolean;
   /** The entry's own wait before it starts the command again; a test stands in a shorter one. */
   restartWaitMs?: number;
   /** This program's own Dock icon and login item. */
@@ -178,6 +184,11 @@ export class BesideWindow {
   /** Whether this window starts the command itself, so leaving it lets nothing start it again. */
   get startsCommand(): boolean {
     return this.options.beside.starter !== undefined;
+  }
+
+  /** Whether the command running now is this window's starter's own (`BesideOptions.ownsCommand`). */
+  get ownsCommand(): boolean {
+    return this.startsCommand && (this.options.beside.ownsCommand?.() ?? false);
   }
 
   constructor(private readonly options: BesideWindowOptions) {

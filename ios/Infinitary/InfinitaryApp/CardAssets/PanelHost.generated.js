@@ -28575,6 +28575,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Add this computer from your first mate’s computer`;
   }
+  function devicesJoinSetUpKept() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تم إعداد شيء هنا بالفعل، لذا تحتفظ هذه النافذة بنائب القبطان الخاص بها بعد أن يضيف حاسوب نائب القبطان هذا الحاسوب. بعدها انضم باستخدام «لصق رابطه» أو «الانضمام بعنوانه».`;
+      case "de":
+        return `Hier ist schon etwas eingerichtet, daher behält dieses Fenster seinen eigenen ersten Offizier, wenn der Computer deines ersten Offiziers diesen hinzufügt. Verbinde dich dann mit „Link einfügen“ oder „Über die Adresse beitreten“.`;
+      case "es":
+        return `Ya hay algo configurado aquí, así que esta ventana conserva su propio primer oficial cuando la computadora de tu primer oficial agregue esta. Después, únete con Pegar su enlace o Unirse por su dirección.`;
+      case "fr":
+        return `Quelque chose est déjà configuré ici : cette fenêtre garde son propre second une fois que l’ordinateur de votre second a ajouté celui-ci. Rejoignez-le ensuite avec Coller son lien ou Rejoindre par son adresse.`;
+      case "ja":
+        return `このコンピューターではすでに設定が行われているため、一等航海士のコンピューターがこのコンピューターを追加しても、このウインドウは自分の一等航海士のままです。その後は「リンクを貼り付ける」か「アドレスで参加」で参加してください。`;
+      case "ko":
+        return `여기에는 이미 설정된 것이 있어서, 일등항해사의 컴퓨터가 이 컴퓨터를 추가해도 이 창은 자기 일등항해사를 그대로 유지해요. 그다음 ‘링크 붙여넣기’나 ‘주소로 참여’로 참여하세요.`;
+      case "pt-BR":
+        return `Já há algo configurado aqui, então esta janela mantém o próprio imediato quando o computador do seu imediato adicionar este. Depois, entre com Colar o link dele ou Entrar pelo endereço.`;
+      case "zh-Hans":
+        return `这里已经设置过内容，所以你大副的电脑添加这台电脑后，这个窗口仍保留自己的大副。之后请用“粘贴它的链接”或“通过地址加入”加入。`;
+      case "zh-Hant":
+        return `這裡已經設定過內容，所以你大副的電腦加入這台電腦後，這個視窗仍保留自己的大副。之後請用「貼上它的連結」或「用位址加入」加入。`;
+      case "en-XA":
+        return `[Šöɱéţĥîñĝ îš áļŕéáðý šéţ ûþ ĥéŕé, šö ţĥîš ŵîñðöŵ ķééþš îţš öŵñ ƒîŕšţ ɱáţé öñçé ýöûŕ ƒîŕšţ ɱáţé’š çöɱþûţéŕ áððš ţĥîš öñé. Ţĥéñ ĵöîñ îţ ŵîţĥ Þášţé îţš ļîñķ öŕ Ĵöîñ ƀý îţš áððŕéšš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Something is already set up here, so this window keeps its own first mate once your first mate’s computer adds this one. Then join it with Paste its link or Join by its address.‬`;
+    }
+    return `Something is already set up here, so this window keeps its own first mate once your first mate’s computer adds this one. Then join it with Paste its link or Join by its address.`;
+  }
   function devicesJoinSetUpLocal() {
     switch (currentLanguage()) {
       case "ar":
@@ -28790,6 +28817,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮There, choose + A computer in Settings → Devices, or ask your first mate, and type this address. It then keeps this computer updated and reaches it by itself.‬`;
     }
     return `There, choose + A computer in Settings → Devices, or ask your first mate, and type this address. It then keeps this computer updated and reaches it by itself.`;
+  }
+  function devicesJoinSetUpUnread() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر العثور على عنوان هذا الحاسوب بعد. تحقّق من أنه متصل بشبكة؛ سيبحث Infinitary مرة أخرى بعد لحظة.`;
+      case "de":
+        return `Die Adresse dieses Computers wurde noch nicht gefunden. Prüfe, ob er mit einem Netzwerk verbunden ist; Infinitary sucht gleich erneut.`;
+      case "es":
+        return `Todavía no se encontró la dirección de esta computadora. Comprueba que esté conectada a una red; Infinitary vuelve a buscar en un momento.`;
+      case "fr":
+        return `L’adresse de cet ordinateur est encore introuvable. Vérifiez qu’il est connecté à un réseau ; Infinitary cherche à nouveau dans un instant.`;
+      case "ja":
+        return `このコンピューターのアドレスがまだ見つかりません。ネットワークにつながっているか確認してください。Infinitary はすぐにもう一度探します。`;
+      case "ko":
+        return `이 컴퓨터의 주소를 아직 찾지 못했습니다. 네트워크에 연결되어 있는지 확인하세요. Infinitary가 잠시 후 다시 찾습니다.`;
+      case "pt-BR":
+        return `Ainda não foi possível encontrar o endereço deste computador. Verifique se ele está em uma rede; o Infinitary procura de novo em instantes.`;
+      case "zh-Hans":
+        return `还找不到这台电脑的地址。请检查它是否已连接网络；Infinitary 稍后会再找一次。`;
+      case "zh-Hant":
+        return `還找不到這台電腦的位址。請確認它已連上網路；Infinitary 稍後會再找一次。`;
+      case "en-XA":
+        return `[Çöûļð ñöţ ƒîñð ţĥîš çöɱþûţéŕ’š áððŕéšš ýéţ. Çĥéçķ ţĥáţ îţ îš öñ á ñéţŵöŕķ; Îñƒîñîţáŕý ļööķš áĝáîñ îñ á ɱöɱéñţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Could not find this computer’s address yet. Check that it is on a network; Infinitary looks again in a moment.‬`;
+    }
+    return `Could not find this computer’s address yet. Check that it is on a network; Infinitary looks again in a moment.`;
   }
   function devicesJoinSetUpWaiting() {
     switch (currentLanguage()) {
@@ -95048,6 +95102,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     devicesJoinSetUpCopy,
     devicesJoinSetUpCopyFailed,
     devicesJoinSetUpHead,
+    devicesJoinSetUpKept,
     devicesJoinSetUpLocal,
     devicesJoinSetUpOff,
     devicesJoinSetUpOn,
@@ -95056,6 +95111,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     devicesJoinSetUpSshOff,
     devicesJoinSetUpSshOn,
     devicesJoinSetUpSub,
+    devicesJoinSetUpUnread,
     devicesJoinSetUpWaiting,
     devicesJoinShows,
     devicesJoinTryAgain,
@@ -98090,6 +98146,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "devicesJoinSetUpCopy": [],
     "devicesJoinSetUpCopyFailed": [],
     "devicesJoinSetUpHead": [],
+    "devicesJoinSetUpKept": [],
     "devicesJoinSetUpLocal": [],
     "devicesJoinSetUpOff": [],
     "devicesJoinSetUpOn": [],
@@ -98098,6 +98155,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "devicesJoinSetUpSshOff": [],
     "devicesJoinSetUpSshOn": [],
     "devicesJoinSetUpSub": [],
+    "devicesJoinSetUpUnread": [],
     "devicesJoinSetUpWaiting": [],
     "devicesJoinShows": ["computer", "here"],
     "devicesJoinTryAgain": [],

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { homedir, hostname, tmpdir, userInfo } from "node:os";
 import { basename, join } from "node:path";
@@ -89,6 +90,7 @@ import { followPresence } from "./presence";
 import { followRendererRecovery } from "./rendererRecovery";
 import {
   followInstalledProgram,
+  keepsStarterBesideGrant,
   lockHolder,
   markRunning,
   processAlive,
@@ -97,12 +99,18 @@ import {
   RUN_UPDATED_EXIT,
   RUN_WORDS,
   type RunEnd,
+  runByOwnAgent,
   runningByCommand,
   runOptions,
   stopRunningCommand,
   windowProfileDir,
 } from "./runCommand";
-import { type RunEnvironment, readKeychainLock, runEnvironment } from "./runEnvironment";
+import {
+  type RunEnvironment,
+  readKeychainLock,
+  runEnvironment,
+  startedByAgent,
+} from "./runEnvironment";
 import { type RunHandOver, runHandOverInTerminal, terminalQuestion } from "./runHandOver";
 import { bundleOf, openNewCopy, openWindowOnReopen } from "./runReopen";
 import { readRunSettings } from "./runSettings";
@@ -636,10 +644,11 @@ export async function startApp(
   // own, so the window starts the run with it as it does on Linux.
   const joinedHere = new JoinedHome(join(dataDir, "joined"));
   // A grant an address add left in the work folder opens this window as a
-  // view, except while the command the window started still runs its empty
-  // first mate: the window keeps that command's starter, so it opens beside
-  // it and follows along, stopping it (docs/view.md, "Following along").
-  const startedRunGoesOn = !windowless && runningByCommand(dataDir);
+  // view, except while the command this app's own agent started still runs
+  // its empty first mate: the window keeps that agent as its starter, so it
+  // opens beside the command and follows along, stopping it. A command the
+  // person started by hand keeps running, with no starter beside it
+  // (docs/view.md, "Following along").
   const starter =
     windowless ||
     move ||
@@ -647,7 +656,10 @@ export async function startApp(
     ownStartEntry(dataDir) === "mac-daemon" ||
     dataFolderRefusal(dataDir, privacy) ||
     joinedHere.read() ||
-    (!startedRunGoesOn && windowFromWork(work.place.dataDir, joinedHere.leftDeviceId()))
+    !keepsStarterBesideGrant(
+      dataDir,
+      Boolean(windowFromWork(work.place.dataDir, joinedHere.leftDeviceId())),
+    )
       ? null
       : commandStarter({
           work,
@@ -657,7 +669,7 @@ export async function startApp(
           switched: userDataChoice.kind === "switch",
           packaged: app.isPackaged,
         });
-  let besideRun = startedRunGoesOn;
+  let besideRun = !windowless && runningByCommand(dataDir);
   // When this window started the command it opens beside, until that one welcomes it.
   let startedAt: number | undefined;
   // A window already running its first mate here holds the folder's lock:
@@ -758,6 +770,12 @@ export async function startApp(
                 await app.whenReady();
                 return readElectronKeychainStatus(join(mainDir, "keychainProcessMain.js"), path);
               }).then(observed),
+        startedByAgent({
+          platform: hostPlatform(),
+          env: process.env,
+          label: runLabelOf(work.place.flavor),
+          cgroup: () => readFileSync("/proc/self/cgroup", "utf8"),
+        }),
       );
       leaveRun = (end) => {
         try {
@@ -1143,6 +1161,7 @@ export async function startApp(
                 programReplaced,
                 ...(starter ? { starter } : {}),
                 ...(startedAt === undefined ? {} : { startedAt }),
+                ownsCommand: () => startedAt !== undefined || runByOwnAgent(dataDir),
                 stopCommand: () => stopRunningCommand(dataDir),
               },
             }

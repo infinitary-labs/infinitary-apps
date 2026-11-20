@@ -1,5 +1,5 @@
 import { machine, type as osType, userInfo } from "node:os";
-import type { SetUpHere } from "@shared/joinByAddress";
+import type { SetUpHere, SetUpReads } from "@shared/joinByAddress";
 import { parseRemoteLoginAddress } from "@shared/remoteLogin";
 import { interfacesFromAddresses, offeredAddresses } from "../connection/addresses";
 import { hostPlatform } from "../platform";
@@ -13,8 +13,9 @@ import { type HostKeyRead, readOwnHostKey } from "./hostKey";
  * (docs/view.md, "Joining"): what the person types or compares on their
  * first mate's computer to add this one by its address. Every reading needs
  * no administrator: the account, the addresses, the local network name, and
- * the key this computer's SSH server answers with on its own loopback,
- * whose absence says Remote Login is off. The line to compare is the key
+ * the key this computer's SSH server answers with on its own loopback and
+ * at the first address shown; Remote Login reads off only where both refuse
+ * the connection. The account and addresses answer before the keys. The line to compare is the key
  * the first address shown answers with, and names that address. On a Mac
  * the local name is the one Bonjour announces; elsewhere, where nothing may
  * announce one, it is the local network address. Each address shown is one
@@ -31,15 +32,19 @@ export async function setUpHere(
     addresses?: () => { address: string; network: "private" | "local" }[];
     /** The account the address names, instead of this run's own. */
     user?: string;
-    /** Whether the address way is offered here, alone: no account, address or key is read. */
-    eligibilityOnly?: boolean;
+    /**
+     * What to read: whether the address way is offered here alone, with no
+     * account, address or key; the account and addresses too, which answer at
+     * once; or the keys too, which wait for this computer's SSH server.
+     */
+    reads?: SetUpReads;
   } = {},
 ): Promise<SetUpHere> {
   const platform = read.platform ?? hostPlatform();
   const far = farSystemOf(read.system ?? osType());
   const offered = Boolean(far?.chips[read.arch ?? machine()]);
   const opensSharing = platform === "darwin";
-  if (!offered || read.eligibilityOnly)
+  if (!offered || read.reads === "offered")
     return {
       offered,
       user: null,
@@ -66,12 +71,31 @@ export async function setUpHere(
       : addresses.find((entry) => entry.network === "local")?.address,
   );
   const lineAt = privateAddress ?? localName;
+  if (read.reads === "addresses")
+    return {
+      offered,
+      user,
+      privateAddress,
+      localName,
+      remoteLogin: "unknown",
+      line: null,
+      lineAt: null,
+      opensSharing,
+    };
   const [key, there] = await Promise.all([
     hostKey("127.0.0.1").catch(() => null),
     lineAt ? hostKey(lineAt).catch(() => null) : null,
   ]);
+  // A key at either says the SSH server answers. It is off only where neither gives a key and
+  // both refuse the connection: a server bound to the address shown alone refuses loopback.
+  const refused = (read: HostKeyRead | null) =>
+    read !== null && !("line" in read) && read.refusal === "remote-login-off";
   const remoteLogin =
-    key && "line" in key ? "on" : key?.refusal === "remote-login-off" ? "off" : "unknown";
+    (key && "line" in key) || (there && "line" in there)
+      ? "on"
+      : refused(key) && (lineAt === null || refused(there))
+        ? "off"
+        : "unknown";
   const line = there && "line" in there ? there.line : null;
   return {
     offered,

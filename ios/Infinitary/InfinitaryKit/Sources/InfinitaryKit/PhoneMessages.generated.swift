@@ -840,6 +840,7 @@ public enum PhoneMessages {
     public static func `devicesJoinSetUpCopy`() -> String { PhoneWords.format("devicesJoinSetUpCopy", []) }
     public static func `devicesJoinSetUpCopyFailed`() -> String { PhoneWords.format("devicesJoinSetUpCopyFailed", []) }
     public static func `devicesJoinSetUpHead`() -> String { PhoneWords.format("devicesJoinSetUpHead", []) }
+    public static func `devicesJoinSetUpKept`() -> String { PhoneWords.format("devicesJoinSetUpKept", []) }
     public static func `devicesJoinSetUpLocal`() -> String { PhoneWords.format("devicesJoinSetUpLocal", []) }
     public static func `devicesJoinSetUpOff`() -> String { PhoneWords.format("devicesJoinSetUpOff", []) }
     public static func `devicesJoinSetUpOn`() -> String { PhoneWords.format("devicesJoinSetUpOn", []) }
@@ -848,6 +849,7 @@ public enum PhoneMessages {
     public static func `devicesJoinSetUpSshOff`() -> String { PhoneWords.format("devicesJoinSetUpSshOff", []) }
     public static func `devicesJoinSetUpSshOn`() -> String { PhoneWords.format("devicesJoinSetUpSshOn", []) }
     public static func `devicesJoinSetUpSub`() -> String { PhoneWords.format("devicesJoinSetUpSub", []) }
+    public static func `devicesJoinSetUpUnread`() -> String { PhoneWords.format("devicesJoinSetUpUnread", []) }
     public static func `devicesJoinSetUpWaiting`() -> String { PhoneWords.format("devicesJoinSetUpWaiting", []) }
     public static func `devicesJoinShows`(`computer`: String, `here`: String) -> String { PhoneWords.format("devicesJoinShows", [`computer`, `here`]) }
     public static func `devicesJoinTryAgain`() -> String { PhoneWords.format("devicesJoinTryAgain", []) }
@@ -4950,6 +4952,7 @@ extension PhoneWords {
         "devicesJoinSetUpCopy": [],
         "devicesJoinSetUpCopyFailed": [],
         "devicesJoinSetUpHead": [],
+        "devicesJoinSetUpKept": [],
         "devicesJoinSetUpLocal": [],
         "devicesJoinSetUpOff": [],
         "devicesJoinSetUpOn": [],
@@ -4958,6 +4961,7 @@ extension PhoneWords {
         "devicesJoinSetUpSshOff": [],
         "devicesJoinSetUpSshOn": [],
         "devicesJoinSetUpSub": [],
+        "devicesJoinSetUpUnread": [],
         "devicesJoinSetUpWaiting": [],
         "devicesJoinShows": ["computer", "here"],
         "devicesJoinTryAgain": [],

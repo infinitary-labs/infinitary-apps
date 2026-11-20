@@ -323,7 +323,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       leave: () => invoke("inf:devices:leave"),
       takeOver: () => invoke("inf:devices:take-over"),
       setUpWork: () => invoke("inf:devices:set-up-work"),
-      setUpHere: (details) => invoke("inf:devices:set-up-here", details),
+      setUpHere: (reads) => invoke("inf:devices:set-up-here", reads),
       openSharing: () => invoke("inf:devices:open-sharing"),
       followAdded: () => invoke("inf:devices:follow-added"),
       fixWork: (deviceId) => invoke("inf:devices:fix-work", deviceId),

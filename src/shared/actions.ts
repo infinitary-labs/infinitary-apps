@@ -14,6 +14,7 @@ import type { DeviceMake } from "./cards";
 import { type AppCostLimitView, costLimitSchema, formatUsd } from "./costLimit";
 import { crewSpeedSchema, SPEED_NAMES } from "./crewSpeed";
 import { type DecisionAnswerer, type DecisionsView, decisionAnswererSchema } from "./decisions";
+import { addressFormOffer, deviceInviteLine } from "./deviceInvite";
 import { anotherUserHere, COMPUTER, HERE } from "./deviceNames";
 import {
   type DeviceView,
@@ -31,7 +32,7 @@ import { hostOfAddress, kindByName } from "./forge";
 import { isServerIntegration, SERVER_INTEGRATION_KINDS, signInHost } from "./forgeKinds";
 import { FORGE_HOST_NAME, type ForgesView } from "./forges";
 import { handoverLines } from "./handoverActions";
-import { englishOf, type Said, said } from "./i18n/said";
+import { englishOf, type Said } from "./i18n/said";
 import {
   INBOX_WORDS,
   INTEGRATION_KIND_NAMES,
@@ -147,6 +148,8 @@ export type ActionLine = {
   current: CoreInvokeChannel | "inf:keyboard:reminders" | null;
   value: z.ZodType;
   line: string;
+  /** The line as served on a home of this system, where its words differ by system; `line` elsewhere. */
+  lineOn?: (platform: string) => string;
   toRequest: (
     value: Record<string, unknown>,
     current: unknown,
@@ -564,7 +567,9 @@ const actionLines = {
       how: z.enum(["link", "command", "another-user", "address", "phone"]).optional(),
       address: remoteLoginAddressSchema.optional(),
     }),
-    line: `Add a device when the captain asks: app_change offers the captain one card whose button makes it in Settings → Devices. When they have not said which way, never pick one for them: first ask them on one decision card, with every way as an option - the ${COMPUTER.one}'s address over Remote Login, a link, a command, or another user on ${HERE.this} - recommending the address (where ${HERE.this} is a Windows PC, its address card offers a link instead), because ${HERE.this} then keeps that ${COMPUTER.one} updated and reaches it by itself, with no visit there after setup; say a link suits a ${COMPUTER.one} they sit at or a Windows PC, and a command one where they can type in Terminal but Remote Login is off; then pass their choice. how "address" with the address they gave, such as sam@mini.local: ${HERE.this} sets that ${COMPUTER.one} up over Remote Login with their own SSH key. how "address" with no address, when they chose it without naming one: a card that opens the address form, with the ${COMPUTER.many} on their network to pick from. how "link" (the default): a one-use link to paste into Infinitary on a ${COMPUTER.one} they sit at. how "command": a command they run once in Terminal on a ${COMPUTER.one} with no screen, which gets Infinitary from ${HERE.this}. Each of those three adds a ${COMPUTER.one} that can control you from Infinitary opened there and can run the work of projects set to run on it. how "phone": a one-use link whose code they scan inside Infinitary on their phone, which then shows their cards. how "another-user": a command they run once as another macOS user on ${HERE.this}, so work runs as that user, with sign-ins of its own, and cannot control you; like every user on a ${COMPUTER.one}, that user can still read files in their home folder outside private folders such as Documents. Only the captain's click makes a link or a command, or reaches a ${COMPUTER.one}, and you never see a link or a command. Pass the ${COMPUTER.one}'s name as the captain said it.`,
+    line: deviceInviteLine(false),
+    // A Windows PC adds no computer by its address, so its first mate recommends the link.
+    lineOn: (platform) => deviceInviteLine(platform === "win32"),
     alwaysTrail: true,
     toRequest: (v) =>
       v.how === "command" || v.how === "address"
@@ -582,25 +587,7 @@ const actionLines = {
       // control connection): there the address way offers the link instead.
       if (v.how === "address" && here.platform !== "win32") {
         // Chosen without an address: the form, with the computers nearby to pick from.
-        if (typeof v.address !== "string") {
-          const words = {
-            title: name
-              ? said("devicesAddressFormTitleNamed", { device: name })
-              : said("devicesAddressFormTitle"),
-            paragraphs: [said("devicesAddressFormSetUp"), said("devicesAddressFormOpen")],
-            label: said("devicesAddressFormOpenButton"),
-            decline: said("devicesAddressFormNotNow"),
-          };
-          return {
-            cardId: "app-device-invite",
-            title: englishOf(words.title),
-            paragraphs: words.paragraphs.map(englishOf),
-            label: englishOf(words.label),
-            decline: englishOf(words.decline),
-            said: words,
-            arrival: { addressForm: true },
-          };
-        }
+        if (typeof v.address !== "string") return addressFormOffer(name);
         return {
           cardId: "app-device-invite",
           title: `Add the ${COMPUTER.one} at ${v.address}`,
@@ -1858,6 +1845,7 @@ const actionLines = {
   ...settingsActs,
 } as const satisfies Record<string, ActionLine>;
 export type ActionName = keyof typeof actionLines;
+
 /** The value an action accepts, as its line's schema reads it (unknown where a line is built generically). */
 export type ActionValue<A extends ActionName> = z.input<(typeof actionLines)[A]["value"]>;
 export const ACTIONS: Record<ActionName, ActionLine> = actionLines;

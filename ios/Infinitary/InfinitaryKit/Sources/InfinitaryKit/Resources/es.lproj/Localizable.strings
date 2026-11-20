@@ -791,6 +791,7 @@
 "devicesJoinSetUpCopy" = "Copiar";
 "devicesJoinSetUpCopyFailed" = "No se pudo copiar la dirección. Selecciónala y cópiala tú.";
 "devicesJoinSetUpHead" = "Agrega esta computadora desde la computadora de tu primer oficial";
+"devicesJoinSetUpKept" = "Ya hay algo configurado aquí, así que esta ventana conserva su propio primer oficial cuando la computadora de tu primer oficial agregue esta. Después, únete con Pegar su enlace o Unirse por su dirección.";
 "devicesJoinSetUpLocal" = "Solo en la misma red:";
 "devicesJoinSetUpOff" = "La Sesión remota está desactivada aquí. Actívala y luego agrega esta computadora.";
 "devicesJoinSetUpOn" = "La Sesión remota está activada aquí.";
@@ -799,6 +800,7 @@
 "devicesJoinSetUpSshOff" = "Su servidor SSH está desactivado aquí. Actívalo y luego agrega esta computadora.";
 "devicesJoinSetUpSshOn" = "Su servidor SSH está activado aquí.";
 "devicesJoinSetUpSub" = "Allí, elige + Una computadora en Configuración → Dispositivos, o pídeselo a tu primer oficial, y escribe esta dirección. Después mantiene esta computadora actualizada y llega a ella por sí sola.";
+"devicesJoinSetUpUnread" = "Todavía no se encontró la dirección de esta computadora. Comprueba que esté conectada a una red; Infinitary vuelve a buscar en un momento.";
 "devicesJoinSetUpWaiting" = "Esperando a que la computadora de tu primer oficial agregue esta. Después, esta ventana abre a tu primer oficial por sí sola.";
 "devicesJoinShows" = "%2$@ muestra a tu primer oficial. Sus tarjetas, tareas y conversación se quedan en esa %1$@.";
 "devicesJoinTryAgain" = "Volver a intentarlo";

@@ -256,6 +256,11 @@ export class IntegrationsService {
 
   constructor(private readonly options: IntegrationsServiceOptions) {}
 
+  /** Whether any connection is set up here, working or not, read without any secret's value. */
+  hasConnections(): boolean {
+    return this.options.bindings.some((binding) => binding.connections().length > 0);
+  }
+
   view(): IntegrationsView {
     const rows = this.rows();
     const connected = new Set(rows.map((row) => row.binding.kind));

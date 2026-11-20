@@ -154,6 +154,8 @@ export const RunMarkerSchema = z.object({
   pid: z.number().int().positive(),
   startedAt: z.string().datetime(),
   environment: RunEnvironmentSchema.optional(),
+  /** The run saw it was started by this app's own agent (`startedByAgent`); absent from earlier runs. */
+  agent: z.literal(true).optional(),
 });
 export type RunMarker = z.infer<typeof RunMarkerSchema>;
 export const RunStopSchema = RunMarkerSchema.extend({
@@ -181,9 +183,10 @@ export function markRunning(
   pid: number,
   now: Date,
   environment?: RunEnvironment | Promise<RunEnvironment>,
+  agent = false,
 ): (end?: RunEnd) => void {
   const path = join(dataDir, RUN_MARKER);
-  let marker: RunMarker = { pid, startedAt: now.toISOString() };
+  let marker: RunMarker = { pid, startedAt: now.toISOString(), ...(agent ? { agent } : {}) };
   let ended = false;
   if (environment instanceof Promise)
     void environment.then(
@@ -242,6 +245,37 @@ export function runningByCommand(
   if (typeof pid !== "number" || pid <= 0 || !alive(pid)) return false;
   const holder = lockHolder(dataDir);
   return holder === undefined || holder === pid;
+}
+
+/**
+ * Whether a window reopened on this folder keeps its starter while a grant
+ * waits in the work folder (docs/view.md, "Following along"): with no grant
+ * it always does, and with one only while the command running here is the
+ * one this app's own agent started, so following along stops that command
+ * and never one the person started by hand.
+ */
+export function keepsStarterBesideGrant(
+  dataDir: string,
+  grant: boolean,
+  alive: (pid: number) => boolean = processAlive,
+): boolean {
+  return !grant || runByOwnAgent(dataDir, alive);
+}
+
+/** Whether the command running on this folder now says this app's own agent started it. */
+export function runByOwnAgent(
+  dataDir: string,
+  alive: (pid: number) => boolean = processAlive,
+): boolean {
+  if (!runningByCommand(dataDir, alive)) return false;
+  try {
+    const marker = JSON.parse(
+      readFileSync(join(dataDir, RUN_MARKER), "utf8"),
+    ) as Partial<RunMarker>;
+    return marker.agent === true;
+  } catch {
+    return false;
+  }
 }
 
 /**

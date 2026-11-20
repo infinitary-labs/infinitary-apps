@@ -177,6 +177,7 @@ Under the computers on this network, after a `--line-1` hairline, the question l
   Cancel closes the form and changes nothing.
   Success still closes the form.
   The field, Try again, Cancel and the two other ways are reached with Tab.
+  A Windows home adds no computer by its address: there + A computer opens the two other ways alone, as before, with no address form and no computers on this network.
   A computer whose user runs another first mate's work asks once in an aside of the same shape, with a danger "Leave it and add" and a focused ghost "Cancel" (`AddAMac.prompt.md`, "Another first mate's Mac").
 
 **+ Running as another user** opens the command panel for a user on this computer at once.

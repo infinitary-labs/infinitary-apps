@@ -79,7 +79,7 @@ import type {
   IntegrationsView,
 } from "./integrations";
 import type { AppInfo, InvokeResponse, RecordedKey } from "./ipc";
-import type { JoinAtAnswer, JoinAtOptions, SetUpHere } from "./joinByAddress";
+import type { JoinAtAnswer, JoinAtOptions, SetUpHere, SetUpReads } from "./joinByAddress";
 import type { KeptJobsView, KeptJobView, KeptRemoveResult } from "./keptJobs";
 import type { MainCommandId, PanelCommand, PanelCommandId, ShellCommandId } from "./keyboard";
 import type { KeymapSnapshot, SavedKeymap } from "./keymap";
@@ -530,7 +530,7 @@ export type FirstmateApi = {
      * following along once that computer added this one, while nothing was
      * done here (`followed` false otherwise).
      */
-    setUpHere: (details: boolean) => Promise<SetUpHere>;
+    setUpHere: (reads: SetUpReads) => Promise<SetUpHere>;
     openSharing: () => Promise<{ ok: true }>;
     followAdded: () => Promise<{ followed: boolean }>;
     /**

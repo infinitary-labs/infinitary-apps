@@ -9,8 +9,11 @@ import { focusOn } from "./windowKeys";
  * round 3; docs/view.md, "Joining"; docs/keyboard.md, "A new feature"): on a Mac or an x64 Linux
  * computer the chip comes first and is reached with Tab, Enter opens its aside with this
  * computer's address and the wait for its first mate's computer, and Cancel returns to the chips.
- * This computer's account, addresses and SSH server are disposable stand-ins, so the journey reads
- * nothing of the runner's own network identity.
+ * This computer's account, addresses and SSH server are disposable stand-ins, and its clipboard a
+ * private one, so the journey reads nothing of the runner's own network identity or clipboard. It
+ * proves the window's side alone, on this computer's own SSH server: no first mate's computer adds
+ * this one, and the window following along after an add is the shell's own tests'
+ * (`src/main/shell.test.ts`, `src/main/shell.beside.test.ts`).
  */
 
 /** This computer as the journey stands it in: a local network address and a private one. */
@@ -39,6 +42,15 @@ test("set up from the first mate's computer is reached with Tab and opens this c
     const setUp = page.locator("[data-join-set-up-chip]");
     const paste = page.locator("[data-join-chip]");
     await expect(setUp).toHaveText(m.devicesJoinSetUpChip());
+    // A private clipboard, so the journey neither reads nor changes the runner's own.
+    await page.evaluate(() => {
+      const writes: string[] = [];
+      (window as unknown as { __copied: string[] }).__copied = writes;
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: { writeText: async (text: string) => void writes.push(text) },
+      });
+    });
     // The new chip sits before Paste its link: one Shift+Tab back from it.
     await focusOn(paste);
     await page.keyboard.press("Shift+Tab");
@@ -52,6 +64,16 @@ test("set up from the first mate's computer is reached with Tab and opens this c
     await expect(aside.locator("[data-join-set-up-address] code").first()).toHaveText(
       `${USER}@${PRIVATE}`,
     );
+    // Focus lands on the first address's Copy, and Enter copies that address.
+    const copy = aside
+      .locator("[data-join-set-up-address]")
+      .first()
+      .getByRole("button", { name: m.devicesJoinSetUpCopy(), exact: true });
+    await expect(copy).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { __copied: string[] }).__copied))
+      .toEqual([`${USER}@${PRIVATE}`]);
     // The stand-in server answered on loopback, so Remote Login reads on, and its key is the line
     // to compare, for the address it answered at.
     await expect(aside.locator('[data-join-remote-login="on"]')).toBeVisible();

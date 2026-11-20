@@ -119,9 +119,55 @@ describe("setUpHere", () => {
       addresses: () => {
         throw new Error("read an address");
       },
-      eligibilityOnly: true,
+      reads: "offered",
     });
     expect(here).toMatchObject({ offered: true, user: null, privateAddress: null, line: null });
+  });
+
+  it("gives the account and addresses without waiting for a key", async () => {
+    const here = await setUpHere({
+      system: "Darwin",
+      arch: "arm64",
+      platform: "darwin",
+      hostKey: () => new Promise<never>(() => undefined),
+      names,
+      addresses,
+      user: "sam",
+      reads: "addresses",
+    });
+    expect(here).toMatchObject({
+      user: "sam",
+      privateAddress: "100.86.12.40",
+      localName: "sams-mac-mini.local",
+      remoteLogin: "unknown",
+      line: null,
+    });
+  });
+
+  it("reads Remote Login on where the address shown answers with a key though loopback refuses", async () => {
+    const here = await setUpHere({
+      system: "Darwin",
+      arch: "arm64",
+      platform: "darwin",
+      // An SSH server listening on the private network address alone.
+      hostKey: async (host) => (host === "127.0.0.1" ? { refusal: "remote-login-off" } : KEY),
+      names,
+      addresses,
+      user: "sam",
+    });
+    expect(here).toMatchObject({ remoteLogin: "on", line: KEY.line, lineAt: "100.86.12.40" });
+    // Loopback refused but the address shown cannot tell: not off.
+    const unsure = await setUpHere({
+      system: "Darwin",
+      arch: "arm64",
+      platform: "darwin",
+      hostKey: async (host) =>
+        host === "127.0.0.1" ? { refusal: "remote-login-off" } : { refusal: "unreachable" },
+      names,
+      addresses,
+      user: "sam",
+    });
+    expect(unsure.remoteLogin).toBe("unknown");
   });
 
   it("says Remote Login is off when nothing answers, and unknown when it cannot tell", async () => {

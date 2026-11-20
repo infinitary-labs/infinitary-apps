@@ -138,8 +138,8 @@ export function registerIpc(options: IpcOptions): void {
   // Set up from your first mate's computer, at the first launch (docs/view.md, "Joining").
   // A development or end-to-end run reads its own stand-ins; an installed app reads none.
   const setUpRead = setUpStandIns(readStandIns(host.app.packaged, process.env));
-  handleInvoke("inf:devices:set-up-here", rendererSource, (details) =>
-    setUpHere({ ...setUpRead, eligibilityOnly: !details }),
+  handleInvoke("inf:devices:set-up-here", rendererSource, (_event, reads) =>
+    setUpHere({ ...setUpRead, reads }),
   );
   handleInvoke("inf:devices:open-sharing", rendererSource, async () => {
     if (hostPlatform() === "darwin") await host.openExternal(SHARING_SETTINGS_URL);

@@ -82,8 +82,9 @@ function OtherWays({
  * worker's package update draws the same form with its own words and neither.
  */
 export function AddressQuestion(props: DevicesTabViewProps) {
-  // A Windows PC's first mate adds no computer by its address: only the link and the command.
-  if (!props.packageUpdate && props.addresses?.addsByAddress === false)
+  // A Windows PC's first mate adds no computer by its address: only the link and the command,
+  // which work from every home, as while the home has not yet said whether it does.
+  if (!props.packageUpdate && (!props.addresses || props.addresses.addsByAddress === false))
     return (
       <div className="fm-devices-aside" data-device-address-question="">
         <OtherWays {...props} alone />

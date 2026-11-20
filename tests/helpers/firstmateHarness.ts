@@ -357,6 +357,8 @@ export function setup(
     machines?: CrewMachines;
     /** The captain's integrations, over this setup's supervisor (docs/integrations.md). */
     integrations?: (supervisor: CrewSupervisor) => IntegrationsService;
+    /** The home's system, whose words an offered card and a served line follow; a Mac's unless named. */
+    platform?: string;
   } = {},
 ) {
   const paths = appPathsFor(scratchDir("infinitary-agent-"));
@@ -464,6 +466,7 @@ export function setup(
       ...(knowledge ? { knowledge } : {}),
       ...(options.scheduler ? { scheduler: options.scheduler } : {}),
       ...(options.forges ? { forges: options.forges } : {}),
+      ...(options.platform ? { platform: options.platform } : {}),
       ...(options.integrations ? { integrations: options.integrations(supervisor) } : {}),
       flagDuplicate: (input) => supervisor.flagDuplicate(input),
       broadcastEvent: (event) => events.push(event),

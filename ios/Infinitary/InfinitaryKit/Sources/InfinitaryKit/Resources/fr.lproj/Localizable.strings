@@ -791,6 +791,7 @@
 "devicesJoinSetUpCopy" = "Copier";
 "devicesJoinSetUpCopyFailed" = "Impossible de copier l’adresse. Sélectionnez-la et copiez-la vous-même.";
 "devicesJoinSetUpHead" = "Ajoutez cet ordinateur depuis l’ordinateur de votre second";
+"devicesJoinSetUpKept" = "Quelque chose est déjà configuré ici : cette fenêtre garde son propre second une fois que l’ordinateur de votre second a ajouté celui-ci. Rejoignez-le ensuite avec Coller son lien ou Rejoindre par son adresse.";
 "devicesJoinSetUpLocal" = "Sur le même réseau seulement :";
 "devicesJoinSetUpOff" = "La Session à distance est désactivée ici. Activez-la, puis ajoutez cet ordinateur.";
 "devicesJoinSetUpOn" = "La Session à distance est activée ici.";
@@ -799,6 +800,7 @@
 "devicesJoinSetUpSshOff" = "Son serveur SSH est désactivé ici. Activez-le, puis ajoutez cet ordinateur.";
 "devicesJoinSetUpSshOn" = "Son serveur SSH est activé ici.";
 "devicesJoinSetUpSub" = "Là-bas, choisissez + Un ordinateur dans Réglages → Appareils, ou demandez-le à votre second, et tapez cette adresse. Il tient ensuite cet ordinateur à jour et le joint de lui-même.";
+"devicesJoinSetUpUnread" = "L’adresse de cet ordinateur est encore introuvable. Vérifiez qu’il est connecté à un réseau ; Infinitary cherche à nouveau dans un instant.";
 "devicesJoinSetUpWaiting" = "En attente que l’ordinateur de votre second ajoute celui-ci. Cette fenêtre ouvre ensuite votre second d’elle-même.";
 "devicesJoinShows" = "%2$@ affiche votre second. Ses cartes, ses tâches et sa conversation restent sur cet %1$@.";
 "devicesJoinTryAgain" = "Réessayer";

@@ -35,6 +35,7 @@ import {
   joinAtOptionsSchema,
   linkAtAnswerSchema,
   setUpHereSchema,
+  setUpReadsSchema,
 } from "../joinByAddress";
 import { nearbyMacsViewSchema } from "../nearbyMacs";
 import { phonePushAnswerSchema, phonePushRegistrationSchema } from "../phonePush";
@@ -620,8 +621,8 @@ export const deviceChannels = {
   "inf:devices:set-up-here": {
     effect: "read",
     surface: "host",
-    // Details: the account, addresses and keys too, read only while the aside is open.
-    request: z.tuple([z.boolean()]),
+    // The account and addresses, then the keys, read only while the aside is open.
+    request: z.tuple([setUpReadsSchema]),
     response: setUpHereSchema,
   },
   "inf:devices:open-sharing": {

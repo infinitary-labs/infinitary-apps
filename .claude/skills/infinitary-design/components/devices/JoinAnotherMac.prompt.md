@@ -26,7 +26,10 @@ It then keeps this computer updated and reaches it by itself."
 This computer's address follows in a mono box with a small secondary "Copy": the user Infinitary runs as at this computer's private network address, such as `sam@100.86.12.40`, with the `--text-sm --fg-2` line "Its private network address, such as Tailscale's, reaches it wherever both computers are on it."
 Under it, "On the same network only:" with the local name the nearby list fills on the other computer, `sam@Sams-Mac-mini.local`, and its own "Copy".
 With no private network address, the box holds the local name alone; the box follows this computer's addresses while the aside is open.
-Then one line says whether Remote Login is on here (on Linux, its SSH server), read without an administrator: an `ok` dot and "Remote Login is on here.", or a `warn` dot and "Remote Login is off here.
+The addresses show at once, before the Remote Login line, which follows when this computer's SSH server has answered.
+With no address found yet, a `--warn` line says "Could not find this computer's address yet.
+Check that it is on a network; Infinitary looks again in a moment."
+Then one line says whether Remote Login is on here (on Linux, its SSH server), read without an administrator, on this computer itself or at the address shown first: an `ok` dot and "Remote Login is on here.", or a `warn` dot and "Remote Login is off here.
 Turn it on, then add this computer.", with a small secondary "Open Sharing settings" on a Mac.
 While it is on, the key line the other computer's question shows follows in mono, under "Your first mate's computer asks you to compare this line."
 "Waiting for your first mate's computer to add this one.
@@ -36,7 +39,9 @@ Every control is reached with Tab and draws the focus ring.
 **Following along.**
 Once the first mate's computer adds this one by its address, this window becomes a view of that first mate without a relaunch, while the stage still carries the first-launch gate and nobody has given this computer's own first mate a task.
 The empty first mate this window started stops, as a pasted link's join stops it; a window opened again while that one still runs becomes the view the same way.
-A computer whose own first mate has a subscription or a turn stays as it is.
+A computer whose own first mate has a subscription, a connection, a project or a turn stays as it is, and the wait line says instead "Something is already set up here, so this window keeps its own first mate once your first mate's computer adds this one.
+Then join it with Paste its link or Join by its address."
+A window beside a first mate started by hand with a command stays beside it; only one its own run agent started follows along.
 
 **Paste.**
 The chip opens the stage's sign-in aside (framed `--line-1`, `--radius-m`, `--bg-1`, 560px): "Paste the link from Infinitary on your other computer" at `--text-base --fg-1` weight 500, then the `--text-sm --fg-2` line "You make it there, in Settings → Devices, or by asking your first mate."

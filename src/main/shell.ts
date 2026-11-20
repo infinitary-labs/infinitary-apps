@@ -486,6 +486,11 @@ export class Shell {
    */
   async followAdded(): Promise<boolean> {
     if (!this.joinable() || this.switching || !this.options.work) return false;
+    // Beside a command, only one this window's starter owns stops by itself.
+    if (this.mode?.kind === "beside" && !this.mode.beside.ownsCommand) return false;
+    // Only a grant waiting asks the first mate anything: most polls find none.
+    if (!windowFromWork(this.options.work.dataDir, this.options.joined.leftDeviceId()))
+      return false;
     const firstRun = await this.dispatch("inf:app:first-run", []).catch(() => null);
     // Only a profile with nothing done here: no turn, sign-in, connection,
     // ask, task, card or project (`FirstRunView.untouched`).

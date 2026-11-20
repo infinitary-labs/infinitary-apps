@@ -67,10 +67,11 @@ Nothing reaches the feed or the record until the join itself.
 ### Set up from your first mate's computer
 
 "+ Set up from your first mate's computer" opens an aside with what the person types or compares on that computer to add this one by its address, which then keeps this one updated and reaches it by itself (INF-4931, design skill `components/devices/JoinAnotherMac`).
-`inf:devices:set-up-here` reads it all without an administrator (`setUpHere`, `src/core/devices/setUpHere.ts`), and the aside asks it again every few seconds while it is open, so it follows this computer's addresses.
+`inf:devices:set-up-here` reads it all without an administrator (`setUpHere`, `src/core/devices/setUpHere.ts`): the chip asks only whether the way is offered here, and the open aside asks the account and addresses, which answer at once, and the keys beside them, again every few seconds while it is open, so it follows this computer's addresses.
+When no address can be read yet, the aside says "Could not find this computer's address yet." and reads again.
 
 - **The address**: the account Infinitary runs as at this computer's private network address (100.64.0.0/10, such as Tailscale's) first, with Copy, and "Its private network address, such as Tailscale's, reaches it wherever both computers are on it."; then "On the same network only:" with its local network name, the one the nearby list fills on the other computer, and its own Copy.
-- **Remote Login**: whether this computer's SSH server answers on loopback with a key (`readOwnHostKey`), so "Remote Login is on here." or "Remote Login is off here.
+- **Remote Login**: whether this computer's SSH server answers with a key, on loopback or at the address shown first (`readOwnHostKey`), so a server that listens on that address alone reads on; it reads off only where both refuse the connection, and says nothing while it cannot tell, so "Remote Login is on here." or "Remote Login is off here.
   Turn it on, then add this computer.", with Open Sharing settings on a Mac (`inf:devices:open-sharing`); on Linux it names its SSH server.
 - **The check line**: while Remote Login is on, the line the other computer's question shows, under "Your first mate's computer asks you to compare this line."
 - **The wait**: "Waiting for your first mate's computer to add this one.
@@ -80,7 +81,10 @@ Nothing reaches the feed or the record until the join itself.
 
 While the first-launch group is up, the window asks `inf:devices:follow-added` every few seconds, and the shell itself decides (`Shell.followAdded`).
 When nothing was done on this computer - the gate is still up, with no turn, no saved sign-in or connection, and no ask, task, card or project (`inf:app:first-run`'s `untouched`, `FirstRunService`) - and the work folder holds a grant an address add left there (`windowFromWork`), the window becomes a view of that home with no relaunch: the empty first mate beside it stops, as a pasted link's join stops it, and every window starts over as the other computer's.
-A window opened beside a command's first mate that it may join follows the same way (`joinable`), and so does one reopened while the command it started still runs: the grant in the work folder does not take that command's starter from it.
+A window opened beside a command's first mate that it may join follows the same way (`joinable`), but only when the window's own run agent started that command (`ownsCommand`; the run marker's `agent`, `startedByAgent`): a command started by hand in Terminal keeps its own first mate, and the window stays beside it.
+A window reopened while the command its run agent started still runs keeps that command's starter after an add, so it can stop the command when it follows along (`keepsStarterBesideGrant`, `src/main/runCommand.ts`).
+The window asks its first mate whether anything was done only once a grant is waiting in the work folder, so most of its asks read nothing of the profile.
+Where something was done, its status line says the window keeps its own first mate once the add is done, and names Paste its link and Join by its address to join after it.
 A computer whose own first mate has a sign-in, a connection, a project or a turn stays as it is, even while its gate is up.
 
 ## A Mac that runs work

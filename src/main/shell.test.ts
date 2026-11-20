@@ -1046,8 +1046,13 @@ describe("a Mac that controls another and runs its work", () => {
       channel === "inf:app:first-run" ? firstRun : { ownCore: channel }) as never);
     await mini.shell.start();
     expect(mini.shell.thisMac().role).toBe("home");
-    // Nothing has been added yet: it stays this computer's own first launch.
+    const asked = () =>
+      mini.own.dispatch.mock.calls.filter(([channel]) => channel === "inf:app:first-run").length;
+    const before = asked();
+    // Nothing has been added yet: it stays this computer's own first launch, and a poll with no
+    // grant waiting asks its first mate nothing.
     expect(await mini.shell.followAdded()).toBe(false);
+    expect(asked()).toBe(before);
     expect(mini.own.dispose).not.toHaveBeenCalled();
 
     // The home sets this computer up over SSH, which leaves the grant in its work folder.

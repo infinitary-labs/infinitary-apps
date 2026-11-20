@@ -791,6 +791,7 @@
 "devicesJoinSetUpCopy" = "コピー";
 "devicesJoinSetUpCopyFailed" = "アドレスをコピーできませんでした。選択して自分でコピーしてください。";
 "devicesJoinSetUpHead" = "一等航海士のコンピューターからこのコンピューターを追加";
+"devicesJoinSetUpKept" = "このコンピューターではすでに設定が行われているため、一等航海士のコンピューターがこのコンピューターを追加しても、このウインドウは自分の一等航海士のままです。その後は「リンクを貼り付ける」か「アドレスで参加」で参加してください。";
 "devicesJoinSetUpLocal" = "同じネットワーク内のみ:";
 "devicesJoinSetUpOff" = "ここでは「リモートログイン」がオフです。オンにしてからこのコンピューターを追加してください。";
 "devicesJoinSetUpOn" = "ここでは「リモートログイン」がオンです。";
@@ -799,6 +800,7 @@
 "devicesJoinSetUpSshOff" = "ここでは SSH サーバーがオフです。オンにしてからこのコンピューターを追加してください。";
 "devicesJoinSetUpSshOn" = "ここでは SSH サーバーがオンです。";
 "devicesJoinSetUpSub" = "そちらの「設定 → デバイス」で「+ コンピューター」を選ぶか、一等航海士に頼んで、このアドレスを入力してください。その後はこのコンピューターを自動で最新に保ち、自分で接続します。";
+"devicesJoinSetUpUnread" = "このコンピューターのアドレスがまだ見つかりません。ネットワークにつながっているか確認してください。Infinitary はすぐにもう一度探します。";
 "devicesJoinSetUpWaiting" = "一等航海士のコンピューターがこのコンピューターを追加するのを待っています。その後、このウインドウが自動で一等航海士を開きます。";
 "devicesJoinShows" = "%2$@ に一等航海士が表示されます。カード、タスク、会話はその %1$@ に残ります。";
 "devicesJoinTryAgain" = "もう一度試す";

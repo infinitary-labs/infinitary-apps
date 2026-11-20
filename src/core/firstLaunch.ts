@@ -60,6 +60,8 @@ export function startFirstLaunch(options: {
   >;
   cards: Pick<CardStore, "hasHistory">;
   repos: Pick<RepoRegistry, "list">;
+  /** A project host's sign-in, another integration or a paired device is saved here, read without any value. */
+  hasConnections: () => boolean;
   supervisor: {
     cards: Pick<CrewSupervisor["cards"], "addRecordedFirstmateNote" | "has" | "takeDown">;
   };
@@ -120,7 +122,7 @@ export function startFirstLaunch(options: {
       }),
     hasActivity: () =>
       hasPriorActivity({ tasks: options.tasks, cards: options.cards, repos: options.repos }),
-    hasAccounts: () => vault.list().length > 0,
+    hasConnections: () => vault.list().length > 0 || options.hasConnections(),
     ...crewFacts(options.tasks),
     createWelcome: (consume) => {
       // The welcome takes no reply - the message box under it is where to

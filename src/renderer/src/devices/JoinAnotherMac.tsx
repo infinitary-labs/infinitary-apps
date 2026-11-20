@@ -21,6 +21,7 @@ import {
 } from "@shared/remoteLogin";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
+import { useShellStore } from "../app/store";
 import { Button, Input, MicroLabel, StatusDot } from "../design";
 import { thisDesktop } from "../design/core/desktop";
 import { focusWithRing } from "../design/focus";
@@ -119,10 +120,13 @@ const SET_UP_RENEW_MS = 5_000;
  * Following along at first launch (docs/view.md, "Joining"): while this
  * group is up, the window asks the shell now and then whether its first
  * mate's computer added this one by its address; the shell itself decides,
- * and on a yes the window starts over as that first mate's.
+ * and on a yes the window starts over as that first mate's. Only while
+ * nothing was done here (`FirstRunView.untouched`), the one profile the
+ * shell follows along from.
  */
-function useFollowAdded(): void {
+function useFollowAdded(can: boolean): void {
   useEffect(() => {
+    if (!can) return;
     let live = true;
     const ask = () => {
       if (live) void window.infinitary.devices.followAdded().catch(() => undefined);
@@ -133,7 +137,7 @@ function useFollowAdded(): void {
       live = false;
       clearInterval(every);
     };
-  }, []);
+  }, [can]);
 }
 
 /**
@@ -145,7 +149,7 @@ function useSetUpOffered(): boolean {
   useEffect(() => {
     let live = true;
     void window.infinitary.devices
-      .setUpHere(false)
+      .setUpHere("offered")
       .then((read) => {
         if (live) setOffered(read.offered);
       })
@@ -159,22 +163,39 @@ function useSetUpOffered(): boolean {
 
 /**
  * This computer as its first mate's computer reaches it, read only while
- * the Set up aside is open: one read at a time, the next a moment after the
- * last answered, so an older answer never replaces a newer one.
+ * the Set up aside is open: the account and addresses at once, then the
+ * keys, one read at a time, the next a moment after the last answered, so
+ * an older answer never replaces a newer one. `unread` says the addresses
+ * could not be read yet; the next read tries again.
  */
-function useSetUpHere(open: boolean): SetUpHere | null {
+function useSetUpHere(open: boolean): { here: SetUpHere | null; unread: boolean } {
   const [here, setHere] = useState<SetUpHere | null>(null);
+  const [unread, setUnread] = useState(false);
   useEffect(() => {
     if (!open) return;
     let live = true;
+    let keyed = false;
     let next: ReturnType<typeof setTimeout> | undefined;
+    void window.infinitary.devices
+      .setUpHere("addresses")
+      .then((read) => {
+        if (live && !keyed) setHere(read);
+      })
+      .catch(() => {
+        if (live && !keyed) setUnread(true);
+      });
     const read = () =>
       void window.infinitary.devices
-        .setUpHere(true)
+        .setUpHere("keys")
         .then((read) => {
-          if (live) setHere(read);
+          if (!live) return;
+          keyed = true;
+          setHere(read);
+          setUnread(false);
         })
-        .catch(() => undefined)
+        .catch(() => {
+          if (live) setUnread(true);
+        })
         .finally(() => {
           if (live) next = setTimeout(read, SET_UP_RENEW_MS);
         });
@@ -183,9 +204,10 @@ function useSetUpHere(open: boolean): SetUpHere | null {
       live = false;
       clearTimeout(next);
       setHere(null);
+      setUnread(false);
     };
   }, [open]);
-  return here;
+  return { here, unread };
 }
 
 export type JoinAnotherMacProps = {
@@ -237,8 +259,9 @@ export function JoinAnotherMac({ onOpenChange, note, join, byAddress }: JoinAnot
   const asked = useRef("");
   const nearby = useNearby(step.step === "address");
   const setUpOffered = useSetUpOffered();
-  const here = useSetUpHere(step.step === "set-up");
-  useFollowAdded();
+  const { here, unread } = useSetUpHere(step.step === "set-up");
+  const followsAlong = useShellStore((s) => s.firstRun?.untouched === true);
+  useFollowAdded(followsAlong);
   const setStep = (next: Step) => {
     setStepState(next);
     onOpenChange?.(next.step !== "closed");
@@ -326,7 +349,9 @@ export function JoinAnotherMac({ onOpenChange, note, join, byAddress }: JoinAnot
       onValue={setValue}
       onOpen={() => setStep({ step: "paste", notALink: false })}
       here={here}
+      unread={unread}
       setUpOffered={setUpOffered}
+      followsAlong={followsAlong}
       onOpenSetUp={() => setStep({ step: "set-up" })}
       onOpenSharing={() => void window.infinitary.devices.openSharing().catch(() => undefined)}
       onContinue={toConfirm}
@@ -355,8 +380,12 @@ export type JoinAnotherMacViewProps = {
   step: Step;
   /** This computer as its first mate's computer reaches it; null until read. */
   here?: SetUpHere | null;
+  /** This computer's addresses could not be read yet; the next read tries again. */
+  unread?: boolean;
   /** Set up from your first mate's computer leads the chips: the address way sets this computer up. */
   setUpOffered?: boolean;
+  /** This window opens the first mate once its computer adds this one: nothing was done here yet. */
+  followsAlong?: boolean;
   onOpenSetUp?: () => void;
   onOpenSharing?: () => void;
   /** A line under the chip, while it is closed: which Mac this app last left. */
@@ -640,6 +669,11 @@ function SetUpStep(props: JoinAnotherMacViewProps & { here: SetUpHere | null }) 
           <CopyLine name="local" text={at(here.localName)} autoFocus={first === "local"} />
         </>
       )}
+      {((props.unread && !here) || (here && !here.privateAddress && !here.localName)) && (
+        <p className="fm-join-sub" role="alert" data-join-set-up-unread="">
+          {m.devicesJoinSetUpUnread()}
+        </p>
+      )}
       {here && here.remoteLogin !== "unknown" && (
         <div className="fm-join-state" data-join-remote-login={here.remoteLogin}>
           <StatusDot
@@ -666,7 +700,7 @@ function SetUpStep(props: JoinAnotherMacViewProps & { here: SetUpHere | null }) 
         </>
       )}
       <p className="fm-join-sub fm-join-waiting" role="status">
-        {m.devicesJoinSetUpWaiting()}
+        {props.followsAlong ? m.devicesJoinSetUpWaiting() : m.devicesJoinSetUpKept()}
       </p>
       <div className="fm-join-buttons">
         <Button

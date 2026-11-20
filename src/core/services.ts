@@ -1645,6 +1645,7 @@ export async function createServices(
     tasks,
     cards: cardStore,
     repos,
+    hasConnections: () => integrations.hasConnections() || devices.list().length > 0,
     supervisor,
     sharing,
     now: ticker.now,

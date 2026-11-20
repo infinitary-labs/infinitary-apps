@@ -1499,6 +1499,8 @@ The tab after Usage, built to the agreed design in the design skill's `component
   The list is one Tab stop: ↑, ↓, Home and End move in it, ↓ in the field reaches it and ↑ from its first row goes back, and Enter or a click fills the field with the user name selected.
   Under the list, a hairline and "Can't turn on Remote Login there?" lead the two other ways, each a secondary button with when to use it beside it and each reached with Tab: "Paste a link into Infinitary there", "You're at that computer, or it is a Windows PC.", which opens the link panel for a Mac (`mac`); and "Run a command there", "You can type in Terminal there.", which opens the command panel for another Mac.
   Updating a Linux computer to Infinitary's package uses the same form with its own words and no other ways (above, "The Ubuntu package").
+  A Windows home adds no computer by its address (`addsByAddress: false` on `inf:devices:addresses`), so there + A computer opens the two other ways alone, as before, and never looks for the computers nearby; until that answer arrives it shows neither the form nor the ways.
+  A view on a version from before the address form is never sent `addsByAddress`, on the read or its push (`device-adds-by-address`).
   While it is reached and set up, a row stands in the list with an idle dot, the address, and "Reaching sam@mini.local with your SSH key…", then the Mac's own name and "Preparing Infinitary for Mac mini…", "Sending Infinitary to Mac mini… 42.3 MB sent" with the count moving (above, "How far the copy has gone"), and "Starting Infinitary on Mac mini…".
   A refusal keeps the address in the field and shows its two lines in that aside, with Try again and Cancel.
   A Mac whose user runs another first mate's work asks once under the foot, with Cancel focused, before anything is sent there (above, "Another first mate's Mac").
@@ -1521,6 +1523,7 @@ The tab after Usage, built to the agreed design in the design skill's `component
 
 Asked to add a computer without being told which way, the first mate never picks one for the captain: the `device-invite` line tells it to ask the captain first on one decision card of its own, with every way as an option - the computer's address, a link, a command, or another user on this computer - and the address recommended, because this computer then keeps the other one updated and reaches it by itself.
 It says a link suits a computer the captain sits at or a Windows PC, and a command one where they can type in Terminal but Remote Login is off.
+On a Windows home its line leaves the address out and recommends a link instead (`ActionLine.lineOn`, `src/shared/actions.ts`).
 Asked to connect a Mac, or to remove one, the first mate calls `app_change`, and the host files one card for the captain from typed facts, never the first mate's words (`HandoverOffer`, `src/shared/actions.ts`):
 
 | Asked | The card | Its button |

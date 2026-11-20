@@ -6,6 +6,7 @@ import { scratchDir } from "../../tests/helpers/scratchDirs";
 import {
   askLoginShellEarly,
   followInstalledProgram,
+  keepsStarterBesideGrant,
   lockHolder,
   markRunning,
   programIdentity,
@@ -14,6 +15,7 @@ import {
   runOptions,
   stopRunningCommand,
 } from "./runCommand";
+import { startedByAgent } from "./runEnvironment";
 
 /**
  * Infinitary started by a command (docs/run.md; INF-1228's approved plan,
@@ -94,6 +96,55 @@ describe("a window opened beside a run", () => {
     expect(signalled).toEqual([4242]);
     expect(stopRunningCommand(dataDir, () => false, signal)).toBe(false);
     expect(signalled).toEqual([4242]);
+  });
+
+  // The review of INF-4930: a window reopened while a grant waits in the work folder keeps its
+  // starter, and follows along stopping the command, only beside the command its own agent started.
+  it("keeps its starter beside a grant only while the command running is its own agent's", () => {
+    const label = "com.infinitary.app.run";
+    const runs = (agent: boolean) => {
+      const dataDir = scratchDir("infinitary-run-marker-");
+      markRunning(dataDir, 4242, new Date("2026-10-25T17:00:00Z"), undefined, agent);
+      symlinkSync(`${hostname()}-4242`, join(dataDir, "SingletonLock"));
+      return dataDir;
+    };
+    const alive = (pid: number) => pid === 4242;
+    // launchd names the job it started; a terminal names its own.
+    const byAgent = startedByAgent({
+      platform: "darwin",
+      env: { XPC_SERVICE_NAME: label },
+      label,
+      cgroup: () => "",
+    });
+    const byHand = startedByAgent({
+      platform: "darwin",
+      env: { XPC_SERVICE_NAME: "application.com.apple.Terminal.1234" },
+      label,
+      cgroup: () => "",
+    });
+    expect([byAgent, byHand]).toEqual([true, false]);
+    // systemd keeps a user service's process in that unit's group.
+    expect(
+      startedByAgent({
+        platform: "linux",
+        env: {},
+        label,
+        cgroup: () =>
+          `0::/user.slice/user-1000.slice/user@1000.service/app.slice/${label}.service\n`,
+      }),
+    ).toBe(true);
+    expect(
+      startedByAgent({
+        platform: "linux",
+        env: {},
+        label,
+        cgroup: () => "0::/user.slice/user-1000.slice/session-2.scope\n",
+      }),
+    ).toBe(false);
+    expect(keepsStarterBesideGrant(runs(byAgent), true, alive)).toBe(true);
+    expect(keepsStarterBesideGrant(runs(byHand), true, alive)).toBe(false);
+    // With no grant waiting, the window keeps its starter as it always has.
+    expect(keepsStarterBesideGrant(runs(byHand), false, alive)).toBe(true);
   });
 
   it("reads a note a crashed run left as nothing running", () => {

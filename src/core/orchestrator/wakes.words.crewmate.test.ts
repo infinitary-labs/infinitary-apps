@@ -1040,6 +1040,24 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         "[fm-op] your merge card merged PR #1061 at 4be7c1d90a2f. The task stays open because its split is still to come; judge what comes next from it and your remaining work. Continue from that result. Dropping this task does not close that pull request. Carry on with the split.",
     },
     {
+      // INF-5396 finding 1: the merge put up the required actions on the app's own cards.
+      name: "merged with required actions asked",
+      wake: {
+        facts: {
+          kind: "merge-continued",
+          ok: true,
+          change: "PR #1061",
+          asked: [
+            { key: "INF-5309", title: "Install the new build" },
+            { key: "INF-5310", title: "Rebuild the setup" },
+          ],
+          text: "Carry on.",
+        },
+      },
+      words:
+        '[fm-op] your merge card merged PR #1061. The task stays open. Continue from that result. Dropping this task does not close that pull request. With this merge the app put up its own card asking the captain for each required action: INF-5309 "Install the new build", INF-5310 "Rebuild the setup". Put up no card of your own for them and do not ask the captain for them again. Carry on.',
+    },
+    {
       name: "merged bare",
       wake: { facts: { kind: "merge-continued", ok: true, change: "PR #1061", text: "Carry on." } },
       words:

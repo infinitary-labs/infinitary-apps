@@ -262,6 +262,8 @@ export async function approved(
     routedModel?: import("./crewHarness").SetupExtras["routedModel"];
     reviewerChooser?: import("./crewHarness").SetupExtras["reviewerChooser"];
     reviewerModels?: import("./crewHarness").SetupExtras["reviewerModels"];
+    /** What the merge card asks the captain to do after the merge (INF-5396 finding 1). */
+    requiredActions?: import("@shared/requiredActions").RequiredAction[];
     /**
      * Save the task's change story before its card goes up, through the
      * app's own story service: the hook seeds it and answers the revision
@@ -362,7 +364,7 @@ export async function approved(
   const emit = (title: string) =>
     harness.specs[0]?.onCard?.({
       ...(presentationRevision === undefined ? {} : { presentationRevision }),
-      requiredActions: [],
+      requiredActions: where.requiredActions ?? [],
       title,
       body: completionBody("<p>The PR is ready.</p><p>CI is green on the tested head.</p>"),
       actions: review

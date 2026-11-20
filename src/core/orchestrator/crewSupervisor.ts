@@ -449,6 +449,14 @@ export class CrewSupervisor {
         if (outcome.ok) void this.watch.sweepGates(this.now());
         const still = this.options.tasks.get(taskId);
         if (!still || TaskService.isClosed(still)) return;
+        // The required actions this merge put up on the app's own cards
+        // (finishContinued), named so the crewmate asks none again (INF-5396).
+        const asked = outcome.ok
+          ? this.options.tasks
+              .listWithRequirementFrom(taskId, [])
+              .filter((row) => row.status === "open" && row.delivery?.captainAction)
+              .map((row) => ({ key: row.key, title: row.title }))
+          : [];
         // A host result is not new captain guidance about the kept approval.
         void this.steer
           .steerInternal(
@@ -469,6 +477,7 @@ export class CrewSupervisor {
                   ? { head: outcome.receipt?.head ?? review?.headSha }
                   : {}),
                 ...(outcome.stillOpen ? { open: outcome.stillOpen } : {}),
+                ...(asked.length > 0 ? { asked } : {}),
                 text: outcome.text,
               },
               ...(outcome.ok && review ? { once: `merge-continued:${review.id}` } : {}),

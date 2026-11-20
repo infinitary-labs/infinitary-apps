@@ -184,6 +184,38 @@ describe("CrewSupervisor", () => {
       expect(h.crewmate.promptCalls.join("\n")).toContain("The task stays open");
     });
 
+    // INF-5396 finding 1, the captain: "why were there two identical asks for
+    // each of those things?" The merge puts up the change's required actions
+    // as the app's own cards, so the crewmate it continues hears which ones.
+    it("names the required actions the app put up at a continuing merge, so its crewmate asks none again", async () => {
+      const h = await approved({
+        referenced: true,
+        requiredActions: [
+          {
+            id: "rebuild",
+            target: "the computer",
+            title: "Rebuild the setup",
+            consequence: "The new setup is not running yet.",
+            instructions: ["Rebuild using the updated files."],
+            criterion: "The rebuild succeeds.",
+            prerequisites: [],
+            completion: { kind: "manual", label: "The rebuild succeeded" },
+          },
+        ],
+      });
+      h.supervisor.cardActions.act(h.card.id, "merge");
+      await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
+      const asked = h.tasks.listOpen().find((row) => row.delivery?.captainAction);
+      expect(asked?.delivery?.captainAction?.cardId).toBeDefined();
+      await vi.waitFor(() =>
+        expect(h.crewmate.promptCalls.join("\n")).toContain("The task stays open"),
+      );
+      const wake = h.crewmate.promptCalls.find((call) => call.includes("The task stays open"));
+      expect(wake).toContain(`${asked?.key} "Rebuild the setup"`);
+      expect(wake).toContain("Put up no card of your own for them");
+      await h.supervisor.disposeAll();
+    });
+
     it("INF-1246 keeps an undeclared moved head unmerged and ends approval when the repair changes work", async () => {
       const h = await continued();
       h.forge.headSha = REPAIRED;

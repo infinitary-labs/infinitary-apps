@@ -14,18 +14,21 @@ export const MOCK_UPDATE_RESUME_REPORT =
   "I picked the work up again after the update and checked what had already happened first.";
 
 /**
- * Held open while the crewmate's conversation has no turn an update stopped;
- * once one carries it on, it reports.
+ * Held open while the crewmate's conversation has fewer than `resumes`
+ * turns an update stopped and carried on; once it has, it reports. A turn
+ * an update that did not finish stopped is carried on by the copy kept, and
+ * is held open again until the next.
  */
-export const updateResume: Scenario =
+export const updateResume =
+  (resumes: number): Scenario =>
   () =>
   ({ body, isFirstmate, wantsStream, hasToolResults }) => {
     if (isFirstmate || !wantsStream || !body.includes(UPDATE_RESUME_MARKER)) return undefined;
     if (hasToolResults) return { text: "Reported." };
-    const resumed = providerMessages(body).some(
+    const resumed = providerMessages(body).filter(
       (message) => message.role === "user" && message.text.includes(updateResumedWords()),
-    );
-    return resumed
+    ).length;
+    return resumed >= resumes
       ? { calls: [{ name: "report", args: { text: MOCK_UPDATE_RESUME_REPORT } }] }
       : { held: true };
   };

@@ -31,10 +31,15 @@ import { powershellPath, pressDialogButton, ps } from "./windowsMachine";
 
 /**
  * What the feed serves for the newer version's installer: the published
- * bytes, a builds file whose checksum is another file's, or a download that
- * stops partway.
+ * bytes, a builds file whose checksum is another file's, a download that
+ * stops partway, or, under the newer installer's name and with its own
+ * checksum, a Windows program that refuses the installer's arguments and
+ * exits with an error, as an installer that stopped does.
  */
-export type FeedMode = "published" | "wrong-checksum" | "interrupted";
+export type FeedMode = "published" | "wrong-checksum" | "interrupted" | "failing";
+
+/** The program the failing feed serves as the installer: Windows' own `where.exe`, which exits 2 on `--updated /S --force-run`. */
+const FAILING_INSTALLER = join(process.env.SystemRoot ?? "C:\\Windows", "System32", "where.exe");
 
 export type UpdateFeed = {
   mode: FeedMode;
@@ -69,6 +74,7 @@ export async function startUpdateFeed(options: {
   const published = sha256(file);
   // A real file's checksum, the older installer's, which the newer one's bytes never match.
   const other = sha256(join(options.installers, installerName(older)));
+  const served = () => (feed.mode === "failing" ? FAILING_INSTALLER : file);
   const feed: UpdateFeed = { mode: "published", asked: [], close: async () => {} };
   const builds = (): BuildsFile => ({
     schemaVersion: 1,
@@ -82,7 +88,12 @@ export async function startUpdateFeed(options: {
             x64: {
               [WINDOWS_INSTALLER]: {
                 url,
-                sha256: feed.mode === "wrong-checksum" ? other : published,
+                sha256:
+                  feed.mode === "wrong-checksum"
+                    ? other
+                    : feed.mode === "failing"
+                      ? sha256(FAILING_INSTALLER)
+                      : published,
               },
             },
           },
@@ -102,12 +113,12 @@ export async function startUpdateFeed(options: {
       response.writeHead(404).end();
       return;
     }
-    const size = statSync(file).size;
+    const size = statSync(served()).size;
     response.writeHead(200, {
       "Content-Type": "application/octet-stream",
       "Content-Length": size,
     });
-    const bytes = readFileSync(file);
+    const bytes = readFileSync(served());
     if (feed.mode === "interrupted") {
       // A connection that drops a quarter of the way through.
       response.write(bytes.subarray(0, Math.floor(size / 4)), () => response.destroy());

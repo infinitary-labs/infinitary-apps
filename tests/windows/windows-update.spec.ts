@@ -7,10 +7,18 @@ import { expect, type Page, test } from "@playwright/test";
 import { runLabelOf } from "@shared/codeNames";
 import type { TaskDetail } from "@shared/tasks";
 import type { UpdateChannel } from "@shared/update";
-import { UPDATE_WORDS, updateResumedWords } from "@shared/updateWords";
+import {
+  UPDATE_NOTICES,
+  UPDATE_WORDS,
+  updateResumedWords,
+  WINDOWS_HAND_OVER_WORDS,
+} from "@shared/updateWords";
 import { publicBuildsUrl } from "../../src/core/update/releaseSource";
 import { UPDATE_CHANNEL_MARKER } from "../../src/core/update/updateChannels";
-import { WINDOWS_UPDATES_FOLDER } from "../../src/core/update/windowsInstall";
+import {
+  WINDOWS_HAND_OVER_RESULT,
+  WINDOWS_UPDATES_FOLDER,
+} from "../../src/core/update/windowsInstall";
 import { GIT_FOR_WINDOWS } from "../../src/core/windowsGit";
 import { GIT_SETUP_WORDS } from "../../src/main/windowsGitSetup";
 import {
@@ -218,7 +226,9 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
     let signInBefore = "";
     let key = "";
     await test.step("the older copy's window starts the command, signs in, changes a setting and starts a task whose turn is still running", async () => {
-      provider = await startMockProvider({ scenarios: [updateResume] });
+      // Held through the update the installer does not finish, which the kept
+      // copy carries on, and through the one that installs.
+      provider = await startMockProvider({ scenarios: [updateResume(2)] });
       launched = await launchInstalled({
         ownDataDir: dataDir,
         signIn: true,
@@ -350,6 +360,67 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
       );
     });
 
+    // The provider requests that carry on the turn an update stopped, each
+    // opening with the words of a turn an update saved; a turn a quit or a
+    // crash cut opens with other words.
+    const lastWords = (body: string) => providerMessages(body).at(-1);
+    const resumed = () =>
+      (provider?.requestBodies() ?? []).filter((body) => {
+        const last = lastWords(body);
+        return last?.role === "user" && last.text.includes(updateResumedWords());
+      });
+
+    await test.step("Try again, with an installer that stops, keeps the older copy, which opens again, carries the turn on and says the installer stopped", async () => {
+      if (!feed) throw new Error("no feed");
+      feed.mode = "failing";
+      const row = await versionRow();
+      const windowPid = launched?.process.pid ?? 0;
+      const commandBefore = runProcesses().map((process) => process.pid);
+      await row.getByRole("button", { name: UPDATE_WORDS.retry, exact: true }).click();
+      // The command saves the turn and ends; the hand-over's installer
+      // exits with an error, so the hand-over ends the window and opens the
+      // kept copy, which starts its command again.
+      await expect
+        .poll(() => stillRunning([windowPid]), { timeout: 10 * 60_000, intervals: [2_000] })
+        .toEqual([]);
+      const newCommand = () =>
+        runProcesses().filter((process) => !commandBefore.includes(process.pid));
+      await expect.poll(() => newCommand().length, { timeout: 180_000 }).toBe(1);
+      expect(runProcesses()).toHaveLength(1);
+      await expect.poll(() => runTask(label)?.state, { timeout: 120_000 }).toBe("Running");
+      expect(installedVersion()).toBe(older);
+      // The kept copy carries the turn on, and the stand-in holds it again.
+      await expect.poll(() => resumed().length, { timeout: 180_000 }).toBe(1);
+      await expect.poll(() => provider?.heldRequests(), { timeout: 60_000 }).toBe(1);
+      keep("kept-copy-resumed-turn.txt", lastWords(resumed()[0] ?? "")?.text ?? "");
+      const opened = topAppProcesses().filter(
+        (process) => !runProcesses().some((run) => run.pid === process.pid),
+      );
+      keep("kept-copy-window.json", JSON.stringify(opened, null, 2));
+      expect(opened).toHaveLength(1);
+      if (evidence) screenshot(join(evidence, "kept-copy-window.png"));
+      // The journey's own window, on the same command, reads what the kept copy says.
+      await launched?.close().catch(() => undefined);
+      for (const { pid } of opened) {
+        try {
+          execFileSync("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore" });
+        } catch {}
+      }
+      launched = await launchInstalled({ ownDataDir: dataDir, reuseMockProvider: provider });
+      const kept = await versionRow();
+      await expect(kept.locator("[data-update-line]")).toContainText(
+        `${WINDOWS_HAND_OVER_WORDS.installFailed} ${UPDATE_NOTICES.stillAvailable(newer)}`,
+        { timeout: 120_000 },
+      );
+      await expect(
+        kept.getByRole("button", { name: UPDATE_WORDS.retry, exact: true }),
+      ).toBeEnabled();
+      expect(runProcesses()).toHaveLength(1);
+      expect(existsSync(join(dataDir, WINDOWS_HAND_OVER_RESULT))).toBe(false);
+      expect(existsSync(join(dataDir, WINDOWS_UPDATES_FOLDER))).toBe(false);
+      if (evidence) await kept.screenshot({ path: join(evidence, "installer-stopped.png") });
+    });
+
     await test.step("Try again, with the published download, saves the running turn, installs the newer version, and the new copy carries the turn on", async () => {
       if (!feed) throw new Error("no feed");
       feed.mode = "published";
@@ -423,16 +494,9 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
       await expect.poll(() => runTask(label)?.state, { timeout: 120_000 }).toBe("Running");
       if (evidence) screenshot(join(evidence, "new-window.png"));
       // The new copy's command carries on the turn the update stopped, in its
-      // own conversation, opening with the words of a turn an update saved;
-      // a turn a quit or a crash cut opens with other words.
-      const lastWords = (body: string) => providerMessages(body).at(-1);
-      const resumed = () =>
-        (provider?.requestBodies() ?? []).filter((body) => {
-          const last = lastWords(body);
-          return last?.role === "user" && last.text.includes(updateResumedWords());
-        });
-      await expect.poll(() => resumed().length, { timeout: 180_000 }).toBe(1);
-      const delivery = resumed()[0] ?? "";
+      // own conversation, once more.
+      await expect.poll(() => resumed().length, { timeout: 180_000 }).toBe(2);
+      const delivery = resumed()[1] ?? "";
       keep("resumed-turn.txt", lastWords(delivery)?.text ?? "");
       expect(delivery).toContain(UPDATE_RESUME_MARKER);
       // Its report ran in the new copy before anything ends it: the stand-in

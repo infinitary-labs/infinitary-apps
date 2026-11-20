@@ -137,12 +137,19 @@ export class ChangePublication {
               )
             : undefined;
         if (merged) return said(merged);
-        const revision = await this.options.presentations.prepare(
-          taskId,
-          staged,
-          located.forge,
-          how,
-        );
+        const repo = located.repo;
+        const revision = await this.options.presentations.prepare(taskId, staged, located.forge, {
+          ...how,
+          ...(repo?.origin
+            ? {
+                approvedAddress: {
+                  origin: repo.origin,
+                  current: () => this.options.repos.get(repo.id)?.origin === repo.origin,
+                  recover: !repo.contribution && !(fork && isForkReview(fork)),
+                },
+              }
+            : {}),
+        });
         const destination = this.options.tasks.delivery
           .changePresentation(taskId, branch)
           ?.revisions.find((saved) => saved.revision === revision)?.destination;

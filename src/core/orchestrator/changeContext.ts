@@ -407,6 +407,7 @@ export class ChangeContext {
     // Measure from the fetched default branch: the task branch starts there
     // (dispatchBase), and the local one lags whenever this Mac has not
     // pulled, which would count merged commits as the branch's own.
+    const approvedOrigin = repoId ? this.options.repos.get(repoId)?.origin : undefined;
     const name = await forge.defaultBranch();
     const fetched = `refs/remotes/origin/${name}`;
     const target = (await git(dir, [
@@ -441,7 +442,30 @@ export class ChangeContext {
             : `its branch no longer builds on the batch's version ${found.lost} it was verified on`
         }, so its own commits cannot be told from the work it carries. This repair stays measured from that version: ${found.unread ? "once it can be read here again, publish or approve this version again" : "build the fix again on it"}, or leave the batch to a new repair built on its current version.`,
       );
-    const base = found?.held ?? (await git(dir, ["merge-base", head, target]));
+    const base =
+      found?.held ??
+      (await git(dir, ["merge-base", head, target]).catch(async (error) => {
+        if ((error as { code?: unknown }).code !== 1 || !repoId || !approvedOrigin) throw error;
+        // After a repository cutover the fetched ref can still belong to unrelated history.
+        // Never fetch a changed checkout address before it has been approved.
+        const configured = await git(dir, ["config", "--get", "remote.origin.url"]).catch(
+          () => undefined,
+        );
+        if (
+          configured !== approvedOrigin ||
+          this.options.repos.get(repoId)?.origin !== approvedOrigin
+        )
+          throw error;
+        await git(
+          dir,
+          ["fetch", "--quiet", "--no-tags", approvedOrigin, `+refs/heads/${name}:${fetched}`],
+          {
+            env: { GIT_TERMINAL_PROMPT: "0" },
+            timeoutMs: 30_000,
+          },
+        );
+        return git(dir, ["merge-base", head, fetched]);
+      }));
     await requireNamedRange(dir, base, head, this.options.namingRule?.() ?? null);
     return { dir, ...(found?.held ? { heldBase: found.held } : {}) };
   }

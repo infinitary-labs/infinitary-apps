@@ -19,6 +19,7 @@ import {
   validationConsentWords,
 } from "@shared/liveValidation";
 import { isForkReview } from "@shared/mergeReview";
+import { storyAtOrigin } from "@shared/presentationDestination";
 import {
   type CaptainAction,
   captainActionResult,
@@ -427,6 +428,33 @@ export class TaskDeliveries {
         ? record.delivery.checkTarget.number
         : undefined,
     );
+  }
+
+  /** Retire active ledgers only; the change record keeps its historical versions. */
+  retirePresentationsAtOrigin(repoId: string, former: string, next: string | null): void {
+    for (const task of this.tasks.listLive()) {
+      if (task.repoId !== repoId) continue;
+      const ledgers = storyLedgers(task.delivery);
+      const kept = ledgers.filter((ledger) => {
+        const story = ledger.revisions.at(-1);
+        return (
+          !story ||
+          !storyAtOrigin(story.destination, former) ||
+          storyAtOrigin(story.destination, next)
+        );
+      });
+      if (kept.length === ledgers.length) continue;
+      const target = task.delivery?.checkTarget;
+      this.writer.writeDeliveryRecords(
+        task.id,
+        placeStories(
+          kept,
+          task.branch,
+          currentChange(task.delivery, task.branch).branch,
+          target && isForkReview(target) ? target.number : undefined,
+        ),
+      );
+    }
   }
 
   updateChangePresentation(

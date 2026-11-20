@@ -30,6 +30,7 @@ import {
   type PresentationDestination,
   presentationFormat,
   samePresentationDestination,
+  storyAtOrigin,
 } from "@shared/presentationDestination";
 import { presentationValidation } from "@shared/presentationValidation";
 import type { NamingRule } from "../../shared/runbooks";
@@ -189,6 +190,8 @@ export class ChangePresentations {
        * call made again adds no revision and uploads nothing (show_merge_card).
        */
       reuseSame?: boolean;
+      /** The approved project address seen by the caller, checked again when saving. */
+      approvedAddress?: { origin: string; current: () => boolean; recover: boolean };
     } = {},
   ): Promise<number> {
     try {
@@ -199,7 +202,22 @@ export class ChangePresentations {
             throw new Error("The code changed. Prepare a story for the current committed version.");
           const branch = await this.options.branch?.(taskId);
           const destination = await storyDestination(target);
-          const current = this.options.tasks.delivery.changePresentation(taskId, branch);
+          const kept = this.options.tasks.delivery.changePresentation(taskId, branch);
+          const address = how.approvedAddress;
+          const former = kept?.revisions.at(-1)?.destination;
+          // An address already moved by an older build has no retirement event. Recover only
+          // an ordinary hosted story, and only after reading the currently approved destination.
+          const retired =
+            address?.recover &&
+            former &&
+            hostedPresentation(former) &&
+            !former.media &&
+            kept?.forkNumber === undefined &&
+            hostedPresentation(destination) &&
+            !destination.media &&
+            storyAtOrigin(destination, address.origin) &&
+            !storyAtOrigin(former, address.origin);
+          const current = retired ? undefined : kept;
           if (
             current?.publication &&
             current.publication.state !== "confirmed" &&
@@ -273,7 +291,10 @@ export class ChangePresentations {
             )
               throw new Error(`Keep the original Before evidence for ${view.id}.`);
           }
-          await this.save(taskId, branch, (record) => {
+          await this.save(taskId, branch, (saved) => {
+            if (address && !address.current())
+              throw new Error("The approved project address changed. Prepare the story again.");
+            const record = retired ? undefined : saved;
             const receipts = [...(record?.receipts ?? [])];
             for (const asset of this.nativeAssets(story)) {
               if (!hostedPresentation(story.destination))

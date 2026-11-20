@@ -3282,6 +3282,7 @@
 "settleMergingAfterTurn" = "等負責的船員做完手邊的事，就會合併";
 "settleMergingChange" = "正在合併 %1$@";
 "settleMergingChangeAfterTurn" = "等負責的船員做完手邊的事，就合併 %1$@";
+"settleProjectAddressChanged" = "專案位址已變更。請顯示一張新的合併卡片。";
 "shellAmbientPause" = "暫停環境音樂";
 "shellAmbientPlay" = "播放環境音樂";
 "shellAmbientQuiet" = "說話時靜音";

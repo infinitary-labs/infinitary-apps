@@ -301,6 +301,7 @@ export class RepoRegistry {
   private readonly costLimits: CostLimitStore;
   /** Who hears a project's Runs on change (`onRunsOn`). */
   private readonly runsOnListeners = new Set<(repo: RepoView) => void>();
+  private readonly addressListeners = new Set<(former: RepoView, origin: string | null) => void>();
   /** Who hears a project's line of approved changes or its open batch change (`onBatch`). */
   private readonly batchListeners = new Set<(repo: RepoView) => void>();
   /** Who hears the app start or end a project's no-checks record (`onNoChecks`). */
@@ -697,6 +698,8 @@ export class RepoRegistry {
             .prepare("UPDATE repos SET batch_gap_minutes = ? WHERE id = ?")
             .run(changes.batchGap, id);
         this.projects.renameForRepo(id, name);
+        if (origin !== repo.origin)
+          for (const listener of this.addressListeners) listener(repo, origin);
       })();
     } catch (error) {
       if (created) unlinkSync(nextLink);
@@ -921,6 +924,11 @@ export class RepoRegistry {
     return () => {
       this.noChecksListeners.delete(listener);
     };
+  }
+
+  /** Keep the local records tied to the approved address in the same transaction. */
+  onAddressChange(listener: (former: RepoView, origin: string | null) => void): void {
+    this.addressListeners.add(listener);
   }
 
   /** Hears each change of a project's line or open batch, after it is written; answers its own unsubscribe. */

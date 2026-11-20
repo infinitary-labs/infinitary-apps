@@ -8,5 +8,6 @@
   "settleMerging": "マージ中",
   "settleMergingAfterTurn": "担当の乗組員が今の作業を終えたらマージします",
   "settleMergingChange": "{change} をマージ中",
-  "settleMergingChangeAfterTurn": "担当の乗組員が今の作業を終えたら {change} をマージします"
+  "settleMergingChangeAfterTurn": "担当の乗組員が今の作業を終えたら {change} をマージします",
+  "settleProjectAddressChanged": "プロジェクトのアドレスが変更されました。新しいマージカードを表示してください。"
 }

@@ -74791,6 +74791,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Merging ${change} once its crewmate finishes what it is doing`;
   }
+  function settleProjectAddressChanged() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تغيّر عنوان المشروع. اعرض بطاقة دمج جديدة.`;
+      case "de":
+        return `Die Projektadresse hat sich geändert. Zeige eine neue Merge-Karte an.`;
+      case "es":
+        return `La dirección del proyecto cambió. Muestra una nueva tarjeta de fusión.`;
+      case "fr":
+        return `L’adresse du projet a changé. Affichez une nouvelle carte de fusion.`;
+      case "ja":
+        return `プロジェクトのアドレスが変更されました。新しいマージカードを表示してください。`;
+      case "ko":
+        return `프로젝트 주소가 변경되었습니다. 새 병합 카드를 표시하세요.`;
+      case "pt-BR":
+        return `O endereço do projeto mudou. Mostre um novo cartão de mesclagem.`;
+      case "zh-Hans":
+        return `项目地址已更改。请显示一张新的合并卡片。`;
+      case "zh-Hant":
+        return `專案位址已變更。請顯示一張新的合併卡片。`;
+      case "en-XA":
+        return `[Ţĥé þŕöĵéçţ áððŕéšš çĥáñĝéð. Šĥöŵ á ñéŵ ɱéŕĝé çáŕð. ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The project address changed. Show a new merge card.‬`;
+    }
+    return `The project address changed. Show a new merge card.`;
+  }
   function shellAmbientPause() {
     switch (currentLanguage()) {
       case "ar":
@@ -85391,6 +85418,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settleMergingAfterTurn,
     settleMergingChange,
     settleMergingChangeAfterTurn,
+    settleProjectAddressChanged,
     shellAmbientPause,
     shellAmbientPlay,
     shellAmbientQuiet,
@@ -88076,6 +88104,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settleMergingAfterTurn": [],
     "settleMergingChange": ["change"],
     "settleMergingChangeAfterTurn": ["change"],
+    "settleProjectAddressChanged": [],
     "shellAmbientPause": [],
     "shellAmbientPlay": [],
     "shellAmbientQuiet": [],

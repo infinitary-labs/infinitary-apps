@@ -3401,6 +3401,7 @@ public enum PhoneMessages {
     public static func `settleMergingAfterTurn`() -> String { PhoneWords.format("settleMergingAfterTurn", []) }
     public static func `settleMergingChange`(`change`: String) -> String { PhoneWords.format("settleMergingChange", [`change`]) }
     public static func `settleMergingChangeAfterTurn`(`change`: String) -> String { PhoneWords.format("settleMergingChangeAfterTurn", [`change`]) }
+    public static func `settleProjectAddressChanged`() -> String { PhoneWords.format("settleProjectAddressChanged", []) }
     public static func `shellAmbientPause`() -> String { PhoneWords.format("shellAmbientPause", []) }
     public static func `shellAmbientPlay`() -> String { PhoneWords.format("shellAmbientPlay", []) }
     public static func `shellAmbientQuiet`() -> String { PhoneWords.format("shellAmbientQuiet", []) }
@@ -7089,6 +7090,7 @@ extension PhoneWords {
         "settleMergingAfterTurn": [],
         "settleMergingChange": ["change"],
         "settleMergingChangeAfterTurn": ["change"],
+        "settleProjectAddressChanged": [],
         "shellAmbientPause": [],
         "shellAmbientPlay": [],
         "shellAmbientQuiet": [],

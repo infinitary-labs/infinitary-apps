@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "change-stories-follow-an-approved-project-move",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Crews can prepare changes again after a project moves",
+      "body": "After you approve a new project address, crewmates can prepare fresh change stories for their rebuilt branches. Approval to merge at the former address does not carry over.",
+      "noPicture": "This fixes how the app prepares the existing merge card after a project move, not how the card looks.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

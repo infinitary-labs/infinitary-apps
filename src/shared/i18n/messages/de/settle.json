@@ -8,5 +8,6 @@
   "settleMerging": "Wird zusammengeführt",
   "settleMergingAfterTurn": "Wird zusammengeführt, sobald sein Crewmitglied mit seiner aktuellen Arbeit fertig ist",
   "settleMergingChange": "{change} wird zusammengeführt",
-  "settleMergingChangeAfterTurn": "{change} wird zusammengeführt, sobald sein Crewmitglied mit seiner aktuellen Arbeit fertig ist"
+  "settleMergingChangeAfterTurn": "{change} wird zusammengeführt, sobald sein Crewmitglied mit seiner aktuellen Arbeit fertig ist",
+  "settleProjectAddressChanged": "Die Projektadresse hat sich geändert. Zeige eine neue Merge-Karte an."
 }

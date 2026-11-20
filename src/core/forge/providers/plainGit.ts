@@ -23,7 +23,10 @@ export class PlainGitForge implements Forge {
   readonly place;
   readonly hasChecks = false;
 
-  constructor(readonly location: ForgeLocation & { place: string | null }) {
+  constructor(
+    readonly location: ForgeLocation & { place: string | null },
+    private readonly approvedOrigin?: string | null,
+  ) {
     this.kind = location.kind;
     this.host = location.host;
     this.place = location.place;
@@ -55,6 +58,7 @@ export class PlainGitForge implements Forge {
 
   async openChange(input: { branch: string; source?: string }): Promise<ForgeChange> {
     const source = input.source ?? `refs/heads/${input.branch}`;
+    await this.assertWriteRoute();
     await this.run(["push", "origin", `${source}:refs/heads/${input.branch}`]);
     const sent = await this.changeFor(input.branch);
     if (!sent)
@@ -87,12 +91,14 @@ export class PlainGitForge implements Forge {
       );
     }
     const target = await this.defaultBranch();
+    await this.assertWriteRoute();
     await this.run(["push", "origin", `${headSha}:refs/heads/${target}`]);
     return undefined;
   }
 
   async close(change: ForgeChange): Promise<void> {
     try {
+      await this.assertWriteRoute();
       await this.run(["push", "origin", "--delete", `refs/heads/${change.branch}`]);
     } catch (caught) {
       // Already gone where the project lives: there is nothing to take back.
@@ -107,6 +113,26 @@ export class PlainGitForge implements Forge {
 
   url(): string | null {
     return null;
+  }
+
+  /** Both Git routes must name the approved destination; pushurl can override an ordinary read URL. */
+  private async assertWriteRoute(): Promise<void> {
+    if (!this.approvedOrigin) return;
+    const checked = await Promise.all([
+      this.run(["config", "--get-all", "remote.origin.url"]),
+      this.run(["remote", "get-url", "--all", "origin"]),
+      this.run(["remote", "get-url", "--push", "--all", "origin"]),
+    ]).catch(() => undefined);
+    if (
+      !checked ||
+      checked[0] !== this.approvedOrigin ||
+      checked[1].includes("\n") ||
+      checked[1] !== checked[2]
+    )
+      throw new ForgeError(
+        "refused",
+        "The checkout's read and push addresses must match the approved project address.",
+      );
   }
 
   private async run(args: string[]): Promise<string> {

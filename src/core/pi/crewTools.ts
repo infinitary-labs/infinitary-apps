@@ -381,16 +381,16 @@ const SHAPE_FIELD_RULES = {
     "Intelligence: low, medium or high; premium needs the captain's premium ask. Tell the captain task difficulty: high Hard, medium Normal, low Simple, premium Premium.",
   kind: "Declare kind: read-only answers use plan/retrieval/research/reproduce; changes use implement/fix/chore. The classifier sorts only what you omit; review stays host-owned.",
   delivery_ask:
-    "Only when the user asked in words for this task to ship as a pull request or stay local. The repository default is unchanged.",
+    "Only when the user asked in words for a pull request or local delivery. The repository default is unchanged.",
   basis: BASIS_DESCRIPTION,
   premium_ask:
     'True only when the user asked for premium or the best model in words, or clicked your "Try a premium model" action. Never your own judgment.',
   override_speed: "As update_task.crew_speed.",
   override_reasoning: "As update_task.reasoning.",
   override_model_id:
-    "The user-named model: exact id or provider-qualified key if the provider matters. Only when named by the user; it wins when available; otherwise the task waits for a computer serving it. Omit for normal routing.",
+    "User-named model: exact id or provider-qualified key if the provider matters. Only when the user named it; it wins when available; otherwise the task waits for a computer serving it. Omit for normal routing.",
   escalate_from:
-    "The task (id or key) whose result the user rejected, only under the escalation rule. The host stops that attempt, keeps its branch and report, and runs this one a tier up.",
+    "Task (id or key) whose result the user rejected, only under the escalation rule. The host stops that attempt, keeps its branch and report, and runs this one a tier up.",
   rigor_ask: "Only when the user said in words how careful to be.",
   autonomy_ask:
     "Only when the user said in words whether this task merges its green work itself (true) or asks first (false). The repository default is unchanged.",
@@ -398,9 +398,9 @@ const SHAPE_FIELD_RULES = {
   internal_step: INTERNAL_STEP_DESCRIPTION,
   in_folder: "Operate in the project's folder; ships nothing.",
   skipped_plan_because:
-    "For a direct build with no chosen basis, which sequences test parts passed: one nameable place, no changed rule, state or meaning, and a result checkable by looking. The host shows it unjudged.",
+    "For a direct build without a chosen basis, which sequences test parts passed: one nameable place, no changed rule, state or meaning, and a result checkable by looking. The host shows it unjudged.",
   review_of:
-    "Task whose committed work an independent reviewer checks, read-only; pass the user's original words and the same repo_id. It runs on its builder's computer, so omit runs_on_ask.",
+    "Task whose committed work an independent reviewer checks read-only; pass the user's original words and same repo_id. It runs on its builder's computer, so omit runs_on_ask.",
 } as const satisfies Record<keyof typeof SHAPE_FIELDS, string>;
 
 /** What each wait in spawn_crewmate's `start_after` group means, on the group (v4.13). */
@@ -554,7 +554,7 @@ export function createCrewTools(delegate: CrewDelegate) {
     label: "Spawn crewmate",
     description: [
       "Commission a crewmate for project work or evidence-gathering investigation.",
-      "Pass a goal, the user's words verbatim, typed constraints and an optional delivery note;",
+      "Pass a goal, the user's verbatim words, typed constraints and an optional delivery note;",
       "the crewmate briefs itself from these on its first turn; do not author a brief.",
       "Pass repo_id to bind a project, or omit it for the default workspace.",
       "Lessons and the user's own panels on the rails use personal_ui true: the",
@@ -574,7 +574,7 @@ export function createCrewTools(delegate: CrewDelegate) {
       user_words: Type.Optional(
         Type.String({
           description:
-            "The captain's words for this task or the ask it is a step of, verbatim; outranks every elaboration downstream; else omit",
+            "The captain's verbatim words for this task or the ask it is a step of; outrank every elaboration downstream; else omit",
         }),
       ),
       repo_id: Type.Optional(
@@ -588,13 +588,13 @@ export function createCrewTools(delegate: CrewDelegate) {
       parent: Type.Optional(
         Type.String({
           description:
-            "The task this work belongs under (a task id or key); it inherits that task's project",
+            "Parent task id or key; this work inherits its project",
         }),
       ),
       blocked_by: Type.Optional(
         Type.Array(Type.String(), {
           description:
-            "Tasks (ids or keys) that must close before this work starts; queues it instead of starting now",
+            "Task ids or keys that must close before this work starts; queues it instead of starting now",
         }),
       ),
       priority: Type.Optional(
@@ -632,7 +632,7 @@ export function createCrewTools(delegate: CrewDelegate) {
       branch_from: Type.Optional(
         Type.String({
           description:
-            "Start from this task’s last commit, held on this computer; for work on another computer, name its pushed version in the brief.",
+            "Start from this task’s last commit, held here; for work on another computer, name its pushed version in the brief.",
         }),
       ),
       branch: Type.Optional(BRANCH_PARAM),

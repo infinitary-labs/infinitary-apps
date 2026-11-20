@@ -59,11 +59,24 @@ export function startCardDrafts(
   const read = cards.drafts;
   const send = cards.draft;
   if (!read || !send || !cards.onDraft) return null;
+  // Another window's words that arrived while the card's field was being
+  // typed in, with the words they arrived over; they show once typing stops,
+  // unless the captain typed on since.
+  const waitingWords = new Map<string, { words: string; over: string | undefined }>();
   const sync = new DraftSync({
     local: (cardId) => localOf(get(), cardId),
-    lifecycle: (cardId) => get().cards.find((card) => card.id === cardId)?.lifecycleId,
+    lifecycle: (cardId) => {
+      const card = get().cards.find((shown) => shown.id === cardId);
+      return card ? (card.lifecycleId ?? null) : undefined;
+    },
     apply: (cardId, parts) => {
       const filled = parts.answers ? fillShownBodies(cardId, parts.answers) : false;
+      const typing = parts.words !== undefined && typingReply(cardId);
+      if (parts.words !== undefined) {
+        if (typing)
+          waitingWords.set(cardId, { words: parts.words, over: get().replyDrafts[cardId] });
+        else waitingWords.delete(cardId);
+      }
       set((s) => ({
         ...(parts.answers && !filled
           ? {
@@ -73,7 +86,7 @@ export function startCardDrafts(
               },
             }
           : {}),
-        ...(parts.words !== undefined && !typingReply(cardId)
+        ...(parts.words !== undefined && !typing
           ? { replyDrafts: { ...s.replyDrafts, [cardId]: parts.words } }
           : {}),
         ...(parts.notes
@@ -106,7 +119,9 @@ export function startCardDrafts(
     later: (run, ms) => setTimeout(run, ms),
     cancel: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
   });
+  // Read only over a loaded stack, so each card's opening is known when its draft is taken.
   const readAll = async () => {
+    if (!get().cardsSnapshotLoaded) return;
     try {
       const home = await window.infinitary.app.healthcheck();
       if (!home.changes?.includes(CARD_DRAFTS)) return;
@@ -122,7 +137,32 @@ export function startCardDrafts(
       // Out of reach: read again at the next welcome.
     }
   };
+  const settleWords = () => {
+    for (const [cardId, waiting] of waitingWords) {
+      if (typingReply(cardId)) continue;
+      waitingWords.delete(cardId);
+      if (get().replyDrafts[cardId] !== waiting.over) continue;
+      set((s) => ({ replyDrafts: { ...s.replyDrafts, [cardId]: waiting.words } }));
+    }
+  };
+  if (typeof document !== "undefined" && typeof window.addEventListener === "function") {
+    // Focus leaves on the next turn, once the next element holds it.
+    document.addEventListener("focusout", () => setTimeout(settleWords, 0));
+    window.addEventListener("blur", settleWords);
+  }
   cards.onDraft((draft) => sync.heardLive(draft));
+  // The opening each card's draft here belongs to; a card seen before this
+  // run reads it from what this window kept of its draft.
+  const openings = new Map<string, string | null>();
+  const knownOpening = (cardId: string): string | null | undefined => {
+    if (openings.has(cardId)) return openings.get(cardId);
+    try {
+      const saved: unknown = JSON.parse(storage()?.getItem(BASE_PREFIX + cardId) ?? "null");
+      return isBase(saved) ? (saved.lifecycle ?? null) : undefined;
+    } catch {
+      return undefined;
+    }
+  };
   subscribe((state, previous) => {
     for (const cardId of new Set([
       ...Object.keys(state.cardAnswers),
@@ -141,11 +181,29 @@ export function startCardDrafts(
       sync.changed(cardId, localOf(previous, cardId), localOf(state, cardId));
     }
     if (state.cards !== previous.cards) {
-      // A card that left, or opened anew under the same id, starts with no draft here.
-      const present = new Map(state.cards.map((card) => [card.id, card.lifecycleId]));
-      for (const card of previous.cards)
-        if (!present.has(card.id) || present.get(card.id) !== card.lifecycleId)
-          sync.forget(card.id);
+      // A card that left lets its draft here go; one opened anew under the
+      // same id, now or before this window started, also drops the picks,
+      // words and notes this window held for its earlier opening, before
+      // its body draws.
+      const present = new Set(state.cards.map((card) => card.id));
+      for (const card of previous.cards) if (!present.has(card.id)) sync.forget(card.id);
+      const anew: string[] = [];
+      for (const card of state.cards) {
+        const opening = card.lifecycleId ?? null;
+        const known = knownOpening(card.id);
+        openings.set(card.id, opening);
+        if (known !== undefined && known !== opening) anew.push(card.id);
+      }
+      for (const cardId of anew) {
+        sync.forget(cardId);
+        waitingWords.delete(cardId);
+      }
+      if (anew.length > 0)
+        set((s) => ({
+          cardAnswers: anew.reduce((left, id) => withoutKey(left, id), s.cardAnswers),
+          replyDrafts: anew.reduce((left, id) => withoutKey(left, id), s.replyDrafts),
+          replyNotes: anew.reduce((left, id) => withoutKey(left, id), s.replyNotes),
+        }));
     }
     // Each welcome: the link to the first mate came back, replayed or not,
     // or a Mac this one controls came back in reach; live frames and changes
@@ -159,6 +217,7 @@ export function startCardDrafts(
         (now.role === "view" && changesOff(before) && !changesOff(now));
       if (back) void readAll();
     }
+    if (state.cardsSnapshotLoaded && !previous.cardsSnapshotLoaded) void readAll();
   });
   void readAll();
   return sync;

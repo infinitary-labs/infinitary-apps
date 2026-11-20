@@ -203,7 +203,7 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
   var documentId = Date.now().toString(36) + Math.random().toString(36).slice(2);
   var capped = new WeakSet();
   var theme = document.documentElement.getAttribute("data-theme") || "dark";
-  var form = { on: false, locked: false, preview: false, fill: null, filling: false, staged: {}, touched: {}, first: new WeakMap(), last: "", fields: new WeakMap(), current: null };
+  var form = { on: false, locked: false, preview: false, fill: null, filling: false, staged: {}, waiting: {}, touched: {}, first: new WeakMap(), last: "", fields: new WeakMap(), current: null };
   var KEY_IN_TEXT = new RegExp(${JSON.stringify(`${TASK_KEY_IN_TEXT}|${KNOWLEDGE_ID_IN_TEXT}`)}, "g");
   var UNLINKED = "a, button, summary, input, select, option, textarea, script, style, svg, [role=button], [data-inf-action], [data-inf-draft], [contenteditable]";
   var keys = { known: null, rested: null, quiet: null, lit: null };
@@ -819,4 +819,4 @@ ${FRAME_KEYBOARD_SCRIPT}
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-f7VDkCvBU67m6YAZrJTykQxq7MMi+0noAnavToNbm+M=";
+export const FRAME_BRIDGE_SHA256 = "sha256-bWCzqiZTYNuKxj5mMi6w8sXaZJMJzkRPmKUvjFiIu/0=";

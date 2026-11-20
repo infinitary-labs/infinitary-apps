@@ -138,6 +138,7 @@ describe("CardDrafts", () => {
     draftOf(
       new CardDrafts(h.db, () => {}).change(shown.id, {
         since: 0,
+        ...(shown.lifecycleId ? { lifecycle: shown.lifecycleId } : {}),
         answers: [pick("format", "parquet-unsent")],
         words,
         notes: [
@@ -169,29 +170,54 @@ describe("CardDrafts", () => {
       owed: (id: string) => h.supervisor.cards.owed(id),
       thread: (id: string) => h.supervisor.cards.thread(id),
     };
-    const reads = [
-      readOpenWork(host, { card: shown.id }).text,
-      readOpenWork(host, {}).text,
-      h.supervisor.cards.cardRead(shown.id),
-      sourceFacts(
-        { tasks: h.tasks, cardStore: h.cardStore, paths: h.paths },
-        h.supervisor.cards,
-        task,
-      ),
-      new TaskTimeline({ tasks: h.tasks, cards: h.cardStore }).entries(taskId),
-      h.cardStore.listOpen(),
-      exportTaskRecords(h.tasks),
+    // Each read with what it shows of this card - the card itself, or for
+    // the export the card's task - so its silence about the draft means something.
+    const reads: [unknown, string][] = [
+      [readOpenWork(host, { card: shown.id }).text, shown.id],
+      [readOpenWork(host, {}).text, shown.id],
+      [h.supervisor.cards.cardRead(shown.id), shown.id],
+      [new TaskTimeline({ tasks: h.tasks, cards: h.cardStore }).entries(taskId), shown.id],
+      [h.cardStore.listOpen(), shown.id],
+      [exportTaskRecords(h.tasks), taskId],
     ];
-    // Each read shows the card itself, so its silence about the draft means something.
-    expect(reads.slice(0, 3).map((read) => JSON.stringify(read).includes(card.title))).toEqual([
-      true,
+    expect(reads.map(([read, shows]) => JSON.stringify(read ?? null).includes(shows))).toEqual(
+      reads.map(() => true),
+    );
+    expect(reads.filter(([read]) => canary(JSON.stringify(read ?? null)))).toEqual([]);
+    // Once the captain answers the card, its evidence and the answer a
+    // later task builds on hold no draft either.
+    h.supervisor.cards.resolve(shown, "go", "go");
+    // The card's record, and the card's body as the answer a later task builds on.
+    const answered: [unknown, string][] = [
+      [h.supervisor.cards.past(shown.id), shown.id],
+      [
+        sourceFacts(
+          { tasks: h.tasks, cardStore: h.cardStore, paths: h.paths },
+          h.supervisor.cards,
+          task,
+        ),
+        card.body,
+      ],
+    ];
+    expect(answered.map(([read, shows]) => JSON.stringify(read ?? null).includes(shows))).toEqual([
       true,
       true,
     ]);
-    expect(reads.filter((read) => canary(JSON.stringify(read ?? null)))).toEqual([]);
-    // Once the card closes, its evidence holds no draft either.
-    h.cardStore.resolve(shown.id, "go");
-    expect(canary(JSON.stringify(h.supervisor.cards.past(shown.id) ?? null))).toBe(false);
+    expect(answered.filter(([read]) => canary(JSON.stringify(read ?? null)))).toEqual([]);
+  });
+
+  it("refuses a change naming no opening once the card holds one, and one naming an opening the card lacks", () => {
+    const { cards, drafts } = setup();
+    // A card written before openings were kept takes only a change naming none.
+    expect(drafts.change(card.id, { since: 0, lifecycle: "opening-1", words: "x" })).toEqual({
+      refused: "closed",
+    });
+    draftOf(drafts.change(card.id, { since: 0, words: "from before" }));
+    cards.resolve(card.id, "go");
+    cards.reopen(card.id);
+    cards.upsert({ ...card, lifecycleId: "opening-1" });
+    expect(drafts.change(card.id, { since: 1, words: "late" })).toEqual({ refused: "closed" });
+    expect(drafts.read()).toEqual([]);
   });
 
   it("refuses a change from an earlier opening of a card reopened under its id", () => {

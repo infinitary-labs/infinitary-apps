@@ -63,8 +63,12 @@ export type DraftBase = { lifecycle?: string; revision: number; parts: Record<st
 
 export type DraftDeps = {
   local: (cardId: string) => DraftLocal;
-  /** The card's current opening, as this window's stack holds it; absent for an unknown card. */
-  lifecycle: (cardId: string) => string | undefined;
+  /**
+   * The card's current opening as this window's stack holds it: null for a
+   * card written before openings were kept, undefined for a card the stack
+   * does not hold, which sends nothing until it does.
+   */
+  lifecycle: (cardId: string) => string | null | undefined;
   apply: (cardId: string, parts: DraftParts) => void;
   send: (cardId: string, change: CardDraftChange) => Promise<CardDraftChanged>;
   /** Whether a change can reach the first mate's computer now. */
@@ -132,8 +136,8 @@ export class DraftSync {
   /** What the request in flight carries, by card. */
   private readonly flying = new Map<string, Flying>();
   private readonly timers = new Map<string, unknown>();
-  /** The last change refused for its size, which is not sent again unchanged. */
-  private readonly refused = new Map<string, string>();
+  /** Each card's changes refused for their size, none sent again unchanged. */
+  private readonly refused = new Map<string, Set<string>>();
   private welcomed = false;
 
   constructor(private readonly deps: DraftDeps) {}
@@ -160,8 +164,10 @@ export class DraftSync {
     }
     this.early.clear();
     for (const cardId of new Set([...cardIds, ...byCard.keys()])) {
-      const draft = byCard.get(cardId) ?? emptyDraft(cardId);
-      if (!this.current(draft)) continue;
+      const read = byCard.get(cardId);
+      // A card with no draft has an empty one of its current opening.
+      if (read && !this.current(read)) continue;
+      const draft = read ?? emptyDraft(cardId);
       const saved = first ? this.saved(cardId) : null;
       if (saved) {
         const marked = this.dirtyOf(cardId);
@@ -205,7 +211,6 @@ export class DraftSync {
         marked.set(part, this.deps.canSend() ? null : this.revisionOf(cardId));
     }
     if (!moved) return;
-    this.refused.delete(cardId);
     this.persist(cardId);
     this.schedule(cardId);
   }
@@ -253,24 +258,30 @@ export class DraftSync {
         value !== undefined && !(part === WORDS && (value as string).length > CARD_REPLY_MAX_CHARS)
       );
     });
-    if (ready.length === 0) return;
-    const taken = this.revisionOf(cardId);
-    const since = Math.min(...ready.map(([, base]) => base ?? taken));
-    const sent: Parts = new Map();
-    const bases = new Map<string, Base>();
-    for (const [part, base] of ready) {
-      if ((base ?? taken) !== since) continue;
-      sent.set(part, local.get(part));
-      bases.set(part, base);
-    }
     const lifecycle = this.deps.lifecycle(cardId);
-    const change: CardDraftChange = {
-      since,
-      ...(lifecycle ? { lifecycle } : {}),
-      ...draftParts(sent),
-    };
-    const key = canonical({ ...change, since: 0 });
-    if (this.refused.get(cardId) === key) return;
+    if (lifecycle === undefined) return;
+    const taken = this.revisionOf(cardId);
+    // One group per revision, oldest first; a group refused for its size unchanged is passed by.
+    const picked = [...new Set(ready.map(([, base]) => base ?? taken))]
+      .sort((a, b) => a - b)
+      .map((since) => {
+        const sent: Parts = new Map();
+        const bases = new Map<string, Base>();
+        for (const [part, base] of ready) {
+          if ((base ?? taken) !== since) continue;
+          sent.set(part, local.get(part));
+          bases.set(part, base);
+        }
+        const change: CardDraftChange = {
+          since,
+          ...(lifecycle !== null ? { lifecycle } : {}),
+          ...draftParts(sent),
+        };
+        return { since, sent, bases, change, key: canonical({ ...change, since: 0 }) };
+      })
+      .find((group) => !this.refused.get(cardId)?.has(group.key));
+    if (!picked) return;
+    const { since, sent, bases, change, key } = picked;
     for (const part of sent.keys()) marked.delete(part);
     const flight: Flying = { parts: sent, bases };
     this.flying.set(cardId, flight);
@@ -288,16 +299,22 @@ export class DraftSync {
         if ("refused" in answer) {
           if (answer.refused === "closed") this.forget(cardId);
           else {
-            this.refused.set(cardId, key);
+            const refused = this.refused.get(cardId) ?? new Set<string>();
+            this.refused.set(cardId, refused.add(key));
             unsent();
+            // The card's other changes still go.
+            this.flush(cardId);
           }
           return;
         }
-        // A part changed out of reach again while on its way goes against what this window just kept.
+        // A part changed out of reach again while on its way goes against
+        // what this window just kept - only where the draft kept it.
         const again = this.dirty.get(cardId);
-        for (const part of sent.keys()) {
+        const now = partsOfDraft(answer.draft);
+        for (const [part, value] of sent) {
           const base = again?.get(part);
-          if (base !== undefined && base !== null)
+          if (base === undefined || base === null) continue;
+          if (canonical(now.get(part)) === canonical(value))
             again?.set(part, Math.max(base, answer.draft.revision));
         }
         this.adopt(answer.draft, sent);
@@ -344,13 +361,13 @@ export class DraftSync {
   /** Whether a draft is of the card's current opening, as far as this window knows it. */
   private current(draft: CardDraft): boolean {
     const lifecycle = this.deps.lifecycle(draft.cardId);
-    return !draft.lifecycle || !lifecycle || draft.lifecycle === lifecycle;
+    return lifecycle === undefined || (draft.lifecycle ?? null) === lifecycle;
   }
 
   /** What this window kept of the card's draft, when it is of the card's current opening. */
   private saved(cardId: string): DraftBase | null {
     const saved = this.deps.loadBase(cardId);
-    return saved && saved.lifecycle === this.deps.lifecycle(cardId) ? saved : null;
+    return saved && (saved.lifecycle ?? null) === this.deps.lifecycle(cardId) ? saved : null;
   }
 
   /** The revision a change here is made at: the newest this window took. */
@@ -360,17 +377,19 @@ export class DraftSync {
 
   /** Keeps the revision taken and each part changed out of reach's own in this window's storage. */
   private persist(cardId: string): void {
-    const parts: Record<string, number> = {};
-    for (const [part, base] of this.flying.get(cardId)?.bases ?? [])
-      if (base !== null) parts[part] = base;
-    for (const [part, base] of this.dirty.get(cardId) ?? []) if (base !== null) parts[part] = base;
+    const lifecycle = this.deps.lifecycle(cardId);
+    // A card this window's stack does not hold yet keeps what was saved of it.
+    if (lifecycle === undefined) return;
     const revision = this.revisionOf(cardId);
+    // A part not yet sent keeps the revision it goes against, even on an empty draft.
+    const parts: Record<string, number> = {};
+    for (const [part, base] of this.flying.get(cardId)?.bases ?? []) parts[part] = base ?? revision;
+    for (const [part, base] of this.dirty.get(cardId) ?? []) parts[part] = base ?? revision;
     if (revision === 0 && Object.keys(parts).length === 0) {
       this.deps.saveBase(cardId, null);
       return;
     }
-    const lifecycle = this.deps.lifecycle(cardId);
-    this.deps.saveBase(cardId, { ...(lifecycle ? { lifecycle } : {}), revision, parts });
+    this.deps.saveBase(cardId, { ...(lifecycle !== null ? { lifecycle } : {}), revision, parts });
   }
 
   private dirtyOf(cardId: string): Map<string, Base> {

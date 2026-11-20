@@ -92,8 +92,8 @@ export class CardDrafts {
         )
         .get(cardId);
       if (!card || card.resolved_at !== null) return { refused: "closed" };
-      if (change.lifecycle && card.lifecycle_id && change.lifecycle !== card.lifecycle_id)
-        return { refused: "closed" };
+      // A card written before openings were kept has none, and takes only a change naming none.
+      if ((change.lifecycle ?? null) !== (card.lifecycle_id || null)) return { refused: "closed" };
       const held = this.rows(cardId);
       const byPart = new Map(held.map((row) => [row.part, row]));
       const revision = held.reduce((most, row) => Math.max(most, row.revision), 0) + 1;

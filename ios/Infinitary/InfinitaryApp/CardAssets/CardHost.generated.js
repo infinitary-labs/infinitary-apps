@@ -90885,31 +90885,59 @@ ${FRAME_QUESTION_SCRIPT}
     }
     post(message);
   }
-  // The question the captain is in now: a control of it, or its Something
-  // else field, holds focus in a document that has it.
-  function holdsFocus(group) {
+  // The question the captain is typing in now: a text field of it, or its
+  // Something else field, holds focus in a document that has it. A pick
+  // under focus is no typing, and takes another window's change at once.
+  function typingIn(group) {
     var focused = document.activeElement;
     if (!focused || !document.hasFocus()) return false;
-    if (group.controls.indexOf(focused) >= 0) return true;
+    if (group.controls.indexOf(focused) >= 0) return kindOf(focused) === "text";
     return writeInRows(group).some(function (row) { return form.fields.get(row) === focused; });
   }
+  // Another window's change to a question being typed in waits, with the
+  // question's answer it arrived over, until typing there stops; the
+  // captain's own words since then keep it from showing.
+  function settleWaiting() {
+    var names = Object.keys(form.waiting);
+    if (names.length === 0 || form.locked) return;
+    var byName = {};
+    questions().forEach(function (group) { byName[group.name] = group; });
+    var due = [];
+    names.forEach(function (name) {
+      var group = byName[name];
+      if (group && typingIn(group)) return;
+      var waiting = form.waiting[name];
+      delete form.waiting[name];
+      if (group && JSON.stringify(answerOf(group)) === waiting.over) due.push(waiting.answer);
+    });
+    if (due.length > 0) fillForm(due, true);
+  }
   // A draft by name: a new document's (\`live\` false), or another window's
-  // change to the body on screen (\`live\` true), which leaves the question
-  // the captain is in as it is and takes back a field emptied to its proposal.
+  // change to the body on screen (\`live\` true), which waits on the
+  // question being typed in and takes back a field emptied to its proposal.
   function fillForm(answers, live) {
     var byName = {};
     questions().forEach(function (group) { byName[group.name] = group; });
     var touched = [];
+    var staged = false;
     answers.forEach(function (answer) {
       if (!answer || !Array.isArray(answer.values)) return;
       if (answer.json) {
-        // A preview's settings live in its own script, which reads them only at its birth.
-        if (!live && typeof answer.values[0] === "string") form.staged[answer.name] = answer.values[0];
+        // A preview's settings live in its own script, which reads them only
+        // at its birth: another window's are kept for the body's next birth.
+        if (typeof answer.values[0] === "string") {
+          staged = staged || (live && form.staged[answer.name] !== answer.values[0]);
+          form.staged[answer.name] = answer.values[0];
+        }
         return;
       }
       var group = byName[answer.name];
       if (!group || group.staged) return;
-      if (live && holdsFocus(group)) return;
+      if (live) delete form.waiting[answer.name];
+      if (live && typingIn(group)) {
+        form.waiting[answer.name] = { answer: answer, over: JSON.stringify(answerOf(group)) };
+        return;
+      }
       // A skip is the card's own proposal: a live form leaves the question
       // untouched, so it still shows and sends its Default; a past card
       // draws the Default the skip sent.
@@ -90959,6 +90987,8 @@ ${FRAME_QUESTION_SCRIPT}
     } finally {
       form.filling = false;
     }
+    // Settings kept for the next birth are read with the rest, so the app keeps them too.
+    if (staged && form.on) readForm();
   }
 ${FRAME_TAG_SCRIPT}
   // The field under a Something else row: the app's own, with no name, so
@@ -91046,6 +91076,9 @@ ${FRAME_TAG_SCRIPT}
       document.addEventListener("input", watch, true);
       document.addEventListener("change", watch, true);
       document.addEventListener("change", focusWriteIn);
+      // Focus leaves on the next turn, once the next element holds it.
+      document.addEventListener("focusout", function () { setTimeout(settleWaiting, 0); });
+      window.addEventListener("blur", settleWaiting);
       new MutationObserver(watch).observe(document.documentElement, {
         childList: true,
         subtree: true,
@@ -91871,7 +91904,7 @@ ${FRAME_TAG_SCRIPT}
   var documentId = Date.now().toString(36) + Math.random().toString(36).slice(2);
   var capped = new WeakSet();
   var theme = document.documentElement.getAttribute("data-theme") || "dark";
-  var form = { on: false, locked: false, preview: false, fill: null, filling: false, staged: {}, touched: {}, first: new WeakMap(), last: "", fields: new WeakMap(), current: null };
+  var form = { on: false, locked: false, preview: false, fill: null, filling: false, staged: {}, waiting: {}, touched: {}, first: new WeakMap(), last: "", fields: new WeakMap(), current: null };
   var KEY_IN_TEXT = new RegExp(${JSON.stringify(`${TASK_KEY_IN_TEXT}|${KNOWLEDGE_ID_IN_TEXT}`)}, "g");
   var UNLINKED = "a, button, summary, input, select, option, textarea, script, style, svg, [role=button], [data-inf-action], [data-inf-draft], [contenteditable]";
   var keys = { known: null, rested: null, quiet: null, lit: null };
@@ -92480,7 +92513,7 @@ ${FRAME_KEYBOARD_SCRIPT}
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-f7VDkCvBU67m6YAZrJTykQxq7MMi+0noAnavToNbm+M=";
+  const FRAME_BRIDGE_SHA256 = "sha256-bWCzqiZTYNuKxj5mMi6w8sXaZJMJzkRPmKUvjFiIu/0=";
   const APP_FRAME_SCHEME = "app-frame";
   const CARD_PICTURE_HOST = "images";
   const CARD_MEDIA_HOST = "media";

@@ -94,7 +94,7 @@ class Window {
   private held: (() => void)[] = [];
   readonly bases = new Map<string, DraftBase>();
   /** The card's opening as this window's stack holds it. */
-  lifecycle: string | undefined = card.lifecycleId;
+  lifecycle: string | null | undefined = card.lifecycleId;
   readonly sync: DraftSync;
 
   constructor(
@@ -375,4 +375,83 @@ describe("DraftSync", () => {
     await settle();
     expect(desk.bases.has(card.id)).toBe(false);
   });
+
+  it("keeps another window's newer pick over a pick made out of reach on the same question", async () => {
+    const { at, time, desk, laptop } = twoWindows();
+    // The laptop's pick is on its way when the desk picks the same question.
+    laptop.hold = true;
+    laptop.edit({ answers: [pick("format", "csv")] });
+    await time.advance(DRAFT_QUIET_MS);
+    laptop.reachable = false;
+    desk.edit({ answers: [pick("format", "json")] });
+    await time.advance(DRAFT_QUIET_MS);
+    // Out of reach, the laptop changes the same question again, having heard none of it.
+    laptop.edit({ answers: [pick("format", "xml")] });
+    // The answer to its first pick comes back: the desk's newer pick was kept over it.
+    laptop.release();
+    await settle();
+    expect(stored(at)?.answers[0]?.values).toEqual(["json"]);
+    laptop.reachable = true;
+    laptop.welcome();
+    await time.advance(DRAFT_QUIET_MS);
+    expect(stored(at)?.answers[0]?.values).toEqual(["json"]);
+    expect(laptop.answer("format")).toEqual(["json"]);
+  });
+
+  it("sends a first pick on an empty draft after a restart that came before the pause", async () => {
+    const { at, time, desk } = twoWindows();
+    desk.edit({ answers: [pick("format", "csv")] });
+    // The window closes before the pause ends, so nothing went.
+    at.windows.splice(at.windows.indexOf(desk), 1);
+    const restarted = new Window(at, time);
+    const kept = desk.bases.get(card.id);
+    if (kept) restarted.bases.set(card.id, kept);
+    restarted.local = desk.local;
+    restarted.welcome();
+    await settle();
+    expect(restarted.requests.map((change) => change.answers?.[0]?.values)).toEqual([["csv"]]);
+    expect(stored(at)?.answers[0]?.values).toEqual(["csv"]);
+  });
+
+  it("still sends a card's later change when an older change is refused for its size", async () => {
+    const { at, time, desk, laptop } = twoWindows();
+    // Out of reach, the laptop fills the card past what one press may send.
+    laptop.reachable = false;
+    const long = "x".repeat(3000);
+    laptop.edit({ answers: Array.from({ length: 30 }, (_, i) => pick(`q${i}`, long)) });
+    desk.edit({ words: "From the desk" });
+    await time.advance(DRAFT_QUIET_MS);
+    laptop.reachable = true;
+    laptop.welcome();
+    await settle();
+    // Back in reach, it types words, which go against the revision it now holds.
+    laptop.edit({ words: "From the laptop" });
+    await time.advance(DRAFT_QUIET_MS);
+    expect(stored(at)?.words).toBe("From the laptop");
+    expect(desk.local.words).toBe("From the laptop");
+    // The refused picks went once and are not sent again unchanged.
+    const sentPicks = laptop.requests.filter((change) => change.answers?.length);
+    expect(sentPicks).toHaveLength(1);
+  });
+
+  it("takes no draft of an earlier opening that had none once the card holds an opening", async () => {
+    const { at, desk } = twoWindows();
+    // A late frame of the card from before openings were kept names none.
+    desk.sync.heardLive({ ...emptyDraftOf(card.id), revision: 4, words: "From before" });
+    expect(desk.local.words).toBeNull();
+    // A window that knows the card as one with no opening refuses the opening's draft instead.
+    desk.lifecycle = null;
+    desk.sync.heardLive({
+      ...emptyDraftOf(card.id),
+      lifecycle: "opening-1",
+      revision: 5,
+      words: "x",
+    });
+    expect(desk.local.words).toBeNull();
+    expect(at.drafts.read()).toEqual([]);
+  });
 });
+
+function emptyDraftOf(cardId: string): CardDraft {
+  return { cardId, revision: 0, answers: [], words: "", notes: [] };
+}

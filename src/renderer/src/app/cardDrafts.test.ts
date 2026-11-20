@@ -21,7 +21,11 @@ const VIEW = {
   caughtUp: 0,
 };
 
-function windowWith(changes: string[], thisMac: object = { role: "home", left: null }) {
+function windowWith(
+  changes: string[],
+  thisMac: object = { role: "home", left: null },
+  start: Partial<Record<"cardAnswers" | "replyDrafts" | "replyNotes", object>> = {},
+) {
   const drafts = vi.fn(async (): Promise<CardDraft[]> => []);
   const draft = vi.fn(async (cardId: string, _change: CardDraftChange) => ({
     draft: { cardId, revision: 1, answers: [], words: "", notes: [] },
@@ -33,16 +37,24 @@ function windowWith(changes: string[], thisMac: object = { role: "home", left: n
     },
   });
   let state = {
-    cards: [{ id: "card-1" }],
+    cards: [],
+    cardsSnapshotLoaded: false,
     cardAnswers: {},
     replyDrafts: {},
     replyNotes: {},
     thisMac,
+    ...start,
   } as unknown as ShellState;
   let listener: Listener = () => {};
+  const change = (next: Partial<ShellState>) => {
+    const previous = state;
+    state = { ...state, ...next };
+    listener(state, previous);
+  };
   startCardDrafts(
     () => state,
-    () => {},
+    (update) =>
+      change(typeof update === "function" ? (update(state) as Partial<ShellState>) : update),
     (next) => {
       listener = next;
       return () => {};
@@ -59,8 +71,30 @@ function windowWith(changes: string[], thisMac: object = { role: "home", left: n
     state = { ...state, thisMac: next } as unknown as ShellState;
     listener(state, previous);
   };
-  return { drafts, draft, type, back };
+  /** The stack loads, or a later snapshot arrives, holding these cards. */
+  const stack = (cards: object[]) =>
+    change({ cards, cardsSnapshotLoaded: true } as unknown as Partial<ShellState>);
+  return { drafts, draft, type, back, stack, state: () => state };
 }
+
+/** This window's own storage, as a node test has none. */
+function stubStorage(seed: Record<string, string> = {}) {
+  const held = new Map(Object.entries(seed));
+  vi.stubGlobal("localStorage", {
+    getItem: (key: string) => held.get(key) ?? null,
+    setItem: (key: string, value: string) => held.set(key, value),
+    removeItem: (key: string) => held.delete(key),
+  });
+  return held;
+}
+
+const PICKED = {
+  answered: 1,
+  of: 1,
+  changed: 1,
+  picked: 1,
+  answers: [{ name: "harbour", values: ["south"], changed: true }],
+};
 
 afterEach(() => {
   vi.useRealTimers();
@@ -71,6 +105,7 @@ describe("startCardDrafts", () => {
   it("reads and sends nothing when the first mate's computer lacks the change", async () => {
     vi.useFakeTimers();
     const at = windowWith([]);
+    at.stack([{ id: "card-1" }]);
     await vi.runAllTimersAsync();
     at.type("Start after the tide");
     await vi.advanceTimersByTimeAsync(DRAFT_QUIET_MS * 2);
@@ -82,6 +117,10 @@ describe("startCardDrafts", () => {
     vi.useFakeTimers();
     const at = windowWith([CARD_DRAFTS]);
     await vi.runAllTimersAsync();
+    // Nothing is read before the stack loads, when no card's opening is known.
+    expect(at.drafts).not.toHaveBeenCalled();
+    at.stack([{ id: "card-1" }]);
+    await vi.runAllTimersAsync();
     expect(at.drafts).toHaveBeenCalledTimes(1);
     at.type("Start after the tide");
     await vi.advanceTimersByTimeAsync(DRAFT_QUIET_MS * 2);
@@ -92,10 +131,63 @@ describe("startCardDrafts", () => {
   it("reads every draft again when a view's link comes back, however short the drop", async () => {
     vi.useFakeTimers();
     const at = windowWith([CARD_DRAFTS], VIEW);
+    at.stack([{ id: "card-1" }]);
     await vi.runAllTimersAsync();
     expect(at.drafts).toHaveBeenCalledTimes(1);
     at.back({ ...VIEW, linkBack: 1 });
     await vi.runAllTimersAsync();
     expect(at.drafts).toHaveBeenCalledTimes(2);
+  });
+
+  it("drops the picks, words and notes of a card's earlier opening when it opens anew under its id", async () => {
+    vi.useFakeTimers();
+    stubStorage();
+    const at = windowWith([CARD_DRAFTS]);
+    at.stack([{ id: "card-1", lifecycleId: "opening-1" }]);
+    await vi.runAllTimersAsync();
+    at.type("Start after the tide");
+    expect(at.state().replyDrafts).toEqual({ "card-1": "Start after the tide" });
+    // The card closed and opened anew: the next snapshot names its new opening.
+    at.stack([{ id: "card-1", lifecycleId: "opening-2" }]);
+    expect(at.state().replyDrafts).toEqual({});
+    expect(at.state().cardAnswers).toEqual({});
+    expect(at.state().replyNotes).toEqual({});
+  });
+
+  it("drops picks restored at start that belong to an earlier opening of the card", async () => {
+    vi.useFakeTimers();
+    // Before the restart this window kept the card's draft at its first opening.
+    stubStorage({
+      "infinitary.cardDraftBase.card-1": JSON.stringify({
+        lifecycle: "opening-1",
+        revision: 0,
+        parts: { "answer:harbour": 0 },
+      }),
+    });
+    const at = windowWith([CARD_DRAFTS], undefined, { cardAnswers: { "card-1": PICKED } });
+    at.stack([{ id: "card-1", lifecycleId: "opening-2" }]);
+    expect(at.state().cardAnswers).toEqual({});
+    await vi.advanceTimersByTimeAsync(DRAFT_QUIET_MS * 2);
+    expect(at.draft).not.toHaveBeenCalled();
+  });
+
+  it("sends a pick restored at start that was never sent, even on a card with no draft yet", async () => {
+    vi.useFakeTimers();
+    stubStorage({
+      "infinitary.cardDraftBase.card-1": JSON.stringify({
+        lifecycle: "opening-1",
+        revision: 0,
+        parts: { "answer:harbour": 0 },
+      }),
+    });
+    const at = windowWith([CARD_DRAFTS], undefined, { cardAnswers: { "card-1": PICKED } });
+    at.stack([{ id: "card-1", lifecycleId: "opening-1" }]);
+    await vi.advanceTimersByTimeAsync(DRAFT_QUIET_MS * 2);
+    expect(at.draft).toHaveBeenCalledTimes(1);
+    expect(at.draft.mock.calls[0]?.[1]).toMatchObject({
+      since: 0,
+      lifecycle: "opening-1",
+      answers: [{ name: "harbour", values: ["south"] }],
+    });
   });
 });

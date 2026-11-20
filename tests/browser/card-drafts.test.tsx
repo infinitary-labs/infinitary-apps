@@ -115,6 +115,8 @@ test("a card's unsent picks and words follow the captain between windows, sent o
     note.value = "Bring the chart";
     note.dispatchEvent(new Event("input", { bubbles: true }));
   });
+  // Focus left the card's field, untouched since: the words that waited show now.
+  await expect.poll(() => field().value).toBe("Words from the other window");
   // Once what was typed has gone, only the body's own rule keeps the focused question.
   await expect
     .poll(() =>
@@ -130,8 +132,21 @@ test("a card's unsent picks and words follow the captain between windows, sent o
   };
   bridge.push("inf:cards:draft", drafts.elsewhere(CARD_ID, { answers: [NORTH, typed] }));
   await expect.poll(() => checked("north")).toBe(true);
+  const note = () =>
+    inCardBody(TITLE, () => (document.getElementById("note") as HTMLInputElement).value);
+  expect(await note()).toBe("Bring the chart");
+
+  // Section: once typing there stops, the change that waited shows, since nothing was typed after it.
+  await inCardBody(TITLE, () =>
+    (document.querySelector('input[name="harbour"][value="north"]') as HTMLInputElement).focus(),
+  );
+  await expect.poll(note).toBe("From the other window");
+
+  // Section: a pick under focus is no typing, and takes another window's change at once.
   expect(
-    await inCardBody(TITLE, () => (document.getElementById("note") as HTMLInputElement).value),
-  ).toBe("Bring the chart");
+    await inCardBody(TITLE, () => (document.activeElement as HTMLInputElement | null)?.value),
+  ).toBe("north");
+  bridge.push("inf:cards:draft", drafts.elsewhere(CARD_ID, { answers: [SOUTH] }));
+  await expect.poll(() => checked("south")).toBe(true);
   expect(bridge.unanswered).toEqual([]);
 });

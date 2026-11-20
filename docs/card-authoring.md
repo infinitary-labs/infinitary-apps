@@ -936,18 +936,20 @@ Nothing in a draft is sent to anyone until the captain presses a button or sends
 
 - `CardDrafts` (`src/core/orchestrator/cardDrafts.ts`) is the one writer of `card_drafts`, one row per part: `answer:<name>`, `words` or `notes`, each with the draft revision that last changed it.
   The table's triggers delete a card's draft in the same write that resolves or removes the card, and a change for a card that is no longer open is refused (`closed`), so a draft never comes back after the card closes.
-  A draft belongs to one opening of its card (`lifecycle`, the card's `lifecycleId`): a change for an earlier opening of a card reopened under its id is refused as closed, and a window lets go of its draft of a card whose opening changed, so the reopened card starts with none.
-  A change whose answers would pass what a press may send, in size (`CARD_ANSWERS_MAX_BYTES`) or in questions (`CARD_MAX_ANSWERS`), is refused whole (`too-large`).
-- A window reads every draft (`inf:cards:drafts`) at each welcome, every return of its link included, and takes a live frame that came while that reading was on its way when the frame is newer.
+  A draft belongs to one opening of its card (`lifecycle`, the card's `lifecycleId`; none for a card written before openings were kept): a change that names another opening than the card's own is refused as closed, and a window takes no draft of another opening.
+  A window drops the picks, words and notes it holds for a card whose opening changed, while it ran or since it last saved the card's draft, before the card's body draws, so the reopened card starts with none.
+  A change whose answers would pass what a press may send, in size (`CARD_ANSWERS_MAX_BYTES`) or in questions (`CARD_MAX_ANSWERS`), is refused whole (`too-large`); the window sends it again only once it changes, and the card's other changes still go.
+- A window reads every draft (`inf:cards:drafts`) once its stack has loaded and at each welcome, every return of its link included, and takes a live frame that came while that reading was on its way when the frame is newer.
   It sends what the captain changed (`inf:cards:draft`) once they pause for `DRAFT_QUIET_MS`, so words typed into the field never go key by key, even when a request comes back or a welcome arrives mid-pause; one request per card is in flight at a time, the newest change waiting behind it (`src/renderer/src/app/draftSync.ts`).
   A change undone while the one before it is on its way still goes, since the draft will hold the earlier change.
 - Each change names the revision the window last took (`since`): a part another window changed after that keeps the newer value, and every other part takes the window's.
   A part changed here and not yet sent is never overwritten by another window's change; it goes next and is the later change.
-  A part changed while the first mate's computer is out of reach instead keeps the revision the window had then, through any answer that comes back meanwhile; the window saves it, with the revision it last took and the card's opening, in its own storage beside its saved picks, so that pick goes on return, or after this window's restart, unless another window changed the same question meanwhile.
+  A part changed while the first mate's computer is out of reach instead keeps the revision the window had then, through any answer that comes back meanwhile, unless that answer kept this window's own value of the part; the window saves each part not yet sent, with the revision it goes against, the revision it last took and the card's opening, in its own storage beside its saved picks, so that pick goes on return, or after this window's restart, unless another window changed the same question meanwhile.
 - Every accepted change goes to every window as a live frame on `inf:cards:draft`, outside the journal (`docs/connection.md`, "Live pushes"), only to a window whose hello lists the `card-drafts` change.
-- Another window's picks reach a body already on screen through the bridge's `fill` message, which sets each choice by name and leaves alone the question that holds focus in a focused window; a body born later takes them from the shell's draft, as a revision does.
-  A preview's staged settings apply at its next birth, because its script reads them only then.
-  Another window's words wait while this window's field holds focus in a focused window.
+- Another window's picks reach a body already on screen through the bridge's `fill` message, which sets each choice by name at once, even one that holds focus; a body born later takes them from the shell's draft, as a revision does.
+  A change to a question being typed in - a text field or a Something else field holding focus in a focused window - waits until focus leaves it, and then shows only if the captain typed nothing there since it arrived.
+  A preview's staged settings are kept for its next birth, because its script reads them only then, and its reading carries them so the shell keeps them too.
+  Another window's words wait the same way while this window's field holds focus in a focused window.
 - A window whose home lacks the `card-drafts` change keeps its picks and words to itself, as before.
 
 ## An answer task's card is its deliverable

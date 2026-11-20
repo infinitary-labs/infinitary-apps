@@ -1,9 +1,9 @@
 import { spawn } from "node:child_process";
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { basename, join } from "node:path";
 import type { UpdateChannel } from "@shared/update";
 import { windowsPowerShell } from "../storage/ownerOnly";
-import type { BuildDownload } from "./updateChannels";
+import { type BuildDownload, UPDATE_CHANNEL_MARKER } from "./updateChannels";
 import { downloadChecked, rememberUpdateChannel, UpdateInstallProblem } from "./updateDownload";
 
 /**
@@ -140,18 +140,35 @@ export function createWindowsInstaller(
     await rm(folder, { recursive: true, force: true });
     await mkdir(folder, { recursive: true });
     const file = join(folder, basename(new URL(plan.download.url).pathname));
+    // The new copy follows the channel it came from, as on Linux. The marker
+    // is written before the hand-over, since the installer runs after this
+    // program ends: a marker that cannot be written hands nothing over, and
+    // a hand-over that fails puts the earlier marker back.
+    const marker = join(options.dataRoot, UPDATE_CHANNEL_MARKER);
+    let earlier: string | null = null;
+    let remembered = false;
     try {
       await downloadChecked(options.fetchImpl, plan.download, file);
       await beforeReplace?.();
+      earlier = await readFile(marker, "utf8").catch(() => null);
+      try {
+        await rememberUpdateChannel(options.dataRoot, plan.channel, plan.version);
+      } catch {
+        throw new UpdateInstallProblem(
+          "Infinitary could not record the update's channel, so nothing was installed.",
+        );
+      }
+      remembered = true;
       await handOver(file);
     } catch (caught) {
+      if (remembered) {
+        await (earlier === null ? rm(marker, { force: true }) : writeFile(marker, earlier)).catch(
+          () => undefined,
+        );
+      }
       await rm(folder, { recursive: true, force: true }).catch(() => undefined);
       throw caught;
     }
-    // The new copy follows the channel it came from, as on Linux.
-    await rememberUpdateChannel(options.dataRoot, plan.channel, plan.version).catch(
-      () => undefined,
-    );
     options.end();
   };
 }

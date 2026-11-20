@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
-import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -141,6 +141,28 @@ describe("the in-app Windows update", () => {
     expect(f.spawnImpl).not.toHaveBeenCalled();
     expect(f.end).not.toHaveBeenCalled();
     expect(existsSync(updatesIn(f.dataRoot))).toBe(false);
+  });
+
+  it("hands nothing over when the new channel cannot be recorded", async () => {
+    const f = installer();
+    // A folder where the marker goes: the marker's write fails.
+    mkdirSync(join(f.dataRoot, UPDATE_CHANNEL_MARKER, "held"), { recursive: true });
+    await expect(f.install(f.plan, f.saved)).rejects.toThrow(
+      "Infinitary could not record the update's channel, so nothing was installed.",
+    );
+    expect(f.spawnImpl).not.toHaveBeenCalled();
+    expect(f.end).not.toHaveBeenCalled();
+    expect(existsSync(updatesIn(f.dataRoot))).toBe(false);
+  });
+
+  it("puts the earlier channel back when the installer cannot start", async () => {
+    const f = installer({ spawns: "refused" });
+    const earlier = `${JSON.stringify({ schemaVersion: 1, channel: "stable", version: "0.8.3" })}\n`;
+    writeFileSync(join(f.dataRoot, UPDATE_CHANNEL_MARKER), earlier);
+    await expect(f.install(f.plan, f.saved)).rejects.toThrow(
+      "The installer could not start, so nothing was installed.",
+    );
+    expect(readFileSync(join(f.dataRoot, UPDATE_CHANNEL_MARKER), "utf8")).toBe(earlier);
   });
 
   it.each([

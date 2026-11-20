@@ -127,14 +127,15 @@ A Linux installation updates through the one update reader (`src/core/update/upd
 A Windows installation updates through the same update reader, from the builds file above, under `windows`, this PC's chip and `exe` (`src/core/update/updateChecker.ts`).
 
 - **Which channel.**
-  It follows its channel marker in the data folder, which the app writes after it hands an update over, and otherwise its version's channel, as on a Mac.
+  It follows its channel marker in the data folder, which the app writes just before it hands an update over, and otherwise its version's channel, as on a Mac.
   A channel whose version carries no Windows installer offers it nothing, and the Version row says no release is available on that channel yet.
 - **One click.**
   The Version row offers Update and restart.
   The app downloads the installer into its data folder (`updates`), refuses bytes whose SHA-256 is not the published one, and saves the crew's work ("Saving work before an update" below).
   It then hands the installer to Windows PowerShell, which waits for the app's own process to end and starts the installer as a silent update (`--updated /S --force-run`; `createWindowsInstaller`, `src/core/update/windowsInstall.ts`).
   Windows ends every process a Task Scheduler task started when the task's command ends, so Windows PowerShell asks Windows' own process service (`Win32_Process.Create`) to start that wait, which then belongs to no task and outlives the command.
-  The app writes its channel marker with the version it handed over and ends: a window quits, and a command ends with 75 as for any update (`docs/run.md`, "After an update").
+  The app writes its channel marker with the version it hands over before the hand-over, since the installer runs after the app ends: a marker it cannot write hands nothing over, and a hand-over that fails puts the earlier marker back.
+  Then it ends: a window quits, and a command ends with 75 as for any update (`docs/run.md`, "After an update").
   The installer replaces the copy for this person alone, with no administrator, keeps the data folder and the Task Scheduler tasks, which name the same program, and opens the new copy through its Start menu entry, whose window starts the command again.
 - **Who the installer trusts.**
   Until the Windows package is signed, an update trusts the download site and the published checksum alone, as a Linux package does; requiring the expected publisher's signature is a later piece of the Windows plan.

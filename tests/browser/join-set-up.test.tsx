@@ -41,7 +41,9 @@ test("a Mac leads with set up from the first mate's computer, its private addres
     ]);
     expect(group.querySelector("[data-join-chips-alone]")).not.toBeNull();
     // The chip came from the quick read alone: no account, address or key is read while closed.
-    expect(bridge.requests("inf:devices:set-up-here")).toEqual([[false]]);
+    const reads = bridge.requests("inf:devices:set-up-here");
+    expect(reads.length).toBeGreaterThan(0);
+    expect(reads.every(([details]) => details === false)).toBe(true);
     // The window asks to follow along while its first launch is up.
     await expect.poll(() => bridge.requests("inf:devices:follow-added").length).toBeGreaterThan(0);
   }

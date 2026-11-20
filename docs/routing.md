@@ -125,7 +125,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
    Discard, rework and cancel share a best-effort close of the abandoned attempt’s open pull request; success or a failure is recorded on its timeline, and a host failure never prevents local cleanup.
    A failed turn closes its task but never its pull request, which stays open for the captain to merge, close or carry on in a fresh attempt.
    A stronger-model retry of a failed task leaves that pull request open, and its brief names the pull request, its link and branch, so the fresh crewmate decides whether to build on top of it or overwrite it (`EscalationBriefFacts.previousPullRequest`).
-   Discarding the failed task closes it (`TaskDrop.drop`), even though the task itself is already closed.
+   Discarding the failed task closes it (`TaskDrop.drop`), even though the task itself is already closed, unless an open task, such as that retry, now delivers through the same pull request; the discard's answer then names that task.
    Existing closed tasks are not revisited.
    The fresh row inherits kind, basis, repo and parent; a clicked premium way also carries `premium_ask` and stamps premium as the floor (R1a outranks R1b), while a stronger-model click takes the next rung.
    It is briefed by `renderEscalationBrief` (Q4 B: a fresh crewmate, never a resume).

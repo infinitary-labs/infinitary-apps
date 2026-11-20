@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { ActionActor } from "@shared/actions";
 import { takesDownload, takesUpdate } from "@shared/contractFeatures";
-import { HERE } from "@shared/deviceNames";
+import { HERE, PLACE_SAID } from "@shared/deviceNames";
 import {
   awayWord,
   type ComputerReach,
@@ -24,6 +24,7 @@ import {
 } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
 import * as m from "@shared/i18n/messages.generated";
+import { englishOf, type Said, said } from "@shared/i18n/said";
 import { PROTOCOL_VERSION, parseInvokeRequest } from "@shared/ipc";
 import {
   type PackageUpdateAddressQuestion,
@@ -188,7 +189,8 @@ export type ComputersOptions = {
   /** The list, whole, after any change. */
   emit: (devices: DeviceView[]) => void;
   /** A note for the log that a removal waiting for a computer could not finish yet. */
-  onProblem: (text: string) => void;
+  /** A problem for the feed: words, or the app's own words as a saved fact (docs/i18n.md, "Saved facts"). */
+  onProblem: (line: string | Said) => void;
   now: () => number;
   /** Runs `run` once after `ms`, answering how to cancel it; a timer by default. */
   schedule?: (ms: number, run: () => void) => () => void;
@@ -558,7 +560,11 @@ export class Computers {
     // Runs on first, so nothing new starts on the computer out of reach.
     for (const repo of repos.list())
       if (repo.runsOn === from) repos.setRunsOn(repo.id, to === RUNS_ON_THIS_MAC ? null : to);
-    const carried = m.devicesCarryRunsOn({ to: toName, from: label });
+    // Saved as a fact beside its English, so it follows the language it is shown in.
+    const carried = said("devicesCarryRunsOn", {
+      to: target ? toName : PLACE_SAID.this,
+      from: label,
+    });
     for (const taskId of tasks.placement.moveRunsOn(from, to, toName, carried))
       this.options.runsOnMoved?.(taskId);
     const started = tasks
@@ -604,8 +610,11 @@ export class Computers {
       if (!device) continue;
       const target = this.options.pairing.list().find((entry) => entry.id === to);
       const toName = target ? deviceLabel(target) : HERE.this;
+      const toSaid = target ? toName : PLACE_SAID.this;
       if (left > 0) {
-        this.options.onProblem(m.devicesCarryStayed({ count: left, from: deviceLabel(device) }));
+        this.options.onProblem(
+          said("devicesCarryStayed", { count: left, from: deviceLabel(device) }),
+        );
         continue;
       }
       void this.removeNow(device)
@@ -615,13 +624,14 @@ export class Computers {
             deviceId: to,
             name: toName,
             stage: "done",
-            text: m.devicesCarriedOn({ to: toName }),
+            // English, as every line of a device's update is.
+            text: englishOf(said("devicesCarriedOn", { to: toSaid })),
             tone: "info",
           }),
         )
         .catch((caught: unknown) =>
           this.options.onProblem(
-            m.devicesCarryNotRemoved({
+            said("devicesCarryNotRemoved", {
               from: deviceLabel(device),
               why: caught instanceof Error ? caught.message : String(caught),
             }),

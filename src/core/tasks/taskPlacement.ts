@@ -1,3 +1,4 @@
+import { englishOf, type Said } from "@shared/i18n/said";
 import {
   type AwayCopy,
   type CommittedPlacement,
@@ -426,8 +427,11 @@ export class TaskPlacement {
     from: string,
     into: string,
     words: string,
-    line = `Runs on: ${words}, the one row its computer keeps now`,
+    line: string | Said = `Runs on: ${words}, the one row its computer keeps now`,
   ): string[] {
+    // A line in the app's words is saved as a fact beside its English (docs/i18n.md, "Saved facts").
+    const text = typeof line === "string" ? line : englishOf(line);
+    const data = typeof line === "string" ? undefined : { said: line };
     const at = this.writer.now();
     const run = this.writer.write(() =>
       this.writer.store.listByStatus("open", "active").flatMap((record) => {
@@ -441,7 +445,8 @@ export class TaskPlacement {
           at,
           actor: "host",
           kind: "note",
-          text: line,
+          text,
+          ...(data ? { data } : {}),
         });
         return [record.id];
       }),

@@ -10,6 +10,7 @@ import {
   parsePairingLink,
 } from "@shared/devices";
 import * as m from "@shared/i18n/messages.generated";
+import { englishOf, type Said, said } from "@shared/i18n/said";
 import { PROTOCOL_VERSION } from "@shared/ipc";
 import { WORK_REACH_GRACE_MS, WORK_SETUP_LIVE } from "@shared/workSetup";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -835,7 +836,7 @@ describe("a computer that joins again under a new key", () => {
       if (!row) throw new Error("not on the list");
       return deviceLabel(row);
     };
-    const said = m.devicesCarryRunsOn({ to: label(again), from: label(home.deviceId) });
+    const fact = said("devicesCarryRunsOn", { to: label(again), from: label(home.deviceId) });
     const answer = await home.computers.carryOn(home.deviceId, again);
     await vi.waitFor(() => expect(home.lines).toHaveLength(1));
 
@@ -849,12 +850,13 @@ describe("a computer that joins again under a new key", () => {
     // Its Runs on follows, and its record says why: the carry, not a fold.
     expect(home.tasks.get("waits")?.shape?.runs_on_ask).toBe(again);
     expect(home.moved).toContain("waits");
-    expect(home.tasks.timeline("waits").map((event) => event.text)).toContain(said);
+    const line = home.tasks.timeline("waits").find((event) => event.data?.said);
+    expect(line).toMatchObject({ text: englishOf(fact), data: { said: fact } });
     expect(home.lines.at(-1)).toMatchObject({ deviceId: again, stage: "done", tone: "info" });
   });
 
   it("keeps the earlier entry and says why when a task cannot move", async () => {
-    const problems: string[] = [];
+    const problems: (string | Said)[] = [];
     const home = homeAt(ADDRESS, undefined, {
       carryTask: async () => ({ ok: false, text: "The footer task holds no commit here." }),
       onProblem: (text) => problems.push(text),
@@ -872,7 +874,7 @@ describe("a computer that joins again under a new key", () => {
   });
 
   it("keeps the earlier entry when a move it started ends with the task still there", async () => {
-    const problems: string[] = [];
+    const problems: (string | Said)[] = [];
     const home = homeAt(ADDRESS, undefined, {
       carryTask: async () => ({ ok: true, text: "moving" }),
       onProblem: (text) => problems.push(text),
@@ -880,10 +882,15 @@ describe("a computer that joins again under a new key", () => {
     started(home, "footer");
     const again = joinAgain(home);
 
+    const earlier = home.computers.list().find((device) => device.id === home.deviceId);
+    if (!earlier) throw new Error("not on the list");
     await home.computers.carryOn(home.deviceId, again);
 
     expect(home.computers.list().map((device) => device.id)).toContain(home.deviceId);
-    expect(problems).toHaveLength(1);
+    // Saved as a fact, worded wherever it is shown.
+    expect(problems).toEqual([
+      said("devicesCarryStayed", { count: 1, from: deviceLabel(earlier) }),
+    ]);
   });
 
   it("refuses a computer in reach, and a destination out of reach", async () => {

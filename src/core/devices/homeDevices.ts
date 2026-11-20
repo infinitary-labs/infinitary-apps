@@ -17,6 +17,7 @@ import {
 } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
 import { overridePasses } from "@shared/holds";
+import { saidLine } from "@shared/i18n/said";
 import { PROTOCOL_VERSION } from "@shared/ipc";
 import type { ComputerResourcesView } from "@shared/resources";
 import { interfacesFromAddresses } from "../connection/addresses";
@@ -641,7 +642,11 @@ export async function startHomeDevices(options: {
           deviceSignIns.reachChanged(view);
           deviceSetup?.reachChanged(view);
         },
-        onProblem: (text) => broadcastEvent({ type: "firstmate_note", text }),
+        onProblem: (line) =>
+          broadcastEvent({
+            type: "firstmate_note",
+            ...(typeof line === "string" ? { text: line } : saidLine(line)),
+          }),
         now: ticker.now,
         bootedAt,
       });

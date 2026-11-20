@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-tests-follow-source",
+      "reason": "Internal: two release workflow tests read the publishing project from the release source file instead of naming the earlier project, so they follow the project that now publishes; nothing a person sees changes."
+    }
+  ]
+}

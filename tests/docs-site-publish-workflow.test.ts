@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { hostEnv } from "../src/core/hostEnv";
+import { releaseSource } from "../src/core/update/releaseSource";
 import { loadYamlFile, workflowValue } from "./helpers/releaseWorkflows";
 import { scratchDir } from "./helpers/scratchDirs";
 
@@ -38,8 +39,9 @@ const check = loadYamlFile(".github/workflows/docs-site.yml") as unknown as Work
 const job = publish.jobs.publish as Job;
 
 const OPERATOR = "kunchenguid";
+// The project that publishes is the one the releases come from (packaging/release-source.json).
 const mainPush = {
-  repository: "infinitary-labs/infinitary",
+  repository: releaseSource.repository,
   ref: "refs/heads/main",
   actor: OPERATOR,
   event_name: "push",
@@ -99,8 +101,8 @@ describe("who and what starts a publish", () => {
     ],
     ["anyone else", { ...mainPush, actor: "someone-else" }, false],
     [
-      "the new source before activation",
-      { ...mainPush, repository: "infinitary-labs/infinitary-apps" },
+      "the archived earlier project",
+      { ...mainPush, repository: "infinitary-labs/infinitary" },
       false,
     ],
     ["a copy of the repository", { ...mainPush, repository: "someone-else/infinitary" }, false],

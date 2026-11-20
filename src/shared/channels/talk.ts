@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { batchAnswerSchema } from "../batches";
+import { cardNotesSchema } from "../cardNotes";
 import {
   CARD_REPLY_MAX_CHARS,
   CONVERSE_TEXT_MAX_CHARS,
@@ -7,6 +8,7 @@ import {
   TURN_IMAGES_MAX,
   taskLifecycleOpSchema,
   taskMoveFromSchema,
+  turnImageSchema,
 } from "../cards";
 import { crewSendResultSchema } from "../crewTranscript";
 import { lastTurnSchema } from "../lastTurn";
@@ -111,7 +113,18 @@ export const talkChannels = {
     effect: "change",
     surface: "core",
     reach: "views",
-    request: z.tuple([z.string().min(1).max(64), z.string().min(1).max(CARD_REPLY_MAX_CHARS)]),
+    // With it ride the notes on the task's running page and their marked pictures
+    // (docs/task-browser.md, "Pointing at a page"), which need no words (`card-note-places.md`).
+    request: z.tuple([
+      z.string().min(1).max(64),
+      z.string().max(CARD_REPLY_MAX_CHARS),
+      z
+        .object({
+          notes: cardNotesSchema.optional(),
+          images: z.array(turnImageSchema).max(TURN_IMAGES_MAX).optional(),
+        })
+        .optional(),
+    ]),
     response: crewSendResultSchema,
   },
   "inf:task:interrupt": {

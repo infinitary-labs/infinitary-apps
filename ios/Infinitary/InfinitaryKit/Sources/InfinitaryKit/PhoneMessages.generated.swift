@@ -308,7 +308,15 @@ public enum PhoneMessages {
     public static func `cardNoteEditUnavailable`() -> String { PhoneWords.format("cardNoteEditUnavailable", []) }
     public static func `cardNoteEmpty`() -> String { PhoneWords.format("cardNoteEmpty", []) }
     public static func `cardNoteLabel`(`excerpt`: String, `kind`: String) -> String { PhoneWords.format("cardNoteLabel", [`excerpt`, `kind`]) }
+    public static func `cardNoteMarkHintBox`() -> String { PhoneWords.format("cardNoteMarkHintBox", []) }
+    public static func `cardNoteMarkHintLine`() -> String { PhoneWords.format("cardNoteMarkHintLine", []) }
+    public static func `cardNoteMarkLabel`(`excerpt`: String, `kind`: String, `mark`: String) -> String { PhoneWords.format("cardNoteMarkLabel", [`excerpt`, `kind`, `mark`]) }
+    public static func `cardNoteMarkedPicture`() -> String { PhoneWords.format("cardNoteMarkedPicture", []) }
     public static func `cardNoteNotSent`() -> String { PhoneWords.format("cardNoteNotSent", []) }
+    public static func `cardNotePageHint`() -> String { PhoneWords.format("cardNotePageHint", []) }
+    public static func `cardNotePagePicture`() -> String { PhoneWords.format("cardNotePagePicture", []) }
+    public static func `cardNotePageShows`() -> String { PhoneWords.format("cardNotePageShows", []) }
+    public static func `cardNotePicturesFull`(`max`: String) -> String { PhoneWords.format("cardNotePicturesFull", [`max`]) }
     public static func `cardNotePlaceholder`() -> String { PhoneWords.format("cardNotePlaceholder", []) }
     public static func `cardNotePointAt`() -> String { PhoneWords.format("cardNotePointAt", []) }
     public static func `cardNotePointedAt`() -> String { PhoneWords.format("cardNotePointedAt", []) }
@@ -317,6 +325,8 @@ public enum PhoneMessages {
     public static func `cardNoteRemove`() -> String { PhoneWords.format("cardNoteRemove", []) }
     public static func `cardNoteSend`(`count`: Int) -> String { PhoneWords.format("cardNoteSend", [`count`]) }
     public static func `cardNoteStale`() -> String { PhoneWords.format("cardNoteStale", []) }
+    public static func `cardNoteToolBox`() -> String { PhoneWords.format("cardNoteToolBox", []) }
+    public static func `cardNoteToolLine`() -> String { PhoneWords.format("cardNoteToolLine", []) }
     public static func `cardNoteUnavailable`() -> String { PhoneWords.format("cardNoteUnavailable", []) }
     public static func `cardPastMark`() -> String { PhoneWords.format("cardPastMark", []) }
     public static func `cardPastMeta`() -> String { PhoneWords.format("cardPastMeta", []) }
@@ -1999,6 +2009,7 @@ public enum PhoneMessages {
     public static func `refuseNoCardIsShownOrPutAside`() -> String { PhoneWords.format("refuseNoCardIsShownOrPutAside", []) }
     public static func `refuseNoCardThreadIsReadAboveIts`() -> String { PhoneWords.format("refuseNoCardThreadIsReadAboveIts", []) }
     public static func `refuseNoOtherCardIsNew`() -> String { PhoneWords.format("refuseNoOtherCardIsNew", []) }
+    public static func `refuseNoPageToPointAt`() -> String { PhoneWords.format("refuseNoPageToPointAt", []) }
     public static func `refuseNoReleaseNotesYet`() -> String { PhoneWords.format("refuseNoReleaseNotesYet", []) }
     public static func `refuseNoUpdateIsAvailable`() -> String { PhoneWords.format("refuseNoUpdateIsAvailable", []) }
     public static func `refuseNoUpdateIsSavingWorkNow`() -> String { PhoneWords.format("refuseNoUpdateIsSavingWorkNow", []) }
@@ -4021,7 +4032,15 @@ extension PhoneWords {
         "cardNoteEditUnavailable": [],
         "cardNoteEmpty": [],
         "cardNoteLabel": ["excerpt", "kind"],
+        "cardNoteMarkHintBox": [],
+        "cardNoteMarkHintLine": [],
+        "cardNoteMarkLabel": ["excerpt", "kind", "mark"],
+        "cardNoteMarkedPicture": [],
         "cardNoteNotSent": [],
+        "cardNotePageHint": [],
+        "cardNotePagePicture": [],
+        "cardNotePageShows": [],
+        "cardNotePicturesFull": ["max"],
         "cardNotePlaceholder": [],
         "cardNotePointAt": [],
         "cardNotePointedAt": [],
@@ -4030,6 +4049,8 @@ extension PhoneWords {
         "cardNoteRemove": [],
         "cardNoteSend": ["count"],
         "cardNoteStale": [],
+        "cardNoteToolBox": [],
+        "cardNoteToolLine": [],
         "cardNoteUnavailable": [],
         "cardPastMark": [],
         "cardPastMeta": [],
@@ -5712,6 +5733,7 @@ extension PhoneWords {
         "refuseNoCardIsShownOrPutAside": [],
         "refuseNoCardThreadIsReadAboveIts": [],
         "refuseNoOtherCardIsNew": [],
+        "refuseNoPageToPointAt": [],
         "refuseNoReleaseNotesYet": [],
         "refuseNoUpdateIsAvailable": [],
         "refuseNoUpdateIsSavingWorkNow": [],

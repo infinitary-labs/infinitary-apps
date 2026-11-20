@@ -353,6 +353,42 @@ export const taskBrowserCommandResultSchema = z.union([
 export type TaskBrowserCommandResult = z.infer<typeof taskBrowserCommandResultSchema>;
 
 /**
+ * A page names at most this many places in one answer (docs/task-browser.md, "Pointing at a
+ * page"): the answer rides one connection frame, and the outline's first ones on screen are kept.
+ */
+export const TASK_BROWSER_PLACES_MAX = 400;
+
+/** One thing the page's outline names on screen: its role and name, and its box in the page's own pixels. */
+export const taskBrowserPlaceSchema = z.object({
+  role: z.string().max(64),
+  name: z.string().max(240),
+  x: z.number().int().nonnegative(),
+  y: z.number().int().nonnegative(),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+});
+export type TaskBrowserPlace = z.infer<typeof taskBrowserPlaceSchema>;
+
+/**
+ * What the outline of a task's page names on screen now, in the outline's order, with the size
+ * the page is laid out at and the page's address and title as its crewmate's own reads give
+ * them; or that it could not be read, which a view shows no words for: a mark then names its
+ * box alone. Names only: never a value typed into the page.
+ */
+export const taskBrowserPlacesSchema = z.union([
+  z.object({
+    ok: z.literal(true),
+    width: z.number().int().positive(),
+    height: z.number().int().positive(),
+    url: z.string().max(2_048),
+    title: z.string().max(240),
+    places: z.array(taskBrowserPlaceSchema).max(TASK_BROWSER_PLACES_MAX),
+  }),
+  z.object({ ok: z.literal(false) }),
+]);
+export type TaskBrowserPlaces = z.infer<typeof taskBrowserPlacesSchema>;
+
+/**
  * How the captain hands a browser back (docs/task-browser.md, "Signed-in
  * sites"): from the kept profile, `automatic` is the captain's rule for the site they
  * signed in to - true lets later tasks use it without asking, false asks

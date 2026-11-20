@@ -13,6 +13,7 @@ import {
   type TaskBrowserFact,
   type TaskBrowserHandle,
   type TaskBrowserInput,
+  type TaskBrowserPlaces,
   type TaskBrowserRequest,
   type TaskBrowserReturn,
   type TaskBrowserSize,
@@ -71,6 +72,7 @@ import { saveDownload } from "./evidenceFiles";
 import { RefBook } from "./outline";
 import { PageActions } from "./pageActions";
 import { clip, PageNotices, refusalWords } from "./pageNotices";
+import { pagePlaces } from "./places";
 import { type ProjectServer, serveProjectFolder } from "./projectServer";
 import { isPageNoise } from "./reading";
 import { SavedSignInGrants, type SignInStore } from "./savedSignInGrants";
@@ -757,6 +759,33 @@ export class TaskBrowsers {
       return { ok: true };
     } catch {
       return { ok: false, text: "The page did not take that." };
+    }
+  }
+
+  /**
+   * What the outline of the task's page names on screen now (docs/task-browser.md,
+   * "Pointing at a page"): read once when the captain's Point at holds the page's
+   * picture, through the same read the crewmate's outline takes. Names only, with a
+   * key hidden where the crewmate's own reads hide it; nothing is recorded.
+   */
+  async places(taskId: string): Promise<TaskBrowserPlaces> {
+    const browser = this.browsers.get(taskId);
+    if (!browser) return { ok: false };
+    try {
+      const nodes = await browser.current.page.nodes();
+      const size = { width: browser.size.width, height: browser.size.height };
+      const hidden = signedIn(browser);
+      const url = addressOf(browser, browser.current);
+      const title = browser.current.page.title().trim();
+      return {
+        ok: true,
+        ...size,
+        url: (hidden ? bareAddress(url) : url).slice(0, 2_048),
+        title: (hidden ? hideKeys(title) : title).slice(0, 240),
+        places: pagePlaces(nodes, size, { hideKeys: hidden }),
+      };
+    } catch {
+      return { ok: false };
     }
   }
 

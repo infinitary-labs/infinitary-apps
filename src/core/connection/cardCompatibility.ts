@@ -1,6 +1,6 @@
 import { withoutSkipped } from "@shared/cardAnswerLines";
 import { CARD_DRAFTS } from "@shared/cardDrafts";
-import { type CardNote, noteText } from "@shared/cardNotes";
+import { type CardNote, markNumbers, noteText, noteTexts } from "@shared/cardNotes";
 import type { Spelling } from "@shared/codeNames";
 import { contractChange } from "./contractChanges";
 import { type JournalEntry, pushFrameIn } from "./journal";
@@ -17,10 +17,36 @@ export const CARD_ANSWER_SKIPPED = contractChange("card-answer-skipped");
 /** Each open card's unsent draft, read and followed by every window (`card-drafts.md`). */
 export const CARD_DRAFTS_CHANGE = contractChange(CARD_DRAFTS);
 
+/** A note's place in a picture, and the page a note marks (`card-note-places.md`). */
+export const CARD_NOTE_PLACES = contractChange("card-note-places");
+
+/**
+ * A line's notes for a reader that draws notes and reads no place: each note with a place is
+ * folded into the line's words, numbered as the whole reply numbers its marks, and the rest stay notes.
+ */
+function withoutPlaces(text: unknown, notes: readonly CardNote[]): Record<string, unknown> {
+  const marks = markNumbers(notes);
+  const plain = notes.filter((note) => !note.place && !note.page);
+  const folded = notes.flatMap((note, index) =>
+    note.place || note.page ? [noteText(note, marks[index])] : [],
+  );
+  if (folded.length === 0) return { notes };
+  return {
+    ...(plain.length > 0 ? { notes: plain } : {}),
+    text: [text, ...folded].filter(Boolean).join("\n"),
+  };
+}
+
 /** Strict older desktops need fields removed; readers without annotations keep a readable note. */
 export function threadLinesFor(
   value: unknown,
-  reads: { sharing: boolean; annotations: boolean; through?: boolean; skipped?: boolean },
+  reads: {
+    sharing: boolean;
+    annotations: boolean;
+    through?: boolean;
+    skipped?: boolean;
+    places?: boolean;
+  },
 ): unknown {
   if (Array.isArray(value)) return value.map((entry) => threadLinesFor(entry, reads));
   if (!value || typeof value !== "object") return value;
@@ -45,13 +71,13 @@ export function threadLinesFor(
         ...(reads.sharing ? { contributor, answersMessage, clarification } : {}),
         ...(reads.annotations
           ? notes
-            ? { notes }
+            ? reads.places === false && Array.isArray(notes)
+              ? withoutPlaces(line.text, notes as CardNote[])
+              : { notes }
             : {}
           : notes && Array.isArray(notes)
             ? {
-                text: [line.text, ...(notes as CardNote[]).map(noteText)]
-                  .filter(Boolean)
-                  .join("\n"),
+                text: [line.text, ...noteTexts(notes as CardNote[])].filter(Boolean).join("\n"),
               }
             : {}),
       };
@@ -89,6 +115,8 @@ export type CardReads = {
   files: boolean;
   through: boolean;
   skipped: boolean;
+  /** Whether the view reads a note's place and page (`card-note-places.md`). */
+  places: boolean;
 };
 
 /**
@@ -131,7 +159,7 @@ export function cardPushFor(
     ? frameWithoutUnreadActions(spelled, actionReads)
     : spelled;
   if (
-    (!sharedCards || !reads.annotations || !reads.through || !reads.skipped) &&
+    (!sharedCards || !reads.annotations || !reads.through || !reads.skipped || !reads.places) &&
     THREAD_CHANNELS.has(entry.channel)
   ) {
     const frame = JSON.parse(text);
@@ -142,6 +170,7 @@ export function cardPushFor(
         annotations: reads.annotations,
         through: reads.through,
         skipped: reads.skipped,
+        places: reads.places,
       }),
     });
   }

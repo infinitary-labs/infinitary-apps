@@ -17,6 +17,7 @@ import {
   cardAnswersBytes,
   cardQuestionsBytes,
   deviceArrival,
+  TURN_IMAGES_MAX,
   withAnythingElse,
 } from "@shared/cards";
 import {
@@ -28,6 +29,7 @@ import {
 import { openedSection } from "@shared/integrations";
 import type { FrameAnswers, FrameBox } from "@shared/plugins/bridge";
 import { isPreparing } from "../attachments/intake";
+import { forgetMarked, markedPictureCount, markedPictures } from "../cards/markedPictures";
 import { clearSecretValues, readSecretValues } from "../cards/SecretAskFields";
 import { readBringPicks } from "../cards/SecretBringPicks";
 import type { ImageAttachment } from "../design";
@@ -535,7 +537,9 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
     attachReplyImages: (cardId, items) =>
       set((s) => {
         const held = s.replyImages[cardId] ?? [];
-        const { taken, refused } = takePictures(held, items);
+        // Each marked picture of the queued notes rides the reply as one of its pictures.
+        const marked = markedPictureCount(cardId, s.replyNotes[cardId] ?? []);
+        const { taken, refused } = takePictures(held, items, marked);
         return {
           replyImages: { ...s.replyImages, [cardId]: [...held, ...taken] },
           replyErrors: withoutKey(s.replyErrors, cardId),
@@ -587,6 +591,14 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
       // Past a reply's limit nothing leaves and the draft stays; the row
       // already says so under the field.
       if (text.length > CARD_REPLY_MAX_CHARS) return;
+      // One picture per marked picture rides the reply beside the attached ones (docs/card-threads.md,
+      // "Pointing at a place"): past a message's pictures nothing leaves, and the row says so.
+      if (markedPictureCount(cardId, notes) + images.length > TURN_IMAGES_MAX) {
+        set((s) => ({ replyNotices: { ...s.replyNotices, [cardId]: "pictures-max" as const } }));
+        return;
+      }
+      // Drawn now, from each picture as it was marked, before the queue is cleared.
+      const marked = markedPictures(cardId, notes);
       set((s) => ({
         // Clear before collecting settings or crossing the core boundary.
         replyDrafts: withoutKey(s.replyDrafts, cardId),
@@ -605,6 +617,7 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         if (answers && cardAnswersBytes(answers) > CARD_ANSWERS_MAX_BYTES) {
           throw new Error(CARD_ANSWERS_TOO_LONG);
         }
+        const drawn = await marked;
         // Sending hands the turn to the author; the card stays where it is.
         const payload =
           images.length > 0 || files.length > 0 || answers?.length || notes.length > 0
@@ -613,14 +626,19 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
                 ...(notes.length ? { notes } : {}),
                 ...(files.length ? { files } : {}),
                 ...(answers?.length ? { answers } : {}),
-                images: images.map((image) => ({
-                  mimeType: image.mimeType,
-                  data: image.data,
-                  ...(image.name ? { name: image.name } : {}),
-                })),
+                images: [
+                  ...images.map((image) => ({
+                    mimeType: image.mimeType,
+                    data: image.data,
+                    ...(image.name ? { name: image.name } : {}),
+                  })),
+                  ...drawn,
+                ],
               }
             : text;
         const thread = await window.infinitary.cards.reply(cardId, payload, submission);
+        // The reply left with its marked pictures: this window keeps none of them.
+        forgetMarked(cardId, []);
         // Paint it before anything else is awaited: the card stays on the
         // stage now, so a later line the core pushes (its author's answer)
         // must not be overwritten by this older reading.

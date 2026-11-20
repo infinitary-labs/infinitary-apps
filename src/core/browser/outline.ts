@@ -44,6 +44,8 @@ export type BrowserNode = {
    * could not tell, as for an element the page does not lay out.
    */
   onScreen?: boolean;
+  /** Where the page's window shows the element, in the page's own pixels from the window's top left. */
+  box?: { x: number; y: number; width: number; height: number };
   /**
    * For a frame whose document the host read (its children): that
    * document's address, which its line names the site of.

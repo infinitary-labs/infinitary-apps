@@ -283,8 +283,8 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       return { ok: true as const };
     },
     // The Crewmate tab's composer: the captain's own line, and his ⌃C or Stop.
-    "inf:task:steer": (taskId, text) =>
-      services.supervisor.steer.steerFromCrewmateTab(taskId, text),
+    "inf:task:steer": (taskId, text, more) =>
+      services.supervisor.steer.steerFromCrewmateTab(taskId, text, more),
     "inf:task:interrupt": (taskId) => services.supervisor.steer.interruptFromCrewmateTab(taskId),
 
     ...taskRowChannels(() => services.supervisor.hostOps, services.tasks),
@@ -860,6 +860,11 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       services.browsers
         ? services.browsers.captainInput(taskId, input)
         : { ok: false, text: NO_TASK_BROWSERS },
+
+    // What the task's page names on screen, read once when the captain's Point at
+    // holds its picture (docs/task-browser.md, "Pointing at a page"); nothing is recorded.
+    "inf:browser:places": async (taskId) =>
+      services.browsers ? services.browsers.places(taskId) : { ok: false as const },
 
     // The captain's own clicks in a task's browser view (docs/task-browser.md).
     "inf:browser:stop": (taskId) =>

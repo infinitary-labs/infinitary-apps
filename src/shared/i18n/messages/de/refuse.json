@@ -11,6 +11,7 @@
   "refuseNoCardIsShownOrPutAside": "Keine Karte wird angezeigt oder liegt beiseite",
   "refuseNoCardThreadIsReadAboveIts": "Kein Kartenverlauf ist oberhalb seiner neuesten Nachricht gelesen",
   "refuseNoOtherCardIsNew": "Keine andere Karte ist neu",
+  "refuseNoPageToPointAt": "Es wird keine Seite angezeigt, auf die du zeigen kannst",
   "refuseNoReleaseNotesYet": "Noch keine Versionshinweise",
   "refuseNoUpdateIsAvailable": "Kein Update verfügbar",
   "refuseNoUpdateIsSavingWorkNow": "Gerade sichert kein Update Arbeit",

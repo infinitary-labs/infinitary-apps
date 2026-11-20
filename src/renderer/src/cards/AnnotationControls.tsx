@@ -1,4 +1,5 @@
-import { type CardNote, noteLabel } from "@shared/cardNotes";
+import { marksSource, smallCopy } from "@shared/cardNoteMarks";
+import { type CardNote, markNumbers, noteLabel, placeKey } from "@shared/cardNotes";
 import { notePart } from "@shared/cardNoteTargets";
 import { CARD_REPLY_MAX_CHARS } from "@shared/cards";
 import { limitBand } from "@shared/composer";
@@ -10,6 +11,7 @@ import { useCommandKeys } from "../app/keyHints";
 import { useShellStore } from "../app/store";
 import { VoiceNotice } from "../app/VoiceNotice";
 import { Button, IconButton } from "../design";
+import { markLook } from "../design/cards/PictureMarks";
 import { ComposerCount } from "../design/core/ComposerField";
 import { thisDesktop } from "../design/core/desktop";
 import { DictationMark } from "../design/voice/VoiceInput";
@@ -22,6 +24,7 @@ import {
   sameNote,
   settleAnnotation,
 } from "./annotationBridge";
+import { forgetMarked, markedSource } from "./markedPictures";
 import type { CollectAnswers } from "./PrototypeBody";
 import { cardBodyHtml } from "./prototypeSrcdoc";
 import { useAnnotationHome } from "./useAnnotationHome";
@@ -84,7 +87,7 @@ export function AnnotationControls({
       {offer && !pick && !sending && <AnnotateOffer cardId={cardId} />}
       {pick && (
         <AnnotationPopover
-          key={`${pick.note.key}-${JSON.stringify(pick.note.span)}`}
+          key={`${pick.note.key}-${JSON.stringify(pick.note.span)}-${placeKey(pick.note.place)}`}
           cardId={cardId}
           collect={collect}
         />
@@ -98,11 +101,24 @@ export function QueuedNotes({ cardId }: { cardId: string }) {
   const [editFailure, setEditFailure] = useState<{ note: CardNote; result: NoteReveal }>();
   const notes = useShellStore((s) => s.replyNotes[cardId] ?? NO_NOTES);
   const sending = useShellStore((s) => s.sendingReplies[cardId]);
+  const writing = useShellStore((s) =>
+    s.annotationPick?.cardId === cardId ? s.annotationPick.note : undefined,
+  );
+  // A removed mark's picture is forgotten with it; the queued ones and the one being written
+  // stay, and so does a reply's while it is being sent, which a refusal puts back.
+  useEffect(() => {
+    if (!sending) forgetMarked(cardId, writing ? [...notes, writing] : notes);
+  }, [cardId, notes, writing, sending]);
+  const marks = markNumbers(notes);
   return (
     <>
-      {notes.map((note) => (
-        <div className="inf-queued-note" key={JSON.stringify([note.key, note.start, note.span])}>
-          <NoteAnchor cardId={cardId} note={note} />
+      {notes.map((note, at) => (
+        <div
+          className="inf-queued-note"
+          key={JSON.stringify([note.key, note.start, note.span, placeKey(note.place)])}
+        >
+          <NoteAnchor cardId={cardId} note={note} mark={marks[at]} />
+          <MarkedCopy cardId={cardId} note={note} mark={marks[at]} />
           <span>{note.comment || m.cardNoteEmpty()}</span>
           {editFailure?.note === note && (
             <span role="status">
@@ -114,8 +130,22 @@ export function QueuedNotes({ cardId }: { cardId: string }) {
             <Button
               variant="ghost"
               disabled={sending}
-              onClick={async () => {
-                const result = await revealNote(cardId, note, true);
+              onClick={async (event) => {
+                // A note on a running page is no part of a card: its words are edited here.
+                if (note.page) {
+                  const box = event.currentTarget.getBoundingClientRect();
+                  settleAnnotation();
+                  useShellStore.setState({
+                    annotationPick: {
+                      cardId,
+                      note,
+                      box: { top: box.top, bottom: box.bottom, left: box.left, right: box.right },
+                    },
+                    annotationOffer: null,
+                  });
+                  return;
+                }
+                const result = await revealNote(cardId, note, true, marks[at]);
                 setEditFailure(result === "revealed" ? undefined : { note, result });
               }}
             >
@@ -131,7 +161,49 @@ export function QueuedNotes({ cardId }: { cardId: string }) {
   );
 }
 
-export function NoteAnchor({ cardId, note }: { cardId: string; note: CardNote }) {
+/** The most room a marked picture's small copy takes in the thread (the design skill's viewer page). */
+const MARKED_COPY = { width: 220, height: 160 };
+
+/**
+ * A queued mark's small copy of its picture, with the mark drawn in (docs/card-threads.md,
+ * "Pointing at a place"): the picture as this window marked it, never one read again.
+ */
+function MarkedCopy({ cardId, note, mark }: { cardId: string; note: CardNote; mark?: number }) {
+  const source = markedSource(cardId, note);
+  if (!source || !note.place || mark === undefined) return null;
+  const size = { width: source.width, height: source.height };
+  const copy = smallCopy(size, MARKED_COPY.width, MARKED_COPY.height);
+  return (
+    <span
+      className="inf-marked-copy"
+      role="img"
+      aria-label={m.cardNoteMarkedPicture()}
+      data-marked-copy={mark}
+      style={{ aspectRatio: `${size.width} / ${size.height}`, width: copy.width }}
+    >
+      <img src={source.src} alt="" draggable={false} />
+      <img
+        src={marksSource(size, [{ number: mark, place: note.place }], markLook(), copy.unit)}
+        alt=""
+        draggable={false}
+      />
+    </span>
+  );
+}
+
+/**
+ * Where a note points, as a press shows it: its part in the card, or the picture viewer at its
+ * mark. `mark` is the number a note with a place is drawn with, in the order its reply queued it.
+ */
+export function NoteAnchor({
+  cardId,
+  note,
+  mark,
+}: {
+  cardId: string;
+  note: CardNote;
+  mark?: number | undefined;
+}) {
   const [result, setResult] = useState<NoteReveal>();
   const body = useShellStore((s) => s.cards.find((card) => card.id === cardId)?.body);
   const missing = useMemo(
@@ -140,11 +212,21 @@ export function NoteAnchor({ cardId, note }: { cardId: string; note: CardNote })
   );
   // biome-ignore lint/correctness/useExhaustiveDependencies: a revised body invalidates its previous reveal failure
   useLayoutEffect(() => setResult(undefined), [body]);
+  // A note on a running page points at no part of a card: its label is its whole anchor.
+  if (note.page)
+    return (
+      <div className="inf-note-anchor" data-page-note="">
+        <span>{noteLabel(note, mark)}</span>
+      </div>
+    );
   const stale = missing || result === "missing";
   return (
     <div className="inf-note-anchor">
-      <button type="button" onClick={async () => setResult(await revealNote(cardId, note))}>
-        {noteLabel(note)}
+      <button
+        type="button"
+        onClick={async () => setResult(await revealNote(cardId, note, false, mark))}
+      >
+        {noteLabel(note, mark)}
       </button>
       {stale ? (
         <span role="status">{m.cardNoteStale()}</span>
@@ -198,11 +280,23 @@ function AnnotateOffer({ cardId }: { cardId: string }) {
 /** The key Annotate shows: Enter (or Tab) in the card opens the editor on the selected words. */
 const ANNOTATE_KEY = "⏎";
 
-function AnnotationPopover({ cardId, collect }: { cardId: string; collect?: CollectAnswers }) {
+/**
+ * The one editor a note is written in. `cardId` is whose queue the note joins: a card's, or a
+ * running page's own (`pageQueue`), whose notes leave from the crewmate's message box (`send`).
+ */
+export function AnnotationPopover({
+  cardId,
+  collect,
+  send,
+}: {
+  cardId: string;
+  collect?: CollectAnswers | undefined;
+  /** Sends the queue where it is no card's reply. */
+  send?: (() => void) | undefined;
+}) {
   const pick = useShellStore((s) => s.annotationPick);
-  const queued = useShellStore((s) =>
-    pick ? (s.replyNotes[cardId] ?? NO_NOTES).some((n) => sameNote(n, pick.note)) : false,
-  );
+  const notes = useShellStore((s) => s.replyNotes[cardId] ?? NO_NOTES);
+  const queued = pick ? notes.some((n) => sameNote(n, pick.note)) : false;
   const field = useRef<HTMLTextAreaElement>(null);
   const pop = useRef<HTMLDivElement>(null);
   const [hint, setHint] = useState(false);
@@ -244,12 +338,19 @@ function AnnotationPopover({ cardId, collect }: { cardId: string; collect?: Coll
   };
   // Typing stops at the limit; dictated words past it stay whole, and nothing queues until trimmed.
   const over = limitBand(pick.note.comment.length, CARD_REPLY_MAX_CHARS) === "over";
-  const queue = (send: boolean) => {
+  const queue = (now: boolean) => {
     if (useShellStore.getState().sendingReplies[cardId] || over) return;
     queueNote(cardId, pick.note);
-    if (send) void useShellStore.getState().sendReply(cardId, collect);
-    else focusPointAt(cardId);
+    if (!now) focusPointAt(cardId);
+    else if (send) send();
+    else void useShellStore.getState().sendReply(cardId, collect);
   };
+  // A page's note shows the exact picture that will be sent, with its mark as numbered.
+  const pagePicture = pick.note.page ? markedSource(cardId, pick.note) : undefined;
+  const numbers = markNumbers(notes);
+  const queuedAt = notes.findIndex((n) => sameNote(n, pick.note));
+  const mark =
+    queuedAt >= 0 ? numbers[queuedAt] : numbers.filter((n) => n !== undefined).length + 1;
   const sendKey = thisDesktop().mac ? "⌘Enter" : "Ctrl+Enter";
   const left = Math.max(8, Math.min(pick.box.left, innerWidth - 328));
   const top = Math.max(8, Math.min(pick.box.bottom + 8, innerHeight - height - 8));
@@ -257,6 +358,8 @@ function AnnotationPopover({ cardId, collect }: { cardId: string; collect?: Coll
     <div
       ref={pop}
       className="inf-annotation-popover"
+      // A note on a place is written over the picture viewer or the Browser tab.
+      data-note-place={pick.note.place ? "" : undefined}
       role="dialog"
       tabIndex={-1}
       aria-label={`${m.cardNoteAnnotate()} ${pick.note.kind}`}
@@ -297,6 +400,15 @@ function AnnotationPopover({ cardId, collect }: { cardId: string; collect?: Coll
         {m.cardNoteAnnotate()} {pick.note.kind}
       </strong>
       <blockquote>{pick.note.excerpt}</blockquote>
+      {pagePicture && (
+        <figure className="inf-annotation-picture" data-note-page-picture="">
+          <MarkedCopy cardId={cardId} note={pick.note} mark={mark} />
+          <figcaption>
+            {m.cardNotePagePicture()}
+            {pagePicture.shows && <span data-note-page-shows=""> {m.cardNotePageShows()}</span>}
+          </figcaption>
+        </figure>
+      )}
       <textarea
         ref={field}
         rows={3}

@@ -37,7 +37,15 @@ import {
 import { taskFactsOf } from "@shared/taskFacts";
 import type { TaskDetail } from "@shared/tasks";
 import type React from "react";
-import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useCommandKeys } from "../app/keyHints";
 import { openSavedSignIns } from "../app/shellCommands";
 import { useShellStore } from "../app/store";
@@ -58,12 +66,21 @@ import {
   isView,
 } from "../devices/viewWords";
 import { appReadExecutor } from "../plugins/reads/appExecutor";
+import {
+  PagePointAtButton,
+  PagePointAtHint,
+  PagePointAtLayer,
+  usePagePointAt,
+  type WatchedPage,
+} from "./BrowserPointAt";
 import { CrewmateView } from "./CrewmateView";
+import { pageQueue } from "./markedPictures";
 import { RecordPaneChrome } from "./RecordPaneChrome";
 import { recordPillToneOf } from "./recordFooter";
 import { returnWordsOf } from "./returnWords";
 import { TaskTabStrip } from "./TaskTabStrip";
 import { NO_TAB_FACTS, taskTabFactsOf } from "./taskTabs";
+import { usePlacesHome } from "./useAnnotationHome";
 
 /**
  * A task's own browser on the stage (docs/task-browser.md, "The view"; the
@@ -451,12 +468,16 @@ function bitmapOf(frame: TaskBrowserFrame): Promise<ImageBitmap> {
  * Watches the task's page while the view is up and paints the newest
  * picture on the canvas the answered ref holds. A picture that arrives while
  * one decodes replaces the waiting one, so a busy page never queues; the
- * newest is kept for a canvas that mounts later (after Open again).
+ * newest is kept for a canvas that mounts later (after Open again). Point at
+ * holds the picture shown still (`hold`): newer ones wait, and the newest is
+ * painted when it lets go.
  */
-function useWatchedPage(taskId: string): (node: HTMLCanvasElement | null) => void {
+function useWatchedPage(taskId: string): WatchedPage {
   const canvas = useRef<HTMLCanvasElement | null>(null);
   const latest = useRef<TaskBrowserFrame | null>(null);
   const waiting = useRef<TaskBrowserFrame | null>(null);
+  const shown = useRef<TaskBrowserFrame | null>(null);
+  const held = useRef(false);
   const painting = useRef(false);
   const painted = useRef(0);
 
@@ -464,12 +485,19 @@ function useWatchedPage(taskId: string): (node: HTMLCanvasElement | null) => voi
     if (painting.current) return;
     painting.current = true;
     try {
-      for (let next = waiting.current; next; next = waiting.current) {
+      for (let next = waiting.current; next && !held.current; next = waiting.current) {
         waiting.current = null;
         const target = canvas.current;
         if (!target) break;
         try {
           const bitmap = await bitmapOf(next);
+          // Held while it decoded: it waits, unless a newer one already does.
+          if (held.current) {
+            bitmap.close();
+            waiting.current ??= next;
+            break;
+          }
+          shown.current = next;
           if (target.width !== bitmap.width) target.width = bitmap.width;
           if (target.height !== bitmap.height) target.height = bitmap.height;
           target.getContext("2d")?.drawImage(bitmap, 0, 0);
@@ -501,7 +529,7 @@ function useWatchedPage(taskId: string): (node: HTMLCanvasElement | null) => voi
     };
   }, [taskId, paint]);
 
-  return useCallback(
+  const mount = useCallback(
     (node: HTMLCanvasElement | null) => {
       canvas.current = node;
       painted.current = 0;
@@ -512,6 +540,15 @@ function useWatchedPage(taskId: string): (node: HTMLCanvasElement | null) => voi
     },
     [paint],
   );
+  const hold = useCallback(
+    (on: boolean) => {
+      held.current = on;
+      if (!on) void paint();
+      return on ? shown.current : null;
+    },
+    [paint],
+  );
+  return useMemo(() => ({ canvas: mount, hold }), [mount, hold]);
 }
 
 /** How long a maximized view's room holds still before the page lays out at it again. */
@@ -615,6 +652,8 @@ export function TaskBrowserView({
         open: boolean;
         /** The open column's width, the thread column's own. */
         width: number;
+        /** Opens the folded column beside the page. */
+        onOpen?: () => void;
         column: React.ReactNode;
         line: React.ReactNode;
       }
@@ -633,7 +672,19 @@ export function TaskBrowserView({
   const [moving, setMoving] = useState<"take" | "return" | null>(null);
   /** The captain's answer to the page's ask is on its way. */
   const [answering, setAnswering] = useState<TaskBrowserAskAnswer | null>(null);
-  const canvas = useWatchedPage(taskId);
+  const watch = useWatchedPage(taskId);
+  // Point at holds the page's picture still and marks a place on it
+  // (docs/task-browser.md, "Pointing at a page").
+  const point = usePagePointAt(taskId, watch);
+  const [canvasNode, setCanvasNode] = useState<HTMLCanvasElement | null>(null);
+  const canvas = useCallback(
+    (node: HTMLCanvasElement | null) => {
+      watch.canvas(node);
+      setCanvasNode(node);
+    },
+    [watch],
+  );
+  const placesHome = usePlacesHome();
   const maximized = useContext(CardSizeContext)?.maximized ?? false;
   const modelName = useModelNames();
   const [topRef, topHeight] = useTopHeight();
@@ -676,7 +727,8 @@ export function TaskBrowserView({
   const driver: TaskBrowserDriver = detail ? browserDriverOf(detail, fact) : "nobody";
   const who = VIEW_DRIVER_WORDS[driver];
   const captain = fact?.state === "open" && driver === "captain";
-  const input = useCaptainInput(taskId, captain && offWords === null);
+  // With Point at on the pointer and the keys mark, and none reaches the page.
+  const input = useCaptainInput(taskId, captain && offWords === null && !point.on);
   // A refusal belongs to the state it answered.
   const factState = fact?.state;
   useEffect(() => {
@@ -720,6 +772,14 @@ export function TaskBrowserView({
   const talk = !docked && fact?.state === "open" && !fact.own ? crew : undefined;
   const column = docked ?? talk;
   const folded = column !== undefined && !column.open;
+  // A note on the page leaves from the card beside it, or from the crewmate's
+  // message box: Point at is offered where one of them is there to take it.
+  const pointOffered = placesHome && fact?.state === "open" && column !== undefined;
+  const noteOwner = docked?.cardId ?? pageQueue(taskId);
+  const endPoint = point.end;
+  useEffect(() => {
+    if (!pointOffered) endPoint();
+  }, [pointOffered, endPoint]);
   const noticeFit = useOverflowTitle(noticeWords);
   const whoFit = useOverflowTitle(who ? `· ${who}` : undefined);
 
@@ -1149,6 +1209,13 @@ export function TaskBrowserView({
                 </span>
               )}
             </div>
+            {pointOffered && (
+              <PagePointAtButton
+                point={point}
+                page={{ url: fact.url, title: fact.title }}
+                off={offWords ?? undefined}
+              />
+            )}
             <span
               data-browser-control-button=""
               data-browser-handoff={fact.own ? undefined : ""}
@@ -1261,13 +1328,15 @@ export function TaskBrowserView({
           <div
             ref={input.ref}
             data-browser-page=""
-            data-browser-input={captain && offWords === null ? "captain" : undefined}
+            data-browser-input={captain && offWords === null && !point.on ? "captain" : undefined}
             data-browser-off={captain && offWords !== null ? "" : undefined}
             // Under the captain's control the page takes the keyboard and pointer
-            // as they come, unless changes are off.
-            role={captain && offWords === null ? "application" : undefined}
+            // as they come, unless changes are off or Point at holds its picture.
+            role={captain && offWords === null && !point.on ? "application" : undefined}
             {...input.handlers}
             style={{
+              // Point at's marks sit over the picture wherever it is drawn.
+              position: "relative",
               display: "flex",
               justifyContent: fit ? "center" : "flex-start",
               alignItems: "flex-start",
@@ -1316,6 +1385,19 @@ export function TaskBrowserView({
                     { display: "block", flex: "none" }
               }
             />
+            {point.on && (
+              <PagePointAtLayer
+                point={point}
+                owner={noteOwner}
+                canvas={canvasNode}
+                shows={captain}
+                openColumn={() => {
+                  if (!folded) return;
+                  if (docked) docked.onOpen?.();
+                  else talk?.onToggle(true, false);
+                }}
+              />
+            )}
           </div>
           {folded && (
             // Folded, the request is its latest line and its field under the
@@ -1354,7 +1436,12 @@ export function TaskBrowserView({
             >
               {detail?.key}
             </span>
-            <span style={{ ...LINE, flex: 1, color: "var(--fg-2)" }}>{detail?.title}</span>
+            {point.on ? (
+              // While the picture is held, the line says how to mark it.
+              <PagePointAtHint point={point} owner={noteOwner} />
+            ) : (
+              <span style={{ ...LINE, flex: 1, color: "var(--fg-2)" }}>{detail?.title}</span>
+            )}
             <button type="button" style={LINK} data-browser-record="" onClick={openRecord}>
               {m.cardBrowserRecord()}
             </button>

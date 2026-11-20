@@ -1,4 +1,4 @@
-import { noteText } from "@shared/cardNotes";
+import { noteTexts } from "@shared/cardNotes";
 import type { CardMessage, CardObservation, CardObservationKind } from "@shared/cards";
 import { cardWords } from "@shared/cardWords";
 import { reportSummary } from "@shared/feed";
@@ -744,7 +744,7 @@ function observationSummary(observation: CardObservation, title: string | undefi
 }
 
 function messageEntry(taskId: string, message: CardMessage): Placed {
-  const words = [message.text, ...(message.notes ?? []).map(noteText)].filter(Boolean).join("\n");
+  const words = [message.text, ...noteTexts(message.notes ?? [])].filter(Boolean).join("\n");
   return {
     entry: entry({
       id: messageId(message.id),

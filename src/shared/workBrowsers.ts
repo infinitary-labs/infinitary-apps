@@ -8,6 +8,7 @@ import {
   taskBrowserFactSchema,
   taskBrowserHandleSchema,
   taskBrowserInputSchema,
+  taskBrowserPlacesSchema,
   taskBrowserRequestSchema,
   taskBrowserSizeSchema,
 } from "./taskBrowser";
@@ -62,6 +63,15 @@ export const browserOrders = {
     effect: "change",
     request: aboutBrowser({ input: taskBrowserInputSchema, here: z.boolean().optional() }),
     response: taskBrowserCommandResultSchema,
+  },
+  /**
+   * What the outline of the task's page names on screen now (`card-note-places`), for the
+   * captain's Point at (docs/task-browser.md, "Pointing at a page"). Nothing is recorded.
+   */
+  "inf:task-browser:places": {
+    effect: "read",
+    request: aboutBrowser({}),
+    response: taskBrowserPlacesSchema,
   },
   "inf:task-browser:take": {
     effect: "change",

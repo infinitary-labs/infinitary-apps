@@ -13480,6 +13480,117 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Pointed at ${kind}: “${excerpt}”`;
   }
+  function cardNoteMarkHintBox() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اسحب لرسم إطار أو اضغط على موضع · الأسهم تحرّك الإطار، Shift يغيّر حجمه، Enter يكتب الملاحظة`;
+      case "de":
+        return `Rahmen ziehen oder Stelle drücken · Pfeile bewegen den Rahmen, Shift ändert die Größe, Enter schreibt die Notiz`;
+      case "es":
+        return `Arrastra un recuadro o pulsa un punto · las flechas mueven el recuadro, Mayús cambia su tamaño, Enter escribe la nota`;
+      case "fr":
+        return `Tracez un cadre ou appuyez sur un point · les flèches déplacent le cadre, Maj le redimensionne, Enter écrit la note`;
+      case "ja":
+        return `ドラッグで枠、クリックで一点 · 矢印キーで枠を移動、Shift で大きさ変更、Enter でメモを書く`;
+      case "ko":
+        return `드래그해 상자를 그리거나 한 곳을 누르기 · 화살표로 상자 이동, Shift로 크기 조절, Enter로 메모 쓰기`;
+      case "pt-BR":
+        return `Arraste uma caixa ou pressione um ponto · as setas movem a caixa, Shift muda o tamanho, Enter escreve a nota`;
+      case "zh-Hans":
+        return `拖出一个框或点按一处 · 方向键移动框，按住 Shift 调整大小，Enter 写备注`;
+      case "zh-Hant":
+        return `拖出一個框或按一下某處 · 方向鍵移動框，按住 Shift 調整大小，Enter 寫備註`;
+      case "en-XA":
+        return `[Ðŕáĝ á ƀöẋ öŕ þŕéšš á šþöţ · áŕŕöŵš ɱöṽé á ƀöẋ, Šĥîƒţ šîžéš îţ, Éñţéŕ ŵŕîţéš ţĥé ñöţé ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Drag a box or press a spot · arrows move a box, Shift sizes it, Enter writes the note‬`;
+    }
+    return `Drag a box or press a spot · arrows move a box, Shift sizes it, Enter writes the note`;
+  }
+  function cardNoteMarkHintLine() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ارسم على الصورة · الخط يحتاج إلى مؤشر`;
+      case "de":
+        return `Auf dem Bild zeichnen · eine Linie braucht einen Zeiger`;
+      case "es":
+        return `Dibuja sobre la imagen · una línea necesita un puntero`;
+      case "fr":
+        return `Dessinez sur l’image · un trait demande un pointeur`;
+      case "ja":
+        return `画像の上に線を描く · 線にはポインターが必要`;
+      case "ko":
+        return `사진 위에 선 그리기 · 선은 포인터가 필요해요`;
+      case "pt-BR":
+        return `Desenhe na imagem · uma linha precisa de um ponteiro`;
+      case "zh-Hans":
+        return `在图片上画线 · 画线需要指针设备`;
+      case "zh-Hant":
+        return `在圖片上畫線 · 畫線需要指標裝置`;
+      case "en-XA":
+        return `[Ðŕáŵ öñ ţĥé þîçţûŕé · á ļîñé ñééðš á þöîñţéŕ ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Draw on the picture · a line needs a pointer‬`;
+    }
+    return `Draw on the picture · a line needs a pointer`;
+  }
+  function cardNoteMarkLabel(input2) {
+    const excerpt = input2.excerpt;
+    const kind = input2.kind;
+    const mark = input2.mark;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أُشير إلى العلامة ${mark} في ${kind}: «${excerpt}»`;
+      case "de":
+        return `Gezeigt auf Markierung ${mark} in ${kind}: „${excerpt}“`;
+      case "es":
+        return `Señalada la marca ${mark} en ${kind}: «${excerpt}»`;
+      case "fr":
+        return `Désigné : repère ${mark} dans ${kind}, « ${excerpt} »`;
+      case "ja":
+        return `${kind}のマーク ${mark} を指し示し：「${excerpt}」`;
+      case "ko":
+        return `${kind}의 표시 ${mark}을(를) 가리킴: “${excerpt}”`;
+      case "pt-BR":
+        return `Apontado para a marca ${mark} em ${kind}: “${excerpt}”`;
+      case "zh-Hans":
+        return `已指向${kind}中的标记 ${mark}：“${excerpt}”`;
+      case "zh-Hant":
+        return `已指向 ${kind} 中的標記 ${mark}：「${excerpt}」`;
+      case "en-XA":
+        return `[Þöîñţéð áţ ɱáŕķ ${mark} îñ ${kind}: “${excerpt}” ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Pointed at mark ‬${mark}‮ in ‬${kind}‮: “‬${excerpt}‮”‬`;
+    }
+    return `Pointed at mark ${mark} in ${kind}: “${excerpt}”`;
+  }
+  function cardNoteMarkedPicture() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الصورة مع علاماتها`;
+      case "de":
+        return `Bild mit Markierungen`;
+      case "es":
+        return `Imagen marcada`;
+      case "fr":
+        return `Image avec ses repères`;
+      case "ja":
+        return `マーク付きの画像`;
+      case "ko":
+        return `표시한 사진`;
+      case "pt-BR":
+        return `Imagem marcada`;
+      case "zh-Hans":
+        return `带标记的图片`;
+      case "zh-Hant":
+        return `帶標記的圖片`;
+      case "en-XA":
+        return `[Ṁáŕķéð þîçţûŕé ~~~~~]`;
+      case "ar-XB":
+        return `‮Marked picture‬`;
+    }
+    return `Marked picture`;
+  }
   function cardNoteNotSent() {
     switch (currentLanguage()) {
       case "ar":
@@ -13506,6 +13617,115 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Not sent‬`;
     }
     return `Not sent`;
+  }
+  function cardNotePageHint() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الصفحة مثبّتة · اضغط على موضع أو اسحب إطارًا أو ارسم · الأسهم تنتقل بين أجزاء الصفحة، Enter يكتب الملاحظة`;
+      case "de":
+        return `Die Seite steht still · Stelle drücken, Rahmen ziehen oder zeichnen · Pfeile gehen durch die Seite, Enter schreibt die Notiz`;
+      case "es":
+        return `La página está detenida · pulsa un punto, arrastra un recuadro o dibuja · las flechas recorren la página, Enter escribe la nota`;
+      case "fr":
+        return `La page est figée · appuyez sur un point, tracez un cadre ou dessinez · les flèches parcourent la page, Enter écrit la note`;
+      case "ja":
+        return `ページは静止中 · クリックで一点、ドラッグで枠、または線を描く · 矢印キーでページ内を移動、Enter でメモを書く`;
+      case "ko":
+        return `페이지가 멈춰 있어요 · 한 곳을 누르거나 상자를 드래그하거나 선 그리기 · 화살표로 페이지 안을 이동, Enter로 메모 쓰기`;
+      case "pt-BR":
+        return `A página está parada · pressione um ponto, arraste uma caixa ou desenhe · as setas percorrem a página, Enter escreve a nota`;
+      case "zh-Hans":
+        return `页面已定格 · 点按一处、拖出一个框或画线 · 方向键在页面各部分之间移动，Enter 写备注`;
+      case "zh-Hant":
+        return `頁面已定格 · 按一下某處、拖出一個框或畫線 · 方向鍵在頁面各部分之間移動，Enter 寫備註`;
+      case "en-XA":
+        return `[Ţĥé þáĝé îš ĥéļð šţîļļ · þŕéšš á šþöţ, ðŕáĝ á ƀöẋ öŕ ðŕáŵ · áŕŕöŵš šţéþ ţĥŕöûĝĥ ţĥé þáĝé, Éñţéŕ ŵŕîţéš ţĥé ñöţé ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The page is held still · press a spot, drag a box or draw · arrows step through the page, Enter writes the note‬`;
+    }
+    return `The page is held still · press a spot, drag a box or draw · arrows step through the page, Enter writes the note`;
+  }
+  function cardNotePagePicture() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الصورة التي ستُرسل`;
+      case "de":
+        return `Das Bild, das gesendet wird`;
+      case "es":
+        return `La imagen que se enviará`;
+      case "fr":
+        return `L’image qui sera envoyée`;
+      case "ja":
+        return `送信される画像`;
+      case "ko":
+        return `보낼 사진`;
+      case "pt-BR":
+        return `A imagem que será enviada`;
+      case "zh-Hans":
+        return `将要发送的图片`;
+      case "zh-Hant":
+        return `即將送出的圖片`;
+      case "en-XA":
+        return `[Ţĥé þîçţûŕé ţĥáţ ŵîļļ ƀé šéñţ ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The picture that will be sent‬`;
+    }
+    return `The picture that will be sent`;
+  }
+  function cardNotePageShows() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عند الإرسال يرى فرد الطاقم هذه الصورة للصفحة.`;
+      case "de":
+        return `Beim Senden sieht das Crewmitglied dieses Bild der Seite.`;
+      case "es":
+        return `Al enviar, el tripulante ve esta imagen de la página.`;
+      case "fr":
+        return `L’envoi montre cette image de la page à l’équipier.`;
+      case "ja":
+        return `送信すると、このページの画像が乗組員に見えます。`;
+      case "ko":
+        return `보내면 선원이 이 페이지 사진을 보게 돼요.`;
+      case "pt-BR":
+        return `Ao enviar, o tripulante vê esta imagem da página.`;
+      case "zh-Hans":
+        return `发送后，船员会看到这张页面图片。`;
+      case "zh-Hant":
+        return `送出後，船員會看到這張頁面圖片。`;
+      case "en-XA":
+        return `[Šéñðîñĝ šĥöŵš ţĥîš þîçţûŕé öƒ ţĥé þáĝé ţö ţĥé çŕéŵɱáţé. ~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Sending shows this picture of the page to the crewmate.‬`;
+    }
+    return `Sending shows this picture of the page to the crewmate.`;
+  }
+  function cardNotePicturesFull(input2) {
+    const max = input2.max;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تحمل الرسالة حتى ${max} صور. أرسل ملاحظاتك أو أزل واحدة أولًا.`;
+      case "de":
+        return `Eine Nachricht trägt bis zu ${max} Bilder. Sende zuerst deine Notizen oder entferne eine.`;
+      case "es":
+        return `Un mensaje lleva hasta ${max} imágenes. Envía tus notas o quita una primero.`;
+      case "fr":
+        return `Un message porte jusqu’à ${max} images. Envoyez d’abord vos notes ou retirez-en une.`;
+      case "ja":
+        return `1 件のメッセージに付けられる画像は ${max} 枚までです。先にメモを送信するか、1 つ削除してください。`;
+      case "ko":
+        return `메시지 하나에는 사진을 ${max}장까지 담을 수 있어요. 먼저 메모를 보내거나 하나를 지우세요.`;
+      case "pt-BR":
+        return `Uma mensagem leva até ${max} imagens. Envie suas notas ou remova uma primeiro.`;
+      case "zh-Hans":
+        return `一条消息最多带 ${max} 张图片。请先发送备注或移除一条。`;
+      case "zh-Hant":
+        return `一則訊息最多帶 ${max} 張圖片。請先送出備註或移除一則。`;
+      case "en-XA":
+        return `[Å ɱéššáĝé çáŕŕîéš ûþ ţö ${max} þîçţûŕéš. Šéñð ýöûŕ ñöţéš öŕ ŕéɱöṽé öñé ƒîŕšţ. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A message carries up to ‬${max}‮ pictures. Send your notes or remove one first.‬`;
+    }
+    return `A message carries up to ${max} pictures. Send your notes or remove one first.`;
   }
   function cardNotePlaceholder() {
     switch (currentLanguage()) {
@@ -13856,6 +14076,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮This part is no longer in the card‬`;
     }
     return `This part is no longer in the card`;
+  }
+  function cardNoteToolBox() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إطار أو موضع`;
+      case "de":
+        return `Rahmen oder Stelle`;
+      case "es":
+        return `Recuadro o punto`;
+      case "fr":
+        return `Cadre ou point`;
+      case "ja":
+        return `枠または一点`;
+      case "ko":
+        return `상자 또는 한 곳`;
+      case "pt-BR":
+        return `Caixa ou ponto`;
+      case "zh-Hans":
+        return `框或点`;
+      case "zh-Hant":
+        return `框或點`;
+      case "en-XA":
+        return `[Ɓöẋ öŕ šþöţ ~~~~]`;
+      case "ar-XB":
+        return `‮Box or spot‬`;
+    }
+    return `Box or spot`;
+  }
+  function cardNoteToolLine() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `خط حر`;
+      case "de":
+        return `Freihandlinie`;
+      case "es":
+        return `Línea a mano alzada`;
+      case "fr":
+        return `Trait à main levée`;
+      case "ja":
+        return `フリーハンドの線`;
+      case "ko":
+        return `자유 곡선`;
+      case "pt-BR":
+        return `Linha à mão livre`;
+      case "zh-Hans":
+        return `手绘线`;
+      case "zh-Hant":
+        return `手繪線`;
+      case "en-XA":
+        return `[Ƒŕééĥáñð ļîñé ~~~~~]`;
+      case "ar-XB":
+        return `‮Freehand line‬`;
+    }
+    return `Freehand line`;
   }
   function cardNoteUnavailable() {
     switch (currentLanguage()) {
@@ -34636,6 +34910,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮No other card is new‬`;
     }
     return `No other card is new`;
+  }
+  function refuseNoPageToPointAt() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا توجد صفحة معروضة للإشارة إليها`;
+      case "de":
+        return `Es wird keine Seite angezeigt, auf die du zeigen kannst`;
+      case "es":
+        return `No se muestra ninguna página que señalar`;
+      case "fr":
+        return `Aucune page n’est affichée à désigner`;
+      case "ja":
+        return `指し示せるページが表示されていません`;
+      case "ko":
+        return `가리킬 페이지가 표시되어 있지 않아요`;
+      case "pt-BR":
+        return `Nenhuma página está sendo mostrada para apontar`;
+      case "zh-Hans":
+        return `没有可指向的页面`;
+      case "zh-Hant":
+        return `沒有可指向的頁面`;
+      case "en-XA":
+        return `[Ñö þáĝé îš šĥöŵñ ţö þöîñţ áţ ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮No page is shown to point at‬`;
+    }
+    return `No page is shown to point at`;
   }
   function refuseNoReleaseNotesYet() {
     switch (currentLanguage()) {
@@ -83913,7 +84214,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardNoteEditUnavailable,
     cardNoteEmpty,
     cardNoteLabel,
+    cardNoteMarkHintBox,
+    cardNoteMarkHintLine,
+    cardNoteMarkLabel,
+    cardNoteMarkedPicture,
     cardNoteNotSent,
+    cardNotePageHint,
+    cardNotePagePicture,
+    cardNotePageShows,
+    cardNotePicturesFull,
     cardNotePlaceholder,
     cardNotePointAt,
     cardNotePointedAt,
@@ -83922,6 +84231,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardNoteRemove,
     cardNoteSend,
     cardNoteStale,
+    cardNoteToolBox,
+    cardNoteToolLine,
     cardNoteUnavailable,
     cardPastMark,
     cardPastMeta,
@@ -84613,6 +84924,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     refuseNoCardIsShownOrPutAside,
     refuseNoCardThreadIsReadAboveIts,
     refuseNoOtherCardIsNew,
+    refuseNoPageToPointAt,
     refuseNoReleaseNotesYet,
     refuseNoUpdateIsAvailable,
     refuseNoUpdateIsSavingWorkNow,
@@ -86623,7 +86935,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardNoteEditUnavailable": [],
     "cardNoteEmpty": [],
     "cardNoteLabel": ["excerpt", "kind"],
+    "cardNoteMarkHintBox": [],
+    "cardNoteMarkHintLine": [],
+    "cardNoteMarkLabel": ["excerpt", "kind", "mark"],
+    "cardNoteMarkedPicture": [],
     "cardNoteNotSent": [],
+    "cardNotePageHint": [],
+    "cardNotePagePicture": [],
+    "cardNotePageShows": [],
+    "cardNotePicturesFull": ["max"],
     "cardNotePlaceholder": [],
     "cardNotePointAt": [],
     "cardNotePointedAt": [],
@@ -86632,6 +86952,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardNoteRemove": [],
     "cardNoteSend": ["count"],
     "cardNoteStale": [],
+    "cardNoteToolBox": [],
+    "cardNoteToolLine": [],
     "cardNoteUnavailable": [],
     "cardPastMark": [],
     "cardPastMeta": [],
@@ -87323,6 +87645,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "refuseNoCardIsShownOrPutAside": [],
     "refuseNoCardThreadIsReadAboveIts": [],
     "refuseNoOtherCardIsNew": [],
+    "refuseNoPageToPointAt": [],
     "refuseNoReleaseNotesYet": [],
     "refuseNoUpdateIsAvailable": [],
     "refuseNoUpdateIsSavingWorkNow": [],
@@ -89132,6 +89455,28 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     /** The click closes the note's task as answered. */
     closesTask: boolean()
   });
+  const NOTE_LINE_POINTS_MAX = 256;
+  const NOTE_PLACE_LINES_MAX = 8;
+  const pixel = number().int().nonnegative();
+  const placeBoxSchema = object({ x: pixel, y: pixel, width: pixel, height: pixel });
+  const placePointSchema = object({
+    x: pixel,
+    y: pixel,
+    /** The line's width here, in the picture's pixels, where the pointer reported its pressure. */
+    w: number().int().positive().optional()
+  });
+  const notePlaceSchema = object({
+    width: number().int().positive(),
+    height: number().int().positive(),
+    picture: number().int().positive().optional(),
+    box: placeBoxSchema.optional(),
+    lines: array(array(placePointSchema).min(1).max(NOTE_LINE_POINTS_MAX)).min(1).max(NOTE_PLACE_LINES_MAX).optional()
+  }).refine((place) => place.box !== void 0 || place.lines !== void 0);
+  const notePageSchema = object({
+    url: string().max(2048),
+    title: string().max(240),
+    under: object({ role: string().max(64), name: string().max(240) }).optional()
+  });
   const cardNoteSchema = object({
     start: number().int().nonnegative(),
     key: string().max(65536),
@@ -89145,7 +89490,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }).refine((span) => span.endPart !== void 0 || span.end > span.start).optional(),
     // Same physical field size as the card reply (CARD_REPLY_MAX_CHARS).
     comment: string().max(4e3),
-    line: number().int().positive()
+    line: number().int().positive(),
+    /** Where in the part's picture the note points (`card-note-places.md`). */
+    place: notePlaceSchema.optional(),
+    /** The running page the note marks, in place of a part of a card. */
+    page: notePageSchema.optional()
   });
   const cardNotesSchema = array(cardNoteSchema);
   const cardEndedSchema = object({
@@ -90766,7 +91115,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     src: string().min(1).max(FRAME_PICTURE_SRC_MAX),
     alt: string().max(FRAME_PICTURE_ALT_MAX),
     width: number().int().nonnegative(),
-    height: number().int().nonnegative()
+    height: number().int().nonnegative(),
+    /**
+     * Where the part the picture is in starts in the body (`data-inf-target`), when the host marked
+     * the body's parts: what a place marked in the viewer is a note on.
+     */
+    part: number().int().nonnegative().optional(),
+    /** Which of that part's pictures this is, counted from 1; absent when the picture is the part. */
+    of: number().int().positive().optional()
   });
   const answerCount = number().int().nonnegative().max(CARD_MAX_ANSWERS);
   const frameAnswerSchema = cardAnswerSchema.extend({
@@ -90817,7 +91173,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       seq: correlationId,
       offerId: string().min(1).max(64),
       top: number().finite().nonnegative().max(1e6).optional(),
-      height: number().finite().nonnegative().max(1e6).optional()
+      height: number().finite().nonnegative().max(1e6).optional(),
+      /** The pictures the revealed part's picture opens with, when the host asked for them (`picture`). */
+      index: number().int().nonnegative().optional(),
+      pictures: array(framePictureSchema).min(1).max(FRAME_MAX_PICTURES).optional()
     }),
     /**
      * Where a step through the body's questions went (docs/keyboard.md, "Moving
@@ -92490,26 +92849,33 @@ ${FRAME_TAG_SCRIPT}
     }
     return pictures;
   }
-  function showPictures(pictures, index) {
-    post({
-      type: "image",
-      index: index,
-      pictures: pictures.map(function (picture) {
-        return {
-          src: picture.currentSrc || picture.src,
-          alt: picture.getAttribute("alt") || "",
-          width: picture.naturalWidth || 0,
-          height: picture.naturalHeight || 0
-        };
-      })
-    });
-  }
-  function openPicture(picture) {
-    var demo = demoOf(picture.closest("figure[data-inf-demo]"));
-    if (demo && demo.poster === picture) {
-      showDemo(demo, false);
-      return;
+  // The pictures of one part of the body, in reading order: its own pictures and
+  // drawings, never a drawing inside another.
+  function partPictures(holder) {
+    var found = holder.querySelectorAll("img, svg");
+    var pictures = [];
+    for (var i = 0; i < found.length; i++) {
+      if (!found[i].parentElement || !found[i].parentElement.closest("svg")) pictures.push(found[i]);
     }
+    return pictures;
+  }
+  // The part of the body a picture is in, when the host marked its parts, and
+  // which of that part's pictures it is: a place marked in the viewer is a note
+  // on that part.
+  function withPart(element, picture) {
+    var holder = element.closest("[data-inf-target]");
+    var start = holder ? holder.getAttribute("data-inf-target") : null;
+    if (start === null || !/^\\d+$/.test(start)) return picture;
+    picture.part = Number(start);
+    if (holder !== element) {
+      var of = partPictures(holder).indexOf(element);
+      if (of >= 0) picture.of = of + 1;
+    }
+    return picture;
+  }
+  // The pictures a press on this one opens, and which of them it is: its group's,
+  // or the picture alone. A demo's poster opens its recording, never a set.
+  function pictureSet(picture) {
     var group = picture.closest(".inf-pictures");
     var members = group ? groupPictures(group) : [];
     var index = members.indexOf(picture);
@@ -92517,7 +92883,40 @@ ${FRAME_TAG_SCRIPT}
       members = [picture];
       index = 0;
     }
-    showPictures(members, index);
+    return { index: index, pictures: members.map(describePicture) };
+  }
+  function describePicture(picture) {
+    return withPart(picture, {
+      src: picture.currentSrc || picture.src,
+      alt: picture.getAttribute("alt") || "",
+      width: picture.naturalWidth || 0,
+      height: picture.naturalHeight || 0
+    });
+  }
+  // The set a note's mark is shown in: the picture its place names in its part.
+  function partPictureSet(holder, of) {
+    var picture = of ? partPictures(holder)[of - 1] : holder;
+    if (!picture) return null;
+    if (picture.tagName === "IMG") {
+      var demo = demoOf(picture.closest("figure[data-inf-demo]"));
+      return demo && demo.poster === picture ? null : pictureSet(picture);
+    }
+    if (picture.namespaceURI === SVG_SPACE && outermostDrawing(picture) === picture && isDiagram(picture)) {
+      return { index: 0, pictures: [drawingPicture(picture)] };
+    }
+    return null;
+  }
+  function showPictures(pictures, index) {
+    post({ type: "image", index: index, pictures: pictures.map(describePicture) });
+  }
+  function openPicture(picture) {
+    var demo = demoOf(picture.closest("figure[data-inf-demo]"));
+    if (demo && demo.poster === picture) {
+      showDemo(demo, false);
+      return;
+    }
+    var set = pictureSet(picture);
+    post({ type: "image", index: set.index, pictures: set.pictures });
   }
   var DEMO_SOURCE = ${JSON.stringify(FRAME_DEMO_SOURCE)};
   var DEMO_CAPTION_MAX = ${FRAME_DEMO_CAPTION_MAX};
@@ -92666,12 +93065,12 @@ ${FRAME_TAG_SCRIPT}
     var figure = drawing.closest("figure");
     var caption = figure ? figure.querySelector("figcaption") : null;
     var words = caption ? caption.textContent : (figure && figure.getAttribute("aria-label")) || drawing.getAttribute("aria-label") || "";
-    return {
+    return withPart(drawing, {
       src: ${JSON.stringify(DRAWING_SOURCE_PREFIX)} + encodeURIComponent(new XMLSerializer().serializeToString(copy)),
       alt: (words || "").replace(/\\s+/g, " ").trim().slice(0, ${FRAME_PICTURE_ALT_MAX}),
       width: Math.max(1, Math.round(width)),
       height: Math.max(1, Math.round(height))
-    };
+    });
   }
   function openDrawing(drawing) {
     post({ type: "image", index: 0, pictures: [drawingPicture(drawing)] });
@@ -93199,7 +93598,9 @@ ${FRAME_EXPAND_SCRIPT}${FRAME_SOUND_SCRIPT}
           setTimeout(function () { target.removeAttribute("data-inf-revision-highlight"); }, 1000);
         }
         if (data.keyboard) { if (!target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1"); target.focus({preventScroll: true}); }
-        post({ type: "revealed", seq: data.seq, offerId: data.offerId, top: rect.top + window.scrollY, height: rect.height });
+        // A note on a place opens the viewer at its picture: the host asks which pictures that is.
+        var shown = caps.pictures && Number.isSafeInteger(data.picture) && data.picture >= 0 ? partPictureSet(target, data.picture) : null;
+        post({ type: "revealed", seq: data.seq, offerId: data.offerId, top: rect.top + window.scrollY, height: rect.height, index: shown ? shown.index : undefined, pictures: shown ? shown.pictures : undefined });
       });
     } else if (data.type === "find-read") {
       if (data.document !== documentId || !Number.isSafeInteger(data.seq) || data.seq < 1) return;
@@ -93484,7 +93885,7 @@ ${FRAME_KEYBOARD_SCRIPT}
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-qLBUmI4YlM+mVVYVg8riNbB15iQZxP6KX6xFMssJKrw=";
+  const FRAME_BRIDGE_SHA256 = "sha256-bgLU+7GZu3JaZWF3oBVIwlHR53zOWCgYLbvh/CCfLj0=";
   const APP_FRAME_SCHEME = "app-frame";
   const CARD_PICTURE_HOST = "images";
   const CARD_MEDIA_HOST = "media";
@@ -98929,7 +99330,7 @@ ${REVISION_HIGHLIGHT_STYLE}`;
       line: source.slice(0, original?.start ?? part.start).split("\n").length
     };
     const existing = input2.queued.find(
-      (queued) => queued.key === note.key && notePartIn(parts, queued, originalToRendered) === picked.start && JSON.stringify(noteTarget(parts, queued, originalToRendered)?.span) === JSON.stringify(picked.span)
+      (queued) => !queued.place && queued.key === note.key && notePartIn(parts, queued, originalToRendered) === picked.start && JSON.stringify(noteTarget(parts, queued, originalToRendered)?.span) === JSON.stringify(picked.span)
     );
     return existing ?? note;
   }

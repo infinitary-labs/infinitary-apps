@@ -81,6 +81,7 @@ import {
   AMBIENT_STYLE,
   CARD_ANSWER_SKIPPED,
   CARD_DRAFTS_CHANGE,
+  CARD_NOTE_PLACES,
   type CardReads,
   cardPushFor,
   legacyCardSnapshot,
@@ -1099,6 +1100,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         through: viewHas(hello, "from-the-command"),
         // An older desktop or phone reads answers strictly: a view gets the mark once its hello lists it.
         skipped: listsChange(hello.changes, CARD_ANSWER_SKIPPED),
+        // A view that draws no place, the phone included, reads each such note as a line of words.
+        places: listsChange(hello.changes, CARD_NOTE_PLACES),
       };
       client.sharedCards =
         hello.system === "ios" || readsSharedCards(hello.protocolVersion, hello.changes);
@@ -1305,12 +1308,14 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
                   (!client.sharedCards ||
                     !client.cardReads.annotations ||
                     !client.cardReads.through ||
-                    !client.cardReads.skipped)
+                    !client.cardReads.skipped ||
+                    !client.cardReads.places)
                 ? threadLinesFor(value, {
                     sharing: client.sharedCards,
                     annotations: client.cardReads.annotations,
                     through: client.cardReads.through,
                     skipped: client.cardReads.skipped,
+                    places: client.cardReads.places,
                   })
                 : value,
         });
@@ -1354,6 +1359,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           files: false,
           through: false,
           skipped: false,
+          places: false,
         },
         sharedCards: false,
         actionReads: {

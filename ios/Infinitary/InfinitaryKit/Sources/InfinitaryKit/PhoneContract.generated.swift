@@ -16,6 +16,7 @@ public enum PhoneContract {
     public static let boardWithoutClosed = "board-without-closed"
     public static let secretsAsk = "secrets-ask"
     public static let cardAnswerSkipped = "card-answer-skipped"
+    public static let settingsCurrent = "settings-current"
     public static let cardDrafts = "card-drafts"
     public static let draftQuietMs = 400
     public static let phonePush = "phone-push"

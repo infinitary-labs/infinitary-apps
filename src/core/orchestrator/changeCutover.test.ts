@@ -344,8 +344,12 @@ describe("saved stories at the approved cutover (INF-5135 and INF-5411)", () => 
       expect.objectContaining({ origin: formerAddress }),
       home,
     );
+    const putIn = vi.spyOn(where.forge, "putIn");
     expect(await service.merges.merge(task.id)).toMatchObject({ ok: true });
-    expect(where.forge.calls).toContain(`putIn #42 ${head}`);
+    expect(putIn).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ number: 42, branch: task.branch, headSha: head }),
+      head,
+    );
     expect(
       observe(
         "moved project tracking ref after pinned publication and merge",

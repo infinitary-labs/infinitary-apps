@@ -37,6 +37,8 @@ export type IntakeResult =
   | { kind: "text"; text: string; name: string }
   /** Neither a picture nor text: its path on this Mac, or null when it has no place on disk. */
   | { kind: "unsupported"; path: string | null }
+  /** A folder, with its path on this computer. */
+  | { kind: "folder"; path: string }
   | { kind: "notice"; notice: ComposerNotice };
 
 /** Where a file's outcome lands: one draft, named by key, applied through the store. */
@@ -51,6 +53,12 @@ export type FileDestination = {
   applyText: (text: string, name: string) => void;
   notice: (notice: ComposerNotice) => void;
   insertPaths: (paths: string[]) => void;
+  /**
+   * Offers a dropped folder as a project (docs/composer.md, "Files"): the
+   * main input on the first mate's own computer only. Without it, a folder
+   * is refused with a notice.
+   */
+  addFolder?: (path: string) => void;
 };
 
 type Host = {
@@ -107,6 +115,7 @@ export async function readDroppedFile(
   } catch {
     place = { kind: "no-path" };
   }
+  if (place.kind === "folder" && place.path) return { kind: "folder", path: place.path };
   if (place.kind === "folder" || place.kind === "shortcut" || place.kind === "other") {
     return { kind: "notice", notice: noticeFor(place.kind) };
   }
@@ -254,6 +263,10 @@ async function run(
         if (!dest.takesPaths()) dest.notice("file-other-mac");
         else if (result.path === null) dest.notice("file-not-local");
         else paths.push(result.path);
+        break;
+      case "folder":
+        if (dest.addFolder && dest.takesPaths()) dest.addFolder(result.path);
+        else dest.notice("file-folder");
         break;
       case "notice":
         dest.notice(result.notice);

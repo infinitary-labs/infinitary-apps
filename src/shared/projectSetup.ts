@@ -84,6 +84,11 @@ export const projectSetupOfferSchema = z.strictObject({
     runsOn: z.string().min(1).max(64).nullable(),
   }),
   work: z.string().optional(),
+  /**
+   * The captain dropped the folder on the main message box (docs/composer.md,
+   * "Files"): the first mate never asked, so it hears nothing of the answer.
+   */
+  dropped: z.literal(true).optional(),
 });
 export type ProjectSetupOffer = z.infer<typeof projectSetupOfferSchema>;
 

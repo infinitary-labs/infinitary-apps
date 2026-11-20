@@ -543,6 +543,8 @@
 "commandUsageUnitWords" = "トークン, 費用, ドル, 見積もり";
 "commandWhatsNewShow" = "新機能を表示";
 "commandWhatsNewShowWords" = "リリース, ノート, 変更, バージョン";
+"composerFolderNotProject" = "そのフォルダをプロジェクトとして追加できませんでした。";
+"composerFolderProject" = "そのフォルダはすでにプロジェクトに入っています。";
 "composerTooLongShorten" = "長すぎて送信できません。先に短くしてください。";
 "composerWordsOnly" = "Infinitary が更新されるまで、送れるのは文字だけです。送るには画像とファイルを取り除いてください。";
 "crewAPart" = "パート";
@@ -3572,6 +3574,9 @@
 "welcomeCard" = "回答や選択肢は、このようなカードでお届けします。";
 "welcomeEnd" = "説明は以上です。始めるには、下の書き出しを押してください。";
 "welcomeFigure" = "ウインドウの各部分を1つずつ表示：メッセージ欄、カード、アクティビティ、タスク";
+"welcomeFolderAdded" = "%1$@ をプロジェクトとして追加しました。そこでしてほしいことをメッセージ欄に入力してください。";
+"welcomeFolderAddedGit" = "%1$@ をプロジェクトとして追加し、フォルダで git を開始して空の最初のコミットを作成しました。そこでしてほしいことをメッセージ欄に入力してください。";
+"welcomeFolderAlreadyAdded" = "%1$@ はすでにプロジェクトに入っています。そこでしてほしいことをメッセージ欄に入力してください。";
 "welcomeLabelActivity" = "アクティビティ";
 "welcomeLabelBox" = "メッセージ欄";
 "welcomeLabelTasks" = "タスク";

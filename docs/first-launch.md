@@ -92,8 +92,14 @@ The presentation is the figure's own script, inside the `<figure>`, with styles 
 Without the script the card reads whole: the full picture with every part and its words, the card over the first mate, and no controls, so nothing on it looks pressable that is not.
 
 Below the picture, always: “To begin, press one and finish the sentence:” and three starters - Clone a project, Start a new project, Work in a folder on my computer.
-A press puts “Clone the project at ”, “Start a new project called ” or “Work in the folder ” in the message box under the card, with the caret after the words and focus in the box, through the store's `beginDraft` as the create-your-own-panel slot does: words already typed stay after them, and another starter's words replace the first one's while the box still starts with them.
-It sends nothing and leaves the welcome up, and while the box is held - a recording, the dictation key's pick, the first-launch gate - it does nothing (`mainMessageRefusal`).
+A press of Clone a project or Start a new project puts “Clone the project at ” or “Start a new project called ” in the message box under the card, with the caret after the words and focus in the box, through the store's `beginDraft` as the create-your-own-panel slot does: words already typed stay after them, and another starter's words replace the first one's while the box still starts with them.
+A press of Work in a folder on my computer, in a window on the first mate's own computer, opens the system's folder picker (`inf:app:choose-folder`) and adds the chosen folder as a project as Settings -> Projects does (`inf:repos:setup` with `adopt`; `pickProjectFolder`, `src/renderer/src/app/projectFolder.ts`).
+Cancel changes nothing.
+Once the folder is added, a quiet line under the card's title names the project and says to type what the captain wants done with it in the message box, and focus goes to the box; a folder already on the list is named the same way, and a plain folder's line says git was started in it.
+A refusal, such as a folder inside the app's own projects folder, shows on the card's error line.
+A view (`docs/view.md`) keeps the starter's words instead, since the picker would show the wrong computer's folders: its press puts “Work in the folder ” in the message box like the other two.
+The frame sends the window only a starter's words, so the window knows the folder starter by the app's own words in the welcome's body (`isWelcomeFolderStarter`, `src/shared/welcome.ts`).
+A press sends nothing and leaves the welcome up, and while the box is held - a recording, the dictation key's pick, the first-launch gate - it does nothing (`mainMessageRefusal`).
 A starter is a `data-inf-draft` button, the frame bridge's own message for a body that starts the captain's message, which the window takes only from the card on screen whose frame holds its focus, as a link opens only then (`docs/card-authoring.md` "Style").
 A press of a starter, Next or Back is not the first turn.
 

@@ -1,4 +1,6 @@
 {
+  "composerFolderNotProject": "Impossible d’ajouter ce dossier comme projet.",
+  "composerFolderProject": "Ce dossier fait déjà partie de vos projets.",
   "composerLines": {
     "plural": "count",
     "one": "{count} ligne",

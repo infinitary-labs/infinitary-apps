@@ -21134,6 +21134,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `release, notes, changes, version`;
   }
+  function composerFolderNotProject() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّرت إضافة هذا المجلد كمشروع.`;
+      case "de":
+        return `Dieser Ordner konnte nicht als Projekt hinzugefügt werden.`;
+      case "es":
+        return `No se pudo añadir esa carpeta como proyecto.`;
+      case "fr":
+        return `Impossible d’ajouter ce dossier comme projet.`;
+      case "ja":
+        return `そのフォルダをプロジェクトとして追加できませんでした。`;
+      case "ko":
+        return `이 폴더를 프로젝트로 추가할 수 없어요.`;
+      case "pt-BR":
+        return `Não foi possível adicionar essa pasta como projeto.`;
+      case "zh-Hans":
+        return `无法将该文件夹添加为项目。`;
+      case "zh-Hant":
+        return `無法將該資料夾加入為專案。`;
+      case "en-XA":
+        return `[Ţĥáţ ƒöļðéŕ çöûļð ñöţ ƀé áððéð áš á þŕöĵéçţ. ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮That folder could not be added as a project.‬`;
+    }
+    return `That folder could not be added as a project.`;
+  }
+  function composerFolderProject() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `هذا المجلد من مشاريعك بالفعل.`;
+      case "de":
+        return `Dieser Ordner ist schon eines deiner Projekte.`;
+      case "es":
+        return `Esa carpeta ya es uno de tus proyectos.`;
+      case "fr":
+        return `Ce dossier fait déjà partie de vos projets.`;
+      case "ja":
+        return `そのフォルダはすでにプロジェクトに入っています。`;
+      case "ko":
+        return `이 폴더는 이미 내 프로젝트예요.`;
+      case "pt-BR":
+        return `Essa pasta já é um dos seus projetos.`;
+      case "zh-Hans":
+        return `该文件夹已经是你的项目了。`;
+      case "zh-Hant":
+        return `該資料夾已經是你的專案了。`;
+      case "en-XA":
+        return `[Ţĥáţ ƒöļðéŕ îš áļŕéáðý öñé öƒ ýöûŕ þŕöĵéçţš. ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮That folder is already one of your projects.‬`;
+    }
+    return `That folder is already one of your projects.`;
+  }
   function composerLines(input2) {
     const count = formatNumber(input2.count);
     switch (currentLanguage()) {
@@ -83266,6 +83320,90 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Your window, one part per press: the message box, a card, Activity and Tasks`;
   }
+  function welcomeFolderAdded(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أُضيف ${name} مشروعًا. اكتب في مربع الرسالة ما تريد إنجازه فيه.`;
+      case "de":
+        return `${name} als Projekt hinzugefügt. Schreib ins Nachrichtenfeld, was darin erledigt werden soll.`;
+      case "es":
+        return `Se agregó ${name} como proyecto. Escribe en el cuadro de mensaje lo que quieres que se haga en él.`;
+      case "fr":
+        return `${name} ajouté comme projet. Tapez dans la zone de message ce que vous voulez y faire faire.`;
+      case "ja":
+        return `${name} をプロジェクトとして追加しました。そこでしてほしいことをメッセージ欄に入力してください。`;
+      case "ko":
+        return `${name}을(를) 프로젝트로 추가했어요. 여기서 원하는 일을 메시지 상자에 입력하세요.`;
+      case "pt-BR":
+        return `${name} adicionado como projeto. Digite na caixa de mensagem o que você quer que seja feito nele.`;
+      case "zh-Hans":
+        return `已将 ${name} 添加为项目。在消息框里输入你想在其中完成的事。`;
+      case "zh-Hant":
+        return `已將 ${name} 加入為專案。在訊息框輸入你想在其中完成的事。`;
+      case "en-XA":
+        return `[Åððéð ${name} áš á þŕöĵéçţ. Ţýþé ŵĥáţ ýöû ŵáñţ ðöñé ŵîţĥ îţ îñ ţĥé ɱéššáĝé ƀöẋ. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Added ‬${name}‮ as a project. Type what you want done with it in the message box.‬`;
+    }
+    return `Added ${name} as a project. Type what you want done with it in the message box.`;
+  }
+  function welcomeFolderAddedGit(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أُضيف ${name} مشروعًا، وبدأ git في المجلد بإيداع أول فارغ. اكتب في مربع الرسالة ما تريد إنجازه فيه.`;
+      case "de":
+        return `${name} als Projekt hinzugefügt und Git im Ordner gestartet, mit einem leeren ersten Commit. Schreib ins Nachrichtenfeld, was darin erledigt werden soll.`;
+      case "es":
+        return `Se agregó ${name} como proyecto y se inició git en la carpeta con una primera confirmación vacía. Escribe en el cuadro de mensaje lo que quieres que se haga en él.`;
+      case "fr":
+        return `${name} ajouté comme projet, et Git initialisé dans le dossier avec un premier commit vide. Tapez dans la zone de message ce que vous voulez y faire faire.`;
+      case "ja":
+        return `${name} をプロジェクトとして追加し、フォルダで git を開始して空の最初のコミットを作成しました。そこでしてほしいことをメッセージ欄に入力してください。`;
+      case "ko":
+        return `${name}을(를) 프로젝트로 추가하고 폴더에서 빈 첫 커밋으로 git을 시작했어요. 여기서 원하는 일을 메시지 상자에 입력하세요.`;
+      case "pt-BR":
+        return `${name} adicionado como projeto, e o git foi iniciado na pasta com um primeiro commit vazio. Digite na caixa de mensagem o que você quer que seja feito nele.`;
+      case "zh-Hans":
+        return `已将 ${name} 添加为项目，并在这个文件夹中初始化 git，创建了一个空的首次提交。在消息框里输入你想在其中完成的事。`;
+      case "zh-Hant":
+        return `已將 ${name} 加入為專案，並在這個資料夾中啟用 git，建立一個空的第一次提交。在訊息框輸入你想在其中完成的事。`;
+      case "en-XA":
+        return `[Åððéð ${name} áš á þŕöĵéçţ áñð šţáŕţéð ĝîţ îñ ţĥé ƒöļðéŕ ŵîţĥ áñ éɱþţý ƒîŕšţ çöɱɱîţ. Ţýþé ŵĥáţ ýöû ŵáñţ ðöñé ŵîţĥ îţ îñ ţĥé ɱéššáĝé ƀöẋ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Added ‬${name}‮ as a project and started git in the folder with an empty first commit. Type what you want done with it in the message box.‬`;
+    }
+    return `Added ${name} as a project and started git in the folder with an empty first commit. Type what you want done with it in the message box.`;
+  }
+  function welcomeFolderAlreadyAdded(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${name} من مشاريعك بالفعل. اكتب في مربع الرسالة ما تريد إنجازه فيه.`;
+      case "de":
+        return `${name} ist schon eines deiner Projekte. Schreib ins Nachrichtenfeld, was darin erledigt werden soll.`;
+      case "es":
+        return `${name} ya es uno de tus proyectos. Escribe en el cuadro de mensaje lo que quieres que se haga en él.`;
+      case "fr":
+        return `${name} fait déjà partie de vos projets. Tapez dans la zone de message ce que vous voulez y faire faire.`;
+      case "ja":
+        return `${name} はすでにプロジェクトに入っています。そこでしてほしいことをメッセージ欄に入力してください。`;
+      case "ko":
+        return `${name}은(는) 이미 내 프로젝트예요. 여기서 원하는 일을 메시지 상자에 입력하세요.`;
+      case "pt-BR":
+        return `${name} já é um dos seus projetos. Digite na caixa de mensagem o que você quer que seja feito nele.`;
+      case "zh-Hans":
+        return `${name} 已经是你的项目了。在消息框里输入你想在其中完成的事。`;
+      case "zh-Hant":
+        return `${name} 已經是你的專案了。在訊息框輸入你想在其中完成的事。`;
+      case "en-XA":
+        return `[${name} îš áļŕéáðý öñé öƒ ýöûŕ þŕöĵéçţš. Ţýþé ŵĥáţ ýöû ŵáñţ ðöñé ŵîţĥ îţ îñ ţĥé ɱéššáĝé ƀöẋ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${name}‮ is already one of your projects. Type what you want done with it in the message box.‬`;
+    }
+    return `${name} is already one of your projects. Type what you want done with it in the message box.`;
+  }
   function welcomeLabelActivity() {
     switch (currentLanguage()) {
       case "ar":
@@ -84173,6 +84311,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     commandUsageUnitWords,
     commandWhatsNewShow,
     commandWhatsNewShowWords,
+    composerFolderNotProject,
+    composerFolderProject,
     composerLines,
     composerTooLongShorten,
     composerWordsOnly,
@@ -86313,6 +86453,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     welcomeCard,
     welcomeEnd,
     welcomeFigure,
+    welcomeFolderAdded,
+    welcomeFolderAddedGit,
+    welcomeFolderAlreadyAdded,
     welcomeLabelActivity,
     welcomeLabelBox,
     welcomeLabelTasks,
@@ -86883,6 +87026,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "commandUsageUnitWords": [],
     "commandWhatsNewShow": [],
     "commandWhatsNewShowWords": [],
+    "composerFolderNotProject": [],
+    "composerFolderProject": [],
     "composerLines": ["count"],
     "composerTooLongShorten": [],
     "composerWordsOnly": [],
@@ -89023,6 +89168,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "welcomeCard": [],
     "welcomeEnd": [],
     "welcomeFigure": [],
+    "welcomeFolderAdded": ["name"],
+    "welcomeFolderAddedGit": ["name"],
+    "welcomeFolderAlreadyAdded": ["name"],
     "welcomeLabelActivity": [],
     "welcomeLabelBox": [],
     "welcomeLabelTasks": [],
@@ -89349,6 +89497,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   const openEffectSchema = object({
     kind: literal("open"),
     target: _enum(["settings", "subscriptions", "projects", "devices", "browser"]),
+    folder: literal(true).optional(),
+    // A Choose folder button on projects (docs/fleet.md)
     savedSignIn: literal(true).optional(),
     signIn: string().min(1).max(253).optional(),
     make: deviceMakeSchema.optional(),
@@ -99046,6 +99196,7 @@ ${REVISION_HIGHLIGHT_STYLE}`;
   const WELCOME_STARTERS_LEAD = english(() => welcomeStartersLead());
   const WELCOME_STARTERS = english(starters);
   const WELCOME_LABELS = english(labels);
+  const WELCOME_FOLDER_STARTER = WELCOME_STARTERS[2];
   const WELCOME_CHAPTERS = 5;
   const round = (value) => Math.round(value * 10) / 10;
   const wire = (near) => `color-mix(in srgb,var(--wire-accent) ${Math.round(near * 100)}%,var(--wire-dim))`;
@@ -99226,7 +99377,10 @@ ${startersHtml()}`;
 <li>${WELCOME_LABELS.tasks}, on the right: ${WELCOME_WORDS.tasks}</li>
 </ul>
 <p>${WELCOME_STARTERS_LEAD} ${WELCOME_STARTERS.map(
-    (starter) => `${starter.label} (puts “${starter.words.trim()}” in the message box)`
+    (starter) => starter === WELCOME_FOLDER_STARTER ? (
+      // i18n-exempt: the answer the record keeps, served to the first mate
+      `${starter.label} (opens the system's folder picker and adds the chosen folder as a project; a window on another computer puts “${starter.words.trim()}” in the message box)`
+    ) : `${starter.label} (puts “${starter.words.trim()}” in the message box)`
   ).join(", ")}.</p>`;
   function appBodyOf(saved) {
     return saved.includes(WELCOME_BODY_MARK) ? welcomeBody() : void 0;

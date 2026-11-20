@@ -543,6 +543,8 @@
 "commandUsageUnitWords" = "令牌, 费用, 美元, 估算";
 "commandWhatsNewShow" = "显示新功能";
 "commandWhatsNewShowWords" = "发布, 说明, 更新内容, 版本";
+"composerFolderNotProject" = "无法将该文件夹添加为项目。";
+"composerFolderProject" = "该文件夹已经是你的项目了。";
 "composerTooLongShorten" = "太长了，无法发送。请先缩短。";
 "composerWordsOnly" = "在 Infinitary 更新之前只能发送文字。请移除图片和文件后再发送。";
 "crewAPart" = "一个部分";
@@ -3572,6 +3574,9 @@
 "welcomeCard" = "我会用这样的卡片带回答案和选项。";
 "welcomeEnd" = "就这些。要开始，请点击下方的一个开头语。";
 "welcomeFigure" = "你的窗口，每按一次介绍一个部分：消息框、卡片、动态和任务";
+"welcomeFolderAdded" = "已将 %1$@ 添加为项目。在消息框里输入你想在其中完成的事。";
+"welcomeFolderAddedGit" = "已将 %1$@ 添加为项目，并在这个文件夹中初始化 git，创建了一个空的首次提交。在消息框里输入你想在其中完成的事。";
+"welcomeFolderAlreadyAdded" = "%1$@ 已经是你的项目了。在消息框里输入你想在其中完成的事。";
 "welcomeLabelActivity" = "动态";
 "welcomeLabelBox" = "消息框";
 "welcomeLabelTasks" = "任务";

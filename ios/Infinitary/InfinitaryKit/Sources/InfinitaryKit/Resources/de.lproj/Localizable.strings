@@ -543,6 +543,8 @@
 "commandUsageUnitWords" = "Token, Kosten, Dollar, Schätzung";
 "commandWhatsNewShow" = "Neuigkeiten anzeigen";
 "commandWhatsNewShowWords" = "Versionshinweise, Neuigkeiten, Änderungen, Version";
+"composerFolderNotProject" = "Dieser Ordner konnte nicht als Projekt hinzugefügt werden.";
+"composerFolderProject" = "Dieser Ordner ist schon eines deiner Projekte.";
 "composerTooLongShorten" = "Zu lang zum Senden. Kürze es zuerst.";
 "composerWordsOnly" = "Bis Infinitary aktualisiert ist, können nur Worte gesendet werden. Entferne die Bilder und Dateien, um dies zu senden.";
 "crewAPart" = "Ein Teil";
@@ -3572,6 +3574,9 @@
 "welcomeCard" = "Antworten und Entscheidungen bringe ich dir als Karten wie diese.";
 "welcomeEnd" = "Das ist schon alles. Drück zum Anfangen unten auf einen Einstieg.";
 "welcomeFigure" = "Dein Fenster, ein Teil pro Klick: das Nachrichtenfeld, eine Karte, Aktivität und Aufgaben";
+"welcomeFolderAdded" = "%1$@ als Projekt hinzugefügt. Schreib ins Nachrichtenfeld, was darin erledigt werden soll.";
+"welcomeFolderAddedGit" = "%1$@ als Projekt hinzugefügt und Git im Ordner gestartet, mit einem leeren ersten Commit. Schreib ins Nachrichtenfeld, was darin erledigt werden soll.";
+"welcomeFolderAlreadyAdded" = "%1$@ ist schon eines deiner Projekte. Schreib ins Nachrichtenfeld, was darin erledigt werden soll.";
 "welcomeLabelActivity" = "Aktivität";
 "welcomeLabelBox" = "das Nachrichtenfeld";
 "welcomeLabelTasks" = "Aufgaben";

@@ -1,4 +1,6 @@
 {
+  "composerFolderNotProject": "تعذّرت إضافة هذا المجلد كمشروع.",
+  "composerFolderProject": "هذا المجلد من مشاريعك بالفعل.",
   "composerLines": {
     "plural": "count",
     "zero": "{count} سطر",

@@ -198,16 +198,16 @@ const settingsPlaceShape = {
 };
 
 /**
- * An open effect: Settings on a section, or - on a crewmate's card that asks
- * the captain to take over its task's browser - that browser's view with the
- * captain in control (`browser`, docs/task-browser.md "Asking for help"),
- * the card's own attachment naming which browser. With `savedSignIn` the
- * browser gets the captain's saved sign-in for its site instead and goes
- * back to its crewmate ("Signed-in sites"); only the host adds that action.
+ * An open effect: Settings on a section, or - on a crewmate's card that asks the captain to take
+ * over its task's browser - that browser's view with the captain in control (`browser`,
+ * docs/task-browser.md "Asking for help"), the card's own attachment naming which browser. With
+ * `savedSignIn` the browser gets the captain's saved sign-in for its site instead and goes back to
+ * its crewmate ("Signed-in sites"); only the host adds that action.
  */
 export const openEffectSchema = z.object({
   kind: z.literal("open"),
   target: z.enum(["settings", "subscriptions", "projects", "devices", "browser"]),
+  folder: z.literal(true).optional(), // A Choose folder button on projects (docs/fleet.md)
   savedSignIn: z.literal(true).optional(),
   signIn: z.string().min(1).max(253).optional(),
   make: deviceMakeSchema.optional(),

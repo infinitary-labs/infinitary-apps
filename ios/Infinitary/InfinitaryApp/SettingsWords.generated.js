@@ -14932,6 +14932,10 @@ ${events}` : prompt;
     initializedGit: boolean().optional(),
     createdInitialCommit: boolean().optional()
   });
+  discriminatedUnion("kind", [
+    object({ kind: literal("card"), cardId: string().min(1) }),
+    object({ kind: literal("already"), name: string().min(1) })
+  ]);
   union([
     string().trim().min(1),
     strictObject({ own: literal(true), key: string().trim().min(1).optional() })
@@ -15017,7 +15021,8 @@ ${events}` : prompt;
   discriminatedUnion("kind", [
     object({ kind: literal("regular"), path: string().min(1).max(4096) }),
     object({ kind: literal("no-path") }),
-    object({ kind: literal("folder") }),
+    /** A folder, with its path: the main message box offers it as a project (docs/composer.md, "Files"). */
+    object({ kind: literal("folder"), path: string().min(1).max(4096).optional() }),
     object({ kind: literal("shortcut") }),
     object({ kind: literal("other") })
   ]);

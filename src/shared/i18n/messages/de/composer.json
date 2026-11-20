@@ -1,4 +1,6 @@
 {
+  "composerFolderNotProject": "Dieser Ordner konnte nicht als Projekt hinzugefügt werden.",
+  "composerFolderProject": "Dieser Ordner ist schon eines deiner Projekte.",
   "composerLines": {
     "plural": "count",
     "one": "{count} Zeile",

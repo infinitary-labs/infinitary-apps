@@ -1,4 +1,6 @@
 {
+  "composerFolderNotProject": "이 폴더를 프로젝트로 추가할 수 없어요.",
+  "composerFolderProject": "이 폴더는 이미 내 프로젝트예요.",
   "composerLines": {
     "plural": "count",
     "other": "{count}줄"

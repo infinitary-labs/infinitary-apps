@@ -56,6 +56,27 @@ export const WELCOME_STARTERS_LEAD = english(() => m.welcomeStartersLead());
 export const WELCOME_STARTERS = english(starters);
 export const WELCOME_LABELS = english(labels);
 
+/**
+ * The folder starter (docs/first-launch.md, "The welcome"): on the first
+ * mate's own computer its press opens the system's folder picker and adds
+ * the chosen folder as a project, as Settings -> Projects adds one; a window
+ * on another computer puts its words in the message box as the other
+ * starters do.
+ */
+export const WELCOME_FOLDER_STARTER = WELCOME_STARTERS[2];
+
+/**
+ * Whether a starter's words from a card's body are the welcome's folder
+ * starter: the app wrote both the body and the words, so the words are the
+ * starter's own, in the window's language or the record's English.
+ */
+export function isWelcomeFolderStarter(body: string | undefined, words: string): boolean {
+  return (
+    !!body?.includes(WELCOME_BODY_MARK) &&
+    (words === m.welcomeStarterFolderWords() || words === WELCOME_FOLDER_STARTER.words)
+  );
+}
+
 /** The chapters as the picture counts them. */
 export const WELCOME_CHAPTERS = 5;
 
@@ -298,8 +319,11 @@ export const WELCOME_ANSWER = `<p>A picture of the window, one part per press, e
 <li>${WELCOME_LABELS.activity}, on the left: ${WELCOME_WORDS.activity}</li>
 <li>${WELCOME_LABELS.tasks}, on the right: ${WELCOME_WORDS.tasks}</li>
 </ul>
-<p>${WELCOME_STARTERS_LEAD} ${WELCOME_STARTERS.map(
-  (starter) => `${starter.label} (puts “${starter.words.trim()}” in the message box)`,
+<p>${WELCOME_STARTERS_LEAD} ${WELCOME_STARTERS.map((starter) =>
+  starter === WELCOME_FOLDER_STARTER
+    ? // i18n-exempt: the answer the record keeps, served to the first mate
+      `${starter.label} (opens the system's folder picker and adds the chosen folder as a project; a window on another computer puts “${starter.words.trim()}” in the message box)`
+    : `${starter.label} (puts “${starter.words.trim()}” in the message box)`,
 ).join(", ")}.</p>`;
 
 /** The note the host presents: its title, its body, and the answer its record keeps. */

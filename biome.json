@@ -375,6 +375,7 @@
         "!src/core/orchestrator/reviews.tier.test.ts",
         "!src/core/orchestrator/settleOwners.keptMerge.test.ts",
         "!src/core/orchestrator/settleOwners.keptMergeRepairs.test.ts",
+        "!src/core/orchestrator/settleOwners.keptMergeUnknown.test.ts",
         "!src/core/orchestrator/starts.automatic.test.ts",
         "!src/core/orchestrator/starts.lost.test.ts",
         "!src/core/orchestrator/taskMoves.computer.test.ts",

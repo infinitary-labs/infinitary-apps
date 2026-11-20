@@ -74,7 +74,12 @@ import {
   writeAnsweredFacts,
   writeSentLine,
 } from "./integrationAsks";
-import { approvableOffer, matchesOfferDestination, taskPull } from "./mergeAuthorization";
+import {
+  approvableOffer,
+  matchesOfferDestination,
+  standingAuthorization,
+  taskPull,
+} from "./mergeAuthorization";
 import { publicationRepo } from "./publicationRepo";
 import { reviewedTaskOf } from "./reviewCard";
 import { reviewHistory } from "./reviewHistory";
@@ -763,6 +768,15 @@ export class CardActions {
     // chrome click runs it; the declaration granted nothing.
     if (merge) {
       if (!card.taskId || source !== "chrome" || queued) return {};
+      // A merge sent earlier whose outcome was never read back came along
+      // with this approval of its pull request: the click reads it back
+      // first, as the kept run does, and sends nothing until it resolves.
+      if (standingAuthorization(this.core.options.tasks.get(card.taskId)?.delivery)?.attempt) {
+        void this.core.settling.kept.runMergeAuthorization(card.taskId).catch((caught: unknown) => {
+          console.warn("[crew] kept merge read-back failed:", caught);
+        });
+        return {};
+      }
       if (merge.review) {
         void this.core.settling.kept
           .requestMerge(card.taskId, merge.review, false, merge.after)

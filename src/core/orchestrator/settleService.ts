@@ -253,6 +253,15 @@ export class SettleService {
   resumePendingSettles(): void {
     for (const record of this.host.tasks.listLive()) {
       if (!record.pendingSettle) continue;
+      // The quit came after the merge left: the kept run reads it back at
+      // boot and sends nothing until it resolves, so it is not sent again.
+      if (
+        record.pendingSettle.mode === "merge-pr" &&
+        standingAuthorization(record.delivery)?.attempt
+      ) {
+        this.host.tasks.delivery.setPendingSettle(record.id, null);
+        continue;
+      }
       void this.reportCardSettle(
         record.id,
         record.pendingSettle.mode,

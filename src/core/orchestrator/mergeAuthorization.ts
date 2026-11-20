@@ -502,7 +502,6 @@ export function declareMergeGuidance(
         guidance: { ...guidance, declared: Math.max(guidance.declared, input.mark) },
         waiting: undefined,
         retryAt: undefined,
-        attempt: undefined,
       },
     });
     tasks.note(taskId, `The captain's kept merge approval ended: ${reason}.`, {
@@ -677,7 +676,6 @@ export function declareMergeRepair(
         undecided: undefined,
         waiting: undefined,
         retryAt: undefined,
-        attempt: undefined,
       },
       `The captain's kept merge approval ended: ${reason}.`,
       true,
@@ -890,7 +888,6 @@ export function decideMergeRepair(
       undecided: assessed,
       waiting: undefined,
       retryAt: undefined,
-      attempt: undefined,
     },
   });
   tasks.note(builderId, `The captain's kept merge approval ended: ${reason}.`, {

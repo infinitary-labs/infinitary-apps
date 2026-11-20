@@ -21,6 +21,7 @@ import type {
   TaskDelivery,
   TaskRecord,
 } from "../storage/taskRecords";
+import { TaskGraph } from "../tasks/taskGraph";
 import type { TaskService } from "../tasks/taskService";
 import type { PrOutcome } from "./changeMerge";
 import { publicationRepo } from "./publicationRepo";
@@ -204,7 +205,7 @@ export function standInFront(
 
 /** The one head an approval can merge now. */
 export function candidateHead(authorization: MergeAuthorization): string {
-  return authorization.lineage.at(-1)?.toHead ?? authorization.approvedHead;
+  return TaskGraph.newestApproved(authorization);
 }
 
 /**

@@ -616,6 +616,26 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       await supervisor.watch.sweepGates(clock.now);
       await settle();
       expect(heard().filter((text) => text.includes(closed))).toHaveLength(1);
+
+      // INF-5297's review: that steer stands for the drop, so a replacement linked later is
+      // named once (INF-1826's wait-moved), as for a waiter told of the drop the usual way.
+      await endTurn(crewmate, later.id, "Reported to the first mate.");
+      const carrier = seedTask(tasks, {
+        id: "carrier",
+        title: "Add the CSV export again",
+        status: "running",
+      });
+      tasks.graph.link(base.id, carrier.id, "replaced-by", "firstmate");
+      clock.now += minutes(10);
+      await supervisor.watch.sweepGates(clock.now);
+      await settle();
+      expect(
+        heard().filter((text) =>
+          text.includes(
+            `${base.key} "Add the CSV export", which you heard was dropped, goes on in ${carrier.key} "Add the CSV export again"`,
+          ),
+        ),
+      ).toHaveLength(1);
     });
 
     // INF-5269 part 3: a part hears once for each newer version its base is approved at,

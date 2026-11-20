@@ -441,9 +441,15 @@ export class Reviews {
       this.host.now(),
     );
     if (decided.decided === "accepted") {
-      void this.host.settling.kept.runMergeAuthorization(builderId).catch((caught: unknown) => {
-        console.warn("[crew] kept merge could not run:", caught);
-      });
+      // The accepted repair follows the part under it at its version, as a declared one does.
+      void followBase(this.options.tasks, builderId, decided.head)
+        .catch((caught: unknown) => {
+          console.warn("[crew] the part under a repaired change could not be followed:", caught);
+        })
+        .then(() => this.host.settling.kept.runMergeAuthorization(builderId))
+        .catch((caught: unknown) => {
+          console.warn("[crew] kept merge could not run:", caught);
+        });
       return;
     }
     // The task's other approvals end with it, and its crewmate hears which (INF-2746).

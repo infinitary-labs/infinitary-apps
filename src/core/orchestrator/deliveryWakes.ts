@@ -632,8 +632,13 @@ export function baseClosedUnmergedWake(base: {
       base: { key: base.key || base.id, title: base.title, head: base.head },
       closed: base.closed,
     },
-    once: `base-closed-unmerged:${base.id}`,
+    once: baseClosedUnmergedOnce(base),
   };
+}
+
+/** The name the steer about a closed part under a task goes out once for: that part. */
+export function baseClosedUnmergedOnce(task: { id: string }): string {
+  return `base-closed-unmerged:${task.id}`;
 }
 
 /** The name a closed dependency's steer goes out once for: the work that closed. */

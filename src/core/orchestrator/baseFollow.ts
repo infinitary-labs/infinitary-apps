@@ -3,7 +3,6 @@ import type { TaskRecord } from "../storage/taskRecords";
 import { TaskGraph } from "../tasks/taskGraph";
 import { TaskService } from "../tasks/taskService";
 import { git } from "../workspace/git";
-import { candidateHead } from "./mergeAuthorization";
 
 /**
  * The part a task was built on (`shape.built_on`) and that part's newest
@@ -25,7 +24,7 @@ export function newestBase(
     task: builtOn.task,
     branch: approval.target.branch,
     from: builtOn.head,
-    newest: candidateHead(approval),
+    newest: TaskGraph.newestApproved(approval),
   };
 }
 

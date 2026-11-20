@@ -75,11 +75,12 @@ Its approved merge waits in the batch line behind its prerequisite (docs/forge.m
 ## Following the part under it
 
 A started part follows the part its `built_on` names while that part's work has not merged (`IdleLadder.followBase`, `newestBase`).
-The part under it's newest approved version is the newest head its standing approval covers: the approved version, or the last repair a kept approval accepted (`candidateHead`).
+The part under it's newest approved version is the newest head its standing approval covers: the approved version, or the last repair a kept approval accepted (`TaskGraph.newestApproved`).
+A part that starts at its prerequisite's approval starts on that version, and a prerequisite that merged counts as merged at the version its merge's receipt names (`TaskGraph.mergedAt`), so a part replayed onto a repaired version is not left behind once that version merges first.
 When that version is newer than the part's `built_on.head`, the idle ladder tells the part's crewmate once for each such version (`base-moved`), naming the old and the new version so it replays only its own commits onto the new one.
 When the part under it closes without merging, the idle ladder tells the part's crewmate once (`base-closed-unmerged`) to report to the first mate, which decides whether the part is rebuilt without that work, waits for the work that replaces it, or is dropped; the steer the closed wait would send otherwise is not sent, since this one says more.
 Each steer rides the durable inbox under a name of its own, so it is queued once, even across a restart, and the parts above follow one level at a time: a part hears only when the part directly under it has a newer approved version.
-Where the host reads the part's version - its review commission, its merge card and its kept approval's repair - `followBase` moves `built_on.head` to the newest approved version under it once that version is in the part's version, through the one writer (`TaskPlacement.setBuiltOn`).
+Where the host reads the part's version - its review commission, its merge card and its kept approval's repair, declared or accepted by an assessment - `followBase` moves `built_on.head` to the newest approved version under it once that version is in the part's version, through the one writer (`TaskPlacement.setBuiltOn`).
 Its review, line count and story then read its own difference against the moved version, and a re-review after a passed review lines up its own commits against that version.
 A merge card, whether shown with `show_merge_card` or `emit_card`, at a version that does not hold the newest approved version under it is refused in the batch line's own words (`LEFT_OUT_WORDS.behindBase`), since the batch would leave it out; a version this computer cannot read is left to the batch line.
 A kept approval's repair onto that version names it as `newBase`, and its paths are compared against the version of the part under it that the approved head was built on, the newest of that part's pushed versions the approved head holds (docs/delivery-rigor.md, "A kept merge approval").
@@ -95,7 +96,7 @@ These writes are machinery: no timeline event of their own - the card and cap ev
 
 An `at-time` gate on an active row is a timed wait.
 The sweep's active branch walks `listActive()`: it heals each work row's captain gate, and a due `at-time` gate is cleared into **one steer on the task's own lane** - the idle ladder's steer path, actor `supervisor` (`timedWaitOver`, worded by `renderWake`) - never a dispatch.
-A wait on another task ends the same way when that task closes: one `dependency-closed` steer per closed task, once (`docs/report-sort.md`, "A wait on work underway moves on its own").
+A wait on another task ends the same way when that task closes: one `dependency-closed` steer per closed task, once, or `base-closed-unmerged` for a task built on that work when it closed without merging (`docs/report-sort.md`, "A wait on work underway moves on its own").
 A baseline wait also resumes sooner, when the default branch's own run of the check it names passes (`docs/forge.md`, "A main failure's wake").
 A wait the first mate recorded can end sooner: a report from the task it waits on wakes the first mate, which passes on a finding the waiter was held for and removes the link (`docs/report-sort.md`, "A hold on a task's finding ends when that task reports it").
 The wait's end opens a new idle episode, so the turn it starts is the task's own.

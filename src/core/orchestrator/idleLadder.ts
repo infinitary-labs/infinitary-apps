@@ -25,6 +25,7 @@ import { escapeCardText } from "./cardText";
 import type { CrewTurn } from "./crewTurn";
 import {
   baseApprovalEndedWake,
+  baseClosedUnmergedOnce,
   baseClosedUnmergedWake,
   baseMovedWake,
   dependencyClosedOnce,
@@ -1910,14 +1911,14 @@ export class IdleLadder {
     const tasks = this.host.tasks;
     return this.liveWaits(record).flatMap(({ task, kind }) => {
       if (kind !== "blocks") return [];
-      const told = tasks.graph
-        .replacedPredecessors(task.id)
-        .filter(
-          (old) =>
-            old.status === "dropped" &&
-            this.host.inbox.woken(record.id, dependencyClosedOnce(old)) &&
-            !this.host.inbox.woken(record.id, waitMovedOnce(old, task)),
-        );
+      const told = tasks.graph.replacedPredecessors(task.id).filter(
+        (old) =>
+          old.status === "dropped" &&
+          // A part built on the dropped task heard of its close in its own steer.
+          (this.host.inbox.woken(record.id, dependencyClosedOnce(old)) ||
+            this.host.inbox.woken(record.id, baseClosedUnmergedOnce(old))) &&
+          !this.host.inbox.woken(record.id, waitMovedOnce(old, task)),
+      );
       if (told.length === 0) return [];
       const moved = new Set(this.movedFrom(record.id, task.id).map((old) => old.id));
       return told

@@ -1,6 +1,9 @@
+import { execFile } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { writePrivate } from "../devices/identity";
+import { hostEnv } from "../hostEnv";
+import { encodedCommand, windowsPowerShell } from "../storage/ownerOnly";
 import type { Launchctl, Launcher } from "./background";
 
 /**
@@ -359,6 +362,63 @@ export async function removeRunTask(
   rmSync(options.file, { force: true });
   return was;
 }
+
+/**
+ * Task Scheduler's own answer for one task in its root folder, through its
+ * scripting interface in Windows' own PowerShell: its not-found error
+ * (0x80070002) for that exact task is gone, and any other error, a PowerShell that cannot start
+ * included, is unknown (`TaskLookup`).
+ */
+export function powerShellTaskLookup(
+  env: NodeJS.ProcessEnv,
+  label: string,
+): Promise<"gone" | "there" | "unknown"> {
+  return new Promise((resolve) => {
+    execFile(
+      windowsPowerShell(env),
+      [
+        "-NoLogo",
+        "-NoProfile",
+        "-NonInteractive",
+        "-EncodedCommand",
+        encodedCommand(TASK_LOOKUP_SCRIPT),
+      ],
+      { env: { ...hostEnv(), INFINITARY_TASK_LABEL: label }, timeout: 15_000, windowsHide: true },
+      (error, stdout) => {
+        const answer = String(stdout).trim();
+        resolve(!error && (answer === "gone" || answer === "there") ? answer : "unknown");
+      },
+    );
+  });
+}
+
+/**
+ * Asks Task Scheduler for the task its setting names. Only the exact task's
+ * lookup can answer gone: an error reaching the service or its root folder,
+ * not-found included, is unknown. Each wrapped error is followed to its own code.
+ */
+const TASK_LOOKUP_SCRIPT = String.raw`
+$ErrorActionPreference = 'Stop'
+try {
+  $service = New-Object -ComObject Schedule.Service
+  $service.Connect()
+  $root = $service.GetFolder('\')
+} catch {
+  'unknown'
+  exit 0
+}
+try {
+  [void]$root.GetTask($env:INFINITARY_TASK_LABEL)
+  'there'
+} catch {
+  $e = $_.Exception
+  while ($e) {
+    if ($e.HResult -eq -2147024894) { 'gone'; exit 0 }
+    $e = $e.InnerException
+  }
+  'unknown'
+}
+`;
 
 /**
  * A stop asked of the run on this data folder where no signal can ask it

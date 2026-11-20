@@ -23,7 +23,12 @@ import { DevicePairing } from "../../src/core/devices/pairing";
 import type { CoreDispatch } from "../../src/core/dispatcher";
 import { CoreEventBus } from "../../src/core/events";
 import { serviceLabel } from "../../src/core/helper/background";
-import { requestRunStop, runTaskFile, WORK_TASK_AGAIN } from "../../src/core/helper/windowsTask";
+import {
+  powerShellTaskLookup,
+  requestRunStop,
+  runTaskFile,
+  WORK_TASK_AGAIN,
+} from "../../src/core/helper/windowsTask";
 import { helperWords } from "../../src/core/helper/words";
 import { onlyOwnerReaches, readAccessList } from "../../src/core/storage/ownerOnly";
 import { GIT_FOR_WINDOWS } from "../../src/core/windowsGit";
@@ -402,11 +407,17 @@ test("the Windows installer installs for this person, offers Git, starts the com
     keepTask("task-from-start-at-boot.json");
     await stopRun();
 
+    // Task Scheduler's own answer for this task, which a refused removal reads before it lets
+    // the task's file go (the review of INF-5409): there while it is registered.
+    expect(await powerShellTaskLookup(process.env, label)).toBe("there");
+
     // `--off` takes the task away.
     const off = execFileSync(executable, ["start-at-boot", "--off"], { encoding: "utf8" });
     keep("start-at-boot-off.txt", off);
     expect(off).toContain(BOOT_WORDS.windowsOff(user)[0]);
     expect(runTask(label)).toBe(null);
+    // And its not-found answer for that same task once it is gone.
+    expect(await powerShellTaskLookup(process.env, label)).toBe("gone");
     expect(existsSync(runTaskFile(dataDir))).toBe(false);
     await expect.poll(() => topAppProcesses().length, { timeout: 30_000 }).toBe(0);
   });

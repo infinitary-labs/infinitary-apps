@@ -1,13 +1,11 @@
-import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { homedir, userInfo } from "node:os";
 import { join } from "node:path";
 import { systemSystemctl } from "@core/helper/background";
 import { appLauncher } from "@core/helper/launcher";
-import { type Schtasks, windowsAccount } from "@core/helper/windowsTask";
+import { powerShellTaskLookup, type Schtasks, windowsAccount } from "@core/helper/windowsTask";
 import { hostEnv } from "@core/hostEnv";
 import { hostPlatform } from "@core/platform";
-import { encodedCommand, windowsPowerShell } from "@core/storage/ownerOnly";
 import { findOnPath } from "@core/userBin";
 import { runLabelOf } from "@shared/codeNames";
 import { SETTING_PREFIXES, settingFrom } from "@shared/envSettings";
@@ -61,53 +59,6 @@ export function windowsSchtasks(env: NodeJS.ProcessEnv, packaged: boolean): Scht
     { lookup: (label: string) => powerShellTaskLookup(env, label) },
   );
 }
-
-/**
- * Task Scheduler's own answer for one task in its root folder, through its
- * scripting interface in Windows' own PowerShell: its not-found error
- * (0x80070002) is gone, and any other error, a PowerShell that cannot start
- * included, is unknown (`TaskLookup`).
- */
-function powerShellTaskLookup(
-  env: NodeJS.ProcessEnv,
-  label: string,
-): Promise<"gone" | "there" | "unknown"> {
-  return new Promise((resolve) => {
-    execFile(
-      windowsPowerShell(env),
-      [
-        "-NoLogo",
-        "-NoProfile",
-        "-NonInteractive",
-        "-EncodedCommand",
-        encodedCommand(TASK_LOOKUP_SCRIPT),
-      ],
-      { env: { ...hostEnv(), INFINITARY_TASK_LABEL: label }, timeout: 15_000, windowsHide: true },
-      (error, stdout) => {
-        const answer = String(stdout).trim();
-        resolve(!error && (answer === "gone" || answer === "there") ? answer : "unknown");
-      },
-    );
-  });
-}
-
-/** Asks Task Scheduler for the task its setting names, following each wrapped error to its own code. */
-const TASK_LOOKUP_SCRIPT = String.raw`
-$ErrorActionPreference = 'Stop'
-try {
-  $service = New-Object -ComObject Schedule.Service
-  $service.Connect()
-  [void]$service.GetFolder('\').GetTask($env:INFINITARY_TASK_LABEL)
-  'there'
-} catch {
-  $e = $_.Exception
-  while ($e) {
-    if ($e.HResult -eq -2147024894) { 'gone'; exit 0 }
-    $e = $e.InnerException
-  }
-  'unknown'
-}
-`;
 
 export async function answerBootCommand(
   asked: { boot: string[] | null; help: string[] | null },

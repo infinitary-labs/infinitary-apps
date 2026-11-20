@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "placed-git-fixture-origin",
+      "reason": "Internal test repair: placed publication tests use the same disposable Git origin for the forge and checkout. No application behavior changes."
+    }
+  ]
+}

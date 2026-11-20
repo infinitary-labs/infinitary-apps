@@ -10,7 +10,18 @@ import type { ShellState } from "./store";
 
 type Listener = (state: ShellState, previous: ShellState) => void;
 
-function windowWith(changes: string[]) {
+const VIEW = {
+  role: "view",
+  name: "MacBook Pro",
+  address: "127.0.0.1",
+  joinedAt: 1,
+  contact: "in-reach",
+  readOnly: null,
+  heardAt: 1,
+  caughtUp: 0,
+};
+
+function windowWith(changes: string[], thisMac: object = { role: "home", left: null }) {
   const drafts = vi.fn(async (): Promise<CardDraft[]> => []);
   const draft = vi.fn(async (cardId: string, _change: CardDraftChange) => ({
     draft: { cardId, revision: 1, answers: [], words: "", notes: [] },
@@ -26,7 +37,7 @@ function windowWith(changes: string[]) {
     cardAnswers: {},
     replyDrafts: {},
     replyNotes: {},
-    thisMac: { role: "home", left: null },
+    thisMac,
   } as unknown as ShellState;
   let listener: Listener = () => {};
   startCardDrafts(
@@ -42,7 +53,13 @@ function windowWith(changes: string[]) {
     state = { ...state, replyDrafts: { "card-1": words } };
     listener(state, previous);
   };
-  return { drafts, draft, type };
+  /** The link to the first mate came back, as `ThisMac` says it. */
+  const back = (next: object) => {
+    const previous = state;
+    state = { ...state, thisMac: next } as unknown as ShellState;
+    listener(state, previous);
+  };
+  return { drafts, draft, type, back };
 }
 
 afterEach(() => {
@@ -70,5 +87,15 @@ describe("startCardDrafts", () => {
     await vi.advanceTimersByTimeAsync(DRAFT_QUIET_MS * 2);
     expect(at.draft).toHaveBeenCalledTimes(1);
     expect(at.draft.mock.calls[0]?.[1]).toMatchObject({ words: "Start after the tide" });
+  });
+
+  it("reads every draft again when a view's link comes back, however short the drop", async () => {
+    vi.useFakeTimers();
+    const at = windowWith([CARD_DRAFTS], VIEW);
+    await vi.runAllTimersAsync();
+    expect(at.drafts).toHaveBeenCalledTimes(1);
+    at.back({ ...VIEW, linkBack: 1 });
+    await vi.runAllTimersAsync();
+    expect(at.drafts).toHaveBeenCalledTimes(2);
   });
 });

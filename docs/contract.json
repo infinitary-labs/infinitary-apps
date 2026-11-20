@@ -16592,6 +16592,11 @@
               "minLength": 1,
               "maxLength": 256
             },
+            "lifecycle": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
             "revision": {
               "type": "integer",
               "minimum": 0,
@@ -16753,6 +16758,11 @@
                 "minimum": 0,
                 "maximum": 9007199254740991
               },
+              "lifecycle": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
               "answers": {
                 "maxItems": 256,
                 "type": "array",
@@ -16902,6 +16912,11 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 256
+                  },
+                  "lifecycle": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
                   },
                   "revision": {
                     "type": "integer",
@@ -78417,6 +78432,11 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 256
+          },
+          "lifecycle": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
           },
           "revision": {
             "type": "integer",

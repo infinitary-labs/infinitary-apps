@@ -16,6 +16,8 @@ import { frameAnswerSchema } from "./plugins/bridge";
 export const CARD_DRAFTS = "card-drafts";
 
 const cardIdSchema = z.string().min(1).max(256);
+/** The card's opening a draft belongs to (`Card.lifecycleId`): a card reopened under its id starts a new one. */
+const lifecycleSchema = z.string().min(1).max(64);
 
 /**
  * One card's draft. `revision` counts the changes the card's draft took,
@@ -23,6 +25,8 @@ const cardIdSchema = z.string().min(1).max(256);
  */
 export const cardDraftSchema = z.strictObject({
   cardId: cardIdSchema,
+  /** The card's opening, absent for a card written before openings were kept. */
+  lifecycle: lifecycleSchema.optional(),
   revision: z.number().int().nonnegative(),
   /** The body's answers that a window changed, one per question name. */
   answers: z.array(frameAnswerSchema).max(CARD_MAX_ANSWERS),
@@ -43,6 +47,8 @@ export const cardDraftsSchema = z.array(cardDraftSchema);
  */
 export const cardDraftChangeSchema = z.strictObject({
   since: z.number().int().nonnegative(),
+  /** The card's opening the window changed; a change for an earlier opening is refused as closed. */
+  lifecycle: lifecycleSchema.optional(),
   answers: z.array(frameAnswerSchema).max(CARD_MAX_ANSWERS).optional(),
   words: z.string().max(CARD_REPLY_MAX_CHARS).optional(),
   notes: cardNotesSchema.optional(),
@@ -51,7 +57,7 @@ export type CardDraftChange = z.infer<typeof cardDraftChangeSchema>;
 
 /**
  * The change's answer: the card's draft as it now stands, or why nothing was
- * kept - the card is no longer open, or its answers would pass what a press
+ * kept - the card is no longer open or opened anew, or its answers would pass what a press
  * may send (`CARD_ANSWERS_MAX_BYTES`).
  */
 export const cardDraftChangedSchema = z.union([

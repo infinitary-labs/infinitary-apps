@@ -7,6 +7,7 @@ import { CardStore } from "../src/core/storage/cardStore";
 import { openInMemoryDatabase } from "../src/core/storage/db";
 import {
   DRAFT_QUIET_MS,
+  type DraftBase,
   type DraftLocal,
   type DraftParts,
   DraftSync,
@@ -29,6 +30,7 @@ const card: Card = {
   actions: [{ id: "go", label: "Approve and build", variant: "primary" }],
   status: "ready",
   createdAt: 1000,
+  lifecycleId: "opening-1",
 };
 
 const pick = (name: string, value: string): FrameAnswer => ({
@@ -90,7 +92,9 @@ class Window {
   /** Answers held back until `release`, to show one request in flight. */
   hold = false;
   private held: (() => void)[] = [];
-  readonly bases = new Map<string, number>();
+  readonly bases = new Map<string, DraftBase>();
+  /** The card's opening as this window's stack holds it. */
+  lifecycle: string | undefined = card.lifecycleId;
   readonly sync: DraftSync;
 
   constructor(
@@ -99,6 +103,7 @@ class Window {
   ) {
     this.sync = new DraftSync({
       local: () => this.local,
+      lifecycle: () => this.lifecycle,
       apply: (_cardId, parts: DraftParts) => {
         const answers = new Map((this.local.answers ?? []).map((a) => [a.name, a]));
         for (const answer of parts.answers ?? []) answers.set(answer.name, answer);
@@ -118,10 +123,10 @@ class Window {
         });
       },
       canSend: () => this.reachable,
-      loadBase: (cardId) => this.bases.get(cardId) ?? 0,
-      saveBase: (cardId, revision) => {
-        if (revision === null) this.bases.delete(cardId);
-        else this.bases.set(cardId, revision);
+      loadBase: (cardId) => this.bases.get(cardId) ?? null,
+      saveBase: (cardId, base) => {
+        if (base === null) this.bases.delete(cardId);
+        else this.bases.set(cardId, base);
       },
       later: time.later,
       cancel: time.cancel,
@@ -248,7 +253,8 @@ describe("DraftSync", () => {
     // The laptop restarts holding its saved picks and the revision it took, then
     // changes a question while it is closed.
     const restarted = new Window(at, time);
-    restarted.bases.set(card.id, laptop.bases.get(card.id) ?? 0);
+    const kept = laptop.bases.get(card.id);
+    if (kept) restarted.bases.set(card.id, kept);
     restarted.local = {
       answers: [pick("format", "csv"), pick("when", "monthly")],
       words: null,
@@ -270,6 +276,103 @@ describe("DraftSync", () => {
     desk.edit({ words: "half a thought, and more" });
     await time.advance(DRAFT_QUIET_MS);
     expect(at.drafts.read()).toEqual([]);
+    expect(desk.bases.has(card.id)).toBe(false);
+  });
+  it("sends a change undone while the change before it is on its way", async () => {
+    const { at, time, desk, laptop } = twoWindows();
+    desk.hold = true;
+    desk.edit({ words: "Keep the header row" });
+    await time.advance(DRAFT_QUIET_MS);
+    // The captain clears the field while those words are still on their way.
+    desk.edit({ words: "" });
+    desk.release();
+    await time.advance(DRAFT_QUIET_MS);
+    expect(desk.requests.map((change) => change.words)).toEqual(["Keep the header row", ""]);
+    expect(stored(at)?.words).toBe("");
+    expect(laptop.local.words).toBe("");
+  });
+
+  it("waits for the pause after a request comes back, never sending the next keys at once", async () => {
+    const { at, time, desk } = twoWindows();
+    desk.hold = true;
+    desk.edit({ words: "Keep" });
+    await time.advance(DRAFT_QUIET_MS);
+    // A key goes in just before the answer comes back, then another just after.
+    desk.edit({ words: "Keep t" });
+    await time.advance(100);
+    desk.release();
+    await settle();
+    desk.edit({ words: "Keep th" });
+    await time.advance(DRAFT_QUIET_MS - 1);
+    expect(desk.requests).toHaveLength(1);
+    await time.advance(1);
+    expect(desk.requests.map((change) => change.words)).toEqual(["Keep", "Keep th"]);
+    expect(stored(at)?.words).toBe("Keep th");
+  });
+
+  it("keeps the revision a change made out of reach goes against, through an answer and a restart", async () => {
+    const { at, time, desk, laptop } = twoWindows();
+    // The laptop's first change is on its way when it goes out of reach.
+    laptop.hold = true;
+    laptop.edit({ answers: [pick("format", "csv")] });
+    await time.advance(DRAFT_QUIET_MS);
+    laptop.reachable = false;
+    laptop.edit({ answers: [pick("format", "csv"), pick("when", "weekly")] });
+    // The desk picks a schedule meanwhile, which the laptop does not hear.
+    desk.edit({ answers: [pick("when", "nightly")] });
+    await time.advance(DRAFT_QUIET_MS);
+    // The answer to the laptop's first change still comes back; then it restarts.
+    laptop.release();
+    await settle();
+    expect(laptop.bases.get(card.id)?.parts["answer:when"]).toBe(0);
+    const restarted = new Window(at, time);
+    const kept = laptop.bases.get(card.id);
+    if (kept) restarted.bases.set(card.id, kept);
+    restarted.local = laptop.local;
+    restarted.welcome();
+    await settle();
+    // The desk's pick, which the laptop never saw, stays, and the laptop shows it.
+    expect(stored(at)?.answers.find((a) => a.name === "when")?.values).toEqual(["nightly"]);
+    expect(restarted.answer("when")).toEqual(["nightly"]);
+  });
+
+  it("shows another window's change that came while the first reading was on its way", async () => {
+    const { at, time, desk } = twoWindows();
+    const opening = new Window(at, time);
+    const reading = at.drafts.read();
+    desk.edit({ answers: [pick("format", "csv")] });
+    await time.advance(DRAFT_QUIET_MS);
+    opening.sync.welcome(reading, [card.id]);
+    expect(opening.answer("format")).toEqual(["csv"]);
+  });
+
+  it("drops what an earlier opening of the card sent once the card opened anew", async () => {
+    const { at, time, desk } = twoWindows();
+    desk.hold = true;
+    desk.edit({ words: "From the earlier offer" });
+    await time.advance(DRAFT_QUIET_MS);
+    // The card closes and opens again under its id while those words are on their way.
+    const cards = new CardStore(at.db);
+    cards.resolve(card.id, "go");
+    cards.reopen(card.id);
+    cards.upsert({ ...card, lifecycleId: "opening-2" });
+    desk.sync.forget(card.id);
+    desk.lifecycle = "opening-2";
+    desk.release();
+    await settle();
+    expect(at.drafts.read()).toEqual([]);
+    expect(desk.bases.has(card.id)).toBe(false);
+  });
+  it("keeps nothing of a change that comes back after the card left the window", async () => {
+    const { at, time, desk } = twoWindows();
+    desk.hold = true;
+    desk.edit({ words: "Half a thought" });
+    await time.advance(DRAFT_QUIET_MS);
+    // The card leaves this window's stack, which then hears nothing more of it.
+    desk.sync.forget(card.id);
+    at.windows.splice(at.windows.indexOf(desk), 1);
+    desk.release();
+    await settle();
     expect(desk.bases.has(card.id)).toBe(false);
   });
 });

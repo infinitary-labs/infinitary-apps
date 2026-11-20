@@ -2,27 +2,39 @@ import { expect, type Page, test } from "@playwright/test";
 import { CardDrafts } from "../../src/core/orchestrator/cardDrafts";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
+import {
+  ANNOTATE,
+  NOTE_COMMENT_LABEL,
+  NOTE_REMOVE,
+  POINT_AT,
+  queuedNotesWords,
+} from "../../src/shared/cardNotes";
 import { COMPUTER } from "../../src/shared/deviceNames";
 import { scratchDir } from "../helpers/scratchDirs";
-import { cardBody } from "./frames";
+import { cardBody, cardBodyElement } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { startMockProvider } from "./mockProvider";
+import { readSavedData } from "./savedData";
 import { cardReply, clickInBody, showCard, shownCard } from "./stack";
+import { focusOn, pressKey } from "./windowKeys";
 
 /**
  * Unsent picks follow you (INF-5446; docs/card-authoring.md). The captain's
  * ask: "it would be cool if the answers you selected on cards showed up on
  * other devices too (like if you don't finish the card completely)". Two
  * apps on this Mac, each with its own data, as two of the captain's Macs: the
- * second controls the first mate on the first (docs/view.md). A pick or the
- * words in the card's field on either shows on the other; both come back
+ * second controls the first mate on the first (docs/view.md). A pick, the
+ * words in the card's field or a queued note on either shows on the other,
+ * and a note removed on one leaves the other; picks and words come back
  * after either restarts; a press on the joined Mac sends every pick both
  * made; then the card and its draft are gone, and stay gone after a restart.
  *
- * Promised result: the other window shows each pick and the field's words,
- * and the press's answers hold both windows' picks. Data: one first mate
+ * Promised result: the other window shows each pick, the field's words and
+ * the queued note, and none once it is removed; the press's answers hold
+ * both windows' picks. Data: one first mate
  * card with a radio question and a checkbox. Completion signal: the other
- * window's control reads checked, its field reads the words, and the card's
+ * window's control reads checked, its field reads the words, its queued-note
+ * line reads one note and then is gone, and the card's
  * saved resolution holds the answers with no draft left. Platform
  * prerequisites: none beyond a desktop. Shared resources: none; each app has
  * its own data folder and the link is to 127.0.0.1.
@@ -103,6 +115,25 @@ test("a card's unsent picks and words follow the captain between windows and acr
       await expect(cardReply(pro.page).field).toHaveValue(WORDS);
     });
 
+    await test.step("a note queued on either shows on the other, and a removed one leaves both", async () => {
+      // Point at the question on the joined Mac and queue a note on it.
+      await view.getByRole("button", { name: new RegExp(`^${POINT_AT}`) }).click();
+      await focusOn(cardBodyElement(view, TITLE));
+      await cardBody(view, TITLE).locator("legend").dispatchEvent("click");
+      const comment = view
+        .getByRole("dialog", { name: new RegExp(`^${ANNOTATE} `) })
+        .getByRole("textbox", { name: NOTE_COMMENT_LABEL });
+      await comment.fill("Ask the harbour master first");
+      await pressKey(comment, "Enter");
+      const queued = (page: Page) => page.getByText(queuedNotesWords(1), { exact: true });
+      await expect(queued(view)).toBeVisible();
+      await expect(queued(pro.page)).toBeVisible();
+      // Removed on the first mate's computer, it leaves the joined Mac too.
+      await pro.page.getByRole("button", { name: NOTE_REMOVE, exact: true }).click();
+      await expect(queued(pro.page)).toHaveCount(0);
+      await expect(queued(view)).toHaveCount(0);
+    });
+
     await test.step("the joined Mac's window shows them again after its restart", async () => {
       const joined = air as LaunchedApp;
       await joined.close();
@@ -158,13 +189,11 @@ test("a card's unsent picks and words follow the captain between windows and acr
   }
 
   // What the first mate's computer kept: the answers the press sent, and no draft.
-  const db = openDatabase(homeDir);
-  try {
-    const answers = new CardStore(db).resolutionOf(CARD_ID)?.answers ?? [];
-    expect(answers.find((answer) => answer.name === "harbour")?.values).toEqual(["south"]);
-    expect(answers.find((answer) => answer.name === "tide")?.values).toEqual(["yes"]);
-    expect(new CardDrafts(db, () => {}).read()).toEqual([]);
-  } finally {
-    db.close();
-  }
+  const kept = readSavedData(homeDir, (db) => ({
+    answers: new CardStore(db).resolutionOf(CARD_ID)?.answers ?? [],
+    drafts: new CardDrafts(db, () => {}).read(),
+  }));
+  expect(kept.answers.find((answer) => answer.name === "harbour")?.values).toEqual(["south"]);
+  expect(kept.answers.find((answer) => answer.name === "tide")?.values).toEqual(["yes"]);
+  expect(kept.drafts).toEqual([]);
 });

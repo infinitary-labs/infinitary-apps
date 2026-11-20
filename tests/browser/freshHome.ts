@@ -1,4 +1,4 @@
-import { type CardDraft, emptyDraft } from "@shared/cardDrafts";
+import { type CardDraft, type CardDraftChange, emptyDraft } from "@shared/cardDrafts";
 import { DEFAULT_SAVED_KEYMAP } from "@shared/keymap";
 import { DEFAULT_KEY_REMINDERS } from "@shared/keyReminders";
 import { frameMountUrl } from "@shared/plugins/frameDocument";
@@ -62,11 +62,8 @@ function homeAnswers({ plain, asked }: FreshHomeAnswers): Answers {
     subscribe: () => () => {},
   });
   let mounts = 0;
-  const drafts = new Map(
-    ((plain as Answers)["inf:cards:drafts"] as CardDraft[] | undefined)?.map((draft) => [
-      draft.cardId,
-      draft,
-    ]) ?? [],
+  const drafts = draftStandIn(
+    ((plain as Answers)["inf:cards:drafts"] as CardDraft[] | undefined) ?? [],
   );
   const askedAnswers = Object.fromEntries(
     Object.entries(asked).map(([channel, byRequest]) => [
@@ -103,22 +100,51 @@ function homeAnswers({ plain, asked }: FreshHomeAnswers): Answers {
     // What the window tells the core at startup, accepted as the core accepts it.
     "inf:plugins:personal:mounts": { ok: true },
     // A card's unsent draft (docs/card-authoring.md, "Unsent picks follow
-    // you"), kept as the core keeps it for the one window a browser test
-    // draws: no other window changes a part, so every part the window sends
-    // is taken at the next revision.
-    "inf:cards:draft": (cardId, change) => {
-      const held = drafts.get(cardId) ?? emptyDraft(cardId);
-      const answers = new Map(held.answers.map((answer) => [answer.name, answer]));
-      for (const answer of change.answers ?? []) answers.set(answer.name, answer);
-      const draft: CardDraft = {
-        cardId,
-        revision: held.revision + 1,
-        answers: [...answers.values()],
-        words: change.words ?? held.words,
-        notes: change.notes ?? held.notes,
-      };
-      drafts.set(cardId, draft);
-      return { draft };
-    },
+    // you"), kept as the core keeps it (`draftStandIn`).
+    "inf:cards:draft": drafts.change,
+  };
+}
+
+/**
+ * The first mate's computer's drafts as `CardDrafts` keeps them, for a
+ * browser test, which draws one window: `change` answers that window's
+ * `inf:cards:draft` request, and `elsewhere` is another window's change,
+ * whose draft the test pushes. A part changed after the request's `since`
+ * keeps the newer value, and every part taken moves to one new revision.
+ */
+export function draftStandIn(seed: readonly CardDraft[]) {
+  const drafts = new Map(seed.map((draft) => [draft.cardId, draft]));
+  // Each part's revision, by card: a seeded part counts from its draft's.
+  const revisions = new Map<string, Map<string, number>>();
+  const partsOf = (change: Omit<CardDraftChange, "since">) => [
+    ...(change.answers ?? []).map((answer) => `answer:${answer.name}`),
+    ...(change.words !== undefined ? ["words"] : []),
+    ...(change.notes !== undefined ? ["notes"] : []),
+  ];
+  const change = (cardId: string, asked: CardDraftChange): { draft: CardDraft } => {
+    const held = drafts.get(cardId) ?? emptyDraft(cardId);
+    const kept = revisions.get(cardId) ?? new Map<string, number>();
+    const newer = (part: string) => (kept.get(part) ?? 0) > asked.since;
+    const revision = held.revision + 1;
+    const answers = new Map(held.answers.map((answer) => [answer.name, answer]));
+    for (const answer of asked.answers ?? [])
+      if (!newer(`answer:${answer.name}`)) answers.set(answer.name, answer);
+    const draft: CardDraft = {
+      ...held,
+      revision,
+      answers: [...answers.values()],
+      words: asked.words !== undefined && !newer("words") ? asked.words : held.words,
+      notes: asked.notes !== undefined && !newer("notes") ? asked.notes : held.notes,
+    };
+    for (const part of partsOf(asked)) if (!newer(part)) kept.set(part, revision);
+    revisions.set(cardId, kept);
+    drafts.set(cardId, draft);
+    return { draft };
+  };
+  return {
+    change,
+    /** Another window's change, taken over everything this window sent: the draft to push. */
+    elsewhere: (cardId: string, parts: Omit<CardDraftChange, "since">): CardDraft =>
+      change(cardId, { ...parts, since: drafts.get(cardId)?.revision ?? 0 }).draft,
   };
 }

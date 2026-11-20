@@ -382,6 +382,7 @@ The card's other buttons, such as Move to Grok beside Sign in, are sent as befor
 
 A card's unsent picks, the words in its field and its queued notes are kept at the first mate's computer and follow the captain between every window that shows the card, this one and the window there included (`docs/card-authoring.md`, "Unsent picks follow you").
 A pick made while that Mac is out of reach waits here and goes once it is back, unless another window changed the same question meanwhile.
+Every welcome after the first, replayed or not and however short the drop, counts in `thisMac`'s `linkBack`, and the window reads every draft again on each, since a draft's live frames are never replayed (`ViewBackend`, `src/main/view/viewBackend.ts`).
 A first mate too old to list the `card-drafts` change keeps none, and each window keeps its own as before.
 
 ## A task's browser on a view

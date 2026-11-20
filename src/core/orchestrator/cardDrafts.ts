@@ -5,7 +5,7 @@ import {
   emptyDraft,
 } from "@shared/cardDrafts";
 import type { CardNote } from "@shared/cardNotes";
-import { CARD_ANSWERS_MAX_BYTES, cardAnswersBytes } from "@shared/cards";
+import { CARD_ANSWERS_MAX_BYTES, CARD_MAX_ANSWERS, cardAnswersBytes } from "@shared/cards";
 import type { FrameAnswer } from "@shared/plugins/bridge";
 import type { AppDatabase } from "../storage/db";
 
@@ -22,14 +22,15 @@ import type { AppDatabase } from "../storage/db";
  */
 
 type Row = { card_id: string; part: string; value_json: string; revision: number };
+type Card = { resolved_at: number | null; lifecycle_id: string | null };
 
 const ANSWER = "answer:";
 const WORDS = "words";
 const NOTES = "notes";
 
 /** The draft the rows of one card make. */
-function draftOf(cardId: string, rows: readonly Row[]): CardDraft {
-  const draft = emptyDraft(cardId);
+function draftOf(cardId: string, lifecycle: string | null, rows: readonly Row[]): CardDraft {
+  const draft: CardDraft = { ...emptyDraft(cardId), ...(lifecycle ? { lifecycle } : {}) };
   for (const row of rows) {
     draft.revision = Math.max(draft.revision, row.revision);
     const value: unknown = JSON.parse(row.value_json);
@@ -59,36 +60,40 @@ export class CardDrafts {
   /** Every open card's draft that holds anything. Only open cards have rows. */
   read(): CardDraft[] {
     const rows = this.db
-      .prepare<[], Row>(
+      .prepare<[], Row & { lifecycle_id: string | null }>(
         // i18n-exempt: SQL, never shown
-        "SELECT card_id, part, value_json, revision FROM card_drafts ORDER BY card_id, part",
+        `SELECT d.card_id, d.part, d.value_json, d.revision, c.lifecycle_id
+         FROM card_drafts d JOIN cards c ON c.id = d.card_id ORDER BY d.card_id, d.part`,
       )
       .all();
-    const byCard = new Map<string, Row[]>();
+    const byCard = new Map<string, { lifecycle: string | null; rows: Row[] }>();
     for (const row of rows) {
       const held = byCard.get(row.card_id);
-      if (held) held.push(row);
-      else byCard.set(row.card_id, [row]);
+      if (held) held.rows.push(row);
+      else byCard.set(row.card_id, { lifecycle: row.lifecycle_id, rows: [row] });
     }
-    return [...byCard].map(([cardId, held]) => draftOf(cardId, held));
+    return [...byCard].map(([cardId, held]) => draftOf(cardId, held.lifecycle, held.rows));
   }
 
   /**
    * Takes what a window changed since it last heard the card's draft at
    * `change.since`. A part another window changed after that keeps the
    * newer value; every other part takes the window's, all at one new
-   * revision. Refused for a card that is not open, and for answers past what
-   * a press may send.
+   * revision. Refused for a card that is not open or opened anew since the
+   * window's change (`change.lifecycle`), and for answers past what a press
+   * may send in size or count.
    */
   change(cardId: string, change: CardDraftChange): CardDraftChanged {
     const result = this.db.transaction((): CardDraftChanged & { moved?: true } => {
       const card = this.db
-        .prepare<[string], { resolved_at: number | null }>(
+        .prepare<[string], Card>(
           // i18n-exempt: SQL, never shown
-          "SELECT resolved_at FROM cards WHERE id = ?",
+          "SELECT resolved_at, lifecycle_id FROM cards WHERE id = ?",
         )
         .get(cardId);
       if (!card || card.resolved_at !== null) return { refused: "closed" };
+      if (change.lifecycle && card.lifecycle_id && change.lifecycle !== card.lifecycle_id)
+        return { refused: "closed" };
       const held = this.rows(cardId);
       const byPart = new Map(held.map((row) => [row.part, row]));
       const revision = held.reduce((most, row) => Math.max(most, row.revision), 0) + 1;
@@ -104,8 +109,12 @@ export class CardDrafts {
         write.run(cardId, part, value, revision);
         moved = true;
       }
-      const draft = draftOf(cardId, moved ? this.rows(cardId) : held);
-      if (cardAnswersBytes(draft.answers) > CARD_ANSWERS_MAX_BYTES) throw new DraftTooLarge();
+      const draft = draftOf(cardId, card.lifecycle_id, moved ? this.rows(cardId) : held);
+      if (
+        draft.answers.length > CARD_MAX_ANSWERS ||
+        cardAnswersBytes(draft.answers) > CARD_ANSWERS_MAX_BYTES
+      )
+        throw new DraftTooLarge();
       return moved ? { draft, moved: true } : { draft };
     });
     let changed: ReturnType<typeof result>;

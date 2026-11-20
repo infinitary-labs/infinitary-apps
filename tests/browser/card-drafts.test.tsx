@@ -1,10 +1,9 @@
-import type { CardDraft, CardDraftChange } from "@shared/cardDrafts";
 import type { CardAction } from "@shared/cards";
 import type { FrameAnswer } from "@shared/plugins/bridge";
 import { expect, test } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { fakeBridge } from "./bridge";
-import { seededHome, subscribed } from "./freshHome";
+import { draftStandIn, seededHome, subscribed } from "./freshHome";
 import { bodyDrawn, inCardBody, inShown, stageAtRest } from "./stack";
 import { openSize, openWindow } from "./window";
 
@@ -34,6 +33,7 @@ const SOUTH: FrameAnswer = {
   labels: ["South Basin"],
   changed: true,
 };
+const NORTH: FrameAnswer = { ...SOUTH, values: ["north"], labels: ["North Basin"] };
 const LEFT_WORDS = "Start after the morning tide";
 const TYPED = " please";
 
@@ -58,22 +58,11 @@ test("a card's unsent picks and words follow the captain between windows, sent o
   );
   const saved = home["inf:cards:drafts"];
   if (!Array.isArray(saved) || !saved[0]) throw new Error("The seeded home read no draft");
-  // The home as it keeps the card's draft: each change takes the window's parts.
-  let draft: CardDraft = saved[0];
+  // The home as it keeps the card's draft, which the test also changes as another window.
+  const drafts = draftStandIn(saved);
   const bridge = fakeBridge(home);
   bridge.answer("inf:cards:seen-update", { ok: true });
-  bridge.answer("inf:cards:draft", (_cardId, change: CardDraftChange) => {
-    const answers = new Map(draft.answers.map((answer) => [answer.name, answer]));
-    for (const answer of change.answers ?? []) answers.set(answer.name, answer);
-    draft = {
-      ...draft,
-      revision: draft.revision + 1,
-      answers: [...answers.values()],
-      words: change.words ?? draft.words,
-      notes: change.notes ?? draft.notes,
-    };
-    return { draft };
-  });
+  bridge.answer("inf:cards:draft", drafts.change);
   await openSize();
   await openWindow(bridge);
   await bodyDrawn(TITLE);
@@ -86,17 +75,13 @@ test("a card's unsent picks and words follow the captain between windows, sent o
   expect(bridge.requests("inf:cards:draft")).toEqual([]);
 
   // Section: another window's pick shows here as it arrives.
-  draft = {
-    ...draft,
-    revision: draft.revision + 1,
-    answers: [{ ...SOUTH, values: ["north"], labels: ["North Basin"] }],
-  };
-  bridge.push("inf:cards:draft", draft);
+  const north = drafts.elsewhere(CARD_ID, { answers: [NORTH] });
+  bridge.push("inf:cards:draft", north);
   await expect.poll(() => checked("north")).toBe(true);
   expect(bridge.requests("inf:cards:draft")).toEqual([]);
 
   // Section: a pick here goes once the captain pauses, naming the revision it saw.
-  const seen = draft.revision;
+  const seen = north.revision;
   await inCardBody(TITLE, () => (document.getElementById("tide") as HTMLInputElement).click());
   await expect.poll(() => bridge.requests("inf:cards:draft").length).toBe(1);
   const [cardId, change] = bridge.requests("inf:cards:draft")[0] ?? [];
@@ -114,15 +99,12 @@ test("a card's unsent picks and words follow the captain between windows, sent o
 
   // Section: another window's words wait while this window's field holds focus.
   expect(document.activeElement).toBe(field());
-  draft = { ...draft, revision: draft.revision + 1, words: "Words from the other window" };
-  bridge.push("inf:cards:draft", draft);
+  bridge.push(
+    "inf:cards:draft",
+    drafts.elsewhere(CARD_ID, { words: "Words from the other window" }),
+  );
   // The field takes nothing while it holds focus; the next change shows that the frame was heard.
-  draft = {
-    ...draft,
-    revision: draft.revision + 1,
-    answers: [SOUTH, ...draft.answers.filter((a) => a.name !== "harbour")],
-  };
-  bridge.push("inf:cards:draft", draft);
+  bridge.push("inf:cards:draft", drafts.elsewhere(CARD_ID, { answers: [SOUTH] }));
   await expect.poll(() => checked("south")).toBe(true);
   expect(field().value).toBe(LEFT_WORDS + TYPED);
 
@@ -146,12 +128,7 @@ test("a card's unsent picks and words follow the captain between windows, sent o
     values: ["From the other window"],
     changed: true,
   };
-  draft = {
-    ...draft,
-    revision: draft.revision + 1,
-    answers: [{ ...SOUTH, values: ["north"], labels: ["North Basin"] }, typed],
-  };
-  bridge.push("inf:cards:draft", draft);
+  bridge.push("inf:cards:draft", drafts.elsewhere(CARD_ID, { answers: [NORTH, typed] }));
   await expect.poll(() => checked("north")).toBe(true);
   expect(
     await inCardBody(TITLE, () => (document.getElementById("note") as HTMLInputElement).value),

@@ -1,7 +1,7 @@
 import { CARD_DRAFTS } from "@shared/cardDrafts";
 import { fillShownBodies } from "../cards/draftFill";
 import { changesOff } from "../devices/viewWords";
-import { type DraftLocal, DraftSync, withDraftAnswers } from "./draftSync";
+import { type DraftBase, type DraftLocal, DraftSync, withDraftAnswers } from "./draftSync";
 import { withoutKey } from "./stack";
 import type { ShellGet, ShellSet, ShellState } from "./store";
 
@@ -17,6 +17,19 @@ function storage(): Storage | null {
   } catch {
     return null;
   }
+}
+
+/** A saved base as `DraftSync` keeps it; anything else in its place reads as none. */
+function isBase(value: unknown): value is DraftBase {
+  if (!value || typeof value !== "object") return false;
+  const base = value as Partial<DraftBase>;
+  return (
+    Number.isSafeInteger(base.revision) &&
+    (base.lifecycle === undefined || typeof base.lifecycle === "string") &&
+    !!base.parts &&
+    typeof base.parts === "object" &&
+    Object.values(base.parts).every((revision) => Number.isSafeInteger(revision))
+  );
 }
 
 /** Whether the card's own field holds focus in a focused window: its words are being typed. */
@@ -48,6 +61,7 @@ export function startCardDrafts(
   if (!read || !send || !cards.onDraft) return null;
   const sync = new DraftSync({
     local: (cardId) => localOf(get(), cardId),
+    lifecycle: (cardId) => get().cards.find((card) => card.id === cardId)?.lifecycleId,
     apply: (cardId, parts) => {
       const filled = parts.answers ? fillShownBodies(cardId, parts.answers) : false;
       set((s) => ({
@@ -75,16 +89,16 @@ export function startCardDrafts(
     canSend: () => !changesOff(get().thisMac),
     loadBase: (cardId) => {
       try {
-        const saved = Number(storage()?.getItem(BASE_PREFIX + cardId) ?? 0);
-        return Number.isSafeInteger(saved) && saved > 0 ? saved : 0;
+        const saved: unknown = JSON.parse(storage()?.getItem(BASE_PREFIX + cardId) ?? "null");
+        return isBase(saved) ? saved : null;
       } catch {
-        return 0;
+        return null;
       }
     },
-    saveBase: (cardId, revision) => {
+    saveBase: (cardId, base) => {
       try {
-        if (revision === null) storage()?.removeItem(BASE_PREFIX + cardId);
-        else storage()?.setItem(BASE_PREFIX + cardId, String(revision));
+        if (base === null) storage()?.removeItem(BASE_PREFIX + cardId);
+        else storage()?.setItem(BASE_PREFIX + cardId, JSON.stringify(base));
       } catch {
         // Full or refused storage: a restart then lets the other windows' picks win.
       }
@@ -127,21 +141,22 @@ export function startCardDrafts(
       sync.changed(cardId, localOf(previous, cardId), localOf(state, cardId));
     }
     if (state.cards !== previous.cards) {
-      const present = new Set(state.cards.map((card) => card.id));
-      for (const card of previous.cards) if (!present.has(card.id)) sync.forget(card.id);
+      // A card that left, or opened anew under the same id, starts with no draft here.
+      const present = new Map(state.cards.map((card) => [card.id, card.lifecycleId]));
+      for (const card of previous.cards)
+        if (!present.has(card.id) || present.get(card.id) !== card.lifecycleId)
+          sync.forget(card.id);
     }
-    // Each welcome: a Mac this one controls came back in reach, or the link
-    // to the first mate here came back; changes it sent meanwhile went nowhere.
+    // Each welcome: the link to the first mate came back, replayed or not,
+    // or a Mac this one controls came back in reach; live frames and changes
+    // sent meanwhile went nowhere.
     const before = previous.thisMac;
     const now = state.thisMac;
-    if (before !== now && now) {
+    if (before !== now && now && before?.role === now.role) {
       const back =
-        now.role === "view"
-          ? (before?.role === "view" && changesOff(before) && !changesOff(now)) ||
-            (before?.role === "view" && now.caughtUp > before.caughtUp)
-          : before?.role === "home" &&
-            ((now.linkBack ?? 0) > (before.linkBack ?? 0) ||
-              (now.caughtUp ?? 0) > (before.caughtUp ?? 0));
+        (now.linkBack ?? 0) > (before.linkBack ?? 0) ||
+        (now.caughtUp ?? 0) > (before.caughtUp ?? 0) ||
+        (now.role === "view" && changesOff(before) && !changesOff(now));
       if (back) void readAll();
     }
   });

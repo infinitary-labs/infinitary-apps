@@ -1,10 +1,24 @@
 import type { CardDraft } from "@shared/cardDrafts";
 import type { Card } from "@shared/cards";
+import { CARD_MAX_ANSWERS } from "@shared/cards";
 import type { FrameAnswer } from "@shared/plugins/bridge";
 import { describe, expect, it } from "vitest";
+import {
+  setup as crewSetup,
+  fakeCrewmate,
+  fakeCrewTimersEachTest,
+  intentOf,
+  tick,
+} from "../../../tests/helpers/crewHarness";
 import { CardStore } from "../storage/cardStore";
 import { openInMemoryDatabase } from "../storage/db";
+import { exportTaskRecords } from "../tasks/taskExport";
+import { TaskTimeline } from "../tasks/taskTimeline";
 import { CardDrafts } from "./cardDrafts";
+import { readOpenWork } from "./openWork";
+import { sourceFacts } from "./workShape";
+
+fakeCrewTimersEachTest();
 
 // Intent (INF-5446, the captain's ask): "it would be cool if the answers you
 // selected on cards showed up on other devices too (like if you don't finish
@@ -103,25 +117,110 @@ describe("CardDrafts", () => {
     expect(drafts.change("missing", { since: 0, words: "x" })).toEqual({ refused: "closed" });
   });
 
-  it("keeps a draft only in its own table, where no agent, card record or export reads", () => {
-    const { db, cards, drafts } = setup();
+  it("keeps a draft only in its own table, where no agent, card record or export reads", async () => {
+    const crew = fakeCrewmate();
+    const h = crewSetup(crew);
+    const { taskId } = await h.supervisor.intake.commission({
+      title: card.title,
+      intent: intentOf("choose how the export runs"),
+    });
+    await tick();
+    await h.specs[0]?.onCard?.({
+      id: "draft-card",
+      title: card.title,
+      body: card.body,
+      actions: [],
+    });
+    const shown = h.supervisor.cards.snapshot().find((c) => c.taskId === taskId);
+    if (!shown) throw new Error("no card");
     const words = "Unsent words about the north basin";
+    const canary = (text: string) => text.includes(words) || text.includes("parquet-unsent");
     draftOf(
-      drafts.change(card.id, { since: 0, answers: [pick("format", "parquet-unsent")], words }),
+      new CardDrafts(h.db, () => {}).change(shown.id, {
+        since: 0,
+        answers: [pick("format", "parquet-unsent")],
+        words,
+        notes: [
+          { start: 0, key: "p0", kind: "paragraph", excerpt: "Format", comment: words, line: 1 },
+        ],
+      }),
     );
-    const tables = db
+    // No table but the drafts' own holds them.
+    const tables = h.db
       .prepare<[], { name: string }>(
         "SELECT name FROM sqlite_master WHERE type = 'table' AND name <> 'card_drafts'",
       )
       .all()
       .map((row) => row.name);
-    const holding = tables.filter((name) => {
-      const rows = db.prepare(`SELECT * FROM "${name}"`).all();
-      const text = JSON.stringify(rows);
-      return text.includes(words) || text.includes("parquet-unsent");
+    expect(
+      tables.filter((name) =>
+        canary(JSON.stringify(h.db.prepare(`SELECT * FROM "${name}"`).all())),
+      ),
+    ).toEqual([]);
+    // The reads an agent, the card's evidence and the task export make.
+    const task = h.tasks.get(taskId);
+    if (!task) throw new Error("no task");
+    const host = {
+      tasks: h.tasks,
+      ending: h.supervisor.askEnding,
+      openCards: () => h.supervisor.cards.snapshot(),
+      storedCard: (id: string) => h.cardStore.get(id),
+      pastCard: (id: string) => h.supervisor.cards.past(id),
+      owed: (id: string) => h.supervisor.cards.owed(id),
+      thread: (id: string) => h.supervisor.cards.thread(id),
+    };
+    const reads = [
+      readOpenWork(host, { card: shown.id }).text,
+      readOpenWork(host, {}).text,
+      h.supervisor.cards.cardRead(shown.id),
+      sourceFacts(
+        { tasks: h.tasks, cardStore: h.cardStore, paths: h.paths },
+        h.supervisor.cards,
+        task,
+      ),
+      new TaskTimeline({ tasks: h.tasks, cards: h.cardStore }).entries(taskId),
+      h.cardStore.listOpen(),
+      exportTaskRecords(h.tasks),
+    ];
+    // Each read shows the card itself, so its silence about the draft means something.
+    expect(reads.slice(0, 3).map((read) => JSON.stringify(read).includes(card.title))).toEqual([
+      true,
+      true,
+      true,
+    ]);
+    expect(reads.filter((read) => canary(JSON.stringify(read ?? null)))).toEqual([]);
+    // Once the card closes, its evidence holds no draft either.
+    h.cardStore.resolve(shown.id, "go");
+    expect(canary(JSON.stringify(h.supervisor.cards.past(shown.id) ?? null))).toBe(false);
+  });
+
+  it("refuses a change from an earlier opening of a card reopened under its id", () => {
+    const { cards, drafts } = setup();
+    cards.upsert({ ...card, lifecycleId: "opening-1" });
+    draftOf(drafts.change(card.id, { since: 0, lifecycle: "opening-1", words: "first offer" }));
+    cards.resolve(card.id, "go");
+    cards.reopen(card.id);
+    cards.upsert({ ...card, lifecycleId: "opening-2" });
+    expect(drafts.change(card.id, { since: 1, lifecycle: "opening-1", words: "late" })).toEqual({
+      refused: "closed",
     });
-    expect(holding).toEqual([]);
-    expect(JSON.stringify([cards.get(card.id), cards.listOpen()])).not.toContain(words);
+    expect(drafts.read()).toEqual([]);
+    const fresh = draftOf(
+      drafts.change(card.id, { since: 0, lifecycle: "opening-2", words: "new" }),
+    );
+    expect(fresh).toMatchObject({ lifecycle: "opening-2", revision: 1, words: "new" });
+  });
+
+  it("refuses a change that would hold more questions than a press may send", () => {
+    const { drafts } = setup();
+    const half = CARD_MAX_ANSWERS / 2 + 1;
+    const some = (from: number) =>
+      Array.from({ length: half }, (_, i) => pick(`q${from + i}`, "y"));
+    draftOf(drafts.change(card.id, { since: 0, answers: some(0) }));
+    expect(drafts.change(card.id, { since: 1, answers: some(half) })).toEqual({
+      refused: "too-large",
+    });
+    expect(drafts.read()[0]?.answers).toHaveLength(half);
   });
 
   it("refuses answers past what a press may send and keeps nothing of that change", () => {

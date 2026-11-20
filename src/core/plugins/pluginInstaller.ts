@@ -3,6 +3,7 @@ import { mkdir, readdir, readFile, rename, rm, stat } from "node:fs/promises";
 import { basename, join } from "node:path";
 import type { Card } from "@shared/cards";
 import type { FmEvent } from "@shared/events";
+import { said, saidMark } from "@shared/i18n/said";
 import type { PersonalManifest } from "@shared/personal/contracts";
 import {
   manifestCapabilities,
@@ -28,12 +29,7 @@ import { panelAddedLine, panelUpdatedLine } from "../personal/panelLines";
 import type { PersonalStore } from "../personal/personalStore";
 import { checkRunbookFiles } from "../runbooks/runbookFiles";
 import type { Runbooks } from "../runbooks/runbooks";
-import {
-  runbookAddedLine,
-  runbookConsentTitle,
-  runbookPanelsWords,
-  runbookRemovedLine,
-} from "../runbooks/words";
+import { runbookAddedLine, runbookConsentTitle, runbookRemovedLine } from "../runbooks/words";
 import {
   CAN_READ_WORDS,
   CAN_USE_WORDS,
@@ -366,7 +362,7 @@ export class PluginInstaller {
             ? `<p>Adding it turns ${escapeHtml(replacement)} off. You can turn that built-in runbook back on.</p>`
             : "") +
           (panelLines.length
-            ? `<p>${escapeHtml(runbookPanelsWords())}</p><ul>${panelLines.join("")}</ul>`
+            ? `${saidMark(said("cardRunbookAddPanels"), "p")}<ul>${panelLines.join("")}</ul>`
             : ""),
         actions: [
           {
@@ -524,7 +520,7 @@ export async function checkPluginTree(
   }
   if (await isFile(join(dir, PERSONAL_ENTRY_FILES.server))) {
     return {
-      // i18n-exempt: a refusal served to the agent, not shown to a person
+      // i18n-exempt: a refusal served to the agent and shown in the developer-only Observe view, which stays English
       refusal: options.inRunbook
         ? "it ships server code (server.ts), and a panel inside a runbook may not run code of its own in the app."
         : "it ships server code (server.ts), and a panel added from elsewhere may not run code of its own in the app.",

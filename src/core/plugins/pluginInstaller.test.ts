@@ -13,7 +13,11 @@ import {
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
+import { escapeHtml } from "@shared/cardBodyMarkup";
 import type { FmEvent } from "@shared/events";
+import { inLanguage } from "@shared/i18n/current";
+import * as m from "@shared/i18n/messages.generated";
+import { wordSaidMarks } from "@shared/i18n/said";
 import { retiredGrantWords } from "@shared/plugins/manifest";
 import { BUILTIN_SURFACES } from "@shared/surfaces";
 import { describe, expect, it, vi } from "vitest";
@@ -965,6 +969,14 @@ describe("adding runbooks through the panel installer's consent", () => {
         expect(card?.body).toContain("runs nothing");
         // The add card names the panel the runbook shows while it is on, and what it reads.
         expect(card?.body).toContain(runbookPanelsWords());
+        // The line is saved as its catalog fact, so each reader words it in
+        // their own language, whatever the home spoke when it raised the card.
+        const french = inLanguage("fr", () => m.cardRunbookAddPanels());
+        expect(french).not.toBe(runbookPanelsWords());
+        expect(inLanguage("fr", () => wordSaidMarks(card?.body ?? ""))).toContain(
+          escapeHtml(french),
+        );
+        expect(wordSaidMarks(card?.body ?? "")).toContain(runbookPanelsWords());
         expect(card?.body).toContain("<b>Token watch</b>");
         expect(h.installed()).toEqual([]);
         expect(() => h.supervisor.cardActions.act(consentCardId(id), "add", "frame")).toThrow(

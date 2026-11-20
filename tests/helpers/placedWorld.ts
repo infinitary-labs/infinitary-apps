@@ -795,7 +795,7 @@ export async function gitProject() {
         },
       })({
         path,
-        origin: "https://git.example.com/me/website.git",
+        origin,
         host: { kind: "git", name: "git.example.com" },
       }),
       {

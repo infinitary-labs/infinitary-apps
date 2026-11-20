@@ -1,6 +1,7 @@
 import { execFile, execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { expect, type Page, test } from "@playwright/test";
@@ -180,6 +181,36 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
           )
         ).stdout.trim();
       const reading = await read(true);
+      // The Node inside Electron, the app's own, with the same setting: what
+      // it reads of this person's store and what it answers. Kept, not
+      // asserted: the installed app's own check below is the assertion.
+      let electron = "";
+      try {
+        electron = createRequire(join(process.cwd(), "package.json"))("electron") as string;
+      } catch (error) {
+        electron = String(error);
+      }
+      const electronReading = existsSync(electron)
+        ? (
+            await promisify(execFile)(
+              electron,
+              [
+                "-e",
+                `const tls = require("node:tls"); const { X509Certificate } = require("node:crypto");
+const system = tls.getCACertificates("system");
+const feed = system.filter((pem) => new X509Certificate(pem).subject.includes("localhost")).length;
+fetch(process.argv[1]).then((r) => String(r.status), (e) => String(e.cause?.code ?? "") + " " + String(e.cause ?? e))
+  .then((answer) => console.log(JSON.stringify({ system: system.length, feed, answer })));`,
+                publicBuildsUrl,
+              ],
+              {
+                encoding: "utf8",
+                env: { ...process.env, ELECTRON_RUN_AS_NODE: "1", NODE_USE_SYSTEM_CA: "1" },
+              },
+            )
+          ).stdout.trim()
+        : `no Electron at ${electron}`;
+      keep("feed-electron.txt", electronReading);
       // The command reads the feed as Task Scheduler starts it, with the
       // environment Task Scheduler gives it.
       const scheduled = await readThroughTaskScheduler(publicBuildsUrl, work, within);

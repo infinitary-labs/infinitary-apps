@@ -143,11 +143,11 @@ describe("PlainGitForge", () => {
     run(repo, "config", "--unset-all", "remote.origin.pushurl");
     const sent = await forge.openChange({ branch: "fm/task-1", title: "Fix", body: "" });
     run(repo, "remote", "set-url", "--push", "origin", former);
-    await expect(forge.putIn(sent, head)).rejects.toMatchObject(refusal);
+    await expect(forge.putIn(sent, head, undefined)).rejects.toMatchObject(refusal);
     expect(readMain(bare)).toBe(base);
     expect(readMain(former)).toBe(base);
     run(repo, "config", "--unset-all", "remote.origin.pushurl");
-    await forge.putIn(sent, head);
+    await forge.putIn(sent, head, undefined);
     const result = { approvedMain: readMain(bare), formerMain: readMain(former) };
     if (process.env.INFINITARY_CUTOVER_PROOF === "1")
       console.info(

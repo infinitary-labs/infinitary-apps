@@ -349,6 +349,8 @@ describe("saved stories at the approved cutover (INF-5135 and INF-5411)", () => 
     expect(putIn).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({ number: 42, branch: task.branch, headSha: head }),
       head,
+      // This stand-in forge reads no allowed merges, so none is chosen for it.
+      undefined,
     );
     expect(
       observe(

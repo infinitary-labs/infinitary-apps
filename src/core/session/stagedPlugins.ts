@@ -1,27 +1,27 @@
-import {
-  closeSync,
-  constants,
-  existsSync,
-  fstatSync,
-  openSync,
-  readFileSync,
-  realpathSync,
-  statSync,
-} from "node:fs";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { mkdir, open, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
-import { type ClaudePlugin, insidePlugin } from "../claude/claudePlugins";
-import { pluginFiles } from "./personalSet";
+import type { ClaudePlugin } from "../claude/claudePlugins";
+import {
+  PERSONAL_SET_BUDGET_BYTES,
+  PLUGIN_FILE_OPEN,
+  pluginFiles,
+  pluginFileTarget,
+  stillPluginFile,
+} from "./personalSet";
 
 /**
  * Each plugin as a crewmate reads it, in its own folder under `dir`: only
  * the files the personal set would carry, at the same paths, each copied
- * from the plugin's own regular file as it is read, so a link that leads
- * outside the plugin reaches no crewmate on any provider, even one an update
- * puts there while it is staged, and nothing written to the copy reaches the
- * plugin (docs/personal-resources.md). Answers the plugins with their folders
- * and skills moved there; a skill whose SKILL.md did not come along is left
- * out, and a plugin that cannot be staged is left out alone, with a `note`.
+ * from the plugin's own regular file as it is read (`readPluginFile`'s
+ * checks), one file at a time, so a link that leads outside the plugin
+ * reaches no crewmate on any provider, even one an update puts there while
+ * it is staged, and nothing written to the copy reaches the plugin
+ * (docs/personal-resources.md). A plugin larger than the set may be is
+ * left out, as no computer could be sent it. Answers the plugins with their
+ * folders and skills moved there; a skill whose SKILL.md did not come along
+ * is left out, and a plugin that cannot be staged is left out alone, with a
+ * `note`.
  */
 export async function stagePluginTrees(
   plugins: readonly ClaudePlugin[],
@@ -33,12 +33,14 @@ export async function stagePluginTrees(
   for (const plugin of plugins) {
     const into = join(dir, plugin.id);
     try {
+      const files = pluginFiles(plugin);
+      if (!files) throw new Error(`it holds more than ${PERSONAL_SET_BUDGET_BYTES} bytes`);
       await mkdir(into, { recursive: true });
-      for (const file of pluginFiles(plugin)) {
-        const { data, mode } = ownFile(plugin.root, file.abs);
+      for (const file of files) {
+        const { data, mode } = await ownFile(plugin.root, file.abs);
         const at = join(into, ...file.path.split("/"));
         await mkdir(dirname(at), { recursive: true });
-        await writeFile(at, data, { mode });
+        await writeFile(at, data, { mode: mode & 0o777 });
       }
     } catch (error) {
       await rm(into, { recursive: true, force: true });
@@ -56,28 +58,15 @@ export async function stagePluginTrees(
   return staged;
 }
 
-/**
- * The bytes and permissions of a plugin's file, read through a handle on
- * the regular file its links lead to, once that file is checked to be
- * inside the plugin and still the one the check named.
- */
-export function ownFile(root: string, path: string): { data: Buffer; mode: number } {
-  const own = realpathSync(path);
-  if (!insidePlugin(root, own)) throw new Error(`${path} leads outside the plugin`);
-  const handle = openSync(own, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+/** `readPluginFile`, without holding the host while the file is read. */
+export async function ownFile(root: string, path: string): Promise<{ data: Buffer; mode: number }> {
+  const own = pluginFileTarget(root, path);
+  const handle = await open(own, PLUGIN_FILE_OPEN);
   try {
-    const opened = fstatSync(handle);
-    const named = statSync(own);
-    if (
-      !opened.isFile() ||
-      opened.ino !== named.ino ||
-      opened.dev !== named.dev ||
-      realpathSync(own) !== own ||
-      !insidePlugin(root, own)
-    )
-      throw new Error(`${path} changed while it was staged`);
-    return { data: readFileSync(handle), mode: opened.mode & 0o777 };
+    const opened = await handle.stat();
+    stillPluginFile(root, path, own, opened);
+    return { data: await handle.readFile(), mode: opened.mode };
   } finally {
-    closeSync(handle);
+    await handle.close();
   }
 }

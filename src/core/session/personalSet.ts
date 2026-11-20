@@ -1,5 +1,15 @@
 import { createHash } from "node:crypto";
-import { readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
+import {
+  closeSync,
+  constants,
+  fstatSync,
+  openSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  type Stats,
+  statSync,
+} from "node:fs";
 import { join, relative, sep } from "node:path";
 import { CONNECTION_MAX_FRAME_BYTES } from "@shared/connection";
 import {
@@ -50,8 +60,18 @@ function fingerprintOf(entries: [string, string, boolean][]): string {
   return sha(JSON.stringify(entries.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))));
 }
 
-/** A file of the set as it is listed, before anything reads it. */
-type Listed = { path: string; abs: string; exec: boolean; stamp: string; size: number };
+/**
+ * A file of the set as it is listed, before anything reads it; a plugin's
+ * file names its plugin's folder (`within`), which its read checks again.
+ */
+type Listed = {
+  path: string;
+  abs: string;
+  exec: boolean;
+  stamp: string;
+  size: number;
+  within?: string;
+};
 
 /**
  * Every regular file under a folder, following links, by its path from
@@ -110,6 +130,7 @@ function list(
         exec: (stat.mode & 0o111) !== 0,
         stamp: `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}:${stat.mode}`,
         size: stat.size,
+        ...(within !== undefined ? { within } : {}),
       });
     }
   }
@@ -165,6 +186,7 @@ function listPlugin(
         exec: (stat.mode & 0o111) !== 0,
         stamp: `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}:${stat.mode}`,
         size: stat.size,
+        within: plugin.root,
       });
     }
   }
@@ -175,13 +197,64 @@ function listPlugin(
 /**
  * A plugin's files a crewmate may read, by their paths inside it: the same
  * files the set carries, each inside the plugin's own folder, whatever its
- * links say (`stagePluginTrees`).
+ * links say (`stagePluginTrees`). Undefined for a plugin larger than the
+ * whole set may be, which no computer could be sent either.
  */
-export function pluginFiles(plugin: { id: string; root: string }): { path: string; abs: string }[] {
+export function pluginFiles(plugin: {
+  id: string;
+  root: string;
+}): { path: string; abs: string }[] | undefined {
   const out: Listed[] = [];
-  listPlugin(plugin, out, Number.POSITIVE_INFINITY, "");
+  if (listPlugin(plugin, out, PERSONAL_SET_BUDGET_BYTES, "") === undefined) return undefined;
   return out.map(({ path, abs }) => ({ path, abs }));
 }
+
+/** How a plugin's file is opened: read alone, never through a last link. */
+export const PLUGIN_FILE_OPEN = constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0);
+
+/** Where a plugin file's links lead, once that is checked to be inside the plugin `root`. */
+export function pluginFileTarget(root: string, path: string): string {
+  const own = realpathSync(path);
+  if (!insidePlugin(root, own)) throw new Error(`${path} leads outside the plugin`);
+  return own;
+}
+
+/**
+ * That a handle opened on `own` holds the plugin's own regular file the
+ * check named: the same file, its path still its own and inside the plugin.
+ */
+export function stillPluginFile(root: string, path: string, own: string, opened: Stats): void {
+  const named = statSync(own);
+  if (
+    !opened.isFile() ||
+    opened.ino !== named.ino ||
+    opened.dev !== named.dev ||
+    realpathSync(own) !== own ||
+    !insidePlugin(root, own)
+  )
+    throw new Error(`${path} changed while it was read`);
+}
+
+/**
+ * A plugin's file, read through a handle on the regular file its links lead
+ * to once that file is checked to be the plugin's own, so a file an update
+ * turns into a link outside the plugin after it was listed is never read.
+ */
+export function readPluginFile(root: string, path: string): { data: Buffer; mode: number } {
+  const own = pluginFileTarget(root, path);
+  const handle = openSync(own, PLUGIN_FILE_OPEN);
+  try {
+    const opened = fstatSync(handle);
+    stillPluginFile(root, path, own, opened);
+    return { data: readFileSync(handle), mode: opened.mode };
+  } finally {
+    closeSync(handle);
+  }
+}
+
+/** A listed file's bytes: a plugin's through its checked read, anything else as it is. */
+const readListed = (file: Listed): Buffer =>
+  file.within !== undefined ? readPluginFile(file.within, file.abs).data : readFileSync(file.abs);
 
 /**
  * The set as the reader would pick it from a home folder, listed and not yet
@@ -254,7 +327,7 @@ export function personalSetVersion(
     if (known?.stamp !== file.stamp) {
       let data: Buffer;
       try {
-        data = readFileSync(file.abs);
+        data = readListed(file);
       } catch {
         continue;
       }
@@ -284,7 +357,7 @@ export function personalSetFiles(
   const files: PersonalFile[] = instructions ? [instructions] : [];
   for (const file of listed) {
     try {
-      files.push({ path: file.path, data: readFileSync(file.abs), exec: file.exec });
+      files.push({ path: file.path, data: readListed(file), exec: file.exec });
     } catch {}
   }
   return { files, left };

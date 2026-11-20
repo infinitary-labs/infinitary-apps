@@ -219,6 +219,34 @@ export function pressDialogButton(pid: number, button: string, treeFile?: string
 }
 
 /** A picture of the whole screen, for the check's evidence. */
+/** The words of every window `pid` shows, as Windows' accessibility tree reads them. */
+export function dialogWords(pid: number): string[] {
+  return psList<string>(
+    `
+    Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
+    $A = [System.Windows.Automation.AutomationElement]
+    $byProcess = New-Object System.Windows.Automation.PropertyCondition($A::ProcessIdProperty, [int]$env:DIALOG_PID)
+    foreach ($window in $A::RootElement.FindAll('Children', $byProcess)) {
+      foreach ($e in $window.FindAll('Descendants', [System.Windows.Automation.Condition]::TrueCondition)) {
+        if ($e.Current.ControlType -eq [System.Windows.Automation.ControlType]::Text -and $e.Current.Name) { $e.Current.Name }
+      }
+    }`,
+    { DIALOG_PID: String(pid) },
+  );
+}
+
+/** The installed copy's top processes opened on `dataDir` with `--user-data-dir`. */
+export function appProcessesOn(executable: string, dataDir: string): number[] {
+  return psList<number>(
+    `
+    $all = @(Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $env:APP_EXE })
+    $ids = @($all | ForEach-Object { $_.ProcessId })
+    $all | Where-Object { $ids -notcontains $_.ParentProcessId -and ([string]$_.CommandLine).Contains('"--user-data-dir=' + $env:APP_DATA + '"') } |
+      ForEach-Object { [int]$_.ProcessId }`,
+    { APP_EXE: executable, APP_DATA: dataDir },
+  );
+}
+
 export function screenshot(file: string): void {
   ps(
     `

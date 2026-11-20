@@ -5,7 +5,7 @@ import { basename, join } from "node:path";
 import type { UpdateChannel } from "@shared/update";
 import { WINDOWS_HAND_OVER_WORDS } from "@shared/updateWords";
 import { windowsPowerShell } from "../storage/ownerOnly";
-import type { BuildDownload } from "./updateChannels";
+import { type BuildDownload, UPDATE_CHANNEL_MARKER } from "./updateChannels";
 import {
   downloadChecked,
   readChannelMarker,
@@ -61,10 +61,15 @@ export type WindowsHandOverResult = {
   /** The version the hand-over kept, which says it when it opens. */
   from: string;
   to: string;
+  /** False when the hand-over could not put back the channel marker the kept copy followed. */
+  channelKept?: boolean;
 };
 
 /** How the hand-over waits for this program to end before it gives up on the update. */
 export const WINDOWS_SHUTDOWN_WAIT_SECONDS = 300;
+
+/** How long a copy the hand-over opens again may take to fail before it counts as opened. */
+const REOPEN_WATCH_SECONDS = 30;
 
 /** A PowerShell literal of `text`, in single quotes. */
 const literal = (text: string) => `'${text.replaceAll("'", "''")}'`;
@@ -73,15 +78,20 @@ const literal = (text: string) => `'${text.replaceAll("'", "''")}'`;
  * The hand-over: the hidden Windows PowerShell that outlives this program
  * and updates it (docs/alpha.md, "Updates on Windows"). It waits up to five
  * minutes for this program to end; one still running then has not finished
- * saving, so it installs nothing, says so for the kept copy, and opens that
- * copy again once it ends. Otherwise it runs the installer silently as an
- * update and reads how it ended. A finished installer opens the new copy:
- * the person's own data folder through the Start menu entry, as the
- * installer's own `--force-run` does, and a data folder the copy was opened
- * on (`--user-data-dir`) opened again on that folder. An installer that
- * stopped leaves the copy in place, which the hand-over opens again and
- * which then says so; one that left no copy is said in a message with
- * where to download the installer, which opens next.
+ * saving, so it installs nothing and, once it ends, opens the kept copy
+ * again. Otherwise it runs the installer silently as an update and reads
+ * how it ended. A finished installer opens the new copy: the person's own
+ * data folder through the Start menu entry, as the installer's own
+ * `--force-run` does, and a data folder the copy was opened on
+ * (`--user-data-dir`) opened again on that folder by the hand-over. An
+ * installer that stopped leaves the kept copy, which the hand-over opens
+ * again. Before it opens the kept copy it puts back the channel marker
+ * that copy followed and says what happened in the result file, which the
+ * copy reads as it starts. Opening a copy first ends that data folder's
+ * windows still open, as the installer would, and only windows: a command
+ * or work run has none. A copy missing its program or its app, or one
+ * that fails as it opens, is said in a message with where to download the
+ * installer, which opens next.
  */
 export function windowsHandOverScript(values: {
   pid: number;
@@ -90,40 +100,67 @@ export function windowsHandOverScript(values: {
   /** The data folder the copy was opened on, absent for the person's own. */
   dataDir?: string;
   resultFile: string;
-  result: Omit<WindowsHandOverResult, "outcome">;
+  result: Omit<WindowsHandOverResult, "outcome" | "channelKept">;
+  /** The channel marker, and what it held before this update: null for none. */
+  marker: { file: string; earlier: string | null };
   page: string;
+  /** How long it waits for this program to end; five minutes but in its own check. */
+  waitSeconds?: number;
 }): string {
-  const said = (outcome: WindowsHandOverResult["outcome"]) =>
-    literal(JSON.stringify({ outcome, ...values.result }));
+  const wait = values.waitSeconds ?? WINDOWS_SHUTDOWN_WAIT_SECONDS;
   return [
     "$ErrorActionPreference = 'Stop'",
     `$exe = ${literal(values.executable)}`,
     `$dataDir = ${literal(values.dataDir ?? "")}`,
     `$result = ${literal(values.resultFile)}`,
-    "function Say([string]$what) { try { [IO.File]::WriteAllText($result, $what) } catch {} }",
-    // The copy's windows on this data folder still open end first, as the
-    // installer ends them, so the copy opens fresh and starts its command
-    // again; a command or a work run is never one of them.
-    "function OnThisFolder($p) { if ($dataDir) { $p.CommandLine.Contains('--user-data-dir=' + $dataDir) } else { -not $p.CommandLine.Contains('--user-data-dir') } }",
+    `$marker = ${literal(values.marker.file)}`,
+    `$earlier = ${values.marker.earlier === null ? "$null" : literal(values.marker.earlier)}`,
+    `$page = ${literal(values.page)}`,
+    "$channelKept = $true",
+    "function PutChannelBack {",
+    "  try {",
+    "    if ($null -eq $earlier) { if (Test-Path -LiteralPath $marker) { Remove-Item -LiteralPath $marker -Force } }",
+    "    else { $temp = $marker + '.restore'; [IO.File]::WriteAllText($temp, $earlier); Move-Item -LiteralPath $temp -Destination $marker -Force }",
+    "  } catch { $script:channelKept = $false }",
+    "}",
+    `function Say([string]$outcome) { try { [IO.File]::WriteAllText($result, (ConvertTo-Json -Compress @{ outcome = $outcome; from = ${literal(values.result.from)}; to = ${literal(values.result.to)}; channelKept = $channelKept })) } catch {} }`,
+    // The data folder a window was opened on, from its command line, as
+    // Chromium reads the switch; the person's own is ''.
+    "function FolderOf([string]$line) { if ($line -match '\"--user-data-dir=([^\"]*)\"' -or $line -match '--user-data-dir=\"([^\"]*)\"' -or $line -match '--user-data-dir=(\\S+)') { $Matches[1] } else { '' } }",
+    "function Recover {",
+    "  Add-Type -AssemblyName System.Windows.Forms",
+    `  [void][System.Windows.Forms.MessageBox]::Show(${literal(WINDOWS_HAND_OVER_WORDS.noCopy(values.page))}, 'Infinitary')`,
+    "  Start-Process $page",
+    "}",
     "function Reopen {",
-    "  $all = @(Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $exe -and $_.CommandLine })",
+    "  $all = @(Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $exe })",
     "  $ids = @($all | ForEach-Object { $_.ProcessId })",
-    "  $all | Where-Object { $ids -notcontains $_.ParentProcessId -and $_.CommandLine -notmatch '\\s\"?run\"?(\\s|$)' -and (OnThisFolder $_) } | ForEach-Object { taskkill /PID $_.ProcessId /T /F | Out-Null }",
-    "  if ($dataDir) { Start-Process -FilePath $exe -ArgumentList ('\"--user-data-dir=' + $dataDir + '\"') } else { Start-Process -FilePath $exe }",
+    "  foreach ($p in $all) {",
+    "    if ($ids -contains $p.ParentProcessId) { continue }",
+    "    if ((FolderOf ([string]$p.CommandLine)) -ne $dataDir) { continue }",
+    "    $running = Get-Process -Id $p.ProcessId -ErrorAction SilentlyContinue",
+    "    if ($running -and $running.MainWindowHandle -ne [IntPtr]::Zero) { Stop-Process -Id $p.ProcessId -Force -ErrorAction SilentlyContinue }",
+    "  }",
+    "  $app = Join-Path (Split-Path -Parent $exe) 'resources\\app.asar'",
+    "  if (-not ((Test-Path -LiteralPath $exe) -and (Test-Path -LiteralPath $app))) { Recover; return }",
+    "  try {",
+    "    if ($dataDir) { $opened = Start-Process -FilePath $exe -ArgumentList ('\"--user-data-dir=' + $dataDir + '\"') -PassThru } else { $opened = Start-Process -FilePath $exe -PassThru }",
+    "    $null = $opened.Handle",
+    `    if (-not $opened.WaitForExit(${REOPEN_WATCH_SECONDS * 1000}) -or $opened.ExitCode -eq 0) { return }`,
+    "  } catch {}",
+    "  Recover",
     "}",
     `$old = Get-Process -Id ${values.pid} -ErrorAction SilentlyContinue`,
-    `if ($old -and -not $old.WaitForExit(${WINDOWS_SHUTDOWN_WAIT_SECONDS * 1000})) { Say ${said("shutdown-timeout")}; $old.WaitForExit(); Reopen; exit }`,
+    `if ($old -and -not $old.WaitForExit(${wait * 1000})) { PutChannelBack; Say 'shutdown-timeout'; $old.WaitForExit(); Reopen; exit }`,
     "$info = New-Object System.Diagnostics.ProcessStartInfo",
     `$info.FileName = ${literal(values.installer)}`,
     `$info.Arguments = ${literal(values.dataDir ? "--updated /S" : "--updated /S --force-run")}`,
     "$info.UseShellExecute = $false",
     "try { $installer = [System.Diagnostics.Process]::Start($info); $installer.WaitForExit(); $code = $installer.ExitCode } catch { $code = -1 }",
     "if ($code -eq 0) { if ($dataDir) { Reopen }; exit }",
-    `Say ${said("install-failed")}`,
-    "if (Test-Path -LiteralPath $exe) { Reopen; exit }",
-    "Add-Type -AssemblyName System.Windows.Forms",
-    `[void][System.Windows.Forms.MessageBox]::Show(${literal(WINDOWS_HAND_OVER_WORDS.noCopy(values.page))}, 'Infinitary')`,
-    `Start-Process ${literal(values.page)}`,
+    "PutChannelBack",
+    "Say 'install-failed'",
+    "Reopen",
   ].join("\n");
 }
 
@@ -149,12 +186,13 @@ export const RUN_INSTALLER_SCRIPT = [
 /**
  * What the hand-over said of an update it did not finish, for this copy,
  * read once: the file goes as it is read, and one written for another
- * version (a copy installed since) says nothing.
+ * version (a copy installed since) says nothing. A file that cannot be
+ * removed still says it, and says it again at the next start.
  */
 export function takeWindowsHandOverResult(
   dataRoot: string,
   currentVersion: string,
-): WindowsHandOverResult["outcome"] | null {
+): WindowsHandOverResult | null {
   const file = join(dataRoot, WINDOWS_HAND_OVER_RESULT);
   let text: string;
   try {
@@ -162,23 +200,35 @@ export function takeWindowsHandOverResult(
   } catch {
     return null;
   }
-  rmSync(file, { force: true });
+  try {
+    rmSync(file, { force: true });
+  } catch {
+    // Said again at the next start rather than not at all.
+  }
   try {
     const result = JSON.parse(text.replace(/^\uFEFF/, "")) as Partial<WindowsHandOverResult>;
     if (result.from !== currentVersion) return null;
-    return result.outcome === "shutdown-timeout" || result.outcome === "install-failed"
-      ? result.outcome
-      : null;
+    if (result.outcome !== "shutdown-timeout" && result.outcome !== "install-failed") return null;
+    return {
+      outcome: result.outcome,
+      from: result.from,
+      to: String(result.to ?? ""),
+      ...(result.channelKept === false ? { channelKept: false } : {}),
+    };
   } catch {
     return null;
   }
 }
 
 /** What the Version row says of an update the hand-over did not finish. */
-export function windowsHandOverProblem(outcome: WindowsHandOverResult["outcome"]): string {
-  return outcome === "shutdown-timeout"
-    ? WINDOWS_HAND_OVER_WORDS.shutdownTimeout
-    : WINDOWS_HAND_OVER_WORDS.installFailed;
+export function windowsHandOverProblem(result: WindowsHandOverResult): string {
+  const said =
+    result.outcome === "shutdown-timeout"
+      ? WINDOWS_HAND_OVER_WORDS.shutdownTimeout
+      : WINDOWS_HAND_OVER_WORDS.installFailed;
+  return result.channelKept === false
+    ? `${said} ${WINDOWS_HAND_OVER_WORDS.channelNotPutBack}`
+    : said;
 }
 
 export type WindowsInstallerOptions = {
@@ -218,7 +268,7 @@ export function createWindowsInstaller(
   // opened this copy; gone by now, or at the next update.
   const leftover = rm(folder, { recursive: true, force: true }).catch(() => undefined);
 
-  function handOver(file: string, plan: WindowsInstallPlan): Promise<void> {
+  function handOver(file: string, plan: WindowsInstallPlan, earlier: string | null): Promise<void> {
     return new Promise((resolve, reject) => {
       const env = options.env();
       let child: ReturnType<typeof spawn>;
@@ -237,6 +287,7 @@ export function createWindowsInstaller(
                   ...(options.openedOn ? { dataDir: options.openedOn } : {}),
                   resultFile: join(options.dataRoot, WINDOWS_HAND_OVER_RESULT),
                   result: { from: options.currentVersion, to: plan.version },
+                  marker: { file: join(options.dataRoot, UPDATE_CHANNEL_MARKER), earlier },
                   page: plan.page,
                 }),
                 "utf16le",
@@ -288,7 +339,7 @@ export function createWindowsInstaller(
         );
       }
       remembered = true;
-      await handOver(file, plan);
+      await handOver(file, plan, earlier);
     } catch (caught) {
       await rm(folder, { recursive: true, force: true }).catch(() => undefined);
       if (remembered) {
@@ -296,9 +347,7 @@ export function createWindowsInstaller(
           await restoreChannelMarker(options.dataRoot, earlier);
         } catch {
           const said = caught instanceof UpdateInstallProblem ? `${caught.message} ` : "";
-          throw new UpdateInstallProblem(
-            `${said}Infinitary could not put back the update channel it followed before, so check the channel in Settings → General.`,
-          );
+          throw new UpdateInstallProblem(`${said}${WINDOWS_HAND_OVER_WORDS.channelNotPutBack}`);
         }
       }
       throw caught;

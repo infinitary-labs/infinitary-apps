@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { WINDOWS_HAND_OVER_WORDS } from "@shared/updateWords";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { buildDownloadUrl, UPDATE_CHANNEL_MARKER } from "./updateChannels";
@@ -12,6 +13,7 @@ import {
   WINDOWS_HAND_OVER_RESULT,
   WINDOWS_UPDATES_FOLDER,
   type WindowsInstallPlan,
+  windowsHandOverProblem,
   windowsHandOverScript,
 } from "./windowsInstall";
 
@@ -119,6 +121,7 @@ describe("the in-app Windows update", () => {
         executable: EXECUTABLE,
         resultFile: join(f.dataRoot, WINDOWS_HAND_OVER_RESULT),
         result: { from: RUNNING, to: VERSION },
+        marker: { file: join(f.dataRoot, UPDATE_CHANNEL_MARKER), earlier: null },
         page: PAGE,
       }),
     );
@@ -149,6 +152,7 @@ describe("the in-app Windows update", () => {
         dataDir: openedOn,
         resultFile: join(f.dataRoot, WINDOWS_HAND_OVER_RESULT),
         result: { from: RUNNING, to: VERSION },
+        marker: { file: join(f.dataRoot, UPDATE_CHANNEL_MARKER), earlier: null },
         page: PAGE,
       }),
     );
@@ -207,6 +211,31 @@ describe("the in-app Windows update", () => {
     expect(existsSync(updatesIn(f.dataRoot))).toBe(false);
   });
 
+  it("hands over the channel this copy followed, for a kept copy to follow again", async () => {
+    const f = installer();
+    const earlier = `${JSON.stringify({ schemaVersion: 1, channel: "stable", version: "0.8.3" })}\n`;
+    writeFileSync(join(f.dataRoot, UPDATE_CHANNEL_MARKER), earlier);
+    await f.install(f.plan, f.saved);
+    const [, , spawned] = f.spawnImpl.mock.calls[0] as [
+      string,
+      string[],
+      { env: NodeJS.ProcessEnv },
+    ];
+    expect(
+      Buffer.from(spawned.env.INFINITARY_UPDATE_HAND_OVER as string, "base64").toString("utf16le"),
+    ).toBe(
+      windowsHandOverScript({
+        pid: 4242,
+        installer: join(updatesIn(f.dataRoot), f.name),
+        executable: EXECUTABLE,
+        resultFile: join(f.dataRoot, WINDOWS_HAND_OVER_RESULT),
+        result: { from: RUNNING, to: VERSION },
+        marker: { file: join(f.dataRoot, UPDATE_CHANNEL_MARKER), earlier },
+        page: PAGE,
+      }),
+    );
+  });
+
   it("puts the earlier channel back when the installer cannot start", async () => {
     const f = installer({ spawns: "refused" });
     const earlier = `${JSON.stringify({ schemaVersion: 1, channel: "stable", version: "0.8.3" })}\n`;
@@ -258,9 +287,22 @@ describe("what the hand-over said of an update it did not finish", () => {
   it("is read once, by the copy it kept", () => {
     const dataRoot = scratchDir("inf-windows-hand-over-");
     said(dataRoot, { outcome: "install-failed", from: RUNNING, to: VERSION });
-    expect(takeWindowsHandOverResult(dataRoot, RUNNING)).toBe("install-failed");
+    expect(takeWindowsHandOverResult(dataRoot, RUNNING)).toEqual({
+      outcome: "install-failed",
+      from: RUNNING,
+      to: VERSION,
+    });
     expect(takeWindowsHandOverResult(dataRoot, RUNNING)).toBeNull();
     expect(existsSync(join(dataRoot, WINDOWS_HAND_OVER_RESULT))).toBe(false);
+  });
+
+  it("says when the channel this copy followed could not be put back", () => {
+    const dataRoot = scratchDir("inf-windows-hand-over-");
+    said(dataRoot, { outcome: "shutdown-timeout", from: RUNNING, to: VERSION, channelKept: false });
+    const result = takeWindowsHandOverResult(dataRoot, RUNNING);
+    expect(result && windowsHandOverProblem(result)).toBe(
+      `${WINDOWS_HAND_OVER_WORDS.shutdownTimeout} ${WINDOWS_HAND_OVER_WORDS.channelNotPutBack}`,
+    );
   });
 
   it("says nothing to a copy installed since", () => {

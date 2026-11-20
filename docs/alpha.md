@@ -137,16 +137,18 @@ A Windows installation updates through the same update reader, from the builds f
   The app writes its channel marker with the version it hands over before the hand-over, since the installer runs after the app ends: a marker it cannot read or write hands nothing over, and a hand-over that fails puts the earlier marker back whole, or says it could not and asks the person to check the channel in Settings → General.
   Then it ends: a window quits, and a command ends with 75 as for any update (`docs/run.md`, "After an update").
   The installer replaces the copy for this person alone, with no administrator, and keeps the data folder and the Task Scheduler tasks, which name the same program.
-  The new copy opens on the data folder the old one was opened on: the person's own through the Start menu entry, as the installer's `--force-run` opens it, and a folder named with `--user-data-dir` by the hand-over, with that folder again; its window starts the command again.
+  The new copy opens on the data folder the old one was opened on: the person's own through the Start menu entry, as the installer's `--force-run` opens it, whose window starts the scheduled command again, and a folder named with `--user-data-dir` by the hand-over, with that folder again, whose window runs its own first mate as it did before, since a switched data folder starts no command (`docs/run.md`).
 - **Who the installer trusts.**
   Until the Windows package is signed, an update trusts the download site and the published checksum alone, as a Linux package does; requiring the expected publisher's signature is a later piece of the Windows plan.
 - **When installing cannot finish.**
   A download that stops, a refused checksum, or an installer that cannot start each say so on the Version row, nothing changes, and the crew's work carries on.
   An app still running five minutes after the hand-over began has not finished saving, so the hand-over installs nothing; once the app ends it opens it again.
   An installer that exits with an error leaves the copy in place, and the hand-over opens it again.
-  Either way the hand-over first ends the copy's windows on that data folder still open, as the installer would, so the copy opens fresh and starts its command, which carries the saved work on.
-  The hand-over leaves `update-result.json` in the data folder, which the copy it kept reads once as it starts (`takeWindowsHandOverResult`), and its Version row says the update stopped or the installer stopped, beside Try again, until the next attempt.
-  An installer that stopped and left no copy to open is said in a message from the hand-over, with the release page to download the installer from, which it opens next.
+  Either way the hand-over first puts back the channel marker the kept copy followed, then ends that data folder's windows still open, as the installer would, and only windows: a command or a work run has none, and another data folder's are left alone.
+  The copy then opens fresh on its data folder as above, and the person's own starts its command, which carries the saved work on.
+  The hand-over leaves `update-result.json` in the data folder, which the copy it kept reads once as it starts (`takeWindowsHandOverResult`), and its Version row says the update stopped or the installer stopped, beside Try again, until the next attempt; when the marker could not be put back it also asks the person to check the channel in Settings → General.
+  A result file the copy cannot remove is said again at its next start rather than stopping it.
+  A copy missing its program or its `resources\app.asar`, or one whose process fails within 30 seconds of opening, is said in a message from the hand-over, with the release page to download the installer from, which it opens next.
 - **A window controlling another computer.**
   It names a newer version of its own copy and its downloads page, and installs nothing: such a PC also runs that computer's work, which the installer would end mid-run (`docs/windows.md`, "Joining another computer").
 - **Development and tests.**

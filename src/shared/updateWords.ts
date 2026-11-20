@@ -43,9 +43,12 @@ export const WINDOWS_HAND_OVER_WORDS = {
   shutdownTimeout:
     "Infinitary took more than five minutes to close, so the update stopped and nothing was installed.",
   installFailed: "The installer stopped before it finished, so this copy was kept.",
-  /** Shown by the hand-over itself when the installer stopped and left no copy to open. */
+  /** Said when the update could not put back the channel marker the kept copy followed. */
+  channelNotPutBack:
+    "Infinitary could not put back the update channel it followed before, so check the channel in Settings → General.",
+  /** Shown by the hand-over itself when the copy it would open is missing or does not open. */
   noCopy: (page: string) =>
-    `Infinitary could not finish its update and could not open again. Download the installer from ${page} and run it; your tasks and settings are kept.`,
+    `Infinitary could not open again after its update. Download the installer from ${page} and run it; your tasks and settings are kept.`,
 } as const;
 
 /** The crew's work around this computer's own update, in the update notice and on the Version row. */

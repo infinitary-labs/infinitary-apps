@@ -1,6 +1,14 @@
-import { execFile, execFileSync } from "node:child_process";
+import { execFile, execFileSync, spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { expect, type Page, test } from "@playwright/test";
@@ -18,6 +26,7 @@ import { UPDATE_CHANNEL_MARKER } from "../../src/core/update/updateChannels";
 import {
   WINDOWS_HAND_OVER_RESULT,
   WINDOWS_UPDATES_FOLDER,
+  windowsHandOverScript,
 } from "../../src/core/update/windowsInstall";
 import { GIT_FOR_WINDOWS } from "../../src/core/windowsGit";
 import { GIT_SETUP_WORDS } from "../../src/main/windowsGitSetup";
@@ -47,6 +56,9 @@ import {
 } from "./updateFeed";
 import { UPDATE_VERSIONS } from "./updateVersions";
 import {
+  appProcessesOn,
+  dialogWords,
+  powershellPath,
   pressDialogButton,
   ps,
   psList,
@@ -587,4 +599,162 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
     }
   }
   expect(left, "every change the journey made to this person's machine was taken back").toEqual([]);
+});
+
+/**
+ * The hand-over's ways back (docs/alpha.md, "When installing cannot
+ * finish"), each run directly with stand-ins the journey above cannot
+ * reach: a disposable process that outlives the wait, shortened to seconds,
+ * stands in for an app still saving; a batch file that records its
+ * arguments stands in for the installer; the installed copy opens on a
+ * data folder of its own (`--user-data-dir`, with a space in it); and a
+ * folder holding the program without its app stands in for a copy that
+ * cannot open, whose download page is a batch file that records it opened.
+ */
+test("the Windows hand-over keeps a copy still saving, reopens a copy on its own data folder and says how to recover one that cannot open", async () => {
+  test.setTimeout(10 * 60_000);
+  const [entry] = removalEntries();
+  if (!entry) throw new Error("no removal entry");
+  const executable = join(dirname(uninstallerOf(entry)), "Infinitary.exe");
+  const root = scratchDir("inf-windows-hand-over-");
+  const profile = join(root, "a person's other folder");
+  mkdirSync(profile, { recursive: true });
+  const marker = join(profile, UPDATE_CHANNEL_MARKER);
+  const resultFile = join(profile, WINDOWS_HAND_OVER_RESULT);
+  const ran = join(root, "installer-ran.txt");
+  const installer = (code: number) => {
+    const file = join(root, `installer ${code}.cmd`);
+    writeFileSync(file, `@echo off\r\necho %*>"${ran}"\r\nexit /b ${code}\r\n`);
+    return file;
+  };
+  const opened = join(root, "page-opened.txt");
+  const page = join(root, "download page.cmd");
+  writeFileSync(page, `@echo off\r\necho opened>"${opened}"\r\n`);
+  const others = topAppProcesses().map((p) => p.pid);
+  const handOver = (values: Parameters<typeof windowsHandOverScript>[0]) => {
+    const encoded = Buffer.from(windowsHandOverScript(values), "utf16le").toString("base64");
+    const child = spawn(
+      powershellPath,
+      ["-NoProfile", "-NonInteractive", "-EncodedCommand", encoded],
+      {
+        stdio: "ignore",
+      },
+    );
+    const ended = new Promise<number | null>((done) => child.on("exit", (code) => done(code)));
+    return { pid: child.pid ?? 0, ended };
+  };
+  const end = (pid: number) => {
+    try {
+      execFileSync("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore" });
+    } catch {}
+  };
+  const closeProfileWindows = () => {
+    for (const pid of appProcessesOn(executable, profile)) end(pid);
+  };
+  // The app the hand-over waits for, already ended.
+  const endedApp = async () => {
+    const gone = spawn(powershellPath, ["-NoProfile", "-Command", "exit"], { stdio: "ignore" });
+    await new Promise((done) => gone.on("exit", done));
+    return gone.pid ?? 0;
+  };
+  const windowShown = (pid: number) =>
+    ps<boolean>(
+      "$p = Get-Process -Id ([int]$env:APP_PID) -ErrorAction SilentlyContinue; [bool]($p -and $p.MainWindowHandle -ne [IntPtr]::Zero)",
+      { APP_PID: String(pid) },
+    );
+  const said = () => JSON.parse(readFileSync(resultFile, "utf8").replace(/^\uFEFF/, ""));
+  const result = { from: "0.0.1", to: "0.0.2" };
+
+  try {
+    await test.step("an app still running after the wait gets nothing installed, its channel back and its copy opened once it ends", async () => {
+      writeFileSync(marker, "the channel this update chose");
+      const saving = spawn(powershellPath, ["-NoProfile", "-Command", "Start-Sleep -Seconds 900"], {
+        stdio: "ignore",
+      });
+      const run = handOver({
+        pid: saving.pid ?? 0,
+        installer: installer(0),
+        executable,
+        dataDir: profile,
+        resultFile,
+        result,
+        marker: { file: marker, earlier: "the channel it followed" },
+        page,
+        waitSeconds: 5,
+      });
+      await expect.poll(() => existsSync(resultFile), { timeout: 60_000 }).toBe(true);
+      expect(said()).toEqual({ outcome: "shutdown-timeout", ...result, channelKept: true });
+      expect(readFileSync(marker, "utf8")).toBe("the channel it followed");
+      // Nothing opens while the app it waits for still runs.
+      expect(appProcessesOn(executable, profile)).toEqual([]);
+      end(saving.pid ?? 0);
+      await expect
+        .poll(() => appProcessesOn(executable, profile).length, { timeout: 60_000 })
+        .toBe(1);
+      await run.ended;
+      const [reopened = 0] = appProcessesOn(executable, profile);
+      await expect.poll(() => windowShown(reopened), { timeout: 60_000 }).toBe(true);
+      expect(existsSync(ran)).toBe(false);
+      expect(existsSync(opened)).toBe(false);
+      // The person's own copy, and anything else running, is left alone.
+      expect(stillRunning(others)).toEqual(others);
+      if (evidence) screenshot(join(evidence, "hand-over-timeout-reopened.png"));
+    });
+
+    await test.step("a finished update of a copy on its own data folder ends that folder's window and opens the copy there again", async () => {
+      const before = appProcessesOn(executable, profile);
+      expect(before).toHaveLength(1);
+      rmSync(resultFile, { force: true });
+      const run = handOver({
+        pid: await endedApp(),
+        installer: installer(0),
+        executable,
+        dataDir: profile,
+        resultFile,
+        result,
+        marker: { file: marker, earlier: null },
+        page,
+        waitSeconds: 5,
+      });
+      expect(await run.ended).toBe(0);
+      expect(readFileSync(ran, "utf8").trim()).toBe("--updated /S");
+      const after = appProcessesOn(executable, profile);
+      expect(after).toHaveLength(1);
+      expect(after).not.toEqual(before);
+      expect(stillRunning(before)).toEqual([]);
+      expect(existsSync(resultFile)).toBe(false);
+      expect(existsSync(opened)).toBe(false);
+      expect(stillRunning(others)).toEqual(others);
+    });
+
+    await test.step("a copy that cannot open is said in a message, and its download page opens next", async () => {
+      closeProfileWindows();
+      const broken = join(root, "a copy without its app");
+      mkdirSync(broken, { recursive: true });
+      copyFileSync(executable, join(broken, "Infinitary.exe"));
+      const run = handOver({
+        pid: await endedApp(),
+        installer: installer(3),
+        executable: join(broken, "Infinitary.exe"),
+        dataDir: profile,
+        resultFile,
+        result,
+        marker: { file: marker, earlier: "the channel it followed" },
+        page,
+        waitSeconds: 5,
+      });
+      const words = WINDOWS_HAND_OVER_WORDS.noCopy(page);
+      await expect.poll(() => dialogWords(run.pid).join(" "), { timeout: 60_000 }).toContain(words);
+      keep("hand-over-recovery-message.json", JSON.stringify(dialogWords(run.pid), null, 2));
+      if (evidence) screenshot(join(evidence, "hand-over-recovery-message.png"));
+      expect(said()).toEqual({ outcome: "install-failed", ...result, channelKept: true });
+      expect(existsSync(opened)).toBe(false);
+      expect(pressDialogButton(run.pid, "OK")).toBe(true);
+      await run.ended;
+      await expect.poll(() => existsSync(opened), { timeout: 60_000 }).toBe(true);
+      expect(appProcessesOn(join(broken, "Infinitary.exe"), profile)).toEqual([]);
+    });
+  } finally {
+    closeProfileWindows();
+  }
 });

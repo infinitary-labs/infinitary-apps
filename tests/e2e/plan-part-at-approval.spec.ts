@@ -184,6 +184,7 @@ test("a chain of parts starts each part at the approval of the part under it and
     // The third part, waiting on both, starts on the second part's approved version while neither merged.
     await startsOn("third", "second", third, second);
     expect(saved(release)?.status).toBe("open");
+    expect(saved(release)?.startedAt).toBeNull();
     await expect.poll(cardTitles, { timeout: 120_000 }).toContain(partTitle("third"));
     await approve("third");
     await expect
@@ -197,11 +198,14 @@ test("a chain of parts starts each part at the approval of the part under it and
     expect(batch?.open?.members.map((member) => member.taskId)).toEqual([first]);
 
     // The first part's batch passes and merges; then the release starts, and the rest follow in order.
+    // Every approval so far left the release unstarted: it needs the first part merged.
+    expect(saved(release)?.startedAt).toBeNull();
     github.setPullChecks(100, PASSED);
     await expect
       .poll(() => github.merges()[0], { timeout: 30_000 })
       .toMatchObject({ number: 100, title: partTitle("first") });
-    await expect.poll(() => saved(release)?.status, { timeout: 60_000 }).not.toBe("open");
+    // The release's start is recorded only after that merge.
+    await expect.poll(() => saved(release)?.startedAt ?? null, { timeout: 60_000 }).not.toBeNull();
     // The second and third parts go in one batch or two, as the line forms them.
     for (const next of [101, 102]) {
       await expect.poll(() => github.pulls().length, { timeout: 60_000 }).toBe(next - 99);
@@ -222,6 +226,7 @@ test("a chain of parts starts each part at the approval of the part under it and
     // Each part's commit carries only its own difference.
     expect(git("show", "--name-only", "--format=", "main")).toBe("third.txt");
     expect(git("show", "--name-only", "--format=", "main~1")).toBe("second.txt");
+    expect(git("show", "--name-only", "--format=", "main~2")).toBe("first.txt");
   } finally {
     await launched.close();
     await github.close();

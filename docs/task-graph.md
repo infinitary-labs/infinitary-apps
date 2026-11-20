@@ -14,7 +14,7 @@ P0 made a task a durable record, P1 made every captain ask land on one; P2 gives
   The move is refused into a removed project, and into a project whose repository has no remote when a task it would take asks to ship as a pull request.
   A parent may carry a crewmate or be a pure container - a planned row that never dispatches on its own.
   **Discovery is not containment**: a follow-up a crewmate files is never a child of the task it was found on (see "Follow-ups are not children" below).
-- **Links** (`task_links`, primary key `(from, to, type)`): `blocks` - `to` is not ready until `from` closes successfully (`done`; dropped never clears), and does not close while `from` is still live work, whoever recorded the edge (INF-3167, the captain's choice A: every wait holds the start and the merge until the other task closes).
+- **Links** (`task_links`, primary key `(from, to, type)`): `blocks` - `to` is not ready until `from` closes successfully (`done`; dropped never clears), and does not close while `from` is still live work, whoever recorded the edge (INF-3167, the captain's choice A: every wait holds the start and the merge until the other task closes), except on batched pull requests, where `to` starts at `from`'s merge approval unless `to` needs it merged ("A part that starts at approval" below).
   The `holds_merge` mark a must-merge-first filing or a required action's prerequisite still writes on that edge is history: no reader branches on it, and no second kind of wait exists.
   `related` is informational; `discovered-from` - `from` was found while doing `to`, provenance with no effect on readiness or closing; `replaced-by` - `to` does `from`'s work now (a drop, a takeover or a fresh task), with no effect on readiness or closing either.
   Each link reads on both ends, and the links decide which tasks read another's milestones (`docs/task-record.md`, "Whom an event concerns").
@@ -40,7 +40,7 @@ The successor inherits the predecessor's parent only while that parent is still 
 
 ## The ready query
 
-`TaskStore.listReady()` is the sweep's dispatch list: open work, no gate, `start_policy = when-ready`, no `blocks` edge from a task that is not `done`; priority first, then age.
+`TaskStore.listReady()` is the sweep's dispatch list: open work, no gate, `start_policy = when-ready`, no `blocks` edge from a task that is not `done`; priority first, then age; `TaskGraph.listReady` adds the work an approval starts ("A part that starts at approval").
 `CrewWatch.sweepGates` runs it on the shared 60 s tick, after any close (`closeTask` sweeps), after any graph change (`graphChanged`), on quota refresh, and once at boot.
 The quit (`CrewSupervisor.disposeAll`) runs no new sweep and starts nothing, a start still waiting before its claim included, and it waits, at most `QUIT_SETTLE_MS`, for a sweep already running to end, so a host closes its database only after the sweep's last write; the next launch's sweep starts what the quit left.
 A start the quit stops part way, whoever began it - the sweep, a computer's new sign-in, the captain's Start or the first mate - did not fail: `dispatchQueuedTask` neither settles nor tells its failure, since the database may already be closed, and the next launch starts it, a claimed row that began nothing back in the queue first (`TaskStarts.releaseUnstartedDispatches`).
@@ -120,9 +120,9 @@ That wait is a soft hold (`waits`): the captain's recorded override passes it, a
 A **dropped** blocker clears a close, and only a close - for readiness it is a wait that can never end and the first mate answers the dead-gate wake, but that wake names open rows only, so an active task held by a dropped blocker would strand with no way out.
 A `discard` abandons the work rather than completing it, so a wait never forbids it; only containment does, and only on the first mate's own drop (`closeGateRefusal`, `settleRefusals.ts`): the captain's own drop keeps open parts planned (`docs/task-record.md`, "One drop").
 A crewmate's merge card is refused at emit time while that same rule would refuse the click (`CrewmateCards.addCrewmateCard`; open children stay a click-time choice because the captain can override them).
-The `link_tasks` description says a blocks link holds the start and the merge until `from` closes.
+The `link_tasks` description says a blocks link holds the start and the merge until `from` closes, and that on batched pull requests the start comes at `from`'s merge approval unless `to`'s `needs_merge` names `from`.
 It says `related` is for work neither task is waiting on.
-The first mate records every wait between tasks as `blocks` that turn, from the task whose close gives what the waiter needs, so Tasks draws the arrow and the wait holds; when only part of a task would give it, it splits that part into its own step or folds the waiter into that task, never recording a wait that holds nothing (INF-3167).
+The first mate records every wait between tasks as `blocks` that turn, from the task whose close gives what the waiter needs, so Tasks draws the arrow and the wait holds, and names in `needs_merge` each one whose merge an unstarted waiter needs, since on batched pull requests a wait otherwise starts it at the other task's merge approval; when only part of a task would give it, it splits that part into its own step or folds the waiter into that task, never recording a wait that holds nothing (INF-3167).
 A click refused by a wait reads in plain words on the feed (captain, 2026-10-01: a second Merge click was needed after a tracking-only wait).
 Because every live edge gates closing, `flagsOf` reports `blocked` for **active** rows too: a task its crewmate works past a recorded wait must say it is held rather than look free until the merge refuses.
 When the captain's recorded override passed that hold (`overridePasses`, `docs/delivery-rigor.md` "The holds"), the row reads free, as its Blocked by and the close gate do.

@@ -9,7 +9,7 @@ import type { TaskReference, TaskReferenceKind } from "../storage/taskReferenceS
 import { baselineStands } from "./dependencyWaits";
 import { holdingWaits } from "./holdingWaits";
 import { TaskService } from "./taskService";
-import { keyOrId, type TaskWriter } from "./taskWriter";
+import { keyOrId, type TaskWriter, withShapeKey } from "./taskWriter";
 import { liveWaitCycle, waitCycleWords } from "./waitCycles";
 
 /** A graph rule refused the write; the message is meant for the agent. */
@@ -136,6 +136,15 @@ const LINK_WORDS: Record<TaskLinkType, string> = {
  * links between tasks, the waits a link records, carriers and replacements,
  * and what holds a close. Reached as `tasks.graph`.
  */
+/** The approved part a task starts on, and the parts under it that part's branch carries. */
+export type ApprovedBase = {
+  task: TaskRecord;
+  head: string;
+  branch: string;
+  /** Unmerged parts under `task` its recorded base holds, by id (`TaskGraph.carriedBy`). */
+  carried: ReadonlySet<string>;
+};
+
 export class TaskGraph {
   constructor(
     private readonly writer: TaskWriter,
@@ -561,9 +570,7 @@ export class TaskGraph {
    * wait the task needs merged is unfinished, or the task waits on other
    * unfinished work besides it.
    */
-  approvedBase(
-    record: Pick<TaskRecord, "id" | "shape">,
-  ): { task: TaskRecord; head: string; branch: string } | undefined {
+  approvedBase(record: Pick<TaskRecord, "id" | "shape">): ApprovedBase | undefined {
     const base = this.approvedPrerequisite(record);
     if (!base) return undefined;
     const waits = this.blocksIn(
@@ -571,8 +578,7 @@ export class TaskGraph {
       statusesWhere((blocker) => !TaskService.blockerCleared(blocker)),
     );
     if (!waits.some(({ task }) => task.id === base.task.id)) return undefined;
-    const carried = this.carriedBy(base.task, this.needsMerge(record));
-    if (waits.some(({ task }) => task.id !== base.task.id && !carried.has(task.id)))
+    if (waits.some(({ task }) => task.id !== base.task.id && !base.carried.has(task.id)))
       return undefined;
     return base;
   }
@@ -590,7 +596,7 @@ export class TaskGraph {
   private approvedPrerequisite(
     record: Pick<TaskRecord, "id" | "shape">,
     among?: TaskRecord,
-  ): { task: TaskRecord; head: string; branch: string } | undefined {
+  ): ApprovedBase | undefined {
     const full = this.writer.store.get(record.id);
     if (!full || this.tasks.policiesOf(full)?.delivery.value !== "queue-pr") return undefined;
     const needs = this.needsMerge(record);
@@ -616,12 +622,20 @@ export class TaskGraph {
         task.delivery?.mergeAuthorization !== undefined &&
         TaskGraph.approvedToMerge(task),
     );
-    const best = candidates
-      .map((task) => ({ task, carries: this.carriedBy(task, needs).size }))
-      .sort((a, b) => b.carries - a.carries)[0]?.task;
-    const authorization = best?.delivery?.mergeAuthorization;
+    // Each candidate's chain is walked once; a single candidate needs no ranking.
+    let best: { task: TaskRecord; carried: Set<string> } | undefined;
+    for (const task of candidates) {
+      const carried = this.carriedBy(task, needs);
+      if (!best || carried.size > best.carried.size) best = { task, carried };
+    }
+    const authorization = best?.task.delivery?.mergeAuthorization;
     if (!best || !authorization) return undefined;
-    return { task: best, head: authorization.approvedHead, branch: authorization.target.branch };
+    return {
+      task: best.task,
+      head: authorization.approvedHead,
+      branch: authorization.target.branch,
+      carried: best.carried,
+    };
   }
 
   /**
@@ -705,25 +719,27 @@ export class TaskGraph {
   }
 
   /**
-   * Whether this task's wait on `blocker` is one its approved base answers
-   * (`approvedBase`): the base itself, or a part under it that the base's
-   * recorded base carries. It neither holds the start nor the close. Once
-   * the task has started, only when it started on that base's approved
-   * version, so the batch line holds its merge behind it.
+   * The waits among `blockers` that this task's approved base answers
+   * (`approvedBase`): the base itself, and the parts under it that the
+   * base's recorded base carries. They neither hold the start nor the
+   * close. Once the task has started, only through the part it was built
+   * on, so the batch line holds its merge behind it. Read once per task.
    */
-  private answeredByApproval(id: string, blocker: TaskRecord): boolean {
+  private answeredByApproval(id: string, blockers: readonly TaskRecord[]): Set<string> {
     // Only an approved wait can be answered: the common case reads nothing more.
-    if (!TaskGraph.approvedToMerge(blocker)) return false;
+    if (!blockers.some((blocker) => TaskGraph.approvedToMerge(blocker))) return new Set();
     const record = this.writer.store.get(id);
-    if (!record) return false;
+    if (!record) return new Set();
     const builtOn = record.status === "open" ? undefined : this.unmergedBuiltOn(record)?.task;
-    if (record.status !== "open" && !builtOn) return false;
+    if (record.status !== "open" && !builtOn) return new Set();
     const base = this.approvedPrerequisite(record, builtOn);
-    if (!base) return false;
-    return (
-      base.task.id === blocker.id ||
-      this.carriedBy(base.task, this.needsMerge(record)).has(blocker.id)
-    );
+    return base ? new Set([base.task.id, ...base.carried]) : new Set();
+  }
+
+  /** `blockers` less the waits this task's approved base answers. */
+  private unanswered(id: string, blockers: TaskRecord[]): TaskRecord[] {
+    const answered = this.answeredByApproval(id, blockers);
+    return answered.size ? blockers.filter((task) => !answered.has(task.id)) : blockers;
   }
 
   /** Open, unheld work waiting on a dropped task - a wait that cannot end. */
@@ -733,12 +749,13 @@ export class TaskGraph {
 
   /** The uncleared blockers of a task. */
   waitingOn(id: string): TaskRecord[] {
-    return this.blocksIn(
+    return this.unanswered(
       id,
-      statusesWhere((blocker) => !TaskService.blockerCleared(blocker)),
-    )
-      .map(({ task }) => task)
-      .filter((task) => !this.answeredByApproval(id, task));
+      this.blocksIn(
+        id,
+        statusesWhere((blocker) => !TaskService.blockerCleared(blocker)),
+      ).map(({ task }) => task),
+    );
   }
 
   /**
@@ -848,9 +865,10 @@ export class TaskGraph {
    * `holdsMerge` mark on an edge is kept as history and changes nothing.
    */
   blockersHoldingClose(id: string): TaskRecord[] {
-    return this.liveBlocks(id)
-      .map(({ task }) => task)
-      .filter((task) => !this.answeredByApproval(id, task));
+    return this.unanswered(
+      id,
+      this.liveBlocks(id).map(({ task }) => task),
+    );
   }
 
   /**
@@ -1107,6 +1125,7 @@ export class TaskGraph {
       if (caught instanceof TaskGraphRefusal) return false;
       throw caught;
     }
+    this.moveNeedsMerge(link, next);
     this.writer.links.delete(link.fromId, link.toId, "blocks");
     this.writer.touch(link.fromId);
     this.writer.addEvent({
@@ -1120,6 +1139,33 @@ export class TaskGraph {
       feed: false,
     });
     return true;
+  }
+
+  /**
+   * A wait the waiter declared it needs merged (`shape.needs_merge`) stays a
+   * merge wait where the wait moves: off the old pair, onto the new one, in
+   * the same write as the link, so a moved wait never starts its waiter at
+   * an approval the filer ruled out.
+   */
+  private moveNeedsMerge(link: TaskLink, next: { fromId: string; toId: string }): void {
+    const named = (record: TaskRecord | undefined, id: string) =>
+      (record?.shape?.needs_merge ?? []).filter((ref) => this.tasks.resolve(ref)?.id === id);
+    const waiter = this.writer.store.get(link.toId);
+    const declared = named(waiter, link.fromId);
+    if (!waiter || declared.length === 0) return;
+    const rest = (waiter.shape?.needs_merge ?? []).filter((ref) => !declared.includes(ref));
+    this.writer.patch(waiter.id, {
+      shape: withShapeKey(waiter.shape, "needs_merge", rest.length ? rest : undefined),
+    });
+    const target = this.writer.store.get(next.toId);
+    const blocker = this.writer.store.get(next.fromId);
+    if (!target || !blocker || named(target, blocker.id).length > 0) return;
+    this.writer.patch(target.id, {
+      shape: withShapeKey(target.shape, "needs_merge", [
+        ...(target.shape?.needs_merge ?? []),
+        keyOrId(blocker),
+      ]),
+    });
   }
 
   insertLink(

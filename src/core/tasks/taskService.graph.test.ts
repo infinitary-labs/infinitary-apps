@@ -176,7 +176,7 @@ describe("the task graph (task-system P2)", () => {
       expect(tasks.graph.approvedBase(later)).toBeUndefined();
 
       approve(tasks, first.id);
-      // Only the marked link opens; an unmarked one still waits for the merge.
+      // Only the batched wait opens; one outside batched pull requests still waits for the merge.
       expect(tasks.graph.listReady().map((r) => r.id)).toEqual(["later"]);
       expect(tasks.graph.approvedBase(tasks.get("later")!)).toMatchObject({
         task: { id: "first" },
@@ -327,6 +327,41 @@ describe("the task graph (task-system P2)", () => {
       approve(tasks, second.id);
       expect(tasks.graph.listReady().map((r) => r.id)).toEqual([]);
       expect(tasks.graph.waitingOn("third").map((r) => r.id)).toEqual(["first"]);
+    });
+
+    // The independent review's finding: a merge wait the filer declared moves with its wait,
+    // whichever side of it is replaced or carried on, so the move never starts it at an approval.
+    it("keeps a declared merge wait when the wait moves to a replacement or a carrier", () => {
+      const { tasks, work } = setup();
+      const shape = { ...BATCHED, kind: "implement" } as const;
+      const old = work("old", { startPolicy: "on-request", shape });
+      const fresh = work("fresh", { startPolicy: "on-request", shape });
+      const release = work("release", {
+        blockedBy: ["old"],
+        shape: { ...shape, needs_merge: [old.key] },
+      });
+      const replace = (from: string, to: string) =>
+        tasks.dropWithChildren(from, { reason: "moved", actor: "firstmate", replacedBy: to });
+      replace(old.id, fresh.id);
+      expect(tasks.graph.blockers(release.id).map((r) => r.id)).toEqual([fresh.id]);
+      expect(tasks.get(release.id)?.shape?.needs_merge).toEqual([fresh.key]);
+      approve(tasks, fresh.id);
+      expect(tasks.graph.listReady().map((r) => r.id)).toEqual([]);
+      expect(tasks.graph.waitingOn(release.id).map((r) => r.id)).toEqual([fresh.id]);
+
+      // The waiter itself replaced: its successor keeps the merge wait.
+      const next = work("next", { startPolicy: "on-request", shape });
+      replace(release.id, next.id);
+      expect(tasks.get(next.id)?.shape?.needs_merge).toEqual([fresh.key]);
+      expect(tasks.get(release.id)?.shape?.needs_merge).toBeUndefined();
+
+      // A shipped slice's carrier takes the wait on, and the merge wait with it.
+      const carrier = work("carrier", { startPolicy: "on-request", shape });
+      expect(tasks.graph.carryWait(fresh.id, next.id, carrier.id, "host", 1)).toBe(true);
+      expect(tasks.get(next.id)?.shape?.needs_merge).toEqual([carrier.key]);
+      approve(tasks, carrier.id);
+      tasks.updateFields(next.id, { startPolicy: "when-ready" }, "firstmate");
+      expect(tasks.graph.listReady().map((r) => r.id)).toEqual([]);
     });
 
     it("keeps waiting while another prerequisite is unfinished", () => {

@@ -155,7 +155,7 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
             process.execPath,
             [
               "-e",
-              "fetch(process.argv[1]).then((r) => console.log(r.status), (e) => console.log(String(e.cause ?? e)))",
+              "fetch(process.argv[1]).then((r) => console.log(String(r.status)), (e) => console.log(String(e.cause ?? e)))",
               publicBuildsUrl,
             ],
             {

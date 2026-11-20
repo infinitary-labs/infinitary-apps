@@ -42,6 +42,7 @@ The empty first mate this window started stops, as a pasted link's join stops it
 A computer whose own first mate has a subscription, a connection, a project or a turn stays as it is, and the wait line says instead "Something is already set up here, so this window keeps its own first mate once your first mate's computer adds this one.
 Then join it with Paste its link or Join by its address."
 A window beside a first mate started by hand with a command stays beside it; only one its own run agent started follows along.
+There Paste its link and Join by its address are drawn disabled, out of the Tab order, with one `fm-join-sub` line under the chips saying to stop that first mate first.
 
 **Paste.**
 The chip opens the stage's sign-in aside (framed `--line-1`, `--radius-m`, `--bg-1`, 560px): "Paste the link from Infinitary on your other computer" at `--text-base --fg-1` weight 500, then the `--text-sm --fg-2` line "You make it there, in Settings → Devices, or by asking your first mate."

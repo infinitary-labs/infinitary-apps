@@ -339,16 +339,23 @@ export async function removeRunTask(
  */
 export const RUN_STOP_FILE = "run-stop.json";
 
+/** One run on a data folder: its process and the start its own note keeps, so a reused process number is another run. */
+export type RunInstance = { pid: number; startedAt: string };
+
 /**
- * Asks the run on this data folder to stop cleanly; with `pid`, only the run
- * that process is, so another run there leaves it alone. False where the
- * request could not be written.
+ * Asks the run on this data folder to stop cleanly; with `run`, only that
+ * run, so another there, a process number reused included, leaves it alone.
+ * False where the request could not be written.
  */
-export function requestRunStop(dataDir: string, now: Date = new Date(), pid?: number): boolean {
+export function requestRunStop(
+  dataDir: string,
+  now: Date = new Date(),
+  run?: RunInstance,
+): boolean {
   try {
     writePrivate(
       join(dataDir, RUN_STOP_FILE),
-      `${JSON.stringify({ at: now.toISOString(), ...(pid === undefined ? {} : { pid }) })}\n`,
+      `${JSON.stringify({ at: now.toISOString(), ...(run ? { pid: run.pid, startedAt: run.startedAt } : {}) })}\n`,
     );
     return true;
   } catch {
@@ -362,28 +369,32 @@ export const RUN_STOP_READ_MS = 1_000;
 /**
  * A run on Windows reads whether a stop was asked of it once a second and
  * stops once one written after its own start is there; a request left from
- * before it started is taken away, as is one naming another process than
- * `pid`, the run's own. Answers what ends the reading.
+ * before it started is taken away, as is one naming another run than `run`,
+ * this one, and one that is not a request at all. A request naming no run
+ * is for whichever runs here. Answers what ends the reading.
  */
 export function watchRunStop(
   dataDir: string,
   startedAt: Date,
   stop: () => void,
   every: number = RUN_STOP_READ_MS,
-  pid?: number,
+  run?: RunInstance,
 ): () => void {
   const file = join(dataDir, RUN_STOP_FILE);
   const asked = (): boolean => {
-    let request: { at?: string; pid?: unknown };
+    let request: unknown;
     try {
-      request = JSON.parse(readFileSync(file, "utf8")) as { at?: string; pid?: unknown };
+      request = JSON.parse(readFileSync(file, "utf8"));
     } catch {
       return false;
     }
     rmSync(file, { force: true });
-    const at = Date.parse(request.at ?? "");
-    const forThis = request.pid === undefined || pid === undefined || request.pid === pid;
-    return forThis && Number.isFinite(at) && at >= startedAt.getTime();
+    if (typeof request !== "object" || request === null) return false;
+    const { at, pid, startedAt: started } = request as Record<string, unknown>;
+    const when = typeof at === "string" ? Date.parse(at) : Number.NaN;
+    const named = pid !== undefined || started !== undefined;
+    const forThis = !named || !run || (pid === run.pid && started === run.startedAt);
+    return forThis && Number.isFinite(when) && when >= startedAt.getTime();
   };
   if (asked()) {
     stop();

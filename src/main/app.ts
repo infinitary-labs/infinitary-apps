@@ -1,4 +1,3 @@
-import { statSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { homedir, hostname, tmpdir, userInfo } from "node:os";
 import { basename, join } from "node:path";
@@ -644,12 +643,13 @@ export async function startApp(
   // Start it here. A Mac's login agent `start-at-boot` writes is the window's
   // own, so the window starts the run with it as it does on Linux.
   const joinedHere = new JoinedHome(join(dataDir, "joined"));
-  // A grant an address add left in the work folder opens this window as a
-  // view, except while the command this app's own agent started still runs
-  // its empty first mate: the window keeps that agent as its starter, so it
-  // opens beside the command and follows along, stopping it. A command the
-  // person started by hand keeps running, with no starter beside it
-  // (docs/view.md, "Following along").
+  // A grant an address add left in the work folder keeps the window's
+  // starter: with no command running it starts one as ever, and beside the
+  // command this app's own agent started it keeps that agent, so the window
+  // opens beside the command and follows along, stopping it only where
+  // nothing was done here. A home that keeps its own first mate goes on
+  // running it in the background. A command the person started by hand
+  // keeps running, with no starter beside it (docs/view.md, "Following along").
   const starter =
     windowless ||
     move ||
@@ -825,7 +825,7 @@ export async function startApp(
             stopRun();
           },
           undefined,
-          process.pid,
+          { pid: process.pid, startedAt: runStartedAt.toISOString() },
         );
       // The last line once the core stopped, then the process ends with its code.
       let ended = false;
@@ -1138,14 +1138,6 @@ export async function startApp(
         keyReminders: () => keyReminders,
         keySystem: desktop.keys,
         joined: new JoinedHome(join(dataDir, "joined")),
-        // Its own first mate's database: a record started here (src/core/services.ts).
-        recordHere: () => {
-          try {
-            return statSync(join(dataDir, "firstmate.db"), { throwIfNoEntry: false }) !== undefined;
-          } catch {
-            return true;
-          }
-        },
         // Beside a run: its local door, its pictures, and this window's own look.
         ...(besideRun
           ? {

@@ -10,6 +10,7 @@ import {
   keepsStarterBesideGrant,
   lockHolder,
   markRunning,
+  type OwnedRun,
   ownedRun,
   programIdentity,
   runCommand,
@@ -104,7 +105,7 @@ describe("a window opened beside a run", () => {
   it("stops the command that runs the folder, and signals nothing when none does", () => {
     const dataDir = scratchDir("infinitary-run-marker-");
     const signalled: number[] = [];
-    const signal = (pid: number) => void signalled.push(pid);
+    const signal = (run: OwnedRun) => void signalled.push(run.pid);
     expect(stopRunningCommand(dataDir, () => true, signal)).toBe(false);
     markRunning(dataDir, 4242, new Date("2026-10-25T17:00:00Z"));
     symlinkSync(`${hostname()}-4242`, join(dataDir, "SingletonLock"));
@@ -142,6 +143,10 @@ describe("a window opened beside a run", () => {
     expect(keepsStarterBesideGrant(runs(byHand), true, alive)).toBe(false);
     // With no grant waiting, the window keeps its starter as it always has.
     expect(keepsStarterBesideGrant(runs(byHand), false, alive)).toBe(true);
+    // The review of INF-5409: with no command running, a grant waiting leaves the starter too,
+    // so a home that keeps its own first mate still starts it in the background.
+    expect(keepsStarterBesideGrant(runs(byHand), true, () => false)).toBe(true);
+    expect(keepsStarterBesideGrant(scratchDir("infinitary-run-none-"), true, alive)).toBe(true);
   });
 
   // The review of INF-5409: joining and following along stop only the run this window's starter
@@ -167,7 +172,7 @@ describe("a window opened beside a run", () => {
     expect(ownedRun(dataDir, alive)).toBeNull();
     // A stop for the run it followed along from signals nothing to the one that replaced it.
     const signalled: number[] = [];
-    const signal = (pid: number) => void signalled.push(pid);
+    const signal = (run: OwnedRun) => void signalled.push(run.pid);
     expect(stopRunningCommand(dataDir, alive, signal, owned ?? undefined)).toBe(false);
     // Nor to one by hand that came back with the same process number.
     running.add(4242);

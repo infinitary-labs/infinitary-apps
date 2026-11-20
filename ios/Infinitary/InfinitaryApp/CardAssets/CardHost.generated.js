@@ -28736,6 +28736,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${here} shows your first mate. Its cards, tasks and conversation stay on that ${computer}.`;
   }
+  function devicesJoinStaysBeside() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يعمل هنا نائب قبطان بدأ تشغيله خارج هذه النافذة. أوقفه أولًا للانضمام إلى حاسوب آخر من هذه النافذة.`;
+      case "de":
+        return `Hier läuft ein erster Offizier, der außerhalb dieses Fensters gestartet wurde. Beende ihn zuerst, um von diesem Fenster aus einem anderen Computer beizutreten.`;
+      case "es":
+        return `Aquí se ejecuta un primer oficial iniciado fuera de esta ventana. Detenlo primero para unirte a otra computadora desde esta ventana.`;
+      case "fr":
+        return `Un second démarré hors de cette fenêtre fonctionne ici. Arrêtez-le d’abord pour rejoindre un autre ordinateur depuis cette fenêtre.`;
+      case "ja":
+        return `このウインドウの外で起動した一等航海士がここで動いています。このウインドウから別のコンピューターに参加するには、先にそれを停止してください。`;
+      case "ko":
+        return `이 창 밖에서 시작한 일등항해사가 여기서 실행 중이에요. 이 창에서 다른 컴퓨터에 참여하려면 먼저 그것을 중지하세요.`;
+      case "pt-BR":
+        return `Um imediato iniciado fora desta janela está rodando aqui. Pare-o primeiro para entrar em outro computador a partir desta janela.`;
+      case "zh-Hans":
+        return `这里运行着一个在此窗口之外启动的大副。要从此窗口加入另一台电脑，请先停止它。`;
+      case "zh-Hant":
+        return `這裡執行著一個在此視窗之外啟動的大副。要從此視窗加入另一台電腦，請先停止它。`;
+      case "en-XA":
+        return `[Å ƒîŕšţ ɱáţé šţáŕţéð öûţšîðé ţĥîš ŵîñðöŵ ŕûñš ĥéŕé. Šţöþ îţ ƒîŕšţ ţö ĵöîñ áñöţĥéŕ çöɱþûţéŕ ƒŕöɱ ţĥîš ŵîñðöŵ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A first mate started outside this window runs here. Stop it first to join another computer from this window.‬`;
+    }
+    return `A first mate started outside this window runs here. Stop it first to join another computer from this window.`;
+  }
   function devicesJoinTryAgain() {
     switch (currentLanguage()) {
       case "ar":
@@ -94950,6 +94977,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     devicesJoinSetUpUnread,
     devicesJoinSetUpWaiting,
     devicesJoinShows,
+    devicesJoinStaysBeside,
     devicesJoinTryAgain,
     devicesJoinYourAccount,
     devicesNearbyPort,
@@ -97995,6 +98023,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "devicesJoinSetUpUnread": [],
     "devicesJoinSetUpWaiting": [],
     "devicesJoinShows": ["computer", "here"],
+    "devicesJoinStaysBeside": [],
     "devicesJoinTryAgain": [],
     "devicesJoinYourAccount": [],
     "devicesNearbyPort": [],

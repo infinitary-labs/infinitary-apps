@@ -261,8 +261,9 @@ export function runningByCommand(
 /**
  * Whether a window reopened on this folder keeps its starter while a grant
  * waits in the work folder (docs/view.md, "Following along"): with no grant
- * it always does, and with one only while the command running here is the
- * one this app's own agent started, so following along stops that command
+ * or no command running it always does, so a home that keeps its own first
+ * mate still runs it in the background; beside a running command, only when
+ * this app's own agent started it, so following along stops that command
  * and never one the person started by hand.
  */
 export function keepsStarterBesideGrant(
@@ -270,7 +271,7 @@ export function keepsStarterBesideGrant(
   grant: boolean,
   alive: (pid: number) => boolean = processAlive,
 ): boolean {
-  return !grant || runByOwnAgent(dataDir, alive);
+  return !grant || !runningByCommand(dataDir, alive) || runByOwnAgent(dataDir, alive);
 }
 
 /** Whether the command running on this folder now says this app's own agent started it. */
@@ -319,14 +320,14 @@ export function ownedRun(
 export function stopRunningCommand(
   dataDir: string,
   alive: (pid: number) => boolean = processAlive,
-  signal: (pid: number) => void = hostPlatform() === "win32"
-    ? (pid) => {
+  signal: (run: OwnedRun) => void = hostPlatform() === "win32"
+    ? (run) => {
         // Windows ends a signalled program at once, so the run is asked
-        // through its folder, by its process, which another run there ignores.
-        if (!requestRunStop(dataDir, new Date(), pid))
+        // through its folder, by its process and start, which another run there ignores.
+        if (!requestRunStop(dataDir, new Date(), run))
           throw new Error("The stop could not be asked.");
       }
-    : (pid) => process.kill(pid, "SIGTERM"),
+    : (run) => process.kill(run.pid, "SIGTERM"),
   /** Stops only this run: another the folder's note names now is left running. */
   only?: OwnedRun,
 ): boolean {
@@ -338,9 +339,8 @@ export function stopRunningCommand(
     return false;
   }
   if (only !== undefined && !sameRun(only, marker)) return false;
-  const { pid } = marker;
   try {
-    signal(pid);
+    signal({ pid: marker.pid, startedAt: marker.startedAt });
     return true;
   } catch {
     return false;

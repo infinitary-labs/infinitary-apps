@@ -11,7 +11,7 @@ import {
   startRunAgent,
   stopRunAgent,
 } from "@core/helper/runAgent";
-import { windowsAccount } from "@core/helper/windowsTask";
+import { type RunInstance, windowsAccount } from "@core/helper/windowsTask";
 import { hostPlatform } from "@core/platform";
 import { runLabelOf } from "@shared/codeNames";
 import { settingFrom } from "@shared/envSettings";
@@ -38,7 +38,7 @@ export type CommandStarter = {
    * again, with `force` a run that does not answer is ended rather than asked,
    * and with `run` a stop asked through the folder is for that process alone.
    */
-  stop: (options: { forget: boolean; force?: EndedRun; run?: number }) => Promise<void>;
+  stop: (options: { forget: boolean; force?: EndedRun; run?: RunInstance }) => Promise<void>;
   /**
    * Restart it: ends the run, the process its record names, by force and
    * starts it again; false where it could not start again.

@@ -804,6 +804,7 @@
 "devicesJoinSetUpUnread" = "Die Adresse dieses Computers wurde noch nicht gefunden. Prüfe, ob er mit einem Netzwerk verbunden ist; Infinitary sucht gleich erneut.";
 "devicesJoinSetUpWaiting" = "Warte darauf, dass der Computer deines ersten Offiziers diesen hinzufügt. Dieses Fenster öffnet dann von selbst deinen ersten Offizier.";
 "devicesJoinShows" = "%2$@ zeigt deinen ersten Offizier. Seine Karten, Aufgaben und Unterhaltung bleiben auf diesem %1$@.";
+"devicesJoinStaysBeside" = "Hier läuft ein erster Offizier, der außerhalb dieses Fensters gestartet wurde. Beende ihn zuerst, um von diesem Fenster aus einem anderen Computer beizutreten.";
 "devicesJoinTryAgain" = "Erneut versuchen";
 "devicesJoinYourAccount" = "Dein Konto";
 "devicesNearbyPort" = "Port";

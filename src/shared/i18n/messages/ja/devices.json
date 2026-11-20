@@ -65,6 +65,7 @@
   "devicesJoinSetUpUnread": "このコンピューターのアドレスがまだ見つかりません。ネットワークにつながっているか確認してください。Infinitary はすぐにもう一度探します。",
   "devicesJoinSetUpWaiting": "一等航海士のコンピューターがこのコンピューターを追加するのを待っています。その後、このウインドウが自動で一等航海士を開きます。",
   "devicesJoinShows": "{here} に一等航海士が表示されます。カード、タスク、会話はその {computer} に残ります。",
+  "devicesJoinStaysBeside": "このウインドウの外で起動した一等航海士がここで動いています。このウインドウから別のコンピューターに参加するには、先にそれを停止してください。",
   "devicesJoinTryAgain": "もう一度試す",
   "devicesJoinYourAccount": "アカウント",
   "devicesNearbyPort": "ポート",

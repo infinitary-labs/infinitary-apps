@@ -502,7 +502,7 @@ export class BesideWindow {
   async leave(only?: OwnedRun): Promise<void> {
     this.close();
     await this.options.beside.starter
-      ?.stop({ forget: true, ...(only ? { run: only.pid } : {}) })
+      ?.stop({ forget: true, ...(only ? { run: only } : {}) })
       .catch((error: unknown) => {
         console.warn(`[shell] could not let the command's starter go: ${(error as Error).message}`);
       });

@@ -67,6 +67,7 @@
   "devicesJoinSetUpUnread": "Ainda não foi possível encontrar o endereço deste computador. Verifique se ele está em uma rede; o Infinitary procura de novo em instantes.",
   "devicesJoinSetUpWaiting": "Esperando o computador do seu imediato adicionar este. Depois, esta janela abre o seu imediato sozinha.",
   "devicesJoinShows": "{here} mostra o seu imediato. Os cartões, as tarefas e a conversa dele ficam naquele {computer}.",
+  "devicesJoinStaysBeside": "Um imediato iniciado fora desta janela está rodando aqui. Pare-o primeiro para entrar em outro computador a partir desta janela.",
   "devicesJoinTryAgain": "Tentar de novo",
   "devicesJoinYourAccount": "Sua conta",
   "devicesNearbyPort": "Porta",

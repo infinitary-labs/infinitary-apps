@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -130,19 +130,58 @@ describe("a stop asked of the run on Windows", () => {
   });
 
   // The review of INF-5409: a window that joined or followed along asks its own run to stop by its
-  // process, and a run started by hand in its place reads that request as another's.
-  it("leaves a run alone for a request naming another process, and takes that request away", async () => {
+  // process and start, and a run started by hand in its place, a reused process number included,
+  // reads that request as another's.
+  it("leaves a run alone for a request naming another run, and takes that request away", async () => {
     const dataDir = scratchDir("windows-stop-");
+    const own = { pid: 5151, startedAt: "2026-10-25T17:05:00.000Z" };
     let stops = 0;
-    const end = watchRunStop(dataDir, new Date(Date.now() - 1_000), () => (stops += 1), 10, 5151);
+    const end = watchRunStop(dataDir, new Date(Date.now() - 1_000), () => (stops += 1), 10, own);
     try {
-      expect(requestRunStop(dataDir, new Date(), 4242)).toBe(true);
-      await expect.poll(() => existsSync(join(dataDir, RUN_STOP_FILE))).toBe(false);
-      expect(stops).toBe(0);
-      requestRunStop(dataDir, new Date(), 5151);
+      for (const other of [
+        { pid: 4242, startedAt: own.startedAt },
+        { pid: own.pid, startedAt: "2026-10-25T17:00:00.000Z" },
+      ]) {
+        expect(requestRunStop(dataDir, new Date(), other)).toBe(true);
+        await expect.poll(() => existsSync(join(dataDir, RUN_STOP_FILE))).toBe(false);
+        expect(stops).toBe(0);
+      }
+      requestRunStop(dataDir, new Date(), own);
       await expect.poll(() => stops).toBe(1);
     } finally {
       end();
+    }
+  });
+
+  // The review of INF-5409: Stop and older callers name no run, and whichever runs here stops.
+  it("stops for a request naming no run", async () => {
+    const dataDir = scratchDir("windows-stop-");
+    let stops = 0;
+    const own = { pid: 5151, startedAt: "2026-10-25T17:05:00.000Z" };
+    const end = watchRunStop(dataDir, new Date(Date.now() - 1_000), () => (stops += 1), 10, own);
+    try {
+      requestRunStop(dataDir);
+      await expect.poll(() => stops).toBe(1);
+    } finally {
+      end();
+    }
+  });
+
+  // The review of INF-5409: a stop file that holds no request, such as JSON null, is no stop, and
+  // reading it as a run starts throws nothing.
+  it("reads a stop file that holds no request as no stop", async () => {
+    const dataDir = scratchDir("windows-stop-");
+    for (const content of ["null", "42", '"stop"']) {
+      writeFileSync(join(dataDir, RUN_STOP_FILE), content);
+      let stops = 0;
+      const end = watchRunStop(dataDir, new Date(Date.now() - 1_000), () => (stops += 1), 10);
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        expect(stops).toBe(0);
+        expect(existsSync(join(dataDir, RUN_STOP_FILE))).toBe(false);
+      } finally {
+        end();
+      }
     }
   });
 

@@ -804,6 +804,7 @@
 "devicesJoinSetUpUnread" = "还找不到这台电脑的地址。请检查它是否已连接网络；Infinitary 稍后会再找一次。";
 "devicesJoinSetUpWaiting" = "正在等待你大副的电脑添加这台电脑。之后这个窗口会自己打开你的大副。";
 "devicesJoinShows" = "%2$@ 会显示你的大副。它的卡片、任务和对话都留在那台 %1$@ 上。";
+"devicesJoinStaysBeside" = "这里运行着一个在此窗口之外启动的大副。要从此窗口加入另一台电脑，请先停止它。";
 "devicesJoinTryAgain" = "重试";
 "devicesJoinYourAccount" = "你的账户";
 "devicesNearbyPort" = "端口";

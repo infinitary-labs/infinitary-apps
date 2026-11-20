@@ -205,7 +205,6 @@ describe("the window beside a command's first mate", () => {
     };
     const made = new Shell({
       joined: new JoinedHome(join(scratchDir("infinitary-shell-beside-"), "joined"), () => {}),
-      recordHere: () => false,
       openPage,
       beside: {
         door: doorDir,
@@ -1129,9 +1128,27 @@ describe("the window beside a command's first mate", () => {
     await expect(at.shell.join(await pro.link())).resolves.toEqual({ ok: true });
     await expect.poll(() => at.shell.thisMac().role).toBe("view");
     // The review of INF-5409: it stops the run its agent started, by that run's process.
-    expect(at.starter.stop.mock.calls).toEqual([[{ forget: true, run: OWNED.pid }]]);
+    expect(at.starter.stop.mock.calls).toEqual([[{ forget: true, run: OWNED }]]);
     expect(at.starter.stopped).toEqual([OWNED]);
     expect(at.startCore).not.toHaveBeenCalled();
+  });
+
+  // The review of INF-5409: joining reads the owned run once, so a command that ends between the
+  // check and the stop leaves a stop for that run alone, never one for whatever runs there next.
+  it("stops only the run it read as its own, even when that run ends as it joins", async () => {
+    const pro = await otherMac();
+    const command = commandRun();
+    await command.open().settled();
+    const reads = [OWNED];
+    const at = besideShell(command.doorDir, {
+      starts: true,
+      ownedRun: () => reads.shift() ?? null,
+    });
+    await at.start();
+    await expect(at.shell.join(await pro.link())).resolves.toEqual({ ok: true });
+    await expect.poll(() => at.shell.thisMac().role).toBe("view");
+    expect(at.starter.stop.mock.calls).toEqual([[{ forget: true, run: OWNED }]]);
+    expect(at.starter.stopped).toEqual([OWNED]);
   });
 
   // INF-1827 offers Join by its address at first launch, and an installed app's first launch
@@ -1157,7 +1174,7 @@ describe("the window beside a command's first mate", () => {
     ]);
     await expect(at.shell.joinHeld("join")).resolves.toEqual({ ok: true });
     await expect.poll(() => at.shell.thisMac().role).toBe("view");
-    expect(at.starter.stop.mock.calls).toEqual([[{ forget: true, run: OWNED.pid }]]);
+    expect(at.starter.stop.mock.calls).toEqual([[{ forget: true, run: OWNED }]]);
     expect(at.starter.stopped).toEqual([OWNED]);
     expect(at.startCore).not.toHaveBeenCalled();
   });
@@ -1183,7 +1200,7 @@ describe("the window beside a command's first mate", () => {
         expect(at.starter.stopped).toEqual([owned]);
         // Its agent's stop names that run too, so a stop asked through the folder (Windows) is
         // ignored by a run started by hand that took its place at the last moment.
-        expect(at.starter.stop.mock.calls).toEqual([[{ forget: true, run: owned.pid }]]);
+        expect(at.starter.stop.mock.calls).toEqual([[{ forget: true, run: owned }]]);
       } else {
         expect(at.shell.thisMac().role).not.toBe("view");
         expect(at.starter.stops).toBe(0);

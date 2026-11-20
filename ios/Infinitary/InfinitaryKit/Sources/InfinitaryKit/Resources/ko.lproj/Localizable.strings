@@ -804,6 +804,7 @@
 "devicesJoinSetUpUnread" = "이 컴퓨터의 주소를 아직 찾지 못했습니다. 네트워크에 연결되어 있는지 확인하세요. Infinitary가 잠시 후 다시 찾습니다.";
 "devicesJoinSetUpWaiting" = "일등항해사의 컴퓨터가 이 컴퓨터를 추가하기를 기다리고 있어요. 그다음 이 창이 알아서 일등항해사를 열어요.";
 "devicesJoinShows" = "%2$@에 일등항해사가 표시돼요. 일등항해사의 카드, 작업, 대화는 그 %1$@에 그대로 있어요.";
+"devicesJoinStaysBeside" = "이 창 밖에서 시작한 일등항해사가 여기서 실행 중이에요. 이 창에서 다른 컴퓨터에 참여하려면 먼저 그것을 중지하세요.";
 "devicesJoinTryAgain" = "다시 시도";
 "devicesJoinYourAccount" = "내 계정";
 "devicesNearbyPort" = "포트";

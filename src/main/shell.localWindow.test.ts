@@ -39,7 +39,6 @@ describe("the window on the first mate's own computer", () => {
     let connection: HomeConnection | null = null;
     const made = new Shell({
       joined: new JoinedHome(join(scratchDir("infinitary-shell-door-"), "joined"), () => {}),
-      recordHere: () => false,
       startCore: async () => own.core,
       startConnection: (core) => {
         connection = startConnection({

@@ -67,6 +67,7 @@
   "devicesJoinSetUpUnread": "Todavía no se encontró la dirección de esta computadora. Comprueba que esté conectada a una red; Infinitary vuelve a buscar en un momento.",
   "devicesJoinSetUpWaiting": "Esperando a que la computadora de tu primer oficial agregue esta. Después, esta ventana abre a tu primer oficial por sí sola.",
   "devicesJoinShows": "{here} muestra a tu primer oficial. Sus tarjetas, tareas y conversación se quedan en esa {computer}.",
+  "devicesJoinStaysBeside": "Aquí se ejecuta un primer oficial iniciado fuera de esta ventana. Detenlo primero para unirte a otra computadora desde esta ventana.",
   "devicesJoinTryAgain": "Volver a intentarlo",
   "devicesJoinYourAccount": "Tu cuenta",
   "devicesNearbyPort": "Puerto",

@@ -16,6 +16,7 @@ import {
 import { linuxStartup } from "./linuxStartup";
 import { processAlive, STOPPED_RUN_WAIT_MS } from "./lock";
 import {
+  type RunInstance,
   readRunTask,
   registerRunTask,
   removeRunTask,
@@ -286,11 +287,11 @@ export function forgetRunAgentFiles(
  * mate itself after all, so the agent never starts the run beside it, and,
  * with `forget`, for a window that joined a first mate on another computer,
  * so no login starts a run here again. With `run`, a stop asked through the
- * folder is for that process alone, so a run started by hand there stays.
+ * folder is for that run alone, so a run started by hand there stays.
  */
 export async function stopRunAgent(
   context: RunAgentContext,
-  options: { forget: boolean; force?: EndedRun; run?: number },
+  options: { forget: boolean; force?: EndedRun; run?: RunInstance },
 ): Promise<void> {
   if ("schtasks" in context) {
     // Task Scheduler's own end of a task ends its program with no clean stop,

@@ -367,12 +367,16 @@ describe("the command the window starts, on Windows", () => {
     expect(asked).toEqual([]);
     expect(existsSync(join(context.dataDir, RUN_STOP_FILE))).toBe(true);
     expect(runAgentInPlace(context)).toBe(true);
-    await stopRunAgent(context, { forget: true, run: 4242 });
+    await stopRunAgent(context, {
+      forget: true,
+      run: { pid: 4242, startedAt: "2026-10-25T17:00:00.000Z" },
+    });
     expect(asked).toEqual([["/Delete", "/TN", LABEL, "/F"]]);
     expect(runAgentInPlace(context)).toBe(false);
-    // The review of INF-5409: a window that joined asks only its own run, by its process.
+    // The review of INF-5409: a window that joined asks only its own run, by its process and start.
     expect(JSON.parse(readFileSync(join(context.dataDir, RUN_STOP_FILE), "utf8"))).toMatchObject({
       pid: 4242,
+      startedAt: "2026-10-25T17:00:00.000Z",
     });
   });
 

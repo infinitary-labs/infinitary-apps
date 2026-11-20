@@ -66,6 +66,7 @@
   "devicesJoinSetUpUnread": "Could not find this computer’s address yet. Check that it is on a network; Infinitary looks again in a moment.",
   "devicesJoinSetUpWaiting": "Waiting for your first mate’s computer to add this one. This window then opens your first mate by itself.",
   "devicesJoinShows": "{here} shows your first mate. Its cards, tasks and conversation stay on that {computer}.",
+  "devicesJoinStaysBeside": "A first mate started outside this window runs here. Stop it first to join another computer from this window.",
   "devicesJoinTryAgain": "Try again",
   "devicesJoinYourAccount": "Your account",
   "devicesNearbyPort": "Port",

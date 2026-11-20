@@ -884,6 +884,7 @@
   {"said":{"m":"devicesJoinSetUpUnread"},"words":"Could not find this computer’s address yet. Check that it is on a network; Infinitary looks again in a moment."},
   {"said":{"m":"devicesJoinSetUpWaiting"},"words":"Waiting for your first mate’s computer to add this one. This window then opens your first mate by itself."},
   {"said":{"m":"devicesJoinShows","a":{"computer":"‹computer›","here":"‹here›"}},"words":"‹here› shows your first mate. Its cards, tasks and conversation stay on that ‹computer›."},
+  {"said":{"m":"devicesJoinStaysBeside"},"words":"A first mate started outside this window runs here. Stop it first to join another computer from this window."},
   {"said":{"m":"devicesJoinTryAgain"},"words":"Try again"},
   {"said":{"m":"devicesJoinYourAccount"},"words":"Your account"},
   {"said":{"m":"devicesNearbyPort"},"words":"Port"},

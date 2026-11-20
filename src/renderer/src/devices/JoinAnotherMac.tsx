@@ -452,6 +452,8 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
   if (step.step === "closed") {
     // Only a computer its first mate's computer can add by its address offers it, first.
     const setUp = Boolean(props.setUpOffered);
+    // Beside a first mate started outside this window, joining would stop it: neither join works.
+    const joins = props.afterAdd !== "stays";
     return (
       <div className="fm-join-group" data-join-another-mac="closed">
         <div className="fm-join-row" data-join-chips-alone={setUp ? "" : undefined}>
@@ -472,6 +474,7 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
               type="button"
               className="fm-connect-chip"
               data-join-chip=""
+              disabled={!joins}
               onClick={props.onOpen}
             >
               {plusIcon}
@@ -481,6 +484,7 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
               type="button"
               className="fm-connect-chip"
               data-join-address-chip=""
+              disabled={!joins}
               onClick={props.onOpenAddress}
             >
               {plusIcon}
@@ -488,6 +492,11 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
             </button>
           </div>
         </div>
+        {!joins && (
+          <p className="fm-join-sub" data-join-stays="">
+            {m.devicesJoinStaysBeside()}
+          </p>
+        )}
         {props.note}
       </div>
     );

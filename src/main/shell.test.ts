@@ -57,8 +57,6 @@ stopEachTest();
 function shell(
   joinedDir = join(scratchDir("infinitary-shell-"), "joined"),
   work?: ShellOptions["work"],
-  /** Whether this computer's own first mate keeps a record here: none, as on a fresh computer. */
-  recordHere: ShellOptions["recordHere"] = () => false,
 ) {
   const own = ownCore();
   // This Mac's Notification Center, and whether its window is in front.
@@ -98,7 +96,6 @@ function shell(
   );
   const made = new Shell({
     joined,
-    recordHere,
     ...(work ? { work } : {}),
     startCore,
     startConnection: startConnectionSpy,
@@ -964,8 +961,15 @@ describe("a Mac that controls another and runs its work", () => {
     new JoinedHome(dataDir).join(grant, Date.UTC(2026, 9, 3, 14, 6));
     const joinedDir = join(scratchDir("infinitary-shell-"), "joined");
     const mini = shell(joinedDir, { dataDir });
+    // Its own first mate reads, at its first launch, that nothing was done here.
+    mini.own.dispatch.mockImplementation((async (channel: string) =>
+      channel === "inf:app:first-run"
+        ? { gateOpen: true, firstTurnAt: null, untouched: true }
+        : { ownCore: channel }) as never);
     await mini.shell.start();
-    expect(mini.startCore).not.toHaveBeenCalled();
+    // Startup finished the switch: the empty first mate it asked stopped, and the window is a view.
+    expect(mini.own.dispose).toHaveBeenCalledTimes(1);
+    expect(mini.shell.thisMac().role).toBe("view");
     await mini.until(() => mini.view().contact === "in-reach");
     expect(mini.view()).toMatchObject({ name: "MacBook Pro", runsWork: true });
     expect({ ...mini.joined.read()?.grant, also: undefined }).toEqual(grant);
@@ -1073,11 +1077,14 @@ describe("a Mac that controls another and runs its work", () => {
     expect(mini.own.dispose).toHaveBeenCalledTimes(1);
     expect(mini.restartWindows).toHaveBeenCalled();
     expect(mini.relaunch).not.toHaveBeenCalled();
-    // A computer that was not open when the home added it opens as that home's view at once.
+    // A computer that was not open when the home added it opens as that home's view once its
+    // own first mate says nothing was done here, before its startup ends.
     const fresh = shell(undefined, { dataDir });
+    fresh.own.dispatch.mockImplementation((async (channel: string) =>
+      channel === "inf:app:first-run" ? firstRun : { ownCore: channel }) as never);
     await fresh.shell.start();
-    await fresh.until(() => fresh.shell.thisMac().role === "view");
-    expect(fresh.startCore).not.toHaveBeenCalled();
+    expect(fresh.shell.thisMac().role).toBe("view");
+    expect(fresh.own.dispose).toHaveBeenCalledTimes(1);
   });
 
   it("does not follow along once something was done here, after a restart too", async () => {
@@ -1133,7 +1140,7 @@ describe("a Mac that controls another and runs its work", () => {
       mkdirSync(joinedDir, { recursive: true });
       writeFileSync(join(joinedDir, "kept-own.json"), "{broken");
       // Its own first mate keeps a record here already: something may have been done.
-      const mini = shell(joinedDir, { dataDir }, () => true);
+      const mini = shell(joinedDir, { dataDir });
       mini.own.dispatch.mockImplementation((async (channel: string) =>
         channel === "inf:app:first-run"
           ? { gateOpen: true, firstTurnAt: null, ...(untouched ? { untouched: true } : {}) }
@@ -1152,7 +1159,7 @@ describe("a Mac that controls another and runs its work", () => {
         expect(mini.joined.read()).toBeNull();
         expect(mini.own.dispose).not.toHaveBeenCalled();
         await mini.shell.dispose();
-        const again = shell(joinedDir, { dataDir }, () => true);
+        const again = shell(joinedDir, { dataDir });
         await again.shell.start();
         expect(again.shell.thisMac().role).toBe("home");
         expect(

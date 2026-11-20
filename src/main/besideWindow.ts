@@ -424,10 +424,7 @@ export class BesideWindow {
   async replacing(): Promise<void> {
     if (!this.options.beside.installsUpdates || !this.window.inReach()) return;
     await this.window.dispatch("inf:update:hold", ["replaced"]);
-    // An agent its service manager would not let go is said, and the update goes on as ever.
-    await this.options.beside.starter?.stop({ forget: false }).catch((error: unknown) => {
-      console.warn(`[shell] could not let the command's starter go: ${(error as Error).message}`);
-    });
+    await this.options.beside.starter?.stop({ forget: false });
   }
 
   /** One core channel the window asked: the first mate's, but for what only this program holds. */

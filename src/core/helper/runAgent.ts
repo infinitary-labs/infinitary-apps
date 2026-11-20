@@ -288,9 +288,10 @@ export function forgetRunAgentFiles(
  * with `forget`, for a window that joined a first mate on another computer,
  * so no login starts a run here again. With `run`, a stop asked through the
  * folder is for that run alone, so a run started by hand there stays. On a
- * Mac or Linux the agent's job is ended whichever run it holds; a job the
- * service manager would not end, and still holds, rejects, so the caller
- * says so, while one already gone is let go quietly.
+ * Mac or Linux the agent's job is ended whichever run it holds. Letting it
+ * go for good (`forget`), a job the service manager would not end rejects,
+ * so the joining window says so, unless the service manager says it holds no
+ * such job, which is let go quietly; any other stop answers as it always has.
  */
 export async function stopRunAgent(
   context: RunAgentContext,
@@ -317,8 +318,13 @@ export async function stopRunAgent(
     const launchctl = launchctlOf(context);
     const service = `gui/${context.uid}/${context.label}`;
     const out = await launchctl(["bootout", service]);
-    // A job already gone is let go; one launchd still holds may start its run again.
-    if (!out.ok && (await launchctl(["print", service])).ok)
+    // Only a job launchd says it does not hold is let go quietly; one it still
+    // holds may start its run again, and one it cannot say about may too.
+    if (
+      options.forget &&
+      !out.ok &&
+      (await launchctl(["print", service])).code !== LAUNCHD_NO_SUCH_SERVICE
+    )
       throw new Error(`launchd did not stop the agent: ${out.output}`);
     return;
   }
@@ -329,9 +335,22 @@ export async function stopRunAgent(
     await systemctl(["daemon-reload"]);
   }
   const out = await systemctl(["stop", context.label]);
-  if (!out.ok && (await systemctl(["is-active", context.label])).ok)
+  if (
+    options.forget &&
+    !out.ok &&
+    !SYSTEMD_NOT_ACTIVE.has((await systemctl(["is-active", context.label])).code ?? -1)
+  )
     throw new Error(`systemd did not stop the agent: ${out.output}`);
 }
+
+/** launchctl's exit status for a service its domain does not hold (`launchctl print`). */
+const LAUNCHD_NO_SUCH_SERVICE = 113;
+/**
+ * `systemctl is-active`'s exit statuses for a unit that is not running: 3
+ * inactive or failed, 4 no such unit (systemctl(1), "Exit status"); any
+ * other, a refused or timed-out ask included, says nothing of the unit.
+ */
+const SYSTEMD_NOT_ACTIVE: ReadonlySet<number> = new Set([3, 4]);
 
 /**
  * Restart it, on the notice over a window whose command runs and does not

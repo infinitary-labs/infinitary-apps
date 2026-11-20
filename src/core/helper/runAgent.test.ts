@@ -47,7 +47,7 @@ const LAUNCHER = {
 const LABEL = "com.infinitary.app.dev.run";
 
 /** How the service manager answers a stop: refused while it still holds the job, or the job already gone. */
-type StopAnswer = "refused" | "gone";
+type StopAnswer = "refused" | "gone" | "unreadable";
 
 function mac(answers: { bootstrap?: boolean; session?: boolean; stop?: StopAnswer } = {}) {
   const asked: string[][] = [];
@@ -71,7 +71,11 @@ function mac(answers: { bootstrap?: boolean; session?: boolean; stop?: StopAnswe
         return {
           ok: false,
           output: `Could not find service "${LABEL}" in domain for user gui: 502`,
+          code: 113,
         };
+      // A launchctl that timed out, which answers nothing of the job.
+      if (args[0] === "print" && args[1] === `gui/502/${LABEL}` && answers.stop === "unreadable")
+        return { ok: false, output: "" };
       return { ok: true, output: "" };
     },
   };
@@ -99,7 +103,10 @@ function linux(answers: { session?: boolean; stop?: StopAnswer } = {}) {
       if (args[1] === "stop" && answers.stop)
         return { ok: false, output: `Failed to stop ${LABEL}.service: Access denied` };
       if (args[1] === "is-active" && answers.stop === "gone")
-        return { ok: false, output: "inactive\n" };
+        return { ok: false, output: "inactive\n", code: 3 };
+      // A user manager that refused the ask, which says nothing of the unit.
+      if (args[1] === "is-active" && answers.stop === "unreadable")
+        return { ok: false, output: "Failed to connect to bus: Connection refused", code: 1 };
       return { ok: true, output: "" };
     },
   };
@@ -203,13 +210,20 @@ describe("the command the window starts, on a Mac", () => {
 
   // The review of INF-5409: a job launchd would not end, and still holds, may start its run again
   // beside the view, so letting it go says so; one already gone is let go quietly.
-  it("rejects when launchd keeps the agent's job it was asked to end, and not when the job was gone", async () => {
+  it("rejects when launchd keeps the agent's job or cannot say, and not when it holds no such job", async () => {
     const refused = mac({ stop: "refused" });
     await expect(stopRunAgent(refused.context, { forget: true })).rejects.toThrow(
       "Boot-out failed",
     );
     const gone = mac({ stop: "gone" });
     await expect(stopRunAgent(gone.context, { forget: true })).resolves.toBeUndefined();
+    // A launchctl that cannot say whether it still holds the job is not proof it is gone.
+    const unreadable = mac({ stop: "unreadable" });
+    await expect(stopRunAgent(unreadable.context, { forget: true })).rejects.toThrow(
+      "Boot-out failed",
+    );
+    // Any other stop, as before an update replaces the copy, answers as it always has.
+    await expect(stopRunAgent(refused.context, { forget: false })).resolves.toBeUndefined();
   });
 });
 
@@ -335,11 +349,16 @@ describe("the command the window starts, on Linux", () => {
   });
 
   // The review of INF-5409: a service systemd would not stop, and still runs, says so.
-  it("rejects when systemd keeps the agent's service running, and not when it had stopped", async () => {
+  it("rejects when systemd keeps the agent's service running or cannot say, and not when it is not running", async () => {
     const refused = linux({ stop: "refused" });
     await expect(stopRunAgent(refused.context, { forget: true })).rejects.toThrow("Access denied");
     const gone = linux({ stop: "gone" });
     await expect(stopRunAgent(gone.context, { forget: true })).resolves.toBeUndefined();
+    const unreadable = linux({ stop: "unreadable" });
+    await expect(stopRunAgent(unreadable.context, { forget: true })).rejects.toThrow(
+      "Access denied",
+    );
+    await expect(stopRunAgent(refused.context, { forget: false })).resolves.toBeUndefined();
   });
 });
 

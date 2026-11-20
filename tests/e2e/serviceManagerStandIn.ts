@@ -85,7 +85,19 @@ function running(label) {
 }
 // Stopping a job takes it away, as launchd's bootout unloads it, until it is started again.
 const goneFile = (label) => join(STATE, label + ".gone");
+// A stop the journey asked to race: the job's run fails just before the stop takes effect, and
+// the stop waits until its supervisor has started it again as another process.
+function restartFirst(label) {
+  const file = join(STATE, label + ".restart-on-stop");
+  if (!existsSync(file) || !running(label)) return;
+  rmSync(file, { force: true });
+  const runs = () => readFileSync(join(STATE, label + ".runs"), "utf8").split("\n").filter(Boolean);
+  const before = runs();
+  try { process.kill(Number(before[before.length - 1]), "SIGKILL"); } catch {}
+  for (let i = 0; i < 600 && !(runs().length > before.length && alive(Number(runs()[before.length]))); i++) spawnSync("sleep", ["0.05"]);
+}
 function end(label) {
+  restartFirst(label);
   writeFileSync(goneFile(label), "");
   if (!existsSync(pidFile(label))) return 3;
   const pid = Number(readFileSync(pidFile(label), "utf8"));
@@ -155,6 +167,8 @@ export type ServiceManagerStandIn = {
   running: (label: string) => boolean;
   /** Refuses the next `count` starts it is asked for, as launchd refuses an agent whose background item is off. */
   refuseStarts: (count: number) => void;
+  /** At the job's next stop, its run fails first and the job starts it again as another process before the stop takes effect. */
+  restartOnStop: (label: string) => void;
   /** Ends every supervisor and its job. */
   stopAll: () => void;
 };
@@ -201,6 +215,7 @@ export function serviceManagerStandIn(homeDir: string): ServiceManagerStandIn {
       return pid !== null && alive(pid);
     },
     refuseStarts: (count) => writeFileSync(join(state, "refuse"), String(count)),
+    restartOnStop: (label) => writeFileSync(join(state, `${label}.restart-on-stop`), ""),
     stopAll: () => {
       for (const name of readdirSync(state)) {
         if (!name.endsWith(".pid")) continue;

@@ -160,6 +160,8 @@ export class BesideWindow {
   /** The process of the command that count is for: a command started again is counted anew. */
   private unansweredOf: number | null = null;
   private shown: CommandNotice | null = null;
+  /** The notice asked for last, which `shown` stands in for while Restart it's starter has not answered. */
+  private wanted: CommandNotice | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
   /** What the window takes from its first mate on a welcome, while it is being read; true once answered. */
   private reading: Promise<boolean> | null = null;
@@ -180,15 +182,18 @@ export class BesideWindow {
    * Restart it under way, until its own replacement is known or the run it
    * replaces is known to survive (`settleRestart`): that run, read once;
    * the window's start time before the press; whether its starter has
-   * answered, and refused; and the connection a first mate welcomed this
-   * window on since, unless the records named the run being replaced then.
+   * answered, and refused; whether any first mate welcomed this window
+   * since; and the connection and time of the newest such welcome, unless
+   * the records named the run being replaced then.
    */
   private restart: {
     from: OwnedRun | null;
     startedBefore: number | null;
     settled: boolean;
     refused: boolean;
+    welcomed: boolean;
     welcomedOn: number | null;
+    welcomedAt: number;
   } | null = null;
   /** Start it here took the notice down: the window starts over once the command it started welcomes it. */
   private startsOver = false;
@@ -428,7 +433,9 @@ export class BesideWindow {
       startedBefore: this.startedAt,
       settled: false,
       refused: false,
+      welcomed: false,
       welcomedOn: null,
+      welcomedAt: 0,
     };
     this.restart = restart;
     this.restarting = true;
@@ -444,7 +451,12 @@ export class BesideWindow {
       restart.refused = !restarted;
       if (this.closed || this.restart !== restart) return;
       this.settleRestart(this.options.beside.status());
-      if (restarted) return;
+      // The notice asked for while the starter had not answered shows now: none for a first mate
+      // that answered meanwhile, Restart it again for one that welcomed and has not.
+      if (restarted) {
+        this.show(this.wanted);
+        return;
+      }
       // The command was not restarted: it is still the one that has not answered since then.
       this.restarting = false;
       if (this.unansweredOf === this.options.beside.status().run?.pid) this.unansweredSince = since;
@@ -756,6 +768,8 @@ export class BesideWindow {
     // welcome while the records name that run is its own, and counts for nothing.
     if (this.restart) {
       const status = this.options.beside.status();
+      this.restart.welcomed = true;
+      this.restart.welcomedAt = this.options.now();
       this.restart.welcomedOn =
         status.running === true && sameRun(status.run, this.restart.from)
           ? null
@@ -781,7 +795,7 @@ export class BesideWindow {
       this.reading = null;
       this.unansweredSince = null;
       // A first mate that answered after its notice went up: the window starts over on it.
-      if (this.shown?.ending === "not-answering" && this.window.inReach()) {
+      if (this.wanted?.ending === "not-answering" && this.window.inReach()) {
         this.show(null);
         this.options.restartWindows();
       }
@@ -833,23 +847,28 @@ export class BesideWindow {
    * Restart it's wait ends, from one reading of the records, once its
    * starter answered and either the records name a run this app's own agent
    * started that is not the one replaced, which welcomed this window on the
-   * connection open now, or the starter refused and the run replaced, by
-   * its process and start, still runs. Read at each welcome, at the
-   * starter's answer and at each join reading, so records unreadable at
-   * any of them are read again once they recover, with no further welcome.
+   * connection open now, after that run started by its own record, or the
+   * starter refused and the run replaced, by its process and start, still
+   * runs. A run starts only once the one before it has ended, so a welcome
+   * before the replacement's start is the replaced run's. Read at each
+   * welcome, at the starter's answer and at each join reading, so records
+   * unreadable at any of them are read again once they recover, with no
+   * further welcome.
    */
   private settleRestart(status: Pick<RunStatus, "running" | "run" | "lastStop">): void {
     const restart = this.restart;
     if (!restart?.settled || status.running !== true) return;
-    // Refused: the run replaced still runs, and joins again as before the press.
+    // Refused: the run replaced still runs, and joins again as before the press, or as after its
+    // first welcome where it welcomed this window meanwhile, since only it ran.
     if (restart.refused && sameRun(status.run, restart.from)) {
       this.restart = null;
-      this.startedAt = restart.startedBefore;
+      this.startedAt = restart.welcomed ? null : restart.startedBefore;
       return;
     }
     const owned = this.options.beside.ownedRun?.(status) ?? null;
     if (!owned || sameRun(owned, restart.from)) return;
     if (restart.welcomedOn === null || restart.welcomedOn !== this.window.connection()) return;
+    if (restart.welcomedAt < Date.parse(owned.startedAt)) return;
     this.restart = null;
     this.startedAt = null;
   }
@@ -934,6 +953,7 @@ export class BesideWindow {
       shown?.state === "stopped" && this.restart?.settled === false
         ? this.restartingNotice()
         : shown;
+    this.wanted = shown;
     const was = this.shown;
     if (
       was?.state === notice?.state &&

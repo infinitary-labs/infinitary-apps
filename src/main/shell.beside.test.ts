@@ -1292,11 +1292,11 @@ describe("the window beside a command's first mate", () => {
     expect(at.shell.followsAdded()).toEqual(starting);
   });
 
-  // The review of INF-5409: a welcome from the run started again is not enough while its
-  // starter has not answered, since a Windows restart can still register or run its task, nor is
-  // one on a connection that has since dropped; once both hold, the join names that replacement,
-  // and records unreadable at its welcome are read again.
-  it("joins beside the run Restart it started only once its starter answered, and stops that run alone", async () => {
+  // The review of INF-5409: a welcome from the run being replaced counts for nothing toward the run
+  // started again, neither on a connection that has since dropped nor on one still open whose
+  // drop the window has not heard yet; the join waits for the replacement's own welcome, reads
+  // again records unreadable at it, and names that replacement.
+  it("counts no welcome from the run Restart it replaces toward the run started again, and stops that run alone", async () => {
     const pro = await otherMac({}, { joinsFromAnotherMac: true });
     const command = commandRun();
     const answer = command.run.dispatch.getMockImplementation();
@@ -1306,7 +1306,8 @@ describe("the window beside a command's first mate", () => {
         : answer?.(channel as never, args as never)) as never);
     await command.open().settled();
     const first = { pid: 41, startedAt: "2026-11-20T08:00:00.000Z", agent: true as const };
-    const again = { pid: 42, startedAt: "2026-11-20T08:05:00.000Z", agent: true as const };
+    // The run started again, whose record says when it started once it writes it.
+    const again = { pid: 42, startedAt: "", agent: true as const };
     const links: HomeLink[] = [];
     const at = besideShell(command.doorDir, {
       starts: true,
@@ -1345,13 +1346,18 @@ describe("the window beside a command's first mate", () => {
     expect(at.shell.restartCommand()).toBe(false);
     expect(at.shell.startHere()).toBe(false);
     expect(at.shell.followsAdded()).toEqual(starting);
-    // It drops, and the run started again writes its record before it welcomes the window: the
-    // welcome on the connection that dropped counts for nothing, once the starter answers too.
-    await command.stop();
-    await expect.poll(() => links.map((link) => link.connection())).toEqual([null]);
+    // The run started again writes its record before the window has heard the run replaced drop,
+    // and the starter answers: that welcome, on a connection still open, came before the run
+    // started again by its own record, so it counts for nothing.
+    again.startedAt = new Date(Date.now() + 1).toISOString();
     at.command.records = { running: true, run: again, lastStop: null };
     settle(true);
     await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(links.map((link) => link.connection())).not.toEqual([null]);
+    expect(at.shell.followsAdded()).toEqual(starting);
+    // It drops: still nothing until the run started again welcomes the window itself.
+    await command.stop();
+    await expect.poll(() => links.map((link) => link.connection())).toEqual([null]);
     expect(at.shell.followsAdded()).toEqual(starting);
     // The run started again welcomes the window while its records cannot be read: still nothing.
     at.command.records = { running: null, run: null, lastStop: null };
@@ -1374,6 +1380,119 @@ describe("the window beside a command's first mate", () => {
     const replacement = { pid: again.pid, startedAt: again.startedAt };
     expect(at.starter.stop.mock.calls).toEqual([[{ forget: true, run: replacement }]]);
     expect(at.starter.stopped).toEqual([replacement]);
+  });
+
+  // The review of INF-5409: a run started again that welcomes the window before its starter
+  // answers still offers no join until the starter does, and its notice follows it once the
+  // starter answered: Restart it again for one that has not answered the window, none for one
+  // that answered meanwhile.
+  async function replacedBeforeAnswer(answers: boolean) {
+    const pro = await otherMac({}, { joinsFromAnotherMac: true });
+    const command = commandRun();
+    const answer = command.run.dispatch.getMockImplementation();
+    /** The window's first request at each welcome, answered once let go. */
+    const heres: (() => void)[] = [];
+    command.run.dispatch.mockImplementation(((channel: string, args: unknown[]) =>
+      channel === "inf:own-window:here"
+        ? new Promise((resolve) => heres.push(() => resolve({ ok: true })))
+        : answer?.(channel as never, args as never)) as never);
+    await command.open().settled();
+    const first = { pid: 41, startedAt: new Date().toISOString(), agent: true as const };
+    const at = besideShell(command.doorDir, {
+      starts: true,
+      readyMs: 2_000,
+      answerWaitMs: 200,
+      records: { running: true, run: first, lastStop: null },
+      ownedRun: (status) => ownedRunOf(status),
+    });
+    await at.shell.start();
+    await expect
+      .poll(() => at.shell.thisMac())
+      .toMatchObject({ command: { state: "stopped", ending: "not-answering" } });
+    let settle: (done: boolean) => void = () => {};
+    at.starter.restart.mockImplementation(
+      () =>
+        new Promise<boolean>((resolve) => {
+          settle = resolve;
+        }),
+    );
+    expect(at.shell.restartCommand()).toBe(true);
+    const starting = { follows: false, joins: false, pastes: false, outside: false };
+    // The run being replaced is gone, and the one started again writes its record and welcomes
+    // the window before its starter answered.
+    await command.stop();
+    const again = { pid: 42, startedAt: new Date().toISOString(), agent: true as const };
+    at.command.records = { running: true, run: again, lastStop: null };
+    await command.open().settled();
+    await expect.poll(() => command.asked("inf:own-window:here").length).toBe(2);
+    // Past the wait for its answers, the notice still says the first mate is starting again.
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(at.shell.thisMac()).toMatchObject({
+      command: { state: "waiting", ending: "restart", byWindow: true },
+    });
+    expect(at.shell.followsAdded()).toEqual(starting);
+    // One that answers late, while the starter has still not answered, is back.
+    if (answers) {
+      heres[1]?.();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    settle(true);
+    if (answers) await expect.poll(() => at.shell.thisMac()).not.toHaveProperty("command");
+    else
+      await expect
+        .poll(() => at.shell.thisMac())
+        .toMatchObject({ command: { state: "stopped", ending: "not-answering", byWindow: true } });
+    await expect.poll(() => at.shell.followsAdded()).toMatchObject({ joins: true, pastes: true });
+    await expect(at.shell.join(await pro.link("mac"))).resolves.toEqual({ ok: true });
+    await expect.poll(() => at.shell.thisMac().role).toBe("view");
+    const replacement = { pid: again.pid, startedAt: again.startedAt };
+    expect(at.starter.stop.mock.calls).toEqual([[{ forget: true, run: replacement }]]);
+    expect(at.starter.stopped).toEqual([replacement]);
+  }
+
+  it("offers Restart it again once the starter answered for a run started again that welcomed and has not answered", async () => {
+    await replacedBeforeAnswer(false);
+  });
+
+  it("takes the notice down once the starter answered for a run started again that answered meanwhile", async () => {
+    await replacedBeforeAnswer(true);
+  });
+
+  // The review of INF-5409: a command this window started that never welcomed it before Restart it
+  // was pressed, and that welcomes it while the restart is under way, is the only run there was:
+  // a restart that did not happen joins it at once, never waiting for a second welcome.
+  it("joins the run a refused Restart it left running at once where it welcomed the window meanwhile", async () => {
+    const command = commandRun();
+    const answer = command.run.dispatch.getMockImplementation();
+    command.run.dispatch.mockImplementation(((channel: string, args: unknown[]) =>
+      channel === "inf:own-window:here"
+        ? new Promise(() => {})
+        : answer?.(channel as never, args as never)) as never);
+    // Started by this window, running, and not yet listening.
+    const at = besideShell(command.doorDir, {
+      starts: true,
+      readyMs: 2_000,
+      answerWaitMs: 200,
+      startedAt: Date.now(),
+    });
+    await at.shell.start();
+    await expect
+      .poll(() => at.shell.thisMac(), { timeout: 5_000 })
+      .toMatchObject({ command: { state: "stopped", ending: "not-answering" } });
+    let settle: (done: boolean) => void = () => {};
+    at.starter.restart.mockImplementation(
+      () =>
+        new Promise<boolean>((resolve) => {
+          settle = resolve;
+        }),
+    );
+    expect(at.shell.restartCommand()).toBe(true);
+    await command.open().settled();
+    await expect
+      .poll(() => command.asked("inf:own-window:here").length, { timeout: 5_000 })
+      .toBe(1);
+    settle(false);
+    await expect.poll(() => at.shell.followsAdded()).toMatchObject({ joins: true, pastes: true });
   });
 
   // The review of INF-5409: records that cannot be read say nothing of a command started outside

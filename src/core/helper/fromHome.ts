@@ -1,4 +1,5 @@
 import { rmSync } from "node:fs";
+import { join } from "node:path";
 import type { DeviceGrant } from "@shared/devices";
 import type { WorkOutcome } from "@shared/remoteLogin";
 import type { ExpectedHome } from "@shared/sshConnection";
@@ -17,6 +18,15 @@ import { cleanUp } from "./cleanUp";
 import { homePlace } from "./homePlace";
 import { fetchedLauncher, keepApp } from "./join";
 import { STOPPED_RUN_WAIT_MS, takeFolderWithin } from "./lock";
+import {
+  beginTrial,
+  putBack,
+  setAside,
+  setAsidePath,
+  trialPathOf,
+  trialWatchOf,
+  watchTrial,
+} from "./updateTrial";
 import { homeLabel } from "./words";
 
 /**
@@ -55,11 +65,18 @@ export type FromHomeContext = {
   now?: () => number;
   /** How long to wait for a stopped run to let the folder go. */
   lockWaitMs?: number;
+  /** How long a copy kept on trial has to reach the home; the update's wait unless a test says. */
+  trialSeconds?: number;
 };
 
 /**
  * Update: keeps the copy the home sent in place of the one kept here, then
- * starts the background from it again.
+ * starts the background from it again. Where the service manager can be
+ * asked from outside this run, the update is on trial (docs/helper.md, "A
+ * copy that does not start"): the agent's file, the record and the copy
+ * kept here are set aside first, and a copy that does not reach the home
+ * within the update's wait is taken away and they are put back, so the
+ * background starts the one before it again.
  */
 export async function updateFromHome(
   context: FromHomeContext,
@@ -73,16 +90,28 @@ export async function updateFromHome(
   const before = readInstalled(dataDir);
   const release = await takeFolder(context, before.service);
   if (!release) return { firstmate: "refused", reason: "busy" };
+  const watch = background && before.service ? trialWatchOf(background, before.service) : null;
+  const previous = setAsidePath(dataDir);
+  let aside: { from: string; to: string }[] = [];
   let kept: string | null = null;
   try {
+    if (watch && before.service)
+      aside = setAside(previous, [
+        { path: before.service.file },
+        { path: join(dataDir, "installed.json") },
+        ...(before.app ? [{ path: before.app, move: true }] : []),
+      ]);
     kept = keepApp(fetched, dataDir);
+    if (watch) beginTrial(dataDir, kept, previous);
   } catch {
+    if (kept) rmSync(kept, { recursive: true, force: true });
     kept = null;
   } finally {
     release();
   }
   if (!kept) {
     // Nothing changed here: the run it stopped starts again as it was.
+    if (watch) putBack(aside, previous);
     if (before.service && background) await resumeInBackground(background, before.service);
     return { firstmate: "refused", reason: "not-kept" };
   }
@@ -102,9 +131,26 @@ export async function updateFromHome(
   if (before.app && before.app !== kept) {
     if (!background) writeInstalled(dataDir, { service: before.service, app: kept });
     const moved = readInstalled(dataDir).app === kept;
-    rmSync(moved ? before.app : kept, { recursive: true, force: true });
-    if (!moved) return { firstmate: "refused", reason: "not-kept" };
+    if (!moved) {
+      rmSync(kept, { recursive: true, force: true });
+      if (watch && before.service && background) {
+        rmSync(trialPathOf(dataDir), { force: true });
+        putBack(aside, previous);
+        await resumeInBackground(background, before.service);
+      }
+      return { firstmate: "refused", reason: "not-kept" };
+    }
+    rmSync(before.app, { recursive: true, force: true });
   }
+  if (watch && before.service)
+    await watchTrial(dataDir, watch, {
+      ...(context.trialSeconds === undefined ? {} : { seconds: context.trialSeconds }),
+      restore: {
+        restore: aside,
+        remove: before.app === kept ? [] : [kept],
+        commands: watch.reload(before.service),
+      },
+    });
   return { firstmate: "updated", background: state };
 }
 

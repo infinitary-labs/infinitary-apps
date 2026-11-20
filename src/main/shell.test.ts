@@ -1,9 +1,10 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { userInfo } from "node:os";
 import { join } from "node:path";
 import type { BrowserViewer } from "@core/browser/browserViews";
 import type { HomeConnection } from "@core/connection/connection";
+import { CONTRACT_CHANGES } from "@core/connection/contractChanges";
 import { claimLink, dialHome } from "@core/devices/dial";
 import { HomeLink } from "@core/devices/homeLink";
 import { JoinedHome } from "@core/devices/joinedHome";
@@ -878,6 +879,29 @@ describe("a Mac that controls another and runs its work", () => {
     await air.until(() => air.view().contact === "in-reach");
     await air.until(() => air.view().workSetup?.reason === "background-off");
     expect(pro.asked).not.toContain("inf:devices:work-setup");
+  });
+
+  // INF-5468's plan, piece 2: a home from before the newer-work reason hears what it can read.
+  it("names work a newer Infinitary saved, and tells a home from before that reason only that its work is not reached", async () => {
+    const pro = await otherMac(
+      { changes: CONTRACT_CHANGES.names.filter((name) => name !== "work-setup-newer-work") },
+      { joinsFromAnotherMac: true },
+    );
+    const dataDir = workDir();
+    // The work folder holds a grant a newer Infinitary saved, on a record version this one does not know.
+    mkdirSync(dataDir, { recursive: true });
+    writeFileSync(join(dataDir, "home.json"), `${JSON.stringify({ version: 2 })}\n`);
+    const background = vi.fn(async () => "running" as const);
+    const air = shell(undefined, { dataDir, background });
+    await air.shell.start();
+    expect(await air.shell.join(await pro.link("mac"))).toEqual({ ok: true });
+    await air.until(() => air.view().workSetup?.reason === "newer-work");
+    const deviceId = air.joined.read()?.grant.deviceId;
+    await expect
+      .poll(() => pro.workSetups.at(-1))
+      .toEqual({ view: deviceId, report: { state: "blocked", reason: "not-reached" } });
+    expect(background).not.toHaveBeenCalled();
+    expect(readFileSync(join(dataDir, "home.json"), "utf8")).toBe('{"version":2}\n');
   });
 
   it("sets its work up again at launch when the work folder lost its grant", async () => {

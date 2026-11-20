@@ -249,6 +249,18 @@ export type ViewBackendOptions = {
 
 /** What this Mac's window found of its work half, told to its home (`work-setup.md`). */
 const WORK_SETUP = contractChange("work-setup");
+/** Newer saved work and a copy that was gone, in a work report (`work-setup-newer-work.md`). */
+const WORK_SETUP_NEWER = contractChange("work-setup-newer-work");
+
+/** A work report as a home reads it: one from before hears neither newer saved work nor a copy that was gone. */
+function toldHome(
+  report: WorkSetupReport,
+  changes: Parameters<typeof listsChange>[0],
+): WorkSetupReport {
+  if (listsChange(changes, WORK_SETUP_NEWER)) return report;
+  const { copyGone: _gone, ...before } = report;
+  return before.reason === "newer-work" ? { ...before, reason: "not-reached" } : before;
+}
 
 /** A window that says whether it is in front (`window-front.md`). */
 const WINDOW_FRONT = contractChange("window-front");
@@ -682,10 +694,13 @@ export class ViewBackend {
   workSetupFound(report: WorkSetupReport | null): void {
     this.workFound = report;
     this.changed();
-    if (!report || !listsChange(this.link.state().homeChanges, WORK_SETUP)) return;
-    this.link.invoke("inf:devices:work-setup", [report]).catch((error: unknown) => {
-      console.warn(`[view] could not say what this Mac found of its work: ${String(error)}`);
-    });
+    const changes = this.link.state().homeChanges;
+    if (!report || !listsChange(changes, WORK_SETUP)) return;
+    this.link
+      .invoke("inf:devices:work-setup", [toldHome(report, changes)])
+      .catch((error: unknown) => {
+        console.warn(`[view] could not say what this Mac found of its work: ${String(error)}`);
+      });
   }
 
   /**

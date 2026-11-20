@@ -23920,6 +23920,61 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${name} is out of reach`;
   }
+  function devicesWorkCopyGone(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم تعد نسخة Infinitary التي كان عمل ${device} يبدأ منها موجودة، لذا يبدأ عمله الآن من Infinitary المثبّت هناك.`;
+      case "de":
+        return `${device} hatte die Infinitary-Kopie, von der seine Arbeit startete, nicht mehr, daher startet seine Arbeit jetzt von dem dort installierten Infinitary.`;
+      case "es":
+        return `${device} ya no tenía la copia de Infinitary desde la que empezaba su trabajo, así que ahora su trabajo empieza desde el Infinitary instalado allí.`;
+      case "fr":
+        return `${device} n’avait plus la copie d’Infinitary à partir de laquelle son travail démarrait, donc son travail démarre maintenant depuis l’Infinitary installé là-bas.`;
+      case "ja":
+        return `${device} には作業の起動元だった Infinitary のコピーがもうないため、作業はそこにインストールされた Infinitary から起動するようになりました。`;
+      case "ko":
+        return `${device}에 작업을 시작하던 Infinitary 사본이 더 이상 없어서, 이제 그곳에 설치된 Infinitary에서 작업을 시작해요.`;
+      case "pt-BR":
+        return `${device} não tinha mais a cópia do Infinitary da qual o trabalho dele começava, então agora o trabalho começa pelo Infinitary instalado lá.`;
+      case "zh-Hans":
+        return `${device} 上已经没有它的工作原先启动的那份 Infinitary 副本，所以它的工作现在从那里安装的 Infinitary 启动。`;
+      case "zh-Hant":
+        return `${device} 上已經沒有它的工作原先啟動的那份 Infinitary 副本，所以它的工作現在從那裡安裝的 Infinitary 啟動。`;
+      case "en-XA":
+        return `[${device} ñö ļöñĝéŕ ĥáð ţĥé çöþý öƒ Îñƒîñîţáŕý îţš ŵöŕķ šţáŕţéð ƒŕöɱ, šö îţš ŵöŕķ ñöŵ šţáŕţš ƒŕöɱ ţĥé Îñƒîñîţáŕý îñšţáļļéð ţĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${device}‮ no longer had the copy of Infinitary its work started from, so its work now starts from the Infinitary installed there.‬`;
+    }
+    return `${device} no longer had the copy of Infinitary its work started from, so its work now starts from the Infinitary installed there.`;
+  }
+  function devicesWorkSavedByNewer() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `حفظ إصدار أحدث من Infinitary هذا العمل، لذا يتركه هذا الإصدار كما هو. ثبّت هنا ذلك الإصدار الأحدث من Infinitary للمتابعة.`;
+      case "de":
+        return `Eine neuere Infinitary-Version hat diese Arbeit gespeichert, daher lässt diese Version sie unverändert. Installiere hier diese neuere Infinitary-Version, um weiterzumachen.`;
+      case "es":
+        return `Una versión más nueva de Infinitary guardó este trabajo, así que esta versión lo deja como está. Instala aquí esa versión más nueva de Infinitary para continuar.`;
+      case "fr":
+        return `Une version plus récente d’Infinitary a enregistré ce travail, donc cette version le laisse tel quel. Installez ici cette version plus récente d’Infinitary pour continuer.`;
+      case "ja":
+        return `この作業は新しいバージョンの Infinitary が保存したため、このバージョンはそのままにします。続けるには、その新しい Infinitary をここにインストールしてください。`;
+      case "ko":
+        return `이 작업은 더 새로운 Infinitary가 저장했기 때문에 이 버전은 그대로 둬요. 계속하려면 여기에 그 새로운 Infinitary를 설치하세요.`;
+      case "pt-BR":
+        return `Uma versão mais nova do Infinitary salvou este trabalho, então esta versão o deixa como está. Instale aqui essa versão mais nova do Infinitary para continuar.`;
+      case "zh-Hans":
+        return `这份工作由更新版本的 Infinitary 保存，所以这个版本不会改动它。请在这里安装那个更新的 Infinitary 以继续。`;
+      case "zh-Hant":
+        return `這份工作由較新版本的 Infinitary 儲存，所以這個版本不會更動它。請在這裡安裝那個較新的 Infinitary 以繼續。`;
+      case "en-XA":
+        return `[Å ñéŵéŕ Îñƒîñîţáŕý šáṽéð ţĥîš ŵöŕķ, šö ţĥîš ṽéŕšîöñ ļéáṽéš îţ áš îţ îš. Îñšţáļļ ţĥáţ ñéŵéŕ Îñƒîñîţáŕý ĥéŕé ţö çáŕŕý öñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A newer Infinitary saved this work, so this version leaves it as it is. Install that newer Infinitary here to carry on.‬`;
+    }
+    return `A newer Infinitary saved this work, so this version leaves it as it is. Install that newer Infinitary here to carry on.`;
+  }
   function dialogAdd() {
     switch (currentLanguage()) {
       case "ar":
@@ -51836,6 +51891,61 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Update ${device}`;
   }
+  function settingsDevicesUpdateOlder() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تثبيت الإصدار الأقدم`;
+      case "de":
+        return `Ältere Version installieren`;
+      case "es":
+        return `Instalar versión anterior`;
+      case "fr":
+        return `Installer la version antérieure`;
+      case "ja":
+        return `古いバージョンをインストール`;
+      case "ko":
+        return `이전 버전 설치`;
+      case "pt-BR":
+        return `Instalar versão anterior`;
+      case "zh-Hans":
+        return `安装旧版本`;
+      case "zh-Hant":
+        return `安裝舊版本`;
+      case "en-XA":
+        return `[Îñšţáļļ öļðéŕ ṽéŕšîöñ ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Install older version‬`;
+    }
+    return `Install older version`;
+  }
+  function settingsDevicesUpdateOlderNamed(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تثبيت الإصدار الأقدم على ${device}`;
+      case "de":
+        return `Ältere Version auf ${device} installieren`;
+      case "es":
+        return `Instalar la versión anterior en ${device}`;
+      case "fr":
+        return `Installer la version antérieure sur ${device}`;
+      case "ja":
+        return `${device} に古いバージョンをインストール`;
+      case "ko":
+        return `${device}에 이전 버전 설치`;
+      case "pt-BR":
+        return `Instalar a versão anterior em ${device}`;
+      case "zh-Hans":
+        return `在 ${device} 上安装旧版本`;
+      case "zh-Hant":
+        return `在 ${device} 上安裝舊版本`;
+      case "en-XA":
+        return `[Îñšţáļļ ţĥé öļðéŕ ṽéŕšîöñ öñ ${device} ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Install the older version on ‬${device}`;
+    }
+    return `Install the older version on ${device}`;
+  }
   function settingsDevicesWayCount(input2) {
     const count = formatNumber(input2.count);
     switch (currentLanguage()) {
@@ -52498,6 +52608,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Its work cannot start: Infinitary on ‬${device}‮ is not allowed to run in the background. On a Mac, turn it on there in System Settings › General › Login Items.‬`;
     }
     return `Its work cannot start: Infinitary on ${device} is not allowed to run in the background. On a Mac, turn it on there in System Settings › General › Login Items.`;
+  }
+  function settingsDevicesWorkNewerWork(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يمكن أن يبدأ عمله: حفظ إصدار أحدث من Infinitary عمله على ${device}. ثبّت هناك ذلك الإصدار الأحدث من Infinitary.`;
+      case "de":
+        return `Seine Arbeit kann nicht starten: Eine neuere Infinitary-Version hat seine Arbeit auf ${device} gespeichert. Installiere dort diese neuere Infinitary-Version.`;
+      case "es":
+        return `Su trabajo no puede empezar: una versión más nueva de Infinitary guardó su trabajo en ${device}. Instala allí esa versión más nueva de Infinitary.`;
+      case "fr":
+        return `Son travail ne peut pas démarrer : une version plus récente d’Infinitary a enregistré son travail sur ${device}. Installez-y cette version plus récente d’Infinitary.`;
+      case "ja":
+        return `作業を開始できません。${device} の作業は新しいバージョンの Infinitary が保存しました。その新しい Infinitary をそこにインストールしてください。`;
+      case "ko":
+        return `작업을 시작할 수 없어요. ${device}의 작업은 더 새로운 Infinitary가 저장했어요. 그곳에 그 새로운 Infinitary를 설치하세요.`;
+      case "pt-BR":
+        return `O trabalho dele não pode começar: uma versão mais nova do Infinitary salvou o trabalho dele em ${device}. Instale lá essa versão mais nova do Infinitary.`;
+      case "zh-Hans":
+        return `它的工作无法开始：${device} 上的工作由更新版本的 Infinitary 保存。请在那里安装那个更新的 Infinitary。`;
+      case "zh-Hant":
+        return `它的工作無法開始：${device} 上的工作由較新版本的 Infinitary 儲存。請在那裡安裝那個較新的 Infinitary。`;
+      case "en-XA":
+        return `[Îţš ŵöŕķ çáññöţ šţáŕţ: á ñéŵéŕ Îñƒîñîţáŕý šáṽéð îţš ŵöŕķ öñ ${device}. Îñšţáļļ ţĥáţ ñéŵéŕ Îñƒîñîţáŕý ţĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Its work cannot start: a newer Infinitary saved its work on ‬${device}‮. Install that newer Infinitary there.‬`;
+    }
+    return `Its work cannot start: a newer Infinitary saved its work on ${device}. Install that newer Infinitary there.`;
   }
   function settingsDevicesWorkNoBackground(input2) {
     const device = input2.device;
@@ -82089,6 +82227,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `This computer's work has not reached ${home}: macOS has not let Infinitary use your local network. Allow it in System Settings › Privacy & Security › Local Network, then try again.`;
   }
+  function viewWorkNewerWork(input2) {
+    const home = input2.home;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يستطيع هذا الحاسوب تشغيل العمل لـ${home}: حفظ إصدار أحدث من Infinitary العمل هنا. ثبّت ذلك الإصدار الأحدث من Infinitary للمتابعة.`;
+      case "de":
+        return `Dieser Computer kann keine Arbeit für ${home} ausführen: Eine neuere Infinitary-Version hat die Arbeit hier gespeichert. Installiere diese neuere Infinitary-Version, um weiterzumachen.`;
+      case "es":
+        return `Esta computadora no puede hacer trabajo para ${home}: una versión más nueva de Infinitary guardó su trabajo aquí. Instala esa versión más nueva de Infinitary para continuar.`;
+      case "fr":
+        return `Cet ordinateur ne peut pas faire de travail pour ${home} : une version plus récente d’Infinitary a enregistré son travail ici. Installez cette version plus récente d’Infinitary pour continuer.`;
+      case "ja":
+        return `このコンピューターは ${home} の作業を実行できません。ここの作業は新しいバージョンの Infinitary が保存しました。続けるには、その新しい Infinitary をインストールしてください。`;
+      case "ko":
+        return `이 컴퓨터는 ${home}의 작업을 실행할 수 없어요. 여기의 작업은 더 새로운 Infinitary가 저장했어요. 계속하려면 그 새로운 Infinitary를 설치하세요.`;
+      case "pt-BR":
+        return `Este computador não pode fazer trabalho para ${home}: uma versão mais nova do Infinitary salvou o trabalho aqui. Instale essa versão mais nova do Infinitary para continuar.`;
+      case "zh-Hans":
+        return `这台电脑无法为 ${home} 运行工作：这里的工作由更新版本的 Infinitary 保存。请安装那个更新的 Infinitary 以继续。`;
+      case "zh-Hant":
+        return `這台電腦無法為 ${home} 執行工作：這裡的工作由較新版本的 Infinitary 儲存。請安裝那個較新的 Infinitary 以繼續。`;
+      case "en-XA":
+        return `[Ţĥîš çöɱþûţéŕ çáññöţ ŕûñ ŵöŕķ ƒöŕ ${home}: á ñéŵéŕ Îñƒîñîţáŕý šáṽéð îţš ŵöŕķ ĥéŕé. Îñšţáļļ ţĥáţ ñéŵéŕ Îñƒîñîţáŕý ţö çáŕŕý öñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮This computer cannot run work for ‬${home}‮: a newer Infinitary saved its work here. Install that newer Infinitary to carry on.‬`;
+    }
+    return `This computer cannot run work for ${home}: a newer Infinitary saved its work here. Install that newer Infinitary to carry on.`;
+  }
   function viewWorkNoBackground(input2) {
     const home = input2.home;
     switch (currentLanguage()) {
@@ -83474,6 +83640,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     devicesRemoteLineReadOnly,
     devicesRemoteLineReadingAgain,
     devicesRemoteOutOfReach,
+    devicesWorkCopyGone,
+    devicesWorkSavedByNewer,
     dialogAdd,
     dialogAttach,
     dialogCancel,
@@ -84414,6 +84582,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsDevicesUpdate,
     settingsDevicesUpdateFailed,
     settingsDevicesUpdateNamed,
+    settingsDevicesUpdateOlder,
+    settingsDevicesUpdateOlderNamed,
     settingsDevicesWayCount,
     settingsDevicesWaysCopyCommand,
     settingsDevicesWaysCopyLink,
@@ -84436,6 +84606,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsDevicesWindowsFirewallWay,
     settingsDevicesWorkAppPlace,
     settingsDevicesWorkBackgroundOff,
+    settingsDevicesWorkNewerWork,
     settingsDevicesWorkNoBackground,
     settingsDevicesWorkNotReached,
     settingsDevicesWorkOtherEntry,
@@ -85481,6 +85652,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     viewWorkBackgroundOff,
     viewWorkFolded,
     viewWorkLocalNetwork,
+    viewWorkNewerWork,
     viewWorkNoBackground,
     viewWorkNotNow,
     viewWorkNotReached,
@@ -86160,6 +86332,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "devicesRemoteLineReadOnly": [],
     "devicesRemoteLineReadingAgain": [],
     "devicesRemoteOutOfReach": ["name"],
+    "devicesWorkCopyGone": ["device"],
+    "devicesWorkSavedByNewer": [],
     "dialogAdd": [],
     "dialogAttach": [],
     "dialogCancel": [],
@@ -87100,6 +87274,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsDevicesUpdate": [],
     "settingsDevicesUpdateFailed": [],
     "settingsDevicesUpdateNamed": ["device"],
+    "settingsDevicesUpdateOlder": [],
+    "settingsDevicesUpdateOlderNamed": ["device"],
     "settingsDevicesWayCount": ["count"],
     "settingsDevicesWaysCopyCommand": [],
     "settingsDevicesWaysCopyLink": [],
@@ -87122,6 +87298,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsDevicesWindowsFirewallWay": [],
     "settingsDevicesWorkAppPlace": ["device"],
     "settingsDevicesWorkBackgroundOff": ["device"],
+    "settingsDevicesWorkNewerWork": ["device"],
     "settingsDevicesWorkNoBackground": ["device"],
     "settingsDevicesWorkNotReached": ["device"],
     "settingsDevicesWorkOtherEntry": ["device"],
@@ -88167,6 +88344,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "viewWorkBackgroundOff": ["home"],
     "viewWorkFolded": [],
     "viewWorkLocalNetwork": ["home"],
+    "viewWorkNewerWork": ["home"],
     "viewWorkNoBackground": ["home"],
     "viewWorkNotNow": [],
     "viewWorkNotReached": ["home"],

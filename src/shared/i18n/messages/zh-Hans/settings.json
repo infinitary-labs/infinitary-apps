@@ -509,6 +509,8 @@
   "settingsDevicesUpdate": "更新",
   "settingsDevicesUpdateFailed": "无法更新那里的 Infinitary。",
   "settingsDevicesUpdateNamed": "更新 {device}",
+  "settingsDevicesUpdateOlder": "安装旧版本",
+  "settingsDevicesUpdateOlderNamed": "在 {device} 上安装旧版本",
   "settingsDevicesWayCount": {
     "plural": "count",
     "other": "{count} 台电脑"
@@ -534,6 +536,7 @@
   "settingsDevicesWindowsFirewallWay": "要让它们连入，请以管理员身份在 PowerShell 中运行一次：",
   "settingsDevicesWorkAppPlace": "它的工作无法开始：{device} 上的 Infinitary 是从磁盘映像或下载文件夹打开的。请在那边把它移到“应用程序”，再重新打开。",
   "settingsDevicesWorkBackgroundOff": "它的工作无法开始：{device} 上的 Infinitary 不允许在后台运行。在 Mac 上，请在那边的“系统设置” › “通用” › “登录项”中打开它。",
+  "settingsDevicesWorkNewerWork": "它的工作无法开始：{device} 上的工作由更新版本的 Infinitary 保存。请在那里安装那个更新的 Infinitary。",
   "settingsDevicesWorkNoBackground": "它的工作无法开始：{device} 没有办法在后台运行 Infinitary。",
   "settingsDevicesWorkNotReached": "它的工作正在 {device} 上运行，但还没有连上这台电脑。",
   "settingsDevicesWorkOtherEntry": "它的工作无法开始：{device} 已经以这个列表上的另一台电脑运行这项工作。请移除那一台，然后点击“修复”。",

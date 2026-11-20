@@ -635,6 +635,8 @@
 "devicesRemoteLineReadOnly" = "· للقراءة فقط";
 "devicesRemoteLineReadingAgain" = "· يلحق، ويقرأ كل شيء من جديد";
 "devicesRemoteOutOfReach" = "%1$@ خارج المتناول";
+"devicesWorkCopyGone" = "لم تعد نسخة Infinitary التي كان عمل %1$@ يبدأ منها موجودة، لذا يبدأ عمله الآن من Infinitary المثبّت هناك.";
+"devicesWorkSavedByNewer" = "حفظ إصدار أحدث من Infinitary هذا العمل، لذا يتركه هذا الإصدار كما هو. ثبّت هنا ذلك الإصدار الأحدث من Infinitary للمتابعة.";
 "dialogAdd" = "إضافة";
 "dialogAttach" = "إرفاق";
 "dialogCancel" = "إلغاء";
@@ -2486,6 +2488,8 @@
 "settingsDevicesUpdate" = "تحديث";
 "settingsDevicesUpdateFailed" = "تعذّر تحديث Infinitary هناك.";
 "settingsDevicesUpdateNamed" = "تحديث %1$@";
+"settingsDevicesUpdateOlder" = "تثبيت الإصدار الأقدم";
+"settingsDevicesUpdateOlderNamed" = "تثبيت الإصدار الأقدم على %1$@";
 "settingsDevicesWaysCopyCommand" = "نسخ أمر";
 "settingsDevicesWaysCopyLink" = "نسخ رابط";
 "settingsDevicesWaysFoot" = "يحمل الرابط أو الأمر كل الطرق معًا. يستخدم الحاسوب الآخر الطريقة التي تستجيب، فلا شيء تختاره هنا.";
@@ -2507,6 +2511,7 @@
 "settingsDevicesWindowsFirewallWay" = "للسماح لها بالدخول، شغّل هذا مرة واحدة في PowerShell بصفتك مسؤولًا:";
 "settingsDevicesWorkAppPlace" = "لا يمكن أن يبدأ عمله: يُفتح Infinitary على %1$@ من صورة قرص أو من مجلد التنزيلات. انقله هناك إلى التطبيقات وافتحه من جديد.";
 "settingsDevicesWorkBackgroundOff" = "لا يمكن أن يبدأ عمله: غير مسموح لـInfinitary على %1$@ بالعمل في الخلفية. على حاسوب Mac، فعّله هناك من إعدادات النظام › عام › عناصر تسجيل الدخول.";
+"settingsDevicesWorkNewerWork" = "لا يمكن أن يبدأ عمله: حفظ إصدار أحدث من Infinitary عمله على %1$@. ثبّت هناك ذلك الإصدار الأحدث من Infinitary.";
 "settingsDevicesWorkNoBackground" = "لا يمكن أن يبدأ عمله: لا توجد لدى %1$@ طريقة لتشغيل Infinitary في الخلفية.";
 "settingsDevicesWorkNotReached" = "عمله يعمل على %1$@، لكنه لم يصل إلى هذا الحاسوب.";
 "settingsDevicesWorkOtherEntry" = "لا يمكن أن يبدأ عمله: يشغّل %1$@ هذا العمل بالفعل كحاسوب آخر في هذه القائمة. أزل ذلك الحاسوب، ثم اضغط إصلاح.";
@@ -3536,6 +3541,7 @@
 "viewWorkBackgroundOff" = "لا يستطيع هذا الحاسوب تشغيل العمل لـ%1$@: غير مسموح لـInfinitary بالعمل في الخلفية. على حاسوب Mac، فعّله من إعدادات النظام › عام › عناصر تسجيل الدخول، ثم حاول مجددًا.";
 "viewWorkFolded" = "عمل هذا الحاسوب: اعرف السبب";
 "viewWorkLocalNetwork" = "لم يصل عمل هذا الحاسوب إلى %1$@: لم يسمح macOS لـInfinitary باستخدام شبكتك المحلية. اسمح بذلك من إعدادات النظام › الخصوصية والأمن › الشبكة المحلية، ثم حاول مجددًا.";
+"viewWorkNewerWork" = "لا يستطيع هذا الحاسوب تشغيل العمل لـ%1$@: حفظ إصدار أحدث من Infinitary العمل هنا. ثبّت ذلك الإصدار الأحدث من Infinitary للمتابعة.";
 "viewWorkNoBackground" = "لا يستطيع هذا الحاسوب تشغيل العمل لـ%1$@: لا توجد لديه طريقة لتشغيل Infinitary في الخلفية.";
 "viewWorkNotNow" = "ليس الآن";
 "viewWorkNotReached" = "عمل هذا الحاسوب يعمل، لكنه لم يصل إلى %1$@.";

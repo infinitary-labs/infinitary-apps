@@ -1,9 +1,10 @@
 import { spawn } from "node:child_process";
-import { existsSync, readFileSync, renameSync, rmSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
 import { UPDATE_RETURN_MS } from "@shared/work";
 import { z } from "zod";
 import { writePrivate } from "../devices/identity";
+import { shellWord } from "../devices/shellWord";
 import { hostEnv } from "../hostEnv";
 import type { BackgroundContext, Service } from "./background";
 
@@ -20,6 +21,12 @@ import type { BackgroundContext, Service } from "./background";
  * That run's hello tells the home that the copy it sent did not start here,
  * once: the home names its own version, the one it sent.
  *
+ * A Mac's first update, an update across the rename and an update over
+ * Remote Login rewrite more than the copy: they set aside what they replace
+ * (`setAside`, in `app/before-update`) and the watcher puts each thing back,
+ * takes away what the new copy set up and has the service manager read the
+ * agent anew (`TrialRestore`).
+ *
  * Whoever renames the trial file first decides: the new run to keep its
  * copy, or the watcher to go back. A rename is one step, so the two never
  * both act.
@@ -28,6 +35,7 @@ import type { BackgroundContext, Service } from "./background";
 const TRIAL_FILE = "trial.json";
 const WENT_BACK_FILE = "went-back.json";
 const PREVIOUS = ".previous";
+const SET_ASIDE = "before-update";
 
 const trialSchema = z.strictObject({
   version: z.literal(1),
@@ -43,6 +51,11 @@ export function previousOf(app: string): string {
   return `${app}${PREVIOUS}`;
 }
 
+/** Where the trial is written: gone once the new copy reached the home, or the watcher went back. */
+export function trialPathOf(dataDir: string): string {
+  return trialPath(dataDir);
+}
+
 function trialPath(dataDir: string): string {
   return join(dataDir, "app", TRIAL_FILE);
 }
@@ -52,8 +65,8 @@ function wentBackPath(dataDir: string): string {
 }
 
 /** Writes the trial for a copy just kept at `app`, with the one it replaced beside it. */
-export function beginTrial(dataDir: string, app: string): void {
-  const trial: Trial = { version: 1, app, previous: previousOf(app) };
+export function beginTrial(dataDir: string, app: string, previous = previousOf(app)): void {
+  const trial: Trial = { version: 1, app, previous };
   writePrivate(trialPath(dataDir), `${JSON.stringify(trial, null, 2)}\n`);
 }
 
@@ -99,25 +112,61 @@ export function forgetWentBack(dataDir: string): void {
 }
 
 /**
+ * What a watcher puts back when it goes back: each thing the update set
+ * aside inside the trial's previous, at its own place (`restore`, in order),
+ * what the new copy set up that goes (`remove`), and the service manager's
+ * commands that start the background again from what was put back (`commands`,
+ * run last). A copy kept at the same path puts back that one copy and asks
+ * for a restart; an update that rewrote the agent puts its file and record
+ * back too and has the agent read anew (`snapshotRestore`).
+ */
+export type TrialRestore = {
+  restore: readonly { from: string; to: string }[];
+  remove: readonly string[];
+  commands: readonly (readonly string[])[];
+};
+
+/**
  * The watcher, in the system's own shell so it needs nothing of the copy it
  * watches: it waits while the trial is open, up to its seconds; a trial
- * still open then is taken (one rename), the new copy is set aside and the
- * previous one put back at its path, the trial is kept as what went back,
- * and the service manager's own restart command runs last.
+ * still open then is taken (one rename), each thing set aside is put back at
+ * its place, the one there set aside first and put back should the move
+ * fail, what the new copy set up goes, the trial is kept as what went back,
+ * and the service manager's own commands run last.
  */
-const WATCHER = [
-  'trial="$1"; app="$2"; previous="$3"; back="$4"; seconds="$5"; shift 5',
-  "i=0",
-  'while [ -e "$trial" ] && [ "$i" -lt "$seconds" ]; do sleep 1; i=$((i+1)); done',
-  'mv "$trial" "$trial.going" 2>/dev/null || exit 0',
-  'if [ ! -e "$previous" ]; then rm -f "$trial.going"; exit 0; fi',
-  'rm -rf "$app.failed"',
-  'if [ -e "$app" ]; then mv "$app" "$app.failed" || exit 1; fi',
-  'mv "$previous" "$app" || { mv "$app.failed" "$app"; rm -f "$trial.going"; exit 1; }',
-  'mv "$trial.going" "$back"',
-  'rm -rf "$app.failed"',
-  '"$@"',
-].join("\n");
+export function watcherScript(
+  at: { trial: string; previous: string; back: string; seconds: number },
+  restore: TrialRestore,
+): string {
+  const q = shellWord;
+  const trial = q(at.trial);
+  const going = q(`${at.trial}.going`);
+  // i18n-exempt: a shell script for the system's own shell, never words a person reads.
+  const lines = [
+    "i=0",
+    `while [ -e ${trial} ] && [ "$i" -lt ${Math.max(0, Math.floor(at.seconds))} ]; do sleep 1; i=$((i+1)); done`,
+    `mv ${trial} ${going} 2>/dev/null || exit 0`,
+    `if [ ! -e ${q(at.previous)} ]; then rm -f ${going}; exit 0; fi`,
+  ];
+  for (const { from, to } of restore.restore) {
+    const failed = q(`${to}.failed`);
+    // i18n-exempt: shell lines.
+    lines.push(
+      `if [ -e ${q(from)} ]; then`,
+      `  rm -rf ${failed}`,
+      `  if [ -e ${q(to)} ]; then mv ${q(to)} ${failed} || exit 1; fi`,
+      `  mv ${q(from)} ${q(to)} || { mv ${failed} ${q(to)}; rm -f ${going}; exit 1; }`,
+      `  rm -rf ${failed}`,
+      "fi",
+    );
+  }
+  // i18n-exempt: shell lines.
+  for (const path of restore.remove) lines.push(`rm -rf ${q(path)}`);
+  // i18n-exempt: shell lines.
+  lines.push(`rm -rf ${q(at.previous)}`, `mv ${going} ${q(at.back)}`);
+  for (const command of restore.commands) lines.push(command.map(q).join(" "));
+  return lines.join("\n");
+}
 
 /**
  * How this computer's service manager starts the background again from
@@ -131,15 +180,28 @@ const WATCHER = [
  * user's own systemd (`systemd-run`), and `systemctl --user restart` starts
  * the service again.
  */
-export type TrialWatch = { wrap: readonly string[]; restart: readonly string[] };
+export type TrialWatch = {
+  wrap: readonly string[];
+  restart: readonly string[];
+  /** Has the service manager read an agent's file anew and start it: after its file was put back. */
+  reload: (service: Service) => string[][];
+  /** Lets an agent go by its label, its file already gone: one the new copy set up under another. */
+  unload: (label: string) => string[];
+};
 
 export function trialWatchOf(context: BackgroundContext, service: Service): TrialWatch | null {
   if ("launchctl" in context) {
     const program = context.launchctl.program;
     if (!program) return null;
+    const domain = `gui/${context.uid}`;
     return {
       wrap: [],
-      restart: [program, "kickstart", "-k", `gui/${context.uid}/${service.label}`],
+      restart: [program, "kickstart", "-k", `${domain}/${service.label}`],
+      reload: (agent) => [
+        [program, "bootout", `${domain}/${agent.label}`],
+        [program, "bootstrap", domain, agent.file],
+      ],
+      unload: (label) => [program, "bootout", `${domain}/${label}`],
     };
   }
   // A Windows PC gets a newer Infinitary only by an install there, with no trial here.
@@ -153,6 +215,11 @@ export function trialWatchOf(context: BackgroundContext, service: Service): Tria
   return {
     wrap: [run, "--user", "--collect", "--quiet", "--"],
     restart: [program, "--user", "restart", service.label],
+    reload: (unit) => [
+      [program, "--user", "daemon-reload"],
+      [program, "--user", "restart", unit.label],
+    ],
+    unload: (label) => [program, "--user", "stop", label],
   };
 }
 
@@ -165,7 +232,7 @@ export function trialWatchOf(context: BackgroundContext, service: Service): Tria
 export async function watchTrial(
   dataDir: string,
   watch: TrialWatch,
-  options: { seconds?: number } = {},
+  options: { seconds?: number; restore?: TrialRestore } = {},
 ): Promise<void> {
   const path = trialPath(dataDir);
   let trial: Trial;
@@ -175,18 +242,16 @@ export async function watchTrial(
     return;
   }
   const seconds = options.seconds ?? Math.ceil(UPDATE_RETURN_MS / 1000);
-  const args = [
-    "/bin/sh",
-    "-c",
-    WATCHER,
-    "infinitary-update-watch",
-    path,
-    trial.app,
-    trial.previous,
-    wentBackPath(dataDir),
-    String(seconds),
-    ...watch.restart,
-  ];
+  const restore: TrialRestore = options.restore ?? {
+    restore: [{ from: trial.previous, to: trial.app }],
+    remove: [],
+    commands: [watch.restart],
+  };
+  const script = watcherScript(
+    { trial: path, previous: trial.previous, back: wentBackPath(dataDir), seconds },
+    restore,
+  );
+  const args = ["/bin/sh", "-c", script, "infinitary-update-watch"];
   const [program, ...rest] = [...watch.wrap, ...args] as [string, ...string[]];
   const child = spawn(program, rest, { detached: true, stdio: "ignore", env: hostEnv() });
   if (watch.wrap.length === 0) {
@@ -197,4 +262,46 @@ export async function watchTrial(
     child.once("exit", () => resolve());
     child.once("error", () => resolve());
   });
+}
+
+/**
+ * Where an update that rewrites the agent, or keeps a copy under another
+ * path, sets aside what it replaces until the new copy reached the home:
+ * the trial's previous, which ending the trial takes away whole.
+ */
+export function setAsidePath(dataDir: string): string {
+  return join(dataDir, "app", SET_ASIDE);
+}
+
+/**
+ * Sets aside what an update is about to replace, inside `previous`: a file
+ * copied (an agent's file, the record), or a copy of the app moved, in
+ * order. Answers where each goes back. A path that is not there is skipped,
+ * so nothing is put back in its place.
+ */
+export function setAside(
+  previous: string,
+  items: readonly { path: string; move?: boolean }[],
+): { from: string; to: string }[] {
+  mkdirSync(previous, { recursive: true, mode: 0o700 });
+  const pairs: { from: string; to: string }[] = [];
+  items.forEach(({ path, move }, index) => {
+    if (!existsSync(path)) return;
+    const from = join(previous, `${index}-${basename(path)}`);
+    rmSync(from, { recursive: true, force: true });
+    if (move) renameSync(path, from);
+    else cpSync(path, from, { recursive: true, verbatimSymlinks: true, preserveTimestamps: true });
+    pairs.push({ from, to: path });
+  });
+  return pairs;
+}
+
+/** Puts back at once what `setAside` set aside, for an update that stopped before its trial began. */
+export function putBack(pairs: readonly { from: string; to: string }[], previous: string): void {
+  for (const { from, to } of pairs) {
+    if (!existsSync(from)) continue;
+    rmSync(to, { recursive: true, force: true });
+    renameSync(from, to);
+  }
+  rmSync(previous, { recursive: true, force: true });
 }

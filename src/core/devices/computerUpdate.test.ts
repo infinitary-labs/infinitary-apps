@@ -1731,4 +1731,107 @@ describe("a computer whose update brought a copy that does not start", () => {
     // The watcher found the trial ended, so it went back on nothing.
     expect(asked()).toEqual([]);
   });
+
+  // A Mac's first update and an update across the rename keep the trial too
+  // (INF-5468's plan, piece 2): what they rewrote is put back, not only the copy.
+  it("on a Mac's first update, takes the copy away and has the agent start the Mac's own app again", async () => {
+    const runnerPlatform = vi.spyOn(platform, "hostPlatform").mockReturnValue("linux");
+    stops.push(() => {
+      runnerPlatform.mockRestore();
+    });
+    const at = await world({ fromAnotherMac: true, waitMs: 200 });
+    const { context, asked } = standInBackground(at.dataDir);
+    const installedApp = bundle("the Mac's own app");
+    const ownLauncher = fetchedLauncher(installedApp);
+    if (!ownLauncher) throw new Error("no launcher");
+    await startInBackground(
+      { ...context, spelling: "fm" },
+      { launcher: ownLauncher, env: {}, app: null },
+    );
+    const service = readInstalled(at.dataDir).service;
+    if (!service) throw new Error("no agent");
+    const agentBefore = readFileSync(service.file, "utf8");
+    const record = readFileSync(join(at.dataDir, "installed.json"), "utf8");
+
+    const setUp = asked().length;
+    const before = at.start({ appVersion: "0.1.20", trialSeconds: 2 }, context);
+    await expect.poll(() => at.view()?.otherVersion?.updateBy).toBe("connection");
+    const updating = at.computers.update(at.deviceId);
+    expect(await before.ended).toBe("updated");
+    const kept = join(at.dataDir, "app", "Firstmate 3000.app");
+    expect(readInstalled(at.dataDir)).toEqual({ service, app: kept });
+    expect(readFileSync(service.file, "utf8")).not.toBe(agentBefore);
+
+    // The kept copy exits at start: it never reaches this Mac.
+    expect(
+      spawnSync(join(kept, "Contents", "MacOS", "Firstmate 3000"), ["work", "run"]).status,
+    ).toBe(1);
+    const updated = await updating;
+    if ("asks" in updated) throw new Error("Update asked for a password.");
+
+    // The agent's file and the record are back as they were, and launchd read the agent anew.
+    await expect.poll(() => existsSync(kept), { timeout: 8_000 }).toBe(false);
+    // launchd read it once for the new copy, then once more for the one put back.
+    const readAnew = [`bootout gui/502/${service.label}`, `bootstrap gui/502 ${service.file}`];
+    await expect
+      .poll(() => asked().slice(setUp), { timeout: 8_000 })
+      .toEqual([...readAnew, ...readAnew]);
+    expect(readFileSync(service.file, "utf8")).toBe(agentBefore);
+    expect(readFileSync(join(at.dataDir, "installed.json"), "utf8")).toBe(record);
+    expect(readdirSync(join(at.dataDir, "app"))).toEqual(["went-back.json"]);
+    expect(readFileSync(join(installedApp, "Contents", "Resources", "marker"), "utf8").trim()).toBe(
+      "the Mac's own app",
+    );
+  });
+
+  it("across the rename, takes the new copy and its agent away and starts the old agent and copy again", async () => {
+    const at = await world({
+      kept: true,
+      speaks: "inf",
+      app: bundle("Infinitary's own copy", "Infinitary"),
+      waitMs: 200,
+    });
+    const { context, asked } = standInBackground(at.dataDir);
+    const kept = join(at.dataDir, "app", "Firstmate 3000.app");
+    const launcher = fetchedLauncher(kept);
+    if (!launcher) throw new Error("no launcher");
+    await startInBackground({ ...context, spelling: "fm" }, { launcher, env: {}, app: kept });
+    const old = readInstalled(at.dataDir).service;
+    if (!old) throw new Error("no agent");
+    const agentBefore = readFileSync(old.file, "utf8");
+
+    const running = at.start({ appVersion: "0.1.20", trialSeconds: 2 }, context);
+    await expect.poll(() => at.view()?.otherVersion?.updateBy).toBe("connection");
+    const updating = at.computers.update(at.deviceId);
+    expect(await running.ended).toBe("updated");
+    const moved = join(at.dataDir, "app", "Infinitary.app");
+    const label = workLabelOf("inf", "release");
+    const file = join(context.homeDir, "Library", "LaunchAgents", `${label}.plist`);
+    expect(readInstalled(at.dataDir)).toEqual({ service: { label, file }, app: moved });
+
+    // The new copy exits at start: it never reaches this Mac.
+    expect(spawnSync(join(moved, "Contents", "MacOS", "Infinitary"), ["work", "run"]).status).toBe(
+      1,
+    );
+    const updated = await updating;
+    if ("asks" in updated) throw new Error("Update asked for a password.");
+
+    await expect.poll(() => existsSync(moved), { timeout: 8_000 }).toBe(false);
+    // The watcher lets the new agent go, then has launchd read the old one anew.
+    await expect
+      .poll(() => asked().slice(-3), { timeout: 8_000 })
+      .toEqual([
+        `bootout gui/502/${label}`,
+        `bootout gui/502/${old.label}`,
+        `bootstrap gui/502 ${old.file}`,
+      ]);
+    expect(existsSync(file)).toBe(false);
+    expect(readFileSync(old.file, "utf8")).toBe(agentBefore);
+    expect(readInstalled(at.dataDir)).toEqual({ service: old, app: kept });
+    expect(at.kept()).toBe("the copy it kept");
+    expect(readdirSync(join(at.dataDir, "app")).sort()).toEqual([
+      "Firstmate 3000.app",
+      "went-back.json",
+    ]);
+  });
 });

@@ -6,8 +6,10 @@ import {
   computerPresenceOf,
   type DeviceKind,
   type DeviceView,
+  deviceLabel,
   parsePairingLink,
 } from "@shared/devices";
+import * as m from "@shared/i18n/messages.generated";
 import { PROTOCOL_VERSION } from "@shared/ipc";
 import { WORK_REACH_GRACE_MS, WORK_SETUP_LIVE } from "@shared/workSetup";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -540,6 +542,20 @@ describe("a Mac whose window is connected and whose work is not in reach", () =>
     expect(imac()?.workSetup).toEqual({ state: "starting" });
     clock.advance(WORK_REACH_GRACE_MS);
     expect(imac()?.workSetup).toEqual({ state: "blocked", reason: "not-reached" });
+  });
+
+  // INF-5468's plan, piece 2: a background whose recorded copy was deleted
+  // starts the app there instead, and the home says so once.
+  it("says once in the feed that its work starts from the app there now, its recorded copy gone", () => {
+    const { connection, computers, deviceId, lines, listed } = joinedMac();
+    connection.tellView({ deviceId, contact: "in-reach" });
+    const said = () => lines.filter((line) => line.deviceId === deviceId).map((line) => line.text);
+    computers.heardWorkSetup(deviceId, { state: "starting", copyGone: true });
+    const name = deviceLabel(listed() as DeviceView);
+    expect(said()).toEqual([m.devicesWorkCopyGone({ device: name })]);
+    // A later report without it says nothing more.
+    computers.heardWorkSetup(deviceId, { state: "running" });
+    expect(said()).toEqual([m.devicesWorkCopyGone({ device: name })]);
   });
 
   it("asks its window, connected now, to set its work up again on Fix it", () => {

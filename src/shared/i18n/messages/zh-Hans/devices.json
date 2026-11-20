@@ -34,5 +34,7 @@
   "devicesRemoteLineOutOfReachSince": "无法联系 · 自",
   "devicesRemoteLineReadOnly": "· 只读",
   "devicesRemoteLineReadingAgain": "· 正在追上，重新读取全部内容",
-  "devicesRemoteOutOfReach": "{name} 无法联系"
+  "devicesRemoteOutOfReach": "{name} 无法联系",
+  "devicesWorkCopyGone": "{device} 上已经没有它的工作原先启动的那份 Infinitary 副本，所以它的工作现在从那里安装的 Infinitary 启动。",
+  "devicesWorkSavedByNewer": "这份工作由更新版本的 Infinitary 保存，所以这个版本不会改动它。请在这里安装那个更新的 Infinitary 以继续。"
 }

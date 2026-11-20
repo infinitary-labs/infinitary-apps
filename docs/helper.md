@@ -451,7 +451,30 @@ Anywhere else the replaced copy goes at once, as before.
    The hello names no version: a release bundle says only the numeric core of its version, so an alpha's would not match, and the copy that did not start is the one the home sent, at the home's own version.
 
 Whoever renames the trial file first decides, the new run to keep its copy or the watcher to go back, so the two never both act.
-An update over Remote Login, a Mac's first copy and a copy under the other name of the rename keep no trial.
+
+Three other routes keep a trial the same way, each setting aside what it replaces in `app/before-update/`, the trial's previous, which ending the trial takes away whole (`setAside`):
+
+- A Mac's first copy ("Kept here first" under "Updated by its home"): the agent's file and `installed.json` are copied aside before the agent is rewritten.
+  Going back puts both back, takes the kept copy away, and has launchd read the agent anew (`bootout`, then `bootstrap`), so it starts the installed app again.
+- A copy under the other name of the rename, whose work stays in its folder: `installed.json` is copied aside before the background moves, and once the run let the folder go the old copy and its agent's file are moved aside before the old agent is let go.
+  Going back puts the three back, takes the new copy and its agent away, and starts the old agent again.
+- An update over Remote Login ("Started by the home"): the agent's file and `installed.json` are copied aside and the copy kept here moved aside before the sent copy is kept; the watcher starts once the background was started again.
+  Going back puts them back and has the service manager read the agent anew.
+
+A copy under the other name whose work moves into the other spelling's data folder keeps no trial: the move retires the older folder, which the copy before it cannot open again.
+A Windows PC keeps no trial, since a newer Infinitary reaches it only by an install there.
+
+### Saved by a newer Infinitary
+
+The grant (`home.json`) may be one a newer Infinitary saved, with a later version number or fields this version does not know (`JoinedHome.savedByNewer`).
+This version names that, and never reads it as not joined:
+
+- the run says so and ends, and pauses its agent so the service manager does not start it on that work again and again (`pauseNewerWork`); the agent's file stays, so a newer copy's window or an update loads it again;
+- with an update's trial still open, the agent is left as it is, and the watcher goes back to the copy before it;
+- `work status` says so;
+- a Mac's window never writes its own grant over it, and reports its work half blocked as `newer-work` (`docs/view.md`, "A Mac that runs work").
+
+A grant unreadable for another reason is still no grant.
 
 ## Resource observations
 

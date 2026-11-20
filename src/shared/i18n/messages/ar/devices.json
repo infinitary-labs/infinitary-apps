@@ -34,5 +34,7 @@
   "devicesRemoteLineOutOfReachSince": "خارج المتناول · منذ",
   "devicesRemoteLineReadOnly": "· للقراءة فقط",
   "devicesRemoteLineReadingAgain": "· يلحق، ويقرأ كل شيء من جديد",
-  "devicesRemoteOutOfReach": "{name} خارج المتناول"
+  "devicesRemoteOutOfReach": "{name} خارج المتناول",
+  "devicesWorkCopyGone": "لم تعد نسخة Infinitary التي كان عمل {device} يبدأ منها موجودة، لذا يبدأ عمله الآن من Infinitary المثبّت هناك.",
+  "devicesWorkSavedByNewer": "حفظ إصدار أحدث من Infinitary هذا العمل، لذا يتركه هذا الإصدار كما هو. ثبّت هنا ذلك الإصدار الأحدث من Infinitary للمتابعة."
 }

@@ -509,6 +509,8 @@
   "settingsDevicesUpdate": "업데이트",
   "settingsDevicesUpdateFailed": "그곳의 Infinitary를 업데이트할 수 없어요.",
   "settingsDevicesUpdateNamed": "{device} 업데이트",
+  "settingsDevicesUpdateOlder": "이전 버전 설치",
+  "settingsDevicesUpdateOlderNamed": "{device}에 이전 버전 설치",
   "settingsDevicesWayCount": {
     "plural": "count",
     "other": "컴퓨터 {count}대"
@@ -534,6 +536,7 @@
   "settingsDevicesWindowsFirewallWay": "허용하려면 관리자 권한으로 PowerShell에서 이것을 한 번 실행하세요:",
   "settingsDevicesWorkAppPlace": "작업을 시작할 수 없어요. {device}의 Infinitary가 디스크 이미지나 다운로드 폴더에서 열려 있어요. 그쪽에서 응용 프로그램 폴더로 옮기고 다시 여세요.",
   "settingsDevicesWorkBackgroundOff": "작업을 시작할 수 없어요. {device}의 Infinitary가 백그라운드에서 실행되도록 허용되지 않았어요. Mac에서는 그쪽의 시스템 설정 › 일반 › 로그인 항목에서 켜세요.",
+  "settingsDevicesWorkNewerWork": "작업을 시작할 수 없어요. {device}의 작업은 더 새로운 Infinitary가 저장했어요. 그곳에 그 새로운 Infinitary를 설치하세요.",
   "settingsDevicesWorkNoBackground": "작업을 시작할 수 없어요. {device}에는 Infinitary를 백그라운드에서 실행할 방법이 없어요.",
   "settingsDevicesWorkNotReached": "{device}에서 작업은 실행 중이지만 이 컴퓨터에 연결되지 않았어요.",
   "settingsDevicesWorkOtherEntry": "작업을 시작할 수 없어요. {device}는 이미 이 목록의 다른 컴퓨터로 이 작업을 실행하고 있어요. 그 항목을 제거한 다음 고치기를 누르세요.",

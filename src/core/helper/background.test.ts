@@ -25,6 +25,7 @@ import {
   agentProbe,
   type BackgroundContext,
   moveInBackground,
+  pauseNewerWork,
   readInstalled,
   retireStrays,
   serviceLabel,
@@ -195,6 +196,26 @@ describe("running in the background", () => {
     await stopInBackground(ctx, service);
     expect(existsSync(service.file)).toBe(false);
     expect(asked).toEqual([["bootout", `gui/502/${service.label}`]]);
+  });
+
+  // Work a newer Infinitary saved (INF-5468's plan, piece 2): its run pauses
+  // the agent, so launchd does not start this version on it again and again.
+  it("pauses the agent on work a newer Infinitary saved, keeping its file, unless an update's trial is open", async () => {
+    const { ctx, asked } = context();
+    await startInBackground(ctx, { launcher: LAUNCHER, env: {}, app: null });
+    const { service } = readInstalled(ctx.dataDir);
+    if (!service) throw new Error("no agent");
+    asked.length = 0;
+    await pauseNewerWork(ctx);
+    expect(asked).toEqual([["bootout", `gui/502/${service.label}`]]);
+    expect(existsSync(service.file)).toBe(true);
+
+    // A trial still open is its watcher's: it goes back to the copy before.
+    asked.length = 0;
+    mkdirSync(join(ctx.dataDir, "app"), { recursive: true });
+    writeFileSync(join(ctx.dataDir, "app", "trial.json"), "{}\n");
+    await pauseNewerWork(ctx);
+    expect(asked).toEqual([]);
   });
 
   it("names one agent per flavor", () => {

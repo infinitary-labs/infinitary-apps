@@ -1,5 +1,5 @@
 import { execFile, spawn } from "node:child_process";
-import { mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync } from "node:fs";
 import type { NetworkInterfaceInfo } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { OWN_IDENTITY, type Spelling, workLabelOf, workLabels } from "@shared/codeNames";
@@ -15,6 +15,7 @@ import { moveLockPathFor, moveLockRunning } from "../storage/moveLock";
 import { onHomeMac } from "./homePlace";
 import { linuxStartup, type SystemdRuntime } from "./linuxStartup";
 import { folderHolder } from "./lock";
+import { trialPathOf } from "./updateTrial";
 import {
   createTask,
   requestRunStop,
@@ -935,6 +936,21 @@ export async function stopInBackground(
 export async function stopUnjoinedTask(context: BackgroundContext): Promise<void> {
   if (!("schtasks" in context)) return;
   await stopInBackground(context, taskScheduler.service(context));
+}
+
+/**
+ * Work a newer Infinitary saved (docs/helper.md, "Saved by a newer
+ * Infinitary"): the run that found it pauses its agent, so the service
+ * manager does not start this version on it again and again; the agent's
+ * file stays, so a newer copy's window or an update loads it again. An
+ * update's trial still open here is left to its watcher, which goes back
+ * to the copy before this one and starts it. Run from that agent, the pause
+ * ends this process, so it comes last.
+ */
+export async function pauseNewerWork(context: BackgroundContext): Promise<void> {
+  const { service } = readInstalled(context.dataDir);
+  if (!service || existsSync(trialPathOf(context.dataDir))) return;
+  await adapterOf(context).pause(context, service);
 }
 
 /**

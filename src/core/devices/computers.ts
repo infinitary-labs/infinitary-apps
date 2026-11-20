@@ -21,6 +21,7 @@ import {
   isPhone,
 } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
+import * as m from "@shared/i18n/messages.generated";
 import { PROTOCOL_VERSION, parseInvokeRequest } from "@shared/ipc";
 import {
   type PackageUpdateAddressQuestion,
@@ -1071,6 +1072,16 @@ export class Computers {
     if (!device || !deviceRunsWork(device.kind) || !deviceControls(device.kind))
       throw new Error("No Mac that runs work with that id is on the list.");
     this.workSetups.set(deviceId, { report, at: this.options.now() });
+    // The copy its background started was gone, so it starts the app there now: said once.
+    if (report.copyGone)
+      this.options.emitUpdate?.({
+        type: "device_update",
+        deviceId,
+        name: deviceLabel(device),
+        stage: "done",
+        text: m.devicesWorkCopyGone({ device: deviceLabel(device) }),
+        tone: "info",
+      });
     this.graceTimers.get(deviceId)?.();
     this.graceTimers.delete(deviceId);
     // A run found, or one asked for and not there yet, has its moment to

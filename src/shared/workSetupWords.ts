@@ -26,6 +26,8 @@ export function workSetupWords(
       return m.settingsDevicesWorkBackgroundOff(words);
     case "no-background":
       return m.settingsDevicesWorkNoBackground(words);
+    case "newer-work":
+      return m.settingsDevicesWorkNewerWork(words);
     default:
       return m.settingsDevicesWorkNotReached(words);
   }

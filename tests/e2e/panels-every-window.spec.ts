@@ -87,6 +87,9 @@ async function drawsTheFirstMatesPanels(page: Page, workspace: string): Promise<
 
 /** A panel the first mate builds while a window on another computer is open, reading settings. */
 const LOOK_PANEL = "look-glance";
+/** The lines LOOK_PANEL_CODE draws before and after the joined window changes its own look. */
+const LOOK_AT_START = "dark theme, music off, notifications off";
+const LOOK_CHANGED = "light theme, music on, notifications off";
 const LOOK_PANEL_CODE = `import type { PanelProps, PanelSettings } from "@infinitary/contracts";
 import { useEffect, useState } from "react";
 
@@ -136,7 +139,7 @@ async function readsItsOwnLook(home: Page, page: Page, workspace: string): Promi
     );
     writeFileSync(join(dir, "panel.tsx"), LOOK_PANEL_CODE);
     const look = panelBody(page, LOOK_PANEL).locator("[data-look]");
-    await expect(look).toHaveText("dark theme, music off, notifications off", { timeout: 60_000 });
+    await expect(look).toHaveText(LOOK_AT_START, { timeout: 60_000 });
     await page.evaluate(async () => {
       const own = await window.infinitary.settings.getAppearance();
       await window.infinitary.settings.setAppearance({
@@ -145,7 +148,7 @@ async function readsItsOwnLook(home: Page, page: Page, workspace: string): Promi
         ambientMusic: true,
       });
     });
-    await expect(look).toHaveText("light theme, music on, notifications off");
+    await expect(look).toHaveText(LOOK_CHANGED);
     expect(await home.evaluate(() => window.infinitary.settings.getAppearance())).toEqual(homeLook);
   });
 }

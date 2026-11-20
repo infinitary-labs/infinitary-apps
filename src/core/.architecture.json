@@ -1172,6 +1172,11 @@
       "why": "follows session completions"
     },
     {
+      "from": "session",
+      "to": "claude",
+      "why": "reads which Claude Code plugins are on"
+    },
+    {
       "from": "sharing",
       "to": "observe",
       "why": "redacts what it sends"

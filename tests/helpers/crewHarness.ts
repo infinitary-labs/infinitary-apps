@@ -580,7 +580,8 @@ export function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     ...(extras.personal
       ? {
           personalResourcesEnabled: extras.personal.enabled,
-          personalVersion: extras.personal.version,
+          personalVersion: async () =>
+            (extras.personal as NonNullable<typeof extras.personal>).version(),
         }
       : {}),
     ...(extras.takesNoWorkUntilUpdated

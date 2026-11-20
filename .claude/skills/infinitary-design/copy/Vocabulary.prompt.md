@@ -61,7 +61,7 @@ The right column is the whole list of allowed forms; pick the one the sentence n
 | settle (as a verb about a task) | merge it, discard it, stop it - discard and drop are plain words and stay |
 | escalation, escalate, stronger model | "a stronger model", "try a stronger model" |
 | inbox, wake, [fm-op], steer, drain, tick | never shown; "told", "asked", "nudged" |
-| plugin, extension, add-on, package, install, uninstall, npm, manifest, capability, grant | a panel; one someone else made is "a panel by <name>", brought in with "add" / "added" and taken back with "remove" / "take it away"; what it may see is "it can read ...", in the words this table gives each thing (the exact name stays in mono beside it, one click deeper) |
+| plugin, extension, add-on, package, install, uninstall, npm, manifest, capability, grant | a panel; one someone else made is "a panel by <name>", brought in with "add" / "added" and taken back with "remove" / "take it away"; what it may see is "it can read ...", in the words this table gives each thing (the exact name stays in mono beside it, one click deeper). The one exception is "agent plugins": the plugins the person turned on in their own coding agent (Claude Code), whose skills crewmates use; that phrase names them and never a panel |
 | spawn, dispatch, commission | "started", "asked a helper to" |
 | error, exception, stack, 401, 403, ENOENT | what happened and what to do: "the sign-in has lapsed - sign in again", "could not reach the provider - try again" |
 | UTC, GMT, Z, an ISO timestamp, for a time of day | the person's local time: "since about 9:05 AM", "resets at 1:10 PM"; a time a source gives in UTC is converted first, and the zone is named only when the person asks for another |

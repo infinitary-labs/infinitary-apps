@@ -17,6 +17,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | account | 帳號 | Taiwan's word; 賬戶 or 账号 forms are avoided. |
 | address (a server's) | 位址 | Taiwan's word for a network address, as in 伺服器位址. |
 | address (of a computer) | 位址 | A computer's SSH address; a browser page's address is 網址. |
+| agent plugins | 代理程式外掛 | Only the plugins turned on in the person's coding agent; a panel stays 面板, never 外掛. |
 | allowance left | 剩餘 {percent}% | The meter's own short form. |
 | Always use | 一律使用 | The setting that sends all crew work to one model; quoted as「一律使用」in sentences. |
 | Appearance | 外觀 | Standard. |

@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "crew-plugin-skills",
+      "kind": "feature",
+      "area": "crewmates",
+      "title": "Crewmates use the skills of your agent plugins",
+      "body": "With Global instructions and skills on, crewmates now also get the skills of the agent plugins you turned on in Claude Code, on every computer that runs work. They follow each plugin update with nothing to link by hand. Only the skills and the files they use come along; the plugins' hooks, MCP servers, agents and commands stay off.",
+      "picture": {
+        "dark": "crew-plugin-skills-dark.webp",
+        "light": "crew-plugin-skills-light.webp",
+        "alt": "The Global instructions and skills switch in Settings, its description now naming the skills of your agent plugins"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

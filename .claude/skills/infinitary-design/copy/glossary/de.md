@@ -17,6 +17,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | a stronger model | ein stärkeres Modell | |
 | account | Konto | |
 | action (an integration action) | Aktion | |
+| agent plugins | Agenten-Plugins | Only the plugins turned on in the person's coding agent; a panel stays "Panel". |
 | Allow (secrets approval button) | „Erlauben“ |  |
 | allowance reading, as of | Stand | "Stand: vor 5 Min.", "letzter Stand veraltet"; the allowance itself is "gelesen" ("kein Kontingent gelesen"). |
 | Always use | Immer verwenden | Quoted „Immer verwenden“ mid-sentence. |

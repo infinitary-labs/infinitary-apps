@@ -1193,7 +1193,7 @@
   "settingsSubscriptionsOnPace": "al ritmo",
   "settingsSubscriptionsOnPaceAll": "al ritmo ✓",
   "settingsSubscriptionsPaused": "en pausa",
-  "settingsSubscriptionsPersonalResourcesDescription": "Las nuevas conversaciones de los tripulantes usan las instrucciones y habilidades globales de la {computer} donde vive tu primer oficial. Otras {computers} que ejecutan trabajo guardan una copia, que se vuelve a enviar solo cuando cambia. Las reglas de la tripulación rigen la entrega; tu archivo orienta el estilo y el criterio.",
+  "settingsSubscriptionsPersonalResourcesDescription": "Las nuevas conversaciones de los tripulantes usan las instrucciones y habilidades globales de la {computer} donde vive tu primer oficial, junto con las habilidades de los plugins de agente que activaste allí. Otras {computers} que ejecutan trabajo guardan una copia, que se vuelve a enviar solo cuando cambia. Las reglas de la tripulación rigen la entrega; tu archivo orienta el estilo y el criterio.",
   "settingsSubscriptionsPersonalResourcesTitle": "Instrucciones y habilidades globales",
   "settingsSubscriptionsReading": "leyendo…",
   "settingsSubscriptionsRefresh": "Actualizar",

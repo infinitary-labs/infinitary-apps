@@ -15,6 +15,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | A phone (the item under Devices) | « Un téléphone » |  |
 | a stronger model | un modèle plus puissant | "Passée à un modèle plus puissant". |
 | account | compte | |
+| agent plugins | plugins d’agent | Only the plugins turned on in the person's coding agent; a panel stays "panneau". |
 | Allow (secrets approval button) | « Autoriser » |  |
 | allowance left | restant | "40 % restant". |
 | Appearance | Apparence | |

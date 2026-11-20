@@ -1,8 +1,29 @@
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import {
+  installClaudePlugin,
+  linkOutsidePlugin,
+  OUTSIDE_THE_PLUGIN,
+  pluginSettings,
+} from "../../../tests/helpers/claudePluginHome";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { type PersonalFile, personalFingerprint } from "../session/personalSet";
+import { readEnabledClaudePlugins } from "../claude/claudePlugins";
+import { personalResources } from "../session/personalResources";
+import {
+  type PersonalFile,
+  personalFingerprint,
+  personalFingerprintOf,
+  personalSetFiles,
+} from "../session/personalSet";
 import { PersonalCopy, type PersonalKeep } from "./personalCopy";
 
 /**
@@ -86,11 +107,79 @@ describe("the personal set a computer keeps", () => {
       ".claude/skills/README.md",
       ".claude/skills/rivets/../../settings.json",
       ".agents/skills/./rivets/SKILL.md",
+      ".claude/plugins/README.md",
+      ".claude/plugins/../settings.json",
+      ".claude/plugins/.hidden/SKILL.md",
+      ".claude/plugin/tools@market/SKILL.md",
     ]) {
       const dir = scratchDir("infinitary-personal-copy-");
       const files = [{ path, data: Buffer.from("x"), exec: false }];
       expect(() => new PersonalCopy(dir).keep(set(files)), path).toThrow(/outside its folders/);
       expect(new PersonalCopy(dir).held(), path).toBeUndefined();
     }
+  });
+
+  // The captain's feature request: plugin skills reach every computer without
+  // manual links, and follow plugin updates.
+  it("keeps a turned-on plugin's skills and own files under its id, never its other parts", async () => {
+    const home = scratchDir("infinitary-personal-plugin-home-");
+    const plugin = installClaudePlugin(home, { name: "claude-security", version: "0.12.0" });
+    const setting = await readEnabledClaudePlugins(pluginSettings({ [plugin.id]: true }));
+    const sent = personalSetFiles(home, setting);
+    const inside = `.claude/plugins/${plugin.id}`;
+    expect(sent.files.map((file) => file.path).sort()).toEqual(
+      [
+        `${inside}/.claude-plugin/plugin.json`,
+        `${inside}/README.md`,
+        `${inside}/scripts/lib/finding.py`,
+        `${inside}/scripts/render_report.py`,
+        `${inside}/skills/claude-security/SKILL.md`,
+      ].sort(),
+    );
+    // A computer without the plugins change is sent the set without them.
+    expect(personalSetFiles(home, undefined).files).toEqual([]);
+    const copy = new PersonalCopy(scratchDir("infinitary-personal-copy-"));
+    copy.keep(set(sent.files));
+    expect(personalFingerprintOf(copy.root())).toBe(personalFingerprint(sent.files));
+    expect(statSync(join(copy.root(), inside, "scripts/render_report.py")).mode & 0o111).not.toBe(
+      0,
+    );
+    const kept = personalResources(copy.root(), new Set(), { kept: true });
+    expect(kept.plugins).toEqual([
+      {
+        id: plugin.id,
+        name: "claude-security",
+        root: join(copy.root(), inside),
+        skills: [
+          { name: "claude-security", dir: join(copy.root(), inside, "skills/claude-security") },
+        ],
+      },
+    ]);
+    const home2 = personalResources(home, new Set(), { enabled: setting });
+    expect(kept.digests).toEqual(home2.digests);
+    // An update is a new version of the set, under the same paths: one send, nothing to relink.
+    installClaudePlugin(home, { name: "claude-security", version: "0.13.0" });
+    const updated = personalSetFiles(home, setting).files;
+    expect(updated.map((file) => file.path)).toEqual(sent.files.map((file) => file.path));
+    expect(personalFingerprint(updated)).not.toBe(personalFingerprint(sent.files));
+  });
+
+  // A plugin's links reach only its own files: nothing outside it reaches another computer.
+  it("leaves out a plugin's links that lead outside it, and keeps both paths to its own folder", async () => {
+    const home = scratchDir("infinitary-personal-plugin-links-");
+    const plugin = installClaudePlugin(home, { name: "claude-security" });
+    linkOutsidePlugin(home, plugin.root);
+    const setting = await readEnabledClaudePlugins(pluginSettings({ [plugin.id]: true }));
+    const inside = `.claude/plugins/${plugin.id}`;
+    const sent = personalSetFiles(home, setting).files;
+    const paths = sent.map((file) => file.path);
+    expect(paths).toContain(`${inside}/scripts/render_report.py`);
+    expect(paths).toContain(`${inside}/tools/render_report.py`);
+    for (const path of paths) expect(path).not.toMatch(/keys\.txt|references|leaked|linked-file/);
+    expect(sent.filter((file) => file.data.includes(OUTSIDE_THE_PLUGIN))).toEqual([]);
+    const listed = personalResources(home, new Set(), { enabled: setting }).plugins;
+    expect(listed.flatMap((each) => each.skills.map((skill) => skill.name))).toEqual([
+      "claude-security",
+    ]);
   });
 });

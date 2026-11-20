@@ -17,6 +17,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | a stronger model | un modelo más potente | "Pasó a un modelo más potente". |
 | account | cuenta | |
 | add | agregar | Chosen over "añadir" for consistency with "computadora". |
+| agent plugins | plugins de agente | Only the plugins turned on in the person's coding agent; a panel stays "panel". |
 | Appearance | Apariencia | |
 | Approves secret uses (switch) | Aprueba usos de secretos | The computer's Settings → Devices should show the same words. |
 | automation | automatización | The Settings section and each scheduled prompt in it; feminine ("creada por tu primer oficial"). |

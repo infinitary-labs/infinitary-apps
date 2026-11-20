@@ -63,7 +63,7 @@ export type ResolveClaudeSettings = (options: ResolveSettingsOptions) => Promise
  * library sets a process-wide environment variable, which a module that
  * only imports the Claude sign-in must not do.
  */
-const resolveSettings: ResolveClaudeSettings = async (options) =>
+export const resolveSettings: ResolveClaudeSettings = async (options) =>
   (await import("@anthropic-ai/claude-agent-sdk")).resolveSettings(options);
 
 /** The development fixture stands in only for the server-managed policy payload. */

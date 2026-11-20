@@ -63,6 +63,8 @@ const isolatedUnit = [
   "src/core/claude/claudeSession.record.test.ts",
   "src/core/claude/claudeSession.test.ts",
   "src/core/claude/claudeStoreLease.test.ts",
+  // Reads which Claude Code plugins are on through the Claude SDK's reader.
+  "src/core/pi/codingSession.projectResources.test.ts",
   "tests/crewmate-fixed-context.test.ts",
   // Its artifact-expiry fixture pins Date.now while real HTTP timers keep running.
   "src/core/forge/providers/gitlab/workflows.test.ts",

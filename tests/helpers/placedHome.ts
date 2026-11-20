@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import type { ComputerReach } from "@shared/devices";
 import { devicePlace } from "@shared/signIns";
+import type { EnabledClaudePlugins } from "../../src/core/claude/claudePlugins";
 import { type HomeConnection, startConnection } from "../../src/core/connection/connection";
 import { DeviceSetup } from "../../src/core/devices/deviceSetup";
 import { DeviceSignIns } from "../../src/core/devices/deviceSignIns";
@@ -234,9 +235,10 @@ export function startPlacedHome(options: {
   /**
    * The home's personal instructions and skills, read from `home` as this
    * user's home folder and kept on each computer as `createServices` keeps
-   * them (docs/personal-resources.md), with the switch on; absent, none is sent.
+   * them (docs/personal-resources.md), with the switch on, and `plugins` as
+   * the setting of which Claude Code plugins are on there; absent, none is sent.
    */
-  personal?: { home: string };
+  personal?: { home: string; plugins?: () => Promise<EnabledClaudePlugins | undefined> };
   log?: (line: string) => void;
 }): PlacedHome {
   const { now } = options;
@@ -273,7 +275,11 @@ export function startPlacedHome(options: {
   const settings = new SettingsStore(db);
   if (options.personal) settings.setPersonalResourcesEnabled(true);
   const homePersonalSet = options.personal
-    ? homePersonalSetOver(settings, { now, home: options.personal.home })
+    ? homePersonalSetOver(settings, {
+        now,
+        home: options.personal.home,
+        plugins: options.personal.plugins,
+      })
     : undefined;
   const latestModels = () =>
     routing && { generatedAt: new Date(now()).toISOString(), models: routing.catalog };
@@ -506,7 +512,9 @@ export function startPlacedHome(options: {
     : undefined;
   const supervisor = new CrewSupervisor({
     personalResourcesEnabled: () => settings.getPersonalResourcesEnabled(),
-    ...(homePersonalSet ? { personalVersion: () => homePersonalSet.current().version } : {}),
+    ...(homePersonalSet
+      ? { personalVersion: async () => (await homePersonalSet.current()).version }
+      : {}),
     sessions: {
       pi: options.here ?? { ...nothingHere, backend: "pi" },
       claude: { ...nothingHere, backend: "claude" },

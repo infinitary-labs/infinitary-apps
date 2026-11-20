@@ -134,3 +134,13 @@ kbd {
   direction: ltr;
   unicode-bidi: isolate;
 }
+
+/*
+ * Pagefind places the search icon at the form's left edge, where the field
+ * starts in left-to-right text. In right-to-left text on a narrow screen,
+ * Starlight's Cancel button takes that edge and the field starts after it,
+ * so the icon moves past the button into the field.
+ */
+[dir="rtl"] #starlight__search .pagefind-ui__form::before {
+  left: calc(var(--sl-search-cancel-space) + 20px * var(--pagefind-ui-scale));
+}

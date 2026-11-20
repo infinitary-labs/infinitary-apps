@@ -16,6 +16,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | a stronger model | 더 강력한 모델 | |
 | account | 계정 | |
 | action (an integration action) | 동작 | Kept apart from 작업 (task) |
+| agent plugins | 에이전트 플러그인 | Only the plugins turned on in the person's coding agent; a panel stays 패널. |
 | Always use | 항상 사용 | The model setting that skips levels |
 | Appearance | 모양 | As macOS's Korean System Settings names it |
 | Approves secret uses (switch) | 비밀 정보 사용 승인 | The computer's Settings → Devices should show the same words. |

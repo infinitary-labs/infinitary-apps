@@ -231,7 +231,7 @@ export type CrewSupervisorOptions = {
    * The version of the home's personal set a conversation on this Mac reads
    * (docs/personal-resources.md): its timeline names it, and the Info tab.
    */
-  personalVersion?: () => import("@shared/personalSet").PersonalVersion;
+  personalVersion?: () => Promise<import("@shared/personalSet").PersonalVersion>;
   source?: import("../selfSource/resolve").SelfSourceReader;
   runbooks?: Runbooks;
   /**

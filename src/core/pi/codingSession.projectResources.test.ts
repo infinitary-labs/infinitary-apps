@@ -3,6 +3,12 @@ import { dirname, join } from "node:path";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { type StubApi, startStubApi } from "../../../tests/helpers/anthropicDialect";
+import {
+  filesFromOutside,
+  installClaudePlugin,
+  linkOutsidePlugin,
+  OUTSIDE_THE_PLUGIN,
+} from "../../../tests/helpers/claudePluginHome";
 import { codingSpec } from "../../../tests/helpers/codingSession";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { Runbooks } from "../runbooks/runbooks";
@@ -174,6 +180,45 @@ it("opts in only to this Mac's file and skills, with project names winning and n
   expect(on).not.toContain("Personal design, shadowed.");
   expect(on).not.toContain("Pi setup never served.");
   console.info("Pi served personal resources:", on);
+});
+
+// The captain's feature request: the skills of the Claude Code plugins turned
+// on in ~/.claude/settings.json reach other crewmates by their bare names.
+it("serves a turned-on Claude Code plugin's skills below the person's own, naming its folder", async () => {
+  const { served, home } = await world();
+  // The client library's settings reader reads this HOME's settings file.
+  vi.stubEnv("HOME", home);
+  vi.stubEnv("CLAUDE_CONFIG_DIR", join(home, ".claude"));
+  const plugin = installClaudePlugin(home, { name: "claude-security" });
+  const off = installClaudePlugin(home, { name: "hookify" });
+  put(
+    join(plugin.root, "skills", "rivets", "SKILL.md"),
+    "---\nname: rivets\ndescription: Plugin rivets, shadowed.\n---\n",
+  );
+  plantSkill(join(home, ".agents", "skills"), "rivets", "Your own rivets.");
+  put(
+    join(home, ".claude", "settings.json"),
+    JSON.stringify({ enabledPlugins: { [plugin.id]: true, [off.id]: false } }),
+  );
+  // Links that lead outside the plugin are not its own: nothing they reach is served.
+  linkOutsidePlugin(home, plugin.root);
+  expect(await served()).not.toContain("claude-security");
+  const on = await served(true);
+  expect(on).toContain("<name>claude-security</name>");
+  // The plugin is served from its own files, staged beside the session's record.
+  const root = /- claude-security: ([^\s]+) \(skills: claude-security\)/.exec(on)?.[1];
+  expect(root).toBeDefined();
+  expect(root).not.toBe(plugin.root);
+  expect(on).toContain(
+    `<location>${join(root as string, "skills", "claude-security", "SKILL.md")}</location>`,
+  );
+  expect(readFileSync(join(root as string, "tools", "render_report.py"), "utf8")).toBe(
+    "print('report')\n",
+  );
+  expect(filesFromOutside(root as string)).toEqual([]);
+  expect(on).toContain("Your own rivets.");
+  for (const absent of ["Plugin rivets, shadowed.", "hookify", "scan-verifier", OUTSIDE_THE_PLUGIN])
+    expect(on, absent).not.toContain(absent);
 });
 
 it("INF-2054 keeps a session's runbook skills where its prompt names them while another session of its task opens", async () => {

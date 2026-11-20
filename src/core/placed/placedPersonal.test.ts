@@ -1,8 +1,10 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { installClaudePlugin, pluginSettings } from "../../../tests/helpers/claudePluginHome";
 import { api, model, placedWorldHooks, world } from "../../../tests/helpers/placedWorld";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { readEnabledClaudePlugins } from "../claude/claudePlugins";
 import {
   personalFingerprint,
   personalFingerprintOf,
@@ -57,7 +59,7 @@ describe("the home's personal set on a computer that runs work", () => {
     const at = await world(undefined, { personal: { home } });
     const sends = () => at.ordered.filter((channel) => channel === "inf:session:personal").length;
     const kept = () => personalFingerprintOf(join(at.dataDir, "personal", "current"));
-    const home_ = () => personalFingerprint(personalSetFiles(home).files);
+    const home_ = () => personalFingerprint(personalSetFiles(home, undefined).files);
 
     // Its contact brings it the home's set: one send, the same fingerprint on both.
     await expect.poll(sends).toBe(1);
@@ -89,5 +91,45 @@ describe("the home's personal set on a computer that runs work", () => {
     await at.inReach();
     expect(sends()).toBe(2);
     expect(kept()).toBe(home_());
+  });
+
+  // The captain's feature request: the skills of turned-on Claude Code
+  // plugins reach every computer, follow plugin updates, need no links.
+  it("carries the home's turned-on plugin skills there, and a plugin update once", async () => {
+    const own = scratchDir("infinitary-personal-computer-");
+    vi.stubEnv("HOME", own);
+    const home = scratchDir("infinitary-personal-home-");
+    const plugin = installClaudePlugin(home, { name: "claude-security", version: "0.12.0" });
+    const plugins = () => readEnabledClaudePlugins(pluginSettings({ [plugin.id]: true }));
+
+    const at = await world(undefined, { personal: { home, plugins } });
+    const sends = () => at.ordered.filter((channel) => channel === "inf:session:personal").length;
+    const keptPlugin = join(at.dataDir, "personal", "current", ".claude", "plugins", plugin.id);
+    await expect.poll(sends).toBe(1);
+
+    const asked = api.requests.length;
+    model([{ text: "Done." }]);
+    await at.start("t-one");
+    await expect.poll(() => api.requests.length).toBe(asked + 1);
+    expect(served()).toContain("<name>claude-security</name>");
+    // Served from the kept set's own files, staged beside the session's record, never the home's folder.
+    const root = /- claude-security: ([^\s]+) \(skills/.exec(served())?.[1] as string;
+    expect(readFileSync(join(root, "skills", "claude-security", "SKILL.md"), "utf8")).toBe(
+      readFileSync(join(keptPlugin, "skills", "claude-security", "SKILL.md"), "utf8"),
+    );
+    expect(served()).not.toContain(plugin.root);
+
+    // Claude Code installs an update in a new folder; the next conversation reads it after one send.
+    installClaudePlugin(home, {
+      name: "claude-security",
+      version: "0.13.0",
+      skillText: "---\nname: claude-security\ndescription: Scan, updated.\n---\nScan.\n",
+    });
+    model([{ text: "Done." }, { text: "Done." }]);
+    await at.start("t-two");
+    await at.start("t-three");
+    await expect.poll(() => api.requests.length).toBe(asked + 3);
+    expect(sends()).toBe(2);
+    expect(served()).toContain("Scan, updated.");
   });
 });

@@ -13,6 +13,7 @@ import {
 import { basename, dirname, join, posix } from "node:path";
 import type { WorkOrderRequest, WorkOrderResponse } from "@shared/work";
 import { z } from "zod";
+import { PLUGIN_SET_ROOT, safePluginName } from "../claude/claudePlugins";
 import { listsChange } from "../connection/contractChanges";
 import { PERSONAL_SYNC } from "../placed/personalSync";
 import { folderLinkType } from "../platform";
@@ -35,13 +36,20 @@ const keptSchema = z.object({
 /** Where a skill may sit in the set: beneath one of the reader's two skill folders. */
 const SKILL_ROOTS = [".agents/skills/", ".claude/skills/"];
 
-/** A path the set may hold: the reader's instruction files, or a file inside a skill. */
+/**
+ * A path the set may hold: the reader's instruction files, a file inside a
+ * skill, or a file inside a plugin's folder (`<PLUGIN_SET_ROOT>/<id>/...`).
+ */
 export function allowedPersonalPath(path: string): boolean {
   if (path.length === 0 || path.length > 1024 || path.includes("\0") || path.includes("\\"))
     return false;
   if (posix.isAbsolute(path) || posix.normalize(path) !== path) return false;
   if (path.split("/").some((part) => part === ".." || part === "." || part === "")) return false;
   if ((PERSONAL_INSTRUCTION_FILES as readonly string[]).includes(path)) return true;
+  if (path.startsWith(`${PLUGIN_SET_ROOT}/`)) {
+    const [id, ...inside] = path.slice(PLUGIN_SET_ROOT.length + 1).split("/");
+    return id !== undefined && safePluginName(id) && inside.length >= 1;
+  }
   return SKILL_ROOTS.some((root) => {
     if (!path.startsWith(root)) return false;
     // `<root><skill>/<file...>`: a skill's folder, never a file beside the skills.

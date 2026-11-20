@@ -69386,29 +69386,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const computers = input2.computers;
     switch (currentLanguage()) {
       case "ar":
-        return `تستخدم محادثات أفراد الطاقم الجديدة التعليمات والمهارات العامة على ${computer} الذي يقيم عليه نائب القبطان. تحتفظ ${computers} الأخرى التي تشغّل العمل بنسخة، لا تُرسل من جديد إلا عند تغيّرها. قواعد الطاقم تحكم التسليم؛ وملفك يوجّه الأسلوب والتقدير.`;
+        return `تستخدم محادثات أفراد الطاقم الجديدة التعليمات والمهارات العامة على ${computer} الذي يقيم عليه نائب القبطان، ومعها مهارات إضافات الوكلاء التي شغّلتها هناك. تحتفظ ${computers} الأخرى التي تشغّل العمل بنسخة، لا تُرسل من جديد إلا عند تغيّرها. قواعد الطاقم تحكم التسليم؛ وملفك يوجّه الأسلوب والتقدير.`;
       case "de":
-        return `Neue Unterhaltungen von Crewmitgliedern verwenden die globalen Anweisungen und Skills auf dem ${computer}, auf dem dein erster Offizier lebt. Andere ${computers}, die Arbeit ausführen, behalten eine Kopie, die nur nach einer Änderung neu gesendet wird. Die Crew-Regeln bestimmen die Lieferung; deine Datei leitet Stil und Urteil.`;
+        return `Neue Unterhaltungen von Crewmitgliedern verwenden die globalen Anweisungen und Skills auf dem ${computer}, auf dem dein erster Offizier lebt, samt den Skills der Agenten-Plugins, die du dort eingeschaltet hast. Andere ${computers}, die Arbeit ausführen, behalten eine Kopie, die nur nach einer Änderung neu gesendet wird. Die Crew-Regeln bestimmen die Lieferung; deine Datei leitet Stil und Urteil.`;
       case "es":
-        return `Las nuevas conversaciones de los tripulantes usan las instrucciones y habilidades globales de la ${computer} donde vive tu primer oficial. Otras ${computers} que ejecutan trabajo guardan una copia, que se vuelve a enviar solo cuando cambia. Las reglas de la tripulación rigen la entrega; tu archivo orienta el estilo y el criterio.`;
+        return `Las nuevas conversaciones de los tripulantes usan las instrucciones y habilidades globales de la ${computer} donde vive tu primer oficial, junto con las habilidades de los plugins de agente que activaste allí. Otras ${computers} que ejecutan trabajo guardan una copia, que se vuelve a enviar solo cuando cambia. Las reglas de la tripulación rigen la entrega; tu archivo orienta el estilo y el criterio.`;
       case "fr":
-        return `Les nouvelles conversations des équipiers utilisent les instructions et compétences globales du ${computer} où vit votre second. Les autres ${computers} qui exécutent du travail en gardent une copie, renvoyée seulement quand elle change. Les règles de l’équipage régissent la livraison ; votre fichier guide le style et le jugement.`;
+        return `Les nouvelles conversations des équipiers utilisent les instructions et compétences globales du ${computer} où vit votre second, avec les compétences des plugins d’agent que vous y avez activés. Les autres ${computers} qui exécutent du travail en gardent une copie, renvoyée seulement quand elle change. Les règles de l’équipage régissent la livraison ; votre fichier guide le style et le jugement.`;
       case "ja":
-        return `新しい乗組員の会話では、一等航海士がいる ${computer} の全体の指示とスキルを使います。作業を実行するほかの ${computers} はその写しを持ち、変更されたときだけ送り直されます。届け方は乗組員のルールが決め、あなたのファイルは書き方と判断の指針になります。`;
+        return `新しい乗組員の会話では、一等航海士がいる ${computer} の全体の指示とスキルと、そこでオンにしたエージェントプラグインのスキルを使います。作業を実行するほかの ${computers} はその写しを持ち、変更されたときだけ送り直されます。届け方は乗組員のルールが決め、あなたのファイルは書き方と判断の指針になります。`;
       case "ko":
-        return `새 선원 대화는 일등항해사가 있는 ${computer}의 전역 지침과 스킬을 써요. 작업을 실행하는 다른 ${computers}는 사본을 보관하고, 바뀔 때만 다시 받아요. 전달 방식은 선원 규칙이 정하고, 선장님의 파일은 스타일과 판단을 이끌어요.`;
+        return `새 선원 대화는 일등항해사가 있는 ${computer}의 전역 지침과 스킬, 그리고 거기서 켠 에이전트 플러그인의 스킬을 써요. 작업을 실행하는 다른 ${computers}는 사본을 보관하고, 바뀔 때만 다시 받아요. 전달 방식은 선원 규칙이 정하고, 선장님의 파일은 스타일과 판단을 이끌어요.`;
       case "pt-BR":
-        return `As novas conversas dos tripulantes usam as instruções e habilidades globais do ${computer} onde mora seu imediato. Os outros ${computers} que executam trabalho guardam uma cópia, enviada de novo só quando ela muda. As regras da tripulação regem a entrega; seu arquivo orienta o estilo e o julgamento.`;
+        return `As novas conversas dos tripulantes usam as instruções e habilidades globais do ${computer} onde mora seu imediato, junto com as habilidades dos plugins de agente que você ativou lá. Os outros ${computers} que executam trabalho guardam uma cópia, enviada de novo só quando ela muda. As regras da tripulação regem a entrega; seu arquivo orienta o estilo e o julgamento.`;
       case "zh-Hans":
-        return `新的船员对话使用你的大副所在 ${computer} 上的全局说明和技能。运行工作的其他 ${computers} 会保留一份副本，只在内容变化时重新发送。船员规则决定交付方式；你的文件引导风格和判断。`;
+        return `新的船员对话使用你的大副所在 ${computer} 上的全局说明和技能，以及你在那里开启的智能体插件的技能。运行工作的其他 ${computers} 会保留一份副本，只在内容变化时重新发送。船员规则决定交付方式；你的文件引导风格和判断。`;
       case "zh-Hant":
-        return `新的船員對話會使用你的大副所在 ${computer} 上的全域指示和技能。執行工作的其他 ${computers} 會保留一份副本，只在內容變更時重新傳送。船員規則決定交付方式；你的檔案引導風格和判斷。`;
+        return `新的船員對話會使用你的大副所在 ${computer} 上的全域指示和技能，以及你在那裡開啟的代理程式外掛的技能。執行工作的其他 ${computers} 會保留一份副本，只在內容變更時重新傳送。船員規則決定交付方式；你的檔案引導風格和判斷。`;
       case "en-XA":
-        return `[Ñéŵ çŕéŵɱáţé šéššîöñš ûšé ţĥé ĝļöƀáļ îñšţŕûçţîöñš áñð šķîļļš öƒ ţĥé ${computer} ŵĥéŕé ýöûŕ ƒîŕšţ ɱáţé ļîṽéš. Öţĥéŕ ${computers} ţĥáţ ŕûñ ŵöŕķ ķééþ á çöþý, šéñţ áĝáîñ öñļý ŵĥéñ îţ çĥáñĝéš. Çŕéŵ ŕûļéš ĝöṽéŕñ ðéļîṽéŕý; ýöûŕ ƒîļé ĝûîðéš šţýļé áñð ĵûðĝɱéñţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Ñéŵ çŕéŵɱáţé šéššîöñš ûšé ţĥé ĝļöƀáļ îñšţŕûçţîöñš áñð šķîļļš öƒ ţĥé ${computer} ŵĥéŕé ýöûŕ ƒîŕšţ ɱáţé ļîṽéš, ŵîţĥ ţĥé šķîļļš öƒ ţĥé áĝéñţ þļûĝîñš ýöû ţûŕñéð öñ ţĥéŕé. Öţĥéŕ ${computers} ţĥáţ ŕûñ ŵöŕķ ķééþ á çöþý, šéñţ áĝáîñ öñļý ŵĥéñ îţ çĥáñĝéš. Çŕéŵ ŕûļéš ĝöṽéŕñ ðéļîṽéŕý; ýöûŕ ƒîļé ĝûîðéš šţýļé áñð ĵûðĝɱéñţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮New crewmate sessions use the global instructions and skills of the ‬${computer}‮ where your first mate lives. Other ‬${computers}‮ that run work keep a copy, sent again only when it changes. Crew rules govern delivery; your file guides style and judgment.‬`;
+        return `‮New crewmate sessions use the global instructions and skills of the ‬${computer}‮ where your first mate lives, with the skills of the agent plugins you turned on there. Other ‬${computers}‮ that run work keep a copy, sent again only when it changes. Crew rules govern delivery; your file guides style and judgment.‬`;
     }
-    return `New crewmate sessions use the global instructions and skills of the ${computer} where your first mate lives. Other ${computers} that run work keep a copy, sent again only when it changes. Crew rules govern delivery; your file guides style and judgment.`;
+    return `New crewmate sessions use the global instructions and skills of the ${computer} where your first mate lives, with the skills of the agent plugins you turned on there. Other ${computers} that run work keep a copy, sent again only when it changes. Crew rules govern delivery; your file guides style and judgment.`;
   }
   function settingsSubscriptionsPersonalResourcesTitle() {
     switch (currentLanguage()) {

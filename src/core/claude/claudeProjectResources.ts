@@ -1,4 +1,4 @@
-import { mkdir, rm, symlink, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { folderLinkType } from "../platform";
 import { stageRunbookSkills } from "../runbooks/runbooks";
@@ -6,6 +6,7 @@ import {
   PERSONAL_RESOURCE_RULES,
   type PersonalResourceDigests,
   personalInstructionsText,
+  personalPluginSource,
   personalResources,
 } from "../session/personalResources";
 import {
@@ -14,6 +15,8 @@ import {
   projectSkillFolders,
 } from "../session/projectResources";
 import type { SessionSpec } from "../session/session";
+import { stagePluginTrees } from "../session/stagedPlugins";
+import { type ClaudePlugin, carriedPluginEntries } from "./claudePlugins";
 
 /**
  * A Claude crewmate's share of its working copy's own instructions and
@@ -38,6 +41,8 @@ export type ClaudeProjectResources = {
   instructions?: ProjectInstructions;
   personalInstructions?: string;
   personalSkillsPlugin?: string;
+  /** One staged plugin per turned-on Claude Code plugin with a skill to serve. */
+  pluginSkillsPlugins?: string[];
   runbookSkillsPlugin?: string;
   /** The staged plugin's folder, when the working copy has a skill. */
   skillsPlugin?: string;
@@ -90,6 +95,65 @@ export async function stageClaudeSkills(
   return dir;
 }
 
+/** The names the app's own staged plugins take, which no person's plugin may. */
+const STAGED_NAMES = [CLAUDE_PROJECT_PLUGIN, "personal", "runbooks"];
+
+/**
+ * Stage each of the person's Claude Code plugins as a local plugin in its
+ * own folder under `dir`: a manifest the app writes (its name alone), links
+ * to the skill folders the reader picked, and links to (or, for a file, a
+ * copy of) the plugin's other own entries, so `${CLAUDE_PLUGIN_ROOT}` in a
+ * skill reaches the scripts and references it names; never its hooks,
+ * agents, commands, MCP or any other part Claude Code would load
+ * (`carriedPluginEntries`). The client lists each skill as `<plugin>:<skill>`.
+ */
+export async function stageClaudePlugins(
+  plugins: readonly ClaudePlugin[],
+  dir: string,
+  note: (line: string) => void,
+): Promise<string[]> {
+  await rm(dir, { recursive: true, force: true });
+  const taken = new Set(STAGED_NAMES);
+  const staged: string[] = [];
+  for (const plugin of plugins) {
+    if (taken.has(plugin.name)) {
+      // i18n-exempt: a line in the session's own log, for a developer.
+      note(`the plugin ${plugin.id} was not staged: another staged plugin is named ${plugin.name}`);
+      continue;
+    }
+    taken.add(plugin.name);
+    const into = join(dir, plugin.id);
+    await mkdir(join(into, ".claude-plugin"), { recursive: true });
+    await mkdir(join(into, "skills"));
+    await writeFile(
+      join(into, ".claude-plugin", "plugin.json"),
+      // i18n-exempt: the client reads it, never a person.
+      JSON.stringify({ name: plugin.name, description: "Skills of a Claude Code plugin." }),
+    );
+    for (const entry of carriedPluginEntries(plugin.root)) {
+      if (entry === "skills") continue;
+      const from = join(plugin.root, entry);
+      // An entry that cannot be read, such as a dangling link, is left out
+      // alone, as the personal set leaves it out, never the plugin's skills.
+      try {
+        if ((await stat(from)).isDirectory())
+          await symlink(from, join(into, entry), folderLinkType());
+        else await copyFile(from, join(into, entry));
+      } catch {
+        // i18n-exempt: a line in the session's own log, for a developer.
+        note(`the plugin ${plugin.id}'s ${entry} was not staged: it could not be read`);
+      }
+    }
+    await Promise.all(
+      plugin.skills.map((skill) =>
+        symlink(skill.dir, join(into, "skills", skill.name), folderLinkType()),
+      ),
+    );
+    staged.push(into);
+  }
+  return staged;
+}
+
 /** Where a coding session stages its working copy's skills, inside its staging folder. */
 export const CLAUDE_PROJECT_SKILLS_DIR = "project-skills";
 
@@ -102,7 +166,7 @@ export const CLAUDE_PROJECT_SKILLS_DIR = "project-skills";
  * costs those skills, never the attach.
  */
 export async function claudeProjectResources(
-  spec: Pick<SessionSpec, "cwd" | "personalResources" | "runbookSkills">,
+  spec: Pick<SessionSpec, "cwd" | "personalResources" | "personalRoot" | "runbookSkills">,
   home: string | undefined,
   staged: string,
   note: (line: string) => void,
@@ -124,7 +188,9 @@ export async function claudeProjectResources(
     project = instructions ? { instructions } : {};
   }
   const names = new Set(projectSkillFolders(spec.cwd).map((skill) => skill.name));
-  const personal = spec.personalResources ? personalResources(home, names) : undefined;
+  const personal = spec.personalResources
+    ? personalResources(home, names, await personalPluginSource(spec.personalRoot))
+    : undefined;
   if (personal) {
     project.personalInstructions = personal.instructions
       ? personalInstructionsText(personal.instructions)
@@ -138,9 +204,22 @@ export async function claudeProjectResources(
     } catch (error) {
       note(`the personal skills were not staged: ${String(error)}`);
     }
+    try {
+      // The plugins' own files alone, then the plugins the client loads from them.
+      const trees = await stagePluginTrees(personal.plugins, join(staged, "plugin-files"), note);
+      const plugins = await stageClaudePlugins(trees, join(staged, "plugin-skills"), note);
+      if (plugins.length > 0) project.pluginSkillsPlugins = plugins;
+    } catch (error) {
+      // i18n-exempt: a line in the session's own log, for a developer.
+      note(`the plugin skills were not staged: ${String(error)}`);
+    }
   }
   if (spec.runbookSkills) {
-    const taken = new Set([...names, ...(personal?.skills ?? []).map((skill) => skill.name)]);
+    const taken = new Set([
+      ...names,
+      ...(personal?.skills ?? []).map((skill) => skill.name),
+      ...(personal?.plugins ?? []).flatMap((plugin) => plugin.skills.map((skill) => skill.name)),
+    ]);
     try {
       const folders = await stageRunbookSkills(
         spec.runbookSkills.filter((skill) => !taken.has(skill.name)),

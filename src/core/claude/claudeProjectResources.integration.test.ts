@@ -5,6 +5,7 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import type { ServerResponse } from "node:http";
@@ -20,6 +21,12 @@ import {
   startStubApi,
   writeAnthropicToolUse,
 } from "../../../tests/helpers/anthropicDialect";
+import {
+  filesFromOutside,
+  installClaudePlugin,
+  linkOutsidePlugin,
+  OUTSIDE_THE_PLUGIN,
+} from "../../../tests/helpers/claudePluginHome";
 import { codingSpec } from "../../../tests/helpers/codingSession";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { Runbooks } from "../runbooks/runbooks";
@@ -387,6 +394,60 @@ it("opts in to local personal instructions and loads a personal skill without ho
       stamps,
     }),
   );
+});
+
+// The captain's feature request: the skills of the Claude Code plugins turned
+// on in ~/.claude/settings.json, skills only, with hooks still disabled.
+it("lists a turned-on plugin's skills under its name with its own files reachable, and none of its other parts", async () => {
+  const crewmate = box();
+  // The client library's settings reader reads this HOME's settings file.
+  vi.stubEnv("HOME", crewmate.home);
+  vi.stubEnv("CLAUDE_CONFIG_DIR", join(crewmate.home, ".claude"));
+  const plugin = installClaudePlugin(crewmate.home, { name: "claude-security" });
+  put(
+    join(plugin.root, "hooks", "hooks.json"),
+    JSON.stringify({
+      hooks: {
+        SessionStart: [
+          { hooks: [{ type: "command", command: `touch ${crewmate.ran("plugin-hook")}` }] },
+        ],
+      },
+    }),
+  );
+  put(
+    join(plugin.root, ".mcp.json"),
+    JSON.stringify({
+      mcpServers: { scanner: { command: "touch", args: [crewmate.ran("plugin-mcp")] } },
+    }),
+  );
+  put(
+    join(crewmate.home, ".claude", "settings.json"),
+    JSON.stringify({ enabledPlugins: { [plugin.id]: true } }),
+  );
+  // A dangling link in the plugin's folder costs only itself.
+  symlinkSync(join(plugin.root, "removed-notes"), join(plugin.root, "notes"));
+  // Links that lead outside the plugin are not its own: nothing they reach is staged or served.
+  linkOutsidePlugin(crewmate.home, plugin.root);
+  crewmate.spec.personalResources = true;
+  loadsASkillThenRuns("claude-security:claude-security", "true");
+  const first = api.requests.length;
+  const session = await crewmate.factory.open(crewmate.spec);
+  await session.prompt("Scan with the plugin.");
+  session.dispose();
+  await session.closed();
+  const [opening, loaded] = api.requests.slice(first);
+  expect(opening?.raw).toContain("claude-security:claude-security");
+  for (const part of ["scan-verifier", 'claude-security:scan\\"', "scanner", OUTSIDE_THE_PLUGIN])
+    expect(opening?.raw, part).not.toContain(part);
+  const script = /[^"\s]*\/scripts\/render_report\.py/.exec(loaded?.raw ?? "")?.[0];
+  expect(script).toBeDefined();
+  expect(script).not.toContain("CLAUDE_PLUGIN_ROOT");
+  expect(readFileSync(script as string, "utf8")).toBe("print('report')\n");
+  for (const name of ["plugin-hook", "plugin-mcp"])
+    expect(existsSync(crewmate.ran(name)), name).toBe(false);
+  expect(filesFromOutside(join(crewmate.recordDir, STAGED_FOLDER))).toEqual([]);
+  expect(existsSync(join(dirname(script as string), "..", "tools", "render_report.py"))).toBe(true);
+  console.info("Claude plugin skill loaded:", loaded?.raw?.slice(0, 2000));
 });
 
 it("renews a reopened conversation when opting in, changing the file or opting out, but resumes unchanged resources", async () => {

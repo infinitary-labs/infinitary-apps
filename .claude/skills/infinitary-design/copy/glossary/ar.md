@@ -16,6 +16,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | a stronger model | نموذج أقوى | |
 | account | حساب | |
 | action (an integration action) | إجراء | Plural "إجراءات". |
+| agent plugins | إضافات الوكلاء | Only the plugins turned on in the person's coding agent; a panel stays "لوحة". |
 | Allow (secrets approval button) | «سماح» |  |
 | Always use | الاستخدام دائمًا | Quoted «الاستخدام دائمًا» mid-sentence. |
 | an automation | أتمتة | One is "أتمتة" ("هذه الأتمتة"), several are "عمليات الأتمتة". |

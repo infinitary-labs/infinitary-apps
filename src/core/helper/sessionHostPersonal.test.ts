@@ -93,7 +93,7 @@ describe("the home's personal instructions on a computer that runs work", () => 
     expect(first.personal).toBeUndefined();
     sync.heard(at.deviceId, first.personal);
     await sync.bring(at.deviceId);
-    const before = set.current().version;
+    const before = (await set.current()).version;
     expect((await at.order("inf:session:roster", [])).personal).toEqual(before);
     expect(personalFingerprintOf(kept)).toBe(before.version);
 
@@ -101,7 +101,7 @@ describe("the home's personal instructions on a computer that runs work", () => 
     put(join(home, "AGENTS.md"), "The home's edited rule.\n");
     await sync.bring(at.deviceId);
     await sync.bring(at.deviceId);
-    const after = set.current().version;
+    const after = (await set.current()).version;
     expect(after.version).not.toBe(before.version);
     expect(sent).toEqual(["inf:session:personal", "inf:session:personal"]);
     const roster = await at.order("inf:session:roster", []);

@@ -212,7 +212,7 @@ export function createClaudeSessionFactory(deps: ClaudeSessionDeps): SessionFact
     // Resumed on a changed prompt array, the client would serve the old one.
     if (recorded) {
       session.renewIfChanged();
-      session.renewPersonalIfChanged();
+      await session.renewPersonalIfChanged();
       void session.readAhead();
     }
     await session.stampContract();

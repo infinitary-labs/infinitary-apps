@@ -41,9 +41,9 @@ export const windowAskSchema = z.strictObject({
   channel: z.enum(WINDOW_CHANNELS),
   args: z.array(z.unknown()).max(4),
   /**
-   * For a change to a shared value, the fields this request changes, each
-   * with its value as the first mate read it: the window changes only those,
-   * and only while each still reads that value there.
+   * For a change to a shared value, every field its action sets, each with
+   * its value as the first mate read it: the window sets only those, and
+   * only while each still reads that value there or already the asked one.
    */
   changes: z
     .array(z.strictObject({ field: z.string().min(1).max(64), was: z.unknown().optional() }))

@@ -698,9 +698,19 @@ describe("the first mate's Settings actions, driven through the whole core", () 
       expect(ruleOf()?.connection).toBe("mail-1");
       // The connection was replaced, so the rule waits on the old one until it is reconnected.
       connected = "mail-2";
+      const stoppedOf = async () =>
+        (await core.dispatch("inf:automation:list", [])).rules.find(
+          (rule) => rule.id === created.id,
+        )?.stopped;
+      expect(await stoppedOf()).toBeDefined();
       const edited = await asked("automation-edit", { id: created.id, reconnect: true });
       expect(ruleOf()?.connection).toBe("mail-2");
+      expect(await stoppedOf()).toBeUndefined();
       expect(edited.lines).toEqual([expect.stringContaining("new-mail from mail")]);
+      // Asked again, it already listens to mail-2: nothing moves and no line is left.
+      const again = await asked("automation-edit", { id: created.id, reconnect: true });
+      expect(ruleOf()?.connection).toBe("mail-2");
+      expect(again.lines).toEqual([]);
     } finally {
       check.mockRestore();
       reading.mockRestore();
@@ -826,36 +836,42 @@ describe("the first mate's Settings actions, driven through the whole core", () 
           .map((task) => task.title),
       ).toEqual(["usage shown in tokens on Studio"]);
 
-      // Its own Settings move the music's volume after the first mate read it:
-      // playing the music changes only whether it plays, keeping that volume.
+      // Its own Settings change the music after the first mate read it.
+      const playThere = async (value: Record<string, unknown>) => {
+        const was = operations().length;
+        const answer = await tool("app_change").run({
+          action: "ambient-music",
+          value,
+          evidence: "The music on Studio, please.",
+          computer: "Studio",
+        });
+        return {
+          text: answer.text,
+          lines: operations()
+            .slice(was)
+            .map((task) => task.title),
+        };
+      };
+      // Asked to play at 40 while it moved from 40 to 70 there: nothing changes there.
       theirs.appearance = { ...theirs.appearance, ambientMusic: false, ambientVolume: 40 };
       theirs.editsAfterRead = (look) => ({ ...look, ambientVolume: 70 });
-      const played = operations().length;
-      await tool("app_change").run({
-        action: "ambient-music",
-        value: { on: true },
-        evidence: "Play the music on Studio.",
-        computer: "Studio",
-      });
-      expect(theirs.appearance).toMatchObject({ ambientMusic: true, ambientVolume: 70 });
-      expect(
-        operations()
-          .slice(played)
-          .map((task) => task.title),
-      ).toHaveLength(1);
-      // Asking for a volume it moved there since the read changes nothing there.
-      theirs.appearance = { ...theirs.appearance, ambientMusic: false, ambientVolume: 40 };
-      theirs.editsAfterRead = (look) => ({ ...look, ambientVolume: 70 });
-      const stale = operations().length;
-      const music = await tool("app_change").run({
-        action: "ambient-music",
-        value: { on: true, volume: 50 },
-        evidence: "Play the music at half on Studio.",
-        computer: "Studio",
-      });
-      expect(music.text).toContain(WINDOW_ASK_WORDS.changedThere(["ambientVolume"]));
+      const atForty = await playThere({ on: true, volume: 40 });
+      expect(atForty.text).toContain(WINDOW_ASK_WORDS.changedThere(["ambientVolume"]));
+      expect(atForty.lines).toEqual([]);
       expect(theirs.appearance).toMatchObject({ ambientMusic: false, ambientVolume: 70 });
-      expect(operations().length).toBe(stale);
+      // Asked to resume paused music it switched off there: nothing changes there.
+      theirs.appearance = { ...theirs.appearance, ambientMusic: true, ambientPaused: true };
+      theirs.editsAfterRead = (look) => ({ ...look, ambientMusic: false, ambientPaused: false });
+      const resumed = await playThere({ on: true });
+      expect(resumed.text).toContain(WINDOW_ASK_WORDS.changedThere(["ambientMusic"]));
+      expect(resumed.lines).toEqual([]);
+      expect(theirs.appearance).toMatchObject({ ambientMusic: false, ambientPaused: false });
+      // Asked to play music it already started there: that part is done, and the volume is set.
+      theirs.appearance = { ...theirs.appearance, ambientMusic: false, ambientVolume: 40 };
+      theirs.editsAfterRead = (look) => ({ ...look, ambientMusic: true });
+      const started = await playThere({ on: true, volume: 60 });
+      expect(theirs.appearance).toMatchObject({ ambientMusic: true, ambientVolume: 60 });
+      expect(started.lines).toHaveLength(1);
 
       // Check for updates there checks that Mac's own app, and says where.
       theirs.update = {

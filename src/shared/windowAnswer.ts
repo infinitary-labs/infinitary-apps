@@ -61,13 +61,16 @@ export async function answerWindowAsk(
     const { channel, args, changes } = asked.data;
     const wholeRead = WINDOW_VALUE_OF[channel];
     if (changes && wholeRead) {
-      // A change to a shared value changes only the fields it names, and
-      // only while each still reads as the first mate read it, so an edit
-      // this window's own Settings made since is never undone; it answers
-      // its own value from just before, for the line that says what changed.
+      // A change to a shared value sets only its action's fields. Each
+      // must still read as the first mate read it, or already as it asks;
+      // one this window's own Settings moved elsewhere since refuses it, so
+      // an edit made here is never undone. It answers its own value from
+      // just before, for the line that says what changed.
       const own = (await answer(wholeRead, [])) as Record<string, unknown>;
       const asks = args[0] as Record<string, unknown>;
-      const moved = changes.filter(({ field, was }) => !sameJson(own[field], was));
+      const moved = changes.filter(
+        ({ field, was }) => !sameJson(own[field], was) && !sameJson(own[field], asks[field]),
+      );
       if (moved.length) throw new Error(WINDOW_ASK_WORDS.changedThere(moved.map((c) => c.field)));
       const next = { ...own };
       for (const { field } of changes) {

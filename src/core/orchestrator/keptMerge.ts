@@ -380,6 +380,9 @@ export class KeptMerge {
       return;
     }
     if (pull.state !== "open") {
+      // Closed without merging: the merge sent did not go in, so nothing is
+      // left unsettled for a later approval to read back.
+      this.approvals.patchStanding(taskId, { attempt: undefined });
       this.approvals.endAuthorization(
         taskId,
         "invalidated",
@@ -408,7 +411,10 @@ export class KeptMerge {
         placeOf(this.host.repos, named, "") || null,
         changeName(named, pull.number),
         pull.headSha,
-        authorization ? candidateHead(authorization) : undefined,
+        // The version the original send was approved at, not a later
+        // approval's: a push after that click is told even when a newer
+        // approval stands (INF-5193).
+        authorization ? (authorization.attempt?.head ?? candidateHead(authorization)) : undefined,
       );
       // A kept approval of a reviewed pull request merged it (INF-2490):
       // its merge card declared what follows (INF-2744).

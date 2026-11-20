@@ -17,6 +17,7 @@ import type { MergeGuard, PrOutcome } from "./changeMerge";
 import {
   approvableOffer,
   candidateHead,
+  carryUnsettled,
   endedAuthorization,
   FAILED_BATCH_NOTE,
   outstandingGuidance,
@@ -284,15 +285,9 @@ export class KeptApproval {
     if (minted) {
       // Approvals still waiting behind one that just ended wait behind this one.
       const waiting = (previous?.queued ?? []).filter((item) => !samePull(item, minted));
-      // A merge of this pull request sent under an earlier approval whose
-      // outcome was never read back carries over, so this approval reads it
-      // back before it sends anything (`KeptMerge.reconcileAttempt`).
-      const unresolved =
-        previous?.attempt && samePull(previous, minted) ? previous.attempt : undefined;
       const kept = {
         ...minted,
         ...(waiting.length > 0 ? { queued: waiting } : {}),
-        ...(unresolved ? { attempt: unresolved } : {}),
       };
       // The approved pull request is the task's current change from the click on (INF-2490).
       if (standing) this.removeQueueMark(taskId, standing);
@@ -330,8 +325,14 @@ export class KeptApproval {
    * run selects its pull request only when it merges (INF-2746).
    */
   private recordStanding(taskId: string, authorization: MergeAuthorization, select = true): void {
+    // The approval it replaces may carry merges sent whose outcome was never
+    // read back; they stay with the record, by pull request (INF-5193).
+    const previous = this.host.tasks.get(taskId)?.delivery?.mergeAuthorization;
     this.host.tasks.delivery.recordPermissionRecords(taskId, {
-      mergeAuthorization: { ...authorization, queueRemovals: this.pendingRemovals(taskId) },
+      mergeAuthorization: {
+        ...carryUnsettled(previous, authorization),
+        queueRemovals: this.pendingRemovals(taskId),
+      },
     });
     if (select) this.selectCovered(taskId, authorization);
   }

@@ -59,6 +59,7 @@ import {
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { type ChangeDelivery, createChangeDelivery } from "./changeDelivery";
+import { otherMergedFacts } from "./changeMerge";
 import { COMPLETION_REVISED_WHILE_RUNNING } from "./crewmateCards";
 import type { CrewmateSpec } from "./crewSession";
 import type { CrewSupervisor } from "./crewSupervisor";
@@ -554,6 +555,80 @@ describe("CrewSupervisor", () => {
         expect(h.tasks.get(h.taskId)?.delivery?.mergeAuthorization?.status).toBe("consumed"),
       );
       expect(h.forge.sends).toBe(1);
+      await h.supervisor.disposeAll();
+    });
+
+    // INF-5193: a merge whose outcome is unknown stays with its pull
+    // request through another pull request's approval, so approving it again
+    // sends nothing; and the version Bitbucket merged is told against the
+    // version the original send was approved at, not a later approval's.
+    it("keeps an unknown merge through another pull request's approval and tells the merged version against the original send's", async () => {
+      const h = await approved({ referenced: true });
+      h.forge.mergeNamesNoVersion = true;
+      h.forge.refuse = new ForgeMergeUnconfirmed("The host took the merge", "7/merge-task-1");
+      h.supervisor.cardActions.act(h.card.id, "merge");
+      await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("outcome"));
+      h.forge.refuse = undefined;
+      h.crewmate.finishPrompt();
+      await tick();
+      const first = h.authorization()?.review;
+      if (!first) throw new Error("Missing review");
+      const approval = {
+        cardId: h.card.id,
+        ...(h.card.lifecycleId ? { lifecycleId: h.card.lifecycleId } : {}),
+        ...(h.card.offerId ? { offerId: h.card.offerId } : {}),
+        actionId: "merge",
+      };
+      const approve = (review: string) =>
+        h.supervisor.settling.approvals.authorizeMerge(h.taskId, approval, false, review);
+      // The captain approves another pull request in its place.
+      h.supervisor.settling.approvals.endAuthorization(
+        h.taskId,
+        "superseded",
+        "a new merge card is up",
+      );
+      const reviews = h.tasks.get(h.taskId)?.delivery?.mergeReviews ?? [];
+      seedDelivery(h.tasks, h.taskId, {
+        mergeReviews: [
+          ...reviews,
+          { ...first, id: "review-other", number: 8, branch: "fm/task-other" },
+        ],
+      });
+      expect(approve("review-other")).toBe("standing");
+      expect(h.authorization()?.attempt).toBeUndefined();
+      // Then approves the first pull request again, at a newer version.
+      h.supervisor.settling.approvals.endAuthorization(
+        h.taskId,
+        "superseded",
+        "a new merge card is up",
+      );
+      h.forge.headSha = REPAIRED;
+      seedDelivery(h.tasks, h.taskId, {
+        mergeReviews: (h.tasks.get(h.taskId)?.delivery?.mergeReviews ?? []).map((review) =>
+          review.id === first.id ? { ...review, headSha: REPAIRED } : review,
+        ),
+      });
+      expect(approve(first.id)).toBe("standing");
+      expect(h.authorization()?.attempt?.head).toBe(APPROVED);
+      await h.supervisor.settling.kept.runMergeAuthorization(h.taskId);
+      expect(h.authorization()?.waiting?.on).toBe("outcome");
+      expect(h.forge.sends).toBe(1);
+      // Bitbucket merged the newer version under the original send.
+      h.forge.merged = true;
+      await h.supervisor.settling.kept.runMergeAuthorization(h.taskId);
+      await vi.waitFor(() =>
+        expect(h.tasks.get(h.taskId)?.delivery?.mergeAuthorization?.status).toBe("consumed"),
+      );
+      expect(h.forge.sends).toBe(1);
+      // The task says GitHub merged the newer version, not the version the
+      // original send was approved at, in the merge path's own words.
+      const told = otherMergedFacts("GitHub", "#7", REPAIRED, APPROVED).told.trim();
+      expect(told).not.toBe("");
+      expect(
+        h.tasks
+          .timeline(h.taskId)
+          .some((event) => event.kind === "note" && event.text.includes(told)),
+      ).toBe(true);
       await h.supervisor.disposeAll();
     });
 

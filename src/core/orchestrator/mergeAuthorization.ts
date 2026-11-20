@@ -177,12 +177,53 @@ export function putInFront(
   const next = others[index];
   if (top.status !== "standing" || top.attempt || !next) return undefined;
   const rest = others.filter((_, at) => at !== index);
-  const { queued: _others, guidance: _marks, queueRemovals: _removals, ...stepped } = top;
+  const {
+    queued: _others,
+    guidance: _marks,
+    queueRemovals: _removals,
+    unsettled: _unsettled,
+    ...stepped
+  } = top;
   return {
     ...next,
     guidance: top.guidance,
     queueRemovals: top.queueRemovals,
+    unsettled: top.unsettled,
     queued: toBack ? [...rest, stepped] : [stepped, ...rest],
+  };
+}
+
+/** The same pull request on the same host, owner and repository. */
+function samePullTarget(a: MergeAuthorization["target"], b: MergeAuthorization["target"]): boolean {
+  return a.host === b.host && a.owner === b.owner && a.name === b.name && a.prNumber === b.prNumber;
+}
+
+/**
+ * The approval that replaces `previous` as the task's record, carrying every
+ * merge sent whose outcome was never read back (INF-5193): `previous`'s own
+ * attempt joins its unsettled list, kept by pull request, and the entry for
+ * `next`'s pull request becomes `next`'s attempt, so it reads that merge back
+ * before sending anything (`KeptMerge.reconcileAttempt`).
+ */
+export function carryUnsettled(
+  previous: MergeAuthorization | undefined,
+  next: MergeAuthorization,
+): MergeAuthorization {
+  let unsettled = [...(previous?.unsettled ?? []), ...(next.unsettled ?? [])];
+  const keep = (entry: {
+    target: MergeAuthorization["target"];
+    attempt: NonNullable<MergeAuthorization["attempt"]>;
+  }) => {
+    unsettled = [...unsettled.filter((item) => !samePullTarget(item.target, entry.target)), entry];
+  };
+  if (previous?.attempt) keep({ target: previous.target, attempt: previous.attempt });
+  if (next.attempt) keep({ target: next.target, attempt: next.attempt });
+  const own = unsettled.find((item) => samePullTarget(item.target, next.target));
+  const rest = unsettled.filter((item) => !samePullTarget(item.target, next.target));
+  return {
+    ...next,
+    ...(own ? { attempt: own.attempt } : {}),
+    unsettled: rest.length > 0 ? rest : undefined,
   };
 }
 

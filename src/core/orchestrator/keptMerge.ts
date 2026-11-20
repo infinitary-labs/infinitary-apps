@@ -322,8 +322,9 @@ export class KeptMerge {
    * means the approval is spent and the task closes once; closed ends it;
    * open clears the token and runs every gate again, except on a host whose
    * merge names no version, where open proves nothing and it waits like an
-   * unreadable one, never sending again; a host refusing the read of the
-   * merge it took (`attempt.task`) ends the approval, sending nothing.
+   * unreadable one, never sending again, until it reads merged or closed;
+   * a host refusing the read of the merge it took (`attempt.task`) keeps
+   * that wait.
    */
   private async reconcileAttempt(taskId: string, authorization: MergeAuthorization): Promise<void> {
     const readPull = this.host.readPull;
@@ -349,37 +350,33 @@ export class KeptMerge {
     const now = this.host.now();
     // An open read cannot show that a merge sent to a host naming no version
     // did not go in (a 202 still merging, or an answer that never came): it
-    // stays read-only, and only a read showing how it ended moves it.
-    if (
-      !pull ||
-      (pull.state === "open" && !pull.merged && pull.mergeNamesNoVersion && !pull.mergeTaskRefused)
-    ) {
+    // stays read-only, and only a read showing it merged or closed moves it.
+    // The attempt is carried into any later approval of the same pull
+    // request, so no click sends again while the outcome is unknown.
+    if (!pull || (pull.state === "open" && !pull.merged && pull.mergeNamesNoVersion)) {
       const retries = (current.retries ?? 0) + 1;
+      // The host refused the read of the merge it took: the merge may have
+      // failed, or the task may not be this pull request's, and nothing says
+      // which. The reference is dropped, so it is asked about once, and the
+      // task says once that the pull request is merged or closed on the host.
+      const refused = pull?.mergeTaskRefused && current.attempt?.task !== undefined;
       this.approvals.patchStanding(taskId, {
         waiting: { on: "outcome", head: candidateHead(current), at: now },
         retries,
         retryAt: retryAfter("outcome", retries, now),
+        ...(refused && current.attempt ? { attempt: { ...current.attempt, task: undefined } } : {}),
       });
+      if (refused)
+        this.host.tasks.note(
+          taskId,
+          // i18n-exempt: an English timeline note, like the approval's other notes
+          "The host would not say how the merge it took ended, so the merge stays unsent until its pull request reads merged or closed on the host; nothing is sent again.",
+          { news: true, feed: true },
+        );
       return;
     }
     if (pull.merged) {
       await this.finishMerged(taskId, record.title, pull);
-      return;
-    }
-    // The host refused the read of the merge it took: the merge may have
-    // failed, or the task may not be this pull request's, and nothing says
-    // which. Nothing is sent again; the approval ends holding the task's
-    // merge (`mergeHold`), so autonomy cannot send another one: only the
-    // captain's own click on a merge card merges again.
-    if (pull.state === "open" && pull.mergeTaskRefused) {
-      this.approvals.endAuthorization(
-        taskId,
-        "invalidated",
-        // i18n-exempt: joins the approval's English timeline note (`endAuthorization`), like every end reason
-        "the host refused the read of the merge it took, so whether it failed is not known; nothing was sent again",
-        { feed: true, holds: true },
-      );
-      this.reportEnded(taskId, record.title);
       return;
     }
     if (pull.state !== "open") {

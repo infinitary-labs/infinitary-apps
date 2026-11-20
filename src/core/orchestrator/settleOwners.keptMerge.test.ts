@@ -503,8 +503,9 @@ describe("CrewSupervisor", () => {
 
     // INF-5193: the host's own reference to a merge it took is kept; a
     // refusal of its read does not say the merge failed (the task may not
-    // be this pull request's), so the approval ends and nothing is sent again.
-    it("asks the host how a merge it took ended, and ends the approval without sending again when the host refuses the read", async () => {
+    // be this pull request's), so the merge stays unsent and read-only, even
+    // through the captain's new approval, until the pull request reads merged.
+    it("keeps a merge the host took read-only through a refused read and a new approval, until it reads merged", async () => {
       const h = await approved({ referenced: true });
       h.forge.mergeNamesNoVersion = true;
       h.forge.refuse = new ForgeMergeUnconfirmed("The host took the merge", "7/merge-task-1");
@@ -518,19 +519,41 @@ describe("CrewSupervisor", () => {
       expect(h.authorization()?.attempt?.task).toBe("7/merge-task-1");
       h.forge.refusedTasks.add("7/merge-task-1");
       await h.supervisor.settling.kept.runMergeAuthorization(h.taskId);
+      expect(h.authorization()).toMatchObject({ status: "standing", waiting: { on: "outcome" } });
+      expect(h.authorization()?.attempt).toBeDefined();
+      expect(h.authorization()?.attempt?.task).toBeUndefined();
+      expect(h.forge.sends).toBe(1);
+      // The captain's approval ends and a new one of the same pull request
+      // is given: it reads the earlier merge back and sends nothing.
+      const review = h.authorization()?.review?.id;
+      h.supervisor.settling.approvals.endAuthorization(
+        h.taskId,
+        "superseded",
+        "a new merge card is up",
+      );
+      expect(
+        h.supervisor.settling.approvals.authorizeMerge(
+          h.taskId,
+          {
+            cardId: h.card.id,
+            ...(h.card.lifecycleId ? { lifecycleId: h.card.lifecycleId } : {}),
+            ...(h.card.offerId ? { offerId: h.card.offerId } : {}),
+            actionId: "merge",
+          },
+          false,
+          review,
+        ),
+      ).toBe("standing");
+      await h.supervisor.settling.kept.runMergeAuthorization(h.taskId);
+      expect(h.authorization()?.waiting?.on).toBe("outcome");
+      expect(h.forge.sends).toBe(1);
+      // Bitbucket finishes the merge it took: the approval is spent once.
+      h.forge.merged = true;
+      await h.supervisor.settling.kept.runMergeAuthorization(h.taskId);
       await vi.waitFor(() =>
-        expect(h.tasks.get(h.taskId)?.delivery?.mergeAuthorization?.status).toBe("invalidated"),
+        expect(h.tasks.get(h.taskId)?.delivery?.mergeAuthorization?.status).toBe("consumed"),
       );
       expect(h.forge.sends).toBe(1);
-      // The end holds the merge: even with the task's autonomy on, the app
-      // may not send another one; only the captain's click can.
-      editPolicies(h, { autonomy: true });
-      const record = h.tasks.get(h.taskId);
-      if (!record) throw new Error("Missing task");
-      expect(h.supervisor.settling.settle.mergeRefusal(record, "merge-pr", "app")).toBeDefined();
-      expect(
-        h.supervisor.settling.settle.mergeRefusal(record, "merge-pr", "captain"),
-      ).toBeUndefined();
       await h.supervisor.disposeAll();
     });
 

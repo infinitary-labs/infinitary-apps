@@ -284,7 +284,16 @@ export class KeptApproval {
     if (minted) {
       // Approvals still waiting behind one that just ended wait behind this one.
       const waiting = (previous?.queued ?? []).filter((item) => !samePull(item, minted));
-      const kept = { ...minted, ...(waiting.length > 0 ? { queued: waiting } : {}) };
+      // A merge of this pull request sent under an earlier approval whose
+      // outcome was never read back carries over, so this approval reads it
+      // back before it sends anything (`KeptMerge.reconcileAttempt`).
+      const unresolved =
+        previous?.attempt && samePull(previous, minted) ? previous.attempt : undefined;
+      const kept = {
+        ...minted,
+        ...(waiting.length > 0 ? { queued: waiting } : {}),
+        ...(unresolved ? { attempt: unresolved } : {}),
+      };
       // The approved pull request is the task's current change from the click on (INF-2490).
       if (standing) this.removeQueueMark(taskId, standing);
       for (const item of previous?.queued ?? [])

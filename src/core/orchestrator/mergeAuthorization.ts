@@ -338,15 +338,24 @@ export function approvalClosesOn(
 
 /**
  * A standing approval as it ends - spent by its merge, or revoked,
- * invalidated or superseded - with no attempt, retry or wait left on it:
- * the one shape every end of an approval records.
+ * invalidated or superseded - with no retry or wait left on it: the one
+ * shape every end of an approval records. A merge spends its attempt;
+ * any other end keeps it: a merge sent whose outcome was never read back is
+ * not undone by the end, and the next approval of the same pull request
+ * reads it back before sending again (`KeptApproval.authorizeMerge`).
  */
 export function endedAuthorization(
   standing: MergeAuthorization,
   end: Pick<MergeAuthorization, "status" | "endedAt"> &
     Partial<Pick<MergeAuthorization, "reason" | "generation" | "holds" | "receipt">>,
 ): MergeAuthorization {
-  return { ...standing, ...end, attempt: undefined, retryAt: undefined, waiting: undefined };
+  return {
+    ...standing,
+    ...end,
+    ...(end.status === "consumed" ? { attempt: undefined } : {}),
+    retryAt: undefined,
+    waiting: undefined,
+  };
 }
 
 /**

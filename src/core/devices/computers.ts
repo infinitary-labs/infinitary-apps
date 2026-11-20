@@ -908,11 +908,16 @@ export class Computers {
   /**
    * Whether the computer is connected on an older Firstmate than this Mac's
    * and takes no new work because of it: a task for it waits for an update,
-   * which is not being out of reach.
+   * which is not being out of reach. A computer whose hello lacks a change a
+   * crewmate turn there may need (`WorkDevices.lacksTurnChange`) takes none
+   * either, though it speaks this Mac's major: a task started there would
+   * only wait for its update (docs/helper.md, "Waiting for its update").
    */
   takesNoWorkUntilUpdated(deviceId: string): boolean {
     const version = this.options.work.version(deviceId);
-    if (!version || version.takesWork) return false;
+    if (!version) return false;
+    if (this.options.work.lacksTurnChange(deviceId)) return true;
+    if (version.takesWork) return false;
     const device = this.options.pairing.list().find((entry) => entry.id === deviceId);
     return !!device && this.otherVersion(device, version)?.than === "older";
   }
@@ -983,7 +988,7 @@ export class Computers {
     return {
       ...(version.app !== undefined ? { app: version.app } : {}),
       ...(order ? { than: order < 0 ? ("older" as const) : ("newer" as const) } : {}),
-      takesWork: version.takesWork,
+      takesWork: version.takesWork && !this.options.work.lacksTurnChange(device.id),
       updateBy,
       ...(updateBy === "connection" && downloadsThere(device, version.contract)
         ? { downloads: true as const }

@@ -5,8 +5,10 @@
   "mergeButtonPullRequest": "Fusionner la demande de tirage",
   "mergeButtonWhenChecksPass": "Fusionner une fois les vérifications réussies",
   "mergeContinues": "La tâche se poursuit après cette fusion.",
+  "mergeHeldEarlier": "Une version antérieure d’Infinitary a affiché cette carte. Fusionner revient quand la carte est affichée à nouveau. Le changement lui-même n’a pas bougé.",
   "mergeHeldOther": "Une autre demande de tirage est devenue le changement actuel de cette tâche après l’apparition de cette carte. Fusionner revient quand la carte l’affiche.",
   "mergeHeldPushed": "Une version plus récente a été poussée après l’apparition de cette carte. Fusionner revient quand la carte affiche la version plus récente.",
+  "mergeRefusedEarlier": "Une version antérieure d’Infinitary a affiché cette carte, donc je n’ai pas fusionné. Fusionner revient quand la carte est affichée à nouveau.",
   "mergeSetByFirstMate": "Défini par votre second pour cette tâche.",
   "mergeSetInProject": "Défini dans les réglages de ce projet."
 }

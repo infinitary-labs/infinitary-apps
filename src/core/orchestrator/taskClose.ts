@@ -553,7 +553,9 @@ export class TaskClosing {
    * The record side of finish(): a crewmate turn that cancelled or failed
    * closes the record, ends its merge approvals as every close does
    * (`endApprovals`), retires its open cards, and saves/removes its worktree.
-   * There is no `completed` here any more (WI-11): a crewmate that finished
+   * A cancel closes its open pull request where the project lives; a failure
+   * never does, since the attempt's change is still the captain's to merge,
+   * close or carry on in a fresh attempt. There is no `completed` here any more (WI-11): a crewmate that finished
    * its work and went idle is not a close - it stays `active` and resumable
    * until the captain merges, lands, or discards. A failure a typed backend
    * reported keeps that fact, so the feed line never reads its words for a
@@ -600,7 +602,7 @@ export class TaskClosing {
         });
       }
     });
-    void this.closeOpenPullRequest(taskId);
+    if (status === "cancelled") void this.closeOpenPullRequest(taskId);
     this.host.cards.retireTaskCards(taskId, status);
     if (record && status === "cancelled") this.placeOutcome(record, "cancelled", actor, sentence);
     this.host.asksMoved?.();

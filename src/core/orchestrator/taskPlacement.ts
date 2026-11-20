@@ -557,15 +557,19 @@ export class TaskPlacement {
     // Connected but not yet caught up is in reach, with since when (INF-1810 finding 7).
     const catchingUpSince = behind ? machines.catchingUpSince?.(device, record.id) : undefined;
     const away = behind && catchingUpSince === undefined;
-    const older = away && this.options.takesNoWorkUntilUpdated?.(device) === true;
+    // One that has not started waits for a computer that takes no new work, even in reach.
+    const older =
+      (away || (live && !settled)) && this.options.takesNoWorkUntilUpdated?.(device) === true;
     return {
       name: label,
       where,
-      reach: away
-        ? this.options.reachOf?.(device) === "connecting" && !older
-          ? "connecting"
-          : "out-of-reach"
-        : "in-reach",
+      reach: older
+        ? "out-of-reach"
+        : away
+          ? this.options.reachOf?.(device) === "connecting"
+            ? "connecting"
+            : "out-of-reach"
+          : "in-reach",
       ...(older ? { noNewWork: true as const } : {}),
       ...(catchingUpSince !== undefined ? { catchingUpSince } : {}),
     };
@@ -653,15 +657,17 @@ export class TaskPlacement {
 
   /**
    * A task that has not started takes where it would start now, and says
-   * whether it must wait for that computer: out of reach, or back and not
-   * yet caught up. It never runs on this Mac instead.
+   * whether it must wait for that computer: out of reach, back and not yet
+   * caught up, or connected on a version that takes no new work until it is
+   * updated (`takesNoWorkUntilUpdated`). It never runs on this Mac instead.
    */
   placeForStart(taskId: string): boolean {
     const record = this.options.tasks.get(taskId);
     if (!record) return false;
     const target = this.placementOf(record);
     if (target && !record.deviceId) this.options.tasks.placement.setDevice(taskId, target);
-    if (!this.host.outOfReach(taskId)) return false;
+    const older = !!target && this.options.takesNoWorkUntilUpdated?.(target) === true;
+    if (!older && !this.host.outOfReach(taskId)) return false;
     if (target) this.sayPlacedWait(this.waitSubject(record), target);
     return true;
   }

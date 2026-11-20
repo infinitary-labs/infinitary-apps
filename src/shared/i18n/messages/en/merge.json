@@ -5,8 +5,10 @@
   "mergeButtonPullRequest": "Merge the pull request",
   "mergeButtonWhenChecksPass": "Merge when checks pass",
   "mergeContinues": "The task continues after this merge.",
+  "mergeHeldEarlier": "An earlier version of Infinitary showed this card. Merge returns when this card is shown again. The change itself did not move.",
   "mergeHeldOther": "Another pull request became this task's current change after this card went up. Merge returns when this card shows it.",
   "mergeHeldPushed": "A newer version was pushed after this card went up. Merge returns when this card shows the newer version.",
+  "mergeRefusedEarlier": "An earlier version of Infinitary showed this card, so I did not merge. Merge returns when the card is shown again.",
   "mergeSetByFirstMate": "Set by your first mate for this task.",
   "mergeSetInProject": "Set in this project's settings."
 }

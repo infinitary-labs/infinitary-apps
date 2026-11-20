@@ -1,0 +1,38 @@
+{
+  "entries": [
+    {
+      "id": "behind-computer-holds-task",
+      "kind": "fix",
+      "area": "devices",
+      "title": "A computer that needs an update asks once and takes no new work",
+      "body": "When a computer that runs your work is too far behind this Mac to take a task's next turn, the task waits and that computer's Update card comes back, once, instead of the wait showing only in the feed. New tasks no longer start on that computer until it is updated; they wait for it, or Automatic picks another computer.",
+      "noPicture": "The Update card and the feed line look as before; what changes is when they appear and where new tasks start.",
+      "provenance": {
+        "origin": "change"
+      }
+    },
+    {
+      "id": "failed-task-keeps-pull-request",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A failed task keeps its pull request open",
+      "body": "When a task closes because its crewmate failed, its open pull request now stays open where your project lives, so you can still merge it, close it or carry it on in a fresh attempt. Cancelling a task, or replacing it with a new attempt, still closes its pull request.",
+      "noPicture": "Nothing new appears on screen: a pull request that used to be closed stays open.",
+      "provenance": {
+        "origin": "change"
+      }
+    },
+    {
+      "id": "merge-card-earlier-version",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Merge cards from before an update say why Merge is held",
+      "body": "A merge card put up by an earlier version of Infinitary now says that an earlier version showed it, and its crewmate shows it again, instead of claiming another pull request became the task's change.",
+      "noPicture": "The held merge card looks as before, with one changed sentence in its existing held line.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

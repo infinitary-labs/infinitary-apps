@@ -117,7 +117,7 @@ A clean folder behind on its default branch is fast-forwarded, as after a merge,
 One behind with edits or commits of its own gets the repair, with `noticed: "app-start"`, unless the captain dropped the project's latest repair while origin's default branch stood where it stands now; once that moves on, the next start files it again.
 
 A pull request an abandoned task could not close gets the same kind of task (INF-549's sibling).
-When a discarded, cancelled, failed or superseded task's pull request is refused its close (`TaskClosing.closeOpenPullRequest`), the host files one task under the project, "Close the pull request", with `in_place.pull` naming the pull request, its link and branch, the abandoned task, and what the host answered (`InPlaceWork.filePullRepair`); one stands per pull request.
+When a discarded, cancelled or superseded task's pull request is refused its close (`TaskClosing.closeOpenPullRequest`), the host files one task under the project, "Close the pull request", with `in_place.pull` naming the pull request, its link and branch, the abandoned task, and what the host answered (`InPlaceWork.filePullRepair`); one stands per pull request.
 The note on the abandoned task names it, and is an Activity line unless the captain's own click already put the outcome there.
 Its brief says close the pull request or report why not (`renderPullRepairBrief`): the crewmate works in the folder without changing it, holds only the read and write tools where the project lives, and never merges, pushes or deletes a branch.
 The same minute's read closes it as finished once the host reads that pull request closed or merged.

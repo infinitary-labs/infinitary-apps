@@ -223,11 +223,19 @@ export class StartSettle {
         shown: true,
       };
     }
-    if (now?.status !== "active" && now?.deviceId && this.core.facts.outOfReach(taskId)) {
+    // A computer that takes no new work until it is updated holds the start even in reach.
+    const older =
+      now?.status !== "active" &&
+      !!now?.deviceId &&
+      this.core.options.takesNoWorkUntilUpdated?.(now.deviceId) === true;
+    if (
+      now?.status !== "active" &&
+      now?.deviceId &&
+      (older || this.core.facts.outOfReach(taskId))
+    ) {
       const place = this.core.options.machines?.placeOf(now.deviceId);
       const who = place?.who ?? "the computer it runs on";
-      if (this.core.options.takesNoWorkUntilUpdated?.(now.deviceId))
-        return told(noNewWorkStartRefusal(handle, who, HERE.this));
+      if (older) return told(noNewWorkStartRefusal(handle, who, HERE.this));
       return told(
         `${handle} waits for ${who}, which is out of reach. It never runs on ${HERE.this} instead.`,
       );

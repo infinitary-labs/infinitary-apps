@@ -978,8 +978,10 @@
 "mergeButtonPullRequest" = "プルリクエストをマージ";
 "mergeButtonWhenChecksPass" = "チェックに合格したらマージ";
 "mergeContinues" = "このマージの後もタスクは続きます。";
+"mergeHeldEarlier" = "以前のバージョンの Infinitary がこのカードを表示しました。カードがもう一度表示されると、マージが戻ります。変更そのものは動いていません。";
 "mergeHeldOther" = "このカードの表示後に、別のプルリクエストがこのタスクの現在の変更になりました。カードがそれを表示すると、マージが戻ります。";
 "mergeHeldPushed" = "このカードの表示後に新しいバージョンがプッシュされました。カードが新しいバージョンを表示すると、マージが戻ります。";
+"mergeRefusedEarlier" = "以前のバージョンの Infinitary がこのカードを表示したため、マージしませんでした。カードがもう一度表示されると、マージが戻ります。";
 "mergeSetByFirstMate" = "このタスクのために一等航海士が設定しました。";
 "mergeSetInProject" = "このプロジェクトの設定で決まっています。";
 "mergedAt" = "%1$@ にマージ";

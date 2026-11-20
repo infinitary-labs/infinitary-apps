@@ -22,6 +22,7 @@ import {
   setup,
   tick,
 } from "../../../tests/helpers/crewHarness";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import {
   BATCH_CHECK,
@@ -29,9 +30,11 @@ import {
   presentationContentHash,
   presentationMarkdown,
 } from "../forge";
+import { seedProject } from "../workspace/seedProject";
 import { coveredNextStep } from "./mergeAuthorization";
 import type { MergeCardWalk } from "./mergeCardSteps";
 import { heldLine } from "./settleCardFacts";
+import { renderWake } from "./wakes";
 
 fakeCrewTimersEachTest();
 
@@ -39,8 +42,11 @@ const HEAD = "5ca2d466ee21f9733827383f23df81f3874e0d10";
 /** The version a later push moves the pull request to. */
 const PUSHED = "732a709e5b1c48d2a9f03e6c7d1b84a2f5e90c13";
 
-/** A queue-pr task whose story revision 1 is ready for its merge card. */
-async function ready(checks: "green" | "pending" | "red" = "green") {
+/**
+ * A queue-pr task whose story revision 1 is ready for its merge card; with
+ * `onGitHub`, a direct-pr task of a project that lives on GitHub.
+ */
+async function ready(checks: "green" | "pending" | "red" = "green", onGitHub = false) {
   const crewmate = fakeCrewmate();
   let story: ChangePresentation | undefined;
   /** The pull request's checks as the next read finds them. */
@@ -71,13 +77,25 @@ async function ready(checks: "green" | "pending" | "red" = "green") {
     checkChange: async () => "Checks passed.",
     mergeCardSteps,
   });
+  const repoId = onGitHub
+    ? seedProject(at.db, {
+        id: "meter",
+        name: "meter",
+        path: scratchDir("infinitary-meter-"),
+        origin: "https://github.com/octo/meter.git",
+        delivery: "direct-pr",
+      }).id
+    : undefined;
   const { taskId } = await at.supervisor.intake.commission({
     title: "Share the meter fix",
     intent: intentOf("share the meter fix"),
+    ...(repoId ? { repoId } : {}),
     shape: { rigor_ask: "quick" },
   });
   await tick();
-  vi.spyOn(at.supervisor.facts, "taskDelivery").mockReturnValue("queue-pr");
+  vi.spyOn(at.supervisor.facts, "taskDelivery").mockReturnValue(
+    onGitHub ? "direct-pr" : "queue-pr",
+  );
   vi.spyOn(at.supervisor.facts, "taskAutonomy").mockReturnValue(false);
   story = {
     version: 1,
@@ -934,6 +952,43 @@ describe("a merge card behind its change (INF-4031)", () => {
       `A newer version, ${PUSHED.slice(0, 7)}, was pushed after this card went up, so I did not merge. The card now shows it.`,
     );
     expect(merges(at.cards().find((entry) => entry.id === shown.id))).toEqual([]);
+  });
+
+  // INF-5442 behavior 4: a merge card an earlier version put up saved its
+  // offer with no destination. After the update, with its crewmate's
+  // conversation let go, the app woke the crewmate saying another pull
+  // request had become the task's current change, though the pull request,
+  // its version and its branch had not moved.
+  it("says an earlier version showed a card whose offer names no destination, never that another pull request became current", async () => {
+    const at = await ready("green", true);
+    await at.call({ id: "merge-meter" });
+    await tick();
+    at.crewmate.finishPrompt();
+    await tick();
+    const cardId = at.cards().find((entry) => entry.title === "The meter reads true")?.id ?? "";
+    const offer = at.tasks.get(at.taskId)?.delivery?.completionOffers?.at(-1);
+    expect(offer?.destination).toBeDefined();
+    expect(await at.supervisor.sessions.releaseConversation(at.taskId)).toBe(true);
+    const wakes: unknown[] = [];
+    vi.spyOn(at.supervisor.steer, "steerInternal").mockImplementation(async (_id, wake) => {
+      wakes.push(wake);
+      return "steered" as never;
+    });
+    // The same offer as the earlier version saved it, with no destination.
+    const { destination: _none, ...asSavedEarlier } = offer as NonNullable<typeof offer>;
+    seedDelivery(at.tasks, at.taskId, { completionOffers: [asSavedEarlier] });
+    await tick();
+    await tick();
+    const held = at.cards().find((entry) => entry.id === cardId);
+    expect(merges(held)).toEqual([]);
+    expect(held?.body).toContain("An earlier version of Infinitary showed this card.");
+    expect(held?.body).not.toContain("Another pull request");
+    const said = wakes.map((wake) => renderWake(wake as never));
+    expect(said).toHaveLength(1);
+    expect(said[0]).toContain(
+      `Your merge card ${cardId} was put up by an earlier version of Infinitary`,
+    );
+    expect(said[0]).not.toContain("another pull request");
   });
 
   it("drops a follow-up row from the open card once that task closes", async () => {

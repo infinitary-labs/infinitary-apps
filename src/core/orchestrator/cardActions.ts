@@ -126,6 +126,7 @@ export class CardChoiceUnavailableError extends Error {
  * redraws the card at once.
  */
 function mergeBehindRefusal(behind: MergeBehind | undefined): string {
+  if (behind?.why === "earlier") return m.mergeRefusedEarlier();
   if (behind?.why === "other")
     return "Another pull request became this task's current change after this card went up, so I did not merge. The card now says so.";
   const version = behind?.current ? `, ${behind.current.slice(0, 7)},` : "";
@@ -1390,7 +1391,9 @@ export class CardActions {
         !matchesOfferDestination(associated, repo, offered, candidate?.branch ?? current.branch)) ||
       (offered.destination && !repo)
     )
-      return { why: "other", ...shown };
+      // An offer an earlier version saved names no destination: its click
+      // approves nothing, though nothing else became the current change.
+      return { why: !offered.destination && !another ? "earlier" : "other", ...shown };
     if (another && !elsewhere) return { why: "other", ...shown };
     const ledger = this.core.options.tasks.delivery.changePresentation(
       associated.id,

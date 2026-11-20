@@ -5,8 +5,10 @@
   "mergeButtonPullRequest": "合併 pull request",
   "mergeButtonWhenChecksPass": "檢查通過後合併",
   "mergeContinues": "這次合併後，任務會繼續進行。",
+  "mergeHeldEarlier": "這張卡片是由較早版本的 Infinitary 顯示的。卡片重新顯示後，合併按鈕會回來。變更本身沒有變化。",
   "mergeHeldOther": "這張卡片出現後，另一個 pull request 成了這個任務目前的變更。卡片顯示它之後，合併按鈕會回來。",
   "mergeHeldPushed": "這張卡片出現後，又推送了一個較新的版本。卡片顯示新版本後，合併按鈕會回來。",
+  "mergeRefusedEarlier": "這張卡片是由較早版本的 Infinitary 顯示的，所以我沒有合併。卡片重新顯示後，合併按鈕會回來。",
   "mergeSetByFirstMate": "由你的大副為這項任務設定。",
   "mergeSetInProject": "依這個專案的設定。"
 }

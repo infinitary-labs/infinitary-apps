@@ -94,7 +94,12 @@ export type SettleFactsReading = {
  * click (INF-3623) and only asks for the redraw.
  */
 export type MergeBehind = {
-  why: "pushed" | "other" | "story";
+  /**
+   * `earlier`: an earlier version of Infinitary saved the card's offer
+   * without where its change lives, so its click approves nothing until the
+   * card is shown again, though the change itself did not move.
+   */
+  why: "pushed" | "other" | "earlier" | "story";
   /** The version the card showed. */
   shown?: string;
   /** The change's version now, when the record names one. */
@@ -111,9 +116,15 @@ export function holdsMerge(behind: MergeBehind | null | undefined): behind is Me
 }
 
 /** The held line itself, keeping the merges it took off. */
-export function heldLine(why: "pushed" | "other", merges: Card["actions"]): string {
+export function heldLine(why: "pushed" | "other" | "earlier", merges: Card["actions"]): string {
   const kept = escapeCardText(JSON.stringify(merges));
-  const words = said(why === "pushed" ? "mergeHeldPushed" : "mergeHeldOther");
+  const words = said(
+    why === "pushed"
+      ? "mergeHeldPushed"
+      : why === "earlier"
+        ? "mergeHeldEarlier"
+        : "mergeHeldOther",
+  );
   return `<p class="inf-panel" ${MERGE_HELD_MARK}="${kept}">${saidMark(words, "strong")}</p>`;
 }
 
@@ -160,7 +171,7 @@ export function settleCardFacts(card: Card, read: SettleFactsReading): Card {
       ...card,
       body: line
         ? card.body
-        : `${heldLine(behind.why === "other" ? "other" : "pushed", taken)}${card.body}`,
+        : `${heldLine(behind.why === "story" ? "pushed" : behind.why, taken)}${card.body}`,
       actions: card.actions.filter((action) => !merges(action) && action.passes !== "checks"),
     };
   }

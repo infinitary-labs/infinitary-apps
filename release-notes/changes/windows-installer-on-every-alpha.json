@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "windows-installer-on-every-alpha",
+      "reason": "Release work: every alpha now publishes the unsigned Windows installer its Windows check tested, and the builds file names it; nothing changes inside the app on a Mac or Linux, and Windows testers learn of the early build from the downloads page, since Windows is not yet a system a note may name."
+    }
+  ]
+}

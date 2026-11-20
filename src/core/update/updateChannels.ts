@@ -405,6 +405,7 @@ const BUILD_ASSET: Record<string, RegExp> = {
   appimage: /\.AppImage$/,
   arch: /\.PKGBUILD$/,
   nix: /\.nix$/,
+  exe: /\.exe$/,
 };
 
 /**
@@ -412,7 +413,7 @@ const BUILD_ASSET: Record<string, RegExp> = {
  * recipe or a Nix package names its channel's package, so a stable version
  * handed to alpha carries alpha's own recipe.
  */
-const CHANNEL_NEUTRAL = new Set(["zip", "dmg", "deb", "rpm", "appimage"]);
+const CHANNEL_NEUTRAL = new Set(["zip", "dmg", "deb", "rpm", "appimage", "exe"]);
 
 const ASSET_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const BUILD_KEY = z.string().regex(/^[a-z0-9]+$/);
@@ -433,7 +434,7 @@ export const channelBuildsSchema = z.object({
   version: z.string(),
   releaseUrl: z.string(),
   sourceCommit: z.string().regex(GIT_COMMIT),
-  /** System (`macos`, `linux`), then chip (`arm64`, `x64`), then kind. */
+  /** System (`macos`, `linux`, `windows`), then chip (`arm64`, `x64`), then kind. */
   systems: z.record(BUILD_KEY, z.record(BUILD_KEY, z.record(BUILD_KEY, buildDownloadSchema))),
 });
 export type ChannelBuilds = z.infer<typeof channelBuildsSchema>;

@@ -4,6 +4,8 @@ import { basename, join } from "node:path";
 import { publicDigest, ReleaseStorage } from "./release-storage.mjs";
 
 // INF-1620: finalized private-record bytes become immutable downloads before any feed moves.
+// The release workflow runs its own copy, but the destination stays the release
+// source's, the one its app reads and the fetch-back checks (docs/alpha.md).
 const configuration = JSON.parse(readFileSync("packaging/release-source.json", "utf8"));
 const version = process.env.VERSION;
 if (!/^\d+\.\d+\.\d+(?:-alpha\.\d+)?$/.test(version ?? "")) throw new Error("Invalid release version");
@@ -15,6 +17,8 @@ const required = (name: string) => {
 };
 const linux = required("LINUX_DIRECTORY");
 const files = [required("DIST_ZIP"), required("DIST_DMG")];
+// An alpha's Windows installer, when the release publishes one (docs/windows.md).
+if (process.env.DIST_WINDOWS) files.push(process.env.DIST_WINDOWS);
 const linuxNames = readFileSync(join(linux, "assets.txt"), "utf8").trim().split("\n");
 for (const name of linuxNames) {
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name)) throw new Error("Invalid Linux asset name");

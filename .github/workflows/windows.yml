@@ -9,7 +9,9 @@ name: windows
 # person's yes, the command with no window started through this person's
 # Task Scheduler, a crew turn whose commands run in that Git's Git Bash with
 # its job stopped, and removal that keeps the saved work. The installer
-# stays on the run; nothing here signs or uploads it anywhere else.
+# stays on the run; nothing here signs or uploads it anywhere else. An
+# alpha's upload job publishes the installer this run checked
+# (release.yml).
 #
 # The captain's pick on INF-4243: it runs on each combined batch that
 # touches Windows-relevant files (batch-checks.yml, scripts/windows-paths.ts)
@@ -61,6 +63,13 @@ on:
         required: false
         type: string
         default: '1'
+    outputs:
+      sums:
+        description: >-
+          The installer's line of the build's SHA256SUMS, which a release's
+          upload job checks its own download of the windows-installer
+          artifact against
+        value: ${{ jobs.build.outputs.sums }}
 
 concurrency:
   group: windows-${{ github.workflow == 'windows' && (inputs.ref || github.ref) || github.run_id }}
@@ -95,6 +104,8 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       rounds: ${{ steps.rounds.outputs.rounds }}
+      # Carried here so a release's upload never trusts a list from the same download.
+      sums: ${{ steps.installer.outputs.sums }}
     defaults:
       run:
         shell: bash
@@ -180,6 +191,7 @@ jobs:
       # download step restored, checked first against Electron's own sums
       # (.github/actions/electron-download/zips.mjs), as the Linux packages do.
       - name: Build the installer
+        id: installer
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
@@ -190,6 +202,8 @@ jobs:
           mkdir -p windows-installer
           cp dist/*-setup.exe windows-installer/
           (cd windows-installer && sha256sum *.exe | tee SHA256SUMS)
+          [[ "$(wc -l < windows-installer/SHA256SUMS)" -eq 1 ]] || { echo 'expected exactly one installer' >&2; exit 1; }
+          echo "sums=$(cat windows-installer/SHA256SUMS)" >> "$GITHUB_OUTPUT"
       - name: Keep electron-builder's tools
         if: ${{ !cancelled() }}
         uses: ./.github/actions/electron-builder-tools
@@ -295,20 +309,25 @@ jobs:
         with:
           name: windows-installer
           path: ${{ runner.temp }}/windows-installer
-      - name: Check the installer against the build's list
+      # Against the build job's own output, never only the artifact's list,
+      # so the installer this machine runs is the one whose checksum the
+      # release's upload job publishes (docs/windows.md). The artifact must
+      # hold only that installer and its list, and the one file checked here
+      # is the one run, by its full path, so no other file can stand in.
+      # Then as a person's double-click runs it, silently: one click installs
+      # for this person and opens the app through its Start menu entry.
+      - name: Check the installer against the build's list and install it
         working-directory: ${{ runner.temp }}/windows-installer
+        env:
+          SUMS: ${{ needs.build.outputs.sums }}
         run: |
-          foreach ($line in Get-Content SHA256SUMS) {
-            $sum, $file = $line -split '\s+\*?', 2
-            if ((Get-FileHash -Algorithm SHA256 $file).Hash.ToLower() -ne $sum) { throw "$file differs from the build's" }
-          }
-      # As a person's double-click runs it, silently: one click installs for
-      # this person and opens the app through its Start menu entry.
-      - name: Install
-        working-directory: ${{ runner.temp }}/windows-installer
-        run: |
-          $setup = Get-ChildItem *-setup.exe | Select-Object -First 1
-          $p = Start-Process $setup.FullName -ArgumentList '/S', '--force-run' -PassThru -Wait
+          $sum, $file = $env:SUMS.Trim() -split '\s+\*?', 2
+          $names = @(Get-ChildItem -Force -Name)
+          if ($names.Count -ne 2 -or $names -notcontains 'SHA256SUMS' -or $names -notcontains $file) { throw "the artifact holds $($names -join ', '), not only SHA256SUMS and $file" }
+          if ((Get-Content SHA256SUMS -Raw).Trim() -ne $env:SUMS.Trim()) { throw "the artifact's SHA256SUMS is not the one the build reported" }
+          $setup = (Get-Item -LiteralPath $file).FullName
+          if ((Get-FileHash -Algorithm SHA256 -LiteralPath $setup).Hash.ToLower() -ne $sum) { throw "$file differs from the build's" }
+          $p = Start-Process -FilePath $setup -ArgumentList '/S', '--force-run' -PassThru -Wait
           if ($p.ExitCode -ne 0) { throw "the installer ended with $($p.ExitCode)" }
       - name: Check the installed app
         env:

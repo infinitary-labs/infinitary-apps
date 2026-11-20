@@ -587,8 +587,7 @@ export function createCrewTools(delegate: CrewDelegate) {
       delivery_note: DELIVERY_NOTE_PARAM,
       parent: Type.Optional(
         Type.String({
-          description:
-            "Parent task id or key; this work inherits its project",
+          description: "Parent task id or key; this work inherits its project",
         }),
       ),
       blocked_by: Type.Optional(

@@ -66,6 +66,7 @@ export type WindowAnswer = z.infer<typeof windowAnswerSchema>;
 /** How long the first mate waits for a window's answer before saying it did not come. */
 export const WINDOW_ANSWER_WAIT_MS = 30_000;
 
+// i18n-exempt: the first mate's tool answers, served to a model, never shown
 export const WINDOW_ASK_WORDS = {
   noWindow: (name: string) =>
     `Infinitary's window on ${name} is not connected now, or is from before it could be asked this. Open it there, then ask again.`,

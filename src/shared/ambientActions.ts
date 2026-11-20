@@ -40,6 +40,7 @@ export const ambientLines = {
         volume: ambientVolumeSchema.optional(),
         style: ambientStyleSchema.optional(),
       })
+      // i18n-exempt: served to the first mate, a model, never shown
       .refine((v) => v.on || v.paused !== true, { message: "Only music that is on can pause." }),
     line: `Play, pause or stop the ambient music when asked, optionally at a volume of 0-100 percent and in one of its styles (${AMBIENT_STYLES.join(", ")}; ${DEFAULT_AMBIENT_STYLE} is the default) or one of the person's own by its id (ambient-own-style): calm music made on the computer that follows the crew. on true plays it, even when it was paused; paused true with on true pauses it, as its sound button does.`,
     // As the Settings switch: turning it on or off takes any pause away (INF-5347).

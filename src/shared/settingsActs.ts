@@ -48,6 +48,7 @@ export const settingsActs = {
     change: "inf:update:channel",
     current: "inf:update:status",
     value: z.strictObject({ channel: updateChannelSchema }),
+    // i18n-exempt: served to the first mate, a model, never shown
     line: "Which releases this app updates to, stable or alpha, when asked: alpha brings new things sooner and less tested. Only where this app chooses its own channel (choosable true).",
     toRequest: (v) => [v.channel],
     readValue: (current) => ({
@@ -62,6 +63,7 @@ export const settingsActs = {
     change: "inf:update:check",
     current: "inf:update:status",
     value: z.strictObject({}),
+    // i18n-exempt: served to the first mate, a model, never shown
     line: "Check for updates now, as Settings' Check for updates does, when asked: answers the newest version and whether it is newer than this one.",
     toRequest: () => [],
     readValue: (current) => ({
@@ -95,6 +97,7 @@ export const settingsActs = {
     change: "inf:integrations:inbox-link",
     current: "inf:integrations:list",
     value: z.strictObject({}),
+    // i18n-exempt: served to the first mate, a model, never shown
     line: "Make the Infinitary command's short name, as Settings → Integrations' link button does, when asked: only while its link is offered.",
     toRequest: () => [],
     readValue: (current) => ({
@@ -110,6 +113,7 @@ export const settingsActs = {
     change: "inf:plugins:retry",
     current: "inf:plugins:personal:list",
     value: z.strictObject({ surface: idSchema }),
+    // i18n-exempt: served to the first mate, a model, never shown
     line: "Start a panel's background work again after the app stopped it, as its Retry does, in the captain's own words: name the panel by its id from this action's current value.",
     toRequest: (v) => [v.surface],
     readValue: (current) => ({
@@ -131,6 +135,7 @@ export const settingsActs = {
       integration: z.string().min(1).max(200),
       action: z.string().min(1).max(200),
     }),
+    // i18n-exempt: served to the first mate, a model, never shown
     line: "Ask again for a panel's integration call that waits on the captain or that the captain turned down, as its Ask again does, when asked: the approval card shows again.",
     toRequest: (v) => [v.surface, v.integration, v.action],
     readValue: (current) => ({
@@ -155,13 +160,15 @@ export const settingsActs = {
     change: "inf:decisions:use:set",
     current: "inf:settings:decisions",
     value: z.strictObject({ use: z.string().min(1).max(200) }),
+    // i18n-exempt: served to the first mate, a model, never shown
     line: "Turn off one way the app asks a decision model, by its use id, when asked. Turning one on stays with the captain in Settings, since it may need the captain's approval.",
     toRequest: (v) => [{ id: v.use, on: false }],
     refuses: (args) => {
       const [request] = args as [Record<string, unknown> | undefined];
       return request?.on === false && request.approve === undefined && request.agreed === undefined
         ? null
-        : "Turning a decision model use on stays with the captain in Settings.";
+        : // i18n-exempt: served to the first mate, a model, never shown
+          "Turning a decision model use on stays with the captain in Settings.";
     },
     readValue: (current) => ({
       uses: ((current as DecisionsView).uses ?? []).map(({ id, name, on }) => ({ id, name, on })),
@@ -180,6 +187,7 @@ export const settingsActs = {
     change: "inf:browser:private-sites:remove",
     current: "inf:browser:private-sites",
     value: z.strictObject({ site: z.string().min(1).max(2_048) }),
+    // i18n-exempt: served to the first mate, a model, never shown
     line: "Take a private site off Settings → Integrations → Private sites, in the captain's own words: task browsers stop reaching it.",
     toRequest: (v) => [v.site],
     readValue: (current) => ({ privateSites: (current as PrivateSitesView).sites }),
@@ -203,12 +211,14 @@ export const settingsActs = {
     change: "inf:secrets:action",
     current: "inf:secrets:view",
     value: z.strictObject({ id: z.string().min(1).max(200) }),
+    // i18n-exempt: served to the first mate, a model, never shown
     line: "End a temporary permission to read secrets before it runs out, as its End now does, in the captain's own words: name it by its id from this action's current value.",
     toRequest: (v) => [{ kind: "end-read", id: v.id }],
     refuses: (args) =>
       (args[0] as { kind?: unknown } | undefined)?.kind === "end-read"
         ? null
-        : "Every secret action but ending a read stays with the captain.",
+        : // i18n-exempt: served to the first mate, a model, never shown
+          "Every secret action but ending a read stays with the captain.",
     readValue: (current) => ({
       reads: (current as SecretsView).reads.map(({ id, label, destination, expires }) => ({
         id,
@@ -232,6 +242,7 @@ export const settingsActs = {
     change: "inf:devices:keep",
     current: "inf:devices:list",
     value: z.strictObject({ deviceId: idSchema }),
+    // i18n-exempt: served to the first mate, a model, never shown
     line: "Keep a computer that waits to be removed once it is back (removal when-back), as its Keep it does, when asked: it stays on the list.",
     toRequest: (v) => [v.deviceId],
     readValue: devicesBrief,
@@ -245,6 +256,7 @@ export const settingsActs = {
     change: "inf:home-move:cancel",
     current: "inf:app:healthcheck",
     value: z.strictObject({}),
+    // i18n-exempt: served to the first mate, a model, never shown
     line: "Cancel moving the first mate to another computer while the move runs, as its Cancel does, when asked: answers whether it stopped and what stays where.",
     toRequest: () => [],
     readValue: () => ({}),
@@ -258,9 +270,11 @@ export const settingsActs = {
     change: "inf:standby:name",
     current: "inf:standby:list",
     value: z.strictObject({ deviceId: idSchema }),
+    // i18n-exempt: served to the first mate, a model, never shown
     line: "Stop keeping a copy of the record on a computer, as its Stop keeping a copy does, when asked. Starting one stays with the captain in Settings.",
     toRequest: (v) => [v.deviceId, false],
     refuses: (args) =>
+      // i18n-exempt: served to the first mate, a model, never shown
       args[1] === false ? null : "Starting to keep a copy stays with the captain in Settings.",
     readValue: (current) => ({
       copies: (current as StandbyViews).standbys.map(({ deviceId, state }) => ({
@@ -284,6 +298,7 @@ export const settingsActs = {
     change: "inf:devices:fix-work",
     current: "inf:devices:list",
     value: z.strictObject({ deviceId: idSchema }),
+    // i18n-exempt: served to the first mate, a model, never shown
     line: "Ask a Mac whose work has not finished setting up (workSetup) to set it up again, as its Fix it does, when asked: only while its window is connected.",
     toRequest: (v) => [v.deviceId],
     readValue: devicesBrief,
@@ -300,6 +315,7 @@ export const settingsActs = {
     change: "inf:devices:try-again",
     current: "inf:devices:list",
     value: z.strictObject({ deviceId: idSchema.optional() }),
+    // i18n-exempt: served to the first mate, a model, never shown
     line: "Try this computer's own SSH connection to a computer added by its address again now, as its Try again does, when asked; with no deviceId, every one it stopped trying.",
     toRequest: (v) => (v.deviceId === undefined ? [] : [v.deviceId]),
     readValue: devicesBrief,
@@ -316,6 +332,7 @@ export const settingsActs = {
     change: "inf:automation:kept-check",
     current: "inf:automation:kept",
     value: z.strictObject({ id: z.string().trim().min(1).max(256) }),
+    // i18n-exempt: served to the first mate, a model, never shown
     line: "Check that one job kept running past its task's close still runs, by id, when asked: its recorded check runs on the computer it runs on.",
     toRequest: (v) => [v.id],
     readValue: (current) => ({

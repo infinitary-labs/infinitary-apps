@@ -81,6 +81,7 @@ export async function answerWindowAsk(
     } else said = { ok: true, result: await answer(channel, args) };
   } catch (error) {
     const message = (error instanceof Error ? error.message : String(error)).slice(0, 400);
+    // i18n-exempt: the window's answer to the first mate, served to a model
     said = { ok: false, message: message || "The window could not do it." };
   }
   await send(asked.data.id, said).catch((error: unknown) =>

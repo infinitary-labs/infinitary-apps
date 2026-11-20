@@ -35,6 +35,7 @@ export const appearanceLines = {
     change: "inf:settings:appearance:set",
     current: "inf:settings:appearance:get",
     value: z.strictObject({ strength: washStrengthSchema }),
+    // i18n-exempt: served to the first mate, a model, never shown
     line: "Window wash opacity, 0–100 percent, when asked.",
     toRequest: (v, current) => [{ ...(current as Appearance), washStrength: v.strength }],
     readValue: washValue,
@@ -48,6 +49,7 @@ export const appearanceLines = {
     change: "inf:settings:appearance:set",
     current: "inf:settings:appearance:get",
     value: z.strictObject({ size: uiSizeSchema }),
+    // i18n-exempt: served to the first mate, a model, never shown
     line: "Whole-window size, 100, 110, 125 or 150 percent, when asked: larger makes text and everything around it bigger. The size keys and the View menu step through the same sizes.",
     toRequest: (v, current) => [{ ...(current as Appearance), size: v.size }],
     readValue: sizeValue,
@@ -61,6 +63,7 @@ export const appearanceLines = {
     change: "inf:settings:appearance:set",
     current: "inf:settings:appearance:get",
     value: z.strictObject({ visible: z.boolean() }),
+    // i18n-exempt: served to the first mate, a model, never shown
     line: "Show or hide crew model names when asked.",
     toRequest: (v, current) => [{ ...(current as Appearance), showCrewModelNames: v.visible }],
     readValue: crewModelNamesValue,
@@ -83,8 +86,10 @@ export const appearanceLines = {
         keepMaximized: z.boolean().optional(),
       })
       .refine((v) => v.size !== undefined || v.keepMaximized !== undefined, {
+        // i18n-exempt: served to the first mate, a model, never shown
         message: "Name size, keepMaximized or both.",
       }),
+    // i18n-exempt: served to the first mate, a model, never shown
     line: "The size a card opens at (usual, wide, full or maximized) and Keep cards maximized, when asked: with it on, every card shows maximized after one is maximized, until one is restored.",
     // As the Settings switch: turning Keep cards maximized on or off forgets the last maximize.
     toRequest: (v, current) => [
@@ -112,10 +117,12 @@ export const appearanceLines = {
       language: z
         .string()
         .refine((tag) => choosableLanguages().includes(tag), {
+          // i18n-exempt: served to the first mate, a model, never shown
           message: `Choose one of ${choosableLanguages().join(", ")}, or null for the default.`,
         })
         .nullable(),
     }),
+    // i18n-exempt: served to the first mate, a model, never shown
     line: `The language the app speaks, when asked: one of ${choosableLanguages().join(", ")} by its tag, or null for the default.`,
     // No language is the default: the core removes the saved choice.
     toRequest: (v, current) => {
@@ -132,6 +139,7 @@ export const appearanceLines = {
     change: "inf:settings:appearance:set",
     current: "inf:settings:appearance:get",
     value: z.strictObject({ unit: usageUnitSchema }),
+    // i18n-exempt: served to the first mate, a model, never shown
     line: "Whether Settings → Usage shows amounts in tokens or estimated dollars (usd), when asked.",
     toRequest: (v, current) => [{ ...(current as Appearance), usageUnit: v.unit }],
     readValue: (current) => ({ unit: (current as Appearance).usageUnit ?? "tokens" }),

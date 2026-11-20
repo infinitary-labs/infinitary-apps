@@ -31,6 +31,7 @@ export type ExceptionGround = (typeof EXCEPTION_GROUNDS)[number];
 export type ActionException = readonly [ExceptionGround, string];
 
 /** A crewmate's tool callback, asked by the computer that holds its conversation (src/shared/work.ts). */
+// i18n-exempt: coverage reasons, read by the coverage check and its tests, never shown
 const WORK_REQUEST: ActionException = [
   "crew-only",
   "A crewmate's own work, asked by the computer that runs it; not an app setting",
@@ -40,6 +41,7 @@ const WORK_REQUEST: ActionException = [
 const CARD_CLICKS: ActionException = ["consent", "Captain card clicks"];
 
 /** Operations which are not app settings, with the reason they stay outside the table. */
+// i18n-exempt: coverage reasons, read by the coverage check and its tests, never shown
 export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, ActionException>> = {
   "inf:secrets:entry": [
     "credential",
@@ -363,6 +365,7 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, ActionExceptio
 };
 
 /** Field exceptions name state inside a claimed request that no action changes, with their ground. */
+// i18n-exempt: coverage reasons, read by the coverage check and its tests, never shown
 export const ACTION_FIELD_EXCEPTIONS: Partial<
   Record<CoreInvokeChannel, Record<string, ActionException>>
 > = {
@@ -433,6 +436,7 @@ export const ACTION_FIELD_EXCEPTIONS: Partial<
  * The window's own requests that change something (`surface: "host"`),
  * which the first mate's core never answers: each one's ground.
  */
+// i18n-exempt: coverage reasons, read by the coverage check and its tests, never shown
 export const HOST_ACTION_EXCEPTIONS: Partial<Record<HostInvokeChannel, ActionException>> = {
   "inf:devices:join": [
     "credential",

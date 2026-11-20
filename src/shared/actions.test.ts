@@ -302,11 +302,7 @@ describe("action permissions and channel parity", () => {
     expect(unaccountedChanges(changing, claimed, HOST_ACTION_EXCEPTIONS)).toEqual([]);
     // A new window request that changes something is refused until it has its ground.
     expect(
-      unaccountedChanges(
-        [...changing, "inf:window:uncatalogued"],
-        claimed,
-        HOST_ACTION_EXCEPTIONS,
-      ),
+      unaccountedChanges([...changing, "inf:window:uncatalogued"], claimed, HOST_ACTION_EXCEPTIONS),
     ).toEqual(["inf:window:uncatalogued"]);
   });
   it("names each excuse's ground from the closed set", () => {

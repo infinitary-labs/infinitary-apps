@@ -148,8 +148,16 @@ beforeEach(() => {
   feed.staged = [];
 });
 
-/** A packaged copy's update settings, and a home of its own for the library's download cache. */
+/**
+ * A packaged copy's update settings, and a home of its own for the library's download cache,
+ * on a Mac new enough for a release's minimum system: the library reads the system's version
+ * through Node's own require, which this file's mock of `node:os` does not reach.
+ */
 function packagedCopy(): void {
+  const system = vi
+    .spyOn(nativeRequire("node:os") as typeof import("node:os"), "release")
+    .mockReturnValue("23.0.0");
+  onTestFinished(() => system.mockRestore());
   const resources = scratchDir("mac-update-resources-");
   writeFileSync(join(resources, "app-update.yml"), "updaterCacheDirName: infinitary-updater\n");
   const resourcesPath = process.resourcesPath;

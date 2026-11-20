@@ -49,20 +49,24 @@ When completed blockers release a queued task, its Starting line in Activity nam
 
 ## A part that starts at approval
 
-A planned part may start when the part before it is approved to merge, instead of when it merges.
-The first mate marks it on `create_task` with `start_at_approval`, naming one of the part's own `blocked_by`; the mark is kept on the part's shape, and a link without it waits for the merge as before.
-Before the part starts, `update_task` sets the mark the same way, naming one of its `blocked_by` (a wait the same call adds counts), or clears it with an empty name; a name that is not one of its waits is refused in filing's words, and a started part's mark no longer changes.
-The tasks reader shows the mark as `start_at_approval` in the part's row and in its by-key read.
-`TaskGraph.listReady` adds to the ready query each marked part whose only unfinished wait is that prerequisite, while the prerequisite is live and its merge approval is standing or spent by the merge closing it (`TaskGraph.approvedBase`, `TaskStore.listAwaitingApproval`, sought through the `task_placement_requests_start_at_approval` index).
-This holds only where the part's delivery is batched pull requests, since the batch line is what holds its merge behind the prerequisite; elsewhere the mark waits for the merge, as an unmarked link does.
-While that approval holds, the wait neither holds the part's start nor its close; once the approval ends, the wait holds again.
+On batched pull requests a part that waits on another part starts when that part is approved to merge, instead of when it merges.
+Every dependency does this unless the first mate filed it as needing the merge: `needs_merge` on `create_task` names the `blocked_by` the part needs merged, not only their code, such as for a release, and `update_task` replaces or clears that list before the part starts.
+A name that is not one of the part's waits, or the one its start mark names, is refused, and nothing is filed or changed.
+`start_at_approval` names which wait the start follows when several could; it is one of the part's own `blocked_by`, set on `create_task` or, before the part starts, on `update_task` (a wait the same call adds counts), and an empty name clears it.
+Without the mark the start follows the unfinished wait in the part's own project whose recorded base carries the most of the others.
+The tasks reader shows `start_at_approval` and `needs_merge` in the part's row and in its by-key read.
+`TaskGraph.listReady` adds to the ready query each part whose unfinished waits are that prerequisite and the parts its recorded base carries, while the prerequisite is live and its merge approval is standing or spent by the merge closing it (`TaskGraph.approvedBase`, `TaskStore.listAwaitingApproval`).
+A part the prerequisite was started on (its `built_on`), the part that one was started on, and so on down, are carried while each is live, approved to merge and not named in `needs_merge` (`TaskGraph.carriedBy`): the prerequisite's branch holds their work and the batch line merges each one ahead of it.
+So a chain goes on at each approval with no depth limit: the third part starts when the second is approved while the first two are unmerged, even when it waits on both.
+This holds only where the part's delivery is batched pull requests, since the batch line is what holds its merge behind the prerequisite; elsewhere every wait holds until the merge.
+While that approval holds, the wait and the waits it carries neither hold the part's start nor its close; once an approval ends, the wait on that part holds again.
 The part starts in a working copy built on the approved version, fetched from the prerequisite's pushed branch (`WorkspaceService.approvedBaseAt`), and records it as `built_on`; a part placed on a computer that runs work starts only where its prerequisite's working copy is.
 Its brief names that version, says it is not merged yet, and tells it not to bring its branch up to date onto the default branch while the prerequisite waits.
 Its review, its line count and its story read its difference against that version while the part's version builds on it and has taken in nothing newer from the default branch, whether or not the prerequisite merged since, since a squash merge never puts that version on the default branch (`TaskGraph.startedOn`, `WorkspaceService.builtOnAt`).
 A part on a computer that runs work is read there the same way: the revision read carries the approved version and answers the one it read from, and a computer without that change reads from the default branch, so its review brief names no approved version.
 If the prerequisite loses its approval before it merges, the idle ladder tells the part's crewmate once for each approval that ends (`base-approval-ended`), unless the prerequisite closed: a closed prerequisite is never approved again, and the batch line leaves the part out in words while its branch carries that unmerged work.
 A prerequisite counts as merged only when it closed done by a merge, which spent its approval (`TaskGraph.mergedAt`).
-A started part's close is released by the approval only when its `built_on` names that prerequisite.
+A started part's close is released by the approval only when its `built_on` names that prerequisite, and a part started before it was approved keeps waiting for the merge.
 Its approved merge waits in the batch line behind its prerequisite (docs/forge.md, "Batches of your own").
 
 ## Gates on active rows

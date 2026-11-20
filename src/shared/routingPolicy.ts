@@ -267,11 +267,18 @@ export const workShapeSchema = z.object({
   /**
    * The earlier part of a plan, by key, whose approved merge starts this
    * task (docs/task-graph.md, "A part that starts at approval"): one of its
-   * `blocks` prerequisites, declared by the first mate where the plan marks
-   * that link. The host starts it once that part's merge is approved, on
-   * the approved version, instead of waiting for the merge.
+   * `blocks` prerequisites, declared by the first mate to name which wait
+   * the start follows. On batched pull requests a wait starts the task at
+   * its approval without the mark too, unless `needs_merge` names it.
    */
   start_at_approval: z.string().optional(),
+  /**
+   * The `blocks` prerequisites, by key, whose merge this task needs, not
+   * only their code (docs/task-graph.md, "A part that starts at approval"):
+   * declared by the first mate, such as for a release. Each one waits for
+   * its merge on batched pull requests too.
+   */
+  needs_merge: z.array(z.string()).optional(),
   /**
    * The approved version of an earlier part this task's working copy
    * started on (`start_at_approval`): that task, its pushed branch and the
@@ -466,6 +473,7 @@ export const CAPTAIN_OWNED_SHAPE_FIELDS = [
   "result_schema",
   "branch_from",
   "start_at_approval",
+  "needs_merge",
   "branch",
   "program",
 ] as const satisfies readonly (keyof WorkShape)[];
@@ -550,6 +558,7 @@ export const workShapeAskSchema = workShapeSchema
     result_schema: true,
     branch_from: true,
     start_at_approval: true,
+    needs_merge: true,
     branch: true,
     program: true,
   })

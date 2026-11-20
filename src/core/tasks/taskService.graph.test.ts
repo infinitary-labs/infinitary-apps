@@ -239,6 +239,96 @@ describe("the task graph (task-system P2)", () => {
       expect(TaskGraph.mergedAt(tasks.get(second.id)!)).toBeUndefined();
     });
 
+    /** The ready sweep's start, as the host takes it: claimed, then built on the approved base. */
+    const startOn = (tasks: TaskService, id: string) => {
+      const base = tasks.graph.approvedBase(tasks.get(id)!);
+      if (!base) throw new Error(`${id} has no approved base`);
+      tasks.starts.dispatch(id, {
+        workspace: { repoDir: "", worktreeDir: "", branch: "" },
+        accountId: null,
+        assignee: "crewmate",
+      });
+      tasks.placement.setBuiltOn(id, { task: base.task.key, branch: base.branch, head: base.head });
+      return base;
+    };
+
+    // INF-5269's plan, part 2, the captain's "default-on" answer: on batched pull requests
+    // every dependency starts the later task at its approval, down a whole chain, with no mark.
+    it("starts each part of an unmarked chain at the approval of the part under it, three deep", () => {
+      const { tasks, work } = setup();
+      const first = work("first", { startPolicy: "on-request" });
+      const second = work("second", {
+        blockedBy: ["first"],
+        shape: { ...BATCHED, kind: "implement" },
+      });
+      // The third part waits on both, as a plan files it; the second part carries the first.
+      const third = work("third", {
+        blockedBy: ["first", "second"],
+        shape: { ...BATCHED, kind: "implement" },
+      });
+      expect(tasks.graph.listReady().map((r) => r.id)).toEqual([]);
+
+      approve(tasks, first.id);
+      expect(tasks.graph.listReady().map((r) => r.id)).toEqual(["second"]);
+      expect(tasks.graph.waitingOn(third.id).map((r) => r.id)).toEqual(["second"]);
+      expect(startOn(tasks, second.id).task.id).toBe(first.id);
+      // A third part with no approved base under it waits: the second part is not approved yet.
+      expect(tasks.graph.approvedBase(tasks.get(third.id)!)).toBeUndefined();
+
+      approve(tasks, second.id);
+      expect(tasks.graph.listReady().map((r) => r.id)).toEqual(["third"]);
+      const base = startOn(tasks, third.id);
+      expect(base.task.id).toBe(second.id);
+      // Neither unmerged part under it holds the started part's close, so its merge card can go up.
+      expect(tasks.graph.blockersHoldingClose(third.id)).toEqual([]);
+      expect(tasks.graph.blockersHoldingClose(second.id)).toEqual([]);
+
+      // Once the bottom part's approval ends, the parts above it wait for it again.
+      approve(tasks, first.id, "revoked");
+      expect(tasks.graph.blockersHoldingClose(second.id).map((r) => r.id)).toEqual([first.id]);
+      expect(tasks.graph.blockersHoldingClose(third.id).map((r) => r.id)).toEqual([first.id]);
+    });
+
+    it("waits for the merge of a dependency filed as needing it, and elsewhere than batched pull requests", () => {
+      const { tasks, work } = setup();
+      const first = work("first", { startPolicy: "on-request" });
+      work("release", {
+        blockedBy: ["first"],
+        shape: { ...BATCHED, kind: "implement", needs_merge: [first.key] },
+      });
+      work("direct", { blockedBy: ["first"], shape: { kind: "implement" } });
+      approve(tasks, first.id);
+      expect(tasks.graph.listReady().map((r) => r.id)).toEqual([]);
+      expect(tasks.graph.waitingOn("release").map((r) => r.id)).toEqual(["first"]);
+      expect(tasks.graph.waitingOn("direct").map((r) => r.id)).toEqual(["first"]);
+
+      tasks.close(first.id, { status: "done", reason: "merged", actor: "host" });
+      expect(
+        tasks.graph
+          .listReady()
+          .map((r) => r.id)
+          .sort(),
+      ).toEqual(["direct", "release"]);
+    });
+
+    it("keeps a part waiting on the part under its base when it needs that part merged", () => {
+      const { tasks, work } = setup();
+      const first = work("first", { startPolicy: "on-request" });
+      const second = work("second", {
+        blockedBy: ["first"],
+        shape: { ...BATCHED, kind: "implement" },
+      });
+      work("third", {
+        blockedBy: ["first", "second"],
+        shape: { ...BATCHED, kind: "implement", needs_merge: [first.key] },
+      });
+      approve(tasks, first.id);
+      startOn(tasks, second.id);
+      approve(tasks, second.id);
+      expect(tasks.graph.listReady().map((r) => r.id)).toEqual([]);
+      expect(tasks.graph.waitingOn("third").map((r) => r.id)).toEqual(["first"]);
+    });
+
     it("keeps waiting while another prerequisite is unfinished", () => {
       const { tasks, work } = setup();
       const first = work("first", { startPolicy: "on-request" });

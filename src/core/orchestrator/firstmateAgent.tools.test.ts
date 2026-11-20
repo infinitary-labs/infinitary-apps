@@ -851,6 +851,59 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     expect(tasks.graph.blockers(second.id).map((row) => row.id)).toEqual([first.id]);
   });
 
+  // INF-5269's plan, part 2, the captain's "default-on" answer: the filer says which
+  // dependencies a task needs merged, not only their code, on filing or before the start.
+  it("files, shows, changes and clears the waits a task needs merged", async () => {
+    const { agent, specs, tasks } = setup();
+    await agent.converse("file the release behind the feature");
+    const tools = piToolsOf(specs[0]?.tools ?? []) as unknown as GraphTool[];
+    const text = async (name: string, params: Record<string, unknown>) =>
+      (
+        await tools
+          .find((tool) => tool.name === name)!
+          .execute("c", params, undefined, undefined, {})
+      ).content[0]?.text ?? "";
+    for (const title of ["Feature", "Docs"])
+      await text("create_task", { title, goal: title, user_words: "file the feature" });
+    const feature = tasks.byKey("SCR-1")!;
+    const docs = tasks.byKey("SCR-2")!;
+
+    // A name that is not one of its waits is refused, and nothing is filed.
+    expect(
+      await text("create_task", {
+        title: "Release",
+        goal: "Release",
+        user_words: "release it",
+        blocked_by: [feature.key],
+        needs_merge: [docs.key],
+      }),
+    ).toContain(`needs_merge names ${docs.key}, which is not one of this task's blocked_by`);
+    expect(tasks.list().map((record) => record.title)).toEqual(["Feature", "Docs"]);
+
+    await text("create_task", {
+      title: "Release",
+      goal: "Release",
+      user_words: "release it",
+      blocked_by: [feature.key, docs.key],
+      needs_merge: [feature.id],
+    });
+    const release = tasks.byKey("SCR-3")!;
+    const read = async () => readTaskQueryText(await text("tasks", { key: release.key }))[0];
+    expect(await read()).toMatchObject({ needs_merge: [feature.key] });
+
+    // A wait cannot both start it at its approval and need its merge.
+    expect(
+      await text("update_task", { task: release.key, start_at_approval: feature.key }),
+    ).toContain(`needs_merge names ${feature.key}, which start_at_approval names too`);
+    expect(await text("update_task", { task: release.key, needs_merge: [docs.key] })).toBe(
+      `Updated ${release.key}: needs_merge ${docs.key}.`,
+    );
+    expect(await text("update_task", { task: release.key, needs_merge: [] })).toBe(
+      `Updated ${release.key}: needs_merge [].`,
+    );
+    expect((await read())?.needs_merge).toBeUndefined();
+  });
+
   // INF-2062: the captain asked that pausing a task moves it back to the backlog, never a steer to stay idle.
   it("moves started work back to the backlog with update_task start_policy on-request, and start_now picks it up", async () => {
     const { agent, specs, tasks, supervisor } = setup();

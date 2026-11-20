@@ -534,9 +534,10 @@ export class TaskGraph {
 
   /**
    * The ready query (design section 7): open, unheld, when-ready work whose
-   * every blocker closed successfully, and work whose only wait left is the
-   * prerequisite it starts at the approval of, now approved to merge
-   * (docs/task-graph.md, "A part that starts at approval"). Priority first,
+   * every blocker closed successfully, and work whose waits left are the
+   * prerequisite it starts at the approval of, now approved to merge, and
+   * the parts under it that its recorded base carries (docs/task-graph.md,
+   * "A part that starts at approval"). Priority first,
    * then age. The R1 sweep dispatches these.
    */
   listReady(): TaskRecord[] {
@@ -552,12 +553,13 @@ export class TaskGraph {
 
   /**
    * The earlier part whose approved merge this task starts on
-   * (`shape.start_at_approval`, docs/task-graph.md, "A part that starts at
-   * approval"): that prerequisite while it is live work whose merge the
-   * captain approved and it has not merged yet, with the approved version
-   * and its pushed branch. Undefined when the task declared none, the
-   * prerequisite is done or dropped, its approval is not standing, or
-   * the task waits on other unfinished work besides it.
+   * (docs/task-graph.md, "A part that starts at approval"): that
+   * prerequisite while it is live work whose merge the captain approved and
+   * it has not merged yet, with the approved version and its pushed branch.
+   * Every other unfinished wait must be one that part's own recorded base
+   * already carries (`carriedBy`). Undefined when no wait is such a part, a
+   * wait the task needs merged is unfinished, or the task waits on other
+   * unfinished work besides it.
    */
   approvedBase(
     record: Pick<TaskRecord, "id" | "shape">,
@@ -569,28 +571,88 @@ export class TaskGraph {
       statusesWhere((blocker) => !TaskService.blockerCleared(blocker)),
     );
     if (!waits.some(({ task }) => task.id === base.task.id)) return undefined;
-    if (waits.some(({ task }) => task.id !== base.task.id)) return undefined;
+    const carried = this.carriedBy(base.task, this.needsMerge(record));
+    if (waits.some(({ task }) => task.id !== base.task.id && !carried.has(task.id)))
+      return undefined;
     return base;
   }
 
   /**
-   * The declared prerequisite while it is live and approved to merge,
-   * whatever else the task waits on. Only on batched pull requests, where
-   * the batch line holds the later part's merge behind it; elsewhere the
-   * mark waits for the merge, as an unmarked link does.
+   * The wait a task starts at the approval of, while it is live and approved
+   * to merge, whatever else the task waits on. Only on batched pull
+   * requests, where the batch line holds the later part's merge behind it;
+   * elsewhere every wait holds until the merge. The one `start_at_approval`
+   * names when the first mate marked one; otherwise each unfinished wait in
+   * the task's own project, the one whose recorded base carries the most
+   * of the others first. A wait `needs_merge` names never starts it.
+   * `among` keeps only that one wait: the part a started task was built on.
    */
   private approvedPrerequisite(
     record: Pick<TaskRecord, "id" | "shape">,
+    among?: TaskRecord,
   ): { task: TaskRecord; head: string; branch: string } | undefined {
-    const ref = record.shape?.start_at_approval;
-    if (!ref) return undefined;
     const full = this.writer.store.get(record.id);
-    if (this.tasks.policiesOf(full)?.delivery.value !== "queue-pr") return undefined;
-    const base = this.tasks.resolve(ref);
-    if (!base || TaskService.isClosed(base)) return undefined;
-    const authorization = base.delivery?.mergeAuthorization;
-    if (!authorization || !TaskGraph.approvedToMerge(base)) return undefined;
-    return { task: base, head: authorization.approvedHead, branch: authorization.target.branch };
+    if (!full || this.tasks.policiesOf(full)?.delivery.value !== "queue-pr") return undefined;
+    const needs = this.needsMerge(record);
+    const ref = record.shape?.start_at_approval;
+    const named = ref ? this.tasks.resolve(ref) : undefined;
+    const candidates = (
+      ref
+        ? named && (!among || among.id === named.id)
+          ? [named]
+          : []
+        : among
+          ? [among]
+          : this.blocksIn(
+              record.id,
+              statusesWhere((blocker) => !TaskService.blockerCleared(blocker)),
+            )
+              .map(({ task }) => task)
+              .filter((task) => task.repoId === full.repoId)
+    ).filter(
+      (task) =>
+        !needs.has(task.id) &&
+        !TaskService.isClosed(task) &&
+        task.delivery?.mergeAuthorization !== undefined &&
+        TaskGraph.approvedToMerge(task),
+    );
+    const best = candidates
+      .map((task) => ({ task, carries: this.carriedBy(task, needs).size }))
+      .sort((a, b) => b.carries - a.carries)[0]?.task;
+    const authorization = best?.delivery?.mergeAuthorization;
+    if (!best || !authorization) return undefined;
+    return { task: best, head: authorization.approvedHead, branch: authorization.target.branch };
+  }
+
+  /**
+   * The unmerged parts under `base` that its own recorded base already
+   * holds: the part it was built on, the part that one was built on, and so
+   * on down, while each is live and approved to merge. A later part built
+   * on `base` carries their work too, and the batch line merges each one
+   * ahead of the part above it, so a wait on one of them neither holds that
+   * part's start nor its close. A part named in `needs` ends the walk.
+   */
+  private carriedBy(base: TaskRecord, needs: ReadonlySet<string>): Set<string> {
+    const carried = new Set<string>();
+    let part = base;
+    for (;;) {
+      const under = this.unmergedBuiltOn(part)?.task;
+      if (!under || under.id === base.id || carried.has(under.id) || needs.has(under.id)) break;
+      if (TaskService.isClosed(under) || !TaskGraph.approvedToMerge(under)) break;
+      carried.add(under.id);
+      part = under;
+    }
+    return carried;
+  }
+
+  /** The waits a task declared it needs merged (`shape.needs_merge`), by id. */
+  private needsMerge(record: Pick<TaskRecord, "shape">): Set<string> {
+    const ids = new Set<string>();
+    for (const ref of record.shape?.needs_merge ?? []) {
+      const task = this.tasks.resolve(ref);
+      if (task) ids.add(task.id);
+    }
+    return ids;
   }
 
   /**
@@ -643,17 +705,25 @@ export class TaskGraph {
   }
 
   /**
-   * Whether this task's wait on `blocker` is the one its approved base
-   * answers (`approvedBase`): it neither holds the start nor the close.
-   * Once the task has started, only when it started on that blocker's
-   * approved version, so the batch line holds its merge behind it.
+   * Whether this task's wait on `blocker` is one its approved base answers
+   * (`approvedBase`): the base itself, or a part under it that the base's
+   * recorded base carries. It neither holds the start nor the close. Once
+   * the task has started, only when it started on that base's approved
+   * version, so the batch line holds its merge behind it.
    */
   private answeredByApproval(id: string, blocker: TaskRecord): boolean {
+    // Only an approved wait can be answered: the common case reads nothing more.
+    if (!TaskGraph.approvedToMerge(blocker)) return false;
     const record = this.writer.store.get(id);
-    if (!record?.shape?.start_at_approval) return false;
-    if (record.status !== "open" && this.unmergedBuiltOn(record)?.task.id !== blocker.id)
-      return false;
-    return this.approvedPrerequisite(record)?.task.id === blocker.id;
+    if (!record) return false;
+    const builtOn = record.status === "open" ? undefined : this.unmergedBuiltOn(record)?.task;
+    if (record.status !== "open" && !builtOn) return false;
+    const base = this.approvedPrerequisite(record, builtOn);
+    if (!base) return false;
+    return (
+      base.task.id === blocker.id ||
+      this.carriedBy(base.task, this.needsMerge(record)).has(blocker.id)
+    );
   }
 
   /** Open, unheld work waiting on a dropped task - a wait that cannot end. */

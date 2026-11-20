@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "chains-start-at-approval",
+      "kind": "feature",
+      "area": "crewmates",
+      "title": "Each task in a chain starts when you approve the one before it",
+      "body": "In a project whose approved changes merge together in batches, a task waiting on another now starts as soon as you approve that task's merge, on the version you approved, instead of waiting for its batch to merge. This goes down a whole chain: the third task starts when you approve the second, while the first two still wait to merge, and they merge in order. A task that needs the earlier one merged first, such as a release, still waits for the merge.",
+      "noPicture": "This changes when a waiting task starts, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

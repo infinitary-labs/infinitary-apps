@@ -808,7 +808,7 @@ export const RAW_WORDS_LEDGER: Readonly<Record<string, number>> = {
   "src/core/storage/taskRecordFields.ts": 1,
   "src/core/storage/taskRecordMigrations.ts": 50,
   "src/core/storage/taskRecordProjection.ts": 12,
-  "src/core/storage/taskRecords.ts": 65,
+  "src/core/storage/taskRecords.ts": 64,
   "src/core/storage/taskReferenceFields.ts": 3,
   "src/core/storage/taskReferenceStore.ts": 8,
   "src/core/storage/taskRepetitionStore.ts": 6,

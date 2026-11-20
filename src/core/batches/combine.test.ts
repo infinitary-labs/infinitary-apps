@@ -441,6 +441,48 @@ describe("a change built on another change's approved version", () => {
     ]);
   });
 
+  // INF-5269's plan, part 2: a chain three parts deep, each started at the approval of the
+  // part under it, merges in order as one commit of each part's own difference, and the parts
+  // above a part the batch leaves out do not go in without it.
+  it("carries a chain of three in order, each as its own commit, and none above a part left out", async () => {
+    const at = host();
+    const { first, panel } = approvedTwice(at);
+    const legend: BatchChange = {
+      ...change(at, {
+        taskId: "task-legend",
+        title: "feat(parser): explain the dates in a legend",
+        files: { "src/legend.ts": "export const legend = 'dates';\n" },
+        from: panel.head,
+        approvedAt: 4_000,
+      }),
+      base: panel.branch,
+      after: panel.taskId,
+    };
+    const input = { repoDir: at.home, defaultBranch: "main", at: AT };
+    const chain = await combine({ ...input, changes: [first, panel, legend] });
+    expect(chain.leftOut).toEqual([]);
+    expect(chain.members.map((member) => member.taskId)).toEqual([
+      PARSER.taskId,
+      panel.taskId,
+      legend.taskId,
+    ]);
+    const [one, two, three] = chain.members.map((member) => member.commit) as [
+      string,
+      string,
+      string,
+    ];
+    expect(run(at.home, "diff", "--name-only", chain.base, one)).toBe("src/parser.ts");
+    expect(run(at.home, "diff", "--name-only", one, two)).toBe("src/panel.ts");
+    expect(run(at.home, "diff", "--name-only", two, three)).toBe("src/legend.ts");
+
+    // The bottom part's crewmate pushes past its approved version: the batch leaves it out.
+    change(at, { ...PARSER, files: { "src/parser.ts": "export const parse = Date.parse;\n" } });
+    const withoutBase = await combine({ ...input, changes: [first, panel, legend] });
+    expect(withoutBase.members).toEqual([]);
+    expect(withoutBase.leftOut).toEqual([{ change: first, reason: LEFT_OUT_WORDS.moved }]);
+    expect(withoutBase.waiting).toEqual([panel, legend]);
+  });
+
   it("goes as its own change once its base merged, checked against the version that merged", async () => {
     const at = host();
     const { first, again, panel } = approvedTwice(at);

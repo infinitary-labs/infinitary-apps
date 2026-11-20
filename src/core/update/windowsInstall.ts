@@ -131,19 +131,21 @@ export function windowsHandOverScript(values: {
     "}",
     `function Say([string]$outcome) { try { [IO.File]::WriteAllText($result, (ConvertTo-Json -Compress @{ outcome = $outcome; from = ${literal(values.result.from)}; to = ${literal(values.result.to)}; channelKept = $channelKept })) } catch {} }`,
     // A command line split into its arguments after the program's own
-    // name, as Windows splits it for the program it starts: whitespace
-    // between arguments, quotes around spaces, and backslashes literal
-    // except before a quote. Plain PowerShell, so nothing is compiled.
+    // name, as Windows splits it for the program it starts: spaces or tabs
+    // between arguments, quotes around them, and backslashes literal except
+    // before a quote; $null for a quote left open, which reads two ways.
+    // Plain PowerShell, so nothing is compiled.
+    "function Gap($c) { $c -eq [char]32 -or $c -eq [char]9 }",
     "function ArgumentsOf([string]$line) {",
     "  $parts = New-Object System.Collections.Generic.List[string]",
     "  $i = 0; $n = $line.Length",
-    "  if ($n -gt 0 -and $line[0] -eq [char]34) { $i = $line.IndexOf([char]34, 1); if ($i -lt 0) { return ,$parts.ToArray() }; $i++ }",
-    "  else { while ($i -lt $n -and -not [char]::IsWhiteSpace($line[$i])) { $i++ } }",
+    "  if ($n -gt 0 -and $line[0] -eq [char]34) { $i = $line.IndexOf([char]34, 1); if ($i -lt 0) { return $null }; $i++ }",
+    "  else { while ($i -lt $n -and -not (Gap $line[$i])) { $i++ } }",
     "  while ($true) {",
-    "    while ($i -lt $n -and [char]::IsWhiteSpace($line[$i])) { $i++ }",
+    "    while ($i -lt $n -and (Gap $line[$i])) { $i++ }",
     "    if ($i -ge $n) { break }",
     "    $part = New-Object System.Text.StringBuilder; $quoted = $false",
-    "    while ($i -lt $n -and ($quoted -or -not [char]::IsWhiteSpace($line[$i]))) {",
+    "    while ($i -lt $n -and ($quoted -or -not (Gap $line[$i]))) {",
     "      $slashes = 0; while ($i -lt $n -and $line[$i] -eq [char]92) { $slashes++; $i++ }",
     "      if ($i -lt $n -and $line[$i] -eq [char]34) {",
     "        [void]$part.Append([char]92, [int][math]::Floor($slashes / 2))",
@@ -151,9 +153,10 @@ export function windowsHandOverScript(values: {
     "        $i++",
     "      } else {",
     "        [void]$part.Append([char]92, $slashes)",
-    "        if ($i -lt $n -and ($quoted -or -not [char]::IsWhiteSpace($line[$i]))) { [void]$part.Append($line[$i]); $i++ }",
+    "        if ($i -lt $n -and ($quoted -or -not (Gap $line[$i]))) { [void]$part.Append($line[$i]); $i++ }",
     "      }",
     "    }",
+    "    if ($quoted) { return $null }",
     "    $parts.Add($part.ToString())",
     "  }",
     "  ,$parts.ToArray()",
@@ -175,7 +178,9 @@ export function windowsHandOverScript(values: {
     "function FolderOf([string]$line) {",
     "  if (-not $line) { return $null }",
     "  $folder = ''",
-    "  foreach ($part in (ArgumentsOf $line)) {",
+    "  $parts = ArgumentsOf $line",
+    "  if ($null -eq $parts) { return $null }",
+    "  foreach ($part in $parts) {",
     "    if ($part -eq '--') { break }",
     "    if ($part -match '^(--|-|/)user-data-dir=(.*)$') { $folder = Canonical $Matches[2]; if ($null -eq $folder) { return $null } }",
     "  }",
@@ -217,7 +222,14 @@ export function windowsHandOverScript(values: {
     "}",
     "function Reopen {",
     "  $before = @(OnThisFolder | ForEach-Object { $_.Id })",
-    "  foreach ($id in $before) { Stop-Process -Id $id -Force -ErrorAction SilentlyContinue }",
+    // The old window ends before the copy opens again, or the new one
+    // would hand itself to it, as a second window on one folder does.
+    "  foreach ($id in $before) {",
+    "    $window = Get-Process -Id $id -ErrorAction SilentlyContinue",
+    "    if (-not $window) { continue }",
+    "    Stop-Process -Id $id -Force -ErrorAction SilentlyContinue",
+    "    if (-not $window.WaitForExit(30000)) { Recover; return }",
+    "  }",
     "  $app = Join-Path (Split-Path -Parent $exe) 'resources\\app.asar'",
     "  if (-not ((Test-Path -LiteralPath $exe) -and (Test-Path -LiteralPath $app))) { Recover; return }",
     "  try {",

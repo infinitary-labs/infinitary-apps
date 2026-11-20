@@ -841,6 +841,36 @@ test("the Windows hand-over keeps a copy still saving, reopens a copy on its own
       expect(stillRunning(others)).toEqual(others);
     });
 
+    await test.step("a finished update of the person's own folder whose installer opens no window is said in a message, and its download page opens next", async () => {
+      // The person's own folder, so the hand-over leaves the restart to the
+      // installer: one that exits 0 and opens nothing leaves no new window.
+      const copy = standIn("a copy the installer does not open", "Infinitary.exe", { app: true });
+      rmSync(opened, { force: true });
+      rmSync(join(dirname(finishes.file), "ran.txt"), { force: true });
+      rmSync(resultFile, { force: true });
+      const run = handOver({
+        pid: await endedApp(),
+        installer: finishes.file,
+        executable: copy.file,
+        resultFile,
+        result,
+        marker: { file: marker, earlier: null },
+        page,
+        readySeconds: 10,
+      });
+      await expect
+        .poll(() => dialogWords(run.pid).join(" "), { timeout: 120_000 })
+        .toContain(recovery);
+      expect(finishes.ran()?.trim()).toBe("--updated /S --force-run");
+      expect(copy.ran()).toBeNull();
+      expect(existsSync(resultFile)).toBe(false);
+      expect(existsSync(opened)).toBe(false);
+      expect(pressDialogButton(run.pid, "OK")).toBe(true);
+      expect(await run.ended).toBe(0);
+      await expect.poll(() => existsSync(opened), { timeout: 60_000 }).toBe(true);
+      expect(stillRunning(others)).toEqual(others);
+    });
+
     await test.step("a copy without its app is said in a message without being started, and its download page opens next", async () => {
       const copy = standIn("a copy without its app", "Infinitary.exe");
       const run = await recovered(copy);

@@ -418,11 +418,12 @@ export class BitbucketForge implements Forge {
    * Bitbucket's word on a merge it took with a 202
    * (`GET /pullrequests/<N>/merge/task-status/<task>`). Bitbucket answers
    * 400 for a merge that failed or left its queue unmerged, and also for a
-   * task of another pull request, so only a reference kept from this pull
-   * request's own answer (`mergeTaskOf`) reads a 400 as failed; anything
-   * else, pending and an unknown task included, is not a failure.
+   * task of another pull request, with no typed fact telling them apart, so
+   * a 400 is a refusal, never a confirmed failure; only a reference kept
+   * from this pull request's own answer (`mergeTaskOf`) is asked about, and
+   * anything else, pending and an unknown task included, is not refused.
    */
-  async mergeTaskFailed(number: number, task: string): Promise<boolean> {
+  async mergeTaskRefused(number: number, task: string): Promise<boolean> {
     const kept = /^(\d+)\/(.+)$/.exec(task);
     if (!kept || Number(kept[1]) !== number) return false;
     try {

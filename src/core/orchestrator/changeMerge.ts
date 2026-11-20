@@ -205,27 +205,37 @@ export type MergeAttempt = PrOutcome & {
   noResend?: boolean;
 };
 
-/** An approval that ended at its last check before the merge request left: nothing was sent. */
+/**
+ * An approval that ended, or newer guidance that held it (`guidance`), at its
+ * last check before the merge request left: nothing was sent.
+ */
 export class MergeWithdrawn extends ForgeError {
-  constructor(why: string) {
+  constructor(
+    why: string,
+    readonly guidance = false,
+  ) {
     super("refused", why, true);
     this.name = "MergeWithdrawn";
   }
 }
 
 /**
- * The approval's last check before a merge, and the attempt it records
- * (`check`, then `onSent`), at the moment the request leaves: on a host whose
- * merge names no version it runs inside the merge as the request leaves, after
- * every read before it, and the hook is returned for `Forge.putIn`; elsewhere
- * it runs now. A check that answers why stops the merge (`MergeWithdrawn`).
+ * The approval's last checks before a merge, and the attempt it records
+ * (`held`, `check`, then `onSent`), at the moment the request leaves: on a
+ * host whose merge names no version they run inside the merge as the request
+ * leaves, after every read before it, and the hook is returned for
+ * `Forge.putIn`; elsewhere they run now. Newer guidance (`held`) or a check
+ * that answers why stops the merge (`MergeWithdrawn`).
  */
 export function atDispatch(
   forge: Forge,
+  held: () => string | undefined,
   check: () => string | undefined,
   onSent: () => void,
 ): (() => void) | undefined {
   const run = () => {
+    const hold = held();
+    if (hold) throw new MergeWithdrawn(hold, true);
     const why = check();
     if (why) throw new MergeWithdrawn(why);
     onSent();
@@ -517,6 +527,7 @@ export class ChangeMerge {
       if (held) return { ok: false, text: `Cannot merge yet: ${held}.`, stop: "guidance" };
       const leaving = atDispatch(
         forge,
+        () => guard?.held?.(),
         () => guard?.beforeDispatch(change.headSha) ?? boundary?.beforeDispatch(change.headSha),
         () => {
           dispatched = true;
@@ -544,6 +555,9 @@ export class ChangeMerge {
       };
     } catch (caught) {
       if (caught instanceof MergeWithdrawn) {
+        if (caught.guidance)
+          // i18n-exempt: served to the crewmate in the merge answer, stays English
+          return { ok: false, text: `Cannot merge yet: ${caught.message}.`, stop: "guidance" };
         return {
           ok: false,
           text: `Cannot merge: ${caught.message}${caught.message.endsWith(".") ? "" : "."}`,
@@ -977,8 +991,9 @@ export class ChangeMerge {
     const pull = await this.context.pullOf(forge, prNumber);
     // A merge the host took and had not confirmed, still open: the host's
     // own word on that merge says whether it failed.
-    if (mergeTask && forge.mergeTaskFailed && pull.state === "open" && !pull.merged) {
-      if (await forge.mergeTaskFailed(prNumber, mergeTask)) return { ...pull, mergeFailed: true };
+    if (mergeTask && forge.mergeTaskRefused && pull.state === "open" && !pull.merged) {
+      if (await forge.mergeTaskRefused(prNumber, mergeTask))
+        return { ...pull, mergeTaskRefused: true };
     }
     return pull;
   }

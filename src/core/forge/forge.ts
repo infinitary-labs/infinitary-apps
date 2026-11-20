@@ -243,8 +243,12 @@ export type ForgePull = {
    * read after a merge was sent cannot show that nothing went in.
    */
   mergeNamesNoVersion?: true;
-  /** The host said the merge it took (`ForgeMergeUnconfirmed.mergeTask`) failed: nothing went in. */
-  mergeFailed?: true;
+  /**
+   * The host refused the read of the merge it took (`ForgeMergeUnconfirmed.mergeTask`)
+   * in a way that may mean the merge failed or that the task is not this
+   * pull request's: it does not confirm either, so nothing is sent again.
+   */
+  mergeTaskRefused?: true;
 };
 
 /**
@@ -369,7 +373,7 @@ export class ForgeBaseMoved extends ForgeError {
  * A merge the host took and has not confirmed, on a host whose merge names
  * no version: an outcome not yet known, never sent again. `mergeTask` is
  * the host's own reference to that merge, when it gave one, which a later
- * read asks how it ended (`Forge.mergeTaskFailed`).
+ * read asks how it ended (`Forge.mergeTaskRefused`).
  */
 export class ForgeMergeUnconfirmed extends ForgeError {
   constructor(
@@ -430,10 +434,11 @@ export interface Forge {
    */
   readonly mergeNamesNoVersion?: true;
   /**
-   * Whether a merge the host took and had not confirmed (`ForgeMergeUnconfirmed.mergeTask`)
-   * failed by the host's own word; false while it runs or once it merged.
+   * Whether the host refused the read of a merge it took and had not
+   * confirmed (`ForgeMergeUnconfirmed.mergeTask`); false while it runs or
+   * once it merged. A refusal is not proof the merge failed.
    */
-  mergeTaskFailed?(number: number, task: string): Promise<boolean>;
+  mergeTaskRefused?(number: number, task: string): Promise<boolean>;
   /** The selected contributor change publishes its saved story in a comment. */
   readonly storyInComment?: boolean;
   /** Optional read-only workflow evidence; absent on hosts without a reader. */

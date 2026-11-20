@@ -475,9 +475,36 @@ describe("CrewSupervisor", () => {
       },
     );
 
-    // INF-5193: the host's own reference to a merge it took is kept, and
-    // its word that the merge failed lets the approval try again.
-    it("asks the host how a merge it took ended, and tries again once it says the merge failed", async () => {
+    // INF-5193: the captain's newer guidance can arrive while a merge on a
+    // host naming no version still reads; it is read again as the request
+    // leaves, so it holds the merge and sends nothing.
+    it.each([
+      ["the task's own pull request", false],
+      ["a numbered pull request", true],
+    ])(
+      "holds the merge of %s for guidance that arrives while it reads on a host naming no version",
+      async (_case, referenced) => {
+        const h = await approved({ referenced });
+        h.forge.mergeNamesNoVersion = true;
+        h.forge.beforeLeaving = async () => {
+          await h.supervisor.steer.steerCrewmate(
+            h.taskId,
+            "Keep the same approved work",
+            "captain",
+          );
+        };
+        h.supervisor.cardActions.act(h.card.id, "merge");
+        await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("guidance"));
+        expect(h.forge.sends).toBe(0);
+        expect(h.authorization()?.attempt).toBeUndefined();
+        await h.supervisor.disposeAll();
+      },
+    );
+
+    // INF-5193: the host's own reference to a merge it took is kept; a
+    // refusal of its read does not say the merge failed (the task may not
+    // be this pull request's), so the approval ends and nothing is sent again.
+    it("asks the host how a merge it took ended, and ends the approval without sending again when the host refuses the read", async () => {
       const h = await approved({ referenced: true });
       h.forge.mergeNamesNoVersion = true;
       h.forge.refuse = new ForgeMergeUnconfirmed("The host took the merge", "7/merge-task-1");
@@ -489,12 +516,12 @@ describe("CrewSupervisor", () => {
       await h.supervisor.settling.kept.runMergeAuthorization(h.taskId);
       expect(h.forge.sends).toBe(1);
       expect(h.authorization()?.attempt?.task).toBe("7/merge-task-1");
-      h.forge.failedTasks.add("7/merge-task-1");
+      h.forge.refusedTasks.add("7/merge-task-1");
       await h.supervisor.settling.kept.runMergeAuthorization(h.taskId);
       await vi.waitFor(() =>
-        expect(h.tasks.get(h.taskId)?.delivery?.mergeAuthorization?.status).toBe("consumed"),
+        expect(h.tasks.get(h.taskId)?.delivery?.mergeAuthorization?.status).toBe("invalidated"),
       );
-      expect(h.forge.sends).toBe(2);
+      expect(h.forge.sends).toBe(1);
       await h.supervisor.disposeAll();
     });
 

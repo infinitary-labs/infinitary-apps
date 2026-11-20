@@ -124,9 +124,9 @@ export class KeptForge implements Forge {
   /** The host's merge names no version, as Bitbucket's does (`Forge.mergeNamesNoVersion`). */
   mergeNamesNoVersion?: true;
   /** The merges the host took and then said failed, by its own reference to each. */
-  failedTasks = new Set<string>();
-  async mergeTaskFailed(_number: number, task: string) {
-    return this.failedTasks.has(task);
+  refusedTasks = new Set<string>();
+  async mergeTaskRefused(_number: number, task: string) {
+    return this.refusedTasks.has(task);
   }
   async listProjects() {
     return [];

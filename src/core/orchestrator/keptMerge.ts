@@ -322,8 +322,8 @@ export class KeptMerge {
    * means the approval is spent and the task closes once; closed ends it;
    * open clears the token and runs every gate again, except on a host whose
    * merge names no version, where open proves nothing and it waits like an
-   * unreadable one, never sending again, until the host's own word on the
-   * merge it took (`attempt.task`) says it failed.
+   * unreadable one, never sending again; a host refusing the read of the
+   * merge it took (`attempt.task`) ends the approval, sending nothing.
    */
   private async reconcileAttempt(taskId: string, authorization: MergeAuthorization): Promise<void> {
     const readPull = this.host.readPull;
@@ -352,7 +352,7 @@ export class KeptMerge {
     // stays read-only, and only a read showing how it ended moves it.
     if (
       !pull ||
-      (pull.state === "open" && !pull.merged && pull.mergeNamesNoVersion && !pull.mergeFailed)
+      (pull.state === "open" && !pull.merged && pull.mergeNamesNoVersion && !pull.mergeTaskRefused)
     ) {
       const retries = (current.retries ?? 0) + 1;
       this.approvals.patchStanding(taskId, {
@@ -364,6 +364,21 @@ export class KeptMerge {
     }
     if (pull.merged) {
       await this.finishMerged(taskId, record.title, pull);
+      return;
+    }
+    // The host refused the read of the merge it took: the merge may have
+    // failed, or the task may not be this pull request's, and nothing says
+    // which. Nothing is sent again; the approval ends, so whether to merge
+    // again is a new merge card's.
+    if (pull.state === "open" && pull.mergeTaskRefused) {
+      this.approvals.endAuthorization(
+        taskId,
+        "invalidated",
+        // i18n-exempt: joins the approval's English timeline note (`endAuthorization`), like every end reason
+        "the host refused the read of the merge it took, so whether it failed is not known; nothing was sent again",
+        { feed: true },
+      );
+      this.reportEnded(taskId, record.title);
       return;
     }
     if (pull.state !== "open") {

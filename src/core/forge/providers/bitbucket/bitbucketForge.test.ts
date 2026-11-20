@@ -313,18 +313,18 @@ describe("a Bitbucket Cloud pull request", () => {
     expect((outcome as ForgeMergeUnconfirmed).mergeTask).toBe(kept);
   });
 
-  it("reads a kept task's 400 as failed, a pending one as not, and asks nothing for another pull request's", async () => {
+  it("reads a kept task's 400 as a refusal, a pending one as not, and asks nothing for another pull request's", async () => {
     const { forge, sent } = standIn({
       [`GET ${REPO}/pullrequests/7/merge/task-status/merge-1`]: () =>
         Response.json({ type: "error", error: { message: "Merge failed" } }, { status: 400 }),
       [`GET ${REPO}/pullrequests/7/merge/task-status/merge-2`]: () =>
         Response.json({ task_status: "PENDING" }),
     });
-    expect(await forge.mergeTaskFailed(7, "7/merge-1")).toBe(true);
-    expect(await forge.mergeTaskFailed(7, "7/merge-2")).toBe(false);
+    expect(await forge.mergeTaskRefused(7, "7/merge-1")).toBe(true);
+    expect(await forge.mergeTaskRefused(7, "7/merge-2")).toBe(false);
     const asked = sent.length;
-    expect(await forge.mergeTaskFailed(7, "8/merge-1")).toBe(false);
-    expect(await forge.mergeTaskFailed(7, "merge-1")).toBe(false);
+    expect(await forge.mergeTaskRefused(7, "8/merge-1")).toBe(false);
+    expect(await forge.mergeTaskRefused(7, "merge-1")).toBe(false);
     expect(sent).toHaveLength(asked);
   });
 

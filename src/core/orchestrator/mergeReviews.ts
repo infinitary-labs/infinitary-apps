@@ -882,6 +882,7 @@ export class MergeReviews {
       const way = await wayToSend(forge, change);
       const leaving = atDispatch(
         forge,
+        () => guard?.held?.(),
         () => guard?.beforeDispatch(candidate.headSha),
         () => {
           dispatched = true;
@@ -894,7 +895,11 @@ export class MergeReviews {
       return merged(sent?.sha, sent?.mergedHead);
     } catch (caught) {
       if (caught instanceof MergeWithdrawn)
-        return { ok: false, stop: "withdrawn", text: caught.message };
+        return {
+          ok: false,
+          stop: caught.guidance ? "guidance" : "withdrawn",
+          text: caught.message,
+        };
       const message = caught instanceof Error ? caught.message : String(caught);
       // A request the host says never left sent nothing, whatever was marked.
       const sent = dispatched && !(caught instanceof ForgeError && caught.beforeSend);

@@ -50,6 +50,8 @@ The renderer reads it over `inf:app:first-run` (a core channel on the frozen `ap
 ## Joining the first mate on another Mac
 
 Under the provider chips a second group, a hairline apart, offers the other way in: `YOUR FIRST MATE IS ON ANOTHER COMPUTER` with "+ Paste its link" and "+ Join by its address", which join the first mate on a computer the person already has instead (`docs/view.md`, "Joining").
+On a Mac or an x64 Linux computer "+ Set up from your first mate's computer" leads them, with the three chips on their own line: its aside shows this computer's address, private network first, whether Remote Login is on, and the line to compare, and waits for that computer to add this one (`docs/view.md`, "Set up from your first mate's computer").
+Once it does, this window opens that first mate by itself, with no relaunch, while nobody has given this computer's own first mate a task (`docs/view.md`, "Following along").
 Above the subscription chips, the first mate's line asks to be set up on a computer that stays on, and says other devices need the first mate awake.
 When a connected subscription still cannot answer, that place keeps "Pick a computer that stays on.
 Other computers need it awake."

@@ -120,3 +120,29 @@ export function joinAtRefusalWords(refused: JoinAtRefusal, address: string): str
       return remoteLoginWords.refused(refused, { address }).join(" ");
   }
 }
+
+/**
+ * Set up from your first mate's computer, at this app's first launch
+ * (docs/view.md, "Joining"; design skill `components/devices/JoinAnotherMac`,
+ * "Set up from your first mate's computer"): what the person types or
+ * compares on their first mate's computer to add this one by its address,
+ * read here without an administrator. `offered` is false on a system the
+ * address way cannot set up (a Windows PC, an Arm Linux computer), where the
+ * window shows no such choice.
+ */
+export const setUpHereSchema = z.strictObject({
+  offered: z.boolean(),
+  /** The account Infinitary runs as here, which the address names first. */
+  user: z.string().min(1).max(64).nullable(),
+  /** Its private network address, such as Tailscale's (100.64.0.0/10). */
+  privateAddress: z.string().min(1).max(64).nullable(),
+  /** Its name on the local network, such as `studio.local`. */
+  localName: z.string().min(1).max(255).nullable(),
+  /** Whether this computer's SSH server, Remote Login on a Mac, answers. */
+  remoteLogin: z.enum(["on", "off", "unknown"]),
+  /** The check line its first mate's computer asks the person to compare. */
+  line: z.string().min(1).max(160).nullable(),
+  /** A Mac opens its Sharing settings, where Remote Login is turned on. */
+  opensSharing: z.boolean(),
+});
+export type SetUpHere = z.infer<typeof setUpHereSchema>;

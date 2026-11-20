@@ -30,6 +30,7 @@ Card pictures and project fonts it has shown are kept in memory for the run, up 
 ## Joining
 
 The first-launch stage carries a second group under the provider chips, `YOUR FIRST MATE IS ON ANOTHER COMPUTER` with "+ Paste its link" and "+ Join by its address" (`src/renderer/src/devices/JoinAnotherMac.tsx`).
+On a Mac or an x64 Linux computer, which its first mate's computer can add by its address, "+ Set up from your first mate's computer" leads them, and the three chips sit on their own line; a Windows PC and an Arm Linux computer keep the two (below, "Set up from your first mate's computer").
 A link joins only by being pasted there and confirmed: nothing on either Mac answers the link's scheme.
 
 1. The window reads the pasted text as a link (`parsePairingLink`) and refuses text that is not one before anything is sent.
@@ -63,6 +64,25 @@ A Windows PC signs in with Windows' own SSH, `ssh.exe` in `System32\OpenSSH`, wh
 Each stop is one warning line with the address kept: Infinitary not open there, which starts nothing there; too old; controlling another computer; this computer itself; no curl on Linux; or Remote Login's own refusals.
 Nothing reaches the feed or the record until the join itself.
 
+### Set up from your first mate's computer
+
+"+ Set up from your first mate's computer" opens an aside with what the person types or compares on that computer to add this one by its address, which then keeps this one updated and reaches it by itself (INF-4931, design skill `components/devices/JoinAnotherMac`).
+`inf:devices:set-up-here` reads it all without an administrator (`setUpHere`, `src/core/devices/setUpHere.ts`), and the aside asks it again every few seconds while it is open, so it follows this computer's addresses.
+
+- **The address**: the account Infinitary runs as at this computer's private network address (100.64.0.0/10, such as Tailscale's) first, with Copy, and "Its private network address, such as Tailscale's, reaches it wherever both computers are on it."; then "On the same network only:" with its local network name, the one the nearby list fills on the other computer, and its own Copy.
+- **Remote Login**: whether this computer's SSH server answers on loopback with a key (`readOwnHostKey`), so "Remote Login is on here." or "Remote Login is off here.
+  Turn it on, then add this computer.", with Open Sharing settings on a Mac (`inf:devices:open-sharing`); on Linux it names its SSH server.
+- **The check line**: while Remote Login is on, the line the other computer's question shows, under "Your first mate's computer asks you to compare this line."
+- **The wait**: "Waiting for your first mate's computer to add this one.
+  This window then opens your first mate by itself.", over Cancel.
+
+### Following along
+
+While the first-launch group is up, the window asks `inf:devices:follow-added` every few seconds, and the shell itself decides (`Shell.followAdded`).
+When the stage still carries the gate, nobody has given this computer's own first mate a task (`inf:app:first-run`'s `gateOpen` and `firstTurnAt`), and the work folder holds a grant an address add left there (`windowFromWork`), the window becomes a view of that home with no relaunch: the empty first mate beside it stops, as a pasted link's join stops it, and every window starts over as the other computer's.
+A window opened beside a command's first mate that it may join follows the same way (`joinable`).
+A computer whose own first mate has a subscription or a turn stays as it is.
+
 ## A Mac that runs work
 
 A Mac (`mac`, `docs/devices.md`) both controls that Mac's first mate from its window and runs its work with no window (`docs/helper.md`, "A Mac that also controls"): one device on that Mac's list, whose window and work keep the same grant, each connection saying which it is (`as`, `docs/connection.md`).
@@ -70,7 +90,7 @@ A Mac (`mac`, `docs/devices.md`) both controls that Mac's first mate from its wi
 - **Joined here at its first launch**: the grant goes to this user's work folder too, and the work starts in the background from this app (`setUpWork`, below): a LaunchAgent on a Mac, a systemd user service on Linux (`docs/helper.md`, "In the background").
   A Linux computer joins a Mac's or a Linux computer's first mate this way, and a Mac a Linux computer's, each with its own system's Infinitary.
   Nothing runs there until a project is set to run on it.
-- **Added by a command or its address**: Infinitary opened here with no grant of its own starts as a view of the home its work runs for, with that grant and no new link (`Shell.start`, `windowFromWork`).
+- **Added by a command or its address**: Infinitary opened here with no grant of its own starts as a view of the home its work runs for, with that grant and no new link (`Shell.start`, `windowFromWork`); one already open at its first launch follows along (above, "Following along").
   It follows where the work's grant dials, and dials through the route the home's SSH keeps when the home reaches it that way.
 - **Clicking Infinitary there** while its work runs opens its window as a view of the home, however it joined.
   On a Mac joined here at its first launch the work runs this same app, so macOS may hand the click to the work, which opens the app beside itself as a new copy that becomes this view (`docs/helper.md`, "What it is").

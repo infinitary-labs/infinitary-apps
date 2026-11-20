@@ -86,6 +86,21 @@ function homeAnswers({ plain, asked }: FreshHomeAnswers): Answers {
     // A new profile's key reminders (src/main/keyReminders.ts reads its missing file as this).
     "inf:keyboard:reminders": DEFAULT_KEY_REMINDERS,
     "inf:devices:this-mac": { role: "home", left: null },
+    // A Mac's first launch reads itself for Set up from your first mate's computer
+    // (src/core/devices/setUpHere.ts): a Mac on a private network with Remote Login on.
+    "inf:devices:set-up-here": {
+      offered: true,
+      user: "sam",
+      privateAddress: "100.86.12.40",
+      localName: "sams-mac-mini.local",
+      remoteLogin: "on",
+      line: "ED25519 SHA256:3Ld3ZbyQh4Gq0n8yY0xV1m2kq3c9tRrJ6Hc5wqv0aXk",
+      opensSharing: true,
+    },
+    // Nobody added this computer meanwhile, so the first launch stays as it is.
+    "inf:devices:follow-added": { followed: false },
+    // A Mac opens its Sharing settings (src/main/ipc/index.ts).
+    "inf:devices:open-sharing": { ok: true },
     "inf:voice:recognizer": { where: "window" },
     // Someone is at this computer, which cannot tell, as main answers on a
     // Linux desktop (src/main/presence.ts).

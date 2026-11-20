@@ -1,6 +1,7 @@
 import { ACTIONS } from "@shared/actions";
 import { DECLINE_ACTION_ID } from "@shared/cardLeave";
 import type { Card } from "@shared/cards";
+import { COMPUTER, HERE } from "@shared/deviceNames";
 import { inLanguage } from "@shared/i18n/current";
 import * as m from "@shared/i18n/messages.generated";
 import { remoteLoginWords } from "@shared/remoteLogin";
@@ -269,8 +270,6 @@ describe("FirstmateAgent", () => {
     expect(
       (await change("device-invite", { how: "address", address: "-oProxyCommand=evil" })).text,
     ).not.toMatch(/offered on/);
-    expect((await change("device-invite", { how: "address" })).text).toContain("Pass the address");
-
     expect((await change("device-update", { deviceId: "mini-1" })).text).toMatch(/offered on/);
     const update = card("Update Infinitary on Mac mini");
     expect(update.body).toBe(
@@ -316,6 +315,26 @@ describe("FirstmateAgent", () => {
     expect(supervisor.cardActions.act(add.id, open?.id ?? "")).toEqual({
       effect: { kind: "open", target: "devices", add: "sam@mini.local" },
     });
+    // INF-4926's plan: how "address" with no address offers a card that opens the form.
+    expect((await change("device-invite", { how: "address", name: "Mac mini" })).text).toMatch(
+      /offered on/,
+    );
+    const form = card(m.devicesAddressFormTitleNamed({ device: "Mac mini" }));
+    expect(form.body).toBe(
+      `<p>${m.devicesAddressFormSetUp({ here: HERE.this })}</p>\n<p>${m.devicesAddressFormOpen({ computers: COMPUTER.many })}</p>`,
+    );
+    expect(form.actions.find((action) => action.default)).toMatchObject({
+      label: m.devicesAddressFormOpenButton(),
+      effect: { kind: "open", target: "devices", addressForm: true },
+    });
+    expect(form.actions.find((action) => !action.default)).toMatchObject({
+      label: m.devicesAddressFormNotNow(),
+    });
+    const openForm = form.actions.find((action) => action.default);
+    expect(supervisor.cardActions.act(form.id, openForm?.id ?? "")).toEqual({
+      effect: { kind: "open", target: "devices", addressForm: true },
+    });
+
     session.emitTurnEnd("Offered.");
     session.resolveNextPrompt();
     await tick();

@@ -1,5 +1,7 @@
 Adding a computer that can run work, and running as another user on this computer (captain's picks on FI3-682, 2026-10-03).
 Every way adds the same kind of device to Your devices (`DevicesTab.prompt.md`); a computer the person sits at joins by pasting a link at Infinitary's first launch (`JoinAnotherMac.prompt.md`).
+Its address is the default way (captain's pick on INF-4926): this computer then keeps it updated and reaches it by itself, so nobody goes back to it after setup.
+The link and the command stay one click away for a computer that cannot turn Remote Login on: the link when the person is at that computer or it is a Windows PC, the command when they can type in Terminal there.
 Pairing's rules - one use, ten minutes, the captain's own click, and a yes on the joining side before anything is sent - are the app's `docs/devices.md`.
 Macs, and Linux computers with an x64 chip (FI3-1432, piece 9): a Mac home or a Linux home adds either.
 The examples name the computer where the first mate lives "MacBook Pro", the added computer "Mac mini", its address `sam@mini.local` and the other user "Builder"; the app always uses the real names.
@@ -7,7 +9,9 @@ The examples name the computer where the first mate lives "MacBook Pro", the add
 **By its address.**
 "add my mini at sam@mini.local" yields one decision from the first mate, "Add the computer at sam@mini.local": "I set it up over Remote Login, with your own SSH key.
 Nothing needs to be open on it." and "Only your click can add a computer, so I ask first.", with a ghost "Not now" and a primary "Add it".
-Devices' "By its address" does the same with no card.
+Devices' + A computer does the same with no card.
+Asked to add a computer without saying how, the first mate offers every way on one card and recommends the address.
+Asked for the address way with no address, it offers "Add a computer by its address": "I set it up from here over Remote Login, with your own SSH key, and keep it updated." and "Open the form here, then type its address or pick it from the computers on this network.", with a ghost "Not now" and a primary "Open the form", which opens + A computer's address form.
 A Linux computer is added the same way, at its SSH server; this computer asks its system first, and sends the Infinitary made for it.
 When that is not this computer's own - a Mac adding a Linux computer, or a Linux computer adding a Mac - it is the one published for that system at this computer's version, got and checked before anything is sent, and the feed says so: "Getting Infinitary for Studio's system from its published release, and checking it.", while the row still reads "Preparing Infinitary for Studio…".
 The address is the one thing the person supplies, with a port beside it only when its SSH server listens on another one than 22.
@@ -75,7 +79,7 @@ Once added, this computer keeps its own SSH connection to that computer while In
 Devices says where that connection stands (`DevicesTab.prompt.md`, "Reached over your SSH").
 
 **Nearby.**
-While "By its address" is open, the computers on this network with Remote Login on stand under the field, so the captain can pick one instead of knowing its address (captain's pick on FI3-1361).
+While + A computer's address form is open, the computers on this network with Remote Login on stand under the field, so the captain can pick one instead of knowing its address (captain's pick on FI3-1361).
 This computer only listens for what Remote Login announces; it never tries the addresses around it.
 A micro label `ON THIS NETWORK` stands over one row per computer: its own name in `--text-sm --fg-1`, drawn as text, then the address it fills in, in mono `--text-xs --fg-3`, "sam@Sams-Mac-mini.local", with the person's own user name before the `@`.
 A computer already on Your devices adds "on your list" on the right, in mono `--fg-3`; it can still be picked.

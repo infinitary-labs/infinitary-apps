@@ -14799,6 +14799,10 @@
                             "minLength": 1,
                             "maxLength": 255
                           },
+                          "addressForm": {
+                            "type": "boolean",
+                            "const": true
+                          },
                           "update": {
                             "type": "string",
                             "minLength": 1,
@@ -16276,6 +16280,10 @@
                               "type": "string",
                               "minLength": 1,
                               "maxLength": 255
+                            },
+                            "addressForm": {
+                              "type": "boolean",
+                              "const": true
                             },
                             "update": {
                               "type": "string",
@@ -74582,6 +74590,10 @@
                                   "minLength": 1,
                                   "maxLength": 255
                                 },
+                                "addressForm": {
+                                  "type": "boolean",
+                                  "const": true
+                                },
                                 "update": {
                                   "type": "string",
                                   "minLength": 1,
@@ -89020,6 +89032,10 @@
                             "type": "string",
                             "minLength": 1,
                             "maxLength": 255
+                          },
+                          "addressForm": {
+                            "type": "boolean",
+                            "const": true
                           },
                           "update": {
                             "type": "string",

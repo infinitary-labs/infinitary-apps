@@ -121,7 +121,6 @@ function render(overrides: Partial<DevicesTabViewProps> & { selection?: string |
       removing={null}
       changing={null}
       moving={[]}
-      choosing={false}
       askingAddress={false}
       nearby={NEARBY_OFF}
       confirming={null}
@@ -137,8 +136,6 @@ function render(overrides: Partial<DevicesTabViewProps> & { selection?: string |
       busy={null}
       problem={null}
       onAddMac={noop}
-      onCancelChoose={noop}
-      onAskAddress={noop}
       onCancelAddress={noop}
       onAddAt={noop}
       onConfirm={noop}
@@ -293,10 +290,8 @@ describe("Settings -> Devices", () => {
     const html = render({ devices: [imac] });
     expect(html).toMatch(/data-device-row="imac" data-controlling=""/);
     expect(acts(html)).toContain("remove");
-    // Each way to add a Mac adds the same kind of Mac.
-    expect(render({ choosing: true })).toContain(
-      "Each way adds the same kind of computer. Pick the one that suits it.",
-    );
+    // The address way says why it is the default: this computer keeps the other one up to date.
+    expect(render({ askingAddress: true })).toContain(m.settingsDevicesAddressKeeps());
   });
 
   it("draws a device's name as text, never as markup", () => {
@@ -345,14 +340,27 @@ describe("Settings -> Devices", () => {
     expect(expired).toContain("Make a new one");
   });
 
-  it("asks how to add a Mac: a link to paste there, a command to run there, or its address", () => {
-    const html = render({ choosing: true });
-    expect(html).toContain("data-device-chooser");
-    expect(html).toContain("How do you want to add it?");
-    expect(html).toContain("Paste a link into Infinitary there");
-    expect(html).toContain("Run a command there");
-    expect(html).toContain("By its address");
-    expect(html).toContain("Cancel");
+  // INF-4926's plan, the captain's lead = address-form-first: "+ A computer opens the address
+  // form", with the link and the command under "Can't turn on Remote Login there?".
+  it("opens the address form with the link and the command under it, and when to use each", () => {
+    const html = render({ askingAddress: true });
+    expect(html).not.toContain("data-device-chooser");
+    const ways = html.slice(html.indexOf("data-device-other-ways"));
+    expect(html.indexOf("data-device-address-question")).toBeLessThan(
+      html.indexOf("data-device-other-ways"),
+    );
+    for (const words of [
+      m.settingsDevicesAddOtherWays(),
+      m.settingsDevicesAddByLink(),
+      m.settingsDevicesAddByLinkWhen(),
+      m.settingsDevicesAddByCommand(),
+      m.settingsDevicesAddByCommandWhen(),
+    ])
+      expect(ways).toContain(renderToStaticMarkup(<>{words}</>));
+    // A package update keeps its own words, with no other ways.
+    expect(
+      render({ askingAddress: true, packageUpdate: { ...AIR, kind: "mac", name: "Ubuntu" } }),
+    ).not.toContain("data-device-other-ways");
   });
 
   it("asks for the other Mac's address, the one the captain uses with SSH", () => {

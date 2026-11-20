@@ -51,6 +51,16 @@ export function readHostKey(ssh: SshProgram, address: string): Promise<HostKeyRe
   });
 }
 
+/**
+ * This computer's own key, as its first mate's computer reads it over the
+ * local door, with no sign-in (set up from your first mate's computer,
+ * docs/view.md, "Joining"), or why it could not be read: nothing answering
+ * there is Remote Login off.
+ */
+export function readOwnHostKey(port = 22): Promise<HostKeyRead> {
+  return scan("127.0.0.1", port);
+}
+
 /** Where the captain's own SSH would connect, without connecting. */
 export function resolveDestination(
   ssh: SshProgram,

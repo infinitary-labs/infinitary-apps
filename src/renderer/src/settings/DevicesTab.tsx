@@ -28,7 +28,6 @@ import { isView, updateThereWords } from "../devices/viewWords";
 import { ControllingTab } from "./ControllingTab";
 import { AddressChange, CarryQuestion, DeviceRow, RemoveQuestion } from "./DeviceRow";
 import {
-  AddChooser,
   AddingRow,
   AddressQuestion,
   ConfirmQuestion,
@@ -179,7 +178,6 @@ function HomeDevicesTab() {
   const [removing, setRemoving] = useState<string | null>(null);
   const [carrying, setCarrying] = useState<CarryAsk | null>(null);
   const [changing, setChanging] = useState<string | null>(null);
-  const [choosing, setChoosing] = useState(false);
   const [askingAddress, setAskingAddress] = useState(false);
   const [packageUpdate, showPackageUpdate] = useState<DeviceView | null>(null);
   // Async card lookups and list pushes need the owner before React renders it.
@@ -354,7 +352,10 @@ function HomeDevicesTab() {
   const make = useCallback(
     async (what: DevicePanelMake, copy = false) => {
       setProblem(null);
-      setChoosing(false);
+      // The link or the command replaces + A computer's address form, as Cancel would.
+      addressTry.current += 1;
+      setAskingAddress(false);
+      setAddressRefusal(null);
       setBusy("link");
       try {
         // One link or command in the panel at a time: a new one closes the one it replaces.
@@ -431,7 +432,6 @@ function HomeDevicesTab() {
     async (address: string, with_: AddWith = {}) => {
       const { leave, confirm, password } = with_;
       setProblem(null);
-      setChoosing(false);
       setChanging(null);
       setLeaving(null);
       setConfirming(null);
@@ -504,7 +504,6 @@ function HomeDevicesTab() {
       if (worker) {
         setSelected(deviceId);
         setPackageUpdate(worker);
-        setChoosing(false);
         setLeaving(null);
         setWorkerAsking(false);
       }
@@ -526,7 +525,6 @@ function HomeDevicesTab() {
           return;
         }
         if ("asks" in answer && answer.asks === "package-address" && worker) {
-          setChoosing(false);
           setLeaving(null);
           setWorkerConfirming(null);
           setWorkerPasswording(null);
@@ -587,6 +585,18 @@ function HomeDevicesTab() {
       setProblem(caught instanceof Error ? caught.message : m.settingsDevicesTryAgainFailed());
     }
   }, []);
+  /** + A computer: its address form, empty, with the caret in the field (captain's pick on INF-4926). */
+  const openAddressForm = useCallback(() => {
+    addressTry.current += 1;
+    setAddressRefusal(null);
+    setLeaving(null);
+    setConfirming(null);
+    setPasswording(null);
+    cancelWorkerUpdate();
+    setAddressDraft("");
+    setPortDraft("");
+    setAskingAddress(true);
+  }, [cancelWorkerUpdate]);
 
   // Fix it: the Mac's window checks its work again, and its row says what it found.
   const fixWork = useCallback(async (deviceId: string) => {
@@ -685,6 +695,10 @@ function HomeDevicesTab() {
       if (takeArrival()) void addAt(arrival.add);
       return;
     }
+    if ("addressForm" in arrival) {
+      if (takeArrival()) openAddressForm();
+      return;
+    }
     if ("update" in arrival) {
       void window.infinitary.devices.list().then(
         (listed) => {
@@ -719,7 +733,17 @@ function HomeDevicesTab() {
     return () => {
       active = false;
     };
-  }, [arrival, make, remove, addAt, beginUpdate, update, updateDevices, packageUpdate]);
+  }, [
+    arrival,
+    make,
+    remove,
+    addAt,
+    openAddressForm,
+    beginUpdate,
+    update,
+    updateDevices,
+    packageUpdate,
+  ]);
 
   // A computer a card or a panel named (`settingsItem`): its row is chosen,
   // and every control there stays the captain's own.
@@ -759,7 +783,6 @@ function HomeDevicesTab() {
       carrying={carrying}
       changing={changing}
       moving={moving}
-      choosing={choosing}
       askingAddress={askingAddress}
       packageUpdate={packageUpdate ?? undefined}
       nearby={nearby}
@@ -780,29 +803,12 @@ function HomeDevicesTab() {
       updateCopy={updateCopy}
       busy={busy}
       problem={problem}
-      onAddMac={() => {
-        addressTry.current += 1;
-        setAskingAddress(false);
-        setAddressRefusal(null);
-        setLeaving(null);
-        setConfirming(null);
-        setPasswording(null);
-        cancelWorkerUpdate();
-        setChoosing(true);
-      }}
-      onCancelChoose={() => setChoosing(false)}
+      onAddMac={openAddressForm}
       addressDraft={addressDraft}
       portDraft={portDraft}
       addressRefusal={addressRefusal}
       onAddressDraft={setAddressDraft}
       onPortDraft={setPortDraft}
-      onAskAddress={() => {
-        setChoosing(false);
-        setAddressDraft("");
-        setPortDraft("");
-        setAddressRefusal(null);
-        setAskingAddress(true);
-      }}
       onCancelAddress={cancelAddress}
       onAddAt={(address) => {
         if (packageUpdate) void update(packageUpdate.id, { address });
@@ -1136,7 +1142,7 @@ export function DevicesTabView(
             type="button"
             className="fm-connect-chip"
             data-device-add="mac"
-            aria-expanded={props.choosing}
+            aria-expanded={props.askingAddress && !props.packageUpdate}
             disabled={busy === "link" || !!packageOwner}
             onClick={props.onAddMac}
           >
@@ -1164,7 +1170,6 @@ export function DevicesTabView(
             <span>{m.settingsDevicesAddUser()}</span>
           </button>
         </div>
-        {props.choosing && <AddChooser {...props} />}
         {props.askingAddress && !props.packageUpdate && <AddressQuestion {...props} />}
         {props.confirming && <ConfirmQuestion question={props.confirming} {...props} />}
         {props.passwording && <PasswordQuestion question={props.passwording} {...props} />}

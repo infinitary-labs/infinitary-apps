@@ -478,6 +478,31 @@ export class Shell {
   }
 
   /**
+   * Following along at first launch (docs/view.md, "A Mac that runs work"):
+   * while this computer's first launch is still up and nothing has been
+   * done here, a home that added it by its address left its grant in the
+   * work folder, and the window opens it now with no relaunch, stopping the
+   * empty first mate beside it as `join` does. False when nothing changed.
+   */
+  async followAdded(): Promise<boolean> {
+    if (!this.joinable() || this.switching || !this.options.work) return false;
+    const firstRun = await this.dispatch("inf:app:first-run", []).catch(() => null);
+    if (!firstRun?.gateOpen || firstRun.firstTurnAt !== null) return false;
+    // Asked again after the wait: a join or a switch may have started meanwhile.
+    if (!this.joinable() || this.switching) return false;
+    const joined = this.openFromWork();
+    if (!joined) return false;
+    this.followWork(joined);
+    void this.switchTo(async () => {
+      // Answer the window first; the switch starts it over.
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      await this.stopHome();
+      this.becomeView();
+    });
+    return true;
+  }
+
+  /**
    * Leave (docs/view.md): tells the other Mac when it is in reach, forgets
    * it, and returns this app to its own first launch.
    */

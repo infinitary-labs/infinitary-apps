@@ -79,7 +79,7 @@ import type {
   IntegrationsView,
 } from "./integrations";
 import type { AppInfo, InvokeResponse, RecordedKey } from "./ipc";
-import type { JoinAtAnswer, JoinAtOptions } from "./joinByAddress";
+import type { JoinAtAnswer, JoinAtOptions, SetUpHere } from "./joinByAddress";
 import type { KeptJobsView, KeptJobView, KeptRemoveResult } from "./keptJobs";
 import type { MainCommandId, PanelCommand, PanelCommandId, ShellCommandId } from "./keyboard";
 import type { KeymapSnapshot, SavedKeymap } from "./keymap";
@@ -523,6 +523,16 @@ export type FirstmateApi = {
      * the check is done, and `onThisMac` says what it found.
      */
     setUpWork: () => Promise<{ ok: true }>;
+    /**
+     * Set up from your first mate's computer, at the first launch
+     * (docs/view.md, "Joining"): this computer's addresses, its Remote
+     * Login state and check line; its Sharing settings on a Mac; and
+     * following along once that computer added this one, while nothing was
+     * done here (`followed` false otherwise).
+     */
+    setUpHere: () => Promise<SetUpHere>;
+    openSharing: () => Promise<{ ok: true }>;
+    followAdded: () => Promise<{ followed: boolean }>;
     /**
      * Fix it on a Mac's row: its window, connected now, checks its work and
      * sets it up again; `asked` is false when no window of it is connected.

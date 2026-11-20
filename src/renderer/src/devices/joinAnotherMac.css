@@ -88,3 +88,40 @@
 .fm-join-account .fm-join-sub {
   margin: 0;
 }
+
+/* Three chips sit on their own line under the label. */
+.fm-join-row[data-join-chips-alone] {
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Set up from your first mate's computer: each address with its own Copy. */
+.fm-join-copy {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.fm-join-copy .fm-devices-link {
+  flex: 1;
+  min-width: 0;
+}
+
+.fm-join-under {
+  margin-bottom: var(--space-2);
+}
+
+.fm-join-state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--fg-1);
+}
+
+.fm-join-waiting {
+  margin: var(--space-3) 0 0;
+}

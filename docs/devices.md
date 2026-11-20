@@ -241,19 +241,20 @@ The bundle is the installed app this runs from (`appBundleOf`): a Mac's `.app`, 
 ## Adding a computer by its address
 
 The captain may add a Mac, or a Linux computer with an x64 chip, by the address the captain reaches it at with SSH, such as `sam@mini.local` (design skill `components/devices/AddAMac`, "By its address").
+It is the way Settings -> Devices and the first mate lead with, since this computer then keeps the other one updated and reaches it by itself, with no visit there after setup.
 A Mac home or a Linux home then sets it up over SSH - a Mac's Remote Login, a Linux computer's SSH server - with the captain's own SSH key, and nothing needs to be open on it.
 The look there asks the other computer's system first, and that system's adapter sets it up (`FarSystem`, `src/core/devices/farSystems.ts`): a Mac exactly as before, and a Linux computer the same steps in its own folders.
 Its work may be in either spelling's data folder of the Infinitary rename, so the look reads the grant, and the removal and the controller start the copy kept there, from the first folder that holds one, Infinitary's first, and never from a folder that moved (`farFolderArgs`; `docs/helper.md`, "Under the other name").
 When that computer does not let the captain's key in, Infinitary asks once for that user's password, uses it only to let its own key in there, and keeps none of it (below, "The password, once").
 An Ubuntu 24.04 or 26.04 computer is set up from Infinitary's Ubuntu package instead of the AppImage (below, "The Ubuntu package").
-It is the captain's own click: Settings -> Devices' "By its address", or Add it on the first mate's card (below, "Asking the first mate"), which asks `inf:devices:add` with the address (`RemoteLogin`, `src/core/devices/remoteLogin.ts`).
+It is the captain's own click: Add it on Settings -> Devices' address form, or Add it on the first mate's card (below, "Asking the first mate"), which asks `inf:devices:add` with the address (`RemoteLogin`, `src/core/devices/remoteLogin.ts`).
 The address is the one thing the captain supplies: one address, never an option, with no space and never a leading dash (`remoteLoginAddressSchema`, `src/shared/remoteLogin.ts`).
 A port other than SSH's 22, typed in the Port field beside it, joins the address as SSH's own URI, `ssh://sam@mini.local:2222` (`addressAtPort`), so ssh, `ssh -G` and the kept key line all read one address, and every later update, removal and key check reaches the computer there.
 An alias from the captain's own SSH settings works, because the captain's own SSH resolves it.
 
 ### Macs nearby
 
-While "By its address" is open, Settings -> Devices lists the Macs on this network with Remote Login on, under the field (`NearbyMacs`, `src/core/devices/nearby.ts`; `inf:devices:nearby`).
+While the address form is open, Settings -> Devices lists the Macs on this network with Remote Login on, under the field (`NearbyMacs`, `src/core/devices/nearby.ts`; `inf:devices:nearby`).
 Remote Login announces itself over Bonjour as `_ssh._tcp`, and this Mac only listens for that, with macOS's own `/usr/bin/dns-sd`: it never tries the addresses around it, and what it lists is what answered.
 A Linux home listens for the same with Avahi's `avahi-browse --parsable --resolve` from its search path (`src/core/devices/avahi.ts`), which hears each computer's name on this network with its announcement, so none is asked again; it is stopped after a dns-sd browse's time and another starts, and one that ends by itself, as when Avahi's daemon is not running, says it could not look.
 It hears every Mac with Remote Login on, and a Linux computer whose SSH server Avahi announces, which many do not by default (Ubuntu ships the announcement as an example, `/usr/share/doc/avahi-daemon/examples/ssh.service`); typing its address always works.
@@ -1458,7 +1459,7 @@ The tab after Usage, built to the agreed design in the design skill's `component
   Added by its address, this computer reaches it with your SSH key instead.", with a secondary Add it by its address before Remove.
   It opens one question in place: "Where to reach Mac mini" over "The address you use with SSH for it, as sam.
   Remote Login must be on there.", an address field with "sam@mini.local" as its placeholder, Add it and Cancel.
-  Add it asks `inf:devices:add` with that address, as "By its address" does, and the row reads "Reaching sam@mini.local with your SSH key…", then "Telling Mac mini where this computer is now…".
+  Add it asks `inf:devices:add` with that address, as the address form does, and the row reads "Reaching sam@mini.local with your SSH key…", then "Telling Mac mini where this computer is now…".
 - **A Mac that has not finished setting up**: a Mac whose window is connected and whose work cannot be set up (above, "A Mac that has not finished setting up") adds its reason under its summary, such as "Its work cannot start: Infinitary on iMac is not allowed to run in the background.
   On a Mac, turn it on there in System Settings › General › Login Items.", with a secondary Fix it, which asks its window to check again, before Add it by its address and Remove.
   Held on the local network it keeps that line instead; while its work is starting it reads "Its work on iMac is starting." with "setting up" on the right and no Fix it.
@@ -1490,13 +1491,14 @@ The tab after Usage, built to the agreed design in the design skill's `component
   Waiting reads "out of reach · removed when it is back" ("connecting · removed when it is back" while its connection is being made), with Keep it in place of Remove.
   A computer connected that takes no new work is asked the same, with "Remove Mac mini?
   It takes no new work." over "… Update it, and its work comes here before Mac mini is removed." and Remove once it is updated, since its work can come here only once it takes work again.
-- **+ A computer** asks how to add it, over "Each way adds the same kind of computer.
-  Pick the one that suits it.": "Paste a link into Infinitary there", a link for a Mac (`mac`), "Run a command there", the command for another Mac, or "By its address": "The other computer's address" over "The one you use with SSH.
-  Remote Login must be on there.", an address field with "you@mini.local" as its placeholder, Add it and Cancel.
+- **+ A computer** opens the address form at once, with the caret in its field (captain's pick on INF-4926): "The other computer's address" over "The one you use with SSH.
+  Remote Login must be on there." and "This computer then keeps it updated and reaches it by itself.", an address field with "you@mini.local" as its placeholder, Add it and Cancel.
   On a Linux home, where the other computer is as likely Linux, the line under the label reads "The one you use with SSH.
   Its SSH server, or Remote Login on a Mac, must be on.", as does a row's own address question.
   Under them, the micro label "On this network" over the Macs nearby (above, "Macs nearby"): each by its name with the address it fills in, in mono, and "on your list" on one already added.
   The list is one Tab stop: ↑, ↓, Home and End move in it, ↓ in the field reaches it and ↑ from its first row goes back, and Enter or a click fills the field with the user name selected.
+  Under the list, a hairline and "Can't turn on Remote Login there?" lead the two other ways, each a secondary button with when to use it beside it and each reached with Tab: "Paste a link into Infinitary there", "You're at that computer, or it is a Windows PC.", which opens the link panel for a Mac (`mac`); and "Run a command there", "You can type in Terminal there.", which opens the command panel for another Mac.
+  Updating a Linux computer to Infinitary's package uses the same form with its own words and no other ways (above, "The Ubuntu package").
   While it is reached and set up, a row stands in the list with an idle dot, the address, and "Reaching sam@mini.local with your SSH key…", then the Mac's own name and "Preparing Infinitary for Mac mini…", "Sending Infinitary to Mac mini… 42.3 MB sent" with the count moving (above, "How far the copy has gone"), and "Starting Infinitary on Mac mini…".
   A refusal keeps the address in the field and shows its two lines in that aside, with Try again and Cancel.
   A Mac whose user runs another first mate's work asks once under the foot, with Cancel focused, before anything is sent there (above, "Another first mate's Mac").
@@ -1517,7 +1519,8 @@ The tab after Usage, built to the agreed design in the design skill's `component
 
 ## Asking the first mate
 
-Asked to add a Mac without being told which way, the first mate never picks one for the captain: the `device-invite` line tells it to ask the captain first on one decision card of its own, with every way as an option - a link, a command, the Mac's address, or another user on this Mac - and the address recommended, with a field for it, when the captain can name it.
+Asked to add a computer without being told which way, the first mate never picks one for the captain: the `device-invite` line tells it to ask the captain first on one decision card of its own, with every way as an option - the computer's address, a link, a command, or another user on this computer - and the address recommended, because this computer then keeps the other one updated and reaches it by itself.
+It says a link suits a computer the captain sits at or a Windows PC, and a command one where they can type in Terminal but Remote Login is off.
 Asked to connect a Mac, or to remove one, the first mate calls `app_change`, and the host files one card for the captain from typed facts, never the first mate's words (`HandoverOffer`, `src/shared/actions.ts`):
 
 | Asked | The card | Its button |
@@ -1526,6 +1529,7 @@ Asked to connect a Mac, or to remove one, the first mate calls `app_change`, and
 | `device-invite { name?, how: "command" }` | "Add your Mac mini by a command": "Make the command here, then run it once in Terminal on your Mac mini." and "It works once, for ten minutes. Only your click can make it, so I never see it." | Make the command, beside Not now |
 | `device-invite { how: "phone" }` | "Connect your phone": the Devices lead for a phone and "Make a link here, then scan its code inside Infinitary on your phone. It works once, for ten minutes. Only your click can make it, so I never see it." | Make a link, beside Not now |
 | `device-invite { how: "another-user" }` | "Run work as another user on this computer": "Its work then runs as that user, with sign-ins of its own, and cannot control your first mate.", "That user, like every user on this computer, can read files in your home folder, outside private folders such as Desktop and Documents." and "Make the user in System Settings first. Then make the command here, and run it once as that user." | Make the command, beside Not now |
+| `device-invite { name?, how: "address" }`, with no address | "Add your Mac mini by its address" (or "Add a computer by its address"): "I set it up from this computer over Remote Login, with your own SSH key, and keep it updated." and "Open the form here, then type its address or pick it from the computers on this network." | Open the form, beside Not now |
 | `device-invite { how: "address", address }` | "Add the computer at sam@mini.local": "I set it up over Remote Login, with your own SSH key. Nothing needs to be open on it." and "Only your click can add a computer, so I ask first." | Add it, beside Not now |
 | `device-update { deviceId }` | "Update Infinitary on Mac mini", for a Mac added by its address: "It downloads this computer's version of Infinitary, or this computer sends its own copy, with a count. Remote Login uses your own SSH key." and "Its running work stops for a moment and goes on after."; for another computer in reach on another version "I send this computer's Infinitary to it over your network, and it starts again." (another user on this Mac: "I start it again on this computer's own Infinitary.") with the same second line | Update it, beside Not now |
 | `device-update { deviceId }`, too old to update from here | "Update Infinitary on Mac mini": "Its version of Infinitary is too old to update from here, so it needs a new command." and "Make the command here, then run it once in Terminal on Mac mini." (or "as Builder") | Make the command, beside Not now |
@@ -1539,7 +1543,7 @@ Asked to connect a Mac, or to remove one, the first mate calls `app_change`, and
 For another user on this Mac added by its address, the update card says "This computer copies its own Infinitary there over Remote Login, with your own SSH key, and starts it again."
 A user added by a command instead starts again on this computer's own installed app, as before.
 
-The button's effect is `open` on `devices` with `make` (`link`, `command` or `user-command`), `phone`, `add: <address>`, `update: <id>` or `remove: <id>`; the captain's click opens Settings -> Devices, which makes the link or the command, adds the Mac or updates Infinitary there, or removes the device, on arrival.
+The button's effect is `open` on `devices` with `make` (`link`, `command` or `user-command`), `phone`, `addressForm: true`, which opens + A computer's address form, `add: <address>`, `update: <id>` or `remove: <id>`; the captain's click opens Settings -> Devices, which makes the link or the command, adds the Mac or updates Infinitary there, or removes the device, on arrival.
 A phone's link rides the optional `phone` field rather than a new `make`, so a view from before ignores it and opens Settings -> Devices with nothing made.
 The address, move and copy cards carry `item: <id>` instead, which only chooses that computer's row: its Change address, Move your first mate here and Keep a copy here stay the captain's clicks, as does Keep this one on the two first mates' question.
 The GitHub sign-in card opens Settings -> Integrations with that computer's sign-in started (`forgeSignInOn`), as its row's own Sign in does.

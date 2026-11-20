@@ -1035,6 +1035,59 @@ describe("a Mac that controls another and runs its work", () => {
     expect(air.shell.thisMac()).toMatchObject({ left: { reason: "removed" } });
   });
 
+  // INF-4931's plan, step 1: "while the gate is up and nothing has been done here, an address add
+  // from another home turns the window into a view without a relaunch".
+  it("follows along when its home adds it by its address while its first launch is still up", async () => {
+    const pro = await otherMac({}, { joinsFromAnotherMac: true });
+    const dataDir = workDir();
+    const mini = shell(undefined, { dataDir });
+    const firstRun = { gateOpen: true, firstTurnAt: null as number | null };
+    mini.own.dispatch.mockImplementation((async (channel: string) =>
+      channel === "inf:app:first-run" ? firstRun : { ownCore: channel }) as never);
+    await mini.shell.start();
+    expect(mini.shell.thisMac().role).toBe("home");
+    // Nothing has been added yet: it stays this computer's own first launch.
+    expect(await mini.shell.followAdded()).toBe(false);
+    expect(mini.own.dispose).not.toHaveBeenCalled();
+
+    // The home sets this computer up over SSH, which leaves the grant in its work folder.
+    const grant = await claimLink(await pro.link("mac"), {
+      kind: "mac",
+      name: "Mac mini",
+      user: sam,
+    });
+    new JoinedHome(dataDir).join(grant, Date.now());
+    expect(await mini.shell.followAdded()).toBe(true);
+    await mini.until(() => mini.shell.thisMac().role === "view");
+    await mini.until(() => mini.view().contact === "in-reach");
+    expect(mini.view()).toMatchObject({ name: "MacBook Pro", runsWork: true });
+    // The empty first mate beside it stops, and the window starts over with no relaunch.
+    expect(mini.own.dispose).toHaveBeenCalledTimes(1);
+    expect(mini.restartWindows).toHaveBeenCalled();
+    expect(mini.relaunch).not.toHaveBeenCalled();
+  });
+
+  it("does not follow along once something was done here", async () => {
+    const pro = await otherMac({}, { joinsFromAnotherMac: true });
+    const dataDir = workDir();
+    const mini = shell(undefined, { dataDir });
+    // The person signed in and gave this computer's own first mate a task.
+    mini.own.dispatch.mockImplementation((async (channel: string) =>
+      channel === "inf:app:first-run"
+        ? { gateOpen: false, firstTurnAt: Date.UTC(2026, 10, 20) }
+        : { ownCore: channel }) as never);
+    await mini.shell.start();
+    const grant = await claimLink(await pro.link("mac"), {
+      kind: "mac",
+      name: "Mac mini",
+      user: sam,
+    });
+    new JoinedHome(dataDir).join(grant, Date.now());
+    expect(await mini.shell.followAdded()).toBe(false);
+    expect(mini.shell.thisMac().role).toBe("home");
+    expect(mini.own.dispose).not.toHaveBeenCalled();
+  });
+
   it("stays its own Firstmate when the work here only runs work", async () => {
     const pro = await otherMac({}, { joinsFromAnotherMac: true });
     const dataDir = workDir();

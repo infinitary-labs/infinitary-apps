@@ -85,13 +85,15 @@ export type DeviceMake = z.infer<typeof deviceMakeSchema>;
 /**
  * What Settings -> Devices does on arrival from a card's button, carried
  * from the card's open effect: make a link or a command, remove a device,
- * add the Mac at an address over Remote Login, or update Firstmate on a Mac
+ * add the Mac at an address over Remote Login, open + A computer's address
+ * form for one the captain will name there, or update Firstmate on a Mac
  * added that way.
  */
 export type DeviceArrival =
   | { make: DeviceMake | "phone" }
   | { remove: string }
   | { add: string }
+  | { addressForm: true }
   | { update: string };
 
 /** The arrival an open effect on Devices carries, as the store keeps it. */
@@ -100,6 +102,7 @@ export function deviceArrival(effect: {
   phone?: true | undefined;
   remove?: string | undefined;
   add?: string | undefined;
+  addressForm?: true | undefined;
   update?: string | undefined;
 }): { pendingDeviceArrival: DeviceArrival } | Record<string, never> {
   // A phone's link is its own field, so a view from before opens Devices and makes nothing.
@@ -107,6 +110,8 @@ export function deviceArrival(effect: {
   if (effect.make) return { pendingDeviceArrival: { make: effect.make } };
   if (effect.remove) return { pendingDeviceArrival: { remove: effect.remove } };
   if (effect.add) return { pendingDeviceArrival: { add: effect.add } };
+  // Its own field too, so a view from before opens Devices and opens nothing.
+  if (effect.addressForm) return { pendingDeviceArrival: { addressForm: true } };
   if (effect.update) return { pendingDeviceArrival: { update: effect.update } };
   return {};
 }
@@ -172,6 +177,9 @@ export const openEffectSchema = z.object({
   // The address, as the line's own value schema read it (`remoteLoginAddressSchema`);
   // `inf:devices:add` reads it again before anything is reached.
   add: z.string().min(1).max(255).optional(),
+  // + A computer's address form, for a computer the captain names there
+  // (docs/devices.md, "Asking the first mate").
+  addressForm: z.literal(true).optional(),
   update: z.string().min(1).max(64).optional(),
   privateSite: z.string().min(1).max(253).optional(),
   signInOn: signInOnSchema.optional(),

@@ -1,5 +1,6 @@
 import { COMPUTER } from "@shared/deviceNames";
 import type { DeviceView } from "@shared/devices";
+import * as m from "@shared/i18n/messages.generated";
 import type { InvokeResponse } from "@shared/ipc";
 import type { NearbyMacsView } from "@shared/nearbyMacs";
 import { addressAtPort, type RemoteLoginAddOptions, remoteLoginWords } from "@shared/remoteLogin";
@@ -88,16 +89,38 @@ test("adding a computer by its address follows each step, keeps a refused addres
 
   const openAddress = async () => {
     await userEvent.click(devices.querySelector('[data-device-add="mac"]') as HTMLElement);
-    await userEvent.click(button(await shown("[data-device-chooser]"), "By its address"));
     return shown("[data-device-address-question]");
   };
   const field = () => document.querySelector<HTMLInputElement>("#device-remote-login");
 
-  // Section: By its address looks for Macs nearby, and an older answer to the
-  // look never covers a newer push.
+  // Section: + A computer opens the address form at once, with the caret in its field and the
+  // link and the command under it, each reached with Tab (INF-4926's plan, lead =
+  // address-form-first).
   {
     const aside = await openAddress();
-    await gone("[data-device-chooser]");
+    expect(document.querySelector("[data-device-chooser]")).toBeNull();
+    await expect.poll(() => document.activeElement).toBe(field());
+    expect(aside.textContent).toContain(m.settingsDevicesAddressKeeps());
+    const ways = aside.querySelector("[data-device-other-ways]") as HTMLElement;
+    expect(ways.textContent).toContain(m.settingsDevicesAddOtherWays());
+    const otherWays: [string, string][] = [
+      [m.settingsDevicesAddByLink(), m.settingsDevicesAddByLinkWhen()],
+      [m.settingsDevicesAddByCommand(), m.settingsDevicesAddByCommandWhen()],
+    ];
+    for (const [way, when] of otherWays) {
+      const choice = button(ways, way);
+      expect(choice.parentElement?.textContent).toContain(when);
+      choice.focus();
+      expect(document.activeElement).toBe(choice);
+      expect(choice.tabIndex).toBe(0);
+    }
+    field()?.focus();
+  }
+
+  // Section: the address form looks for Macs nearby, and an older answer to the
+  // look never covers a newer push.
+  {
+    const aside = document.querySelector("[data-device-address-question]") as HTMLElement;
     await expect.poll(() => bridge.requests("inf:devices:nearby")).toEqual([[true]]);
     bridge.push("inf:devices:nearby", { state: "looking", user: USER, macs: [NEARBY_MAC] });
     looks[0]?.resolve({ state: "looking", user: USER, macs: [] });

@@ -6,7 +6,6 @@ import { HERE } from "@shared/deviceNames";
 import {
   type ClaudePlugin,
   type EnabledClaudePlugins,
-  enabledClaudePlugins,
   keptClaudePlugins,
   readEnabledClaudePlugins,
   turnedOnClaudePlugins,
@@ -64,7 +63,8 @@ function read(path: string): string | undefined {
 export function personalResources(
   home: string = homedir(),
   excluded: ReadonlySet<string> = new Set(),
-  source: PersonalPluginSource = { enabled: enabledClaudePlugins() },
+  // Unknown is never on: a caller that read no setting serves no plugin.
+  source: PersonalPluginSource = { enabled: undefined },
 ): PersonalResources {
   let instructions: ProjectInstructions | undefined;
   for (const name of PERSONAL_INSTRUCTION_FILES) {

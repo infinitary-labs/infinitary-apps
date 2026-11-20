@@ -157,7 +157,7 @@ export class CrewSessions {
     if (runbookSkills) spec.runbookSkills = runbookSkills;
     if (this.core.disposed()) throw new Error("This computer is stopping.");
     const session = await factory.open(spec);
-    if (spec.personalResources) this.notePersonal(task.id, crewmate.machineId);
+    if (spec.personalResources) await this.notePersonal(task.id, crewmate.machineId);
     // Unopenable: the backend could not take the recorded conversation, or
     // it was asked to and opened another one instead, as a Claude client
     // with no transcript for it does.
@@ -184,10 +184,10 @@ export class CrewSessions {
    * and skills a conversation read as it opened, and where, once each time
    * it moves: the record's Info tab shows the newest (docs/personal-resources.md).
    */
-  private notePersonal(taskId: string, machine: string): void {
+  private async notePersonal(taskId: string, machine: string): Promise<void> {
     const local = machine === LOCAL_MACHINE_ID;
     const version = local
-      ? this.core.options.personalVersion?.()
+      ? await this.core.options.personalVersion?.()
       : this.core.options.machines?.personalOf?.(taskId);
     if (!version) return;
     const computer = local

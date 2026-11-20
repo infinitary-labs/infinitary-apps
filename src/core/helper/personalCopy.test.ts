@@ -111,8 +111,8 @@ describe("the personal set a computer keeps", () => {
   it("keeps a turned-on plugin's skills and own files under its id, never its other parts", async () => {
     const home = scratchDir("infinitary-personal-plugin-home-");
     const plugin = installClaudePlugin(home, { name: "claude-security", version: "0.12.0" });
-    await readEnabledClaudePlugins(pluginSettings({ [plugin.id]: true }));
-    const sent = personalSetFiles(home);
+    const setting = await readEnabledClaudePlugins(pluginSettings({ [plugin.id]: true }));
+    const sent = personalSetFiles(home, setting);
     const inside = `.claude/plugins/${plugin.id}`;
     expect(sent.files.map((file) => file.path).sort()).toEqual(
       [
@@ -124,7 +124,7 @@ describe("the personal set a computer keeps", () => {
       ].sort(),
     );
     // A computer without the plugins change is sent the set without them.
-    expect(personalSetFiles(home, false).files).toEqual([]);
+    expect(personalSetFiles(home, undefined).files).toEqual([]);
     const copy = new PersonalCopy(scratchDir("infinitary-personal-copy-"));
     copy.keep(set(sent.files));
     expect(personalFingerprintOf(copy.root())).toBe(personalFingerprint(sent.files));
@@ -142,11 +142,11 @@ describe("the personal set a computer keeps", () => {
         ],
       },
     ]);
-    const home2 = personalResources(home, new Set(), { enabled: { [plugin.id]: true } });
+    const home2 = personalResources(home, new Set(), { enabled: setting });
     expect(kept.digests).toEqual(home2.digests);
     // An update is a new version of the set, under the same paths: one send, nothing to relink.
     installClaudePlugin(home, { name: "claude-security", version: "0.13.0" });
-    const updated = personalSetFiles(home).files;
+    const updated = personalSetFiles(home, setting).files;
     expect(updated.map((file) => file.path)).toEqual(sent.files.map((file) => file.path));
     expect(personalFingerprint(updated)).not.toBe(personalFingerprint(sent.files));
   });

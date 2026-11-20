@@ -18,6 +18,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | account | 账户 | |
 | address (a server's) | 地址 | |
 | address (of a computer) | 地址 | The address used with SSH; also a browser page's address. |
+| agent plugins | 智能体插件 | Only the plugins turned on in the person's coding agent; a panel stays 面板. |
 | Always use | 始终使用 | The setting that sends all crew work to one model; quoted as “始终使用” in sentences. |
 | Appearance | 外观 | |
 | Approves secret uses (switch) | 批准机密使用 | The computer's Settings → Devices should show the same words. |

@@ -59,7 +59,7 @@ describe("the home's personal set on a computer that runs work", () => {
     const at = await world(undefined, { personal: { home } });
     const sends = () => at.ordered.filter((channel) => channel === "inf:session:personal").length;
     const kept = () => personalFingerprintOf(join(at.dataDir, "personal", "current"));
-    const home_ = () => personalFingerprint(personalSetFiles(home).files);
+    const home_ = () => personalFingerprint(personalSetFiles(home, undefined).files);
 
     // Its contact brings it the home's set: one send, the same fingerprint on both.
     await expect.poll(sends).toBe(1);
@@ -100,9 +100,9 @@ describe("the home's personal set on a computer that runs work", () => {
     vi.stubEnv("HOME", own);
     const home = scratchDir("infinitary-personal-home-");
     const plugin = installClaudePlugin(home, { name: "claude-security", version: "0.12.0" });
-    await readEnabledClaudePlugins(pluginSettings({ [plugin.id]: true }));
+    const plugins = () => readEnabledClaudePlugins(pluginSettings({ [plugin.id]: true }));
 
-    const at = await world(undefined, { personal: { home } });
+    const at = await world(undefined, { personal: { home, plugins } });
     const sends = () => at.ordered.filter((channel) => channel === "inf:session:personal").length;
     const keptPlugin = join(at.dataDir, "personal", "current", ".claude", "plugins", plugin.id);
     await expect.poll(sends).toBe(1);

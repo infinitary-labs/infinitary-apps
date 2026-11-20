@@ -60,10 +60,15 @@ export function installClaudePlugin(
   return { id, root };
 }
 
-/** The client library's settings reader standing in: the person's `enabledPlugins`, and the organization's. */
+/**
+ * The client library's settings reader standing in: the person's
+ * `enabledPlugins`, and the organization's, with any other managed settings
+ * the organization sets beside it (`policy`).
+ */
 export function pluginSettings(
   own: Record<string, unknown>,
   organization?: Record<string, unknown>,
+  policy?: Record<string, unknown>,
 ): ResolveClaudeSettings {
   return async () =>
     ({
@@ -71,8 +76,8 @@ export function pluginSettings(
       provenance: {},
       sources: [
         { source: "user", settings: { enabledPlugins: own } },
-        ...(organization
-          ? [{ source: "managed", settings: { enabledPlugins: organization } }]
+        ...(organization || policy
+          ? [{ source: "managed", settings: { ...policy, enabledPlugins: organization } }]
           : []),
       ],
     }) as unknown as Awaited<ReturnType<ResolveClaudeSettings>>;

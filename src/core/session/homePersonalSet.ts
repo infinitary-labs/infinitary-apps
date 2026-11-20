@@ -1,5 +1,5 @@
 import { homedir } from "node:os";
-import { readEnabledClaudePlugins } from "../claude/claudePlugins";
+import { type EnabledClaudePlugins, readEnabledClaudePlugins } from "../claude/claudePlugins";
 import {
   type PersonalDigests,
   type PersonalFile,
@@ -15,7 +15,9 @@ import {
  * again from this user's home folder whenever it is asked, so an edit counts
  * from the next time anything asks, and read only where a file changed since
  * it last looked. A new fingerprint is a new version, since the moment it
- * was first seen, kept in Settings so a restart keeps it.
+ * was first seen, kept in Settings so a restart keeps it. Which Claude Code
+ * plugins are on is read again with every version, before it is taken, so no
+ * version is ever taken without that setting.
  */
 export class HomePersonalSet {
   private readonly listeners = new Set<() => void>();
@@ -23,6 +25,8 @@ export class HomePersonalSet {
   private readonly digests: PersonalDigests = new Map();
   /** The skills last left out for their size, named in the log once each time they change. */
   private left = "";
+  /** The plugin setting as last read, kept when a later read fails. */
+  private pluginSetting: EnabledClaudePlugins | undefined;
 
   constructor(
     private readonly options: {
@@ -33,6 +37,8 @@ export class HomePersonalSet {
       };
       now: () => number;
       home?: string;
+      /** Reads which Claude Code plugins are on (`claudePlugins.ts`); none without it. */
+      plugins?: () => Promise<EnabledClaudePlugins | undefined>;
       log?: (line: string) => void;
     },
   ) {}
@@ -41,35 +47,31 @@ export class HomePersonalSet {
     return this.options.enabled();
   }
 
-  /** Reads again which Claude Code plugins are on, which the next listing reads (`claudePlugins.ts`). */
-  async ready(): Promise<void> {
-    if (this.options.home === undefined) await readEnabledClaudePlugins();
-  }
-
   /**
    * The version now; a fingerprint not seen before is a new version, which
    * listeners hear. Without `plugins`, the version of the set as a computer
    * that keeps no plugins is sent it, since when the home has had its set.
    */
-  current(plugins = true): { version: PersonalVersion } {
-    const { version, files, left } = personalSetVersion(this.home(), this.digests);
+  async current(plugins = true): Promise<{ version: PersonalVersion }> {
+    const enabled = await this.plugins();
+    const { version, files, left } = personalSetVersion(this.home(), this.digests, enabled);
     const seen = this.seen(version, files, left);
     if (plugins) return { version: seen };
-    const part = personalSetVersion(this.home(), this.digests, false);
+    const part = personalSetVersion(this.home(), this.digests, undefined);
     return { version: { ...seen, version: part.version, files: part.files } };
   }
 
   /** The set now, read whole, with the version its bytes make: what is sent. */
-  read(plugins = true): { version: PersonalVersion; files: PersonalFile[] } {
+  async read(plugins = true): Promise<{ version: PersonalVersion; files: PersonalFile[] }> {
     if (!plugins) {
-      const { since } = this.current().version;
-      const { files } = personalSetFiles(this.home(), false);
+      const { since } = (await this.current()).version;
+      const { files } = personalSetFiles(this.home(), undefined);
       return {
         version: { version: personalFingerprint(files), since, files: files.length },
         files,
       };
     }
-    const { files, left } = personalSetFiles(this.home());
+    const { files, left } = personalSetFiles(this.home(), await this.plugins());
     return { version: this.seen(personalFingerprint(files), files.length, left), files };
   }
 
@@ -77,6 +79,11 @@ export class HomePersonalSet {
   onChange(listener: () => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  }
+
+  private async plugins(): Promise<EnabledClaudePlugins | undefined> {
+    this.pluginSetting = (await this.options.plugins?.()) ?? this.pluginSetting;
+    return this.pluginSetting;
   }
 
   private home(): string {
@@ -104,9 +111,15 @@ export function homePersonalSetOver(
     getPersonalVersion(): { version: string; since: number } | undefined;
     setPersonalVersion(seen: { version: string; since: number }): void;
   },
-  options: { now: () => number; home?: string; log?: (line: string) => void },
+  options: {
+    now: () => number;
+    home?: string;
+    plugins?: () => Promise<EnabledClaudePlugins | undefined>;
+    log?: (line: string) => void;
+  },
 ): HomePersonalSet {
   return new HomePersonalSet({
+    plugins: () => readEnabledClaudePlugins(),
     enabled: () => settings.getPersonalResourcesEnabled(),
     saved: {
       get: () => settings.getPersonalVersion(),

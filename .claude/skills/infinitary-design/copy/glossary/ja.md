@@ -17,6 +17,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | a stronger model | より強力なモデル | Replaces escalation. |
 | account | アカウント | Standard. |
 | address (of a computer) | アドレス | A computer's SSH address, and a browser page's address. |
+| agent plugins | エージェントプラグイン | Only the plugins turned on in the person's coding agent; a panel stays パネル. |
 | Always use | 常に使う | The setting that sends all crew work to one model; quoted as 「常に使う」 in sentences. |
 | Appearance | 外観 | macOS Japanese. |
 | Approves secret uses (switch) | シークレットの使用を承認 | The computer's Settings → Devices should show the same words. |

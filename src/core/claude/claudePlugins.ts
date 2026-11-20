@@ -54,24 +54,22 @@ export const PLUGIN_MANIFEST = ".claude-plugin/plugin.json";
 const SAFE_NAME = /^[A-Za-z0-9][A-Za-z0-9._@+-]{0,199}$/;
 export const safePluginName = (name: string) => SAFE_NAME.test(name) && !name.includes("..");
 
-/** Effective `enabledPlugins`: the person's settings file with the organization's tier over it. */
-export type EnabledClaudePlugins = Record<string, unknown>;
-
 /**
- * The setting as last read. Unknown until the reader first answers, and
- * unknown is never on: no plugin is served before that.
+ * What the reader reads of the settings: effective `enabledPlugins` (the
+ * person's settings file with the organization's tier over it), and whether
+ * the organization lets Claude Code load plugin folders saved under
+ * `~/.claude/skills`.
  */
-let enabled: EnabledClaudePlugins | undefined;
+export type EnabledClaudePlugins = { plugins: Record<string, unknown>; skillsDir: boolean };
 
-/** The setting as last read, without reading it again. */
-export function enabledClaudePlugins(): EnabledClaudePlugins | undefined {
-  return enabled;
-}
+type MarketplaceList = { source?: unknown }[] | undefined;
+const namesSkillsDir = (list: MarketplaceList) =>
+  Array.isArray(list) && list.some((entry) => entry?.source === "skills-dir");
 
 /**
- * Reads the setting again through the client library's reader, asking for
- * the person's settings file alone, and keeps it for the synchronous readers.
- * A failed read keeps what was read before.
+ * Reads the setting through the client library's reader, asking for the
+ * person's settings file alone. Undefined when it cannot be read: unknown is
+ * never on, so no plugin is served then.
  */
 export async function readEnabledClaudePlugins(
   resolve: ResolveClaudeSettings = resolveSettings,
@@ -83,11 +81,29 @@ export async function readEnabledClaudePlugins(
         {},
         ...resolved.sources
           .filter((each) => each.source === source)
-          .map((each) => each.settings?.enabledPlugins ?? {}),
-      ) as EnabledClaudePlugins;
-    enabled = { ...tier("user"), ...tier("managed") };
-  } catch {}
-  return enabled;
+          .map((each) => each.settings ?? {}),
+      ) as {
+        enabledPlugins?: Record<string, unknown>;
+        strictKnownMarketplaces?: MarketplaceList;
+        allowedMarketplaces?: MarketplaceList;
+        blockedMarketplaces?: MarketplaceList;
+      };
+    const own = tier("user");
+    const managed = tier("managed");
+    // The organization's marketplace allowlist (`allowedMarketplaces` is its
+    // alias) lets the folder scan run only when it names `skills-dir`; its
+    // blocklist naming `skills-dir` turns the scan off.
+    const allowlist = managed.strictKnownMarketplaces ?? managed.allowedMarketplaces;
+    const skillsDir =
+      (allowlist === undefined || namesSkillsDir(allowlist)) &&
+      !namesSkillsDir(managed.blockedMarketplaces);
+    return {
+      plugins: { ...(own.enabledPlugins ?? {}), ...(managed.enabledPlugins ?? {}) },
+      skillsDir,
+    };
+  } catch {
+    return undefined;
+  }
 }
 
 function json(path: string): Record<string, unknown> | undefined {
@@ -168,14 +184,15 @@ function turnedOn(value: unknown, byDefault: boolean): boolean {
  * The plugins Claude Code loads for the person on this computer, in id order:
  * each user-scope install that the setting turns on, then each plugin folder
  * the person saved under `~/.claude/skills` (one holding a manifest and no
- * SKILL.md of its own), as `<name>@skills-dir`. None while the setting is
- * unknown.
+ * SKILL.md of its own), as `<name>@skills-dir`, unless the organization
+ * turned that folder scan off. None while the setting is unknown.
  */
 export function turnedOnClaudePlugins(
   home: string,
   setting: EnabledClaudePlugins | undefined,
 ): ClaudePlugin[] {
   if (!setting) return [];
+  const on = setting.plugins;
   const out: ClaudePlugin[] = [];
   const record = json(join(home, ".claude", "plugins", "installed_plugins.json"));
   const installs =
@@ -192,12 +209,12 @@ export function turnedOnClaudePlugins(
       : undefined;
     if (!user) continue;
     const plugin = claudePluginAt(id, user.installPath);
-    if (plugin && turnedOn(setting[id], plugin.defaultEnabled)) out.push(strip(plugin));
+    if (plugin && turnedOn(on[id], plugin.defaultEnabled)) out.push(strip(plugin));
   }
   const saved = join(home, ".claude", "skills");
   let names: string[] = [];
   try {
-    names = readdirSync(saved).sort();
+    if (setting.skillsDir) names = readdirSync(saved).sort();
   } catch {}
   for (const folder of names) {
     const root = join(saved, folder);
@@ -205,7 +222,7 @@ export function turnedOnClaudePlugins(
     if (!isFile(join(root, PLUGIN_MANIFEST))) continue;
     const named = json(join(root, PLUGIN_MANIFEST))?.name;
     const plugin = claudePluginAt(`${typeof named === "string" ? named : folder}@skills-dir`, root);
-    if (plugin && turnedOn(setting[plugin.id], true)) out.push(strip(plugin));
+    if (plugin && turnedOn(on[plugin.id], true)) out.push(strip(plugin));
   }
   // By id: where two plugins hold one skill name, the earlier id's wins.
   return out.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));

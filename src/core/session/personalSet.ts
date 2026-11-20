@@ -1,9 +1,13 @@
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
-import { homedir } from "node:os";
 import { join, relative, sep } from "node:path";
 import { CONNECTION_MAX_FRAME_BYTES } from "@shared/connection";
-import { carriedPluginEntries, PLUGIN_MANIFEST, PLUGIN_SET_ROOT } from "../claude/claudePlugins";
+import {
+  carriedPluginEntries,
+  type EnabledClaudePlugins,
+  PLUGIN_MANIFEST,
+  PLUGIN_SET_ROOT,
+} from "../claude/claudePlugins";
 import { personalResources } from "./personalResources";
 
 /**
@@ -169,13 +173,13 @@ function listPlugin(
  */
 function listSet(
   home: string,
-  plugins: boolean,
+  enabled: EnabledClaudePlugins | undefined,
 ): {
   instructions: PersonalFile | undefined;
   listed: Listed[];
   left: string[];
 } {
-  const read = personalResources(home);
+  const read = personalResources(home, new Set(), { enabled });
   let bytes = 0;
   let instructions: PersonalFile | undefined;
   if (read.instructions) {
@@ -195,7 +199,7 @@ function listSet(
     listed.push(...own);
     bytes += size;
   }
-  for (const plugin of plugins ? read.plugins : []) {
+  for (const plugin of read.plugins) {
     const size = listPlugin(plugin, listed, PERSONAL_SET_BUDGET_BYTES - bytes);
     if (size === undefined) left.push(plugin.id);
     else bytes += size;
@@ -212,13 +216,15 @@ export type PersonalDigests = Map<string, { stamp: string; sha: string }>;
 /**
  * The home's set's fingerprint now, reading only the files whose listing
  * changed since `digests` saw them; `digests` keeps what it read for next time.
+ * `enabled` is the plugin setting the home read (`claudePlugins.ts`); without
+ * it, the set carries no plugin.
  */
 export function personalSetVersion(
   home: string,
   digests: PersonalDigests,
-  plugins = true,
+  enabled: EnabledClaudePlugins | undefined,
 ): { version: string; files: number; left: string[] } {
-  const { instructions, listed, left } = listSet(home, plugins);
+  const { instructions, listed, left } = listSet(home, enabled);
   const entries: [string, string, boolean][] = [];
   if (instructions) entries.push([instructions.path, sha(instructions.data), false]);
   const kept = new Set<string>();
@@ -238,7 +244,7 @@ export function personalSetVersion(
     entries.push([file.path, known.sha, file.exec]);
   }
   // The set without plugins is a part of the set with them: it keeps their files' digests.
-  if (plugins) for (const abs of digests.keys()) if (!kept.has(abs)) digests.delete(abs);
+  if (enabled) for (const abs of digests.keys()) if (!kept.has(abs)) digests.delete(abs);
   return { version: fingerprintOf(entries), files: entries.length, left };
 }
 
@@ -248,13 +254,13 @@ export function personalSetVersion(
  * with plugins only to a computer that keeps them (`personal-plugins`).
  */
 export function personalSetFiles(
-  home: string = homedir(),
-  plugins = true,
+  home: string,
+  enabled: EnabledClaudePlugins | undefined,
 ): {
   files: PersonalFile[];
   left: string[];
 } {
-  const { instructions, listed, left } = listSet(home, plugins);
+  const { instructions, listed, left } = listSet(home, enabled);
   const files: PersonalFile[] = instructions ? [instructions] : [];
   for (const file of listed) {
     try {

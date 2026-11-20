@@ -5,6 +5,7 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import type { ServerResponse } from "node:http";
@@ -418,6 +419,8 @@ it("lists a turned-on plugin's skills under its name with its own files reachabl
     join(crewmate.home, ".claude", "settings.json"),
     JSON.stringify({ enabledPlugins: { [plugin.id]: true } }),
   );
+  // A dangling link in the plugin's folder costs only itself.
+  symlinkSync(join(plugin.root, "removed-notes"), join(plugin.root, "notes"));
   crewmate.spec.personalResources = true;
   loadsASkillThenRuns("claude-security:claude-security", "true");
   const first = api.requests.length;

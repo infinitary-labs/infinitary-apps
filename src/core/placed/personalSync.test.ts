@@ -15,13 +15,13 @@ describe("the personal set sent to a computer that keeps no plugins", () => {
   it("leaves the plugin files out, is kept whole there, and is not sent again", async () => {
     const home = scratchDir("infinitary-personal-sync-home-");
     const plugin = installClaudePlugin(home, { name: "claude-security" });
-    await readEnabledClaudePlugins(pluginSettings({ [plugin.id]: true }));
     let saved: { version: string; since: number } | undefined;
     const personal = new HomePersonalSet({
       enabled: () => true,
       saved: { get: () => saved, set: (seen) => (saved = seen) },
       now: () => 7,
       home,
+      plugins: () => readEnabledClaudePlugins(pluginSettings({ [plugin.id]: true })),
     });
     const copies = {
       older: scratchDir("infinitary-sync-older-"),
@@ -54,8 +54,8 @@ describe("the personal set sent to a computer that keeps no plugins", () => {
     expect(sent.older).toEqual([[]]);
     expect(sent.newer).toHaveLength(1);
     expect(sent.newer[0]).toContain(`.claude/plugins/${plugin.id}/skills/claude-security/SKILL.md`);
-    expect(sync.keptOn("older")?.version).toBe(personal.current(false).version.version);
-    expect(sync.keptOn("newer")?.version).toBe(personal.current().version.version);
+    expect(sync.keptOn("older")?.version).toBe((await personal.current(false)).version.version);
+    expect(sync.keptOn("newer")?.version).toBe((await personal.current()).version.version);
     expect(sync.keptOn("older")?.version).not.toBe(sync.keptOn("newer")?.version);
   });
 });

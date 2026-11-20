@@ -26,10 +26,10 @@ A home with no files serves no personal file or skills.
 
 The reader also serves the skills of the Claude Code plugins the person turned on (`src/core/claude/claudePlugins.ts`).
 Which plugins are on is Claude Code's `enabledPlugins` setting, read through the client library's own settings reader with only the person's settings file asked for, the organization's tier over it; a plugin set false is off, and an installed plugin with no entry follows its manifest's `defaultEnabled`, on unless it says false.
-Only that key is kept; hooks, MCP, environment and every other key stay unread.
-The setting is read again before each crewmate conversation opens on the home and before each send of the set; until the first read answers, no plugin is on.
+Only that key and the organization's marketplace rules are kept; hooks, MCP, environment and every other key stay unread.
+The setting is read again before every version of the set is taken, so each crewmate conversation and each send uses it; when a read fails the last read stands, and before any read answers no plugin is on.
 Where each plugin is comes from Claude Code's `~/.claude/plugins/installed_plugins.json` (version 2), its user-scope `installPath`, so an update Claude Code installs in a new folder is read from there at once; plugins a project enables stay out.
-A plugin folder the person saved under `~/.claude/skills` (one holding `.claude-plugin/plugin.json` and no SKILL.md of its own) counts as the plugin `<name>@skills-dir`.
+A plugin folder the person saved under `~/.claude/skills` (one holding `.claude-plugin/plugin.json` and no SKILL.md of its own) counts as the plugin `<name>@skills-dir`, unless the organization's `strictKnownMarketplaces` (or `allowedMarketplaces`) leaves out a `skills-dir` entry or its `blockedMarketplaces` names one.
 A plugin's skills are the folders in its `skills/`, the manifest's own `skills` paths inside the plugin, or a SKILL.md at its top.
 Plugins are taken in id order, after the person's own skill folders: a name the project, the person's folders or an earlier plugin holds wins over a plugin's skill, on every provider.
 A plugin's own files travel and are served with its skills: every top-level entry but `.claude-plugin`, `commands`, `agents`, `hooks`, `.mcp.json`, `.lsp.json`, `output-styles`, `workflows`, `themes`, `monitors`, `bin`, `settings.json`, `.git` and `node_modules`; its manifest travels alone, for its name and skill paths.

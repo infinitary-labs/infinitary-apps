@@ -15,6 +15,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | A phone (the item under Devices) | Um celular |  |
 | a stronger model | um modelo mais forte | |
 | account | conta | |
+| agent plugins | plugins de agente | Only the plugins turned on in the person's coding agent; a panel stays "painel". |
 | app | app | Short and common in Brazil; "o app". |
 | Appearance | Aparência | |
 | Approves secret uses (switch) | Aprova usos de segredos | The computer's Settings → Devices should show the same words. |

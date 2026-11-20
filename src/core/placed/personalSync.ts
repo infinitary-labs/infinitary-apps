@@ -16,11 +16,9 @@ export const PERSONAL_PLUGINS = contractChange("personal-plugins");
  */
 export type HomePersonal = {
   enabled: () => boolean;
-  /** Reads again what the next listing depends on beyond the files, before a send. */
-  ready?: () => Promise<void>;
   /** With `plugins` false, the set as a computer without `personal-plugins` keeps it. */
-  current: (plugins?: boolean) => { version: PersonalVersion };
-  read: (plugins?: boolean) => { version: PersonalVersion; files: PersonalFile[] };
+  current: (plugins?: boolean) => Promise<{ version: PersonalVersion }>;
+  read: (plugins?: boolean) => Promise<{ version: PersonalVersion; files: PersonalFile[] }>;
   /** A new version was read: each computer in reach is sent it at once. */
   onChange: (listener: () => void) => () => void;
 };
@@ -91,10 +89,9 @@ export class PersonalSync {
     if (!listsChange(changes, PERSONAL_SYNC)) return;
     // A computer that keeps no plugins is sent the set without them, which it accepts.
     const plugins = listsChange(changes, PERSONAL_PLUGINS);
-    await this.options.personal.ready?.();
-    if (this.kept.get(deviceId)?.version === this.options.personal.current(plugins).version.version)
-      return;
-    const { version, files } = this.options.personal.read(plugins);
+    const now = await this.options.personal.current(plugins);
+    if (this.kept.get(deviceId)?.version === now.version.version) return;
+    const { version, files } = await this.options.personal.read(plugins);
     const answer = keepAnswerSchema.parse(
       await this.options.devices.ask(deviceId, "inf:session:personal", [
         {

@@ -132,9 +132,16 @@ export async function stageClaudePlugins(
     for (const entry of carriedPluginEntries(plugin.root)) {
       if (entry === "skills") continue;
       const from = join(plugin.root, entry);
-      if ((await stat(from)).isDirectory())
-        await symlink(from, join(into, entry), folderLinkType());
-      else await copyFile(from, join(into, entry));
+      // An entry that cannot be read, such as a dangling link, is left out
+      // alone, as the personal set leaves it out, never the plugin's skills.
+      try {
+        if ((await stat(from)).isDirectory())
+          await symlink(from, join(into, entry), folderLinkType());
+        else await copyFile(from, join(into, entry));
+      } catch {
+        // i18n-exempt: a line in the session's own log, for a developer.
+        note(`the plugin ${plugin.id}'s ${entry} was not staged: it could not be read`);
+      }
     }
     await Promise.all(
       plugin.skills.map((skill) =>

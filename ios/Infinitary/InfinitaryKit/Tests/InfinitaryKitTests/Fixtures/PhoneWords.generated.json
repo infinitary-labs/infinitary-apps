@@ -2383,7 +2383,7 @@
   {"said":{"m":"settingsSubscriptionsOnPace"},"words":"on pace"},
   {"said":{"m":"settingsSubscriptionsOnPaceAll"},"words":"on pace ✓"},
   {"said":{"m":"settingsSubscriptionsPaused"},"words":"paused"},
-  {"said":{"m":"settingsSubscriptionsPersonalResourcesDescription","a":{"computer":"‹computer›","computers":"‹computers›"}},"words":"New crewmate sessions use the global instructions and skills of the ‹computer› where your first mate lives, with the skills of the Claude Code plugins you turned on there. Other ‹computers› that run work keep a copy, sent again only when it changes. Crew rules govern delivery; your file guides style and judgment."},
+  {"said":{"m":"settingsSubscriptionsPersonalResourcesDescription","a":{"computer":"‹computer›","computers":"‹computers›"}},"words":"New crewmate sessions use the global instructions and skills of the ‹computer› where your first mate lives, with the skills of the agent plugins you turned on there. Other ‹computers› that run work keep a copy, sent again only when it changes. Crew rules govern delivery; your file guides style and judgment."},
   {"said":{"m":"settingsSubscriptionsPersonalResourcesTitle"},"words":"Global instructions and skills"},
   {"said":{"m":"settingsSubscriptionsReading"},"words":"reading…"},
   {"said":{"m":"settingsSubscriptionsRefresh"},"words":"Refresh"},

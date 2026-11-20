@@ -30,7 +30,7 @@ All UI work MUST follow the project skill `infinitary-design` (`.claude/skills/i
 
 - Tokens: `.claude/skills/infinitary-design/tokens/*.css` - consume these, never hardcode values they define.
 - Click-through mock: serve the skill dir over HTTP, open `ui_kits/firstmate/index.html` (voice states trigger on a real right-⌥ keydown).
-- User-facing words follow the vocabulary (the skill's `copy/Vocabulary.prompt.md`; code side `docs/vocabulary.md`): written for someone who has never opened a terminal. It is measured by the replay gate, never a banned-word lint. These words never reach a user surface: harness, memory, extension, plugin, preference, telemetry, analytics, Umami, sequence, step.
+- User-facing words follow the vocabulary (the skill's `copy/Vocabulary.prompt.md`; code side `docs/vocabulary.md`): written for someone who has never opened a terminal. It is measured by the replay gate, never a banned-word lint. These words never reach a user surface: harness, memory, extension, plugin (except "agent plugins", the ones turned on in the person's coding agent), preference, telemetry, analytics, Umami, sequence, step.
 - **Translate as you build** (`docs/i18n.md`, "Translating"): every new or changed word a person reads - in the window, a panel, a card, a feed line or a button the core writes - goes in the catalog with all nine translations in the same PR, never typed into the code; `scripts/raw-words.ts` refuses new English in `src/renderer`, `src/panels`, `src/shared`, `src/core`, `src/main` and `src/preload`, and fails only when a file gains words. Text served to a model stays English.
 
 ## Architecture and implementation

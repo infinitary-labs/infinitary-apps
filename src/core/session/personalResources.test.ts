@@ -64,6 +64,8 @@ it("never hands a crewmate the skill infinitary-axi setup writes, in either skil
 // Code plugins turned on in ~/.claude/settings.json, from the folder
 // installed_plugins.json names, and follow plugin updates.
 describe("the skills of the person's turned-on Claude Code plugins", () => {
+  /** The setting as the reader reads it with no organization policy. */
+  const on = (plugins: Record<string, unknown>) => ({ enabled: { plugins, skillsDir: true } });
   it("serves each turned-on plugin's skills, organization first, an unset plugin by its default", async () => {
     const home = scratchDir("infinitary-personal-plugins-");
     const security = installClaudePlugin(home, { name: "claude-security" });
@@ -82,7 +84,7 @@ describe("the skills of the person's turned-on Claude Code plugins", () => {
       security.id,
       design.id,
     ]);
-    const read = personalResources(home, new Set(), { enabled: { [security.id]: true } });
+    const read = personalResources(home, new Set(), on({ [security.id]: true }));
     expect(read.plugins).toEqual([
       {
         id: security.id,
@@ -100,16 +102,18 @@ describe("the skills of the person's turned-on Claude Code plugins", () => {
   it("follows an update to the new folder, its digest moving only with a skill's text", () => {
     const home = scratchDir("infinitary-personal-plugin-update-");
     const old = installClaudePlugin(home, { name: "claude-security", version: "0.12.0" });
-    const on = { enabled: { [old.id]: true } };
-    const before = personalResources(home, new Set(), on);
+    const turned = on({ [old.id]: true });
+    const before = personalResources(home, new Set(), turned);
     const moved = installClaudePlugin(home, { name: "claude-security", version: "0.13.0" });
-    const after = personalResources(home, new Set(), on);
+    const after = personalResources(home, new Set(), turned);
     expect(after.plugins[0]?.root).toBe(moved.root);
     expect(after.digests).toEqual(before.digests);
     installClaudePlugin(home, { name: "claude-security", version: "0.14.0", skillText: "New." });
-    expect(personalResources(home, new Set(), on).digests.skills).not.toBe(before.digests.skills);
+    expect(personalResources(home, new Set(), turned).digests.skills).not.toBe(
+      before.digests.skills,
+    );
     // A plugin turned off leaves the digest a home without plugins has.
-    expect(personalResources(home, new Set(), { enabled: { [old.id]: false } }).digests).toEqual(
+    expect(personalResources(home, new Set(), on({ [old.id]: false })).digests).toEqual(
       personalResources(scratchDir("infinitary-personal-no-plugins-")).digests,
     );
   });
@@ -123,9 +127,7 @@ describe("the skills of the person's turned-on Claude Code plugins", () => {
     put(join(home, ".agents", "skills", "shared", "SKILL.md"), "own shared");
     const plugin = installClaudePlugin(home, { name: "tools" });
     put(join(plugin.root, "skills", "rivets", "SKILL.md"), "a later plugin's rivets");
-    const read = personalResources(home, new Set(["tools"]), {
-      enabled: { [plugin.id]: true },
-    });
+    const read = personalResources(home, new Set(["tools"]), on({ [plugin.id]: true }));
     expect(read.skills.map((skill) => skill.name)).toEqual(["shared"]);
     expect(read.plugins).toEqual([
       {
@@ -136,9 +138,28 @@ describe("the skills of the person's turned-on Claude Code plugins", () => {
       },
     ]);
     expect(
-      personalResources(home, new Set(), { enabled: { "rivets@skills-dir": false } }).plugins.map(
+      personalResources(home, new Set(), on({ "rivets@skills-dir": false })).plugins.map(
         (each) => each.id,
       ),
     ).toEqual([plugin.id]);
+  });
+
+  it("leaves out the folders saved under ~/.claude/skills where the organization's marketplace rules turn that scan off", async () => {
+    const home = scratchDir("infinitary-personal-plugin-policy-");
+    const saved = join(home, ".claude", "skills", "rivets-plugin");
+    put(join(saved, ".claude-plugin", "plugin.json"), JSON.stringify({ name: "rivets" }));
+    put(join(saved, "skills", "rivets", "SKILL.md"), "rivets body");
+    const github = { source: "github", repo: "example/marketplace" };
+    const ids = async (policy?: Record<string, unknown>) =>
+      personalResources(home, new Set(), {
+        enabled: await readEnabledClaudePlugins(pluginSettings({}, undefined, policy)),
+      }).plugins.map((plugin) => plugin.id);
+    expect(await ids()).toEqual(["rivets@skills-dir"]);
+    expect(await ids({ strictKnownMarketplaces: [github] })).toEqual([]);
+    expect(await ids({ allowedMarketplaces: [github] })).toEqual([]);
+    expect(await ids({ strictKnownMarketplaces: [github, { source: "skills-dir" }] })).toEqual([
+      "rivets@skills-dir",
+    ]);
+    expect(await ids({ blockedMarketplaces: [{ source: "skills-dir" }] })).toEqual([]);
   });
 });

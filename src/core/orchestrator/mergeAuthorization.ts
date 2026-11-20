@@ -7,7 +7,7 @@ import {
   repairImpact,
 } from "@shared/checkRepair";
 import { hasChangeRequests } from "@shared/forge";
-import { changeHostOf, changeRequestHostAt } from "@shared/forgeKinds";
+import { changeHostOf, changeRequestHost, changeRequestHostAt } from "@shared/forgeKinds";
 import { englishOf, type Said, said, saidPart } from "@shared/i18n/said";
 import type { MergeReview } from "@shared/mergeReview";
 import { opensPullRequest, ownsBatches, type RepoDelivery } from "@shared/repos";
@@ -195,18 +195,32 @@ export function putInFront(
 }
 
 /**
+ * The forge kind a managed project configured for a host's address (a
+ * self-hosted GitLab's, say), when one did: what a host is, before its
+ * public address.
+ */
+export type HostKindAt = (host: string) => string | null | undefined;
+
+/**
  * The same pull request on the same host, owner and repository, compared as
  * the host reads them: a host that folds a project's owner and name, as
  * GitHub's and Bitbucket's do, matches them without regard to case
- * (`foldsNames`), and a host the table does not hold reads as GitHub's, as
- * a numbered request's identity does (`requestIdentity`).
+ * (`foldsNames`). The kind a managed project configured for that address
+ * (`kindAt`) decides first, then the public host's, and a host neither
+ * names reads as GitHub's, as a numbered request's identity does
+ * (`requestIdentity`).
  */
 export function samePullTarget(
   a: MergeAuthorization["target"],
   b: MergeAuthorization["target"],
+  kindAt?: HostKindAt,
 ): boolean {
   if (a.host !== b.host || a.prNumber !== b.prNumber) return false;
-  const folds = (changeRequestHostAt(a.host) ?? changeHostOf(undefined)).foldsNames;
+  const folds = (
+    changeRequestHost(kindAt?.(a.host)) ??
+    changeRequestHostAt(a.host) ??
+    changeHostOf(undefined)
+  ).foldsNames;
   const fold = (word: string) => (folds ? word.toLowerCase() : word);
   return fold(a.owner) === fold(b.owner) && fold(a.name) === fold(b.name);
 }
@@ -221,18 +235,21 @@ export function samePullTarget(
 export function carryUnsettled(
   previous: MergeAuthorization | undefined,
   next: MergeAuthorization,
+  kindAt?: HostKindAt,
 ): MergeAuthorization {
+  const same = (a: MergeAuthorization["target"], b: MergeAuthorization["target"]) =>
+    samePullTarget(a, b, kindAt);
   let unsettled = [...(previous?.unsettled ?? []), ...(next.unsettled ?? [])];
   const keep = (entry: {
     target: MergeAuthorization["target"];
     attempt: NonNullable<MergeAuthorization["attempt"]>;
   }) => {
-    unsettled = [...unsettled.filter((item) => !samePullTarget(item.target, entry.target)), entry];
+    unsettled = [...unsettled.filter((item) => !same(item.target, entry.target)), entry];
   };
   if (previous?.attempt) keep({ target: previous.target, attempt: previous.attempt });
   if (next.attempt) keep({ target: next.target, attempt: next.attempt });
-  const own = unsettled.find((item) => samePullTarget(item.target, next.target));
-  const rest = unsettled.filter((item) => !samePullTarget(item.target, next.target));
+  const own = unsettled.find((item) => same(item.target, next.target));
+  const rest = unsettled.filter((item) => !same(item.target, next.target));
   return {
     ...next,
     ...(own ? { attempt: own.attempt } : {}),

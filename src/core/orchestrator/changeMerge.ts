@@ -997,19 +997,25 @@ export class ChangeMerge {
     place?: { host: string; owner: string; name: string },
   ): Promise<ForgePull | undefined> {
     const record = this.options.tasks.get(taskId);
-    const repo = record?.repoId ? this.options.repos.get(record.repoId) : undefined;
-    if (!record || !repo || !opensPullRequest(deliveryForRecord(record, repo.delivery)))
+    if (!record) return undefined;
+    // A kept approval's read names the repository it pinned (`place`): it is
+    // read there, whatever the task's own project delivers now or whether it
+    // is still managed, so a merge sent earlier is always read back, and a
+    // number another project shares never answers it.
+    const pinned = place ? this.pinnedRepo(record, place) : undefined;
+    if (place && !pinned) return undefined;
+    const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
+    if (!pinned && (!repo || !opensPullRequest(deliveryForRecord(record, repo.delivery))))
       return undefined;
     // Reading a named pull request needs the project's saved host identity,
     // not a local branch or folder (nor an in-reach work computer): the
     // task's own project, or the other managed one the task opened that
-    // number in (INF-2510). A kept approval's read names the repository it
-    // pinned (`place`), so a number another project shares never answers it.
-    const pinned = place ? this.pinnedRepo(record, repo, place) : undefined;
-    if (place && !pinned) return undefined;
+    // number in (INF-2510).
     const elsewhere = pinned ? undefined : this.projectOfNumber(record, prNumber);
     if (elsewhere === null) return undefined;
-    const forge = this.options.forgeFor(pinned ?? elsewhere ?? publicationRepo(record, repo));
+    const own = pinned ?? elsewhere ?? (repo ? publicationRepo(record, repo) : undefined);
+    if (!own) return undefined;
+    const forge = this.options.forgeFor(own);
     if (!forge.pull) return undefined;
     const pull = await this.context.pullOf(forge, prNumber);
     // A merge the host took and had not confirmed, still open: the host's
@@ -1109,18 +1115,15 @@ export class ChangeMerge {
   }
 
   /**
-   * After a request whose answer never came, or with no open pull request
-   * for the branch: the pinned pull request as the host holds it now. A
-   * merge at the approved head is the merge; a closed one ends the approval;
-   * an open one at the approved head may be tried again.
+   * The managed repository a kept approval pinned its pull request in: the
+   * task's own project first, as it publishes, then any other managed one.
    */
-  /** The managed repository a kept approval pinned its pull request in. */
   private pinnedRepo(
     record: TaskRecord,
-    repo: RepoView,
     place: { host: string; owner: string; name: string },
   ): RepoView | undefined {
-    return [repo, ...this.options.repos.list()]
+    const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
+    return [...(repo ? [repo] : []), ...this.options.repos.list()]
       .map((item) => publicationRepo(record, item))
       .find((item) => requestAtRepo(item, place));
   }
@@ -1139,11 +1142,16 @@ export class ChangeMerge {
       return "said" in located ? undefined : located.forge;
     }
     const record = this.options.tasks.get(taskId);
-    const repo = record?.repoId ? this.options.repos.get(record.repoId) : undefined;
-    const pinned = record && repo ? this.pinnedRepo(record, repo, place) : undefined;
+    const pinned = record ? this.pinnedRepo(record, place) : undefined;
     return pinned ? this.options.forgeFor(pinned) : undefined;
   }
 
+  /**
+   * After a request whose answer never came, or with no open pull request
+   * for the branch: the pinned pull request as the host holds it now. A
+   * merge at the approved head is the merge; a closed one ends the approval;
+   * an open one at the approved head may be tried again.
+   */
   private async readBack(
     taskId: string,
     guard: MergeGuard,

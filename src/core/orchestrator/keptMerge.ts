@@ -1,4 +1,5 @@
 import { currentCheckStatus } from "@shared/checkSnapshot";
+import { forgePlace } from "@shared/forge";
 import type { ForgePull } from "../forge";
 import type { MergeAuthorization, MergeWait } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
@@ -13,6 +14,7 @@ import {
   standingAuthorization,
   wakesFirstmate,
 } from "./mergeAuthorization";
+import { publicationRepo, requestAtRepo } from "./publicationRepo";
 import type { SettleOutcome, SettleServiceHost } from "./settleHost";
 import type { SettleLocks } from "./settleLocks";
 import { describeStatus, type SettleService } from "./settleService";
@@ -560,11 +562,28 @@ export class KeptMerge {
         this.unsettledReads.delete(key);
         if (!this.leaveUnsettled(record.id, send.attempt.token, false) || !pull?.merged) continue;
         const named = this.host.tasks.get(record.id);
+        // Said where it was read, and against the version that send was
+        // approved at: a push after that click is told (INF-5193).
+        const destination = this.host.repos
+          .list()
+          .find((repo) => named && requestAtRepo(publicationRepo(named, repo), send.target));
+        const place =
+          (destination?.host
+            ? forgePlace({ kind: destination.host.kind, host: destination.host.name })
+            : null) ?? placeOf(this.host.repos, named, "");
+        const change = changeName(named, pull.number);
+        const other = otherMergedFacts(place || null, change, pull.headSha, send.attempt.head);
         this.host.tasks.note(
           record.id,
           // i18n-exempt: an English timeline note, like the approval's other notes
-          `The merge sent earlier of ${changeName(named, pull.number)} went in on ${placeOf(this.host.repos, named)}.`,
-          { news: true, feed: true },
+          `The merge sent earlier of ${change} went in on ${place || "the project's host"}.${other.told}`,
+          {
+            news: true,
+            feed: true,
+            ...(other.line
+              ? { data: { line: other.line.line, lineSaid: other.line.lineSaid } }
+              : {}),
+          },
         );
       }
     }

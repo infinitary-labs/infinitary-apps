@@ -20,6 +20,7 @@ import {
   carryUnsettled,
   endedAuthorization,
   FAILED_BATCH_NOTE,
+  type HostKindAt,
   outstandingGuidance,
   putInFront,
   retryAfter,
@@ -331,7 +332,7 @@ export class KeptApproval {
     const previous = this.host.tasks.get(taskId)?.delivery?.mergeAuthorization;
     this.host.tasks.delivery.recordPermissionRecords(taskId, {
       mergeAuthorization: {
-        ...carryUnsettled(previous, authorization),
+        ...carryUnsettled(previous, authorization, this.hostKindAt),
         queueRemovals: this.pendingRemovals(taskId),
       },
     });
@@ -779,6 +780,10 @@ export class KeptApproval {
     return guard;
   }
 
+  /** The forge kind a managed project configured for a host's address. */
+  private readonly hostKindAt: HostKindAt = (host) =>
+    this.host.repos.list().find((repo) => forgeLocationOf(repo)?.host === host)?.host?.kind;
+
   /**
    * Whether a merge of this pull request (`samePullTarget`) was sent, from
    * this task or another, closed ones included, and its outcome never read
@@ -803,7 +808,8 @@ export class KeptApproval {
         ...(kept.unsettled ?? []),
       ];
       return sends.some(
-        (item) => item.attempt.token !== own && samePullTarget(item.target, target),
+        (item) =>
+          item.attempt.token !== own && samePullTarget(item.target, target, this.hostKindAt),
       );
     });
   }

@@ -621,6 +621,56 @@ describe("a kept merge whose outcome is unknown on a host naming no version (INF
     await h.supervisor.disposeAll();
   });
 
+  // INF-5193 (the review of Bitbucket's merge): a send whose task closed is
+  // read where its approval pinned it, even once the task's own project
+  // delivers no pull requests or is no longer managed, and a later push
+  // that went in with it is told against the version that send approved.
+  it.each([
+    ["switches to local merges", "local-only"],
+    ["is removed", "removed"],
+  ] as const)(
+    "reads a closed task's unknown merge back after its project %s, and tells a later version merging",
+    async (_, change) => {
+      const h = await approved({ referenced: true });
+      h.forge.mergeNamesNoVersion = true;
+      h.forge.refuse = new ForgeMergeUnconfirmed("The host took the merge", "7/merge-task-1");
+      h.supervisor.cardActions.act(h.card.id, "merge");
+      await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("outcome"));
+      h.forge.refuse = undefined;
+      h.crewmate.finishPrompt();
+      await tick();
+      await h.supervisor.settling.closing.closeTask(h.taskId, {
+        status: "dropped",
+        reason: "discarded",
+        actor: "host",
+      });
+      // Another managed project still points at the same repository, saved
+      // with its owner and name in capitals.
+      const { dir } = gitRepo("meter-again");
+      execFileSync("git", ["-C", dir, "remote", "add", "origin", "https://github.com/O/R.git"]);
+      await h.repos.setup({ kind: "adopt", path: dir, name: "meter-again" });
+      const own = h.tasks.get(h.taskId)?.repoId;
+      if (!own) throw new Error("Missing the task's project");
+      if (change === "removed") h.repos.unregister(own);
+      else h.repos.configure(own, { delivery: change });
+      // Bitbucket merged the pull request at a version pushed after the click.
+      h.forge.merged = true;
+      h.forge.headSha = REPAIRED;
+      await h.supervisor.settling.kept.reconcileUnsettledSends(Date.now());
+      expect(h.authorization()?.attempt).toBeUndefined();
+      expect(h.tasks.unresolvedMergeSends().map((record) => record.id)).not.toContain(h.taskId);
+      const note = h.tasks
+        .timeline(h.taskId)
+        .find((event) => event.text.includes("The merge sent earlier"));
+      expect(note?.text).toContain(
+        otherMergedFacts("GitHub", "#7", REPAIRED, APPROVED).told.trim(),
+      );
+      expect(note?.text).toContain("went in on GitHub");
+      expect(h.forge.sends).toBe(1);
+      await h.supervisor.disposeAll();
+    },
+  );
+
   // INF-5193: the read right after a merge whose answer never came asks the
   // repository the approval pinned, never another managed project whose
   // pull request of the same number was selected while the merge was out.

@@ -314,8 +314,27 @@ export function createAppTools(delegate: AppToolsDelegate) {
           }
           const line = ACTIONS[action];
           if (!line.change || !line.current) return { text: line.line };
-          const args = await actionRequest(asked, action, params.value, params.evidence as string);
-          const answer = await asked(line.change as CoreInvokeChannel, args);
+          // A window's request is built from one reading of its value, which
+          // the change carries so the window changes only what it changes.
+          const read = window ? await asked(line.current as CoreInvokeChannel, []) : undefined;
+          const reading: CoreDispatch = window
+            ? (((channel: CoreInvokeChannel, args: unknown) =>
+                channel === line.current
+                  ? Promise.resolve(read)
+                  : asked(channel, args)) as CoreDispatch)
+            : asked;
+          const args = await actionRequest(
+            reading,
+            action,
+            params.value,
+            params.evidence as string,
+          );
+          const answer = window
+            ? await delegate.dispatch(line.change as CoreInvokeChannel, args, {
+                ...actor,
+                window: { ...window, read },
+              })
+            : await asked(line.change as CoreInvokeChannel, args);
           // A window answers its whole value with the change, checked as it
           // arrives, so a change it made is never lost to a read after it.
           const result = window ? answer : await asked(line.current as CoreInvokeChannel, []);

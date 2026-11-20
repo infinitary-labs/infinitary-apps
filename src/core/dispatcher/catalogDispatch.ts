@@ -33,7 +33,12 @@ import type { RepoPolicyPatch, RepoSetupResult, RepoView } from "@shared/repos";
 import type { RunbookView } from "@shared/runbooks";
 import { devicePlace } from "@shared/signIns";
 import { type AppPanelGates, runbookGatesOf } from "@shared/surfaces";
-import { isWindowChannel, WINDOW_ONLY_CHANNELS } from "@shared/windowAsks";
+import {
+  isWindowChannel,
+  WINDOW_ONLY_CHANNELS,
+  WINDOW_VALUE_OF,
+  type WindowChannel,
+} from "@shared/windowAsks";
 import { addedPrivateSite } from "../browser/privateSites";
 import type { CoreServices } from "../coreServices";
 import { actionValue } from "../pi/appTools";
@@ -109,13 +114,19 @@ export function createCatalogDispatch({
     // (docs/view.md, "What the first mate asks of a window"); every other is
     // answered here.
     const window = actor.kind === "firstmate" ? actor.window : undefined;
-    // A window applies only the named action's fields over its own value,
-    // so its own edit since the read before is kept.
-    const named =
-      actor.kind === "firstmate" && actor.action ? ACTIONS[actor.action].fields : undefined;
+    // A window changes only the fields this request changes, and only while
+    // each reads there as the first mate read it (`changes`); it answers its
+    // own value from just before, which the trail reads (`windowBefore`).
+    let changes: { field: string; was?: unknown }[] | undefined;
+    let windowBefore: unknown;
     const call = (asked: string, callArgs: readonly unknown[]): Promise<unknown> =>
       window && isWindowChannel(asked)
-        ? viewWindows.ask(window, asked, callArgs, asked === channel ? named : undefined)
+        ? viewWindows
+            .ask(window, asked, callArgs, asked === channel ? changes : undefined)
+            .then(({ result, before }) => {
+              if (asked === channel && before !== undefined) windowBefore = before;
+              return result;
+            })
         : WINDOW_ONLY_CHANNELS.has(asked)
           ? Promise.reject(new Error("A key reminder is asked of a window."))
           : Promise.resolve(
@@ -132,14 +143,21 @@ export function createCatalogDispatch({
     const reads = invokeContract[channel].effect !== "change";
     // Lines that read one value read it once: a window's is asked over the
     // connection, once for every line.
-    const readOnce = () => {
-      const read = new Map<string, Promise<unknown>>();
+    const readOnce = (seed?: [string, unknown]) => {
+      const read = new Map<string, Promise<unknown>>(
+        seed ? [[seed[0], Promise.resolve(seed[1])]] : [],
+      );
       return (current: string) => {
         if (!read.has(current)) read.set(current, call(current, []));
         return read.get(current) as Promise<unknown>;
       };
     };
-    const readBefore = readOnce();
+    // A window's own value is the one the first mate built its request from.
+    const ownCurrent =
+      actor.kind === "firstmate" && actor.action ? ACTIONS[actor.action].current : null;
+    const readBefore = readOnce(
+      window?.read !== undefined && ownCurrent ? [ownCurrent, window.read] : undefined,
+    );
     const before = new Map<ActionName, unknown>();
     for (const name of names)
       before.set(
@@ -263,8 +281,23 @@ export function createCatalogDispatch({
           );
       }
     }
+    if (
+      window &&
+      actor.kind === "firstmate" &&
+      actor.action &&
+      WINDOW_VALUE_OF[channel as WindowChannel]
+    ) {
+      const base = (before.get(actor.action) ?? {}) as Record<string, unknown>;
+      const next = (args[0] ?? {}) as Record<string, unknown>;
+      changes = (ACTIONS[actor.action].fields ?? [])
+        .filter((field) => !field.includes("=") && !isDeepStrictEqual(base[field], next[field]))
+        .map((field) => ({ field, was: base[field] }));
+    }
     if (names.length) automation.said = undefined;
     const result = (await call(channel, args)) as InvokeResponse<C>;
+    // Every line's trail reads the window's own value from just before, so
+    // an edit made there since the first mate read it is no line of its own.
+    if (windowBefore !== undefined) for (const name of names) before.set(name, windowBefore);
     const readAfter = readOnce();
     for (const name of names) {
       // An act's trail is what it did, read from its request and answer.

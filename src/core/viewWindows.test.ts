@@ -38,29 +38,35 @@ describe("ViewWindows", () => {
     windows.answered(id, { ok: true, result: "forged" }, { kind: "firstmate", wake: "captain" });
     const theirs = { ...DEFAULT_APPEARANCE, usageUnit: "usd" };
     windows.answered(id, { ok: true, result: theirs }, { kind: "captain", view: "studio" });
-    await expect(result).resolves.toEqual(theirs);
+    await expect(result).resolves.toEqual({ result: theirs });
   });
 
-  it("sends a change's named fields, and refuses an answer the contract does not admit", async () => {
+  it("sends what a change changes and from what, takes the window's value from before it, and refuses an answer the contract does not admit", async () => {
     const { windows, sent } = setup();
-    const changed = windows.ask(
-      studio,
-      "inf:settings:appearance:set",
-      [{ ...DEFAULT_APPEARANCE, usageUnit: "usd" }],
-      ["usageUnit"],
-    );
-    expect(sent[0]?.payload).toMatchObject({ fields: ["usageUnit"] });
+    const changes = [{ field: "usageUnit", was: "tokens" }];
+    const next = { ...DEFAULT_APPEARANCE, usageUnit: "usd" as const };
+    const changed = windows.ask(studio, "inf:settings:appearance:set", [next], changes);
+    expect(sent[0]?.payload).toMatchObject({ changes });
     windows.answered(
       sent[0]?.payload.id ?? "",
-      { ok: true, result: { usageUnit: "usd" } },
+      { ok: true, result: next, before: DEFAULT_APPEARANCE },
       { kind: "captain", view: "studio" },
     );
-    await expect(changed).rejects.toThrow(WINDOW_ASK_WORDS.badAnswer("Studio"));
+    await expect(changed).resolves.toEqual({ result: next, before: DEFAULT_APPEARANCE });
+    // A whole value the contract does not admit, after or before, is refused.
+    for (const said of [
+      { ok: true as const, result: { usageUnit: "usd" }, before: DEFAULT_APPEARANCE },
+      { ok: true as const, result: next, before: { usageUnit: "tokens" } },
+    ]) {
+      const asked = windows.ask(studio, "inf:settings:appearance:set", [next], changes);
+      windows.answered(sent.at(-1)?.payload.id ?? "", said, { kind: "captain", view: "studio" });
+      await expect(asked).rejects.toThrow(WINDOW_ASK_WORDS.badAnswer("Studio"));
+    }
     // A request the contract does not admit is never sent.
     await expect(windows.ask(studio, "inf:keyboard:reminders:set", ["on"])).rejects.toThrow(
       "malformed request",
     );
-    expect(sent).toHaveLength(1);
+    expect(sent).toHaveLength(3);
   });
 
   it("says plainly when no window is connected, when one does not answer, and what a refusing window said", async () => {

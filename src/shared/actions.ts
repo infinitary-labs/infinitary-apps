@@ -1983,7 +1983,8 @@ export type ActionActor =
        * request (docs/view.md, "What the first mate asks of a window"): a Mac
        * that controls this one, or this computer's own window for a key reminder.
        */
-      window?: { deviceId: string; name: string };
+      /** A window's own setting: that computer's window, and its value as the first mate read it. */
+      window?: { deviceId: string; name: string; read?: unknown };
     };
 /** Settings and Firstmate share this project-change path. */
 export function isProjectChange(action: ActionName): boolean {

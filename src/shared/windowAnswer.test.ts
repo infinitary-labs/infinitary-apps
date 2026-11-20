@@ -1,4 +1,4 @@
-import { WINDOW_ASK_LIVE, type WindowAnswer } from "@shared/windowAsks";
+import { WINDOW_ASK_LIVE, WINDOW_ASK_WORDS, type WindowAnswer } from "@shared/windowAsks";
 import { describe, expect, it } from "vitest";
 import { answerKeyReminders, answerWindowAsk } from "./windowAnswer";
 
@@ -43,24 +43,54 @@ describe("a window's answer to the first mate", () => {
     expect(ran).toBe(false);
   });
 
-  it("applies a change's named fields over its own value now, keeping its own edit since", async () => {
-    // The first mate read dark; this window's own Settings chose light since.
-    let own: Record<string, unknown> = { theme: "light", usageUnit: "tokens" };
+  const ownSettings = (start: Record<string, unknown>) => {
+    let own = start;
     const applied: unknown[] = [];
+    const answer = async (channel: string, args: readonly unknown[]) => {
+      if (channel === "inf:settings:appearance:get") return own;
+      applied.push(args[0]);
+      own = args[0] as Record<string, unknown>;
+      return own;
+    };
+    return { answer, applied };
+  };
+
+  it("changes only what the change changes, over its own value now, and answers its value from before", async () => {
+    // The first mate read dark; this window's own Settings chose light since.
+    const start = { theme: "light", usageUnit: "tokens" };
+    const { answer, applied } = ownSettings(start);
     const sent = await answering(
       {
         ...ask("studio", "inf:settings:appearance:set", [{ theme: "dark", usageUnit: "usd" }]),
-        fields: ["usageUnit"],
+        changes: [{ field: "usageUnit", was: "tokens" }],
       },
-      async (channel: string, args: readonly unknown[]) => {
-        if (channel === "inf:settings:appearance:get") return own;
-        applied.push(args[0]);
-        own = args[0] as Record<string, unknown>;
-        return own;
-      },
+      answer,
     );
     expect(applied).toEqual([{ theme: "light", usageUnit: "usd" }]);
-    expect(sent).toEqual([["ask-1", { ok: true, result: { theme: "light", usageUnit: "usd" } }]]);
+    expect(sent).toEqual([
+      ["ask-1", { ok: true, result: { theme: "light", usageUnit: "usd" }, before: start }],
+    ]);
+  });
+
+  it("changes nothing when a field it changes moved here since the first mate read it", async () => {
+    // The first mate read the music at 40 and asks to play it; here it went to 70 since.
+    const { answer, applied } = ownSettings({ ambientMusic: false, ambientVolume: 70 });
+    const sent = await answering(
+      {
+        ...ask("studio", "inf:settings:appearance:set", [
+          { ambientMusic: true, ambientVolume: 40 },
+        ]),
+        changes: [
+          { field: "ambientMusic", was: false },
+          { field: "ambientVolume", was: 40 },
+        ],
+      },
+      answer,
+    );
+    expect(applied).toEqual([]);
+    expect(sent).toEqual([
+      ["ask-1", { ok: false, message: WINDOW_ASK_WORDS.changedThere(["ambientVolume"]) }],
+    ]);
   });
 
   it("switches the window's own key reminder", () => {

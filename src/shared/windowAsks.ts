@@ -41,15 +41,24 @@ export const windowAskSchema = z.strictObject({
   channel: z.enum(WINDOW_CHANNELS),
   args: z.array(z.unknown()).max(4),
   /**
-   * For a change to a shared value, the fields the named action may change:
-   * the window applies them over its own value as it is then.
+   * For a change to a shared value, the fields this request changes, each
+   * with its value as the first mate read it: the window changes only those,
+   * and only while each still reads that value there.
    */
-  fields: z.array(z.string().min(1).max(64)).max(16).optional(),
+  changes: z
+    .array(z.strictObject({ field: z.string().min(1).max(64), was: z.unknown().optional() }))
+    .max(16)
+    .optional(),
 });
 export type WindowAsk = z.infer<typeof windowAskSchema>;
 
 export const windowAnswerSchema = z.discriminatedUnion("ok", [
-  z.strictObject({ ok: z.literal(true), result: z.unknown() }),
+  z.strictObject({
+    ok: z.literal(true),
+    result: z.unknown(),
+    /** For a change with `changes`, the window's own value just before it. */
+    before: z.unknown().optional(),
+  }),
   z.strictObject({ ok: z.literal(false), message: z.string().min(1).max(400) }),
 ]);
 export type WindowAnswer = z.infer<typeof windowAnswerSchema>;
@@ -65,28 +74,12 @@ export const WINDOW_ASK_WORDS = {
   badAnswer: (name: string) =>
     `Infinitary's window on ${name} answered in a way this computer does not read, so it may or may not have made the change. Look at its Settings before asking again.`,
   notAsked: "That is not something the first mate asks of a window.",
+  changedThere: (fields: readonly string[]) =>
+    `This changed in this computer's own Settings since the first mate read it (${fields.join(", ")}), so nothing was changed. Read it again, then ask again.`,
 } as const;
 
-/** The read that answers a shared value's whole, for a window applying only named fields. */
+/** The read that answers a shared value's whole, for a window changing only some of its fields. */
 export const WINDOW_VALUE_OF: Partial<Record<WindowChannel, WindowChannel>> = {
   "inf:settings:appearance:set": "inf:settings:appearance:get",
   "inf:settings:layout:set": "inf:settings:layout:get",
 };
-
-/**
- * The request a window runs for an ask with named fields: those fields from
- * the asked value over its own value now, every other field as it is there.
- */
-export function namedFieldsOver(
-  own: Record<string, unknown>,
-  asked: Record<string, unknown>,
-  fields: readonly string[],
-): Record<string, unknown> {
-  const next = { ...own };
-  for (const field of fields) {
-    if (field.includes("=")) continue;
-    if (Object.hasOwn(asked, field)) next[field] = asked[field];
-    else delete next[field];
-  }
-  return next;
-}

@@ -87,6 +87,7 @@ import {
 } from "./cardCompatibility";
 import { CONTRACT_CHANGES, listsChange } from "./contractChanges";
 import { readsFrameParts } from "./frameParts";
+import { heldAsks } from "./heldAsks";
 import {
   DEFAULT_JOURNAL_LIMITS,
   EventJournal,
@@ -689,8 +690,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
   let nextAsk = 1;
   /** Why changes wait while the first mate moves to another computer; null otherwise. */
   let moving: string | null = null;
-  /** Each ask sent to one window (`liveToView`'s `one`), by its id: only that connection answers it. */
-  const windowAsked = new Map<string, Client>();
+  const windowAsked = heldAsks<Client>();
   const workListeners = new Set<(contact: WorkDeviceContact) => void>();
   const sentListeners = new Set<(deviceId: string, bytes: number) => void>();
   const tellSent = (deviceId: string, bytes: number) => {
@@ -1234,11 +1234,10 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       // never another window of the same computer.
       if (channel === "inf:view:answer") {
         const id = (frame.args as unknown[] | undefined)?.[0];
-        if (typeof id !== "string" || windowAsked.get(id) !== client) {
+        if (!windowAsked.answered(id, client)) {
           reply({ ok: true, value: { ok: true } });
           return;
         }
-        windowAsked.delete(id);
       }
       try {
         // A paired view is the captain at another Mac: the same actor the
@@ -1353,7 +1352,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       });
       ws.on("close", () => {
         clients.delete(client);
-        for (const [id, asked] of windowAsked) if (asked === client) windowAsked.delete(id);
+        windowAsked.left(client);
         const heard = client.gone;
         client.gone = [];
         client.pictures.clear();
@@ -1930,7 +1929,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       // so its id reaches no other and it runs once.
       const windows = one ? eligible.slice(-1) : eligible;
       const askId = (payload as { id?: unknown } | null)?.id;
-      if (one && typeof askId === "string" && windows[0]) windowAsked.set(askId, windows[0]);
+      if (one && typeof askId === "string" && windows[0]) windowAsked.hold(askId, windows[0]);
       for (const client of windows)
         client.out.send(
           JSON.stringify({ t: "live", channel: channelIn(channel, client.spelling), payload }),

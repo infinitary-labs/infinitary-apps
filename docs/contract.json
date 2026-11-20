@@ -8920,7 +8920,8 @@
                     "type": "boolean",
                     "const": true
                   },
-                  "result": {}
+                  "result": {},
+                  "before": {}
                 },
                 "required": [
                   "ok",

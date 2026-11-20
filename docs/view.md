@@ -171,13 +171,16 @@ A window's own settings are its computer's, so the first mate changes them at th
 `app_change` takes the Mac by its name or id in `computer`, from the computers that control this one; left out, it means this computer.
 The core sends one live frame (`inf:view:ask`, `ViewWindows`, `src/core/viewWindows.ts`) to one connection of that Mac, the newest that lists the `window-asks` contract change, so the ask's id reaches no other connection and the change runs once.
 The window answers as its own Settings would, through the same `ViewBackend.dispatch` and the same key reminder store (`answerWindowAsk`, `src/shared/windowAnswer.ts`), by `inf:view:answer`.
-A change to the look or the layout carries the named action's fields, and the window applies those fields over its own value as it is then, so an edit made in its own Settings since the first mate read it stays.
-The core hears the answer only from the window it asked, as the captain at that computer, and uses it only once it matches the request's answer in the contract.
-It runs the catalog line's checks, trail and operation as for any change, taking the value after from the window's own answer rather than a second read, and the trail names the computer ("usage shown in usd on Studio"); Check for updates there is a line of its own too.
+The first mate builds a change to the look or the layout from one reading of the window's value, and the ask carries only the fields that change, each with its value in that reading (`changes`).
+The window reads its own value again: if a field the change changes reads otherwise there, its own Settings moved it since, so it changes nothing and says so (`changedThere`); otherwise it sets only those fields over its value as it is then, so its own edit to any other field stays.
+It answers its value after the change and its value just before (`before`).
+The core hears the answer only from the window it asked, as the captain at that computer, and uses it only once both values match the contract.
+It runs the catalog line's checks, trail and operation as for any change, reading the window's own before and after values rather than the first mate's reading, so an edit made there since is no line of the first mate's, and the trail names the computer ("usage shown in usd on Studio"); Check for updates there is a line of its own too.
 A window's changes wait only on that window's other changes, never on this computer's Settings writes.
 The key reminder only a window's own program keeps, so the first mate's computer asks its own window for it through the local door (`LocalWindow`, and the window beside a command), and a reminder no window answers reads as unknown in `app_state`.
 When no such window is connected, nothing is sent and nothing changes, and the first mate is told so.
 When a window was asked but did not answer within thirty seconds (`WINDOW_ANSWER_WAIT_MS`), or answered what the contract does not admit, the change may or may not have been made there, and the first mate is told to look before asking again.
+The connection holds each ask's id for the window it went to until that window answers, the same thirty seconds run out or that window leaves, whichever comes first (`heldAsks`, `src/core/connection/heldAsks.ts`); an answer after that reaches nothing.
 
 ## The first mate's own words
 

@@ -1,7 +1,7 @@
 import { parseInvokeRequest } from "./ipc";
 import type { KeyReminders } from "./keyReminders";
 import {
-  namedFieldsOver,
+  WINDOW_ASK_WORDS,
   WINDOW_VALUE_OF,
   type WindowAnswer,
   type WindowChannel,
@@ -26,6 +26,22 @@ export function answerKeyReminders(
   return reminders.current();
 }
 
+/** Whether two values a window keeps read the same, as JSON reads them: in any key order, absent and undefined alike. */
+function sameJson(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (typeof a !== "object" || typeof b !== "object" || a === null || b === null) return false;
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  const keys = (value: object) =>
+    Object.keys(value).filter((key) => (value as Record<string, unknown>)[key] !== undefined);
+  const [left, right] = [keys(a), keys(b)];
+  return (
+    left.length === right.length &&
+    left.every((key) =>
+      sameJson((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key]),
+    )
+  );
+}
+
 /**
  * One ask the first mate sent this window (`inf:view:ask`, docs/view.md,
  * "What the first mate asks of a window"): an ask for another window is not
@@ -42,21 +58,24 @@ export async function answerWindowAsk(
   if (!asked.success || asked.data.deviceId !== ownId) return;
   let said: WindowAnswer;
   try {
-    const { channel, args, fields } = asked.data;
+    const { channel, args, changes } = asked.data;
     const wholeRead = WINDOW_VALUE_OF[channel];
-    // A change to a shared value applies only the named fields over this
-    // window's own value now, so its own edit since the ask was written stays.
-    const request =
-      fields && wholeRead
-        ? [
-            namedFieldsOver(
-              (await answer(wholeRead, [])) as Record<string, unknown>,
-              args[0] as Record<string, unknown>,
-              fields,
-            ),
-          ]
-        : args;
-    said = { ok: true, result: await answer(channel, request) };
+    if (changes && wholeRead) {
+      // A change to a shared value changes only the fields it names, and
+      // only while each still reads as the first mate read it, so an edit
+      // this window's own Settings made since is never undone; it answers
+      // its own value from just before, for the line that says what changed.
+      const own = (await answer(wholeRead, [])) as Record<string, unknown>;
+      const asks = args[0] as Record<string, unknown>;
+      const moved = changes.filter(({ field, was }) => !sameJson(own[field], was));
+      if (moved.length) throw new Error(WINDOW_ASK_WORDS.changedThere(moved.map((c) => c.field)));
+      const next = { ...own };
+      for (const { field } of changes) {
+        if (Object.hasOwn(asks, field)) next[field] = asks[field];
+        else delete next[field];
+      }
+      said = { ok: true, result: await answer(channel, [next]), before: own };
+    } else said = { ok: true, result: await answer(channel, args) };
   } catch (error) {
     const message = (error instanceof Error ? error.message : String(error)).slice(0, 400);
     said = { ok: false, message: message || "The window could not do it." };

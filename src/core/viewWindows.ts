@@ -4,6 +4,7 @@ import {
   WINDOW_ANSWER_WAIT_MS,
   WINDOW_ASK_LIVE,
   WINDOW_ASK_WORDS,
+  WINDOW_VALUE_OF,
   type WindowAnswer,
   type WindowAsk,
   type WindowChannel,
@@ -42,13 +43,17 @@ export class ViewWindows {
     },
   ) {}
 
-  /** Asks one computer's window one of its own requests; resolves its answer, or rejects in plain words. */
+  /**
+   * Asks one computer's window one of its own requests; resolves its answer,
+   * and for a change with `changes` the window's own value just before it,
+   * or rejects in plain words.
+   */
   async ask(
     window: { deviceId: string; name: string },
     channel: WindowChannel,
     args: readonly unknown[],
-    fields?: readonly string[],
-  ): Promise<unknown> {
+    changes?: readonly { field: string; was?: unknown }[],
+  ): Promise<{ result: unknown; before?: unknown }> {
     // The window is asked only what the contract admits, and its answer is
     // used only once the contract admits it too.
     const asked: WindowAsk = windowAskSchema.parse({
@@ -56,7 +61,7 @@ export class ViewWindows {
       deviceId: window.deviceId,
       channel,
       args: parseInvokeRequest(channel, args),
-      ...(fields ? { fields } : {}),
+      ...(changes ? { changes } : {}),
     });
     const answered = new Promise<WindowAnswer | null>((resolve) => {
       this.waiting.set(asked.id, { deviceId: window.deviceId, resolve });
@@ -76,8 +81,14 @@ export class ViewWindows {
     if (!answer) throw new Error(WINDOW_ASK_WORDS.noAnswer(window.name));
     if (!answer.ok) throw new Error(answer.message);
     const result = invokeContract[channel].response.safeParse(answer.result);
-    if (!result.success) throw new Error(WINDOW_ASK_WORDS.badAnswer(window.name));
-    return result.data;
+    const wholeRead = WINDOW_VALUE_OF[channel];
+    const before =
+      changes && wholeRead
+        ? invokeContract[wholeRead].response.safeParse(answer.before)
+        : undefined;
+    if (!result.success || before?.success === false)
+      throw new Error(WINDOW_ASK_WORDS.badAnswer(window.name));
+    return { result: result.data, ...(before ? { before: before.data } : {}) };
   }
 
   /**

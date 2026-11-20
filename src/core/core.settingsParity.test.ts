@@ -3,20 +3,27 @@ import { join } from "node:path";
 import { ACTIONS, type ActionName } from "@shared/actions";
 import type { DeviceView } from "@shared/devices";
 import type { IntegrationsView } from "@shared/integrations";
+import type { CoreInvokeChannel } from "@shared/ipc";
 import { knownPanels } from "@shared/panelArrangement";
 import type { Appearance } from "@shared/preferences";
 import type { SecretsView } from "@shared/secrets";
+import type { StandbyViews } from "@shared/standby";
 import type { UpdateStatus } from "@shared/update";
 import { answerKeyReminders, answerWindowAsk } from "@shared/windowAnswer";
+import { WINDOW_ASK_WORDS } from "@shared/windowAsks";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { fakeHost, quotaFixture } from "../../tests/helpers/bootedCore";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
+import { createActionTrail } from "./dispatcher/actionTrail";
+import { type CoreHandlers, createCatalogDispatch } from "./dispatcher/catalogDispatch";
+import { HOME_MOVE_WORDS } from "./homeMove/words";
 import { type Core, startCore } from "./index";
 import { createAppTools } from "./pi/appTools";
 import { catalogRefreshesSettled } from "./pi/modelRuntime";
 import { STANDBY_WORDS } from "./standby/words";
 import { keptJobsAt } from "./tasks/keptJobs";
 import { keptRoot } from "./tasks/taskStops";
+import { ViewWindows } from "./viewWindows";
 
 // This file is not about the utility-QoS clamp, so what the product spawns
 // runs at this run's own priority (tests/helpers/unclampedQos.ts).
@@ -600,6 +607,107 @@ describe("the first mate's Settings actions, driven through the whole core", () 
     }
   });
 
+  it("cancels a running move and stops a kept copy, each leaving one line", async () => {
+    // This core holds no move and keeps no copy, so a move that runs and a
+    // copy on mini are the two requests' own state, behind the real catalog
+    // checks and trail.
+    let copies: StandbyViews = { standbys: [{ deviceId: "mini", state: "in-sync", copyAt: 1 }] };
+    let moving = true;
+    const held: Partial<CoreHandlers> = {
+      "inf:app:healthcheck": () => core.dispatch("inf:app:healthcheck", []),
+      "inf:home-move:cancel": () => {
+        if (!moving) return { ok: false, text: HOME_MOVE_WORDS.notMoving };
+        moving = false;
+        return { ok: true, text: HOME_MOVE_WORDS.cancelling };
+      },
+      "inf:standby:list": () => copies,
+      "inf:standby:name": (deviceId, on) => {
+        if (on || !copies.standbys.some((copy) => copy.deviceId === deviceId))
+          return { ok: false, text: STANDBY_WORDS.noCopies };
+        copies = { standbys: copies.standbys.filter((copy) => copy.deviceId !== deviceId) };
+        return { ok: true, text: STANDBY_WORDS.stopped("mini") };
+      },
+    };
+    const handlers = new Proxy(held, {
+      get: (own, channel: string) => {
+        const handler = own[channel as keyof CoreHandlers];
+        if (!handler) throw new Error(`Unexpected ${channel}`);
+        return handler;
+      },
+    }) as CoreHandlers;
+    const dispatch = createCatalogDispatch({
+      services: core.services,
+      handlers,
+      ...createActionTrail(core.services, {}),
+      automation: { said: undefined },
+      viewWindows: new ViewWindows({ liveToView: () => false }),
+    });
+    const act = async (action: ActionName, channel: CoreInvokeChannel, args: unknown[]) => {
+      const before = operations().length;
+      await dispatch(channel as never, args, {
+        kind: "firstmate",
+        wake: "captain",
+        action,
+        evidence: "Please.",
+      });
+      return operations()
+        .slice(before)
+        .map((task) => task.title);
+    };
+    expect(await act("home-move-cancel", "inf:home-move:cancel", [])).toEqual([
+      HOME_MOVE_WORDS.cancelling,
+    ]);
+    expect(moving).toBe(false);
+    // Activity shows the words cut to its line's length.
+    const stopped = await act("copy-stop", "inf:standby:name", ["mini", false]);
+    expect(stopped).toHaveLength(1);
+    expect(STANDBY_WORDS.stopped("mini").startsWith(stopped[0]?.replace(/…$/, "") ?? "-")).toBe(
+      true,
+    );
+    expect(copies.standbys).toEqual([]);
+    // Asked again, neither has anything left to do, and neither leaves a line.
+    expect(await act("home-move-cancel", "inf:home-move:cancel", [])).toEqual([]);
+    expect(await act("copy-stop", "inf:standby:name", ["mini", false])).toEqual([]);
+  });
+
+  it("reconnects a stopped event rule to what its integration is connected to now, leaving one line", async () => {
+    const scheduler = core.services.scheduler;
+    // What the mail integration is connected to: the rule's own connection, then a replacement.
+    let connected = "mail-1";
+    const mail = () => ({
+      integration: "mail",
+      connection: connected,
+      name: "Mail",
+      event: "new-mail",
+      label: "New mail",
+      every: 1,
+    });
+    const check = vi
+      .spyOn(scheduler, "checkEvent")
+      .mockImplementation((spec) => ({ spec, connection: connected }));
+    const reading = vi.spyOn(scheduler, "eventsNow").mockReturnValue({ find: mail });
+    const created = await core.dispatch("inf:automation:save", [
+      {
+        name: "Mail",
+        spec: { kind: "event", integration: "mail", event: "new-mail" },
+        prompt: "Read the new mail.",
+      },
+    ]);
+    try {
+      const ruleOf = () => scheduler.rules().find((rule) => rule.id === created.id);
+      expect(ruleOf()?.connection).toBe("mail-1");
+      // The connection was replaced, so the rule waits on the old one until it is reconnected.
+      connected = "mail-2";
+      const edited = await asked("automation-edit", { id: created.id, reconnect: true });
+      expect(ruleOf()?.connection).toBe("mail-2");
+      expect(edited.lines).toEqual([expect.stringContaining("new-mail from mail")]);
+    } finally {
+      check.mockRestore();
+      reading.mockRestore();
+      await core.dispatch("inf:automation:delete", [created.id]);
+    }
+  });
+
   /**
    * The captain's pick on the review (add-window-target): what the first mate
    * changes of a window's own Settings goes to the window the captain names.
@@ -699,8 +807,11 @@ describe("the first mate's Settings actions, driven through the whole core", () 
       expect(unknown.text).toContain("No Mac that controls this one is named Laptop");
 
       // Its own Settings switch to a light theme after the first mate read its look:
-      // the first mate's change of the usage unit keeps that edit.
+      // the first mate's change of the usage unit keeps that edit, and its one
+      // Activity line is the usage unit alone, never the window's own theme.
+      theirs.appearance = { ...theirs.appearance, theme: "dark" };
       theirs.editsAfterRead = (look) => ({ ...look, theme: "light" });
+      const overlapped = operations().length;
       await tool("app_change").run({
         action: "usage-unit",
         value: { unit: "tokens" },
@@ -709,6 +820,42 @@ describe("the first mate's Settings actions, driven through the whole core", () 
       });
       expect(theirs.appearance).toMatchObject({ theme: "light", usageUnit: "tokens" });
       expect(await appearance()).toEqual(here);
+      expect(
+        operations()
+          .slice(overlapped)
+          .map((task) => task.title),
+      ).toEqual(["usage shown in tokens on Studio"]);
+
+      // Its own Settings move the music's volume after the first mate read it:
+      // playing the music changes only whether it plays, keeping that volume.
+      theirs.appearance = { ...theirs.appearance, ambientMusic: false, ambientVolume: 40 };
+      theirs.editsAfterRead = (look) => ({ ...look, ambientVolume: 70 });
+      const played = operations().length;
+      await tool("app_change").run({
+        action: "ambient-music",
+        value: { on: true },
+        evidence: "Play the music on Studio.",
+        computer: "Studio",
+      });
+      expect(theirs.appearance).toMatchObject({ ambientMusic: true, ambientVolume: 70 });
+      expect(
+        operations()
+          .slice(played)
+          .map((task) => task.title),
+      ).toHaveLength(1);
+      // Asking for a volume it moved there since the read changes nothing there.
+      theirs.appearance = { ...theirs.appearance, ambientMusic: false, ambientVolume: 40 };
+      theirs.editsAfterRead = (look) => ({ ...look, ambientVolume: 70 });
+      const stale = operations().length;
+      const music = await tool("app_change").run({
+        action: "ambient-music",
+        value: { on: true, volume: 50 },
+        evidence: "Play the music at half on Studio.",
+        computer: "Studio",
+      });
+      expect(music.text).toContain(WINDOW_ASK_WORDS.changedThere(["ambientVolume"]));
+      expect(theirs.appearance).toMatchObject({ ambientMusic: false, ambientVolume: 70 });
+      expect(operations().length).toBe(stale);
 
       // Check for updates there checks that Mac's own app, and says where.
       theirs.update = {

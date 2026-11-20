@@ -1,7 +1,12 @@
 import type { BrowserViewer } from "@core/browser/browserViews";
 import { LOCAL_CLIENT } from "@core/connection/connection";
 import { dialLocalDoor } from "@core/connection/localDoor";
-import { HomeLink, type HomeLinkOptions, type HomeLinkState } from "@core/devices/homeLink";
+import {
+  HomeLink,
+  type HomeLinkConnection,
+  type HomeLinkOptions,
+  type HomeLinkState,
+} from "@core/devices/homeLink";
 import type { DeviceGrant } from "@shared/devices";
 import type { CoreInvokeChannel, InvokeResponse, PushChannel } from "@shared/ipc";
 import { answerKeyReminders, answerWindowAsk, type WindowKeyReminders } from "@shared/windowAnswer";
@@ -177,8 +182,8 @@ export class LocalWindow {
     return this.link.state().contact === "in-reach";
   }
 
-  /** The number of the welcome on the connection open now, or null while none is open. */
-  connection(): number | null {
+  /** The connection open now, its welcome's number and when its dial began; null while none is open. */
+  connection(): HomeLinkConnection | null {
     return this.link.connection();
   }
 

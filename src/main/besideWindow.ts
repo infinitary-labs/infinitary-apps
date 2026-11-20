@@ -1,6 +1,6 @@
 import type { BrowserViewer } from "@core/browser/browserViews";
 import { contractChange, listsChange } from "@core/connection/contractChanges";
-import { HomeOutOfReachError } from "@core/devices/homeLink";
+import { type HomeLinkConnection, HomeOutOfReachError } from "@core/devices/homeLink";
 import type { JoinedHome } from "@core/devices/joinedHome";
 import type { HostNotifications, HostPresence } from "@core/host";
 import { AskedInstall } from "@core/update/homeUpdate";
@@ -183,8 +183,8 @@ export class BesideWindow {
    * replaces is known to survive (`settleRestart`): that run, read once;
    * the window's start time before the press; whether its starter has
    * answered, and refused; whether any first mate welcomed this window
-   * since; and the connection and time of the newest such welcome, unless
-   * the records named the run being replaced then.
+   * since; and the connection of the newest such welcome, with when its
+   * dial began, unless the records named the run being replaced then.
    */
   private restart: {
     from: OwnedRun | null;
@@ -192,8 +192,7 @@ export class BesideWindow {
     settled: boolean;
     refused: boolean;
     welcomed: boolean;
-    welcomedOn: number | null;
-    welcomedAt: number;
+    welcomedOn: HomeLinkConnection | null;
   } | null = null;
   /** Start it here took the notice down: the window starts over once the command it started welcomes it. */
   private startsOver = false;
@@ -435,7 +434,6 @@ export class BesideWindow {
       refused: false,
       welcomed: false,
       welcomedOn: null,
-      welcomedAt: 0,
     };
     this.restart = restart;
     this.restarting = true;
@@ -459,6 +457,12 @@ export class BesideWindow {
       }
       // The command was not restarted: it is still the one that has not answered since then.
       this.restarting = false;
+      // Unless a first mate welcomed this window meanwhile: its own answer, or its wait for one,
+      // says whether it answers, and a run that answered is never offered an end by force.
+      if (restart.welcomed) {
+        this.show(this.wanted);
+        return;
+      }
       if (this.unansweredOf === this.options.beside.status().run?.pid) this.unansweredSince = since;
       this.show(this.notAnswering());
     });
@@ -692,7 +696,9 @@ export class BesideWindow {
    */
   private async firstAnswers(reading: Promise<boolean>): Promise<void> {
     const since = this.options.now();
-    const of = this.options.beside.status().run?.pid;
+    // The wait is this connection's: whoever welcomed it is the one that has not answered, however
+    // its records read meanwhile.
+    const on = this.window.connection();
     let timer: ReturnType<typeof setTimeout> | undefined;
     const answered = await Promise.race([
       // Asks refused as the link dropped were never answered: the wait runs on.
@@ -704,13 +710,13 @@ export class BesideWindow {
     clearTimeout(timer);
     // A later welcome waits for its own answers.
     if (answered || this.closed || this.reading !== reading) return;
-    // Out of reach, or with another command running since this welcome,
-    // read() counts for the command that runs now.
-    if (!this.window.inReach() || this.options.beside.status().run?.pid !== of) return;
+    // Out of reach, or on another connection since this welcome, read() or that connection's own
+    // welcome counts for the command that runs now.
+    if (!this.window.inReach() || !on || this.window.connection()?.welcome !== on.welcome) return;
     console.warn("[shell] the command's first mate welcomed the window and has not answered it");
     // Counted from the welcome, so every later reading agrees it has not answered.
     this.unansweredSince = since;
-    this.unansweredOf = of ?? null;
+    this.unansweredOf = this.options.beside.status().run?.pid ?? null;
     this.show(this.notAnswering());
   }
 
@@ -769,7 +775,6 @@ export class BesideWindow {
     if (this.restart) {
       const status = this.options.beside.status();
       this.restart.welcomed = true;
-      this.restart.welcomedAt = this.options.now();
       this.restart.welcomedOn =
         status.running === true && sameRun(status.run, this.restart.from)
           ? null
@@ -847,10 +852,11 @@ export class BesideWindow {
    * Restart it's wait ends, from one reading of the records, once its
    * starter answered and either the records name a run this app's own agent
    * started that is not the one replaced, which welcomed this window on the
-   * connection open now, after that run started by its own record, or the
-   * starter refused and the run replaced, by its process and start, still
-   * runs. A run starts only once the one before it has ended, so a welcome
-   * before the replacement's start is the replaced run's. Read at each
+   * connection open now, dialed after that run started by its own record,
+   * or the starter refused and the run replaced, by its process and start,
+   * still runs. A run starts only once the one before it has ended, so a
+   * connection dialed before the replacement's start was answered by the
+   * replaced run, however late its welcome is handled. Read at each
    * welcome, at the starter's answer and at each join reading, so records
    * unreadable at any of them are read again once they recover, with no
    * further welcome.
@@ -867,8 +873,11 @@ export class BesideWindow {
     }
     const owned = this.options.beside.ownedRun?.(status) ?? null;
     if (!owned || sameRun(owned, restart.from)) return;
-    if (restart.welcomedOn === null || restart.welcomedOn !== this.window.connection()) return;
-    if (restart.welcomedAt < Date.parse(owned.startedAt)) return;
+    // The welcome came on the connection open now, dialed once that run had started: whoever
+    // answered that dial was listening after it started, and only it runs since.
+    const on = this.window.connection();
+    if (!restart.welcomedOn || on?.welcome !== restart.welcomedOn.welcome) return;
+    if (restart.welcomedOn.dialedAt < Date.parse(owned.startedAt)) return;
     this.restart = null;
     this.startedAt = null;
   }

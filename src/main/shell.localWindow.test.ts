@@ -91,7 +91,7 @@ describe("the window on the first mate's own computer", () => {
         },
         state: () => ({ contact: heard.welcomed ? "in-reach" : "reaching" }) as never,
         // One connection, open while welcomed.
-        connection: () => (heard.welcomed ? 1 : null),
+        connection: () => (heard.welcomed ? { welcome: 1, dialedAt: 0 } : null),
         close: () => {
           heard.closed = true;
         },

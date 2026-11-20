@@ -72,6 +72,9 @@ const STANDBY_OTHER_HOME = "inf:standby:other-home";
  */
 export type HomeContact = "reaching" | "in-reach" | "lost" | "closed";
 
+/** The connection a link has open: its welcome's number, and when its dial began (`HomeLink.connection`). */
+export type HomeLinkConnection = { welcome: number; dialedAt: number };
+
 export type HomeLinkState = {
   readonly contact: HomeContact;
   /** What the version rule lets this device ask, from the newest welcome. */
@@ -332,6 +335,10 @@ export class HomeLink {
   private open: WebSocket | null = null;
   /** How many welcomes this link has heard: the number of the newest connection's. */
   private welcomes = 0;
+  /** When the attempt under way began to dial, before it reached anyone. */
+  private dialedAt = 0;
+  /** When the attempt the newest welcome came on began to dial. */
+  private welcomeDialedAt = 0;
   private cursor: ConnectionCursor | undefined;
   private attempting = false;
   /** The one attempt right after a drop, before the device says the home is out of reach. */
@@ -374,12 +381,14 @@ export class HomeLink {
   }
 
   /**
-   * The number of the welcome on the connection open now, or null while
-   * none is open: a drop the link dials through at once leaves the contact
-   * in reach, and still ends that number.
+   * The connection open now, or null while none is open: the number of its
+   * welcome, and when its dial began, before anyone answered it. A drop the
+   * link dials through at once leaves the contact in reach, and still ends
+   * that number. Whoever welcomed a connection was listening once its dial
+   * began, so a process that started after that moment could not have.
    */
-  connection(): number | null {
-    return this.open ? this.welcomes : null;
+  connection(): HomeLinkConnection | null {
+    return this.open ? { welcome: this.welcomes, dialedAt: this.welcomeDialedAt } : null;
   }
 
   /** Starts dialing; it keeps dialing until it is closed or the home removes the device. */
@@ -496,6 +505,7 @@ export class HomeLink {
   private async attempt(): Promise<void> {
     this.attempting = true;
     let ending: Ending = { welcomed: false };
+    this.dialedAt = this.now();
     try {
       this.reachedAt = this.grant.at;
       const socket = await this.dial(this.grant, (at) => {
@@ -711,6 +721,7 @@ export class HomeLink {
     );
     this.open = socket;
     this.welcomes += 1;
+    this.welcomeDialedAt = this.dialedAt;
     this.heardNumber(frame.homeNumber ?? FIRST_HOME_NUMBER);
     this.heardTakeOverOf(frame);
     this.followRoutes(frame.addresses);

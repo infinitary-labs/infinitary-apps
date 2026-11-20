@@ -161,6 +161,8 @@ describe("the window beside a command's first mate", () => {
       dialHangs?: () => boolean;
       /** Where each link the window dials the command's door with is kept, to read its connection. */
       links?: HomeLink[];
+      /** How long each dial of the command's door takes before it reaches the door. */
+      dialMs?: number;
       /** This user's work folder, where a home that added this computer leaves its grant. */
       workDir?: string;
       /**
@@ -249,11 +251,15 @@ describe("the window beside a command's first mate", () => {
                     link: (linkOptions: ConstructorParameters<typeof HomeLink>[0]) => {
                       const link = new HomeLink({
                         ...linkOptions,
-                        dial: (grant, reached) =>
-                          options.dialHangs?.()
-                            ? new Promise<never>(() => {})
-                            : (linkOptions.dial?.(grant, reached) ??
-                              Promise.reject(new Error("no dial"))),
+                        dial: async (grant, reached) => {
+                          if (options.dialHangs?.()) return new Promise<never>(() => {});
+                          if (options.dialMs)
+                            await new Promise((resolve) => setTimeout(resolve, options.dialMs));
+                          return (
+                            linkOptions.dial?.(grant, reached) ??
+                            Promise.reject(new Error("no dial"))
+                          );
+                        },
                       });
                       options.links?.push(link);
                       return link;
@@ -1316,6 +1322,7 @@ describe("the window beside a command's first mate", () => {
       records: { running: true, run: first, lastStop: null },
       ownedRun: (status) => ownedRunOf(status),
       links,
+      dialMs: 20,
     });
     await at.shell.start();
     await expect
@@ -1347,9 +1354,11 @@ describe("the window beside a command's first mate", () => {
     expect(at.shell.startHere()).toBe(false);
     expect(at.shell.followsAdded()).toEqual(starting);
     // The run started again writes its record before the window has heard the run replaced drop,
-    // and the starter answers: that welcome, on a connection still open, came before the run
-    // started again by its own record, so it counts for nothing.
-    again.startedAt = new Date(Date.now() + 1).toISOString();
+    // and the starter answers. The welcome on the connection still open was handled after that
+    // run started by its own record, but its dial began before it: the run replaced answered that
+    // dial, so it counts for nothing.
+    const dialed = links.at(-1)?.connection()?.dialedAt ?? 0;
+    again.startedAt = new Date(dialed + 1).toISOString();
     at.command.records = { running: true, run: again, lastStop: null };
     settle(true);
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -1493,6 +1502,77 @@ describe("the window beside a command's first mate", () => {
       .toBe(1);
     settle(false);
     await expect.poll(() => at.shell.followsAdded()).toMatchObject({ joins: true, pastes: true });
+  });
+
+  // The review of INF-5409: a refused Restart it over a run that reconnected and answered the
+  // window meanwhile leaves that run as it is, with no notice offering to end it by force.
+  it("puts up no notice when Restart it is refused over a run that answered the window meanwhile", async () => {
+    const command = commandRun();
+    const answer = command.run.dispatch.getMockImplementation();
+    /** The window's first request at each welcome, answered once let go. */
+    const heres: (() => void)[] = [];
+    command.run.dispatch.mockImplementation(((channel: string, args: unknown[]) =>
+      channel === "inf:own-window:here"
+        ? new Promise((resolve) => heres.push(() => resolve({ ok: true })))
+        : answer?.(channel as never, args as never)) as never);
+    await command.open().settled();
+    const first = { pid: 41, startedAt: new Date().toISOString(), agent: true as const };
+    const at = besideShell(command.doorDir, {
+      starts: true,
+      readyMs: 2_000,
+      answerWaitMs: 200,
+      records: { running: true, run: first, lastStop: null },
+      ownedRun: (status) => ownedRunOf(status),
+    });
+    await at.shell.start();
+    await expect
+      .poll(() => at.shell.thisMac())
+      .toMatchObject({ command: { state: "stopped", ending: "not-answering" } });
+    let settle: (done: boolean) => void = () => {};
+    at.starter.restart.mockImplementation(
+      () =>
+        new Promise<boolean>((resolve) => {
+          settle = resolve;
+        }),
+    );
+    expect(at.shell.restartCommand()).toBe(true);
+    // The same run reconnects and answers the window while the starter has not answered.
+    await command.stop();
+    await command.open().settled();
+    await expect.poll(() => command.asked("inf:own-window:here").length).toBe(2);
+    heres[1]?.();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    settle(false);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(at.shell.thisMac()).not.toHaveProperty("command");
+    expect(at.shell.followsAdded()).toMatchObject({ joins: true, pastes: true });
+  });
+
+  // The review of INF-5409: the wait for a first mate's answers is its connection's, so records
+  // that could not be read at its welcome and come back meanwhile still end in the notice.
+  it("says the first mate is not answering when its records come back during the wait for its answers", async () => {
+    const command = commandRun();
+    const answer = command.run.dispatch.getMockImplementation();
+    command.run.dispatch.mockImplementation(((channel: string, args: unknown[]) =>
+      channel === "inf:own-window:here"
+        ? new Promise(() => {})
+        : answer?.(channel as never, args as never)) as never);
+    await command.open().settled();
+    const at = besideShell(command.doorDir, {
+      starts: true,
+      readyMs: 2_000,
+      answerWaitMs: 200,
+      records: { running: null, run: null, lastStop: null },
+      ownedRun: (status) => ownedRunOf(status),
+    });
+    await at.shell.start();
+    await expect.poll(() => command.asked("inf:own-window:here").length).toBe(1);
+    const run = { pid: 42, startedAt: new Date().toISOString(), agent: true as const };
+    at.command.records = { running: true, run, lastStop: null };
+    await expect
+      .poll(() => at.shell.thisMac())
+      .toMatchObject({ command: { state: "stopped", ending: "not-answering", byWindow: true } });
+    expect(at.shell.restartCommand()).toBe(true);
   });
 
   // The review of INF-5409: records that cannot be read say nothing of a command started outside

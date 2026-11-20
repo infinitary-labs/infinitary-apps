@@ -587,8 +587,10 @@ extension PhoneJourney {
         // only puts the keyboard down: the note stays and nothing is sent.
         if app.keyboards.firstMatch.exists {
             XCTAssertTrue(waitForPhonePress(gotIt), "Got it is not in view under the typing reply\n\(app.debugDescription)")
+            picture("reply-typing-choice-quiet")
             tapOnPhone(gotIt)
             XCTAssertTrue(app.keyboards.firstMatch.waitForAbsence(timeout: 10), app.debugDescription)
+            picture("reply-typing-ended")
             XCTAssertFalse(gotIt.waitForAbsence(timeout: 2), "A tap while the reply typed read the note\n\(app.debugDescription)")
             XCTAssertEqual((reply.value as? String), words, "The words stay in the field")
         }

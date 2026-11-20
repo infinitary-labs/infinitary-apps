@@ -33,6 +33,7 @@ A plugin folder the person saved under `~/.claude/skills` (one holding `.claude-
 A plugin's skills are the folders in its `skills/`, the manifest's own `skills` paths inside the plugin, or a SKILL.md at its top.
 Plugins are taken in id order, after the person's own skill folders: a name the project, the person's folders or an earlier plugin holds wins over a plugin's skill, on every provider.
 A plugin's own files travel and are served with its skills: every top-level entry but `.claude-plugin`, `commands`, `agents`, `hooks`, `.mcp.json`, `.lsp.json`, `output-styles`, `workflows`, `themes`, `monitors`, `bin`, `settings.json`, `.git` and `node_modules`; its manifest travels alone, for its name and skill paths.
+A link inside a plugin is followed only while it leads to the plugin's own folder: a skill folder, an entry or a file whose link leads outside it is never served, staged or sent.
 No hook, MCP server, agent, command, language server, program, monitor, output style, workflow or theme of a plugin reaches a crewmate.
 The skill digest adds each plugin's id, skill names and SKILL.md text hashes, never its versioned folder, so an update that leaves a skill's text alone renews no reopened Claude conversation; with no plugin it is the digest it was before.
 

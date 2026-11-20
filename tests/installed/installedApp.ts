@@ -116,15 +116,22 @@ function homeEnv(homeDir: string): Record<string, string> {
  * as the Start menu opens it, naming where that folder is: what it sets up
  * in the background reads the same folder. Otherwise both are throwaway.
  * `signIn` signs that own folder in to the stand-in provider too, as a
- * throwaway folder always is.
+ * throwaway folder always is. `reuseMockProvider` signs in to a stand-in
+ * the caller started and closes, so launches that share a sign-in share it.
  */
 export async function launchInstalled(
-  options: { scenarios?: readonly Scenario[]; ownDataDir?: string; signIn?: boolean } = {},
+  options: {
+    scenarios?: readonly Scenario[];
+    ownDataDir?: string;
+    signIn?: boolean;
+    reuseMockProvider?: MockProviderServer;
+  } = {},
 ): Promise<InstalledApp> {
   const own = options.ownDataDir;
   const userDataDir = own ?? scratchDir("infinitary-installed-data-");
   const homeDir = own ? "" : scratchDir("infinitary-installed-home-");
-  const mockProvider = await startMockProvider({ scenarios: options.scenarios });
+  const mockProvider =
+    options.reuseMockProvider ?? (await startMockProvider({ scenarios: options.scenarios }));
   if (own) rmSync(join(own, "DevToolsActivePort"), { force: true });
   if (!own || options.signIn) {
     mkdirSync(join(userDataDir, "auth"), { recursive: true });
@@ -167,7 +174,7 @@ export async function launchInstalled(
       await exited;
       clearTimeout(killed);
     }
-    await mockProvider.close();
+    if (!options.reuseMockProvider) await mockProvider.close();
     const evidence = process.env.INFINITARY_INSTALLED_EVIDENCE;
     if (evidence) {
       mkdirSync(evidence, { recursive: true });

@@ -13,10 +13,14 @@ import { UPDATE_CHANNEL_MARKER } from "../../src/core/update/updateChannels";
 import { WINDOWS_UPDATES_FOLDER } from "../../src/core/update/windowsInstall";
 import { GIT_FOR_WINDOWS } from "../../src/core/windowsGit";
 import { GIT_SETUP_WORDS } from "../../src/main/windowsGitSetup";
-import { SPAWN_PROMPT_MARKER } from "../e2e/mockProvider";
+import {
+  type MockProviderServer,
+  SPAWN_PROMPT_MARKER,
+  startMockProvider,
+} from "../e2e/mockProvider";
 import { heroShotShowing } from "../e2e/pictures";
 import { promptInput } from "../e2e/prompt";
-import { providerMessages } from "../e2e/providerRequest";
+import { providerMessages, providerToolCalls } from "../e2e/providerRequest";
 import { taskKey } from "../e2e/rails";
 import {
   MOCK_UPDATE_RESUME_REPORT,
@@ -106,6 +110,9 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
   let restoreTrust: (() => void) | undefined;
   const nodeTrustBefore = process.env.NODE_USE_SYSTEM_CA;
   let launched: InstalledApp | undefined;
+  // One stand-in for the older copy and the newer one, so the sign-in the
+  // newer copy keeps still reaches it, until the turn it carries on is saved.
+  let provider: MockProviderServer | undefined;
   // What the journey could not take back of its changes to this person's machine.
   const left: string[] = [];
 
@@ -211,10 +218,11 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
     let signInBefore = "";
     let key = "";
     await test.step("the older copy's window starts the command, signs in, changes a setting and starts a task whose turn is still running", async () => {
+      provider = await startMockProvider({ scenarios: [updateResume] });
       launched = await launchInstalled({
         ownDataDir: dataDir,
         signIn: true,
-        scenarios: [updateResume],
+        reuseMockProvider: provider,
       });
       const { page } = launched;
       await expect.poll(() => runTask(label)?.state, { timeout: 120_000 }).toBe("Running");
@@ -235,7 +243,7 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
       key = await taskKey(page, title);
       keep("task-before.txt", key);
       // Its crewmate's model is still working: the stand-in holds the turn open.
-      await expect.poll(() => launched?.mockProvider.heldRequests(), { timeout: 120_000 }).toBe(1);
+      await expect.poll(() => provider?.heldRequests(), { timeout: 120_000 }).toBe(1);
     });
 
     const page = () => (launched as InstalledApp).page;
@@ -273,7 +281,7 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
       expect((await updateStatus(page())).currentVersion).toBe(older);
       expect(installedVersion()).toBe(older);
       expect(existsSync(join(dataDir, WINDOWS_UPDATES_FOLDER))).toBe(false);
-      expect(launched?.mockProvider.heldRequests()).toBe(1);
+      expect(provider?.heldRequests()).toBe(1);
     };
     /** Presses the row's `button` while the feed serves `mode`, which installs nothing and says `problem`. */
     const installsNothing = async (
@@ -419,7 +427,7 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
       // a turn a quit or a crash cut opens with other words.
       const lastWords = (body: string) => providerMessages(body).at(-1);
       const resumed = () =>
-        (launched?.mockProvider.requestBodies() ?? []).filter((body) => {
+        (provider?.requestBodies() ?? []).filter((body) => {
           const last = lastWords(body);
           return last?.role === "user" && last.text.includes(updateResumedWords());
         });
@@ -427,6 +435,18 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
       const delivery = resumed()[0] ?? "";
       keep("resumed-turn.txt", lastWords(delivery)?.text ?? "");
       expect(delivery).toContain(UPDATE_RESUME_MARKER);
+      // Its report ran in the new copy before anything ends it: the stand-in
+      // was asked again with the report's result.
+      const reported = () =>
+        (provider?.requestBodies() ?? []).some(
+          (body) =>
+            body.includes(updateResumedWords()) &&
+            providerMessages(body).at(-1)?.role === "tool" &&
+            providerToolCalls(body).some(
+              (call) => call.name === "report" && call.args.text === MOCK_UPDATE_RESUME_REPORT,
+            ),
+        );
+      await expect.poll(reported, { timeout: 120_000 }).toBe(true);
     });
 
     await test.step("the new copy keeps the tasks, the setting, the sign-in and the Task Scheduler entry", async () => {
@@ -438,7 +458,7 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
           execFileSync("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore" });
         } catch {}
       }
-      launched = await launchInstalled({ ownDataDir: dataDir });
+      launched = await launchInstalled({ ownDataDir: dataDir, reuseMockProvider: provider });
       const after = launched.page;
       const status = await updateStatus(after);
       keep("status-after.json", JSON.stringify(status, null, 2));
@@ -478,6 +498,7 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
   } finally {
     if (feed) keep("feed-requests.json", JSON.stringify(feed.asked, null, 2));
     await launched?.close().catch(() => undefined);
+    await provider?.close().catch(() => undefined);
     // Each change to this person's machine is taken back, and one that
     // could not be is said: kept beside a failure's own error, and failing
     // a journey that passed, below.

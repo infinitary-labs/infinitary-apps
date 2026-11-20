@@ -387,22 +387,17 @@ jobs:
     # older test version installed on its own fresh Windows 11 machine,
     # updated by the app itself from the machine's own feed. Each round is a
     # fresh machine on the same test installers; rounds start in order, two
-    # machines at a time, and a later round runs only once every earlier
-    # round of its channel passed.
+    # machines at a time, and with more than one round a failed round cancels
+    # every round after it. One round keeps both channels' jobs to the end.
     if: ${{ !inputs.hosted && inputs.update_check }}
     strategy:
-      fail-fast: false
+      fail-fast: ${{ needs.build.outputs.rounds != '[1]' }}
       max-parallel: 2
       matrix:
         round: ${{ fromJSON(needs.build.outputs.rounds) }}
         channel: [alpha, stable]
     runs-on: ${{ vars.WINDOWS_CLEAN_RUNNER || 'shell-pc-win11' }}
-    # A later round may first wait for its channel's earlier round.
-    timeout-minutes: ${{ matrix.round > 1 && 120 || 60 }}
-    # Reading the run's own jobs, for a later round's wait.
-    permissions:
-      contents: read
-      actions: read
+    timeout-minutes: 60
     defaults:
       run:
         shell: powershell
@@ -413,29 +408,6 @@ jobs:
       GIT_CONFIG_KEY_0: credential.helper
       GIT_CONFIG_VALUE_0: ''
     steps:
-      # A later round runs only after every earlier round of its channel
-      # passed, and stops at once when one did not.
-      - name: Wait for this channel's earlier rounds
-        if: ${{ matrix.round > 1 }}
-        timeout-minutes: 60
-        env:
-          TOKEN: ${{ github.token }}
-          CHANNEL: ${{ matrix.channel }}
-          ROUND: ${{ matrix.round }}
-        run: |
-          $headers = @{ Authorization = "Bearer $env:TOKEN"; Accept = 'application/vnd.github+json' }
-          $url = "$env:GITHUB_API_URL/repos/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID/attempts/$env:GITHUB_RUN_ATTEMPT/jobs?per_page=100"
-          $round = [int]$env:ROUND
-          while ($true) {
-            $earlier = @((Invoke-RestMethod -Headers $headers -Uri $url).jobs | Where-Object {
-              $_.name -match "Update the Windows app on $env:CHANNEL \(fresh Windows 11; round (\d+)\)" -and [int]$Matches[1] -lt $round
-            })
-            $failed = @($earlier | Where-Object { $_.status -eq 'completed' -and $_.conclusion -ne 'success' })
-            if ($failed.Count -gt 0) { throw "$($failed[0].name) did not pass, so this round does not run" }
-            $passed = @($earlier | Where-Object { $_.status -eq 'completed' })
-            if ($passed.Count -ge $round - 1) { break }
-            Start-Sleep -Seconds 30
-          }
       - name: Git Bash for the job's own steps
         run: |
           $ProgressPreference = 'SilentlyContinue'

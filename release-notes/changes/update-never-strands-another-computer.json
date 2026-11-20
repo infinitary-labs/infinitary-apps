@@ -6,8 +6,14 @@
       "area": "devices",
       "title": "An update no longer leaves another computer unable to run work",
       "body": "When Infinitary updates a computer that runs work for you, it keeps the copy it replaces and goes back to it if the new one does not start, now for every kind of update. A computer whose work a newer Infinitary saved says so instead of claiming it never joined, and stops restarting. If the copy its work started from was deleted, its work starts from the Infinitary installed there. On a computer with a newer Infinitary, the Update button now says Install older version.",
-      "noPicture": "Most of this changes how an update recovers on another computer; the one changed button shows only beside a computer on a newer Infinitary, which needs a second computer to show.",
-      "provenance": { "origin": "change" }
+      "picture": {
+        "dark": "update-never-strands-another-computer-dark.webp",
+        "light": "update-never-strands-another-computer-light.webp",
+        "alt": "Settings, Devices, a computer on a newer Infinitary whose row offers Install older version beside Remove"
+      },
+      "provenance": {
+        "origin": "change"
+      }
     }
   ],
   "exclusions": []

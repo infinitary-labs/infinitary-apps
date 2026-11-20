@@ -142,7 +142,10 @@ export async function updateFromHome(
     }
     rmSync(before.app, { recursive: true, force: true });
   }
-  if (watch && before.service)
+  // Only a copy the background started now can reach the home within the
+  // trial's wait; one that starts at the next login, or not at all, is kept
+  // with no trial, so the update is not taken back and refused here for good.
+  if (watch && before.service && state === "running")
     await watchTrial(dataDir, watch, {
       ...(context.trialSeconds === undefined ? {} : { seconds: context.trialSeconds }),
       restore: {
@@ -151,6 +154,10 @@ export async function updateFromHome(
         commands: watch.reload(before.service),
       },
     });
+  else if (watch) {
+    rmSync(trialPathOf(dataDir), { force: true });
+    rmSync(previous, { recursive: true, force: true });
+  }
   return { firstmate: "updated", background: state };
 }
 

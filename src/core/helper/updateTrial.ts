@@ -118,7 +118,7 @@ export function forgetWentBack(dataDir: string): void {
  * commands that start the background again from what was put back (`commands`,
  * run last). A copy kept at the same path puts back that one copy and asks
  * for a restart; an update that rewrote the agent puts its file and record
- * back too and has the agent read anew (`snapshotRestore`).
+ * back too and has the agent read anew (`TrialWatch.reload`).
  */
 export type TrialRestore = {
   restore: readonly { from: string; to: string }[];

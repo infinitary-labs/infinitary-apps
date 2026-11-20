@@ -160,13 +160,14 @@ A Mac that joined with its window also runs its work in the background, and its 
 When it cannot, the window tells this Mac why (`inf:devices:work-setup`), and `Computers` keeps what each Mac's window last said while that window is connected (`heardWorkSetup`).
 The row of a Mac whose window is connected and whose work is not in reach carries `workSetup` (`deviceWorkSetupSchema`, `src/shared/workSetup.ts`):
 
-- `blocked` with the window's own reason: another first mate's work there (`other-home`), this first mate's work under another entry on the list (`other-entry`), an earlier removal there not finished (`removal-unfinished`), the app running from a disk image or a moved-aside copy (`app-place`), the system refusing the background (`background-off`), or no background the app can use (`no-background`);
+- `blocked` with the window's own reason: another first mate's work there (`other-home`), this first mate's work under another entry on the list (`other-entry`), an earlier removal there not finished (`removal-unfinished`), work there a newer Infinitary saved, which that window's version cannot read (`newer-work`), the app running from a disk image or a moved-aside copy (`app-place`), the system refusing the background (`background-off`), or no background the app can use (`no-background`);
 - `starting` for `WORK_REACH_GRACE_MS` (30 seconds) after the window found a run or asked the background for one;
 - after that moment a run that has not reached this Mac is `blocked` with this Mac's own reading: `local-network` when its work's dial is held on the local network (below, "Held on the local network"), and `not-reached` otherwise.
 
 Held on the local network is decided from the work's own contact alone: the window's connection never writes when that Mac was last seen (`viewContact`), so a connected window does not hide that its work's dial is held.
 A window that goes takes what it said with it, and says it again at its next connection.
 Fix it on the row (`inf:devices:fix-work`) sends that Mac's window, connected now, a live frame outside the numbering (`inf:devices:set-up-work`, `HomeConnection.liveToView`), and its window checks again; it answers `asked: false` when no window of that Mac is connected.
+When the background started the app there because the copy it named was gone, the report says so (`copyGone`), and this Mac's feed says once that its work starts from the Infinitary installed there.
 An older window never reports, and its row reads as before.
 
 ## Joining by a command

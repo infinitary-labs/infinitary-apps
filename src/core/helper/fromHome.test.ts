@@ -361,4 +361,30 @@ describe("the work mode started by its home over Remote Login", () => {
       "went-back.json",
     ]);
   });
+
+  it("keeps the copy the home sent with no trial when its agent starts only at the next login", async () => {
+    const at = await joined();
+    // A launchctl of the test's own for a Mac nobody is logged in to: the
+    // agent's domain is unknown, so the agent starts at the next login.
+    const dir = scratchDir("infinitary-from-home-launchctl-");
+    const program = join(dir, "launchctl");
+    writeFileSync(
+      program,
+      `#!/bin/sh\ncase "$1" in bootstrap|print) echo "Could not find domain"; exit 113;; esac\n`,
+      { mode: 0o755 },
+    );
+    const background: BackgroundContext = { ...at.background, launchctl: launchctlAt(program) };
+    const sent = bundleAt(scratchDir("infinitary-from-home-sent-"), "the home's version");
+
+    const outcome = await updateFromHome(
+      { dataDir: at.dataDir, background, backgroundEnv: {}, expected: EXPECTED, trialSeconds: 1 },
+      sent,
+    );
+    expect(outcome).toEqual({ firstmate: "updated", background: "at-login" });
+    // No trial is open, so no watcher takes it back or calls it a copy that did not start.
+    expect(readdirSync(join(at.dataDir, "app"))).toEqual(["Firstmate 3000.app"]);
+    expect(readFileSync(join(at.kept, "Contents", "MacOS", "Firstmate 3000"), "utf8")).toContain(
+      "the home's version",
+    );
+  });
 });

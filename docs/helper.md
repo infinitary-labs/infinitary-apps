@@ -214,7 +214,7 @@ The home does only what its captain chose there - adding it by a click, and upda
 - **Update** (`update --fetched <app> --from-home`, `updateFromHome`, `src/core/helper/fromHome.ts`) stops the background's run so the folder is free, keeps the copy the home sent in place of the one kept here, and starts the background from it again.
   The home's Update holds its SSH connection to this computer while it runs (`SshConnections.hold`, `docs/devices.md`, "Updating"), so the controller here has withdrawn its route and nothing here can dial the home.
   The home's word on whether this computer runs on its own Mac rides the update's arguments instead (`--on-home-mac`, from its list's `onThisMac`), and the update keeps it on the grant before it sets the agent up anew, so a grant that had not kept it - one joined before the home said it, updated before its run heard a welcome - starts at the priority the home's word gives (below, "In the background"); with no word, the grant stays as it was.
-  A copy under the other name of the Infinitary rename moves the background to it (below, "In the background"), and the copy kept before goes only once the record names the new one; a background that would not move leaves the copy kept before running as it was, and the outcome is `not-kept`.
+  A copy under the other name of the Infinitary rename moves the background to it (below, "In the background"), and the copy kept before goes only once the record names the new one, or is kept aside on trial while the background runs (below, "A copy that does not start"); a background that would not move leaves the copy kept before running as it was, and the outcome is `not-kept`.
 - **Remove** (`remove --from-home`, `removeFromHome`) is a home removing this computer while it was out of reach of the connection: it stops the background's run, keeps one note of which home removed it (`left.json`), and removes what Infinitary set up here (below, "Removed"), keeping a working copy that still holds unmerged work.
   A Claude login Infinitary made here is the work's own run's to sign out, so it starts the agent again for that.
   What it could not remove yet rides the outcome as `unremoved`, and the home says so (`docs/devices.md`, "Removing it there").
@@ -294,7 +294,7 @@ An agent `installed.json` records under the other app's label moves to this app'
 The two never run work at once, because each works only while it holds the folder (`running.lock`).
 A new one the service manager refuses is taken away again and the old one started again as it was, so a move that fails changes nothing.
 A join, the window and the home's update over Remote Login each start the background this way, under the label of the folder the work is in: this app's own once its work is in this app's folder (below).
-A run updated by its home over the connection is the old agent's own run, so its move hands back what it does last: the old copy and agent go once that run let the folder go, and letting the agent go ends that run (below, "Updated by its home").
+A run updated by its home over the connection is the old agent's own run, so its move hands back what it does last: the old copy and agent go once that run let the folder go, and letting the agent go ends that run (below, "Updated by its home"); while the new agent runs, they are kept aside on trial until the new copy reaches the home ("A copy that does not start").
 A run that holds the folder takes away what a move that stopped partway left (`retireStrays`): an agent of this flavor under the other label whose file names this folder, or the folder the one-time move brought it from, and a copy in `app/` other than the one recorded; another folder's agent stays.
 
 Infinitary keeps its work in its own data folder, so its work follows the one-time move of that folder (`docs/saved-data-compatibility.md`, "The one-time move"), and a computer that only runs work makes that move from its work run, since no window opens there:
@@ -393,7 +393,7 @@ On any version from `WORK_UPDATE_SINCE` on, the run answers its home's update or
 
 1. Where a copy of Infinitary is kept here (`installed.json`'s `app`, what a command got), it gets the home's at `/firstmate` with this computer's own key and no code - naming this computer's system and chip to a home whose welcome said protocol 5.1 or later, which answers Infinitary for them (`docs/devices.md`, "Infinitary for another system") - unpacks it in a temporary folder inside the data folder (a gzipped tar with the Mac's own tar, a published zip with the Mac's own ditto, a Linux AppImage as it came), and keeps it in place of its own at the same path, which is the one the background starts (`keepApp`).
    A copy that did not arrive whole, or another app than the one kept, changes nothing here, and the order is refused.
-   The same app under the other name of the Infinitary rename - `Infinitary.app` for a computer that keeps `Firstmate 3000.app`, or back, of the same flavor - is kept beside the one here instead, and the background moves to it under that app's own label before the answer goes (above, "Under the other name"); the old copy and agent go once the run let the folder go.
+   The same app under the other name of the Infinitary rename - `Infinitary.app` for a computer that keeps `Firstmate 3000.app`, or back, of the same flavor - is kept beside the one here instead, and the background moves to it under that app's own label before the answer goes (above, "Under the other name"); the old copy and agent go once the run let the folder go, kept aside on trial while the new agent runs (below, "A copy that does not start").
    A background that will not move takes the new copy away again, changes nothing, and the order is refused.
    Another user on the home's Mac runs that Mac's own app, which is the home's already, so nothing is got.
    A separate Mac whose agent starts its own installed app - one that joined at its first launch (above, "A Mac that also controls") - is not on the home's version, so its first update keeps the home's copy in `app/` as a command-added Mac keeps one, and rewrites its agent to start that copy before the answer goes; once the run let the folder go, a shell in a session of its own takes the agent away and sets it up again, since taking it away ends every process of the run but one in its own session (`reloadInBackground`).
@@ -440,7 +440,7 @@ Other refusals that name an update there, such as preparing a working copy or st
 
 An update over the connection keeps the copy it replaces until the new one has reached the home once, and goes back to it by itself otherwise (`src/core/helper/updateTrial.ts`).
 It applies where the update keeps the home's copy in place of one of the same name, the answer says the background starts the run again (`restarts`), and that background can be started again from outside its run: a Mac's agent, through launchd's own `launchctl`, or a Linux service, through the `systemd-run` beside the user's own `systemctl`.
-Anywhere else the replaced copy goes at once, as before.
+Three more routes keep a trial (below); anywhere else the replaced copy goes at once, as before.
 
 1. Keeping the new copy, the update moves the one it replaces beside it (`<app>.previous`) and writes a trial (`app/trial.json`) naming both.
 2. Once the run let the folder go, it leaves a watcher behind in the system's own shell, outside the run: in a session of its own on a Mac, and as a transient service of the user's own systemd on Linux, since the service's stop takes every process it started with it; the run waits until `systemd-run` started that service.
@@ -458,10 +458,11 @@ Three other routes keep a trial the same way, each setting aside what it replace
   Going back puts both back, takes the kept copy away, and has launchd read the agent anew (`bootout`, then `bootstrap`), so it starts the installed app again.
 - A copy under the other name of the rename, whose work stays in its folder: `installed.json` is copied aside before the background moves, and once the run let the folder go the old copy and its agent's file are moved aside before the old agent is let go.
   Going back puts the three back, takes the new copy and its agent away, and starts the old agent again.
-- An update over Remote Login ("Started by the home"): the agent's file and `installed.json` are copied aside and the copy kept here moved aside before the sent copy is kept; the watcher starts once the background was started again.
+- An update over Remote Login ("Started by the home"): the agent's file and `installed.json` are copied aside and the copy kept here moved aside before the sent copy is kept; the watcher starts once the background is running again.
   Going back puts them back and has the service manager read the agent anew.
 
 A copy under the other name whose work moves into the other spelling's data folder keeps no trial: the move retires the older folder, which the copy before it cannot open again.
+A route whose background starts only at the next login, or not at all, keeps no trial either: the new copy could not reach the home within the wait, so the trial and what was set aside go and the new copy stays.
 A Windows PC keeps no trial, since a newer Infinitary reaches it only by an install there.
 
 ### Saved by a newer Infinitary
@@ -471,6 +472,7 @@ This version names that, and never reads it as not joined:
 
 - the run says so and ends, and pauses its agent so the service manager does not start it on that work again and again (`pauseNewerWork`); the agent's file stays, so a newer copy's window or an update loads it again;
 - with an update's trial still open, the agent is left as it is, and the watcher goes back to the copy before it;
+- with another live run holding the folder, the newer copy's own while this one was started by hand, the agent is left running;
 - `work status` says so;
 - a Mac's window never writes its own grant over it, and reports its work half blocked as `newer-work` (`docs/view.md`, "A Mac that runs work").
 

@@ -63,13 +63,18 @@ import {
  * rewrites its agent to start that copy before the answer goes, and once
  * the run let the folder go has launchd read the agent anew from outside
  * the run (`reloadInBackground`); should that not happen, the agent starts
- * the copy from the next login. The installed app is left as it is.
+ * the copy from the next login. The installed app is left as it is. Where
+ * launchctl can be asked from outside the run, the update is on trial
+ * (docs/helper.md, "A copy that does not start"): the agent's file and the
+ * record are put back should the copy not reach the home in time.
  *
  * A home on the other side of the Infinitary rename sends that app, under
  * its own name (FI3-1780 step 2): `Infinitary.app` to a computer that keeps
  * `Firstmate 3000.app`, or back. It is kept beside the one here, and the
  * background moves to it, under that app's own label, before the run ends;
- * the old copy and agent go once the run let the folder go (`afterRun`).
+ * the old copy and agent go once the run let the folder go (`afterRun`),
+ * kept aside on trial while the new agent runs, and put back with the old
+ * agent should the new copy not reach the home in time.
  * An app that keeps its work in another folder - Infinitary's - takes the
  * work there first: once the run let the folder go, the whole data folder
  * moves into that app's own with the one-time move (src/core/folderMove/),
@@ -108,9 +113,11 @@ export type UpdateHereOptions = {
 };
 
 /**
- * The answer to the home, and for a copy kept under another name what
- * follows once the run let the folder go: the old copy and the old agent
- * taken away. Run from that agent, the last step ends this process.
+ * The answer to the home, and what follows once the run let the folder go:
+ * the watcher of a trial left behind, launchd reading a rewritten agent
+ * anew, or for a copy kept under another name the old copy and the old
+ * agent taken away or set aside. Run from that agent, the last step ends
+ * this process.
  */
 export type UpdatedHere = WorkUpdateAnswer & { afterRun?: () => Promise<void> };
 
@@ -497,7 +504,14 @@ async function keepRenamed(
   }
   const before = installed.service;
   const now = readInstalled(dataDir).service;
-  if (!watch || !now || !openTrial(dataDir, kept, previous, options.log))
+  // A new agent that starts only at the next login could not reach the home
+  // within the trial's wait: it is kept with no trial.
+  if (
+    !watch ||
+    !now ||
+    moved.state !== "running" ||
+    !openTrial(dataDir, kept, previous, options.log)
+  )
     return async () => {
       rmSync(previous, { recursive: true, force: true });
       rmSync(old, { recursive: true, force: true });

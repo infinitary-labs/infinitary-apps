@@ -1613,7 +1613,13 @@ describe("a computer whose update brought a copy that does not start", () => {
     const dir = scratchDir("infinitary-update-launchctl-");
     const log = join(dir, "asked.log");
     const program = join(dir, "launchctl");
-    writeFileSync(program, `#!/bin/sh\necho "$*" >> "${log}"\n`, { mode: 0o755 });
+    // Once `loggedOut` runs, launchd knows no session there: agents start at the next login.
+    const away = join(dir, "logged-out");
+    writeFileSync(
+      program,
+      `#!/bin/sh\necho "$*" >> "${log}"\nif [ -e "${away}" ]; then case "$1" in bootstrap|print) exit 113;; esac; fi\n`,
+      { mode: 0o755 },
+    );
     const context: BackgroundContext = {
       flavor: "release",
       dataDir,
@@ -1622,7 +1628,7 @@ describe("a computer whose update brought a copy that does not start", () => {
       launchctl: launchctlAt(program),
     };
     const asked = () => (existsSync(log) ? readFileSync(log, "utf8").trim().split("\n") : []);
-    return { context, asked };
+    return { context, asked, loggedOut: () => writeFileSync(away, "") };
   }
 
   it("goes back to the copy it kept when the new one exits at start, and this Mac names that version and does not send it again", async () => {
@@ -1782,6 +1788,33 @@ describe("a computer whose update brought a copy that does not start", () => {
     expect(readFileSync(join(installedApp, "Contents", "Resources", "marker"), "utf8").trim()).toBe(
       "the Mac's own app",
     );
+  });
+
+  it("across the rename, keeps the new copy with no trial when its agent starts only at the next login", async () => {
+    const at = await world({
+      kept: true,
+      speaks: "inf",
+      app: bundle("Infinitary's own copy", "Infinitary"),
+      waitMs: 200,
+    });
+    const { context, loggedOut } = standInBackground(at.dataDir);
+    const kept = join(at.dataDir, "app", "Firstmate 3000.app");
+    const launcher = fetchedLauncher(kept);
+    if (!launcher) throw new Error("no launcher");
+    await startInBackground({ ...context, spelling: "fm" }, { launcher, env: {}, app: kept });
+
+    const running = at.start({ appVersion: "0.1.20", trialSeconds: 1 }, context);
+    await expect.poll(() => at.view()?.otherVersion?.updateBy).toBe("connection");
+    loggedOut();
+    const updating = at.computers.update(at.deviceId);
+    expect(await running.ended).toBe("updated");
+    await updating.catch(() => undefined);
+    const moved = join(at.dataDir, "app", "Infinitary.app");
+    const label = workLabelOf("inf", "release");
+    const file = join(context.homeDir, "Library", "LaunchAgents", `${label}.plist`);
+    // The new copy and agent stay for the next login, with no trial to take them back.
+    expect(readInstalled(at.dataDir)).toEqual({ service: { label, file }, app: moved });
+    await expect.poll(() => readdirSync(join(at.dataDir, "app"))).toEqual(["Infinitary.app"]);
   });
 
   it("across the rename, takes the new copy and its agent away and starts the old agent and copy again", async () => {

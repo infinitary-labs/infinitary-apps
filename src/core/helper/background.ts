@@ -944,12 +944,17 @@ export async function stopUnjoinedTask(context: BackgroundContext): Promise<void
  * manager does not start this version on it again and again; the agent's
  * file stays, so a newer copy's window or an update loads it again. An
  * update's trial still open here is left to its watcher, which goes back
- * to the copy before this one and starts it. Run from that agent, the pause
+ * to the copy before this one and starts it, and a run that holds the
+ * folder - the newer copy's own, while this one was started by hand - is
+ * left running. Run from that agent, the pause
  * ends this process, so it comes last.
  */
 export async function pauseNewerWork(context: BackgroundContext): Promise<void> {
   const { service } = readInstalled(context.dataDir);
   if (!service || existsSync(trialPathOf(context.dataDir))) return;
+  // A live run holds the folder: the newer copy's own, which is left running.
+  const holder = folderHolder(context.dataDir);
+  if (holder !== null && holder !== process.pid) return;
   await adapterOf(context).pause(context, service);
 }
 

@@ -34,6 +34,7 @@ import {
   stopInBackground,
   writeInstalled,
 } from "./background";
+import { lockFolder } from "./lock";
 import { RUN_STOP_FILE } from "./windowsTask";
 
 /**
@@ -200,7 +201,7 @@ describe("running in the background", () => {
 
   // Work a newer Infinitary saved (INF-5468's plan, piece 2): its run pauses
   // the agent, so launchd does not start this version on it again and again.
-  it("pauses the agent on work a newer Infinitary saved, keeping its file, unless an update's trial is open", async () => {
+  it("pauses the agent on work a newer Infinitary saved, keeping its file, unless a live run holds the folder or an update's trial is open", async () => {
     const { ctx, asked } = context();
     await startInBackground(ctx, { launcher: LAUNCHER, env: {}, app: null });
     const { service } = readInstalled(ctx.dataDir);
@@ -209,6 +210,16 @@ describe("running in the background", () => {
     await pauseNewerWork(ctx);
     expect(asked).toEqual([["bootout", `gui/502/${service.label}`]]);
     expect(existsSync(service.file)).toBe(true);
+
+    // A live run holds the folder, the newer copy's own: it is left running.
+    asked.length = 0;
+    const release = lockFolder(ctx.dataDir, { pid: process.ppid });
+    try {
+      await pauseNewerWork(ctx);
+    } finally {
+      release();
+    }
+    expect(asked).toEqual([]);
 
     // A trial still open is its watcher's: it goes back to the copy before.
     asked.length = 0;

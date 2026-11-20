@@ -68,7 +68,7 @@ The host enables native replacement only for an installed release Mac, not a dev
   The Version row and the top-right update notice draw one update part (`src/renderer/src/app/UpdateStepView.tsx`) from one ladder (`updateStep`, `src/renderer/src/app/updateStep.ts`): for every state a line that says where the update stands and, beside it, a button that takes the next step, with at most one more control.
   Up to date, a copy ahead of its channel, or no release yet: the line says so and when the release source last answered (`checkedAt`; "Up to date on Stable.
   Checked just now."), with Check for updates.
-  Check for updates reads the release source now on every copy whose installation the app knows, except a Windows copy, which reads nothing and offers no update (`docs/windows.md`), past the 4-hour saved answer, and joins a check already reading (`checkNow`, `inf:update:check`); command search's Check for updates and the app menu's Check for Updates… open Settings → General with focus on the row's Check for updates, or its next step where it offers none, and press Check for updates.
+  Check for updates reads the release source now on every copy whose installation the app knows, past the 4-hour saved answer, and joins a check already reading (`checkNow`, `inf:update:check`); command search's Check for updates and the app menu's Check for Updates… open Settings → General with focus on the row's Check for updates, or its next step where it offers none, and press Check for updates.
   A failed check with nothing found says so beside Try again and Open the releases page; it never says the copy is up to date.
   A version available offers Update and restart (Install on Linux) or, where a package manager installs it (Homebrew, Arch, NixOS), shows its command with Copy command, each beside Check for updates, since a newer version may be out; the line says when it last checked ("Version 0.6.5 is available.
   Checked 3h ago."), and the version in it opens that version's release page.
@@ -122,11 +122,47 @@ A Linux installation updates through the one update reader (`src/core/update/upd
 - **Development and tests.**
   Only an unpackaged run reads `INFINITARY_UPDATE_BUILDS_URL` and `INFINITARY_UPDATE_LINUX_PACKAGE` (with `APPIMAGE` for an AppImage), which point the reader at a stand-in download source and stand in for a package; a run from source on Linux without them reads what a Mac reads.
 
+## Updates on Windows
+
+A Windows installation updates through the same update reader, from the builds file above, under `windows`, this PC's chip and `exe` (`src/core/update/updateChecker.ts`).
+
+- **Which channel.**
+  It follows its channel marker in the data folder, which the app writes just before it hands an update over, and otherwise its version's channel, as on a Mac.
+  A channel whose version carries no Windows installer offers it nothing, and the Version row says no release is available on that channel yet.
+- **One click.**
+  The Version row offers Update and restart.
+  The app downloads the installer into its data folder (`updates`), refuses bytes whose SHA-256 is not the published one, and saves the crew's work ("Saving work before an update" below).
+  It then hands the installer to a hidden Windows PowerShell, the hand-over, which waits for the app's own process to end, runs the installer as a silent update and reads how it ended (`windowsHandOverScript`, `src/core/update/windowsInstall.ts`).
+  Windows ends every process a Task Scheduler task started when the task's command ends, so Windows PowerShell asks Windows' own process service (`Win32_Process.Create`) to start the hand-over, which then belongs to no task and outlives the command.
+  The app writes its channel marker with the version it hands over before the hand-over, since the installer runs after the app ends: a marker it cannot read or write hands nothing over, and a hand-over that fails puts the earlier marker back whole, or says it could not and asks the person to check the channel in Settings → General.
+  Then it ends: a window quits, and a command ends with 75 as for any update (`docs/run.md`, "After an update").
+  The installer replaces the copy for this person alone, with no administrator, and keeps the data folder and the Task Scheduler tasks, which name the same program.
+  The new copy opens on the data folder the old one was opened on: the person's own through the Start menu entry, as the installer's `--force-run` opens it, whose window starts the scheduled command again, and a folder named with `--user-data-dir` by the hand-over, with that folder again, whose window runs its own first mate as it did before, since a switched data folder starts no command (`docs/run.md`).
+- **Who the installer trusts.**
+  Until the Windows package is signed, an update trusts the download site and the published checksum alone, as a Linux package does; requiring the expected publisher's signature is a later piece of the Windows plan.
+- **When installing cannot finish.**
+  A download that stops, a refused checksum, or an installer that cannot start each say so on the Version row, nothing changes, and the crew's work carries on.
+  An app still running five minutes after the hand-over began has not finished saving, so the hand-over installs nothing; once the app ends it opens it again.
+  An installer that exits with an error leaves the copy in place, and the hand-over opens it again.
+  Either way the hand-over first puts back the channel marker the kept copy followed, then ends that data folder's windows still open, as the installer would, and only windows: a command or a work run has none, and another data folder's are left alone.
+  It reads each process's data folder as Chromium does, from its command line split as Windows splits it (the last `--user-data-dir=` switch, any prefix or case, before a lone `--`), compares full paths, and leaves alone a process whose command line it cannot read, leaves a quote open, or names a folder with no drive or share, since a relative folder means the folder that process started in; the app reads its own switch the same way (`openedOnSwitch`).
+  The hand-over is plain Windows PowerShell and compiles nothing as it runs, so a computer whose policy refuses that still updates.
+  The copy then opens fresh on its data folder as above, and the person's own starts its command, which carries the saved work on.
+  The hand-over leaves `update-result.json` in the data folder, which the copy it kept reads once as it starts (`takeWindowsHandOverResult`), and its Version row says the update stopped or the installer stopped, beside Try again, until the next attempt; when the marker could not be put back it also asks the person to check the channel in Settings → General.
+  A result file the copy cannot remove is said again at its next start rather than stopping it.
+  The windows it ends must end within 30 seconds before it opens the copy, since a new window would hand itself to an old one still open on the same folder; one that does not end gets the message below.
+  A copy counts as opened again only when a window that was not there before shows on its data folder, which the hand-over also waits for after a finished installer's own restart of the person's own folder.
+  A copy missing its program or its `resources\app.asar`, or one that shows no new window on that data folder within two minutes, is said in a message from the hand-over, with the release page to download the installer from, which it opens next.
+- **A window controlling another computer.**
+  It names a newer version of its own copy and its downloads page, and installs nothing: such a PC also runs that computer's work, which the installer would end mid-run (`docs/windows.md`, "Joining another computer").
+- **Development and tests.**
+  Only an unpackaged run reads `INFINITARY_UPDATE_BUILDS_URL` and `INFINITARY_UPDATE_WINDOWS_INSTALLER=1`, which stand in for the download source and for an installed copy; a run from source on Windows without them reads what a Mac reads.
+
 ## Saving work before an update
 
 An update of this computer's own copy saves the crew's work here before anything replaces the copy (INF-2245, the stop-and-resume update the captain approved on INF-2223).
 The update asks the crew's work (`CrewWorkForUpdate`, `src/core/update/updateWork.ts`), which `CrewUpdates.saveForUpdate` answers.
-The Mac updater asks once the download is done and before native installation; the Linux updater asks once the download's checksum is checked and before the password prompt or the AppImage's rename (`beforeReplace`, `src/core/update/linuxInstall.ts`).
+The Mac updater asks once the download is done and before native installation; the Linux updater asks once the download's checksum is checked and before the password prompt or the AppImage's rename (`beforeReplace`, `src/core/update/linuxInstall.ts`), and the Windows updater once the installer's checksum is checked and before it hands the installer over (`src/core/update/windowsInstall.ts`).
 
 - **Nothing new starts.**
   While the update saves, no crewmate turn on this computer starts: a reply, a steer, a queued task and the next turn of a task wait on their lanes in order (`heldForUpdate`).
@@ -150,6 +186,7 @@ The Mac updater asks once the download is done and before native installation; t
   An installation that fails after the save, such as a closed password prompt or a refused signature, lets the work carry on the same way.
 - **A first mate started by a command.**
   Its own updater is the only updater where it can be: on Linux the command replaces the program after the same save and ends with 75, for whatever started it to start the new copy (`docs/run.md`, "After an update").
+  On Windows the command hands the installer over after the same save and ends with 75; the installer opens the new copy's window, which starts the command again.
   On a Mac only a program in the person's own session can install the update, so the window opened beside the command installs it for that first mate, while the first mate holds the crew's work saved (`createUpdateHold`, `src/core/update/updateHold.ts`; `inf:update:hold`, asked only by this computer's window).
   The window asks `save` where a window with its own first mate asks the crew's work, `later` for Update later, `release` when nothing replaced the copy, and `replaced` once it did, which ends the first mate with its work still saved for the new copy to resume (`crewWorkHeldThere`).
   The hold belongs to the window's connection: a window that closes or drops mid-save lets the save go and the work carries on, so a closed window never leaves the crew waiting.

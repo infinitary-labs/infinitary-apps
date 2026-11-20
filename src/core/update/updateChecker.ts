@@ -13,7 +13,6 @@ import {
   type LinuxInstallPlan,
   linuxUpdateCommand,
   readLinuxInstallation,
-  UpdateInstallProblem,
 } from "./linuxInstall";
 import { createMacUpdateChecker, type MacUpdateDriver } from "./macUpdates";
 import { PUBLIC_RELEASE_NAMES, publicBuildsUrl, releaseSource } from "./releaseSource";
@@ -30,13 +29,22 @@ import {
   type TapNames,
   targetsUrlOf,
   upgradeCommandFor,
+  WINDOWS_INSTALLER,
 } from "./updateChannels";
+import { UpdateInstallProblem } from "./updateDownload";
 import {
   type CrewWorkForUpdate,
   createUpdateSaving,
   type UpdateSaving,
   withUpdateWork,
 } from "./updateWork";
+import {
+  createWindowsInstaller,
+  takeWindowsHandOverResult,
+  type WindowsInstallation,
+  type WindowsInstallPlan,
+  windowsHandOverProblem,
+} from "./windowsInstall";
 
 // Direct Mac copies use the consented native updater; Homebrew copies keep reading
 // their cask's target and offer only its Homebrew command. Linux reads public builds.
@@ -51,6 +59,10 @@ import {
 // own package's build: a deb, an rpm or an AppImage the app installs
 // itself, after checking the build's published checksum; an Arch or NixOS
 // package the notice names the command for.
+//
+// A Windows installation reads the same builds file, under `windows`, its
+// chip and `exe`, and installs its channel's installer itself after
+// checking the published checksum (docs/alpha.md "Updates on Windows").
 //
 // A Mac that came to Infinitary through Firstmate 3000's cask (the old-cask
 // switch) reads that tap instead, and its notice names that cask's command,
@@ -120,6 +132,19 @@ export type CreateUpdateCheckerOptions = {
   buildsUrl?: string;
   /** Installs an offered Linux build (`createLinuxInstaller`); absent, nothing installs. */
   installLinux?: (plan: LinuxInstallPlan, beforeReplace?: () => Promise<void>) => Promise<void>;
+  /**
+   * A Windows installation: read the builds file for its chip's installer,
+   * as a Linux one reads its package's build.
+   */
+  windows?: WindowsInstallation;
+  /** Runs an offered Windows installer (`createWindowsInstaller`); absent, nothing installs. */
+  installWindows?: (plan: WindowsInstallPlan, beforeReplace?: () => Promise<void>) => Promise<void>;
+  /**
+   * What the Windows hand-over said of the last update it did not finish
+   * (`takeWindowsHandOverResult`): the Version row says it beside Try
+   * again until the next install starts.
+   */
+  windowsHandOverProblem?: string;
   /** Saves the crew's work before an installed build replaces this copy. */
   saving?: UpdateSaving;
   /**
@@ -190,10 +215,14 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
   const keyOf = (channel: UpdateChannel, tap: TapNames) => `${tap.repo} ${channel}`;
 
   const linux = options.linux;
+  const windows = linux ? undefined : options.windows;
+  // Both read the builds file of this build's own tap, never a cask's.
+  const readsBuilds = !!(linux || windows);
   const buildsUrl = options.buildsUrl ?? publicBuildsUrl;
   // The offer each channel's last good status was read from, for install().
   const lastOffer = new Map<string, Offer | null>();
   let installing = false;
+  let handOverProblem = options.windowsHandOverProblem;
 
   const statusFor = (channel: UpdateChannel, tap: TapNames, offer: Offer | null): UpdateStatus => {
     const updateAvailable = offer ? isNewerVersion(offer.version, options.currentVersion) : false;
@@ -203,8 +232,15 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
       latestVersion: offer?.version ?? null,
       updateAvailable,
       releaseUrl: offer?.url ?? null,
-      upgradeCommand: linux ? "" : upgradeCommandFor(channel, tap),
+      upgradeCommand: readsBuilds ? "" : upgradeCommandFor(channel, tap),
     };
+    if (windows) {
+      // One click: the installer runs with no question and starts the new copy.
+      const said = handOverProblem ? { problem: handOverProblem } : {};
+      return offer?.download && updateAvailable && options.installWindows
+        ? { ...status, ...said, install: { asksPassword: false, restarts: true } }
+        : { ...status, ...said };
+    }
     if (!linux || !offer?.download) return status;
     const inApp = linux.package ? INSTALLS_IN_APP[linux.package] : undefined;
     return {
@@ -228,7 +264,7 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
 
   async function readBuildsOffer(
     channel: UpdateChannel,
-    where: LinuxInstallation,
+    where: { system: string; chip: string; kind: string },
   ): Promise<Offer | null> {
     let response: Response;
     let fromTap = false;
@@ -261,18 +297,29 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
     const data: unknown = await response.json();
     const builds = parseBuilds(data, PUBLIC_RELEASE_NAMES) ?? parseBuilds(data);
     if (!builds) throw new Error("Update builds are invalid");
-    const offer = buildOfferFor(builds, channel, {
-      system: "linux",
-      chip: where.chip,
-      kind: where.package ?? "",
-    });
+    const offer = buildOfferFor(builds, channel, where);
     return offer
       ? { version: offer.version, url: offer.releaseUrl, download: offer.download }
       : null;
   }
 
   async function readOffer(channel: UpdateChannel, tap: TapNames): Promise<Offer | null> {
-    if (linux) return readBuildsOffer(channel, linux);
+    if (linux)
+      return readBuildsOffer(channel, {
+        system: "linux",
+        chip: linux.chip,
+        kind: linux.package ?? "",
+      });
+    if (windows) {
+      // A version with no Windows installer is not one this copy can take:
+      // the channel offers it nothing until one carries an installer.
+      const offer = await readBuildsOffer(channel, {
+        system: "windows",
+        chip: windows.chip,
+        kind: WINDOWS_INSTALLER,
+      });
+      return offer?.download ? offer : null;
+    }
     const response = await fetchImpl(targetsUrlFor(tap), {
       headers: { Accept: "application/json", ...REQUEST_HEADERS },
     });
@@ -339,8 +386,8 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
 
   async function getStatus(): Promise<UpdateStatus> {
     const channel = options.channel();
-    // Linux has no casks: an installation there always reads this build's own tap.
-    const tap = linux ? TAP : tapNow();
+    // Linux and Windows have no casks: an installation there always reads this build's own tap.
+    const tap = readsBuilds ? TAP : tapNow();
     const fake = simulated(channel, tap);
     if (fake) return fake;
     const key = keyOf(channel, tap);
@@ -360,7 +407,7 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
 
   async function checkNow(): Promise<UpdateStatus> {
     const channel = options.channel();
-    const tap = linux ? TAP : tapNow();
+    const tap = readsBuilds ? TAP : tapNow();
     const fake = simulated(channel, tap);
     if (fake) return fake;
     const good = lastGood.get(keyOf(channel, tap));
@@ -380,7 +427,7 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
   async function openReleasePage(): Promise<void> {
     const status = await getStatus();
     await openExternal(
-      status.releaseUrl ?? releasesPageFor(status.channel, linux ? TAP : tapNow()),
+      status.releaseUrl ?? releasesPageFor(status.channel, readsBuilds ? TAP : tapNow()),
     );
   }
 
@@ -392,7 +439,7 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
    */
   async function readBeforeInstall(): Promise<UpdateStatus> {
     const channel = options.channel();
-    const tap = linux ? TAP : tapNow();
+    const tap = readsBuilds ? TAP : tapNow();
     if (simulated(channel, tap) || !fetchImpl) return getStatus();
     try {
       return await read(channel, tap);
@@ -414,31 +461,55 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
     return run;
   }
 
+  /** The installer this copy runs for an offer, or null when it installs none itself. */
+  function installerFor(
+    offer: Offer | undefined | null,
+    channel: UpdateChannel,
+  ): ((beforeReplace: () => Promise<void>) => Promise<void>) | null {
+    const download = offer?.download;
+    if (!offer || !download) return null;
+    const { installLinux, installWindows } = options;
+    if (linux?.package && installLinux) {
+      const plan: LinuxInstallPlan = {
+        package: linux.package,
+        version: offer.version,
+        channel,
+        download,
+        ...(linux.appImage ? { appImage: linux.appImage } : {}),
+      };
+      return (beforeReplace) => installLinux(plan, beforeReplace);
+    }
+    if (windows && installWindows) {
+      const plan: WindowsInstallPlan = {
+        version: offer.version,
+        channel,
+        download,
+        page: offer.url ?? releasesPageFor(channel, TAP),
+      };
+      return (beforeReplace) => installWindows(plan, beforeReplace);
+    }
+    return null;
+  }
+
   async function installOnce(): Promise<UpdateInstallResult> {
     const status = await readBeforeInstall();
     const offer = lastOffer.get(keyOf(status.channel, TAP));
-    if (!linux?.package || !status.install || !offer?.download || !options.installLinux) {
+    const installer = status.install ? installerFor(offer, status.channel) : null;
+    if (!installer) {
       return { ok: false, problem: "There is no update this app can install itself." };
     }
     if (installing) return { ok: false, problem: "The update is already installing." };
     installing = true;
+    // A new attempt answers for itself.
+    handOverProblem = undefined;
     let later = false;
     try {
-      await options.installLinux(
-        {
-          package: linux.package,
-          version: offer.version,
-          channel: status.channel,
-          download: offer.download,
-          ...(linux.appImage ? { appImage: linux.appImage } : {}),
-        },
-        // The crew's work stops where nothing is lost before the copy is replaced.
-        async () => {
-          if (await saving.save()) return;
-          later = true;
-          throw new UpdateInstallProblem(UPDATE_LATER);
-        },
-      );
+      // The crew's work stops where nothing is lost before the copy is replaced.
+      await installer(async () => {
+        if (await saving.save()) return;
+        later = true;
+        throw new UpdateInstallProblem(UPDATE_LATER);
+      });
       return { ok: true };
     } catch (caught) {
       if (later) return { ok: false, later: true, problem: UPDATE_LATER };
@@ -479,6 +550,14 @@ export type InstalledUpdateCheckerOptions = {
    * replaced; absent, a Linux installation installs nothing itself.
    */
   relaunch?: (execPath?: string) => void;
+  /**
+   * Ends this program for a Windows installer, whose hand-over opens the
+   * new copy; absent, a Windows installation names its update and installs
+   * nothing. Only the copy's own first mate is handed one: a window
+   * controlling another computer also runs that computer's work, which the
+   * installer would end mid-run.
+   */
+  endForInstaller?: () => void;
   /** Read for the development stand-ins below; the process's own by default. */
   env?: NodeJS.ProcessEnv;
   fetchImpl?: typeof fetch;
@@ -489,6 +568,19 @@ export type InstalledUpdateCheckerOptions = {
    */
   work?: CrewWorkForUpdate;
 };
+
+/**
+ * Whether this program was opened on a data folder of its own choosing
+ * (`--user-data-dir`), as Chromium reads its switches on Windows: any of
+ * its prefixes, any case, before a lone `--`. The hand-over reads windows'
+ * command lines the same way.
+ */
+export function openedOnSwitch(argv: readonly string[]): boolean {
+  const end = argv.indexOf("--");
+  return (end === -1 ? argv : argv.slice(0, end)).some((arg) =>
+    /^(--|-|\/)user-data-dir=./i.test(arg),
+  );
+}
 
 /**
  * The update checker for the app installed on this computer: its version,
@@ -512,18 +604,14 @@ export function createInstalledUpdateChecker(
         currentVersion: settingFrom(env, "UPDATE_CURRENT_VERSION")?.trim() || undefined,
         buildsUrl: settingFrom(env, "UPDATE_BUILDS_URL")?.trim() || undefined,
         linuxPackage: settingFrom(env, "UPDATE_LINUX_PACKAGE")?.trim() || undefined,
+        windowsInstaller: settingFrom(env, "UPDATE_WINDOWS_INSTALLER")?.trim() === "1",
       };
   const currentVersion = overrides.currentVersion ?? app.version;
   const installation = options.macDriver?.installation;
   // A copy this checker cannot update offers nothing: one whose installation
-  // the app could not confirm, and every Windows copy, whose installer no
-  // release carries yet (docs/windows.md).
+  // the app could not confirm.
   const cannotUpdate =
-    installation?.kind === "unknown"
-      ? UPDATE_PROBLEMS.unknownInstallation
-      : app.platform === "win32"
-        ? UPDATE_PROBLEMS.windows
-        : null;
+    installation?.kind === "unknown" ? UPDATE_PROBLEMS.unknownInstallation : null;
   if (cannotUpdate) {
     const status: UpdateStatus = {
       currentVersion,
@@ -570,6 +658,18 @@ export function createInstalledUpdateChecker(
           override: overrides.linuxPackage,
         })
       : undefined;
+  // An installed Windows app runs its channel's installer; a run from source
+  // is no installation, so it reads what a Mac reads unless a stand-in says
+  // it is one.
+  const windows =
+    app.platform === "win32" && (app.packaged || overrides.windowsInstaller)
+      ? { chip: thisDeviceSystem(app.platform).chip ?? process.arch }
+      : undefined;
+  // An update the hand-over did not finish, said once by the copy it kept.
+  const windowsHandOver =
+    windows && options.endForInstaller
+      ? takeWindowsHandOverResult(app.userDataDir, currentVersion)
+      : null;
   // The process's fetch, looked up at each download rather than kept from startup.
   const fetchImpl: typeof fetch =
     options.fetchImpl ?? ((input, init) => globalThis.fetch(input, init));
@@ -590,6 +690,8 @@ export function createInstalledUpdateChecker(
     ...(overrides.targetsUrl ? { targetsUrl: overrides.targetsUrl } : {}),
     ...(overrides.releasesUrl ? { releasesUrl: overrides.releasesUrl } : {}),
     ...(linux ? { linux } : {}),
+    ...(windows ? { windows } : {}),
+    ...(windowsHandOver ? { windowsHandOverProblem: windowsHandOverProblem(windowsHandOver) } : {}),
     ...(overrides.buildsUrl ? { buildsUrl: overrides.buildsUrl } : {}),
     // An installed Linux copy marks its reads of the download server's builds file.
     ...(linux && app.packaged ? { activeMarks: createActiveMarks(app.userDataDir) } : {}),
@@ -600,6 +702,20 @@ export function createInstalledUpdateChecker(
             fetchImpl,
             env: () => hostEnv(),
             relaunch: options.relaunch,
+          }),
+        }
+      : {}),
+    ...(windows && options.endForInstaller
+      ? {
+          installWindows: createWindowsInstaller({
+            dataRoot: app.userDataDir,
+            fetchImpl,
+            env: () => hostEnv(),
+            end: options.endForInstaller,
+            currentVersion,
+            executable: process.execPath,
+            // A copy opened on another data folder opens on it again.
+            ...(openedOnSwitch(process.argv) ? { openedOn: app.userDataDir } : {}),
           }),
         }
       : {}),

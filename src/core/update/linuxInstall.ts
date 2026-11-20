@@ -1,19 +1,12 @@
 import { spawn } from "node:child_process";
-import { createHash, randomBytes } from "node:crypto";
-import { createWriteStream, existsSync, readFileSync, statSync } from "node:fs";
-import { chmod, mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { chmod, mkdir, rename, rm } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join } from "node:path";
-import { Readable, Transform } from "node:stream";
-import { pipeline } from "node:stream/promises";
 import { cutTextEnd } from "@shared/textCut";
 import type { UpdateChannel } from "@shared/update";
-import {
-  type BuildDownload,
-  isLinuxPackage,
-  type LinuxPackage,
-  UPDATE_CHANNEL_MARKER,
-  type UpdateChannelMarker,
-} from "./updateChannels";
+import { type BuildDownload, isLinuxPackage, type LinuxPackage } from "./updateChannels";
+import { downloadChecked, rememberUpdateChannel, UpdateInstallProblem } from "./updateDownload";
 
 /**
  * How an installed Linux app updates itself (docs/alpha.md "Updates on
@@ -144,11 +137,6 @@ export type LinuxInstallPlan = {
   appImage?: string;
 };
 
-/** Why an update did not install, in words the update panel shows as they are. */
-export class UpdateInstallProblem extends Error {
-  override name = "UpdateInstallProblem";
-}
-
 /**
  * What runs as the superuser after the system asked for the person's
  * password: it copies the downloaded package into a folder only the
@@ -211,52 +199,8 @@ export function createLinuxInstaller(
 ): (plan: LinuxInstallPlan, beforeReplace?: () => Promise<void>) => Promise<void> {
   const spawnImpl = options.spawnImpl ?? spawn;
 
-  async function download(plan: LinuxInstallPlan, file: string): Promise<void> {
-    let response: Response;
-    try {
-      response = await options.fetchImpl(plan.download.url, {
-        headers: { "User-Agent": "infinitary" },
-        redirect: "follow",
-      });
-    } catch {
-      throw new UpdateInstallProblem(
-        "Infinitary could not reach the download. Check your connection and try again.",
-      );
-    }
-    if (!response.ok || !response.body) {
-      throw new UpdateInstallProblem(
-        `The download did not start (the server answered ${response.status}). Try again later.`,
-      );
-    }
-    const hash = createHash("sha256");
-    const hashing = new Transform({
-      transform(chunk: Buffer, _encoding, done) {
-        hash.update(chunk);
-        done(null, chunk);
-      },
-    });
-    try {
-      await pipeline(
-        Readable.fromWeb(response.body as Parameters<typeof Readable.fromWeb>[0]),
-        hashing,
-        createWriteStream(file, { mode: 0o600 }),
-      );
-    } catch (caught) {
-      await rm(file, { force: true });
-      const code = (caught as NodeJS.ErrnoException).code;
-      throw new UpdateInstallProblem(
-        code === "EACCES" || code === "EROFS" || code === "EPERM"
-          ? `Infinitary cannot write in ${dirname(file)}. Move the app to a folder you own, such as your home folder, and try again.`
-          : "The download stopped before it finished. Try again.",
-      );
-    }
-    if (hash.digest("hex") !== plan.download.sha256) {
-      await rm(file, { force: true });
-      throw new UpdateInstallProblem(
-        "The download did not match its published checksum, so nothing was installed.",
-      );
-    }
-  }
+  const download = (plan: LinuxInstallPlan, file: string) =>
+    downloadChecked(options.fetchImpl, plan.download, file);
 
   function runPrivileged(file: string, plan: LinuxInstallPlan): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -321,17 +265,8 @@ export function createLinuxInstaller(
     });
   }
 
-  async function rememberChannel(plan: LinuxInstallPlan): Promise<void> {
-    const marker: UpdateChannelMarker = {
-      schemaVersion: 1,
-      channel: plan.channel,
-      version: plan.version,
-    };
-    const path = join(options.dataRoot, UPDATE_CHANNEL_MARKER);
-    const temporary = `${path}.${randomBytes(6).toString("hex")}`;
-    await writeFile(temporary, `${JSON.stringify(marker)}\n`);
-    await rename(temporary, path);
-  }
+  const rememberChannel = (plan: LinuxInstallPlan) =>
+    rememberUpdateChannel(options.dataRoot, plan.channel, plan.version);
 
   // `beforeReplace` runs once the download is checked and before anything
   // is replaced (docs/alpha.md, "Saving work before an update"); a throw

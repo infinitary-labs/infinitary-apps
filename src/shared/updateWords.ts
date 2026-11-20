@@ -1,3 +1,5 @@
+import * as m from "./i18n/messages.generated.ts";
+
 export const UPDATE_WORDS = {
   channel: "Update channel",
   restart: "Update and restart",
@@ -25,6 +27,34 @@ export const UPDATE_WORDS = {
  * "Saving work before an update"): nothing went wrong.
  */
 export const UPDATE_LATER = "The update waits until you choose it again. Your work carries on.";
+
+/**
+ * How a crewmate's turn an update stopped opens again, naming the computer
+ * that was updated when it is not this one (docs/alpha.md, "Saving work
+ * before an update"); a scripted stand-in recognizes it by it.
+ */
+export function updateResumedWords(computer?: string): string {
+  return `Your last turn stopped part way while Infinitary${computer ? ` on ${computer}` : ""} was updated; it is back now.`;
+}
+
+/**
+ * What a Windows copy says, once it opens again, of an update its hand-over
+ * did not finish (docs/alpha.md, "Updates on Windows"): this copy was kept.
+ */
+export const WINDOWS_HAND_OVER_WORDS = {
+  get shutdownTimeout() {
+    return m.updateWindowsShutdownTimeout();
+  },
+  get installFailed() {
+    return m.updateWindowsInstallFailed();
+  },
+  /** Said when the update could not put back the channel marker the kept copy followed. */
+  get channelNotPutBack() {
+    return m.updateWindowsChannelNotPutBack();
+  },
+  /** Shown by the hand-over itself when the copy it would open is missing or does not open. */
+  noCopy: (page: string) => m.updateWindowsNoCopy({ page }),
+};
 
 /** The crew's work around this computer's own update, in the update notice and on the Version row. */
 export const UPDATE_WORK_WORDS = {
@@ -76,8 +106,6 @@ export const UPDATE_PROBLEMS = {
     "In-app updates are only for copies installed from the disk image. Keep Homebrew copies updated through Homebrew.",
   unknownInstallation:
     "Infinitary could not confirm how this copy was installed. Reinstall it from the releases page, keeping your saved work.",
-  windows:
-    "Infinitary does not update itself on Windows yet. Installing a newer version keeps your saved work.",
   unwritable:
     "Infinitary cannot replace this copy. Ask an administrator to install the new disk image, keeping your saved work.",
   staged:

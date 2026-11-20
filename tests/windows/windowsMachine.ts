@@ -7,7 +7,8 @@ import { join } from "node:path";
  * ride the environment, never a script's text, and it answers JSON.
  */
 
-const powershell = join(
+/** Windows PowerShell 5.1, which every Windows 11 carries. */
+export const powershellPath = join(
   process.env.SystemRoot ?? "C:\\Windows",
   "System32",
   "WindowsPowerShell",
@@ -15,12 +16,23 @@ const powershell = join(
   "powershell.exe",
 );
 
+/**
+ * Windows PowerShell 5.1 writes to a pipe in the console's code page, which
+ * cannot hold every letter the app's words use (accents, typographic
+ * apostrophes), so each read answers in UTF-8, as it is decoded.
+ */
+const UTF8_OUTPUT = "[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding $false; ";
+
 function run(command: string, env: Record<string, string>): string {
-  return execFileSync(powershell, ["-NoProfile", "-NonInteractive", "-Command", command], {
-    env: { ...process.env, ...env },
-    encoding: "utf8",
-    windowsHide: true,
-  }).trim();
+  return execFileSync(
+    powershellPath,
+    ["-NoProfile", "-NonInteractive", "-Command", UTF8_OUTPUT + command],
+    {
+      env: { ...process.env, ...env },
+      encoding: "utf8",
+      windowsHide: true,
+    },
+  ).trim();
 }
 
 /** Runs a Windows PowerShell script that answers one value, and parses its JSON. */
@@ -159,8 +171,9 @@ export function stillRunning(pids: readonly number[]): number[] {
  * through Windows' accessibility tree, as a person's click would; false
  * while no such button shows. The element carrying the words may be the
  * button's label rather than the button, so the press goes to the nearest
- * element that can be pressed, or, failing that, focuses it and presses
- * Enter as a person's keyboard would. When nothing could be pressed and
+ * element that can be pressed; a classic dialog's button that offers no
+ * such pattern gets its window's own click message; failing both, the
+ * press focuses it and presses Enter as a person's keyboard would. When nothing could be pressed and
  * treeFile is given, the dialog's accessibility tree is written there.
  */
 export function pressDialogButton(pid: number, button: string, treeFile?: string): boolean {
@@ -183,6 +196,14 @@ export function pressDialogButton(pid: number, button: string, treeFile?: string
             $e.GetCurrentPattern($invoke).Invoke()
             $pressed = $true
           } else { $e = $walker.GetParent($e) }
+        }
+        # A classic dialog's button, which offers no pattern while its
+        # window keeps it: the window's own click message presses it.
+        if (-not $pressed -and $candidate.Current.ClassName -eq 'Button' -and $candidate.Current.NativeWindowHandle -ne 0) {
+          if (-not ('InfDialog.Button' -as [type])) {
+            Add-Type -Name Button -Namespace InfDialog -MemberDefinition '[DllImport("user32.dll")] public static extern bool PostMessage(System.IntPtr hWnd, uint msg, System.IntPtr w, System.IntPtr l);'
+          }
+          $pressed = [InfDialog.Button]::PostMessage([System.IntPtr]$candidate.Current.NativeWindowHandle, 0x00F5, [System.IntPtr]::Zero, [System.IntPtr]::Zero)
         }
         if (-not $pressed -and $candidate.Current.IsKeyboardFocusable) {
           $candidate.SetFocus()
@@ -209,6 +230,37 @@ export function pressDialogButton(pid: number, button: string, treeFile?: string
 }
 
 /** A picture of the whole screen, for the check's evidence. */
+/**
+ * The words of every window `pid` shows, as Windows' accessibility tree
+ * reads them: each part's name, its text and its buttons' labels alike.
+ */
+export function dialogWords(pid: number): string[] {
+  return psList<string>(
+    `
+    Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
+    $A = [System.Windows.Automation.AutomationElement]
+    $byProcess = New-Object System.Windows.Automation.PropertyCondition($A::ProcessIdProperty, [int]$env:DIALOG_PID)
+    foreach ($window in $A::RootElement.FindAll('Children', $byProcess)) {
+      foreach ($e in $window.FindAll('Descendants', [System.Windows.Automation.Condition]::TrueCondition)) {
+        if ($e.Current.Name) { $e.Current.Name }
+      }
+    }`,
+    { DIALOG_PID: String(pid) },
+  );
+}
+
+/** The installed copy's top processes opened on `dataDir` with `--user-data-dir`. */
+export function appProcessesOn(executable: string, dataDir: string): number[] {
+  return psList<number>(
+    `
+    $all = @(Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $env:APP_EXE })
+    $ids = @($all | ForEach-Object { $_.ProcessId })
+    $all | Where-Object { $ids -notcontains $_.ParentProcessId -and ([string]$_.CommandLine).Contains('"--user-data-dir=' + $env:APP_DATA + '"') } |
+      ForEach-Object { [int]$_.ProcessId }`,
+    { APP_EXE: executable, APP_DATA: dataDir },
+  );
+}
+
 export function screenshot(file: string): void {
   ps(
     `

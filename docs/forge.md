@@ -997,7 +997,7 @@ Once it has found the cause, it fixes forward by default and chooses by what the
 It fixes forward when the code under test, the code that makes the project do what a change says, is right and the fix is small: changes that meet badly, or one change that left tests, test data, a generated file, a check list, a pinned version or a comment out of date.
 It sends a change back only when that change's code under test must change, the fix needs a decision, or the fix is not small; one declaration can do both.
 `sendBack` names each change at fault by its task key, with the reason its crewmate reads, and the rest combine again with the changes that waited in line ("A change sent back").
-`fix` declares the repair's own change the batch's fix: approved on its own merge card, it joins the held batch and ends the hold, and every change waiting in line joins behind it (`carried`, `src/core/batches/line.ts`).
+`fix` declares the repair's own change the batch's fix: approved on its own merge card, it joins the held batch and ends the hold, and every change waiting in line joins behind it (`carried`, `src/core/batches/line.ts`), unless the held version passed first (below).
 The order of approval and declaration does not matter: a change already approved and waiting in line is marked the fix as it is declared and joins on the pass the declaration starts, and one approved later is marked as it goes in line (`Batches.declareFix`, `Batches.enqueue`).
 An approval of the same version again keeps its place.
 A declared fix stays declared through every combine of the batch, its own joining included, and through Try again, a batch closed and put back in line, a batch that merged or ended without it, a new version of the fix approved in its place, and a restart; it is forgotten once a batch merges with it or its task closes (`unfixed`, `pruned`).
@@ -1024,6 +1024,13 @@ Try again ends the wait.
 Every combine of an open batch, the one that takes the awaited fix, Try again and a send-back included, reads the batch branch where the project lives first, so a push whose record was lost is combined over instead of refused every time (`Batches.moved`).
 When the awaited repair's task closes first, the batch stays held with no repair to wait for, and the feed says so once (`BATCH_WORDS.fixClosed`): another repair's approved fix, or Try again, ends the hold.
 For a flake, the repair runs the failed checks again where the project lives, and checks that run again end the hold by the host's own reading; the flaky test still gets an owner.
+A batch held for its checks reads them before an approved fix joins: a version whose checks pass on a rerun merges as it is, and the fix waits in line for the next batch, still declared, with the version it was built on.
+Its checks failing again take the approved fix at once, without waking a repair again.
+A repair may also judge that a rerun already passed the held version, such as a step of the batch's own run that runs the failed tests again while the host still reads the first attempt's jobs failed, and declare it with `check_change`'s `batch.passed`, naming that version (`Batches.declarePassed`, `OpenBatch.passed`).
+At that version the failed checks the hold named read as passed, any other check still counts, one that fails later included, and the batch merges once the rest passed.
+A fix declared beside it, or approved meanwhile, goes to the next batch, so the flaky test stays on the default branch until then (the captain's pick in the daily velocity review: "Merge a held batch once its version passes, even on a rerun, and send a test-only fix declared meanwhile to the next batch").
+The declaration is refused for another version, for a batch held for something other than its checks, and beside a send-back or while the batch waits for a fix after one, since its version still carries the changes sent back.
+A combine at a new version drops it.
 Settings → Projects shows a held batch in the Changes group of the repository's settings on its project's page (`BatchHoldPanel`, `src/renderer/src/settings/`): why it holds and since when, a button that opens its pull request, Try again, and Send back with a reason for the chosen changes, every control reached by keys.
 Try again combines the batch again at a new version with every change waiting in line, so its checks run again.
 The first mate sends the same answers through `app_change`'s `project-batch-answer`: Try again on its own judgment, and a send-back only on the captain's own words.

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "merge-passed-held-batch",
+      "kind": "improvement",
+      "area": "projects",
+      "title": "A held batch merges as soon as its failed tests pass on a rerun",
+      "body": "On a project with batched pull requests, a held batch no longer waits to be rebuilt with a test fix once its failed tests pass on a rerun. The crewmate repairing it can say the batch passed, and it merges as it is. A fix for the flaky test goes in with the next batch.",
+      "noPicture": "This changes when a held batch merges; no screen looks different.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

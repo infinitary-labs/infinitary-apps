@@ -1,5 +1,6 @@
 import type { CheckChangeInput } from "@shared/checkRepair";
 import { checksThatRan } from "@shared/checkSnapshot";
+import type { BatchPassedRefusal } from "../batches/batches";
 import { type Forge, type ForgeChange, isSignInForgeFailure } from "../forge";
 import type { TaskRecord } from "../storage/taskRecords";
 import { git } from "../workspace/git";
@@ -32,7 +33,24 @@ export const BATCH_DECLARATION_WORDS = {
   none: "Batch declaration refused: no batch of approved changes is held in this task's project, so there is nothing to answer.",
   evidence:
     "Batch declaration refused: evidence is empty. Say how you accounted for every failed test against every change in the batch.",
-  one: "Batch declaration refused: give fix true, sendBack, or both.",
+  one: "Batch declaration refused: give fix true, sendBack, passed, or fix true with one of them.",
+  // i18n-exempt: a tool answer served to the agent, not shown to a person
+  passedSentBack:
+    "Batch declaration refused: passed goes without sendBack, since the held version carries the changes sent back. Send them back, or declare passed alone.",
+  // i18n-exempt: a tool answer served to the agent, not shown to a person
+  passed: {
+    "not-held":
+      "Batch declaration refused: the batch is no longer held, so there is nothing to answer.",
+    "other-version":
+      "Batch declaration refused: passed names a version the batch is not held at. Read the batch again and name its held version.",
+    "not-checks":
+      "Batch declaration refused: the batch is held for something other than its checks, so passed answers nothing.",
+    "sent-back":
+      "Batch declaration refused: the batch waits for a fix after changes were sent back, and its held version still carries them, so it cannot merge as it is.",
+  } satisfies Record<BatchPassedRefusal, string>,
+  // i18n-exempt: a tool answer served to the agent, not shown to a person
+  passedRecorded: (fix: boolean) =>
+    `Recorded: the held version passed on its rerun. Its failed checks are answered at that version, and the batch merges once every other check passes.${fix ? " This task's change is declared its fix too: it goes to the next batch with the changes waiting in line, so push it, confirm its story with open_change and show its merge card as usual." : ""} If a check fails that you did not answer, the batch holds again.`,
   reason: (task: string) =>
     `Batch declaration refused: ${task} has no reason. Its crewmate reads the reason, so say what its change broke.`,
   notMember: (task: string, members: readonly string[]) =>
@@ -372,7 +390,18 @@ export class CheckChangeTool {
     if (!record || !repoId || !batches || !open?.hold) return BATCH_DECLARATION_WORDS.none;
     if (!batch.evidence.trim()) return BATCH_DECLARATION_WORDS.evidence;
     const back = batch.sendBack ?? [];
-    if (batch.fix !== true && back.length === 0) return BATCH_DECLARATION_WORDS.one;
+    const passed = batch.passed?.trim();
+    if (batch.fix !== true && back.length === 0 && !passed) return BATCH_DECLARATION_WORDS.one;
+    if (passed) {
+      if (back.length) return BATCH_DECLARATION_WORDS.passedSentBack;
+      const refused = await batches.declarePassed(
+        repoId,
+        passed,
+        batch.fix === true ? record.id : undefined,
+      );
+      if (refused) return BATCH_DECLARATION_WORDS.passed[refused];
+      return BATCH_DECLARATION_WORDS.passedRecorded(batch.fix === true);
+    }
     if (batch.fix === true && back.length === 0) {
       const refused = await batches.declareFix(repoId, record.id);
       if (refused) return `Batch declaration refused: ${refused}`;

@@ -2167,6 +2167,24 @@
                     },
                     "awaits": {
                       "type": "string"
+                    },
+                    "passed": {
+                      "type": "object",
+                      "properties": {
+                        "head": {
+                          "type": "string"
+                        },
+                        "checks": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "head",
+                        "checks"
+                      ]
                     }
                   },
                   "required": [
@@ -2984,6 +3002,24 @@
                       },
                       "awaits": {
                         "type": "string"
+                      },
+                      "passed": {
+                        "type": "object",
+                        "properties": {
+                          "head": {
+                            "type": "string"
+                          },
+                          "checks": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "head",
+                          "checks"
+                        ]
                       }
                     },
                     "required": [
@@ -4077,6 +4113,24 @@
                   },
                   "awaits": {
                     "type": "string"
+                  },
+                  "passed": {
+                    "type": "object",
+                    "properties": {
+                      "head": {
+                        "type": "string"
+                      },
+                      "checks": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "head",
+                      "checks"
+                    ]
                   }
                 },
                 "required": [
@@ -8969,6 +9023,24 @@
                   },
                   "awaits": {
                     "type": "string"
+                  },
+                  "passed": {
+                    "type": "object",
+                    "properties": {
+                      "head": {
+                        "type": "string"
+                      },
+                      "checks": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "head",
+                      "checks"
+                    ]
                   }
                 },
                 "required": [
@@ -67821,6 +67893,9 @@
                             "reason"
                           ]
                         }
+                      },
+                      "passed": {
+                        "type": "string"
                       },
                       "evidence": {
                         "type": "string"

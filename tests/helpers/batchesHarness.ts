@@ -420,7 +420,10 @@ export function setup(ways: MergeWays = EVERY_WAY) {
             : true,
       runsNoChecks: (taskId) => declaredNoChecks.has(taskId),
       live: (taskId) => !closedTasks.has(taskId),
-      unmergedBase: (change) => unmergedBases.get(change.taskId),
+      unmergedBase: (change) => {
+        const version = unmergedBases.get(change.taskId);
+        return version ? [version] : undefined;
+      },
       story: async (member) => storyOf(member),
       settle: (taskIds) => heard.settled.push(taskIds),
       // As the app does it: a change sent back keeps its approval, and its crewmate hears why.
@@ -444,7 +447,7 @@ export function setup(ways: MergeWays = EVERY_WAY) {
         for (let change of input.changes) {
           // As git answers it (combine.test.ts): a change built on another's approved version.
           if (change.after && !members.some((member) => member.taskId === change.after)) {
-            const unmerged = input.unmergedBase?.(change);
+            const unmerged = input.unmergedBase?.(change)?.[0];
             if (!unmerged && !input.merged?.(change.after)) {
               waiting.push(change);
               continue;

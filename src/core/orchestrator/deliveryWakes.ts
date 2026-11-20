@@ -98,7 +98,8 @@ export type DeliveryFacts =
        * its one steer, which sends the part to the first mate.
        */
       kind: "base-closed-unmerged";
-      base: { key: string; title: string; head: string };
+      /** `newer`: the newest version its approval covered, when newer than `head`. */
+      base: { key: string; title: string; head: string; newer?: string };
       closed: "done" | "dropped";
     }
   | {
@@ -624,12 +625,20 @@ export function baseClosedUnmergedWake(base: {
   title: string;
   /** The approved version the part's recorded base names. */
   head: string;
+  /** The newest version the closed part's approval covered. */
+  newest?: string;
   closed: "done" | "dropped";
 }): TypedWake {
+  const newer = base.newest && base.newest !== base.head ? base.newest : undefined;
   return {
     facts: {
       kind: "base-closed-unmerged",
-      base: { key: base.key || base.id, title: base.title, head: base.head },
+      base: {
+        key: base.key || base.id,
+        title: base.title,
+        head: base.head,
+        ...(newer ? { newer } : {}),
+      },
       closed: base.closed,
     },
     once: baseClosedUnmergedOnce(base),
@@ -874,7 +883,7 @@ export const DELIVERY_WORDS: KindWords<DeliveryFacts> = {
     `${facts.base.key} "${facts.base.title}" is now approved to merge at ${facts.to}, a newer version than ${facts.from}, the one your branch builds on. Bring your branch onto ${facts.to} with only your own commits (git fetch origin ${facts.base.branch}, then git rebase --onto ${facts.to} ${facts.from}), check your change again and push. If the captain's merge approval of your change stands, declare that push with check_change conflictRepair, giving ${facts.to} as newBase; otherwise show your merge card again at the new version. A merge card at a version that does not hold ${facts.to} is refused, and the batch would leave such a version out.`,
   // i18n-exempt: served to the crewmate as its steer, stays English
   "base-closed-unmerged": (facts) =>
-    `${facts.base.key} "${facts.base.title}" closed without merging (${facts.closed}), and your branch builds on its approved version ${facts.base.head}, so your branch carries work that will not merge and the batch leaves your change out while it does. Stop building on it and report to the first mate with needs_firstmate, naming ${facts.base.key}: it decides whether your task goes on rebuilt without that work, waits for the work that replaces ${facts.base.key}, or is dropped. Put up no merge card until it answers.`,
+    `${facts.base.key} "${facts.base.title}" closed without merging (${facts.closed}), and your branch builds on its approved version ${facts.base.head}${facts.base.newer ? `, or on its newer approved version ${facts.base.newer} if you brought it onto that one` : ""}, so your branch carries work that will not merge and the batch leaves your change out while it does. Stop building on it and report to the first mate with needs_firstmate, naming ${facts.base.key}: it decides whether your task goes on rebuilt without that work, waits for the work that replaces ${facts.base.key}, or is dropped. Put up no merge card until it answers.`,
   "wait-moved": (facts) =>
     `${facts.replaced.key} "${facts.replaced.title}", which you heard was dropped, goes on in ${facts.dependency.key} "${facts.dependency.title}", so your task waits on ${facts.dependency.key} now and its close steers you. If you carried on without that work, check what your task still needs from it.`,
   "merge-line": (facts) =>

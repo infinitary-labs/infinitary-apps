@@ -1841,11 +1841,13 @@ export class IdleLadder {
     if (!builtOn) return undefined;
     const base = builtOn.task;
     if (TaskService.isClosed(base)) {
+      const ended = base.delivery?.mergeAuthorization;
       this.steerOnce(
         record.id,
         baseClosedUnmergedWake({
           ...base,
           head: builtOn.head,
+          ...(ended ? { newest: TaskGraph.newestApproved(ended) } : {}),
           closed: base.status === "done" ? "done" : "dropped",
         }),
       );

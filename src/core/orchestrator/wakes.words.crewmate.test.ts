@@ -890,6 +890,23 @@ const CASES: WordsCases<CrewmateWakeKind> = {
       words:
         'INF-5187 "Bitbucket 1: the forge" closed without merging (dropped), and your branch builds on its approved version 4be7c1d90a2f4be7c1d90a2f4be7c1d90a2f4be7, so your branch carries work that will not merge and the batch leaves your change out while it does. Stop building on it and report to the first mate with needs_firstmate, naming INF-5187: it decides whether your task goes on rebuilt without that work, waits for the work that replaces INF-5187, or is dropped. Put up no merge card until it answers.',
     },
+    {
+      name: "the part under it closed after a kept repair it may have been brought onto (INF-5297 review)",
+      wake: {
+        facts: {
+          kind: "base-closed-unmerged",
+          base: {
+            key: "INF-5187",
+            title: "Bitbucket 1: the forge",
+            head: "4be7c1d90a2f4be7c1d90a2f4be7c1d90a2f4be7",
+            newer: "9d3f0a6b2c8e9d3f0a6b2c8e9d3f0a6b2c8e9d3f",
+          },
+          closed: "dropped",
+        },
+      },
+      words:
+        'INF-5187 "Bitbucket 1: the forge" closed without merging (dropped), and your branch builds on its approved version 4be7c1d90a2f4be7c1d90a2f4be7c1d90a2f4be7, or on its newer approved version 9d3f0a6b2c8e9d3f0a6b2c8e9d3f0a6b2c8e9d3f if you brought it onto that one, so your branch carries work that will not merge and the batch leaves your change out while it does. Stop building on it and report to the first mate with needs_firstmate, naming INF-5187: it decides whether your task goes on rebuilt without that work, waits for the work that replaces INF-5187, or is dropped. Put up no merge card until it answers.',
+    },
   ],
   "dependency-closed": [
     {

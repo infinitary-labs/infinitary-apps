@@ -751,6 +751,98 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(heard()).toHaveLength(told);
     });
 
+    // INF-5297's review: the steer about a closed base names the newest version its ended
+    // approval covered, which the part may have been brought onto.
+    it("names the repaired version too when a base closes after its kept repair, before the part followed it", async () => {
+      const crewmate = fakeCrewmate();
+      const { supervisor, tasks } = clockedSetup(crewmate);
+      const head = "4c2e8a1f6b3d9e7a5c1f8b2d4e6a9c3f7b1d5e8a";
+      const repaired = "2e4f6a8c1d3b5e7f9a2c4e6b8d1f3a5c7e9b2d4f";
+      const base = seedTask(tasks, {
+        id: "base",
+        title: "Add the CSV export",
+        status: "completed",
+        worktreeDir: "/work/base",
+        sessionFile: "/tmp/base.jsonl",
+      });
+      const later = seedTask(tasks, {
+        id: "later",
+        title: "Show the export in the panel",
+        status: "completed",
+        worktreeDir: "/work/later",
+        sessionFile: "/tmp/later.jsonl",
+        shape: {
+          kind: "implement",
+          built_on: { task: base.key, branch: "inf/csv-export-a1b2", head },
+        },
+      });
+      tasks.graph.link(base.id, later.id, "blocks", "firstmate");
+      const approval = (approvedHead: string, lineage: string[] = []) =>
+        seedDelivery(tasks, base.id, {
+          mergeAuthorization: {
+            version: 1,
+            id: `approval-${approvedHead}`,
+            generation: 1,
+            issuer: "captain",
+            at: 1,
+            card: { id: "merge-card", offerId: "offer-1", actionId: "merge" },
+            target: {
+              repoId: "r1",
+              host: "github.com",
+              owner: "example",
+              name: "meter",
+              branch: "inf/csv-export-a1b2",
+              delivery: "direct-pr",
+              method: "squash",
+            },
+            approvedHead,
+            proceedWithOpen: false,
+            status: "standing",
+            lineage: lineage.map((toHead, index) => ({
+              fromHead: index === 0 ? approvedHead : (lineage[index - 1] ?? approvedHead),
+              toHead,
+              newBase: "0a1b2c3d4e5f0a1b2c3d4e5f0a1b2c3d4e5f0a1b",
+              impact: "none" as const,
+              changedPaths: [],
+              evidence: "rebased onto the default branch",
+              validation: "the unit tests",
+              generation: 1,
+              at: 2,
+            })),
+          },
+        });
+      const heard = () => [
+        ...crewmate.promptCalls,
+        ...vi.mocked(crewmate.steer).mock.calls.map(([text]) => String(text)),
+      ];
+      const sweep = async () => {
+        clock.now += minutes(30);
+        await supervisor.watch.sweepGates(clock.now);
+        await settle();
+      };
+
+      // INF-5297's review: the base is repaired and then dropped before anything moved the
+      // part's recorded base, so the part may hold either version; the steer names both.
+      approval(head, [repaired]);
+      await sweep();
+      await endTurn(crewmate, later.id, "Brought my branch onto the repaired export.");
+      tasks.close(base.id, { status: "dropped", reason: "cancelled", actor: "captain" });
+      await sweep();
+      await sweep();
+      const closed = renderWake(
+        baseClosedUnmergedWake({
+          id: base.id,
+          key: base.key,
+          title: base.title,
+          head,
+          newest: repaired,
+          closed: "dropped",
+        }),
+      );
+      expect(closed).toContain(`or on its newer approved version ${repaired}`);
+      expect(heard().filter((text) => text.includes(closed))).toHaveLength(1);
+    });
+
     it("after the resume the ladder reads the task on its own clock again", async () => {
       const { supervisor, crewmate, tasks, taskId, owner, at } = await waitingOn("blocks");
       tasks.close(owner.id, { status: "done", reason: "merged", actor: "captain" });

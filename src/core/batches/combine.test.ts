@@ -511,7 +511,7 @@ describe("a change built on another change's approved version", () => {
     const at = host();
     const { first, panel } = approvedTwice(at);
     const closed = (change: BatchChange) =>
-      change.taskId === panel.taskId ? first.head : undefined;
+      change.taskId === panel.taskId ? [first.head] : undefined;
     const carrying = await combine({
       repoDir: at.home,
       defaultBranch: "main",
@@ -543,6 +543,42 @@ describe("a change built on another change's approved version", () => {
     });
     expect(own.leftOut).toEqual([]);
     expect(run(at.home, "diff", "--name-only", own.base, own.head)).toBe("src/panel.ts");
+  });
+
+  // INF-5297's review: a kept repair brings the earlier part up to date with the default
+  // branch, so its newer approved version does not hold the one the later part was built on.
+  // A later part brought onto that newer version still carries the closed part's work.
+  it("leaves it out while it carries the newer approved version of a base that closed without merging", async () => {
+    const at = host();
+    const { first } = approvedTwice(at);
+    run(at.work, "checkout", "--quiet", "-B", "main", "origin/main");
+    write(at.work, "src/report.ts", "export const rows = ['date', 'total', 'zone'];\n");
+    run(at.work, "commit", "-am", "feat(report): add the zone column");
+    run(at.work, "push", "origin", "HEAD:refs/heads/main");
+    // The repair: the parser's change again, on the newer default branch.
+    const repaired = change(at, { ...PARSER, approvedAt: 2_500 });
+    const replayed: BatchChange = {
+      ...change(at, {
+        taskId: "task-panel",
+        title: "feat(parser): show parsed dates in the panel",
+        files: { "src/panel.ts": "export const panel = 'dates';\n" },
+        from: repaired.head,
+        approvedAt: 4_000,
+      }),
+      base: first.branch,
+      after: first.taskId,
+    };
+    const result = await combine({
+      repoDir: at.home,
+      defaultBranch: "main",
+      changes: [replayed],
+      at: AT,
+      unmergedBase: () => [first.head, repaired.head],
+    });
+    expect(result.members).toEqual([]);
+    expect(result.leftOut).toEqual([
+      { change: replayed, reason: LEFT_OUT_WORDS.baseClosed(repaired.head) },
+    ]);
   });
 });
 

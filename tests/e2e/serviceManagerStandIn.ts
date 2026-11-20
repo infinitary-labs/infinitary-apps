@@ -67,9 +67,10 @@ function refused() {
 }
 function begin(job) {
   if (refused()) return 5;
+  rmSync(goneFile(job.label), { force: true });
   const running = existsSync(pidFile(job.label)) && alive(Number(readFileSync(pidFile(job.label), "utf8")));
   if (running) return 0;
-  writeFileSync(join(STATE, job.label + ".job.json"), JSON.stringify(job));
+  writeFileSync(jobFile(job.label), JSON.stringify(job));
   const log = openSync(join(STATE, job.label + ".log"), "a");
   const supervisor = spawn(process.execPath, [__filename, "__supervise", job.label], { detached: true, stdio: ["ignore", log, log], env: process.env });
   supervisor.unref();
@@ -77,7 +78,15 @@ function begin(job) {
   for (let i = 0; i < 200 && !existsSync(pidFile(job.label)); i++) spawnSync("sleep", ["0.05"]);
   return 0;
 }
+const jobFile = (label) => join(STATE, label + ".job.json");
+// Running: its supervisor is there, as systemd's is-active answers for an active unit.
+function running(label) {
+  return existsSync(pidFile(label)) && alive(Number(readFileSync(pidFile(label), "utf8")));
+}
+// Stopping a job takes it away, as launchd's bootout unloads it, until it is started again.
+const goneFile = (label) => join(STATE, label + ".gone");
 function end(label) {
+  writeFileSync(goneFile(label), "");
   if (!existsSync(pidFile(label))) return 3;
   const pid = Number(readFileSync(pidFile(label), "utf8"));
   try { process.kill(pid, "SIGTERM"); } catch {}
@@ -117,7 +126,8 @@ let code = 0;
 if (args[0] === "__supervise") supervise(args[1]);
 else if (args[0] === "bootstrap") code = begin(plistJob(args[2]));
 else if (args[0] === "bootout") code = end(args[1].split("/").pop());
-else if (args[0] === "print") code = 0;
+// A domain is always there, and a job until it is stopped, as launchd holds what it loaded.
+else if (args[0] === "print") code = args[1].split("/").length < 3 || !existsSync(goneFile(args[1].split("/").pop())) ? 0 : 113;
 else if (args[0] === "kickstart" && args[1] === "-k") code = kill(args[2].split("/").pop());
 else if (args[0] === "--user" && args[1] === "kill" && args[2] === "--signal=SIGKILL") code = kill(args[3]);
 else if (args[0] === "--user" && args[1] === "start") code = begin(unitJob(join(__UNITS__, args[2] + ".service"), args[2]));
@@ -126,6 +136,7 @@ else if (args[0] === "--user" && args[1] === "restart") {
   end(args[2]);
   code = begin(unitJob(join(__UNITS__, args[2]), args[2]));
 }
+else if (args[0] === "--user" && args[1] === "is-active") code = running(args[2]) ? 0 : 3;
 else if (args[0] === "--user") code = 0;
 else code = 1;
 if (args[0] !== "__supervise") process.exit(code);

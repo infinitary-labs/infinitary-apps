@@ -46,7 +46,10 @@ const LAUNCHER = {
 };
 const LABEL = "com.infinitary.app.dev.run";
 
-function mac(answers: { bootstrap?: boolean; session?: boolean } = {}) {
+/** How the service manager answers a stop: refused while it still holds the job, or the job already gone. */
+type StopAnswer = "refused" | "gone";
+
+function mac(answers: { bootstrap?: boolean; session?: boolean; stop?: StopAnswer } = {}) {
   const asked: string[][] = [];
   const context: RunAgentContext = {
     label: LABEL,
@@ -62,13 +65,20 @@ function mac(answers: { bootstrap?: boolean; session?: boolean } = {}) {
         return { ok: false, output: "Bootstrap failed: 5: Input/output error" };
       if (args[0] === "print" && answers.session === false)
         return { ok: false, output: `Could not find domain for user ${args[1]}` };
+      if (args[0] === "bootout" && answers.stop)
+        return { ok: false, output: "Boot-out failed: 5: Input/output error" };
+      if (args[0] === "print" && args[1] === `gui/502/${LABEL}` && answers.stop === "gone")
+        return {
+          ok: false,
+          output: `Could not find service "${LABEL}" in domain for user gui: 502`,
+        };
       return { ok: true, output: "" };
     },
   };
   return { context, asked };
 }
 
-function linux(answers: { session?: boolean } = {}) {
+function linux(answers: { session?: boolean; stop?: StopAnswer } = {}) {
   const asked: string[][] = [];
   const unitsDir = join(scratchDir("infinitary-run-agent-config-"), "systemd", "user");
   const context: RunAgentContext = {
@@ -86,6 +96,10 @@ function linux(answers: { session?: boolean } = {}) {
       if (args.includes("show-environment") && answers.session === false)
         return { ok: false, output: "Failed to connect to bus" };
       if (args.includes("--system")) return { ok: true, output: "inactive\n" };
+      if (args[1] === "stop" && answers.stop)
+        return { ok: false, output: `Failed to stop ${LABEL}.service: Access denied` };
+      if (args[1] === "is-active" && answers.stop === "gone")
+        return { ok: false, output: "inactive\n" };
       return { ok: true, output: "" };
     },
   };
@@ -185,6 +199,17 @@ describe("the command the window starts, on a Mac", () => {
     });
     expect(asked).toEqual([["bootout", `gui/502/${LABEL}`]]);
     expect(runAgentInPlace(context)).toBe(false);
+  });
+
+  // The review of INF-5409: a job launchd would not end, and still holds, may start its run again
+  // beside the view, so letting it go says so; one already gone is let go quietly.
+  it("rejects when launchd keeps the agent's job it was asked to end, and not when the job was gone", async () => {
+    const refused = mac({ stop: "refused" });
+    await expect(stopRunAgent(refused.context, { forget: true })).rejects.toThrow(
+      "Boot-out failed",
+    );
+    const gone = mac({ stop: "gone" });
+    await expect(stopRunAgent(gone.context, { forget: true })).resolves.toBeUndefined();
   });
 });
 
@@ -307,6 +332,14 @@ describe("the command the window starts, on Linux", () => {
       ["--user", "daemon-reload"],
       ["--user", "stop", LABEL],
     ]);
+  });
+
+  // The review of INF-5409: a service systemd would not stop, and still runs, says so.
+  it("rejects when systemd keeps the agent's service running, and not when it had stopped", async () => {
+    const refused = linux({ stop: "refused" });
+    await expect(stopRunAgent(refused.context, { forget: true })).rejects.toThrow("Access denied");
+    const gone = linux({ stop: "gone" });
+    await expect(stopRunAgent(gone.context, { forget: true })).resolves.toBeUndefined();
   });
 });
 

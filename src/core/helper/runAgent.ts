@@ -287,7 +287,10 @@ export function forgetRunAgentFiles(
  * mate itself after all, so the agent never starts the run beside it, and,
  * with `forget`, for a window that joined a first mate on another computer,
  * so no login starts a run here again. With `run`, a stop asked through the
- * folder is for that run alone, so a run started by hand there stays.
+ * folder is for that run alone, so a run started by hand there stays. On a
+ * Mac or Linux the agent's job is ended whichever run it holds; a job the
+ * service manager would not end, and still holds, rejects, so the caller
+ * says so, while one already gone is let go quietly.
  */
 export async function stopRunAgent(
   context: RunAgentContext,
@@ -311,7 +314,12 @@ export async function stopRunAgent(
       rmSync(loginAgentFile(context), { force: true });
       rmSync(sessionAgentFile(context), { force: true });
     }
-    await launchctlOf(context)(["bootout", `gui/${context.uid}/${context.label}`]);
+    const launchctl = launchctlOf(context);
+    const service = `gui/${context.uid}/${context.label}`;
+    const out = await launchctl(["bootout", service]);
+    // A job already gone is let go; one launchd still holds may start its run again.
+    if (!out.ok && (await launchctl(["print", service])).ok)
+      throw new Error(`launchd did not stop the agent: ${out.output}`);
     return;
   }
   const systemctl = systemctlOf(context);
@@ -320,7 +328,9 @@ export async function stopRunAgent(
     rmSync(unitFile(context), { force: true });
     await systemctl(["daemon-reload"]);
   }
-  await systemctl(["stop", context.label]);
+  const out = await systemctl(["stop", context.label]);
+  if (!out.ok && (await systemctl(["is-active", context.label])).ok)
+    throw new Error(`systemd did not stop the agent: ${out.output}`);
 }
 
 /**

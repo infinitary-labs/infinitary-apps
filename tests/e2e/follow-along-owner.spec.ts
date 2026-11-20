@@ -25,7 +25,9 @@ import { type ServiceManagerStandIn, serviceManagerStandIn } from "./serviceMana
  * the shell's own answer on following along, and whether the window became that home's view.
  * A grant written before either process starts is taken by the window alone: its command, run
  * with no window, never takes one, so a fresh home follows along once with no restart, and a home
- * where a sign-in was saved stays home, its command running on after the window quits.
+ * where a sign-in was saved stays home, its command running on after the window quits. A run
+ * the agent's job started again after a failure is the job's own: following along ends the job
+ * with it, while a run started by hand in its place keeps going.
  */
 
 const LABEL = runLabelOf("dev");
@@ -210,6 +212,49 @@ test("a window follows along beside the command its agent started, and never sto
       await expect.poll(() => standIn?.running(LABEL)).toBe(false);
       expect(standIn.runs(LABEL)).toEqual([owned]);
       // The window is that home's view, under the grant the add left.
+      await expect
+        .poll(async () =>
+          (await pro.page.evaluate(() => window.infinitary.devices.list())).some(
+            (device) => device.id === deviceId && device.inReach,
+          ),
+        )
+        .toBe(true);
+      await air.close();
+      air = undefined;
+      standIn.stopAll();
+      endCommands();
+    });
+
+    await test.step("its agent started the command again after it failed: following along ends the agent's job with that run, and nothing starts another", async () => {
+      const userDataDir = scratchDir("infinitary-follow-managed-");
+      const homeDir = scratchDir("infinitary-follow-managed-home-");
+      standIn = serviceManagerStandIn(homeDir);
+      air = await launchApp({
+        userDataDir,
+        homeDir,
+        env: {
+          ...standIn.env,
+          INFINITARY_WINDOW_STARTS_RUN: "1",
+          INFINITARY_DEVICE_NAME: "Mac mini",
+        },
+      });
+      const { page } = air;
+      await welcomed(page);
+      const first = commandPid(userDataDir);
+      expect(standIn.runs(LABEL)).toEqual([first]);
+      // The run fails, and the agent's job starts it again as another process: the job's own run.
+      process.kill(first, "SIGKILL");
+      await expect.poll(() => standIn?.runs(LABEL).length, { timeout: 30_000 }).toBe(2);
+      const second = standIn.runs(LABEL)[1] as number;
+      expect(second).not.toBe(first);
+      await expect.poll(() => commandPid(userDataDir), { timeout: 60_000 }).toBe(second);
+      await welcomed(page);
+      const deviceId = await addedByAddress(join(userDataDir, "work"));
+      await expect.poll(() => roleOf(page), { timeout: 90_000 }).toBe("view");
+      // Letting the agent go ends its job, and the run it started again goes with it.
+      await expect.poll(() => alive(second), { timeout: 30_000 }).toBe(false);
+      await expect.poll(() => standIn?.running(LABEL)).toBe(false);
+      expect(standIn.runs(LABEL)).toEqual([first, second]);
       await expect
         .poll(async () =>
           (await pro.page.evaluate(() => window.infinitary.devices.list())).some(

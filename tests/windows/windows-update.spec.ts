@@ -13,6 +13,7 @@ import { WINDOWS_UPDATES_FOLDER } from "../../src/core/update/windowsInstall";
 import { GIT_FOR_WINDOWS } from "../../src/core/windowsGit";
 import { GIT_SETUP_WORDS } from "../../src/main/windowsGitSetup";
 import { SPAWN_PROMPT_MARKER } from "../e2e/mockProvider";
+import { heroShotShowing } from "../e2e/pictures";
 import { promptInput } from "../e2e/prompt";
 import { taskKey } from "../e2e/rails";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -285,6 +286,26 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
       feed.mode = "published";
       await offered();
       const panel = await showPanel("update-offered");
+      if (evidence) {
+        // The release note's picture pair: the offer as a Windows copy now
+        // draws it, in both themes, the saved theme back after.
+        const saved = await page().evaluate(() => window.infinitary.settings.getAppearance());
+        await heroShotShowing(
+          page(),
+          { region: panel, name: "windows-updates-itself", dir: evidence },
+          async (theme) => {
+            const next = theme ?? saved.theme;
+            await page().evaluate(
+              (appearance) => window.infinitary.settings.setAppearance(appearance),
+              {
+                ...saved,
+                theme: next,
+              },
+            );
+            await expect.poll(() => page().evaluate(() => document.body.dataset.theme)).toBe(next);
+          },
+        );
+      }
       const windowPid = launched?.process.pid;
       await panel.getByRole("button", { name: UPDATE_WORDS.restart }).click();
       // The command saves its crew's work and ends, the installer replaces

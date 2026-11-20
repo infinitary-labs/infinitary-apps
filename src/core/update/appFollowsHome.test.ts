@@ -136,6 +136,46 @@ describe("an app following the version of the computer it controls", () => {
     expect(a.install.mock.calls.map((call) => call[0])).toEqual(["0.8.4-alpha.650"]);
   });
 
+  it("ends what a connection started once it goes or another comes, then reads the home's version again", async () => {
+    const a = app({ nobody: true });
+    a.follows.connected();
+    await a.settle();
+    // A new connection while the download runs: the old one's version neither installs nor waits.
+    a.homeRuns("0.8.4-alpha.650");
+    a.follows.connected();
+    await a.ready({ ok: true });
+    expect(a.install).not.toHaveBeenCalled();
+    expect(a.told.map((report) => report.step)).toEqual(["getting", "getting"]);
+    expect(a.follow).toHaveBeenLastCalledWith("0.8.4-alpha.650");
+    await a.ready({ ok: true });
+    expect(a.install.mock.calls.map((call) => call[0])).toEqual(["0.8.4-alpha.650"]);
+    // The connection goes during the install: it is no longer wanted before it quits.
+    const stillWanted = a.install.mock.calls[0]?.[1];
+    expect(stillWanted?.()).toBe(true);
+    a.follows.lost();
+    expect(stillWanted?.()).toBe(false);
+  });
+
+  it("says why a copy that only refuses cannot follow, in its own reason", async () => {
+    const told: AppFollowReport[] = [];
+    const follows = new AppFollowsHome({
+      updates: {
+        getStatus: async () => status("0.8.3"),
+        checkNow: async () => status("0.8.3"),
+        openReleasePage: async () => {},
+        install: async () => ({ ok: false, problem: "no" }),
+        follow: async () => ({ ok: false, reason: "package-manager" }),
+      },
+      homeVersion: async () => "0.8.4",
+      tell: (report) => told.push(report),
+      nobodyHere: () => true,
+      every: () => () => {},
+    });
+    follows.connected();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(told.at(-1)).toEqual({ version: "0.8.4", step: "cannot", reason: "package-manager" });
+  });
+
   it("stops following once it no longer controls that home, or the home runs its version", async () => {
     const a = app();
     a.follows.connected();

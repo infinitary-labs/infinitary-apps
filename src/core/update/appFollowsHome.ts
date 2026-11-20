@@ -45,6 +45,14 @@ export class AppFollowsHome {
   /** The last step told, so a moving download tells only what changed. */
   private told: string | null = null;
   private disposed = false;
+  /**
+   * Which connection an attempt belongs to: a lost or newer connection ends
+   * every attempt of the one before, so none installs its version, waits
+   * on it or tells the home of it.
+   */
+  private connection = 0;
+  /** A connection came while an attempt ran: read the home's version again once it ends. */
+  private again = false;
 
   constructor(private readonly options: AppFollowsHomeOptions) {}
 
@@ -54,9 +62,17 @@ export class AppFollowsHome {
    * again with no download, and one the home no longer runs is let go.
    */
   connected(): void {
+    this.lost();
+    if (this.running) this.again = true;
+    else this.start();
+  }
+
+  /** The connection to the home went: what it started ends, and the next connection reads again. */
+  lost(): void {
+    this.connection++;
     this.told = null;
     this.waiting = null;
-    this.start();
+    this.now = false;
   }
 
   /** The row's Update on the home: catch up and start again as soon as the version is here. */
@@ -80,44 +96,58 @@ export class AppFollowsHome {
   /** This app no longer controls that home: its own channel's newest is its offer again. */
   dispose(): void {
     this.disposed = true;
-    this.waiting = null;
+    this.lost();
     this.options.updates.unfollow?.();
   }
 
-  /** The catching up, once at a time; one asked meanwhile joins it. */
+  /** The catching up, once at a time; a connection that came meanwhile reads again after it. */
   private start(): void {
     if (this.running || this.disposed) return;
-    const run = this.catchUp().finally(() => {
+    const run = this.catchUp(this.connection).finally(() => {
       if (this.running === run) this.running = null;
       // A press holds only for this catching up: one that ended short of installing lets it go.
       if (!this.waiting) this.now = false;
+      if (this.again) {
+        this.again = false;
+        this.start();
+      }
     });
     this.running = run;
   }
 
-  private async catchUp(): Promise<void> {
+  /** Whether an attempt still belongs to the connection there is now. */
+  private current(connection: number): boolean {
+    return connection === this.connection && !this.disposed;
+  }
+
+  private async catchUp(connection: number): Promise<void> {
     const { updates } = this.options;
     const home = await this.options.homeVersion().catch(() => null);
-    if (!home || this.disposed) return;
+    if (!home || !this.current(connection)) return;
     const own = (await updates.getStatus()).currentVersion;
+    if (!this.current(connection)) return;
     if (!isNewerVersion(home, own)) {
       // The home runs this version or an older one again: nothing to follow.
       updates.unfollow?.();
       return;
     }
-    if (!updates.follow || !updates.installFollowed) {
+    if (!updates.follow) {
       this.tell({ version: home, step: "cannot", reason: "installation" });
       return;
     }
     this.tell({ version: home, step: "getting", percent: 0 });
     const stop = (this.options.every ?? every)(PROGRESS_EVERY_MS, () => {
       void updates.getStatus().then((status) => {
-        if (status.phase === "downloading" && status.percent !== undefined)
+        if (
+          status.phase === "downloading" &&
+          status.percent !== undefined &&
+          this.current(connection)
+        )
           this.tell({ version: home, step: "getting", percent: Math.floor(status.percent) });
       });
     });
     const ready = await updates.follow(home).finally(stop);
-    if (this.disposed) return;
+    if (!this.current(connection)) return;
     if (!ready.ok) {
       this.tell(
         "reason" in ready
@@ -129,6 +159,11 @@ export class AppFollowsHome {
             }
           : { version: home, step: "failed", problem: ready.failed.slice(0, 400) },
       );
+      return;
+    }
+    // Only a copy that installs the followed version alone may start again on it.
+    if (!updates.installFollowed) {
+      this.tell({ version: home, step: "cannot", reason: "installation" });
       return;
     }
     this.waiting = home;
@@ -148,12 +183,17 @@ export class AppFollowsHome {
     const { installFollowed } = this.options.updates;
     if (this.waiting !== version || this.disposed || !installFollowed) return;
     const asked = this.now;
+    const connection = this.connection;
     this.waiting = null;
     this.now = false;
     this.tell({ version, step: "restarting" });
-    const result = await installFollowed(version, () => asked || this.options.nobodyHere());
+    // Asked again before it quits: still this connection's, and asked for or nobody here.
+    const result = await installFollowed(
+      version,
+      () => this.current(connection) && (asked || this.options.nobodyHere()),
+    );
     // A release quits to start again and never answers; an answer means it did not.
-    if (result.ok || this.disposed) return;
+    if (result.ok || !this.current(connection)) return;
     if (result.later) {
       this.waiting = version;
       this.tell({ version, step: "waiting" });

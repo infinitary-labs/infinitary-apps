@@ -1,3 +1,4 @@
+import { appendFileSync } from "node:fs";
 import { DIRECT_MAC_INSTALLATION, parseMacInstallation } from "@core/update/macInstallation";
 import type { MacUpdateDriver } from "@core/update/macUpdates";
 import { releaseSource } from "@core/update/releaseSource";
@@ -20,6 +21,10 @@ export function macUpdateStandIn(
   if (packaged) return undefined;
   const version = settingFrom(env, "MAC_UPDATE_STAND_IN")?.trim();
   if (!version) return undefined;
+  /** Where each install that reached the replacement says its version, one line each. */
+  const installs = settingFrom(env, "MAC_UPDATE_STAND_IN_INSTALLS")?.trim();
+  /** The version last downloaded, the one an install replaces the copy with. */
+  let downloaded: string | undefined;
   return {
     installation: parseMacInstallation(DIRECT_MAC_INSTALLATION),
     check: async () => ({ version, releaseUrl: releaseSource.releaseUrl(version) }),
@@ -28,10 +33,17 @@ export function macUpdateStandIn(
       version: exact,
       releaseUrl: releaseSource.releaseUrl(exact),
     }),
-    download: async (_offer, progress) => progress(100),
-    // A release quits here to replace the copy and never answers; nothing is replaced and nothing quits.
-    // Someone using the app by then keeps it running, as a release's staged update does.
-    install: (stillWanted) =>
-      stillWanted && !stillWanted() ? Promise.resolve(false) : new Promise<void>(() => {}),
+    download: async (offer, progress) => {
+      downloaded = offer.version;
+      progress(100);
+    },
+    // A release stages and quits here to replace the copy and never answers; nothing is
+    // replaced and nothing quits. Someone using the app by then keeps it running, as a
+    // release does before it stages. A journey reads the version that reached this step.
+    install: (stillWanted) => {
+      if (stillWanted && !stillWanted()) return Promise.resolve(false);
+      if (installs && downloaded) appendFileSync(installs, `${downloaded}\n`);
+      return new Promise<void>(() => {});
+    },
   };
 }

@@ -1036,7 +1036,11 @@ export class ViewBackend {
     }
     if (state.contact === "in-reach") this.foldOnce(state);
     // A replay cut short ends with the connection; the next welcome says again.
-    if (state.contact === "lost" || state.contact === "closed") this.replaying = false;
+    if (state.contact === "lost" || state.contact === "closed") {
+      this.replaying = false;
+      // Catching up with the other Mac's version ends with the connection it read it on.
+      this.follows.lost();
+    }
     this.changed();
   }
 

@@ -37,9 +37,11 @@ export type MacUpdateDriver = {
   ) => Promise<void>;
   /**
    * After consent, download and the crew's saved work; owns native
-   * signature verification and graceful shutdown. `stillWanted`, asked once
-   * staging is done and before shutdown starts, keeps the copy running when
-   * it answers false: the install answers `false`, staged, and nothing quits.
+   * signature verification and graceful shutdown. `stillWanted`, asked
+   * before native staging starts, keeps the copy running when it answers
+   * false: the install answers `false`, with nothing staged and nothing quit.
+   * Once staging starts the copy is committed to it, since a staged update
+   * is applied at the next start.
    */
   install: (stillWanted?: () => boolean) => Promise<void | false>;
 };
@@ -294,10 +296,10 @@ export function createMacUpdateChecker(options: {
         saving.release();
         throw error;
       }
-      // Staged, and someone started using the app before it quit: it restarts later with no download.
+      // Someone started using the app before it was staged: it stays as it was.
       if (restarted === false) {
         saving.release();
-        if (consent === generation) phase = "ready";
+        if (consent === generation) phase = alreadyStaged ? "ready" : "idle";
         return { ok: false, later: true, problem: UPDATE_LATER };
       }
       return { ok: true };

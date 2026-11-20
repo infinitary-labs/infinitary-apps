@@ -26,6 +26,15 @@ export const UPDATE_WORDS = {
  */
 export const UPDATE_LATER = "The update waits until you choose it again. Your work carries on.";
 
+/**
+ * How a crewmate's turn an update stopped opens again, naming the computer
+ * that was updated when it is not this one (docs/alpha.md, "Saving work
+ * before an update"); a scripted stand-in recognizes it by it.
+ */
+export function updateResumedWords(computer?: string): string {
+  return `Your last turn stopped part way while Infinitary${computer ? ` on ${computer}` : ""} was updated; it is back now.`;
+}
+
 /** The crew's work around this computer's own update, in the update notice and on the Version row. */
 export const UPDATE_WORK_WORDS = {
   saving: "Saving work before the update. Running work finishes first, so nothing is lost.",

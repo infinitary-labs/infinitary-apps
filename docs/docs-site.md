@@ -53,6 +53,7 @@ Every page names itself as its canonical address and its version in each shipped
 
 `docs-site/words/<tag>.json` holds the site's own words in each language: the sidebar's group names and its home link for every catalog language, and the Keyboard page's own sentences for each shipped one.
 Starlight brings its menus', search's and notices' words for most languages; `docs-site/src/content/i18n/` adds them for the ones it lacks (`zh-Hans`, `zh-Hant`) and the words it leaves in English for a language, such as a heading link's label in Arabic and Japanese.
+The search window's own words (its result count, clear button and the rest, Starlight's `pagefind.*` words) come from that folder too: Starlight brings none, and Pagefind's search window does not pick its own by the page's language, so a shipped language adds them there.
 Text in Chinese, Japanese, Korean and Arabic takes the visitor's own typeface for its script from the design skill's `tokens/typography.css`, imported in Starlight's lowest layer so only its custom properties reach the site, with tracking at zero; no font file is added and nothing loads from another host.
 
 ### Translated pages
@@ -81,7 +82,7 @@ It never judges the prose; it refuses a shipped language that lacks a page Engli
 
 Add `docs-site/src/content/docs/<tag in lowercase>/` with every hand-written page translated and stamped, the language's words in `docs-site/words/<tag>.json`, and run `node scripts/docs-site-keyboard.ts` for its Keyboard page.
 The redirect for it goes away, its menu entry, alternates and search appear, and the site and live checks open its pages, with no other change.
-A language Starlight brings no words for also adds its file under `docs-site/src/content/i18n/`.
+Its file under `docs-site/src/content/i18n/` holds its search window's words, and the words Starlight brings none for.
 
 ## Build and check
 
@@ -97,7 +98,7 @@ The build writes plain files to `docs-site/dist/`, search index included.
 ### The check
 
 `docs-site/scripts/check-site.mjs` serves `dist/` on this computer and opens every built page in Chromium through Playwright, in a browser that may reach only that server.
-It opens pages side by side, and fails on a page that does not answer or draws no title, a page that does not name its language, direction, canonical address and alternates or labels its heading links in another language's words ("Languages"), a request to any other host, a cookie, a link between pages or to a heading that leads nowhere, a picture that does not draw, an unknown address that does not draw the site's own not-found page, search that draws no search box, search that finds nothing in English or, from each shipped language's home page, for a word of its Install page's title, finding that language's pages, a sitemap entry whose alternates differ from its page's, a translated What's new that does not show the English notes, marked English, under Starlight's notice in its language and marked so, and a wordmark drawn in anything but the text color at weight 500.
+It opens pages side by side, and fails on a page that does not answer or draws no title, a page that does not name its language, direction, canonical address and alternates or labels its heading links in another language's words ("Languages"), a request to any other host, a cookie, a link between pages or to a heading that leads nowhere, a picture that does not draw, an unknown address that does not draw the site's own not-found page, search that draws no search box, search that finds nothing in English or, from each shipped language's home page, for a word of its Install page's title, finding that language's pages, or whose result count or clear button reads as English's on a translated home page, a sitemap entry whose alternates differ from its page's, a translated What's new that does not show the English notes, marked English, under Starlight's notice in its language and marked so, and a wordmark drawn in anything but the text color at weight 500.
 Starlight builds the search box only when the browser next has idle time, and headless Chromium on a busy computer can stop drawing without ever having it, so the check waits for the box while asking the page for animation frames, as a visitor's pointer would.
 It also opens the home page with the system asking for dark and then for light, and fails unless the site follows.
 `SCREENSHOTS=<folder>` saves the home, install and first launch pages in both themes there.

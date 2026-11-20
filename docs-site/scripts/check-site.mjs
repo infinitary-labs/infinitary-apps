@@ -325,7 +325,9 @@ try {
     }
   }
 
-  // Then in each language from its own home page.
+  // Then in each language from its own home page,
+  // and its window speaks that language: its result count and clear button are not English's.
+  const searchWords = new Map();
   await sideBySide(LANGUAGES, async (tab, language) => {
     const word = searchWord(language);
     await tab.goto(`${origin}${language.prefix}`, { waitUntil: "load" });
@@ -338,10 +340,20 @@ try {
       if (languageOf(new URL(href, origin).pathname).tag !== language.tag) {
         fail(`Searching for "${word}" on ${language.prefix} led to ${href}, a page in another language`);
       }
+      const count = (await tab.locator(".pagefind-ui__message").first().innerText()).replace(word, "").replace(/\p{Nd}+/gu, "");
+      const clear = await tab.locator(".pagefind-ui__search-clear").first().innerText();
+      searchWords.set(language.tag, { count: count.trim(), clear: clear.trim() });
     } catch {
       fail(`Searching for "${word}" on ${language.prefix} found nothing`);
     }
   });
+  const englishSearch = searchWords.get(SOURCE_LANGUAGE);
+  for (const [tag, words] of searchWords) {
+    if (tag === SOURCE_LANGUAGE || !englishSearch) continue;
+    if (words.count === englishSearch.count || words.clear === englishSearch.clear) {
+      fail(`Search on /${segmentOf(tag)}/ shows its result count or clear button in English ("${words.count}", "${words.clear}")`);
+    }
+  }
 
   // What's new stays English in every language (docs/docs-site.md, "Languages"):
   // each language's page shows the English notes, marked English, under

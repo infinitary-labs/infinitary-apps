@@ -1167,7 +1167,12 @@ describe("the window beside a command's first mate", () => {
       workDir,
     });
     await at.start();
-    expect(at.shell.followsAdded()).toEqual({ follows: false, joins: false, pastes: true });
+    expect(at.shell.followsAdded()).toEqual({
+      follows: false,
+      joins: false,
+      pastes: true,
+      outside: false,
+    });
     await expect(at.shell.joinAt("kun@studio")).resolves.toEqual({ refused: "failed" });
     await grantFrom(pro, workDir);
     expect(await at.shell.followAdded()).toBe(false);
@@ -1187,33 +1192,83 @@ describe("the window beside a command's first mate", () => {
   });
 
   // The review of INF-5409: a command the window has just started may not have written its
-  // record yet, as on Windows, where Task Scheduler accepts the start before the run begins. That is
-  // not a stopped command: no join is offered until the run is known, and the join then stops it.
-  it("offers no join while the command it started has not written its record, then stops that run", async () => {
+  // record yet, as on Windows, where Task Scheduler accepts the start before the run begins, and
+  // may take longer than the window's wait to do so. That is not a stopped command: no join is
+  // offered until the run it started welcomes the window, and the join then stops that run.
+  it("offers no join while the command it started has not welcomed it, past the wait too, then stops that run", async () => {
     const pro = await otherMac({}, { joinsFromAnotherMac: true });
     const command = commandRun();
     let owned: OwnedRun | null = null;
     const at = besideShell(command.doorDir, {
       starts: true,
-      records: stopped("signal", 0),
+      records: { running: false, run: null, lastStop: null },
       ownedRun: () => owned,
-      startedAt: Date.now(),
-      readyMs: 60_000,
+      // Started well before the wait for it ended.
+      startedAt: Date.now() - 60_000,
+      readyMs: 1,
     });
     await at.shell.start();
-    expect(at.shell.followsAdded()).toEqual({ follows: false, joins: false, pastes: false });
+    const starting = { follows: false, joins: false, pastes: false, outside: false };
+    expect(at.shell.followsAdded()).toEqual(starting);
     await expect(at.shell.join(await pro.link("mac"))).resolves.toEqual({
       ok: false,
       refused: "other",
     });
-    // The run it started writes its record: the join is offered, and stops that run alone.
+    // Its run writes its record, and has not welcomed the window yet: still nothing is offered.
     owned = { pid: 4321, startedAt: "2026-11-20T18:00:00.000Z" };
     at.command.records = { running: true, run: owned, lastStop: null };
-    expect(at.shell.followsAdded()).toEqual({ follows: false, joins: true, pastes: true });
+    expect(at.shell.followsAdded()).toEqual(starting);
+    // It welcomes the window: the join is offered, and stops that run alone.
+    await command.open().settled();
+    await expect
+      .poll(() => at.shell.followsAdded())
+      .toEqual({ follows: false, joins: true, pastes: true, outside: false });
     await expect(at.shell.join(await pro.link("mac"))).resolves.toEqual({ ok: true });
     await expect.poll(() => at.shell.thisMac().role).toBe("view");
     expect(at.starter.stop.mock.calls).toEqual([[{ forget: true, run: owned }]]);
     expect(at.starter.stopped).toEqual([owned]);
+  });
+
+  // The review of INF-5409: Restart it ends the run the window owns and starts another; a join
+  // asked meanwhile would name the run on its way out and leave its replacement running, so none
+  // is offered until the restart settles, and a restart that did not happen offers it again.
+  it("offers no join while Restart it is under way, and offers it again when the restart did not happen", async () => {
+    const pro = await otherMac({}, { joinsFromAnotherMac: true });
+    const command = commandRun();
+    const answer = command.run.dispatch.getMockImplementation();
+    command.run.dispatch.mockImplementation(((channel: string, args: unknown[]) =>
+      channel === "inf:own-window:here"
+        ? new Promise(() => {})
+        : answer?.(channel as never, args as never)) as never);
+    await command.open().settled();
+    const at = besideShell(command.doorDir, { starts: true, readyMs: 2_000, answerWaitMs: 200 });
+    await at.shell.start();
+    await expect
+      .poll(() => at.shell.thisMac())
+      .toMatchObject({ command: { state: "stopped", ending: "not-answering" } });
+    expect(at.shell.followsAdded()).toMatchObject({ joins: true, pastes: true });
+    let restarted: (done: boolean) => void = () => {};
+    at.starter.restart.mockImplementation(
+      () =>
+        new Promise<boolean>((resolve) => {
+          restarted = resolve;
+        }),
+    );
+    expect(at.shell.restartCommand()).toBe(true);
+    expect(at.shell.followsAdded()).toEqual({
+      follows: false,
+      joins: false,
+      pastes: false,
+      outside: false,
+    });
+    await expect(at.shell.join(await pro.link("mac"))).resolves.toEqual({
+      ok: false,
+      refused: "other",
+    });
+    expect(at.starter.stop).not.toHaveBeenCalled();
+    // The service manager would not restart it: the run the window owns still runs, and joins.
+    restarted(false);
+    await expect.poll(() => at.shell.followsAdded()).toMatchObject({ joins: true, pastes: true });
   });
 
   // INF-1827 offers Join by its address at first launch, and an installed app's first launch
@@ -1261,6 +1316,7 @@ describe("the window beside a command's first mate", () => {
         follows: owned !== null,
         joins: owned !== null,
         pastes: owned !== null,
+        outside: owned === null,
       });
       await grantFrom(pro, workDir);
       expect(await at.shell.followAdded()).toBe(owned !== null);
@@ -1297,7 +1353,12 @@ describe("the window beside a command's first mate", () => {
     expect(at.starter.stops).toBe(0);
     expect(at.starter.stop).not.toHaveBeenCalled();
     // Nor does it offer to join, which would stop the run started by hand.
-    expect(at.shell.followsAdded()).toEqual({ follows: false, joins: false, pastes: false });
+    expect(at.shell.followsAdded()).toEqual({
+      follows: false,
+      joins: false,
+      pastes: false,
+      outside: true,
+    });
     expect(await at.shell.join(await pro.link("mac"))).toEqual({ ok: false, refused: "other" });
     expect(at.starter.stop).not.toHaveBeenCalled();
   });

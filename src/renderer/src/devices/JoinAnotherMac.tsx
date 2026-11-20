@@ -140,11 +140,12 @@ type AfterAdd = "waits" | "keeps" | "stays" | "unknown";
 function useFollowAdded(
   can: boolean,
   untouched: boolean,
-): { afterAdd: AfterAdd; joins: boolean | null; pastes: boolean | null } {
+): { afterAdd: AfterAdd; joins: boolean | null; pastes: boolean | null; outside: boolean } {
   const [answer, setAnswer] = useState<{
     follows: boolean;
     joins: boolean;
     pastes: boolean;
+    outside: boolean;
   } | null>(null);
   useEffect(() => {
     if (!can) return;
@@ -154,7 +155,13 @@ function useFollowAdded(
     const ask = () => {
       void window.infinitary.devices.followAdded().then(
         (said) => {
-          if (live) setAnswer({ follows: said.follows, joins: said.joins, pastes: said.pastes });
+          if (live)
+            setAnswer({
+              follows: said.follows,
+              joins: said.joins,
+              pastes: said.pastes,
+              outside: said.outside,
+            });
         },
         // An answer that cannot be read leaves joining unknown, never allowed.
         () => {
@@ -169,17 +176,23 @@ function useFollowAdded(
       clearInterval(every);
     };
   }, [can]);
-  // While no command this window starts runs, only a pasted link joins: nothing to promise.
+  // Only a first mate started outside this window keeps it beside that one. While no command
+  // this window starts runs, or one it started is still starting, there is nothing to promise.
   const afterAdd: AfterAdd = !answer
     ? "unknown"
-    : !answer.pastes
+    : answer.outside
       ? "stays"
-      : !answer.joins
+      : !answer.pastes || !answer.joins
         ? "unknown"
         : untouched && answer.follows
           ? "waits"
           : "keeps";
-  return { afterAdd, joins: answer?.joins ?? null, pastes: answer?.pastes ?? null };
+  return {
+    afterAdd,
+    joins: answer?.joins ?? null,
+    pastes: answer?.pastes ?? null,
+    outside: answer?.outside === true,
+  };
 }
 
 /**
@@ -303,7 +316,7 @@ export function JoinAnotherMac({ onOpenChange, note, join, byAddress }: JoinAnot
   const setUpOffered = useSetUpOffered();
   const { here, unread } = useSetUpHere(step.step === "set-up");
   const firstRun = useShellStore((s) => s.firstRun);
-  const { afterAdd, joins, pastes } = useFollowAdded(
+  const { afterAdd, joins, pastes, outside } = useFollowAdded(
     firstRun?.gateOpen === true,
     firstRun?.untouched === true,
   );
@@ -399,6 +412,7 @@ export function JoinAnotherMac({ onOpenChange, note, join, byAddress }: JoinAnot
       afterAdd={afterAdd}
       joins={joins}
       pastes={pastes}
+      outside={outside}
       onOpenSetUp={() => setStep({ step: "set-up" })}
       onOpenSharing={() => void window.infinitary.devices.openSharing().catch(() => undefined)}
       onContinue={toConfirm}
@@ -442,10 +456,13 @@ export type JoinAnotherMacViewProps = {
   joins?: boolean | null;
   /**
    * Whether Paste its link works here, as the shell last said: false beside
-   * a first mate started outside this window, null while not yet known.
-   * Absent, as a view drawn alone, it works.
+   * a first mate started outside this window or while a command this window
+   * started is still starting, null while not yet known. Absent, as a view
+   * drawn alone, it works.
    */
   pastes?: boolean | null;
+  /** The shell said a first mate started outside this window runs beside it: the line says so. */
+  outside?: boolean;
   onOpenSetUp?: () => void;
   onOpenSharing?: () => void;
   /** A line under the chip, while it is closed: which Mac this app last left. */
@@ -536,7 +553,7 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
             </button>
           </div>
         </div>
-        {props.pastes === false && (
+        {props.outside === true && (
           <p className="fm-join-sub" data-join-stays="">
             {m.devicesJoinStaysBeside()}
           </p>

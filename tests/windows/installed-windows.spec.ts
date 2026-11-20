@@ -661,14 +661,7 @@ test("the Windows installer installs for this person, offers Git, starts the com
     const launched = await launchInstalled({ ownDataDir: dataDir });
     try {
       const { link } = home.pairing.invite({ kind: "mac", at: `127.0.0.1:${home.port}` });
-      // The window started the command through Task Scheduler as it opened, which answers before
-      // the run begins: Paste its link is offered only once that run is known as the window's own
-      // (the review of INF-5409), so the join stops it rather than leaving it beside the view.
-      await expect
-        .poll(() => launched.page.evaluate(() => window.infinitary.devices.followAdded()), {
-          timeout: 120_000,
-        })
-        .toMatchObject({ pastes: true });
+      await joinReady(launched.page);
       const [started] = runProcesses();
       if (!started) throw new Error("the window's command is not running");
       // Joining starts the window over, so its answer may never return to this page.
@@ -697,7 +690,10 @@ test("the Windows installer installs for this person, offers Git, starts the com
       await expect
         .poll(() => runProcesses().map((run) => run.pid), { timeout: 60_000 })
         .not.toContain(started.pid);
+      // No run of this computer's own first mate is left at all, a later one included.
+      expect(runProcesses()).toEqual([]);
       expect(workRunProcesses().length).toBe(1);
+      expect(home.reached).toContain(device?.id);
       if (evidence) screenshot(join(evidence, "window-joined.png"));
 
       home.pairing.remove(device?.id ?? "");
@@ -733,6 +729,8 @@ test("the Windows installer installs for this person, offers Git, starts the com
       // Whether this PC reaches that home at all, apart from the app: a
       // network that keeps the two apart reads here, not as a refused join.
       keep("network-reach.txt", await reaches(new URL(link).searchParams.get("at") ?? ""));
+      // The window's own command must be known before the link is used once, as above.
+      await joinReady(launched.page);
       // A refusal answers on this page; a join starts the window over, so
       // its answer never returns.
       const answer = await Promise.race([
@@ -798,6 +796,20 @@ test("the Windows installer installs for this person, offers Git, starts the com
 });
 
 /** The job's numbers file, in the task's working copy under the project's worktrees. */
+/**
+ * Waits until the window accepts a pasted link (the review of INF-5409): it started the command
+ * through Task Scheduler as it opened, which answers before the run begins, and Paste its link is
+ * accepted only once that run has welcomed the window as its own, so the join stops that run
+ * rather than leaving it beside the view. The link is then used once.
+ */
+async function joinReady(page: Page): Promise<void> {
+  await expect
+    .poll(() => page.evaluate(() => window.infinitary.devices.followAdded()), {
+      timeout: 120_000,
+    })
+    .toMatchObject({ pastes: true });
+}
+
 async function jobPidsFile(git: string, repo: string): Promise<string> {
   let found = "";
   await expect

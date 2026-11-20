@@ -636,12 +636,14 @@ export const deviceChannels = {
     surface: "host",
     request: z.tuple([]),
     // `follows`: this window would follow along once added; `joins`: Join by its address works here;
-    // `pastes`: Paste its link works here, as it also does while no command this window starts runs.
+    // `pastes`: Paste its link works here, as it also does while no command this window starts runs;
+    // `outside`: a first mate started outside this window runs beside it, never one still starting.
     response: z.strictObject({
       followed: z.boolean(),
       follows: z.boolean(),
       joins: z.boolean(),
       pastes: z.boolean(),
+      outside: z.boolean(),
     }),
   },
   // One step of Join by its address asked of the first mate a command runs

@@ -448,34 +448,37 @@ export class Shell {
   }
 
   /**
-   * Whether this app's first mate answers a join here: as this computer's
-   * own, or beside a command this window starts while the command running is
-   * its own agent's, whose first mate stops for good (docs/run.md, "Joining
-   * another computer"). Join by its address and following along ask that
-   * first mate, so neither works while no command runs; a pasted link still
-   * does (`joinTarget`). Never beside one started by hand, which joining
-   * would stop.
+   * What joining would stop here, read once so the check, the stop and the
+   * window's answer name the same run (docs/run.md, "Joining another
+   * computer"): this app's own first mate (no `owned`), or beside a command
+   * this window starts, the run its own agent started, or `owned: null`
+   * while none runs, which stops no run however one starts meanwhile
+   * (`BesideWindow.joinState`). "starting" while a command this window
+   * started or restarted has not welcomed it, and "outside" beside one it
+   * does not own, where joining is refused, as it is in a view.
+   */
+  private joinState(): { owned?: OwnedRun | null } | "starting" | "outside" | "view" {
+    const mode = this.mode;
+    if (mode?.kind === "home") return {};
+    if (mode?.kind === "beside") return mode.beside.joinState();
+    return "view";
+  }
+
+  /** The join target, or null where joining is refused (`joinState`). */
+  private joinTarget(): { owned?: OwnedRun | null } | null {
+    const state = this.joinState();
+    return typeof state === "object" ? state : null;
+  }
+
+  /**
+   * Whether this app's first mate answers Join by its address and following
+   * along here: as this computer's own, or beside the run its own agent
+   * started; never while no command runs, which has no first mate to ask,
+   * nor beside one started by hand, which joining would stop.
    */
   private joinable(): boolean {
     const target = this.joinTarget();
     return target !== null && target.owned !== null;
-  }
-
-  /**
-   * What joining would stop here, read once so the check and the stop name
-   * the same run: this app's own first mate (no `owned`), or beside a command
-   * this window starts, the run its own agent started, or `owned: null` while
-   * none runs and none it started is on its way (`noCommandRuns`), which
-   * stops no run however one starts meanwhile. Null where
-   * joining is refused.
-   */
-  private joinTarget(): { owned?: OwnedRun | null } | null {
-    const mode = this.mode;
-    if (mode?.kind === "home") return {};
-    if (mode?.kind !== "beside" || !mode.beside.startsCommand) return null;
-    if (mode.beside.noCommandRuns) return { owned: null };
-    const owned = mode.beside.ownedRun;
-    return owned ? { owned } : null;
   }
 
   /**
@@ -564,15 +567,22 @@ export class Shell {
    * when it would follow along (`followAdded`), able to join with this
    * computer's work; `joins` when Join by its address works here: as its
    * own first mate, or beside a command its starter owns, never one started
-   * by hand (`joinable`); and `pastes` when Paste its link works, which a
-   * window that starts the command also may while none runs. The window
-   * promises only these.
+   * by hand (`joinable`); `pastes` when Paste its link works, which a
+   * window that starts the command also may while none runs; and `outside`
+   * only beside a command this window does not own, never while one it
+   * started is still starting. The window promises only these.
    */
-  followsAdded(): { follows: boolean; joins: boolean; pastes: boolean } {
-    // One reading for all three, so they never describe two different commands.
-    const target = this.joinTarget();
+  followsAdded(): { follows: boolean; joins: boolean; pastes: boolean; outside: boolean } {
+    // One reading for all four, so they never describe two different commands.
+    const state = this.joinState();
+    const target = typeof state === "object" ? state : null;
     const joins = target !== null && target.owned !== null;
-    return { follows: joins && Boolean(this.options.work), joins, pastes: target !== null };
+    return {
+      follows: joins && Boolean(this.options.work),
+      joins,
+      pastes: target !== null,
+      outside: state === "outside",
+    };
   }
 
   /**

@@ -537,6 +537,7 @@ export type FirstmateApi = {
       follows: boolean;
       joins: boolean;
       pastes: boolean;
+      outside: boolean;
     }>;
     /**
      * Fix it on a Mac's row: its window, connected now, checks its work and

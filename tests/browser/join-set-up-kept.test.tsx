@@ -24,7 +24,13 @@ test("a first launch with something set up promises no switch", async () => {
   const bridge = fakeBridge({
     ...home,
     "inf:app:first-run": used,
-    "inf:devices:follow-added": { followed: false, follows: false, joins: true, pastes: true },
+    "inf:devices:follow-added": {
+      followed: false,
+      follows: false,
+      joins: true,
+      pastes: true,
+      outside: false,
+    },
   });
   await openSize();
   await openWindow(bridge);

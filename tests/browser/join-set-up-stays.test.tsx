@@ -14,13 +14,20 @@ import { openSize, openWindow } from "./window";
  * the shell's first answer neither is offered either, and the set-up aside promises nothing, and a
  * later answer that a join works offers
  * both again. While no command runs a pasted link's join alone is offered, since it stops none.
+ * A command the window started that is still starting is join-set-up-starting.test.tsx's.
  * The untouched profile's view is join-set-up.test.tsx.
  */
 
 test("beside a first mate started outside the window, an untouched first launch promises no switch or join", async () => {
   const home = freshHome();
   // The shell has not answered yet: whether a join works here is unknown.
-  const first = held<{ followed: boolean; follows: boolean; joins: boolean; pastes: boolean }>();
+  const first = held<{
+    followed: boolean;
+    follows: boolean;
+    joins: boolean;
+    pastes: boolean;
+    outside: boolean;
+  }>();
   const bridge = fakeBridge(home);
   bridge.answer("inf:devices:follow-added", () => first.promise);
   await openSize();
@@ -55,8 +62,9 @@ test("beside a first mate started outside the window, an untouched first launch 
     follows: false,
     joins: false,
     pastes: false,
+    outside: true,
   });
-  first.resolve({ followed: false, follows: false, joins: false, pastes: false });
+  first.resolve({ followed: false, follows: false, joins: false, pastes: false, outside: true });
   // The closed group offers neither join: both chips are unavailable, and Tab passes them by.
   await expect
     .poll(() => document.querySelector("[data-join-stays]")?.textContent)
@@ -82,6 +90,7 @@ test("beside a first mate started outside the window, an untouched first launch 
     follows: false,
     joins: false,
     pastes: true,
+    outside: false,
   });
   await expect.poll(chips, { timeout: 10_000 }).toEqual([false, true]);
   expect(document.querySelector("[data-join-stays]")).toBeNull();
@@ -92,6 +101,7 @@ test("beside a first mate started outside the window, an untouched first launch 
     follows: true,
     joins: true,
     pastes: true,
+    outside: false,
   });
   await expect.poll(chips, { timeout: 10_000 }).toEqual([false, false]);
   expect(document.querySelector("[data-join-stays]")).toBeNull();

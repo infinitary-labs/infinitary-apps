@@ -192,30 +192,22 @@ export class BesideWindow {
   }
 
   /**
-   * Whether this window starts the command and its records say none runs
-   * now; unreadable records are never read as stopped. A command this window
-   * started that has not yet written its record, while the wait for it lasts
-   * (`launching`), is not none: it may still open this computer's first mate.
+   * What a join beside this command would stop, read once (docs/view.md,
+   * "Following along"): `{ owned: null }` while this window starts the
+   * command and its records say none runs, which stops no run; `{ owned }`
+   * while the run its own agent started runs (`BesideOptions.ownedRun`);
+   * "starting" while a command this window started or restarted has not
+   * welcomed it yet, whose run may still open this computer's first mate,
+   * however long it takes; and "outside" beside a command this window does
+   * not start, or one it does not own. Unreadable records are never read as
+   * stopped.
    */
-  get noCommandRuns(): boolean {
-    return (
-      this.startsCommand && this.options.beside.status().running === false && !this.launching()
-    );
-  }
-
-  /** Whether the command this window last started may still be on its way, as `read` waits for it. */
-  private launching(): boolean {
-    const started = this.startedAt;
-    const { beside, now } = this.options;
-    return (
-      started !== null &&
-      now() - started < entryWaitMs(beside.restartWaitMs, this.options.localWindow?.readyMs)
-    );
-  }
-
-  /** The command running now, when it is this window's starter's own (`BesideOptions.ownedRun`). */
-  get ownedRun(): OwnedRun | null {
-    return this.startsCommand ? (this.options.beside.ownedRun?.() ?? null) : null;
+  joinState(): { owned: OwnedRun | null } | "starting" | "outside" {
+    if (!this.startsCommand) return "outside";
+    if (this.startedAt !== null) return "starting";
+    if (this.options.beside.status().running === false) return { owned: null };
+    const owned = this.options.beside.ownedRun?.() ?? null;
+    return owned ? { owned } : "outside";
   }
 
   constructor(private readonly options: BesideWindowOptions) {
@@ -406,6 +398,7 @@ export class BesideWindow {
     const { starter } = this.options.beside;
     if (this.shown?.ending !== "not-answering" || !starter) return false;
     const since = this.unansweredSince;
+    const startedBefore = this.startedAt;
     this.restarting = true;
     this.startedAt = this.options.now();
     // The wait counts from the press, even while the command ending still runs.
@@ -418,6 +411,7 @@ export class BesideWindow {
       if (restarted || this.closed) return;
       // The command was not restarted: it is still the one that has not answered since then.
       this.restarting = false;
+      this.startedAt = startedBefore;
       if (this.unansweredOf === this.options.beside.status().run?.pid) this.unansweredSince = since;
       this.show(this.notAnswering());
     });

@@ -5,6 +5,7 @@ import { basename, join } from "node:path";
 import * as m from "@shared/i18n/messages.generated";
 import type { UpdateChannel } from "@shared/update";
 import { WINDOWS_HAND_OVER_WORDS } from "@shared/updateWords";
+import { powerShellWord } from "../devices/joinCommand";
 import { windowsPowerShell } from "../storage/ownerOnly";
 import { type BuildDownload, UPDATE_CHANNEL_MARKER } from "./updateChannels";
 import {
@@ -72,8 +73,12 @@ export const WINDOWS_SHUTDOWN_WAIT_SECONDS = 300;
 /** How long the hand-over waits for a copy it opens to show its window on its data folder. */
 export const WINDOWS_REOPEN_READY_SECONDS = 120;
 
-/** A PowerShell literal of `text`, in single quotes. */
-const literal = (text: string) => `'${text.replaceAll("'", "''")}'`;
+/**
+ * A PowerShell literal of `text`, in single quotes: the typographic single
+ * quotes a translation holds are doubled too, since PowerShell reads them as
+ * quotes and would refuse the whole script.
+ */
+const literal = powerShellWord;
 
 /**
  * The hand-over: the hidden Windows PowerShell that outlives this program

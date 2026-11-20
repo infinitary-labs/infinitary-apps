@@ -13,6 +13,7 @@ import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { expect, type Page, test } from "@playwright/test";
 import { runLabelOf } from "@shared/codeNames";
+import { inLanguage } from "@shared/i18n/current";
 import * as m from "@shared/i18n/messages.generated";
 import type { TaskDetail } from "@shared/tasks";
 import type { UpdateChannel } from "@shared/update";
@@ -803,24 +804,33 @@ test("the Windows hand-over keeps a copy still saving, reopens a copy on its own
       expect(stillRunning(others)).toEqual(others);
     });
 
-    const recovered = async (copy: ReturnType<typeof standIn>, readySeconds?: number) => {
+    // `language` is the one the app speaks as it writes the hand-over, whose
+    // recovery words ride the script itself.
+    const recovered = async (
+      copy: ReturnType<typeof standIn>,
+      readySeconds?: number,
+      language = "en",
+    ) => {
       for (const pid of appProcessesOn(executable, profile)) end(pid);
       rmSync(opened, { force: true });
       rmSync(join(dirname(stops.file), "ran.txt"), { force: true });
-      const run = handOver({
-        pid: await endedApp(),
-        installer: stops.file,
-        executable: copy.file,
-        dataDir: profile,
-        resultFile,
-        result,
-        marker: { file: marker, earlier: "the channel it followed" },
-        page,
-        ...(readySeconds ? { readySeconds } : {}),
-      });
+      const pid = await endedApp();
+      const run = inLanguage(language, () =>
+        handOver({
+          pid,
+          installer: stops.file,
+          executable: copy.file,
+          dataDir: profile,
+          resultFile,
+          result,
+          marker: { file: marker, earlier: "the channel it followed" },
+          page,
+          ...(readySeconds ? { readySeconds } : {}),
+        }),
+      );
       await expect
         .poll(() => dialogWords(run.pid).join(" "), { timeout: 120_000 })
-        .toContain(recovery);
+        .toContain(inLanguage(language, () => WINDOWS_HAND_OVER_WORDS.noCopy(page)));
       // The installer ran and stopped with its error before the message.
       expect(stops.ran()?.trim()).toBe("--updated /S");
       expect(said()).toEqual({ outcome: "install-failed", ...result, channelKept: true });
@@ -872,9 +882,12 @@ test("the Windows hand-over keeps a copy still saving, reopens a copy on its own
       expect(stillRunning(others)).toEqual(others);
     });
 
-    await test.step("a copy without its app is said in a message without being started, and its download page opens next", async () => {
+    await test.step("a copy without its app is said in a message, in French with its typographic apostrophes, without being started, and its download page opens next", async () => {
       const copy = standIn("a copy without its app", "Infinitary.exe");
-      const run = await recovered(copy);
+      // French words hold typographic apostrophes, which PowerShell reads as
+      // quotes: the message showing at all shows the script still parsed.
+      expect(inLanguage("fr", () => WINDOWS_HAND_OVER_WORDS.noCopy(page))).toContain("’");
+      const run = await recovered(copy, undefined, "fr");
       keep("hand-over-recovery-message.json", JSON.stringify(dialogWords(run.pid), null, 2));
       if (evidence) screenshot(join(evidence, "hand-over-recovery-message.png"));
       expect(copy.ran()).toBeNull();

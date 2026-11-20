@@ -1539,7 +1539,7 @@ The recipe:
 `verify.yml` with `installer_only=true` runs `mac-installer.yml` with its build and Apple-silicon checks on the `build` and `light` kinds' queues, or the placement service's `mini-mac-virtual` virtual-only label where those have none, and Intel on `macos-15-intel`, using the selected ref and existing release credentials without publishing anything.
 Its scratch signing home, real notarized binaries, native replacements, saved-work checks and failure cases are described in `docs/alpha.md`, "Isolated signed verification".
 The legacy private project keeps its requested pre-merge check.
-After cutover to `infinitary-apps`, the first alpha and alphas that change installer inputs must pass the full check after merge and before publication, in addition to the update check from the previous alpha (`docs/alpha.md`, "The update check").
+After cutover to `infinitary-apps`, the first alpha and alphas that change installer inputs (`docs/alpha.md`, "The update check", names them) must pass the full check after merge and before publication, in addition to the update check from the previous alpha (`docs/alpha.md`, "The update check").
 The local `mac-updates.spec.ts` journey owns channel selection, update consent, progress, restart recovery and keyboard access, with native effects replaced; it does not prove signed installation.
 The affected-journey selector retains that journey for changes to the core Mac controller or shared renderer update store, including changes with no new words or hooks.
 

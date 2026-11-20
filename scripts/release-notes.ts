@@ -108,7 +108,7 @@ import {
   verifyCatalog,
 } from "../src/core/releaseNotes/catalog.ts";
 import { compareSemver, isAlphaVersion, isStableVersion, parseSemver } from "../src/shared/semver.ts";
-import { isDesktopPath, isSignedInstallerPath } from "./desktop-build.ts";
+import { isDesktopPath, signedInstallerChanges } from "./desktop-build.ts";
 
 const NOTES_DIR = "release-notes";
 
@@ -164,6 +164,12 @@ class Repo {
     return this.gitRaw("diff", "--name-only", "--no-renames", "-z", from, to, "--")
       .split("\0")
       .filter(Boolean);
+  }
+
+  /** A file's text at a commit, or null where the commit has no such file. */
+  fileAt(commit: string, path: string): string | null {
+    if (this.gitRaw("ls-tree", "--name-only", "-z", commit, "--", path) === "") return null;
+    return this.gitRaw("show", `${commit}:${path}`);
   }
 
   private gitRaw(...args: string[]): string {
@@ -579,7 +585,11 @@ function desktopChanges(repo: Repo, flags: Map<string, string | true>): string {
   return JSON.stringify({ previous: previous?.version ?? null, changed });
 }
 
-/** Select merged code for the post-merge installer gate, or an empty source if unaffected. */
+/**
+ * Select merged code for the post-merge installer gate, or an empty source
+ * when nothing it guards changed since the previous release
+ * (scripts/desktop-build.ts, signedInstallerChanges). Why goes to the log.
+ */
 function installerSource(repo: Repo, flags: Map<string, string | true>): string {
   repo.assertFullHistory();
   const source = repo.resolve(need(flags, "source"));
@@ -589,9 +599,19 @@ function installerSource(repo: Repo, flags: Map<string, string | true>): string 
   if (repo.changedPaths(merged, source).some((path) => !path.startsWith(`${NOTES_DIR}/`))) {
     throw new Refusal(["Signed installer verification requires release code already merged into main."]);
   }
-  const needsInstaller =
-    previous === null || repo.changedPaths(previous.commit, source).some(isSignedInstallerPath);
-  return `source=${needsInstaller ? merged : ""}`;
+  if (previous === null) {
+    console.error("Signed installer check: there is no previous release, so this alpha runs it.");
+    return `source=${merged}`;
+  }
+  const reasons = signedInstallerChanges(repo.changedPaths(previous.commit, source), (path, side) =>
+    repo.fileAt(side === "before" ? previous.commit : source, path),
+  );
+  console.error(
+    reasons.length > 0
+      ? `Signed installer check: runs, since v${previous.version} changed ${reasons.join(", ")}.`
+      : `Signed installer check: skipped, since v${previous.version} changed none of its inputs.`,
+  );
+  return `source=${reasons.length > 0 ? merged : ""}`;
 }
 
 function check(repo: Repo, flags: Map<string, string | true>): string {

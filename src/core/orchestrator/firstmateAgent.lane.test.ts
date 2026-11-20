@@ -754,6 +754,9 @@ describe("FirstmateAgent", () => {
           "inf:settings:dictation:get": { enabled: true, key: "AltRight" },
           "inf:devices:list": [],
           "inf:release-notes:list": { version: "0.1.28", name: "stable 0.1.28", notes: [] },
+          // General's lines include ending a secret read and stopping a copy, which list theirs.
+          "inf:secrets:view": { reads: [] },
+          "inf:standby:list": { standbys: [] },
         };
         return (values[channel] ?? true) as never;
       });

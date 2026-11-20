@@ -34,7 +34,7 @@ describe("ViewWindows", () => {
     // Another window, the home's own window, and a crewmate are not that window.
     windows.answered(id, { ok: true, result: "forged" }, { kind: "captain", view: "laptop" });
     windows.answered(id, { ok: true, result: "forged" }, { kind: "captain" });
-    windows.answered(id, { ok: true, result: "forged" }, { kind: "firstmate" });
+    windows.answered(id, { ok: true, result: "forged" }, { kind: "firstmate", wake: "captain" });
     windows.answered(
       id,
       { ok: true, result: { cardSize: "large" } },

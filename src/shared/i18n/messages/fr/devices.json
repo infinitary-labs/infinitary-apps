@@ -62,6 +62,7 @@
   "devicesJoinSetUpPrivate": "Son adresse sur le réseau privé, comme celle de Tailscale, le joint partout où les deux ordinateurs y sont.",
   "devicesJoinSetUpSshOff": "Son serveur SSH est désactivé ici. Activez-le, puis ajoutez cet ordinateur.",
   "devicesJoinSetUpSshOn": "Son serveur SSH est activé ici.",
+  "devicesJoinSetUpStays": "Un second démarré hors de cette fenêtre fonctionne ici : cette fenêtre reste à ses côtés une fois que l’ordinateur de votre second a ajouté celui-ci.",
   "devicesJoinSetUpSub": "Là-bas, choisissez + Un ordinateur dans Réglages → Appareils, ou demandez-le à votre second, et tapez cette adresse. Il tient ensuite cet ordinateur à jour et le joint de lui-même.",
   "devicesJoinSetUpUnread": "L’adresse de cet ordinateur est encore introuvable. Vérifiez qu’il est connecté à un réseau ; Infinitary cherche à nouveau dans un instant.",
   "devicesJoinSetUpWaiting": "En attente que l’ordinateur de votre second ajoute celui-ci. Cette fenêtre ouvre ensuite votre second d’elle-même.",

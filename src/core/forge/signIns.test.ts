@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { KnownForgeHost } from "@shared/forge";
 import type { ForgesView } from "@shared/forges";
@@ -293,6 +293,10 @@ describe("health, through the five rules", () => {
     await signIns.checkHealth();
     expect(signIns.view().signIns[0]?.state).toBe("unknown");
     expect(asked).toBe(0);
+    // The review of INF-5409: the file is there, so a first launch counts it, without reading it.
+    expect(signIns.present("github.com")).toBe(true);
+    rmSync(join(h.root, "github.com", "sign-in.json"));
+    expect(signIns.present("github.com")).toBe(false);
   });
 
   it("with nothing signed in, checks nothing and says nothing", async () => {

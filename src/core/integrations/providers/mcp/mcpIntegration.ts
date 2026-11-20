@@ -530,6 +530,8 @@ export function mcpIntegration(
   return {
     kind: "mcp",
     many: true,
+    // A file that could not be read may hold servers, so it is never read as none.
+    saved: () => servers.length > 0 || launched === undefined,
     connections: () => servers.map(connectionOf),
 
     add: async (input, claim) => {

@@ -61,6 +61,7 @@
   "devicesJoinSetUpPrivate": "Its private network address, such as Tailscale’s, reaches it wherever both computers are on it.",
   "devicesJoinSetUpSshOff": "Its SSH server is off here. Turn it on, then add this computer.",
   "devicesJoinSetUpSshOn": "Its SSH server is on here.",
+  "devicesJoinSetUpStays": "A first mate started outside this window runs here, so this window stays beside it once your first mate’s computer adds this one.",
   "devicesJoinSetUpSub": "There, choose + A computer in Settings → Devices, or ask your first mate, and type this address. It then keeps this computer updated and reaches it by itself.",
   "devicesJoinSetUpUnread": "Could not find this computer’s address yet. Check that it is on a network; Infinitary looks again in a moment.",
   "devicesJoinSetUpWaiting": "Waiting for your first mate’s computer to add this one. This window then opens your first mate by itself.",

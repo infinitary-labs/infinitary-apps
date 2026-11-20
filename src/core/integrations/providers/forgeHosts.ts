@@ -59,6 +59,11 @@ export function forgeHostIntegration(
           .connections()
           .map((connection) => ({ ...connection, host: row.host, name: rowName(row.host) }));
       }),
+    saved: () =>
+      hosts().some((row) => {
+        const one = binding(forgeIntegrationId(kind, row.host));
+        return one.saved?.() ?? one.connections().length > 0;
+      }),
     check: async (id) => {
       await binding(id).check?.(id);
     },

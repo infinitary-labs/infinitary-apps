@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { homedir, hostname, tmpdir, userInfo } from "node:os";
 import { basename, join } from "node:path";
@@ -93,13 +92,13 @@ import {
   keepsStarterBesideGrant,
   lockHolder,
   markRunning,
+  ownedRun,
   processAlive,
   programIdentity,
   RUN_SETTINGS_EXIT,
   RUN_UPDATED_EXIT,
   RUN_WORDS,
   type RunEnd,
-  runByOwnAgent,
   runningByCommand,
   runOptions,
   stopRunningCommand,
@@ -656,10 +655,7 @@ export async function startApp(
     ownStartEntry(dataDir) === "mac-daemon" ||
     dataFolderRefusal(dataDir, privacy) ||
     joinedHere.read() ||
-    !keepsStarterBesideGrant(
-      dataDir,
-      Boolean(windowFromWork(work.place.dataDir, joinedHere.leftDeviceId())),
-    )
+    !keepsStarterBesideGrant(dataDir, grantFollowed(work.place.dataDir, joinedHere))
       ? null
       : commandStarter({
           work,
@@ -672,6 +668,8 @@ export async function startApp(
   let besideRun = !windowless && runningByCommand(dataDir);
   // When this window started the command it opens beside, until that one welcomes it.
   let startedAt: number | undefined;
+  // The command this window started, by its process number: its starter owns that run alone.
+  let startedRun: number | undefined;
   // A window already running its first mate here holds the folder's lock:
   // this launch only focuses it, and a command started now could not open it.
   // Where the lock names no holder (Windows' own lock), a held one is a window's too.
@@ -692,6 +690,7 @@ export async function startApp(
   if (!besideRun && starter && !heldByWindow && gitForRun) {
     startedAt = Date.now();
     besideRun = await starter.start();
+    if (besideRun) startedRun = readRunStatus(dataDir).run?.pid;
     if (!besideRun) {
       // It runs its first mate itself: the agent never starts a run beside it.
       startedAt = undefined;
@@ -770,12 +769,7 @@ export async function startApp(
                 await app.whenReady();
                 return readElectronKeychainStatus(join(mainDir, "keychainProcessMain.js"), path);
               }).then(observed),
-        startedByAgent({
-          platform: hostPlatform(),
-          env: process.env,
-          label: runLabelOf(work.place.flavor),
-          cgroup: () => readFileSync("/proc/self/cgroup", "utf8"),
-        }),
+        startedByAgent({ env: process.env, label: runLabelOf(work.place.flavor) }),
       );
       leaveRun = (end) => {
         try {
@@ -1161,8 +1155,8 @@ export async function startApp(
                 programReplaced,
                 ...(starter ? { starter } : {}),
                 ...(startedAt === undefined ? {} : { startedAt }),
-                ownsCommand: () => startedAt !== undefined || runByOwnAgent(dataDir),
-                stopCommand: () => stopRunningCommand(dataDir),
+                ownedRun: () => ownedRun(dataDir, startedRun),
+                stopCommand: (only) => stopRunningCommand(dataDir, undefined, undefined, only),
               },
             }
           : {}),
@@ -1576,4 +1570,13 @@ export async function startApp(
       });
     });
   }
+}
+
+/**
+ * Whether this computer's work keeps a grant its window would follow: one
+ * neither left nor kept beside its own first mate (`JoinedHome.keepOwn`).
+ */
+function grantFollowed(workDir: string, joined: JoinedHome): boolean {
+  const found = windowFromWork(workDir, joined.leftDeviceId());
+  return Boolean(found && found.grant.deviceId !== joined.keptOwnDeviceId());
 }

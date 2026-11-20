@@ -37,11 +37,18 @@ test("a Windows PC's first mate offers the link and the command in place of the 
   const devices = await openDevices();
   await userEvent.click(devices.querySelector('[data-device-add="mac"]') as HTMLElement);
   const aside = await shown("[data-device-address-question]");
-  // Before the home answers, no address form and no look for computers nearby.
+  // Before the home answers, the two other ways alone, with the link focused: no address form
+  // and no look for computers nearby.
   expect(document.querySelector("#device-remote-login")).toBeNull();
+  const pending = aside.querySelector("[data-device-other-ways]") as HTMLElement;
+  expect(pending.textContent).toContain(m.settingsDevicesAddWays());
+  await expect
+    .poll(() => document.activeElement)
+    .toBe(button(pending, m.settingsDevicesAddByLink()));
   expect(bridge.requests("inf:devices:nearby").filter(([watching]) => watching)).toEqual([]);
   read.resolve({ ...ADDRESSES, addsByAddress: false });
   await afterNextFrame();
+  // The answer leaves them as they are: still no form, and the link keeps the focus.
   expect(document.querySelector("#device-remote-login")).toBeNull();
   const ways = aside.querySelector("[data-device-other-ways]") as HTMLElement;
   expect(ways.textContent).toContain(m.settingsDevicesAddWays());

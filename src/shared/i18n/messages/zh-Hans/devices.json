@@ -60,6 +60,7 @@
   "devicesJoinSetUpPrivate": "它的私有网络地址（如 Tailscale 的）在两台电脑都在该网络上时，随处都能连到它。",
   "devicesJoinSetUpSshOff": "这里的 SSH 服务器未打开。请打开它，然后添加这台电脑。",
   "devicesJoinSetUpSshOn": "这里的 SSH 服务器已打开。",
+  "devicesJoinSetUpStays": "这里运行着一个在此窗口之外启动的大副，所以你大副的电脑添加这台电脑后，这个窗口仍留在它旁边。",
   "devicesJoinSetUpSub": "在那里的“设置 → 设备”中选择“+ 一台电脑”，或让你的大副来做，然后输入这个地址。之后它会让这台电脑保持最新，并自己连到它。",
   "devicesJoinSetUpUnread": "还找不到这台电脑的地址。请检查它是否已连接网络；Infinitary 稍后会再找一次。",
   "devicesJoinSetUpWaiting": "正在等待你大副的电脑添加这台电脑。之后这个窗口会自己打开你的大副。",

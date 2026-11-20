@@ -227,6 +227,11 @@ export const WALKS: Record<string, { walks: string[]; reason: string }> = {
       walks: ["SCAN repos", "USE TEMP B-TREE FOR ORDER BY"],
       reason: "one row per project the captain adds",
     },
+  "SELECT 1 FROM repos WHERE kind != 'personal' LIMIT 1": {
+    walks: ["SCAN repos"],
+    reason:
+      "stops at its first row: the personal workspace is at most one row before it, and repos holds one row per project the captain adds",
+  },
   "SELECT id, origin FROM repos WHERE forge_kind = 'git' OR forge_kind IS NULL": {
     walks: ["SCAN repos"],
     reason: "one row per project the captain adds",

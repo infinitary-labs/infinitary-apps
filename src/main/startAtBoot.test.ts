@@ -8,7 +8,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import type { Launchctl } from "@core/helper/background";
+import { type Launchctl, RUN_AGENT_ENV } from "@core/helper/background";
 import { loginAgentFile, sessionAgentFile } from "@core/helper/runAgent";
 import { readRunTask, runTaskFile } from "@core/helper/windowsTask";
 import { describe, expect, it } from "vitest";
@@ -371,6 +371,8 @@ describe("starting at boot on a Mac", () => {
       ProcessType: "Interactive",
       StandardOutPath: log,
       StandardErrorPath: log,
+      // Each run it starts says so, so a window following along stops only such a run.
+      EnvironmentVariables: { [RUN_AGENT_ENV]: LABEL },
     });
     expect(statSync(agent).mode & 0o777).toBe(0o600);
     expect(existsSync(dirname(log))).toBe(true);
@@ -500,6 +502,7 @@ describe("starting at boot on a Mac", () => {
     await runStartAtBoot({ off: false }, c);
     expect(parsePlist(readFileSync(agent, "utf8")).EnvironmentVariables).toEqual({
       INFINITARY_USER_DATA_DIR: "/tmp/fm data",
+      [RUN_AGENT_ENV]: LABEL,
     });
   });
 

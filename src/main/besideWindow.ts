@@ -76,11 +76,12 @@ export type BesideOptions = {
   /** Which start entry the app wrote is in place now. */
   startEntry: () => StartEntry;
   /**
-   * Whether the command running now is the starter's own: this window
-   * started it, or this app's own agent did. Following along stops only such
-   * a command, never one the person started by hand.
+   * The process number of the command running now when it is the starter's
+   * own: the one this window started, or one this app's own agent started;
+   * null for any other. Following along stops only that run, never one the
+   * person started by hand.
    */
-  ownsCommand?: () => boolean;
+  ownedRun?: () => number | null;
   /** The entry's own wait before it starts the command again; a test stands in a shorter one. */
   restartWaitMs?: number;
   /** This program's own Dock icon and login item. */
@@ -103,8 +104,11 @@ export type BesideOptions = {
   starter?: CommandStarter;
   /** When this window started the command it opened beside, while that one has not welcomed it yet. */
   startedAt?: number;
-  /** Stops the command's first mate and its crew cleanly, as a signal does; false when none runs. */
-  stopCommand?: () => boolean;
+  /**
+   * Stops the command's first mate and its crew cleanly, as a signal does;
+   * with `only`, just that run. False when none runs, or another one does.
+   */
+  stopCommand?: (only?: number) => boolean;
   /** How long a running command gets to answer before the window says it does not; a test stands in a shorter one. */
   answerWaitMs?: number;
 };
@@ -186,9 +190,9 @@ export class BesideWindow {
     return this.options.beside.starter !== undefined;
   }
 
-  /** Whether the command running now is this window's starter's own (`BesideOptions.ownsCommand`). */
-  get ownsCommand(): boolean {
-    return this.startsCommand && (this.options.beside.ownsCommand?.() ?? false);
+  /** The command running now, when it is this window's starter's own (`BesideOptions.ownedRun`). */
+  get ownedRun(): number | null {
+    return this.startsCommand ? (this.options.beside.ownedRun?.() ?? null) : null;
   }
 
   constructor(private readonly options: BesideWindowOptions) {
@@ -489,14 +493,15 @@ export class BesideWindow {
 
   /**
    * The window joins a first mate on another computer: it closes, and the
-   * command's first mate stops with nothing set to start it again.
+   * command's first mate stops with nothing set to start it again; with
+   * `only`, the window stops just that run, the one it followed along from.
    */
-  async leave(): Promise<void> {
+  async leave(only?: number): Promise<void> {
     this.close();
     await this.options.beside.starter?.stop({ forget: true }).catch((error: unknown) => {
       console.warn(`[shell] could not let the command's starter go: ${(error as Error).message}`);
     });
-    this.options.beside.stopCommand?.();
+    this.options.beside.stopCommand?.(only);
   }
 
   close(): void {

@@ -1070,12 +1070,18 @@ describe("a Mac that controls another and runs its work", () => {
     expect(mini.own.dispose).toHaveBeenCalledTimes(1);
     expect(mini.restartWindows).toHaveBeenCalled();
     expect(mini.relaunch).not.toHaveBeenCalled();
+    // A computer that was not open when the home added it opens as that home's view at once.
+    const fresh = shell(undefined, { dataDir });
+    await fresh.shell.start();
+    await fresh.until(() => fresh.shell.thisMac().role === "view");
+    expect(fresh.startCore).not.toHaveBeenCalled();
   });
 
-  it("does not follow along once something was done here", async () => {
+  it("does not follow along once something was done here, after a restart too", async () => {
     const pro = await otherMac({}, { joinsFromAnotherMac: true });
     const dataDir = workDir();
-    const mini = shell(undefined, { dataDir });
+    const joinedDir = join(scratchDir("infinitary-shell-"), "joined");
+    const mini = shell(joinedDir, { dataDir });
     // The person saved a sign-in or a project here, though the first launch is still up: its core
     // answers the gate open with no turn yet, and without `untouched`.
     mini.own.dispatch.mockImplementation((async (channel: string) =>
@@ -1092,6 +1098,19 @@ describe("a Mac that controls another and runs its work", () => {
     expect(await mini.shell.followAdded()).toBe(false);
     expect(mini.shell.thisMac().role).toBe("home");
     expect(mini.own.dispose).not.toHaveBeenCalled();
+    expect(mini.shell.followsAdded()).toEqual({ follows: true, joins: true });
+
+    // The review of INF-5409: reopened with that grant still waiting, it stays its own first mate,
+    // and a poll asks nothing more of it.
+    await mini.shell.dispose();
+    const again = shell(joinedDir, { dataDir });
+    await again.shell.start();
+    expect(again.shell.thisMac().role).toBe("home");
+    expect(again.startCore).toHaveBeenCalledTimes(1);
+    expect(await again.shell.followAdded()).toBe(false);
+    expect(
+      again.own.dispatch.mock.calls.filter(([channel]) => channel === "inf:app:first-run"),
+    ).toEqual([]);
   });
 
   it("stays its own Firstmate when the work here only runs work", async () => {

@@ -48,7 +48,8 @@ function setup(initialOpen = true) {
       gateOpen: () => open,
       usable: () => usable,
       hasActivity: () =>
-        activity || hasPriorActivity({ tasks, cards: cardStore, repos: { list: () => [] } }),
+        activity ||
+        hasPriorActivity({ tasks, cards: cardStore, repos: { hasProject: () => false } }),
       ...crewFacts(tasks),
       createWelcome: (consume) => {
         cards.addRecordedFirstmateNote(WELCOME_NOTE, consume, {
@@ -583,7 +584,7 @@ describe("an untouched profile", () => {
         hasPriorActivity({
           tasks: fixture.tasks,
           cards: fixture.cardStore,
-          repos: { list: () => [] },
+          repos: { hasProject: () => false },
         }),
       hasConnections: () => accounts,
       ...crewFacts(fixture.tasks),

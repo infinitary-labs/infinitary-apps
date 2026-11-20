@@ -267,14 +267,28 @@ export function runByOwnAgent(
   dataDir: string,
   alive: (pid: number) => boolean = processAlive,
 ): boolean {
-  if (!runningByCommand(dataDir, alive)) return false;
+  return ownedRun(dataDir, undefined, alive) !== null;
+}
+
+/**
+ * The process number of the command running on this folder now, when this
+ * app's starter owns it: its own agent started it, or it is `started`, the
+ * one this window started. Null for any other, a command started by hand
+ * after this window's own ended included.
+ */
+export function ownedRun(
+  dataDir: string,
+  started: number | undefined,
+  alive: (pid: number) => boolean = processAlive,
+): number | null {
+  if (!runningByCommand(dataDir, alive)) return null;
   try {
-    const marker = JSON.parse(
-      readFileSync(join(dataDir, RUN_MARKER), "utf8"),
-    ) as Partial<RunMarker>;
-    return marker.agent === true;
+    const marker = RunMarkerSchema.parse(
+      JSON.parse(readFileSync(join(dataDir, RUN_MARKER), "utf8")),
+    );
+    return marker.agent === true || marker.pid === started ? marker.pid : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -293,6 +307,8 @@ export function stopRunningCommand(
         if (!requestRunStop(dataDir)) throw new Error("The stop could not be asked.");
       }
     : (pid) => process.kill(pid, "SIGTERM"),
+  /** Stops only this run: another the folder's note names now is left running. */
+  only?: number,
 ): boolean {
   if (!runningByCommand(dataDir, alive)) return false;
   let pid: number;
@@ -301,6 +317,7 @@ export function stopRunningCommand(
   } catch {
     return false;
   }
+  if (only !== undefined && pid !== only) return false;
   try {
     signal(pid);
     return true;

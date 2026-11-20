@@ -44,7 +44,9 @@ If a subscription is connected but still cannot answer, the window reads **Set u
 ## If your first mate already lives on another computer
 
 Under the provider buttons, a second group reads "Your first mate is on another computer".
-On a Mac or an x64 Linux computer, **Set up from your first mate's computer** comes first: it shows this computer's address to type on the computer where your first mate lives, and this window opens your first mate once that computer adds this one.
+On a Mac or an x64 Linux computer, **Set up from your first mate's computer** comes first: it shows this computer's address to type on the computer where your first mate lives.
+Once that computer adds this one, this window opens your first mate by itself, unless you already set something up here, such as a sign-in or a project.
+A Windows PC and an Arm Linux computer show the other two ways alone.
 Use **Paste its link** or **Join by its address** to control that first mate from here instead of setting up a new one.
 See [Your other computers](/your-other-computers/).
 

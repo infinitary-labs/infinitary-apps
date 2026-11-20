@@ -116,28 +116,47 @@ const FOLLOW_EVERY_MS = 5_000;
 /** How often the open aside reads this computer again, so it follows its addresses and Remote Login. */
 const SET_UP_RENEW_MS = 5_000;
 
+/** What the window promises once its first mate's computer adds this one (`useFollowAdded`). */
+type AfterAdd = "waits" | "keeps" | "stays";
+
 /**
  * Following along at first launch (docs/view.md, "Joining"): while this
  * group is up, the window asks the shell now and then whether its first
  * mate's computer added this one by its address; the shell itself decides,
- * and on a yes the window starts over as that first mate's. Only while
- * nothing was done here (`FirstRunView.untouched`), the one profile the
- * shell follows along from.
+ * and on a yes the window starts over as that first mate's. The shell says
+ * too what it would do: it follows along only while nothing was done here
+ * (`FirstRunView.untouched`) and, beside a command, only from one this
+ * window's starter owns; otherwise this window keeps its own first mate,
+ * and beside a command started elsewhere it cannot join at all. A profile
+ * with something done is asked too, so the shell keeps that answer after a
+ * restart.
  */
-function useFollowAdded(can: boolean): void {
+function useFollowAdded(can: boolean, untouched: boolean): AfterAdd {
+  const [answer, setAnswer] = useState<{ follows: boolean; joins: boolean } | null>(null);
   useEffect(() => {
     if (!can) return;
     let live = true;
+    let every: ReturnType<typeof setInterval> | undefined;
     const ask = () => {
-      if (live) void window.infinitary.devices.followAdded().catch(() => undefined);
+      void window.infinitary.devices
+        .followAdded()
+        .then((said) => {
+          if (!live) return;
+          setAnswer({ follows: said.follows, joins: said.joins });
+          // Beside a command started elsewhere, nothing here would follow or join.
+          if (!said.joins) clearInterval(every);
+        })
+        .catch(() => undefined);
     };
     ask();
-    const every = setInterval(ask, FOLLOW_EVERY_MS);
+    every = setInterval(ask, FOLLOW_EVERY_MS);
     return () => {
       live = false;
       clearInterval(every);
     };
   }, [can]);
+  if (answer && !answer.joins) return "stays";
+  return untouched && (answer?.follows ?? true) ? "waits" : "keeps";
 }
 
 /**
@@ -260,8 +279,8 @@ export function JoinAnotherMac({ onOpenChange, note, join, byAddress }: JoinAnot
   const nearby = useNearby(step.step === "address");
   const setUpOffered = useSetUpOffered();
   const { here, unread } = useSetUpHere(step.step === "set-up");
-  const followsAlong = useShellStore((s) => s.firstRun?.untouched === true);
-  useFollowAdded(followsAlong);
+  const firstRun = useShellStore((s) => s.firstRun);
+  const afterAdd = useFollowAdded(firstRun?.gateOpen === true, firstRun?.untouched === true);
   const setStep = (next: Step) => {
     setStepState(next);
     onOpenChange?.(next.step !== "closed");
@@ -351,7 +370,7 @@ export function JoinAnotherMac({ onOpenChange, note, join, byAddress }: JoinAnot
       here={here}
       unread={unread}
       setUpOffered={setUpOffered}
-      followsAlong={followsAlong}
+      afterAdd={afterAdd}
       onOpenSetUp={() => setStep({ step: "set-up" })}
       onOpenSharing={() => void window.infinitary.devices.openSharing().catch(() => undefined)}
       onContinue={toConfirm}
@@ -385,7 +404,7 @@ export type JoinAnotherMacViewProps = {
   /** Set up from your first mate's computer leads the chips: the address way sets this computer up. */
   setUpOffered?: boolean;
   /** This window opens the first mate once its computer adds this one: nothing was done here yet. */
-  followsAlong?: boolean;
+  afterAdd?: AfterAdd;
   onOpenSetUp?: () => void;
   onOpenSharing?: () => void;
   /** A line under the chip, while it is closed: which Mac this app last left. */
@@ -700,7 +719,11 @@ function SetUpStep(props: JoinAnotherMacViewProps & { here: SetUpHere | null }) 
         </>
       )}
       <p className="fm-join-sub fm-join-waiting" role="status">
-        {props.followsAlong ? m.devicesJoinSetUpWaiting() : m.devicesJoinSetUpKept()}
+        {props.afterAdd === "waits"
+          ? m.devicesJoinSetUpWaiting()
+          : props.afterAdd === "stays"
+            ? m.devicesJoinSetUpStays()
+            : m.devicesJoinSetUpKept()}
       </p>
       <div className="fm-join-buttons">
         <Button

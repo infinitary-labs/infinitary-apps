@@ -635,7 +635,8 @@ export const deviceChannels = {
     effect: "change",
     surface: "host",
     request: z.tuple([]),
-    response: z.strictObject({ followed: z.boolean() }),
+    // `follows`: this window would follow along once added; `joins`: Paste its link and Join by its address work here.
+    response: z.strictObject({ followed: z.boolean(), follows: z.boolean(), joins: z.boolean() }),
   },
   // One step of Join by its address asked of the first mate a command runs
   // (docs/run.md, "Joining another computer"): it keeps this computer's SSH

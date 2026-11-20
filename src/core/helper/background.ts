@@ -303,6 +303,19 @@ export function serviceUnit(options: {
 }
 
 /**
+ * The variable this app's own agent and service set to their label, so the
+ * run they start knows it is theirs (`startedByAgent`, src/main/runEnvironment.ts):
+ * a run started by hand carries no such mark, and a window following along
+ * stops only a run its own agent started (docs/view.md, "Following along").
+ */
+export const RUN_AGENT_ENV = "INFINITARY_RUN_AGENT";
+
+/** What an agent or service under `label` sets for its run: `env`, and the mark that names it. */
+export function runAgentEnv(label: string, env: Readonly<Record<string, string>>) {
+  return { ...env, [RUN_AGENT_ENV]: label };
+}
+
+/**
  * The service `infinitary start-at-boot` sets up (docs/run.md, "Starting at
  * boot"): `<app> run` started by this user's own systemd at their login, and
  * at boot once the user lingers. A failure starts it again ten seconds later,

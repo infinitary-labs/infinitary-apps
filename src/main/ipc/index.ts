@@ -147,6 +147,7 @@ export function registerIpc(options: IpcOptions): void {
   });
   handleInvoke("inf:devices:follow-added", rendererSource, async () => ({
     followed: await shell.followAdded(),
+    ...shell.followsAdded(),
   }));
   // Try again on a Mac whose work could not be set up (docs/view.md, "A Mac that runs work").
   handleInvoke("inf:devices:set-up-work", rendererSource, async () => {

@@ -848,6 +848,7 @@ public enum PhoneMessages {
     public static func `devicesJoinSetUpPrivate`() -> String { PhoneWords.format("devicesJoinSetUpPrivate", []) }
     public static func `devicesJoinSetUpSshOff`() -> String { PhoneWords.format("devicesJoinSetUpSshOff", []) }
     public static func `devicesJoinSetUpSshOn`() -> String { PhoneWords.format("devicesJoinSetUpSshOn", []) }
+    public static func `devicesJoinSetUpStays`() -> String { PhoneWords.format("devicesJoinSetUpStays", []) }
     public static func `devicesJoinSetUpSub`() -> String { PhoneWords.format("devicesJoinSetUpSub", []) }
     public static func `devicesJoinSetUpUnread`() -> String { PhoneWords.format("devicesJoinSetUpUnread", []) }
     public static func `devicesJoinSetUpWaiting`() -> String { PhoneWords.format("devicesJoinSetUpWaiting", []) }
@@ -4960,6 +4961,7 @@ extension PhoneWords {
         "devicesJoinSetUpPrivate": [],
         "devicesJoinSetUpSshOff": [],
         "devicesJoinSetUpSshOn": [],
+        "devicesJoinSetUpStays": [],
         "devicesJoinSetUpSub": [],
         "devicesJoinSetUpUnread": [],
         "devicesJoinSetUpWaiting": [],

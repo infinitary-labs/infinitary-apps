@@ -81,10 +81,14 @@ When no address can be read yet, the aside says "Could not find this computer's 
 
 While the first-launch group is up, the window asks `inf:devices:follow-added` every few seconds, and the shell itself decides (`Shell.followAdded`).
 When nothing was done on this computer - the gate is still up, with no turn, no saved sign-in or connection, and no ask, task, card or project (`inf:app:first-run`'s `untouched`, `FirstRunService`) - and the work folder holds a grant an address add left there (`windowFromWork`), the window becomes a view of that home with no relaunch: the empty first mate beside it stops, as a pasted link's join stops it, and every window starts over as the other computer's.
-A window opened beside a command's first mate that it may join follows the same way (`joinable`), but only when the window's own run agent started that command (`ownsCommand`; the run marker's `agent`, `startedByAgent`): a command started by hand in Terminal keeps its own first mate, and the window stays beside it.
+A window opened beside a command's first mate that it may join follows the same way (`joinable`), but only from the run its starter owns (`ownedRun`): the one this window started, by its process number, or one the window's own run agent started.
+The agent's definition marks each run it starts with its label in `INFINITARY_RUN_AGENT` (`runAgentEnv`, `src/core/helper/background.ts`), and the run notes the mark in its run marker's `agent` (`startedByAgent`); a command started by hand in Terminal, or by an agent an older version set up, carries no mark, keeps its own first mate, and the window stays beside it.
+The window reads which run it owns before asking its first mate whether anything was done, reads it again after the answer, and follows only when the same run still runs; it then stops that run alone, never one started by hand that took its place (`BesideWindow.leave`, `stopRunningCommand`'s `only`).
 A window reopened while the command its run agent started still runs keeps that command's starter after an add, so it can stop the command when it follows along (`keepsStarterBesideGrant`, `src/main/runCommand.ts`).
 The window asks its first mate whether anything was done only once a grant is waiting in the work folder, so most of its asks read nothing of the profile.
-Where something was done, its status line says the window keeps its own first mate once the add is done, and names Paste its link and Join by its address to join after it.
+Where something was done, the window notes that it keeps its own first mate beside that grant (`JoinedHome.keepOwn`, `kept-own.json`), so it stays itself after a restart too: neither a reopened window nor a reopened starter adopts that grant.
+Each answer of `inf:devices:follow-added` says what the window would do (`followsAdded`): `follows` when it would follow along, and `joins` when Paste its link and Join by its address work here.
+The status line promises only that: the switch where it follows; where something was done, that it keeps its own first mate, naming Paste its link and Join by its address to join after it; and beside a command it cannot join, that it stays beside that command, after which the window stops asking.
 A computer whose own first mate has a sign-in, a connection, a project or a turn stays as it is, even while its gate is up.
 
 ## A Mac that runs work

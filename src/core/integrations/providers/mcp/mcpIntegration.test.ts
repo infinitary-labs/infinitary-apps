@@ -1016,6 +1016,8 @@ describe("an MCP server's key", () => {
     for (const [kind, text] of Object.entries(files)) {
       writeFileSync(join(root, "mcp.json"), text);
       const { binding, close } = serviceIn(root, secrets.keys);
+      // The review of INF-5409: a file that cannot be read whole may hold servers, so it counts as set up.
+      expect(binding.saved?.(), kind).toBe(true);
       await binding.moveKeys();
       close();
       expect(await secrets.entries(), kind).toMatchObject([{ ref, forProgram: true }]);

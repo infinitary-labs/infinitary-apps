@@ -46,6 +46,16 @@ const LEFT_FILE = "left.json";
 /** What this computer saved as the home after the copy that took over from it (docs/devices.md, "An old home that returns"). */
 const STEPPED_DOWN_FILE = "stepped-down.json";
 const LOOK_FILE = "appearance.json";
+/**
+ * The grant this app kept its own first mate beside: it came while the
+ * profile here had something done, so the window stays itself, after a
+ * restart too (docs/view.md, "Following along").
+ */
+const KEPT_OWN_FILE = "kept-own.json";
+const keptOwnSchema = z.strictObject({
+  version: z.literal(1),
+  deviceId: z.string().min(1).max(128),
+});
 
 const lookSchema = z.strictObject({
   version: z.literal(1),
@@ -310,6 +320,23 @@ export class JoinedHome {
       ...(unfinished ? { unfinished } : {}),
       ...(deviceId ? { deviceId } : {}),
     });
+  }
+
+  /** Notes that this app kept its own first mate when the grant for `deviceId` came. */
+  keepOwn(deviceId: string): void {
+    if (this.keptOwnDeviceId() === deviceId) return;
+    this.write(KEPT_OWN_FILE, { version: 1, deviceId });
+  }
+
+  /** The grant this app kept its own first mate beside (`keepOwn`), or null. */
+  keptOwnDeviceId(): string | null {
+    const path = join(this.dir, KEPT_OWN_FILE);
+    if (!existsSync(path)) return null;
+    try {
+      return keptOwnSchema.parse(JSON.parse(readFileSync(path, "utf8"))).deviceId;
+    } catch {
+      return null;
+    }
   }
 
   /** The device this app last left or was removed as, when the note says. */

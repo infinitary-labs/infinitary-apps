@@ -1,5 +1,6 @@
 import { userInfo } from "node:os";
 import { join } from "node:path";
+import { RUN_AGENT_ENV } from "@core/helper/background";
 import { z } from "zod";
 import { hostPlatform } from "../core/platform";
 
@@ -15,27 +16,12 @@ export type RunEnvironment = z.infer<typeof RunEnvironmentSchema>;
 
 /**
  * Whether this run was started by this app's own agent, the one the window
- * and `start-at-boot` set up under `label`: launchd names a job it started
- * in `XPC_SERVICE_NAME`, and systemd puts a user service's process in that
- * unit's group. Task Scheduler leaves no such mark, so a Windows run never
- * says so; neither does one started by hand.
+ * and `start-at-boot` set up under `label`: each sets `RUN_AGENT_ENV` to its
+ * label for the run it starts. A run started by hand carries no such mark,
+ * nor does one an agent from before this mark started.
  */
-export function startedByAgent(options: {
-  platform: NodeJS.Platform;
-  env: NodeJS.ProcessEnv;
-  label: string;
-  cgroup: () => string;
-}): boolean {
-  if (options.platform === "darwin") return options.env.XPC_SERVICE_NAME === options.label;
-  if (options.platform !== "linux") return false;
-  try {
-    return options
-      .cgroup()
-      .split("\n")
-      .some((line) => line.endsWith(`/${options.label}.service`));
-  } catch {
-    return false;
-  }
+export function startedByAgent(options: { env: NodeJS.ProcessEnv; label: string }): boolean {
+  return options.env[RUN_AGENT_ENV] === options.label;
 }
 
 /** No display variable proves only that Linux has no display to open, not that a Mac cannot draw. */

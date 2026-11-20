@@ -51,7 +51,10 @@ export function startFirstLaunch(options: {
   routing: Pick<HomeRouting, "routableModels" | "availableModels">;
   flagship: Pick<Flagship, "servesFirstmate" | "standsOnCutOff" | "resolveAccountId" | "pause">;
   localOrchestrator: Pick<LocalOrchestratorService, "seat">;
-  vault: Pick<AccountVault, "list" | "customUnchecked" | "availableModelsByAccount">;
+  vault: Pick<
+    AccountVault,
+    "list" | "customUnchecked" | "availableModelsByAccount" | "mayHoldAccounts"
+  >;
   auth: Pick<PiAuthService, "customProviderModels">;
   firstmate: Pick<FirstmateAgent, "preflightModel">;
   tasks: Pick<
@@ -59,7 +62,7 @@ export function startFirstLaunch(options: {
     "list" | "capture" | "hasKind" | "hasFinishedTask" | "finishedCrewmates"
   >;
   cards: Pick<CardStore, "hasHistory">;
-  repos: Pick<RepoRegistry, "list">;
+  repos: Pick<RepoRegistry, "hasProject">;
   /** A project host's sign-in, another integration or a paired device is saved here, read without any value. */
   hasConnections: () => boolean;
   supervisor: {
@@ -122,7 +125,7 @@ export function startFirstLaunch(options: {
       }),
     hasActivity: () =>
       hasPriorActivity({ tasks: options.tasks, cards: options.cards, repos: options.repos }),
-    hasConnections: () => vault.list().length > 0 || options.hasConnections(),
+    hasConnections: () => vault.mayHoldAccounts() || options.hasConnections(),
     ...crewFacts(options.tasks),
     createWelcome: (consume) => {
       // The welcome takes no reply - the message box under it is where to

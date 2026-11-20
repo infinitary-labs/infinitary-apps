@@ -62,6 +62,7 @@
   "devicesJoinSetUpPrivate": "O endereço de rede privada dele, como o do Tailscale, o alcança onde quer que os dois computadores estejam nela.",
   "devicesJoinSetUpSshOff": "O servidor SSH dele está desativado aqui. Ative-o e depois adicione este computador.",
   "devicesJoinSetUpSshOn": "O servidor SSH dele está ativado aqui.",
+  "devicesJoinSetUpStays": "Um imediato iniciado fora desta janela está rodando aqui, então esta janela fica ao lado dele quando o computador do seu imediato adicionar este.",
   "devicesJoinSetUpSub": "Lá, escolha + Um computador em Ajustes → Dispositivos, ou peça ao seu imediato, e digite este endereço. Depois ele mantém este computador atualizado e se conecta a ele sozinho.",
   "devicesJoinSetUpUnread": "Ainda não foi possível encontrar o endereço deste computador. Verifique se ele está em uma rede; o Infinitary procura de novo em instantes.",
   "devicesJoinSetUpWaiting": "Esperando o computador do seu imediato adicionar este. Depois, esta janela abre o seu imediato sozinha.",

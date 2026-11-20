@@ -56,7 +56,7 @@ export type FirstRunStep = "gate_shown" | "signed_in" | "first_turn";
 export function hasPriorActivity(sources: {
   tasks: Pick<TaskService, "hasKind"> & { capture: Pick<TaskService["capture"], "latestAskId"> };
   cards: Pick<CardStore, "hasHistory">;
-  repos: Pick<RepoRegistry, "list">;
+  repos: Pick<RepoRegistry, "hasProject">;
 }): boolean {
   // Existence reads only: a window beside this first launch asks often, and
   // composing every task or ask to say "none" would cost a long record dearly.
@@ -64,7 +64,7 @@ export function hasPriorActivity(sources: {
     (["work", "question", "decision"] as const).some((kind) => sources.tasks.hasKind(kind)) ||
     sources.tasks.capture.latestAskId() !== undefined ||
     sources.cards.hasHistory() ||
-    sources.repos.list().some((repo) => repo.kind !== "personal")
+    sources.repos.hasProject()
   );
 }
 

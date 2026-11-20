@@ -8,6 +8,7 @@ import {
   type Launcher,
   launchctlOf,
   loadAgent,
+  runAgentEnv,
   type ServiceManager,
   systemctlOf,
   wantedBy,
@@ -143,7 +144,7 @@ function writeMacAgent(context: RunAgentContext, file: string, from = file): voi
       launcher: context.launcher,
       settings: kept.settings,
       log: kept.log ?? join(context.dataDir, RUN_AGENT_LOG),
-      env: context.env,
+      env: runAgentEnv(context.label, context.env),
     }),
   );
 }
@@ -178,7 +179,11 @@ function ensureUnit(context: RunAgentContext): void {
   const file = unitFile(context);
   const was = existsSync(file) ? readFileSync(file, "utf8") : null;
   const settings = was === null ? undefined : unitSettings(was);
-  const text = bootUnit({ launcher: context.launcher, env: context.env, settings });
+  const text = bootUnit({
+    launcher: context.launcher,
+    env: runAgentEnv(context.label, context.env),
+    settings,
+  });
   if (was === text) return;
   mkdirSync(dirname(file), { recursive: true });
   writePrivate(file, text);

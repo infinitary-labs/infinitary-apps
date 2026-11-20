@@ -34,9 +34,11 @@ Remote Login must be on there; on Linux, its SSH server.
 Computers on the same network are listed under **On this network**, so you can pick one.
 You can also ask your first mate to add a computer, and it recommends the address.
 
-On a new computer, Infinitary's first launch shows the address to type: choose **Set up from your first mate's computer**.
+On a new Mac or x64 Linux computer, Infinitary's first launch shows the address to type: choose **Set up from your first mate's computer**.
 It shows this computer's private network address first, such as Tailscale's, then its address on the local network, each with **Copy**.
-Once the computer where your first mate lives adds it, that window opens your first mate by itself.
+Once the computer where your first mate lives adds it, that window opens your first mate by itself, as long as nothing was set up in it yet.
+A window where you already signed in, added a project or talked to its first mate keeps its own first mate, and so does a window beside an Infinitary you started yourself from Terminal.
+A Windows PC and an Arm Linux computer join with **Paste its link** instead.
 
 Under the address, **Can't turn on Remote Login there?** offers two other ways.
 Each adds the same kind of computer.

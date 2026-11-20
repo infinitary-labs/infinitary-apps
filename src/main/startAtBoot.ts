@@ -7,6 +7,7 @@ import {
   type Launchctl,
   type Launcher,
   loadAgent,
+  runAgentEnv,
   wantedBy,
 } from "@core/helper/background";
 import { type SystemdRuntime, systemdRuntime } from "@core/helper/linuxStartup";
@@ -276,7 +277,14 @@ export async function runStartAtBoot(asked: BootAsked, context: BootContext): Pr
   const lingers = await lingering(context);
   try {
     mkdirSync(dirname(wants), { recursive: true });
-    writePrivate(file, bootUnit({ launcher: context.launcher, settings, env: context.env }));
+    writePrivate(
+      file,
+      bootUnit({
+        launcher: context.launcher,
+        settings,
+        env: runAgentEnv(context.label, context.env),
+      }),
+    );
     // What `systemctl --user enable` makes, made here so the service starts
     // at the next login or boot even when this user's systemd cannot be asked now.
     rmSync(wants, { force: true });
@@ -370,7 +378,7 @@ async function macStartAtBoot(asked: BootAsked, context: BootContext): Promise<B
         launcher: context.launcher,
         settings,
         log,
-        env: context.env,
+        env: runAgentEnv(context.label, context.env),
       }),
     );
     rmSync(prepared, { force: true });

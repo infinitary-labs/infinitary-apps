@@ -10,7 +10,7 @@ import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { execStart } from "../../../tests/helpers/unitExecStart";
-import { bootPlist, bootUnit, wantedBy } from "./background";
+import { bootPlist, bootUnit, runAgentEnv, wantedBy } from "./background";
 import {
   loginAgentFile,
   type RunAgentContext,
@@ -147,7 +147,7 @@ describe("the command the window starts, on a Mac", () => {
       launcher: context.launcher,
       settings,
       log,
-      env: context.env,
+      env: runAgentEnv(context.label, context.env),
     });
     expect(readFileSync(file, "utf8")).toBe(current);
     setRunAgentAtLogin(context, false);
@@ -201,7 +201,11 @@ describe("the command the window starts, on Linux", () => {
     const moved = { executable: "/home/kai/Infinitary-1.2.AppImage", args: [] };
     writeFileSync(unit, bootUnit({ launcher: moved, settings, env: {} }));
     await startRunAgent(context);
-    const current = bootUnit({ launcher: context.launcher, settings, env: context.env });
+    const current = bootUnit({
+      launcher: context.launcher,
+      settings,
+      env: runAgentEnv(context.label, context.env),
+    });
     expect(readFileSync(unit, "utf8")).toBe(current);
   });
 
@@ -214,7 +218,7 @@ describe("the command the window starts, on Linux", () => {
     writeFileSync(unit, bootUnit({ launcher: context.launcher, env: other }));
     await startRunAgent(context);
     expect(readFileSync(unit, "utf8")).toBe(
-      bootUnit({ launcher: context.launcher, env: context.env }),
+      bootUnit({ launcher: context.launcher, env: runAgentEnv(context.label, context.env) }),
     );
   });
 
@@ -251,7 +255,9 @@ describe("the command the window starts, on Linux", () => {
     );
     await startRunAgent(context);
     const text = readFileSync(unit, "utf8");
-    expect(text).toBe(bootUnit({ launcher: context.launcher, env: context.env }));
+    expect(text).toBe(
+      bootUnit({ launcher: context.launcher, env: runAgentEnv(context.label, context.env) }),
+    );
     expect(execStart(text)).toEqual(["/usr/bin/infinitary", "--ozone-platform=x11", "run"]);
   });
 

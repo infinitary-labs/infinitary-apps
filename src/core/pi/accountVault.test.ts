@@ -140,6 +140,20 @@ describe("AccountVault", () => {
     expect(views.every((view) => view.connected && view.enabled)).toBe(true);
   });
 
+  // The review of INF-5409: a first launch never reads a registry it cannot read as no accounts.
+  it("may hold accounts once one is added, or while its registry cannot be read", async () => {
+    const paths = freshPaths();
+    expect(AccountVault.create(paths).mayHoldAccounts()).toBe(false);
+    mkdirSync(paths.accountsDir, { recursive: true });
+    writeFileSync(join(paths.accountsDir, "registry.json"), "{not json");
+    const unread = AccountVault.create(paths);
+    expect(unread.list()).toEqual([]);
+    expect(unread.mayHoldAccounts()).toBe(true);
+    const added = AccountVault.create(freshPaths());
+    await added.add("openai-codex", "oauth", bridge());
+    expect(added.mayHoldAccounts()).toBe(true);
+  });
+
   it("tags login prompts and notices with the account id for row routing", async () => {
     const vault = AccountVault.create(freshPaths());
     const capture = bridge();

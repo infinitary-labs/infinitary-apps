@@ -1,6 +1,7 @@
-import { renameSync, symlinkSync, writeFileSync } from "node:fs";
+import { renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { hostname } from "node:os";
 import { join } from "node:path";
+import { RUN_AGENT_ENV } from "@core/helper/background";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
 import {
@@ -9,6 +10,7 @@ import {
   keepsStarterBesideGrant,
   lockHolder,
   markRunning,
+  ownedRun,
   programIdentity,
   runCommand,
   runningByCommand,
@@ -109,42 +111,48 @@ describe("a window opened beside a run", () => {
       return dataDir;
     };
     const alive = (pid: number) => pid === 4242;
-    // launchd names the job it started; a terminal names its own.
-    const byAgent = startedByAgent({
-      platform: "darwin",
-      env: { XPC_SERVICE_NAME: label },
-      label,
-      cgroup: () => "",
-    });
-    const byHand = startedByAgent({
-      platform: "darwin",
-      env: { XPC_SERVICE_NAME: "application.com.apple.Terminal.1234" },
-      label,
-      cgroup: () => "",
-    });
+    // The agent's own definition marks the runs it starts with its label (`runAgentEnv`); a
+    // terminal's run carries no mark, or another agent's.
+    const byAgent = startedByAgent({ env: { [RUN_AGENT_ENV]: label }, label });
+    const byHand = startedByAgent({ env: {}, label });
     expect([byAgent, byHand]).toEqual([true, false]);
-    // systemd keeps a user service's process in that unit's group.
-    expect(
-      startedByAgent({
-        platform: "linux",
-        env: {},
-        label,
-        cgroup: () =>
-          `0::/user.slice/user-1000.slice/user@1000.service/app.slice/${label}.service\n`,
-      }),
-    ).toBe(true);
-    expect(
-      startedByAgent({
-        platform: "linux",
-        env: {},
-        label,
-        cgroup: () => "0::/user.slice/user-1000.slice/session-2.scope\n",
-      }),
-    ).toBe(false);
+    expect(startedByAgent({ env: { [RUN_AGENT_ENV]: "com.infinitary.app.dev.run" }, label })).toBe(
+      false,
+    );
     expect(keepsStarterBesideGrant(runs(byAgent), true, alive)).toBe(true);
     expect(keepsStarterBesideGrant(runs(byHand), true, alive)).toBe(false);
     // With no grant waiting, the window keeps its starter as it always has.
     expect(keepsStarterBesideGrant(runs(byHand), false, alive)).toBe(true);
+  });
+
+  // The review of INF-5409: following along stops only the run this window's starter owns, by its
+  // process number: the one this window started or its own agent's, never a later one by hand.
+  it("owns only the run this window started or its agent did, and stops only that run", () => {
+    const dataDir = scratchDir("infinitary-run-marker-");
+    const running = new Set([4242]);
+    const alive = (pid: number) => running.has(pid);
+    const holds = (pid: number) => {
+      rmSync(join(dataDir, "SingletonLock"), { force: true });
+      symlinkSync(`${hostname()}-${pid}`, join(dataDir, "SingletonLock"));
+    };
+    markRunning(dataDir, 4242, new Date("2026-10-25T17:00:00Z"));
+    holds(4242);
+    // This window started 4242.
+    expect(ownedRun(dataDir, 4242, alive)).toBe(4242);
+    expect(ownedRun(dataDir, undefined, alive)).toBeNull();
+    // It ended, and the person started one by hand on the same folder.
+    running.clear();
+    running.add(5151);
+    markRunning(dataDir, 5151, new Date("2026-10-25T17:05:00Z"));
+    holds(5151);
+    expect(ownedRun(dataDir, 4242, alive)).toBeNull();
+    // A stop for the run it followed along from signals nothing to the one that replaced it.
+    const signalled: number[] = [];
+    expect(stopRunningCommand(dataDir, alive, (pid) => void signalled.push(pid), 4242)).toBe(false);
+    expect(signalled).toEqual([]);
+    // The agent's own run is owned whoever started the window.
+    markRunning(dataDir, 5151, new Date("2026-10-25T17:06:00Z"), undefined, true);
+    expect(ownedRun(dataDir, undefined, alive)).toBe(5151);
   });
 
   it("reads a note a crashed run left as nothing running", () => {

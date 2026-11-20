@@ -98,8 +98,9 @@ function homeAnswers({ plain, asked }: FreshHomeAnswers): Answers {
       lineAt: "100.86.12.40",
       opensSharing: true,
     },
-    // Nobody added this computer meanwhile, so the first launch stays as it is.
-    "inf:devices:follow-added": { followed: false },
+    // Nobody added this computer meanwhile, so the first launch stays as it is; its own first
+    // mate would follow along once added, and both other ways join from here.
+    "inf:devices:follow-added": { followed: false, follows: true, joins: true },
     // A Mac opens its Sharing settings (src/main/ipc/index.ts).
     "inf:devices:open-sharing": { ok: true },
     "inf:voice:recognizer": { where: "window" },

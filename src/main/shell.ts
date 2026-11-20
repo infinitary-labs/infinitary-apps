@@ -486,27 +486,48 @@ export class Shell {
    */
   async followAdded(): Promise<boolean> {
     if (!this.joinable() || this.switching || !this.options.work) return false;
-    // Beside a command, only one this window's starter owns stops by itself.
-    if (this.mode?.kind === "beside" && !this.mode.beside.ownsCommand) return false;
+    // Beside a command, only the run this window's starter owns stops by itself.
+    const owned = this.mode?.kind === "beside" ? this.mode.beside.ownedRun : undefined;
+    if (owned === null) return false;
     // Only a grant waiting asks the first mate anything: most polls find none.
-    if (!windowFromWork(this.options.work.dataDir, this.options.joined.leftDeviceId()))
-      return false;
+    const waiting = this.waitingGrant();
+    if (!waiting) return false;
     const firstRun = await this.dispatch("inf:app:first-run", []).catch(() => null);
     // Only a profile with nothing done here: no turn, sign-in, connection,
-    // ask, task, card or project (`FirstRunView.untouched`).
+    // ask, task, card or project (`FirstRunView.untouched`). A profile with
+    // something done keeps its own first mate, after a restart too.
+    if (firstRun && firstRun.untouched !== true)
+      this.options.joined.keepOwn(waiting.grant.deviceId);
     if (firstRun?.untouched !== true) return false;
-    // Asked again after the wait: a join or a switch may have started meanwhile.
+    // Asked again after the wait: a join, a switch or another run may have started meanwhile.
     if (!this.joinable() || this.switching) return false;
+    if (this.mode?.kind === "beside" && this.mode.beside.ownedRun !== owned) return false;
     const joined = this.openFromWork();
     if (!joined) return false;
     this.followWork(joined);
     void this.switchTo(async () => {
       // Answer the window first; the switch starts it over.
       await new Promise<void>((resolve) => setImmediate(resolve));
-      await this.stopHome();
+      await this.stopHome(owned);
       this.becomeView();
     });
     return true;
+  }
+
+  /**
+   * What this window does once its first mate's computer adds it: `follows`
+   * when it would follow along (`followAdded`), able to join, with this
+   * computer's work and, beside a command, only one its starter owns; and
+   * `joins` when Paste its link and Join by its address work here. The window
+   * promises only these.
+   */
+  followsAdded(): { follows: boolean; joins: boolean } {
+    const joins = this.joinable();
+    const follows =
+      joins &&
+      Boolean(this.options.work) &&
+      (this.mode?.kind !== "beside" || this.mode.beside.ownedRun !== null);
+    return { follows, joins };
   }
 
   /**
@@ -819,12 +840,23 @@ export class Shell {
    * device this app last left or was removed as.
    */
   private openFromWork(): Joined | null {
-    const work = this.options.work;
-    if (!work) return null;
-    const found = windowFromWork(work.dataDir, this.options.joined.leftDeviceId());
+    const found = this.waitingGrant();
     if (!found) return null;
     this.options.joined.join(found.grant, found.joinedAt, found.name);
     return this.options.joined.read();
+  }
+
+  /**
+   * The grant this computer's work keeps for its window (`windowFromWork`),
+   * unless this window kept its own first mate when that grant came: a
+   * profile with something done stays itself, a restart included.
+   */
+  private waitingGrant(): Joined | null {
+    const work = this.options.work;
+    if (!work) return null;
+    const found = windowFromWork(work.dataDir, this.options.joined.leftDeviceId());
+    if (!found || found.grant.deviceId === this.options.joined.keptOwnDeviceId()) return null;
+    return found;
   }
 
   /**
@@ -1064,11 +1096,11 @@ export class Shell {
     end("moved");
   }
 
-  private async stopHome(): Promise<void> {
+  private async stopHome(only?: number): Promise<void> {
     const mode = this.mode;
     if (mode?.kind === "beside") {
       this.mode = null;
-      await mode.beside.leave();
+      await mode.beside.leave(only);
       return;
     }
     if (mode?.kind !== "home") return;

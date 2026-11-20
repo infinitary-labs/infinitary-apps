@@ -1,6 +1,7 @@
 import { ACTIONS } from "@shared/actions";
 import { DECLINE_ACTION_ID } from "@shared/cardLeave";
 import type { Card } from "@shared/cards";
+import { deviceInviteLine } from "@shared/deviceInvite";
 import { inLanguage } from "@shared/i18n/current";
 import * as m from "@shared/i18n/messages.generated";
 import { wordedCardText, wordSaidMarks } from "@shared/i18n/said";
@@ -351,17 +352,38 @@ describe("FirstmateAgent", () => {
     await tick();
   });
 
-  // INF-4926's plan: a card for the address opens the address form on a home that adds a
-  // computer by it, and the link on a Windows PC, which adds none (the served line for each is
-  // `ACTIONS["device-invite"].lineOn`'s, in actions.test.ts). A scripted model stands in: this
-  // shows what the host offers for the home's system, never a real model's pick.
-  it("opens the address form from a Mac home's card and the link from a Windows home's", async () => {
+  // INF-4926's plan: the first mate recommends the address on a home that adds a computer by it,
+  // and the link on a Windows PC, which adds none; the card for the address opens the address
+  // form, or the link there. The catalog app_state serves on each home is read first. A scripted
+  // model stands in for the choice: this shows what the host serves and offers for the home's
+  // system, never a real model's pick.
+  it("serves the address way on a Mac home and the link on a Windows home, and opens each from its card", async () => {
+    const served: Record<string, string> = {};
     for (const platform of ["darwin", "win32"]) {
       const { agent, session, specs, supervisor } = setup({ platform });
-      agent.bindAppDispatch(
-        async (channel) => (channel === "inf:devices:list" ? [] : true) as never,
-      );
+      // Each value the general area reads, as the app answers it with nothing set up yet.
+      const nothingYet: Record<string, unknown> = {
+        "inf:devices:list": [],
+        "inf:voice:status": { modelReady: false },
+        "inf:release-notes:list": { notes: [] },
+        "inf:knowledge:directions": { state: "ready", rows: [] },
+        "inf:settings:sharing:get": {
+          diagnostics: { enabled: false },
+          contribution: { enabled: false },
+        },
+        "inf:shell:preferences": { panels: { enabled: false } },
+      };
+      agent.bindAppDispatch(async (channel) => (nothingYet[channel] ?? {}) as never);
       await agent.converse("add my mini");
+      const state = specs[0]?.tools.find((entry) => entry.name === "app_state");
+      if (!state) throw new Error("Missing app_state");
+      const catalog = JSON.parse((await state.run({ area: "general" })).text) as {
+        action: string;
+        line: string;
+      }[];
+      const line = catalog.find((entry) => entry.action === "device-invite")?.line ?? "";
+      expect(line).toBe(deviceInviteLine(platform === "win32"));
+      served[platform] = line;
       const app = specs[0]?.tools.find((entry) => entry.name === "app_change");
       if (!app) throw new Error("Missing app_change");
       await app.run({
@@ -382,6 +404,8 @@ describe("FirstmateAgent", () => {
       session.resolveNextPrompt();
       await tick();
     }
+    // Each home is served its own recommendation.
+    expect(served.darwin).not.toBe(served.win32);
   });
 
   // Intent: a bug - once the captain clicked Add it on one computer's card,

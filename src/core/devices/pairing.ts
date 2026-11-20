@@ -522,6 +522,16 @@ export class DevicePairing implements PairedDevices {
     }
   }
 
+  /**
+   * Whether the list may hold a device: one is paired, or the list cannot be
+   * read, so it is never read as empty. Reads no device's view.
+   */
+  mayHoldDevices(): boolean {
+    if (this.unreadable) return true;
+    const own = this.ownReturning()?.deviceId;
+    return this.entries.some((entry) => entry.id !== own);
+  }
+
   /** The devices on the list, oldest first, never with their secrets. */
   list(): DeviceView[] {
     if (this.projection?.devices) return this.projection.devices;

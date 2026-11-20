@@ -28791,6 +28791,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Its SSH server is on here.`;
   }
+  function devicesJoinSetUpStays() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `يعمل هنا نائب قبطان بدأ تشغيله خارج هذه النافذة، لذا تبقى هذه النافذة بجانبه بعد أن يضيف حاسوب نائب القبطان هذا الحاسوب.`;
+      case "de":
+        return `Hier läuft ein erster Offizier, der außerhalb dieses Fensters gestartet wurde, daher bleibt dieses Fenster bei ihm, wenn der Computer deines ersten Offiziers diesen hinzufügt.`;
+      case "es":
+        return `Aquí se ejecuta un primer oficial iniciado fuera de esta ventana, así que esta ventana se queda junto a él cuando la computadora de tu primer oficial agregue esta.`;
+      case "fr":
+        return `Un second démarré hors de cette fenêtre fonctionne ici : cette fenêtre reste à ses côtés une fois que l’ordinateur de votre second a ajouté celui-ci.`;
+      case "ja":
+        return `このウインドウの外で起動した一等航海士がここで動いているため、一等航海士のコンピューターがこのコンピューターを追加しても、このウインドウはその横に残ります。`;
+      case "ko":
+        return `이 창 밖에서 시작한 일등항해사가 여기서 실행 중이라, 일등항해사의 컴퓨터가 이 컴퓨터를 추가해도 이 창은 그 곁에 그대로 있어요.`;
+      case "pt-BR":
+        return `Um imediato iniciado fora desta janela está rodando aqui, então esta janela fica ao lado dele quando o computador do seu imediato adicionar este.`;
+      case "zh-Hans":
+        return `这里运行着一个在此窗口之外启动的大副，所以你大副的电脑添加这台电脑后，这个窗口仍留在它旁边。`;
+      case "zh-Hant":
+        return `這裡執行著一個在此視窗之外啟動的大副，所以你大副的電腦加入這台電腦後，這個視窗仍留在它旁邊。`;
+      case "en-XA":
+        return `[Å ƒîŕšţ ɱáţé šţáŕţéð öûţšîðé ţĥîš ŵîñðöŵ ŕûñš ĥéŕé, šö ţĥîš ŵîñðöŵ šţáýš ƀéšîðé îţ öñçé ýöûŕ ƒîŕšţ ɱáţé’š çöɱþûţéŕ áððš ţĥîš öñé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A first mate started outside this window runs here, so this window stays beside it once your first mate’s computer adds this one.‬`;
+    }
+    return `A first mate started outside this window runs here, so this window stays beside it once your first mate’s computer adds this one.`;
+  }
   function devicesJoinSetUpSub() {
     switch (currentLanguage()) {
       case "ar":
@@ -95110,6 +95137,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     devicesJoinSetUpPrivate,
     devicesJoinSetUpSshOff,
     devicesJoinSetUpSshOn,
+    devicesJoinSetUpStays,
     devicesJoinSetUpSub,
     devicesJoinSetUpUnread,
     devicesJoinSetUpWaiting,
@@ -98154,6 +98182,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "devicesJoinSetUpPrivate": [],
     "devicesJoinSetUpSshOff": [],
     "devicesJoinSetUpSshOn": [],
+    "devicesJoinSetUpStays": [],
     "devicesJoinSetUpSub": [],
     "devicesJoinSetUpUnread": [],
     "devicesJoinSetUpWaiting": [],

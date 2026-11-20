@@ -879,6 +879,7 @@
   {"said":{"m":"devicesJoinSetUpPrivate"},"words":"Its private network address, such as Tailscale’s, reaches it wherever both computers are on it."},
   {"said":{"m":"devicesJoinSetUpSshOff"},"words":"Its SSH server is off here. Turn it on, then add this computer."},
   {"said":{"m":"devicesJoinSetUpSshOn"},"words":"Its SSH server is on here."},
+  {"said":{"m":"devicesJoinSetUpStays"},"words":"A first mate started outside this window runs here, so this window stays beside it once your first mate’s computer adds this one."},
   {"said":{"m":"devicesJoinSetUpSub"},"words":"There, choose + A computer in Settings → Devices, or ask your first mate, and type this address. It then keeps this computer updated and reaches it by itself."},
   {"said":{"m":"devicesJoinSetUpUnread"},"words":"Could not find this computer’s address yet. Check that it is on a network; Infinitary looks again in a moment."},
   {"said":{"m":"devicesJoinSetUpWaiting"},"words":"Waiting for your first mate’s computer to add this one. This window then opens your first mate by itself."},

@@ -158,8 +158,11 @@ describe("the window beside a command's first mate", () => {
       dialHangs?: () => boolean;
       /** This user's work folder, where a home that added this computer leaves its grant. */
       workDir?: string;
-      /** Whether the command running is the starter's own: this window or this app's agent started it. */
-      owns?: boolean;
+      /**
+       * The process number of the command running when it is the starter's own - this window or
+       * this app's agent started it - or null for one started by hand; asked each time.
+       */
+      ownedRun?: () => number | null;
     } = {},
   ) {
     const startCore = vi.fn(async () => ownCore().core);
@@ -194,6 +197,8 @@ describe("the window beside a command's first mate", () => {
       restart: vi.fn(async (_run?: { pid?: number }) => true),
       login: false,
       stops: 0,
+      /** Which run each stop asked to stop, when it named one. */
+      stopped: [] as (number | undefined)[],
     };
     const made = new Shell({
       joined: new JoinedHome(join(scratchDir("infinitary-shell-beside-"), "joined"), () => {}),
@@ -217,11 +222,12 @@ describe("the window beside a command's first mate", () => {
         installsUpdates: options.installsUpdates ?? false,
         programReplaced: () => command.programReplaced,
         ...(options.starts ? { starter } : {}),
-        ...(options.owns === undefined ? {} : { ownsCommand: () => options.owns === true }),
+        ...(options.ownedRun === undefined ? {} : { ownedRun: options.ownedRun }),
         ...(options.startedAt === undefined ? {} : { startedAt: options.startedAt }),
         ...(options.answerWaitMs === undefined ? {} : { answerWaitMs: options.answerWaitMs }),
-        stopCommand: () => {
+        stopCommand: (only?: number) => {
           starter.stops += 1;
+          starter.stopped.push(only);
           return command.records.running === true;
         },
       },
@@ -1153,30 +1159,22 @@ describe("the window beside a command's first mate", () => {
 
   // The review of INF-4930: following along stops the command beside the window by itself, so
   // only a command this window's starter owns - this window or this app's own agent started it -
-  // and never one the person started by hand, though a grant waits in the work folder.
+  // and never one the person started by hand, though a grant waits in the work folder. It stops
+  // that run alone, by its process number.
   it("follows along beside the command its own agent started, never beside one started by hand", async () => {
     const pro = await otherMac({}, { joinsFromAnotherMac: true });
-    for (const owns of [false, true]) {
-      const command = commandRun();
-      const fallback = command.run.dispatch.getMockImplementation();
-      command.run.dispatch.mockImplementation((async (channel: string, args: unknown[]) =>
-        channel === "inf:app:first-run"
-          ? { gateOpen: true, firstTurnAt: null, untouched: true }
-          : fallback?.(channel as never, args as never)) as never);
+    for (const owned of [null, 4321]) {
+      const command = untouchedCommand();
       await command.open().settled();
       const workDir = join(scratchDir("infinitary-shell-beside-work-"), "work");
-      const at = besideShell(command.doorDir, { starts: true, owns, workDir });
+      const at = besideShell(command.doorDir, { starts: true, ownedRun: () => owned, workDir });
       await at.start();
-      const grant = await claimLink(await pro.link("mac"), {
-        kind: "mac",
-        name: "Mac mini",
-        user: { name: "sam", uid: 501 },
-      });
-      new JoinedHome(workDir).join(grant, Date.now());
-      expect(await at.shell.followAdded()).toBe(owns);
-      if (owns) {
+      expect(at.shell.followsAdded()).toEqual({ follows: owned !== null, joins: true });
+      await grantFrom(pro, workDir);
+      expect(await at.shell.followAdded()).toBe(owned !== null);
+      if (owned !== null) {
         await expect.poll(() => at.shell.thisMac().role).toBe("view");
-        expect(at.starter.stops).toBe(1);
+        expect(at.starter.stopped).toEqual([owned]);
       } else {
         expect(at.shell.thisMac().role).not.toBe("view");
         expect(at.starter.stops).toBe(0);
@@ -1184,4 +1182,46 @@ describe("the window beside a command's first mate", () => {
       }
     }
   });
+
+  // The review of INF-5409: a command started by hand that replaces the owned one while the window
+  // asks its first mate whether anything was done here is never stopped.
+  it("stays beside a command started by hand that replaced the owned one during the wait", async () => {
+    const pro = await otherMac({}, { joinsFromAnotherMac: true });
+    let running: number | null = 4321;
+    const command = untouchedCommand(() => {
+      // The owned run ended and one the person started by hand took its place.
+      running = null;
+    });
+    await command.open().settled();
+    const workDir = join(scratchDir("infinitary-shell-beside-work-"), "work");
+    const at = besideShell(command.doorDir, { starts: true, ownedRun: () => running, workDir });
+    await at.start();
+    await grantFrom(pro, workDir);
+    expect(await at.shell.followAdded()).toBe(false);
+    expect(at.shell.thisMac().role).not.toBe("view");
+    expect(at.starter.stops).toBe(0);
+    expect(at.starter.stop).not.toHaveBeenCalled();
+  });
+
+  /** A command whose first mate says nothing was done here, calling `meanwhile` as it answers. */
+  function untouchedCommand(meanwhile?: () => void) {
+    const command = commandRun();
+    const fallback = command.run.dispatch.getMockImplementation();
+    command.run.dispatch.mockImplementation((async (channel: string, args: unknown[]) => {
+      if (channel !== "inf:app:first-run") return fallback?.(channel as never, args as never);
+      meanwhile?.();
+      return { gateOpen: true, firstTurnAt: null, untouched: true };
+    }) as never);
+    return command;
+  }
+
+  /** The grant a home that added this computer leaves in its work folder. */
+  async function grantFrom(pro: Awaited<ReturnType<typeof otherMac>>, workDir: string) {
+    const grant = await claimLink(await pro.link("mac"), {
+      kind: "mac",
+      name: "Mac mini",
+      user: { name: "sam", uid: 501 },
+    });
+    new JoinedHome(workDir).join(grant, Date.now());
+  }
 });

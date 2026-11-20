@@ -799,6 +799,7 @@
 "devicesJoinSetUpPrivate" = "Seine Adresse im privaten Netzwerk, etwa die von Tailscale, erreicht ihn überall, wo beide Computer darin sind.";
 "devicesJoinSetUpSshOff" = "Sein SSH-Server ist hier deaktiviert. Aktiviere ihn, dann füg diesen Computer hinzu.";
 "devicesJoinSetUpSshOn" = "Sein SSH-Server ist hier aktiviert.";
+"devicesJoinSetUpStays" = "Hier läuft ein erster Offizier, der außerhalb dieses Fensters gestartet wurde, daher bleibt dieses Fenster bei ihm, wenn der Computer deines ersten Offiziers diesen hinzufügt.";
 "devicesJoinSetUpSub" = "Wähl dort in Einstellungen → Geräte + Einen Computer, oder frag deinen ersten Offizier, und gib diese Adresse ein. Er hält diesen Computer dann aktuell und erreicht ihn von selbst.";
 "devicesJoinSetUpUnread" = "Die Adresse dieses Computers wurde noch nicht gefunden. Prüfe, ob er mit einem Netzwerk verbunden ist; Infinitary sucht gleich erneut.";
 "devicesJoinSetUpWaiting" = "Warte darauf, dass der Computer deines ersten Offiziers diesen hinzufügt. Dieses Fenster öffnet dann von selbst deinen ersten Offizier.";

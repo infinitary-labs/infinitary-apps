@@ -60,6 +60,7 @@
   "devicesJoinSetUpPrivate": "Tailscale 같은 사설 네트워크 주소는 두 컴퓨터가 그 네트워크에 있으면 어디서든 연결돼요.",
   "devicesJoinSetUpSshOff": "여기에서 SSH 서버가 꺼져 있어요. 켠 다음 이 컴퓨터를 추가하세요.",
   "devicesJoinSetUpSshOn": "여기에서 SSH 서버가 켜져 있어요.",
+  "devicesJoinSetUpStays": "이 창 밖에서 시작한 일등항해사가 여기서 실행 중이라, 일등항해사의 컴퓨터가 이 컴퓨터를 추가해도 이 창은 그 곁에 그대로 있어요.",
   "devicesJoinSetUpSub": "그곳의 설정 → 기기에서 + 컴퓨터를 선택하거나 일등항해사에게 요청한 뒤, 이 주소를 입력하세요. 그다음에는 이 컴퓨터를 알아서 최신으로 유지하고 연결해요.",
   "devicesJoinSetUpUnread": "이 컴퓨터의 주소를 아직 찾지 못했습니다. 네트워크에 연결되어 있는지 확인하세요. Infinitary가 잠시 후 다시 찾습니다.",
   "devicesJoinSetUpWaiting": "일등항해사의 컴퓨터가 이 컴퓨터를 추가하기를 기다리고 있어요. 그다음 이 창이 알아서 일등항해사를 열어요.",

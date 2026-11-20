@@ -49,5 +49,6 @@
   "crewmateUnreadable": "无法读取这名船员的对话。",
   "crewmateWaiting": "等你处理",
   "crewmateWaitsForModel": "{left} 已不在设置中的任何级别里，你的级别中也没有其他模型能接手这个任务，所以它会等到有模型能接手",
+  "crewmateWaitsForUpdate": "{left} 已不在设置中的任何级别里，而 {computer} 需要更新后这个任务才能在那里改用其他模型，所以它会等到那时",
   "crewmateWorking": "处理中…"
 }

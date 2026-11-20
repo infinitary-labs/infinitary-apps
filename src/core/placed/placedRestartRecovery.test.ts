@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
+import { piStubRuntime } from "../../../tests/helpers/piStubRuntime";
+import type { PlacedHome } from "../../../tests/helpers/placedHome";
 import {
   api,
+  CODEX_MEDIUM_STARTER,
+  computerAccount,
   gate,
   MODEL,
   model,
@@ -9,6 +13,7 @@ import {
   placedWorldHooks,
   type Step,
   said,
+  THIS_MAC_ON_NEWER_CODEX,
   world,
 } from "../../../tests/helpers/placedWorld";
 import { CONTRACT_CHANGES } from "../connection/contractChanges";
@@ -28,6 +33,41 @@ vi.mock("../utilityQos", async (importOriginal) =>
   (await import("../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
 );
 placedWorldHooks({ now: Date.now, reset: () => {} });
+
+/** That computer signed in to two Codex accounts, one serving the starter and one GPT-6 Sol. */
+const SOL = { provider: "openai-codex", id: "gpt-6-sol" };
+const STARTER = { provider: "openai-codex", id: CODEX_MEDIUM_STARTER };
+async function codexThere() {
+  const runs = await piStubRuntime(api.url, STARTER, [SOL.id]);
+  return world(undefined, {
+    routing: THIS_MAC_ON_NEWER_CODEX,
+    signedInTo: [
+      computerAccount("acct_codex_other", "openai-codex"),
+      computerAccount("acct_codex_sol", "openai-codex"),
+    ],
+    served: [
+      { accountId: "acct_codex_other", models: [{ ...STARTER, name: STARTER.id }] },
+      { accountId: "acct_codex_sol", models: [{ ...SOL, name: "GPT-6 Sol" }] },
+    ],
+    runtime: runs,
+  });
+}
+
+/** The captain takes the starter off its level and puts GPT-6 Sol there. */
+function starterLeft(home: PlacedHome): void {
+  const slots = home.slots;
+  if (!slots) throw new Error("no levels");
+  slots.setSlotMembership(`${STARTER.provider}/${STARTER.id}`, "medium", false);
+  slots.setSlotMembership(`${SOL.provider}/${SOL.id}`, "medium", true);
+}
+
+/** The task's notes that it routed again because its model left every level. */
+function rerouted(home: PlacedHome, taskId: string): string[] {
+  return home.tasks
+    .timeline(taskId)
+    .filter((entry) => entry.kind === "note" && entry.data && "rerouted" in entry.data)
+    .map((entry) => entry.text);
+}
 
 describe("recovery after a work computer quits mid-turn", () => {
   it.each(["steer", "interrupt", "backlog restart"] as const)(
@@ -127,7 +167,7 @@ describe("reopening after a work computer restarts, when the task's model left e
     await at.start(taskId);
     const home = at.home();
     await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
-    const commit = vi.fn(() => "committed" as const);
+    const commit = vi.fn(async () => "committed" as const);
     const asked = vi.spyOn(home.supervisor, "reopenModel").mockResolvedValue({
       model: { provider: PROVIDER, id: OTHER_MODEL },
       thinking: { level: "off" },
@@ -143,6 +183,154 @@ describe("reopening after a work computer restarts, when the task's model left e
     await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
     await expect.poll(() => api.requests.length).toBeGreaterThan(requests);
     expect(api.requests.at(-1)?.body.model).toBe(OTHER_MODEL);
+  });
+
+  // INF-5438 round 7 finding 12: the real router, the home's read of that
+  // computer's subscriptions and the computer's own sign-ins, joined. The
+  // task's model leaves every level while it idles; after that computer
+  // restarts, the next words reach the model a level holds, on an account
+  // there that serves it, and the move records that account.
+  it("sends the next words to the model a level holds, on an account there that serves it", async () => {
+    const at = await codexThere();
+    const taskId = "t-left";
+    model([{ text: "Started on it." }, { text: "On GPT-6 Sol." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    expect(api.requests.at(-1)?.body.model).toBe(STARTER.id);
+    expect(at.bound.map((binding) => binding.accountId)).toEqual(["acct_codex_other"]);
+    starterLeft(home);
+
+    await at.restartComputer();
+    await at.inReach(taskId);
+    await expect.poll(() => home.decisions.latestRouting(taskId)?.model).toBe(SOL.id);
+    await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("On GPT-6 Sol.");
+    expect(api.requests.at(-1)?.body.model).toBe(SOL.id);
+    expect(said(api.requests.at(-1))).toContain("Carry on.");
+    // Bound there to the one account that serves it, and recorded with it.
+    expect(at.bound.map((binding) => binding.accountId)).toEqual([
+      "acct_codex_other",
+      "acct_codex_sol",
+    ]);
+    const routed = home.decisions.latestRouting(taskId);
+    expect(routed).toMatchObject({ provider: SOL.provider, model: SOL.id });
+    expect(routed && home.decisions.routingFacts(routed.id)).toMatchObject({
+      accountId: "acct_codex_sol",
+    });
+    // Said once, on the task's record.
+    expect(rerouted(home, taskId)).toHaveLength(1);
+  });
+
+  // INF-5438 round 7 findings 6 and 12: this Mac reattaches to the live
+  // conversation its computer holds on another model than its newest routing
+  // names, so no open is confirmed; when that computer restarts, nothing
+  // reopens on the model it held, and the next words open a conversation on
+  // the model a level holds.
+  it("reopens nothing on a model it adopted live once that computer restarts", async () => {
+    const at = await codexThere();
+    const taskId = "t-adopted";
+    model([{ text: "Started on it." }, { text: "Still live." }, { text: "On GPT-6 Sol." }]);
+    await at.start(taskId);
+    await expect.poll(() => at.home().tasks.get(taskId)?.activity).toBe("idle");
+    // Only this Mac restarts; meanwhile the newest routing names GPT-6 Sol.
+    await at.restartHome();
+    await at.inReach(taskId);
+    const home = at.home();
+    starterLeft(home);
+    home.decisions.recordRouting({
+      taskId,
+      provider: SOL.provider,
+      model: SOL.id,
+      bucket: "medium",
+      rule: "R1",
+      served: "medium",
+      reasons: ["routed again"],
+      facts: { kind: "routing-candidates", candidates: [], accountId: "acct_codex_sol" },
+    });
+    await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Still live.");
+    // The live conversation kept its model.
+    expect(api.requests.at(-1)?.body.model).toBe(STARTER.id);
+
+    await at.restartComputer();
+    await at.inReach(taskId);
+    const requests = api.requests.length;
+    await home.supervisor.steer.steerCrewmate(taskId, "And the header.", "captain");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("On GPT-6 Sol.");
+    expect(api.requests.slice(requests).map((request) => request.body.model)).toEqual([SOL.id]);
+  });
+
+  // INF-5438 round 7 findings 2, 4, 5 and 12: GPT-6 Sol leaves its level
+  // while that computer opens the conversation on it, and the starter is put
+  // back. The open is refused: no move, routing row or note is written for
+  // it, and the next words reach the starter, which a level holds again.
+  it("writes nothing for an open refused because its model left the level meanwhile", async () => {
+    const at = await codexThere();
+    const taskId = "t-refused";
+    model([{ text: "Started on it." }, { text: "Back on the starter." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    starterLeft(home);
+    const rows = home.decisions.routing({ taskIds: [taskId] }).length;
+    const opened: string[] = [];
+    const ask = home.devices.ask.bind(home.devices);
+    vi.spyOn(home.devices, "ask").mockImplementation(async (device, channel, args) => {
+      const [open] = args as [{ spec?: { reattach?: boolean; model?: { id: string } } }];
+      const answer = await ask(device, channel, args);
+      if (channel === "inf:session:open" && open.spec?.reattach !== true && open.spec?.model) {
+        opened.push(open.spec.model.id);
+        // The captain puts the starter back while GPT-6 Sol was opening.
+        if (open.spec.model.id === SOL.id) {
+          const slots = home.slots;
+          slots?.setSlotMembership(`${SOL.provider}/${SOL.id}`, "medium", false);
+          slots?.setSlotMembership(`${STARTER.provider}/${STARTER.id}`, "medium", true);
+        }
+      }
+      return answer;
+    });
+
+    await at.restartComputer();
+    await at.inReach(taskId);
+    await expect.poll(() => opened).toContain(SOL.id);
+    const requests = api.requests.length;
+    await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Back on the starter.");
+    expect(api.requests.slice(requests).map((request) => request.body.model)).toEqual([STARTER.id]);
+    // Nothing durable says it moved to GPT-6 Sol.
+    expect(rerouted(home, taskId)).toEqual([]);
+    expect(home.decisions.routing({ taskIds: [taskId] }).slice(rows)).toEqual([]);
+    expect(home.tasks.get(taskId)?.model ?? null).not.toBe(`${SOL.provider}/${SOL.id}`);
+  });
+
+  // INF-5438 round 7 findings 8 and 12: a reopen whose open is not accepted
+  // keeps orders from the conversation it opened; the next order after it
+  // waits for the conversation the next turn opens, and reaches the model once.
+  it("sends an order after a reopen that did not open only to the conversation opened next", async () => {
+    const at = await world();
+    const taskId = "t-after";
+    model([{ text: "Started." }, { text: "Carrying on." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    vi.spyOn(home.supervisor, "reopenModel").mockResolvedValueOnce({
+      model: { provider: PROVIDER, id: OTHER_MODEL },
+      thinking: { level: "low" },
+      commit: async () => "again" as const,
+    });
+    const letGo = vi.spyOn(home.supervisor, "placedLetGo");
+    const requests = api.requests.length;
+
+    await at.restartComputer();
+    await expect.poll(() => letGo.mock.calls.length).toBe(1);
+    expect(api.requests.length).toBe(requests);
+    await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+    await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Carrying on.");
+    expect(
+      api.requests.slice(requests).map((request) => said(request).includes("Carry on.")),
+    ).toEqual([true]);
+    expect(home.inbox.allFor(taskId)).toEqual([]);
   });
 
   it("opens nothing there and lets the task go when no model can take it", async () => {
@@ -214,7 +402,7 @@ describe("reopening after a work computer restarts, when the task's model left e
       }
       return ask(device, channel, args);
     });
-    const commit = vi.fn(() => "committed" as const);
+    const commit = vi.fn(async () => "committed" as const);
     const routed = vi
       .spyOn(home.supervisor.moves, "routeAgainIfLeft")
       .mockImplementation(async () => {
@@ -251,7 +439,7 @@ describe("reopening after a work computer restarts, when the task's model left e
       model: { provider: PROVIDER, id: OTHER_MODEL },
       thinkingLevel: "low",
       providerName: "Stub",
-      commit: () => "committed" as const,
+      commit: async () => "committed" as const,
     });
 
     await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
@@ -273,11 +461,11 @@ describe("reopening after a work computer restarts, when the task's model left e
     const routing = gate();
     const asked = vi.spyOn(home.supervisor, "reopenModel").mockImplementation(async () => {
       await routing.held;
-      // It opened, but routing changed meanwhile and now waits.
+      // It opened, but routing changed meanwhile and picks again.
       return {
         model: { provider: PROVIDER, id: OTHER_MODEL },
         thinking: { level: "low" },
-        commit: () => "wait" as const,
+        commit: async () => "again" as const,
       };
     });
     const requests = api.requests.length;
@@ -324,7 +512,7 @@ describe("reopening after a work computer restarts, when the task's model left e
       }
       return answer;
     });
-    const commit = vi.fn(() => "committed" as const);
+    const commit = vi.fn(async () => "committed" as const);
     vi.spyOn(home.supervisor, "reopenModel").mockResolvedValue({
       model: { provider: PROVIDER, id: OTHER_MODEL },
       accountId: "a-guess-the-home-made",

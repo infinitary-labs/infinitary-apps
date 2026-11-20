@@ -598,9 +598,9 @@ it("routes a task on a computer that runs work among that computer's own models 
   // Nothing is recorded until that computer answers a conversation opened on Luna.
   expect(routedModels(h, taskId)).toEqual([sol.id]);
   expect(reroutedNotes(h, taskId)).toHaveLength(0);
-  expect(typeof routed === "object" && routed.commit({ model: luna, account: "there-codex" })).toBe(
-    "committed",
-  );
+  expect(
+    typeof routed === "object" && (await routed.commit({ model: luna, account: "there-codex" })),
+  ).toBe("committed");
   expect(routedModels(h, taskId)).toEqual([sol.id, luna.id]);
   expect(reroutedNotes(h, taskId)).toHaveLength(1);
   // Luna holds a level: the next reopen there keeps it.
@@ -648,7 +648,7 @@ it("routes a custom connection's task only among that connection's models, on it
   expect(reroutedNotes(h, taskId)).toHaveLength(1);
 });
 
-it("waits on a computer that runs work when none of its sign-ins serves a model, even for a conversation open there", async () => {
+it("waits on a computer that runs work when none of its sign-ins serves a model", async () => {
   const routing = realRouting();
   const crewmate = fakeCrewmate({ model: sol });
   const h = setup(crewmate, { realRouter: routing.make });
@@ -667,9 +667,6 @@ it("waits on a computer that runs work when none of its sign-ins serves a model,
   } as unknown as CrewMachines;
   const relaunched = reboot(h, vi.fn(), { router: h.router as unknown as Router, machines });
 
-  // An older computer that keeps a conversation open there cannot be told to
-  // reattach only, so it waits like a new conversation would.
-  expect(await relaunched.reopenModel(taskId, "mini", true)).toBe("wait");
   expect(await relaunched.reopenModel(taskId, "mini", false)).toBe("wait");
   expect(routedModels(h, taskId)).toEqual([sol.id]);
   expect(waitNotes(h, taskId)).toHaveLength(1);
@@ -1008,10 +1005,11 @@ it("keeps the routed model when it is back on a level by the time the conversati
   await relaunched.disposeAll();
 });
 
-// INF-5438 round 6 finding 4: the move on a computer that runs work records
-// the account that computer answers it bound, only when that account serves
-// the model there; a conversation bound to any other waits.
-it("records the account a computer that runs work bound, and waits when it does not serve the model", async () => {
+// INF-5438 round 6 finding 4, round 7 finding 5: the move on a computer that
+// runs work records the account that computer answers it bound, only when
+// that account serves the model there; a conversation bound to any other
+// passes that model over, and the task waits once nothing else can take it.
+it("records the account a computer that runs work bound, and passes the model over when it does not serve it", async () => {
   const routing = realRouting([sol, terra, luna]);
   const crewmate = fakeCrewmate({ model: sol });
   const h = setup(crewmate, { realRouter: routing.make });
@@ -1032,17 +1030,19 @@ it("records the account a computer that runs work bound, and waits when it does 
 
   // That computer bound another account, one that does not serve Luna there.
   const first = await relaunched.reopenModel(taskId, "mini", false);
-  expect(typeof first === "object" && first.commit({ model: luna, account: "there-other" })).toBe(
-    "wait",
-  );
+  expect(
+    typeof first === "object" && (await first.commit({ model: luna, account: "there-other" })),
+  ).toBe("again");
   expect(routedModels(h, taskId)).toEqual([sol.id]);
+  // Luna is passed over, and nothing else there can take the task.
+  expect(await relaunched.reopenModel(taskId, "mini", false)).toBe("wait");
   expect(waitNotes(h, taskId)).toHaveLength(1);
 
-  // It bound the account that serves Luna: that account is the one recorded.
+  // Tried again, it bound the account that serves Luna: that one is recorded.
   const second = await relaunched.reopenModel(taskId, "mini", false);
-  expect(typeof second === "object" && second.commit({ model: luna, account: "there-codex" })).toBe(
-    "committed",
-  );
+  expect(
+    typeof second === "object" && (await second.commit({ model: luna, account: "there-codex" })),
+  ).toBe("committed");
   expect(routedModels(h, taskId)).toEqual([sol.id, luna.id]);
   const row = h.db
     .prepare(
@@ -1085,4 +1085,248 @@ it("opens nothing and says nothing while this Mac's accounts have not said what 
   expect((await relaunchAndSteer(h, taskId))?.model).toEqual(terra);
   expect(routedModels(h, taskId)).toEqual([sol.id, terra.id]);
   expect(waitNotes(h, taskId)).toEqual([]);
+});
+
+// INF-5438 round 7 finding 5: a replacement that opened on another model is
+// passed over, and the task tries the other models routing would pick before
+// it waits; the one that opens on its model takes the words.
+it("tries the next model routing picks when a replacement opens on another model", async () => {
+  const routing = realRouting([sol, terra, luna]);
+  const crewmate = fakeCrewmate({ model: sol });
+  const h = setup(crewmate, { realRouter: routing.make });
+  const taskId = await startedOnSol(h, crewmate);
+  // Terra and Luna both take high in Sol's place.
+  routing.takeSolOffEveryLevel();
+  routing.placeHigh(luna);
+  const specs: CrewmateSpec[] = [];
+  const opened: ReturnType<typeof fakeCrewmate>[] = [];
+  const relaunched = reboot(
+    h,
+    vi.fn(async () => {
+      // The first replacement's runtime could not resolve it and opened on Sol.
+      const session = fakeCrewmate({
+        model: opened.length === 0 ? sol : (specs.at(-1)?.model ?? sol),
+      });
+      opened.push(session);
+      return session;
+    }),
+    { specs, router: h.router as unknown as Router },
+  );
+  await relaunched.steer.steerCrewmate(taskId, "carry on").catch(() => undefined);
+  await tick();
+  const [first, second] = specs.map((spec) => spec.model?.id);
+  expect(specs).toHaveLength(2);
+  expect([first, second].sort()).toEqual([luna.id, terra.id].sort());
+  expect(opened[0]?.promptCalls).toEqual([]);
+  expect(opened[1]?.promptCalls).toEqual(["carry on"]);
+  expect(routedModels(h, taskId)).toEqual([sol.id, second]);
+  expect(reroutedNotes(h, taskId)).toHaveLength(1);
+  expect(waitNotes(h, taskId)).toEqual([]);
+  await relaunched.disposeAll();
+});
+
+// INF-5438 round 7 finding 2: the account picked here is read again once the
+// conversation opened; one that no longer serves the model takes no words.
+it("sends no words to a replacement whose account stopped serving it while it opened", async () => {
+  const routing = realRouting();
+  const crewmate = fakeCrewmate({ model: sol });
+  const h = setup(crewmate, { realRouter: routing.make });
+  const taskId = await startedOnSol(h, crewmate);
+  routing.takeSolOffEveryLevel();
+  let servesTerra = true;
+  const accounts: AccountAttachment = {
+    selectForSpawn: vi.fn(async () => "acct-codex"),
+    pickForSpawn: vi.fn(async () => ({
+      accountId: "acct-codex",
+      record: () => {},
+      selected: () => {},
+    })),
+    reselectForResume: vi.fn(async (_taskId: string, held: string | null) => ({
+      ...(held ? { accountId: held } : {}),
+      changed: false,
+    })),
+    labelOf: () => "personal",
+    serves: (_accountId, model) => model.id === sol.id || servesTerra,
+  };
+  const specs: CrewmateSpec[] = [];
+  const opened: ReturnType<typeof fakeCrewmate>[] = [];
+  const relaunched = reboot(
+    h,
+    vi.fn(async () => {
+      // While Terra opens, its account signs out of it.
+      servesTerra = false;
+      const session = fakeCrewmate({ model: specs.at(-1)?.model ?? sol });
+      opened.push(session);
+      return session;
+    }),
+    { specs, router: h.router as unknown as Router, accounts },
+  );
+  await relaunched.steer.steerCrewmate(taskId, "carry on").catch(() => undefined);
+  await tick();
+  expect(specs.map((spec) => spec.model)).toEqual([terra]);
+  expect(opened[0]?.promptCalls).toEqual([]);
+  expect(routedModels(h, taskId)).toEqual([sol.id]);
+  expect(relaunched.moves.waitsForModel(taskId)).toBe(true);
+  expect(waitNotes(h, taskId)).toHaveLength(1);
+  await relaunched.disposeAll();
+});
+
+// INF-5438 round 7 findings 3 and 4: a conversation opened anew on the model
+// the task kept takes no words when that model left every level while it
+// opened, and writes nothing of its own - no renewal line or restart - before
+// the task routes again and the replacement takes the words.
+it("routes again when the kept model leaves every level while its conversation opens, writing nothing for the one let go", async () => {
+  const routing = realRouting();
+  const crewmate = fakeCrewmate({ model: sol });
+  const h = setup(crewmate, { realRouter: routing.make });
+  const taskId = await startedOnSol(h, crewmate);
+  const specs: CrewmateSpec[] = [];
+  const opened: ReturnType<typeof fakeCrewmate>[] = [];
+  const relaunched = reboot(
+    h,
+    vi.fn(async () => {
+      // While Sol reopens - renewing its instructions as it opens - the
+      // person takes it off every level and places Terra.
+      const first = opened.length === 0;
+      if (first) routing.takeSolOffEveryLevel();
+      const session = fakeCrewmate({
+        model: specs.at(-1)?.model ?? sol,
+        ...(first ? { renewal: { from: "s0", changed: ["instructions"] as const } } : {}),
+      });
+      opened.push(session);
+      return session;
+    }),
+    { specs, router: h.router as unknown as Router },
+  );
+  await relaunched.steer.steerCrewmate(taskId, "carry on").catch(() => undefined);
+  await tick();
+  expect(specs.map((spec) => spec.model)).toEqual([sol, terra]);
+  expect(opened[0]?.promptCalls).toEqual([]);
+  expect(opened[1]?.promptCalls).toEqual(["carry on"]);
+  expect(routedModels(h, taskId)).toEqual([sol.id, terra.id]);
+  expect(
+    h.tasks.timeline(taskId).filter((entry) => entry.data && "conversation" in entry.data),
+  ).toEqual([]);
+  await relaunched.disposeAll();
+});
+
+// INF-5438 round 7 finding 1: on a computer that runs work, the move commits
+// only for an account that computer bound and that lists the model there -
+// not its provider's pinned account that does not, and not none.
+it("commits a move on a computer that runs work only for an account there that lists the model", async () => {
+  const routing = realRouting([sol, terra, luna]);
+  const crewmate = fakeCrewmate({ model: sol });
+  const h = setup(crewmate, { realRouter: routing.make });
+  const taskId = await startedOnSol(h, crewmate);
+  h.tasks.placement.setDevice(taskId, "mini");
+  routing.takeSolOffEveryLevel();
+  routing.placeHigh(luna);
+  // Its pinned Codex account lists no Luna; another lists it.
+  const machines = {
+    served: async () => ({
+      available: [luna],
+      catalog: [{ provider: "codex", id: luna.id, label: luna.id, effectivePercentRemaining: 80 }],
+      note: "the computer's own sign-ins",
+      accounts: new Map([["openai-codex", "there-pinned"]]),
+      modelAccounts: new Map([[offeringKey(luna), "there-luna"]]),
+      servedBy: new Map([[offeringKey(luna), new Set(["there-luna"])]]),
+    }),
+  } as unknown as CrewMachines;
+  const relaunched = reboot(h, vi.fn(), { router: h.router as unknown as Router, machines });
+  const commitOn = async (account?: string) => {
+    const routed = await relaunched.reopenModel(taskId, "mini", false);
+    if (typeof routed !== "object") throw new Error(`no route: ${routed}`);
+    expect(routed.accountId).toBe("there-luna");
+    return routed.commit({ model: luna, ...(account ? { account } : {}) });
+  };
+
+  // It bound none of its accounts (its own Claude login, say): nothing is recorded.
+  expect(await commitOn()).toBe("again");
+  expect(await relaunched.reopenModel(taskId, "mini", false)).toBe("wait");
+  // It bound its pinned account, which does not list Luna: nothing is recorded.
+  expect(await commitOn("there-pinned")).toBe("again");
+  expect(routedModels(h, taskId)).toEqual([sol.id]);
+  expect(await relaunched.reopenModel(taskId, "mini", false)).toBe("wait");
+  // It bound the account that lists Luna.
+  expect(await commitOn("there-luna")).toBe("committed");
+  expect(routedModels(h, taskId)).toEqual([sol.id, luna.id]);
+  await relaunched.disposeAll();
+});
+
+// INF-5438 round 7 finding 2: what that computer serves is read again once
+// the conversation opened there; an account that stopped listing the model
+// meanwhile records nothing.
+it("reads again what a computer that runs work serves before it commits a move there", async () => {
+  const routing = realRouting([sol, terra, luna]);
+  const crewmate = fakeCrewmate({ model: sol });
+  const h = setup(crewmate, { realRouter: routing.make });
+  const taskId = await startedOnSol(h, crewmate);
+  h.tasks.placement.setDevice(taskId, "mini");
+  routing.takeSolOffEveryLevel();
+  routing.placeHigh(luna);
+  let listsLuna = true;
+  const machines = {
+    served: async () => ({
+      available: [luna],
+      catalog: [{ provider: "codex", id: luna.id, label: luna.id, effectivePercentRemaining: 80 }],
+      note: "the computer's own sign-ins",
+      accounts: new Map([["openai-codex", "there-codex"]]),
+      modelAccounts: new Map(listsLuna ? [[offeringKey(luna), "there-codex"]] : []),
+      servedBy: new Map(listsLuna ? [[offeringKey(luna), new Set(["there-codex"])]] : []),
+    }),
+  } as unknown as CrewMachines;
+  const relaunched = reboot(h, vi.fn(), { router: h.router as unknown as Router, machines });
+  const routed = await relaunched.reopenModel(taskId, "mini", false);
+  if (typeof routed !== "object") throw new Error(`no route: ${routed}`);
+  // While the conversation opened there, that account stopped listing Luna.
+  listsLuna = false;
+  expect(await routed.commit({ model: luna, account: "there-codex" })).toBe("again");
+  expect(routedModels(h, taskId)).toEqual([sol.id]);
+  expect(reroutedNotes(h, taskId)).toEqual([]);
+  await relaunched.disposeAll();
+});
+
+// INF-5438 round 7 finding 9: an older computer holding the task's
+// conversation open waits because only its update lets the task move, even
+// when another model there can take it; it says that reason once, and the
+// wait ends when that computer no longer holds the conversation.
+it("tells why an older computer holding the conversation open waits, and stops waiting once it holds none", async () => {
+  const routing = realRouting([sol, terra, luna]);
+  const crewmate = fakeCrewmate({ model: sol });
+  const h = setup(crewmate, { realRouter: routing.make });
+  const taskId = await startedOnSol(h, crewmate);
+  h.tasks.placement.setDevice(taskId, "mini");
+  routing.takeSolOffEveryLevel();
+  routing.placeHigh(luna);
+  let held = true;
+  const machines = {
+    served: async () => ({
+      available: [luna],
+      catalog: [{ provider: "codex", id: luna.id, label: luna.id, effectivePercentRemaining: 80 }],
+      note: "the computer's own sign-ins",
+      accounts: new Map([["openai-codex", "there-codex"]]),
+      modelAccounts: new Map([[offeringKey(luna), "there-codex"]]),
+    }),
+    servedState: () => "luna",
+    nameOf: () => "Mac mini",
+    conversationOpen: () => held,
+  } as unknown as CrewMachines;
+  const relaunched = reboot(h, vi.fn(), { router: h.router as unknown as Router, machines });
+
+  expect(await relaunched.reopenModel(taskId, "mini", true)).toBe("wait");
+  expect(await relaunched.reopenModel(taskId, "mini", true)).toBe("wait");
+  const update = englishOf(
+    said("crewmateWaitsForUpdate", {
+      left: h.router?.modelLabel(sol) ?? "",
+      computer: "Mac mini",
+    }),
+  );
+  expect(waitNotes(h, taskId)).toEqual([update]);
+  expect(relaunched.moves.modelWaitWords(taskId)).toBe(update);
+  expect(relaunched.moves.waitsForModel(taskId)).toBe(true);
+  // That computer restarted and holds the conversation no more.
+  held = false;
+  expect(relaunched.moves.waitsForModel(taskId)).toBe(false);
+  expect(await relaunched.reopenModel(taskId, "mini", false)).toMatchObject({ model: luna });
+  await relaunched.disposeAll();
 });

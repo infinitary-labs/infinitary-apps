@@ -1002,6 +1002,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       ]),
     );
     if (!state) throw new NeedsNewConversation(task);
+    placed.reopening = undefined;
     const recordDir = spec.shape.record.dir;
     placed.record.dir = recordDir;
     // The spec of the conversation open there: one that kept another model
@@ -1029,13 +1030,13 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         order: async <C extends WorkOrderChannel>(channel: C, args: unknown) => {
           // A reopen asks first and routes before it opens: words wait for
           // that open, and go back to their lane unspent if it did not open.
-          if (
-            (channel === "inf:session:prompt" || channel === "inf:session:steer") &&
-            (await placed.reopening) === false
-          )
-            throw new NotOpenThere(task);
-          if (channel === "inf:session:prompt")
+          const words = channel === "inf:session:prompt" || channel === "inf:session:steer";
+          if (words && (await placed.reopening) === false) throw new NotOpenThere(task);
+          if (channel === "inf:session:prompt") {
             turnOrigin = await this.copies.followProject(deviceId, task, turnOrigin);
+            // A reopen that began while the project was followed is waited for too.
+            if ((await placed.reopening) === false) throw new NotOpenThere(task);
+          }
           return this.options.devices.ask(deviceId, channel, args) as Promise<WorkOrderResponse<C>>;
         },
         inReach: () => this.options.devices.inReach(deviceId),
@@ -1047,6 +1048,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         released: (released) => {
           if (placed.session === released) {
             placed.session = undefined;
+            placed.reopening = undefined;
             placed.openCalls.clear();
             placed.endedCalls.clear();
             placed.record.cancelLive();
@@ -1191,11 +1193,9 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   /**
    * Opens the conversation there again, from where its record ends, for the
    * session this Mac still holds; the lane waits until it is open, and until
-   * the supervisor took a conversation that started over there.
-   *
-   * The tool names are the ones that
-   * computer allows now, not the ones it allowed when the conversation
-   * opened, so a version-gated tool arrives without this Mac restarting.
+   * the supervisor took a conversation that started over there. Tool names
+   * are what that computer allows now, so a version-gated tool arrives
+   * without this Mac restarting.
    */
   private reopen(
     placed: Placed,
@@ -1204,11 +1204,21 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     owed = false,
     openedThere = false,
   ): Promise<void> {
-    const opened = this.specForReopen(placed);
-    if (!opened) return Promise.resolve();
-    const resume = session.resumeToken();
     // Still this computer's, in the session this Mac holds, after each wait.
     const ours = () => heldSession(placed) === session && placed.deviceId === deviceId;
+    const letGo = () => {
+      if (ours()) this.host?.letGo?.(placed.task);
+      return false;
+    };
+    const opened = this.specForReopen(placed);
+    // Adopted on another model than it asked, no spec was confirmed: it takes
+    // no words, and the task's next turn opens one through the ordinary resume.
+    if (!opened) {
+      placed.reopening = Promise.resolve(false);
+      letGo();
+      return Promise.resolve();
+    }
+    const resume = session.resumeToken();
     const ask = (spec: PlacedSpec) =>
       this.options.devices.ask(deviceId, "inf:session:open", [
         {
@@ -1228,19 +1238,21 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       ask: async (spec) => openAnswerSchema.parse(await ask(spec)),
       route: (attach) =>
         this.host?.reopenModel?.(placed.task, deviceId, attach && (owed || openedThere)),
-      letGo: () => this.host?.letGo?.(placed.task),
+      letGo,
     });
     // True once the conversation is open there for this session's words.
     const reopening: Promise<boolean> = asking
-      .then((answer) => {
+      .then(async (answer) => {
         if (answer === "open") return true;
         const state = answer?.state;
-        if (!state) return false;
+        if (!state) return answer ? letGo() : false;
         placed.reopenOwed = state.streaming;
-        const spec = reopenedSpec(progress.asked, state, progress.routed, ours(), () =>
-          this.host?.letGo?.(placed.task),
-        );
-        if (spec === false) return false;
+        const spec = await reopenedSpec(progress, state, {
+          ours,
+          letGo,
+          kept: () => this.host?.modelKept?.(placed.task, deviceId),
+        });
+        if (spec === false || !ours()) return false;
         if (spec) placed.spec = spec;
         session.reopened(state);
         if (!session.letGo) this.host?.reopened(placed.task);
@@ -1248,23 +1260,20 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       })
       .catch((caught: unknown) => {
         this.log(`could not open ${placed.task} there again: ${errorText(caught)}`);
-        // A conversation that needed opening anew stays unopened: the next
-        // turn opens it through the ordinary resume.
-        if (progress.anew) {
-          if (ours()) this.host?.letGo?.(placed.task);
-          return false;
-        }
-        // An owed open that failed stays owed, asked again at the next end;
-        // the conversation it asked about is still open there.
-        if (owed) placed.reopenOwed = true;
-        return owed;
+        return letGo();
       });
     placed.adoptingSince = this.options.now();
-    const settled = reopening.finally(() => {
-      placed.adopting = undefined;
-      placed.adoptingSince = undefined;
-      placed.reopening = undefined;
-    });
+    // Words wait for that computer to confirm it open; one it did not confirm
+    // takes none until this session is let go (`NotOpenThere`).
+    const settled: Promise<boolean> = reopening
+      .then((open) => {
+        if (open && placed.reopening === settled) placed.reopening = undefined;
+        return open;
+      })
+      .finally(() => {
+        placed.adopting = undefined;
+        placed.adoptingSince = undefined;
+      });
     placed.reopening = settled;
     placed.adopting = settled.then(() => undefined);
     return placed.adopting;

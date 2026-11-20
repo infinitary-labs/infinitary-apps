@@ -20,6 +20,7 @@ import {
   crewmateTempDir,
 } from "../paths";
 import { errorText } from "../personal/errorText";
+import { type ComputerPool, servesOnComputer } from "../routing/computerPool";
 import type { RoutePreview } from "../routing/router";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import type { TaskRecord } from "../storage/taskRecords";
@@ -70,19 +71,21 @@ export type RoutedAgain = {
    * `commit` writes it then, the account that computer says it bound
    * recorded as the one that serves it. It answers "stale" when a stop, a
    * close or another move took the task meanwhile, "again" when Settings
-   * changed so this is no longer the model routing picks, and "wait" when
-   * the conversation opened on another model or an account there that does
-   * not serve it. Only "committed" lets the conversation take work: on any
-   * other answer it is let go, and a new one routes again or waits.
+   * changed so this is no longer the model routing picks, or when the
+   * conversation opened on another model or an account that does not serve
+   * it now, read again where it opened: that pair is passed over, and the
+   * new conversation routes among the rest, waiting once none is left. Only
+   * "committed" lets the conversation take work: on any other answer it is
+   * let go.
    */
-  commit: (opened: OpenedOn) => RerouteOutcome;
+  commit: (opened: OpenedOn) => Promise<RerouteOutcome>;
 };
 
 /** What a rerouted conversation opened on: its model, and the account a computer that runs work says it bound. */
 export type OpenedOn = { model?: { provider: string; id: string }; account?: string };
 
 /** What a rerouted conversation's open came to (`RoutedAgain.commit`). */
-export type RerouteOutcome = "committed" | "stale" | "again" | "wait";
+export type RerouteOutcome = "committed" | "stale" | "again";
 
 /**
  * A new conversation does not open: the model the task routed to left
@@ -141,6 +144,20 @@ export class TaskMoves {
   private readonly moving = new Set<string>();
   /** Tasks waiting for a model, with what Settings and the models were when they began. */
   private readonly modelWaits = new Map<string, string>();
+  /**
+   * What a task's new conversation opened on that took no words - a model
+   * (provider/id), or a model and this Mac's account (provider/id@account) -
+   * passed over until its routing again commits or waits (`routeAgainIfLeft`).
+   */
+  private readonly failedOpens = new Map<string, Set<string>>();
+  /**
+   * Tasks whose computer that runs work still holds a conversation this Mac
+   * refused to give words to; the next open there opens anew instead of
+   * reattaching to it (`refusedThere`), until an open there is accepted.
+   */
+  private readonly refused = new Set<string>();
+  /** What each task's newest wait for a model said (`modelWaitWords`). */
+  private readonly waitWords = new Map<string, ReturnType<typeof said>>();
   /** Tasks whose move to another computer is being carried out now (`runComputerMove`). */
   private readonly computerMoving = new Set<string>();
   /** Tasks whose moved-off or unfinished copy is being removed now (`retireMovedSource`, `undoMovedDestination`). */
@@ -487,8 +504,44 @@ export class TaskMoves {
       !routed.named &&
       // A pool known to be empty: only a pin or a level holds it.
       router.holdsAtALevel(routed.model, []) !== true;
-    if (!may) this.modelWaits.delete(taskId);
+    if (!may) {
+      this.modelWaits.delete(taskId);
+      this.failedOpens.delete(taskId);
+    }
     return may;
+  }
+
+  /**
+   * Whether a conversation that opened anew on the task's routed model,
+   * routing nothing, keeps it: the task names it, a level where it opened
+   * holds it, or nothing can have left (`routeAgainIfLeft`). One that does
+   * not takes no words, and its task routes again.
+   */
+  async keepsModel(taskId: string, machine = this.host.machineOf(taskId)): Promise<boolean> {
+    const router = this.options.router;
+    if (!router || !this.mayRouteAgain(taskId)) return true;
+    const local = machine === LOCAL_MACHINE_ID;
+    const pool = local ? undefined : await this.options.machines?.served(machine);
+    if (!local && !pool) return true;
+    const routed = router.servedChoice(taskId);
+    if (!routed || routed.named) return true;
+    const kept = router.holdsAtALevel(routed.model, pool?.available) === true;
+    if (!kept && !local) this.refused.add(taskId);
+    return kept;
+  }
+
+  /**
+   * Whether the task's computer that runs work still holds a conversation
+   * this Mac refused (`keepsModel`, a reroute's commit): one never reattached
+   * to, so a removed model is not adopted as if it were live work.
+   */
+  refusedThere(taskId: string): boolean {
+    return this.refused.has(taskId);
+  }
+
+  /** An open there took words: nothing it holds is refused any more. */
+  openedThere(taskId: string): void {
+    this.refused.delete(taskId);
   }
 
   async routeAgainIfLeft(
@@ -536,9 +589,11 @@ export class TaskMoves {
       this.modelWaits.delete(taskId);
       return undefined;
     }
-    // An older computer's open may only bring back the removed model there.
+    // An older computer's open may only bring back the removed model there:
+    // the task waits until that computer is updated, or holds no
+    // conversation of it open, whatever else could take it.
     if (asking.attach) {
-      this.waitForModel(taskId, asked, machine);
+      this.waitForModel(taskId, asked, machine, true);
       return "wait";
     }
     // A stop, a quit, a close or a move - to another model or computer -
@@ -568,17 +623,24 @@ export class TaskMoves {
       const avoidProvider = builder ? router.servedProvider(builder) : undefined;
       const images = briefCarriesPictures(this.options.tasks, taskId, record.shape ?? undefined);
       const custom = isCustomApiProvider(from.provider);
-      const prepared = await router.prepare({
-        ...(pool ? { pool } : {}),
-        ...(avoidProvider ? { avoidProvider } : {}),
-        images,
-      });
-      // A replacement no account there serves is passed over for the next.
+      const prepare = (serving: ComputerPool | undefined) =>
+        router.prepare({
+          ...(serving ? { pool: serving } : {}),
+          ...(avoidProvider ? { avoidProvider } : {}),
+          images,
+        });
+      const prepared = await prepare(pool);
+      // A replacement no account there serves is passed over for the next,
+      // and so is one that opened on another model or an account that does
+      // not serve it, until this selection commits or waits.
       const passed = new Set<string>();
+      const failed = this.failedOpens.get(taskId);
       const only = (model: { provider: string; id: string }) =>
-        (!custom || model.provider === from.provider) && !passed.has(offeringKey(model));
-      const look = () => {
-        const preview = router.preview(record.prompt, shape, { ...prepared, only });
+        (!custom || model.provider === from.provider) &&
+        !passed.has(offeringKey(model)) &&
+        failed?.has(offeringKey(model)) !== true;
+      const look = (on = prepared) => {
+        const preview = router.preview(record.prompt, shape, { ...on, only });
         const choice = preview.result.choice;
         if (!choice || preview.requiresReasoningWait) return undefined;
         if (offeringKey(choice) === offeringKey(from)) return undefined;
@@ -602,12 +664,14 @@ export class TaskMoves {
         const binding = pool
           ? (pool.modelAccounts?.get(offeringKey(to)) ?? pool.accounts.get(to.provider))
           : undefined;
-        // Here, the account picked must list the model, or it would open on another.
-        const serves = pool
-          ? binding !== undefined
-          : accountId !== undefined
+        // Here, the account picked must serve the model now, or it would open on another.
+        const servesHere = () =>
+          accountId !== undefined
             ? this.options.accounts?.serves?.(accountId, to) !== false
             : custom || !this.options.accounts || this.options.accountlessServes?.(to) === true;
+        const serves = pool
+          ? binding !== undefined
+          : servesHere() && failed?.has(`${offeringKey(to)}@${accountId}`) !== true;
         if (!serves) {
           passed.add(offeringKey(to));
           found = look();
@@ -617,48 +681,71 @@ export class TaskMoves {
           left: this.host.modelName(from),
           model: this.host.modelName(to),
         });
-        const commit = (opened: OpenedOn): RerouteOutcome => {
-          if (stale()) return "stale";
-          // What Settings holds now, after the open: a level that took the
-          // old model back keeps it, and a replacement that left its level
-          // meanwhile gives way to the one routing picks now.
-          if (!left(this.options.tasks.get(taskId))) return "again";
-          const current = look();
-          if (!current || offeringKey(current.to) !== offeringKey(to)) return "again";
-          // That computer's own account, as it says it bound it: the one
-          // routing chose, its provider's, or none it names.
-          const served = pool ? opened.account : accountId;
-          const eligible =
-            !pool ||
-            opened.account === undefined ||
-            opened.account === binding ||
-            opened.account === pool.accounts.get(to.provider);
-          if (!opened.model || offeringKey(opened.model) !== offeringKey(to) || !eligible) {
-            this.waitForModel(taskId, from, machine);
-            return "wait";
-          }
-          const { accountId: _guessed, ...evaluated } = current.preview;
-          this.options.tasks.atomic(
-            () => {
-              pick?.record();
-              router.commit(taskId, served ? { ...evaluated, accountId: served } : evaluated);
-              this.options.tasks.placement.recordMove(taskId, {
-                model: to,
-                accountId: accountId ?? null,
-                actor: "host",
-                text: englishOf(fact),
-                data: {
-                  rerouted: { from: offeringKey(from), to: offeringKey(to) },
-                  said: fact,
-                  feedLine: true,
-                },
-              });
-            },
-            () => pick?.selected(),
-          );
-          this.modelWaits.delete(taskId);
-          return "committed";
-        };
+        const commit = (opened: OpenedOn): Promise<RerouteOutcome> =>
+          router.inOrder(async () => {
+            // What serves there now, read again after the open.
+            const serving = pool ? await this.options.machines?.served(machine) : undefined;
+            const preparedNow = await prepare(serving);
+            if (stale()) {
+              this.failedOpens.delete(taskId);
+              return "stale";
+            }
+            // What Settings holds now, after the open: a level that took the
+            // old model back keeps it, and a replacement that left its level
+            // meanwhile gives way to the one routing picks now.
+            // What it opened there takes no words, so nothing reattaches to it.
+            const refuse = () => {
+              if (pool) this.refused.add(taskId);
+              return "again" as const;
+            };
+            if (!left(this.options.tasks.get(taskId))) return refuse();
+            const current = look(preparedNow);
+            if (!current || offeringKey(current.to) !== offeringKey(to)) return refuse();
+            // That computer's own account, as it says it bound it, which must
+            // serve the model there now; here, the account picked, which must
+            // still serve it.
+            const served = pool ? opened.account : accountId;
+            const onModel =
+              opened.model !== undefined && offeringKey(opened.model) === offeringKey(to);
+            const eligible = pool
+              ? serving !== undefined && servesOnComputer(serving, opened.account, to)
+              : servesHere();
+            if (!onModel || !eligible) {
+              // The pair is passed over, and the rest routing would pick are
+              // tried before the task waits.
+              const passing = this.failedOpens.get(taskId) ?? new Set<string>();
+              passing.add(
+                onModel && !pool && accountId !== undefined
+                  ? `${offeringKey(to)}@${accountId}`
+                  : offeringKey(to),
+              );
+              this.failedOpens.set(taskId, passing);
+              return refuse();
+            }
+            const { accountId: _guessed, ...evaluated } = current.preview;
+            this.options.tasks.atomic(
+              () => {
+                pick?.record();
+                router.commit(taskId, served ? { ...evaluated, accountId: served } : evaluated);
+                this.options.tasks.placement.recordMove(taskId, {
+                  model: to,
+                  accountId: accountId ?? null,
+                  actor: "host",
+                  text: englishOf(fact),
+                  data: {
+                    rerouted: { from: offeringKey(from), to: offeringKey(to) },
+                    said: fact,
+                    feedLine: true,
+                  },
+                });
+              },
+              () => pick?.selected(),
+            );
+            this.modelWaits.delete(taskId);
+            this.failedOpens.delete(taskId);
+            this.refused.delete(taskId);
+            return "committed";
+          });
         const level = now.preview.result.servedBucket ?? now.preview.result.bucket;
         const chosen =
           record.shape?.override_reasoning ?? router.reasoningChoice(to, level) ?? undefined;
@@ -701,23 +788,40 @@ export class TaskMoves {
   modelWaitWords(taskId: string): string {
     const routed = this.options.router?.servedChoice(taskId);
     return englishOf(
-      said("crewmateWaitsForModel", {
-        left: routed ? this.host.modelName(routed.model) : taskId,
-      }),
+      this.waitWords.get(taskId) ??
+        said("crewmateWaitsForModel", {
+          left: routed ? this.host.modelName(routed.model) : taskId,
+        }),
     );
   }
 
-  /** Holds the task's lane for a model, and says why once, until it routes again. */
-  private waitForModel(taskId: string, from: { provider: string; id: string }, machine: string) {
+  /**
+   * Holds the task's lane for a model, and says why once, until it routes
+   * again: no model can take it, or (`update`) an older computer holds its
+   * conversation open, which only that computer's update lets move.
+   */
+  private waitForModel(
+    taskId: string,
+    from: { provider: string; id: string },
+    machine: string,
+    update = false,
+  ) {
     this.modelWaits.set(taskId, this.modelsNow(taskId, machine));
-    const key = offeringKey(from);
+    this.failedOpens.delete(taskId);
+    const key = update ? `${offeringKey(from)}#update` : offeringKey(from);
+    const fact = update
+      ? said("crewmateWaitsForUpdate", {
+          left: this.host.modelName(from),
+          computer: this.computerName(machine),
+        })
+      : said("crewmateWaitsForModel", { left: this.host.modelName(from) });
+    this.waitWords.set(taskId, fact);
     const last = this.options.tasks
       .timeline(taskId)
       .findLast(
         (event) => event.data?.rerouted !== undefined || event.data?.modelWait !== undefined,
       );
     if (last?.data?.modelWait === key) return;
-    const fact = said("crewmateWaitsForModel", { left: this.host.modelName(from) });
     this.options.tasks.note(taskId, englishOf(fact), {
       news: true,
       feed: true,
@@ -729,7 +833,9 @@ export class TaskMoves {
    * What a wait for a model compares: where it opens, the task's newest
    * routing choice (a move writes a newer one), the routing settings, slot
    * record, levels, models and spent allowance here, and the accounts of
-   * where it opens - this Mac's, or what that computer last said it serves.
+   * where it opens - this Mac's, or what that computer last said it serves,
+   * whether it opens only what it holds, and whether it holds the task's
+   * conversation open.
    */
   private modelsNow(taskId: string, machine: string): string {
     const routed = this.options.router?.servedChoice(taskId);
@@ -739,7 +845,11 @@ export class TaskMoves {
       this.options.router?.routingState() ?? "",
       machine === LOCAL_MACHINE_ID
         ? (this.options.accounts?.servingState?.() ?? "")
-        : `${this.options.machines?.servedState?.(machine) ?? ""}\n${this.options.machines?.reattachOnly?.(machine) === true}`,
+        : [
+            this.options.machines?.servedState?.(machine) ?? "",
+            this.options.machines?.reattachOnly?.(machine) === true,
+            this.options.machines?.conversationOpen?.(machine, taskId) === true,
+          ].join("\n"),
     ].join("\n");
   }
 

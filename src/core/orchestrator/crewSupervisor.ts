@@ -1397,14 +1397,17 @@ export class CrewSupervisor {
     const task = this.tasks.get(taskId);
     if (!task || task.turn.closing || (held && task !== held)) return;
     // A turn still out ends first through its own end - taken, failed or
-    // given back to the lane - so none of its rows is lost with the session.
+    // given back to the lane - so none of its rows is lost with the session;
+    // it goes as that turn ends, before words given back start another on it.
     if (task.turn.busy) {
-      void this.turns.untilTurnOver(task).then(() => this.placedLetGo(taskId, task));
+      this.turns.atTurnOver(task, () => this.placedLetGo(taskId, task));
       return;
     }
     this.sessions.releaseSession(task);
     this.tasks.delete(taskId);
     this.facts.broadcastCrewCounts();
+    // Words its turn gave back unspent go to the conversation the task opens next.
+    void this.watch.sweepTaskLane(taskId, this.now());
   }
 
   /**

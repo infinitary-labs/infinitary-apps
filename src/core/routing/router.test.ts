@@ -510,6 +510,35 @@ describe("Router", () => {
     expect(router.holdsAtALevel(sol)).toBe(false);
   });
 
+  // INF-5438 round 7 finding 10: with no placements of the person's own, the
+  // defaults standing in leave a model out only once every account here said
+  // what it serves: one account answering first is no exclusion of the rest.
+  it("cannot say a model is off the defaults while an account here has not said what it serves", () => {
+    const db = openInMemoryDatabase();
+    const settings = new SettingsStore(db);
+    const slots = new ModelSlots({ settings, accounts: () => [], quotaModels: () => undefined });
+    const sol = { provider: "openai-codex", id: "gpt-6.1-sol" };
+    const terra = { provider: "openai-codex", id: "gpt-6.1-terra" };
+    const available = [terra];
+    let read = false;
+    const router = new Router({
+      decisions: new DecisionStore(db),
+      settings,
+      quota: fakeQuota(undefined),
+      availableModels: () => available,
+      slots,
+      poolRead: () => read,
+    });
+    // Terra's account answered; Sol's has not.
+    expect(router.holdsAtALevel(sol)).toBeUndefined();
+    available.push(sol);
+    read = true;
+    expect(router.holdsAtALevel(sol)).toBe(true);
+    // Every account answered, and none serves Sol.
+    available.splice(available.indexOf(sol), 1);
+    expect(router.holdsAtALevel(sol)).toBe(false);
+  });
+
   // INF-5438 finding 11: a routing row an older app wrote before `facts.named`
   // still says whether its model was named - by its selection, then its rule.
   it("reads whether an older routing row named its model, by its selection and then its rule", () => {

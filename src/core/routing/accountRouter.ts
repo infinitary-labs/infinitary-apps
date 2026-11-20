@@ -196,6 +196,23 @@ export class AccountSelector {
     });
   }
 
+  /**
+   * Whether the account serves `model` now, as a pick reads it: on,
+   * connected, withheld by nothing, and listing the model - or listing
+   * nothing while no sibling's list names it.
+   */
+  servesNow(accountId: string, model: { provider: string; id: string }): boolean {
+    const candidate = this.candidatesFor(model.provider, model.id, undefined).find(
+      (row) => row.accountId === accountId,
+    );
+    return (
+      candidate !== undefined &&
+      candidate.enabled &&
+      candidate.connected !== false &&
+      candidate.withheld === undefined
+    );
+  }
+
   /** The user label of an account, for user-facing copy. */
   labelOf(accountId: string): string | undefined {
     return this.options.pool.list().find((account) => account.id === accountId)?.label;

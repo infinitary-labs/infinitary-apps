@@ -562,8 +562,9 @@ export class Router {
    * this Mac's models, or a computer's own pool. With no slot record every
    * model counts as held; a pool known to be empty - a computer's, or this
    * Mac's once every account said what it serves - holds none but a pin or
-   * level. Undefined: this Mac's pool is empty and not read yet, so whether
-   * the defaults hold it is not known until it is.
+   * level. Undefined: this Mac's pool is not read yet - empty, or with the
+   * defaults leaving the model out while an account has not said what it
+   * serves - so whether the defaults hold it is not known until it is.
    */
   holdsAtALevel(ref: PiModelRef, available?: readonly PiModelRef[]): boolean | undefined {
     const key = servedModelKey(ref);
@@ -577,7 +578,9 @@ export class Router {
       return available === undefined && this.options.poolRead?.() !== true ? undefined : false;
     const routable = slots.routable(models);
     if (routable.placed === true) return false;
-    return routable.models.some((model) => servedModelKey(model) === key);
+    if (routable.models.some((model) => servedModelKey(model) === key)) return true;
+    // Left out while an account here has not said what it serves: not known.
+    return available === undefined && this.options.poolRead?.() === false ? undefined : false;
   }
 
   /**

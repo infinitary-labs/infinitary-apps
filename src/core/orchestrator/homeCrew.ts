@@ -251,14 +251,7 @@ export function startHomeCrew({
       labelOf: (accountId) => accounts.labelOf(accountId),
       accessOf: (accountId) => vault.accessSync(accountId),
       servingState: () => accounts.servingState(),
-      serves: (accountId, model) =>
-        vault
-          .availableModelsByAccount()
-          .some(
-            (row) =>
-              row.accountId === accountId &&
-              row.models.some((one) => one.provider === model.provider && one.id === model.id),
-          ),
+      serves: (accountId, model) => accounts.servesNow(accountId, model),
     },
     taskSelection: host.recordProcess ? (input) => recordReader.tasks(input) : undefined,
     // Whoever observes a typed cut-off records it on the account.

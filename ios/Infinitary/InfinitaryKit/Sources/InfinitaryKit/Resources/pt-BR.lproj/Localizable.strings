@@ -637,6 +637,7 @@
 "crewmateUnreadable" = "Não foi possível ler a sessão deste tripulante.";
 "crewmateWaiting" = "Aguardando você";
 "crewmateWaitsForModel" = "%1$@ não está mais em nenhum nível dos Ajustes e nenhum outro modelo dos seus níveis pode assumir esta tarefa, então ela espera até que um possa";
+"crewmateWaitsForUpdate" = "%2$@ não está mais em nenhum nível dos Ajustes e %1$@ precisa de uma atualização antes que esta tarefa possa passar para outro modelo lá, então ela espera até lá";
 "crewmateWorking" = "Trabalhando…";
 "devicesCarriedOn" = "As tarefas de um computador fora de alcance continuam em %1$@, e essa entrada saiu da sua lista.";
 "devicesCarryNotRemoved" = "As tarefas de %1$@ foram movidas, mas ele não pôde sair da sua lista: %2$@";

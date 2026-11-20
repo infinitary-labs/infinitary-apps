@@ -49,26 +49,33 @@ export function routedSpec(
 /**
  * The spec a reopen confirmed open there keeps, or false when it takes no
  * words. A routed one commits its move only for the model routing still
- * picks and an account there that serves it; any other is let go unless a
- * stop or another move already took it, and the next turn opens one through
- * the ordinary resume. One kept on the old model keeps the spec it had.
+ * picks and an account there that serves it; one opened anew on the model
+ * it had, routing nothing, only while that model is still held there
+ * (`kept`). Any other is let go unless a stop or another move already took
+ * it, and the next turn opens one through the ordinary resume. One kept on
+ * the old model keeps the spec it had.
  */
-export function reopenedSpec(
-  asked: PlacedSpec,
+export async function reopenedSpec(
+  progress: ReopenProgress,
   state: { model?: { provider: string; id: string } | undefined; accountId?: string | undefined },
-  routed: ReopenRoute | undefined,
-  ours: boolean,
-  letGo: () => void,
-): PlacedSpec | undefined | false {
-  if (!routed) return sameModel(state.model, asked.model) ? confirmedSpec(asked, state) : undefined;
-  const outcome = ours
-    ? routed.commit({
+  o: { ours(): boolean; letGo(): void; kept(): Promise<boolean> | undefined },
+): Promise<PlacedSpec | undefined | false> {
+  const { asked, routed } = progress;
+  if (!routed) {
+    if (progress.anew && (await o.kept()) === false) {
+      o.letGo();
+      return false;
+    }
+    return sameModel(state.model, asked.model) ? confirmedSpec(asked, state) : undefined;
+  }
+  const outcome = o.ours()
+    ? await routed.commit({
         ...(state.model ? { model: state.model } : {}),
         ...(state.accountId ? { account: state.accountId } : {}),
       })
     : "stale";
   if (outcome === "committed") return confirmedSpec(asked, state);
-  if (outcome !== "stale") letGo();
+  if (outcome !== "stale") o.letGo();
   return false;
 }
 
@@ -79,7 +86,7 @@ type ReopenRoute = {
   model: { provider: string; id: string };
   accountId?: string;
   thinking: PlacedSpec["thinking"];
-  commit(opened: OpenedThere): "committed" | "stale" | "again" | "wait";
+  commit(opened: OpenedThere): Promise<"committed" | "stale" | "again">;
 };
 
 /** What a reopen asked so far: the spec, the routing pick, and whether it opens anew. */

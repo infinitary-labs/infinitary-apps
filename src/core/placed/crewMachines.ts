@@ -83,8 +83,8 @@ export type PlacedHost = {
    * model that left every level"): another that computer serves, with its
    * own account there and the effort it opens at, and `commit`, which
    * records the move once that computer answers a conversation opened on
-   * it, with the model and account it opened on, and answers "committed"
-   * only then (`RoutedAgain.commit`). "wait" when none can take it, so it
+   * it, with the model and account it opened on, read against what that
+   * computer serves now, and answers "committed" only then (`RoutedAgain.commit`). "wait" when none can take it, so it
    * does not open on the one that left; "stale" when a stop, a close or a
    * move took the task meanwhile, so nothing is sent. Undefined, answered
    * at once when nothing can have left, keeps the model it opened with.
@@ -104,7 +104,7 @@ export type PlacedHost = {
             commit(opened: {
               model?: { provider: string; id: string };
               account?: string;
-            }): "committed" | "stale" | "again" | "wait";
+            }): Promise<"committed" | "stale" | "again">;
           }
         | "wait"
         | "stale"
@@ -117,6 +117,12 @@ export type PlacedHost = {
    * that could open it again on that model before the home routes it.
    */
   modelMayHaveLeft?(taskId: string): boolean;
+  /**
+   * Whether a conversation that opened anew on `machine` on the model it
+   * had, routing nothing, keeps it (`TaskMoves.keepsModel`): false when
+   * that model left every level there while it opened, so it takes no words.
+   */
+  modelKept?(taskId: string, machine: string): Promise<boolean>;
   /**
    * The conversation this crewmate holds did not open there again - no
    * model there can take it, or the one that can runs on the other backend

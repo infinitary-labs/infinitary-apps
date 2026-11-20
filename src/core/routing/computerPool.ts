@@ -21,7 +21,28 @@ export type ComputerPool = RoutingPool & {
    * the first that lists it. Absent for a computer too old to list what it serves.
    */
   modelAccounts?: ReadonlyMap<string, string>;
+  /**
+   * Every account there that serves each model, by provider/id: each one
+   * that lists it. Absent for a computer too old to list what it serves.
+   */
+  servedBy?: ReadonlyMap<string, ReadonlySet<string>>;
 };
+
+/**
+ * Whether an account a computer bound serves the model there now: one that
+ * lists it, or, from a computer too old to list what it serves, the
+ * account there that serves its provider. No account serves nothing.
+ */
+export function servesOnComputer(
+  pool: ComputerPool,
+  account: string | undefined,
+  model: { provider: string; id: string },
+): boolean {
+  if (account === undefined) return false;
+  return pool.servedBy
+    ? pool.servedBy.get(`${model.provider}/${model.id}`)?.has(account) === true
+    : pool.accounts.get(model.provider) === account;
+}
 
 /**
  * Whether an account a computer listed can serve a task there: enabled,
@@ -246,7 +267,12 @@ export function actualComputerPool(
   signIns: ComputerSignIns | null,
   models: readonly QuotaCatalogModel[],
   nowMs: number,
-): (ComputerPool & { modelAccounts: ReadonlyMap<string, string> }) | null {
+):
+  | (ComputerPool & {
+      modelAccounts: ReadonlyMap<string, string>;
+      servedBy: ReadonlyMap<string, ReadonlySet<string>>;
+    })
+  | null {
   if (!signIns?.served) return null;
   const serving = new Set(
     signIns.accounts.filter((account) => servesThere(account, nowMs)).map((account) => account.id),
@@ -260,18 +286,21 @@ export function actualComputerPool(
   );
   const described = models.filter((model) => actual.has(`${model.provider}/${model.id}`));
   const modelAccounts = new Map<string, string>();
+  const servedBy = new Map<string, Set<string>>();
   for (const account of [...signIns.accounts]
     .filter((row) => serving.has(row.id))
     .sort((a, b) => Number(b.pinned) - Number(a.pinned)))
     for (const model of signIns.served.find((row) => row.accountId === account.id)?.models ?? []) {
       const key = `${model.provider}/${model.id}`;
       if (!modelAccounts.has(key)) modelAccounts.set(key, account.id);
+      servedBy.set(key, (servedBy.get(key) ?? new Set()).add(account.id));
     }
   // computerPool's catalog expansion is safe with exactly this computer's identities.
   const pool = computerPool(who, signIns, described, nowMs);
   return {
     ...pool,
     modelAccounts,
+    servedBy,
     available: pool.available.filter((model) => actual.has(`${model.provider}/${model.id}`)),
     // The catalog names a provider by its allowance id (claude, codex, grok), as routing reads it.
     catalog: pool.catalog.filter((model) => actual.has(servedModelKey(model))),

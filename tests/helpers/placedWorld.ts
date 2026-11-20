@@ -502,8 +502,18 @@ export async function world(
             bound.push(binding);
             if (refusing) throw new Error(`This computer has no sign-in for ${PROVIDER} here.`);
             if (binding.backend === "claude" && options.claude) return options.claude.binding;
-            return { backend: "pi", runtime: options.runtime ?? runtime };
+            // Signed in there, it binds the account of its own the home named.
+            const own = options.signedInTo?.find((account) => account.id === binding.accountId);
+            return {
+              backend: "pi",
+              runtime: options.runtime ?? runtime,
+              ...(own ? { accountId: own.id } : {}),
+            };
           },
+          // A conversation bound to an account of its own says so, as a computer's does.
+          ...(options.signedInTo
+            ? { accounts: { of: (binding) => binding.accountId, noteCutOff: () => {} } }
+            : {}),
           ...(tools ? { tools } : {}),
           ...(options.leftovers ? { leftovers: placedLeftovers(tasks) } : {}),
           ...(channel

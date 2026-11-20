@@ -49,5 +49,6 @@
   "crewmateUnreadable": "이 선원의 대화를 읽을 수 없었어요.",
   "crewmateWaiting": "선장님을 기다림",
   "crewmateWaitsForModel": "{left}이(가) 설정의 어떤 수준에도 없고 수준에 있는 다른 모델도 이 작업을 맡을 수 없어서, 맡을 수 있는 모델이 생길 때까지 기다립니다",
+  "crewmateWaitsForUpdate": "{left}이(가) 설정의 어떤 수준에도 없습니다. {computer}을(를) 업데이트해야 이 작업이 그곳에서 다른 모델로 옮겨갈 수 있으므로 그때까지 기다립니다",
   "crewmateWorking": "작업 중…"
 }

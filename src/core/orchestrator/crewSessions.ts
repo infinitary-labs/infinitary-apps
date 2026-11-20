@@ -55,6 +55,11 @@ export class CrewSessions {
   private crewmateSeq = 0;
   /** Sessions let go of mid-turn, each until it is gone (`releaseSession`). */
   private readonly releasing = new Set<Promise<void>>();
+  /**
+   * What a reopened conversation writes once it is accepted (`carryRestart`):
+   * its record, a renewal and a restart wake, never written for one let go.
+   */
+  private readonly carries = new WeakMap<ModelSession, () => void>();
 
   constructor(private readonly core: CrewCore) {}
 
@@ -171,13 +176,18 @@ export class CrewSessions {
       spec.shape.turns === "rolling" &&
       (!asked ||
         (asked.backend !== "pi" && opened !== undefined && opened !== crewmateResumeToken(asked)));
-    this.carryRestart(
-      task,
-      crewmate.machineId,
-      session,
-      unopenable ? crewmate.resumeToken : undefined,
-      movedTo,
-    );
+    const carry = () =>
+      this.carryRestart(
+        task,
+        crewmate.machineId,
+        session,
+        unopenable ? crewmate.resumeToken : undefined,
+        movedTo,
+      );
+    // A reopen writes what replaced the earlier conversation only once the
+    // task took this one (`acceptOpened`).
+    if (crewmate.resumeToken) this.carries.set(session, carry);
+    else carry();
     return session;
   }
 
@@ -668,17 +678,21 @@ export class CrewSessions {
     // A computer that opens only what it holds is asked that first, on the
     // model and backend it holds, and this routes only once it answers that
     // a new conversation is needed (`reattach-only-open.md`).
+    // One holding a conversation this Mac refused opens anew instead.
+    const refusedThere = this.core.moves.refusedThere(record.id);
     const reattaching =
       !known &&
       !move &&
       !fresh &&
       machine !== LOCAL_MACHINE_ID &&
+      !refusedThere &&
       this.core.options.machines?.reattachOnly?.(machine) === true;
     // An older computer's open may reattach to a conversation open there,
     // or open it again on the model it had: a removed model waits instead.
     const attach =
       !known &&
       !reattaching &&
+      !refusedThere &&
       machine !== LOCAL_MACHINE_ID &&
       !fresh &&
       this.core.options.machines?.conversationOpen?.(machine, record.id) === true;
@@ -830,7 +844,7 @@ export class CrewSessions {
     if (rerouted) {
       const model = session.modelRef();
       const account = this.core.options.machines?.servingAccount(session);
-      const outcome = rerouted.commit({
+      const outcome = await rerouted.commit({
         ...(model ? { model } : {}),
         ...(account ? { account } : {}),
       });
@@ -838,14 +852,25 @@ export class CrewSessions {
         if (this.core.tasks.get(record.id) === task) this.core.tasks.delete(record.id);
         this.disposeSession(task);
         if (outcome === "again") return this.openResumed(taskId, move, restart, known);
-        if (outcome === "stale")
-          throw new Error("This task's crewmate was let go while its conversation opened.");
-        if (fresh && fresh.changed !== "computer")
-          this.recordRestart(record.id, record.key || record.id, machine, fresh);
-        throw new ModelWaitError(this.core.moves.modelWaitWords(record.id));
+        throw new Error("This task's crewmate was let go while its conversation opened.");
       }
+    } else if (
+      !move &&
+      !reattaching &&
+      !attach &&
+      !(await this.core.moves.keepsModel(record.id, machine))
+    ) {
+      // A conversation opened anew on the model it had takes work only while
+      // a level where it opened still holds that model, or the task names
+      // it: one that left every level while it opened is let go, and the
+      // task routes again. One reattached to, live there, is kept as it is.
+      if (this.core.tasks.get(record.id) === task) this.core.tasks.delete(record.id);
+      this.disposeSession(task);
+      return this.openResumed(taskId, move, restart, known);
     }
     this.endIfLetGo(task);
+    this.acceptOpened(session);
+    this.core.moves.openedThere(record.id);
     task.unsubscribe = await this.core.toolHooks.follow(task, session);
     this.endIfLetGo(task);
     // A moved task's record names the conversation it opened now, so a quit
@@ -876,6 +901,13 @@ export class CrewSessions {
     }
     this.core.facts.broadcastCrewCounts();
     return task;
+  }
+
+  /** Writes what a reopened conversation the task took replaced (`carries`). */
+  private acceptOpened(session: ModelSession): void {
+    const carry = this.carries.get(session);
+    this.carries.delete(session);
+    carry?.();
   }
 
   /**

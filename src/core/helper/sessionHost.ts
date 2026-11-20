@@ -900,8 +900,9 @@ export class SessionHost {
       // started with, and so does one its crewmate carries on by itself:
       // closing it would cut that turn and lose what it still sends, such
       // as a report waiting for the home. Its answer says it still streams,
-      // and the home asks again once the turn ends (INF-2332).
-      if (this.busy(held) || !this.contractMoved(held, spec, sourceFacts)) {
+      // and the home asks again once the turn ends (INF-2332). A reattach
+      // keeps a held conversation on whatever model it runs, and answers it.
+      if (this.busy(held) || !this.contractMoved(held, spec, sourceFacts, !reattach)) {
         this.recordJobs(held, true);
         return this.stateOf(held);
       }
@@ -1082,15 +1083,20 @@ export class SessionHost {
    * Whether this open names tools, instructions or a model the held
    * conversation was not opened with: the home routed it again off a model
    * that left every level (docs/routing.md), and an idle conversation opens
-   * again on the new one.
+   * again on the new one. Without `withModel`, only the rest is compared.
    */
-  private contractMoved(held: Held, spec: PlacedSpec, sourceFacts: string): boolean {
+  private contractMoved(
+    held: Held,
+    spec: PlacedSpec,
+    sourceFacts: string,
+    withModel = true,
+  ): boolean {
     const opened = held.opened;
     if (!opened) return false;
     const model = (asked: PlacedSpec | undefined) =>
       asked?.model ? `${asked.model.provider}/${asked.model.id}` : "";
     return (
-      model(held.spec) !== model(spec) ||
+      (withModel && model(held.spec) !== model(spec)) ||
       !sameNames(opened.tools, spec.tools) ||
       opened.instructions !== spec.instructions ||
       opened.sourceContext !== sourceFacts ||

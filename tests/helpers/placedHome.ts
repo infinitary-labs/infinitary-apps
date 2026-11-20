@@ -116,6 +116,8 @@ export type PlacedHome = {
   setup: DeviceSetup;
   /** The routing ledger; empty unless the home routes. */
   decisions: DecisionStore;
+  /** The Models board's slot record, given `routing`: a level change is its `setSlotMembership`. */
+  slots?: ModelSlots;
   /** The database beneath, for reading what the ledger keeps to itself (a decision's reasons). */
   db: AppDatabase;
   /** Every event the home broadcast, oldest first. */
@@ -646,6 +648,7 @@ export function startPlacedHome(options: {
     toolsNow: (taskId) => supervisor.toolsNow(taskId),
     reopenModel: (taskId, machine, attach) => supervisor.reopenModel(taskId, machine, attach),
     modelMayHaveLeft: (taskId) => supervisor.modelMayHaveLeft(taskId),
+    modelKept: (taskId, machine) => supervisor.moves.keepsModel(taskId, machine),
     letGo: (taskId) => supervisor.placedLetGo(taskId),
     awayCopyKept: (taskId) => supervisor.moves.tellAwayCopies(taskId),
   });
@@ -706,6 +709,7 @@ export function startPlacedHome(options: {
     signIns,
     setup,
     decisions,
+    ...(slots ? { slots } : {}),
     db,
     events,
     wakes,

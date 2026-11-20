@@ -667,6 +667,7 @@ public enum PhoneMessages {
     public static func `crewmateUnreadable`() -> String { PhoneWords.format("crewmateUnreadable", []) }
     public static func `crewmateWaiting`() -> String { PhoneWords.format("crewmateWaiting", []) }
     public static func `crewmateWaitsForModel`(`left`: String) -> String { PhoneWords.format("crewmateWaitsForModel", [`left`]) }
+    public static func `crewmateWaitsForUpdate`(`computer`: String, `left`: String) -> String { PhoneWords.format("crewmateWaitsForUpdate", [`computer`, `left`]) }
     public static func `crewmateWorking`() -> String { PhoneWords.format("crewmateWorking", []) }
     public static func `devicesCarriedOn`(`to`: String) -> String { PhoneWords.format("devicesCarriedOn", [`to`]) }
     public static func `devicesCarryNotRemoved`(`from`: String, `why`: String) -> String { PhoneWords.format("devicesCarryNotRemoved", [`from`, `why`]) }
@@ -4483,6 +4484,7 @@ extension PhoneWords {
         "crewmateUnreadable": [],
         "crewmateWaiting": [],
         "crewmateWaitsForModel": ["left"],
+        "crewmateWaitsForUpdate": ["computer", "left"],
         "crewmateWorking": [],
         "devicesCarriedOn": ["to"],
         "devicesCarryNotRemoved": ["from", "why"],

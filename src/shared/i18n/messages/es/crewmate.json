@@ -55,5 +55,6 @@
   "crewmateUnreadable": "No se pudieron leer las notas de este tripulante.",
   "crewmateWaiting": "Esperándote",
   "crewmateWaitsForModel": "{left} ya no está en ningún nivel de Configuración y ningún otro modelo de tus niveles puede encargarse de esta tarea, así que espera hasta que uno pueda",
+  "crewmateWaitsForUpdate": "{left} ya no está en ningún nivel de Configuración y {computer} necesita una actualización antes de que esta tarea pueda pasar a otro modelo allí, así que espera hasta entonces",
   "crewmateWorking": "Trabajando…"
 }

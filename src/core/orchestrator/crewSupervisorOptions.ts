@@ -174,7 +174,11 @@ export type AccountAttachment = {
    * lists - so a wait for a model tries again once one could serve.
    */
   servingState?(): string;
-  /** Whether the account lists the model, so a conversation bound to it opens on that model. */
+  /**
+   * Whether the account serves the model now - on, connected, withheld by
+   * nothing, and listing it, or listing nothing while no sibling's list
+   * names it - so a conversation bound to it opens on that model.
+   */
   serves?(accountId: string, model: { provider: string; id: string }): boolean;
 };
 

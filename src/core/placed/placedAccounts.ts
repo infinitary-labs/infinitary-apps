@@ -72,12 +72,21 @@ export class PlacedAccounts
       computerPool(who, signIns, models, now);
     // A model binds an account whose list names it before one that lists
     // nothing and only stands in with the catalog.
-    const listed = actualComputerPool(who, signIns, models, now)?.modelAccounts;
+    const actual = actualComputerPool(who, signIns, models, now);
+    const listed = actual?.modelAccounts;
     const modelAccounts: ReadonlyMap<string, string> | undefined =
       pool.modelAccounts && listed
         ? new Map([...pool.modelAccounts, ...listed])
         : pool.modelAccounts;
-    return { ...pool, ...(modelAccounts ? { modelAccounts } : {}), deviceId: machine };
+    // An account that lists nothing serves a model only while none lists it.
+    const servedBy: ReadonlyMap<string, ReadonlySet<string>> | undefined =
+      pool.servedBy && actual ? new Map([...pool.servedBy, ...actual.servedBy]) : pool.servedBy;
+    return {
+      ...pool,
+      ...(modelAccounts ? { modelAccounts } : {}),
+      ...(servedBy ? { servedBy } : {}),
+      deviceId: machine,
+    };
   }
 
   /**

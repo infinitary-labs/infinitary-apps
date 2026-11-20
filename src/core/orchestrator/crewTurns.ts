@@ -1684,6 +1684,8 @@ export class CrewTurns {
     task: TaskRuntime,
     options: { announce?: boolean; sent?: boolean } = {},
   ): void {
+    // A runtime let go as its turn ended takes no more turns.
+    if (this.core.tasks.get(task.id) !== task) return;
     if (task.turn.closing || !task.session || task.turn.busy) return;
     if (task.turn.stage === "stopped" && !options.sent) return;
     if (this.core.facts.laneHeld(task.id)) return;
@@ -1856,6 +1858,20 @@ export class CrewTurns {
     task.steersAtCheck = undefined;
     task.waitNamed = undefined;
     task.readsAnsweredAt = undefined;
+  }
+
+  /**
+   * Runs `then` as the task's running turn here ends, before anything
+   * waiting starts the next one (`turnOver`); at once when none runs.
+   */
+  atTurnOver(task: TaskRuntime, then: () => void): void {
+    if (this.core.tasks.get(task.id) !== task || !task.turn.busy) {
+      then();
+      return;
+    }
+    const waiters = this.turnWaiters.get(task.id) ?? new Set<() => void>();
+    waiters.add(then);
+    this.turnWaiters.set(task.id, waiters);
   }
 
   /** Resolves once the task's running turn here has ended, at once when none runs. */

@@ -445,6 +445,8 @@ describe("a conversation held on a computer that runs work", () => {
     expect(roster.tasks.find((entry) => entry.task === TASK)?.open).not.toBe(true);
   });
 
+  // INF-5438 round 7 finding 7: a reattach adopts the held conversation as it
+  // runs, answering its own model, rather than asking the home to open anew.
   it("keeps an idle conversation's model when asked only to reattach on another", async () => {
     const at = await placed();
     await at.open();
@@ -459,7 +461,7 @@ describe("a conversation held on a computer that runs work", () => {
         spec: { ...at.spec, model: { provider: PROVIDER, id: OTHER_MODEL }, reattach: true },
       },
     ]);
-    expect(asked).toEqual({ needsOpen: true });
+    expect(asked).toMatchObject({ state: { model: { provider: PROVIDER, id: MODEL } } });
     // The conversation it held is the one that answers the next turn.
     await at.order("inf:session:prompt", [{ orderId: "rows:2", task: TASK, text: "Continue." }]);
     await at.ended(2);

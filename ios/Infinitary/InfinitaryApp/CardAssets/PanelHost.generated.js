@@ -24371,6 +24371,35 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${left} is on no level in Settings any more, and no other model on your levels can take this task, so it waits until one can`;
   }
+  function crewmateWaitsForUpdate(input2) {
+    const computer = input2.computer;
+    const left = input2.left;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يعد ${left} في أي مستوى في الإعدادات، ويحتاج ${computer} إلى تحديث قبل أن تنتقل هذه المهمة إلى نموذج آخر هناك، لذا تنتظر حتى ذلك الحين`;
+      case "de":
+        return `${left} ist in den Einstellungen auf keiner Stufe mehr, und ${computer} braucht ein Update, bevor diese Aufgabe dort zu einem anderen Modell wechseln kann, deshalb wartet sie bis dahin`;
+      case "es":
+        return `${left} ya no está en ningún nivel de Configuración y ${computer} necesita una actualización antes de que esta tarea pueda pasar a otro modelo allí, así que espera hasta entonces`;
+      case "fr":
+        return `${left} n’est plus dans aucun niveau des Réglages, et ${computer} doit être mis à jour avant que cette tâche puisse passer à un autre modèle là-bas, donc elle attend jusque-là`;
+      case "ja":
+        return `${left} は設定のどのレベルにもなくなりました。${computer} を更新するまで、このタスクはそこで別のモデルに移れないため、それまで待ちます`;
+      case "ko":
+        return `${left}이(가) 설정의 어떤 수준에도 없습니다. ${computer}을(를) 업데이트해야 이 작업이 그곳에서 다른 모델로 옮겨갈 수 있으므로 그때까지 기다립니다`;
+      case "pt-BR":
+        return `${left} não está mais em nenhum nível dos Ajustes e ${computer} precisa de uma atualização antes que esta tarefa possa passar para outro modelo lá, então ela espera até lá`;
+      case "zh-Hans":
+        return `${left} 已不在设置中的任何级别里，而 ${computer} 需要更新后这个任务才能在那里改用其他模型，所以它会等到那时`;
+      case "zh-Hant":
+        return `${left} 已不在設定中的任何等級裡，而 ${computer} 需要更新後這個任務才能在那裡改用其他模型，所以它會等到那時`;
+      case "en-XA":
+        return `[${left} îš öñ ñö ļéṽéļ îñ Šéţţîñĝš áñý ɱöŕé, áñð ${computer} ñééðš áñ ûþðáţé ƀéƒöŕé ţĥîš ţášķ çáñ ɱöṽé ţö áñöţĥéŕ ɱöðéļ ţĥéŕé, šö îţ ŵáîţš ûñţîļ ţĥéñ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${left}‮ is on no level in Settings any more, and ‬${computer}‮ needs an update before this task can move to another model there, so it waits until then‬`;
+    }
+    return `${left} is on no level in Settings any more, and ${computer} needs an update before this task can move to another model there, so it waits until then`;
+  }
   function crewmateWorking() {
     switch (currentLanguage()) {
       case "ar":
@@ -87664,6 +87693,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     crewmateUnreadable,
     crewmateWaiting,
     crewmateWaitsForModel,
+    crewmateWaitsForUpdate,
     crewmateWorking,
     devicesCarriedOn,
     devicesCarryNotRemoved,
@@ -90477,6 +90507,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "crewmateUnreadable": [],
     "crewmateWaiting": [],
     "crewmateWaitsForModel": ["left"],
+    "crewmateWaitsForUpdate": ["computer", "left"],
     "crewmateWorking": [],
     "devicesCarriedOn": ["to"],
     "devicesCarryNotRemoved": ["from", "why"],

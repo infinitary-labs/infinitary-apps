@@ -1,4 +1,4 @@
-import { anythingElseOf, type CardWidth, isPreviewBody, type PastCard } from "@shared/cards";
+import { anythingElseOf, type CardWidth, isPlayableBody, type PastCard } from "@shared/cards";
 import { formatDateTime } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import { wordedCardText } from "@shared/i18n/said";
@@ -121,7 +121,7 @@ export function PastCardColumn({
       fill: () => past.answers,
       onAnswers: noop,
       readOnly: true as const,
-      ...(isPreviewBody(past.body) ? { preview: true as const } : {}),
+      ...(isPlayableBody(past.body) ? { preview: true as const } : {}),
     }),
     [past.answers, past.body],
   );

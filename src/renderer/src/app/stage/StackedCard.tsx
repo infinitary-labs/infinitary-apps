@@ -10,7 +10,7 @@ import {
   cardMetaWords,
   cardTakesReplies,
   firstmateOwnCard,
-  isPreviewBody,
+  isPlayableBody,
   MERGE_CLOSES_MARK,
   splitMergeClosesLine,
 } from "@shared/cards";
@@ -278,9 +278,10 @@ export function StackedCard({
   const unanswered = asking && answers.answered < answers.of;
   const closeRef = useRef<HTMLButtonElement>(null);
   // Moving between the body's questions (docs/keyboard.md, "Moving between
-  // a card's questions"): a preview's settings are its own controls', so
-  // only a decision's questions are stepped through.
-  const stepping = !isPreviewBody(card.body);
+  // a card's questions"): a playable preview's settings are its own
+  // controls', so only a decision's questions are stepped through. A body
+  // that only brings a style sheet is a decision (INF-5452).
+  const stepping = !isPlayableBody(card.body);
   const questionRef = useRef<StepQuestions | null>(null);
   const bodyElement = useRef<HTMLDivElement | null>(null);
   const placeRef = useCardReadingPlace(card.id, active);
@@ -399,7 +400,7 @@ export function StackedCard({
               whiteSpace: "nowrap",
             }}
           >
-            {footerAnswers(answers, isPreviewBody(card.body))}
+            {footerAnswers(answers, !stepping)}
           </span>
         )}
         {filesFirst && (card.actions.length > 0 || noteDone) && (

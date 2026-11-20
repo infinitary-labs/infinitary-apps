@@ -305,25 +305,43 @@ const PREVIEW_TAGS =
   /<!--[\s\S]*?(?:-->|$)|<(script|style)(?=[\s>/])[^>]*>(?:[\s\S]*?<\/\1\s*>|[\s\S]*$)|<(\/?)(figure|canvas)(?=[\s>/])[^>]*>/gi;
 
 /**
- * Whether a body is a preview rather than prose: it brings behaviour or
- * styling of its own - a `<style>` sheet, a `<canvas>`, or a `<script>`
- * outside every `<figure>`. Such a body is markup first and copy second, so
- * the rules written for prose do not read it - the shape lint lets it be
- * (core/pi/cardLint.ts), the Firstmate's context line quotes no excerpt from
- * it (core/orchestrator/firstmateContext.ts) and no change bar marks it
- * (core/orchestrator/cardChanges.ts). A script inside a figure only makes
- * that figure move (FI3-796, the captain's yes): the body stays prose. It is
- * a shape test, never a kind test.
+ * What a body brings of its own: a style sheet, and controls of its own (a
+ * `<canvas>`, or a `<script>` outside every `<figure>`). A script inside a
+ * figure only makes that figure move (FI3-796, the captain's yes).
  */
-export function isPreviewBody(body: string): boolean {
+function bodyShape(body: string): { styled: boolean; playable: boolean } {
   let figures = 0;
+  let styled = false;
   for (const [, raw, close, tag] of body.matchAll(PREVIEW_TAGS)) {
     const name = (raw ?? tag ?? "").toLowerCase();
-    if (name === "style" || (name === "canvas" && !close)) return true;
-    if (name === "script" && figures === 0) return true;
+    if (name === "style") styled = true;
+    if ((name === "canvas" && !close) || (name === "script" && figures === 0)) {
+      return { styled, playable: true };
+    }
     if (name === "figure") figures = close ? Math.max(0, figures - 1) : figures + 1;
   }
-  return false;
+  return { styled, playable: false };
+}
+
+/**
+ * Whether a body is a preview rather than prose: a style sheet or controls
+ * of its own. It is markup first, so the Firstmate's context line quotes no
+ * excerpt from it (core/orchestrator/firstmateContext.ts) and no change bar
+ * marks it (core/orchestrator/cardChanges.ts). A shape test, never a kind.
+ */
+export function isPreviewBody(body: string): boolean {
+  const shape = bodyShape(body);
+  return shape.styled || shape.playable;
+}
+
+/**
+ * Whether a body is a playable preview, running controls of its own: its
+ * form controls are settings, so its footer counts them answered, tags no
+ * Default, steps through none, and the question lint lets it be. A style
+ * sheet alone asks questions as every decision does (INF-5452).
+ */
+export function isPlayableBody(body: string): boolean {
+  return bodyShape(body).playable;
 }
 
 /** The id of the Merge anyway action the host adds beside a merge on failed checks (`passes`). */

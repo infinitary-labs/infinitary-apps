@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { type StubApi, startStubApi } from "../../../tests/helpers/anthropicDialect";
-import { installClaudePlugin } from "../../../tests/helpers/claudePluginHome";
+import { installClaudePlugin, pluginSettings } from "../../../tests/helpers/claudePluginHome";
 import { codingSpec } from "../../../tests/helpers/codingSession";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { Runbooks } from "../runbooks/runbooks";
@@ -11,6 +11,22 @@ import type { SessionSpec } from "../session/session";
 import { openInMemoryDatabase } from "../storage/db";
 import { SettingsStore } from "../storage/settingsStore";
 import { createPiSessionFactory } from "./session";
+
+// The client library's settings reader, standing in: loading the library sets
+// a process environment variable, which this cohort refuses, and the real
+// reader is the integration test's (claudeProjectResources). It reads the
+// person's settings file in this HOME, as the real one asks it to.
+vi.mock("../claude/claudeAccess", async (original) => ({
+  ...(await original<typeof import("../claude/claudeAccess")>()),
+  resolveSettings: async () => {
+    let enabledPlugins: Record<string, unknown> = {};
+    try {
+      const path = join(process.env.HOME ?? "", ".claude", "settings.json");
+      enabledPlugins = JSON.parse(readFileSync(path, "utf8")).enabledPlugins ?? {};
+    } catch {}
+    return pluginSettings(enabledPlugins)({});
+  },
+}));
 
 /**
  * What a Pi crewmate's coding session carries of its working copy
@@ -181,9 +197,8 @@ it("opts in only to this Mac's file and skills, with project names winning and n
 // on in ~/.claude/settings.json reach other crewmates by their bare names.
 it("serves a turned-on Claude Code plugin's skills below the person's own, naming its folder", async () => {
   const { served, home } = await world();
-  // The client library's settings reader reads this HOME's settings file.
+  // The settings reader reads this HOME's settings file.
   vi.stubEnv("HOME", home);
-  vi.stubEnv("CLAUDE_CONFIG_DIR", join(home, ".claude"));
   const plugin = installClaudePlugin(home, { name: "claude-security" });
   const off = installClaudePlugin(home, { name: "hookify" });
   put(

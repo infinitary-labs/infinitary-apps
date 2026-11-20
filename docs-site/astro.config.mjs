@@ -6,7 +6,14 @@ import starlight from "@astrojs/starlight";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "astro/config";
-import { catalogRedirects, SOURCE_LANGUAGE, starlightLocales, translationsOf, wordsOf } from "./languages.ts";
+import {
+  catalogRedirects,
+  SITE_ORIGIN,
+  SOURCE_LANGUAGE,
+  starlightLocales,
+  translationsOf,
+  wordsOf,
+} from "./languages.ts";
 
 // The app's own icon, read from the design system rather than copied into this folder.
 const APP_ICON = new URL("../.claude/skills/infinitary-design/assets/app-icon.svg", import.meta.url);
@@ -168,7 +175,7 @@ function headingIds() {
 const label = (key) => ({ label: wordsOf(SOURCE_LANGUAGE)[key], translations: translationsOf(key) });
 
 export default defineConfig({
-  site: "https://docs.getinfinitary.com",
+  site: SITE_ORIGIN,
   integrations: [
     starlight({
       title: "Infinitary",
@@ -180,6 +187,7 @@ export default defineConfig({
       customCss: ["./src/styles/infinitary.css"],
       components: {
         SiteTitle: "./src/components/SiteTitle.astro",
+        FallbackContentNotice: "./src/components/FallbackContentNotice.astro",
       },
       social: [{ icon: "discord", label: "Discord", href: "https://discord.gg/Wsy2NpnZDu" }],
       // The sidebar lists only pages that exist.

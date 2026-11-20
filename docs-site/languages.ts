@@ -14,6 +14,9 @@ export const WORDS = new URL("./words/", import.meta.url);
 
 export { SOURCE_LANGUAGE, textDirection };
 
+/** Where the site is published; every page's canonical address and alternates name it. */
+export const SITE_ORIGIN = "https://docs.getinfinitary.com";
+
 /** Every catalog language, English first, then the rest in name order. */
 export function catalogLanguages(): string[] {
   const tags = readdirSync(CATALOG, { withFileTypes: true })

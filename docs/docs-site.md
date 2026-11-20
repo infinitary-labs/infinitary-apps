@@ -52,7 +52,7 @@ Every page names itself as its canonical address and its version in each shipped
 ### Words
 
 `docs-site/words/<tag>.json` holds the site's own words in each language: the sidebar's group names and its home link for every catalog language, and the Keyboard page's own sentences for each shipped one.
-Starlight brings its menus', search's and notices' words for most languages; `docs-site/src/content/i18n/` adds them for the ones it lacks (`zh-Hans`, `zh-Hant`) and the words it leaves in English for a language, such as a heading link's label.
+Starlight brings its menus', search's and notices' words for most languages; `docs-site/src/content/i18n/` adds them for the ones it lacks (`zh-Hans`, `zh-Hant`) and the words it leaves in English for a language, such as a heading link's label in Arabic and Japanese.
 Text in Chinese, Japanese, Korean and Arabic takes the visitor's own typeface for its script from the design skill's `tokens/typography.css`, imported in Starlight's lowest layer so only its custom properties reach the site, with tracking at zero; no font file is added and nothing loads from another host.
 
 ### Translated pages
@@ -69,12 +69,12 @@ node scripts/docs-site-languages.ts --stamp docs-site/src/content/docs/ar/instal
 ```
 
 Whoever changes an English page writes every shipped language's version in the same pull request, and stamps each once it is re-read.
-Keyboard is generated in each shipped language (`node scripts/docs-site-keyboard.ts`), and What's new stays English in every language under Starlight's notice that the page is not translated yet, since release notes are written in English only.
+Keyboard is generated in each shipped language (`node scripts/docs-site-keyboard.ts`), and What's new stays English in every language under Starlight's notice that the page is not translated yet, since release notes are written in English only; the notes are marked English and the notice, through `src/components/FallbackContentNotice.astro`, the reader's language and direction.
 
 ### The languages check
 
 `node scripts/docs-site-languages.ts --check` runs in `pnpm check`.
-It never judges the prose; it refuses a shipped language that lacks a page English has, folders included, or holds one English lacks, a translated page whose `source` is not the English page's current fingerprint, a translated page whose links (its language's segment aside), pictures, code, keys, frontmatter fields and their values (title and description aside) or headings' levels and ids differ from the English page's, a translated page's link to an English page, and a catalog language whose words file is missing, lacks a word the site reads in it (the sidebar's for every language, the Keyboard page's for each shipped one), has a blank one or one the site does not use.
+It never judges the prose; it refuses a shipped language that lacks a page English has, folders included, or holds one English lacks, a translated page whose `source` is not the English page's current fingerprint, a translated page whose links (its language's segment aside), pictures, code, keys, frontmatter, line for line with nested values included (title and description aside) or headings' levels and ids differ from the English page's, a translated page's link to an English page, however it is written, and a catalog language whose words file is missing, lacks a word the site reads in it (the sidebar's for every language, the Keyboard page's for each shipped one), has a blank one or one the site does not use.
 `tests/docs-site-languages.test.ts` holds it to the site's own pages.
 
 ### Adding a language
@@ -97,7 +97,7 @@ The build writes plain files to `docs-site/dist/`, search index included.
 ### The check
 
 `docs-site/scripts/check-site.mjs` serves `dist/` on this computer and opens every built page in Chromium through Playwright, in a browser that may reach only that server.
-It opens pages side by side, and fails on a page that does not answer or draws no title, a page that does not name its language, direction, canonical address and alternates or labels its heading links in another language's words ("Languages"), a request to any other host, a cookie, a link between pages or to a heading that leads nowhere, a picture that does not draw, an unknown address that does not draw the site's own not-found page, search that draws no search box, search that finds nothing in English or, from each shipped language's home page, for a word of its Install page's title, finding that language's pages, a sitemap entry whose alternates differ from its page's, a translated What's new that does not show the English notes, marked English, under Starlight's notice in its language, and a wordmark drawn in anything but the text color at weight 500.
+It opens pages side by side, and fails on a page that does not answer or draws no title, a page that does not name its language, direction, canonical address and alternates or labels its heading links in another language's words ("Languages"), a request to any other host, a cookie, a link between pages or to a heading that leads nowhere, a picture that does not draw, an unknown address that does not draw the site's own not-found page, search that draws no search box, search that finds nothing in English or, from each shipped language's home page, for a word of its Install page's title, finding that language's pages, a sitemap entry whose alternates differ from its page's, a translated What's new that does not show the English notes, marked English, under Starlight's notice in its language and marked so, and a wordmark drawn in anything but the text color at weight 500.
 Starlight builds the search box only when the browser next has idle time, and headless Chromium on a busy computer can stop drawing without ever having it, so the check waits for the box while asking the page for animation frames, as a visitor's pointer would.
 It also opens the home page with the system asking for dark and then for light, and fails unless the site follows.
 `SCREENSHOTS=<folder>` saves the home, install and first launch pages in both themes there.

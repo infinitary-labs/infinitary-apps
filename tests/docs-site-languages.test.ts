@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   KEYBOARD_WORDS,
   SIDEBAR_WORDS,
+  SITE_ORIGIN,
   SOURCE_LANGUAGE,
   siteWords,
 } from "../docs-site/languages.ts";
@@ -144,9 +145,36 @@ describe("the docs site's languages check", () => {
       text.replace(/\]\(\/[a-z-]+\/([a-z-]+\/[^)]*)\)/, "](/$1)"),
     );
     expect(problemsOf(english, linked).join("\n")).toContain("(not in its language)");
+    // The same English page, written as the site's full address.
+    const absolute = withPage(linked, (text) =>
+      text.replace(/\]\(\/[a-z-]+\/([a-z-]+\/[^)]*)\)/, `](${SITE_ORIGIN}/$1)`),
+    );
+    expect(problemsOf(absolute, linked).join("\n")).toContain("(not in its language)");
+    // The page's own language, written as the site's full address, is the same link.
+    const own = withPage(linked, (text) =>
+      text.replace(/\]\((\/[a-z-]+\/[a-z-]+\/[^)]*)\)/, `](${SITE_ORIGIN}$1)`),
+    );
+    expect(problemsOf(own, linked)).toEqual([]);
     const name = pageWith(/^title:/m);
     const drafted = withPage(name, (text) => text.replace(/^title:/m, "draft: true\ntitle:"));
     expect(problemsOf(drafted, name).join("\n")).toContain('"draft: true"');
+  });
+
+  it("refuses a changed nested frontmatter value, and keeps a worded field's own lines", () => {
+    const name = pageWith(/^title:/m);
+    const english = site.english.get(name) ?? "";
+    const hidden = (text: string, value: boolean) =>
+      text.replace(/^title:/m, `sidebar:\n  hidden: ${value}\ntitle:`);
+    const changed = {
+      ...withPage(name, (text) => hidden(text, true)),
+      english: new Map(site.english).set(name, hidden(english, false)),
+    };
+    const problems = problemsOf(changed, name).filter((problem) => problem.includes("frontmatter"));
+    expect(problems.join("\n")).toContain('"  hidden: false"');
+    const folded = withPage(name, (text) =>
+      text.replace(/^description: (.*)$/m, "description: >\n  $1"),
+    );
+    expect(problemsOf(folded, name)).toEqual([]);
   });
 
   it("holds a page in a folder as it holds the rest", () => {

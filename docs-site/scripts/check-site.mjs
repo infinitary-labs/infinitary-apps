@@ -38,10 +38,9 @@ import { parseArgs } from "node:util";
 import { chromium } from "playwright";
 // Starlight's own English words, which a translated page's notices must not show.
 import starlightEnglish from "../node_modules/@astrojs/starlight/dist/translations/en.js";
-import { pagesFolder, segmentOf, shippedLanguages, SOURCE_LANGUAGE, textDirection } from "../languages.ts";
+import { pagesFolder, SITE_ORIGIN, segmentOf, shippedLanguages, SOURCE_LANGUAGE, textDirection } from "../languages.ts";
 
 const DIST = fileURLToPath(new URL("../dist/", import.meta.url));
-const SITE_ORIGIN = "https://docs.getinfinitary.com";
 const TYPES = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
@@ -357,12 +356,18 @@ try {
       if ((await tab.locator("main .sl-markdown-content").innerText()) !== notes) {
         fail(`${path} does not show What's new's English notes`);
       }
-      if ((await tab.locator("main").getAttribute("lang")) !== SOURCE_LANGUAGE) {
-        fail(`${path} does not mark its notes as English`);
+      const notesLanguage = await tab
+        .locator("main .sl-markdown-content")
+        .evaluate((notes) => notes.closest("[lang]")?.getAttribute("lang"));
+      if (notesLanguage !== SOURCE_LANGUAGE) fail(`${path} marks its English notes as ${notesLanguage}`);
+      const notice = tab.locator("main .fallback-notice");
+      const marked = (await notice.count()) === 1 ? await notice.evaluate((element) => [element.lang, element.dir]) : [];
+      if (marked[0] !== language.tag || marked[1] !== textDirection(language.tag)) {
+        fail(`${path} does not mark its notice as ${language.tag}, ${textDirection(language.tag)}: ${marked.join(", ")}`);
       }
-      const notice = (await tab.locator("main h1 + p").textContent())?.trim() ?? "";
-      if (!notice || notice === starlightEnglish["i18n.untranslatedContent"]) {
-        fail(`${path} does not say, in its language, that the page is not translated yet: "${notice}"`);
+      const words = (await notice.first().textContent())?.trim() ?? "";
+      if (!words || words === starlightEnglish["i18n.untranslatedContent"]) {
+        fail(`${path} does not say, in its language, that the page is not translated yet: "${words}"`);
       }
     },
   );

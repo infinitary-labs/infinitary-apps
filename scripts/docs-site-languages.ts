@@ -7,6 +7,7 @@ import {
   headingId,
   KEYBOARD_WORDS,
   pagesFolder,
+  SITE_ORIGIN,
   SCOPE_WORD_KEYS,
   SIDEBAR_WORDS,
   SOURCE_LANGUAGE,
@@ -46,15 +47,37 @@ export function fingerprint(english: string): string {
   return createHash("sha256").update(english).digest("hex").slice(0, 16);
 }
 
-/** A page's frontmatter fields and its body. */
-export function splitPage(text: string): { fields: Map<string, string>; body: string } {
+/** A page's frontmatter: its top-level fields and its lines, and its body. */
+export function splitPage(text: string): { fields: Map<string, string>; lines: string[]; body: string } {
   const match = /^---\n([\s\S]*?)\n---\n/.exec(text);
+  const lines = match?.[1]?.split("\n") ?? [];
   const fields = new Map<string, string>();
-  for (const line of match?.[1]?.split("\n") ?? []) {
+  for (const line of lines) {
     const field = /^([A-Za-z][\w-]*):\s?(.*)$/.exec(line);
     if (field?.[1]) fields.set(field[1], field[2] ?? "");
   }
-  return { fields, body: match ? text.slice(match[0].length) : text };
+  return { fields, lines, body: match ? text.slice(match[0].length) : text };
+}
+
+/**
+ * What a translation keeps of a page's frontmatter: each line as English has
+ * it, nested ones included, in order, except a worded field's, which keep
+ * only its name.
+ */
+function keptFrontmatter(lines: string[]): string[] {
+  let worded = false;
+  return lines.flatMap((line) => {
+    const field = /^([A-Za-z][\w-]*):/.exec(line)?.[1];
+    if (field) worded = WORDED_FIELDS.has(field) || field === "source";
+    if (!worded) return [line];
+    return field && field !== "source" ? [field] : [];
+  });
+}
+
+/** The address Starlight builds a page at, from its path in its language's folder. */
+function routeOf(name: string, segment?: string): string {
+  const page = name.replace(/\.mdx?$/, "").replace(/(^|\/)index$/, "");
+  return `/${segment ? `${segment}/` : ""}${page ? `${page}/` : ""}`;
 }
 
 /** The frontmatter fields a translation words in its own language; every other field keeps the English value. */
@@ -83,17 +106,23 @@ export type Structure = {
  * segment, left out of its links so they compare with English's, and each
  * heading's id is the one it names (`{#id}`); on English, the one its words make.
  */
-export function structureOf(text: string, segment?: string): Structure {
-  const { fields, body } = splitPage(text);
+export function structureOf(text: string, name: string, segment?: string): Structure {
+  const { lines, body } = splitPage(text);
   const fences = [...body.matchAll(/^```[^\n]*\n([\s\S]*?)^```/gm)].map((match) => match[1] ?? "");
   const prose = body.replace(/^```[^\n]*\n[\s\S]*?^```/gm, "");
-  // A translated page's link to one of the site's pages leads to its own
-  // language's; one that leads to an English page is kept apart, so it differs.
+  // Each link to the site, written any way, is where it leads from this page;
+  // a translated page's leads to its own language's, and one that leads to an
+  // English page is kept apart, so it differs.
+  const route = `${SITE_ORIGIN}${routeOf(name, segment)}`;
   const unprefixed = (href: string) => {
-    if (!segment || !href.startsWith("/") || href.startsWith("//")) return href;
-    return href === `/${segment}/` || href.startsWith(`/${segment}/`)
-      ? href.slice(segment.length + 1)
-      : `(not in its language) ${href}`;
+    const url = URL.parse(href, route);
+    if (!url || url.origin !== SITE_ORIGIN) return href;
+    const path = url.pathname;
+    const at = `${url.search}${url.hash}`;
+    if (!segment) return `${path}${at}`;
+    return path === `/${segment}/` || path.startsWith(`/${segment}/`)
+      ? `${path.slice(segment.length + 1)}${at}`
+      : `(not in its language) ${path}${at}`;
   };
   const seen = new Map<string, number>();
   const headings = [...prose.matchAll(/^(#{1,6}) (.*)$/gm)].map((match) => {
@@ -105,11 +134,7 @@ export function structureOf(text: string, segment?: string): Structure {
   });
   const sorted = (list: string[]) => list.sort();
   return {
-    fields: sorted(
-      [...fields]
-        .filter(([field]) => field !== "source")
-        .map(([field, value]) => (WORDED_FIELDS.has(field) ? field : `${field}: ${value}`)),
-    ),
+    fields: keptFrontmatter(lines),
     links: sorted(
       [
         ...[...prose.matchAll(/\]\(([^)\s]+)\)/g)].map((match) => match[1] ?? ""),
@@ -134,7 +159,7 @@ export function structureOf(text: string, segment?: string): Structure {
 /** Where a translated page's structure differs from the English page's, in words. */
 function structureProblems(english: Structure, translated: Structure): string[] {
   const parts: { key: keyof Structure; name: string }[] = [
-    { key: "fields", name: "frontmatter fields (and values, title and description aside)" },
+    { key: "fields", name: "frontmatter (each line, title and description aside)" },
     { key: "links", name: "links" },
     { key: "pictures", name: "pictures" },
     { key: "code", name: "code" },
@@ -211,7 +236,7 @@ export function languageProblems(site: SiteLanguages): string[] {
             : `${segment}/${name} names no source: run node scripts/docs-site-languages.ts --stamp docs-site/src/content/docs/${segment}/${name} once it is translated`,
         );
       }
-      for (const problem of structureProblems(structureOf(source), structureOf(text, segment))) {
+      for (const problem of structureProblems(structureOf(source, name), structureOf(text, name, segment))) {
         problems.push(`${segment}/${name}: ${problem}`);
       }
     }

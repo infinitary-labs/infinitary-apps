@@ -6,6 +6,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { runLabelOf } from "@shared/codeNames";
 import type { UpdateChannel } from "@shared/update";
 import { UPDATE_WORDS } from "@shared/updateWords";
+import { publicBuildsUrl } from "../../src/core/update/releaseSource";
 import { UPDATE_CHANNEL_MARKER } from "../../src/core/update/updateChannels";
 import { WINDOWS_UPDATES_FOLDER } from "../../src/core/update/windowsInstall";
 import { GIT_FOR_WINDOWS } from "../../src/core/windowsGit";
@@ -144,6 +145,18 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
       // Before the window starts the command: Task Scheduler gives it this person's environment.
       trustSystemStore(true);
       feed = await startUpdateFeed({ channel, installers, pfx: made.pfx, passphrase });
+      // Node, as the app's own runs it, reads the feed with only the person's trust.
+      const reading = execFileSync(
+        process.execPath,
+        [
+          "-e",
+          "fetch(process.argv[1]).then((r) => console.log(r.status), (e) => console.log(String(e.cause ?? e)))",
+          publicBuildsUrl,
+        ],
+        { encoding: "utf8", env: { ...process.env, NODE_USE_SYSTEM_CA: "1" } },
+      ).trim();
+      keep("feed-trusted.txt", reading);
+      expect(reading).toBe("200");
     });
 
     const notifications = { before: false };
@@ -175,6 +188,7 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
     const page = () => (launched as InstalledApp).page;
     const offered = async () => {
       const status = await page().evaluate(() => window.infinitary.update.check());
+      keep("status-offered.json", JSON.stringify(status, null, 2));
       expect(status).toMatchObject({
         currentVersion: older,
         channel,
@@ -246,7 +260,6 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
       // The new window starts the command again through the same entry.
       await expect.poll(() => runTask(label)?.state, { timeout: 120_000 }).toBe("Running");
       if (evidence) screenshot(join(evidence, "new-window.png"));
-      keep("feed-requests.json", JSON.stringify(feed.asked, null, 2));
     });
 
     await test.step("the new copy keeps the tasks, the setting, the sign-in and the Task Scheduler entry", async () => {
@@ -286,6 +299,7 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
       if (evidence) await after.screenshot({ path: join(evidence, "after-update.png") });
     });
   } finally {
+    if (feed) keep("feed-requests.json", JSON.stringify(feed.asked, null, 2));
     await launched?.close().catch(() => undefined);
     await feed?.close().catch(() => undefined);
     if (thumbprint) removeFeedCertificate(thumbprint);

@@ -119,6 +119,10 @@ export async function startUpdateFeed(options: {
   const servers: Server[] = [];
   for (const host of ["127.0.0.1", "::1"]) {
     const server = createServer({ pfx: options.pfx, passphrase: options.passphrase }, handler);
+    // A reader that did not trust the certificate shows here, not as a request.
+    server.on("tlsClientError", (error) => {
+      feed.asked.push(`TLS refused on ${host}: ${error.message}`);
+    });
     await new Promise<void>((done, fail) => {
       server.once("error", fail);
       server.listen(UPDATE_FEED_PORT, host, () => done());

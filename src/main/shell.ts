@@ -458,13 +458,14 @@ export class Shell {
   /**
    * What joining would stop here, read once so the check and the stop name
    * the same run: this app's own first mate (no run), or beside a command
-   * this window starts, the run its own agent started. Null where joining is
-   * refused (`joinable`).
+   * this window starts, the run its own agent started, or no run while none
+   * runs. Null where joining is refused (`joinable`).
    */
   private joinTarget(): { owned?: OwnedRun } | null {
     const mode = this.mode;
     if (mode?.kind === "home") return {};
     if (mode?.kind !== "beside" || !mode.beside.startsCommand) return null;
+    if (mode.beside.noCommandRuns) return {};
     const owned = mode.beside.ownedRun;
     return owned ? { owned } : null;
   }

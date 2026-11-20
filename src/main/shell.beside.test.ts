@@ -1151,6 +1151,25 @@ describe("the window beside a command's first mate", () => {
     expect(at.starter.stopped).toEqual([OWNED]);
   });
 
+  // The fourth window journey on Windows: a window that starts the command, opened while none
+  // runs, joins a home by its pasted link as it did before INF-4930 - there is no run to stop -
+  // and lets its starter go so nothing starts the command again.
+  it("joins another computer while no command runs, letting its starter go", async () => {
+    const pro = await otherMac();
+    const command = commandRun();
+    const at = besideShell(command.doorDir, {
+      starts: true,
+      records: stopped("signal", 0),
+      ownedRun: () => null,
+    });
+    await at.start();
+    expect(at.shell.followsAdded().joins).toBe(true);
+    await expect(at.shell.join(await pro.link())).resolves.toEqual({ ok: true });
+    await expect.poll(() => at.shell.thisMac().role).toBe("view");
+    expect(at.starter.stop.mock.calls).toEqual([[{ forget: true }]]);
+    expect(at.startCore).not.toHaveBeenCalled();
+  });
+
   // INF-1827 offers Join by its address at first launch, and an installed app's first launch
   // stands beside the command its window started: the command's first mate, which keeps this
   // computer's SSH trust and Infinitary's own key, asks the other computer for the link.

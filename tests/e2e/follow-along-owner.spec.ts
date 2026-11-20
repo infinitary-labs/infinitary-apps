@@ -34,6 +34,16 @@ const LABEL = runLabelOf("dev");
 const user = { name: userInfo().username, uid: userInfo().uid };
 
 let standIn: ServiceManagerStandIn | null = null;
+
+/**
+ * The work folder named for the work this window sets up once it follows along: a window whose
+ * data folder a test isolated keeps its work inside it, and the work service it sets up carries a
+ * named work folder (`HELPER_DATA_DIR`) but never the window's own, so the service opens this one.
+ */
+function namedWork(userDataDir: string): { INFINITARY_HELPER_DATA_DIR: string } {
+  return { INFINITARY_HELPER_DATA_DIR: join(userDataDir, "work") };
+}
+
 test.afterEach(() => {
   const testInfo = test.info();
   standIn?.stopAll();
@@ -193,6 +203,7 @@ test("a window follows along beside the command its agent started, and never sto
         ...standIn.env,
         INFINITARY_WINDOW_STARTS_RUN: "1",
         INFINITARY_DEVICE_NAME: "Mac mini",
+        ...namedWork(userDataDir),
       };
       air = await launchApp({ userDataDir, homeDir, env });
       await welcomed(air.page);
@@ -217,6 +228,8 @@ test("a window follows along beside the command its agent started, and never sto
           (await pro.page.evaluate(() => window.infinitary.devices.list())).some(
             (device) => device.id === deviceId && device.inReach,
           ),
+          // The work service starts this app's work in a program of its own, which then dials the home.
+          { timeout: 60_000 },
         )
         .toBe(true);
       await air.close();
@@ -236,6 +249,7 @@ test("a window follows along beside the command its agent started, and never sto
           ...standIn.env,
           INFINITARY_WINDOW_STARTS_RUN: "1",
           INFINITARY_DEVICE_NAME: "Mac mini",
+          ...namedWork(userDataDir),
         },
       });
       const { page } = air;
@@ -259,6 +273,8 @@ test("a window follows along beside the command its agent started, and never sto
           (await pro.page.evaluate(() => window.infinitary.devices.list())).some(
             (device) => device.id === deviceId && device.inReach,
           ),
+          // The work service starts this app's work in a program of its own, which then dials the home.
+          { timeout: 60_000 },
         )
         .toBe(true);
       await air.close();
@@ -279,6 +295,7 @@ test("a window follows along beside the command its agent started, and never sto
           ...standIn.env,
           INFINITARY_WINDOW_STARTS_RUN: "1",
           INFINITARY_DEVICE_NAME: "Mac mini",
+          ...namedWork(userDataDir),
         },
       });
       const { page } = air;
@@ -294,6 +311,8 @@ test("a window follows along beside the command its agent started, and never sto
           (await pro.page.evaluate(() => window.infinitary.devices.list())).some(
             (device) => device.id === deviceId && device.inReach,
           ),
+          // The work service starts this app's work in a program of its own, which then dials the home.
+          { timeout: 60_000 },
         )
         .toBe(true);
       await air.close();

@@ -191,6 +191,14 @@ export class BesideWindow {
     return this.options.beside.starter !== undefined;
   }
 
+  /**
+   * Whether this window starts the command and its records say none runs
+   * now; unreadable records are never read as stopped.
+   */
+  get noCommandRuns(): boolean {
+    return this.startsCommand && this.options.beside.status().running === false;
+  }
+
   /** The command running now, when it is this window's starter's own (`BesideOptions.ownedRun`). */
   get ownedRun(): OwnedRun | null {
     return this.startsCommand ? (this.options.beside.ownedRun?.() ?? null) : null;

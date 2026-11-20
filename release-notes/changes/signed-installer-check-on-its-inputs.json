@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "signed-installer-check-on-its-inputs",
+      "reason": "Internal release workflow change: an alpha runs the five-copy signed installer check only when the Mac update code, the updater library or Electron, the app's executables, signing, the packaging file's Mac, signing or fuse settings, or app shutdown change. Nothing in the app changes."
+    }
+  ]
+}

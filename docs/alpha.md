@@ -613,7 +613,9 @@ A stable inherits its alpha's update check and does not run it.
 The five-copy check below stays available on request.
 In the legacy private repository, a pull request that changes Electron or `electron-updater`, update code, signing, packaging or shutdown runs the five-copy check before merging through `verify.yml` with `installer_only=true`.
 On `infinitary-apps`, the first alpha and subsequent alphas with changes to installer inputs must pass this check after merge and before any uploads.
-The check compares the candidate with the previous release across dependencies, desktop entry points, updater code, resources, packaging and build scripts.
+The installer inputs are what the check guards, compared with the previous release (`signedInstallerChanges`, `scripts/desktop-build.ts`): the Mac update code, including the update file Mac shares with Linux and Windows; the `electron`, `electron-updater` or `electron-builder` version, or a patch to the updater library, Electron or the universal merge; the app's own executables the packaging steps place and the receipt they write; signing and notarization; and app shutdown.
+In `electron-builder.yml` only the `appId`, `productName`, `mac`, `afterPack`, `afterSign`, `electronFuses`, `publish` and `dmg` settings count, so a copyright line, a license file the app carries or a comment does not.
+Every other alpha, the check's own workflow and fixtures included, relies on the update check, and the release log names the inputs that held it.
 It signs only merged code from protected `main`; for a notes-only candidate it uses the merged base after verifying that nothing outside `release-notes/` differs.
 Both Apple silicon and Intel must pass, and a failure or skip holds publication.
 A stable promotes an already published alpha, not a branch build.

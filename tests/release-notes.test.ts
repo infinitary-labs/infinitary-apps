@@ -1003,26 +1003,122 @@ describe("the post-merge signed installer source", () => {
     expect(select(f, main)).toBe(`source=${main}`);
   });
 
-  it("uses a manifest without a tag, skipping docs but detecting bundled Git and installer actions", () => {
-    const { f, base } = released();
+  // INF-5466: the captain's tight rule. Only the Mac update code, the updater
+  // library or Electron, the app's executables, signing, electron-builder.yml's
+  // Mac, signing or fuse settings, or app shutdown hold an alpha for the check.
+  // The fixture is the project's own package.json and electron-builder.yml.
+  const realFile = (path: string) => readFileSync(join(__dirname, "..", path), "utf8");
+  const builder = realFile("electron-builder.yml");
+  const pkg = JSON.parse(realFile("package.json")) as Record<string, Record<string, string>>;
+  const withVersion = (field: string, name: string, version: string) =>
+    `${JSON.stringify({ ...pkg, [field]: { ...pkg[field], [name]: version } }, null, 2)}\n`;
+  const edit = (from: string, to: string) => {
+    expect(builder).toContain(from);
+    return builder.replace(from, to);
+  };
+  function shipped(): { f: Fixture; base: string } {
+    const { f } = released();
     f.git("tag", "-d", "v1.0.0");
-    const docs = f.commit("Document signing", { "docs/alpha.md": "# Signing" });
-    expect(select(f, docs)).toBe("source=");
-    for (const path of [
-      "vendor/git-bin/README.md",
-      ".github/actions/electron-download/action.yml",
-      "tests/fixtures/installed-updates/versions.json",
-      "tests/e2e/virtualMac.ts",
-    ]) {
-      f.git("checkout", "--detach", base);
-      const main = f.commit("Change an installer input", { [path]: "changed installer input" });
-      expect(select(f, main)).toBe(`source=${main}`);
-    }
+    f.commit("Package the app", {
+      "package.json": `${JSON.stringify(pkg, null, 2)}\n`,
+      "electron-builder.yml": builder,
+      "src/core/update/macUpdates.ts": "export {};",
+    });
+    f.tag("1.0.1-alpha.1");
+    return { f, base: f.git("rev-parse", "HEAD") };
+  }
+  const selectsFrom = (f: Fixture, base: string, files: Record<string, unknown>) => {
+    f.git("checkout", "-q", "--detach", base);
+    const main = f.commit("Change since the last alpha", files);
+    return select(f, main) === `source=${main}`;
+  };
+
+  it("skips an alpha whose changes leave everything the check guards alone", () => {
+    const { f, base } = shipped();
+    const skipped: Record<string, Record<string, unknown>> = {
+      docs: { "docs/alpha.md": "# Signing" },
+      "app code": {
+        "src/main/app.ts": "export {};",
+        "src/core/update/linuxInstall.ts": "export {};",
+      },
+      "the copyright line": {
+        "electron-builder.yml": edit(
+          "copyright: Copyright (c) 2026",
+          "copyright: Copyright (c) 2027",
+        ),
+      },
+      "a license file the app carries": {
+        "electron-builder.yml": edit(
+          "extraResources:\n",
+          "extraResources:\n  - from: THIRD_PARTY\n    to: licenses/THIRD_PARTY.txt\n",
+        ),
+      },
+      "a comment in the Mac settings": {
+        "electron-builder.yml": edit("mac:\n", "mac:\n  # A note for whoever reads this next.\n"),
+      },
+      "another package's version": {
+        "package.json": withVersion("dependencies", "zod", "0.0.1-other"),
+      },
+      "the lockfile and bundled Git": {
+        "pnpm-lock.yaml": "lockfileVersion: '9.0'",
+        "vendor/git-bin/README.md": "g",
+      },
+      "the check's own files": {
+        ".github/workflows/mac-installer.yml": "name: changed",
+        ".github/actions/electron-download/action.yml": "name: changed",
+        "tests/fixtures/installed-updates/versions.json": "{}",
+        "tests/e2e/virtualMac.ts": "export {};",
+      },
+      "a test beside the update code": { "src/core/update/macUpdates.test.ts": "it" },
+    };
+    for (const [what, files] of Object.entries(skipped))
+      expect(selectsFrom(f, base, files), what).toBe(false);
+  });
+
+  it("runs the check for each change it guards", () => {
+    const { f, base } = shipped();
+    const held: Record<string, Record<string, unknown>> = {
+      "the Mac update driver": { "src/core/update/macUpdates.ts": "export const changed = 1;" },
+      "the update file Mac shares": { "src/core/update/updateChecker.ts": "export {};" },
+      "the Mac update host": { "src/main/host/macUpdates.ts": "export {};" },
+      "the update feed's settings": { "packaging/app-update.yml": "provider: generic" },
+      "the updater library's version": {
+        "package.json": withVersion("dependencies", "electron-updater", "0.0.1-changed"),
+      },
+      "Electron's version": {
+        "package.json": withVersion("devDependencies", "electron", "0.0.1-changed"),
+      },
+      "a patch to the updater library": { "patches/electron-updater@6.8.9.patch": "diff" },
+      "the step that places the app's executables": {
+        "scripts/after-pack.mjs": "export default () => {};",
+      },
+      "the Mac launcher": { "scripts/mac-app-launcher.m": "int main(void) { return 0; }" },
+      "the entitlements": { "packaging/entitlements.plist": "<plist/>" },
+      notarization: { "scripts/notarize.ts": "export {};" },
+      "app shutdown": { "src/main/lifecycle.ts": "export {};" },
+      "a fuse": {
+        "electron-builder.yml": edit(
+          "enableCookieEncryption: true",
+          "enableCookieEncryption: false",
+        ),
+      },
+      "the signing identity": {
+        "electron-builder.yml": edit("hardenedRuntime: true", "hardenedRuntime: false"),
+      },
+      "a new hook after signing": {
+        "electron-builder.yml": `${builder}\nafterSign: ./scripts/after-sign.mjs\n`,
+      },
+      "the disk image": { "electron-builder.yml": edit("iconSize: 96", "iconSize: 128") },
+    };
+    for (const [what, files] of Object.entries(held))
+      expect(selectsFrom(f, base, files), what).toBe(true);
   });
 
   it("uses the merged base for notes-only candidates and refuses other branch changes", () => {
     const { f } = released();
-    const main = f.commit("Update Electron inputs", { "pnpm-lock.yaml": "lockfileVersion: '9.0'" });
+    const main = f.commit("Update the Mac update code", {
+      "src/core/update/macUpdates.ts": "export {};",
+    });
     f.git("checkout", "-b", "reviewed-notes");
     const notes = f.commit("Review alpha notes", {
       "release-notes/changes/alpha.json": note("alpha"),

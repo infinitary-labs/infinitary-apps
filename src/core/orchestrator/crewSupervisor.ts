@@ -30,6 +30,7 @@ import {
 import { RIGOR_WORDS } from "@shared/vocabulary";
 import { resolveFirstmateCardId } from "../pi/cardTool";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
+import type { PlacedHost } from "../placed/crewMachines";
 import { CrewPrograms, ProgramRunner } from "../program/programRunner";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import { bindTools, type EmittedCardInput } from "../session/tools";
@@ -1351,6 +1352,29 @@ export class CrewSupervisor {
       }
       this.sessions.carryRestart(task, this.facts.machineOf(taskId), task.session);
     }
+  }
+
+  /**
+   * The model a conversation reopening on its computer after that computer
+   * restarted opens on, when the one it had left every level: routed again
+   * among that backend's models there, or "wait" when none can take it
+   * (`TaskMoves.routeAgainIfLeft`). Undefined keeps the one it opened with.
+   */
+  async reopenModel(
+    taskId: string,
+    backend: "pi" | "claude",
+  ): ReturnType<NonNullable<PlacedHost["reopenModel"]>> {
+    const routed = await this.moves.routeAgainIfLeft(taskId, {
+      machine: this.facts.machineOf(taskId),
+      backend,
+    });
+    if (routed === "wait") return "wait";
+    if (!routed || routed === "stale") return undefined;
+    return {
+      model: routed.model,
+      ...(routed.binding ? { accountId: routed.binding } : {}),
+      thinkingLevel: routed.thinkingLevel,
+    };
   }
 
   /**

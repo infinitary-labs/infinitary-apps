@@ -636,6 +636,7 @@
 "crewmateStopping" = "正在停止…";
 "crewmateUnreadable" = "无法读取这名船员的对话。";
 "crewmateWaiting" = "等你处理";
+"crewmateWaitsForModel" = "%1$@ 已不在设置中的任何级别里，你的级别中也没有其他模型能接手这个任务，所以它会等到有模型能接手";
 "crewmateWorking" = "处理中…";
 "devicesCarriedOn" = "一台无法联系的电脑的任务在%1$@上继续，那个条目已从你的列表中移除。";
 "devicesCarryNotRemoved" = "%1$@的任务已移走，但无法把它从你的列表中移除：%2$@";

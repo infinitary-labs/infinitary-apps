@@ -54,5 +54,6 @@
   "crewmateStopping": "Arrêt en cours…",
   "crewmateUnreadable": "La conversation de cet équipier n’a pas pu être lue.",
   "crewmateWaiting": "En attente de vous",
+  "crewmateWaitsForModel": "{left} n’est plus dans aucun niveau des Réglages et aucun autre modèle de vos niveaux ne peut prendre cette tâche, donc elle attend qu’un modèle le puisse",
   "crewmateWorking": "En cours…"
 }

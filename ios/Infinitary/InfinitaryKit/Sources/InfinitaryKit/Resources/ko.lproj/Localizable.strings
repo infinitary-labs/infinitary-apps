@@ -636,6 +636,7 @@
 "crewmateStopping" = "중지하는 중…";
 "crewmateUnreadable" = "이 선원의 대화를 읽을 수 없었어요.";
 "crewmateWaiting" = "선장님을 기다림";
+"crewmateWaitsForModel" = "%1$@이(가) 설정의 어떤 수준에도 없고 수준에 있는 다른 모델도 이 작업을 맡을 수 없어서, 맡을 수 있는 모델이 생길 때까지 기다립니다";
 "crewmateWorking" = "작업 중…";
 "devicesCarriedOn" = "연락 닿지 않는 컴퓨터의 작업이 %1$@에서 이어지며, 그 항목은 목록에서 빠졌습니다.";
 "devicesCarryNotRemoved" = "%1$@의 작업은 옮겨졌지만 목록에서 뺄 수 없었습니다: %2$@";

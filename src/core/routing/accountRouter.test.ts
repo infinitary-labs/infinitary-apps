@@ -84,6 +84,38 @@ describe("AccountSelector", () => {
     expect(JSON.parse(row.reasons_json).join(" ")).toContain("most headroom");
   });
 
+  it("binds only an account of the provider whose sign-in lists the routed model", async () => {
+    const db = openInMemoryDatabase();
+    const accounts = pool([{ id: "acct_a" }, { id: "acct_b" }]);
+    const selector = new AccountSelector({
+      pool: accounts,
+      // The roomier account's plan does not list Terra; the other's does.
+      quota: {
+        latest: () =>
+          snapshot([
+            { accountId: "acct_a", percent: 20 },
+            { accountId: "acct_b", percent: 70 },
+          ]),
+      },
+      accountModels: () => [
+        { accountId: "acct_a", models: [{ provider: "openai-codex", id: "gpt-6.1-terra" }] },
+        { accountId: "acct_b", models: [{ provider: "openai-codex", id: "gpt-6.1-sol" }] },
+      ],
+      flagshipAccountId: () => null,
+      decisions: new DecisionStore(db),
+    });
+    const pick = await selector.pickForSpawn("task-1", "openai-codex", { model: "gpt-6.1-terra" });
+    expect(pick.accountId).toBe("acct_a");
+    // Nothing is written until the move that uses it commits.
+    expect(accounts.marked).toEqual([]);
+    pick.record();
+    pick.selected();
+    expect(accounts.marked).toEqual(["acct_a"]);
+    expect(await selector.selectForSpawn("task-2", "openai-codex", { model: "gpt-6.1-sol" })).toBe(
+      "acct_b",
+    );
+  });
+
   // INF-443 piece 2: the record shows each account's reading and fate.
   it("saves every account's reading and what became of it", async () => {
     const db = openInMemoryDatabase();

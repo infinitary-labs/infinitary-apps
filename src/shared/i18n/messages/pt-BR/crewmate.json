@@ -54,5 +54,6 @@
   "crewmateStopping": "Parando…",
   "crewmateUnreadable": "Não foi possível ler a sessão deste tripulante.",
   "crewmateWaiting": "Aguardando você",
+  "crewmateWaitsForModel": "{left} não está mais em nenhum nível dos Ajustes e nenhum outro modelo dos seus níveis pode assumir esta tarefa, então ela espera até que um possa",
   "crewmateWorking": "Trabalhando…"
 }

@@ -417,7 +417,9 @@ export class CrewWatch {
           ? "its computer is out of reach or still catching up"
           : this.core.updates.waitsForUpdateThere(taskId)
             ? "its computer must be updated first"
-            : "its subscription is waiting for its sign-in or allowance",
+            : this.core.moves.waitsForModel(taskId)
+              ? this.core.moves.modelWaitWords(taskId)
+              : "its subscription is waiting for its sign-in or allowance",
       );
     const due = this.core.facts.deliverableRows(taskId, now);
     if (due.length === 0) return;

@@ -636,6 +636,7 @@
 "crewmateStopping" = "停止中…";
 "crewmateUnreadable" = "この乗組員の会話を読み込めませんでした。";
 "crewmateWaiting" = "あなた待ち";
+"crewmateWaitsForModel" = "%1$@ は設定のどのレベルにもなくなり、レベル上の他のモデルもこのタスクを引き受けられないため、引き受けられるモデルが現れるまで待ちます";
 "crewmateWorking" = "作業中…";
 "devicesCarriedOn" = "連絡がつかないコンピューターのタスクが%1$@で続き、その項目はリストから外れました。";
 "devicesCarryNotRemoved" = "%1$@のタスクは移りましたが、リストから外せませんでした：%2$@";

@@ -537,6 +537,8 @@ export function heldSteerText(taskId: string, hold?: LaneHold): string {
       return `Task ${taskId} is moving to another computer, ${kept} once it has moved and its conversation is open there. ${tail}`;
     case "hand-over":
       return `Task ${taskId} is still receiving files handed over to it, ${kept} right after them. ${tail}`;
+    case "model":
+      return `Task ${taskId}'s model is on no level in Settings any more and no other model there can take it, ${kept} once one can. ${tail}`;
     case "account":
       return `Task ${taskId}'s account is not answering right now, ${kept} when it answers again; you will hear when it does. ${tail}`;
     case "update":

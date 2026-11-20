@@ -57,6 +57,7 @@ export type LaneHold =
   | { kind: "cost-limit"; holder: string; holderKey: string; limitUsd: number; cardId: string }
   | { kind: "move" }
   | { kind: "hand-over" }
+  | { kind: "model" }
   | { kind: "account" }
   | { kind: "update" }
   | { kind: "out-of-reach" };

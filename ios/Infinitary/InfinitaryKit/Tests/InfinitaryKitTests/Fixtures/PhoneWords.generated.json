@@ -718,6 +718,7 @@
   {"said":{"m":"crewmateStopping"},"words":"Stopping…"},
   {"said":{"m":"crewmateUnreadable"},"words":"This crewmate's session could not be read."},
   {"said":{"m":"crewmateWaiting"},"words":"Waiting on you"},
+  {"said":{"m":"crewmateWaitsForModel","a":{"left":"‹left›"}},"words":"‹left› is on no level in Settings any more, and no other model on your levels can take this task, so it waits until one can"},
   {"said":{"m":"crewmateWorking"},"words":"Working…"},
   {"said":{"m":"devicesCarriedOn","a":{"to":"‹to›"}},"words":"The tasks of a computer out of reach continue on ‹to›, and that entry is off your list."},
   {"said":{"m":"devicesCarryNotRemoved","a":{"from":"‹from›","why":"‹why›"}},"words":"The tasks of ‹from› moved, but it could not come off your list: ‹why›"},

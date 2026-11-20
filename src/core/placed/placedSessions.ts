@@ -690,6 +690,13 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return (placed ?? this.load(taskId, machine)).through >= there.seq;
   }
 
+  conversationOpen(machine: string, taskId: string): boolean {
+    const roster = this.devices.get(machine)?.roster;
+    if (!roster || this.placed.get(taskId)?.adopting) return true;
+    const there = roster.tasks.get(taskId);
+    return there?.open === true || there?.running !== undefined;
+  }
+
   catchingUpSince(machine: string, taskId: string): number | undefined {
     if (!this.options.devices.inReach(machine) || this.ready(machine, taskId)) return undefined;
     const back = this.devices.get(machine)?.reachedAt ?? this.startedAt;
@@ -1143,17 +1150,38 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     deviceId: string,
     owed = false,
   ): Promise<void> {
-    const spec = this.specForReopen(placed);
-    if (!spec) return Promise.resolve();
+    const opened = this.specForReopen(placed);
+    if (!opened) return Promise.resolve();
     const resume = session.resumeToken();
-    const reopening = this.options.devices
-      .ask(deviceId, "inf:session:open", [
+    const reopening = (async () => {
+      // A model that left every level opens on another its backend serves
+      // there, or not at all until one can take it.
+      const routed = await this.host?.reopenModel?.(placed.task, opened.binding.backend);
+      if (routed === "wait") throw new Error("no model on its levels can take it there");
+      const spec: PlacedSpec = routed
+        ? placedSpecSchema.parse({
+            ...opened,
+            binding: {
+              backend: opened.binding.backend,
+              ...(routed.accountId ? { accountId: routed.accountId } : {}),
+              provider: routed.model.provider,
+            },
+            model: routed.model,
+            thinking: {
+              ...opened.thinking,
+              ...(routed.thinkingLevel ? { level: routed.thinkingLevel } : {}),
+            },
+          })
+        : opened;
+      if (routed) placed.spec = spec;
+      return this.options.devices.ask(deviceId, "inf:session:open", [
         {
           orderId: `open:${placed.task}:${this.options.now()}`,
           task: placed.task,
           spec: { ...spec, ...(resume ? { resume } : {}) },
         },
-      ])
+      ]);
+    })()
       .then((raw) => {
         const { state } = openAnswerSchema.parse(raw);
         placed.reopenOwed = state.streaming;

@@ -43,6 +43,13 @@ export type AccountSelectorOptions = {
   flagshipAccountId: () => string | null;
   /** The decision ledger every selection is recorded in. */
   decisions: DecisionStore;
+  /**
+   * The models each account lists (`AccountVault.availableModelsByAccount`):
+   * a crewmate's pick leaves out an account whose list names other models
+   * but not this one, so the account bound serves the model routing chose.
+   * An account with no list, or an empty one, is not ruled out.
+   */
+  accountModels?: () => { accountId: string; models: { provider: string; id: string }[] }[];
 };
 
 export class AccountSelector {
@@ -61,25 +68,28 @@ export class AccountSelector {
   ): Promise<string | undefined> {
     const pick = await this.pickForSpawn(taskId, provider, crew);
     pick.record();
+    pick.selected();
     return pick.accountId;
   }
 
   /**
-   * The account `selectForSpawn` would pick, with the write that records it
-   * kept apart: a move that may still be abandoned after the pick - a stop,
-   * a quit or another move meanwhile - records it only with the move, so an
-   * abandoned move leaves no account decision and marks no account selected.
+   * The account `selectForSpawn` would pick, with its writes kept apart: a
+   * move that may still be abandoned after the pick - a stop, a quit or
+   * another move meanwhile - writes the decision row (`record`) in the
+   * move's own transaction, and marks the account selected (`selected`, a
+   * file write no transaction rolls back) only once that transaction
+   * committed, so an abandoned move leaves neither.
    */
   async pickForSpawn(
     taskId: string,
     piProviderId: string,
     crew?: { model: string },
-  ): Promise<{ accountId?: string; record(): void }> {
+  ): Promise<{ accountId?: string; record(): void; selected(): void }> {
     const placed = await this.options.placedWork?.prepare(
       this.options.quota.latest()?.providers ?? [],
     );
     const decision = this.decide(piProviderId, crew, placed);
-    if (!decision) return { record: () => {} };
+    if (!decision) return { record: () => {}, selected: () => {} };
     const record = () => {
       this.options.decisions.recordAccount({
         taskId,
@@ -92,9 +102,11 @@ export class AccountSelector {
           ...(decision.pinned ? { pinned: true as const } : {}),
         },
       });
+    };
+    const selected = () => {
       if (decision.accountId) this.options.pool.markSelected(decision.accountId);
     };
-    return { ...(decision.accountId ? { accountId: decision.accountId } : {}), record };
+    return { ...(decision.accountId ? { accountId: decision.accountId } : {}), record, selected };
   }
 
   /** A resume keeps a healthy account; otherwise prepare and bind a serving sibling. */
@@ -182,7 +194,14 @@ export class AccountSelector {
     // Every account is scored against one read of the placed work.
     const placedWork = this.options.placedWork;
     const data = placed;
-    return this.options.pool.list(piProviderId).map((account) => {
+    const lists = model ? this.options.accountModels?.() : undefined;
+    const servesModel = (accountId: string) => {
+      const listed = lists?.find((row) => row.accountId === accountId)?.models;
+      if (!listed || listed.length === 0) return true;
+      return listed.some((entry) => entry.provider === piProviderId && entry.id === model);
+    };
+    const pool = this.options.pool.list(piProviderId).filter((account) => servesModel(account.id));
+    return pool.map((account) => {
       const row = rows?.find(
         (provider) => provider.accountId === account.id && provider.provider === quotaId,
       );

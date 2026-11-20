@@ -636,6 +636,7 @@
 "crewmateStopping" = "Wird gestoppt …";
 "crewmateUnreadable" = "Die Unterhaltung dieses Crewmitglieds konnte nicht gelesen werden.";
 "crewmateWaiting" = "Wartet auf dich";
+"crewmateWaitsForModel" = "%1$@ ist in den Einstellungen auf keiner Stufe mehr, und kein anderes Modell auf deinen Stufen kann diese Aufgabe übernehmen, deshalb wartet sie, bis eines es kann";
 "crewmateWorking" = "Arbeitet …";
 "devicesCarriedOn" = "Die Aufgaben eines Computers außer Reichweite laufen auf %1$@ weiter, und dieser Eintrag ist von deiner Liste verschwunden.";
 "devicesCarryNotRemoved" = "Die Aufgaben von %1$@ wurden verschoben, aber der Eintrag konnte nicht von deiner Liste entfernt werden: %2$@";

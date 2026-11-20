@@ -151,15 +151,16 @@ export type AccountAttachment = {
     crew?: { model: string },
   ): string | undefined | Promise<string | undefined>;
   /**
-   * `selectForSpawn` with its record kept apart (`AccountSelector.pickForSpawn`):
-   * a move records the pick only when it commits. Absent on a stand-in,
-   * which a move then asks `selectForSpawn`.
+   * `selectForSpawn` with its writes kept apart (`AccountSelector.pickForSpawn`):
+   * a move writes the decision in its own transaction and marks the account
+   * selected once that committed. Absent on a stand-in, which a move then
+   * asks `selectForSpawn`.
    */
   pickForSpawn?(
     taskId: string,
     piProviderId: string,
     crew?: { model: string },
-  ): Promise<{ accountId?: string; record(): void }>;
+  ): Promise<{ accountId?: string; record(): void; selected(): void }>;
   reselectForResume(
     taskId: string,
     accountId: string | null,

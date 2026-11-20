@@ -19,6 +19,7 @@ import {
   setup,
   tick,
 } from "../../../tests/helpers/crewHarness";
+import type { CrewMachines } from "../placed/crewMachines";
 import type { QuotaService } from "../quota/quotaService";
 import { type AccountPool, AccountSelector } from "../routing/accountRouter";
 import { ModelSlots } from "../routing/modelSlots";
@@ -36,6 +37,10 @@ const sol = { provider: "openai-codex", id: "gpt-6.1-sol" };
 const terra = { provider: "openai-codex", id: "gpt-6.1-terra" };
 const luna = { provider: "openai-codex", id: "gpt-6.1-luna" };
 const opus = { provider: "anthropic-claude", id: "claude-opus-5-5" };
+// Two models on one custom connection.
+const served = "fm-custom-0123456789abcdef";
+const dawn = { provider: served, id: "dawn-2" };
+const dusk = { provider: served, id: "dusk-2" };
 
 type Ref = { provider: string; id: string };
 
@@ -43,7 +48,12 @@ type Ref = { provider: string; id: string };
 function signIns(models: Ref[]) {
   const providers = [...new Set(models.map((model) => model.provider))];
   return providers.map((providerId) => ({
-    accountId: providerId === "anthropic-claude" ? "acct-claude" : "acct-codex",
+    accountId:
+      providerId === "anthropic-claude"
+        ? "acct-claude"
+        : providerId === "openai-codex"
+          ? "acct-codex"
+          : "acct-custom",
     accountLabel: "personal",
     providerId,
     models: models.filter((model) => model.provider === providerId),
@@ -72,7 +82,12 @@ function realRouting(models: Ref[] = [sol, terra]) {
         latestModels: () => ({
           generatedAt: "now",
           models: models.map((model) => ({
-            provider: model.provider === "anthropic-claude" ? "claude" : "codex",
+            provider:
+              model.provider === "anthropic-claude"
+                ? "claude"
+                : model.provider === "openai-codex"
+                  ? "codex"
+                  : model.provider,
             id: model.id,
             label: model.id,
             effectivePercentRemaining: 80,
@@ -119,6 +134,14 @@ function reroutedNotes(h: Harness, taskId: string): string[] {
   return h.tasks
     .timeline(taskId)
     .filter((entry) => entry.kind === "note" && entry.data && "rerouted" in entry.data)
+    .map((entry) => entry.text);
+}
+
+/** The timeline lines saying the task waits because no other model can take it. */
+function waitNotes(h: Harness, taskId: string): string[] {
+  return h.tasks
+    .timeline(taskId)
+    .filter((entry) => entry.kind === "note" && entry.data && "modelWait" in entry.data)
     .map((entry) => entry.text);
 }
 
@@ -170,7 +193,7 @@ async function relaunchAndSteer(
  * An account surface whose pick waits until `release`, running `whilePicking`
  * first; it records its pick only when the move asks it to.
  */
-function pausedAccounts(accountId: string, whilePicking: () => void) {
+function pausedAccounts(accountId: string | undefined, whilePicking: () => void) {
   const recorded = vi.fn();
   let release: () => void = () => {};
   const gate = new Promise<void>((resolve) => {
@@ -181,7 +204,7 @@ function pausedAccounts(accountId: string, whilePicking: () => void) {
     pickForSpawn: vi.fn(async () => {
       whilePicking();
       await gate;
-      return { accountId, record: recorded };
+      return { ...(accountId ? { accountId } : {}), record: recorded, selected: () => {} };
     }),
     reselectForResume: vi.fn(async (_taskId: string, held: string | null) => ({
       ...(held ? { accountId: held } : {}),
@@ -390,7 +413,7 @@ it("opens nothing and records no account pick when the task stops while its acco
   expect(reroutedNotes(h, taskId)).toEqual([]);
 });
 
-it("keeps the old model when the replacement leaves its level while the account is picked", async () => {
+it("takes the replacement routing picks now when the first leaves its level while the account is picked", async () => {
   const routing = realRouting([sol, terra, luna]);
   const crewmate = fakeCrewmate({ model: sol });
   const h = setup(crewmate, { realRouter: routing.make });
@@ -402,13 +425,194 @@ it("keeps the old model when the replacement leaves its level while the account 
     routing.takeOffEveryLevel(terra);
     routing.placeHigh(luna);
   });
-  const reopening = relaunchAndSteer(h, taskId, sol, paused.accounts);
+  const reopening = relaunchAndSteer(h, taskId, luna, paused.accounts);
   await tick();
   paused.release();
   const reopened = await reopening;
 
-  expect(reopened?.model).toEqual(sol);
+  expect(reopened?.model).toEqual(luna);
+  expect(routedModels(h, taskId)).toEqual([sol.id, luna.id]);
+  // Only the pick for the model committed is recorded.
+  expect(paused.recorded).toHaveBeenCalledTimes(1);
+  expect(reroutedNotes(h, taskId)).toEqual([
+    englishOf(
+      said("crewmateRoutedAgain", {
+        left: h.router?.modelLabel(sol) ?? "",
+        model: h.router?.modelLabel(luna) ?? "",
+      }),
+    ),
+  ]);
+});
+
+it("opens nothing and records no pick when the task stops while a pick that finds no account waits", async () => {
+  const routing = realRouting();
+  const crewmate = fakeCrewmate({ model: sol });
+  const h = setup(crewmate, { realRouter: routing.make });
+  const taskId = await startedOnSol(h, crewmate);
+  routing.takeSolOffEveryLevel();
+
+  const paused = pausedAccounts(undefined, () => {
+    h.tasks.close(taskId, { status: "dropped", reason: "cancelled", actor: "captain" });
+  });
+  const reopening = relaunchAndSteer(h, taskId, terra, paused.accounts);
+  await tick();
+  paused.release();
+
+  expect(await reopening).toBeUndefined();
   expect(routedModels(h, taskId)).toEqual([sol.id]);
   expect(paused.recorded).not.toHaveBeenCalled();
+  expect(waitNotes(h, taskId)).toEqual([]);
+});
+
+it("waits and says so once when no other model can take the task, and its lane holds meanwhile", async () => {
+  const routing = realRouting();
+  const crewmate = fakeCrewmate({ model: sol });
+  const h = setup(crewmate, { realRouter: routing.make });
+  const taskId = await startedOnSol(h, crewmate);
+  routing.takeSolOffEveryLevel();
+
+  // No account serves Terra: nothing on the levels can take the task.
+  const noAccount = pausedAccounts(undefined, () => {});
+  noAccount.release();
+  const specs: CrewmateSpec[] = [];
+  const relaunched = reboot(
+    h,
+    vi.fn(async () => fakeCrewmate({ model: terra })),
+    { specs, router: h.router as unknown as Router, accounts: noAccount.accounts },
+  );
+  expect(await relaunched.steer.steerCrewmate(taskId, "carry on")).toBe("recorded-retrying");
+  await tick();
+  expect(specs).toEqual([]);
+  expect(routedModels(h, taskId)).toEqual([sol.id]);
+  const words = englishOf(said("crewmateWaitsForModel", { left: h.router?.modelLabel(sol) ?? "" }));
+  expect(waitNotes(h, taskId)).toEqual([words]);
+  // While nothing changed, the lane holds: the next message is kept, not tried.
+  expect(await relaunched.steer.steerCrewmate(taskId, "and the logs")).toBe("recorded-held");
+  await relaunched.disposeAll();
+
+  // The next launch tries once more and finds the same: it says nothing new.
+  expect(await relaunchAndSteer(h, taskId, terra, noAccount.accounts)).toBeUndefined();
+  expect(waitNotes(h, taskId)).toEqual([words]);
+});
+
+it("keeps the latest model the captain named by a move, whatever the levels hold", async () => {
+  const routing = realRouting();
+  const crewmate = fakeCrewmate({ model: sol });
+  const moved = fakeCrewmate({ model: terra, sessionId: "s2" });
+  const h = setup(crewmate, { realRouter: routing.make, crewmates: [moved] });
+  const { taskId } = await h.supervisor.intake.commission({
+    title: "Read the project",
+    intent: intentOf("read the project and report"),
+  });
+  await tick();
+  crewmate.finishPrompt();
+  await tick();
+  await h.supervisor.moves.runMove(taskId, { by: "captain", model: offeringKey(terra) });
+  await vi.waitFor(() => expect(h.specs.at(-1)?.model).toEqual(terra));
+  await h.supervisor.disposeAll();
+
+  routing.takeOffEveryLevel(terra);
+
+  const reopened = await relaunchAndSteer(h, taskId);
+  expect(reopened?.model).toEqual(terra);
+  expect(routedModels(h, taskId)).toEqual([sol.id, terra.id]);
   expect(reroutedNotes(h, taskId)).toEqual([]);
+});
+
+it("routes again when the defaults standing in for levels leave the model out", async () => {
+  const routing = realRouting([sol, terra, luna]);
+  const crewmate = fakeCrewmate({ model: luna });
+  const h = setup(crewmate, { realRouter: routing.make });
+  // The person places Luna at high in Sol's place, and the task starts on Luna.
+  routing.takeOffEveryLevel(sol);
+  routing.placeHigh(luna);
+  const { taskId } = await h.supervisor.intake.commission({
+    title: "Read the project",
+    intent: intentOf("read the project and report"),
+  });
+  await tick();
+  expect(h.specs[0]?.model).toEqual(luna);
+  crewmate.finishPrompt();
+  await tick();
+  await h.supervisor.disposeAll();
+
+  // Every level emptied: the starter map's Sol and Terra stand in, without Luna.
+  routing.takeOffEveryLevel(luna);
+  routing.takeOffEveryLevel(terra);
+
+  const reopened = await relaunchAndSteer(h, taskId, sol);
+  expect(reopened?.model).toEqual(sol);
+  expect(routedModels(h, taskId)).toEqual([luna.id, sol.id]);
+  expect(reroutedNotes(h, taskId)).toHaveLength(1);
+});
+
+it("routes a task on a computer that runs work among that computer's own models and account", async () => {
+  const routing = realRouting([sol, terra, luna]);
+  const crewmate = fakeCrewmate({ model: sol });
+  const h = setup(crewmate, { realRouter: routing.make });
+  const taskId = await startedOnSol(h, crewmate);
+  h.tasks.placement.setDevice(taskId, "mini");
+  // Terra and Luna both take high here; only Luna is signed in there.
+  routing.takeSolOffEveryLevel();
+  routing.placeHigh(luna);
+  const machines = {
+    served: async () => ({
+      available: [luna],
+      catalog: [{ provider: "codex", id: luna.id, label: luna.id, effectivePercentRemaining: 80 }],
+      note: "the computer's own sign-ins",
+      accounts: new Map([["openai-codex", "there-codex"]]),
+      modelAccounts: new Map(),
+    }),
+  } as unknown as CrewMachines;
+  const relaunched = reboot(h, vi.fn(), { router: h.router as unknown as Router, machines });
+
+  expect(await relaunched.reopenModel(taskId, "pi")).toMatchObject({
+    model: luna,
+    accountId: "there-codex",
+  });
+  expect(routedModels(h, taskId)).toEqual([sol.id, luna.id]);
+  expect(reroutedNotes(h, taskId)).toHaveLength(1);
+  // Luna holds a level: the next reopen there keeps it.
+  expect(await relaunched.reopenModel(taskId, "pi")).toBeUndefined();
+  await relaunched.disposeAll();
+});
+
+it("routes a custom connection's task only among that connection's models, on its account", async () => {
+  const routing = realRouting([sol, terra, dawn, dusk]);
+  const accounts: AccountAttachment = {
+    selectForSpawn: vi.fn(async (_task: string, provider: string) =>
+      provider === served ? "acct-custom" : "acct-codex",
+    ),
+    reselectForResume: vi.fn(async (_taskId: string, held: string | null) => ({
+      ...(held ? { accountId: held } : {}),
+      changed: false,
+    })),
+    labelOf: () => "personal",
+  };
+  const crewmate = fakeCrewmate({ model: dawn });
+  const h = setup(crewmate, { realRouter: routing.make, accounts });
+  // The person places Dawn at high in Sol's place, and the task starts there.
+  routing.takeOffEveryLevel(sol);
+  routing.placeHigh(dawn);
+  const { taskId } = await h.supervisor.intake.commission({
+    title: "Read the project",
+    intent: intentOf("read the project and report"),
+  });
+  await tick();
+  expect(h.specs[0]?.model).toEqual(dawn);
+  expect(h.tasks.get(taskId)?.accountId).toBe("acct-custom");
+  crewmate.finishPrompt();
+  await tick();
+  await h.supervisor.disposeAll();
+
+  // Dawn leaves every level; Sol and Dusk take high.
+  routing.takeOffEveryLevel(dawn);
+  routing.placeHigh(sol);
+  routing.placeHigh(dusk);
+
+  const reopened = await relaunchAndSteer(h, taskId, dusk, accounts);
+  expect(reopened?.model).toEqual(dusk);
+  expect(routedModels(h, taskId)).toEqual([dawn.id, dusk.id]);
+  expect(h.tasks.get(taskId)?.accountId).toBe("acct-custom");
+  expect(reroutedNotes(h, taskId)).toHaveLength(1);
 });

@@ -48,5 +48,6 @@
   "crewmateStopping": "正在停止…",
   "crewmateUnreadable": "无法读取这名船员的对话。",
   "crewmateWaiting": "等你处理",
+  "crewmateWaitsForModel": "{left} 已不在设置中的任何级别里，你的级别中也没有其他模型能接手这个任务，所以它会等到有模型能接手",
   "crewmateWorking": "处理中…"
 }

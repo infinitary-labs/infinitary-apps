@@ -51,5 +51,6 @@
   "crewmateStopping": "Stopping…",
   "crewmateUnreadable": "This crewmate's session could not be read.",
   "crewmateWaiting": "Waiting on you",
+  "crewmateWaitsForModel": "{left} is on no level in Settings any more, and no other model on your levels can take this task, so it waits until one can",
   "crewmateWorking": "Working…"
 }

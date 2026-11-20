@@ -44,6 +44,22 @@ export type PlacedHost = {
    */
   toolsNow?(taskId: string): readonly string[] | undefined;
   /**
+   * The model a conversation that opens there again after that computer
+   * restarted opens on, when the one it opened with left every level
+   * (docs/routing.md, "A model that left every level"): another its
+   * backend serves there, with that computer's own account for it, or
+   * "wait" when none can take it, so it does not open on the one that left.
+   * Undefined keeps the model it opened with.
+   */
+  reopenModel?(
+    taskId: string,
+    backend: "pi" | "claude",
+  ): Promise<
+    | { model: { provider: string; id: string }; accountId?: string; thinkingLevel?: string }
+    | "wait"
+    | undefined
+  >;
+  /**
    * A computer the task moved off while it was out of reach is back and its
    * copy is kept (docs/helper.md, "Moving a task off a computer that is out
    * of reach"): the task's crewmate is told where, once.
@@ -67,6 +83,12 @@ export type CrewMachines = {
   keepsBrowsers?(machine: string): boolean;
   /** The task's computer is in reach and caught up, so its lane may go on. */
   ready(machine: string, taskId: string): boolean;
+  /**
+   * Whether the task's conversation is open there, as that computer's
+   * roster says: an open reattaches to it rather than starting a new one.
+   * True while the roster is unread, since nothing new can open then.
+   */
+  conversationOpen?(machine: string, taskId: string): boolean;
   /**
    * Since when the task's computer, in reach, has been catching up with it:
    * from the contact that brought the computer back, or from when its

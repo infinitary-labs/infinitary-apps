@@ -626,16 +626,39 @@ export class CrewSessions {
       throw new Error(
         "This task’s custom connection was disconnected. It cannot resume on another server automatically.",
       );
-    // A model that left every level routes again before a reopen here opens
-    // (docs/routing.md, "A model that left every level"); a move names its
-    // model, and a move to another computer opens on the model it moved with.
+    // A model that left every level routes again before a new conversation
+    // opens, wherever it opens (docs/routing.md, "A model that left every
+    // level"); a move names its model, and an open that reattaches to a
+    // conversation open on its computer starts none.
+    const moving = fresh?.changed === "computer";
+    const reattaches =
+      machine !== LOCAL_MACHINE_ID &&
+      !fresh &&
+      this.core.options.machines?.conversationOpen?.(machine, record.id) === true;
     const routedAgain =
-      move || fresh?.changed === "computer"
+      move || reattaches
         ? undefined
-        : await this.core.moves.routeAgainIfLeft(record.id);
-    // A stop, a quit or a move while it routed again took the task: this
-    // reopen opens nothing for it.
-    if (routedAgain === "stale")
+        : await this.core.moves.routeAgainIfLeft(record.id, { machine, ownMove: moving });
+    if (routedAgain === "wait") throw new Error(this.core.moves.modelWaitWords(record.id));
+    // A stop, a quit, a close or another move - to another computer, or to
+    // another model, which writes a newer routing choice - while this reopen
+    // waited took the task: it registers and opens nothing for it.
+    const choiceNow = () => {
+      const routed = this.core.options.router?.servedChoice(record.id);
+      return routed ? `${routed.model.provider}/${routed.model.id}` : undefined;
+    };
+    const chosen = choiceNow();
+    const superseded = () => {
+      const now = this.core.options.tasks.get(record.id);
+      return (
+        !now ||
+        now.status === "done" ||
+        now.status === "dropped" ||
+        this.core.facts.machineOf(record.id) !== machine ||
+        choiceNow() !== chosen
+      );
+    };
+    if (routedAgain === "stale" || superseded())
       throw new Error("This task's crewmate was let go while its conversation opened.");
     const target = move ?? routedAgain;
     // A task on a computer that runs work binds that computer's own
@@ -651,6 +674,8 @@ export class CrewSessions {
               changed: false,
             });
     const attachment = selecting instanceof Promise ? await selecting : selecting;
+    if (superseded())
+      throw new Error("This task's crewmate was let go while its conversation opened.");
     if (attachment.changed) {
       this.core.options.tasks.placement.setAccountId(record.id, attachment.accountId ?? null);
       const moved = attachment.accountId
@@ -783,8 +808,9 @@ export class CrewSessions {
    * from, so without this it opens on the client's default. A client's
    * fallback is not a routing choice, so the reopen asks for the original
    * again. A task that never routed opens as its session restores it. A
-   * model that left every level was routed again before this
-   * (`TaskMoves.routeAgainIfLeft`), so the choice read here is held.
+   * model that left every level was routed again before this, or the open
+   * waited for one (`TaskMoves.routeAgainIfLeft`), so the choice read here
+   * is held, or was the newest model named.
    */
   private reopenedOn(record: TaskRecord): Pick<CrewmateSpec, "model" | "thinkingLevel" | "quick"> {
     const routed = this.core.options.router?.servedChoice(record.id);

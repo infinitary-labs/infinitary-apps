@@ -128,6 +128,12 @@ export type RouteOptions = {
    */
   withoutProvider?: string;
   /**
+   * The only models routed among, with no fallback to others: a task routed
+   * again off a model that left every level stays on its custom connection,
+   * or on the backend its open conversation there speaks.
+   */
+  only?: (model: { provider: string; id: string }) => boolean;
+  /**
    * The models to route among instead of this Mac's own: a task that
    * runs on a computer that runs work takes only what that computer's
    * own sign-ins serve (docs/helper.md, "Its own sign-ins").
@@ -300,8 +306,9 @@ export class Router {
     // What the router may pick: the catalog only describes, so leaving a
     // provider out of what serves leaves it out of the pick.
     const without = options.withoutProvider;
-    const kept = <T extends { provider: string }>(models: T[]): T[] =>
-      without ? models.filter((model) => model.provider !== without) : models;
+    const only = options.only;
+    const kept = <T extends { provider: string; id: string }>(models: T[]): T[] =>
+      models.filter((model) => (!without || model.provider !== without) && (!only || only(model)));
     const rawCatalog = options.pool
       ? options.pool.catalog
       : (this.options.quota.latestModels()?.models ?? []);
@@ -512,10 +519,7 @@ export class Router {
    * Undefined when the task never routed or nothing was chosen.
    */
   servedProvider(taskId: string): string | undefined {
-    return (
-      this.options.decisions.routing({ taskIds: [taskId], chosen: true }).at(-1)?.provider ??
-      undefined
-    );
+    return this.options.decisions.latestChosenSlots([taskId])[0]?.provider ?? undefined;
   }
 
   /**
@@ -525,28 +529,54 @@ export class Router {
    * the one served, as `servedSlots` reads it. Undefined when the task never
    * routed or the row's slot is not one.
    */
-  servedChoice(taskId: string): { model: PiModelRef; slot: Slot } | undefined {
-    const row = this.options.decisions.routing({ taskIds: [taskId], chosen: true }).at(-1);
+  servedChoice(taskId: string): { model: PiModelRef; slot: Slot; named: boolean } | undefined {
+    const row = this.options.decisions.latestChosenSlots([taskId])[0];
     const slot = slotSchema.safeParse(row?.served ?? row?.bucket);
     if (!row?.provider || !row.model || !slot.success) return undefined;
-    return { model: { provider: row.provider, id: row.model }, slot: slot.data };
+    return {
+      model: { provider: row.provider, id: row.model },
+      slot: slot.data,
+      // R0 is the rule of a model named - at the start or by a move.
+      named: row.rule === "R0",
+    };
   }
 
   /**
    * Whether routing would still place `ref` at all (docs/routing.md, "A
-   * model that left every level"): a Settings pin names it, or a level in
-   * Settings → Intelligence → Models holds it. Only the person's own
-   * placement can leave a model out: with no slot record, or while the
-   * starter map or the listed models stand in for placements of the
-   * person's own (`ModelSlots.routable`), every model counts as held.
+   * model that left every level"): a Settings pin names it, a level in
+   * Settings → Intelligence → Models holds it, or, while the starter map or
+   * the listed models stand in for placements of the person's own
+   * (`ModelSlots.routable`), those defaults include it among `available` -
+   * this Mac's models, or a computer's own pool. With no slot record, or
+   * nothing yet known to be available, every model counts as held.
    */
-  holdsAtALevel(ref: PiModelRef): boolean {
+  holdsAtALevel(ref: PiModelRef, available?: readonly PiModelRef[]): boolean {
     const key = servedModelKey(ref);
     if (this.options.settings.getRoutingSettings().pins.some((pin) => servedModelKey(pin) === key))
       return true;
     const slots = this.options.slots;
     if (!slots || slots.slotsOf(ref).length > 0) return true;
-    return slots.routable(this.options.availableModels()).placed !== true;
+    const models = [...(available ?? this.options.availableModels())];
+    if (models.length === 0) return true;
+    const routable = slots.routable(models);
+    if (routable.placed === true) return false;
+    return routable.models.some((model) => servedModelKey(model) === key);
+  }
+
+  /**
+   * What routing reads here of Settings and the models, for a wait to compare
+   * (`TaskMoves.waitsForModel`): the pins and levels, what each level holds,
+   * and the models this Mac's accounts serve.
+   */
+  routingState(): string {
+    const available = this.options.availableModels();
+    return JSON.stringify([
+      this.options.settings.getRoutingSettings(),
+      (this.options.slots?.routable(available).models ?? []).map(
+        (model) => `${servedModelKey(model)}@${model.slot}`,
+      ),
+      available.map((model) => servedModelKey(model)),
+    ]);
   }
 
   /**

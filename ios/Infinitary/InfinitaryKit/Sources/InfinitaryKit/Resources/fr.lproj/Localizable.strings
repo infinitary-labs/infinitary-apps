@@ -636,6 +636,7 @@
 "crewmateStopping" = "Arrêt en cours…";
 "crewmateUnreadable" = "La conversation de cet équipier n’a pas pu être lue.";
 "crewmateWaiting" = "En attente de vous";
+"crewmateWaitsForModel" = "%1$@ n’est plus dans aucun niveau des Réglages et aucun autre modèle de vos niveaux ne peut prendre cette tâche, donc elle attend qu’un modèle le puisse";
 "crewmateWorking" = "En cours…";
 "devicesCarriedOn" = "Les tâches d'un ordinateur hors de portée continuent sur %1$@, et cette entrée a quitté votre liste.";
 "devicesCarryNotRemoved" = "Les tâches de %1$@ ont été déplacées, mais il n'a pas pu quitter votre liste : %2$@";

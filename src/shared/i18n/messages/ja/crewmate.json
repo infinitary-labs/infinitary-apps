@@ -48,5 +48,6 @@
   "crewmateStopping": "停止中…",
   "crewmateUnreadable": "この乗組員の会話を読み込めませんでした。",
   "crewmateWaiting": "あなた待ち",
+  "crewmateWaitsForModel": "{left} は設定のどのレベルにもなくなり、レベル上の他のモデルもこのタスクを引き受けられないため、引き受けられるモデルが現れるまで待ちます",
   "crewmateWorking": "作業中…"
 }

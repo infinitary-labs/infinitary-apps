@@ -636,6 +636,7 @@
 "crewmateStopping" = "Deteniendo…";
 "crewmateUnreadable" = "No se pudieron leer las notas de este tripulante.";
 "crewmateWaiting" = "Esperándote";
+"crewmateWaitsForModel" = "%1$@ ya no está en ningún nivel de Configuración y ningún otro modelo de tus niveles puede encargarse de esta tarea, así que espera hasta que uno pueda";
 "crewmateWorking" = "Trabajando…";
 "devicesCarriedOn" = "Las tareas de una computadora fuera de alcance continúan en %1$@, y esa entrada salió de tu lista.";
 "devicesCarryNotRemoved" = "Las tareas de %1$@ se movieron, pero no pudo salir de tu lista: %2$@";

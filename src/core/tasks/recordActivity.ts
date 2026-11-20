@@ -1,6 +1,6 @@
 import { checkSnapshotSchema, checkSnapshotSummary } from "@shared/checkSnapshot";
 import { reportSummary } from "@shared/feed";
-import { type Said, saidSchema } from "@shared/i18n/said";
+import type { Said } from "@shared/i18n/said";
 import { CREWMATE_TAB_VIA } from "@shared/provenance";
 import { DROP_BEFORE_START, DROPPED_BEFORE_START_ACTIVITY } from "@shared/recordDrop";
 import { withoutIntentLead } from "@shared/rigor";
@@ -15,6 +15,7 @@ import {
 import { THROUGH_THE_COMMAND } from "../askedFromTheCommand";
 import { INFINITARY_COMMAND } from "../integrations/commandWords";
 import type { TaskConcernRelation } from "../storage/taskEventStore";
+import { savedSaid } from "./taskFeed";
 
 /**
  * Where an event reads in a record's Activity (docs/task-record.md, "What
@@ -224,8 +225,7 @@ export function condenseActivity(
           show(`${words.charAt(0).toUpperCase()}${words.slice(1)}.`);
         } else {
           // A note its writer saved as a fact (`data.said`) is worded where it is shown.
-          const saved = saidSchema.safeParse(data.said);
-          const fact = saved.success ? saved.data : undefined;
+          const fact = savedSaid(data.said);
           if (isNews(event)) show(event.text, fact);
           else fold(event.text, fact);
         }

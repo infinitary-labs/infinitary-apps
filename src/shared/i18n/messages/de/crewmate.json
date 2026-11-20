@@ -51,5 +51,6 @@
   "crewmateStopping": "Wird gestoppt …",
   "crewmateUnreadable": "Die Unterhaltung dieses Crewmitglieds konnte nicht gelesen werden.",
   "crewmateWaiting": "Wartet auf dich",
+  "crewmateWaitsForModel": "{left} ist in den Einstellungen auf keiner Stufe mehr, und kein anderes Modell auf deinen Stufen kann diese Aufgabe übernehmen, deshalb wartet sie, bis eines es kann",
   "crewmateWorking": "Arbeitet …"
 }

@@ -24343,6 +24343,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Waiting on you`;
   }
+  function crewmateWaitsForModel(input2) {
+    const left = input2.left;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يعد ${left} في أي مستوى في الإعدادات، ولا يستطيع أي نموذج آخر في مستوياتك تولي هذه المهمة، لذا تنتظر حتى يستطيع أحدها`;
+      case "de":
+        return `${left} ist in den Einstellungen auf keiner Stufe mehr, und kein anderes Modell auf deinen Stufen kann diese Aufgabe übernehmen, deshalb wartet sie, bis eines es kann`;
+      case "es":
+        return `${left} ya no está en ningún nivel de Configuración y ningún otro modelo de tus niveles puede encargarse de esta tarea, así que espera hasta que uno pueda`;
+      case "fr":
+        return `${left} n’est plus dans aucun niveau des Réglages et aucun autre modèle de vos niveaux ne peut prendre cette tâche, donc elle attend qu’un modèle le puisse`;
+      case "ja":
+        return `${left} は設定のどのレベルにもなくなり、レベル上の他のモデルもこのタスクを引き受けられないため、引き受けられるモデルが現れるまで待ちます`;
+      case "ko":
+        return `${left}이(가) 설정의 어떤 수준에도 없고 수준에 있는 다른 모델도 이 작업을 맡을 수 없어서, 맡을 수 있는 모델이 생길 때까지 기다립니다`;
+      case "pt-BR":
+        return `${left} não está mais em nenhum nível dos Ajustes e nenhum outro modelo dos seus níveis pode assumir esta tarefa, então ela espera até que um possa`;
+      case "zh-Hans":
+        return `${left} 已不在设置中的任何级别里，你的级别中也没有其他模型能接手这个任务，所以它会等到有模型能接手`;
+      case "zh-Hant":
+        return `${left} 已不在設定中的任何等級裡，你的等級中也沒有其他模型能接手這個任務，所以它會等到有模型能接手`;
+      case "en-XA":
+        return `[${left} îš öñ ñö ļéṽéļ îñ Šéţţîñĝš áñý ɱöŕé, áñð ñö öţĥéŕ ɱöðéļ öñ ýöûŕ ļéṽéļš çáñ ţáķé ţĥîš ţášķ, šö îţ ŵáîţš ûñţîļ öñé çáñ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${left}‮ is on no level in Settings any more, and no other model on your levels can take this task, so it waits until one can‬`;
+    }
+    return `${left} is on no level in Settings any more, and no other model on your levels can take this task, so it waits until one can`;
+  }
   function crewmateWorking() {
     switch (currentLanguage()) {
       case "ar":
@@ -87635,6 +87663,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     crewmateStopping,
     crewmateUnreadable,
     crewmateWaiting,
+    crewmateWaitsForModel,
     crewmateWorking,
     devicesCarriedOn,
     devicesCarryNotRemoved,
@@ -90447,6 +90476,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "crewmateStopping": [],
     "crewmateUnreadable": [],
     "crewmateWaiting": [],
+    "crewmateWaitsForModel": ["left"],
     "crewmateWorking": [],
     "devicesCarriedOn": ["to"],
     "devicesCarryNotRemoved": ["from", "why"],
@@ -105090,9 +105120,9 @@ ${FRAME_KEYBOARD_SCRIPT}
     saidHere: literal(true).optional(),
     /**
      * The app's own words of `text` saved as a fact (docs/i18n.md, "Saved
-     * facts"), so the window words the line in its own language; `text` keeps
-     * the English for a reader that words nothing itself, such as the phone.
-     * Absent on every other line, and from an older home.
+     * facts"), so the window and the phone (`PhoneWords.line`) word the line
+     * in their own language; `text` keeps the English for a reader that words
+     * nothing itself. Absent on every other line, and from an older home.
      */
     said: saidSchema.optional()
   });

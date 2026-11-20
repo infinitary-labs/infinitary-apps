@@ -63,5 +63,6 @@
   "crewmateStopping": "جارٍ الإيقاف…",
   "crewmateUnreadable": "تعذّرت قراءة محادثة فرد الطاقم هذا.",
   "crewmateWaiting": "بانتظارك",
+  "crewmateWaitsForModel": "لم يعد {left} في أي مستوى في الإعدادات، ولا يستطيع أي نموذج آخر في مستوياتك تولي هذه المهمة، لذا تنتظر حتى يستطيع أحدها",
   "crewmateWorking": "جارٍ العمل…"
 }

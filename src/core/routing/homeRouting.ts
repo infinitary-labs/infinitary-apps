@@ -198,6 +198,7 @@ export function startHomeRouting(options: {
     quota,
     flagshipAccountId: () => settings.getFirstmateAccount(),
     decisions: ledger,
+    accountModels: () => vault.availableModelsByAccount(),
   });
   const router = new Router({
     quota,

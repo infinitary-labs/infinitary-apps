@@ -7,7 +7,7 @@ import { COMPUTER, HERE } from "@shared/deviceNames";
 import { englishOf, said } from "@shared/i18n/said";
 import { offeringKey, parseOfferingKey, type Slot } from "@shared/modelSlots";
 import { AUTOMATIC_COMPUTER, type ComputerMove } from "@shared/placement";
-import { PROVIDER_CATALOG } from "@shared/providers";
+import { backendForProvider, PROVIDER_CATALOG } from "@shared/providers";
 import { agoWords, leftBehindLine, moveOutOfReach } from "@shared/recordBar";
 import { RUNS_ON_THIS_MAC } from "@shared/repos";
 import { levelDefaultReasoning, type WorkShape } from "@shared/routingPolicy";
@@ -32,7 +32,6 @@ import { briefCarriesPictures } from "./crewBrief";
 import type { MoveAsk, MoveTarget, TaskRuntime } from "./crewRuntime";
 import type { CrewmateSpec } from "./crewSession";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
-import { routesNamed } from "./namedModel";
 import { describeStatus } from "./settleService";
 import type { TaskPlacement } from "./taskPlacement";
 
@@ -55,6 +54,17 @@ function warnMove(caught: unknown): void {
 }
 
 /** What the task moves reach of the supervisor beyond its options. */
+/** The model a task routed again to, the account it binds here or there, and how it opens. */
+export type RoutedAgain = {
+  model: { provider: string; id: string };
+  /** This Mac's account for it. */
+  accountId?: string;
+  /** The account of a computer that runs work that serves it there. */
+  binding?: string;
+  thinkingLevel: NonNullable<CrewmateSpec["thinkingLevel"]>;
+  providerName: string;
+};
+
 export type TaskMovesHost = {
   now(): number;
   /** Where each task runs: the computer a move names, read as Runs on reads it. */
@@ -100,6 +110,8 @@ export type TaskMovesHost = {
 export class TaskMoves {
   /** Tasks moving to another provider now (INF-849). */
   private readonly moving = new Set<string>();
+  /** Tasks waiting for a model, with what Settings and the models were when they began. */
+  private readonly modelWaits = new Map<string, string>();
   /** Tasks whose move to another computer is being carried out now (`runComputerMove`). */
   private readonly computerMoving = new Set<string>();
   /** Tasks whose moved-off or unfinished copy is being removed now (`retireMovedSource`, `undoMovedDestination`). */
@@ -348,27 +360,34 @@ export class TaskMoves {
         }
         const current = this.options.tasks.get(taskId);
         if (!current || current.status !== "active" || this.host.disposed()) return;
-        pick?.record();
-        this.options.router?.commit(taskId, preview);
         if (runtime) {
           this.host.releaseSession(runtime);
           this.host.forgetRuntime(taskId);
         }
         const fromName = from ? this.providerName(from) : "its provider";
         const toName = this.providerName(choice.provider);
-        this.options.tasks.placement.recordMove(taskId, {
-          model: choice,
-          accountId: accountId ?? null,
-          actor: ask.by,
-          text: `${who} moved it from ${fromName} to ${this.host.modelName(choice)} on ${toName}`,
-          data: {
-            moved: {
-              from: record.model,
-              to: offeringKey(choice),
-              ...(accountId ? { accountId } : {}),
-            },
+        // The account decision, the routing row and the record move together;
+        // the account is marked selected only once they committed.
+        this.options.tasks.atomic(
+          () => {
+            pick?.record();
+            this.options.router?.commit(taskId, preview);
+            this.options.tasks.placement.recordMove(taskId, {
+              model: choice,
+              accountId: accountId ?? null,
+              actor: ask.by,
+              text: `${who} moved it from ${fromName} to ${this.host.modelName(choice)} on ${toName}`,
+              data: {
+                moved: {
+                  from: record.model,
+                  to: offeringKey(choice),
+                  ...(accountId ? { accountId } : {}),
+                },
+              },
+            });
           },
-        });
+          () => pick?.selected(),
+        );
         const level = preview.result.servedBucket ?? preview.result.bucket;
         return {
           model: choice,
@@ -399,38 +418,56 @@ export class TaskMoves {
   }
 
   /**
-   * A task's next conversation on this Mac when the model it routed to left
-   * every level (docs/routing.md, "A model that left every level"): before a
-   * reopen or a restart opens it, the task routes again on its own shape,
-   * as its start did - a review still away from its builder's provider
-   * (R9) - and the new routing row, the record's model and account and one
-   * timeline and feed line commit together. It answers the account and
-   * provider the conversation opens with; the reopen then asks for the
-   * newest routing choice as any reopen does. Undefined keeps the routed
-   * model: a level or a pin still holds it, the task names it, it never
-   * routed, a custom connection serves it (it never moves server on its
-   * own), the task runs on a computer that runs work, or routing again finds
-   * no other model, only one below the level the task requires, or none an
-   * account here serves. The newest row then names a held model, so a later
-   * reopen keeps it and says nothing more. "stale" says a stop, a quit, a
-   * close or a move took the task while it waited, so the reopen opens
-   * nothing; the account it picked is recorded only with the move it commits.
+   * A task's next conversation when the model it routed to left every level
+   * (docs/routing.md, "A model that left every level"): before a reopen or a
+   * restart opens a new conversation - on this Mac, on a computer that runs
+   * work, or where a move to another computer took it - the task routes
+   * again on its own shape, as its start did - a review still away from its
+   * builder's provider (R9) - among the models that computer's sign-ins
+   * serve. A custom connection routes only among its own models, and a
+   * conversation reopening in place there only among its backend's. The
+   * new routing row, the record's model and account and one timeline and
+   * feed line commit together. It answers the model the conversation opens
+   * with, and on this Mac its account. Undefined keeps the routed model: a
+   * level, a pin or the defaults standing in for levels still hold it, the
+   * newest model chosen was named (at the start or by a move), or it never
+   * routed. "wait" says no other model on the levels that one of the
+   * computer's accounts serves can take it: the conversation does not open,
+   * the task's lane holds (`waitsForModel`) and it says so once. "stale"
+   * says a stop, a quit, a close or another move took the task while it
+   * waited, so the reopen opens nothing; the account it picked is recorded
+   * only with the move it commits.
    */
   async routeAgainIfLeft(
     taskId: string,
-  ): Promise<{ accountId?: string; providerName: string } | "stale" | undefined> {
+    asking: {
+      /** The computer the conversation opens on; the task's own by default. */
+      machine?: string;
+      /** The backend of a conversation reopening in place there. */
+      backend?: "pi" | "claude";
+      /** This open is a move's own, so that move does not supersede it. */
+      ownMove?: boolean;
+    } = {},
+  ): Promise<RoutedAgain | "stale" | "wait" | undefined> {
     const router = this.options.router;
-    if (!router || this.host.machineOf(taskId) !== LOCAL_MACHINE_ID) return undefined;
+    if (!router) return undefined;
+    const machine = asking.machine ?? this.host.machineOf(taskId);
+    const local = machine === LOCAL_MACHINE_ID;
+    // A computer that runs work routes among its own sign-ins.
+    const pool = local ? undefined : await this.options.machines?.served(machine);
+    if (!local && !pool) return undefined;
     const left = (record: TaskRecord | undefined) => {
       const routed = router.servedChoice(taskId);
       if (!record || record.status !== "active" || !routed) return undefined;
-      if (isCustomApiProvider(routed.model.provider)) return undefined;
-      const named = record.shape?.override_model_id;
-      if (named && routesNamed(named, routed.model)) return undefined;
-      return router.holdsAtALevel(routed.model) ? undefined : routed.model;
+      // The newest model named - at the start or by a move - is kept.
+      if (routed.named) return undefined;
+      return router.holdsAtALevel(routed.model, pool?.available) ? undefined : routed.model;
     };
     const asked = left(this.options.tasks.get(taskId));
-    if (!asked) return undefined;
+    if (!asked) {
+      this.modelWaits.delete(taskId);
+      return undefined;
+    }
     // A stop, a quit, a close or a move - to another model or computer -
     // while this waited supersedes the reopen that asked: it opens nothing.
     const stale = () => {
@@ -440,8 +477,8 @@ export class TaskMoves {
         !current ||
         current.status !== "active" ||
         this.host.disposed() ||
-        this.isMoving(taskId) ||
-        this.host.machineOf(taskId) !== LOCAL_MACHINE_ID ||
+        (!asking.ownMove && this.isMoving(taskId)) ||
+        this.host.machineOf(taskId) !== machine ||
         !routed ||
         offeringKey(routed.model) !== offeringKey(asked)
       );
@@ -451,74 +488,162 @@ export class TaskMoves {
       const record = this.options.tasks.get(taskId);
       const from = left(record);
       if (!record || !from) return undefined;
-      const shape = this.host.queuedShape(record);
+      // Routing again is no move to a model named: a name the start gave was
+      // not the newest choice.
+      const { override_model_id: _named, ...shape } = this.host.queuedShape(record);
       const builder = shape.kind === "review" ? shape.basis : undefined;
       const avoidProvider = builder ? router.servedProvider(builder) : undefined;
       const images = briefCarriesPictures(this.options.tasks, taskId, record.shape ?? undefined);
+      const custom = isCustomApiProvider(from.provider);
+      const backend = asking.backend;
       const prepared = await router.prepare({
+        ...(pool ? { pool } : {}),
         ...(avoidProvider ? { avoidProvider } : {}),
         images,
       });
-      const chosen = (preview: RoutePreview) => {
+      // A replacement no account there serves is passed over for the next.
+      const passed = new Set<string>();
+      const only = (model: { provider: string; id: string }) =>
+        (!custom || model.provider === from.provider) &&
+        (!backend || backendForProvider(model.provider) === backend) &&
+        !passed.has(offeringKey(model));
+      const look = () => {
+        const preview = router.preview(record.prompt, shape, { ...prepared, only });
         const choice = preview.result.choice;
         if (!choice || preview.requiresReasoningWait) return undefined;
         if (offeringKey(choice) === offeringKey(from)) return undefined;
-        return { provider: choice.provider, id: choice.id };
+        return { preview, to: { provider: choice.provider, id: choice.id } };
       };
-      const to = chosen(router.preview(record.prompt, shape, prepared));
-      if (!to) return undefined;
-      const pick = await this.pickAccount(taskId, to);
-      if (this.options.accounts && !pick.accountId && this.options.accountlessServes?.(to) !== true)
-        return undefined;
+      let found = look();
+      while (found) {
+        const { to } = found;
+        const pick = local && !custom ? await this.pickAccount(taskId, to) : undefined;
+        if (stale()) return "stale";
+        // What Settings holds now, after the account was chosen: a level that
+        // took the old model back keeps it, and a replacement that left its
+        // level meanwhile gives way to the one routing picks now.
+        if (!left(this.options.tasks.get(taskId))) return undefined;
+        const now = look();
+        if (!now || offeringKey(now.to) !== offeringKey(to)) {
+          found = now;
+          continue;
+        }
+        const accountId = custom ? (record.accountId ?? undefined) : pick?.accountId;
+        const binding = pool
+          ? (pool.modelAccounts?.get(offeringKey(to)) ?? pool.accounts.get(to.provider))
+          : undefined;
+        const serves = pool
+          ? binding !== undefined
+          : custom ||
+            !this.options.accounts ||
+            accountId !== undefined ||
+            this.options.accountlessServes?.(to) === true;
+        if (!serves) {
+          passed.add(offeringKey(to));
+          found = look();
+          continue;
+        }
+        const fact = said("crewmateRoutedAgain", {
+          left: this.host.modelName(from),
+          model: this.host.modelName(to),
+        });
+        this.options.tasks.atomic(
+          () => {
+            pick?.record();
+            router.commit(taskId, now.preview);
+            this.options.tasks.placement.recordMove(taskId, {
+              model: to,
+              accountId: accountId ?? null,
+              actor: "host",
+              text: englishOf(fact),
+              data: {
+                rerouted: { from: offeringKey(from), to: offeringKey(to) },
+                said: fact,
+                feedLine: true,
+              },
+            });
+          },
+          () => pick?.selected(),
+        );
+        this.modelWaits.delete(taskId);
+        const level = now.preview.result.servedBucket ?? now.preview.result.bucket;
+        return {
+          model: to,
+          ...(accountId ? { accountId } : {}),
+          ...(binding ? { binding } : {}),
+          thinkingLevel: this.effortFor(record, to, level),
+          providerName: this.providerName(to.provider),
+        };
+      }
       if (stale()) return "stale";
-      // What Settings holds now, after the account was chosen: a level that
-      // took the old model back keeps it, and a replacement that left its
-      // level meanwhile is not the one committed.
       if (!left(this.options.tasks.get(taskId))) return undefined;
-      const preview = router.preview(record.prompt, shape, prepared);
-      const now = chosen(preview);
-      if (!now || offeringKey(now) !== offeringKey(to)) return undefined;
-      const accountId = pick.accountId;
-      const fact = said("crewmateRoutedAgain", {
-        left: this.host.modelName(from),
-        model: this.host.modelName(to),
-      });
-      this.options.tasks.atomic(
-        () => {
-          pick.record();
-          router.commit(taskId, preview);
-          this.options.tasks.placement.recordMove(taskId, {
-            model: to,
-            accountId: accountId ?? null,
-            actor: "host",
-            text: englishOf(fact),
-            data: {
-              rerouted: { from: offeringKey(from), to: offeringKey(to) },
-              said: fact,
-              feedLine: true,
-            },
-          });
-        },
-        () => {},
-      );
-      return { ...(accountId ? { accountId } : {}), providerName: this.providerName(to.provider) };
+      this.waitForModel(taskId, from, machine);
+      return "wait";
     });
   }
 
   /**
-   * The account a move to `model` on this Mac binds, and the write that
-   * records the pick, which the move makes only when it commits.
+   * Whether a task waits for a model to take it (`routeAgainIfLeft`): its
+   * lane holds while Settings and the models that could serve stay as they
+   * were when the wait began, so a change to either lets it try again.
+   */
+  waitsForModel(taskId: string): boolean {
+    const began = this.modelWaits.get(taskId);
+    if (began === undefined) return false;
+    if (began === this.modelsNow(this.host.machineOf(taskId))) return true;
+    this.modelWaits.delete(taskId);
+    return false;
+  }
+
+  /** Why a reopen waiting for a model opens nothing, in the words it said once. */
+  modelWaitWords(taskId: string): string {
+    const routed = this.options.router?.servedChoice(taskId);
+    return englishOf(
+      said("crewmateWaitsForModel", {
+        left: routed ? this.host.modelName(routed.model) : taskId,
+      }),
+    );
+  }
+
+  /** Holds the task's lane for a model, and says why once, until it routes again. */
+  private waitForModel(taskId: string, from: { provider: string; id: string }, machine: string) {
+    this.modelWaits.set(taskId, this.modelsNow(machine));
+    const key = offeringKey(from);
+    const last = this.options.tasks
+      .timeline(taskId)
+      .findLast(
+        (event) => event.data?.rerouted !== undefined || event.data?.modelWait !== undefined,
+      );
+    if (last?.data?.modelWait === key) return;
+    const fact = said("crewmateWaitsForModel", { left: this.host.modelName(from) });
+    this.options.tasks.note(taskId, englishOf(fact), {
+      news: true,
+      feed: true,
+      data: { feedLine: true, said: fact, modelWait: key },
+    });
+  }
+
+  /** What a wait for a model compares: where it opens, and the routing settings, levels and models here. */
+  private modelsNow(machine: string): string {
+    return `${machine}\n${this.options.router?.routingState() ?? ""}`;
+  }
+
+  /**
+   * The account a move to `model` on this Mac binds, the write that records
+   * the pick, which the move makes in its own transaction, and the mark that
+   * the account was selected, made once that transaction committed.
    */
   private async pickAccount(
     taskId: string,
     model: { provider: string; id: string },
-  ): Promise<{ accountId?: string; record(): void }> {
+  ): Promise<{ accountId?: string; record(): void; selected(): void }> {
     const accounts = this.options.accounts;
-    if (!accounts) return { record: () => {} };
+    const none = () => {};
+    if (!accounts) return { record: none, selected: none };
     if (accounts.pickForSpawn)
       return accounts.pickForSpawn(taskId, model.provider, { model: model.id });
     const accountId = await accounts.selectForSpawn(taskId, model.provider, { model: model.id });
-    return { ...(accountId ? { accountId } : {}), record: () => {} };
+    return { ...(accountId ? { accountId } : {}), record: none, selected: none };
   }
 
   /**

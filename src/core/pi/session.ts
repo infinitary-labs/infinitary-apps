@@ -32,7 +32,7 @@ import type { Reasoning } from "@shared/reasoning";
 import type { BashOutcome } from "../jobs/jobManager";
 import type { ServedInstructions, ServedMessage, ServedState } from "../orchestrator/seat";
 import { modelTurnsErrorMessage } from "../session/bounds";
-import { personalResources } from "../session/personalResources";
+import { personalPluginSource, personalResources } from "../session/personalResources";
 import { projectSkillFolders } from "../session/projectResources";
 import {
   admits,
@@ -1261,6 +1261,7 @@ async function openCoding(
     ? personalResources(
         spec.personalRoot,
         new Set(projectSkillFolders(spec.cwd).map((skill) => skill.name)),
+        await personalPluginSource(spec.personalRoot),
       )
     : undefined;
   const runbookSkills =

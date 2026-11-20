@@ -6,6 +6,9 @@ import type { WorkDevices } from "./workDevices";
 /** The home sends its personal set, whole, when it changes (`personal-sync.md`). */
 export const PERSONAL_SYNC = contractChange("personal-sync");
 
+/** The set carries the skills of the person's Claude Code plugins (`personal-plugins.md`). */
+export const PERSONAL_PLUGINS = contractChange("personal-plugins");
+
 /**
  * The home's set as it stands, asked again on each call: its version
  * (`HomePersonalSet.current`), and the whole set only when one is sent
@@ -13,8 +16,11 @@ export const PERSONAL_SYNC = contractChange("personal-sync");
  */
 export type HomePersonal = {
   enabled: () => boolean;
-  current: () => { version: PersonalVersion };
-  read: () => { version: PersonalVersion; files: PersonalFile[] };
+  /** Reads again what the next listing depends on beyond the files, before a send. */
+  ready?: () => Promise<void>;
+  /** With `plugins` false, the set as a computer without `personal-plugins` keeps it. */
+  current: (plugins?: boolean) => { version: PersonalVersion };
+  read: (plugins?: boolean) => { version: PersonalVersion; files: PersonalFile[] };
   /** A new version was read: each computer in reach is sent it at once. */
   onChange: (listener: () => void) => () => void;
 };
@@ -81,10 +87,14 @@ export class PersonalSync {
   private async send(deviceId: string): Promise<void> {
     if (!this.options.personal.enabled() || !this.options.devices.inReach(deviceId)) return;
     if (!this.kept.has(deviceId)) return;
-    if (!listsChange(this.options.devices.version(deviceId)?.changes, PERSONAL_SYNC)) return;
-    if (this.kept.get(deviceId)?.version === this.options.personal.current().version.version)
+    const changes = this.options.devices.version(deviceId)?.changes;
+    if (!listsChange(changes, PERSONAL_SYNC)) return;
+    // A computer that keeps no plugins is sent the set without them, which it accepts.
+    const plugins = listsChange(changes, PERSONAL_PLUGINS);
+    await this.options.personal.ready?.();
+    if (this.kept.get(deviceId)?.version === this.options.personal.current(plugins).version.version)
       return;
-    const { version, files } = this.options.personal.read();
+    const { version, files } = this.options.personal.read(plugins);
     const answer = keepAnswerSchema.parse(
       await this.options.devices.ask(deviceId, "inf:session:personal", [
         {

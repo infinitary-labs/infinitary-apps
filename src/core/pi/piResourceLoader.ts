@@ -10,6 +10,7 @@ import {
   PERSONAL_RESOURCE_RULES,
   type PersonalResources,
   personalInstructionsText,
+  personalPluginsText,
 } from "../session/personalResources";
 import { projectInstructions, projectSkillRoots } from "../session/projectResources";
 import { buildCrewmateSystemPrompt } from "./piResources";
@@ -62,6 +63,7 @@ export function createCrewmateResourceLoader(
     getAppendSystemPrompt: () => {
       const text = appended();
       const personal = project?.personal;
+      const plugins = personal ? personalPluginsText(personal.plugins) : undefined;
       return [
         ...(text ? [text] : []),
         ...(personal
@@ -71,6 +73,7 @@ export function createCrewmateResourceLoader(
                 : PERSONAL_RESOURCE_RULES,
             ]
           : []),
+        ...(plugins ? [plugins] : []),
       ];
     },
     getAppendSystemPromptSources: () => [],
@@ -81,8 +84,10 @@ export function createCrewmateResourceLoader(
       agentsFiles = instructions ? [instructions] : [];
       skills = projectSkills(project.cwd);
       const names = new Set(skills.skills.map((skill) => skill.name));
+      // The project's, then the person's skill folders, then their plugins', then the runbooks'.
       for (const folder of [
         ...(project.personal?.skills ?? []),
+        ...(project.personal?.plugins ?? []).flatMap((plugin) => plugin.skills),
         ...(project.runbookSkills ?? []),
       ]) {
         const loaded = loadSkillsFromDir({ dir: folder.dir, source: "user" });

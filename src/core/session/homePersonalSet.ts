@@ -1,4 +1,5 @@
 import { homedir } from "node:os";
+import { readEnabledClaudePlugins } from "../claude/claudePlugins";
 import {
   type PersonalDigests,
   type PersonalFile,
@@ -40,14 +41,34 @@ export class HomePersonalSet {
     return this.options.enabled();
   }
 
-  /** The version now; a fingerprint not seen before is a new version, which listeners hear. */
-  current(): { version: PersonalVersion } {
+  /** Reads again which Claude Code plugins are on, which the next listing reads (`claudePlugins.ts`). */
+  async ready(): Promise<void> {
+    if (this.options.home === undefined) await readEnabledClaudePlugins();
+  }
+
+  /**
+   * The version now; a fingerprint not seen before is a new version, which
+   * listeners hear. Without `plugins`, the version of the set as a computer
+   * that keeps no plugins is sent it, since when the home has had its set.
+   */
+  current(plugins = true): { version: PersonalVersion } {
     const { version, files, left } = personalSetVersion(this.home(), this.digests);
-    return { version: this.seen(version, files, left) };
+    const seen = this.seen(version, files, left);
+    if (plugins) return { version: seen };
+    const part = personalSetVersion(this.home(), this.digests, false);
+    return { version: { ...seen, version: part.version, files: part.files } };
   }
 
   /** The set now, read whole, with the version its bytes make: what is sent. */
-  read(): { version: PersonalVersion; files: PersonalFile[] } {
+  read(plugins = true): { version: PersonalVersion; files: PersonalFile[] } {
+    if (!plugins) {
+      const { since } = this.current().version;
+      const { files } = personalSetFiles(this.home(), false);
+      return {
+        version: { version: personalFingerprint(files), since, files: files.length },
+        files,
+      };
+    }
     const { files, left } = personalSetFiles(this.home());
     return { version: this.seen(personalFingerprint(files), files.length, left), files };
   }

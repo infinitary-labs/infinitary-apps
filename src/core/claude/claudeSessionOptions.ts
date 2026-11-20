@@ -227,7 +227,10 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
     const staged =
       coding &&
       Boolean(
-        project?.skillsPlugin || project?.personalSkillsPlugin || project?.runbookSkillsPlugin,
+        project?.skillsPlugin ||
+          project?.personalSkillsPlugin ||
+          project?.pluginSkillsPlugins?.length ||
+          project?.runbookSkillsPlugin,
       );
     return {
       cwd: spec.cwd,
@@ -305,6 +308,7 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
             plugins: [
               project?.skillsPlugin,
               project?.personalSkillsPlugin,
+              ...(project?.pluginSkillsPlugins ?? []),
               project?.runbookSkillsPlugin,
             ].flatMap((path) => (path ? [{ type: "local" as const, path }] : [])),
           }

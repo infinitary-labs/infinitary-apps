@@ -721,7 +721,11 @@ describe("runbooks over existing prompt and skill doors", () => {
     const files = books.crew(code).skills;
     const runbookSkills = await stageRunbookSkills(files, join(cwd, "runbooks"));
     const personalSkills = await stageRunbookSkills(files, join(cwd, "personal"));
-    const personal = { skills: personalSkills, digests: { instructions: null, skills: "" } };
+    const personal = {
+      skills: personalSkills,
+      plugins: [],
+      digests: { instructions: null, skills: "" },
+    };
     const loader = createCrewmateResourceLoader("base", undefined, {
       cwd,
       personal,

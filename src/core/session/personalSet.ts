@@ -3,6 +3,7 @@ import { readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, relative, sep } from "node:path";
 import { CONNECTION_MAX_FRAME_BYTES } from "@shared/connection";
+import { carriedPluginEntries, PLUGIN_MANIFEST, PLUGIN_SET_ROOT } from "../claude/claudePlugins";
 import { personalResources } from "./personalResources";
 
 /**
@@ -23,7 +24,9 @@ export type { PersonalVersion } from "@shared/personalSet";
 export const PERSONAL_SET_BUDGET_BYTES = CONNECTION_MAX_FRAME_BYTES / 2;
 
 /** A skill's own git folder is how it was fetched, not what it says. */
-const NEVER_SENT = new Set([".git"]);
+const NEVER_SENT: ReadonlySet<string> = new Set([".git"]);
+/** A plugin's own packages are how it was installed, not what its skills say. */
+const NEVER_SENT_FROM_PLUGINS: ReadonlySet<string> = new Set([".git", "node_modules"]);
 
 const sha = (data: Buffer | string) => createHash("sha256").update(data).digest("hex");
 
@@ -57,6 +60,8 @@ function list(
   out: Listed[],
   budget: number,
   seen: Set<string> = new Set(),
+  skip: ReadonlySet<string> = NEVER_SENT,
+  prefix = "",
 ): number | undefined {
   let real: string;
   try {
@@ -75,7 +80,7 @@ function list(
     return 0;
   }
   for (const name of names) {
-    if (NEVER_SENT.has(name)) continue;
+    if (skip.has(name)) continue;
     const path = join(dir, name);
     let stat: ReturnType<typeof statSync>;
     try {
@@ -84,14 +89,14 @@ function list(
       continue;
     }
     if (stat.isDirectory()) {
-      const inside = list(path, base, out, budget - bytes, seen);
+      const inside = list(path, base, out, budget - bytes, seen, skip, prefix);
       if (inside === undefined) return undefined;
       bytes += inside;
     } else if (stat.isFile()) {
       bytes += stat.size;
       if (bytes > budget) return undefined;
       out.push({
-        path: posix(relative(base, path)),
+        path: prefix + posix(relative(base, path)),
         abs: path,
         exec: (stat.mode & 0o111) !== 0,
         stamp: `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}:${stat.mode}`,
@@ -103,12 +108,69 @@ function list(
 }
 
 /**
- * The set as the reader would pick it from a home folder, listed and not yet
- * read: the instruction file's text, which the reader reads anyway, and each
- * skill's files, a skill that would take the set past its budget left out
- * whole and named in `left`.
+ * A plugin's files that travel, by their paths under the set's plugin folder
+ * for its id (`PLUGIN_SET_ROOT`), whatever version the home has: its
+ * manifest, and every top-level entry but the parts that never reach a
+ * crewmate (`carriedPluginEntries`). Undefined past `budget`.
  */
-function listSet(home: string): {
+function listPlugin(
+  plugin: { id: string; root: string },
+  out: Listed[],
+  budget: number,
+): number | undefined {
+  const own = Array.from(new Set([PLUGIN_MANIFEST, ...carriedPluginEntries(plugin.root)]));
+  const prefix = `${PLUGIN_SET_ROOT}/${plugin.id}/`;
+  const listed: Listed[] = [];
+  const seen = new Set<string>();
+  let bytes = 0;
+  for (const entry of own) {
+    const path = join(plugin.root, entry);
+    let stat: ReturnType<typeof statSync>;
+    try {
+      stat = statSync(path);
+    } catch {
+      continue;
+    }
+    if (stat.isDirectory()) {
+      const inside = list(
+        path,
+        plugin.root,
+        listed,
+        budget - bytes,
+        seen,
+        NEVER_SENT_FROM_PLUGINS,
+        prefix,
+      );
+      if (inside === undefined) return undefined;
+      bytes += inside;
+    } else if (stat.isFile()) {
+      bytes += stat.size;
+      if (bytes > budget) return undefined;
+      listed.push({
+        path: prefix + posix(entry),
+        abs: path,
+        exec: (stat.mode & 0o111) !== 0,
+        stamp: `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeMs}:${stat.ctimeMs}:${stat.mode}`,
+        size: stat.size,
+      });
+    }
+  }
+  out.push(...listed);
+  return bytes;
+}
+
+/**
+ * The set as the reader would pick it from a home folder, listed and not yet
+ * read: the instruction file's text, which the reader reads anyway, each
+ * skill's files, then, with `plugins`, each turned-on plugin's files; a
+ * skill or plugin that would take the set past its budget is left out whole
+ * and named in `left`, so a large plugin never crowds out the person's own
+ * skill folders.
+ */
+function listSet(
+  home: string,
+  plugins: boolean,
+): {
   instructions: PersonalFile | undefined;
   listed: Listed[];
   left: string[];
@@ -133,6 +195,11 @@ function listSet(home: string): {
     listed.push(...own);
     bytes += size;
   }
+  for (const plugin of plugins ? read.plugins : []) {
+    const size = listPlugin(plugin, listed, PERSONAL_SET_BUDGET_BYTES - bytes);
+    if (size === undefined) left.push(plugin.id);
+    else bytes += size;
+  }
   return { instructions, listed, left };
 }
 
@@ -149,8 +216,9 @@ export type PersonalDigests = Map<string, { stamp: string; sha: string }>;
 export function personalSetVersion(
   home: string,
   digests: PersonalDigests,
+  plugins = true,
 ): { version: string; files: number; left: string[] } {
-  const { instructions, listed, left } = listSet(home);
+  const { instructions, listed, left } = listSet(home, plugins);
   const entries: [string, string, boolean][] = [];
   if (instructions) entries.push([instructions.path, sha(instructions.data), false]);
   const kept = new Set<string>();
@@ -169,19 +237,24 @@ export function personalSetVersion(
     }
     entries.push([file.path, known.sha, file.exec]);
   }
-  for (const abs of digests.keys()) if (!kept.has(abs)) digests.delete(abs);
+  // The set without plugins is a part of the set with them: it keeps their files' digests.
+  if (plugins) for (const abs of digests.keys()) if (!kept.has(abs)) digests.delete(abs);
   return { version: fingerprintOf(entries), files: entries.length, left };
 }
 
 /**
  * The home's set now, read whole from this user's home folder, as the reader
- * would pick it with no project's skills beside it: what the home sends.
+ * would pick it with no project's skills beside it: what the home sends,
+ * with plugins only to a computer that keeps them (`personal-plugins`).
  */
-export function personalSetFiles(home: string = homedir()): {
+export function personalSetFiles(
+  home: string = homedir(),
+  plugins = true,
+): {
   files: PersonalFile[];
   left: string[];
 } {
-  const { instructions, listed, left } = listSet(home);
+  const { instructions, listed, left } = listSet(home, plugins);
   const files: PersonalFile[] = instructions ? [instructions] : [];
   for (const file of listed) {
     try {

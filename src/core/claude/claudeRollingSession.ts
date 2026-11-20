@@ -5,7 +5,11 @@ import type { Reasoning } from "@shared/reasoning";
 import type { ServedInstructions, ServedState } from "../orchestrator/seat";
 import { TICK_PERIOD_MS } from "../orchestrator/ticker";
 import { outputCapErrorMessage, type SessionClock } from "../session/bounds";
-import { type PersonalResourceDigests, personalResources } from "../session/personalResources";
+import {
+  type PersonalResourceDigests,
+  personalPluginSource,
+  personalResources,
+} from "../session/personalResources";
 import { projectSkillFolders } from "../session/projectResources";
 import {
   type ContractStamp,
@@ -332,13 +336,14 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
   }
 
   /** Claude restores its recorded opening prompt; renew when the personal opt-in or files changed. */
-  renewPersonalIfChanged(): void {
+  async renewPersonalIfChanged(): Promise<void> {
     if (this.spec.builtins !== "coding" || this.record.clientTranscript(this.id) === null) return;
     const previous = this.record.personalAtStart(this.id);
     const current = this.spec.personalResources
       ? personalResources(
           this.spec.personalRoot ?? this.config.env.HOME,
           new Set(projectSkillFolders(this.spec.cwd).map((skill) => skill.name)),
+          await personalPluginSource(this.spec.personalRoot),
         ).digests
       : undefined;
     if (JSON.stringify(previous) !== JSON.stringify(current)) this.renewFor(["instructions"]);

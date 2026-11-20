@@ -205,7 +205,8 @@ export type DeliveryFacts =
       /** The card's id, and its task. */
       card: string;
       task: { id: string; title: string };
-      why: "pushed" | "other";
+      /** `earlier`: an earlier version of Infinitary showed the card, and its change did not move. */
+      why: "pushed" | "other" | "earlier";
       /** The version the card shows. */
       shown?: string;
       /** The change's version now. */
@@ -504,6 +505,16 @@ function renderDependencyClosed(facts: Extract<WakeFacts, { kind: "dependency-cl
 
 /** A merge card behind its change, in its author's words (INF-4031). */
 function renderMergeCardBehind(facts: Extract<WakeFacts, { kind: "merge-card-behind" }>): string {
+  if (facts.why === "earlier") {
+    const shows = facts.shown ? ` at ${facts.shown.slice(0, 7)}` : "";
+    // i18n-exempt: served to the card's author, not shown to a person
+    const why = `was put up by an earlier version of Infinitary${shows}, which did not record where its change lives, so the app took its Merge button off. Nothing in the pull request moved.`;
+    if (facts.lane === "firstmate")
+      // i18n-exempt: served to the first mate, not shown to a person
+      return `[fm-op] Your merge card ${facts.card} for task ${facts.task.id} "${facts.task.title}" ${why} Revise that card with emit_card under the same id to show the same version again.`;
+    // i18n-exempt: served to the crewmate, not shown to a person
+    return `Your merge card ${facts.card} ${why} Call show_merge_card to show the same version again: it revises this card, whatever id you give it.`;
+  }
   const shows = facts.shown ? ` shows ${facts.shown.slice(0, 7)}, and` : "";
   const moved =
     facts.why === "other"
@@ -521,7 +532,7 @@ function renderMergeCardBehind(facts: Extract<WakeFacts, { kind: "merge-card-beh
 export function mergeCardBehindWake(
   card: { id: string },
   task: { id: string; title: string },
-  behind: { why: "pushed" | "other" | "story"; shown?: string; current?: string },
+  behind: { why: "pushed" | "other" | "earlier" | "story"; shown?: string; current?: string },
   lane: "crewmate" | "firstmate",
 ): TypedWake {
   return {
@@ -530,7 +541,7 @@ export function mergeCardBehindWake(
       lane,
       card: card.id,
       task: { id: task.id, title: task.title },
-      why: behind.why === "other" ? "other" : "pushed",
+      why: behind.why === "story" ? "pushed" : behind.why,
       ...(behind.shown ? { shown: behind.shown } : {}),
       ...(behind.current ? { current: behind.current } : {}),
     },

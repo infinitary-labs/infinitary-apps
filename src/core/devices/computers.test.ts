@@ -20,6 +20,7 @@ import {
   type WorkDeviceContact,
   type WorkDeviceVersion,
 } from "../connection/connection";
+import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { foldProof } from "../helper/fromWindow";
 import { type WorkDeviceLink, WorkDevices } from "../placed/workDevices";
 import { seedTask } from "../tasks/seedTask";
@@ -331,6 +332,62 @@ describe("each copy's version", () => {
     // A second app of the same device, from before apps said their version, reads as the older.
     open(imac, null);
     expect(row(imac)?.appVersion).toEqual({});
+  });
+});
+
+/**
+ * A computer on this Mac's major whose hello lacks a change a crewmate turn
+ * there needs (INF-5442 behavior 3): a task started there would only wait
+ * for its update, so it takes no new work, and its row says so.
+ */
+describe("a computer behind a change a turn needs", () => {
+  it("takes no new work while its hello lacks the project-address change, and takes work once it lists it", () => {
+    const { pairing, connection, computers } = homeAt("192.168.65.2", {
+      app: "0.8.4",
+      contract: PROTOCOL_VERSION,
+    });
+    const joined = pairing.claim(
+      {
+        code: parsePairingLink(pairing.invite({ kind: "mac" }).link).code,
+        kind: "mac",
+        name: "Mac mini",
+        user: { name: "sam", uid: 501 },
+      },
+      shown(createKeyIdentity("Mac mini"), "::ffff:192.168.65.9"),
+    );
+    if (!joined.ok) throw new Error(joined.reason);
+    const mini = joined.grant.deviceId;
+    const row = () => computers.list().find((device) => device.id === mini);
+    const older = CONTRACT_CHANGES.names.filter((name) => name !== "placed-project-address");
+    connection.tell({ deviceId: mini, contact: "in-reach" });
+    connection.tellVersion(mini, {
+      contract: PROTOCOL_VERSION,
+      app: "0.8.2",
+      takesWork: true,
+      changes: older,
+    });
+    expect(computers.takesNoWorkUntilUpdated(mini)).toBe(true);
+    expect(row()?.otherVersion).toMatchObject({ than: "older", takesWork: false });
+
+    // Updated: it lists the change and takes work again.
+    connection.tellVersion(mini, {
+      contract: PROTOCOL_VERSION,
+      app: "0.8.3",
+      takesWork: true,
+      changes: CONTRACT_CHANGES.names,
+    });
+    expect(computers.takesNoWorkUntilUpdated(mini)).toBe(false);
+    expect(row()?.otherVersion).toMatchObject({ than: "older", takesWork: true });
+
+    // A newer major lists none of this major's changes, yet this Mac is the one behind.
+    const newerMajor = `${Number(PROTOCOL_VERSION.split(".")[0]) + 1}.0.0`;
+    connection.tellVersion(mini, {
+      contract: newerMajor,
+      app: "9.0.0",
+      takesWork: false,
+      changes: [],
+    });
+    expect(computers.takesNoWorkUntilUpdated(mini)).toBe(false);
   });
 });
 

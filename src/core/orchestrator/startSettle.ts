@@ -183,7 +183,12 @@ export class StartSettle {
     const setup = now.deviceId
       ? await this.core.placement.placedWaitFor(now.deviceId, now.repoId)
       : undefined;
-    if (now.gate || signIn || setup || (now.deviceId && this.core.facts.outOfReach(now.id))) {
+    if (
+      now.gate ||
+      signIn ||
+      setup ||
+      (now.deviceId && this.core.placement.waitsForComputer(now.id, now.deviceId))
+    ) {
       this.core.options.tasks.starts.clearStartAttempt(now.id);
       return;
     }
@@ -223,7 +228,11 @@ export class StartSettle {
         shown: true,
       };
     }
-    if (now?.status !== "active" && now?.deviceId && this.core.facts.outOfReach(taskId)) {
+    if (
+      now?.status !== "active" &&
+      now?.deviceId &&
+      this.core.placement.waitsForComputer(taskId, now.deviceId)
+    ) {
       const place = this.core.options.machines?.placeOf(now.deviceId);
       const who = place?.who ?? "the computer it runs on";
       if (this.core.options.takesNoWorkUntilUpdated?.(now.deviceId))

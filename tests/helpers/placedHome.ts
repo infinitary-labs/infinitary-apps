@@ -121,6 +121,8 @@ export type PlacedHome = {
   events: FmEvent[];
   /** Every wake the Firstmate was sent, oldest first. */
   wakes: TypedWake[];
+  /** Each computer whose Update card the crew brought back, oldest first. */
+  updateCards: string[];
   /** The card stack, as last broadcast. */
   cards: () => Card[];
   paths: AppPaths;
@@ -254,6 +256,7 @@ export function startPlacedHome(options: {
   );
   const events: FmEvent[] = [];
   const wakes: TypedWake[] = [];
+  const updateCards: string[] = [];
   let cards: Card[] = [];
   const devices = new WorkDevices();
   // What a computer says of its sign-ins reaches the crew once it exists.
@@ -509,6 +512,7 @@ export function startPlacedHome(options: {
       claude: { ...nothingHere, backend: "claude" },
     },
     machines: placed,
+    recallUpdateCard: (deviceId) => updateCards.push(deviceId),
     ...(knowledge ? { knowledge } : {}),
     ...(options.reachOf ? { reachOf: options.reachOf } : {}),
     ...(files ? { files } : {}),
@@ -694,6 +698,7 @@ export function startPlacedHome(options: {
     db,
     events,
     wakes,
+    updateCards,
     cards: () => cards,
     ...(integrations ? { integrations } : {}),
     ...(files ? { files } : {}),

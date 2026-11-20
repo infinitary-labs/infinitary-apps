@@ -615,7 +615,7 @@ Focus that rests anywhere else, such as in a side panel, stays there when a card
 Closing something that opened over the work returns focus where it was: command search gives back the control it remembered ("Command search"), and leaving Settings lands by the fact from before Settings opened, in the main message when no card is left.
 A pointer click that removes its own control, such as Got it, leaves the caret in the main message.
 A card the person points at, and a card the first mate brings forward, still take focus ("Cards and frames"); sending, starting a draft and recall still focus the main message.
-Dictation writes into the field that has focus, the main message when none of the four that take it does, and leaves focus where it was (`docs/composer.md`, "Where the words go").
+Dictation writes into the field that has focus - the main message, a card's reply, a note's comment or the crewmate's message box - and that field keeps focus; with focus anywhere else the words go to the main message, which takes focus (`docs/composer.md`, "Where the words go").
 
 ## Command search
 

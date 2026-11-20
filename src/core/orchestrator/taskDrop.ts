@@ -93,7 +93,7 @@ export class TaskDrop {
         text: `Cannot drop task ${taskId}: ${pending} is already in progress. Wait for its outcome.`,
       };
     const closed = record.status === "done" || record.status === "dropped";
-    if (closed && !(record.worktreeDir && record.workspaceState === "present"))
+    if (closed && !keptCopy(record) && !failedWithPullRequest(record))
       return {
         ok: false,
         text: `Task ${taskId} "${record.title}" is already ${describeStatus(record)}; there is nothing to discard.`,
@@ -141,15 +141,26 @@ export class TaskDrop {
         }
       }
       // A closed task's kept copy, whose work could not be saved when it
-      // closed: dropping it again is the choice to remove it.
+      // closed: dropping it again is the choice to remove it. A failure
+      // leaves its pull request open for a retry to build on; discarding the
+      // failed task is the choice to close it.
       if (closed) {
-        await this.closing.closeTask(taskId, {
-          status: "dropped",
-          reason: input.reason,
-          actor: input.actor,
-          removeKept: true,
-        });
-        return { ok: true, text: discardedText() };
+        const pull = failedWithPullRequest(record)
+          ? await this.closing.closeOpenPullRequest(taskId, { line: input.actor === "firstmate" })
+          : undefined;
+        if (keptCopy(record))
+          await this.closing.closeTask(taskId, {
+            status: "dropped",
+            reason: input.reason,
+            actor: input.actor,
+            removeKept: true,
+          });
+        return {
+          ok: true,
+          text: discardedText(pull?.text),
+          ...(pull?.problem ? { problem: pull.problem } : {}),
+          ...(pull?.repair ? { followup: pull.repair } : {}),
+        };
       }
       const pull = await this.closing.closeOpenPullRequest(taskId, {
         line: input.actor === "firstmate",
@@ -211,4 +222,18 @@ export class TaskDrop {
       ...(input.panel ? { panel: input.panel } : {}),
     };
   }
+}
+
+/** A closed task whose work could not be saved when it closed keeps its copy on disk. */
+function keptCopy(record: TaskRecord): boolean {
+  return !!record.worktreeDir && record.workspaceState === "present";
+}
+
+/** A failed task's pull request stays open after the failure, for a retry or a discard to settle. */
+function failedWithPullRequest(record: TaskRecord): boolean {
+  return (
+    record.status === "dropped" &&
+    record.closedReason === "failed" &&
+    record.delivery?.prNumber !== undefined
+  );
 }

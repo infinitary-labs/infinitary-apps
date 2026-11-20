@@ -7,11 +7,7 @@ import {
   type WorkDeviceContact,
   type WorkDeviceVersion,
 } from "../connection/connection";
-import {
-  type ContractChangeName,
-  contractChange,
-  listsChange,
-} from "../connection/contractChanges";
+import { contractChange, listsChange } from "../connection/contractChanges";
 
 /**
  * A working copy there confirms the project's approved address before each
@@ -21,7 +17,6 @@ import {
 export const FOLLOWS_PROJECT_ADDRESS = contractChange("placed-project-address");
 
 /** The changes every crewmate turn on a computer may need: one whose hello lacks any takes no new work. */
-const TURN_CHANGES: readonly ContractChangeName[] = [FOLLOWS_PROJECT_ADDRESS];
 
 /**
  * The core's way to the computers that run work for this home
@@ -236,15 +231,15 @@ export class WorkDevices {
   }
 
   /**
-   * The change a crewmate turn there may need that the connected computer's
-   * hello did not list (`ComputerBehindError`), so a task started there would
-   * only wait for its update; undefined when it lists them all, or while
-   * none of its connections is up, which says nothing of its version.
+   * Whether the connected computer's hello did not list the change a
+   * crewmate turn there may need (`FOLLOWS_PROJECT_ADDRESS`,
+   * `ComputerBehindError`), so a task started there would only wait for its
+   * update; false while none of its connections is up, which says nothing of
+   * its version.
    */
-  lacksTurnChange(deviceId: string): ContractChangeName | undefined {
+  lacksTurnChange(deviceId: string): boolean {
     const version = this.versions.get(deviceId);
-    if (!version) return undefined;
-    return TURN_CHANGES.find((change) => !listsChange(version.changes, change));
+    return !!version && !listsChange(version.changes, FOLLOWS_PROJECT_ADDRESS);
   }
 
   /**

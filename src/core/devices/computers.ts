@@ -916,7 +916,7 @@ export class Computers {
   takesNoWorkUntilUpdated(deviceId: string): boolean {
     const version = this.options.work.version(deviceId);
     if (!version) return false;
-    if (version.takesWork) return !!this.options.work.lacksTurnChange(deviceId);
+    if (version.takesWork) return this.options.work.lacksTurnChange(deviceId);
     const device = this.options.pairing.list().find((entry) => entry.id === deviceId);
     return !!device && this.otherVersion(device, version)?.than === "older";
   }

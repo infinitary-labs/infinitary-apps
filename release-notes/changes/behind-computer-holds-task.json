@@ -16,7 +16,7 @@
       "kind": "fix",
       "area": "tasks",
       "title": "A failed task keeps its pull request open",
-      "body": "When a task closes because its crewmate failed, its open pull request now stays open where your project lives, so you can still merge it, close it or carry it on in a fresh attempt. Cancelling a task, or replacing it with a new attempt, still closes its pull request.",
+      "body": "When a task closes because its crewmate failed, its open pull request now stays open where your project lives. Retrying the task with a stronger model keeps it open, and the new crewmate is told about it and decides whether to build on it or replace it. Discarding the failed task closes it, and cancelling a task still closes its pull request.",
       "noPicture": "Nothing new appears on screen: a pull request that used to be closed stays open.",
       "provenance": {
         "origin": "change"

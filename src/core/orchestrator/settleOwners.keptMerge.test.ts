@@ -162,6 +162,44 @@ describe("CrewSupervisor", () => {
     expect(workspace.removeTaskWorktree).toHaveBeenCalledWith(expect.objectContaining({ taskId }));
   });
 
+  // The captain, on INF-5443's review: "retry should keep it open, but it's the
+  // new crewmate's decision for whether to build on top or overwrite it".
+  it("keeps a failed task's PR open for its stronger-model retry and tells the retry's crewmate its number and branch", async () => {
+    const { supervisor, tasks, crewmate, forge, closePullRequest, taskId } =
+      await withOpenPullRequest();
+    crewmate.failPrompt("The client exited.");
+    await tick();
+    const branch = tasks.get(taskId)?.branch;
+    expect(branch).toBeTruthy();
+    await supervisor.intake.commission({
+      title: "Fresh attempt",
+      intent: intentOf("try a stronger model"),
+      shape: { escalate_from: tasks.get(taskId)?.key },
+    });
+    await tick();
+    expect(closePullRequest).not.toHaveBeenCalled();
+    expect(forge.close).not.toHaveBeenCalled();
+    const brief = crewmate.promptCalls.at(-1) ?? "";
+    expect(brief).toContain(`pull request #9 on branch ${branch} is still open`);
+    expect(brief).toContain("build on top of it or overwrite it");
+  });
+
+  // The captain, on INF-5443's review: "discarding the task should close the PR".
+  it("closes a failed task's PR where the project lives when the failed task is discarded", async () => {
+    const { supervisor, tasks, crewmate, forge, closePullRequest, taskId } =
+      await withOpenPullRequest();
+    crewmate.failPrompt("The client exited.");
+    await tick();
+    expect(closePullRequest).not.toHaveBeenCalled();
+    expect(await supervisor.settling.settle.settleTask(taskId, "discard")).toBe(
+      "Discarded. Closed PR #9 on GitHub.",
+    );
+    expect(forge.close).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ number: 9, branch: tasks.get(taskId)?.branch }),
+    );
+    expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "failed" });
+  });
+
   describe("the captain's kept merge approval (FI3-304)", () => {
     // INF-1246: a continued pull request has live check facts, and its one
     // chrome click survives a conflict only for the declared unchanged work.

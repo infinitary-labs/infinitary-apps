@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "phone-check-dealt-jobs",
+      "reason": "Deals a requested phone check's passes into jobs of at most 19 recorded minutes that run side by side, each stopped at 25 minutes. Only how the project is checked changes; nothing in the app does."
+    }
+  ]
+}

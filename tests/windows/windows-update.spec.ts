@@ -19,6 +19,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { type InstalledApp, launchInstalled } from "../installed/installedApp";
 import {
   makeFeedCertificate,
+  readThroughTaskScheduler,
   removeFeedCertificate,
   startUpdateFeed,
   trustSystemStore,
@@ -165,8 +166,17 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
           )
         ).stdout.trim();
       const reading = await read(true);
-      keep("feed-trusted.txt", `with the system store: ${reading}\nwithout: ${await read(false)}`);
+      // The command reads the feed as Task Scheduler starts it, with the
+      // environment Task Scheduler gives it.
+      const scheduled = await readThroughTaskScheduler(publicBuildsUrl, work, async (done) => {
+        await expect.poll(done, { timeout: 60_000, intervals: [500] }).toBe(true);
+      });
+      keep(
+        "feed-trusted.txt",
+        `with the system store: ${reading}\nwithout: ${await read(false)}\nstarted by Task Scheduler: ${JSON.stringify(scheduled)}`,
+      );
       expect(reading).toBe("200");
+      expect(scheduled).toEqual({ NODE_USE_SYSTEM_CA: "1", reading: "200" });
     });
 
     const notifications = { before: false };

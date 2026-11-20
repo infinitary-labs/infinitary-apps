@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFileSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:https";
 import { join } from "node:path";
 import type { UpdateChannel } from "@shared/update";
@@ -187,4 +187,55 @@ export function removeFeedCertificate(thumbprint: string): void {
     $true`,
     { THUMB: thumbprint },
   );
+}
+
+/** What a Node that Task Scheduler started read from the feed, and the trust switch it was given. */
+export type ScheduledReading = {
+  readonly NODE_USE_SYSTEM_CA: string | null;
+  readonly reading: string;
+};
+
+/**
+ * Reads `url` from a Node that Task Scheduler starts for this person, as it
+ * starts the app's command: a task of the check's own, run once and taken
+ * away, whose answer says whether what Task Scheduler starts trusts the feed.
+ */
+export async function readThroughTaskScheduler(
+  url: string,
+  work: string,
+  wait: (done: () => boolean) => Promise<void>,
+): Promise<ScheduledReading> {
+  const script = join(work, "scheduled-reading.cjs");
+  const out = join(work, "scheduled-reading.json");
+  writeFileSync(
+    script,
+    `const [url, out] = process.argv.slice(2);
+fetch(url)
+  .then((r) => String(r.status), (e) => String(e.cause ?? e))
+  .then((reading) => require("node:fs").writeFileSync(out, JSON.stringify({ NODE_USE_SYSTEM_CA: process.env.NODE_USE_SYSTEM_CA ?? null, reading })));
+`,
+  );
+  const env = {
+    NODE: process.execPath,
+    SCRIPT: script,
+    URL: url,
+    OUT: out,
+    NAME: "Infinitary update check reading",
+  };
+  ps(
+    `
+    $ErrorActionPreference = 'Stop'
+    $action = New-ScheduledTaskAction -Execute $env:NODE -Argument ('"' + $env:SCRIPT + '" "' + $env:URL + '" "' + $env:OUT + '"')
+    $principal = New-ScheduledTaskPrincipal -UserId ([System.Security.Principal.WindowsIdentity]::GetCurrent().Name) -LogonType Interactive
+    $null = Register-ScheduledTask -TaskName $env:NAME -Action $action -Principal $principal -Force
+    Start-ScheduledTask -TaskName $env:NAME
+    $true`,
+    env,
+  );
+  try {
+    await wait(() => existsSync(out));
+    return JSON.parse(readFileSync(out, "utf8")) as ScheduledReading;
+  } finally {
+    ps(`Unregister-ScheduledTask -TaskName $env:NAME -Confirm:$false; $true`, env);
+  }
 }

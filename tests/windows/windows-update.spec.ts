@@ -1,7 +1,6 @@
 import { execFile, execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { expect, type Page, test } from "@playwright/test";
@@ -71,6 +70,29 @@ function installedVersion(): string | null {
     $entry = Get-ChildItem 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall' -ErrorAction SilentlyContinue |
       ForEach-Object { Get-ItemProperty $_.PSPath } | Where-Object { $_.DisplayName -like 'Infinitary*' } | Select-Object -First 1
     if ($entry) { [string]$entry.DisplayVersion } else { $null }`);
+}
+
+/** Electron for this checkout's version, unpacked from the job's Electron cache; "" when it holds none. */
+function electronFromCache(): string {
+  const cache = process.env.electron_config_cache ?? "";
+  const version = (
+    JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8")) as {
+      devDependencies: Record<string, string>;
+    }
+  ).devDependencies.electron;
+  const name = `electron-v${version}-win32-x64.zip`;
+  const zip = cache
+    ? readdirSync(cache, { recursive: true, encoding: "utf8" }).find((entry) =>
+        entry.endsWith(name),
+      )
+    : undefined;
+  if (!zip) return "";
+  const into = scratchDir("infinitary-update-electron-");
+  ps(`Expand-Archive -LiteralPath $env:ZIP -DestinationPath $env:INTO -Force; $true`, {
+    ZIP: join(cache, zip),
+    INTO: into,
+  });
+  return join(into, "electron.exe");
 }
 
 /** Waits up to a minute until `done` answers true. */
@@ -184,12 +206,9 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
       // The Node inside Electron, the app's own, with the same setting: what
       // it reads of this person's store and what it answers. Kept, not
       // asserted: the installed app's own check below is the assertion.
-      let electron = "";
-      try {
-        electron = createRequire(join(process.cwd(), "package.json"))("electron") as string;
-      } catch (error) {
-        electron = String(error);
-      }
+      // Electron's own zip for this version, from the cache this job's
+      // install reads, unpacked here: the same Node the app runs.
+      const electron = electronFromCache();
       const electronReading = existsSync(electron)
         ? (
             await promisify(execFile)(
@@ -209,7 +228,7 @@ fetch(process.argv[1]).then((r) => String(r.status), (e) => String(e.cause?.code
               },
             )
           ).stdout.trim()
-        : `no Electron at ${electron}`;
+        : "no Electron in the job's Electron cache";
       keep("feed-electron.txt", electronReading);
       // The command reads the feed as Task Scheduler starts it, with the
       // environment Task Scheduler gives it.

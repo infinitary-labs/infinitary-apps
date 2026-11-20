@@ -429,9 +429,6 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/check-installed-packages.ts
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          # Electron itself, from the cache, whose Node the journey reads the feed with as the app's does.
-          node scripts/ensure-electron-installed.mjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/generate-messages.ts --compiled
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node scripts/windows-update-source.ts

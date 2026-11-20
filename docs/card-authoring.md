@@ -817,8 +817,9 @@ The card lint (`preansweredRefusal` in `src/core/pi/cardLint.ts`) holds the firs
 It groups and reads `required` the way the bridge does: by name, a disabled control is no question, and one required control makes its question required.
 Optional questions, text fields, notes and previews pass that rule; `unmarkedSkippableQuestions` refuses an optional radio or select question that arrives unanswered and marks no option, read the same way.
 
-A body may also stage a JSON snapshot under a name with `inf.stage(name, value)` (`undefined` unstages it): a preview's tuned look, say.
+A body may also stage a JSON snapshot under a name with `inf.stage(name, value, apply)` (`undefined` unstages it): a preview's tuned look, say.
 It joins the answers as one more question, always `changed`, and is worded as JSON.
+`apply`, which a preview gives so a setting from elsewhere can reach it, takes a parsed snapshot and sets the preview's own controls to it, as if the captain had set them; the controls then stage the setting again as they always do.
 
 The host side (`src/shared/plugins/bridge.ts`, `FrameController`, `StackedCard` in `src/renderer/src/app/stage/StackedCard.tsx`):
 
@@ -950,7 +951,8 @@ Nothing in a draft is sent to anyone until the captain presses a button or sends
 - Every accepted change goes to every window as a live frame on `inf:cards:draft`, outside the journal (`docs/connection.md`, "Live pushes"), only to a window whose hello lists the `card-drafts` change.
 - Another window's picks reach a body already on screen through the bridge's `fill` message, which sets each choice by name at once, even one that holds focus; a body born later takes them from the shell's draft, as a revision does.
   A change to a question being typed in - a text field or a Something else field holding focus in a focused window - waits until focus leaves it, and then shows only if the captain typed nothing there since it arrived; a later change replaces the one waiting, even one back to what the question shows.
-  A preview's staged settings that arrive while its body is on screen wait in the window for the body's next birth, because its script reads them only then, and the preview on screen keeps sending what it shows until that birth; the birth takes them only if this window has not changed that setting since they came (`src/renderer/src/cards/draftFill.ts`).
+  A preview's staged setting, live or at a birth (after a restart too), goes through the `apply` the preview staged it with, so the preview shows it and a press sends it; while the captain types in one of the preview's own text fields, a live setting waits like a typed question.
+  A preview that staged a setting with no `apply` keeps what it shows and sends, and takes no setting from elsewhere (`src/shared/plugins/frameFormScript.ts`).
   Another window's words wait the same way while this window's field holds focus in a focused window, and whatever waits goes when the card leaves the window.
 - A window whose home lacks the `card-drafts` change keeps its picks and words to itself, as before.
 
@@ -1090,7 +1092,7 @@ The sequences document's plan line says so, and the first mate core sends the as
 Those two sentences are the only places the word prototype reaches the first mate; `CARD_AUTHORING` speaks of a preview.
 
 A playable preview is a decision body that draws the thing being chosen with its own controls ("The preview is the decision" above).
-Its settings ride a hidden named field or `inf.stage(name, value)` as a compact JSON snapshot with stable names and units.
+Its settings ride a hidden named field or `inf.stage(name, value, apply)` as a compact JSON snapshot with stable names and units; `apply` sets the preview's controls to a snapshot from another window or a restart ("Unsent picks follow you").
 The 4,096 UTF-8 bytes named in the authoring instructions are an authoring budget for that snapshot, not a limit shared with the other answers.
 Controls update the preview and the card's unsent draft only: no author turn and no submission; the draft is kept on the first mate's computer and shown in every window like any pick ("Unsent picks follow you"), until a press or reply submits it.
 The footer choices and author-directed replies submit the current settings.

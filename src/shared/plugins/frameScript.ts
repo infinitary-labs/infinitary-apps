@@ -68,9 +68,13 @@ import { READ_VALUE_DECODER } from "./readTransfer";
  *   JSON), false where the host opens none; `inf.expanded(element)` reads the
  *   state back in the copy, and the part hears the last one as an
  *   `inf-expanded` event (docs/card-authoring.md, "A part full screen").
- * - `inf.stage(name, value)` - a JSON snapshot staged under a name beside the
- *   body's own form (inline decisions, contract 4.22). It is local: it joins
- *   the form's answers and leaves the card only with them.
+ * - `inf.stage(name, value, apply?)` - a JSON snapshot staged under a name
+ *   beside the body's own form (inline decisions, contract 4.22). It joins
+ *   the form's answers, the card's unsent draft included, and is submitted
+ *   only with them. `apply(value)` sets the preview's own controls to a
+ *   snapshot, as the captain would; the bridge calls it for another
+ *   window's setting and one restored at the body's birth, and a preview
+ *   that gave none keeps what it shows.
  *
  * A card body's FORM is the bridge's to watch (inline decisions, contract
  * 4.22): `FRAME_FORM_SCRIPT` (./frameFormScript.ts) starts on the host's
@@ -203,7 +207,7 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
   var documentId = Date.now().toString(36) + Math.random().toString(36).slice(2);
   var capped = new WeakSet();
   var theme = document.documentElement.getAttribute("data-theme") || "dark";
-  var form = { on: false, locked: false, preview: false, fill: null, filling: false, staged: {}, waiting: {}, touched: {}, first: new WeakMap(), last: "", fields: new WeakMap(), current: null };
+  var form = { on: false, locked: false, preview: false, fill: null, filling: false, staged: {}, appliers: {}, waiting: {}, touched: {}, first: new WeakMap(), last: "", fields: new WeakMap(), current: null };
   var KEY_IN_TEXT = new RegExp(${JSON.stringify(`${TASK_KEY_IN_TEXT}|${KNOWLEDGE_ID_IN_TEXT}`)}, "g");
   var UNLINKED = "a, button, summary, input, select, option, textarea, script, style, svg, [role=button], [data-inf-action], [data-inf-draft], [contenteditable]";
   var keys = { known: null, rested: null, quiet: null, lit: null };
@@ -636,10 +640,13 @@ ${FRAME_EXPAND_SCRIPT}${FRAME_SOUND_SCRIPT}
     // A part full screen, and its state in the copy (FRAME_EXPAND_SCRIPT).
     expand: expandPart,
     expanded: expandedState,
-    stage: function (name, value) {
+    stage: function (name, value, apply) {
       var json = value === undefined ? undefined : JSON.stringify(value);
       if (json === undefined) delete form.staged[String(name)];
       else form.staged[String(name)] = json;
+      // The function to apply a setting stays until the setting is unstaged.
+      if (json === undefined) delete form.appliers[String(name)];
+      else if (typeof apply === "function") form.appliers[String(name)] = apply;
       if (form.on) readForm();
     }
   };
@@ -819,4 +826,4 @@ ${FRAME_KEYBOARD_SCRIPT}
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-uYn1xAokZhB8O78ouNq3Barv59E30ni5DotWZ7XtSag=";
+export const FRAME_BRIDGE_SHA256 = "sha256-ceoag1lc65b4ASFqIhLJ6j753IhMfHnAz3c3Wb8+4rk=";

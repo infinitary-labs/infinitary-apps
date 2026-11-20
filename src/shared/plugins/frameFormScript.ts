@@ -352,6 +352,9 @@ ${FRAME_QUESTION_SCRIPT}
   function typingIn(group) {
     var focused = document.activeElement;
     if (!focused || !document.hasFocus()) return false;
+    // A preview's setting has no control of its own: any field the preview
+    // takes words in holds it while the captain types there.
+    if (group.staged) return focused.isContentEditable || (/^(INPUT|TEXTAREA)$/.test(focused.tagName) && kindOf(focused) === "text" && focused.type !== "range" && focused.type !== "color");
     if (group.controls.indexOf(focused) >= 0) return kindOf(focused) === "text";
     return writeInRows(group).some(function (row) { return form.fields.get(row) === focused; });
   }
@@ -380,14 +383,29 @@ ${FRAME_QUESTION_SCRIPT}
     var byName = {};
     questions().forEach(function (group) { byName[group.name] = group; });
     var touched = [];
+    var applied = [];
     answers.forEach(function (answer) {
       if (!answer || !Array.isArray(answer.values)) return;
+      var group = byName[answer.name];
       if (answer.json) {
-        // A preview's settings live in its own script, which reads them only at its birth.
-        if (!live && typeof answer.values[0] === "string") form.staged[answer.name] = answer.values[0];
+        // A preview's setting goes through the preview's own controls, by
+        // the function it staged the setting with, as if the captain set
+        // them; a preview that gave none keeps what it shows and sends.
+        var apply = form.appliers[answer.name];
+        if (!apply || typeof answer.values[0] !== "string") return;
+        if (live) delete form.waiting[answer.name];
+        if (live && group && typingIn(group)) {
+          form.waiting[answer.name] = { answer: answer, over: JSON.stringify(answerOf(group)) };
+          return;
+        }
+        try {
+          applied.push({ apply: apply, value: JSON.parse(answer.values[0]) });
+        } catch (error) {
+          return;
+        }
+        form.staged[answer.name] = answer.values[0];
         return;
       }
-      var group = byName[answer.name];
       if (!group || group.staged) return;
       if (live) delete form.waiting[answer.name];
       if (live && typingIn(group)) {
@@ -443,6 +461,12 @@ ${FRAME_QUESTION_SCRIPT}
     } finally {
       form.filling = false;
     }
+    applied.forEach(function (setting) {
+      try {
+        setting.apply(setting.value);
+      } catch (error) {}
+    });
+    if (applied.length > 0 && form.on) readForm();
   }
 ${FRAME_TAG_SCRIPT}
   // The field under a Something else row: the app's own, with no name, so

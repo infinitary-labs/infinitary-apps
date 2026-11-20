@@ -1,5 +1,5 @@
 import { CARD_DRAFTS } from "@shared/cardDrafts";
-import { fillShownBodies, forgetNextBirth } from "../cards/draftFill";
+import { fillShownBodies } from "../cards/draftFill";
 import { changesOff } from "../devices/viewWords";
 import { type DraftBase, type DraftLocal, DraftSync, withDraftAnswers } from "./draftSync";
 import { withoutKey } from "./stack";
@@ -70,9 +70,7 @@ export function startCardDrafts(
       return card ? (card.lifecycleId ?? null) : undefined;
     },
     apply: (cardId, parts) => {
-      const filled = parts.answers
-        ? fillShownBodies(cardId, parts.answers, get().cardAnswers[cardId]?.answers)
-        : false;
+      const filled = parts.answers ? fillShownBodies(cardId, parts.answers) : false;
       const typing = parts.words !== undefined && typingReply(cardId);
       if (parts.words !== undefined) {
         if (typing)
@@ -193,7 +191,6 @@ export function startCardDrafts(
         if (!present.has(card.id)) {
           sync.forget(card.id);
           waitingWords.delete(card.id);
-          forgetNextBirth(card.id);
         }
       const anew: string[] = [];
       const before = new Map(previous.cards.map((card) => [card.id, card.lifecycleId ?? null]));
@@ -208,7 +205,6 @@ export function startCardDrafts(
       for (const cardId of anew) {
         sync.forget(cardId);
         waitingWords.delete(cardId);
-        forgetNextBirth(cardId);
       }
       if (anew.length > 0)
         set((s) => ({

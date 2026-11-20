@@ -448,7 +448,7 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     expect(prompt).toContain("the default after required answers, others whatever is picked");
     expect(prompt).not.toContain("check or select the option you propose");
     expect(prompt).toContain(
-      "Controls update only the preview and the renderer's draft, never an author turn",
+      "Controls update only the preview and the card's unsent draft, never an author turn",
     );
     expect(prompt).not.toContain('inf.action("use-settings"');
     expect(prompt).not.toMatch(/explain.more/i);

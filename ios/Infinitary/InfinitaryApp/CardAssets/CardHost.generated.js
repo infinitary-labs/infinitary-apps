@@ -90891,6 +90891,9 @@ ${FRAME_QUESTION_SCRIPT}
   function typingIn(group) {
     var focused = document.activeElement;
     if (!focused || !document.hasFocus()) return false;
+    // A preview's setting has no control of its own: any field the preview
+    // takes words in holds it while the captain types there.
+    if (group.staged) return focused.isContentEditable || (/^(INPUT|TEXTAREA)$/.test(focused.tagName) && kindOf(focused) === "text" && focused.type !== "range" && focused.type !== "color");
     if (group.controls.indexOf(focused) >= 0) return kindOf(focused) === "text";
     return writeInRows(group).some(function (row) { return form.fields.get(row) === focused; });
   }
@@ -90919,14 +90922,29 @@ ${FRAME_QUESTION_SCRIPT}
     var byName = {};
     questions().forEach(function (group) { byName[group.name] = group; });
     var touched = [];
+    var applied = [];
     answers.forEach(function (answer) {
       if (!answer || !Array.isArray(answer.values)) return;
+      var group = byName[answer.name];
       if (answer.json) {
-        // A preview's settings live in its own script, which reads them only at its birth.
-        if (!live && typeof answer.values[0] === "string") form.staged[answer.name] = answer.values[0];
+        // A preview's setting goes through the preview's own controls, by
+        // the function it staged the setting with, as if the captain set
+        // them; a preview that gave none keeps what it shows and sends.
+        var apply = form.appliers[answer.name];
+        if (!apply || typeof answer.values[0] !== "string") return;
+        if (live) delete form.waiting[answer.name];
+        if (live && group && typingIn(group)) {
+          form.waiting[answer.name] = { answer: answer, over: JSON.stringify(answerOf(group)) };
+          return;
+        }
+        try {
+          applied.push({ apply: apply, value: JSON.parse(answer.values[0]) });
+        } catch (error) {
+          return;
+        }
+        form.staged[answer.name] = answer.values[0];
         return;
       }
-      var group = byName[answer.name];
       if (!group || group.staged) return;
       if (live) delete form.waiting[answer.name];
       if (live && typingIn(group)) {
@@ -90982,6 +91000,12 @@ ${FRAME_QUESTION_SCRIPT}
     } finally {
       form.filling = false;
     }
+    applied.forEach(function (setting) {
+      try {
+        setting.apply(setting.value);
+      } catch (error) {}
+    });
+    if (applied.length > 0 && form.on) readForm();
   }
 ${FRAME_TAG_SCRIPT}
   // The field under a Something else row: the app's own, with no name, so
@@ -91897,7 +91921,7 @@ ${FRAME_TAG_SCRIPT}
   var documentId = Date.now().toString(36) + Math.random().toString(36).slice(2);
   var capped = new WeakSet();
   var theme = document.documentElement.getAttribute("data-theme") || "dark";
-  var form = { on: false, locked: false, preview: false, fill: null, filling: false, staged: {}, waiting: {}, touched: {}, first: new WeakMap(), last: "", fields: new WeakMap(), current: null };
+  var form = { on: false, locked: false, preview: false, fill: null, filling: false, staged: {}, appliers: {}, waiting: {}, touched: {}, first: new WeakMap(), last: "", fields: new WeakMap(), current: null };
   var KEY_IN_TEXT = new RegExp(${JSON.stringify(`${TASK_KEY_IN_TEXT}|${KNOWLEDGE_ID_IN_TEXT}`)}, "g");
   var UNLINKED = "a, button, summary, input, select, option, textarea, script, style, svg, [role=button], [data-inf-action], [data-inf-draft], [contenteditable]";
   var keys = { known: null, rested: null, quiet: null, lit: null };
@@ -92330,10 +92354,13 @@ ${FRAME_EXPAND_SCRIPT}${FRAME_SOUND_SCRIPT}
     // A part full screen, and its state in the copy (FRAME_EXPAND_SCRIPT).
     expand: expandPart,
     expanded: expandedState,
-    stage: function (name, value) {
+    stage: function (name, value, apply) {
       var json = value === undefined ? undefined : JSON.stringify(value);
       if (json === undefined) delete form.staged[String(name)];
       else form.staged[String(name)] = json;
+      // The function to apply a setting stays until the setting is unstaged.
+      if (json === undefined) delete form.appliers[String(name)];
+      else if (typeof apply === "function") form.appliers[String(name)] = apply;
       if (form.on) readForm();
     }
   };
@@ -92506,7 +92533,7 @@ ${FRAME_KEYBOARD_SCRIPT}
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-uYn1xAokZhB8O78ouNq3Barv59E30ni5DotWZ7XtSag=";
+  const FRAME_BRIDGE_SHA256 = "sha256-ceoag1lc65b4ASFqIhLJ6j753IhMfHnAz3c3Wb8+4rk=";
   const APP_FRAME_SCHEME = "app-frame";
   const CARD_PICTURE_HOST = "images";
   const CARD_MEDIA_HOST = "media";

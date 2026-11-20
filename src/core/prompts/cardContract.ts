@@ -78,7 +78,7 @@ const CARD_AUTHORING_PARTS: readonly InstructionPart[] = [
     "The app draws its own field above a card's buttons: words sent from it alone arrive as a reply, and words left in it at a button's click arrive with that choice as anything_else, written in, so never add a comment box of your own.",
   ),
   crewOnly(
-    "A playable preview is a decision body drawing the thing being chosen with its own controls; a hidden field or inf.stage(name, value) carries settings as a JSON snapshot with stable names and units, at most 4,096 UTF-8 bytes. Controls update only the preview and the renderer's draft, never an author turn; footer choices and author-directed replies submit current settings. A preview ships nothing: scratch stays private in the working copy, and revise the same card as feedback arrives.",
+    "A playable preview is a decision body drawing the thing being chosen with its own controls; a hidden field or inf.stage(name, value, apply) carries settings as a JSON snapshot with stable names and units, at most 4,096 UTF-8 bytes; apply(value) sets the preview's own controls to a snapshot, so another window's or a restored setting shows as if picked. Controls update only the preview and the card's unsent draft, never an author turn; footer choices and author-directed replies submit current settings. A preview ships nothing: scratch stays private in the working copy, and revise the same card as feedback arrives.",
   ),
   "A card leads with its answer: one sentence in the open.",
   "An answer implying any captain next step, even optional, is a decision; only a pure fact is a note.",

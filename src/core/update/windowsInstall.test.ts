@@ -19,17 +19,25 @@ import {
 const INSTALLER = "the new installer's bytes";
 const VERSION = "0.8.4-alpha.3";
 
-/** A child process as `spawn` returns one: it starts, or it could not. */
-function child(outcome: "spawn" | "error") {
-  const emitter = Object.assign(new EventEmitter(), { unref: vi.fn() });
+/**
+ * The script's process as `spawn` returns one: Windows started the
+ * hand-over (exit 0), refused it (exit 1), or the script could not start.
+ */
+type Outcome = "started" | "refused" | "error";
+function child(outcome: Outcome) {
+  const emitter = new EventEmitter();
   setImmediate(() => {
-    if (outcome === "spawn") emitter.emit("spawn");
-    else emitter.emit("error", Object.assign(new Error("not found"), { code: "ENOENT" }));
+    if (outcome === "error") {
+      emitter.emit("error", Object.assign(new Error("not found"), { code: "ENOENT" }));
+      return;
+    }
+    emitter.emit("spawn");
+    emitter.emit("exit", outcome === "started" ? 0 : 1, null);
   });
   return emitter;
 }
 
-function installer(options: { body?: () => Response; spawns?: "spawn" | "error" } = {}) {
+function installer(options: { body?: () => Response; spawns?: Outcome } = {}) {
   const dataRoot = join(scratchDir("inf-windows-install-"), "data");
   mkdirSync(dataRoot, { recursive: true });
   const order: string[] = [];
@@ -38,7 +46,7 @@ function installer(options: { body?: () => Response; spawns?: "spawn" | "error" 
     // The installer the child is handed is the checked download, whole.
     const env = (_args[2] as { env: NodeJS.ProcessEnv }).env;
     order.push(readFileSync(env.INFINITARY_UPDATE_INSTALLER as string, "utf8"));
-    return child(options.spawns ?? "spawn");
+    return child(options.spawns ?? "started");
   });
   const end = vi.fn(() => {
     order.push("end");
@@ -76,7 +84,7 @@ describe("the in-app Windows update", () => {
     const [program, args, spawned] = f.spawnImpl.mock.calls[0] as [
       string,
       string[],
-      { env: NodeJS.ProcessEnv; detached: boolean },
+      { env: NodeJS.ProcessEnv },
     ];
     expect(program).toBe(
       join("C:\\Windows", "System32", "WindowsPowerShell", "v1.0", "powershell.exe"),
@@ -86,7 +94,6 @@ describe("the in-app Windows update", () => {
     expect(spawned.env.INFINITARY_UPDATE_WAIT).toBe("4242");
     expect(spawned.env.INFINITARY_UPDATE_INSTALLER).toBe(join(updatesIn(f.dataRoot), f.name));
     expect(RUN_INSTALLER_SCRIPT).toContain("'--updated','/S','--force-run'");
-    expect(spawned.detached).toBe(true);
     // The new copy follows the channel it came from.
     expect(JSON.parse(readFileSync(join(f.dataRoot, UPDATE_CHANNEL_MARKER), "utf8"))).toEqual({
       schemaVersion: 1,
@@ -136,8 +143,11 @@ describe("the in-app Windows update", () => {
     expect(existsSync(updatesIn(f.dataRoot))).toBe(false);
   });
 
-  it("keeps running, and remembers no new channel, when the installer cannot start", async () => {
-    const f = installer({ spawns: "error" });
+  it.each([
+    ["Windows PowerShell cannot start", "error"],
+    ["Windows refuses to start the hand-over", "refused"],
+  ] as const)("keeps running, and remembers no new channel, when %s", async (_, spawns) => {
+    const f = installer({ spawns });
     await expect(f.install(f.plan, f.saved)).rejects.toThrow(
       "The installer could not start, so nothing was installed.",
     );

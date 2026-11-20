@@ -14,7 +14,8 @@ import { downloadChecked, rememberUpdateChannel, UpdateInstallProblem } from "./
  * keeps it only when its bytes match the published SHA-256, lets the
  * crew's work be saved, and hands the installer to Windows PowerShell,
  * which waits for this program to end and then runs it silently, as an
- * update (`--updated /S --force-run`). The installer replaces the copy for
+ * update (`--updated /S --force-run`), outside the task that started a
+ * command, so it outlives this program. The installer replaces the copy for
  * this person alone, with no administrator, keeps the data folder, and
  * opens the new copy through its Start menu entry, as the Start menu does.
  *
@@ -40,17 +41,31 @@ export type WindowsInstallPlan = {
 export const WINDOWS_UPDATES_FOLDER = "updates";
 
 /**
- * What runs the installer: Windows PowerShell waits for the app's own
- * process to end, so nothing of the old copy is running when the installer
- * replaces it, then starts the installer as an update. Paths and the
- * process number ride the environment, never the command's text. A wait
- * that runs past five minutes starts the installer anyway, which ends what
- * is left of the old copy itself.
+ * What runs the installer. A command Task Scheduler started is in that
+ * task's group of processes, which Windows ends with the command, and a
+ * detached child stays in it: a hand-over started directly died with the
+ * command before the installer ran. So this script, run directly, only asks
+ * Windows' own process service (`Win32_Process.Create`) to start the
+ * hand-over, which then belongs to no task and outlives this program. The
+ * hand-over waits for the app's own process to end, so nothing of the old
+ * copy is running when the installer replaces it, then starts the installer
+ * as an update. Paths and the process number ride this script's environment,
+ * never the command's text; the script quotes them into the hand-over's
+ * script itself. A wait that runs past five minutes starts the installer
+ * anyway, which ends what is left of the old copy itself. It exits 1 when
+ * Windows refused to start the hand-over.
  */
 export const RUN_INSTALLER_SCRIPT = [
-  "Wait-Process -Id ([int]$env:INFINITARY_UPDATE_WAIT) -Timeout 300 -ErrorAction SilentlyContinue",
-  "Start-Process -FilePath $env:INFINITARY_UPDATE_INSTALLER -ArgumentList '--updated','/S','--force-run'",
-].join("; ");
+  "$ErrorActionPreference = 'Stop'",
+  "$wait = [int]$env:INFINITARY_UPDATE_WAIT",
+  '$installer = $env:INFINITARY_UPDATE_INSTALLER.Replace("\'", "\'\'")',
+  "$handOver = \"Wait-Process -Id $wait -Timeout 300 -ErrorAction SilentlyContinue; Start-Process -FilePath '$installer' -ArgumentList '--updated','/S','--force-run'\"",
+  "$encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($handOver))",
+  "$shell = Join-Path $PSHOME 'powershell.exe'",
+  "$hidden = New-CimInstance -ClassName Win32_ProcessStartup -ClientOnly -Property @{ ShowWindow = [uint16]0 }",
+  '$started = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = "`"$shell`" -NoProfile -NonInteractive -WindowStyle Hidden -EncodedCommand $encoded"; ProcessStartupInformation = $hidden }',
+  "if ($started.ReturnValue -ne 0) { exit 1 }",
+].join("\n");
 
 export type WindowsInstallerOptions = {
   /** The run's own userData: the downloads folder and the channel marker. */
@@ -97,7 +112,6 @@ export function createWindowsInstaller(
               INFINITARY_UPDATE_WAIT: String(options.pid ?? process.pid),
               INFINITARY_UPDATE_INSTALLER: file,
             },
-            detached: true,
             stdio: "ignore",
             windowsHide: true,
           },
@@ -108,15 +122,13 @@ export function createWindowsInstaller(
         );
         return;
       }
-      child.once("error", () =>
+      const refused = () =>
         reject(
           new UpdateInstallProblem("The installer could not start, so nothing was installed."),
-        ),
-      );
-      child.once("spawn", () => {
-        child.unref();
-        resolve();
-      });
+        );
+      child.once("error", refused);
+      // The script ends once Windows started the hand-over, or refused to.
+      child.once("exit", (code) => (code === 0 ? resolve() : refused()));
     });
   }
 

@@ -75,6 +75,14 @@ final class PhoneSceneTouchView: UIView, UIGestureRecognizerDelegate {
         }
     }
     static func square(_ point: CGPoint) -> CGRect { CGRect(x: point.x - 22, y: point.y - 22, width: 44, height: 44) }
+    /// The square accessibility reads for `target`: 44 points, shrunk where another target sits closer, so no other
+    /// square covers its center and a query at its center finds it. A program's moons sit closer than 44 points apart.
+    func square(of target: Target, among all: [Target]) -> CGRect {
+        let gap = all.lazy.filter { $0.id != target.id }
+            .map { max(abs($0.point.x - target.point.x), abs($0.point.y - target.point.y)) }.min() ?? .infinity
+        let half = max(1, min(22, gap / 2))
+        return CGRect(x: target.point.x - half, y: target.point.y - half, width: half * 2, height: half * 2)
+    }
 
     /// Where and when the finger landed. The tap is recognized only as the finger lifts, while the crew keep moving on
     /// the render thread; the crewmate under the finger is the one the frame on screen at touch-down drew there, as a
@@ -131,13 +139,16 @@ final class PhoneSceneTouchView: UIView, UIGestureRecognizerDelegate {
             set {}
         }
         override var accessibilityFrameInContainerSpace: CGRect {
-            get { target.map { PhoneSceneTouchView.square($0.point) } ?? .zero }
+            get {
+                guard let view, let target else { return .zero }
+                return view.square(of: target, among: view.targets())
+            }
             set {}
         }
         override var accessibilityFrame: CGRect {
             get {
                 guard let view, let target else { return .zero }
-                return UIAccessibility.convertToScreenCoordinates(PhoneSceneTouchView.square(target.point), in: view)
+                return UIAccessibility.convertToScreenCoordinates(view.square(of: target, among: view.targets()), in: view)
             }
             set {}
         }

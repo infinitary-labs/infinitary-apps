@@ -1,4 +1,4 @@
-import { CARD_DRAFTS, type CardDraft } from "@shared/cardDrafts";
+import { CARD_DRAFTS, type CardDraft, type CardDraftChange } from "@shared/cardDrafts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { startCardDrafts } from "./cardDrafts";
 import { DRAFT_QUIET_MS } from "./draftSync";
@@ -12,7 +12,7 @@ type Listener = (state: ShellState, previous: ShellState) => void;
 
 function windowWith(changes: string[]) {
   const drafts = vi.fn(async (): Promise<CardDraft[]> => []);
-  const draft = vi.fn(async (cardId: string) => ({
+  const draft = vi.fn(async (cardId: string, _change: CardDraftChange) => ({
     draft: { cardId, revision: 1, answers: [], words: "", notes: [] },
   }));
   vi.stubGlobal("window", {

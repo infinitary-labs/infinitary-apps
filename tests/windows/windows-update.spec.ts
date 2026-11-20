@@ -1,7 +1,8 @@
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { promisify } from "node:util";
 import { expect, type Page, test } from "@playwright/test";
 import { runLabelOf } from "@shared/codeNames";
 import type { UpdateChannel } from "@shared/update";
@@ -145,17 +146,26 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
       // Before the window starts the command: Task Scheduler gives it this person's environment.
       trustSystemStore(true);
       feed = await startUpdateFeed({ channel, installers, pfx: made.pfx, passphrase });
-      // Node, as the app's own runs it, reads the feed with only the person's trust.
-      const reading = execFileSync(
-        process.execPath,
-        [
-          "-e",
-          "fetch(process.argv[1]).then((r) => console.log(r.status), (e) => console.log(String(e.cause ?? e)))",
-          publicBuildsUrl,
-        ],
-        { encoding: "utf8", env: { ...process.env, NODE_USE_SYSTEM_CA: "1" } },
-      ).trim();
-      keep("feed-trusted.txt", reading);
+      // Node, as the app's own runs it, reads the feed with only the person's
+      // trust. The reader is its own process, read without blocking this
+      // one, which serves the feed.
+      const read = async (systemCa: boolean) =>
+        (
+          await promisify(execFile)(
+            process.execPath,
+            [
+              "-e",
+              "fetch(process.argv[1]).then((r) => console.log(r.status), (e) => console.log(String(e.cause ?? e)))",
+              publicBuildsUrl,
+            ],
+            {
+              encoding: "utf8",
+              env: { ...process.env, NODE_USE_SYSTEM_CA: systemCa ? "1" : "" },
+            },
+          )
+        ).stdout.trim();
+      const reading = await read(true);
+      keep("feed-trusted.txt", `with the system store: ${reading}\nwithout: ${await read(false)}`);
       expect(reading).toBe("200");
     });
 

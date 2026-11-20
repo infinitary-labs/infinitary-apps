@@ -8,5 +8,6 @@
   "mergeHeldOther": "Une autre demande de tirage est devenue le changement actuel de cette tâche après l’apparition de cette carte. Fusionner revient quand la carte l’affiche.",
   "mergeHeldPushed": "Une version plus récente a été poussée après l’apparition de cette carte. Fusionner revient quand la carte affiche la version plus récente.",
   "mergeSetByFirstMate": "Défini par votre second pour cette tâche.",
-  "mergeSetInProject": "Défini dans les réglages de ce projet."
+  "mergeSetInProject": "Défini dans les réglages de ce projet.",
+  "mergeWaitsForReview": "Cette fusion attend que vous répondiez à la revue :"
 }

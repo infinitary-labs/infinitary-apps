@@ -30,7 +30,7 @@ import {
 import { type FactDotState, factDotSvg } from "@shared/factDot";
 import { overrideCellWords, overrideWords, standingOverride } from "@shared/holds";
 import { said, saidMark } from "@shared/i18n/said";
-import { HELD_LINE, heldMerges } from "@shared/mergeHeld";
+import { HELD_LINE, heldMerges, mergeActionsOf } from "@shared/mergeHeld";
 import { opensPullRequest, type RepoDelivery } from "@shared/repos";
 import {
   BATCH_CHECK_WORDS,
@@ -83,6 +83,8 @@ export type SettleFactsReading = {
   behind?: (card: Card) => MergeBehind | null | undefined;
   /** The rows of work the crew filed under the task's name now (`SettleFacts.followupNotice`). */
   followups?: () => string | undefined;
+  /** The titles of the review's questions about the task still waiting on the captain. */
+  reviewQuestions?: () => readonly string[];
 };
 
 /**
@@ -115,6 +117,20 @@ export function heldLine(why: "pushed" | "other", merges: Card["actions"]): stri
   const kept = escapeCardText(JSON.stringify(merges));
   const words = said(why === "pushed" ? "mergeHeldPushed" : "mergeHeldOther");
   return `<p class="inf-panel" ${MERGE_HELD_MARK}="${kept}">${saidMark(words, "strong")}</p>`;
+}
+
+/**
+ * The line a merge card carries while the review's questions about its task
+ * wait on the captain (INF-5396's audit, finding 2): each question by its
+ * title, since the merge waits for their answers.
+ */
+const REVIEW_QUESTIONS_LINE = /<div class="inf-panel" data-merge-waits[^>]*>[\s\S]*?<\/ul><\/div>/;
+
+/** The merge card's line naming the review's open questions, or none. */
+function reviewQuestionsLine(titles: readonly string[]): string {
+  if (titles.length === 0) return "";
+  const items = titles.map((title) => `<li>${escapeCardText(title)}</li>`).join("");
+  return `<div class="inf-panel" data-merge-waits style="margin-bottom: var(--space-3)">${saidMark(said("mergeWaitsForReview"), "p")}<ul>${items}</ul></div>`;
 }
 
 /** The work-filed rows a merge card carries (`SettleFacts.followupNotice`): each row closes on its last span. */
@@ -163,6 +179,17 @@ export function settleCardFacts(card: Card, read: SettleFactsReading): Card {
         : `${heldLine(behind.why === "other" ? "other" : "pushed", taken)}${card.body}`,
       actions: card.actions.filter((action) => !merges(action) && action.passes !== "checks"),
     };
+  }
+  // The review's open questions follow the record like the strip: a merge
+  // card names each while it waits on the captain, and drops the line once
+  // they are answered.
+  const offersMerge = mergeActionsOf(card).length > 0;
+  if (read.reviewQuestions && (offersMerge || REVIEW_QUESTIONS_LINE.test(card.body))) {
+    const titles = offersMerge ? read.reviewQuestions() : [];
+    const line = reviewQuestionsLine(titles);
+    const rest = card.body.replace(REVIEW_QUESTIONS_LINE, "");
+    const body = `${line}${rest}`;
+    if (body !== card.body) card = { ...card, body };
   }
   const relabeled = (card: Card): Card => {
     const label = read.mergeLabel?.(card);

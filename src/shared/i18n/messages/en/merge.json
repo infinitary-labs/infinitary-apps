@@ -8,5 +8,6 @@
   "mergeHeldOther": "Another pull request became this task's current change after this card went up. Merge returns when this card shows it.",
   "mergeHeldPushed": "A newer version was pushed after this card went up. Merge returns when this card shows the newer version.",
   "mergeSetByFirstMate": "Set by your first mate for this task.",
-  "mergeSetInProject": "Set in this project's settings."
+  "mergeSetInProject": "Set in this project's settings.",
+  "mergeWaitsForReview": "This merge waits until you answer the review:"
 }

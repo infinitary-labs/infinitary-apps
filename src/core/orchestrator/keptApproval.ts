@@ -63,6 +63,7 @@ function waitOf(result: SettleOutcome, undecided: boolean): MergeWait {
     case "queue":
     case "host-queue":
     case "host-removed":
+    case "questions":
       return result.stop;
     default:
       if (result.refusal?.refused === "not-signed-in") return "sign-in";

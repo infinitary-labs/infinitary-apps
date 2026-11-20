@@ -3,10 +3,13 @@
  * words the window, its panels and the shared, core, main-process and
  * preload code show come from the catalog, so a file under those roots
  * holds no words typed in for a person to read. The files that still do are on `RAW_WORDS_LEDGER` with how many
- * runs of words each holds; the ledger only shrinks. A file not on it must
- * hold none, a listed file may not gain one, and a listed file that lost
- * some must lower its count, or leave the ledger at none, in the same pull
- * request.
+ * runs of words each held when listed. The check fails only when a file gains
+ * words: a file not on it must hold none, a listed file may not hold more than
+ * its entry, and a file the branch changed may not hold more than it did where
+ * the branch started. A file that lost words needs no edit to the ledger: once
+ * the merge batch puts the change on main, main's own lower count is the next
+ * change's limit, so two changes that both lower one file never clash over it
+ * (INF-5395's fix 1).
  *
  * What counts as words a person reads, read from each file's syntax:
  * - JSX text holding a letter;
@@ -22,7 +25,7 @@
  * statement or expression starting there: a name, a symbol,
  * or a developer-only view.
  *
- *   node scripts/raw-words.ts          exits 1 naming each file out of step with the ledger
+ *   node scripts/raw-words.ts          exits 1 naming each file that gained raw words
  *   node scripts/raw-words.ts --list   every file holding raw words, with its count
  *   node scripts/raw-words.ts --show <file>   each run of raw words in one file
  */
@@ -30,6 +33,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
+import { baseRef } from "./check-changed.ts";
 
 /**
  * Where the check reads: the window, the app's own panels, and the shared,
@@ -318,9 +322,12 @@ export function isCheckedFile(path: string): boolean {
 }
 
 /**
- * The files that still hold raw words, with how many runs each holds. It only
- * shrinks: each area that moves its words into the catalog lowers or removes
- * its files' entries in the same pull request, until the ledger is empty.
+ * The files that still hold raw words, with how many runs each held when
+ * listed: the most each may hold. A change never has to lower an entry; the
+ * branch's starting point holds a file to what main holds now
+ * (`ledgerProblems`'s `atBase`). An entry is added only for a file that must
+ * hold words, such as one split out of a listed file, and the ledger is
+ * emptied when every area's words are in the catalog.
  */
 export const RAW_WORDS_LEDGER: Readonly<Record<string, number>> = {
   "src/core/attachments.ts": 1,
@@ -1077,15 +1084,22 @@ export const RAW_WORDS_LEDGER: Readonly<Record<string, number>> = {
   "src/shared/writeAsk.ts": 2,
 };
 
-/** Each problem with the files' raw words against the ledger, as one line. */
+/**
+ * Each file that gained raw words, as one line: one not on the ledger that
+ * holds some, a listed one holding more than its entry, and one holding more
+ * than it did where the branch started (`atBase`, read only for the files that
+ * existed there). A file that lost words, or an entry left above its file's
+ * count, is no problem: the check fails only when a file gains words.
+ */
 export function ledgerProblems(
   counts: Record<string, number>,
   ledger: Readonly<Record<string, number>>,
-  script = "scripts/raw-words.ts",
+  atBase: Readonly<Record<string, number>> = {},
 ): string[] {
   const problems: string[] = [];
   for (const [path, count] of Object.entries(counts)) {
     const listed = ledger[path];
+    const before = atBase[path];
     if (count === 0) continue;
     if (listed === undefined)
       problems.push(
@@ -1093,16 +1107,35 @@ export function ledgerProblems(
       );
     else if (count > listed)
       problems.push(
-        `${path}: ${count} run(s) of raw words, more than the ledger's ${listed}; put the new words in the catalog (docs/i18n.md), the ledger only shrinks`,
+        `${path}: ${count} run(s) of raw words, more than the ledger's ${listed}; put the new words in the catalog (docs/i18n.md)`,
       );
-    else if (count < listed)
-      problems.push(`${script}: ${path} now holds ${count} run(s) of raw words; lower its entry to ${count}`);
-  }
-  for (const path of Object.keys(ledger)) {
-    if (!counts[path])
-      problems.push(`${script}: ${path} holds no raw words now; remove its entry, and the ledger shrinks`);
+    else if (before !== undefined && count > before)
+      problems.push(
+        `${path}: ${count} run(s) of raw words, more than the ${before} it held where this branch started; put the new words in the catalog (docs/i18n.md)`,
+      );
   }
   return problems;
+}
+
+/**
+ * The raw words each checked file the working copy changed held at `base`,
+ * read under its name there, so a renamed file keeps its count. A file new
+ * since then has none here and answers to the ledger alone.
+ */
+export function countsAtBase(
+  base: string,
+  checked: (path: string) => boolean,
+  count: (path: string, text: string) => number,
+): Record<string, number> {
+  const git = (args: string[]) =>
+    execFileSync("git", args, { encoding: "utf8", maxBuffer: 64 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] });
+  const atBase: Record<string, number> = {};
+  for (const line of git(["diff", "--name-status", "-M", "--diff-filter=MR", base, "--", "src"]).split("\n")) {
+    const [status, from, to = from] = line.split("\t");
+    if (!status || !from || !to || !checked(to)) continue;
+    atBase[to] = count(to, git(["show", `${base}:${from}`]));
+  }
+  return atBase;
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
@@ -1131,7 +1164,12 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       for (const [path, count] of Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)))
         if (count) console.log(`  "${path}": ${count},`);
     } else {
-      const problems = ledgerProblems(counts, RAW_WORDS_LEDGER);
+      // Where the branch started: the pull request check's base, or the
+      // branch's merge base with main. On main's own one-commit checkout it is
+      // HEAD, nothing has changed since, and the ledger alone holds each file.
+      const base = process.env.CHANGE_BASE || baseRef();
+      const atBase = countsAtBase(base, isCheckedFile, (path, text) => rawWordsIn(path, text).length);
+      const problems = ledgerProblems(counts, RAW_WORDS_LEDGER, atBase);
       if (problems.length) {
         console.error(problems.join("\n"));
         process.exitCode = 1;

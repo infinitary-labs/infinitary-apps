@@ -62,9 +62,11 @@ describe("continuation instructions served at the seven moments", () => {
     );
     expect(FIRSTMATE_PROMPT_CORE).toContain("without a merge action");
     // INF-3167, the captain's choice A: every wait is recorded and holds
-    // the waiter's start and merge until the other task closes.
+    // the waiter's start and merge until the other task closes; INF-5269's
+    // default-on rule starts it at that task's approval on batched pull
+    // requests unless the waiter needs it merged.
     expect(FIRSTMATE_PROMPT_CORE).toContain(
-      "Record every wait that turn with link_tasks blocks from the task whose close gives what the waiter needs; it holds start and merge until then.",
+      "Record every wait that turn with link_tasks blocks from the task whose close gives what the waiter needs; it holds start and merge until then, except that on batched pull requests the start comes at that task's merge approval: when the waiter needs it merged, such as for a release, add that wait with update_task blocked_by and needs_merge in one call instead, since a link alone can start it at once.",
     );
   });
 });

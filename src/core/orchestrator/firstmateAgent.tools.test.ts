@@ -4,9 +4,15 @@ import { join } from "node:path";
 import { runsHereOnly } from "@shared/repos";
 import { describe, expect, it, vi } from "vitest";
 import { deferred } from "../../../tests/helpers/deferred";
-import { decodeContext, fakeClockEachTest, setup } from "../../../tests/helpers/firstmateHarness";
+import {
+  decodeContext,
+  fakeClockEachTest,
+  setup,
+  tick,
+} from "../../../tests/helpers/firstmateHarness";
 import { firstmateTools } from "../../../tests/helpers/firstmateTools";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { readTaskQueryText } from "../../../tests/helpers/taskQueryText";
 import { crewmateHandoverDir } from "../paths";
 import { toolsFingerprint } from "../pi/piResources";
@@ -915,6 +921,73 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
       }),
     ).toBe(`Updated ${release.key}: needs_merge ${notes.key}, waits for ${notes.key}.`);
     expect(await read()).toMatchObject({ needs_merge: [notes.key] });
+  });
+
+  // The review's finding: adding an already approved wait the task needs merged, with its
+  // merge need in the same update_task call, leaves queued work unstarted until that merge.
+  it("keeps queued work unstarted when one call adds an approved wait it needs merged", async () => {
+    const { agent, specs, tasks } = setup();
+    await agent.converse("queue the release behind the approved feature");
+    const tools = piToolsOf(specs[0]?.tools ?? []) as unknown as GraphTool[];
+    const text = async (name: string, params: Record<string, unknown>) =>
+      (
+        await tools
+          .find((tool) => tool.name === name)!
+          .execute("c", params, undefined, undefined, {})
+      ).content[0]?.text ?? "";
+    // Batched pull requests: a wait otherwise starts the waiter at the blocker's approval.
+    const batched = (id: string, title: string) =>
+      tasks.create({
+        id,
+        title,
+        prompt: title,
+        repoId: null,
+        startPolicy: "on-request",
+        shape: { kind: "implement", delivery_ask: "queue-pr" },
+      });
+    const feature = batched("feature", "Feature");
+    const release = batched("release", "Release");
+    const notes = batched("notes", "Release notes");
+    seedDelivery(tasks, feature.id, {
+      mergeAuthorization: {
+        version: 1,
+        id: "approval-feature",
+        generation: 1,
+        issuer: "captain",
+        at: 1,
+        card: { id: "merge-card", offerId: "offer-1", actionId: "merge" },
+        target: {
+          repoId: "r1",
+          host: "github.com",
+          owner: "example",
+          name: "nimbus-api",
+          branch: "inf/feature-a1b2",
+          delivery: "direct-pr",
+          method: "squash",
+        },
+        approvedHead: "0f3c9a1e4b7d2c6a8e5f1b3d9c7a2e4f6b8d0c1a",
+        proceedWithOpen: false,
+        status: "standing",
+        lineage: [],
+      },
+    });
+    const queue = (task: string, needsMerge: string[]) =>
+      text("update_task", {
+        task,
+        start_policy: "when-ready",
+        blocked_by: [feature.key || feature.id],
+        needs_merge: needsMerge,
+      });
+    await queue(release.key || release.id, [feature.key || feature.id]);
+    // The notes need only the feature's code, so its approval opens them; the release waits.
+    await queue(notes.key || notes.id, []);
+    await tick();
+    expect(tasks.get(release.id)).toMatchObject({ status: "open", startedAt: null });
+    expect(tasks.graph.waitingOn(release.id).map((task) => task.id)).toEqual([feature.id]);
+    expect(tasks.graph.waitingOn(notes.id)).toEqual([]);
+
+    tasks.close(feature.id, { status: "done", reason: "merged", actor: "host" });
+    expect(tasks.graph.waitingOn(release.id)).toEqual([]);
   });
 
   // INF-2062: the captain asked that pausing a task moves it back to the backlog, never a steer to stay idle.

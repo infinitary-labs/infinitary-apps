@@ -24,12 +24,14 @@ import { servedNumber } from "@shared/i18n/format";
 import { acceptedValidation } from "@shared/liveValidation";
 import { liveValidationSummary } from "@shared/liveValidationSummary";
 import {
+  assertBranchStoryAddress,
   hostedPresentation,
   type LocalPresentationDestination,
   nativePresentationMedia,
   type PresentationDestination,
   presentationFormat,
   samePresentationDestination,
+  storyAtOrigin,
 } from "@shared/presentationDestination";
 import { presentationValidation } from "@shared/presentationValidation";
 import type { NamingRule } from "../../shared/runbooks";
@@ -112,6 +114,8 @@ type PublicationOpening = {
   base?: string;
   /** Recheck and consume the caller's publication authority after preflight, before uploads. */
   beforePublish?: (head: string) => void;
+  /** Re-read the approved address at the plain branch publication boundaries. */
+  branchOrigin?: () => string | null;
   /** Whether Careful's records complete no-mistakes' review, test and document at this version. */
   attests?: (head: string) => boolean;
   /** The ref this Mac holds the branch at when not under its own name (INF-2490). */
@@ -189,6 +193,8 @@ export class ChangePresentations {
        * call made again adds no revision and uploads nothing (show_merge_card).
        */
       reuseSame?: boolean;
+      /** The approved project address seen by the caller, checked again when saving. */
+      approvedAddress?: { origin: string; current: () => boolean; recover: boolean };
     } = {},
   ): Promise<number> {
     try {
@@ -199,7 +205,25 @@ export class ChangePresentations {
             throw new Error("The code changed. Prepare a story for the current committed version.");
           const branch = await this.options.branch?.(taskId);
           const destination = await storyDestination(target);
-          const current = this.options.tasks.delivery.changePresentation(taskId, branch);
+          const kept = this.options.tasks.delivery.changePresentation(taskId, branch);
+          const address = how.approvedAddress;
+          if (address) assertBranchStoryAddress(destination, address.origin);
+          const former = kept?.revisions.at(-1)?.destination;
+          // An address already moved by an older build has no retirement event. Recover only
+          // an ordinary remote story, and only after reading the currently approved destination.
+          const retired =
+            address?.recover &&
+            former &&
+            kept?.forkNumber === undefined &&
+            (hostedPresentation(former) && hostedPresentation(destination)
+              ? !former.media && !destination.media
+              : !hostedPresentation(former) &&
+                former.kind === "branch" &&
+                !hostedPresentation(destination) &&
+                destination.kind === "branch") &&
+            storyAtOrigin(destination, address.origin) &&
+            !storyAtOrigin(former, address.origin);
+          const current = retired ? undefined : kept;
           if (
             current?.publication &&
             current.publication.state !== "confirmed" &&
@@ -273,7 +297,10 @@ export class ChangePresentations {
             )
               throw new Error(`Keep the original Before evidence for ${view.id}.`);
           }
-          await this.save(taskId, branch, (record) => {
+          await this.save(taskId, branch, (saved) => {
+            if (address && !address.current())
+              throw new Error("The approved project address changed. Prepare the story again.");
+            const record = retired ? undefined : saved;
             const receipts = [...(record?.receipts ?? [])];
             for (const asset of this.nativeAssets(story)) {
               if (!hostedPresentation(story.destination))
@@ -369,9 +396,13 @@ export class ChangePresentations {
       if (around || recovery)
         throw new Error("A pushed branch has no description to replace or reconcile.");
       await this.validatePrepared(story, forge, remoteOnly);
+      if (opening?.branchOrigin)
+        assertBranchStoryAddress(story.destination, opening.branchOrigin());
       const existing = await forge.changeFor(branch);
       if (existing && existing.headSha !== story.head)
         throw new Error("The pushed branch does not match this story.");
+      if (opening?.branchOrigin)
+        assertBranchStoryAddress(story.destination, opening.branchOrigin());
       opening?.beforePublish?.(story.head);
       // A placed branch is brought home before publication. Preserve the plain
       // forge's first push from there; an already-pushed branch needs no write.
@@ -386,10 +417,14 @@ export class ChangePresentations {
       await this.validateCurrent(story, forge, branch, remoteOnly);
       if (change.headSha !== story.head)
         throw new Error("The pushed branch does not match this story.");
-      await this.save(taskId, branch, (record) => ({
-        ...this.required(record),
-        completion: { revision, head: story.head, contentHash: presentationContentHash(story) },
-      }));
+      await this.save(taskId, branch, (record) => {
+        if (opening?.branchOrigin)
+          assertBranchStoryAddress(story.destination, opening.branchOrigin());
+        return {
+          ...this.required(record),
+          completion: { revision, head: story.head, contentHash: presentationContentHash(story) },
+        };
+      });
       return change;
     }
     const destination = story.destination;

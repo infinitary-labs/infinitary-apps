@@ -86,16 +86,16 @@ export function taskPull(
   return review ? { branch: review.branch, review } : undefined;
 }
 
-/** Hosted offers are never reinterpreted using the project's current address. */
+/** Address-bound offers are never reinterpreted using the project's current address. */
 export function matchesOfferDestination(
   record: TaskRecord,
   repo: ForgeRepo,
   offer: CompletionOffer,
   branch: string,
 ): boolean {
-  if (!hasChangeRequests(repo.host?.kind)) return offer.destination === undefined;
+  if (offer.retired) return false;
+  if (!offer.destination) return !hasChangeRequests(repo.host?.kind);
   return (
-    !!offer.destination &&
     offer.destination.origin === publicationRepo(record, repo).origin &&
     offer.destination.repoId === ("id" in repo ? repo.id : record.repoId) &&
     offer.destination.branch === branch

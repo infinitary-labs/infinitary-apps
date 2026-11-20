@@ -8,5 +8,6 @@
   "settleMerging": "Fusion en cours",
   "settleMergingAfterTurn": "Fusion dès que son équipier aura fini ce qu’il fait",
   "settleMergingChange": "Fusion de {change}",
-  "settleMergingChangeAfterTurn": "Fusion de {change} dès que son équipier aura fini ce qu’il fait"
+  "settleMergingChangeAfterTurn": "Fusion de {change} dès que son équipier aura fini ce qu’il fait",
+  "settleProjectAddressChanged": "L’adresse du projet a changé. Affichez une nouvelle carte de fusion."
 }

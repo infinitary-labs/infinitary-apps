@@ -26,7 +26,7 @@ import {
 import { readyPresentation } from "@shared/changePresentation";
 import { currentCheckStatus, failedBatch } from "@shared/checkSnapshot";
 import { HERE } from "@shared/deviceNames";
-import { sameRequestLink } from "@shared/forge";
+import { hasChangeRequests, sameRequestLink } from "@shared/forge";
 import { changePageUrl } from "@shared/forgeKinds";
 import { choiceWords, type HoldOverride, overridePasses, overrideWords } from "@shared/holds";
 import * as m from "@shared/i18n/messages.generated";
@@ -37,6 +37,7 @@ import {
 } from "@shared/integrations";
 import { VALIDATION_GAPS_FIELD } from "@shared/liveValidation";
 import { heldMerges } from "@shared/mergeHeld";
+import { storyAtOrigin } from "@shared/presentationDestination";
 import { opensPullRequest } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
 import { SECRET_BRING_CARD_WORDS } from "@shared/secretBring";
@@ -74,6 +75,7 @@ import {
   writeSentLine,
 } from "./integrationAsks";
 import { approvableOffer, matchesOfferDestination, taskPull } from "./mergeAuthorization";
+import { publicationRepo } from "./publicationRepo";
 import { reviewedTaskOf } from "./reviewCard";
 import { reviewHistory } from "./reviewHistory";
 import { holdsMerge, type MergeBehind } from "./settleCardFacts";
@@ -1360,6 +1362,7 @@ export class CardActions {
     );
     // A card with no offer of its own shows no version to fall behind.
     if (!offered) return undefined;
+    if (offered.retired) return { why: "other", shown: offered.headSha };
     const shownFor = offered.shownFor ?? offered.prNumber;
     const current = currentChange(delivery, associated.branch);
     const changes = this.core.options.tasks.changesFor(associated.id);
@@ -1398,6 +1401,20 @@ export class CardActions {
       shownFor ?? current.number,
     );
     const newest = ledger?.revisions.at(-1);
+    // Older plain-host cards did not bind the address. Keep their click only where
+    // the currently confirmed story still identifies exactly what the card showed.
+    if (
+      repo?.origin &&
+      opensPullRequest(this.core.facts.taskDelivery(associated.id)) &&
+      !hasChangeRequests(repo.host?.kind) &&
+      offered.presentationRevision !== undefined &&
+      (!newest ||
+        !storyAtOrigin(newest.destination, publicationRepo(associated, repo).origin ?? null) ||
+        (!offered.destination &&
+          (!offered.presentationContentHash ||
+            readyPresentation(ledger)?.contentHash !== offered.presentationContentHash)))
+    )
+      return { why: "other", ...shown };
     const read = !elsewhere && current.number !== undefined ? delivery?.headSha : undefined;
     const pushed = read !== undefined && read !== offered?.headSha;
     const story = ledger !== undefined || offered?.presentationRevision !== undefined;

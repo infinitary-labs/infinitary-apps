@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { forgeOf } from "./forge";
 import {
   CHANGE_REQUEST_HOSTS,
   CHANGE_REQUEST_KINDS,
@@ -75,4 +76,34 @@ export function samePresentationDestination(
   return left.kind === "local" && right.kind === "local"
     ? left.project === right.project
     : left.kind === "branch" && right.kind === "branch" && left.origin === right.origin;
+}
+
+/** Match a saved destination to an approved Git address, not to its audience. */
+export function storyAtOrigin(
+  destination: PresentationDestination,
+  origin: string | null,
+): boolean {
+  if (!hostedPresentation(destination))
+    return destination.kind === "branch" && destination.origin === origin;
+  const where = forgeOf(origin);
+  if (where.host !== destination.host || !where.owner || !where.name) return false;
+  const name = `${where.owner}/${where.name}`;
+  return presentationFormat(destination) === "github"
+    ? destination.fullName.toLowerCase() === name.toLowerCase()
+    : destination.fullName === name;
+}
+
+/** Plain stories agree with the address the person approved, not just with the checkout. */
+export function assertBranchStoryAddress(
+  destination: PresentationDestination,
+  approved: string | null,
+): void {
+  if (
+    "kind" in destination &&
+    destination.kind === "branch" &&
+    !storyAtOrigin(destination, approved)
+  )
+    throw new Error(
+      "The checkout does not use the approved project address. Update its origin and try again.",
+    );
 }

@@ -3282,6 +3282,7 @@
 "settleMergingAfterTurn" = "Wird zusammengeführt, sobald sein Crewmitglied mit seiner aktuellen Arbeit fertig ist";
 "settleMergingChange" = "%1$@ wird zusammengeführt";
 "settleMergingChangeAfterTurn" = "%1$@ wird zusammengeführt, sobald sein Crewmitglied mit seiner aktuellen Arbeit fertig ist";
+"settleProjectAddressChanged" = "Die Projektadresse hat sich geändert. Zeige eine neue Merge-Karte an.";
 "shellAmbientPause" = "Hintergrundmusik pausieren";
 "shellAmbientPlay" = "Hintergrundmusik abspielen";
 "shellAmbientQuiet" = "Leise, während du sprichst";

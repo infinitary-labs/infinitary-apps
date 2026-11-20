@@ -1517,6 +1517,9 @@ describe("shared story delivery boundaries", () => {
       // The crewmate delivers from a branch it checked out, as INF-3472 did.
       const at = await saved("github", async () => ({ branch: phone, head: original }));
       const destination = { kind: "branch" as const, origin: "https://git.example.test/x/y.git" };
+      const repoId = at.tasks.get("ab12cd34")?.repoId;
+      if (!repoId) throw new Error("The plain Git fixture needs a managed project.");
+      at.repos.configure(repoId, { origin: destination.origin });
       Object.assign(at.forge, {
         kind: "git",
         place: null,

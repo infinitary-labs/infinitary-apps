@@ -931,6 +931,16 @@ A branch with no common history with the current default branch is left out, for
 When the approved address changes, the app retires the former open batch locally without a merge receipt or remote cleanup.
 Its changes stay with their tasks for fresh approval, and eligible approvals can form a new batch at the new address.
 Waiting approvals also stay at the address they named and require fresh approval before joining a batch at the new address.
+The app retires open tasks' active story ledgers that name the former destination, so a crewmate can prepare revision 1 with a new Before base after rebuilding its branch there.
+For an ordinary remote story left behind by an earlier build, preparing against the approved destination starts a new ledger when the old story names another address; this does not relax the same-address base or audience checks.
+A story pinned to an unchanged publication address keeps its ledger.
+A story at the new address needs a new merge card and approval, even for a plain Git branch at the same commit and story revision.
+Returning to a former address does not restore a retired offer.
+Preparing, confirming or merging a plain Git story requires the checkout and story to agree with its approved address.
+For a managed origin, the range check compares the home project folder’s cached default branch to the tip advertised by the approved address, fetching when the cached ref is missing or differs.
+It never follows a different checkout address.
+A task pinned to an unchanged publication address reads that address’s default branch and keeps its fetched ref apart from the moved project’s tracking refs.
+Plain Git writes also refuse a separate push address that differs from the approved read route.
 A declared repair is reset with the former batch: its declaration, the versions that held and its verified base are dropped, so its whole branch goes as an ordinary change once approved again at the new address.
 A move noticed after a combine's reads or during its push leaves its result unsaved, and nothing is pushed to the former address once the move is seen.
 A change that no longer combines is told whether it clashes with the default branch as it is now, which bringing it up to date answers, or only with an approved change ahead of it in the batch, which the combine names (`ahead` on its left-out entry).

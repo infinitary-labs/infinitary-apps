@@ -8,5 +8,6 @@
   "settleMerging": "正在合并",
   "settleMergingAfterTurn": "等它的船员做完手头的事，就合并",
   "settleMergingChange": "正在合并 {change}",
-  "settleMergingChangeAfterTurn": "等它的船员做完手头的事，就合并 {change}"
+  "settleMergingChangeAfterTurn": "等它的船员做完手头的事，就合并 {change}",
+  "settleProjectAddressChanged": "项目地址已更改。请显示一张新的合并卡片。"
 }

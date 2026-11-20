@@ -3282,6 +3282,7 @@
 "settleMergingAfterTurn" = "Merging once its crewmate finishes what it is doing";
 "settleMergingChange" = "Merging %1$@";
 "settleMergingChangeAfterTurn" = "Merging %1$@ once its crewmate finishes what it is doing";
+"settleProjectAddressChanged" = "The project address changed. Show a new merge card.";
 "shellAmbientPause" = "Pause ambient music";
 "shellAmbientPlay" = "Play ambient music";
 "shellAmbientQuiet" = "Quiet while you talk";

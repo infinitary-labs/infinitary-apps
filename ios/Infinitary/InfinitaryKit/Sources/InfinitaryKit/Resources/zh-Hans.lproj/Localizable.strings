@@ -3282,6 +3282,7 @@
 "settleMergingAfterTurn" = "等它的船员做完手头的事，就合并";
 "settleMergingChange" = "正在合并 %1$@";
 "settleMergingChangeAfterTurn" = "等它的船员做完手头的事，就合并 %1$@";
+"settleProjectAddressChanged" = "项目地址已更改。请显示一张新的合并卡片。";
 "shellAmbientPause" = "暂停环境音乐";
 "shellAmbientPlay" = "播放环境音乐";
 "shellAmbientQuiet" = "说话时静音";

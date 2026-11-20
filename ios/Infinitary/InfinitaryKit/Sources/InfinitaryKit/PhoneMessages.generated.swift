@@ -1027,8 +1027,10 @@ public enum PhoneMessages {
     public static func `mergeButtonPullRequest`() -> String { PhoneWords.format("mergeButtonPullRequest", []) }
     public static func `mergeButtonWhenChecksPass`() -> String { PhoneWords.format("mergeButtonWhenChecksPass", []) }
     public static func `mergeContinues`() -> String { PhoneWords.format("mergeContinues", []) }
+    public static func `mergeHeldEarlier`() -> String { PhoneWords.format("mergeHeldEarlier", []) }
     public static func `mergeHeldOther`() -> String { PhoneWords.format("mergeHeldOther", []) }
     public static func `mergeHeldPushed`() -> String { PhoneWords.format("mergeHeldPushed", []) }
+    public static func `mergeRefusedEarlier`() -> String { PhoneWords.format("mergeRefusedEarlier", []) }
     public static func `mergeSetByFirstMate`() -> String { PhoneWords.format("mergeSetByFirstMate", []) }
     public static func `mergeSetInProject`() -> String { PhoneWords.format("mergeSetInProject", []) }
     public static func `mergeWaitsForReview`() -> String { PhoneWords.format("mergeWaitsForReview", []) }
@@ -4716,8 +4718,10 @@ extension PhoneWords {
         "mergeButtonPullRequest": [],
         "mergeButtonWhenChecksPass": [],
         "mergeContinues": [],
+        "mergeHeldEarlier": [],
         "mergeHeldOther": [],
         "mergeHeldPushed": [],
+        "mergeRefusedEarlier": [],
         "mergeSetByFirstMate": [],
         "mergeSetInProject": [],
         "mergeWaitsForReview": [],

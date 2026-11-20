@@ -430,11 +430,13 @@ This Mac may run a newer version than a computer that runs work, as for the minu
 Before a crewmate turn there, this Mac has the task's working copy confirm the project's approved address (`PlacedCopies.followProject`), which a computer can do only once its hello lists `placed-project-address`.
 A connected computer whose hello lacks it refuses that turn as `ComputerBehindError`, naming the change (`src/core/connection/contractChanges.ts`); a computer not connected says nothing of its version, so the turn's order waits for it to be back, as any order does (`DeviceOutOfReachError`).
 A turn refused as `ComputerBehindError` never reaches its model and never closes its task (`CrewUpdates.waitForUpdateThere`): it ends as a pause, its words go back on its lane, and the feed says once that the task waits for Infinitary on that computer to be updated.
+The first task to wait on that computer brings back its one Update card, even after Not now (`recallUpdateCard`; `docs/devices.md`, "The card that asks for it"); the tasks that wait beside it raise no second card, and nobody is woken.
 Its lane then waits, with what the first mate sends meanwhile, as for an update under way (`waitsForUpdateThere`, the `update` lane hold), and a provider outage the lane already carries is kept but not told again as still down meanwhile.
 Once that computer is connected with a hello that lists the change, the lane goes on by itself: the computer coming back caught up sweeps it at once (`placedCaughtUp`), and so does the next sweep of the lanes.
 The wait lasts only as long as this Mac's run; after a restart here, the next turn is refused and waits again.
 A task that moved to another computer, or closed, waits no more.
-Other refusals that name an update there, such as preparing a working copy or starting a task, do not wait this way yet.
+A connected computer whose hello lacks such a change takes no new work (`WorkDevices.lacksTurnChange`, read by `Computers.takesNoWorkUntilUpdated`), though it speaks this Mac's major: automatic placement passes it by, and a task already placed there waits before it starts, as for a computer on an older major, with the same feed line and Update card.
+Other refusals that name an update there, such as preparing a working copy, do not wait this way yet.
 
 ### A copy that does not start
 

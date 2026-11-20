@@ -316,6 +316,11 @@ export type EscalationBriefFacts = {
   /** Its branch, kept because it held unlanded work (O1). */
   /** The hidden ref the rejected attempt's work was saved on when it closed. */
   previousWork?: string;
+  /**
+   * The failed attempt's pull request, which its failure left open where the
+   * project lives: the retry decides whether to build on it or overwrite it.
+   */
+  previousPullRequest?: { number: number; branch: string; url?: string };
 };
 
 /**
@@ -347,6 +352,13 @@ export function renderEscalationBrief(
   if (escalation.previousWork) {
     lines.push(
       `Its branch is gone, but its work is saved in the repository at ${escalation.previousWork} (\`git log ${escalation.previousWork}\`); read or start from it only if it helps, and do not assume it is right.`,
+    );
+  }
+  const pull = escalation.previousPullRequest;
+  if (pull) {
+    lines.push(
+      // i18n-exempt: served to the retry's crewmate in its brief, stays English
+      `Its pull request #${pull.number}${pull.url ? ` (${pull.url})` : ""} on branch ${pull.branch} is still open where the project lives: the failure did not close it. Decide yourself whether to build on top of it or overwrite it with your own work. If you deliver through a pull request of your own instead, say in your report that #${pull.number} is still open, so it is not left behind by accident.`,
     );
   }
   lines.push(

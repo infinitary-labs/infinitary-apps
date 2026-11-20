@@ -1028,11 +1028,14 @@ describe("a task that runs on a computer that runs work", () => {
       );
     expect(home.tasks.get("t-behind")).toMatchObject({ status: "active", activity: "idle" });
     expect(api.requests.length).toBe(requests);
+    // The wait brings back that computer's one Update card (INF-5442 behavior 1).
+    expect(home.updateCards).toEqual([at.deviceId]);
     // What the first mate sends meanwhile waits on the lane with the brief.
     expect(await home.supervisor.steer.steerCrewmate("t-behind", "Make it blue.")).toBe(
       "recorded-held",
     );
     expect(home.supervisor.facts.laneHold("t-behind")).toEqual({ kind: "update" });
+    expect(home.updateCards).toEqual([at.deviceId]);
 
     await at.restartComputer({ changes: CONTRACT_CHANGES.names });
     await expect.poll(() => home.tasks.get("t-behind")?.outcome).toBe("Made the footer blue.");

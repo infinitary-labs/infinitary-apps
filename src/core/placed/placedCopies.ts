@@ -20,7 +20,7 @@ import {
   workOrders,
 } from "@shared/work";
 import { DeviceOutOfReachError } from "../connection/connection";
-import { ComputerBehindError, contractChange, listsChange } from "../connection/contractChanges";
+import { ComputerBehindError, listsChange } from "../connection/contractChanges";
 import { type AppPaths, crewmatePlacedDir } from "../paths";
 import { TaskService } from "../tasks/taskService";
 import { ARTIFACTS_FOLDER, artifactPath, OLDER_ARTIFACTS_FOLDER } from "../workspace/artifacts";
@@ -42,7 +42,7 @@ import {
   type WorktreeAcquisition,
 } from "../workspace/workspaceService";
 import { sendSourceFile } from "./sourceFiles";
-import type { WorkDevices } from "./workDevices";
+import { FOLLOWS_PROJECT_ADDRESS, type WorkDevices } from "./workDevices";
 
 /**
  * The home's side of a task's working copy on a computer that runs work
@@ -111,8 +111,6 @@ export type PlacedCopiesOptions = {
 
 /** The most commits the home names as ones it has when it asks for a bundle. */
 const HAVE_MAX = 64;
-
-const FOLLOWS_PROJECT_ADDRESS = contractChange("placed-project-address");
 
 export class PreparationUnknown extends Error {}
 export class PreparationFailed extends Error {}

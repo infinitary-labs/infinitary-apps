@@ -28043,6 +28043,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `The task continues after this merge.`;
   }
+  function mergeHeldEarlier() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عرضت نسخة سابقة من Infinitary هذه البطاقة. يعود الدمج عندما تُعرض البطاقة من جديد. التغيير نفسه لم يتغيّر.`;
+      case "de":
+        return `Eine frühere Version von Infinitary hat diese Karte gezeigt. Zusammenführen ist wieder verfügbar, sobald die Karte erneut gezeigt wird. Die Änderung selbst ist unverändert.`;
+      case "es":
+        return `Una versión anterior de Infinitary mostró esta tarjeta. Fusionar vuelve cuando la tarjeta se muestre de nuevo. El cambio en sí no se movió.`;
+      case "fr":
+        return `Une version antérieure d’Infinitary a affiché cette carte. Fusionner revient quand la carte est affichée à nouveau. Le changement lui-même n’a pas bougé.`;
+      case "ja":
+        return `以前のバージョンの Infinitary がこのカードを表示しました。カードがもう一度表示されると、マージが戻ります。変更そのものは動いていません。`;
+      case "ko":
+        return `이전 버전의 Infinitary가 이 카드를 보여 줬어요. 카드가 다시 표시되면 병합이 다시 생겨요. 변경 자체는 그대로예요.`;
+      case "pt-BR":
+        return `Uma versão anterior do Infinitary mostrou este cartão. Mesclar volta quando o cartão for mostrado de novo. A mudança em si continua igual.`;
+      case "zh-Hans":
+        return `这张卡片是由较早版本的 Infinitary 显示的。卡片重新显示后，合并按钮会回来。更改本身没有变化。`;
+      case "zh-Hant":
+        return `這張卡片是由較早版本的 Infinitary 顯示的。卡片重新顯示後，合併按鈕會回來。變更本身沒有變化。`;
+      case "en-XA":
+        return `[Åñ éáŕļîéŕ ṽéŕšîöñ öƒ Îñƒîñîţáŕý šĥöŵéð ţĥîš çáŕð. Ṁéŕĝé ŕéţûŕñš ŵĥéñ ţĥîš çáŕð îš šĥöŵñ áĝáîñ. Ţĥé çĥáñĝé îţšéļƒ ðîð ñöţ ɱöṽé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮An earlier version of Infinitary showed this card. Merge returns when this card is shown again. The change itself did not move.‬`;
+    }
+    return `An earlier version of Infinitary showed this card. Merge returns when this card is shown again. The change itself did not move.`;
+  }
   function mergeHeldOther() {
     switch (currentLanguage()) {
       case "ar":
@@ -28096,6 +28123,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮A newer version was pushed after this card went up. Merge returns when this card shows the newer version.‬`;
     }
     return `A newer version was pushed after this card went up. Merge returns when this card shows the newer version.`;
+  }
+  function mergeRefusedEarlier() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `عرضت نسخة سابقة من Infinitary هذه البطاقة، لذلك لم أدمج. يعود الدمج عندما تُعرض البطاقة من جديد.`;
+      case "de":
+        return `Eine frühere Version von Infinitary hat diese Karte gezeigt, deshalb habe ich nicht zusammengeführt. Zusammenführen ist wieder verfügbar, sobald die Karte erneut gezeigt wird.`;
+      case "es":
+        return `Una versión anterior de Infinitary mostró esta tarjeta, así que no fusioné. Fusionar vuelve cuando la tarjeta se muestre de nuevo.`;
+      case "fr":
+        return `Une version antérieure d’Infinitary a affiché cette carte, donc je n’ai pas fusionné. Fusionner revient quand la carte est affichée à nouveau.`;
+      case "ja":
+        return `以前のバージョンの Infinitary がこのカードを表示したため、マージしませんでした。カードがもう一度表示されると、マージが戻ります。`;
+      case "ko":
+        return `이전 버전의 Infinitary가 이 카드를 보여 줘서 병합하지 않았어요. 카드가 다시 표시되면 병합이 다시 생겨요.`;
+      case "pt-BR":
+        return `Uma versão anterior do Infinitary mostrou este cartão, então não mesclei. Mesclar volta quando o cartão for mostrado de novo.`;
+      case "zh-Hans":
+        return `这张卡片是由较早版本的 Infinitary 显示的，所以我没有合并。卡片重新显示后，合并按钮会回来。`;
+      case "zh-Hant":
+        return `這張卡片是由較早版本的 Infinitary 顯示的，所以我沒有合併。卡片重新顯示後，合併按鈕會回來。`;
+      case "en-XA":
+        return `[Åñ éáŕļîéŕ ṽéŕšîöñ öƒ Îñƒîñîţáŕý šĥöŵéð ţĥîš çáŕð, šö Î ðîð ñöţ ɱéŕĝé. Ṁéŕĝé ŕéţûŕñš ŵĥéñ ţĥé çáŕð îš šĥöŵñ áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮An earlier version of Infinitary showed this card, so I did not merge. Merge returns when the card is shown again.‬`;
+    }
+    return `An earlier version of Infinitary showed this card, so I did not merge. Merge returns when the card is shown again.`;
   }
   function mergeSetByFirstMate() {
     switch (currentLanguage()) {
@@ -83612,8 +83666,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     mergeButtonPullRequest,
     mergeButtonWhenChecksPass,
     mergeContinues,
+    mergeHeldEarlier,
     mergeHeldOther,
     mergeHeldPushed,
+    mergeRefusedEarlier,
     mergeSetByFirstMate,
     mergeSetInProject,
     mergeWaitsForReview,
@@ -86298,8 +86354,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "mergeButtonPullRequest": [],
     "mergeButtonWhenChecksPass": [],
     "mergeContinues": [],
+    "mergeHeldEarlier": [],
     "mergeHeldOther": [],
     "mergeHeldPushed": [],
+    "mergeRefusedEarlier": [],
     "mergeSetByFirstMate": [],
     "mergeSetInProject": [],
     "mergeWaitsForReview": [],

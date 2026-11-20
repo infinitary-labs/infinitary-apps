@@ -117,7 +117,7 @@ A clean folder behind on its default branch is fast-forwarded, as after a merge,
 One behind with edits or commits of its own gets the repair, with `noticed: "app-start"`, unless the captain dropped the project's latest repair while origin's default branch stood where it stands now; once that moves on, the next start files it again.
 
 A pull request an abandoned task could not close gets the same kind of task (INF-549's sibling).
-When a discarded, cancelled, failed or superseded task's pull request is refused its close (`TaskClosing.closeOpenPullRequest`), the host files one task under the project, "Close the pull request", with `in_place.pull` naming the pull request, its link and branch, the abandoned task, and what the host answered (`InPlaceWork.filePullRepair`); one stands per pull request.
+When a discarded, cancelled or superseded task's pull request is refused its close (`TaskClosing.closeOpenPullRequest`), the host files one task under the project, "Close the pull request", with `in_place.pull` naming the pull request, its link and branch, the abandoned task, and what the host answered (`InPlaceWork.filePullRepair`); one stands per pull request.
 The note on the abandoned task names it, and is an Activity line unless the captain's own click already put the outcome there.
 Its brief says close the pull request or report why not (`renderPullRepairBrief`): the crewmate works in the folder without changing it, holds only the read and write tools where the project lives, and never merges, pushes or deletes a branch.
 The same minute's read closes it as finished once the host reads that pull request closed or merged.
@@ -528,9 +528,10 @@ The record stays shown and reads Done with its facts; a refusal is the bar's inl
 
 Discard and Drop task end a task by one set of rules (`TaskDrop`, `src/core/orchestrator/taskDrop.ts`): the first mate's `settle_task` discard, a card's Discard button, and the captain's Drop task on started and on never-started work all run it.
 Discard records the close as `discarded` and Drop task as `cancelled`, so each surface keeps its own word.
-The drop refuses outright only what no choice changes: a task that is not here, a decision, another settle of the same task still running, a task already closed with no kept copy, and a record that changed since the captain reviewed it on the record.
+The drop refuses outright only what no choice changes: a task that is not here, a decision, another settle of the same task still running, a task already closed with neither a kept copy nor a failure's pull request, and a record that changed since the captain reviewed it on the record.
 A drop stops a working crewmate, closes the task's own open pull request and waits for that close, filing the task that closes it when the host refuses, and saves its commits and edits on the task's kept ref, as every close does.
 A copy whose work cannot be saved stays on disk, and the record says so; dropping the closed task again removes it.
+A failed task's pull request stays open when it fails; discarding the failed task closes it, unless an open task, such as its stronger-model retry, now delivers through it, which the discard's answer names.
 Open parts stay planned, and a part that started keeps working.
 The captain's own drop, by Drop task or a click on a Discard button, passes every hold.
 The first mate dropping on its own meets three holds: open parts, which `proceed_with_open` passes; a crewmate still working; and work that is not merged or cannot be read, which `confirm` passes after the captain chose.

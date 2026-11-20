@@ -11,7 +11,11 @@
 
 import { HERE } from "@shared/deviceNames";
 import { deviceForgeGateRef, updateWaitLine } from "@shared/deviceSetup";
-import { noNewWorkDayLine, noNewWorkWaitLine } from "@shared/deviceUpdateNudge";
+import {
+  noNewWorkDayLine,
+  noNewWorkStartRefusal,
+  noNewWorkWaitLine,
+} from "@shared/deviceUpdateNudge";
 import type { FmEvent } from "@shared/events";
 import { AUTOMATIC_COMPUTER, AUTOMATIC_WORD, UNCOMPARED_WAIT } from "@shared/placement";
 import { RUNS_ON_THIS_MAC } from "@shared/repos";
@@ -101,6 +105,73 @@ describe("where a task runs", () => {
       `To run it here instead, ask your first mate to run "Footer" on ${HERE.this}.`,
     ]);
     expect(recallUpdateCard).toHaveBeenCalledTimes(1);
+  });
+
+  // INF-5442 behavior 3: this Mac already knew its work computer had to be
+  // updated before it could take a turn, and a new task still started there,
+  // made its working copy and then waited. A computer in reach that takes no
+  // new work until it is updated holds the task before it starts.
+  it("holds a task for a computer in reach that takes no new work until it is updated, before it starts there", async () => {
+    const recallUpdateCard = vi.fn();
+    const { machines, reach } = oneComputer();
+    reach.now = true;
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, events } = setup(crewmate, {
+      machines,
+      takesNoWorkUntilUpdated: (device) => device === MINI,
+      recallUpdateCard,
+    });
+    seedTask(tasks, {
+      id: "t-behind",
+      title: "Header",
+      status: "queued",
+      repoId: null,
+      shape: { kind: "unclear", runs_on_ask: MINI },
+    });
+
+    const claimed = vi.spyOn(tasks.starts, "claimForDispatch");
+    await supervisor.starts.dispatchQueuedTask("t-behind");
+    await supervisor.starts.dispatchQueuedTask("t-behind");
+    await tick();
+    // It never claims its start there, so no working copy is made there.
+    expect(claimed).not.toHaveBeenCalled();
+    expect(tasks.get("t-behind")).toMatchObject({ status: "open", deviceId: MINI });
+    expect(crewmate.promptCalls).toHaveLength(0);
+    expect(feed(events)).toEqual([noNewWorkWaitLine('"Header"', MINI_NAME)]);
+    expect(recallUpdateCard.mock.calls).toEqual([[MINI]]);
+    const record = tasks.get("t-behind");
+    expect(record && supervisor.placement.taskPlace(record)).toMatchObject({ noNewWork: true });
+  });
+
+  // The captain's Start of a backlog task held there is a wait, never a failed start.
+  it("keeps the captain's Start of a backlog task for a computer in reach that takes no new work as a wait, never a failed start", async () => {
+    const { machines, reach } = oneComputer();
+    reach.now = true;
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks } = setup(crewmate, {
+      machines,
+      takesNoWorkUntilUpdated: (device) => device === MINI,
+    });
+    seedTask(tasks, {
+      id: "t-asked",
+      title: "Header",
+      status: "queued",
+      repoId: null,
+      shape: { kind: "unclear", runs_on_ask: MINI },
+      startPolicy: "on-request",
+    });
+
+    const said = await supervisor.starts.startQueuedNow("t-asked", {
+      audience: "captain",
+      direct: true,
+    });
+    const key = tasks.get("t-asked")?.key;
+    expect(said).toBe(noNewWorkStartRefusal(`${key} "Header"`, MINI_NAME, HERE.this));
+    expect(crewmate.promptCalls).toHaveLength(0);
+    // Not returned to Backlog with Could not start: it waits there for the update.
+    expect(tasks.get("t-asked")?.startNotice).toBeFalsy();
+    expect(tasks.starts.startAttemptOf("t-asked")).toBeUndefined();
+    expect(tasks.get("t-asked")).toMatchObject({ status: "open", deviceId: MINI });
   });
 
   it("holds a task with no project for a computer too old to take one, and says so once", async () => {

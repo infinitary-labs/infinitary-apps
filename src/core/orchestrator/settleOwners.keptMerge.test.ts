@@ -76,34 +76,42 @@ vi.mock("../utilityQos", async (importOriginal) =>
 fakeCrewTimersEachTest();
 
 describe("CrewSupervisor", () => {
-  it.each(["rework", "cancel-idle", "cancel-running", "failed"] as const)(
+  /** A direct-pr task with its open pull request #9 on GitHub. */
+  async function withOpenPullRequest() {
+    const crewmate = fakeCrewmate();
+    const change: ForgeChange = { number: 9, branch: "", headSha: "abc", url: null };
+    const forge = {
+      kind: "github",
+      host: "github.com",
+      place: "GitHub",
+      hasChecks: true,
+      changeFor: vi.fn(async (branch: string) => ({ ...change, branch })),
+      close: vi.fn(async () => {}),
+      label: () => "#9",
+      url: () => null,
+    } as unknown as Forge;
+    let delivery: ChangeDelivery;
+    const closePullRequest = vi.fn((id: string) => delivery.merges.close(id));
+    const at = setup(crewmate, { closePullRequest });
+    const { supervisor, tasks, repos } = at;
+    delivery = createChangeDelivery({ tasks, repos, forgeFor: () => forge });
+    const { repo } = await repos.setup({ kind: "init", name: "abandoned" });
+    repos.configure(repo.id, { delivery: "direct-pr" });
+    const { taskId } = await supervisor.intake.commission({
+      title: "Abandoned attempt",
+      intent: intentOf("fix the meter"),
+      repoId: repo.id,
+    });
+    seedDelivery(tasks, taskId, { prNumber: 9 });
+    await tick();
+    return { ...at, crewmate, forge, closePullRequest, taskId };
+  }
+
+  it.each(["rework", "cancel-idle", "cancel-running"] as const)(
     "closes an abandoned direct-pr attempt's PR on %s and records the outcome",
     async (path) => {
-      const crewmate = fakeCrewmate();
-      const change: ForgeChange = { number: 9, branch: "", headSha: "abc", url: null };
-      const forge = {
-        kind: "github",
-        host: "github.com",
-        place: "GitHub",
-        hasChecks: true,
-        changeFor: vi.fn(async (branch: string) => ({ ...change, branch })),
-        close: vi.fn(async () => {}),
-        label: () => "#9",
-        url: () => null,
-      } as unknown as Forge;
-      let delivery: ChangeDelivery;
-      const closePullRequest = vi.fn((id: string) => delivery.merges.close(id));
-      const { supervisor, tasks, workspace, repos } = setup(crewmate, { closePullRequest });
-      delivery = createChangeDelivery({ tasks, repos, forgeFor: () => forge });
-      const { repo } = await repos.setup({ kind: "init", name: "abandoned" });
-      repos.configure(repo.id, { delivery: "direct-pr" });
-      const { taskId } = await supervisor.intake.commission({
-        title: "Abandoned attempt",
-        intent: intentOf("fix the meter"),
-        repoId: repo.id,
-      });
-      seedDelivery(tasks, taskId, { prNumber: 9 });
-      await tick();
+      const { supervisor, tasks, workspace, crewmate, forge, closePullRequest, taskId } =
+        await withOpenPullRequest();
       if (path === "rework" || path === "cancel-idle") {
         crewmate.finishPrompt();
         await tick();
@@ -114,8 +122,6 @@ describe("CrewSupervisor", () => {
           intent: intentOf("try a stronger model"),
           shape: { escalate_from: tasks.get(taskId)?.key },
         });
-      } else if (path === "failed") {
-        crewmate.failPrompt("The client exited.");
       } else {
         await supervisor.sessions.interruptCrewmate(taskId, "cancel");
         if (path === "cancel-running") crewmate.failPrompt("aborted");
@@ -127,7 +133,7 @@ describe("CrewSupervisor", () => {
       );
       expect(tasks.get(taskId)).toMatchObject({
         status: "dropped",
-        closedReason: path === "rework" ? "superseded" : path === "failed" ? "failed" : "cancelled",
+        closedReason: path === "rework" ? "superseded" : "cancelled",
       });
       expect(tasks.timeline(taskId)).toContainEqual(
         expect.objectContaining({ text: "Closed PR #9 on GitHub." }),
@@ -137,6 +143,84 @@ describe("CrewSupervisor", () => {
       );
     },
   );
+
+  // A behind work computer's next turn failed and closed its task, and the
+  // close took the task's open pull request with it (INF-5442 behavior 2): a
+  // failure closes the task but leaves its pull request open where the
+  // project lives, for the captain to merge, close or carry on.
+  it("keeps a failed direct-pr task's PR open where the project lives", async () => {
+    const { tasks, workspace, crewmate, forge, closePullRequest, taskId } =
+      await withOpenPullRequest();
+    crewmate.failPrompt("The client exited.");
+    await tick();
+    expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "failed" });
+    expect(closePullRequest).not.toHaveBeenCalled();
+    expect(forge.close).not.toHaveBeenCalled();
+    expect(tasks.timeline(taskId).map((event) => event.text)).not.toContain(
+      "Closed PR #9 on GitHub.",
+    );
+    expect(workspace.removeTaskWorktree).toHaveBeenCalledWith(expect.objectContaining({ taskId }));
+  });
+
+  // The captain, on INF-5443's review: "retry should keep it open, but it's the
+  // new crewmate's decision for whether to build on top or overwrite it".
+  it("keeps a failed task's PR open for its stronger-model retry and tells the retry's crewmate its number and branch", async () => {
+    const { supervisor, tasks, crewmate, forge, closePullRequest, taskId } =
+      await withOpenPullRequest();
+    crewmate.failPrompt("The client exited.");
+    await tick();
+    const branch = tasks.get(taskId)?.branch;
+    expect(branch).toBeTruthy();
+    await supervisor.intake.commission({
+      title: "Fresh attempt",
+      intent: intentOf("try a stronger model"),
+      shape: { escalate_from: tasks.get(taskId)?.key },
+    });
+    await tick();
+    expect(closePullRequest).not.toHaveBeenCalled();
+    expect(forge.close).not.toHaveBeenCalled();
+    const brief = crewmate.promptCalls.at(-1) ?? "";
+    expect(brief).toContain(`pull request #9 on branch ${branch} is still open`);
+    expect(brief).toContain("build on top of it or overwrite it");
+  });
+
+  // The captain, on INF-5443's review: "discarding the task should close the PR".
+  it("closes a failed task's PR where the project lives when the failed task is discarded", async () => {
+    const { supervisor, tasks, crewmate, forge, closePullRequest, taskId } =
+      await withOpenPullRequest();
+    crewmate.failPrompt("The client exited.");
+    await tick();
+    expect(closePullRequest).not.toHaveBeenCalled();
+    expect(await supervisor.settling.settle.settleTask(taskId, "discard")).toBe(
+      "Discarded. Closed PR #9 on GitHub.",
+    );
+    expect(forge.close).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ number: 9, branch: tasks.get(taskId)?.branch }),
+    );
+    expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "failed" });
+  });
+
+  // The captain left building on the failed attempt's PR to the retry's crewmate.
+  it("leaves a failed task's PR open on discard while its retry delivers through it", async () => {
+    const { supervisor, tasks, crewmate, forge, closePullRequest, taskId } =
+      await withOpenPullRequest();
+    crewmate.failPrompt("The client exited.");
+    await tick();
+    const retry = await supervisor.intake.commission({
+      title: "Fresh attempt",
+      intent: intentOf("try a stronger model"),
+      shape: { escalate_from: tasks.get(taskId)?.key },
+    });
+    await tick();
+    // The retry built on it: its delivery names the same pull request.
+    seedDelivery(tasks, retry.taskId, { prNumber: 9 });
+    const carrier = tasks.get(retry.taskId)?.key;
+    expect(await supervisor.settling.settle.settleTask(taskId, "discard")).toBe(
+      `Discarded. Its PR #9 stays open: ${carrier} delivers through it now.`,
+    );
+    expect(closePullRequest).not.toHaveBeenCalled();
+    expect(forge.close).not.toHaveBeenCalled();
+  });
 
   describe("the captain's kept merge approval (FI3-304)", () => {
     // INF-1246: a continued pull request has live check facts, and its one

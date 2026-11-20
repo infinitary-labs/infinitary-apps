@@ -5,8 +5,10 @@
   "mergeButtonPullRequest": "Mesclar a solicitação de pull",
   "mergeButtonWhenChecksPass": "Mesclar quando as verificações passarem",
   "mergeContinues": "A tarefa continua depois desta mesclagem.",
+  "mergeHeldEarlier": "Uma versão anterior do Infinitary mostrou este cartão. Mesclar volta quando o cartão for mostrado de novo. A mudança em si continua igual.",
   "mergeHeldOther": "Outra solicitação de pull virou a mudança atual desta tarefa depois que este cartão apareceu. Mesclar volta quando o cartão mostrá-la.",
   "mergeHeldPushed": "Uma versão mais recente recebeu push depois que este cartão apareceu. Mesclar volta quando o cartão mostrar a versão mais recente.",
+  "mergeRefusedEarlier": "Uma versão anterior do Infinitary mostrou este cartão, então não mesclei. Mesclar volta quando o cartão for mostrado de novo.",
   "mergeSetByFirstMate": "Definido pelo seu imediato para esta tarefa.",
   "mergeSetInProject": "Definido nos ajustes deste projeto.",
   "mergeWaitsForReview": "Esta mesclagem espera você responder à revisão:"

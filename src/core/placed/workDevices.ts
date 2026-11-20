@@ -7,6 +7,14 @@ import {
   type WorkDeviceContact,
   type WorkDeviceVersion,
 } from "../connection/connection";
+import { contractChange, listsChange } from "../connection/contractChanges";
+
+/**
+ * A working copy there confirms the project's approved address before each
+ * crewmate turn (`PlacedCopies.followProject`), which a computer can do only
+ * once its hello lists this change (docs/helper.md, "Waiting for its update").
+ */
+export const FOLLOWS_PROJECT_ADDRESS = contractChange("placed-project-address");
 
 /**
  * The core's way to the computers that run work for this home
@@ -218,6 +226,18 @@ export class WorkDevices {
   takesCurrentWork(deviceId: string): boolean {
     const version = this.versions.get(deviceId);
     return !!version && takesWork(version.contract);
+  }
+
+  /**
+   * Whether the connected computer's hello did not list the change a
+   * crewmate turn there may need (`FOLLOWS_PROJECT_ADDRESS`,
+   * `ComputerBehindError`), so a task started there would only wait for its
+   * update; false while none of its connections is up, which says nothing of
+   * its version.
+   */
+  lacksTurnChange(deviceId: string): boolean {
+    const version = this.versions.get(deviceId);
+    return !!version && !listsChange(version.changes, FOLLOWS_PROJECT_ADDRESS);
   }
 
   /**

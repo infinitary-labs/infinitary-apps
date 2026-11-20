@@ -5,8 +5,10 @@
   "mergeButtonPullRequest": "끌어오기 요청 병합",
   "mergeButtonWhenChecksPass": "검사를 통과하면 병합",
   "mergeContinues": "이 병합 뒤에도 작업은 계속돼요.",
+  "mergeHeldEarlier": "이전 버전의 Infinitary가 이 카드를 보여 줬어요. 카드가 다시 표시되면 병합이 다시 생겨요. 변경 자체는 그대로예요.",
   "mergeHeldOther": "이 카드가 올라온 뒤 다른 끌어오기 요청이 이 작업의 현재 변경이 됐어요. 카드가 그것을 보여 주면 병합이 다시 생겨요.",
   "mergeHeldPushed": "이 카드가 올라온 뒤 더 새로운 버전이 푸시됐어요. 카드가 새 버전을 보여 주면 병합이 다시 생겨요.",
+  "mergeRefusedEarlier": "이전 버전의 Infinitary가 이 카드를 보여 줘서 병합하지 않았어요. 카드가 다시 표시되면 병합이 다시 생겨요.",
   "mergeSetByFirstMate": "일등항해사가 이 작업에 맞춰 정했어요.",
   "mergeSetInProject": "이 프로젝트의 설정에서 정했어요.",
   "mergeWaitsForReview": "이 병합은 검토에 대한 답을 기다려요:"

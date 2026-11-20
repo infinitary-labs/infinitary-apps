@@ -595,7 +595,8 @@ describe("CrewSupervisor", () => {
     expect(tasks.get(previous.id)?.closedReason).toBe("cancelled");
   });
 
-  it.each(["rework", "cancel", "failed"] as const)(
+  // A failed task never closes its PR (settleOwners.keptMerge.test.ts owns that), so it has no close to fail.
+  it.each(["rework", "cancel"] as const)(
     "keeps %s cleanup best effort and records a thrown PR close failure",
     async (path) => {
       const crewmate = fakeCrewmate();
@@ -609,19 +610,15 @@ describe("CrewSupervisor", () => {
         intent: intentOf("fix it"),
       });
       await tick();
-      if (path === "failed") {
-        crewmate.failPrompt("The client exited.");
-      } else {
-        crewmate.finishPrompt();
-        await tick();
-        if (path === "cancel") await supervisor.sessions.interruptCrewmate(taskId, "cancel");
-        else
-          await supervisor.intake.commission({
-            title: "Fresh attempt",
-            intent: intentOf("try a stronger model"),
-            shape: { escalate_from: tasks.get(taskId)?.key },
-          });
-      }
+      crewmate.finishPrompt();
+      await tick();
+      if (path === "cancel") await supervisor.sessions.interruptCrewmate(taskId, "cancel");
+      else
+        await supervisor.intake.commission({
+          title: "Fresh attempt",
+          intent: intentOf("try a stronger model"),
+          shape: { escalate_from: tasks.get(taskId)?.key },
+        });
       await tick();
       expect(tasks.get(taskId)?.status).toBe("dropped");
       expect(workspace.removeTaskWorktree).toHaveBeenCalledWith(

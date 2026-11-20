@@ -101,7 +101,10 @@ export class CrewUpdates {
   private readonly behind = new Map<string, { deviceId: string; change: ContractChangeName }>();
 
   constructor(
-    private readonly options: Pick<CrewSupervisorOptions, "inbox" | "machines" | "tasks">,
+    private readonly options: Pick<
+      CrewSupervisorOptions,
+      "inbox" | "machines" | "tasks" | "recallUpdateCard"
+    >,
     private readonly host: CrewUpdatesHost,
   ) {}
 
@@ -135,11 +138,19 @@ export class CrewUpdates {
    * turn ends as a pause that never reached its model, so its words go
    * again, and its lane waits (`waitsForUpdateThere`) until the computer
    * lists the change. The task stays open, and nobody is woken: there is
-   * nothing to act on but the update.
+   * nothing to act on but the update, which that computer's one Update card
+   * asks the captain for. The first task to wait on that computer brings the
+   * card back, even after Not now; the tasks that wait beside it raise no
+   * second one.
    */
   waitForUpdateThere(task: TaskRuntime, behind: ComputerBehindError): void {
     const computer = this.options.machines?.nameOf(behind.deviceId) ?? behind.deviceId;
+    const first = ![...this.behind.keys()].some(
+      (taskId) =>
+        this.behind.get(taskId)?.deviceId === behind.deviceId && this.waitsForUpdateThere(taskId),
+    );
     this.behind.set(task.id, { deviceId: behind.deviceId, change: behind.change });
+    if (first) this.options.recallUpdateCard?.(behind.deviceId);
     task.turn.hold({ computer, unstarted: true, behind: true });
     task.lastTurnError ??= behind.message;
     this.host.restarts.recordRestartOutcome(

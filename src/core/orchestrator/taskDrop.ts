@@ -56,13 +56,16 @@ function neverStarted(record: TaskRecord): boolean {
  *
  * It refuses outright only the real limits: a task that is not here, a
  * decision, another settle of the same task still running, a task already
- * closed with no kept copy left, and a record that changed since the
- * captain reviewed it. A drop stops a working crewmate, closes the task's
- * own open pull request and waits for that close (filing the task that
- * closes it when the host refuses), and saves its commits and edits as
- * every close saves them. A copy whose work cannot be saved stays on disk
- * and the record says so; dropping the closed task again removes it. Open
- * parts stay planned and a started part keeps working.
+ * closed with neither a kept copy left nor a failure's pull request, and a
+ * record that changed since the captain reviewed it. A drop stops a working
+ * crewmate, closes the task's own open pull request and waits for that close
+ * (filing the task that closes it when the host refuses), and saves its
+ * commits and edits as every close saves them. A copy whose work cannot be
+ * saved stays on disk and the record says so; dropping the closed task again
+ * removes it. A failure leaves its pull request open, and discarding the
+ * failed task closes it, unless an open task, such as its retry, now
+ * delivers through it. Open parts stay planned and a started part keeps
+ * working.
  *
  * The captain's own drop passes every hold. The first mate dropping on its
  * own meets the open parts (`proceed_with_open` or the captain's recorded override
@@ -93,7 +96,7 @@ export class TaskDrop {
         text: `Cannot drop task ${taskId}: ${pending} is already in progress. Wait for its outcome.`,
       };
     const closed = record.status === "done" || record.status === "dropped";
-    if (closed && !(record.worktreeDir && record.workspaceState === "present"))
+    if (closed && !keptCopy(record) && !failedWithPullRequest(record))
       return {
         ok: false,
         text: `Task ${taskId} "${record.title}" is already ${describeStatus(record)}; there is nothing to discard.`,
@@ -141,15 +144,32 @@ export class TaskDrop {
         }
       }
       // A closed task's kept copy, whose work could not be saved when it
-      // closed: dropping it again is the choice to remove it.
+      // closed: dropping it again is the choice to remove it. A failure
+      // leaves its pull request open for a retry to build on; discarding the
+      // failed task is the choice to close it.
       if (closed) {
-        await this.closing.closeTask(taskId, {
-          status: "dropped",
-          reason: input.reason,
-          actor: input.actor,
-          removeKept: true,
-        });
-        return { ok: true, text: discardedText() };
+        const carrier = failedWithPullRequest(record) ? this.carrierOf(record) : undefined;
+        const pull = carrier
+          ? // i18n-exempt: the discard's answer to the first mate, not shown to a person
+            {
+              text: `Its PR #${record.delivery?.prNumber} stays open: ${carrier} delivers through it now.`,
+            }
+          : failedWithPullRequest(record)
+            ? await this.closing.closeOpenPullRequest(taskId, { line: input.actor === "firstmate" })
+            : undefined;
+        if (keptCopy(record))
+          await this.closing.closeTask(taskId, {
+            status: "dropped",
+            reason: input.reason,
+            actor: input.actor,
+            removeKept: true,
+          });
+        return {
+          ok: true,
+          text: discardedText(pull?.text),
+          ...(pull && "problem" in pull && pull.problem ? { problem: pull.problem } : {}),
+          ...(pull && "repair" in pull && pull.repair ? { followup: pull.repair } : {}),
+        };
       }
       const pull = await this.closing.closeOpenPullRequest(taskId, {
         line: input.actor === "firstmate",
@@ -205,10 +225,42 @@ export class TaskDrop {
     return { ok: true, text: discardedText() };
   }
 
+  /**
+   * The open task that took over a failed task's pull request - a retry that
+   * built on it, as its brief lets it - named by its key, so discarding the
+   * failed task never closes the pull request that task delivers through.
+   */
+  private carrierOf(record: TaskRecord): string | undefined {
+    const number = record.delivery?.prNumber;
+    const carrier = this.host.tasks
+      .listLive()
+      .find(
+        (live) =>
+          live.id !== record.id &&
+          live.repoId === record.repoId &&
+          live.delivery?.prNumber === number,
+      );
+    return carrier ? carrier.key || carrier.id : undefined;
+  }
+
   private provenance(input: DropInput): Record<string, unknown> {
     return {
       ...(input.via ? { via: input.via } : {}),
       ...(input.panel ? { panel: input.panel } : {}),
     };
   }
+}
+
+/** A closed task whose work could not be saved when it closed keeps its copy on disk. */
+function keptCopy(record: TaskRecord): boolean {
+  return !!record.worktreeDir && record.workspaceState === "present";
+}
+
+/** A failed task's pull request stays open after the failure, for a retry or a discard to settle. */
+function failedWithPullRequest(record: TaskRecord): boolean {
+  return (
+    record.status === "dropped" &&
+    record.closedReason === "failed" &&
+    record.delivery?.prNumber !== undefined
+  );
 }

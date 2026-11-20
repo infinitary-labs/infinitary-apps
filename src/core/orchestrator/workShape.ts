@@ -139,6 +139,20 @@ export function resolveEscalation(
       ...(previous.worktreeDir && previous.workspaceState === "present"
         ? { previousWork: keptRefFor(previous.id) }
         : {}),
+      // A failure leaves its pull request open (`TaskClosing.closeRecord`):
+      // the retry is told, and decides whether to build on it or overwrite it.
+      ...(previous.status === "dropped" &&
+      previous.closedReason === "failed" &&
+      previous.delivery?.prNumber !== undefined &&
+      previous.branch
+        ? {
+            previousPullRequest: {
+              number: previous.delivery.prNumber,
+              branch: previous.branch,
+              ...(previous.delivery.prUrl ? { url: previous.delivery.prUrl } : {}),
+            },
+          }
+        : {}),
     },
   };
 }

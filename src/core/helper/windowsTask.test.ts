@@ -112,24 +112,44 @@ describe("the task", () => {
     expect(await removeRunTask(program, { label: LABEL, file })).toBe(false);
   });
 
-  // The review of INF-5409: a task Task Scheduler keeps still starts at sign-in, so it says so.
-  it("keeps its file and rejects where Task Scheduler keeps the task, and not where it holds none", async () => {
+  // The review of INF-5409: a task Task Scheduler would not take away, or may still hold, is said,
+  // and its file kept; only a full list of Task Scheduler's tasks without it lets the file go.
+  it("keeps its file and rejects where Task Scheduler keeps the task or cannot list its tasks", async () => {
     const file = runTaskFile(scratchDir("windows-task-"));
     const xml = runTaskXml({ launcher: LAUNCHER, account: "ada", atLogin: true });
-    const held =
-      (present: boolean): Launchctl =>
+    // `schtasks /Query /FO CSV /NH` as Windows answers it: one line per task, its path first.
+    const other = '"\\Microsoft\\Windows\\Defrag\\ScheduledDefrag","N/A","Ready"';
+    const ours = `"\\${LABEL}","N/A","Ready"`;
+    const refused =
+      (list: { ok: boolean; output: string }): Launchctl =>
       async (args) =>
         args[0] === "/Delete"
           ? { ok: false, output: "ERROR: Access is denied." }
           : args[0] === "/Query"
-            ? { ok: present, output: "" }
+            ? list
             : { ok: true, output: "SUCCESS" };
-    await registerRunTask(held(true), { label: LABEL, file, xml });
-    await expect(removeRunTask(held(true), { label: LABEL, file })).rejects.toThrow(
-      "Access is denied",
-    );
+    await registerRunTask(refused({ ok: true, output: "" }), { label: LABEL, file, xml });
+    await expect(
+      removeRunTask(refused({ ok: true, output: `\r\n${other}\r\n${ours}\r\n` }), {
+        label: LABEL,
+        file,
+      }),
+    ).rejects.toThrow("so it is still registered: ERROR: Access is denied.");
     expect(existsSync(file)).toBe(true);
-    expect(await removeRunTask(held(false), { label: LABEL, file })).toBe(true);
+    // A list Task Scheduler would not give, as a refused or timed-out ask answers, proves nothing.
+    await expect(
+      removeRunTask(refused({ ok: false, output: "ERROR: Access is denied." }), {
+        label: LABEL,
+        file,
+      }),
+    ).rejects.toThrow("could not say whether it is still registered");
+    expect(existsSync(file)).toBe(true);
+    expect(
+      await removeRunTask(refused({ ok: true, output: `\r\n${other}\r\n` }), {
+        label: LABEL,
+        file,
+      }),
+    ).toBe(true);
     expect(existsSync(file)).toBe(false);
   });
 });

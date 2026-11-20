@@ -291,7 +291,7 @@ export function forgetRunAgentFiles(
  * Mac or Linux the agent's job is ended whichever run it holds. Letting it
  * go for good (`forget`), a job the service manager would not end, or a task
  * Task Scheduler would not take away, rejects, so the joining window says so,
- * unless the service manager says it holds no such job or the job is stopped,
+ * unless the service manager or Task Scheduler says it holds no such job, or the job is stopped,
  * which is let go quietly; any other stop answers as it always has.
  */
 export async function stopRunAgent(

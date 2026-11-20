@@ -446,7 +446,7 @@ async function windowsStartAtBoot(asked: BootAsked, context: BootContext): Promi
       return {
         code: 1,
         out: "",
-        // The task's own refusal, which says it still starts at sign-in.
+        // The task's own refusal, which says whether it is still registered.
         error: said([error instanceof Error ? error.message : String(error)]),
       };
     }

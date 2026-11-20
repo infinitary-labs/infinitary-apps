@@ -404,6 +404,8 @@ function windows(answers: { create?: boolean; running?: number; remove?: boolean
         return { ok: false, output: "ERROR: Access is denied." };
       if (args[0] === "/Delete" && answers.remove === false)
         return { ok: false, output: "ERROR: Access is denied." };
+      if (args[0] === "/Query" && answers.remove === false)
+        return { ok: true, output: `"\\${LABEL}","N/A","Ready"\r\n` };
       return { ok: true, output: "SUCCESS" };
     },
   };
@@ -483,7 +485,7 @@ describe("the command the window starts, on Windows", () => {
   });
 
   // The review of INF-5409: a join that lets the agent go says so when Task Scheduler keeps its
-  // task, which would start a run at the next sign-in, and still asks only its own run to stop.
+  // task registered, and still asks only its own run to stop.
   it("rejects a join's forget when Task Scheduler keeps the task, keeping its file", async () => {
     const { context, asked } = windows({ remove: false });
     await startRunAgent(context);
@@ -492,7 +494,7 @@ describe("the command the window starts, on Windows", () => {
     await expect(stopRunAgent(context, { forget: true, run })).rejects.toThrow("Access is denied");
     expect(asked).toEqual([
       ["/Delete", "/TN", LABEL, "/F"],
-      ["/Query", "/TN", LABEL],
+      ["/Query", "/FO", "CSV", "/NH"],
     ]);
     expect(runAgentInPlace(context)).toBe(true);
     expect(

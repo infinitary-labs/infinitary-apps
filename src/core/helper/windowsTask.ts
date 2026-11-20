@@ -319,8 +319,10 @@ export async function startRunTask(schtasks: Schtasks, label: string): Promise<b
  * Takes the task away and its file with it. A run it started keeps going
  * until it stops: Task Scheduler's own end of a task ends its program at
  * once, with no clean stop, so a stop is asked of the run itself instead.
- * A task Task Scheduler would not take away, and still holds, keeps its file
- * for a later removal and rejects, so its caller says it still starts.
+ * A task Task Scheduler would not take away keeps its file for a later
+ * removal and rejects, so its caller says so, unless Task Scheduler's whole
+ * list, read in full, names no such task: a refused or unread ask proves
+ * nothing, and a task still registered may or may not start at sign-in.
  */
 export async function removeRunTask(
   schtasks: Schtasks,
@@ -328,12 +330,24 @@ export async function removeRunTask(
 ): Promise<boolean> {
   const was = existsSync(options.file);
   const out = await schtasks(["/Delete", "/TN", options.label, "/F"]);
-  if (!out.ok && (await schtasks(["/Query", "/TN", options.label])).ok)
-    throw new Error(
-      `Task Scheduler did not take Infinitary's task away, so it still starts at sign-in: ${out.output}`,
-    );
+  if (!out.ok) {
+    const list = await schtasks(["/Query", "/FO", "CSV", "/NH"]);
+    if (!list.ok)
+      throw new Error(
+        `Task Scheduler did not take Infinitary's task away, and could not say whether it is still registered: ${out.output}`,
+      );
+    if (listsTask(list.output, options.label))
+      throw new Error(
+        `Task Scheduler did not take Infinitary's task away, so it is still registered: ${out.output}`,
+      );
+  }
   rmSync(options.file, { force: true });
   return was;
+}
+
+/** Whether `schtasks /Query /FO CSV /NH`'s list names a task in the root folder by `label`: its first field is `"\<label>"`. */
+function listsTask(csv: string, label: string): boolean {
+  return csv.split(/\r?\n/).some((line) => line.startsWith(`"\\${label}"`));
 }
 
 /**

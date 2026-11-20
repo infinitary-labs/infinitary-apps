@@ -938,7 +938,7 @@ A part names the iPad only when it checks something no iPhone shows: the wide la
 A part names the Duo only when it checks something only a fold shows; the `fold` part checks the layout in the Duo's flat poses, below.
 `phonePasses` and `phoneJobs` run a part only on the devices its row names, at a phone release and on a request alike, the chooser's `ipad_parts` and `duo_parts` keep only the parts that name each, and `phone.yml` and `ios-release.yml` check the devices the list names (`tests/phone-ci.test.ts` holds both workflows to it).
 An edited part runs three times on the iPhone and once on each other device that lists it.
-A device's list is also its short pass: a branch request whose change edits a hand-written Swift file in the app's own folder runs every part on the iPad's and the Duo's lists, once, in that device's own job, beside the parts the change reaches on the iPhone (INF-4241 piece 9; `docs/testing.md`, "The phone check on request").
+A device's list is also its short pass: a branch request whose change edits a hand-written Swift file in the app's own folder runs every part on the iPad's and the Duo's lists, once, beside the parts the change reaches on the iPhone (INF-4241 piece 9; `docs/testing.md`, "The phone check on request").
 
 ### The Duo's hinge
 
@@ -1307,7 +1307,7 @@ The runner waits for simulator boot completion before launching tests and uses o
 
 For interactive local development, `node scripts/phone-test-home.ts <output-json-outside-the-project>` keeps the same disposable real-core home open until interrupted.
 The output names its control address and scratch root, and is private to that run.
-`phone.yml` runs this same gate once per device, each in its own job, for changes touching `ios/` or the phone-card or phone-contract generator and the contract shape guard.
+`phone.yml` runs this same gate in each job a request's passes were dealt into, for changes touching `ios/` or the phone-card or phone-contract generator and the contract shape guard.
 A pull request no longer starts it (INF-2139): a crewmate whose change selects it requests it on its branch with `affected: "true"`.
 INF-2539 removed its pull request selection; the phone release (`ios-release.yml`) runs every part, and main runs no phone check (INF-2492).
 The gate's own setup also selects it: `phone.yml`, the launcher `scripts/test-phone.ts`, the test home `tests/helpers/phoneHome.ts` and every module the launcher loads short of the app's own code and the test home's fixtures, such as `tests/helpers/phoneKeyboard.ts`, the Photos wait `tests/helpers/phonePhotos.ts`, its activity writer `scripts/phone-activity.ts`, its leftover sweep `scripts/phone-leftovers.ts`, its check runner `scripts/phone-checks.ts` and its test plan helper `scripts/phone-test-plan.ts`, and the files the launcher reads (`docs/testing.md`, "Native phone checks").
@@ -1315,8 +1315,9 @@ Setup the gate never runs does not: `scripts/affected-phone.ts`, `scripts/phone-
 The phone release (`ios-release.yml`) runs every part on both devices, while a crewmate's request with `affected: "true"` runs only touched parts and falls back to every part when scope is uncertain; a part it only reaches runs on the iPhone, and a change to a hand-written Swift file in the app's own folder adds the iPad's and the Duo's short passes, every part their rows name (INF-2582 as INF-4241 amends it; `docs/testing.md`, "The phone check on request").
 Shared modules, connection/device code, general packages and the lockfile alone do not select it; a changed generated Swift file does, unless it changes only its `public static let version` line, which includes a new first number: the phone and the computer come from the same pull request, so they always agree on it, and `docs/contract.json` alone never selects the gate.
 Every pull request still checks on Linux that the generated file is current, through `pnpm check` (`node scripts/generate-phone-contract.ts --check`).
-On an affected request the native job runs the chooser, `scripts/affected-phone.ts`, on the Mac before its setup; an unreadable comparison runs the gate, and a change it selects no gate for ends the job there.
-A default run on request (`workflow_dispatch`) skips the chooser and runs every part on both devices, then keeps each part's minutes as `part-times.json` in `phone-logs`, and it starts no release step (`docs/testing.md`, "The phone check on request").
+A request's Linux `request` job runs the chooser, `scripts/affected-phone.ts`, before any phone Mac is taken; an unreadable comparison runs the gate, and a change it selects no gate for starts no job on a phone Mac.
+The chooser deals the request's passes into jobs of at most 19 recorded minutes, each on its own phone Mac, side by side (`docs/testing.md`, "Native phone checks").
+A default run on request (`workflow_dispatch`) runs every part on every device, dealt the same way, and starts no release step (`docs/testing.md`, "The phone check on request"); the phone release's one job of every device keeps each part's minutes as `part-times.json` in `phone-logs`.
 On a branch it needs `task` and `reason` inputs, and the workflow refuses it without them (`docs/testing.md`, "What a task branch requests").
 Inside a gate, a failed Swift package test is reported and the simulator tests still run (`scripts/phone-checks.ts`).
 The gate does not check the generated Swift files: `pnpm check` does on every pull request, on Linux.
@@ -1339,11 +1340,11 @@ Before the gate starts any phone work, `scripts/phone-activity.ts` publishes a p
 Each invocation owns one uniquely named JSON file containing only `schemaVersion: 1`, its `pid` and `processStartedAt`, the normalized `LC_ALL=C TZ=UTC /bin/ps -o lstart=` reading for that PID.
 The supervisor stays alive through teardown and removes only its own file after cleanup; this is activity reporting, with no lock, admission wait, heartbeat or age expiry.
 The paired reader is dotfiles-private's `hosts/PHONE_ACTIVITY.md` contract and idle-reboot watchdog; producer and reader must merge together before the lock removals are complete.
-The device gate has a 90-minute step limit in the placed guest for each pass it runs: 90 minutes for one pass, and 270 for a request whose edited parts run two more passes in the same step (INF-2582).
+A dealt job's gate step and the job itself are stopped at 25 minutes; the phone release's gate step keeps 90 minutes.
 Both sequential and parallel device lanes must finish within that same limit.
 Two full checks at once, one on each of the Mac mini's virtual Macs, starve each other: their parts ran past XCTest's 20-minute allowance, and one check ran past the 90 minutes too (INF-2052).
 Xcode collects no diagnostics after a failed test (`-collect-test-diagnostics never`), since its collection held each failed part for ten minutes and the gate keeps its own failure logs (INF-2052).
-The native job's limit is 165 minutes for setup, the ordinary pass, cleanup and evidence upload, plus 90 for each further pass, without command-admission waits.
+The phone release's job keeps its limit of 165 minutes for setup, the ordinary pass, cleanup and evidence upload, plus 90 for each of two further passes, without command-admission waits.
 Neither device's failure is ignored: both devices run every selected part, whether their lanes run side by side or sequentially, and any failing fails the gate; on a pull request the first failed part stops the rest.
 This pull-request lane neither signs a physical-device build nor publishes one; `ios-release.yml` runs the same native gates before its separately dispatched TestFlight upload.
 Mac-side checks remain the project's normal gate and affected Devices journeys.
@@ -1364,10 +1365,10 @@ The one native job, `native-phone`, requires that mapping with no per-run overri
 An absent, empty or malformed mapping supplies no runnable destination instead of redirecting to the mini.
 The other nine queue mappings and the generic Mac labels remain unchanged for non-phone jobs.
 Each guest runs `scripts/test-phone.ts` directly, with as many simulators as the guest holds, two on a compute Mac VM of 10 cores and 9 GiB and one on a rented VM of 5 cores (INF-4241 piece 3).
-A narrower request runs each device in its own job with `--device` (INF-2970's fix 1).
-The unsigned TestFlight call names no device, and a request of every part on every device is the same full check: one job, matrix device `every`, whose gate runs `--every-device`, so every device's lanes run from one build on one guest and write one `part-times.json` (INF-4241 piece 8, the plan's "a phone release runs the full check").
+A request runs each dealt job's passes with `--plan`, and only its first job runs the phone's Swift package tests (INF-5387's plan, piece 2).
+The unsigned TestFlight call names no device: one job, matrix device `every`, whose gate runs `--every-device`, so every device's lanes run from one build on one guest and write one `part-times.json` (INF-4241 piece 8, the plan's "a phone release runs the full check"); a request of every part on every device is dealt into jobs instead.
 The ordinary request and the unsigned TestFlight call use the same gate and failure behavior.
-Those places also take other kinds of Mac work, such as the merge batch's Mac lanes, so a phone check and a batch lane wait for the same free places (INF-3726); a phone retry after a failure therefore runs only what failed: a rerun of the failed job runs only the parts that did not pass, and a retry at a repaired version names only the failing part and device (`docs/testing.md`, "A retry after a failed phone request").
+Those places also take other kinds of Mac work, such as the merge batch's Mac lanes, so a phone check and a batch lane wait for the same free places (INF-3726); a phone retry after a failure therefore runs only what failed: a rerun of the failed jobs runs only the parts that did not pass, and a retry at a repaired version names only the failing part and device (`docs/testing.md`, "A retry after a failed phone request").
 `tests/phone-pool-isolation.test.ts` evaluates the workflows with configured queues and both release modes, allowing only the native phone job there and refusing secret reads.
 Other workflows' operator-controlled overrides must never point at the phone queue.
 The disposable guests have no captain signing material; the ordinary GitHub job token permits checkout and result uploads.

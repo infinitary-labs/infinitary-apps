@@ -466,14 +466,12 @@ describe("the dispatched workflow's gate", () => {
       env: {},
       steps: {},
       // The called workflow's one job of every device for this call (INF-4241 piece 8).
-      matrix: {
-        device: (
-          workflowValue(phone.jobs["native-phone"].strategy.matrix.device, {
-            inputs,
-            needs: {},
-          }) as string[]
-        )[0],
-      },
+      matrix: (
+        workflowValue(phone.jobs["native-phone"].strategy.matrix.include, {
+          inputs,
+          needs: {},
+        }) as Record<string, string>[]
+      )[0],
     };
     for (const id of ["native-phone"])
       for (const step of phone.jobs[id].steps.filter((step: { uses?: string }) =>
@@ -486,7 +484,11 @@ describe("the dispatched workflow's gate", () => {
       expect(workflowString(step.with.ref, { needs })).toBe(source);
     const native = phone.jobs["native-phone"];
     expect(eligible(native.if, contexts)).toBe(true);
-    const selection = native.steps.find((step: { id?: string }) => step.id === "request-select");
+    // The call chooses no parts and deals no jobs.
+    expect(contexts.matrix).toEqual({ device: "every", key: "every" });
+    const selection = phone.jobs.request.steps.find(
+      (step: { id?: string }) => step.id === "request-select",
+    );
     expect(eligible(selection.if, contexts)).toBe(false);
     const scope = native.steps.find((step: { id?: string }) => step.id === "scope");
     expect(workflowValue(scope.env.GATE, contexts)).toBe(true);
@@ -494,7 +496,7 @@ describe("the dispatched workflow's gate", () => {
     expect(
       eligible(gate.if, { ...contexts, steps: { scope: { outputs: { gate: "true" } } } }),
     ).toBe(true);
-    expect(workflowString(gate.env.PHONE_PARTS, contexts)).toBe("");
+    expect(workflowString(gate.env.PHONE_PLAN, contexts)).toBe("");
     expect(workflowString(gate.env.INFINITARY_PHONE_STOP_EARLY, contexts)).toBe("0");
     expect(
       workflowValue(workflow.jobs.testflight["runs-on"], {

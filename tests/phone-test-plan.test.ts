@@ -1,7 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { PHONE_JOB_BUDGET_MS, recordedPartMs } from "../scripts/phone-deadlines";
 import {
+  dealPhonePasses,
   devicePartNames,
   devicePhotos,
   endPhoneGate,
@@ -14,6 +16,7 @@ import {
   type PhoneDevice,
   type PhoneJob,
   type PhonePassEnd,
+  type PhonePassTimes,
   partDevices,
   partIdentifier,
   partOnMac,
@@ -29,6 +32,7 @@ import {
   phoneLanes,
   phonePasses,
   phonePassesLeft,
+  phonePassMs,
   phonePassName,
   phoneSelectionRunsJourney,
   phoneTestSelection,
@@ -36,6 +40,7 @@ import {
   phoneWork,
   phoneWorkPast,
   readPhonePasses,
+  readPhonePlan,
   runDeviceLanes,
   runSideBySide,
   testHomeKeys,
@@ -720,6 +725,99 @@ describe("every pass in one gate", () => {
 // release check runs a full gate of one device on each phone Mac. INF-3243: a shadowed flag kept every
 // gate from writing it. The plan is the one scripts/test-phone.ts builds for a gate that names no part,
 // run through the gate's own lanes on a stand-in device that times each pass as the gate does.
+// INF-5387's plan, piece 2 (the captain's "how can we make them last <30m at max"): a manual request's passes are
+// dealt into jobs of at most 19 recorded minutes, each on its own phone Mac, read by the gate from its plan. The times
+// are the recorded part times the chooser deals by.
+describe("dealing a request's passes into jobs", () => {
+  const recorded = JSON.parse(readFileSync(PHONE_PART_TIMES, "utf8")) as PhonePassTimes;
+  const load = (passes: readonly PhoneJob[], times = recorded) =>
+    passes.reduce((sum, pass) => sum + phonePassMs(pass, times), 0);
+  const every = phonePasses([...PHONE_DEVICES], { parts: PHONE_PARTS.map(({ name }) => name) });
+  it("deals every pass once into as few jobs of the budget as its recorded time needs, each in plan order", () => {
+    const jobs = dealPhonePasses(every, recorded);
+    expect(PHONE_JOB_BUDGET_MS).toBe(19 * 60_000);
+    expect(jobs).toHaveLength(Math.ceil(load(every) / PHONE_JOB_BUDGET_MS));
+    expect(
+      jobs
+        .flatMap((job) => job.passes)
+        .map(phonePassName)
+        .sort(),
+    ).toEqual(every.map(phonePassName).sort());
+    for (const job of jobs) {
+      expect(load(job.passes)).toBeLessThanOrEqual(PHONE_JOB_BUDGET_MS);
+      expect(job.passes).toEqual(every.filter((pass) => job.passes.includes(pass)));
+    }
+    expect(jobs.map((job) => job.number)).toEqual(jobs.map((_, index) => index + 1));
+  });
+  it("puts the Mac part in the first job, beside the package tests whose build it reuses", () => {
+    const jobs = dealPhonePasses(every, recorded);
+    expect(jobs[0]!.passes.some((pass) => partOnMac(pass.part))).toBe(true);
+    expect(jobs.slice(1).some((job) => job.passes.some((pass) => partOnMac(pass.part)))).toBe(
+      false,
+    );
+  });
+  it("runs a pass longer than the budget in a job of its own, and keeps every other job inside it", () => {
+    const longest = every.reduce((best, pass) =>
+      phonePassMs(pass, recorded) > phonePassMs(best, recorded) ? pass : best,
+    );
+    const budget = phonePassMs(longest, recorded) - 1;
+    const jobs = dealPhonePasses(every, recorded, budget);
+    const alone = jobs.find((job) => job.passes.includes(longest))!;
+    expect(alone.passes).toEqual([longest]);
+    for (const job of jobs) if (job !== alone) expect(load(job.passes)).toBeLessThanOrEqual(budget);
+  });
+  it("keeps a device's passes together when the balance allows", () => {
+    // Four parts on both devices, each as long on the iPad as on the iPhone: two jobs of one device each balance.
+    const parts = ["join-read", "talk-tasks", "address", "rest"];
+    const times = Object.fromEntries(
+      parts.map((part) => [
+        part,
+        { ipad: recorded[part]!.iphone!, iphone: recorded[part]!.iphone! },
+      ]),
+    );
+    const passes = phonePasses(["ipad", "iphone"], { parts });
+    const jobs = dealPhonePasses(passes, times, load(passes, times) / 2);
+    expect(jobs.map((job) => [...new Set(job.passes.map((pass) => pass.device))])).toEqual([
+      ["ipad"],
+      ["iphone"],
+    ]);
+  });
+  it("counts a pass of a part with no recorded time as the median recorded part", () => {
+    const { rest: _rest, ...unrecorded } = recorded;
+    const rest = { device: "iphone" as const, part: "rest", round: 1 };
+    expect(phonePassMs(rest, unrecorded)).toBe(
+      recordedPartMs("rest", partTimes(JSON.stringify(unrecorded))),
+    );
+    expect(phonePassMs(rest, unrecorded)).toBeGreaterThan(0);
+  });
+  it("hands the gate exactly a dealt job's passes, and refuses any plan the dealing cannot make", () => {
+    for (const job of dealPhonePasses(every, recorded))
+      expect(readPhonePlan(JSON.stringify(job.passes))).toEqual(job.passes);
+    const further = phonePasses(["iphone"], {
+      parts: ["rest"],
+      repeats: ["talk-tasks"],
+      repeatTests: { "talk-tasks": ["InfinitaryUITests/PhoneJourney/testTasksAndSteer"] },
+    });
+    expect(readPhonePlan(JSON.stringify(further))).toEqual(further);
+    for (const [plan, refusal] of [
+      [[], /at least one/],
+      [[{ device: "watch", part: "rest", round: 1 }], /names a device and a part/],
+      [[{ device: "ipad", part: "fold", round: 1 }], /does not run on the ipad/],
+      [[{ device: "ipad", part: "rest", round: 2 }], /has no round 2/],
+      [[{ device: "iphone", part: "rest", round: 4 }], /has no round 4/],
+      [[{ device: "iphone", part: "rest", round: 1, tests: [7] }], /tests are identifiers/],
+      [
+        [
+          { device: "iphone", part: "rest", round: 1 },
+          { device: "iphone", part: "rest", round: 1 },
+        ],
+        /iphone rest twice/,
+      ],
+    ] as const)
+      expect(() => readPhonePlan(JSON.stringify(plan))).toThrow(refusal);
+  });
+});
+
 describe("a gate's end", () => {
   const everyPart = PHONE_PARTS.map(({ name }) => name);
   const gate = async (jobs: PhoneJob[], fails?: string, stopEarly = false) =>

@@ -17,14 +17,25 @@ export const PHONE_PACKAGE_TESTS_BUDGET_MS = 5 * 60_000;
 /** The least a part is given, however short its recorded time: its app's start and its own test home. */
 export const PHONE_PART_BUDGET_FLOOR_MS = 3 * 60_000;
 
+/** INF-5387's plan, piece 2: the recorded minutes (`scripts/phone-part-times.json`) one job of a manual request holds at
+ * most. Parts take about 0.45 of their recorded minutes on a phone Mac with two simulators and 0.69 on one, and a job
+ * adds 5 to 6 fixed minutes, so a job of 19 recorded minutes ends near 13 minutes on the first and 19 on the second,
+ * inside the job's 25-minute limit in phone.yml. */
+export const PHONE_JOB_BUDGET_MS = 19 * 60_000;
+
 export const phoneMinutes = (ms: number): string => (ms / 60_000).toFixed(1);
 
-/** A part's deadline: twice its recorded time (`scripts/phone-part-times.json`), and at least the floor. A part with no
- * recorded time counts as the median recorded part. XCTest's per-test allowance is this too. */
-export function phonePartBudget(part: string, times: ReadonlyMap<string, number> | undefined): number {
+/** A part's recorded time, from each part's longer device time; a part with no recorded time counts as the median
+ * recorded part, and with no record at all as nothing. */
+export function recordedPartMs(part: string, times: ReadonlyMap<string, number> | undefined): number {
   const recorded = [...(times?.values() ?? [])].toSorted((a, b) => a - b);
-  const time = times?.get(part) ?? recorded[Math.floor(recorded.length / 2)] ?? 0;
-  return Math.max(2 * time, PHONE_PART_BUDGET_FLOOR_MS);
+  return times?.get(part) ?? recorded[Math.floor(recorded.length / 2)] ?? 0;
+}
+
+/** A part's deadline: twice its recorded time (`scripts/phone-part-times.json`, `recordedPartMs`), and at least the
+ * floor. XCTest's per-test allowance is this too. */
+export function phonePartBudget(part: string, times: ReadonlyMap<string, number> | undefined): number {
+  return Math.max(2 * recordedPartMs(part, times), PHONE_PART_BUDGET_FLOOR_MS);
 }
 
 /** The deadline of one command `run` starts, unless its caller names its own, as a part's test does. */

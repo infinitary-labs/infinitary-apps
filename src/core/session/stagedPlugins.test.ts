@@ -1,4 +1,5 @@
 import {
+  appendFileSync,
   chmodSync,
   readFileSync,
   rmSync,
@@ -17,7 +18,7 @@ import {
 } from "../../../tests/helpers/claudePluginHome";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { readEnabledClaudePlugins, turnedOnClaudePlugins } from "../claude/claudePlugins";
-import { PERSONAL_SET_BUDGET_BYTES, readPluginFile } from "./personalSet";
+import { PERSONAL_SET_BUDGET_BYTES, readPluginFile, withinListing } from "./personalSet";
 import { ownFile, stagePluginTrees } from "./stagedPlugins";
 
 /**
@@ -66,13 +67,29 @@ describe("a plugin staged for a session", () => {
     const plugin = installClaudePlugin(home, { name: "claude-security" });
     linkOutsidePlugin(home, plugin.root);
     const listed = join(plugin.root, "scripts", "render_report.py");
-    expect((await ownFile(plugin.root, listed)).data.toString()).toBe("print('report')\n");
-    expect(readPluginFile(plugin.root, listed).data.toString()).toBe("print('report')\n");
+    const size = statSync(listed).size;
+    expect((await ownFile(plugin.root, listed, size)).data.toString()).toBe("print('report')\n");
+    expect(readPluginFile(plugin.root, listed, size).data.toString()).toBe("print('report')\n");
     // An update swaps the listed file for a link outside before it is copied.
     rmSync(listed);
     symlinkSync(join(home, "elsewhere", "keys.txt"), listed);
-    await expect(ownFile(plugin.root, listed)).rejects.toThrow("leads outside the plugin");
-    expect(() => readPluginFile(plugin.root, listed)).toThrow("leads outside the plugin");
+    await expect(ownFile(plugin.root, listed, size)).rejects.toThrow("leads outside the plugin");
+    expect(() => readPluginFile(plugin.root, listed, size)).toThrow("leads outside the plugin");
     expect(readFileSync(listed, "utf8")).toContain(OUTSIDE_THE_PLUGIN);
+  });
+
+  it("refuses a file that grew past its listed size, in the set and in the stage", async () => {
+    const home = scratchDir("infinitary-staged-plugin-grown-");
+    const plugin = installClaudePlugin(home, { name: "claude-security" });
+    const listed = join(plugin.root, "scripts", "render_report.py");
+    const size = statSync(listed).size;
+    // An update appends to the listed file before it is read.
+    appendFileSync(listed, "print('more')\n");
+    await expect(ownFile(plugin.root, listed, size)).rejects.toThrow();
+    expect(() => readPluginFile(plugin.root, listed, size)).toThrow();
+    expect(withinListing(listed, Buffer.from("abc"), 3, 3).toString()).toBe("abc");
+    expect(() => withinListing(listed, Buffer.from("abcd"), 4, 3)).toThrow(
+      "grew past its listed size",
+    );
   });
 });

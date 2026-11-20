@@ -8,6 +8,7 @@ import {
   pluginFiles,
   pluginFileTarget,
   stillPluginFile,
+  withinListing,
 } from "./personalSet";
 
 /**
@@ -37,7 +38,7 @@ export async function stagePluginTrees(
       if (!files) throw new Error(`it holds more than ${PERSONAL_SET_BUDGET_BYTES} bytes`);
       await mkdir(into, { recursive: true });
       for (const file of files) {
-        const { data, mode } = await ownFile(plugin.root, file.abs);
+        const { data, mode } = await ownFile(plugin.root, file.abs, file.size);
         const at = join(into, ...file.path.split("/"));
         await mkdir(dirname(at), { recursive: true });
         await writeFile(at, data, { mode: mode & 0o777 });
@@ -59,13 +60,22 @@ export async function stagePluginTrees(
 }
 
 /** `readPluginFile`, without holding the host while the file is read. */
-export async function ownFile(root: string, path: string): Promise<{ data: Buffer; mode: number }> {
+export async function ownFile(
+  root: string,
+  path: string,
+  size: number,
+): Promise<{ data: Buffer; mode: number }> {
   const own = pluginFileTarget(root, path);
   const handle = await open(own, PLUGIN_FILE_OPEN);
   try {
     const opened = await handle.stat();
-    stillPluginFile(root, path, own, opened);
-    return { data: await handle.readFile(), mode: opened.mode };
+    stillPluginFile(root, path, own, opened, size);
+    // One byte past the listing tells a file that grew while it was read.
+    const data = Buffer.alloc(size + 1);
+    let read = 0;
+    for (let got = 1; got > 0 && read < data.length; read += got)
+      ({ bytesRead: got } = await handle.read(data, read, data.length - read, read));
+    return { data: withinListing(path, data, read, size), mode: opened.mode };
   } finally {
     await handle.close();
   }

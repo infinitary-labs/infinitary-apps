@@ -6,6 +6,7 @@ import {
   openSync,
   readdirSync,
   readFileSync,
+  readSync,
   realpathSync,
   type Stats,
   statSync,
@@ -203,10 +204,10 @@ function listPlugin(
 export function pluginFiles(plugin: {
   id: string;
   root: string;
-}): { path: string; abs: string }[] | undefined {
+}): { path: string; abs: string; size: number }[] | undefined {
   const out: Listed[] = [];
   if (listPlugin(plugin, out, PERSONAL_SET_BUDGET_BYTES, "") === undefined) return undefined;
-  return out.map(({ path, abs }) => ({ path, abs }));
+  return out.map(({ path, abs, size }) => ({ path, abs, size }));
 }
 
 /** How a plugin's file is opened: read alone, never through a last link. */
@@ -221,12 +222,20 @@ export function pluginFileTarget(root: string, path: string): string {
 
 /**
  * That a handle opened on `own` holds the plugin's own regular file the
- * check named: the same file, its path still its own and inside the plugin.
+ * check named: the same file, no larger than its listing allowed, its path
+ * still its own and inside the plugin.
  */
-export function stillPluginFile(root: string, path: string, own: string, opened: Stats): void {
+export function stillPluginFile(
+  root: string,
+  path: string,
+  own: string,
+  opened: Stats,
+  size: number,
+): void {
   const named = statSync(own);
   if (
     !opened.isFile() ||
+    opened.size > size ||
     opened.ino !== named.ino ||
     opened.dev !== named.dev ||
     realpathSync(own) !== own ||
@@ -239,22 +248,41 @@ export function stillPluginFile(root: string, path: string, own: string, opened:
  * A plugin's file, read through a handle on the regular file its links lead
  * to once that file is checked to be the plugin's own, so a file an update
  * turns into a link outside the plugin after it was listed is never read.
+ * At most the `size` its listing counted is read; a file that has grown
+ * past it since is refused, so the set's budget holds.
  */
-export function readPluginFile(root: string, path: string): { data: Buffer; mode: number } {
+export function readPluginFile(
+  root: string,
+  path: string,
+  size: number,
+): { data: Buffer; mode: number } {
   const own = pluginFileTarget(root, path);
   const handle = openSync(own, PLUGIN_FILE_OPEN);
   try {
     const opened = fstatSync(handle);
-    stillPluginFile(root, path, own, opened);
-    return { data: readFileSync(handle), mode: opened.mode };
+    stillPluginFile(root, path, own, opened, size);
+    // One byte past the listing tells a file that grew while it was read.
+    const data = Buffer.alloc(size + 1);
+    let read = 0;
+    for (let got = 1; got > 0 && read < data.length; read += got)
+      got = readSync(handle, data, read, data.length - read, read);
+    return { data: withinListing(path, data, read, size), mode: opened.mode };
   } finally {
     closeSync(handle);
   }
 }
 
+/** The bytes read of a plugin's file, refused when there were more than its listing counted. */
+export function withinListing(path: string, data: Buffer, read: number, size: number): Buffer {
+  if (read > size) throw new Error(`${path} grew past its listed size while it was read`);
+  return data.subarray(0, read);
+}
+
 /** A listed file's bytes: a plugin's through its checked read, anything else as it is. */
 const readListed = (file: Listed): Buffer =>
-  file.within !== undefined ? readPluginFile(file.within, file.abs).data : readFileSync(file.abs);
+  file.within !== undefined
+    ? readPluginFile(file.within, file.abs, file.size).data
+    : readFileSync(file.abs);
 
 /**
  * The set as the reader would pick it from a home folder, listed and not yet

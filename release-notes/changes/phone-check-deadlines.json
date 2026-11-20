@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "phone-check-deadlines",
+      "reason": "Gives every command the project's phone check runs a deadline, so a frozen simulator fails the check in minutes, and moves the check's chooser to the faster Linux line. Only how the project is checked changes; nothing in the app does."
+    }
+  ]
+}

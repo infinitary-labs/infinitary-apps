@@ -576,18 +576,19 @@ describe("a device's Photos in two stages", () => {
 });
 
 describe("the native test's outer deadline", () => {
-  it("gives ordinary tests 1200 seconds, leaves graded allowances to Xcode, and collects no diagnostics", () => {
-    expect(phoneExecutionArguments(false)).toEqual([
+  // INF-5387's plan, piece 1: an ordinary test's allowance is its part's deadline, in whole seconds.
+  it("gives ordinary tests their part's deadline, leaves graded allowances to Xcode, and collects no diagnostics", () => {
+    expect(phoneExecutionArguments(false, 960_611 / 1000)).toEqual([
       "-test-timeouts-enabled",
       "YES",
       "-collect-test-diagnostics",
       "never",
       "-default-test-execution-time-allowance",
-      "1200",
+      "961",
       "-maximum-test-execution-time-allowance",
-      "1200",
+      "961",
     ]);
-    expect(phoneExecutionArguments(true)).toEqual([
+    expect(phoneExecutionArguments(true, 960_611 / 1000)).toEqual([
       "-test-timeouts-enabled",
       "YES",
       "-collect-test-diagnostics",

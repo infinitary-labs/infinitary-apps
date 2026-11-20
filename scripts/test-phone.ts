@@ -24,8 +24,9 @@ import { keepPhoneFailureLogs, runPhoneLog } from "./phone-failure-logs.ts";
 import { GATE_SIMULATOR, removePhoneLeftovers, SCRATCH_PREFIX } from "./phone-leftovers.ts";
 import { buildPhoneHinge, type PhoneHinge, type PhoneKey, type PhoneTurn, pressPhoneKey, setPhoneHinge, turnPhone } from "./phone-hinge.ts";
 import { phoneRecording } from "./phone-recording.ts";
+import { endPhoneHang, PHONE_COMMAND_BUDGET_MS, PhoneDeadlinePassed, phoneCommandBudget, phoneCommandName, phonePartBudget, withinPhoneDeadline } from "./phone-deadlines.ts";
 import { startPhoneGuestObserver } from "./phone-guest-observer.ts";
-import { phoneSharedCacheFolder, phoneSimulator, phoneSimulatorBooted, phoneXcode, removeEmptyPhoneSharedCache } from "./phone-simulator.ts";
+import { PHONE_BOOT_BUDGET_MS, phoneSharedCacheFolder, phoneSimulator, phoneSimulatorBooted, phoneXcode, removeEmptyPhoneSharedCache } from "./phone-simulator.ts";
 import { devicePartNames, devicePhotos, endPhoneGate, macTestFilter, partHinge, PHONE_DEVICES, PHONE_PARTS, partOnMac, partPlanPath, type PhoneWork, phoneWork, phoneWorkPast, runSideBySide, type PhoneDevice, type PhoneJob, type PhonePassEnd, phonePassName, phoneSelectionRunsJourney, phoneTestSelection, phoneTestsStarted, phoneAnimationWaits, phoneExecutionArguments, phoneLanePlan, phoneLanes, phonePasses, phoneStopsEarly, PHONE_PART_TIMES, partTimes, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
 
 // INF-800: with CI mode on, the phone check runs only through CI (docs/testing.md).
@@ -129,7 +130,8 @@ if (!left.length) {
   process.exit(0);
 }
 // INF-4326: a part on the Mac takes no lane; the plan's queues index the device jobs alone, as `runDeviceLanes` gets them.
-const lanePlan = phoneLanePlan(left.filter((job) => !partOnMac(job.part)), simulators, partTimes(readFileSync(join(REPO_ROOT, PHONE_PART_TIMES), "utf8")));
+const recordedTimes = partTimes(readFileSync(join(REPO_ROOT, PHONE_PART_TIMES), "utf8"));
+const lanePlan = phoneLanePlan(left.filter((job) => !partOnMac(job.part)), simulators, recordedTimes);
 mkdirSync(evidence, { recursive: true });
 // INF-1541 piece 4 and INF-1664: a local gate waits in its computer's load line, never for a quieter
 // Mac; its parts ride the gate's place. CI's job, and a shell with no line, start at once (INF-2137).
@@ -159,9 +161,10 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) process.once(signal, () => 
   for (const child of children) child.kill("SIGTERM");
 });
 // A cleanup command, such as deleting a simulator the gate started, still runs after an interruption; `stop` ends one
-// the gate no longer waits for.
+// the gate no longer waits for. INF-5387 piece 1: every command has a deadline (`phoneCommandBudget` unless `budget`
+// names one); past it, what it waited on is kept, it is ended, and it fails naming itself, with no retry.
 const run = async (command: string, args: string[], cleanup = false, onLine?: (line: string) => void, stop?: AbortSignal,
-  extraEnv: Record<string, string> = {}) => {
+  extraEnv: Record<string, string> = {}, budget = phoneCommandBudget(command, args)) => {
   if (interrupted && !cleaningUp && !cleanup) throw new Error("The native gate was interrupted");
   const child = spawn(command, args, { cwd: REPO_ROOT, env: { ...env, ...extraEnv }, stdio: ["ignore", "pipe", "pipe"] });
   children.add(child);
@@ -175,11 +178,23 @@ const run = async (command: string, args: string[], cleanup = false, onLine?: (l
     reader.on("line", onLine);
     return reader;
   }) : [];
-  const status = await new Promise<number | null>((resolveExit, reject) => {
+  const closed = new Promise<number | null>((resolveExit, reject) => {
     child.once("error", reject); child.once("close", resolveExit);
   }).finally(() => { children.delete(child); stop?.removeEventListener("abort", end); for (const reader of readers) reader.close(); });
+  const name = phoneCommandName(command, args);
+  let late: PhoneDeadlinePassed | undefined;
+  const status = await withinPhoneDeadline(name, budget, closed, () => endPhoneHang({ name, pid: child.pid, evidence, env,
+    simulator: args.find((arg) => ownedSimulators.has(arg)) ?? simulator })).catch((error: Error) => {
+    if (!(error instanceof PhoneDeadlinePassed)) throw error;
+    late = error;
+    return null;
+  });
   const log = join(evidence, `${++number}-${command.replaceAll("/", "-")}.log`);
   writeFileSync(log, output);
+  if (late) {
+    console.log(`::error::${late.message}`);
+    throw Object.assign(late, { output });
+  }
   if (status !== 0) throw Object.assign(new Error(`${command} failed (${status}); see ${log}`), { output });
   return output;
 };
@@ -397,7 +412,8 @@ type Lane = { device: PhoneDevice; owned: string; booted: Date; photos?: ReturnT
 const sharedCaches = new Map<string, Promise<void>>();
 // `simctl bootstatus -b` boots the simulator and prints each step of its boot; the gate waits for it within its budget.
 const bootSimulator = (device: PhoneDevice, owned: string) => phoneSimulatorBooted({ device, simulator: owned,
-  boot: (stop, heard) => run("xcrun", ["simctl", "bootstatus", owned, "-b"], false, heard, stop) });
+  boot: (stop, heard) => run("xcrun", ["simctl", "bootstatus", owned, "-b"], false, heard, stop, {},
+    PHONE_BOOT_BUDGET_MS + PHONE_COMMAND_BUDGET_MS) });
 const startSimulator = async (device: PhoneDevice): Promise<Lane> => {
   const catalog = JSON.parse(await run("xcrun", ["simctl", "list", "--json"]));
   const { kind, runtime } = phoneSimulator(catalog, device);
@@ -420,10 +436,13 @@ const startSimulator = async (device: PhoneDevice): Promise<Lane> => {
   console.log(`${device}: started simulator ${owned} in ${((Date.now() - booted.getTime()) / 60_000).toFixed(1)} minutes`);
   return { device, owned, booted };
 };
+// INF-5387 piece 1: a simulator whose delete failed or passed its deadline is not tried again at the gate's end; the next
+// phone check on this Mac removes it before it starts (`removePhoneLeftovers`).
 const deleteSimulator = async (owned: string) => {
-  await run("xcrun", ["simctl", "shutdown", owned], true).catch(() => {});
-  await run("xcrun", ["simctl", "delete", owned], true);
-  ownedSimulators.delete(owned);
+  try {
+    await run("xcrun", ["simctl", "shutdown", owned], true).catch(() => {});
+    await run("xcrun", ["simctl", "delete", owned], true);
+  } finally { ownedSimulators.delete(owned); }
 };
 const simulatorState = async (owned: string): Promise<string> => {
   const listed = JSON.parse(await run("xcrun", ["simctl", "list", "devices", "-j"])).devices as Record<string, { udid: string; state: string }[]>;
@@ -508,6 +527,21 @@ const everyPartOn = async (starting: Map<string, Promise<Lane>>) => {
     return perDevice ? join(evidence, device, name) : join(evidence, name);
   };
   if (perDevice) for (const device of devices) mkdirSync(join(evidence, device), { recursive: true });
+  // INF-5387 piece 1: a part's own run ends within its deadline, its test's (`phonePartBudget`), and room for its
+  // xcodebuild to end and for its own clean-up. Its own commands' deadlines end it first; this one ends a part whose
+  // clean-up still hangs, with every process under it, and fails it naming the part and its minutes.
+  const partEnded = (name: string, job: PhoneJob, child: ChildProcess, owned: string | undefined, ended: () => void) =>
+    withinPhoneDeadline(`The ${name} part`, phonePartBudget(job.part, recordedTimes) + 2 * PHONE_COMMAND_BUDGET_MS,
+      new Promise<number | null>((resolveExit, reject) => {
+        child.once("error", reject); child.once("close", resolveExit);
+      }).finally(ended),
+      () => endPhoneHang({ name, pid: child.pid, evidence: folder(job), simulator: owned, env }))
+      .catch((error: Error) => {
+        if (!(error instanceof PhoneDeadlinePassed)) throw error;
+        ended();
+        console.log(`::error::${name}: ${error.message}`);
+        return null;
+      });
   const gate = async (job: PhoneJob, lane: Lane, stopping: AbortSignal): Promise<PhonePassEnd> => {
     const { device, part } = job;
     const name = phonePassName(job);
@@ -541,9 +575,7 @@ const everyPartOn = async (starting: Map<string, Promise<Lane>>) => {
     stopping.addEventListener("abort", stop, { once: true });
     for (const stream of [child.stdout, child.stderr])
       createInterface({ input: stream }).on("line", (line) => console.log(`${name}: ${line}`));
-    const status = await new Promise<number | null>((resolveExit, reject) => {
-      child.once("error", reject); child.once("close", resolveExit);
-    }).finally(() => { children.delete(child); stopping.removeEventListener("abort", stop); });
+    const status = await partEnded(name, job, child, lane.owned, () => { children.delete(child); stopping.removeEventListener("abort", stop); });
     console.log(`${name}: ${stopped ? "stopped after another part failed" : `ended with ${status}`} after ${minutes()} minutes`);
     const work = join(folder(job), "work.json");
     return { ...ended(status === 0 ? "passed" : stopped ? "stopped" : "failed"),
@@ -566,9 +598,7 @@ const everyPartOn = async (starting: Map<string, Promise<Lane>>) => {
     stopping.addEventListener("abort", stop, { once: true });
     for (const stream of [child.stdout, child.stderr])
       createInterface({ input: stream }).on("line", (line) => console.log(`${name}: ${line}`));
-    const status = await new Promise<number | null>((resolveExit, reject) => {
-      child.once("error", reject); child.once("close", resolveExit);
-    }).finally(() => { children.delete(child); stopping.removeEventListener("abort", stop); });
+    const status = await partEnded(name, job, child, undefined, () => { children.delete(child); stopping.removeEventListener("abort", stop); });
     const minutes = ((Date.now() - began) / 60_000).toFixed(1);
     console.log(`${name}: ${stopped ? "stopped after another part failed" : `ended with ${status}`} after ${minutes} minutes on the Mac`);
     return { outcome: status === 0 ? "passed" : stopped ? "stopped" : "failed", ms: Date.now() - began };
@@ -624,6 +654,9 @@ const planFor = async (built: string, url: string, owned: string) => {
 // device clean before it and waited for Photos where the part chooses a photo.
 const onePart = async () => {
   const owned = simulator!;
+  // INF-5387 piece 1: XCTest ends a test that hangs while it runs at the part's deadline; the part's xcodebuild has that
+  // and room to end after it, so a test program that never starts again ends too.
+  const partBudget = phonePartBudget(values.part![0]!, recordedTimes);
   keyboard = await observePhoneKeyboard({ simulator: owned, env, evidence, children });
   const { startPhoneHome } = await runner.import<typeof import("../tests/helpers/phoneHome")>(join(REPO_ROOT, "tests/helpers/phoneHome.ts"));
   await demo.prepare();
@@ -657,7 +690,7 @@ const onePart = async () => {
       sample: async (pid, destination) => { await run("/usr/bin/sample", [String(pid), "3", "1", "-mayDie", "-file", destination]); },
     });
     if (values["guest-observer"] && values.part![0]!.startsWith("cards-")) {
-      const execution = phoneExecutionArguments(false);
+      const execution = phoneExecutionArguments(false, partBudget / 1000);
       guestObserver = await startPhoneGuestObserver({ owner, env, evidence: join(evidence, "guest-observer"),
         sampleSeconds: Number(execution[execution.indexOf("-maximum-test-execution-time-allowance") + 1]),
       }, children);
@@ -701,10 +734,10 @@ const onePart = async () => {
   const testing = new Date();
   let output = "";
   await finishPhoneCheck(run("xcodebuild", ["-xctestrun", plan, ...destination, ...phoneTestSelection(values.part![0]!, values.test, only),
-    ...phoneExecutionArguments(GRADES_BUDGETS), "test-without-building"], false, (line) => {
+    ...phoneExecutionArguments(GRADES_BUDGETS, partBudget / 1000), "test-without-building"], false, (line) => {
       idleStack?.receive(line);
       if (guestObserver && phoneGuestJourneyFinished(line, values.part![0]!)) guestObserver.stop();
-    })
+    }, undefined, {}, partBudget + PHONE_COMMAND_BUDGET_MS)
     .then((log) => { output = log; }, (error: Error & { output?: string }) => {
       output = error.output ?? "";
       throw error;
@@ -726,7 +759,7 @@ const onePart = async () => {
         nextLog: () => join(evidence, `${++number}-xcrun.log`),
         keepLog: async (args, log) => {
           if (interrupted && !cleaningUp) throw new Error("The native gate was interrupted");
-          await runPhoneLog({ command: "xcrun", args, cwd: REPO_ROOT, env, children, log });
+          await runPhoneLog({ command: "xcrun", args, cwd: REPO_ROOT, env, children, log, budget: PHONE_COMMAND_BUDGET_MS });
         },
       });
       throw error;
@@ -756,7 +789,7 @@ const macPart = async () => {
   const output = await run("swift", ["test", "--package-path", "ios/Infinitary/InfinitaryKit", "--scratch-path", values["swift-build"]!,
     "--cache-path", packageCache, ...macTestFilter(part, values.test)], false, (line) => {
     if (/^Test Case .* (started|passed|failed|skipped)|error: /.test(line)) console.log(line);
-  }, undefined, { PHONE_TEST_HOME: fixture.url });
+  }, undefined, { PHONE_TEST_HOME: fixture.url }, phonePartBudget(part, recordedTimes) + PHONE_COMMAND_BUDGET_MS);
   // INF-2625: a test XCTest no longer finds passes silently; a skipped one ran nothing.
   if (!phoneTestsStarted(part, output, values.test)) throw new Error(`The ${part} part never started its tests: swift test did not find them`);
   if (/^Test Case .* skipped/m.test(output)) throw new Error(`The ${part} part skipped its tests: they found no disposable home`);
@@ -813,6 +846,8 @@ try {
       } finally {
         try { await runner.close(); }
         finally {
+          // INF-5387 piece 1: a diagnostic whose close passed its deadline left its process; none outlives the gate.
+          for (const child of children) child.kill("SIGKILL");
           // Keep activity visible through the scratch owner's filesystem teardown too.
           try { removeScratchDirs(); }
           finally {

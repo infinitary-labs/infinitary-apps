@@ -1,9 +1,14 @@
+import { PHONE_COMMAND_BUDGET_MS, withinPhoneDeadline } from "./phone-deadlines.ts";
+
 /** INF-1936 review: failed evidence or diagnostic teardown must not replace the
  * native outcome or prevent the remaining diagnostics from finishing.
  * Required setup and resource teardown still fail through their normal owners.
  */
-export async function keepPhoneDiagnostic(name: string, keep: () => unknown, report = console.log): Promise<void> {
-  try { await keep(); }
+export async function keepPhoneDiagnostic(name: string, keep: () => unknown, report = console.log,
+  budget = PHONE_COMMAND_BUDGET_MS): Promise<void> {
+  // INF-5387 piece 1: a close that hangs, as one on a frozen simulator can, is left at its deadline and the rest go on;
+  // the gate ends its processes at its own end.
+  try { await withinPhoneDeadline(name, budget, Promise.resolve().then(keep), async () => "the check went on without it"); }
   catch (error) { report(`${name} could not be kept: ${String(error)}`); }
 }
 

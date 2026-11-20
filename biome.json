@@ -521,6 +521,7 @@
         "!tests/heavy-run-place.test.ts",
         "!tests/heavy-run-place-phone.test.ts",
         "!tests/phone-activity.test.ts",
+        "!tests/phone-deadlines.test.ts",
         "!tests/phone-failure-logs.test.ts",
         "!tests/wait-window.test.ts",
         "!tests/load-clock.test.ts",

@@ -90078,6 +90078,11 @@
               "type": "string",
               "pattern": "^[0-9a-f]{40}(?:[0-9a-f]{24})?$"
             },
+            "base": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
             "changedFiles": {
               "type": "array",
               "items": {

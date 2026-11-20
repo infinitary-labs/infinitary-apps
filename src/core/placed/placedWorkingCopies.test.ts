@@ -160,6 +160,58 @@ describe("a task that runs on a computer that runs work", () => {
     expect(readFileSync(join(work, "notes.txt"), "utf8")).toBe("still thinking\n");
   });
 
+  it("reviews a branch rebuilt after its project moved against the new address's default branch, leaving the clone's origin as it was (project move)", async () => {
+    const former = await gitProject();
+    const current = await gitProject();
+    // The new address was started over: its history shares nothing with the former one's.
+    await git(current.home, ["checkout", "--quiet", "--orphan", "restart"]);
+    writeFileSync(join(current.home, "README.md"), "# website, started over\n");
+    await commit(current.home, "chore: start the website over");
+    await git(current.home, ["push", "--quiet", "--force", "origin", "HEAD:main"]);
+    const at = await world(() => former.forge(Buffer.alloc(0)));
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, former.home);
+    home.repos.configure(repo.id, { delivery: "direct-pr" });
+    model([{ text: "Started on the former address." }]);
+    await at.start("t-rebuilt", "Make the footer blue.", repo.id);
+    await expect.poll(() => home.tasks.get("t-rebuilt")?.activity).toBe("idle");
+    const work = at.folders("t-rebuilt").work;
+    const branch = await git(work, ["branch", "--show-current"]);
+    const clone = await git(work, ["rev-parse", "--path-format=absolute", "--git-common-dir"]);
+    const originRefs = await git(clone, ["for-each-ref", "refs/remotes/origin"]);
+    await git(former.home, ["remote", "set-url", "origin", current.origin]);
+    home.repos.configure(repo.id, { origin: current.origin });
+    model([{ text: "Rebuilt at the new address." }]);
+    await home.supervisor.steer.steerCrewmate("t-rebuilt", "Rebuild the footer there.");
+    await expect.poll(() => home.tasks.get("t-rebuilt")?.activity).toBe("idle");
+    // The crewmate rebuilds its branch on the new address's default branch.
+    await git(work, ["fetch", "--quiet", current.origin, "main"]);
+    await git(work, ["reset", "--quiet", "--hard", "FETCH_HEAD"]);
+    writeFileSync(join(work, "footer.html"), "<footer>blue</footer>\n");
+    const tip = await commit(work, "feat: a blue footer");
+
+    model([{ text: "Reading the footer change." }]);
+    const handle = await home.supervisor.intake.commission({
+      title: "Review",
+      intent: { goal: "Review the footer.", userWords: "make the footer blue" },
+      shape: { review_of: "t-rebuilt" },
+    });
+    await handle.started;
+    const review = home.tasks.get(handle.taskId);
+    expect(review?.delivery?.headSha).toBe(tip);
+    // The brief names the default branch where the project lives now, and
+    // the reviewer's own diff against it reads the footer alone.
+    const base = `refs/remotes/${await git(work, ["config", "--get", `branch.${branch}.remote`])}/main`;
+    expect(review?.prompt).toContain(`git diff ${base}...${tip}`);
+    expect(review?.prompt).toContain('- "footer.html"');
+    expect(review?.prompt).not.toContain('- "README.md"');
+    const reviewWork = at.folders(handle.taskId).work;
+    expect(await git(reviewWork, ["diff", "--name-only", `${base}...${tip}`])).toBe("footer.html");
+    // The shared clone still names the former address, as its other tasks expect.
+    expect(await git(clone, ["remote", "get-url", "origin"])).toBe(former.origin);
+    expect(await git(clone, ["for-each-ref", "refs/remotes/origin"])).toBe(originRefs);
+  });
+
   it("prepares a story on the home after transferring the work computer's inspected pictures, without showing a card or uploading (INF-92)", async () => {
     const project = await gitProject();
     const upload = vi.fn(async () => {

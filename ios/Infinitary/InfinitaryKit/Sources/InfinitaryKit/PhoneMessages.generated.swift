@@ -1292,6 +1292,7 @@ public enum PhoneMessages {
     public static func `panelMoveNotAsked`() -> String { PhoneWords.format("panelMoveNotAsked", []) }
     public static func `panelRailFolded`() -> String { PhoneWords.format("panelRailFolded", []) }
     public static func `panelRailMore`(`count`: String) -> String { PhoneWords.format("panelRailMore", [`count`]) }
+    public static func `panelReadsSettings`() -> String { PhoneWords.format("panelReadsSettings", []) }
     public static func `panelRetry`() -> String { PhoneWords.format("panelRetry", []) }
     public static func `panelSaidLineOpen`(`panelTitle`: String) -> String { PhoneWords.format("panelSaidLineOpen", [`panelTitle`]) }
     public static func `panelSettingsAppearance`() -> String { PhoneWords.format("panelSettingsAppearance", []) }
@@ -5118,6 +5119,7 @@ extension PhoneWords {
         "panelMoveNotAsked": [],
         "panelRailFolded": [],
         "panelRailMore": ["count"],
+        "panelReadsSettings": [],
         "panelRetry": [],
         "panelSaidLineOpen": ["panelTitle"],
         "panelSettingsAppearance": [],

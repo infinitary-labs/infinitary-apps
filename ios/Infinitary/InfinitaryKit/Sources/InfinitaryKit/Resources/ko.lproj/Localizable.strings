@@ -1231,6 +1231,7 @@
 "panelMoveNotAsked" = "이 패널에서 직접 클릭하거나 키를 눌러야만 작업이 옮겨져요. 아무것도 기록하지 않았어요.";
 "panelRailFolded" = "공간이 부족해 접은 패널";
 "panelRailMore" = "%1$@개 더";
+"panelReadsSettings" = "모양, 음악 및 몇 가지 다른 설정";
 "panelRetry" = "다시 시도";
 "panelSaidLineOpen" = "%1$@ 열기";
 "panelSettingsAppearance" = "모양";

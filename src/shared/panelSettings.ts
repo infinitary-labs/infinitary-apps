@@ -17,6 +17,7 @@ import {
  * Why an action catalog line has no panel value, so `settings.current`
  * refuses it: one ground from this closed set for every such line.
  */
+// i18n-exempt: a developer's reason for each ground, never shown to a person
 export const PANEL_UNREADABLE = {
   act: "an act, a hand-over or a card: it holds no setting to read",
   names:
@@ -77,6 +78,11 @@ export const PANEL_SETTINGS: Record<ActionName, PanelSetting> = {
   "device-update": { unreadable: "names" },
   "device-sign-in": { unreadable: "names" },
   "device-address": { unreadable: "act" },
+  "device-change-address": { unreadable: "names" },
+  "device-forge-sign-in": { unreadable: "names" },
+  "home-move": { unreadable: "names" },
+  "standby-keep": { unreadable: "names" },
+  "keep-home": { unreadable: "names" },
   panel: { unreadable: "layout" },
   "voice-model": { unreadable: "home" },
   "account-sign-in": { unreadable: "act" },
@@ -90,6 +96,9 @@ export const PANEL_SETTINGS: Record<ActionName, PanelSetting> = {
   recovery: { unreadable: "act" },
   "ask-first-merge": { unreadable: "act" },
   "show-card": { unreadable: "act" },
+  "show-task": { unreadable: "act" },
+  "show-settings": { unreadable: "act" },
+  "secrets-page": { unreadable: "act" },
   "show-whats-new": { unreadable: "home" },
   direction: { unreadable: "names" },
   "start-at-login": { unreadable: "home" },
@@ -134,6 +143,7 @@ export const PANEL_SETTINGS: Record<ActionName, PanelSetting> = {
   "automation-notes": { unreadable: "read" },
   "automation-delete": { unreadable: "read" },
   "kept-job-remove": { unreadable: "read" },
+  "kept-job-forget": { unreadable: "read" },
 };
 
 /** The panel value of each named line from its `current` answer, by that answer's channel. */

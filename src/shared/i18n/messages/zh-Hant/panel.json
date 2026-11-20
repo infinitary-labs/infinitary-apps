@@ -21,6 +21,7 @@
   "panelMoveNotAsked": "只有你自己在這個面板裡的點按或按鍵才會移動任務。沒有寫入任何內容。",
   "panelRailFolded": "面板已收合以騰出空間",
   "panelRailMore": "還有 {count} 個",
+  "panelReadsSettings": "你的外觀、音樂和其他幾項設定",
   "panelRetry": "重試",
   "panelSaidLineOpen": "開啟 {panelTitle}",
   "panelSettingsAppearance": "外觀",

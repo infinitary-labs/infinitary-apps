@@ -31879,6 +31879,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${count} more`;
   }
+  function panelReadsSettings() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مظهرك وموسيقاك وبعض الإعدادات الأخرى`;
+      case "de":
+        return `dein Erscheinungsbild, deine Musik und einige weitere Einstellungen`;
+      case "es":
+        return `tu apariencia, tu música y algunos ajustes más`;
+      case "fr":
+        return `votre apparence, votre musique et quelques autres réglages`;
+      case "ja":
+        return `外観、音楽、その他いくつかの設定`;
+      case "ko":
+        return `모양, 음악 및 몇 가지 다른 설정`;
+      case "pt-BR":
+        return `sua aparência, sua música e algumas outras configurações`;
+      case "zh-Hans":
+        return `你的外观、音乐和其他几项设置`;
+      case "zh-Hant":
+        return `你的外觀、音樂和其他幾項設定`;
+      case "en-XA":
+        return `[ýöûŕ ļööķ, ɱûšîç áñð á ƒéŵ öţĥéŕ šéţţîñĝš ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮your look, music and a few other settings‬`;
+    }
+    return `your look, music and a few other settings`;
+  }
   function panelRetry() {
     switch (currentLanguage()) {
       case "ar":
@@ -87788,6 +87815,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     panelMoveNotAsked,
     panelRailFolded,
     panelRailMore,
+    panelReadsSettings,
     panelRetry,
     panelSaidLineOpen,
     panelSettingsAppearance,
@@ -90603,6 +90631,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "panelMoveNotAsked": [],
     "panelRailFolded": [],
     "panelRailMore": ["count"],
+    "panelReadsSettings": [],
     "panelRetry": [],
     "panelSaidLineOpen": ["panelTitle"],
     "panelSettingsAppearance": [],

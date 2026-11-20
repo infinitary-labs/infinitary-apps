@@ -1231,6 +1231,7 @@
 "panelMoveNotAsked" = "Solo tu propio clic o tecla en este panel mueve una tarea. No se escribió nada.";
 "panelRailFolded" = "Paneles plegados por falta de espacio";
 "panelRailMore" = "%1$@ más";
+"panelReadsSettings" = "tu apariencia, tu música y algunos ajustes más";
 "panelRetry" = "Reintentar";
 "panelSaidLineOpen" = "Abrir %1$@";
 "panelSettingsAppearance" = "Apariencia";

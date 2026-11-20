@@ -1231,6 +1231,7 @@
 "panelMoveNotAsked" = "タスクを動かせるのは、このパネルでのあなた自身のクリックかキー操作だけです。何も書き込まれていません。";
 "panelRailFolded" = "スペースが足りないためパネルを折りたたみました";
 "panelRailMore" = "ほか%1$@件";
+"panelReadsSettings" = "外観、音楽、その他いくつかの設定";
 "panelRetry" = "再試行";
 "panelSaidLineOpen" = "%1$@ を開く";
 "panelSettingsAppearance" = "外観";

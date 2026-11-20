@@ -272,7 +272,10 @@ export const READ_WORDS: Record<string, string> = {
   "knowledge.entry": "each idea and finding in full, with its evidence",
   "knowledge.directions": "your standing directions",
   "knowledge.direction": "a standing direction and its edit history",
-  "settings.current": "your look, music and a few other settings",
+  // Worded in the language the app speaks when the card is written.
+  get "settings.current"() {
+    return m.panelReadsSettings();
+  },
 };
 
 /**

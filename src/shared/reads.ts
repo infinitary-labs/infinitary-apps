@@ -624,6 +624,7 @@ export const readCatalog = {
       events: (event) => event.type === "personalized",
       sameValue: (current, next) => JSON.stringify(current) === JSON.stringify(next),
     },
+    // i18n-exempt: told to a panel's author and the crew, never shown in the window
     description:
       "The current value of each named app setting a panel may read: look, sound and a few switches.",
   }),

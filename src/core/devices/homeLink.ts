@@ -330,6 +330,8 @@ export class HomeLink {
   private socket: WebSocket | null = null;
   /** The socket the home welcomed; requests ride only this. */
   private open: WebSocket | null = null;
+  /** How many welcomes this link has heard: the number of the newest connection's. */
+  private welcomes = 0;
   private cursor: ConnectionCursor | undefined;
   private attempting = false;
   /** The one attempt right after a drop, before the device says the home is out of reach. */
@@ -369,6 +371,15 @@ export class HomeLink {
 
   state(): HomeLinkState {
     return this.current;
+  }
+
+  /**
+   * The number of the welcome on the connection open now, or null while
+   * none is open: a drop the link dials through at once leaves the contact
+   * in reach, and still ends that number.
+   */
+  connection(): number | null {
+    return this.open ? this.welcomes : null;
   }
 
   /** Starts dialing; it keeps dialing until it is closed or the home removes the device. */
@@ -699,6 +710,7 @@ export class HomeLink {
       this.options.speaks ?? OWN_SPELLING,
     );
     this.open = socket;
+    this.welcomes += 1;
     this.heardNumber(frame.homeNumber ?? FIRST_HOME_NUMBER);
     this.heardTakeOverOf(frame);
     this.followRoutes(frame.addresses);

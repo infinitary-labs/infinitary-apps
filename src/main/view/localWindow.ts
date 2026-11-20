@@ -23,7 +23,7 @@ import { BrowserWatches, isBrowserWatchChannel } from "./browserWatches";
  * - stays with the window and never crosses.
  */
 
-type Link = Pick<HomeLink, "start" | "invoke" | "state" | "close">;
+type Link = Pick<HomeLink, "start" | "invoke" | "state" | "connection" | "close">;
 
 export type LocalWindowOptions = {
   /** The local door's folder, which the window reads as any local client does. */
@@ -175,6 +175,11 @@ export class LocalWindow {
   /** Whether the first mate welcomes the window now. */
   inReach(): boolean {
     return this.link.state().contact === "in-reach";
+  }
+
+  /** The number of the welcome on the connection open now, or null while none is open. */
+  connection(): number | null {
+    return this.link.connection();
   }
 
   /** The contract changes the first mate's welcome listed; null before its first welcome. */

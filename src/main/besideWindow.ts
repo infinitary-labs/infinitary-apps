@@ -177,11 +177,19 @@ export class BesideWindow {
   /** When this window last started the command, until that one welcomes it. */
   private startedAt: number | null;
   /**
-   * Restart it under way: the run it replaces, whether its starter has
-   * answered, and whether a first mate welcomed this window since, until
-   * its own replacement is known (`settleRestart`).
+   * Restart it under way, until its own replacement is known or the run it
+   * replaces is known to survive (`settleRestart`): that run, read once;
+   * the window's start time before the press; whether its starter has
+   * answered, and refused; and the connection a first mate welcomed this
+   * window on since, unless the records named the run being replaced then.
    */
-  private restart: { from: OwnedRun | null; settled: boolean; welcomed: boolean } | null = null;
+  private restart: {
+    from: OwnedRun | null;
+    startedBefore: number | null;
+    settled: boolean;
+    refused: boolean;
+    welcomedOn: number | null;
+  } | null = null;
   /** Start it here took the notice down: the window starts over once the command it started welcomes it. */
   private startsOver = false;
   /** Restart it ended a command that did not answer: the window waits under its notice for the one started again. */
@@ -212,7 +220,8 @@ export class BesideWindow {
   joinState(): { owned: OwnedRun | null } | "starting" | "outside" | "unknown" {
     const status = this.options.beside.status();
     if (!this.startsCommand) return status.running === true ? "outside" : "unknown";
-    this.settleRestart();
+    // The same reading settles Restart it and names what a join stops.
+    this.settleRestart(status);
     if (this.startedAt !== null) return "starting";
     if (status.running === false) return { owned: null };
     if (status.running !== true) return "unknown";
@@ -410,12 +419,17 @@ export class BesideWindow {
     if (this.shown?.ending !== "not-answering" || !starter || this.restart?.settled === false)
       return false;
     const since = this.unansweredSince;
-    const startedBefore = this.startedAt;
     // The run this restart replaces, read once: the one its starter ends, and a welcome from it,
     // reconnecting, is not the one started again.
     const recorded = this.options.beside.status().run;
     const outgoing = recorded ? { pid: recorded.pid, startedAt: recorded.startedAt } : null;
-    const restart = { from: outgoing, settled: false, welcomed: false };
+    const restart = {
+      from: outgoing,
+      startedBefore: this.startedAt,
+      settled: false,
+      refused: false,
+      welcomedOn: null,
+    };
     this.restart = restart;
     this.restarting = true;
     this.startedAt = this.options.now();
@@ -427,20 +441,12 @@ export class BesideWindow {
     this.away();
     void starter.restart(outgoing ? { pid: outgoing.pid } : {}).then((restarted) => {
       restart.settled = true;
+      restart.refused = !restarted;
       if (this.closed || this.restart !== restart) return;
-      if (restarted) {
-        this.settleRestart();
-        return;
-      }
+      this.settleRestart(this.options.beside.status());
+      if (restarted) return;
       // The command was not restarted: it is still the one that has not answered since then.
       this.restarting = false;
-      // Joining is offered again only beside the run it replaced, still running; where that run
-      // has gone, whatever was started in its place has not welcomed this window.
-      const now = this.options.beside.status();
-      if (now.running === true && sameRun(now.run, outgoing)) {
-        this.startedAt = startedBefore;
-        this.restart = null;
-      }
       if (this.unansweredOf === this.options.beside.status().run?.pid) this.unansweredSince = since;
       this.show(this.notAnswering());
     });
@@ -746,10 +752,15 @@ export class BesideWindow {
     this.stopReading();
     this.stoppedAt = null;
     this.unansweredSince = null;
-    // Beside Restart it, only its own replacement ends the wait, never the run it replaces.
+    // Beside Restart it, only its own replacement ends the wait, never the run it replaces: a
+    // welcome while the records name that run is its own, and counts for nothing.
     if (this.restart) {
-      this.restart.welcomed = true;
-      this.settleRestart();
+      const status = this.options.beside.status();
+      this.restart.welcomedOn =
+        status.running === true && sameRun(status.run, this.restart.from)
+          ? null
+          : this.window.connection();
+      this.settleRestart(status);
     } else this.startedAt = null;
     this.restarting = false;
     const under = this.shown !== null || this.startsOver;
@@ -819,27 +830,32 @@ export class BesideWindow {
   }
 
   /**
-   * Restart it's wait ends once its starter answered, a first mate welcomed
-   * this window since, and the records name a run this app's own agent
-   * started that is not the one it replaced. Read again at each welcome and
-   * each join reading, so records unreadable at the welcome are read again
-   * once they recover, with no further welcome needed.
+   * Restart it's wait ends, from one reading of the records, once its
+   * starter answered and either the records name a run this app's own agent
+   * started that is not the one replaced, which welcomed this window on the
+   * connection open now, or the starter refused and the run replaced, by
+   * its process and start, still runs. Read at each welcome, at the
+   * starter's answer and at each join reading, so records unreadable at
+   * any of them are read again once they recover, with no further welcome.
    */
-  private settleRestart(): void {
+  private settleRestart(status: Pick<RunStatus, "running" | "run" | "lastStop">): void {
     const restart = this.restart;
-    if (!restart?.settled || !restart.welcomed) return;
-    const status = this.options.beside.status();
-    if (status.running !== true) return;
+    if (!restart?.settled || status.running !== true) return;
+    // Refused: the run replaced still runs, and joins again as before the press.
+    if (restart.refused && sameRun(status.run, restart.from)) {
+      this.restart = null;
+      this.startedAt = restart.startedBefore;
+      return;
+    }
     const owned = this.options.beside.ownedRun?.(status) ?? null;
     if (!owned || sameRun(owned, restart.from)) return;
+    if (restart.welcomedOn === null || restart.welcomedOn !== this.window.connection()) return;
     this.restart = null;
     this.startedAt = null;
   }
 
   /** The first mate is out of reach: read whether its command still runs, until it is back. */
   private away(): void {
-    // A welcome before this drop says nothing of the first mate that welcomes next.
-    if (this.restart) this.restart.welcomed = false;
     if (this.closed || this.timer) return;
     this.read();
     this.timer = setInterval(() => this.read(), BESIDE_RUN_READ_MS);
@@ -891,12 +907,8 @@ export class BesideWindow {
       if (status.running === true) this.countUnanswered(status);
       else this.unansweredSince = null;
       const since = this.unansweredSince;
-      // While Restart it's starter has not answered, the notice offers no second one.
       const silent =
-        this.restart?.settled !== false &&
-        status.running === true &&
-        since !== null &&
-        now() - since >= this.answerWaitMs();
+        status.running === true && since !== null && now() - since >= this.answerWaitMs();
       if (silent) this.restarting = false;
       this.show(silent ? this.notAnswering() : this.restarting ? this.restartingNotice() : null);
       return;
@@ -915,7 +927,13 @@ export class BesideWindow {
     this.show(notice && beside.starter ? { ...notice, byWindow: true } : notice);
   }
 
-  private show(notice: CommandNotice | null): void {
+  private show(shown: CommandNotice | null): void {
+    // While Restart it's starter has not answered, no notice offers what it would refuse: Restart
+    // it again, or Start it here.
+    const notice =
+      shown?.state === "stopped" && this.restart?.settled === false
+        ? this.restartingNotice()
+        : shown;
     const was = this.shown;
     if (
       was?.state === notice?.state &&

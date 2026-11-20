@@ -159,13 +159,15 @@ describe("the window beside a command's first mate", () => {
       answerWaitMs?: number;
       /** Each dial of the command's door after this turns true never connects, as at a stuck command. */
       dialHangs?: () => boolean;
+      /** Where each link the window dials the command's door with is kept, to read its connection. */
+      links?: HomeLink[];
       /** This user's work folder, where a home that added this computer leaves its grant. */
       workDir?: string;
       /**
        * The command running when it is the starter's own - this app's agent started it - or null
        * for one started by hand; asked each time. With a starter, the agent's run by default.
        */
-      ownedRun?: () => OwnedRun | null;
+      ownedRun?: (status: Records) => OwnedRun | null;
     } = {},
   ) {
     const startCore = vi.fn(async () => ownCore().core);
@@ -238,21 +240,24 @@ describe("the window beside a command's first mate", () => {
       startConnection: () => {
         throw new Error("A window beside a command serves no connection.");
       },
-      ...(options.readyMs !== undefined || options.dialHangs
+      ...(options.readyMs !== undefined || options.dialHangs || options.links
         ? {
             localWindow: {
               ...(options.readyMs !== undefined ? { readyMs: options.readyMs } : {}),
-              ...(options.dialHangs
+              ...(options.dialHangs || options.links
                 ? {
-                    link: (linkOptions: ConstructorParameters<typeof HomeLink>[0]) =>
-                      new HomeLink({
+                    link: (linkOptions: ConstructorParameters<typeof HomeLink>[0]) => {
+                      const link = new HomeLink({
                         ...linkOptions,
                         dial: (grant, reached) =>
                           options.dialHangs?.()
                             ? new Promise<never>(() => {})
                             : (linkOptions.dial?.(grant, reached) ??
                               Promise.reject(new Error("no dial"))),
-                      }),
+                      });
+                      options.links?.push(link);
+                      return link;
+                    },
                   }
                 : {}),
             },
@@ -1268,8 +1273,13 @@ describe("the window beside a command's first mate", () => {
     await expect.poll(() => command.asked("inf:own-window:here").length).toBe(2);
     expect(at.shell.followsAdded()).toEqual(starting);
     expect(at.starter.stop).not.toHaveBeenCalled();
-    // The service manager would not restart it: the run the window owns still runs, and joins.
+    // The service manager would not restart it while the records cannot be read: nothing is offered
+    // until they name the run the window owns, by its process and start, still running.
+    at.command.records = { running: null, run: null, lastStop: null };
     answers.shift()?.(false);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(at.shell.followsAdded()).toEqual(starting);
+    at.command.records = { running: true, run: JOINED, lastStop: null };
     await expect.poll(() => at.shell.followsAdded()).toMatchObject({ joins: true, pastes: true });
     // A restart that ended that run and then could not start another leaves nothing to offer.
     await expect
@@ -1283,8 +1293,9 @@ describe("the window beside a command's first mate", () => {
   });
 
   // The review of INF-5409: a welcome from the run started again is not enough while its
-  // starter has not answered, since a Windows restart can still register or run its task; once it
-  // has, the join names that replacement, and records unreadable at its welcome are read again.
+  // starter has not answered, since a Windows restart can still register or run its task, nor is
+  // one on a connection that has since dropped; once both hold, the join names that replacement,
+  // and records unreadable at its welcome are read again.
   it("joins beside the run Restart it started only once its starter answered, and stops that run alone", async () => {
     const pro = await otherMac({}, { joinsFromAnotherMac: true });
     const command = commandRun();
@@ -1296,12 +1307,14 @@ describe("the window beside a command's first mate", () => {
     await command.open().settled();
     const first = { pid: 41, startedAt: "2026-11-20T08:00:00.000Z", agent: true as const };
     const again = { pid: 42, startedAt: "2026-11-20T08:05:00.000Z", agent: true as const };
+    const links: HomeLink[] = [];
     const at = besideShell(command.doorDir, {
       starts: true,
       readyMs: 2_000,
       answerWaitMs: 200,
       records: { running: true, run: first, lastStop: null },
-      ownedRun: () => ownedRunOf(at.command.records),
+      ownedRun: (status) => ownedRunOf(status),
+      links,
     });
     await at.shell.start();
     await expect
@@ -1318,24 +1331,44 @@ describe("the window beside a command's first mate", () => {
     // Its starter ends the run read when Restart it was pressed, by its process.
     expect(at.starter.restart.mock.calls).toEqual([[{ pid: first.pid }]]);
     const starting = { follows: false, joins: false, pastes: false, outside: false };
-    // The run started again welcomes the window before its starter answered: nothing is offered,
-    // and no second Restart it or Start it here goes to the starter meanwhile.
-    at.command.records = { running: true, run: again, lastStop: null };
+    // The run being replaced reconnects while the records cannot be read, welcomes the window and
+    // never answers it, past the wait for its answers: the notice still says the first mate is
+    // starting again and offers neither a second Restart it nor Start it here.
+    at.command.records = { running: null, run: null, lastStop: null };
     await command.stop();
     await command.open().settled();
     await expect.poll(() => command.asked("inf:own-window:here").length).toBe(2);
-    expect(at.shell.followsAdded()).toEqual(starting);
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(at.shell.thisMac()).toMatchObject({
+      command: { state: "waiting", ending: "restart", byWindow: true },
+    });
     expect(at.shell.restartCommand()).toBe(false);
     expect(at.shell.startHere()).toBe(false);
-    // The starter answers while the records cannot be read: still nothing is offered.
-    at.command.records = { running: null, run: null, lastStop: null };
+    expect(at.shell.followsAdded()).toEqual(starting);
+    // It drops, and the run started again writes its record before it welcomes the window: the
+    // welcome on the connection that dropped counts for nothing, once the starter answers too.
+    await command.stop();
+    await expect.poll(() => links.map((link) => link.connection())).toEqual([null]);
+    at.command.records = { running: true, run: again, lastStop: null };
     settle(true);
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(at.shell.followsAdded()).toEqual(starting);
-    // The records come back naming the run started again: the join is offered with no new welcome.
-    at.command.records = { running: true, run: again, lastStop: null };
+    // The run started again welcomes the window while its records cannot be read: still nothing.
+    at.command.records = { running: null, run: null, lastStop: null };
+    await command.open().settled();
+    await expect.poll(() => command.asked("inf:own-window:here").length).toBe(3);
+    expect(at.shell.followsAdded()).toEqual(starting);
+    // The records come back naming it, after one more reading that names no run: that reading
+    // settles nothing and offers no join that stops none; the next offers it, with no new welcome.
+    const reads: Records[] = [{ running: false, run: null, lastStop: null }];
+    const after: Records = { running: true, run: again, lastStop: null };
+    Object.defineProperty(at.command, "records", {
+      configurable: true,
+      get: () => reads.shift() ?? after,
+    });
+    expect(at.shell.followsAdded()).toEqual(starting);
     await expect.poll(() => at.shell.followsAdded()).toMatchObject({ joins: true, pastes: true });
-    expect(command.asked("inf:own-window:here")).toHaveLength(2);
+    expect(command.asked("inf:own-window:here")).toHaveLength(3);
     await expect(at.shell.join(await pro.link("mac"))).resolves.toEqual({ ok: true });
     await expect.poll(() => at.shell.thisMac().role).toBe("view");
     const replacement = { pid: again.pid, startedAt: again.startedAt };

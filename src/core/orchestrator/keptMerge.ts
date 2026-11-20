@@ -479,7 +479,8 @@ export class KeptMerge {
   /**
    * The tick's rider: every standing approval whose timed wait came due
    * runs again (FI3-304: persisted delayed reconciliation, never a hot loop
-   * that a restart resets).
+   * that a restart resets), and every send no standing approval reads is
+   * read back (`reconcileUnsettledSends`).
    */
   reconcileMergeAuthorizations(now: number): void {
     for (const record of this.host.tasks.listLive()) {
@@ -497,6 +498,106 @@ export class KeptMerge {
         console.warn("[settle] a kept merge approval could not run:", caught);
       });
     }
+    // One pass at a time: a slow read is never overtaken by the next tick's.
+    if (this.readingUnsettled) return;
+    this.readingUnsettled = true;
+    void this.reconcileUnsettledSends(now)
+      .catch((caught: unknown) => {
+        console.warn("[settle] a merge sent earlier could not be read back:", caught);
+      })
+      .finally(() => {
+        this.readingUnsettled = false;
+      });
+  }
+
+  private readingUnsettled = false;
+  /** When each unsettled send was last read, by task and attempt token: the minute pass's backoff. */
+  private readonly unsettledReads = new Map<string, { retries: number; retryAt?: number }>();
+
+  /**
+   * Merges sent whose outcome was never read back that no standing approval
+   * reads (INF-5193): an ended approval's attempt and the unsettled entries
+   * carried past it, on any task, closed ones included. Each is read in the
+   * repository its approval pinned: one reading merged or closed is settled
+   * and leaves the record, so it holds no send of that pull request any
+   * more (`KeptApproval.unresolvedSend`); one reading open, or unreadable,
+   * stays, read again on the outcome wait's backoff. A merge it finds made
+   * is said once on its task. Nothing is ever sent from here.
+   */
+  async reconcileUnsettledSends(now: number): Promise<void> {
+    const readPull = this.host.readPull;
+    if (!readPull) return;
+    for (const record of this.host.tasks.unresolvedMergeSends()) {
+      const top = record.delivery?.mergeAuthorization;
+      if (!top) continue;
+      const sends = [
+        ...(top.attempt && top.status !== "standing"
+          ? [{ target: top.target, attempt: top.attempt }]
+          : []),
+        ...(top.unsettled ?? []),
+      ];
+      for (const send of sends) {
+        const key = `${record.id}:${send.attempt.token}`;
+        const due = this.unsettledReads.get(key);
+        if (due?.retryAt !== undefined && due.retryAt > now) continue;
+        const number = send.target.prNumber;
+        let pull: ForgePull | undefined;
+        try {
+          pull =
+            number === undefined
+              ? undefined
+              : await readPull(record.id, number, send.attempt.task, send.target);
+        } catch {
+          pull = undefined;
+        }
+        const settled = pull && (pull.merged || pull.state !== "open");
+        if (!settled) {
+          const retries = (due?.retries ?? 0) + 1;
+          this.unsettledReads.set(key, { retries, retryAt: retryAfter("outcome", retries, now) });
+          if (pull?.mergeTaskRefused) this.leaveUnsettled(record.id, send.attempt.token, true);
+          continue;
+        }
+        this.unsettledReads.delete(key);
+        if (!this.leaveUnsettled(record.id, send.attempt.token, false) || !pull?.merged) continue;
+        const named = this.host.tasks.get(record.id);
+        this.host.tasks.note(
+          record.id,
+          // i18n-exempt: an English timeline note, like the approval's other notes
+          `The merge sent earlier of ${changeName(named, pull.number)} went in on ${placeOf(this.host.repos, named)}.`,
+          { news: true, feed: true },
+        );
+      }
+    }
+  }
+
+  /**
+   * Settle one unsettled send on the task's approval record, read again now:
+   * drop it, or with `taskOnly` only the host's reference to it, which was
+   * refused and is asked about once. Only a send still where it was read
+   * moves: one a standing approval took meanwhile is that approval's to read.
+   */
+  private leaveUnsettled(taskId: string, token: string, taskOnly: boolean): boolean {
+    const top = this.host.tasks.get(taskId)?.delivery?.mergeAuthorization;
+    if (!top) return false;
+    const settle = <T extends { token: string; task?: string }>(attempt: T): T | undefined =>
+      taskOnly ? { ...attempt, task: undefined } : undefined;
+    if (top.attempt?.token === token && top.status !== "standing") {
+      this.host.tasks.delivery.recordPermissionRecords(taskId, {
+        mergeAuthorization: { ...top, attempt: settle(top.attempt) },
+      });
+      return true;
+    }
+    const entry = top.unsettled?.find((item) => item.attempt.token === token);
+    if (!entry) return false;
+    const rest = (top.unsettled ?? []).flatMap((item) => {
+      if (item !== entry) return [item];
+      const attempt = settle(item.attempt);
+      return attempt ? [{ ...item, attempt }] : [];
+    });
+    this.host.tasks.delivery.recordPermissionRecords(taskId, {
+      mergeAuthorization: { ...top, unsettled: rest.length > 0 ? rest : undefined },
+    });
+    return true;
   }
 
   /**

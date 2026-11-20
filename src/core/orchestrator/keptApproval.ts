@@ -781,9 +781,10 @@ export class KeptApproval {
 
   /**
    * Whether a merge of this pull request (`samePullTarget`) was sent, from
-   * this task or another live one, and its outcome never read back: an
-   * approval's attempt or an unsettled entry carried past it, other than
-   * the attempt this send recorded (`own`).
+   * this task or another, closed ones included, and its outcome never read
+   * back (`KeptMerge.reconcileUnsettledSends` reads those no standing
+   * approval reads): an approval's attempt or an unsettled entry carried
+   * past it, other than the attempt this send recorded (`own`).
    */
   private unresolvedSend(
     taskId: string,
@@ -792,7 +793,7 @@ export class KeptApproval {
   ): boolean {
     const records = [
       this.host.tasks.get(taskId),
-      ...this.host.tasks.listLive().filter((record) => record.id !== taskId),
+      ...this.host.tasks.unresolvedMergeSends().filter((record) => record.id !== taskId),
     ];
     return records.some((record) => {
       const kept = record?.delivery?.mergeAuthorization;

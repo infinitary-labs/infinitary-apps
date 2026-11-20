@@ -16,6 +16,7 @@ import {
   completionBody,
   fakeCrewmate,
   fakeCrewTimersEachTest,
+  intentOf,
   reboot,
   tick,
 } from "../../../tests/helpers/crewHarness";
@@ -544,6 +545,79 @@ describe("a kept merge whose outcome is unknown on a host naming no version (INF
     );
     h.crewmate.finishPrompt();
     await tick();
+    await h.supervisor.disposeAll();
+  });
+
+  // INF-5193: a merge whose outcome is unknown outlives its task's close,
+  // and the pull request stays reserved from another task's approval of
+  // it, saved under another spelling of the same repository, until a read
+  // in the repository the first approval pinned settles it.
+  it("keeps a closed task's unknown merge reserved from a second task approving the same pull request under another spelling, until a read settles it", async () => {
+    const h = await approved({ referenced: true });
+    h.forge.mergeNamesNoVersion = true;
+    h.forge.refuse = new ForgeMergeUnconfirmed("The host took the merge", "7/merge-task-1");
+    h.supervisor.cardActions.act(h.card.id, "merge");
+    await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("outcome"));
+    h.forge.refuse = undefined;
+    h.crewmate.finishPrompt();
+    await tick();
+    await h.supervisor.settling.closing.closeTask(h.taskId, {
+      status: "dropped",
+      reason: "discarded",
+      actor: "host",
+    });
+    expect(h.authorization()).toMatchObject({
+      status: "revoked",
+      attempt: { head: APPROVED, task: "7/merge-task-1" },
+    });
+    // A second task on the same repository, saved with its owner and name
+    // in capitals, reviews and approves the same pull request.
+    const { dir } = gitRepo("meter-again");
+    execFileSync("git", ["-C", dir, "remote", "add", "origin", "https://github.com/O/R.git"]);
+    const { repo } = await h.repos.setup({ kind: "adopt", path: dir, name: "meter-again" });
+    h.repos.configure(repo.id, { delivery: "direct-pr", rigor: "quick" });
+    const { taskId: second } = await h.supervisor.intake.commission({
+      title: "Ship the meter again",
+      intent: intentOf("Ship the meter fix again"),
+      repoId: repo.id,
+    });
+    await tick();
+    await h.checkService.checkTool.checkForCrew(second, { pull: 7 });
+    const review = h.tasks.get(second)?.delivery?.mergeReviews?.[0];
+    if (!review) throw new Error("Missing the second task's review");
+    expect(review).toMatchObject({ owner: "O", name: "R" });
+    await h.specs[1]?.onCard?.({
+      requiredActions: [],
+      title: "Ready to merge the same pull request",
+      body: completionBody("<p>The PR is ready.</p><p>CI is green on the tested head.</p>"),
+      actions: [
+        {
+          id: "merge",
+          default: true,
+          effect: { kind: "merge", review: review.id, after: "continue" },
+        },
+        { id: "not-now", label: "Not now" },
+      ],
+    });
+    h.reviewer.finishPrompt();
+    await tick();
+    const card = h.cards().find((item) => item.title === "Ready to merge the same pull request");
+    if (!card) throw new Error("Missing the second task's merge card");
+    const secondApproval = () => h.tasks.get(second)?.delivery?.mergeAuthorization;
+    h.supervisor.cardActions.act(card.id, "merge");
+    await vi.waitFor(() => expect(secondApproval()?.waiting?.on).toBe("outcome"));
+    expect(h.forge.sends).toBe(1);
+    expect(secondApproval()?.attempt).toBeUndefined();
+    // Bitbucket finishes the first merge: the read settles the closed
+    // task's send, says so on it, and the pull request is reserved no more.
+    h.forge.merged = true;
+    await h.supervisor.settling.kept.reconcileUnsettledSends(Date.now());
+    expect(h.authorization()?.attempt).toBeUndefined();
+    expect(h.tasks.unresolvedMergeSends().map((record) => record.id)).not.toContain(h.taskId);
+    expect(
+      h.tasks.timeline(h.taskId).some((event) => event.text.includes("The merge sent earlier")),
+    ).toBe(true);
+    expect(h.forge.sends).toBe(1);
     await h.supervisor.disposeAll();
   });
 

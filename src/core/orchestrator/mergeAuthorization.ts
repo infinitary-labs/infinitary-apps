@@ -7,6 +7,7 @@ import {
   repairImpact,
 } from "@shared/checkRepair";
 import { hasChangeRequests } from "@shared/forge";
+import { changeHostOf, changeRequestHostAt } from "@shared/forgeKinds";
 import { englishOf, type Said, said, saidPart } from "@shared/i18n/said";
 import type { MergeReview } from "@shared/mergeReview";
 import { opensPullRequest, ownsBatches, type RepoDelivery } from "@shared/repos";
@@ -193,12 +194,21 @@ export function putInFront(
   };
 }
 
-/** The same pull request on the same host, owner and repository. */
+/**
+ * The same pull request on the same host, owner and repository, compared as
+ * the host reads them: a host that folds a project's owner and name, as
+ * GitHub's and Bitbucket's do, matches them without regard to case
+ * (`foldsNames`), and a host the table does not hold reads as GitHub's, as
+ * a numbered request's identity does (`requestIdentity`).
+ */
 export function samePullTarget(
   a: MergeAuthorization["target"],
   b: MergeAuthorization["target"],
 ): boolean {
-  return a.host === b.host && a.owner === b.owner && a.name === b.name && a.prNumber === b.prNumber;
+  if (a.host !== b.host || a.prNumber !== b.prNumber) return false;
+  const folds = (changeRequestHostAt(a.host) ?? changeHostOf(undefined)).foldsNames;
+  const fold = (word: string) => (folds ? word.toLowerCase() : word);
+  return fold(a.owner) === fold(b.owner) && fold(a.name) === fold(b.name);
 }
 
 /**

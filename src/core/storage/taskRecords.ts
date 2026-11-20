@@ -982,6 +982,10 @@ export class TaskStore {
     return this.delivery.queueRemovalTaskIds().flatMap((id) => this.get(id) ?? []);
   }
 
+  unresolvedMergeSends(): TaskRecord[] {
+    return this.delivery.unresolvedSendTaskIds().flatMap((id) => this.get(id) ?? []);
+  }
+
   listByStatus(...statuses: TaskStatus[]): TaskRecord[] {
     if (statuses.length === 0) return [];
     const key = JSON.stringify(statuses);

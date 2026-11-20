@@ -381,14 +381,14 @@ const SHAPE_FIELD_RULES = {
     "Intelligence: low, medium or high; premium needs the captain's premium ask. Tell the captain task difficulty: high Hard, medium Normal, low Simple, premium Premium.",
   kind: "Declare kind: read-only answers use plan/retrieval/research/reproduce; changes use implement/fix/chore. The classifier sorts only what you omit; review stays host-owned.",
   delivery_ask:
-    "Only when the user asked in words for a pull request or local delivery. The repository default is unchanged.",
+    "Only when the user asked in words for this task to ship as a pull request or stay local. The repository default is unchanged.",
   basis: BASIS_DESCRIPTION,
   premium_ask:
     'True only when the user asked for premium or the best model in words, or clicked your "Try a premium model" action. Never your own judgment.',
   override_speed: "As update_task.crew_speed.",
   override_reasoning: "As update_task.reasoning.",
   override_model_id:
-    "User-named model: exact id or provider-qualified key if the provider matters. Only when the user named it; it wins when available; otherwise the task waits for a computer serving it. Omit for normal routing.",
+    "The user-named model: exact id or provider-qualified key if the provider matters. Only when named by the user; it wins when available; otherwise the task waits for a computer serving it. Omit for normal routing.",
   escalate_from:
     "Task (id or key) whose result the user rejected, only under the escalation rule. The host stops that attempt, keeps its branch and report, and runs this one a tier up.",
   rigor_ask: "Only when the user said in words how careful to be.",
@@ -873,7 +873,7 @@ export function createCrewTools(delegate: CrewDelegate) {
       drop_waiting: Type.Optional(
         Type.Array(Type.Integer(), {
           description:
-            "For done: ids of messages waiting for its idle crewmate, as a refusal named them, that it no longer needs; dropped once the close goes through",
+            "For done: refusal-named ids of messages the idle crewmate no longer needs; dropped once the close goes through",
         }),
       ),
       confirm: Type.Optional(
@@ -936,7 +936,7 @@ export function createCrewTools(delegate: CrewDelegate) {
       keep: Type.Optional(
         Type.Array(Type.String(), {
           description:
-            "Ignored files or folders that must move too, by path in its working copy, as the captain or its crewmate named them",
+            "Ignored files or folders to move too, by working-copy path, as the captain or its crewmate named them",
         }),
       ),
       // The description above is the one home of its rule.

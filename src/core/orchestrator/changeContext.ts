@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import type { ChangeRecord } from "@shared/change";
 import { sameRequestLink } from "@shared/forge";
@@ -384,14 +384,13 @@ export class ChangeContext {
 
   /** Checks the branch's own commit names in the project's folder, and answers that folder. */
   async validateRange(
-    repoId: string | null | undefined,
-    repoDir: string | null | undefined,
+    task: TaskRecord | undefined,
     branch: string,
     forge: Forge,
     head = branch,
     fixOf?: string,
   ): Promise<string> {
-    return (await this.checkRange(repoId, repoDir, branch, forge, head, fixOf)).dir;
+    return (await this.checkRange(task, branch, forge, head, fixOf)).dir;
   }
 
   /**
@@ -399,14 +398,14 @@ export class ChangeContext {
    * (`heldBase`), so its approval can keep it with the repair.
    */
   async checkRange(
-    repoId: string | null | undefined,
-    repoDir: string | null | undefined,
+    task: TaskRecord | undefined,
     branch: string,
     forge: Forge,
     head = branch,
     fixOf?: string,
   ): Promise<{ dir: string; heldBase?: string }> {
-    const dir = this.projectDir(repoId, repoDir);
+    const repoId = task?.repoId;
+    const dir = this.projectDir(repoId, task?.repoDir);
     if (this.options.validateRange) {
       await this.options.validateRange(dir, branch, forge, head);
       return { dir };
@@ -435,60 +434,84 @@ export class ChangeContext {
             : `its branch no longer builds on the batch's version ${found.lost} it was verified on`
         }, so its own commits cannot be told from the work it carries. This repair stays measured from that version: ${found.unread ? "once it can be read here again, publish or approve this version again" : "build the fix again on it"}, or leave the batch to a new repair built on its current version.`,
       );
-    const base = found?.held ?? (await this.defaultRangeBase(dir, repoId, forge, head));
+    const base = found?.held ?? (await this.defaultRangeBase(dir, task, forge, head));
     await requireNamedRange(dir, base, head, this.options.namingRule?.() ?? null);
     return { dir, ...(found?.held ? { heldBase: found.held } : {}) };
   }
 
-  /** A tracking ref is reusable only when it equals the approved remote's advertised tip. */
+  /** Read the name and tip together, and only reuse a cached ref at that exact tip. */
   private async defaultRangeBase(
     dir: string,
-    repoId: string | null | undefined,
+    task: TaskRecord | undefined,
     forge: Forge,
     head: string,
   ): Promise<string> {
-    const origin = repoId ? this.options.repos.get(repoId)?.origin : undefined;
+    const registry = task?.repoId ? this.options.repos.get(task.repoId) : undefined;
+    const origin = task && registry ? publicationRepo(task, registry).origin : undefined;
+    const trackedTip = (tracked: string) =>
+      git(dir, ["rev-parse", "--verify", "--quiet", `${tracked}^{commit}`]).catch(() => "");
+    if (!origin || !task) {
+      const name = await forge.defaultBranch();
+      const cached = await trackedTip(`refs/remotes/origin/${name}`);
+      return git(dir, ["merge-base", head, cached || name]);
+    }
+    // A pinned route can outlive the registry address. Keep it out of the checkout's
+    // settings and give its cache a separate ref; origin/main belongs to the checkout.
+    const pin =
+      origin !== registry?.origin ? createHash("sha256").update(origin).digest("hex") : undefined;
+    const remote = pin ? `infinitary-range-${pin}` : "origin";
+    const config = pin ? [`--config-env=remote.${remote}.url=INFINITARY_RANGE_ORIGIN`] : [];
     const assertOrigin = async () => {
-      const configured = await git(dir, ["config", "--get-all", "remote.origin.url"]).catch(
-        () => undefined,
-      );
-      if (!repoId || configured !== origin || this.options.repos.get(repoId)?.origin !== origin)
+      const configured = await git(
+        dir,
+        [...config, "config", "--get-all", `remote.${remote}.url`],
+        {
+          ...(pin ? { env: { INFINITARY_RANGE_ORIGIN: origin } } : {}),
+        },
+      ).catch(() => undefined);
+      if (configured !== origin || this.approvedOrigin(task.id) !== origin)
         throw new Error(
           "The checkout does not use the approved project address. Update its origin and try again.",
         );
     };
-    if (origin) await assertOrigin();
-    const name = await forge.defaultBranch();
-    const tracked = `refs/remotes/origin/${name}`;
-    const remoteRef = `refs/heads/${name}`;
-    const readTracked = () =>
-      git(dir, ["rev-parse", "--verify", "--quiet", `${tracked}^{commit}`]).catch(() => "");
-    const cached = await readTracked();
-    if (!origin) return git(dir, ["merge-base", head, cached || name]);
     const readOrigin = (args: string[]) =>
-      git(dir, args, {
-        env: { GIT_TERMINAL_PROMPT: "0" },
+      git(dir, [...config, ...args], {
+        env: { GIT_TERMINAL_PROMPT: "0", ...(pin ? { INFINITARY_RANGE_ORIGIN: origin } : {}) },
         timeoutMs: 30_000,
       }).catch(() => {
         // Transport diagnostics may contain the configured URL and its sign-in.
         throw new Error("Could not refresh the approved project's default branch from origin.");
       });
     await assertOrigin();
-    const advertised = await readOrigin([
-      "ls-remote",
-      "--exit-code",
-      "--refs",
-      "origin",
-      remoteRef,
-    ]);
-    const [tip, ref] = advertised.split("\t");
-    if (ref !== remoteRef || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(tip ?? ""))
+    let name: string | undefined;
+    let tip: string | undefined;
+    if (pin) {
+      const advertised = await readOrigin(["ls-remote", "--exit-code", "--symref", remote, "HEAD"]);
+      const lines = advertised.split("\n");
+      name = lines
+        .find((line) => line.startsWith("ref: refs/heads/") && line.endsWith("\tHEAD"))
+        ?.slice("ref: refs/heads/".length, -"\tHEAD".length);
+      tip = lines
+        .find((line) => /^(?:[0-9a-f]{40}|[0-9a-f]{64})\tHEAD$/.test(line))
+        ?.split("\t")[0];
+    } else {
+      name = await forge.defaultBranch();
+      await assertOrigin();
+      const ref = `refs/heads/${name}`;
+      const [sha, named] = (
+        await readOrigin(["ls-remote", "--exit-code", "--refs", remote, ref])
+      ).split("\t");
+      if (named === ref && /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(sha ?? "")) tip = sha;
+    }
+    if (!name || !tip)
       throw new Error("Could not read the approved project's default branch from origin.");
+    const tracked = pin ? `refs/infinitary/range/${pin}/${name}` : `refs/remotes/origin/${name}`;
+    const cached = await trackedTip(tracked);
     await assertOrigin();
     if (cached !== tip) {
-      await readOrigin(["fetch", "--quiet", "--no-tags", "origin", `+${remoteRef}:${tracked}`]);
+      await readOrigin(["fetch", "--quiet", "--no-tags", remote, `+refs/heads/${name}:${tracked}`]);
       await assertOrigin();
-      if ((await readTracked()) !== tip)
+      if ((await trackedTip(tracked)) !== tip)
         throw new Error(
           "The approved project's default branch changed during the refresh. Try again.",
         );

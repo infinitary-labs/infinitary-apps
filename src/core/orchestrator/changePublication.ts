@@ -610,8 +610,7 @@ export class ChangePublication {
       // a held batch's fix from its held version only where its batch carries it as its own
       // difference; any other route opens a pull request that merges the branch whole.
       await this.context.validateRange(
-        record.repoId,
-        record.repoDir,
+        record,
         branch,
         forge,
         read,

@@ -254,28 +254,108 @@ describe("saved stories at the approved cutover (INF-5135 and INF-5411)", () => 
     },
   );
 
-  it("keeps a story pinned to its unchanged publication address", async () => {
+  it("publishes and preflights a pinned story against its unchanged destination after the registry moves", async () => {
     const where = storyForge();
-    const { tasks, repos, service, readHead } = setup({ forge: where.forge });
+    const forgeFor = vi.fn(() => where.forge);
+    const { tasks, repos, service, readHead, paths } = setup({
+      forge: where.forge,
+      forgeFor,
+      realRange: true,
+    });
     await insertDirectPrTask(tasks, repos);
     const task = tasks.get("ab12cd34");
     if (!task?.repoId) throw new Error("The fixture needs a managed project.");
+    const home = task.repoDir;
+    const former = join(paths, "pinned-project");
+    const moved = join(paths, "moved-project");
+    const commit = (dir: string, title: string) =>
+      git(dir, [
+        "-c",
+        "user.name=Fixture",
+        "-c",
+        "user.email=test@example.com",
+        "commit",
+        "-q",
+        "--allow-empty",
+        "-m",
+        title,
+      ]);
+    await git(paths, ["init", "-q", "-b", "trunk", former]);
+    await git(paths, ["init", "-q", "-b", "main", moved]);
+    await commit(former, "Imported work from before the naming rule");
+    await commit(moved, "chore: start the moved project");
+    const base = await git(former, ["rev-parse", "HEAD"]);
+    const movedTip = await git(moved, ["rev-parse", "HEAD"]);
+    await git(home, ["fetch", "-q", former, "refs/heads/trunk"]);
+    await git(home, ["switch", "-c", task.branch, base]);
+    const title = staged(base).title;
+    await commit(home, title);
+    const head = await git(home, ["rev-parse", "HEAD"]);
+    await git(home, ["config", `url.${former}.insteadOf`, formerAddress]);
+    await git(home, ["config", `url.${moved}.insteadOf`, newAddress]);
+    await git(home, ["remote", "add", "origin", formerAddress]);
     repos.configure(task.repoId, { origin: formerAddress });
     seedDelivery(tasks, task.id, { publicationOrigin: formerAddress });
-    readHead.mockResolvedValue(original);
-    expect(await service.publication.prepareStory(task.id, staged(original))).toMatchObject({
+    readHead.mockResolvedValue(head);
+    where.pushed(head);
+    where.forge.opened = {
+      number: 42,
+      url: "https://github.com/example-studio/evidence-sample/pull/42",
+      headSha: head,
+      base: "trunk",
+      title,
+    };
+    const openChange = where.forge.openChange.bind(where.forge);
+    vi.spyOn(where.forge, "openChange").mockImplementation(async (input) => {
+      const opened = { ...(await openChange(input)), body: input.body };
+      where.forge.change = opened;
+      return opened;
+    });
+    Object.assign(where.forge, {
+      attachments: {
+        destination: () => Promise.resolve(formerDestination),
+        upload: () => Promise.reject(new Error("The fixture has no media to upload.")),
+      },
+    });
+    expect(await service.publication.prepareStory(task.id, staged(base, head))).toMatchObject({
       revision: 1,
     });
     repos.configure(task.repoId, { origin: newAddress });
+    await git(home, ["remote", "set-url", "origin", newAddress]);
+    await git(home, ["fetch", "-q", "origin"]);
     expect(tasks.delivery.changePresentation(task.id)?.revisions.at(-1)?.destination).toEqual(
       formerDestination,
     );
     expect(
       observe(
         "prepare again at the unchanged pinned destination",
-        await service.publication.prepareStory(task.id, staged(original)),
+        await service.publication.prepareStory(task.id, staged(base, head)),
       ),
     ).toMatchObject({ revision: 2 });
+    const published = await service.publication.open(task.id, { title, presentation: 2 });
+    expect(
+      observe("publish after the registry moves, using the pinned default", published),
+    ).toContain("Opened pull request #42");
+    expect(tasks.delivery.changePresentation(task.id)?.published).toMatchObject({
+      revision: 2,
+      head,
+    });
+    expect(forgeFor).toHaveBeenLastCalledWith(
+      expect.objectContaining({ origin: formerAddress }),
+      home,
+    );
+    expect(await service.merges.merge(task.id)).toMatchObject({ ok: true });
+    expect(where.forge.calls).toContain(`putIn #42 ${head}`);
+    expect(
+      observe(
+        "moved project tracking ref after pinned publication and merge",
+        await git(home, ["rev-parse", "refs/remotes/origin/main"]),
+      ),
+    ).toBe(movedTip);
+    expect(
+      await git(home, ["for-each-ref", "--format=%(objectname)", "refs/infinitary/range/"]),
+    ).toBe(base);
+    expect(await git(home, ["remote"])).toBe("origin");
   });
 
   it.each(["address-bound", "legacy unbound"])(

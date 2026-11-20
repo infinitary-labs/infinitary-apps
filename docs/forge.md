@@ -939,6 +939,7 @@ Returning to a former address does not restore a retired offer.
 Preparing, confirming or merging a plain Git story requires the checkout and story to agree with its approved address.
 For a managed origin, the range check compares the home project folder’s cached default branch to the tip advertised by the approved address, fetching when the cached ref is missing or differs.
 It never follows a different checkout address.
+A task pinned to an unchanged publication address reads that address’s default branch and keeps its fetched ref apart from the moved project’s tracking refs.
 Plain Git writes also refuse a separate push address that differs from the approved read route.
 A declared repair is reset with the former batch: its declaration, the versions that held and its verified base are dropped, so its whole branch goes as an ordinary change once approved again at the new address.
 A move noticed after a combine's reads or during its push leaves its result unsaved, and nothing is pushed to the former address once the move is seen.

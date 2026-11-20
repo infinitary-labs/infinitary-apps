@@ -392,13 +392,7 @@ export class ChangeMerge {
       const repo =
         elsewhere ?? (record?.repoId ? this.options.repos.get(record.repoId) : undefined);
       const dir = own
-        ? await this.context.validateRange(
-            record?.repoId,
-            record?.repoDir,
-            change.branch,
-            forge,
-            change.headSha,
-          )
+        ? await this.context.validateRange(record, change.branch, forge, change.headSha)
         : (repo?.path ?? record?.repoDir ?? "");
       if (!fork && hasChangeRequests(forge.kind))
         requireNamed(change.title ?? "", "pull request title", this.options.namingRule?.() ?? null);
@@ -650,8 +644,7 @@ export class ChangeMerge {
       const record = this.options.tasks.get(taskId);
       if (record && !record.delivery?.presentation) await this.context.branchHome(record);
       const { dir, heldBase } = await this.context.checkRange(
-        record?.repoId,
-        record?.repoDir,
+        record,
         change.branch,
         forge,
         change.headSha,

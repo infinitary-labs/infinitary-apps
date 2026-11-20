@@ -28,7 +28,7 @@ const dist = new URL("../dist/", import.meta.url);
 const languages = shippedLanguages()
   .filter((tag) => tag !== SOURCE_LANGUAGE)
   .map(segmentOf);
-const unshipped = catalogLanguages().filter((tag) => !shippedLanguages().includes(tag)).map(segmentOf)[0];
+const unshipped = catalogLanguages().filter((tag) => !shippedLanguages().includes(tag)).map(segmentOf);
 const files = Object.assign({}, BUILT_FILES, ...languages.map(languageFiles));
 const built = Object.fromEntries(
   await Promise.all(

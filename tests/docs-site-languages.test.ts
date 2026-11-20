@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  KEYBOARD_WORDS,
+  SIDEBAR_WORDS,
+  SOURCE_LANGUAGE,
+  siteWords,
+} from "../docs-site/languages.ts";
+import {
   fingerprint,
   GENERATED_PAGES,
   languageProblems,
@@ -132,32 +138,79 @@ describe("the docs site's languages check", () => {
     expect(problems.join("\n")).toContain("(no id)");
   });
 
-  it("refuses a words file that lacks a word the site needs", () => {
-    const sidebar = Object.keys(site.words.get("en") ?? {}).find((key) =>
-      key.startsWith("sidebar."),
+  it("refuses a link to an English page and a changed routing field", () => {
+    const linked = pageWith(/\]\(\/[a-z-]+\/[a-z-]+\/[^)]*\)/);
+    const english = withPage(linked, (text) =>
+      text.replace(/\]\(\/[a-z-]+\/([a-z-]+\/[^)]*)\)/, "](/$1)"),
     );
-    const unshipped = [...site.words.keys()].find(
-      (word) => word !== "en" && !site.languages.has(word),
+    expect(problemsOf(english, linked).join("\n")).toContain("(not in its language)");
+    const name = pageWith(/^title:/m);
+    const drafted = withPage(name, (text) => text.replace(/^title:/m, "draft: true\ntitle:"));
+    expect(problemsOf(drafted, name).join("\n")).toContain('"draft: true"');
+  });
+
+  it("holds a page in a folder as it holds the rest", () => {
+    const english = new Map(site.english).set(
+      "guides/one.md",
+      "---\ntitle: One\n---\n\n## Start\n",
     );
-    for (const [words, key] of [
-      [tag, Object.keys(site.words.get("en") ?? {}).find((key) => key.startsWith("keyboard."))],
-      [unshipped, sidebar],
-    ] as const) {
-      if (!words || !key) throw new Error("the site has no such words to take away");
-      const without = { ...site.words.get(words) };
-      delete without[key];
-      const changed = { ...site, words: new Map(site.words).set(words, without) };
-      expect(languageProblems(changed)).toEqual([
-        `words/${words}.json lacks "${key}", which English has`,
-      ]);
+    expect(languageProblems({ ...site, english }).join("\n")).toContain(
+      `${language?.segment}/guides/one.md is missing`,
+    );
+  });
+});
+
+/**
+ * The words files, on a small fixed catalog: English, one language that has
+ * shipped and one that has not, each with the words the site reads in it.
+ */
+describe("the docs site's words", () => {
+  const english = site.words.get(SOURCE_LANGUAGE) ?? {};
+  const wordsFor = (tag: string, shipped: boolean) =>
+    Object.fromEntries(siteWords(tag, shipped).map((key) => [key, english[key] ?? key]));
+  const fixture = (words: Record<string, Record<string, unknown>>): SiteLanguages => ({
+    catalog: ["en", "ar", "ja"],
+    english: new Map(),
+    languages: new Map([["ar", { segment: "ar", pages: new Map() }]]),
+    words: new Map(Object.entries(words)),
+  });
+  const complete = {
+    en: wordsFor("en", true),
+    ar: wordsFor("ar", true),
+    ja: wordsFor("ja", false),
+  };
+
+  it("passes when every language has the words the site reads in it", () => {
+    expect(languageProblems(fixture(complete))).toEqual([]);
+  });
+
+  it("refuses a missing, blank or non-text word, and a missing words file", () => {
+    const keyboard = KEYBOARD_WORDS[0];
+    const sidebar = SIDEBAR_WORDS[0];
+    const cases: [Record<string, Record<string, unknown>>, string][] = [
+      [
+        { ...complete, en: { ...complete.en, [keyboard]: undefined } },
+        `words/en.json lacks "${keyboard}"`,
+      ],
+      [
+        { ...complete, ar: { ...complete.ar, [keyboard]: " " } },
+        `words/ar.json lacks "${keyboard}"`,
+      ],
+      [{ ...complete, ja: { ...complete.ja, [sidebar]: 3 } }, `words/ja.json lacks "${sidebar}"`],
+      [{ en: complete.en, ar: complete.ar }, "words/ja.json is missing"],
+    ];
+    for (const [words, problem] of cases) {
+      expect(languageProblems(fixture(words)).join("\n")).toContain(problem);
     }
   });
 
-  it("refuses a word the site does not use", () => {
-    const words = { ...site.words.get(tag ?? ""), "sidebar.nowhere": "x" };
-    const changed = { ...site, words: new Map(site.words).set(tag ?? "", words) };
-    expect(languageProblems(changed)).toEqual([
-      `words/${tag}.json has "sidebar.nowhere", a word the site does not use`,
+  it("refuses a word the site does not use, and a file for a language outside the catalog", () => {
+    const problems = languageProblems(
+      fixture({ ...complete, ar: { ...complete.ar, "sidebar.nowhere": "x" }, xx: complete.ja }),
+    );
+    expect(problems).toEqual([
+      'words/ar.json has "sidebar.nowhere", a word the site does not use',
+      "words/xx.json is for xx, which is not a catalog language",
     ]);
   });
 });

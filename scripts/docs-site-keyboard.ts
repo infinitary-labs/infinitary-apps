@@ -1,6 +1,14 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
-import { pagesFolder, SOURCE_LANGUAGE, shippedLanguages, wordsOf } from "../docs-site/languages.ts";
+import {
+  headingId,
+  pagesFolder,
+  SCOPE_WORD_KEYS,
+  type SiteWord,
+  SOURCE_LANGUAGE,
+  shippedLanguages,
+  wordsOf,
+} from "../docs-site/languages.ts";
 import { staleGeneratedFile } from "./github-errors.ts";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 
@@ -26,16 +34,6 @@ import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 export function keyboardPagePath(tag: string): string {
   return relative(REPO_ROOT, join(pagesFolder(tag), "keyboard.mdx"));
 }
-
-/**
- * The words a language other than English needs beyond English's words file:
- * the places a command works, which the English page reads from the app.
- */
-export const SCOPE_WORD_KEYS = {
-  window: "keyboard.scope.window",
-  "message-field": "keyboard.scope.message-field",
-  "main-message": "keyboard.scope.main-message",
-} as const;
 
 /** The app's own panels whose commands read as the window's, in the order the app adds them. */
 const OWN_PANELS = ["src/panels/now/manifest.json", "src/panels/knowledge/manifest.json"];
@@ -143,17 +141,12 @@ function keys(list: string[]): string {
   return list.length === 0 ? "—" : list.join(", ");
 }
 
-function table(rows: KeyRow[], words: Record<string, string>): string[] {
+function table(rows: KeyRow[], words: Partial<Record<SiteWord, string>>): string[] {
   return [
     `| ${words["keyboard.column.command"]} | ${words["keyboard.column.mac"]} | ${words["keyboard.column.linux"]} |`,
     "| --- | --- | --- |",
     ...rows.map((row) => `| ${cell(row.label)} | ${keys(row.mac)} | ${keys(row.linux)} |`),
   ];
-}
-
-/** A heading's id on the English page (github-slugger's, for the plain words these headings use). */
-function englishId(heading: string): string {
-  return heading.toLowerCase().replace(/[^a-z0-9 -]/g, "").replace(/ /g, "-");
 }
 
 /**
@@ -171,8 +164,8 @@ export function keyboardPage(modules: KeyboardModules, tag: string = SOURCE_LANG
 function pageIn(modules: KeyboardModules, tag: string): string {
   const english = wordsOf(SOURCE_LANGUAGE);
   const words = wordsOf(tag);
-  const heading = (key: string) =>
-    tag === SOURCE_LANGUAGE ? `## ${words[key]}` : `## ${words[key]} {#${englishId(english[key] ?? "")}}`;
+  const heading = (key: SiteWord) =>
+    tag === SOURCE_LANGUAGE ? `## ${words[key]}` : `## ${words[key]} {#${headingId(english[key] ?? "")}}`;
   const scopeWords = (scope: Scope) =>
     tag === SOURCE_LANGUAGE ? modules.keymap.SCOPE_WORDS[scope] : (words[SCOPE_WORD_KEYS[scope]] ?? "");
   const notTyping = ` ${words["keyboard.notTyping"]}`;
@@ -188,7 +181,7 @@ function pageIn(modules: KeyboardModules, tag: string): string {
     return [`<TabItem label="${PRESET_LABELS[preset]}">`, ...sections, "", "</TabItem>"];
   });
   const presetNames = ordered.map((id) => PRESET_LABELS[id]).join(words["keyboard.separator"]);
-  const fill = (key: string) =>
+  const fill = (key: SiteWord) =>
     (words[key] ?? "")
       .replace("{presets}", presetNames)
       .replace("{preset}", PRESET_LABELS[NEW_PROFILE_PRESET] ?? NEW_PROFILE_PRESET);

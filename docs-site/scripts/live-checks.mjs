@@ -53,11 +53,11 @@ export function languageFiles(segment) {
  *
  * languages names each shipped language's address segment other than
  * English's, whose home and inner pages are checked the same way, keyed in
- * built as languageFiles names them; unshipped names a catalog language that
- * has not shipped, whose addresses must move to the same English page
- * (docs/docs-site.md, "Languages").
+ * built as languageFiles names them; unshipped names each catalog language
+ * that has not shipped, whose home and inner addresses must move to the same
+ * English page on the same site (docs/docs-site.md, "Languages").
  */
-export async function checkLive(origin, { built, fetchImpl = fetch, languages = [], unshipped }) {
+export async function checkLive(origin, { built, fetchImpl = fetch, languages = [], unshipped = [] }) {
   const base = new URL(origin).origin;
   // Browsers name text/html, and Cloudflare's edge changes a page only for a request that does.
   const get = (url) => fetchImpl(url, { redirect: "manual", headers: { accept: "text/html" } });
@@ -89,16 +89,21 @@ export async function checkLive(origin, { built, fetchImpl = fetch, languages = 
   results.push(asBuilt("unknown address", missingHtml, "notFound"));
   results.push(...headerChecks("unknown address", missing));
 
-  if (unshipped) {
-    const moved = await get(`${base}/${unshipped}/install/`);
-    const location = new URL(moved.headers.get("location") ?? "/nowhere", base).pathname;
-    results.push(
-      check(
-        `${unshipped}, not shipped yet: moves to the English page`,
-        moved.status === 302 && location === "/install/",
-        `${moved.status} -> ${location}`,
-      ),
-    );
+  for (const segment of unshipped) {
+    for (const [from, to] of [
+      [`/${segment}/`, "/"],
+      [`/${segment}/install/`, "/install/"],
+    ]) {
+      const moved = await get(`${base}${from}`);
+      const location = new URL(moved.headers.get("location") ?? "/nowhere", `${base}${from}`);
+      results.push(
+        check(
+          `${from}, not shipped yet: moves to the English page`,
+          moved.status === 302 && location.origin === base && location.pathname === to,
+          `${moved.status} -> ${location.href}`,
+        ),
+      );
+    }
   }
 
   // Cloudflare moves the zone's plain http addresses to https; a local copy serves plain http itself.

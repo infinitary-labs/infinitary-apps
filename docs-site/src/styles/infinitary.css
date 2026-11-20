@@ -124,3 +124,13 @@ li > .task-mark:first-child {
 .task-mark-track {
   stroke: var(--line-2);
 }
+
+/*
+ * A key reads as the app prints it in every language: inside right-to-left
+ * text, ⇧⌘] keeps its order and its bracket (docs/docs-site.md, "Languages").
+ * Keys written in a translated page's prose sit in <bdi dir="ltr"> for the same reason.
+ */
+kbd {
+  direction: ltr;
+  unicode-bidi: isolate;
+}

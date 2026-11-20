@@ -117,6 +117,38 @@ function languageRedirects() {
 }
 
 /**
+ * Names the English page as each sitemap entry's x-default alternate, as
+ * every page's head does (docs/docs-site.md, "Languages"): Starlight's
+ * sitemap names only the languages themselves. Starlight adds its sitemap
+ * while setting up, so this adds itself after it to run once it is written.
+ */
+function sitemapDefault() {
+  const after = {
+    name: "infinitary-sitemap-default",
+    hooks: {
+      "astro:build:done": async ({ dir }) => {
+        const english = `hreflang="${SOURCE_LANGUAGE}" href="`;
+        for (const name of await readdir(dir)) {
+          if (!/^sitemap-\d+\.xml$/.test(name)) continue;
+          const file = new URL(name, dir);
+          const xml = (await readFile(file, "utf8")).replace(/<url>[\s\S]*?<\/url>/g, (entry) => {
+            const at = entry.indexOf(english);
+            if (at === -1 || entry.includes('hreflang="x-default"')) return entry;
+            const href = entry.slice(at + english.length, entry.indexOf('"', at + english.length));
+            return entry.replace("</url>", `<xhtml:link rel="alternate" hreflang="x-default" href="${href}"/></url>`);
+          });
+          await writeFile(file, xml);
+        }
+      },
+    },
+  };
+  return {
+    name: "infinitary-sitemap-default-setup",
+    hooks: { "astro:config:setup": ({ updateConfig }) => updateConfig({ integrations: [after] }) },
+  };
+}
+
+/**
  * Lets a heading name its own id (`## المتطلبات {#requirements}`), so a
  * translated page keeps the English page's heading ids and every link to a
  * heading works the same in every language (docs/docs-site.md, "Languages").
@@ -200,5 +232,6 @@ export default defineConfig({
     appIcon(),
     securityHeaders(),
     languageRedirects(),
+    sitemapDefault(),
   ],
 });

@@ -36,6 +36,8 @@ import { extname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { chromium } from "playwright";
+// Starlight's own English words, which a translated page's notices must not show.
+import starlightEnglish from "../node_modules/@astrojs/starlight/dist/translations/en.js";
 import { pagesFolder, segmentOf, shippedLanguages, SOURCE_LANGUAGE, textDirection } from "../languages.ts";
 
 const DIST = fileURLToPath(new URL("../dist/", import.meta.url));
@@ -109,6 +111,20 @@ const pages = (await files(DIST))
   .filter((file) => file.endsWith(".html"))
   .map((file) => `/${file.replace(/(^|\/)index\.html$/, "$1")}`);
 
+/** Each address the built sitemap lists, with the alternates it names for it. */
+const SITEMAP = new Map(
+  (await readdir(DIST))
+    .filter((name) => /^sitemap-\d+\.xml$/.test(name))
+    .flatMap((name) => [...readFileSync(join(DIST, name), "utf8").matchAll(/<url>([\s\S]*?)<\/url>/g)])
+    .map(([, entry]) => [
+      /<loc>([^<]*)<\/loc>/.exec(entry)?.[1],
+      Object.fromEntries([...entry.matchAll(/hreflang="([^"]*)" href="([^"]*)"/g)].map(([, lang, href]) => [lang, href])),
+    ]),
+);
+
+/** An object's entries in name order, to compare two. */
+const sortedEntries = (object) => Object.entries(object).sort(([a], [b]) => a.localeCompare(b));
+
 /** The shipped languages, each with its address prefix ("/" for English, "/ar/" for Arabic). */
 const LANGUAGES = shippedLanguages().map((tag) => ({
   tag,
@@ -137,6 +153,10 @@ function languageMarks() {
         link.getAttribute("href"),
       ]),
     ),
+    // Heading links in the page's own language; What's new's English notes keep English ones.
+    anchors: [...document.querySelectorAll(".sl-anchor-link .sr-only")]
+      .filter((label) => label.closest("[lang]")?.lang === document.documentElement.lang)
+      .map((label) => label.textContent.trim()),
     // The header and the phone-width menu each draw the same select; read one.
     menu: [...(document.querySelector("starlight-lang-select select")?.options ?? [])].map((option) =>
       option.textContent.trim(),
@@ -165,6 +185,10 @@ function languageProblems(path, marks) {
   if (LANGUAGES.length > 1 && marks.menu.length !== LANGUAGES.length) {
     problems.push(`${path}'s language menu lists ${marks.menu.join(", ")}`);
   }
+  // A translated page's heading links name their heading in its own language's words, not Starlight's English.
+  const english = starlightEnglish["heading.anchorLabel"].split("{{")[0];
+  const untranslated = marks.anchors.find((label) => label.startsWith(english));
+  if (language.tag !== SOURCE_LANGUAGE && untranslated) problems.push(`${path} labels a heading link "${untranslated}"`);
   return problems;
 }
 
@@ -231,7 +255,14 @@ try {
       links.push({ from: path, href });
     }
     if (path !== "/404.html") {
-      for (const problem of languageProblems(path, await tab.evaluate(languageMarks))) fail(problem);
+      const marks = await tab.evaluate(languageMarks);
+      for (const problem of languageProblems(path, marks)) fail(problem);
+      // The sitemap names the same alternates as the page's head, x-default included.
+      const listed = SITEMAP.get(`${SITE_ORIGIN}${path}`);
+      if (!listed) fail(`The sitemap does not list ${path}`);
+      else if (JSON.stringify(sortedEntries(listed)) !== JSON.stringify(sortedEntries(marks.alternates))) {
+        fail(`The sitemap names ${JSON.stringify(listed)} as ${path}'s alternates, its head ${JSON.stringify(marks.alternates)}`);
+      }
     }
   });
 
@@ -312,6 +343,29 @@ try {
       fail(`Searching for "${word}" on ${language.prefix} found nothing`);
     }
   });
+
+  // What's new stays English in every language (docs/docs-site.md, "Languages"):
+  // each language's page shows the English notes, marked English, under
+  // Starlight's notice, in that language, that the page is not translated yet.
+  await page.goto(`${origin}/whats-new/`, { waitUntil: "load" });
+  const notes = await page.locator("main .sl-markdown-content").innerText();
+  await sideBySide(
+    LANGUAGES.filter(({ tag }) => tag !== SOURCE_LANGUAGE),
+    async (tab, language) => {
+      const path = `${language.prefix}whats-new/`;
+      await tab.goto(origin + path, { waitUntil: "load" });
+      if ((await tab.locator("main .sl-markdown-content").innerText()) !== notes) {
+        fail(`${path} does not show What's new's English notes`);
+      }
+      if ((await tab.locator("main").getAttribute("lang")) !== SOURCE_LANGUAGE) {
+        fail(`${path} does not mark its notes as English`);
+      }
+      const notice = (await tab.locator("main h1 + p").textContent())?.trim() ?? "";
+      if (!notice || notice === starlightEnglish["i18n.untranslatedContent"]) {
+        fail(`${path} does not say, in its language, that the page is not translated yet: "${notice}"`);
+      }
+    },
+  );
 
   if ((await context.cookies()).length > 0) fail("The site stored a cookie");
   await context.close();

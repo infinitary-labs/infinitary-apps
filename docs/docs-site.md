@@ -47,12 +47,12 @@ A language ships when that folder exists; its pages carry the catalog tag as the
 A language appears only with every page translated, so no reader gets a translated frame around English words.
 
 A catalog language that has not shipped yet answers its addresses with a temporary redirect to the same English page, written by the build to `dist/_redirects`, so a link to it never leads nowhere.
-Every page names itself as its canonical address and its version in each shipped language, with English as `x-default`, as alternates, and the sitemap carries the same; the language menu names each shipped language in itself.
+Every page names itself as its canonical address and its version in each shipped language, with English as `x-default`, as alternates, and the sitemap carries the same, its `x-default` added by the build since Starlight's sitemap names only the languages; the language menu names each shipped language in itself.
 
 ### Words
 
 `docs-site/words/<tag>.json` holds the site's own words in each language: the sidebar's group names and its home link for every catalog language, and the Keyboard page's own sentences for each shipped one.
-Starlight brings its menus', search's and notices' words for most languages; `docs-site/src/content/i18n/` adds them for the ones it lacks (`zh-Hans`, `zh-Hant`).
+Starlight brings its menus', search's and notices' words for most languages; `docs-site/src/content/i18n/` adds them for the ones it lacks (`zh-Hans`, `zh-Hant`) and the words it leaves in English for a language, such as a heading link's label.
 Text in Chinese, Japanese, Korean and Arabic takes the visitor's own typeface for its script from the design skill's `tokens/typography.css`, imported in Starlight's lowest layer so only its custom properties reach the site, with tracking at zero; no font file is added and nothing loads from another host.
 
 ### Translated pages
@@ -61,6 +61,7 @@ A translated page has the English page's file name in its language's folder.
 Its headings end with the English heading's id (`## المتطلبات {#requirements}`), so a link to a heading works the same in every language, and its links to the site's pages carry its language's segment (`/ar/install/`).
 Its frontmatter's `source` is the fingerprint of the English page it was written from.
 Write a translation from the language's glossary (`.claude/skills/infinitary-design/copy/glossary/<tag>.md`), one sentence per line, keeping "Infinitary", key names and code as written, and the app's own words for what it shows on screen; add a term the glossary lacks to it.
+In a right-to-left language, a key written in prose sits in `<bdi dir="ltr">⇧⌘]</bdi>`, so it keeps its order and its brackets; `<kbd>` is isolated the same way by the site's stylesheet.
 Then record the fingerprint:
 
 ```sh
@@ -73,7 +74,7 @@ Keyboard is generated in each shipped language (`node scripts/docs-site-keyboard
 ### The languages check
 
 `node scripts/docs-site-languages.ts --check` runs in `pnpm check`.
-It never judges the prose; it refuses a shipped language that lacks a page English has or holds one English lacks, a translated page whose `source` is not the English page's current fingerprint, a translated page whose links (its language's segment aside), pictures, code, keys, frontmatter fields or headings' levels and ids differ from the English page's, and a words file lacking a word English's has.
+It never judges the prose; it refuses a shipped language that lacks a page English has, folders included, or holds one English lacks, a translated page whose `source` is not the English page's current fingerprint, a translated page whose links (its language's segment aside), pictures, code, keys, frontmatter fields and their values (title and description aside) or headings' levels and ids differ from the English page's, a translated page's link to an English page, and a catalog language whose words file is missing, lacks a word the site reads in it (the sidebar's for every language, the Keyboard page's for each shipped one), has a blank one or one the site does not use.
 `tests/docs-site-languages.test.ts` holds it to the site's own pages.
 
 ### Adding a language
@@ -96,7 +97,7 @@ The build writes plain files to `docs-site/dist/`, search index included.
 ### The check
 
 `docs-site/scripts/check-site.mjs` serves `dist/` on this computer and opens every built page in Chromium through Playwright, in a browser that may reach only that server.
-It opens pages side by side, and fails on a page that does not answer or draws no title, a page that does not name its language, direction, canonical address and alternates ("Languages"), a request to any other host, a cookie, a link between pages or to a heading that leads nowhere, a picture that does not draw, an unknown address that does not draw the site's own not-found page, search that draws no search box, search that finds nothing in English or, from each shipped language's home page, for a word of its Install page's title, finding that language's pages, and a wordmark drawn in anything but the text color at weight 500.
+It opens pages side by side, and fails on a page that does not answer or draws no title, a page that does not name its language, direction, canonical address and alternates or labels its heading links in another language's words ("Languages"), a request to any other host, a cookie, a link between pages or to a heading that leads nowhere, a picture that does not draw, an unknown address that does not draw the site's own not-found page, search that draws no search box, search that finds nothing in English or, from each shipped language's home page, for a word of its Install page's title, finding that language's pages, a sitemap entry whose alternates differ from its page's, a translated What's new that does not show the English notes, marked English, under Starlight's notice in its language, and a wordmark drawn in anything but the text color at weight 500.
 Starlight builds the search box only when the browser next has idle time, and headless Chromium on a busy computer can stop drawing without ever having it, so the check waits for the box while asking the page for animation frames, as a visitor's pointer would.
 It also opens the home page with the system asking for dark and then for light, and fails unless the site follows.
 `SCREENSHOTS=<folder>` saves the home, install and first launch pages in both themes there.
@@ -201,7 +202,7 @@ pnpm --dir docs-site build
 node docs-site/scripts/check-live.mjs --origin https://docs.getinfinitary.com
 ```
 
-It fails unless the home page and an inner page, in English and in each shipped language, answer 200 over https as the site's own pages, a catalog language not shipped yet moves to the English page, an unknown address answers 404 with the site's own not-found page, plain http moves to https, every answer carries the security headers, no-transform and no cookie, each of those three pages arrives exactly as `dist/` holds it when asked for as a browser asks, and the browser check (`check-site.mjs --origin`) passes at that address, so no page asks another host for anything.
+It fails unless the home page and an inner page, in English and in each shipped language, answer 200 over https as the site's own pages, each catalog language not shipped yet moves its home and inner addresses to the same English page on the same site, an unknown address answers 404 with the site's own not-found page, plain http moves to https, every answer carries the security headers, no-transform and no cookie, each of those three pages arrives exactly as `dist/` holds it when asked for as a browser asks, and the browser check (`check-site.mjs --origin`) passes at that address, so no page asks another host for anything.
 A new address can take a few minutes to get its certificate, so the run tries for five minutes.
 A publish whose live check fails is not a published site, whatever the upload said; if a step's outcome is unknown, read the Worker's versions and the live site before running anything again.
 

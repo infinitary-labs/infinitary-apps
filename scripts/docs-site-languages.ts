@@ -1,15 +1,20 @@
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { join, relative, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   catalogLanguages,
+  headingId,
+  KEYBOARD_WORDS,
   pagesFolder,
+  SCOPE_WORD_KEYS,
+  SIDEBAR_WORDS,
   SOURCE_LANGUAGE,
+  segmentOf,
   shippedLanguages,
+  siteWords,
   WORDS,
-  wordsOf,
 } from "../docs-site/languages.ts";
-import { SCOPE_WORD_KEYS } from "./docs-site-keyboard.ts";
 import { errorLine } from "./github-errors.ts";
 import { REPO_ROOT } from "./moduleRunner.ts";
 
@@ -23,8 +28,10 @@ import { REPO_ROOT } from "./moduleRunner.ts";
  *   page has not changed since;
  * - each translated page keeps the English page's links (its language's
  *   address segment aside), pictures, code, keys and frontmatter fields, and
- *   its headings keep their levels and the English page's ids;
- * - each language's words file has every word English's has.
+ *   its headings keep their levels and the English page's ids, its links to
+ *   the site's pages lead to its own language's, and its frontmatter keeps
+ *   every value but its title and description;
+ * - every catalog language's words file has each word the site reads in it.
  *
  *   node scripts/docs-site-languages.ts --check          fails on any of these
  *   node scripts/docs-site-languages.ts --stamp <page>   records a translated
@@ -50,16 +57,8 @@ export function splitPage(text: string): { fields: Map<string, string>; body: st
   return { fields, body: match ? text.slice(match[0].length) : text };
 }
 
-/** github-slugger's id for a heading's words, as the site's Markdown gives English headings. */
-function slugOf(words: string, seen: Map<string, number>): string {
-  const base = words
-    .toLowerCase()
-    .replace(/[^\p{L}\p{M}\p{N}\p{Pc} -]/gu, "")
-    .replace(/ /g, "-");
-  const count = seen.get(base) ?? 0;
-  seen.set(base, count + 1);
-  return count === 0 ? base : `${base}-${count}`;
-}
+/** The frontmatter fields a translation words in its own language; every other field keeps the English value. */
+const WORDED_FIELDS = new Set(["title", "description"]);
 
 /** A heading's words as a reader sees them: Markdown's marks and link targets left out. */
 function headingWords(text: string): string {
@@ -88,21 +87,29 @@ export function structureOf(text: string, segment?: string): Structure {
   const { fields, body } = splitPage(text);
   const fences = [...body.matchAll(/^```[^\n]*\n([\s\S]*?)^```/gm)].map((match) => match[1] ?? "");
   const prose = body.replace(/^```[^\n]*\n[\s\S]*?^```/gm, "");
-  const unprefixed = (href: string) =>
-    segment && (href === `/${segment}/` || href.startsWith(`/${segment}/`))
+  // A translated page's link to one of the site's pages leads to its own
+  // language's; one that leads to an English page is kept apart, so it differs.
+  const unprefixed = (href: string) => {
+    if (!segment || !href.startsWith("/") || href.startsWith("//")) return href;
+    return href === `/${segment}/` || href.startsWith(`/${segment}/`)
       ? href.slice(segment.length + 1)
-      : href;
+      : `(not in its language) ${href}`;
+  };
   const seen = new Map<string, number>();
   const headings = [...prose.matchAll(/^(#{1,6}) (.*)$/gm)].map((match) => {
     const level = match[1]?.length ?? 0;
     const words = match[2] ?? "";
     const named = /\s\{#([^}\s]+)\}\s*$/.exec(words);
-    const id = segment ? (named?.[1] ?? "(no id)") : slugOf(headingWords(words), seen);
+    const id = segment ? (named?.[1] ?? "(no id)") : headingId(headingWords(words), seen);
     return `h${level}#${id}`;
   });
   const sorted = (list: string[]) => list.sort();
   return {
-    fields: sorted([...fields.keys()].filter((field) => field !== "source")),
+    fields: sorted(
+      [...fields]
+        .filter(([field]) => field !== "source")
+        .map(([field, value]) => (WORDED_FIELDS.has(field) ? field : `${field}: ${value}`)),
+    ),
     links: sorted(
       [
         ...[...prose.matchAll(/\]\(([^)\s]+)\)/g)].map((match) => match[1] ?? ""),
@@ -127,7 +134,7 @@ export function structureOf(text: string, segment?: string): Structure {
 /** Where a translated page's structure differs from the English page's, in words. */
 function structureProblems(english: Structure, translated: Structure): string[] {
   const parts: { key: keyof Structure; name: string }[] = [
-    { key: "fields", name: "frontmatter fields" },
+    { key: "fields", name: "frontmatter fields (and values, title and description aside)" },
     { key: "links", name: "links" },
     { key: "pictures", name: "pictures" },
     { key: "code", name: "code" },
@@ -150,36 +157,42 @@ function structureProblems(english: Structure, translated: Structure): string[] 
   });
 }
 
-/** The words a language's words file must have: English's, and for a translated Keyboard page, where each command works. */
-function requiredWords(tag: string, shipped: boolean, english: Record<string, string>): string[] {
-  const keys = Object.keys(english);
-  if (!shipped) return keys.filter((key) => key.startsWith("sidebar."));
-  return tag === SOURCE_LANGUAGE ? keys : [...keys, ...Object.values(SCOPE_WORD_KEYS)];
-}
-
-/** What the check reads: the pages of English and of each language, by file name, and each language's words. */
+/**
+ * What the check reads: the catalog's languages, the pages of English and of
+ * each shipped language by their path in its folder, and each words file.
+ */
 export type SiteLanguages = {
+  catalog: readonly string[];
   english: ReadonlyMap<string, string>;
   languages: ReadonlyMap<string, { segment: string; pages: ReadonlyMap<string, string> }>;
-  words: ReadonlyMap<string, Record<string, string>>;
+  words: ReadonlyMap<string, Record<string, unknown>>;
 };
+
+/** Every word the site reads from a words file. */
+const KNOWN_WORDS = new Set<string>([...SIDEBAR_WORDS, ...KEYBOARD_WORDS, ...Object.values(SCOPE_WORD_KEYS)]);
 
 /** Every way the site's languages fall short, as one line each. */
 export function languageProblems(site: SiteLanguages): string[] {
   const problems: string[] = [];
-  const english = site.words.get(SOURCE_LANGUAGE) ?? {};
-  const known = new Set([...Object.keys(english), ...Object.values(SCOPE_WORD_KEYS)]);
-  for (const [tag, words] of site.words) {
-    const shipped = tag === SOURCE_LANGUAGE || site.languages.has(tag);
-    for (const key of requiredWords(tag, shipped, english)) {
-      if (!words[key]) problems.push(`words/${tag}.json lacks "${key}", which ${tag === SOURCE_LANGUAGE ? "the site" : "English"} has`);
+  for (const tag of site.catalog) {
+    const words = site.words.get(tag);
+    if (!words) {
+      problems.push(`words/${tag}.json is missing: every catalog language has the site's words`);
+      continue;
     }
-    for (const key of Object.keys(words)) {
-      if (!known.has(key)) problems.push(`words/${tag}.json has "${key}", a word the site does not use`);
+    const shipped = tag === SOURCE_LANGUAGE || site.languages.has(tag);
+    for (const key of siteWords(tag, shipped)) {
+      const word = words[key];
+      if (typeof word !== "string" || word.trim() === "") problems.push(`words/${tag}.json lacks "${key}", which the site reads`);
     }
   }
-  for (const [tag, { segment, pages }] of site.languages) {
-    if (!site.words.has(tag)) problems.push(`words/${tag}.json is missing`);
+  for (const [tag, words] of site.words) {
+    if (!site.catalog.includes(tag)) problems.push(`words/${tag}.json is for ${tag}, which is not a catalog language`);
+    for (const key of Object.keys(words)) {
+      if (!KNOWN_WORDS.has(key)) problems.push(`words/${tag}.json has "${key}", a word the site does not use`);
+    }
+  }
+  for (const { segment, pages } of site.languages.values()) {
     for (const name of site.english.keys()) {
       if (name !== "whats-new.md" && !pages.has(name)) problems.push(`${segment}/${name} is missing: English has ${name}`);
     }
@@ -206,38 +219,48 @@ export function languageProblems(site: SiteLanguages): string[] {
   return problems;
 }
 
-/** The pages in a folder, by file name, its language folders left out. */
-function pagesIn(folder: string): Map<string, string> {
+/**
+ * The pages in a folder and the folders under it, by their path there, as
+ * Starlight builds them; skip names the folders that are other languages'.
+ */
+function pagesIn(folder: string, skip: ReadonlySet<string> = new Set()): Map<string, string> {
   return new Map(
-    readdirSync(folder, { withFileTypes: true })
+    readdirSync(folder, { recursive: true, withFileTypes: true })
       .filter((entry) => entry.isFile() && /\.mdx?$/.test(entry.name))
-      .map((entry) => [entry.name, readFileSync(join(folder, entry.name), "utf8")]),
+      .map((entry) => relative(folder, join(entry.parentPath, entry.name)).split(sep).join("/"))
+      .filter((path) => !skip.has(path.split("/")[0] ?? ""))
+      .map((path) => [path, readFileSync(join(folder, path), "utf8")]),
   );
 }
 
 /** The site's languages as the repository holds them. */
 export function readSiteLanguages(): SiteLanguages {
-  const tags = catalogLanguages();
+  const catalog = catalogLanguages();
   const shipped = new Set(shippedLanguages());
-  const wordFiles = new Set(readdirSync(WORDS).map((name) => name.replace(/\.json$/, "")));
+  const others = catalog.filter((tag) => tag !== SOURCE_LANGUAGE);
   return {
-    english: pagesIn(pagesFolder(SOURCE_LANGUAGE)),
+    catalog,
+    english: pagesIn(pagesFolder(SOURCE_LANGUAGE), new Set(others.map(segmentOf))),
     languages: new Map(
-      tags
-        .filter((tag) => tag !== SOURCE_LANGUAGE && shipped.has(tag))
-        .map((tag) => [tag, { segment: tag.toLowerCase(), pages: pagesIn(pagesFolder(tag)) }]),
+      others
+        .filter((tag) => shipped.has(tag))
+        .map((tag) => [tag, { segment: segmentOf(tag), pages: pagesIn(pagesFolder(tag)) }]),
     ),
-    words: new Map(tags.filter((tag) => wordFiles.has(tag)).map((tag) => [tag, wordsOf(tag)])),
+    words: new Map(
+      readdirSync(WORDS)
+        .filter((name) => name.endsWith(".json"))
+        .map((name) => [name.slice(0, -".json".length), JSON.parse(readFileSync(join(fileURLToPath(WORDS), name), "utf8"))]),
+    ),
   };
 }
 
 /** Records a translated page's English fingerprint in its frontmatter. */
 export function stamp(path: string): void {
   const full = resolve(path);
-  const segment = relative(pagesFolder(SOURCE_LANGUAGE), full).split(/[\\/]/);
-  const name = segment.at(-1) ?? "";
-  if (segment.length !== 2 || !name) throw new Error(`${path} is not a translated page`);
-  const english = readFileSync(join(pagesFolder(SOURCE_LANGUAGE), name), "utf8");
+  const [segment, ...rest] = relative(pagesFolder(SOURCE_LANGUAGE), full).split(/[\\/]/);
+  const known = catalogLanguages().filter((tag) => tag !== SOURCE_LANGUAGE).map(segmentOf);
+  if (!segment || !known.includes(segment) || rest.length === 0) throw new Error(`${path} is not a translated page`);
+  const english = readFileSync(join(pagesFolder(SOURCE_LANGUAGE), ...rest), "utf8");
   const text = readFileSync(full, "utf8");
   const line = `source: ${fingerprint(english)}`;
   const stamped = /^---\n[\s\S]*?^source:.*$/m.test(text)

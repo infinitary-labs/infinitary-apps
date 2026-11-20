@@ -148,6 +148,8 @@ export class SettleService {
   ) {
     const initial = this.host.tasks.get(taskId);
     const signature = initial ? JSON.stringify(this.host.tasks.policiesOf(initial)) : "";
+    const click =
+      actor === "captain" && mode === "merge-pr" ? initial?.delivery?.mergeClick : undefined;
     // A waiting attempt keeps the exact story across restart, never recaptures a newer one.
     const initialStory = initial?.pendingSettle
       ? initial.pendingSettle.story
@@ -155,6 +157,14 @@ export class SettleService {
     return (head?: string): string | undefined => {
       const record = this.host.tasks.get(taskId);
       if (!record || TaskService.isClosed(record)) return "the task closed";
+      if (
+        click &&
+        record.delivery?.completionOffers?.some(
+          (offer) =>
+            offer.cardId === click.cardId && offer.offerId === click.offerId && offer.retired,
+        )
+      )
+        return "the project address changed; show a fresh merge card";
       if (signature !== JSON.stringify(this.host.tasks.policiesOf(record)))
         return "its policies changed; recheck the current requirements before trying again";
       if (this.locks.working(taskId)) return "its crewmate is still working";

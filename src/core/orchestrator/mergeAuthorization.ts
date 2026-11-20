@@ -93,6 +93,7 @@ export function matchesOfferDestination(
   offer: CompletionOffer,
   branch: string,
 ): boolean {
+  if (offer.retired) return false;
   if (!offer.destination) return !hasChangeRequests(repo.host?.kind);
   return (
     offer.destination.origin === publicationRepo(record, repo).origin &&

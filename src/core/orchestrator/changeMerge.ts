@@ -4,6 +4,11 @@ import { fixedHoldWords, overridePasses, softHoldWords } from "@shared/holds";
 import { englishOf, type Said, said } from "@shared/i18n/said";
 import { isForkReview, mergeRuleWords, type SkippedRule } from "@shared/mergeReview";
 import { isMergeConflict } from "@shared/plainProblem";
+import {
+  assertBranchStoryAddress,
+  hostedPresentation,
+  samePresentationDestination,
+} from "@shared/presentationDestination";
 import { deliveryForRecord, opensPullRequest, type RepoView } from "@shared/repos";
 import {
   BATCH_WAITING_WORDS,
@@ -446,6 +451,17 @@ export class ChangeMerge {
             text: "Cannot merge: the contributor's request is no longer open.",
             stop: "closed",
           };
+      }
+      if (!hasChangeRequests(forge.kind) && repo) {
+        const destination = this.options.tasks.delivery
+          .changePresentation(taskId, change.branch)
+          ?.revisions.at(-1)?.destination;
+        if (destination && !hostedPresentation(destination) && destination.kind === "branch") {
+          const actual = await forge.storyDestination?.();
+          if (!actual || !samePresentationDestination(destination, actual))
+            throw new Error("The story's destination or audience changed.");
+          assertBranchStoryAddress(destination, this.context.approvedOrigin(taskId));
+        }
       }
       const held = guard?.held?.();
       if (held) return { ok: false, text: `Cannot merge yet: ${held}.`, stop: "guidance" };

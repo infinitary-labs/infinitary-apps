@@ -102,6 +102,8 @@ export type CompletionOffer = {
   shownFor?: number;
   /** Project address as shown; absence cannot authorize a numbered request. */
   destination?: { repoId: string; origin: string; branch: string };
+  /** A move retired this offer; a return to that address cannot revive it. */
+  retired?: true;
   /** The merge card declared the task continues after this merge (INF-2744). */
   continues?: true;
   /** The saved story this offer showed, when it uses one. */

@@ -41,6 +41,7 @@ import {
 } from "./changeContext";
 import type { DraftReadiness } from "./draftReadiness";
 import { mergedAheadWords, mergedStory } from "./mergedStory";
+import { publicationRepo } from "./publicationRepo";
 import { carryPassedReview } from "./reviewCarry";
 
 /**
@@ -138,13 +139,14 @@ export class ChangePublication {
             : undefined;
         if (merged) return said(merged);
         const repo = located.repo;
+        const origin = repo ? publicationRepo(located.record, repo).origin : null;
         const revision = await this.options.presentations.prepare(taskId, staged, located.forge, {
           ...how,
-          ...(repo?.origin
+          ...(repo && origin
             ? {
                 approvedAddress: {
-                  origin: repo.origin,
-                  current: () => this.options.repos.get(repo.id)?.origin === repo.origin,
+                  origin,
+                  current: () => this.context.approvedOrigin(taskId) === origin,
                   recover:
                     !repo.contribution &&
                     !located.record.delivery?.publicationOrigin &&
@@ -658,6 +660,7 @@ export class ChangePublication {
                 }
               : {}),
             ...(input.base ? { base: input.base } : {}),
+            ...(located.repo ? { branchOrigin: () => this.context.approvedOrigin(taskId) } : {}),
             ...(read === branch ? {} : { source: read }),
           },
         );

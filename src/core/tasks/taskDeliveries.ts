@@ -445,17 +445,29 @@ export class TaskDeliveries {
             storyAtOrigin(story.destination, task.delivery.publicationOrigin))
         );
       });
-      if (kept.length === ledgers.length) continue;
-      const target = task.delivery?.checkTarget;
-      this.writer.writeDeliveryRecords(
-        task.id,
-        placeStories(
-          kept,
-          task.branch,
-          currentChange(task.delivery, task.branch).branch,
-          target && isForkReview(target) ? target.number : undefined,
-        ),
-      );
+      const retired = ledgers.filter((ledger) => !kept.includes(ledger));
+      const offers = task.delivery?.completionOffers;
+      const completionOffers = offers?.map((offer) => {
+        const { destination: bound, presentationRevision } = offer;
+        const moved = bound
+          ? bound.repoId === repoId &&
+            bound.origin === former &&
+            task.delivery?.publicationOrigin !== former
+          : presentationRevision !== undefined &&
+            retired.some(
+              (ledger) =>
+                (ledger.branch ?? task.branch) ===
+                  currentChange(task.delivery, task.branch).branch &&
+                (ledger.revisions.at(-1)?.revision ?? 0) >= presentationRevision,
+            );
+        return moved && !offer.retired ? { ...offer, retired: true as const } : offer;
+      });
+      if (!retired.length && !completionOffers?.some((offer, i) => offer !== offers?.[i])) continue;
+      this.writer.writeDeliveryRecords(task.id, {
+        presentation: undefined,
+        presentations: kept.length ? kept : undefined,
+        completionOffers,
+      });
     }
   }
 

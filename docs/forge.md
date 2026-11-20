@@ -935,6 +935,8 @@ The app retires open tasks' active story ledgers that name the former destinatio
 For an ordinary remote story left behind by an earlier build, preparing against the approved destination starts a new ledger when the old story names another address; this does not relax the same-address base or audience checks.
 A story pinned to an unchanged publication address keeps its ledger.
 A story at the new address needs a new merge card and approval, even for a plain Git branch at the same commit and story revision.
+Returning to a former address does not restore a retired offer.
+Preparing, confirming or merging a plain Git story requires the checkout and story to agree with its approved address.
 If the fetched default branch in the home project folder has no common ancestor with the rebuilt branch, the range check fetches the current default branch and tries again, but only when the folder's origin matches the approved address.
 A declared repair is reset with the former batch: its declaration, the versions that held and its verified base are dropped, so its whole branch goes as an ordinary change once approved again at the new address.
 A move noticed after a combine's reads or during its push leaves its result unsaved, and nothing is pushed to the former address once the move is seen.

@@ -1362,6 +1362,7 @@ export class CardActions {
     );
     // A card with no offer of its own shows no version to fall behind.
     if (!offered) return undefined;
+    if (offered.retired) return { why: "other", shown: offered.headSha };
     const shownFor = offered.shownFor ?? offered.prNumber;
     const current = currentChange(delivery, associated.branch);
     const changes = this.core.options.tasks.changesFor(associated.id);
@@ -1406,12 +1407,12 @@ export class CardActions {
       repo?.origin &&
       opensPullRequest(this.core.facts.taskDelivery(associated.id)) &&
       !hasChangeRequests(repo.host?.kind) &&
-      !offered.destination &&
       offered.presentationRevision !== undefined &&
       (!newest ||
         !storyAtOrigin(newest.destination, publicationRepo(associated, repo).origin ?? null) ||
-        !offered.presentationContentHash ||
-        readyPresentation(ledger)?.contentHash !== offered.presentationContentHash)
+        (!offered.destination &&
+          (!offered.presentationContentHash ||
+            readyPresentation(ledger)?.contentHash !== offered.presentationContentHash)))
     )
       return { why: "other", ...shown };
     const read = !elsewhere && current.number !== undefined ? delivery?.headSha : undefined;

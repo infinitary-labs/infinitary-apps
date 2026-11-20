@@ -281,12 +281,14 @@ describe("saved stories at the approved cutover (INF-5135 and INF-5411)", () => 
   it.each(["address-bound", "legacy unbound"])(
     "refuses the former plain Git card and sends only a fresh click (%s)",
     async (offerStyle) => {
-      const merge = vi.fn(async () => ({ ok: true, text: "Merged the pushed branch." }));
+      let runMerge: ReturnType<typeof createChangeDelivery>["settleHooks"]["mergePullRequest"];
+      const merge = vi.fn<typeof runMerge>((...args) => runMerge(...args));
       const { db, tasks, repos, supervisor } = setupCrew(fakeCrewmate(), {
         mergePullRequest: merge,
       });
       const from = "https://git.example.com/library/field-notes.git";
       const to = "https://git.example.com/library/field-notes-next.git";
+      let checkoutOrigin = from;
       const repo = seedProject(db, {
         id: "plain-cutover",
         path: scratchDir("plain-cutover-"),
@@ -303,7 +305,7 @@ describe("saved stories at the approved cutover (INF-5135 and INF-5411)", () => 
         branchHead: async () => original,
         storyDestination: async () => ({
           kind: "branch" as const,
-          origin: repos.get(repo.id)?.origin ?? "",
+          origin: checkoutOrigin,
         }),
       });
       const presentations = new ChangePresentations({
@@ -311,13 +313,15 @@ describe("saved stories at the approved cutover (INF-5135 and INF-5411)", () => 
         mediaDir: () => repo.path,
         head: async () => original,
       });
-      const { publication } = createChangeDelivery({
+      const { publication, settleHooks } = createChangeDelivery({
         tasks,
         repos,
         presentations,
         forgeFor: () => forge,
         validateRange: async () => {},
       });
+      runMerge = settleHooks.mergePullRequest;
+      const putIn = vi.spyOn(forge, "putIn");
       const prepare = async () => {
         const story = staged(original);
         expect(await publication.prepareStory(id, story)).toMatchObject({ revision: 1 });
@@ -354,27 +358,74 @@ describe("saved stories at the approved cutover (INF-5135 and INF-5411)", () => 
         });
       }
       repos.configure(repo.id, { origin: to });
+      const lagged = await publication.prepareStory(id, staged(original));
+      expect(observe("prepare with former checkout after address approval", lagged.said)).toContain(
+        "checkout does not use the approved project address",
+      );
+      expect(lagged.revision).toBeUndefined();
+      expect(tasks.delivery.changePresentation(id)).toBeUndefined();
+      // A former ledger left by an earlier build cannot be confirmed merely because it still matches checkout.
+      tasks.delivery.updateChangePresentation(id, () => ({
+        revisions: [
+          {
+            ...staged(original),
+            taskId: id,
+            revision: 1,
+            destination: { kind: "branch", origin: from },
+          },
+        ],
+        receipts: [],
+      }));
+      const refused = await publication.open(id, {
+        title: staged(original).title,
+        presentation: 1,
+      });
+      expect(observe("publish former plain story at the lagging checkout", refused)).toContain(
+        "checkout does not use the approved project address",
+      );
+      expect(tasks.delivery.changePresentation(id)?.completion).toBeUndefined();
+      checkoutOrigin = to;
       await prepare();
-      expect(() => {
-        try {
-          supervisor.cardActions.act(former, "merge");
-        } catch (error) {
-          observe(`former ${offerStyle} plain merge click`, (error as Error).message);
-          throw error;
-        }
-      }).toThrow("so I did not merge");
-      expect(merge).not.toHaveBeenCalled();
-      expect(tasks.get(id)?.delivery?.mergeClick).toBeUndefined();
+      const refuseFormer = (step: string) => {
+        expect(() => {
+          try {
+            supervisor.cardActions.act(former, "merge");
+          } catch (error) {
+            observe(`${step}: former ${offerStyle} plain merge click`, (error as Error).message);
+            throw error;
+          }
+        }).toThrow("so I did not merge");
+        expect(merge).not.toHaveBeenCalled();
+        expect(putIn).not.toHaveBeenCalled();
+        expect(tasks.get(id)?.delivery?.mergeClick).toBeUndefined();
+      };
+      refuseFormer("after the move");
+      repos.configure(repo.id, { origin: from });
+      checkoutOrigin = from;
+      await prepare();
+      refuseFormer("after return to the original address");
       const fresh = show("fresh-plain-merge");
+      checkoutOrigin = to;
       supervisor.cardActions.act(fresh, "merge");
       await vi.waitFor(() => expect(merge).toHaveBeenCalledTimes(1));
+      const blocked = await merge.mock.results[0]?.value;
+      expect(observe("merge dispatch from a lagging checkout", blocked)).toMatchObject({
+        ok: false,
+        text: expect.stringMatching(/destination|approved/),
+      });
+      expect(putIn).not.toHaveBeenCalled();
+      checkoutOrigin = from;
+      const valid = show("valid-plain-merge");
+      supervisor.cardActions.act(valid, "merge");
+      await vi.waitFor(() => expect(putIn).toHaveBeenCalledTimes(1));
+      await merge.mock.results[1]?.value;
       const click = tasks.get(id)?.delivery?.mergeClick;
       expect(
         observe("fresh plain merge click", {
           cardId: click?.cardId,
-          dispatches: merge.mock.calls.length,
+          dispatches: putIn.mock.calls.length,
         }),
-      ).toEqual({ cardId: fresh, dispatches: 1 });
+      ).toEqual({ cardId: valid, dispatches: 1 });
     },
   );
 

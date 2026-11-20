@@ -92,3 +92,18 @@ export function storyAtOrigin(
     ? destination.fullName.toLowerCase() === name.toLowerCase()
     : destination.fullName === name;
 }
+
+/** Plain stories agree with the address the person approved, not just with the checkout. */
+export function assertBranchStoryAddress(
+  destination: PresentationDestination,
+  approved: string | null,
+): void {
+  if (
+    "kind" in destination &&
+    destination.kind === "branch" &&
+    !storyAtOrigin(destination, approved)
+  )
+    throw new Error(
+      "The checkout does not use the approved project address. Update its origin and try again.",
+    );
+}

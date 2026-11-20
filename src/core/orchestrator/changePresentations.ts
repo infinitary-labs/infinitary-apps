@@ -24,6 +24,7 @@ import { servedNumber } from "@shared/i18n/format";
 import { acceptedValidation } from "@shared/liveValidation";
 import { liveValidationSummary } from "@shared/liveValidationSummary";
 import {
+  assertBranchStoryAddress,
   hostedPresentation,
   type LocalPresentationDestination,
   nativePresentationMedia,
@@ -113,6 +114,8 @@ type PublicationOpening = {
   base?: string;
   /** Recheck and consume the caller's publication authority after preflight, before uploads. */
   beforePublish?: (head: string) => void;
+  /** Re-read the approved address at the plain branch publication boundaries. */
+  branchOrigin?: () => string | null;
   /** Whether Careful's records complete no-mistakes' review, test and document at this version. */
   attests?: (head: string) => boolean;
   /** The ref this Mac holds the branch at when not under its own name (INF-2490). */
@@ -204,6 +207,7 @@ export class ChangePresentations {
           const destination = await storyDestination(target);
           const kept = this.options.tasks.delivery.changePresentation(taskId, branch);
           const address = how.approvedAddress;
+          if (address) assertBranchStoryAddress(destination, address.origin);
           const former = kept?.revisions.at(-1)?.destination;
           // An address already moved by an older build has no retirement event. Recover only
           // an ordinary remote story, and only after reading the currently approved destination.
@@ -392,9 +396,13 @@ export class ChangePresentations {
       if (around || recovery)
         throw new Error("A pushed branch has no description to replace or reconcile.");
       await this.validatePrepared(story, forge, remoteOnly);
+      if (opening?.branchOrigin)
+        assertBranchStoryAddress(story.destination, opening.branchOrigin());
       const existing = await forge.changeFor(branch);
       if (existing && existing.headSha !== story.head)
         throw new Error("The pushed branch does not match this story.");
+      if (opening?.branchOrigin)
+        assertBranchStoryAddress(story.destination, opening.branchOrigin());
       opening?.beforePublish?.(story.head);
       // A placed branch is brought home before publication. Preserve the plain
       // forge's first push from there; an already-pushed branch needs no write.
@@ -409,10 +417,14 @@ export class ChangePresentations {
       await this.validateCurrent(story, forge, branch, remoteOnly);
       if (change.headSha !== story.head)
         throw new Error("The pushed branch does not match this story.");
-      await this.save(taskId, branch, (record) => ({
-        ...this.required(record),
-        completion: { revision, head: story.head, contentHash: presentationContentHash(story) },
-      }));
+      await this.save(taskId, branch, (record) => {
+        if (opening?.branchOrigin)
+          assertBranchStoryAddress(story.destination, opening.branchOrigin());
+        return {
+          ...this.required(record),
+          completion: { revision, head: story.head, contentHash: presentationContentHash(story) },
+        };
+      });
       return change;
     }
     const destination = story.destination;

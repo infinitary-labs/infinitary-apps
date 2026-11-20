@@ -140,6 +140,13 @@ export class ChangeContext {
     return mergesInOwnBatch(record, repo) ? repo : undefined;
   }
 
+  /** The task's effective approved address, including an explicitly pinned publication route. */
+  approvedOrigin(taskId: string): string | null {
+    const record = this.options.tasks.get(taskId);
+    const repo = record?.repoId ? this.options.repos.get(record.repoId) : undefined;
+    return record && repo ? publicationRepo(record, repo).origin : null;
+  }
+
   get batches(): Batches | undefined {
     return this.options.batches?.();
   }

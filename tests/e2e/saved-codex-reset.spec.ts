@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { firstmatePauseTitle } from "../../src/core/orchestrator/hostCards";
 import * as m from "../../src/shared/i18n/messages.generated";
@@ -26,7 +25,10 @@ import { focusOn, pressKey } from "./windowKeys";
 
 /** The live Codex reading's saved resets (`tests/fixtures/quota-credits`), here applying now. */
 const LIVE = JSON.parse(
-  readFileSync(join(__dirname, "../fixtures/quota-credits/codex-usage-credits.json"), "utf8"),
+  readFileSync(
+    new URL("../fixtures/quota-credits/codex-usage-credits.json", import.meta.url),
+    "utf8",
+  ),
 ) as { rate_limit_reset_credits: { available_count: number } };
 const HELD = LIVE.rate_limit_reset_credits.available_count;
 

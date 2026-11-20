@@ -27,7 +27,10 @@ import type { ForgeWorkflows } from "./workflows";
  * - `gitlab`: a merge request, the pipelines and jobs GitLab ran for its
  *   head, a squash merge at the checked head, over GitLab's REST API with
  *   the key the person made there.
- * - `git` (and Bitbucket, until its own file exists): the
+ * - `bitbucket`: a pull request on Bitbucket Cloud, the build statuses on
+ *   its head, a squash merge after reading the branch is still at the
+ *   checked head, over Bitbucket's REST API with the person's API token.
+ * - `git`: the
  *   working copy is SENT UP as its own branch; it has no checks, so it reads
  *   green with zero of them; putting it in fast-forwards the default branch
  *   onto the checked head and sends that up.
@@ -259,7 +262,16 @@ export type ForgeRuleset = {
  * one, or `queued` when the branch's own merge queue took the change and has
  * not merged it yet.
  */
-export type MergeAnswer = { sha?: string; queued?: true };
+export type MergeAnswer = {
+  sha?: string;
+  queued?: true;
+  /**
+   * The version the host says it merged, where its merge takes no version
+   * to hold it to (Bitbucket Cloud): when it is not the one asked for, a
+   * push landed between the app's read and the merge.
+   */
+  mergedHead?: string;
+};
 
 /**
  * A merge past the rules as the host reports it: merged, failed (nothing

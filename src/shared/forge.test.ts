@@ -137,7 +137,7 @@ describe("forgePlace", () => {
 });
 
 describe("hasChangeRequests", () => {
-  it("is GitHub's pull requests and GitLab's merge requests, and no other kind", () => {
+  it("is GitHub's and Bitbucket's pull requests and GitLab's merge requests, and no other kind", () => {
     expect(
       (["github", "gitlab", "bitbucket", "git", "none", undefined] as const).map((kind) => [
         kind,
@@ -146,7 +146,7 @@ describe("hasChangeRequests", () => {
     ).toEqual([
       ["github", true],
       ["gitlab", true],
-      ["bitbucket", false],
+      ["bitbucket", true],
       ["git", false],
       ["none", false],
       [undefined, false],

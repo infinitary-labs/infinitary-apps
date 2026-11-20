@@ -293,6 +293,7 @@ These kinds declare no Automation events, and their sign-ins stay with the proje
 The signed-in bitbucket.org host is the `bitbucket` integration, one row named Bitbucket over `ForgeSignIns` and its per-host file and health, like GitLab's public row (`docs/forge.md`, "Bitbucket sign-in and projects").
 The Bitbucket chip opens the key form for an Atlassian API token, naming the scopes to tick.
 The row shows its account and health, with Check now, Pause or Resume, and Sign out and remove; it offers no actions yet, so neither the first mate nor a crewmate reaches Bitbucket's API through it.
+The app's own pull requests, checks and merges on Bitbucket use the same sign-in (`docs/forge.md`, "Bitbucket pull requests").
 A typed `bitbucket:bitbucket.org` arrival opens its form like GitLab's.
 
 ## The inbox

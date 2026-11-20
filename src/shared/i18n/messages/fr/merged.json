@@ -1,5 +1,6 @@
 {
   "mergedAt": "Fusionnée à {at}",
+  "mergedChangeNewerOn": "{change} fusionnée sur {place}, avec un envoi fait après la version approuvée",
   "mergedChangeOn": "{change} fusionnée sur {place}",
   "mergedChangeOnHost": "{change} fusionnée chez l’hébergeur du projet",
   "mergedChangeWhereItLives": "{change} fusionnée là où le projet est hébergé",

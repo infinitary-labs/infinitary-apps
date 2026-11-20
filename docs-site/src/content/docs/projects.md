@@ -48,7 +48,8 @@ For GitLab, you can sign in in your browser or paste a key, on gitlab.com or on 
 For Bitbucket, you make an API token on your Atlassian account and paste it, for projects on bitbucket.org.
 The key form names the scopes to tick on Atlassian's page.
 Your Bitbucket projects are listed from the workspaces you belong to; with many, some may not be checked, and the list says so.
-For now, a Bitbucket project's changes are offered as a branch, not as a pull request.
+A Bitbucket project's changes are offered as pull requests, as on GitHub and GitLab; a project you added before this works the same way from its next task.
+A Bitbucket pull request's description carries the story as text, and its pictures stay on the card.
 Your sign-in stays on this computer.
 
 If a sign-in stops working, a card asks you to sign in again.

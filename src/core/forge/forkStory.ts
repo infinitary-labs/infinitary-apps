@@ -32,6 +32,13 @@ const STORY_COMMENTS: Record<
       path: `${STORY_COMMENTS.gitlab.list(project, number)}/${id}`,
     }),
   },
+  bitbucket: {
+    list: (project, number) => `/repositories/${project}/pullrequests/${number}/comments`,
+    update: (project, number, id) => ({
+      method: "PUT",
+      path: `${STORY_COMMENTS.bitbucket.list(project, number)}/${id}`,
+    }),
+  },
 };
 
 /**

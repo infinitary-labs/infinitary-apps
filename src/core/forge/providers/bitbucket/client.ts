@@ -3,7 +3,7 @@ import { forgePlace } from "@shared/forge";
 import { notSignedInText } from "@shared/forges";
 import { cutText } from "@shared/textCut";
 import { API_RESPONSE_MAX_BYTES } from "../../api";
-import { ForgeError, type ForgeFailure } from "../../forge";
+import { ForgeAllowanceSpent, ForgeError, type ForgeFailure, ForgeWriteError } from "../../forge";
 
 /**
  * Bitbucket Cloud's REST API (`docs/forge.md`, "Bitbucket sign-in and
@@ -52,14 +52,36 @@ export class BitbucketClient {
 
   /** One read of a path under the API, or of a `next` page link Bitbucket gave on that API. */
   async get<T>(pathOrLink: string): Promise<T> {
+    return (await this.request("GET", pathOrLink)).body as T;
+  }
+
+  /**
+   * One call under the API, its answer read whole and bounded. A refusal
+   * throws its typed failure; a spent allowance (429) carries the time
+   * Bitbucket said to wait. `beforeSend` runs once the call is about to
+   * leave, after the sign-in is read. A write's caller decides what a
+   * failure means for it (`write`).
+   */
+  async request(
+    method: "GET" | "POST" | "PUT" | "DELETE",
+    pathOrLink: string,
+    body?: unknown,
+    beforeSend?: () => void,
+  ): Promise<{ status: number; body: unknown; location: string | null }> {
     const path = this.pathOf(pathOrLink);
     const token = await this.options.token();
-    if (!token) throw new ForgeError("sign-in", notSignedInText(this.place, this.host));
+    if (!token) throw new ForgeError("sign-in", notSignedInText(this.place, this.host), true);
     let response: Response;
+    beforeSend?.();
     try {
       response = await this.fetcher(`${this.options.apiBaseUrl}${path}`, {
-        method: "GET",
-        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+        method,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+          ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+        },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         redirect: "error",
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
@@ -69,15 +91,49 @@ export class BitbucketClient {
     }
     if (!response.ok) {
       const said = await this.words(response);
-      const what = `${this.place} answered ${response.status} to GET ${path.split("?")[0]}${said ? `: ${said}` : ""}`;
+      const what = `${this.place} answered ${response.status} to ${method} ${path.split("?")[0]}${said ? `: ${said}` : ""}`;
       if (response.status === 401) this.options.onSignInRejected?.();
-      throw new ForgeError(failureOf(response.status), what);
+      const wait = Number(response.headers.get("retry-after"));
+      if (response.status === 429 && Number.isFinite(wait) && wait > 0)
+        throw new ForgeAllowanceSpent(Date.now() + wait * 1000, what);
+      throw new BitbucketRefusal(response.status, what);
     }
     const text = await this.bounded(response, API_RESPONSE_MAX_BYTES);
+    let parsed: unknown = null;
     try {
-      return (text ? JSON.parse(text) : null) as T;
+      parsed = text ? JSON.parse(text) : null;
     } catch {
       throw new ForgeError("transient", `${this.place}'s answer could not be read.`);
+    }
+    return { status: response.status, body: parsed, location: response.headers.get("location") };
+  }
+
+  /**
+   * A write whose outcome the caller must know: a refusal Bitbucket gave
+   * before acting is `failed`; no answer, a server error or an unreadable
+   * success is `uncertain`, read back before any retry.
+   */
+  async write(
+    method: "POST" | "PUT" | "DELETE",
+    path: string,
+    body: unknown,
+    what: string,
+  ): Promise<{ status: number; body: unknown; location: string | null }> {
+    try {
+      return await this.request(method, path, body);
+    } catch (caught) {
+      if (!(caught instanceof ForgeError)) throw caught;
+      if (
+        caught.beforeSend ||
+        caught instanceof ForgeAllowanceSpent ||
+        (caught instanceof BitbucketRefusal && caught.status < 500)
+      )
+        throw new ForgeWriteError("failed", caught.failure, caught.message);
+      throw new ForgeWriteError(
+        "uncertain",
+        "transient",
+        `${this.place} gave no clear answer when ${what}; read it back before any retry. ${caught.message}`,
+      );
     }
   }
 
@@ -140,6 +196,17 @@ export class BitbucketClient {
     } finally {
       reader.releaseLock();
     }
+  }
+}
+
+/** Bitbucket refused a call with this status, before or instead of acting on it. */
+export class BitbucketRefusal extends ForgeError {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(failureOf(status), message);
+    this.name = "BitbucketRefusal";
   }
 }
 

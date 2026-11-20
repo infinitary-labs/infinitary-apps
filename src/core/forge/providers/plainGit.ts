@@ -2,8 +2,7 @@ import { git } from "../../workspace/git";
 import { type Forge, type ForgeChange, ForgeError, type ForgeLocation } from "../forge";
 
 /**
- * A plain Git host (`git`), and GitLab and Bitbucket until their own files
- * exist (the captain's Q4 and Q5, 2026-09-24): a proposed change is the
+ * A plain Git host (`git`) (the captain's Q4 and Q5, 2026-09-24): a proposed change is the
  * working copy SENT UP as its own branch. It has no number, no page and no
  * checks - the local gate is the evidence - so it reads green with zero
  * checks, and putting it in fast-forwards the default branch onto the

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "bitbucket-pull-requests",
+      "kind": "feature",
+      "title": "Bitbucket projects now open pull requests",
+      "body": "When a crewmate finishes work on a Bitbucket project, it now opens a pull request on bitbucket.org instead of only sending up a branch. The merge card shows the pull request, reads the builds on its version as its checks, and your click squash-merges the version those checks passed. If someone pushes to the branch after the checks, nothing is merged and the card says why. Projects you already added work this way from their next task, with your Bitbucket sign-in.",
+      "area": "projects",
+      "picture": {
+        "dark": "bitbucket-pull-requests-dark.webp",
+        "light": "bitbucket-pull-requests-light.webp",
+        "alt": "A merge card for a Bitbucket project: the change's story, Checks passed, pull request #1 on field-notes, and a Merge the pull request button."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

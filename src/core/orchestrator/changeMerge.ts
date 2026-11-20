@@ -476,9 +476,14 @@ export class ChangeMerge {
       dispatched = true;
       const receipt = await forge.putIn(publishedChange, publishedChange.headSha, way);
       if (receipt?.queued) return hostQueued(forge, change);
+      // A host whose merge names no version says which one it merged: a
+      // push between the app's read and the merge went in too, and is told.
+      const newer =
+        receipt?.mergedHead !== undefined &&
+        !publishedChange.headSha.startsWith(receipt.mergedHead);
       return {
         ok: true,
-        ...this.putInText(taskId, forge, change),
+        ...this.putInText(taskId, forge, change, newer ? receipt?.mergedHead : undefined),
         ...(guard
           ? { receipt: { head: change.headSha, ...(receipt?.sha ? { sha: receipt.sha } : {}) } }
           : {}),
@@ -1218,17 +1223,26 @@ export class ChangeMerge {
     taskId: string,
     forge: Forge,
     change: ForgeChange,
+    /** The newer version the host merged instead of the approved one, when it said so. */
+    newer?: string,
   ): { text: string; line: string; lineSaid: Said } {
     const url = forge.url(change);
     const where = forge.place ? `on ${forge.place}` : "where the project lives";
     const place = forge.place;
     if (change.number !== undefined) {
       const label = forge.label(change);
-      const lineSaid = place
-        ? said("mergedChangeOn", { change: label, place })
-        : said("mergedChangeWhereItLives", { change: label });
+      const lineSaid =
+        place && newer
+          ? said("mergedChangeNewerOn", { change: label, place })
+          : place
+            ? said("mergedChangeOn", { change: label, place })
+            : said("mergedChangeWhereItLives", { change: label });
       const line = englishOf(lineSaid);
-      return { text: `${line}.${url ? ` ${url}` : ""}`, line, lineSaid };
+      const told = newer
+        ? // i18n-exempt: served to the crewmate in the merge answer, stays English
+          ` ${place ?? "The host"} merged version ${newer}, not the approved version ${change.headSha}: a push landed after the merge was approved, and its work is merged without approval. Tell the captain on a card.`
+        : "";
+      return { text: `${line}.${url ? ` ${url}` : ""}${told}`, line, lineSaid };
     }
     const title = this.options.tasks.get(taskId)?.title ?? forge.label(change);
     const lineSaid = place ? said("mergedOn", { place }) : said("mergedWhereItLives");

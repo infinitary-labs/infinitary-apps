@@ -415,7 +415,7 @@ export function forgeSignInCard(
   host: string,
   name: string,
   waitingChanges: number,
-  options: { reauth?: boolean; cli?: boolean; kind?: string } = {},
+  options: { reauth?: boolean; cli?: boolean } = {},
 ): HostCard {
   const reauth = options.reauth ?? true;
   // A sign-in through GitHub CLI is signed in again in GitHub CLI itself, never here.
@@ -431,7 +431,7 @@ export function forgeSignInCard(
     title: forgeSignInTitle(name, reauth),
     meta: name,
     body: reauth
-      ? `<p>${cli ? forgeCliRefusedText(name) : forgeRefusedText(name, options.kind)}${waiting}</p><p>${LOCAL_PROJECTS_UNAFFECTED}</p>`
+      ? `<p>${cli ? forgeCliRefusedText(name) : forgeRefusedText(name)}${waiting}</p><p>${LOCAL_PROJECTS_UNAFFECTED}</p>`
       : `<p>A task for a project on ${name} is waiting for your sign-in.${waiting}</p><p>Once you sign in, your first mate will retry starting the task. ${LOCAL_PROJECTS_UNAFFECTED}</p>`,
 
     actions: [

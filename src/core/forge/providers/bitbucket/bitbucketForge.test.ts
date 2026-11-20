@@ -1,0 +1,231 @@
+import { describe, expect, it, vi } from "vitest";
+import { ForgeBaseMoved, type ForgeChange, ForgeError } from "../../forge";
+import { BitbucketForge } from "./bitbucketForge";
+
+// The task's intent (INF-5193, the captain's "adding bitbucket as another
+// forge integration just like github and gitlab, reaching parity as much as
+// possible"): a Bitbucket Cloud project opens a pull request, reads its
+// build statuses as checks, says whether Bitbucket would merge it, and is
+// merged at the approved version only. Each answer follows the shapes
+// Bitbucket's published API gives: short commit ids on a pull request, full
+// ones on a branch, and the merge's 200, 202 and 409.
+const API = "https://api.bitbucket.org/2.0";
+const KEY = "ATATT3xFfGF0disposable_test-key=0A1B2C3D";
+const REPO = "/repositories/field-team/field-notes";
+const HEAD = "4f1c2a9be07d3c55a1e8b2f06d9c4a7e3b5d1f20";
+const NEWER = "9a8b7c6d5e4f30211203f4e5d6c7b8a9f0e1d2c3";
+const MERGED = "c0ffee00d15ea5e0b16b00b5ca5cade0ddba11ed";
+const BRANCH = "inf/add-field-notes-bb01";
+
+type Sent = { method: string; path: string; body?: unknown };
+
+/** A stand-in for bitbucket.org's API: `routes` answers `METHOD path`, and every request is kept. */
+function standIn(routes: Record<string, (body: unknown) => Response>) {
+  const sent: Sent[] = [];
+  const fetcher = vi.fn<typeof fetch>(async (input, init) => {
+    expect(new Headers(init?.headers).get("Authorization")).toBe(`Bearer ${KEY}`);
+    const url = new URL(String(input));
+    const path = url.pathname.replace(/^\/2\.0/, "") + url.search;
+    const method = init?.method ?? "GET";
+    const body = typeof init?.body === "string" ? JSON.parse(init.body) : undefined;
+    sent.push({ method, path, ...(body !== undefined ? { body } : {}) });
+    const route = routes[`${method} ${path}`];
+    return route ? route(body) : Response.json({ type: "error" }, { status: 404 });
+  });
+  const forge = new BitbucketForge(
+    { kind: "bitbucket", host: "bitbucket.org", owner: "field-team", name: "field-notes", dir: "" },
+    { token: async () => KEY, apiBaseUrl: API, fetch: fetcher },
+  );
+  return { forge, sent };
+}
+
+/** A pull request as Bitbucket answers it: the head by its short id. */
+function pullRequest(fields: { id?: number; state?: string; head?: string; draft?: boolean }) {
+  const id = fields.id ?? 7;
+  return {
+    type: "pullrequest",
+    id,
+    title: "feat: keep field notes",
+    description: "Field notes, kept beside the map.",
+    state: fields.state ?? "OPEN",
+    draft: fields.draft ?? false,
+    source: {
+      branch: { name: BRANCH },
+      commit: { hash: (fields.head ?? HEAD).slice(0, 12) },
+      repository: { full_name: "field-team/field-notes" },
+    },
+    destination: { branch: { name: "main" }, commit: { hash: "1a2b3c4d5e6f" } },
+    merge_commit: fields.state === "MERGED" ? { hash: MERGED.slice(0, 12) } : null,
+    links: { html: { href: `https://bitbucket.org/field-team/field-notes/pull-requests/${id}` } },
+  };
+}
+
+/** Bitbucket's commit read, which turns a short id into its full one. */
+function commits(...full: string[]) {
+  return Object.fromEntries(
+    full.map((sha) => [
+      `GET ${REPO}/commit/${sha.slice(0, 12)}?fields=hash`,
+      () => Response.json({ hash: sha }),
+    ]),
+  );
+}
+
+const change: ForgeChange = {
+  number: 7,
+  url: "https://bitbucket.org/field-team/field-notes/pull-requests/7",
+  branch: BRANCH,
+  headSha: HEAD,
+  title: "feat: keep field notes",
+  body: "Field notes, kept beside the map.",
+  squashMessage: "Field notes, kept beside the map.",
+};
+
+describe("a Bitbucket Cloud pull request", () => {
+  it("opens onto the main branch as a draft and is read back with its full head version", async () => {
+    const { forge, sent } = standIn({
+      [`GET ${REPO}?fields=mainbranch.name`]: () => Response.json({ mainbranch: { name: "main" } }),
+      [`POST ${REPO}/pullrequests`]: () =>
+        Response.json(pullRequest({ draft: true }), { status: 201 }),
+      ...commits(HEAD),
+    });
+    const opened = await forge.openChange({
+      branch: BRANCH,
+      title: "feat: keep field notes",
+      body: "Field notes, kept beside the map.",
+      draft: true,
+    });
+    expect(sent.find((request) => request.method === "POST")?.body).toEqual({
+      title: "feat: keep field notes",
+      description: "Field notes, kept beside the map.",
+      source: { branch: { name: BRANCH } },
+      destination: { branch: { name: "main" } },
+      close_source_branch: false,
+      draft: true,
+    });
+    expect(opened).toMatchObject({ number: 7, draft: true, headSha: HEAD, base: "main" });
+    expect(forge.label(opened)).toBe("#7");
+  });
+
+  it("reads each build status on the version as a check, a running one pending", async () => {
+    const statuses = `GET ${REPO}/commit/${HEAD}/statuses?pagelen=100`;
+    const { forge } = standIn({
+      [statuses]: () =>
+        Response.json({
+          values: [
+            { key: "lint", name: "Lint", state: "SUCCESSFUL", url: "https://ci.example/1" },
+            { key: "unit", name: "Unit tests", state: "FAILED", url: "https://ci.example/2" },
+            { key: "deploy", name: "Deploy", state: "INPROGRESS" },
+            { key: "docs", name: "Docs", state: "STOPPED" },
+          ],
+        }),
+    });
+    const read = await forge.checks(change);
+    expect(read.complete).toBe(true);
+    expect(read.items.map(({ name, state }) => [name, state])).toEqual([
+      ["Lint", "success"],
+      ["Unit tests", "failure"],
+      ["Deploy", "pending"],
+      ["Docs", "cancelled"],
+    ]);
+  });
+
+  it.each([
+    [
+      "conflict",
+      [{ type: "git_mergeability_check", status: "FAILED", reason: "conflicts", blocking: true }],
+    ],
+    [
+      "behind",
+      [
+        { type: "git_mergeability_check", status: "PASSED", reason: "clean" },
+        {
+          type: "standard_merge_check",
+          status: "FAILED",
+          blocking: true,
+          check: { kind: "maximum_commits_behind" },
+        },
+      ],
+    ],
+    [
+      "blocked",
+      [
+        { type: "git_mergeability_check", status: "PASSED", reason: "clean" },
+        {
+          type: "standard_merge_check",
+          status: "FAILED",
+          blocking: true,
+          check: { kind: "minimum_approvals" },
+        },
+      ],
+    ],
+    ["computing", [{ type: "git_mergeability_check", status: "PENDING" }]],
+    ["clean", [{ type: "git_mergeability_check", status: "PASSED", reason: "clean" }]],
+  ])("reads %s from Bitbucket's own mergeability checks", async (readiness, values) => {
+    const { forge } = standIn({
+      [`GET ${REPO}/pullrequests/7`]: () => Response.json(pullRequest({})),
+      [`GET ${REPO}/pullrequests/7/mergeability/checks`]: () => Response.json({ values }),
+      ...commits(HEAD),
+    });
+    expect((await forge.pull(7)).readiness).toBe(readiness);
+  });
+
+  it("merges by squash at the approved version, naming the merged commit and version in full", async () => {
+    const { forge, sent } = standIn({
+      [`GET ${REPO}/refs/branches/${encodeURIComponent(BRANCH)}?fields=target.hash`]: () =>
+        Response.json({ target: { hash: HEAD } }),
+      [`POST ${REPO}/pullrequests/7/merge`]: () => Response.json(pullRequest({ state: "MERGED" })),
+      ...commits(HEAD, MERGED),
+    });
+    expect(await forge.putIn(change, HEAD)).toEqual({ sha: MERGED, mergedHead: HEAD });
+    expect(sent.find((request) => request.path.endsWith("/merge"))?.body).toEqual({
+      type: "pullrequest",
+      message: "feat: keep field notes\n\nField notes, kept beside the map.",
+      merge_strategy: "squash",
+      close_source_branch: false,
+    });
+  });
+
+  it("sends no merge when the branch moved past the approved version", async () => {
+    const { forge, sent } = standIn({
+      [`GET ${REPO}/refs/branches/${encodeURIComponent(BRANCH)}?fields=target.hash`]: () =>
+        Response.json({ target: { hash: NEWER } }),
+    });
+    const refused = await forge.putIn(change, HEAD).catch((error: unknown) => error);
+    expect(refused).toBeInstanceOf(ForgeError);
+    expect(refused).toMatchObject({ failure: "refused", beforeSend: true });
+    expect(sent.some((request) => request.method === "POST")).toBe(false);
+  });
+
+  it("names the newer version Bitbucket merged when a push landed between the read and the merge", async () => {
+    const { forge } = standIn({
+      [`GET ${REPO}/refs/branches/${encodeURIComponent(BRANCH)}?fields=target.hash`]: () =>
+        Response.json({ target: { hash: HEAD } }),
+      [`POST ${REPO}/pullrequests/7/merge`]: () =>
+        Response.json(pullRequest({ state: "MERGED", head: NEWER })),
+      ...commits(NEWER, MERGED),
+    });
+    expect(await forge.putIn(change, HEAD)).toEqual({ sha: MERGED, mergedHead: NEWER });
+  });
+
+  it("reads a ref that moved during the merge as the base moving, and a merge queue's 202 as queued", async () => {
+    const branch = `GET ${REPO}/refs/branches/${encodeURIComponent(BRANCH)}?fields=target.hash`;
+    const moved = standIn({
+      [branch]: () => Response.json({ target: { hash: HEAD } }),
+      [`POST ${REPO}/pullrequests/7/merge`]: () =>
+        Response.json(
+          { type: "error", error: { message: "A ref was updated during the merge." } },
+          { status: 409 },
+        ),
+    });
+    await expect(moved.forge.putIn(change, HEAD)).rejects.toBeInstanceOf(ForgeBaseMoved);
+    const queued = standIn({
+      [branch]: () => Response.json({ target: { hash: HEAD } }),
+      [`POST ${REPO}/pullrequests/7/merge`]: () =>
+        new Response(null, {
+          status: 202,
+          headers: { Location: `${API}${REPO}/pullrequests/7/merge/task-status/1` },
+        }),
+    });
+    expect(await queued.forge.putIn(change, HEAD)).toEqual({ queued: true });
+  });
+});

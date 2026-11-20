@@ -34,7 +34,7 @@ export const githubChange: Scenario =
         .filter((message) => message.role === "user")
         .map((message) => messageText(message.content)),
     ].find((reading) =>
-      /https:\/\/(?:github|gitlab)[^\s]*\n[0-9a-f]{40}\n[0-9a-f]{40}/.test(reading),
+      /https:\/\/(?:github|gitlab|bitbucket)[^\s]*\n[0-9a-f]{40}\n[0-9a-f]{40}/.test(reading),
     );
     // INF-1965: every description host takes the saved story.
     if (!calledTool(body, "bash"))

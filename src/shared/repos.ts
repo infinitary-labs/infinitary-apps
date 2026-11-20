@@ -226,9 +226,7 @@ export function autonomyForRecord(
 /**
  * Where a registered project lives (git integration PR 1.1, migration 40):
  * the host kind read from its origin (`forgeOf` in `./forge.ts`) and the
- * host's name. Null for a project kept only on this Mac. GitLab and
- * Bitbucket are recognised so a surface can name them; until their own
- * forge files exist they behave as a plain Git host. A remote on this Mac's
+ * host's name. Null for a project kept only on this Mac. A remote on this Mac's
  * own disk is a plain host with no name.
  */
 export const repoHostSchema = z

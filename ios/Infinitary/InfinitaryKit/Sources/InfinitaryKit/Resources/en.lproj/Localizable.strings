@@ -987,6 +987,7 @@
 "mergeSetInProject" = "Set in this project's settings.";
 "mergeWaitsForReview" = "This merge waits until you answer the review:";
 "mergedAt" = "Merged at %1$@";
+"mergedChangeNewerOn" = "Merged %1$@ on %2$@, with a push made after the approved version";
 "mergedChangeOn" = "Merged %1$@ on %2$@";
 "mergedChangeOnHost" = "Merged %1$@ on the project's host";
 "mergedChangeWhereItLives" = "Merged %1$@ where the project lives";

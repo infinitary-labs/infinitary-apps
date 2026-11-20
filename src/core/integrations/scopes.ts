@@ -60,6 +60,19 @@ export function forgeScope(kind: ChangeRequestKind): (input: unknown) => Integra
   };
 }
 
+/** A repository named by its owner and name under `root`, as GitHub's `repos` and Bitbucket's `repositories` are. */
+function ownerAndName(root: string): {
+  of: (parts: string[], method: string) => IntegrationScope | undefined;
+} {
+  return {
+    of: ([first, owner, name], method) => {
+      if (first !== root || !owner || !name) return undefined;
+      const place = `${owner}/${name}`.toLowerCase();
+      return { key: `${method} /${root}/${place}`, words: `${method} requests to ${place}` };
+    },
+  };
+}
+
 /** Each kind's own place in a REST path: a repository, or a project by its id. */
 const FORGE_PLACES: Record<
   ChangeRequestKind,
@@ -69,13 +82,7 @@ const FORGE_PLACES: Record<
     of: (parts: string[], method: string) => IntegrationScope | undefined;
   }
 > = {
-  github: {
-    of: ([root, first, second], method) => {
-      if (root !== "repos" || !first || !second) return undefined;
-      const place = `${first}/${second}`.toLowerCase();
-      return { key: `${method} /repos/${place}`, words: `${method} requests to ${place}` };
-    },
-  },
+  github: ownerAndName("repos"),
   gitlab: {
     encodedAt: 1,
     of: ([root, first], method) => {
@@ -90,6 +97,7 @@ const FORGE_PLACES: Record<
       return { key: `${method} /projects/${id}`, words: `${method} requests to project ${name}` };
     },
   },
+  bitbucket: ownerAndName("repositories"),
 };
 
 /** Who a calendar change notifies, by `send_updates`. */

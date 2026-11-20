@@ -1182,6 +1182,12 @@ const KIND_REST: Record<
     retryNamesRun: true,
     numberedProject: /^\/projects\/\d+(?:\/|$)/,
   },
+  bitbucket: {
+    opensChange: "pullrequests",
+    description: { path: /^pullrequests\/(\d+)$/, method: "PUT", field: "description" },
+    startsPipeline: "pipelines",
+    retryNamesRun: false,
+  },
 };
 
 /** The integration a write through the captain's sign-in goes through, as the person names it. */

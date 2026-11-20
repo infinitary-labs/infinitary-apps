@@ -58,6 +58,19 @@ const WRITE_GRAMMAR: Record<ChangeRequestKind, WriteGrammar> = {
       return undefined;
     },
   },
+  bitbucket: {
+    merges: (rest) => /^pullrequests\/\d+\/merge(?:\/|$)/.test(rest),
+    branchOf: async ({ rest, data, query, readDefault }) => {
+      if (/^refs\/branches\//.test(rest)) return rest.slice("refs/branches/".length);
+      if (rest === "refs/branches" && typeof data.name === "string") return data.name;
+      // A commit through the source route lands on the branch it names, else the main branch.
+      if (rest === "src") {
+        const branchInput = data.branch ?? query.get("branch");
+        return typeof branchInput === "string" ? branchInput : await readDefault();
+      }
+      return undefined;
+    },
+  },
 };
 
 /**

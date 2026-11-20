@@ -12686,7 +12686,7 @@ ${events}` : prompt;
     passed: string().optional(),
     evidence: string()
   });
-  const CHANGE_REQUEST_KINDS = ["github", "gitlab"];
+  const CHANGE_REQUEST_KINDS = ["github", "gitlab", "bitbucket"];
   const CHANGE_REQUEST_HOSTS = {
     github: {
       kind: "github",
@@ -12727,6 +12727,48 @@ ${events}` : prompt;
       addressExample: "gitlab.com",
       keyPage: (host) => `https://${host}/-/user_settings/personal_access_tokens?name=Infinitary&scopes=api`,
       batches: true
+    },
+    /**
+     * Bitbucket Cloud (`docs/forge.md`, "Bitbucket pull requests"): an API
+     * token the person makes on their Atlassian account with Bitbucket's
+     * scopes, sent as a bearer token; its pull requests are `#N` under
+     * `pull-requests/`. The scopes are the ones the app reads and writes
+     * with once the crew's reach is built too, so one key serves them all.
+     */
+    bitbucket: {
+      kind: "bitbucket",
+      publicHost: "bitbucket.org",
+      serverIntegration: "bitbucket",
+      serverIdPrefix: "bitbucket",
+      publicHostIsServerRow: true,
+      changeWord: "pull request",
+      handle: "pr",
+      numberPrefix: "#",
+      requestPath: "pull-requests",
+      requestPaths: ["pull-requests"],
+      comparePath: "branches/compare",
+      // Bitbucket names the branch first, then the branch it builds on, split by a carriage return.
+      compareRange: (base, branch) => `${branch}%0D${base}`,
+      // Bitbucket's workspace and repository names are lower case in every address.
+      foldsNames: true,
+      quickActions: false,
+      holdsOnlyKnownHosts: true,
+      addressExample: "bitbucket.org",
+      // Atlassian keeps every API token on the person's account, not on bitbucket.org.
+      keyPage: () => "https://id.atlassian.com/manage-profile/security/api-tokens",
+      keyAccount: "your Atlassian account",
+      keyScopes: [
+        "read:user:bitbucket",
+        "read:workspace:bitbucket",
+        "read:repository:bitbucket",
+        "write:repository:bitbucket",
+        "read:pullrequest:bitbucket",
+        "write:pullrequest:bitbucket",
+        "read:pipeline:bitbucket",
+        "write:pipeline:bitbucket"
+      ],
+      // Batches of a person's own on Bitbucket come with its merge queue, a later change.
+      batches: false
     }
   };
   function changeRequestKind(kind) {

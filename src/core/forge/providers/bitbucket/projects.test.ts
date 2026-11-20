@@ -8,8 +8,8 @@ import { BitbucketProjects } from "./projects";
 import { BITBUCKET_GIT_USER, createBitbucketServer } from "./signIn";
 
 // The task's intent (INF-5192): sign in to Bitbucket Cloud with an API
-// token, list its projects by workspace, and keep git on the person's own
-// helpers there until they sign in. The answers follow Bitbucket's own
+// token and list its projects by workspace; INF-5193: git answers
+// bitbucket.org with the app's sign-in alone. The answers follow Bitbucket's own
 // published shapes for /user, /user/workspaces and /repositories.
 const API = "https://api.bitbucket.org/2.0";
 const HOST = "bitbucket.org";
@@ -199,8 +199,8 @@ describe("Bitbucket sign-in by API token", () => {
         : new Response(null, { status }),
     );
     const { store, options, signIns } = service(fetcher);
-    // Git keeps the person's own helpers for bitbucket.org until they sign in here.
-    expect(signIns.gitHosts()).not.toContain(HOST);
+    // INF-5193: git answers bitbucket.org with the app's sign-in alone, as the pull requests the app opens there are made with it.
+    expect(signIns.gitHosts()).toContain(HOST);
     expect(signIns.view().hosts).toContainEqual(expect.objectContaining({ host: HOST }));
     status = 401;
     expect(await signIns.signInWithKey({ kind: "bitbucket", address: HOST, key: KEY })).toEqual({
@@ -232,7 +232,8 @@ describe("Bitbucket sign-in by API token", () => {
     expect(restarted.nameOf(HOST)).toBe("Bitbucket");
     restarted.signOut(HOST);
     expect(store.read(HOST)).toBeUndefined();
-    expect(restarted.gitHosts()).not.toContain(HOST);
+    // Signed out, git still never falls back to another sign-in there.
+    expect(restarted.gitHosts()).toContain(HOST);
   });
 
   it("asks to sign in again once Bitbucket refuses a kept token, and lets held work go when a new one replaces a working one", async () => {

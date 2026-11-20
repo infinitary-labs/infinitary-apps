@@ -2,8 +2,11 @@
  * INF-2394: fixture ownership follows the product reader.
  * @journey-area src/core/forge/providers/bitbucket/
  */
-import { createServer } from "node:http";
+import { createHash } from "node:crypto";
+import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
+import { createServer, type IncomingMessage } from "node:http";
 import type { AddressInfo } from "node:net";
+import { join } from "node:path";
 
 /**
  * A local stand-in for Bitbucket Cloud's REST API (`/2.0`), over real HTTP
@@ -16,6 +19,15 @@ import type { AddressInfo } from "node:net";
  * 401 for any other, Bitbucket's answer to a revoked token; the account's workspaces; each workspace's repositories,
  * newest first, paged by an absolute `next` link on the same API; and one
  * repository by `workspace/name`, with a 404 for any other.
+ *
+ * For the project the journeys deliver to (`BITBUCKET_STUB_PROJECT`) it
+ * also answers the pull request calls (`docs/forge.md`, "Bitbucket pull
+ * requests") as Bitbucket's published API does: a pull request names its
+ * head by a short commit id, a branch and a commit read name the full one;
+ * a pull request's build statuses are those on its head commit; its
+ * mergeability checks report a Git conflict; and a merge takes no version,
+ * merging whatever the branch holds when it arrives, refusing a conflict
+ * with 400 and answering the merged pull request otherwise.
  */
 export const BITBUCKET_STUB_KEY = "ATATT3xFfGF0hermetic_sign-in-key=0A1B2C3D";
 /** The token the person makes after revoking the first one. */
@@ -49,10 +61,73 @@ const REPOSITORIES: Record<string, { name: string; updated: string; isPrivate: b
   ]),
 };
 
+/** A Bitbucket key sign-in already made on bitbucket.org, exactly where the app keeps one. */
+export function seedBitbucketSignIn(userDataDir: string): void {
+  const forges = join(userDataDir, "forges");
+  mkdirSync(join(forges, "bitbucket.org"), { recursive: true, mode: 0o700 });
+  chmodSync(forges, 0o700);
+  writeFileSync(
+    join(forges, "bitbucket.org", "sign-in.json"),
+    `${JSON.stringify({
+      token: BITBUCKET_STUB_KEY,
+      scopes: [],
+      login: BITBUCKET_STUB_LOGIN,
+      createdAt: 1,
+      kind: "bitbucket",
+      gitUser: "x-bitbucket-api-token-auth",
+    })}\n`,
+    { mode: 0o600 },
+  );
+}
+
+/** One build status a check service posted on a commit, as Bitbucket keeps it. */
+export type BitbucketStubStatus = {
+  key: string;
+  name: string;
+  /** `SUCCESSFUL`, `FAILED`, `INPROGRESS` or `STOPPED`. */
+  state: "SUCCESSFUL" | "FAILED" | "INPROGRESS" | "STOPPED";
+};
+
+/** A merge Bitbucket made: the pull request, the version it merged, and how. */
+export type BitbucketStubMerge = {
+  id: number;
+  head: string;
+  strategy: string;
+  message: string;
+};
+
+type StubPullRequest = {
+  id: number;
+  branch: string;
+  title: string;
+  description: string;
+  state: "OPEN" | "MERGED" | "DECLINED";
+  draft: boolean;
+  /** The version it merged, once merged. */
+  mergedHead?: string;
+  mergeCommit?: string;
+};
+
+/** The commit Bitbucket writes for a squash of `head`: distinct per head. */
+export function bitbucketMergeCommit(head: string): string {
+  return createHash("sha1").update(`squash of ${head}`).digest("hex");
+}
+
 export async function startBitbucketStub() {
   const requests: string[] = [];
   let base = "";
   let accepted = BITBUCKET_STUB_KEY;
+  const pullRequests = new Map<number, StubPullRequest>();
+  let nextId = 1;
+  const merges: BitbucketStubMerge[] = [];
+  /** The project's branches and commits, as git holds them where it lives. */
+  let gitOf: { head: (branch: string) => string; commit: (rev: string) => string } | null = null;
+  /** The build status every commit carries unless a test names others: one that passed. */
+  let statuses: BitbucketStubStatus[] = [{ key: "build", name: "Build", state: "SUCCESSFUL" }];
+  let conflicted = false;
+  let onMergeRequest: () => void = () => {};
+  let onBranchRead: (branch: string) => void = () => {};
+  const started = new Date().toISOString();
   const repository = (
     workspace: string,
     row: { name: string; updated: string; isPrivate: boolean },
@@ -60,6 +135,9 @@ export async function startBitbucketStub() {
     type: "repository",
     full_name: `${workspace}/${row.name}`,
     name: row.name,
+    // Bitbucket names a repository by a UUID; each one here is its name's.
+    uuid: `{${createHash("sha1").update(`${workspace}/${row.name}`).digest("hex").slice(0, 8)}-0000-4000-8000-000000000000}`,
+    mainbranch: { type: "branch", name: "main" },
     is_private: row.isPrivate,
     updated_on: row.updated,
     links: {
@@ -73,13 +151,221 @@ export async function startBitbucketStub() {
       ],
     },
   });
-  const server = createServer((req, res) => {
+  const branchHead = (branch: string): string | undefined => {
+    try {
+      return gitOf?.head(branch);
+    } catch {
+      return undefined;
+    }
+  };
+  /** A commit's full id from any id of it, short or full, or undefined. */
+  const fullCommit = (rev: string): string | undefined => {
+    if (!/^[0-9a-f]{7,40}$/.test(rev)) return undefined;
+    for (const request of pullRequests.values())
+      if (request.mergeCommit?.startsWith(rev)) return request.mergeCommit;
+    try {
+      return gitOf?.commit(rev);
+    } catch {
+      return undefined;
+    }
+  };
+  const headOfRequest = (request: StubPullRequest) =>
+    request.mergedHead ?? branchHead(request.branch);
+  const pullRequestJson = (request: StubPullRequest) => {
+    const head = headOfRequest(request);
+    return {
+      type: "pullrequest",
+      id: request.id,
+      title: request.title,
+      description: request.description,
+      summary: { raw: request.description, markup: "markdown" },
+      state: request.state,
+      draft: request.draft,
+      source: {
+        branch: { name: request.branch },
+        // Bitbucket names a pull request's commits by their short id.
+        commit: head ? { type: "commit", hash: head.slice(0, 12) } : null,
+        repository: { type: "repository", full_name: BITBUCKET_STUB_PROJECT },
+      },
+      destination: {
+        branch: { name: "main" },
+        repository: { type: "repository", full_name: BITBUCKET_STUB_PROJECT },
+      },
+      merge_commit: request.mergeCommit ? { hash: request.mergeCommit.slice(0, 12) } : null,
+      close_source_branch: false,
+      updated_on: new Date(Date.UTC(2026, 10, 18, 12, request.id)).toISOString(),
+      links: {
+        html: {
+          href: `https://bitbucket.org/${BITBUCKET_STUB_PROJECT}/pull-requests/${request.id}`,
+        },
+      },
+    };
+  };
+  const read = (req: IncomingMessage) =>
+    new Promise<Record<string, unknown>>((resolve) => {
+      const chunks: Buffer[] = [];
+      req.on("data", (chunk: Buffer) => chunks.push(chunk));
+      req.on("end", () => {
+        const text = Buffer.concat(chunks).toString("utf8");
+        try {
+          resolve(text ? (JSON.parse(text) as Record<string, unknown>) : {});
+        } catch {
+          resolve({});
+        }
+      });
+    });
+  /** The project's own pull request calls; false for a path it does not answer. */
+  const answerProject = (
+    method: string,
+    rest: string,
+    url: URL,
+    body: Record<string, unknown>,
+    send: (status: number, answer: unknown) => void,
+  ): boolean => {
+    const notFound = () => send(404, { type: "error", error: { message: "Resource not found" } });
+    const branchRead = /^\/refs\/branches\/(.+)$/.exec(rest);
+    if (method === "GET" && branchRead) {
+      const branch = decodeURIComponent(branchRead[1] ?? "");
+      onBranchRead(branch);
+      const head = branchHead(branch);
+      if (!head) notFound();
+      else send(200, { type: "branch", name: branch, target: { type: "commit", hash: head } });
+      return true;
+    }
+    const commitRead = /^\/commit\/([^/]+)(\/statuses)?$/.exec(rest);
+    if (method === "GET" && commitRead) {
+      const full = fullCommit(decodeURIComponent(commitRead[1] ?? ""));
+      if (!full) notFound();
+      else if (!commitRead[2]) send(200, { type: "commit", hash: full });
+      else
+        send(200, {
+          pagelen: 100,
+          page: 1,
+          size: statuses.length,
+          values: statuses.map((status) => ({
+            type: "build",
+            ...status,
+            url: `https://bitbucket.org/${BITBUCKET_STUB_PROJECT}/pipelines/results/1`,
+            refname: null,
+            // Each status was posted as the stand-in started, as a build that just ran.
+            created_on: started,
+            updated_on: started,
+          })),
+        });
+      return true;
+    }
+    if (method === "POST" && rest === "/pullrequests") {
+      const source = body.source as { branch?: { name?: unknown } } | undefined;
+      const branch = String(source?.branch?.name ?? "");
+      if (!branchHead(branch)) {
+        send(400, { type: "error", error: { message: `${branch}: branch not found` } });
+        return true;
+      }
+      const request: StubPullRequest = {
+        id: nextId++,
+        branch,
+        title: String(body.title ?? ""),
+        description: String(body.description ?? ""),
+        state: "OPEN",
+        draft: body.draft === true,
+      };
+      pullRequests.set(request.id, request);
+      send(201, pullRequestJson(request));
+      return true;
+    }
+    if (method === "GET" && rest === "/pullrequests") {
+      const state = url.searchParams.get("state");
+      const branch = /source\.branch\.name="((?:[^"\\]|\\.)*)"/.exec(
+        url.searchParams.get("q") ?? "",
+      );
+      send(200, {
+        pagelen: 50,
+        page: 1,
+        values: [...pullRequests.values()]
+          .filter(
+            (request) =>
+              (!state || request.state === state) &&
+              (!branch || request.branch === branch[1]?.replace(/\\(.)/g, "$1")),
+          )
+          .sort((a, b) => b.id - a.id)
+          .map(pullRequestJson),
+      });
+      return true;
+    }
+    const numbered =
+      /^\/pullrequests\/(\d+)(\/merge|\/decline|\/comments|\/mergeability\/checks)?$/.exec(rest);
+    if (!numbered) return false;
+    const request = pullRequests.get(Number(numbered[1]));
+    if (!request) {
+      notFound();
+      return true;
+    }
+    const part = numbered[2];
+    if (method === "GET" && part === undefined) send(200, pullRequestJson(request));
+    else if (method === "PUT" && part === undefined) {
+      if (typeof body.title === "string") request.title = body.title;
+      if (typeof body.description === "string") request.description = body.description;
+      if (typeof body.draft === "boolean") request.draft = body.draft;
+      send(200, pullRequestJson(request));
+    } else if (method === "GET" && part === "/mergeability/checks") {
+      send(200, {
+        values: [
+          conflicted
+            ? {
+                type: "git_mergeability_check",
+                status: "FAILED",
+                required: true,
+                blocking: true,
+                reason: "conflicts",
+              }
+            : {
+                type: "git_mergeability_check",
+                status: "PASSED",
+                required: true,
+                blocking: false,
+                reason: "clean",
+              },
+        ],
+      });
+    } else if (method === "POST" && part === "/merge") {
+      onMergeRequest();
+      const head = headOfRequest(request);
+      if (request.state !== "OPEN" || !head) {
+        send(400, { type: "error", error: { message: "This pull request is already closed." } });
+      } else if (conflicted) {
+        send(400, {
+          type: "error",
+          error: { message: "You can't merge until you resolve all merge conflicts." },
+        });
+      } else {
+        // Bitbucket merges whatever the branch holds when the merge arrives.
+        merges.push({
+          id: request.id,
+          head,
+          strategy: String(body.merge_strategy ?? "merge_commit"),
+          message: String(body.message ?? ""),
+        });
+        request.state = "MERGED";
+        request.mergedHead = head;
+        request.mergeCommit = bitbucketMergeCommit(head);
+        send(200, pullRequestJson(request));
+      }
+    } else if (method === "POST" && part === "/decline") {
+      request.state = "DECLINED";
+      send(200, pullRequestJson(request));
+    } else if (method === "POST" && part === "/comments") {
+      send(201, { type: "pullrequest_comment", id: 1, content: body.content });
+    } else notFound();
+    return true;
+  };
+  const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
     const method = req.method ?? "GET";
     requests.push(`${method} ${url.pathname}`);
-    const send = (status: number, body: unknown) => {
+    const body = method === "GET" ? {} : await read(req);
+    const send = (status: number, answer: unknown) => {
       res.writeHead(status, { "content-type": "application/json" });
-      res.end(JSON.stringify(body));
+      res.end(JSON.stringify(answer));
     };
     if (req.headers.authorization !== `Bearer ${accepted}`) {
       send(401, {
@@ -112,6 +398,9 @@ export async function startBitbucketStub() {
       });
       return;
     }
+    const project = `/repositories/${BITBUCKET_STUB_PROJECT}`;
+    const rest = path.startsWith(`${project}/`) ? path.slice(project.length) : undefined;
+    if (rest !== undefined && answerProject(method, rest, url, body, send)) return;
     const listing = /^\/repositories\/([^/]+)$/.exec(path);
     if (method === "GET" && listing) {
       const pages = REPOSITORIES[decodeURIComponent(listing[1] ?? "")];
@@ -150,6 +439,44 @@ export async function startBitbucketStub() {
     env: { INFINITARY_BITBUCKET_API_URL: base },
     /** Every request, `METHOD /path` (query dropped). */
     requests: () => [...requests],
+    /** Every merge Bitbucket made, in order; a refused one is only a request. */
+    merges: () => [...merges],
+    /** Each pull request's description as Bitbucket holds it now, by its number. */
+    descriptions: () =>
+      new Map([...pullRequests.values()].map((request) => [request.id, request.description])),
+    /** The project's branches and commits where it lives, read from git there. */
+    gitOf: (reader: { head: (branch: string) => string; commit: (rev: string) => string }) => {
+      gitOf = reader;
+    },
+    /** The build statuses every commit carries. */
+    setStatuses: (next: BitbucketStubStatus[]) => {
+      statuses = next;
+    },
+    /** Whether the pull requests conflict with newer work on main. */
+    conflicts: (on: boolean) => {
+      conflicted = on;
+    },
+    /** Runs when a merge arrives, before Bitbucket reads the branch it merges. */
+    onMergeRequest: (apply: () => void) => {
+      onMergeRequest = apply;
+    },
+    /** Runs when a branch is read, before Bitbucket answers its head. */
+    onBranchRead: (apply: (branch: string) => void) => {
+      onBranchRead = apply;
+    },
+    /** Open a pull request as a person would on Bitbucket's own page. */
+    openPullRequest: (input: { branch: string; title: string; description?: string }) => {
+      const request: StubPullRequest = {
+        id: nextId++,
+        branch: input.branch,
+        title: input.title,
+        description: input.description ?? "",
+        state: "OPEN",
+        draft: false,
+      };
+      pullRequests.set(request.id, request);
+      return request.id;
+    },
     /** The person revoked the first token and made a new one: only that one is accepted now. */
     revokeFirstKey: () => {
       accepted = BITBUCKET_STUB_NEW_KEY;
@@ -161,3 +488,5 @@ export async function startBitbucketStub() {
       }),
   };
 }
+
+export type BitbucketStub = Awaited<ReturnType<typeof startBitbucketStub>>;

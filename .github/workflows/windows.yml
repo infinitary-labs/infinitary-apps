@@ -420,10 +420,23 @@ jobs:
           if ($p.ExitCode -ne 0) { throw "the portable Git unpacked with $($p.ExitCode)" }
           Add-Content $env:GITHUB_PATH (Join-Path $dir 'cmd')
           Add-Content $env:GITHUB_PATH (Join-Path $dir 'bin')
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-        with:
+      # Waits out GitHub refusing the job's token, as the check job does.
+      - id: checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        continue-on-error: true
+        with: &update-checkout
           ref: ${{ inputs.ref || github.ref }}
           persist-credentials: false
+      - name: Wait until GitHub takes the job's token
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        shell: bash
+        env:
+          TOKEN: ${{ github.token }}
+        run: *wait-for-token
+      - name: Check out again
+        if: ${{ !cancelled() && steps.checkout.outcome == 'failure' }}
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: *update-checkout
       - uses: ./.github/actions/pnpm
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:

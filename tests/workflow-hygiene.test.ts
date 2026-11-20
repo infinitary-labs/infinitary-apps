@@ -305,7 +305,9 @@ describe("every workflow", () => {
         const where = `${file}:${id}`;
         steps.forEach((step, index) => {
           if (!packagesBeyondFolder(step.run ?? "")) return;
-          packaging.push(where);
+          // A job that packages in more than one step, such as the Windows
+          // build's installer and its update check's test versions, is one job.
+          if (!packaging.includes(where)) packaging.push(where);
           // The signing job's own Mac keeps electron-builder's cache in its home.
           if (where === "release.yml:release") return;
           const tools = (from: number, to: number) =>

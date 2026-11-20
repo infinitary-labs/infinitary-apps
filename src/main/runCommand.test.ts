@@ -11,6 +11,7 @@ import {
   lockHolder,
   markRunning,
   ownedRun,
+  ownedRunOf,
   programIdentity,
   runCommand,
   runningByCommand,
@@ -18,6 +19,7 @@ import {
   stopRunningCommand,
 } from "./runCommand";
 import { startedByAgent, takeRunAgentMark } from "./runEnvironment";
+import { readRunStatus } from "./runStatus";
 
 /**
  * Infinitary started by a command (docs/run.md; INF-1228's approved plan,
@@ -169,12 +171,15 @@ describe("a window opened beside a run", () => {
     holds(4242);
     const owned = ownedRun(dataDir, alive);
     expect(owned).toEqual({ pid: 4242, startedAt: "2026-10-25T17:00:00.000Z" });
+    // The window reads the same from one reading of the records (the review of INF-5409).
+    expect(ownedRunOf(readRunStatus(dataDir, alive))).toEqual(owned);
     // It ended, and the person started one by hand on the same folder.
     running.clear();
     running.add(5151);
     markRunning(dataDir, 5151, new Date("2026-10-25T17:05:00Z"));
     holds(5151);
     expect(ownedRun(dataDir, alive)).toBeNull();
+    expect(ownedRunOf(readRunStatus(dataDir, alive))).toBeNull();
     // A stop for the run it followed along from signals nothing to the one that replaced it.
     const signalled: number[] = [];
     const signal = (pid: number) => void signalled.push(pid);

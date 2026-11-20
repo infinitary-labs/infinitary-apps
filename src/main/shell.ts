@@ -454,10 +454,11 @@ export class Shell {
    * this window starts, the run its own agent started, or `owned: null`
    * while none runs, which stops no run however one starts meanwhile
    * (`BesideWindow.joinState`). "starting" while a command this window
-   * started or restarted has not welcomed it, and "outside" beside one it
-   * does not own, where joining is refused, as it is in a view.
+   * started or restarted has not welcomed it, "outside" beside one the
+   * records say runs that it does not own, and "unknown" while they cannot
+   * be read, where joining is refused, as it is in a view.
    */
-  private joinState(): { owned?: OwnedRun | null } | "starting" | "outside" | "view" {
+  private joinState(): { owned?: OwnedRun | null } | "starting" | "outside" | "unknown" | "view" {
     const mode = this.mode;
     if (mode?.kind === "home") return {};
     if (mode?.kind === "beside") return mode.beside.joinState();

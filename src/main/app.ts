@@ -92,7 +92,7 @@ import {
   keepsStarterBesideGrant,
   lockHolder,
   markRunning,
-  ownedRun,
+  ownedRunOf,
   processAlive,
   programIdentity,
   RUN_SETTINGS_EXIT,
@@ -1165,7 +1165,7 @@ export async function startApp(
                 programReplaced,
                 ...(starter ? { starter } : {}),
                 ...(startedAt === undefined ? {} : { startedAt }),
-                ownedRun: () => ownedRun(dataDir),
+                ownedRun: ownedRunOf,
                 stopCommand: (only) => stopRunningCommand(dataDir, undefined, undefined, only),
               },
             }

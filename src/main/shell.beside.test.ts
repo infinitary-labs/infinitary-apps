@@ -1247,28 +1247,62 @@ describe("the window beside a command's first mate", () => {
       .poll(() => at.shell.thisMac())
       .toMatchObject({ command: { state: "stopped", ending: "not-answering" } });
     expect(at.shell.followsAdded()).toMatchObject({ joins: true, pastes: true });
-    let restarted: (done: boolean) => void = () => {};
+    const answers: ((done: boolean) => void)[] = [];
     at.starter.restart.mockImplementation(
       () =>
         new Promise<boolean>((resolve) => {
-          restarted = resolve;
+          answers.push(resolve);
         }),
     );
+    const starting = { follows: false, joins: false, pastes: false, outside: false };
     expect(at.shell.restartCommand()).toBe(true);
+    expect(at.shell.followsAdded()).toEqual(starting);
+    await expect(at.shell.join(await pro.link("mac"))).resolves.toEqual({
+      ok: false,
+      refused: "other",
+    });
+    // The run being replaced reconnects and welcomes the window again before it ends: that is
+    // not the run started again, so the join is still not offered.
+    await command.stop();
+    await command.open().settled();
+    expect(at.shell.followsAdded()).toEqual(starting);
+    expect(at.starter.stop).not.toHaveBeenCalled();
+    // The service manager would not restart it: the run the window owns still runs, and joins.
+    answers.shift()?.(false);
+    await expect.poll(() => at.shell.followsAdded()).toMatchObject({ joins: true, pastes: true });
+    // A restart that ended that run and then could not start another leaves nothing to offer.
+    await expect
+      .poll(() => at.shell.thisMac())
+      .toMatchObject({ command: { ending: "not-answering" } });
+    expect(at.shell.restartCommand()).toBe(true);
+    at.command.records = stopped("signal", 1);
+    answers.shift()?.(false);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(at.shell.followsAdded()).toEqual(starting);
+  });
+
+  // The review of INF-5409: records that cannot be read say nothing of a command started outside
+  // the window, so the window neither offers a join nor tells the person to stop one.
+  it("offers no join and names no outside command while the command's records cannot be read", async () => {
+    const command = commandRun();
+    await command.open().settled();
+    const at = besideShell(command.doorDir, {
+      starts: true,
+      records: { running: null, run: null, lastStop: null },
+    });
+    await at.start();
     expect(at.shell.followsAdded()).toEqual({
       follows: false,
       joins: false,
       pastes: false,
       outside: false,
     });
-    await expect(at.shell.join(await pro.link("mac"))).resolves.toEqual({
-      ok: false,
-      refused: "other",
+    // Nor beside a command this window does not start, whose records cannot be read either.
+    const alone = besideShell(command.doorDir, {
+      records: { running: null, run: null, lastStop: null },
     });
-    expect(at.starter.stop).not.toHaveBeenCalled();
-    // The service manager would not restart it: the run the window owns still runs, and joins.
-    restarted(false);
-    await expect.poll(() => at.shell.followsAdded()).toMatchObject({ joins: true, pastes: true });
+    await alone.start();
+    expect(alone.shell.followsAdded()).toMatchObject({ joins: false, outside: false });
   });
 
   // INF-1827 offers Join by its address at first launch, and an installed app's first launch

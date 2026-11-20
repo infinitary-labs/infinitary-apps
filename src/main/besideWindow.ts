@@ -28,7 +28,7 @@ import type { UpdateStatus } from "@shared/update";
 import type { WindowKeyReminders } from "@shared/windowAnswer";
 import { commandNotice, entryWaitMs, type JoinedRun, runEnd, type StartEntry } from "./besideRun";
 import type { CommandStarter } from "./commandStarter";
-import type { OwnedRun } from "./runCommand";
+import { type OwnedRun, sameRun } from "./runCommand";
 import type { RunStatus } from "./runStatus";
 import { LocalWindow, type LocalWindowOptions } from "./view/localWindow";
 import { answerOwnApp, OWN_APP } from "./view/viewBackend";
@@ -77,12 +77,13 @@ export type BesideOptions = {
   /** Which start entry the app wrote is in place now. */
   startEntry: () => StartEntry;
   /**
-   * The command running now when it is the starter's own: one this app's own
-   * agent started, as the run's own note says (`ownedRun`, ./runCommand.ts);
+   * The command running now when it is the starter's own, read from the same
+   * reading of the records as whether one runs: one this app's own agent
+   * started, as the run's own note says (`ownedRunOf`, ./runCommand.ts);
    * null for any other. Joining and following along stop only that run,
    * never one the person started by hand.
    */
-  ownedRun?: () => OwnedRun | null;
+  ownedRun?: (status: Pick<RunStatus, "running" | "run" | "lastStop">) => OwnedRun | null;
   /** The entry's own wait before it starts the command again; a test stands in a shorter one. */
   restartWaitMs?: number;
   /** This program's own Dock icon and login item. */
@@ -175,6 +176,10 @@ export class BesideWindow {
   private closed = false;
   /** When this window last started the command, until that one welcomes it. */
   private startedAt: number | null;
+  /** The run Restart it is replacing, until the one started again welcomes this window. */
+  private restartingFrom: OwnedRun | null = null;
+  /** How many times Restart it was pressed, so only the latest restart's answer counts. */
+  private restarts = 0;
   /** Start it here took the notice down: the window starts over once the command it started welcomes it. */
   private startsOver = false;
   /** Restart it ended a command that did not answer: the window waits under its notice for the one started again. */
@@ -192,21 +197,23 @@ export class BesideWindow {
   }
 
   /**
-   * What a join beside this command would stop, read once (docs/view.md,
-   * "Following along"): `{ owned: null }` while this window starts the
-   * command and its records say none runs, which stops no run; `{ owned }`
-   * while the run its own agent started runs (`BesideOptions.ownedRun`);
-   * "starting" while a command this window started or restarted has not
-   * welcomed it yet, whose run may still open this computer's first mate,
-   * however long it takes; and "outside" beside a command this window does
-   * not start, or one it does not own. Unreadable records are never read as
-   * stopped.
+   * What a join beside this command would stop, from one reading of the
+   * command's records (docs/view.md, "Following along"): `{ owned: null }`
+   * while this window starts the command and the records say none runs,
+   * which stops no run; `{ owned }` while the run its own agent started runs
+   * (`BesideOptions.ownedRun`); "starting" while a command this window
+   * started or restarted has not welcomed it yet, whose run may still open
+   * this computer's first mate, however long it takes; "outside" only while
+   * the records say a command runs that this window does not own or does not
+   * start; and "unknown" while they cannot be read.
    */
-  joinState(): { owned: OwnedRun | null } | "starting" | "outside" {
-    if (!this.startsCommand) return "outside";
+  joinState(): { owned: OwnedRun | null } | "starting" | "outside" | "unknown" {
+    const status = this.options.beside.status();
+    if (!this.startsCommand) return status.running === true ? "outside" : "unknown";
     if (this.startedAt !== null) return "starting";
-    if (this.options.beside.status().running === false) return { owned: null };
-    const owned = this.options.beside.ownedRun?.() ?? null;
+    if (status.running === false) return { owned: null };
+    if (status.running !== true) return "unknown";
+    const owned = this.options.beside.ownedRun?.(status) ?? null;
     return owned ? { owned } : "outside";
   }
 
@@ -399,6 +406,11 @@ export class BesideWindow {
     if (this.shown?.ending !== "not-answering" || !starter) return false;
     const since = this.unansweredSince;
     const startedBefore = this.startedAt;
+    // The run this restart replaces: a welcome from it, reconnecting, is not the one started again.
+    const recorded = this.options.beside.status().run;
+    const outgoing = recorded ? { pid: recorded.pid, startedAt: recorded.startedAt } : null;
+    const restart = ++this.restarts;
+    this.restartingFrom = outgoing;
     this.restarting = true;
     this.startedAt = this.options.now();
     // The wait counts from the press, even while the command ending still runs.
@@ -408,10 +420,17 @@ export class BesideWindow {
     // The window hears the stopped command go, and dials the one started again.
     this.away();
     void starter.restart(this.recordedRun()).then((restarted) => {
-      if (restarted || this.closed) return;
+      // A later restart's answer is the one that counts.
+      if (restarted || this.closed || restart !== this.restarts) return;
       // The command was not restarted: it is still the one that has not answered since then.
       this.restarting = false;
-      this.startedAt = startedBefore;
+      // Joining is offered again only beside the run it replaced, still running; where that run
+      // has gone, whatever was started in its place has not welcomed this window.
+      const now = this.options.beside.status();
+      if (now.running === true && sameRun(now.run, outgoing)) {
+        this.startedAt = startedBefore;
+        this.restartingFrom = null;
+      }
       if (this.unansweredOf === this.options.beside.status().run?.pid) this.unansweredSince = since;
       this.show(this.notAnswering());
     });
@@ -717,7 +736,12 @@ export class BesideWindow {
     this.stopReading();
     this.stoppedAt = null;
     this.unansweredSince = null;
-    this.startedAt = null;
+    // A welcome from the run Restart it is replacing is not the one it started: that still waits.
+    const run = this.options.beside.status().run;
+    if (!this.restartingFrom || (run && !sameRun(run, this.restartingFrom))) {
+      this.startedAt = null;
+      this.restartingFrom = null;
+    }
     this.restarting = false;
     const under = this.shown !== null || this.startsOver;
     this.startsOver = false;

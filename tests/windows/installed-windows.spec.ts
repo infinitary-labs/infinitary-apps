@@ -693,7 +693,13 @@ test("the Windows installer installs for this person, offers Git, starts the com
       // No run of this computer's own first mate is left at all, a later one included.
       expect(runProcesses()).toEqual([]);
       expect(workRunProcesses().length).toBe(1);
-      expect(home.reached).toContain(device?.id);
+      // And that work run answers the home now, not only once before: a read-only ask it answers
+      // over its current contact.
+      await expect
+        .poll(async () => (await copyHello(home, device?.id ?? "").catch(() => null)) !== null, {
+          timeout: 60_000,
+        })
+        .toBe(true);
       if (evidence) screenshot(join(evidence, "window-joined.png"));
 
       home.pairing.remove(device?.id ?? "");

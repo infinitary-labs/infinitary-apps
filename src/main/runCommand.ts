@@ -291,6 +291,20 @@ export function sameRun(a: OwnedRun | null | undefined, b: OwnedRun | null | und
 }
 
 /**
+ * The run a reading of the command's records names as running, when this
+ * app's own agent started it, by that same reading: the run wrote so in its
+ * note (`startedByAgent`). Null while none runs, while the records cannot be
+ * read, and for a run started any other way.
+ */
+export function ownedRunOf(status: {
+  running: boolean | null;
+  run: RunMarker | null;
+}): OwnedRun | null {
+  const run = status.running === true ? status.run : null;
+  return run?.agent === true ? { pid: run.pid, startedAt: run.startedAt } : null;
+}
+
+/**
  * The command running on this folder now, when this app's own agent started
  * it: the run itself wrote so in its note, from the mark its agent gave it
  * (`startedByAgent`). Null for any other, a command started by hand after

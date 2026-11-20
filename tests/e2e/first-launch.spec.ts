@@ -16,6 +16,7 @@ import {
   holdPastTheHold,
 } from "./dictation";
 import { committedWelcome, observeWelcomeReadiness, reloadTypingEarly } from "./firstLaunch";
+import { frameGesturesDecided } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import {
   atRest,
@@ -505,6 +506,9 @@ test("the welcome shows one part per press by keys in both themes at the minimum
         await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
       }
     });
+    // Its presses are decided only once the app's grace frames are over;
+    // until then a later real press into the frame could still take them.
+    await frameGesturesDecided(page);
     await expect(prompt).toBeFocused();
     await expect(prompt).toHaveValue("my own words");
   });

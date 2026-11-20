@@ -59,7 +59,8 @@ extension ReadOnlySession {
 /// INF-1062: the computer's own sheet, with its name, reach and address, then Leave or Forget under its own heading.
 /// INF-1517, the captain's pick: it opens at half height on the system's glass with Settings' headings and spacing.
 /// This device's own facts live in `PhoneSettingsSheet`.
-/// INF-5265: under them, the other kept computers, each marked when it answers, and Add another computer.
+/// INF-5265: under them, the other kept computers, each marked when it answers; Add another computer comes last, after
+/// Leave, so a phone that keeps one computer finds Leave where it always was, at every Text Size.
 struct PhoneComputerSheet: View {
     let session: ReadOnlySession
     let model: PhoneModel
@@ -94,8 +95,9 @@ struct PhoneComputerSheet: View {
                     if session.homeLost, let standbys = session.mac.standbys, !standbys.isEmpty {
                         PhoneTakeOverSection(session: session, standbys: standbys)
                     }
-                    keptComputers
+                    otherComputers
                     exitControls
+                    addComputer
                 }.padding(PhoneTheme.space5).frame(maxWidth: .infinity, alignment: .leading)
             }
             .onAppear { model.lookAtOthers() }
@@ -134,48 +136,56 @@ struct PhoneComputerSheet: View {
         dismiss()
     }
 
-    /// The other kept computers, then Add another computer. A tap shows a computer: the phone never switches by
-    /// itself (the captain's pick, Stay), so a mark only says which one answers now. On an iPad keyboard the arrows
-    /// move among the rows and Return or Space presses one.
-    private var keptComputers: some View {
-        let rows = model.kept.others.map(\.pin) + [Self.addRow]
-        return VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-            if !model.kept.others.isEmpty {
+    /// The other kept computers. A tap shows a computer: the phone never switches by itself (the captain's pick,
+    /// Stay), so a mark only says which one answers now. On an iPad keyboard the arrows move among the rows, on to Add
+    /// another computer, and Return or Space presses one; a press with Command held is left to the app's own commands.
+    @ViewBuilder private var otherComputers: some View {
+        if !model.kept.others.isEmpty {
+            let rows = model.kept.others.map(\.pin) + [Self.addRow]
+            VStack(alignment: .leading, spacing: PhoneTheme.space2) {
                 Text(PhoneMessages.phoneComputerOthersHeading()).font(PhoneFont.headline).foregroundStyle(PhoneTheme.text)
-            }
-            PhoneList {
-                ForEach(model.kept.others, id: \.pin) { mac in
-                    Button { dismiss(); model.show(mac.pin) } label: {
-                        PhoneRow(symbol: .computer, title: mac.name, line: answerWords(mac.pin), chevron: true)
-                            .overlay(alignment: .leading) {
-                                if model.answering[mac.pin] == true {
-                                    Circle().fill(PhoneTheme.accent).frame(width: 6, height: 6)
-                                        .offset(x: PhoneTheme.space2).accessibilityHidden(true)
+                PhoneList {
+                    ForEach(model.kept.others, id: \.pin) { mac in
+                        Button { dismiss(); model.show(mac.pin) } label: {
+                            PhoneRow(symbol: .computer, title: mac.name, line: answerWords(mac.pin), chevron: true)
+                                .overlay(alignment: .leading) {
+                                    if model.answering[mac.pin] == true {
+                                        Circle().fill(PhoneTheme.accent).frame(width: 6, height: 6)
+                                            .offset(x: PhoneTheme.space2).accessibilityHidden(true)
+                                    }
                                 }
-                            }
+                        }
+                        .accessibilityLabel(mac.name).accessibilityValue(answerWords(mac.pin))
+                        .accessibilityHint(PhoneMessages.phoneComputerShowHint())
+                        .accessibilityIdentifier("kept-computer")
+                        .focusable().focused($focusedRow, equals: mac.pin)
+                        .onPlainKey(.return) { dismiss(); model.show(mac.pin) }
+                        .onPlainKey(.space) { dismiss(); model.show(mac.pin) }
+                        .onPlainKey(.downArrow) { focusedRow = step(rows, from: mac.pin, by: 1) }
+                        .onPlainKey(.upArrow) { focusedRow = step(rows, from: mac.pin, by: -1) }
                     }
-                    .accessibilityLabel(mac.name).accessibilityValue(answerWords(mac.pin))
-                    .accessibilityHint(PhoneMessages.phoneComputerShowHint())
-                    .accessibilityIdentifier("kept-computer")
-                    .focusable().focused($focusedRow, equals: mac.pin)
-                    .onKeyPress(.return) { dismiss(); model.show(mac.pin); return .handled }
-                    .onKeyPress(.space) { dismiss(); model.show(mac.pin); return .handled }
-                    .onKeyPress(.downArrow) { focusedRow = step(rows, from: mac.pin, by: 1); return .handled }
-                    .onKeyPress(.upArrow) { focusedRow = step(rows, from: mac.pin, by: -1); return .handled }
-                }
-                Button { choosingWay = true } label: {
-                    PhoneRow(symbol: .plus, title: PhoneMessages.phoneComputerAddTitle(),
-                             line: PhoneMessages.phoneComputerAddLine(), chevron: true)
-                }
-                .accessibilityIdentifier("add-computer")
-                .focusable().focused($focusedRow, equals: Self.addRow)
-                .onKeyPress(.return) { choosingWay = true; return .handled }
-                .onKeyPress(.space) { choosingWay = true; return .handled }
-                .onKeyPress(.upArrow) { focusedRow = step(rows, from: Self.addRow, by: -1); return .handled }
-            }.buttonStyle(PhoneRowStyle())
-        }.frame(maxWidth: .infinity, alignment: .leading)
-            // The sheet opens with the first row focused, so a keyboard's arrows and Return reach the list at once.
-            .onAppear { focusedRow = rows.first }
+                }.buttonStyle(PhoneRowStyle())
+            }.frame(maxWidth: .infinity, alignment: .leading)
+                // The sheet opens with the first row focused, so a keyboard's arrows and Return reach the list at once.
+                .onAppear { focusedRow = rows.first }
+        }
+    }
+
+    /// Add another computer, the last row of the sheet.
+    private var addComputer: some View {
+        PhoneList {
+            Button { choosingWay = true } label: {
+                PhoneRow(symbol: .plus, title: PhoneMessages.phoneComputerAddTitle(),
+                         line: PhoneMessages.phoneComputerAddLine(), chevron: true)
+            }
+            .accessibilityIdentifier("add-computer")
+            .focusable().focused($focusedRow, equals: Self.addRow)
+            .onPlainKey(.return) { choosingWay = true }
+            .onPlainKey(.space) { choosingWay = true }
+            .onPlainKey(.upArrow) {
+                if let last = model.kept.others.last { focusedRow = last.pin }
+            }
+        }.buttonStyle(PhoneRowStyle()).frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private static let addRow = "add-computer" // i18n-exempt: a focus name, not shown
@@ -221,3 +231,15 @@ struct PhoneComputerSheet: View {
 
 /// INF-5265: the ways in Add another computer offers, the first screen's three.
 enum PhoneAddWay { case scan, paste, address }
+
+private extension View {
+    /// A key pressed alone; with Command, Option or Control held it is left to the app's own commands, such as
+    /// Command-Return, which never presses a row behind it (INF-499).
+    func onPlainKey(_ key: KeyEquivalent, _ action: @escaping () -> Void) -> some View {
+        onKeyPress(keys: [key], phases: .down) { press in
+            guard press.modifiers.isDisjoint(with: [.command, .option, .control]) else { return .ignored }
+            action()
+            return .handled
+        }
+    }
+}

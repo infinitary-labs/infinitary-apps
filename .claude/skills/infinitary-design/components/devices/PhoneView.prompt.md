@@ -52,7 +52,8 @@ Out of reach is said once, by one line under the bar on every tab with its dot, 
 The message capsule and a card's reply row dim, and one line under the message box says only “Changes are off until <computer> is back.”, as the Mac says it.
 The computer button opens a native sheet with the computer's name, its reach and its address.
 Under them, Your other computers lists each other kept computer as a row in the shared list shape, the computer glyph, its name and one line, Answers now with an accent dot before the glyph, Not answering from here, or Looking… while the phone checks; a tap shows it, and the phone never switches by itself.
-The last row is Add another computer with a plus glyph, which offers the first screen's three ways in; the sheet opens with its first row focused, and the arrows, Return and Space reach every row.
+Leave, or Forget, follows them, and the last row, after it, is Add another computer with a plus glyph, which offers the first screen's three ways in, so a phone keeping one computer finds Leave where it always was at every Text Size.
+With other computers kept, the sheet opens with the first of them focused, and the arrows, Return and Space reach every row; a key pressed with Command held presses no row.
 The Settings button, the Lucide gear, opens a sheet at full height on a list of General, Appearance, Projects, Intelligence, Runbooks, Usage, Automation, Integrations and Devices, the desktop's names in the desktop's order.
 Each row has no icon: its section name, one current-state line and a trailing chevron, in the shared list shape.
 A row opens its page in the same sheet, on iPad as on iPhone, never a sidebar.

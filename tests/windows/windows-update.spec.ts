@@ -29,6 +29,7 @@ import { UPDATE_VERSIONS } from "./updateVersions";
 import {
   pressDialogButton,
   ps,
+  psList,
   removalEntries,
   runProcesses,
   runTask,
@@ -328,7 +329,56 @@ fetch(process.argv[1]).then((r) => String(r.status), (e) => String(e.cause?.code
       await panel.getByRole("button", { name: UPDATE_WORDS.restart }).click();
       // The command saves its crew's work and ends, the installer replaces
       // the copy and opens the new window through the Start menu entry.
-      await expect.poll(installedVersion, { timeout: 10 * 60_000, intervals: [2_000] }).toBe(newer);
+      // Every process of the hand-over seen while the copy is replaced, kept
+      // whatever the wait answers: which ran, from which parent, and when it ended.
+      const seen = new Map<
+        number,
+        { name: string; parent: number; command: string; first: number; last: number }
+      >();
+      const started = Date.now();
+      const watchHandOver = () => {
+        const now = Date.now() - started;
+        for (const p of psList<{
+          ProcessId: number;
+          ParentProcessId: number;
+          Name: string;
+          CommandLine: string | null;
+        }>(
+          "Get-CimInstance Win32_Process | Where-Object { $_.Name -match '^(Infinitary|powershell|taskkill|Un_A|Un_B)' -or $_.Name -match 'setup' } | Select-Object ProcessId, ParentProcessId, Name, CommandLine",
+        )) {
+          const was = seen.get(p.ProcessId);
+          if (was) was.last = now;
+          else
+            seen.set(p.ProcessId, {
+              name: p.Name,
+              parent: p.ParentProcessId,
+              command: p.CommandLine ?? "",
+              first: now,
+              last: now,
+            });
+        }
+      };
+      try {
+        await expect
+          .poll(
+            () => {
+              watchHandOver();
+              return installedVersion();
+            },
+            { timeout: 10 * 60_000, intervals: [2_000] },
+          )
+          .toBe(newer);
+      } finally {
+        keep(
+          "hand-over-processes.json",
+          JSON.stringify(
+            [...seen].map(([pid, p]) => ({ pid, ...p })),
+            null,
+            2,
+          ),
+        );
+        keep("run-task-after.json", JSON.stringify(runTask(label) ?? null, null, 2));
+      }
       if (windowPid) {
         await expect.poll(() => stillRunning([windowPid]), { timeout: 120_000 }).toEqual([]);
       }

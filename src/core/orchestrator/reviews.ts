@@ -109,6 +109,8 @@ export class Reviews {
     // The approved version the builder started on, named only where the read used it.
     const builtOn = this.options.tasks.graph.startedOn(builder);
     let builtOnHead: string | undefined;
+    // The default branch read in place of origin's, named only where that computer read one.
+    let base: string | undefined;
     if (device) {
       const folders = machines?.folders(device, builder.id);
       if (!machines?.ready(device, builder.id) || !folders)
@@ -120,6 +122,7 @@ export class Reviews {
       ({ headSha, changedFiles, changeReading } = read);
       // Named only where that computer read from it: an older one reads from the default branch.
       builtOnHead = read.builtOn;
+      base = read.base;
       evidenceDir = folders.evidence;
     } else {
       headSha = builder.branch
@@ -176,6 +179,7 @@ export class Reviews {
       builderGoal: builder.goal?.trim() || builder.title,
       branch: builder.branch,
       headSha,
+      ...(base ? { base } : {}),
       ...(builtOnHead && builtOn
         ? { builtOn: { task: builtOn.task.key || builtOn.task.id, head: builtOn.head } }
         : {}),

@@ -1061,6 +1061,12 @@ export type ReviewBriefFacts = {
   branch: string;
   headSha: string;
   /**
+   * The default branch the change was read against, as a full ref, when it
+   * is not the one the clone's `origin` names: a builder that followed its
+   * project to a new address is read against that address's.
+   */
+  base?: string;
+  /**
    * The approved version of an earlier part the builder started on
    * (`shape.built_on`): the change under review is its own difference
    * against it, since that part was approved on its own.
@@ -1380,9 +1386,15 @@ export function renderReviewBrief(
   const userWords = words
     ? [USER_WORDS_PRECEDENCE, words]
     : [`${NO_RECORDED_WORDS_LEAD}${JSON.stringify(standIn)}`];
+  // The default branch the change is read against, by its ref where it is not origin's.
+  const from = facts.base ?? "<default>";
+  // i18n-exempt: served to the reviewer crewmate in its brief, stays English
+  const against = facts.base
+    ? `${facts.base}, the default branch where the project lives now`
+    : "the default branch";
   const assigned = facts.builtOn
     ? `Review branch ${facts.branch} at head ${facts.headSha} - this repository's worktrees share refs, so read the diff of the assigned commit yourself. It started on ${facts.builtOn.head}, the version of ${facts.builtOn.task} whose merge the captain approved on its own, so the change under review is only its difference against that version (git diff ${facts.builtOn.head}...${facts.headSha}); a path only ${facts.builtOn.task} changed is out of scope`
-    : `Review branch ${facts.branch} at head ${facts.headSha} - this repository's worktrees share refs, so read the diff of the assigned commit against the default branch yourself (git diff <default>...${facts.headSha})`;
+    : `Review branch ${facts.branch} at head ${facts.headSha} - this repository's worktrees share refs, so read the diff of the assigned commit against ${against} yourself (git diff ${from}...${facts.headSha})`;
   const target = facts.prUrl
     ? `${assigned}. A pull request is already open at ${facts.prUrl}; review the assigned commit, not that pull request's recorded head.`
     : assigned;
@@ -1401,7 +1413,7 @@ export function renderReviewBrief(
     : passed
       ? [
           "",
-          `An earlier review already passed this change at ${passed}, and the branch has moved since. Review only the difference between that passed version and the assigned commit - what bringing it up to date, or later work, changed - not the whole change again: after an unavoidable update, the re-review checks only the update's difference (the captain's rule). git range-diff <default>..${passed} <default>..${facts.headSha} lines the two versions up commit by commit; for one path, compare git diff <default>...${passed} -- <path> with git diff <default>...${facts.headSha} -- <path>. Read the rest of the change only where you need it to judge the difference. If ${passed} is not in this working copy, say so and review the whole change instead.`,
+          `An earlier review already passed this change at ${passed}, and the branch has moved since. Review only the difference between that passed version and the assigned commit - what bringing it up to date, or later work, changed - not the whole change again: after an unavoidable update, the re-review checks only the update's difference (the captain's rule). git range-diff ${from}..${passed} ${from}..${facts.headSha} lines the two versions up commit by commit; for one path, compare git diff ${from}...${passed} -- <path> with git diff ${from}...${facts.headSha} -- <path>. Read the rest of the change only where you need it to judge the difference. If ${passed} is not in this working copy, say so and review the whole change instead.`,
         ]
       : [];
   const coverage = proofRead
@@ -1427,7 +1439,7 @@ export function renderReviewBrief(
     "",
     facts.changedFiles === null
       ? `The assigned commit ${facts.headSha} is not in this working copy. Report the gap and do not claim a clean review.`
-      : `Changed-file checklist at ${facts.headSha} (committed paths against the default branch${passed ? `; compare each with ${passed}` : ""}):`,
+      : `Changed-file checklist at ${facts.headSha} (committed paths against ${against}${passed ? `; compare each with ${passed}` : ""}):`,
     ...(facts.changedFiles ?? []).map((path) => `- ${JSON.stringify(path)}`),
     "",
     `Your verdict is the typed review record on report.validation with kind review, head ${facts.headSha} and revision ${validationRevision(facts.validation)}, never a line of the report text. code: clear when nothing needs a fix, findings when at least one finding blocks, blocked when you could not review. findings: one entry per finding - id, severity (error: should absolutely not get merged; warning: worth addressing but can be done in a follow up; info: nice to have), file and line, one sentence of text, and an action - auto-fix for a non-functional, non-user-visible issue (correctness, error handling, security, performance, mechanical code quality) safely fixable without discussing the author's intent; ask-user for anything about functional requirements or product behavior, or that challenges a deliberate choice, even if it looks wrong, and when in doubt; no-op for an informational note. An ask-user finding's text may run past one sentence: it says what the code does now, lists every way forward with a rough size in your own words (what the code does now is sized as no further change), and names the way you recommend with one reason, or says you recommend none. risk: level low|medium|high with one sentence why - low: well-bounded, mostly cosmetic, or straightforward with little ambiguity; medium: room to improve but safe to merge first with concerns addressed as follow-ups; high: should not be merged without explicit human approval. A clean change is code clear with no findings. An error, a warning or an ask-user finding blocks; info findings never block, so they ride a clear review: the record refuses clear code beside a finding that blocks, and code findings none of which block. The report text says in plain words what you found.`,

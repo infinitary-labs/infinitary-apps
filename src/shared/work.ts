@@ -1612,6 +1612,12 @@ export const workOrders = {
       headSha: commitSchema,
       /** The approved version the changed files and lines were read from; absent when read from the default branch. */
       builtOn: commitSchema.optional(),
+      /**
+       * The default branch read in place of the clone's `origin`'s, as a full
+       * ref: a task that followed its project to a new address reads that
+       * address's. Absent when read from `origin`'s, or from an older computer.
+       */
+      base: z.string().min(1).max(512).optional(),
       changedFiles: z.array(z.string()),
       /** Host-measured text lines at headSha; absent when unavailable or on an older computer. */
       changeLines: z

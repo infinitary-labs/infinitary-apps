@@ -7,7 +7,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { execStart } from "../../../tests/helpers/unitExecStart";
 import { bootPlist, bootUnit, runAgentEnv, wantedBy } from "./background";
@@ -398,14 +398,18 @@ function windows(answers: { create?: boolean; running?: number; remove?: boolean
         }, 250);
       },
     },
-    schtasks: async (args) => {
-      asked.push([...args]);
-      if (args[0] === "/Create" && answers.create === false)
-        return { ok: false, output: "ERROR: Access is denied." };
-      if (args[0] === "/Delete" && answers.remove === false)
-        return { ok: false, output: "ERROR: Access is denied." };
-      return { ok: true, output: "SUCCESS" };
-    },
+    schtasks: Object.assign(
+      async (args: readonly string[]) => {
+        asked.push([...args]);
+        if (args[0] === "/Create" && answers.create === false)
+          return { ok: false, output: "ERROR: Access is denied." };
+        if (args[0] === "/Delete" && answers.remove === false)
+          return { ok: false, output: "ERROR: Access is denied." };
+        return { ok: true, output: "SUCCESS" };
+      },
+      // Task Scheduler's own answer for the task: still there where it would not take it away.
+      { lookup: async () => (answers.remove === false ? ("there" as const) : ("gone" as const)) },
+    ),
   };
   if (answers.running !== undefined) live.add(answers.running);
   return { context, asked };
@@ -489,18 +493,9 @@ describe("the command the window starts, on Windows", () => {
     await startRunAgent(context);
     asked.length = 0;
     const run = { pid: 4242, startedAt: "2026-10-25T17:00:00.000Z" };
-    // Task Scheduler's own record of the task, in Windows' folder, still there.
-    const systemRoot = scratchDir("infinitary-run-agent-root-");
-    mkdirSync(join(systemRoot, "System32", "Tasks"), { recursive: true });
-    writeFileSync(join(systemRoot, "System32", "Tasks", LABEL), "<Task/>");
-    vi.stubEnv("SystemRoot", systemRoot);
-    try {
-      await expect(stopRunAgent(context, { forget: true, run })).rejects.toThrow(
-        "so it is still registered: ERROR: Access is denied.",
-      );
-    } finally {
-      vi.unstubAllEnvs();
-    }
+    await expect(stopRunAgent(context, { forget: true, run })).rejects.toThrow(
+      "so it is still registered: ERROR: Access is denied.",
+    );
     expect(asked).toEqual([["/Delete", "/TN", LABEL, "/F"]]);
     expect(runAgentInPlace(context)).toBe(true);
     expect(

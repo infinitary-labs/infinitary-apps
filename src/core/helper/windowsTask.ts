@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { writePrivate } from "../devices/identity";
 import type { Launchctl, Launcher } from "./background";
@@ -26,8 +26,20 @@ import type { Launchctl, Launcher } from "./background";
  * systemd keep the work alive on a Mac and Linux.
  */
 
-/** `schtasks.exe`, asked as `launchctl` is: its arguments, then what it answered. */
-export type Schtasks = Launchctl;
+/**
+ * `schtasks.exe`, asked as `launchctl` is: its arguments, then what it
+ * answered; with `lookup`, Task Scheduler's own answer for one task, which
+ * `schtasks.exe` cannot give, since it fails alike for a task it does not
+ * hold and one it will not show, in words that follow the system's language.
+ */
+export type Schtasks = Launchctl & { lookup?: TaskLookup };
+
+/**
+ * One task in Task Scheduler's root folder, as Task Scheduler itself answers
+ * for it by name: gone only on its own not-found answer; there; or unknown,
+ * a refusal, a timeout or no answer at all.
+ */
+export type TaskLookup = (label: string) => Promise<"gone" | "there" | "unknown">;
 
 /** The task as it was registered, in the data folder: what `schtasks /Create /XML` reads. */
 export const RUN_TASK_FILE = "run-task.xml";
@@ -320,10 +332,10 @@ export async function startRunTask(schtasks: Schtasks, label: string): Promise<b
  * until it stops: Task Scheduler's own end of a task ends its program at
  * once, with no clean stop, so a stop is asked of the run itself instead.
  * A task Task Scheduler would not take away keeps its file for a later
- * removal and rejects, so its caller says so, unless Task Scheduler's own
- * record of that exact task is certainly not there (`taskRecord`): a list of
- * tasks leaves out one this account cannot read, and a task still registered
- * may or may not start at sign-in.
+ * removal and rejects, so its caller says so, unless Task Scheduler answers
+ * that it holds no task by that name (`Schtasks.lookup`): a list of tasks
+ * leaves out one this account cannot read, and a task still registered may
+ * or may not start at sign-in.
  */
 export async function removeRunTask(
   schtasks: Schtasks,
@@ -331,7 +343,11 @@ export async function removeRunTask(
 ): Promise<boolean> {
   const was = existsSync(options.file);
   const out = await schtasks(["/Delete", "/TN", options.label, "/F"]);
-  const record = out.ok ? "gone" : taskRecord(options.label);
+  const record = out.ok
+    ? "gone"
+    : await (schtasks.lookup?.(options.label) ?? Promise.resolve("unknown" as const)).catch(
+        () => "unknown" as const,
+      );
   if (record === "there")
     throw new Error(
       `Task Scheduler did not take Infinitary's task away, so it is still registered: ${out.output}`,
@@ -342,26 +358,6 @@ export async function removeRunTask(
     );
   rmSync(options.file, { force: true });
   return was;
-}
-
-/**
- * Task Scheduler's own record of a task in its root folder, the file
- * `%SystemRoot%\System32\Tasks\<label>`: gone only where Windows answers
- * that no such file is there; one this account may not read, or a Windows
- * folder no setting names, is there or unknown, never gone.
- */
-export function taskRecord(
-  label: string,
-  env: NodeJS.ProcessEnv = process.env,
-): "gone" | "there" | "unknown" {
-  const root = env.SystemRoot || env.SYSTEMROOT;
-  if (!root) return "unknown";
-  try {
-    statSync(join(root, "System32/Tasks", label));
-    return "there";
-  } catch (error) {
-    return (error as NodeJS.ErrnoException).code === "ENOENT" ? "gone" : "unknown";
-  }
 }
 
 /**

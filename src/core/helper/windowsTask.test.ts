@@ -1,6 +1,6 @@
-import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { Launchctl } from "./background";
 import {
@@ -12,6 +12,8 @@ import {
   requestRunStop,
   runTaskFile,
   runTaskXml,
+  type Schtasks,
+  type TaskLookup,
   watchRunStop,
   windowsAccount,
   windowsWord,
@@ -113,45 +115,56 @@ describe("the task", () => {
   });
 
   // The review of INF-5409: a task Task Scheduler would not take away, or may still hold, is said,
-  // and its file kept; only Task Scheduler's own record of that task, certainly not there, lets
-  // the file go, since a list of tasks leaves out one this account cannot read.
-  it("keeps its file and rejects unless Task Scheduler's record of the task is certainly gone", async () => {
+  // and its file kept; only Task Scheduler's own not-found answer for that task lets the file go,
+  // since a list of tasks leaves out one this account cannot read.
+  it("keeps its file and rejects unless Task Scheduler answers it holds no such task", async () => {
     const file = runTaskFile(scratchDir("windows-task-"));
     const xml = runTaskXml({ launcher: LAUNCHER, account: "ada", atLogin: true });
-    // Windows' own folder, as `%SystemRoot%` names it, with Task Scheduler's record of the task.
-    const systemRoot = scratchDir("windows-root-");
-    const tasks = join(systemRoot, "System32", "Tasks");
-    mkdirSync(tasks, { recursive: true });
-    writeFileSync(join(tasks, LABEL), "<Task/>");
-    vi.stubEnv("SystemRoot", systemRoot);
-    try {
-      const refused: Launchctl = async (args) =>
-        args[0] === "/Delete"
-          ? { ok: false, output: "ERROR: Access is denied." }
-          : { ok: true, output: "SUCCESS" };
-      await registerRunTask(refused, { label: LABEL, file, xml });
-      await expect(removeRunTask(refused, { label: LABEL, file })).rejects.toThrow(
-        "so it is still registered: ERROR: Access is denied.",
+    const asked: string[] = [];
+    const refused = (lookup?: TaskLookup): Schtasks =>
+      Object.assign(
+        async (args: readonly string[]) =>
+          args[0] === "/Delete"
+            ? { ok: false, output: "ERROR: Access is denied." }
+            : { ok: true, output: "SUCCESS" },
+        lookup
+          ? {
+              lookup: async (label: string) => {
+                asked.push(label);
+                return lookup(label);
+              },
+            }
+          : {},
+      );
+    await registerRunTask(refused(), { label: LABEL, file, xml });
+    await expect(
+      removeRunTask(
+        refused(async () => "there"),
+        { label: LABEL, file },
+      ),
+    ).rejects.toThrow("so it is still registered: ERROR: Access is denied.");
+    expect(existsSync(file)).toBe(true);
+    expect(asked).toEqual([LABEL]);
+    // A refusal or a lookup that cannot run, or none to ask, is not an answer that it is gone.
+    for (const unsure of [
+      refused(async () => "unknown"),
+      refused(async () => {
+        throw new Error("PowerShell could not start");
+      }),
+      refused(),
+    ]) {
+      await expect(removeRunTask(unsure, { label: LABEL, file })).rejects.toThrow(
+        "could not say whether it is still registered: ERROR: Access is denied.",
       );
       expect(existsSync(file)).toBe(true);
-      // A record this account may not read is not a record that is gone.
-      if (process.platform !== "win32" && process.getuid?.() !== 0) {
-        chmodSync(tasks, 0o000);
-        try {
-          await expect(removeRunTask(refused, { label: LABEL, file })).rejects.toThrow(
-            "could not say whether it is still registered",
-          );
-        } finally {
-          chmodSync(tasks, 0o700);
-        }
-        expect(existsSync(file)).toBe(true);
-      }
-      rmSync(join(tasks, LABEL));
-      expect(await removeRunTask(refused, { label: LABEL, file })).toBe(true);
-      expect(existsSync(file)).toBe(false);
-    } finally {
-      vi.unstubAllEnvs();
     }
+    expect(
+      await removeRunTask(
+        refused(async () => "gone"),
+        { label: LABEL, file },
+      ),
+    ).toBe(true);
+    expect(existsSync(file)).toBe(false);
   });
 });
 

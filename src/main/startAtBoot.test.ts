@@ -11,7 +11,7 @@ import { dirname, join } from "node:path";
 import { type Launchctl, RUN_AGENT_ENV } from "@core/helper/background";
 import { loginAgentFile, sessionAgentFile } from "@core/helper/runAgent";
 import { readRunTask, runTaskFile } from "@core/helper/windowsTask";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
 import { RUN_SETTINGS_EXIT, RUN_WORDS } from "./runCommand";
 import {
@@ -549,7 +549,9 @@ function taskScheduler(options: { creates?: boolean; runs?: boolean; removes?: b
       return { ok: false, output: "ERROR: Access is denied." };
     return { ok: true, output: "" };
   };
-  return { calls, schtasks };
+  // Task Scheduler's own answer for the task: still there where it would not take it away.
+  const lookup = async () => (options.removes === false ? ("there" as const) : ("gone" as const));
+  return { calls, schtasks: Object.assign(schtasks, { lookup }) };
 }
 
 function windows(options: { creates?: boolean; runs?: boolean; removes?: boolean } = {}) {
@@ -629,14 +631,9 @@ describe("starting at sign-in on Windows", () => {
 
   // The review of INF-5409: a task Task Scheduler keeps is still registered, so --off says so.
   it("fails --off and keeps the task file where Task Scheduler keeps the task", async () => {
-    const { root, context: c, file } = windows({ removes: false });
+    const { context: c, file } = windows({ removes: false });
     await runStartAtBoot({ off: false }, c);
-    // Task Scheduler's own record of the task, in Windows' folder, still there.
-    const systemRoot = join(root, "Windows");
-    mkdirSync(join(systemRoot, "System32", "Tasks"), { recursive: true });
-    writeFileSync(join(systemRoot, "System32", "Tasks", LABEL), "<Task/>");
-    vi.stubEnv("SystemRoot", systemRoot);
-    const off = await runStartAtBoot({ off: true }, c).finally(() => vi.unstubAllEnvs());
+    const off = await runStartAtBoot({ off: true }, c);
     expect(off.code).toBe(1);
     expect(lines(off.error)).toEqual([
       "Task Scheduler did not take Infinitary's task away, so it is still registered: ERROR: Access is denied.",

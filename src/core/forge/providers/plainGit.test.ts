@@ -40,9 +40,12 @@ function plainHost() {
   run(repo, "commit", "-m", "fix");
   const head = run(repo, "rev-parse", "HEAD");
   const forgeFor = createForgeResolver({ github: () => expect.fail("not a GitHub project") });
+  const origin = "ssh://git@git.example.com/me/meter.git";
+  run(repo, "config", `url.${bare}.insteadOf`, origin);
+  run(repo, "remote", "set-url", "origin", origin);
   const forge = forgeFor({
     path: repo,
-    origin: "ssh://git@git.example.com/me/meter.git",
+    origin,
     host: { kind: "git", name: "git.example.com" },
   });
   return { bare, repo, head, forge };
@@ -119,6 +122,43 @@ describe("PlainGitForge", () => {
     const moved = run(bare, "rev-parse", "refs/heads/main");
     await expect(forge.putIn(sent, head)).rejects.toMatchObject({ failure: "refused" });
     expect(run(bare, "rev-parse", "refs/heads/main")).toBe(moved);
+  });
+
+  it("refuses publication and merge through a former push address even when reads use the approved one", async () => {
+    const { bare, repo, head, forge } = plainHost();
+    const former = join(scratchDir("former-plain-host-"), "host.git");
+    run(repo, "clone", "--bare", bare, former);
+    const readMain = (dir: string) => run(dir, "rev-parse", "refs/heads/main");
+    const base = readMain(bare);
+    const refusal = {
+      failure: "refused",
+      message: expect.stringContaining("read and push addresses"),
+    };
+    run(repo, "remote", "set-url", "--push", "origin", former);
+    await expect(
+      forge.openChange({ branch: "fm/task-1", title: "Fix", body: "" }),
+    ).rejects.toMatchObject(refusal);
+    expect(await forge.changeFor("fm/task-1")).toBeNull();
+    expect(() => run(former, "rev-parse", "--verify", "refs/heads/fm/task-1")).toThrow();
+    run(repo, "config", "--unset-all", "remote.origin.pushurl");
+    const sent = await forge.openChange({ branch: "fm/task-1", title: "Fix", body: "" });
+    run(repo, "remote", "set-url", "--push", "origin", former);
+    await expect(forge.putIn(sent, head)).rejects.toMatchObject(refusal);
+    expect(readMain(bare)).toBe(base);
+    expect(readMain(former)).toBe(base);
+    run(repo, "config", "--unset-all", "remote.origin.pushurl");
+    await forge.putIn(sent, head);
+    const result = { approvedMain: readMain(bare), formerMain: readMain(former) };
+    if (process.env.INFINITARY_CUTOVER_PROOF === "1")
+      console.info(
+        JSON.stringify({
+          action: "plain Git writes with split then matching routes",
+          base,
+          head,
+          result,
+        }),
+      );
+    expect(result).toEqual({ approvedMain: head, formerMain: base });
   });
 
   it("takes a sent-up copy back on close, quietly when it is already gone", async () => {

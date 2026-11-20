@@ -843,16 +843,22 @@ export class CrewSupervisor {
     const record = this.options.tasks.get(taskId);
     const repoId = record?.delivery?.checkTarget?.repoId ?? record?.repoId;
     const repo = repoId ? this.options.repos.get(repoId) : undefined;
+    const story = record?.delivery?.presentation?.revisions.at(-1);
     const origin =
       record && repo && hasChangeRequests(repo.host?.kind)
         ? publicationRepo(record, repo).origin
-        : undefined;
+        : offer.presentationRevision !== undefined &&
+            story &&
+            "kind" in story.destination &&
+            story.destination.kind === "branch"
+          ? story.destination.origin
+          : undefined;
     const destination = previous
       ? previous.destination
       : origin && repoId && record
         ? { repoId, origin, branch: currentChange(record.delivery, record.branch).branch }
         : undefined;
-    offer = { ...offer, destination };
+    offer = { ...offer, destination, ...(previous?.retired ? { retired: true } : {}) };
     const all = [
       ...offers.filter((entry) => entry.cardId !== offer.cardId || entry.offerId !== offer.offerId),
       offer,

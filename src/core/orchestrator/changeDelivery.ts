@@ -29,6 +29,10 @@ export type ChangeDelivery = {
 };
 
 export function createChangeDelivery(options: ChangeDeliveryOptions): ChangeDelivery {
+  options.repos.onAddressChange((former, next) => {
+    if (former.origin)
+      options.tasks.delivery.retirePresentationsAtOrigin(former.id, former.origin, next);
+  });
   const context = new ChangeContext(options);
   const readiness = new DraftReadiness(context);
   const checks = new ChangeChecks(context, readiness);

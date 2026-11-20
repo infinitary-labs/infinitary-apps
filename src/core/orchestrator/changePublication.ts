@@ -41,6 +41,7 @@ import {
 } from "./changeContext";
 import type { DraftReadiness } from "./draftReadiness";
 import { mergedAheadWords, mergedStory } from "./mergedStory";
+import { publicationRepo } from "./publicationRepo";
 import { carryPassedReview } from "./reviewCarry";
 
 /**
@@ -137,12 +138,23 @@ export class ChangePublication {
               )
             : undefined;
         if (merged) return said(merged);
-        const revision = await this.options.presentations.prepare(
-          taskId,
-          staged,
-          located.forge,
-          how,
-        );
+        const repo = located.repo;
+        const origin = repo ? publicationRepo(located.record, repo).origin : null;
+        const revision = await this.options.presentations.prepare(taskId, staged, located.forge, {
+          ...how,
+          ...(repo && origin
+            ? {
+                approvedAddress: {
+                  origin,
+                  current: () => this.context.approvedOrigin(taskId) === origin,
+                  recover:
+                    !repo.contribution &&
+                    !located.record.delivery?.publicationOrigin &&
+                    !(fork && isForkReview(fork)),
+                },
+              }
+            : {}),
+        });
         const destination = this.options.tasks.delivery
           .changePresentation(taskId, branch)
           ?.revisions.find((saved) => saved.revision === revision)?.destination;
@@ -598,8 +610,7 @@ export class ChangePublication {
       // a held batch's fix from its held version only where its batch carries it as its own
       // difference; any other route opens a pull request that merges the branch whole.
       await this.context.validateRange(
-        record.repoId,
-        record.repoDir,
+        record,
         branch,
         forge,
         read,
@@ -648,6 +659,7 @@ export class ChangePublication {
                 }
               : {}),
             ...(input.base ? { base: input.base } : {}),
+            ...(located.repo ? { branchOrigin: () => this.context.approvedOrigin(taskId) } : {}),
             ...(read === branch ? {} : { source: read }),
           },
         );

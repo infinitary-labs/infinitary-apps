@@ -3282,6 +3282,7 @@
 "settleMergingAfterTurn" = "Mesclando assim que o tripulante terminar o que está fazendo";
 "settleMergingChange" = "Mesclando %1$@";
 "settleMergingChangeAfterTurn" = "Mesclando %1$@ assim que o tripulante terminar o que está fazendo";
+"settleProjectAddressChanged" = "O endereço do projeto mudou. Mostre um novo cartão de mesclagem.";
 "shellAmbientPause" = "Pausar música ambiente";
 "shellAmbientPlay" = "Reproduzir música ambiente";
 "shellAmbientQuiet" = "Em silêncio enquanto você fala";

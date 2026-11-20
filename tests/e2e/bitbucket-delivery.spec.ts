@@ -144,6 +144,8 @@ async function openedOnBitbucket() {
       page,
       bitbucket,
       bare,
+      /** The task's working copy, where the app keeps it. */
+      worktreeDir: join(userDataDir, "worktrees", task.id),
       card,
       task,
       branch,
@@ -521,8 +523,14 @@ test("a merge Bitbucket accepted and has not finished merges nothing yet, is not
       .toContain(task.delivery?.changeLabel ?? "#1");
     expect(bitbucket.merges()).toEqual([]);
     expect(bitbucket.requests().filter((request) => request.endsWith("/merge"))).toHaveLength(1);
+    // One notice in Activity says why, and the crewmate's work is still in its working copy.
+    await expect(noteLines(page, task.key)).toHaveCount(1);
+    await expect(noteLines(page, task.key)).toContainText(/Cannot merge|Your merge/);
     await expect(putInLine(page, task.key)).toHaveCount(0);
     expect(await detail()).toMatchObject({ status: "active", closedReason: null });
+    expect(git("-C", opened.worktreeDir, "log", "-1", "--format=%s", task.repo?.branch ?? "")).toBe(
+      MOCK_GITHUB_CHANGE.title,
+    );
   } finally {
     await opened.close();
   }

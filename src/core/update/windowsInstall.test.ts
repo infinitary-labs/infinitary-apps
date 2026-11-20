@@ -1,6 +1,13 @@
 import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -37,7 +44,9 @@ function child(outcome: Outcome) {
   return emitter;
 }
 
-function installer(options: { body?: () => Response; spawns?: Outcome } = {}) {
+function installer(
+  options: { body?: () => Response; spawns?: Outcome; onSpawn?: (dataRoot: string) => void } = {},
+) {
   const dataRoot = join(scratchDir("inf-windows-install-"), "data");
   mkdirSync(dataRoot, { recursive: true });
   const order: string[] = [];
@@ -46,6 +55,7 @@ function installer(options: { body?: () => Response; spawns?: Outcome } = {}) {
     // The installer the child is handed is the checked download, whole.
     const env = (_args[2] as { env: NodeJS.ProcessEnv }).env;
     order.push(readFileSync(env.INFINITARY_UPDATE_INSTALLER as string, "utf8"));
+    options.onSpawn?.(dataRoot);
     return child(options.spawns ?? "started");
   });
   const end = vi.fn(() => {
@@ -145,7 +155,7 @@ describe("the in-app Windows update", () => {
 
   it("hands nothing over when the new channel cannot be recorded", async () => {
     const f = installer();
-    // A folder where the marker goes: the marker's write fails.
+    // A folder where the marker goes: the marker can be neither read nor written.
     mkdirSync(join(f.dataRoot, UPDATE_CHANNEL_MARKER, "held"), { recursive: true });
     await expect(f.install(f.plan, f.saved)).rejects.toThrow(
       "Infinitary could not record the update's channel, so nothing was installed.",
@@ -163,6 +173,23 @@ describe("the in-app Windows update", () => {
       "The installer could not start, so nothing was installed.",
     );
     expect(readFileSync(join(f.dataRoot, UPDATE_CHANNEL_MARKER), "utf8")).toBe(earlier);
+  });
+
+  it("says so when the earlier channel cannot be put back", async () => {
+    // The data folder stops taking writes while the hand-over is refused.
+    const f = installer({ spawns: "refused", onSpawn: (dataRoot) => chmodSync(dataRoot, 0o500) });
+    writeFileSync(
+      join(f.dataRoot, UPDATE_CHANNEL_MARKER),
+      `${JSON.stringify({ schemaVersion: 1, channel: "stable", version: "0.8.3" })}\n`,
+    );
+    try {
+      await expect(f.install(f.plan, f.saved)).rejects.toThrow(
+        "The installer could not start, so nothing was installed. Infinitary could not put back the update channel it followed before, so check the channel in Settings → General.",
+      );
+      expect(f.end).not.toHaveBeenCalled();
+    } finally {
+      chmodSync(f.dataRoot, 0o700);
+    }
   });
 
   it.each([

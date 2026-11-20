@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { createWriteStream } from "node:fs";
-import { rename, rm, writeFile } from "node:fs/promises";
+import { readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
@@ -88,8 +88,41 @@ export async function rememberUpdateChannel(
   version: string,
 ): Promise<void> {
   const marker: UpdateChannelMarker = { schemaVersion: 1, channel, version };
+  await replaceChannelMarker(dataRoot, `${JSON.stringify(marker)}\n`);
+}
+
+/** Writes the marker whole, through a file beside it, so a reader never sees half of it. */
+async function replaceChannelMarker(dataRoot: string, text: string): Promise<void> {
   const path = join(dataRoot, UPDATE_CHANNEL_MARKER);
   const temporary = `${path}.${randomBytes(6).toString("hex")}`;
-  await writeFile(temporary, `${JSON.stringify(marker)}\n`);
-  await rename(temporary, path);
+  try {
+    await writeFile(temporary, text);
+    await rename(temporary, path);
+  } catch (caught) {
+    await rm(temporary, { force: true }).catch(() => undefined);
+    throw caught;
+  }
+}
+
+/**
+ * The channel marker's text as it is now, for an update that may have to
+ * put it back; null only when there is none. A marker that cannot be read
+ * throws, so nothing replaces what could not be kept.
+ */
+export async function readChannelMarker(dataRoot: string): Promise<string | null> {
+  try {
+    return await readFile(join(dataRoot, UPDATE_CHANNEL_MARKER), "utf8");
+  } catch (caught) {
+    if ((caught as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw caught;
+  }
+}
+
+/** Puts back the marker `readChannelMarker` read, or takes it away when there was none. */
+export async function restoreChannelMarker(
+  dataRoot: string,
+  earlier: string | null,
+): Promise<void> {
+  if (earlier === null) await rm(join(dataRoot, UPDATE_CHANNEL_MARKER), { force: true });
+  else await replaceChannelMarker(dataRoot, earlier);
 }

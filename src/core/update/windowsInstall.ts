@@ -1,10 +1,16 @@
 import { spawn } from "node:child_process";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, rm } from "node:fs/promises";
 import { basename, join } from "node:path";
 import type { UpdateChannel } from "@shared/update";
 import { windowsPowerShell } from "../storage/ownerOnly";
-import { type BuildDownload, UPDATE_CHANNEL_MARKER } from "./updateChannels";
-import { downloadChecked, rememberUpdateChannel, UpdateInstallProblem } from "./updateDownload";
+import type { BuildDownload } from "./updateChannels";
+import {
+  downloadChecked,
+  readChannelMarker,
+  rememberUpdateChannel,
+  restoreChannelMarker,
+  UpdateInstallProblem,
+} from "./updateDownload";
 
 /**
  * How an installed Windows app updates itself (docs/alpha.md "Updates on
@@ -143,15 +149,14 @@ export function createWindowsInstaller(
     // The new copy follows the channel it came from, as on Linux. The marker
     // is written before the hand-over, since the installer runs after this
     // program ends: a marker that cannot be written hands nothing over, and
-    // a hand-over that fails puts the earlier marker back.
-    const marker = join(options.dataRoot, UPDATE_CHANNEL_MARKER);
+    // a hand-over that fails puts the earlier marker back, or says it could not.
     let earlier: string | null = null;
     let remembered = false;
     try {
       await downloadChecked(options.fetchImpl, plan.download, file);
       await beforeReplace?.();
-      earlier = await readFile(marker, "utf8").catch(() => null);
       try {
+        earlier = await readChannelMarker(options.dataRoot);
         await rememberUpdateChannel(options.dataRoot, plan.channel, plan.version);
       } catch {
         throw new UpdateInstallProblem(
@@ -161,12 +166,17 @@ export function createWindowsInstaller(
       remembered = true;
       await handOver(file);
     } catch (caught) {
-      if (remembered) {
-        await (earlier === null ? rm(marker, { force: true }) : writeFile(marker, earlier)).catch(
-          () => undefined,
-        );
-      }
       await rm(folder, { recursive: true, force: true }).catch(() => undefined);
+      if (remembered) {
+        try {
+          await restoreChannelMarker(options.dataRoot, earlier);
+        } catch {
+          const said = caught instanceof UpdateInstallProblem ? `${caught.message} ` : "";
+          throw new UpdateInstallProblem(
+            `${said}Infinitary could not put back the update channel it followed before, so check the channel in Settings → General.`,
+          );
+        }
+      }
       throw caught;
     }
     options.end();

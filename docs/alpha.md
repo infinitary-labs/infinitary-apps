@@ -134,7 +134,7 @@ A Windows installation updates through the same update reader, from the builds f
   The app downloads the installer into its data folder (`updates`), refuses bytes whose SHA-256 is not the published one, and saves the crew's work ("Saving work before an update" below).
   It then hands the installer to Windows PowerShell, which waits for the app's own process to end and starts the installer as a silent update (`--updated /S --force-run`; `createWindowsInstaller`, `src/core/update/windowsInstall.ts`).
   Windows ends every process a Task Scheduler task started when the task's command ends, so Windows PowerShell asks Windows' own process service (`Win32_Process.Create`) to start that wait, which then belongs to no task and outlives the command.
-  The app writes its channel marker with the version it hands over before the hand-over, since the installer runs after the app ends: a marker it cannot write hands nothing over, and a hand-over that fails puts the earlier marker back.
+  The app writes its channel marker with the version it hands over before the hand-over, since the installer runs after the app ends: a marker it cannot read or write hands nothing over, and a hand-over that fails puts the earlier marker back whole, or says it could not and asks the person to check the channel in Settings → General.
   Then it ends: a window quits, and a command ends with 75 as for any update (`docs/run.md`, "After an update").
   The installer replaces the copy for this person alone, with no administrator, keeps the data folder and the Task Scheduler tasks, which name the same program, and opens the new copy through its Start menu entry, whose window starts the command again.
 - **Who the installer trusts.**

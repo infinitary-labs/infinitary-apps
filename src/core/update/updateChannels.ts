@@ -139,7 +139,7 @@ export function buildsUrlOf(tap: TapNames): string {
  * marker after it installs an update, and an Arch or NixOS package carries
  * its own beside the app. On Windows the app writes it too, just before it
  * hands its installer over, and puts the earlier one back when the hand-over
- * fails (`windowsInstall.ts`; docs/alpha.md "Update channels").
+ * fails, or says it could not (`windowsInstall.ts`; docs/alpha.md "Update channels").
  */
 export const UPDATE_CHANNEL_MARKER = "update-channel.json";
 

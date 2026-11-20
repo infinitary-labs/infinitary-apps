@@ -381,6 +381,8 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       seenUpdate: (cardId, lifecycleId, updateId) =>
         invoke("inf:cards:seen-update", cardId, lifecycleId, updateId),
       thread: (cardId) => invoke("inf:cards:thread", cardId),
+      drafts: () => invoke("inf:cards:drafts"),
+      draft: (cardId, change) => invoke("inf:cards:draft", cardId, change),
       past: (cardId) => invoke("inf:cards:past", cardId),
       showPast: (cardId) => invoke("inf:cards:show-past", cardId),
       openPage: (cardId) => invoke("inf:cards:open-page", cardId),
@@ -399,6 +401,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
           invoke("inf:cards:reply", cardId, payload, submission),
         ),
       onThread: (listener) => subscribe("inf:cards:thread", listener),
+      onDraft: (listener) => subscribe("inf:cards:draft", listener),
       takeNotified: () => invoke("inf:cards:take-notified"),
       onNotified: (listener) => subscribe("inf:cards:notified", () => listener()),
     },

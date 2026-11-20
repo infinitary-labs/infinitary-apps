@@ -1,0 +1,66 @@
+import { z } from "zod";
+import { cardNotesSchema } from "./cardNotes";
+import { CARD_MAX_ANSWERS, CARD_REPLY_MAX_CHARS } from "./cards";
+import { frameAnswerSchema } from "./plugins/bridge";
+
+/**
+ * An open card's unsent draft, as the first mate's computer keeps it for
+ * every window that shows the card (docs/card-authoring.md, "Unsent picks
+ * follow you"): the picks in the card's body by question, the words in the
+ * card's own field and the notes waiting to go with them. A draft lasts as
+ * long as its card is open and is never read by an agent; nothing it holds
+ * is sent until the captain presses a button or sends a reply.
+ */
+
+/** The contract change that adds drafts (`src/shared/contract-changes/card-drafts.md`). */
+export const CARD_DRAFTS = "card-drafts";
+
+const cardIdSchema = z.string().min(1).max(256);
+
+/**
+ * One card's draft. `revision` counts the changes the card's draft took,
+ * from 1; a card with no draft reads at revision 0 with nothing in it.
+ */
+export const cardDraftSchema = z.strictObject({
+  cardId: cardIdSchema,
+  revision: z.number().int().nonnegative(),
+  /** The body's answers that a window changed, one per question name. */
+  answers: z.array(frameAnswerSchema).max(CARD_MAX_ANSWERS),
+  /** The words in the card's own field; empty for none. */
+  words: z.string().max(CARD_REPLY_MAX_CHARS),
+  /** The notes pointing at parts of the card, waiting to go with a reply. */
+  notes: cardNotesSchema,
+});
+export type CardDraft = z.infer<typeof cardDraftSchema>;
+
+/** Every open card's draft that holds anything, as a window reads them at each welcome. */
+export const cardDraftsSchema = z.array(cardDraftSchema);
+
+/**
+ * What a window changed in a card's draft since it last heard the draft at
+ * `since`. Each part named takes its new value, unless another window
+ * changed that same part after `since`: then the newer value stays.
+ */
+export const cardDraftChangeSchema = z.strictObject({
+  since: z.number().int().nonnegative(),
+  answers: z.array(frameAnswerSchema).max(CARD_MAX_ANSWERS).optional(),
+  words: z.string().max(CARD_REPLY_MAX_CHARS).optional(),
+  notes: cardNotesSchema.optional(),
+});
+export type CardDraftChange = z.infer<typeof cardDraftChangeSchema>;
+
+/**
+ * The change's answer: the card's draft as it now stands, or why nothing was
+ * kept - the card is no longer open, or its answers would pass what a press
+ * may send (`CARD_ANSWERS_MAX_BYTES`).
+ */
+export const cardDraftChangedSchema = z.union([
+  z.strictObject({ draft: cardDraftSchema }),
+  z.strictObject({ refused: z.enum(["closed", "too-large"]) }),
+]);
+export type CardDraftChanged = z.infer<typeof cardDraftChangedSchema>;
+
+/** A card with nothing in its draft yet. */
+export function emptyDraft(cardId: string): CardDraft {
+  return { cardId, revision: 0, answers: [], words: "", notes: [] };
+}

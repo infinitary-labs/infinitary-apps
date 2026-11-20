@@ -1,3 +1,4 @@
+import { type CardDraft, emptyDraft } from "@shared/cardDrafts";
 import { DEFAULT_SAVED_KEYMAP } from "@shared/keymap";
 import { DEFAULT_KEY_REMINDERS } from "@shared/keyReminders";
 import { frameMountUrl } from "@shared/plugins/frameDocument";
@@ -61,6 +62,12 @@ function homeAnswers({ plain, asked }: FreshHomeAnswers): Answers {
     subscribe: () => () => {},
   });
   let mounts = 0;
+  const drafts = new Map(
+    ((plain as Answers)["inf:cards:drafts"] as CardDraft[] | undefined)?.map((draft) => [
+      draft.cardId,
+      draft,
+    ]) ?? [],
+  );
   const askedAnswers = Object.fromEntries(
     Object.entries(asked).map(([channel, byRequest]) => [
       channel,
@@ -95,5 +102,23 @@ function homeAnswers({ plain, asked }: FreshHomeAnswers): Answers {
     "inf:frames:unmount": { ok: true },
     // What the window tells the core at startup, accepted as the core accepts it.
     "inf:plugins:personal:mounts": { ok: true },
+    // A card's unsent draft (docs/card-authoring.md, "Unsent picks follow
+    // you"), kept as the core keeps it for the one window a browser test
+    // draws: no other window changes a part, so every part the window sends
+    // is taken at the next revision.
+    "inf:cards:draft": (cardId, change) => {
+      const held = drafts.get(cardId) ?? emptyDraft(cardId);
+      const answers = new Map(held.answers.map((answer) => [answer.name, answer]));
+      for (const answer of change.answers ?? []) answers.set(answer.name, answer);
+      const draft: CardDraft = {
+        cardId,
+        revision: held.revision + 1,
+        answers: [...answers.values()],
+        words: change.words ?? held.words,
+        notes: change.notes ?? held.notes,
+      };
+      drafts.set(cardId, draft);
+      return { draft };
+    },
   };
 }

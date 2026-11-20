@@ -181,6 +181,10 @@ Each reading is whole and the next one replaces it, so a replay that skips the o
 A phone is sent none of them, since it never shows them, so they never wake it while crew work runs.
 A view older than major 16 whose hello does not list the change is sent each as a `push` under the newest number already sent, as with streamed events; a major that breaks views removes that.
 
+An open card's unsent draft is live too (`card-drafts`, `docs/card-authoring.md` "Unsent picks follow you"): each change the home took goes on `inf:cards:draft` as a `live` frame, the card's whole draft.
+A window reads every draft again at each welcome (`inf:cards:drafts`), so a frame it missed while out of reach leaves nothing behind.
+A device whose hello does not list the change, a phone among them, is sent none.
+
 ## Closing
 
 | Code | Name | When |

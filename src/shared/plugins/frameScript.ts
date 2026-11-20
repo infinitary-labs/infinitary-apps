@@ -449,6 +449,9 @@ ${FRAME_EXPAND_SCRIPT}${FRAME_SOUND_SCRIPT}
       if (hold) hold.form = true;
       else if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", startForm);
       else startForm();
+    } else if (data.type === "fill") {
+      // Another window's change to the draft: applied to the body on screen.
+      if (form.on && !form.locked && Array.isArray(data.answers)) fillForm(data.answers, true);
     } else if (data.type === "tasks") {
       var known = {};
       var any = false;
@@ -816,4 +819,4 @@ ${FRAME_KEYBOARD_SCRIPT}
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-iFsWKjoCYRKPlWDOQeKJU0waV/6OLCh3l7ZRscKEbd4=";
+export const FRAME_BRIDGE_SHA256 = "sha256-f7VDkCvBU67m6YAZrJTykQxq7MMi+0noAnavToNbm+M=";

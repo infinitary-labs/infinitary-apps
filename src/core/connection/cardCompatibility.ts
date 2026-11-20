@@ -1,4 +1,5 @@
 import { withoutSkipped } from "@shared/cardAnswerLines";
+import { CARD_DRAFTS } from "@shared/cardDrafts";
 import { type CardNote, noteText } from "@shared/cardNotes";
 import type { Spelling } from "@shared/codeNames";
 import { contractChange } from "./contractChanges";
@@ -12,6 +13,9 @@ export const AMBIENT_STYLE = contractChange("ambient-style");
 
 /** A skipped question's answer marked as a skip (`card-answer-skipped.md`). */
 export const CARD_ANSWER_SKIPPED = contractChange("card-answer-skipped");
+
+/** Each open card's unsent draft, read and followed by every window (`card-drafts.md`). */
+export const CARD_DRAFTS_CHANGE = contractChange(CARD_DRAFTS);
 
 /** Strict older desktops need fields removed; readers without annotations keep a readable note. */
 export function threadLinesFor(

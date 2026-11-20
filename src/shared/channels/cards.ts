@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cardDraftChangedSchema, cardDraftChangeSchema, cardDraftsSchema } from "../cardDrafts";
 import {
   cardFilePieceSchema,
   cardFileSavedSchema,
@@ -116,6 +117,24 @@ export const cardChannels = {
     reach: "views",
     request: z.tuple([z.string()]),
     response: cardThreadSchema,
+  },
+  // Each open card's unsent draft (`card-drafts.md`; docs/card-authoring.md,
+  // "Unsent picks follow you"): a window reads every one at each welcome,
+  // then follows the `inf:cards:draft` live frame.
+  "inf:cards:drafts": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([]),
+    response: cardDraftsSchema,
+  },
+  // What a window changed in one card's draft since it last heard it.
+  "inf:cards:draft": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().min(1).max(256), cardDraftChangeSchema]),
+    response: cardDraftChangedSchema,
   },
   // A card picture's bytes by its file name (docs/view.md): how a view shows
   // the home's own copy of a picture a card names, which its frame asks of

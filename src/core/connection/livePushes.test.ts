@@ -1,3 +1,4 @@
+import { CARD_DRAFTS, type CardDraft } from "@shared/cardDrafts";
 import type { ComputerResourcesView } from "@shared/resources";
 import { expect, it } from "vitest";
 import { connectClient } from "../../../tests/helpers/connectionClient";
@@ -138,4 +139,35 @@ it("sends the computers' readings outside the numbering, and none to a phone", a
     [cursor.seq, "inf:models:changed"],
     [cursor.seq + 1, "inf:models:changed"],
   ]);
+});
+
+// INF-5446: a card's unsent picks and words follow the captain between windows; each change the
+// home takes goes to every window that lists the change, outside the numbering.
+it("sends a card's draft live to a window whose hello lists the change, and none to one that does not", async () => {
+  const at = await home();
+  const grant = await at.join();
+  const listing = await connectClient(await at.join(), { changes: [CARD_DRAFTS] });
+  const other = await connectClient(await at.join(), { changes: [] });
+  const first = await connectClient(grant);
+  changed(at.events);
+  await first.push(() => true);
+  const cursor = first.cursor();
+
+  const draft: CardDraft = {
+    cardId: "card-1",
+    revision: 3,
+    answers: [{ name: "harbour", values: ["south"], labels: ["South Basin"], changed: true }],
+    words: "After the morning tide",
+    notes: [],
+  };
+  at.events.emit("inf:cards:draft", draft);
+  changed(at.events);
+
+  for (const view of [listing, other]) await view.push((push) => push.seq === cursor.seq + 1);
+  expect(listing.lives).toEqual([{ channel: "inf:cards:draft", payload: draft }]);
+  // It takes no number, so a dropped window's place in the journal never moves for it.
+  expect(listing.pushes.map((push) => push.channel)).not.toContain("inf:cards:draft");
+  expect(other.lives).toEqual([]);
+  expect(other.pushes.map((push) => push.channel)).not.toContain("inf:cards:draft");
+  await first.close();
 });

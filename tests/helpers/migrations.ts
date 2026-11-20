@@ -120,7 +120,11 @@ export const MIGRATION_71_TABLE =
 export const TASK_REFERENCES_TABLE =
   "CREATE TABLE task_references (task_id TEXT NOT NULL, kind TEXT NOT NULL, ref TEXT NOT NULL, target_id TEXT, actor TEXT, recorded_at INTEGER, PRIMARY KEY (task_id, kind));";
 /** A rule's notes (docs/automation.md, "A rule's notes"), undone: its one table. */
-export const REVERSE_SCHEDULE_NOTES = "DROP TABLE IF EXISTS schedule_notes;\n";
+/** The card drafts migration (the newest), undone: its two triggers on `cards`, then its table. */
+export const REVERSE_CARD_DRAFTS =
+  "DROP TRIGGER IF EXISTS card_drafts_resolved;\nDROP TRIGGER IF EXISTS card_drafts_removed;\nDROP TABLE IF EXISTS card_drafts;\n";
+
+export const REVERSE_SCHEDULE_NOTES = `${REVERSE_CARD_DRAFTS}DROP TABLE IF EXISTS schedule_notes;\n`;
 /** INF-3108's record of the close controls it gave back, undone: its one table. */
 export const REVERSE_CLOSE_CONTROL_RESTORE = "DROP TABLE IF EXISTS card_close_control_restore;\n";
 /** INF-3898 piece 2's command mark on a card's resolution, undone: the `cards` column. */

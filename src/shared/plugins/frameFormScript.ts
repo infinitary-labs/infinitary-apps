@@ -346,23 +346,36 @@ ${FRAME_QUESTION_SCRIPT}
     }
     post(message);
   }
-  function fillForm(answers) {
+  // The question the captain is in now: a control of it, or its Something
+  // else field, holds focus in a document that has it.
+  function holdsFocus(group) {
+    var focused = document.activeElement;
+    if (!focused || !document.hasFocus()) return false;
+    if (group.controls.indexOf(focused) >= 0) return true;
+    return writeInRows(group).some(function (row) { return form.fields.get(row) === focused; });
+  }
+  // A draft by name: a new document's (\`live\` false), or another window's
+  // change to the body on screen (\`live\` true), which leaves the question
+  // the captain is in as it is and takes back a field emptied to its proposal.
+  function fillForm(answers, live) {
     var byName = {};
     questions().forEach(function (group) { byName[group.name] = group; });
     var touched = [];
     answers.forEach(function (answer) {
       if (!answer || !Array.isArray(answer.values)) return;
       if (answer.json) {
-        if (typeof answer.values[0] === "string") form.staged[answer.name] = answer.values[0];
+        // A preview's settings live in its own script, which reads them only at its birth.
+        if (!live && typeof answer.values[0] === "string") form.staged[answer.name] = answer.values[0];
         return;
       }
       var group = byName[answer.name];
       if (!group || group.staged) return;
+      if (live && holdsFocus(group)) return;
       // A skip is the card's own proposal: a live form leaves the question
       // untouched, so it still shows and sends its Default; a past card
       // draws the Default the skip sent.
       if (answer.skipped && !form.locked) return;
-      if (!answer.changed && group.controls.every(function (control) { var kind = kindOf(control); return kind === "text" || kind === "hidden"; })) return;
+      if (!live && !answer.changed && group.controls.every(function (control) { var kind = kindOf(control); return kind === "text" || kind === "hidden"; })) return;
       var values = answer.values.map(String);
       // A restored change the captain made is still the captain's: an
       // emptied checkbox question stays touched, so its default comes back

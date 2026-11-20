@@ -400,6 +400,8 @@ export class ViewBackend {
         // The computers' live readings, outside the numbering.
         if (channel === "inf:computers:resources")
           options.broadcast("inf:computers:resources", payload);
+        // An open card's draft another window changed, outside the numbering.
+        if (channel === "inf:cards:draft") options.broadcast("inf:cards:draft", payload);
       },
       // Counted before the state turns in reach, and said with it, so the
       // window goes from out of reach to catching up with no moment of live

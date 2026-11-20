@@ -272,9 +272,10 @@ const answerCount = z.number().int().nonnegative().max(CARD_MAX_ANSWERS);
  * `CARD_WRITTEN_MAX`. Only the app's own Anything else? box, which is host
  * chrome, writes more (`withAnythingElse`).
  */
-const frameAnswerSchema = cardAnswerSchema.extend({
+export const frameAnswerSchema = cardAnswerSchema.extend({
   written: z.string().min(1).max(CARD_WRITTEN_MAX).optional(),
 });
+export type FrameAnswer = z.infer<typeof frameAnswerSchema>;
 
 export const frameAnswersSchema = z.object({
   answered: answerCount,
@@ -650,6 +651,12 @@ export type HostMessage =
       /** A playable preview's body (`isPreviewBody`): its questions are settings, so none is tagged Default. */
       preview?: true;
     }
+  /**
+   * Another window changed these answers of the card's draft (docs/card-authoring.md,
+   * "Unsent picks follow you"): the bridge applies them by name to the body on screen,
+   * leaving the question that holds focus in a focused document as it is.
+   */
+  | { fm: typeof FRAME_BRIDGE_VERSION; type: "fill"; answers: CardAnswer[] }
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "collect"; seq: number; focusUnpicked?: boolean }
   /**
    * A step through the body's questions (docs/keyboard.md, "Moving between a

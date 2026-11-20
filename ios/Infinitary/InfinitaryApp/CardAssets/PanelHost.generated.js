@@ -92962,23 +92962,36 @@ ${FRAME_QUESTION_SCRIPT}
     }
     post(message);
   }
-  function fillForm(answers) {
+  // The question the captain is in now: a control of it, or its Something
+  // else field, holds focus in a document that has it.
+  function holdsFocus(group) {
+    var focused = document.activeElement;
+    if (!focused || !document.hasFocus()) return false;
+    if (group.controls.indexOf(focused) >= 0) return true;
+    return writeInRows(group).some(function (row) { return form.fields.get(row) === focused; });
+  }
+  // A draft by name: a new document's (\`live\` false), or another window's
+  // change to the body on screen (\`live\` true), which leaves the question
+  // the captain is in as it is and takes back a field emptied to its proposal.
+  function fillForm(answers, live) {
     var byName = {};
     questions().forEach(function (group) { byName[group.name] = group; });
     var touched = [];
     answers.forEach(function (answer) {
       if (!answer || !Array.isArray(answer.values)) return;
       if (answer.json) {
-        if (typeof answer.values[0] === "string") form.staged[answer.name] = answer.values[0];
+        // A preview's settings live in its own script, which reads them only at its birth.
+        if (!live && typeof answer.values[0] === "string") form.staged[answer.name] = answer.values[0];
         return;
       }
       var group = byName[answer.name];
       if (!group || group.staged) return;
+      if (live && holdsFocus(group)) return;
       // A skip is the card's own proposal: a live form leaves the question
       // untouched, so it still shows and sends its Default; a past card
       // draws the Default the skip sent.
       if (answer.skipped && !form.locked) return;
-      if (!answer.changed && group.controls.every(function (control) { var kind = kindOf(control); return kind === "text" || kind === "hidden"; })) return;
+      if (!live && !answer.changed && group.controls.every(function (control) { var kind = kindOf(control); return kind === "text" || kind === "hidden"; })) return;
       var values = answer.values.map(String);
       // A restored change the captain made is still the captain's: an
       // emptied checkbox question stays touched, so its default comes back
@@ -94213,6 +94226,9 @@ ${FRAME_EXPAND_SCRIPT}${FRAME_SOUND_SCRIPT}
       if (hold) hold.form = true;
       else if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", startForm);
       else startForm();
+    } else if (data.type === "fill") {
+      // Another window's change to the draft: applied to the body on screen.
+      if (form.on && !form.locked && Array.isArray(data.answers)) fillForm(data.answers, true);
     } else if (data.type === "tasks") {
       var known = {};
       var any = false;
@@ -94573,7 +94589,7 @@ ${FRAME_KEYBOARD_SCRIPT}
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-iFsWKjoCYRKPlWDOQeKJU0waV/6OLCh3l7ZRscKEbd4=";
+  const FRAME_BRIDGE_SHA256 = "sha256-f7VDkCvBU67m6YAZrJTykQxq7MMi+0noAnavToNbm+M=";
   const APP_FRAME_SCHEME = "app-frame";
   const FRAME_SANDBOX_TOKENS = ["allow-scripts"];
   const FRAME_SANDBOX = FRAME_SANDBOX_TOKENS.join(" ");
@@ -102631,6 +102647,17 @@ ${FRAME_KEYBOARD_SCRIPT}
         });
         this.port.post({ fm: V, type: "collect", seq, focusUnpicked });
       });
+    }
+    /**
+     * Another window's change to the card's draft (docs/card-authoring.md,
+     * "Unsent picks follow you"): the bridge applies the answers by name to the
+     * body on screen. False for a mount that watches no form, a read-only
+     * body, or a document not yet born, which takes the draft at its birth.
+     */
+    fill(answers) {
+      if (this.disposed || !this.ready || !this.spec.form || this.spec.form.readOnly) return false;
+      this.port.post({ fm: V, type: "fill", answers });
+      return true;
     }
     /**
      * The host just gave the frame focus back (docs/keyboard.md, "Cards and

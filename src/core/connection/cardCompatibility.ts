@@ -12,6 +12,14 @@ export const AMBIENT_PAUSE = contractChange("ambient-pause");
 export const AMBIENT_STYLE = contractChange("ambient-style");
 export const AMBIENT_AWAY = contractChange("ambient-away");
 
+/**
+ * The panel read `settings.current` (`settings-current.md`). A view without
+ * it decodes a panel's reads as a closed list, so `unreadLook` names the read
+ * and `lookFor` leaves out each panel that declares it.
+ */
+export const SETTINGS_CURRENT = contractChange("settings-current");
+const SETTINGS_READ = "settings.current";
+
 /** A skipped question's answer marked as a skip (`card-answer-skipped.md`). */
 export const CARD_ANSWER_SKIPPED = contractChange("card-answer-skipped");
 
@@ -99,9 +107,26 @@ export function threadLinesFor(
 export function lookFor(channel: string, value: unknown, unread: readonly string[]): unknown {
   if (unread.length === 0 || !value || typeof value !== "object") return value;
   if (channel === "inf:settings:appearance:get") return without(value, unread);
+  if (channel === "inf:plugins:personal:list" || channel === "inf:plugins:personal") {
+    return unread.includes(SETTINGS_READ) ? panelsWithoutSettingsRead(value) : value;
+  }
   if (channel !== "inf:shell:preferences") return value;
   const look = value as Record<string, unknown>;
   return { ...look, appearance: without(look.appearance, unread) };
+}
+
+/** A panel snapshot without the panels (and drafts) that read settings. */
+function panelsWithoutSettingsRead(value: object): unknown {
+  const keep = (panel: { reads?: readonly string[] }) => !panel.reads?.includes(SETTINGS_READ);
+  const snapshot = value as {
+    extensions?: { reads?: string[] }[];
+    drafts?: { reads?: string[] }[];
+  };
+  return {
+    ...snapshot,
+    ...(snapshot.extensions ? { extensions: snapshot.extensions.filter(keep) } : {}),
+    ...(snapshot.drafts ? { drafts: snapshot.drafts.filter(keep) } : {}),
+  };
 }
 
 function without(appearance: unknown, unread: readonly string[]): unknown {
@@ -197,7 +222,9 @@ export function cardPushFor(
 /** A look pushed to a view, without the choices it cannot read (`lookFor`). */
 function lookPushFor(entry: JournalEntry, spelling: Spelling, unread: readonly string[]): string {
   const spelled = pushFrameIn(entry, spelling);
-  if (unread.length === 0 || entry.channel !== "inf:shell:preferences") return spelled;
+  const looks =
+    entry.channel === "inf:shell:preferences" || entry.channel === "inf:plugins:personal";
+  if (unread.length === 0 || !looks) return spelled;
   const frame = JSON.parse(spelled);
   return JSON.stringify({ ...frame, payload: lookFor(entry.channel, frame.payload, unread) });
 }

@@ -1,3 +1,4 @@
+import { type PersonalExtensionView, personalSnapshotSchema } from "@shared/personal/manifest";
 import {
   appearanceSchema,
   DEFAULT_SHELL_PREFERENCES,
@@ -229,6 +230,68 @@ it("leaves keep playing while away out of the look a view without ambient-away i
   });
   expect((await current.push((push) => push.channel === "inf:shell:preferences")).payload).toEqual(
     look,
+  );
+  await older.close();
+  await current.close();
+});
+
+// INF-5326's piece 4 review (`settings-current`): a view whose hello does not
+// list the change reads a panel's reads as a closed list, so a panel that
+// declares `settings.current` would make it refuse the whole panel list. Its
+// home leaves those panels, and drafts, out of the list it answers and pushes;
+// the other panels arrive, and a view naming the change reads every panel.
+it("leaves the panels that read settings out of the panel list a view without settings-current is pushed or answered", async () => {
+  const notes: PersonalExtensionView = {
+    id: "notes",
+    source: "yours",
+    by: null,
+    title: "Notes",
+    placement: { x: "left", y: "top" },
+    order: 100,
+    size: "content",
+    present: true,
+    ownPresence: false,
+    moves: false,
+    running: false,
+    reads: ["tasks.board"],
+    sql: [],
+    panel: null,
+    frame: { version: "0".repeat(16) },
+    server: null,
+    cardViews: [],
+    cards: {},
+    header: [],
+    commands: [],
+    error: null,
+  };
+  const music: PersonalExtensionView = {
+    ...notes,
+    id: "music",
+    title: "Music",
+    reads: ["tasks.board", "settings.current"],
+  };
+  const panels = personalSnapshotSchema.parse({
+    extensions: [notes, music],
+    drafts: [{ ...music, id: "music-being-built", running: true }],
+  });
+  const at = await home({
+    dispatch: (async (channel) => {
+      if (channel === "inf:plugins:personal:list") return panels;
+      throw new Error("Unexpected request");
+    }) as CoreDispatch,
+  });
+  const grant = await at.join();
+  const older = await connectClient(grant, { changes: ["ambient-music", "ambient-pause"] });
+  const current = await connectClient(grant, { changes: ["settings-current"] });
+  const withoutSettings = { extensions: [notes], drafts: [] };
+  expect(await older.invoke("inf:plugins:personal:list", [])).toEqual(withoutSettings);
+  expect(await current.invoke("inf:plugins:personal:list", [])).toEqual(panels);
+  at.events.emit("inf:plugins:personal", panels);
+  expect((await older.push((push) => push.channel === "inf:plugins:personal")).payload).toEqual(
+    withoutSettings,
+  );
+  expect((await current.push((push) => push.channel === "inf:plugins:personal")).payload).toEqual(
+    panels,
   );
   await older.close();
   await current.close();

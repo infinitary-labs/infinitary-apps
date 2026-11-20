@@ -153,10 +153,43 @@ describe("the core, driven with no Electron in the process", () => {
         enabled: (await core.dispatch("inf:shell:preferences", [])).panels.enabled,
       },
     });
-    // Every readable line at once carries none of the rest of what it read.
+    // Every readable line at once is exactly its panel value: none of what sits
+    // beside it in the answer it was read from (a hidden panel's id, the
+    // language, the cost limit's recent tasks) reaches a panel.
+    const notifications = await core.dispatch("inf:settings:notifications:get", []);
+    const resources = await core.dispatch("inf:settings:personal-resources:get", []);
+    const limit = await core.dispatch("inf:settings:cost-limit:get", []);
+    await core.dispatch("inf:settings:appearance:set", [
+      {
+        ...(await core.dispatch("inf:settings:appearance:get", [])),
+        language: "fr",
+        fonts: { reading: "Iowan Old Style" },
+        washStrength: 30,
+        size: 110,
+        showCrewModelNames: false,
+      },
+    ]);
+    await core.dispatch("inf:settings:notifications:set", [false]);
+    await core.dispatch("inf:settings:personal-resources:set", [true]);
+    await core.dispatch("inf:settings:cost-limit:set", [{ usd: 75 }]);
     const all = await core.dispatch("inf:settings:current", [[...PANEL_SETTING_NAMES]]);
-    expect(Object.keys(all)).toEqual([...PANEL_SETTING_NAMES]);
-    expect(JSON.stringify(all)).not.toContain("activity");
+    expect(all).toEqual({
+      theme: { theme: "light" },
+      font: { fonts: { reading: "Iowan Old Style" } },
+      "window-wash": { strength: 30 },
+      "window-size": { size: 110 },
+      "crew-model-names": { visible: false },
+      "ambient-music": { on: true, paused: true, style: "quiet-cove", volume: 25 },
+      notifications: { enabled: false },
+      "cost-limit": { limit: { usd: 75 } },
+      "personal-resources": { enabled: true },
+      "panels-switch": {
+        enabled: (await core.dispatch("inf:shell:preferences", [])).panels.enabled,
+      },
+    });
+    await core.dispatch("inf:settings:notifications:set", [notifications]);
+    await core.dispatch("inf:settings:personal-resources:set", [resources]);
+    await core.dispatch("inf:settings:cost-limit:set", [limit.limit]);
     // A line with no panel value is refused, and so is one the catalog lacks.
     for (const name of ["project-settings", "firstmate-account", "dictation", "nothing-at-all"])
       await expect(core.dispatch("inf:settings:current", [[name]])).rejects.toThrow(

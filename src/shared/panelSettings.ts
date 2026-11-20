@@ -1,14 +1,17 @@
 import type { ActionName } from "./actions";
-import type { AppCostLimitView } from "./costLimit";
 import type { PanelSettingName } from "./panelSettingNames";
 import {
-  type Appearance,
-  ambientStyleOf,
-  DEFAULT_AMBIENT_VOLUME,
-  DEFAULT_APPEARANCE,
-  type ShellPreferences,
-  type UiSize,
-} from "./preferences";
+  ambientMusicValue,
+  ambientPausedValue,
+  costLimitValue,
+  crewModelNamesValue,
+  enabledValue,
+  fontsValue,
+  panelsSwitchValue,
+  sizeValue,
+  themeValue,
+  washValue,
+} from "./settingValues";
 
 /**
  * Why an action catalog line has no panel value, so `settings.current`
@@ -34,32 +37,19 @@ export type PanelSetting =
   | { value: (current: unknown) => Record<string, unknown> }
   | { unreadable: PanelUnreadable };
 
-const look = (current: unknown) => current as Appearance;
-/** The app's own look sets both, so a panel never reads either as missing. */
-const DEFAULT_WASH = DEFAULT_APPEARANCE.washStrength as number;
-const DEFAULT_SIZE = DEFAULT_APPEARANCE.size as UiSize;
-
+// Each panel value is the line's own `readValue` projector (src/shared/settingValues.ts).
 const readable = {
-  theme: { value: (c) => ({ theme: look(c).theme }) },
-  font: { value: (c) => ({ fonts: look(c).fonts ?? {} }) },
-  "window-wash": {
-    value: (c) => ({ strength: look(c).washStrength ?? DEFAULT_WASH }),
-  },
-  "window-size": { value: (c) => ({ size: look(c).size ?? DEFAULT_SIZE }) },
-  "crew-model-names": { value: (c) => ({ visible: look(c).showCrewModelNames ?? true }) },
+  theme: { value: themeValue },
+  font: { value: fontsValue },
+  "window-wash": { value: washValue },
+  "window-size": { value: sizeValue },
+  "crew-model-names": { value: crewModelNamesValue },
   // A momentary hush stays inside the window; a pause is saved, so it reads.
-  "ambient-music": {
-    value: (c) => ({
-      on: look(c).ambientMusic ?? false,
-      paused: look(c).ambientPaused ?? false,
-      style: ambientStyleOf(look(c).ambientStyle),
-      volume: look(c).ambientVolume ?? DEFAULT_AMBIENT_VOLUME,
-    }),
-  },
-  notifications: { value: (c) => ({ enabled: c as boolean }) },
-  "cost-limit": { value: (c) => ({ limit: (c as AppCostLimitView).limit }) },
-  "personal-resources": { value: (c) => ({ enabled: c as boolean }) },
-  "panels-switch": { value: (c) => ({ enabled: (c as ShellPreferences).panels.enabled }) },
+  "ambient-music": { value: (c) => ({ ...ambientMusicValue(c), ...ambientPausedValue(c) }) },
+  notifications: { value: enabledValue },
+  "cost-limit": { value: costLimitValue },
+  "personal-resources": { value: enabledValue },
+  "panels-switch": { value: panelsSwitchValue },
 } satisfies Record<PanelSettingName, PanelSetting>;
 
 /** The value each readable line answers, as the core builds it. */

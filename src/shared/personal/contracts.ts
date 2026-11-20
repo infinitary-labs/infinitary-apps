@@ -811,7 +811,9 @@ export type PanelKnowledgeDirectionRead =
 /**
  * The app settings a panel may read through `settings.current`, by their
  * action catalog names, each with the value it delivers. Any other setting
- * is unreadable: asking for it throws.
+ * is unreadable: the host refuses the read, the panel's console says so, and
+ * the listener is never called. That differs from a read the manifest does
+ * not declare, which throws at the call.
  */
 export type PanelSettingValues = {
   theme: { theme: "dark" | "light" };

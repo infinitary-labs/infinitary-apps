@@ -16,6 +16,7 @@ import { hostPlatform } from "@core/platform";
 import type { FreshAuthentication } from "@core/secrets/approvals";
 import { SIGN_IN_RETURN } from "@core/signInReturns";
 import type { UpdateChecker } from "@core/update/updateChecker";
+import { ACTIONS } from "@shared/actions";
 import {
   type FoldedInto16,
   hasSince16,
@@ -37,6 +38,8 @@ import {
   signInEndedSchema,
   signInPageSchema,
 } from "@shared/ipc";
+import type { PanelSettingName } from "@shared/panelSettingNames";
+import { panelSettingsNow } from "@shared/panelSettings";
 import { personalSnapshotSchema } from "@shared/personal/manifest";
 import { type ShellPreferences, shellPreferencesSchema } from "@shared/preferences";
 import { HOME_GOODBYE_LIVE } from "@shared/standby";
@@ -549,6 +552,8 @@ export class ViewBackend {
     viewer?: BrowserViewer,
   ): Promise<InvokeResponse<C>> {
     if (OWN_LOOK.has(channel)) return (await this.ownLook(channel, rawArgs)) as InvokeResponse<C>;
+    if (channel === "inf:settings:current")
+      return (await this.settingsNow(rawArgs)) as InvokeResponse<C>;
     if (OWN_APP.has(channel)) return (await this.ownApp(channel, rawArgs)) as InvokeResponse<C>;
     if (viewer && isBrowserWatchChannel(channel))
       return (await this.browsers.view(channel, rawArgs, viewer)) as InvokeResponse<C>;
@@ -753,6 +758,24 @@ export class ViewBackend {
   /** A first mate there that is known, from its welcome, not to have such an addition. */
   private homeLacks(name: FoldedInto16): boolean {
     return this.link.state().homeChanges !== null && !this.homeHas(name);
+  }
+
+  /**
+   * A panel's `settings.current` here: a line this Mac's own look holds
+   * (`OWN_LOOK`) is read from it, as this window shows it, and only the rest
+   * is asked of the other Mac.
+   */
+  private async settingsNow(rawArgs: unknown[]): Promise<unknown> {
+    const [names] = parseInvokeRequest("inf:settings:current", rawArgs);
+    const ownLine = (name: PanelSettingName) =>
+      OWN_LOOK.has(ACTIONS[name].current as CoreInvokeChannel);
+    const there = names.filter((name) => !ownLine(name));
+    const fromHome =
+      there.length > 0 ? ((await this.link.invoke("inf:settings:current", [there])) as object) : {};
+    const here = await panelSettingsNow(names.filter(ownLine), (name) =>
+      this.ownLook(ACTIONS[name].current as CoreInvokeChannel, []),
+    );
+    return { ...fromHome, ...here };
   }
 
   private async ownLook(channel: CoreInvokeChannel, rawArgs: unknown[]): Promise<unknown> {

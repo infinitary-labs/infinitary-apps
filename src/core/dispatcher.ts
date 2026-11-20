@@ -961,6 +961,8 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     // line's own current answer, cut to its panel value (src/shared/panelSettings.ts).
     "inf:settings:current": (names) =>
       panelSettingsNow(names, async (name) => {
+        // The saved limit alone: the line's own answer also walks recent usage.
+        if (name === "cost-limit") return { limit: services.settings.getTaskCostLimit() };
         const current = ACTIONS[name].current;
         if (!current) throw new Error(`${name} holds no setting to read.`);
         return (handlers as unknown as Record<string, () => unknown>)[current]?.();

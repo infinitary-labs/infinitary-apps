@@ -83,6 +83,7 @@ Unknown values stay unknown in a read and in a view column (a count nobody recor
 - Personal panels query `v_usage_v1` through `sql`, taught by the seeded `usage` skill with the `token-watch` fixture.
 - A crewmate's card reads what its `emit_card` declared while it is open ([`../tests/e2e/card-live-reads.spec.ts`](../tests/e2e/card-live-reads.spec.ts)).
 - Panels read the app's settings through `settings.current`: each action catalog line's panel value (`PANEL_SETTINGS` in [`../src/shared/panelSettings.ts`](../src/shared/panelSettings.ts)), answered in core over `inf:settings:current`; a line without one, such as anything naming a project, computer or account, is refused.
+  A window on another computer reads the settings its own look holds from that look, and asks the first mate only for the rest (docs/view.md, "The switch and the layout").
 
 ## Checks
 

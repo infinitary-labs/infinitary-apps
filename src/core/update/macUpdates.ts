@@ -37,7 +37,9 @@ export type MacUpdateDriver = {
   ) => Promise<void>;
   /**
    * After consent, download and the crew's saved work; owns native
-   * signature verification and graceful shutdown. `stillWanted` is asked
+   * signature verification and graceful shutdown. It installs `version`
+   * alone: the one staged already, or the one whose archive it downloaded
+   * last, and refuses any other. `stillWanted` is asked
    * before native staging starts and again once staged, before shutdown;
    * false keeps the copy running and nothing quits. The install answers
    * `unstaged` when it was asked before staging, and `staged` once staged:
@@ -45,7 +47,7 @@ export type MacUpdateDriver = {
    * that version quits with no staging, and one of another version stages
    * it in its place. A release that quits never answers.
    */
-  install: (stillWanted?: () => boolean) => Promise<void | MacInstallKept>;
+  install: (version: string, stillWanted?: () => boolean) => Promise<void | MacInstallKept>;
 };
 
 /** Where an install that kept the copy running rests: nothing staged, or staged for the next start. */
@@ -295,7 +297,7 @@ export function createMacUpdateChecker(options: {
       }
       let kept: void | MacInstallKept;
       try {
-        kept = await options.driver.install(stillWanted);
+        kept = await options.driver.install(wanted.version, stillWanted);
       } catch (error) {
         // Nothing replaced this copy: the work it stopped carries on.
         saving.release();

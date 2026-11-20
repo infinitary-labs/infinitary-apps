@@ -40,9 +40,10 @@ export function macUpdateStandIn(
     // A release stages and quits here to replace the copy and never answers; nothing is
     // replaced and nothing quits. Someone using the app by then keeps it running, as a
     // release does before it stages. A journey reads the version that reached this step.
-    install: (stillWanted) => {
+    install: (wanted, stillWanted) => {
       if (stillWanted && !stillWanted()) return Promise.resolve("unstaged");
-      if (installs && downloaded) appendFileSync(installs, `${downloaded}\n`);
+      if (downloaded !== wanted) return Promise.reject(new Error("The update offer changed."));
+      if (installs) appendFileSync(installs, `${wanted}\n`);
       return new Promise<void>(() => {});
     },
   };

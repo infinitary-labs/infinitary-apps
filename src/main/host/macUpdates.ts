@@ -74,6 +74,8 @@ export function createMacUpdateDriver(prepareRestart: () => Promise<void>): MacU
   let checked: UpdateCheckResult | null = null;
   /** The version Squirrel staged; it applies at the next start until another is staged in its place. */
   let nativeReady: string | undefined;
+  /** The version whose archive the last download finished and checked, the only one Squirrel can stage. */
+  let archive: string | undefined;
   let queue: Promise<unknown> = Promise.resolve();
   // The library shares the checked offer with downloadUpdate. Serialize checks so an older
   // channel request can never replace a newer request's provider or download target.
@@ -197,23 +199,27 @@ export function createMacUpdateDriver(prepareRestart: () => Promise<void>): MacU
         const onProgress = (info: { percent: number }) => progress(info.percent);
         signal.addEventListener("abort", cancel, { once: true });
         current.on("download-progress", onProgress);
+        archive = undefined;
         try {
           await current.downloadUpdate(cancellation);
+          archive = offer.version;
         } finally {
           signal.removeEventListener("abort", cancel);
           current.removeListener("download-progress", onProgress);
         }
       }),
-    install: async (stillWanted) => {
+    install: async (version, stillWanted) => {
       // Asked before native staging, which Squirrel applies at the next start whatever
       // follows: someone using the app by then keeps it running, with nothing staged.
       if (stillWanted && !stillWanted()) return "unstaged";
       const current = await engine();
       // With autoInstallOnAppQuit=false, the library has only downloaded and checksummed the
       // ZIP. Native staging (including signature verification) starts only after consent.
-      // The version downloaded last, which the core checked is the one it installs.
-      const target = checked?.updateInfo.version;
-      if (!target || nativeReady !== target)
+      // Squirrel's completion names no version, so only the archive downloaded last is staged,
+      // and only when it is the version asked for; a version staged already quits as it is.
+      if (nativeReady !== version && archive !== version)
+        throw new Error("The update offer changed.");
+      if (nativeReady !== version)
         await new Promise<void>((resolve, reject) => {
           const cleanup = () => {
             autoUpdater.removeListener("error", failed);
@@ -224,7 +230,7 @@ export function createMacUpdateDriver(prepareRestart: () => Promise<void>): MacU
             reject(error);
           };
           const ready = () => {
-            nativeReady = target;
+            nativeReady = version;
             cleanup();
             resolve();
           };

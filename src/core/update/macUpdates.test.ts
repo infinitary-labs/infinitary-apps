@@ -735,7 +735,7 @@ describe("following the version of the computer this copy controls", () => {
 
   it("stays running with nothing staged when someone uses the app just before staging, then restarts with no download", async () => {
     const f = following("0.8.3");
-    f.driver.install.mockImplementation(async (wanted) =>
+    f.driver.install.mockImplementation(async (_version, wanted) =>
       wanted && !wanted() ? "unstaged" : undefined,
     );
     expect(await f.follow("0.8.4")).toEqual({ ok: true });

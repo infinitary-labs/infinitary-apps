@@ -80,6 +80,14 @@ beforeEach(() => {
   state.downloaded.mockResolvedValue([]);
 });
 
+/** Checks the channel and downloads the version it offers, as the core does before an install. */
+async function downloadedOffer(driver: ReturnType<typeof createMacUpdateDriver>): Promise<string> {
+  const offer = await driver.check("alpha");
+  if (!offer) throw new Error("fixture must offer the next alpha");
+  await driver.download(offer, vi.fn(), new AbortController().signal);
+  return offer.version;
+}
+
 // INF-640: the Electron adapter never silently downloads, downgrades, installs on quit or bypasses shutdown.
 describe("Mac updater native effects", () => {
   // Captain's revised INF-643: a Homebrew-owned copy never reaches the native updater.
@@ -96,7 +104,7 @@ describe("Mac updater native effects", () => {
     await expect(driver.download(offer, vi.fn(), new AbortController().signal)).rejects.toThrow(
       "Homebrew",
     );
-    await expect(driver.install()).rejects.toThrow("Homebrew");
+    await expect(driver.install(offer.version)).rejects.toThrow("Homebrew");
     await expect(driver.check("stable")).rejects.toThrow("Homebrew");
     expect(state.downloaded).not.toHaveBeenCalled();
     expect(autoUpdater.checkForUpdates).not.toHaveBeenCalled();
@@ -190,7 +198,7 @@ describe("Mac updater native effects", () => {
       await disposed;
       order.push("settled");
     });
-    await driver.check("alpha");
+    const version = await downloadedOffer(driver);
     vi.mocked(autoUpdater.checkForUpdates).mockImplementation(() => {
       order.push("native check");
       autoUpdater.emit("update-downloaded");
@@ -198,7 +206,7 @@ describe("Mac updater native effects", () => {
     state.quit.mockImplementation(() => {
       order.push("replace");
     });
-    const installing = driver.install();
+    const installing = driver.install(version);
     await started;
     expect(order).toEqual(["native check", "shutdown"]);
     expect(state.quit).not.toHaveBeenCalled();
@@ -210,7 +218,7 @@ describe("Mac updater native effects", () => {
   it("does not shut down or replace after native signature verification fails", async () => {
     const shutdown = vi.fn();
     const driver = createMacUpdateDriver(shutdown);
-    await driver.check("alpha");
+    const version = await downloadedOffer(driver);
     let checked!: () => void;
     const nativeCheck = new Promise<void>((resolve) => {
       checked = resolve;
@@ -218,7 +226,7 @@ describe("Mac updater native effects", () => {
     vi.mocked(autoUpdater.checkForUpdates).mockImplementation(() => {
       checked();
     });
-    const installing = driver.install();
+    const installing = driver.install(version);
     const failed = expect(installing).rejects.toThrow("Signature refused");
     await nativeCheck;
     expect(() => {
@@ -234,7 +242,7 @@ describe("Mac updater native effects", () => {
   it("keeps running, staged, when someone came back while native staging was pending, and later quits with no staging", async () => {
     const shutdown = vi.fn(async () => {});
     const driver = createMacUpdateDriver(shutdown);
-    await driver.check("alpha");
+    const version = await downloadedOffer(driver);
     let checked!: () => void;
     const nativeCheck = new Promise<void>((resolve) => {
       checked = resolve;
@@ -243,7 +251,7 @@ describe("Mac updater native effects", () => {
       checked();
     });
     let nobodyHere = true;
-    const installing = driver.install(() => nobodyHere);
+    const installing = driver.install(version, () => nobodyHere);
     await nativeCheck;
     // A window came to the front while Squirrel staged.
     nobodyHere = false;
@@ -252,7 +260,7 @@ describe("Mac updater native effects", () => {
     expect(shutdown).not.toHaveBeenCalled();
     expect(state.quit).not.toHaveBeenCalled();
     nobodyHere = true;
-    await driver.install(() => nobodyHere);
+    await driver.install(version, () => nobodyHere);
     expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(1);
     expect(shutdown).toHaveBeenCalledOnce();
     expect(state.quit).toHaveBeenCalledOnce();
@@ -260,38 +268,59 @@ describe("Mac updater native effects", () => {
   it("stages a newer version in place of one staged and kept running, then quits on it", async () => {
     const shutdown = vi.fn(async () => {});
     const driver = createMacUpdateDriver(shutdown);
-    await driver.check("alpha");
+    const version = await downloadedOffer(driver);
     vi.mocked(autoUpdater.checkForUpdates).mockImplementation(() => {
       autoUpdater.emit("update-downloaded");
     });
     let nobodyHere = true;
-    const kept = driver.install(() => {
+    const kept = driver.install(version, () => {
       const answer = nobodyHere;
       nobodyHere = false;
       return answer;
     });
     expect(await kept).toBe("staged");
-    // A newer version is read and downloaded: the one staged is not it.
+    // A newer version is read but not downloaded: nothing stages it under the older one's name.
+    const newer = "0.5.0-alpha.11";
     state.checked.mockResolvedValue({
       isUpdateAvailable: true,
-      updateInfo: { version: "0.5.0-alpha.11" },
+      updateInfo: { version: newer },
       cancellationToken: { cancel: state.cancel },
     });
     await driver.check("alpha");
-    await driver.install(() => true);
+    await expect(driver.install(newer, () => true)).rejects.toThrow("offer changed");
+    expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(1);
+    // Once its archive is downloaded, it is staged in place of the older one and quits on it.
+    expect(await downloadedOffer(driver)).toBe(newer);
+    await driver.install(newer, () => true);
     expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(2);
+    expect(state.quit).toHaveBeenCalledOnce();
+  });
+
+  it("quits on the version staged already, whatever was checked since, and stages no other", async () => {
+    const shutdown = vi.fn().mockRejectedValueOnce(new Error("busy")).mockResolvedValue(undefined);
+    const driver = createMacUpdateDriver(shutdown);
+    const version = await downloadedOffer(driver);
+    vi.mocked(autoUpdater.checkForUpdates).mockImplementation(() => {
+      autoUpdater.emit("update-downloaded");
+    });
+    await expect(driver.install(version)).rejects.toThrow("update is ready");
+    // A read of another version since, or one that found nothing, changes nothing staged.
+    state.checked.mockResolvedValue(null);
+    await driver.check("alpha");
+    await driver.install(version);
+    expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(1);
     expect(state.quit).toHaveBeenCalledOnce();
   });
   it("does not stage twice when shutdown must be tried again", async () => {
     const shutdown = vi.fn().mockRejectedValueOnce(new Error("busy")).mockResolvedValue(undefined);
     const driver = createMacUpdateDriver(shutdown);
-    await driver.check("alpha");
+    const version = await downloadedOffer(driver);
     vi.mocked(autoUpdater.checkForUpdates).mockImplementation(() => {
       autoUpdater.emit("update-downloaded");
     });
-    await expect(driver.install()).rejects.toThrow("update is ready");
+    await expect(driver.install(version)).rejects.toThrow("update is ready");
     expect(state.quit).not.toHaveBeenCalled();
-    await driver.install();
+    await driver.install(version);
     expect(autoUpdater.checkForUpdates).toHaveBeenCalledTimes(1);
     expect(state.quit).toHaveBeenCalledTimes(1);
   });

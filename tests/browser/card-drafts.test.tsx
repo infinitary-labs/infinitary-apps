@@ -26,7 +26,8 @@ const BODY = `
     <label><input type="radio" name="harbour" value="north"> North Basin</label>
     <label><input type="radio" name="harbour" value="south"> South Basin</label>
   </fieldset>
-  <label><input id="tide" type="checkbox" name="tide" value="yes"> Keep the tide table</label>`;
+  <label><input id="tide" type="checkbox" name="tide" value="yes"> Keep the tide table</label>
+  <label>Notes for the crew <input id="note" type="text" name="crew_note"></label>`;
 const SOUTH: FrameAnswer = {
   name: "harbour",
   values: ["south"],
@@ -45,7 +46,7 @@ const checked = (value: string) =>
     value,
   );
 
-test("a card's unsent picks and words follow the captain between windows, sent once they pause", async () => {
+test("a card's unsent picks and words follow the captain between windows, sent once they pause, never over what is being typed", async () => {
   const home = subscribed(
     await seededHome({
       title: TITLE,
@@ -110,5 +111,50 @@ test("a card's unsent picks and words follow the captain between windows, sent o
   // Sent key by key, the second request would carry only the first key.
   await expect.poll(() => bridge.requests("inf:cards:draft").length).toBe(2);
   expect(bridge.requests("inf:cards:draft")[1]?.[1]?.words).toBe(LEFT_WORDS + TYPED);
+
+  // Section: another window's words wait while this window's field holds focus.
+  expect(document.activeElement).toBe(field());
+  draft = { ...draft, revision: draft.revision + 1, words: "Words from the other window" };
+  bridge.push("inf:cards:draft", draft);
+  // The field takes nothing while it holds focus; the next change shows that the frame was heard.
+  draft = {
+    ...draft,
+    revision: draft.revision + 1,
+    answers: [SOUTH, ...draft.answers.filter((a) => a.name !== "harbour")],
+  };
+  bridge.push("inf:cards:draft", draft);
+  await expect.poll(() => checked("south")).toBe(true);
+  expect(field().value).toBe(LEFT_WORDS + TYPED);
+
+  // Section: a question being typed into in the body keeps what is typed; the others take the change.
+  await inCardBody(TITLE, () => {
+    const note = document.getElementById("note") as HTMLInputElement;
+    note.focus();
+    note.value = "Bring the chart";
+    note.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  // Once what was typed has gone, only the body's own rule keeps the focused question.
+  await expect
+    .poll(() =>
+      bridge
+        .requests("inf:cards:draft")
+        .some(([, sent]) => sent.answers?.some((answer) => answer.name === "crew_note")),
+    )
+    .toBe(true);
+  const typed: FrameAnswer = {
+    name: "crew_note",
+    values: ["From the other window"],
+    changed: true,
+  };
+  draft = {
+    ...draft,
+    revision: draft.revision + 1,
+    answers: [{ ...SOUTH, values: ["north"], labels: ["North Basin"] }, typed],
+  };
+  bridge.push("inf:cards:draft", draft);
+  await expect.poll(() => checked("north")).toBe(true);
+  expect(
+    await inCardBody(TITLE, () => (document.getElementById("note") as HTMLInputElement).value),
+  ).toBe("Bring the chart");
   expect(bridge.unanswered).toEqual([]);
 });

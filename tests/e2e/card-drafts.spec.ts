@@ -15,23 +15,28 @@ import { cardReply, clickInBody, showCard, shownCard } from "./stack";
  * other devices too (like if you don't finish the card completely)". Two
  * apps on this Mac, each with its own data, as two of the captain's Macs: the
  * second controls the first mate on the first (docs/view.md). A pick or the
- * words in the card's field on either shows on the other, the first mate's
- * computer keeps them across its restart, and the press on either sends
- * every pick both made; then the card and its draft are gone.
+ * words in the card's field on either shows on the other; both come back
+ * after either restarts; a press on the joined Mac sends every pick both
+ * made; then the card and its draft are gone, and stay gone after a restart.
  *
  * Promised result: the other window shows each pick and the field's words,
  * and the press's answers hold both windows' picks. Data: one first mate
  * card with a radio question and a checkbox. Completion signal: the other
  * window's control reads checked, its field reads the words, and the card's
- * saved resolution holds the answers. Platform prerequisites: none beyond a
- * desktop. Shared resources: none; each app has its own data folder and the
- * link is to 127.0.0.1.
+ * saved resolution holds the answers with no draft left. Platform
+ * prerequisites: none beyond a desktop. Shared resources: none; each app has
+ * its own data folder and the link is to 127.0.0.1.
  */
 
 const CARD_ID = "survey-start";
 const TITLE = "Choose where the survey starts";
 const START = "Start the survey";
 const WORDS = "After the morning tide";
+const PRO_ENV = { INFINITARY_DEVICE_NAME: "MacBook Pro" };
+const AIR_ENV = { INFINITARY_DEVICE_NAME: "MacBook Air" };
+
+const shownIds = (page: Page) =>
+  page.evaluate(async () => (await window.infinitary.cards.list()).map((card) => card.id));
 
 function seedHome(dir: string) {
   const db = openDatabase(dir);
@@ -60,7 +65,7 @@ const tide = (page: Page) =>
 /** The second app joins the first with the link its Devices tab makes. */
 async function join(home: LaunchedApp): Promise<LaunchedApp> {
   const invite = await home.page.evaluate(() => window.infinitary.devices.invite({ kind: "mac" }));
-  const view = await launchApp({ env: { INFINITARY_DEVICE_NAME: "MacBook Air" } });
+  const view = await launchApp({ env: AIR_ENV });
   const { page } = view;
   await expect(page.locator('[data-first-run-gate="open"]')).toBeVisible();
   await page.locator("[data-join-chip]").click();
@@ -71,14 +76,13 @@ async function join(home: LaunchedApp): Promise<LaunchedApp> {
   return view;
 }
 
-test("a card's unsent picks and words follow the captain between windows and across a restart", async () => {
-  // Three launches: the first mate's computer twice and the one that controls it.
-  test.setTimeout(180_000);
+test("a card's unsent picks and words follow the captain between windows and across restarts", async () => {
+  // Five launches: the first mate's computer twice and the Mac that controls it three times.
+  test.setTimeout(240_000);
   const homeDir = scratchDir("infinitary-card-drafts-");
   seedHome(homeDir);
   const provider = await startMockProvider();
-  const proEnv = { INFINITARY_DEVICE_NAME: "MacBook Pro" };
-  let pro = await launchApp({ userDataDir: homeDir, reuseMockProvider: provider, env: proEnv });
+  let pro = await launchApp({ userDataDir: homeDir, reuseMockProvider: provider, env: PRO_ENV });
   let air: LaunchedApp | undefined;
   try {
     air = await join(pro);
@@ -99,23 +103,53 @@ test("a card's unsent picks and words follow the captain between windows and acr
       await expect(cardReply(pro.page).field).toHaveValue(WORDS);
     });
 
-    await test.step("the first mate's computer keeps them across its restart", async () => {
+    await test.step("the joined Mac's window shows them again after its restart", async () => {
+      const joined = air as LaunchedApp;
+      await joined.close();
+      air = await launchApp({
+        userDataDir: joined.userDataDir,
+        homeDir: joined.homeDir,
+        env: AIR_ENV,
+      });
+      await expect(air.page.locator("[data-remote-control]")).toHaveAttribute(
+        "data-freshness",
+        "live",
+      );
+      await showCard(air.page, TITLE);
+      await expect(harbour(air.page, "South Basin")).toBeChecked();
+      await expect(tide(air.page)).toBeChecked();
+      // The words were never kept on the joined Mac: they come back from the first mate's computer.
+      await expect(cardReply(air.page).field).toHaveValue(WORDS);
+    });
+
+    await test.step("the first mate's computer keeps them across its own restart", async () => {
       await pro.close();
-      pro = await launchApp({ userDataDir: homeDir, reuseMockProvider: provider, env: proEnv });
+      pro = await launchApp({ userDataDir: homeDir, reuseMockProvider: provider, env: PRO_ENV });
       await showCard(pro.page, TITLE);
       await expect(harbour(pro.page, "South Basin")).toBeChecked();
       await expect(tide(pro.page)).toBeChecked();
       await expect(cardReply(pro.page).field).toHaveValue(WORDS);
     });
 
-    await test.step("the press sends both windows' picks, and the card leaves both", async () => {
-      await shownCard(pro.page, TITLE).getByRole("button", { name: START, exact: true }).click();
-      await expect(shownCard(pro.page, TITLE)).toHaveCount(0);
-      await expect
-        .poll(() =>
-          view.evaluate(async () => (await window.infinitary.cards.list()).map((card) => card.id)),
-        )
-        .not.toContain(CARD_ID);
+    await test.step("a press on the joined Mac sends both windows' picks, and the card leaves both for good", async () => {
+      const view = (air as LaunchedApp).page;
+      await expect(view.locator("[data-remote-control]")).toHaveAttribute("data-freshness", "live");
+      await showCard(view, TITLE);
+      await shownCard(view, TITLE).getByRole("button", { name: START, exact: true }).click();
+      await expect.poll(() => shownIds(pro.page)).not.toContain(CARD_ID);
+      await expect.poll(() => shownIds(view)).not.toContain(CARD_ID);
+      const joined = air as LaunchedApp;
+      await joined.close();
+      air = await launchApp({
+        userDataDir: joined.userDataDir,
+        homeDir: joined.homeDir,
+        env: AIR_ENV,
+      });
+      await expect(air.page.locator("[data-remote-control]")).toHaveAttribute(
+        "data-freshness",
+        "live",
+      );
+      expect(await shownIds(air.page)).not.toContain(CARD_ID);
     });
   } finally {
     await air?.close();

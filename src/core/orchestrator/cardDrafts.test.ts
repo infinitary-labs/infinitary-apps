@@ -103,6 +103,27 @@ describe("CardDrafts", () => {
     expect(drafts.change("missing", { since: 0, words: "x" })).toEqual({ refused: "closed" });
   });
 
+  it("keeps a draft only in its own table, where no agent, card record or export reads", () => {
+    const { db, cards, drafts } = setup();
+    const words = "Unsent words about the north basin";
+    draftOf(
+      drafts.change(card.id, { since: 0, answers: [pick("format", "parquet-unsent")], words }),
+    );
+    const tables = db
+      .prepare<[], { name: string }>(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name <> 'card_drafts'",
+      )
+      .all()
+      .map((row) => row.name);
+    const holding = tables.filter((name) => {
+      const rows = db.prepare(`SELECT * FROM "${name}"`).all();
+      const text = JSON.stringify(rows);
+      return text.includes(words) || text.includes("parquet-unsent");
+    });
+    expect(holding).toEqual([]);
+    expect(JSON.stringify([cards.get(card.id), cards.listOpen()])).not.toContain(words);
+  });
+
   it("refuses answers past what a press may send and keeps nothing of that change", () => {
     const { drafts, pushed } = setup();
     const long = "x".repeat(3000);

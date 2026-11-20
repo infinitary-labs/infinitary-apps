@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { installClaudePlugin, pluginSettings } from "../../../tests/helpers/claudePluginHome";
@@ -112,7 +112,11 @@ describe("the home's personal set on a computer that runs work", () => {
     await at.start("t-one");
     await expect.poll(() => api.requests.length).toBe(asked + 1);
     expect(served()).toContain("<name>claude-security</name>");
-    expect(served()).toContain(`- claude-security: ${keptPlugin}`);
+    // Served from the kept set's own files, staged beside the session's record, never the home's folder.
+    const root = /- claude-security: ([^\s]+) \(skills/.exec(served())?.[1] as string;
+    expect(readFileSync(join(root, "skills", "claude-security", "SKILL.md"), "utf8")).toBe(
+      readFileSync(join(keptPlugin, "skills", "claude-security", "SKILL.md"), "utf8"),
+    );
     expect(served()).not.toContain(plugin.root);
 
     // Claude Code installs an update in a new folder; the next conversation reads it after one send.

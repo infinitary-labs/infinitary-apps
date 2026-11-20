@@ -52,6 +52,7 @@ import {
   type TaskShell,
   type ThinkingLevel,
 } from "../session/session";
+import { stagePluginTrees } from "../session/stagedPlugins";
 import { claimStagingFolder } from "../session/stagingFolders";
 import { PI_CONTROL_PROFILE } from "./controlProfile";
 import { speedRuntime } from "./crewSpeed";
@@ -1257,13 +1258,21 @@ async function openCoding(
 
   // The working copy's own AGENTS.md (or CLAUDE.md) and skills, from its
   // root alone (FI3-789).
-  const personal = spec.personalResources
+  const read = spec.personalResources
     ? personalResources(
         spec.personalRoot,
         new Set(projectSkillFolders(spec.cwd).map((skill) => skill.name)),
         await personalPluginSource(spec.personalRoot),
       )
     : undefined;
+  // A plugin is served from its own files alone, staged beside the record;
+  // with nowhere to stage them, or a stage that fails, no plugin is served.
+  const personal = read && {
+    ...read,
+    plugins: staged
+      ? await stagePluginTrees(read.plugins, join(staged, "plugin-files")).catch(() => [])
+      : [],
+  };
   const runbookSkills =
     spec.runbookSkills && staged
       ? await stageRunbookSkills(spec.runbookSkills, join(staged, "runbook-skills"))
@@ -1374,12 +1383,14 @@ export function createPiSessionFactory(deps: PiSessionDeps): SessionFactory {
         if (spec.shape.turns !== "rolling") {
           throw new Error("A Pi session serves the coding built-ins on a rolling session only.");
         }
-        // The runbook skills are staged in this session's own folder beside
-        // its record, held until it closes (INF-2054): Pi reads them where it
-        // was told they are for as long as it runs.
-        const staging = spec.runbookSkills
-          ? await claimStagingFolder(spec.shape.record.dir)
-          : undefined;
+        // The runbook skills and the person's plugins are staged in this
+        // session's own folder beside its record, held until it closes
+        // (INF-2054): Pi reads them where it was told they are for as long
+        // as it runs.
+        const staging =
+          spec.runbookSkills || spec.personalResources
+            ? await claimStagingFolder(spec.shape.record.dir)
+            : undefined;
         try {
           const session = await openCoding(deps, spec, spec.shape.record, binding, staging?.dir);
           if (staging) void session.closed().then(staging.release, staging.release);

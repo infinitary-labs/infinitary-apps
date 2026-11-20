@@ -58,7 +58,8 @@ type Listed = { path: string; abs: string; exec: boolean; stamp: string; size: n
  * `base`, listed by its size alone; once the listing passes `budget` bytes it
  * stops and answers `undefined`, so a skill too large to send (one holding
  * its own packages, say) is never read whole. With `within`, a plugin's
- * folder, an entry whose link leads outside it is left out.
+ * folder, an entry whose link leads outside it is left out, and a folder
+ * is skipped only inside itself, so two paths to one folder both list it.
  */
 function list(
   dir: string,
@@ -112,6 +113,8 @@ function list(
       });
     }
   }
+  // In a plugin, only a folder's own ancestors make a loop.
+  if (within !== undefined) seen.delete(real);
   return bytes;
 }
 
@@ -125,9 +128,9 @@ function listPlugin(
   plugin: { id: string; root: string },
   out: Listed[],
   budget: number,
+  prefix = `${PLUGIN_SET_ROOT}/${plugin.id}/`,
 ): number | undefined {
   const own = Array.from(new Set([PLUGIN_MANIFEST, ...carriedPluginEntries(plugin.root)]));
-  const prefix = `${PLUGIN_SET_ROOT}/${plugin.id}/`;
   const listed: Listed[] = [];
   const seen = new Set<string>();
   let bytes = 0;
@@ -167,6 +170,17 @@ function listPlugin(
   }
   out.push(...listed);
   return bytes;
+}
+
+/**
+ * A plugin's files a crewmate may read, by their paths inside it: the same
+ * files the set carries, each inside the plugin's own folder, whatever its
+ * links say (`stagePluginTrees`).
+ */
+export function pluginFiles(plugin: { id: string; root: string }): { path: string; abs: string }[] {
+  const out: Listed[] = [];
+  listPlugin(plugin, out, Number.POSITIVE_INFINITY, "");
+  return out.map(({ path, abs }) => ({ path, abs }));
 }
 
 /**

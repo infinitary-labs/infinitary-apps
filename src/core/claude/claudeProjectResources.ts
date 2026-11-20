@@ -15,7 +15,8 @@ import {
   projectSkillFolders,
 } from "../session/projectResources";
 import type { SessionSpec } from "../session/session";
-import { type ClaudePlugin, carriedPluginEntries, insidePlugin } from "./claudePlugins";
+import { stagePluginTrees } from "../session/stagedPlugins";
+import { type ClaudePlugin, carriedPluginEntries } from "./claudePlugins";
 
 /**
  * A Claude crewmate's share of its working copy's own instructions and
@@ -132,12 +133,6 @@ export async function stageClaudePlugins(
     for (const entry of carriedPluginEntries(plugin.root)) {
       if (entry === "skills") continue;
       const from = join(plugin.root, entry);
-      // A link that leads outside the plugin is not its own.
-      if (!insidePlugin(plugin.root, from)) {
-        // i18n-exempt: a line in the session's own log, for a developer.
-        note(`the plugin ${plugin.id}'s ${entry} was not staged: it leads outside the plugin`);
-        continue;
-      }
       // An entry that cannot be read, such as a dangling link, is left out
       // alone, as the personal set leaves it out, never the plugin's skills.
       try {
@@ -210,11 +205,9 @@ export async function claudeProjectResources(
       note(`the personal skills were not staged: ${String(error)}`);
     }
     try {
-      const plugins = await stageClaudePlugins(
-        personal.plugins,
-        join(staged, "plugin-skills"),
-        note,
-      );
+      // The plugins' own files alone, then the plugins the client loads from them.
+      const trees = await stagePluginTrees(personal.plugins, join(staged, "plugin-files"));
+      const plugins = await stageClaudePlugins(trees, join(staged, "plugin-skills"), note);
       if (plugins.length > 0) project.pluginSkillsPlugins = plugins;
     } catch (error) {
       // i18n-exempt: a line in the session's own log, for a developer.

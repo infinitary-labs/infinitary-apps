@@ -138,6 +138,14 @@ export function insidePlugin(root: string, path: string): boolean {
   }
 }
 
+/** The plugin's manifest, when it is the plugin's own file. */
+const manifestOf = (root: string) =>
+  insidePlugin(root, join(root, PLUGIN_MANIFEST)) ? json(join(root, PLUGIN_MANIFEST)) : undefined;
+
+/** A skill the plugin holds: its folder and its SKILL.md both inside the plugin. */
+const ownSkill = (root: string, dir: string) =>
+  insidePlugin(root, dir) && insidePlugin(root, join(dir, "SKILL.md"));
+
 /** A plugin's top-level entries that travel with its skills: everything but its left-out parts. */
 export function carriedPluginEntries(root: string): string[] {
   try {
@@ -159,7 +167,7 @@ export function claudePluginAt(
   root: string,
 ): (ClaudePlugin & { defaultEnabled: boolean }) | undefined {
   if (!safePluginName(id)) return undefined;
-  const manifest = json(join(root, PLUGIN_MANIFEST)) ?? {};
+  const manifest = manifestOf(root) ?? {};
   const named = typeof manifest.name === "string" ? manifest.name : "";
   const name = safePluginName(named) ? named : (id.split("@")[0] ?? id);
   const declared = typeof manifest.skills === "string" ? [manifest.skills] : manifest.skills;
@@ -177,9 +185,10 @@ export function claudePluginAt(
       ? [{ name: basename(path), dir: path }]
       : skillFolders([path]);
     for (const skill of skills)
-      if (!found.has(skill.name) && insidePlugin(root, skill.dir)) found.set(skill.name, skill.dir);
+      if (!found.has(skill.name) && ownSkill(root, skill.dir)) found.set(skill.name, skill.dir);
   }
-  if (found.size === 0 && isFile(join(root, "SKILL.md"))) found.set(name, root);
+  if (found.size === 0 && isFile(join(root, "SKILL.md")) && ownSkill(root, root))
+    found.set(name, root);
   if (found.size === 0) return undefined;
   return {
     id,
@@ -235,8 +244,9 @@ export function turnedOnClaudePlugins(
   for (const folder of names) {
     const root = join(saved, folder);
     if (folder.startsWith(".") || isFile(join(root, "SKILL.md"))) continue;
-    if (!isFile(join(root, PLUGIN_MANIFEST))) continue;
-    const named = json(join(root, PLUGIN_MANIFEST))?.name;
+    if (!isFile(join(root, PLUGIN_MANIFEST)) || !insidePlugin(root, join(root, PLUGIN_MANIFEST)))
+      continue;
+    const named = manifestOf(root)?.name;
     const plugin = claudePluginAt(`${typeof named === "string" ? named : folder}@skills-dir`, root);
     if (plugin && turnedOn(on[plugin.id], true)) out.push(strip(plugin));
   }

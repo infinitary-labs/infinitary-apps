@@ -1,4 +1,13 @@
-import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import type { ResolveClaudeSettings } from "../../src/core/claude/claudeAccess";
 
@@ -81,4 +90,50 @@ export function pluginSettings(
           : []),
       ],
     }) as unknown as Awaited<ReturnType<ResolveClaudeSettings>>;
+}
+
+/** The words every file a plugin's links reach outside it holds. */
+export const OUTSIDE_THE_PLUGIN = "Planted outside the plugin.";
+
+/**
+ * Links in an installed plugin the way a hand-edited plugin can hold them:
+ * a top-level file, a folder, a nested support file, a skill folder and a
+ * skill's SKILL.md that lead to files outside it, and `tools`, a second
+ * path to its own `scripts` folder.
+ */
+export function linkOutsidePlugin(home: string, root: string): void {
+  const elsewhere = join(home, "elsewhere");
+  mkdirSync(join(elsewhere, "leaked"), { recursive: true });
+  writeFileSync(join(elsewhere, "keys.txt"), `${OUTSIDE_THE_PLUGIN}\n`);
+  writeFileSync(
+    join(elsewhere, "leaked", "SKILL.md"),
+    `---\nname: leaked\ndescription: ${OUTSIDE_THE_PLUGIN}\n---\n`,
+  );
+  mkdirSync(join(root, "skills", "linked-file"), { recursive: true });
+  symlinkSync(
+    join(elsewhere, "leaked", "SKILL.md"),
+    join(root, "skills", "linked-file", "SKILL.md"),
+  );
+  symlinkSync(join(elsewhere, "leaked"), join(root, "skills", "leaked"));
+  symlinkSync(elsewhere, join(root, "references"));
+  symlinkSync(join(elsewhere, "keys.txt"), join(root, "keys.txt"));
+  symlinkSync(join(elsewhere, "keys.txt"), join(root, "scripts", "keys.txt"));
+  symlinkSync(join(root, "scripts"), join(root, "tools"));
+}
+
+/** Every file under `dir`, links followed, that holds what lies outside the plugin. */
+export function filesFromOutside(dir: string, ancestors: string[] = []): string[] {
+  const real = realpathSync(dir);
+  if (ancestors.includes(real)) return [];
+  return readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name);
+    let stat: ReturnType<typeof statSync>;
+    try {
+      stat = statSync(path);
+    } catch {
+      return [];
+    }
+    if (stat.isDirectory()) return filesFromOutside(path, [...ancestors, real]);
+    return readFileSync(path, "utf8").includes(OUTSIDE_THE_PLUGIN) ? [path] : [];
+  });
 }

@@ -153,7 +153,8 @@ public struct PhonePushEffects {
     public var post: @Sendable (URL, Data) async -> Int?
     /// The held record, nil when none is kept; it throws when the record cannot be read now, such as while locked.
     public var load: @MainActor () throws -> PhonePushHeld?
-    public var save: @MainActor (PhonePushHeld) -> Void
+    /// Writes the held record; it throws unless the write was confirmed.
+    public var save: @MainActor (PhonePushHeld) throws -> Void
     /// Whether this phone asked the person once already, and noting that it did.
     public var askedPerson: @MainActor () -> Bool
     public var noteAskedPerson: @MainActor () -> Void
@@ -165,7 +166,7 @@ public struct PhonePushEffects {
 
     public init(permission: @escaping @MainActor () async -> PhonePushPermission, askPermission: @escaping @MainActor () async -> Bool,
                 registerForPushes: @escaping @MainActor () -> Void, unregisterForPushes: @escaping @MainActor () -> Void, post: @escaping @Sendable (URL, Data) async -> Int?,
-                load: @escaping @MainActor () throws -> PhonePushHeld?, save: @escaping @MainActor (PhonePushHeld) -> Void,
+                load: @escaping @MainActor () throws -> PhonePushHeld?, save: @escaping @MainActor (PhonePushHeld) throws -> Void,
                 askedPerson: @escaping @MainActor () -> Bool, noteAskedPerson: @escaping @MainActor () -> Void,
                 delivered: @escaping @MainActor () async -> [(id: String, cardID: String?, push: String?, computer: String?)],
                 remove: @escaping @MainActor ([String]) -> Void,
@@ -222,14 +223,16 @@ public struct PhonePushEffects {
     ///
     /// The app hands the list only once it read it, so the list is the phone's own: a computer missing from it was
     /// forgotten, even if the app stopped before it let go of that computer's key, and it goes now with its
-    /// notifications. An empty list is the last computer forgotten, which lets go of the push address too.
-    /// It answers the removal of those notifications, under way, or nil when none goes.
+    /// notifications. An empty list is the last computer forgotten, which lets go of the push address too. The record
+    /// changes only once the Keychain confirmed the write; until then nothing changes and the next list tries again.
+    /// Each time, every notification for a card whose computer is not kept goes, and every one goes while none is
+    /// kept, so a cleanup cut short is finished by the next list. It answers that removal, under way, or nil when the
+    /// record could not be read or written.
     @discardableResult public func kept(_ kept: [(pin: String, name: String)]) -> Task<Void, Never>? {
         guard var held = keep() else { return nil }
         let before = held
-        guard !kept.isEmpty else {
-            guard before.computers != [] else { return nil }
-            reset()
+        if kept.isEmpty {
+            guard before.computers == [] || reset() else { return nil }
             return Task { await removeDelivered { _ in true } }
         }
         var computers = held.computers ?? []
@@ -247,11 +250,11 @@ public struct PhonePushEffects {
             computers.append(PhonePushComputer(pin: computer.pin, name: computer.name, key: PhonePushSeal.newKey()))
         }
         held.computers = computers
-        guard held != before else { return nil }
-        self.held = held; effects.save(held)
-        let dropped = Set((before.computers ?? []).map(\.pin)).subtracting(computers.map(\.pin))
-        guard !dropped.isEmpty else { return nil }
-        return Task { await removeDelivered { $0.cardID != nil && self.owner(named: $0.computer, in: before).map(dropped.contains) == true } }
+        guard held == before || commit(held) else { return nil }
+        let pins = Set(kept.map(\.pin))
+        return Task {
+            await removeDelivered { $0.cardID != nil && self.owner(named: $0.computer, in: held).map(pins.contains) != true }
+        }
     }
 
     /// The computer's welcome reached In reach: `hand` asks `inf:devices:push` on this connection, and hands the key
@@ -291,7 +294,8 @@ public struct PhonePushEffects {
             let before = held
             held.computers = rest
             if held.untagged == computer { held.untagged = nil }
-            self.held = held; effects.save(held)
+            // A write that fails changes nothing; the list handed next lets go of the key and its notifications.
+            guard commit(held) else { return }
             // One that opened no card names no computer, so it is no one's to remove here.
             await removeDelivered { $0.cardID != nil && self.owner(named: $0.computer, in: before) == computer }
             return
@@ -300,13 +304,21 @@ public struct PhonePushEffects {
         await removeDelivered { _ in true }
     }
 
-    /// The last computer is forgotten: no handover, no push address, and a new key that belongs to no computer.
-    private func reset() {
+    /// The last computer is forgotten: no handover, no push address, and a new key that belongs to no computer. False
+    /// when the new record could not be written, which the next empty list tries again.
+    @discardableResult private func reset() -> Bool {
         left()
         token = nil; askedFor = nil
-        let fresh = PhonePushHeld(key: PhonePushSeal.newKey(), computers: [])
-        held = fresh; effects.save(fresh)
         effects.unregisterForPushes()
+        return commit(PhonePushHeld(key: PhonePushSeal.newKey(), computers: []))
+    }
+
+    /// Keeps `next` once the write is confirmed, so the app never hands a key the notification part cannot read, nor
+    /// keeps using one it still reads.
+    private func commit(_ next: PhonePushHeld) -> Bool {
+        do { try effects.save(next) } catch { return false }
+        held = next
+        return true
     }
 
     /// Removes the notifications shown now that `which` picks.
@@ -339,7 +351,7 @@ public struct PhonePushEffects {
         guard let grant = PhonePush.grant(inPush: userInfo),
               let named = askedFor ?? (token ?? held.token).map({ ($0, environment) }) else { return false }
         held.token = named.token; held.environment = named.environment; held.grant = grant
-        self.held = held; effects.save(held)
+        guard commit(held) else { return false }
         askedFor = nil
         await handOver()
         return true
@@ -399,15 +411,10 @@ public struct PhonePushEffects {
     /// cannot read it, which is asked again next time rather than taken for none.
     private func keep() -> PhonePushHeld? {
         if let held { return held }
-        let loaded: PhonePushHeld
         do {
-            if let found = try effects.load() { loaded = found } else {
-                loaded = PhonePushHeld(key: PhonePushSeal.newKey())
-                effects.save(loaded)
-            }
+            if let found = try effects.load() { held = found; return found }
         } catch { return nil }
-        held = loaded
-        return loaded
+        return commit(PhonePushHeld(key: PhonePushSeal.newKey())) ? held : nil
     }
 
     /// Hands the computer what the phone holds: the registration while notifications are on and a grant is held,
@@ -427,7 +434,7 @@ public struct PhonePushEffects {
             // record is read again after the wait, and only that grant goes, so a key kept or forgotten meanwhile stays.
             guard var forgotten = keep(), forgotten.grant == registration.grant else { return }
             forgotten.grant = nil
-            self.held = forgotten; effects.save(forgotten)
+            guard commit(forgotten) else { return }
             await askRelay()
         }
     }
@@ -438,7 +445,8 @@ public struct PhonePushEffects {
         let now = effects.now()
         if let asked = held.asked, now.timeIntervalSince(asked) < PhonePush.askEvery { return }
         held.asked = now
-        self.held = held; effects.save(held)
+        // An ask the phone could not note waits, so a failing write never asks the relay more than once an hour.
+        guard commit(held) else { return }
         askedFor = (token, environment)
         let body = try? JSONSerialization.data(withJSONObject: ["token": token, "environment": environment.rawValue])
         // 202: the grant comes by a background push. Anything else waits for the next ask.

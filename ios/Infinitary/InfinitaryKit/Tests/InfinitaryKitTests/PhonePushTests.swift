@@ -110,6 +110,8 @@ struct PhonePushTests {
         var keeps = true
         /// The Keychain cannot read the record now, as before the phone's first unlock.
         var locked = false
+        /// The Keychain refuses writes now.
+        var refusesWrites = false
         var delivered: [(id: String, cardID: String?, push: String?, computer: String?)] = []
         var removed: [String] = []
         var now = Date(timeIntervalSince1970: 1_795_000_000)
@@ -131,7 +133,10 @@ struct PhonePushTests {
                     if self.locked { throw PhonePushStore.Unreadable(status: errSecInteractionNotAllowed) }
                     return self.held
                 },
-                save: { if !self.locked { self.held = $0 } },
+                save: {
+                    if self.locked || self.refusesWrites { throw PhonePushStore.Unreadable(status: errSecInteractionNotAllowed) }
+                    self.held = $0
+                },
                 askedPerson: { self.askedPerson }, noteAskedPerson: { self.askedPerson = true },
                 delivered: { self.delivered }, remove: { self.removed += $0 },
                 now: { self.now }), environment: environment)
@@ -585,7 +590,52 @@ struct PhonePushTests {
         #expect(outside.held?.computers == [] && outside.held?.grant == nil && outside.held?.token == nil)
         #expect(outside.unregistered == 1)
         #expect(outside.removed == ["n1", "n2", "n3"])
-        #expect(pushes.kept([]) == nil && outside.unregistered == 1, "An empty list read again changes nothing")
+        outside.removed = []
+        await pushes.kept([])?.value
+        #expect(outside.unregistered == 1, "An empty list read again lets go of nothing more")
+    }
+
+    /// A forget cut short after its key went but before its notifications did is finished by the next list: every
+    /// notification for a card whose computer is not kept goes, one from before the phone kept a key per computer
+    /// included, while a kept computer's and one that opened no card stay.
+    @MainActor @Test func theNextListFinishesACleanupCutShort() async throws {
+        let outside = Outside()
+        outside.held = PhonePushHeld(key: PhonePushSeal.newKey(), token: token, environment: .production, grant: grant(expiring: 20))
+        let pushes = outside.pushes()
+        await pushes.kept([office])?.value
+        await pushes.kept([office, studio])?.value
+        await pushes.forgot(computer: office.pin)
+        outside.delivered = [("n1", "card-41d6e0b2-export-retries", nil, office.pin), ("n2", "card-0e7e2c55-from-before", nil, nil),
+                             ("n3", "card-7f3a9c1e-plan-launch-week", nil, studio.pin), ("n4", nil, nil, nil)]
+        await pushes.kept([studio])?.value
+        #expect(outside.removed == ["n1", "n2"])
+        outside.removed = []
+        await pushes.kept([studio])?.value
+        #expect(outside.removed == ["n1", "n2"], "Each list removes what is still shown, so a removal cut short is tried again")
+    }
+
+    /// A write the Keychain refuses changes nothing the notification part or a computer sees: no new computer's key is
+    /// handed and a forgotten one's key stays until a write lands, which the next list tries again.
+    @MainActor @Test func aWriteTheKeychainRefusesIsTriedAgainByTheNextList() async throws {
+        let outside = Outside()
+        outside.held = PhonePushHeld(key: PhonePushSeal.newKey(), token: token, environment: .production, grant: grant(expiring: 20))
+        let pushes = outside.pushes()
+        pushes.kept([studio])
+        let saved = try #require(outside.held)
+        outside.refusesWrites = true
+        pushes.kept([studio, office])
+        await pushes.opened()
+        await pushes.tokenArrived(address)
+        await pushes.reached(computer: office.pin, takesPushes: true, hand: outside.hand)
+        #expect(outside.handed.isEmpty, "No key is handed before the notification part can read it")
+        await pushes.forgot(computer: studio.pin)
+        #expect(outside.held == saved)
+        outside.refusesWrites = false
+        pushes.kept([office])
+        await pushes.reached(computer: office.pin, takesPushes: true, hand: outside.hand)
+        let officeKey = try #require(outside.held?.computers?.first { $0.pin == office.pin }?.key)
+        #expect(outside.held?.computers?.map(\.pin) == [office.pin])
+        #expect(outside.handed.last??.key == officeKey)
     }
 
     /// A record the Keychain cannot read now, as before the first unlock, is never taken for none: nothing new is

@@ -336,6 +336,13 @@ const recording = {
     writeFileSync(file, JSON.stringify(payload));
     await run("xcrun", ["simctl", "push", simulator, phoneBundle, file]);
   },
+  // INF-5265's homes part: the phone's own network going and coming back, which the app's stand-in path monitor reads
+  // as the system's (PhoneModel's `standInNetwork`); a test cannot change the simulator's own network.
+  phonePath: async (usable: boolean) => {
+    if (!simulator) throw new Error("No owned simulator exists");
+    const name = `com.getinfinitary.infinitary.test.path-${usable ? "back" : "lost"}`;
+    await run("xcrun", ["simctl", "spawn", simulator, "notifyutil", "-p", name]);
+  },
   appearance: async (theme: "dark" | "light"): Promise<PhoneDisplayReport> => ({ appearance: await (await changeAppearance(theme, phoneDisplayDeadline())).confirmed }),
   damageRecord: async () => {
     if (!simulator) throw new Error("No owned simulator exists");

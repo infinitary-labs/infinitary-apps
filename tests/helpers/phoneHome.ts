@@ -144,6 +144,8 @@ export async function startPhoneHome(
     pickerPreview?(since: number): Promise<PhonePickerPreview>;
     // INF-4794: a push the stand-in relay hands the part's simulator, as Apple would deliver it.
     push?(payload: Record<string, unknown>): Promise<void>;
+    // INF-5265: the phone's own network going (false) or coming back (true), through the app's stand-in path monitor.
+    phonePath?(usable: boolean): Promise<void>;
     biometry?(step: "enroll" | "face-in-view" | "face-away"): Promise<void>;
     // INF-4241 piece 8: the Duo's hinge, read or moved once (scripts/phone-hinge.ts); absent on a device with none.
     hinge?(to?: "open" | "closed"): Promise<{ hinge: "open" | "closed" | null }>;
@@ -2737,6 +2739,15 @@ export async function startPhoneHome(
           for (const target of core.services.devices.pushTargets())
             core.services.devices.setPush(target.deviceId, null);
           result = pushReading();
+          break;
+        }
+        // INF-5265: the phone's own network goes or comes back while the app stays open (`{ "usable": boolean }`).
+        case "POST phone-path": {
+          if (!controls?.phonePath)
+            throw new Error("Only the owned simulator launcher can change the phone's network");
+          const { usable } = JSON.parse(await controlBody(request)) as { usable: boolean };
+          await controls.phonePath(usable);
+          result = { usable };
           break;
         }
         // INF-5265: a second computer beside this one, which the phone joins with a link of its own.

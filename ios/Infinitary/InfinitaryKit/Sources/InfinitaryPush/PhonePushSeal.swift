@@ -179,7 +179,7 @@ public enum PhonePushStore {
          kSecAttrAccessGroup as String: group, kSecAttrSynchronizable as String: false]
     }
 
-    /// The Keychain could not read the record now, such as before the phone's first unlock: it may hold one.
+    /// The Keychain could not read or write the record now, such as before the phone's first unlock.
     public struct Unreadable: Error {
         public let status: OSStatus
         public init(status: OSStatus) { self.status = status }
@@ -200,13 +200,17 @@ public enum PhonePushStore {
     /// The held record when it can be read now, for the notification part, which only reads it.
     public static func load() -> PhonePushHeld? { (try? read()) ?? nil }
 
-    public static func save(_ held: PhonePushHeld) {
-        guard let data = try? JSONEncoder().encode(held) else { return }
+    /// Writes the record; it throws unless the Keychain confirmed the write, so the app keeps and hands only what the
+    /// notification part will read (INF-5265's review).
+    public static func save(_ held: PhonePushHeld) throws {
+        let data = try JSONEncoder().encode(held)
         let found = SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary)
-        guard found == errSecItemNotFound else { return }
+        if found == errSecSuccess { return }
+        guard found == errSecItemNotFound else { throw Unreadable(status: found) }
         var add = query
         add[kSecValueData as String] = data
         add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-        SecItemAdd(add as CFDictionary, nil)
+        let added = SecItemAdd(add as CFDictionary, nil)
+        guard added == errSecSuccess else { throw Unreadable(status: added) }
     }
 }

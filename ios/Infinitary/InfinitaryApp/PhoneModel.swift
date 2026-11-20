@@ -107,7 +107,34 @@ struct AddressJoin: Equatable {
             Task { @MainActor in self?.networkChanged(seen, usable: usable) }
         }
         network.start(queue: .main)
+        standInNetwork()
     }
+
+    /// INF-5265's homes part: a test cannot change the simulator's own network, so in an isolated phone check the
+    /// part's simulator posts a system notification for the phone's path going and coming back
+    /// (`INFINITARY_TEST_NETWORK`, `phone-path`), which reaches `networkChanged` as the path monitor's would. A build
+    /// for a device has none.
+    private func standInNetwork() {
+        #if targetEnvironment(simulator)
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["INFINITARY_ISOLATED_PHONE_TEST"] == "1", environment["INFINITARY_TEST_NETWORK"] == "1" else { return }
+        let center = CFNotificationCenterGetDarwinNotifyCenter()
+        let observer = Unmanaged.passUnretained(self).toOpaque()
+        // The app keeps its one model for its whole run, so the observer is never left pointing at a model that went.
+        for name in [Self.standInPathLost, Self.standInPathBack] {
+            CFNotificationCenterAddObserver(center, observer, { _, observer, name, _, _ in
+                guard let observer, let name else { return }
+                let usable = name.rawValue as String == PhoneModel.standInPathBack
+                let model = Unmanaged<PhoneModel>.fromOpaque(observer).takeUnretainedValue()
+                Task { @MainActor in model.networkChanged("stand-in|\(usable)", usable: usable) }
+            }, name as CFString, nil, .deliverImmediately)
+        }
+        #endif
+    }
+
+    // i18n-exempt: system notification names, never shown
+    nonisolated static let standInPathLost = "com.getinfinitary.infinitary.test.path-lost"
+    nonisolated static let standInPathBack = "com.getinfinitary.infinitary.test.path-back"
 
     private func networkChanged(_ seen: String, usable: Bool) {
         // The monitor's first answer is the network the app started on, not a change.
@@ -502,6 +529,8 @@ struct AddressJoin: Equatable {
         // INF-4794: each welcome hands the computer this phone's push registration, or null while notifications are off.
         session.onReached = { [weak self, weak session] in
             guard let self, let session, self.connection === session, let pushes = self.pushes else { return }
+            // The list again first, so a key a failed write left unkept is made before it is handed.
+            self.keptPushes()
             Task {
                 // INF-5265: a switch while this waited hands nothing to, and clears nothing for, the computer left.
                 guard self.connection === session else { return }
@@ -536,10 +565,18 @@ struct AddressJoin: Equatable {
     private func openTapped() {
         guard let (card, named) = tapped, restored, !busy else { return }
         tapped = nil
-        // The owner is read once the list was read, from the push record the list was handed to.
-        guard let computer = pushes?.owner(named: named) ?? named, kept.all.contains(where: { $0.pin == computer }) else { return }
+        guard let computer = keptOwner(named) else { return }
         guard show(computer), let session = connection, session.mac.pin == computer else { tapped = (card, named); return }
         session.openCard(card)
+    }
+
+    /// INF-5265: the kept computer a notification came from, read from the push record the list was handed to: the one
+    /// it names, or the one kept before the phone kept a key per computer; nil when that computer is not kept, the list
+    /// is not read yet or no computer is known. A tap and a notification shown in front both go by it.
+    func keptOwner(_ named: String?) -> String? {
+        guard restored, let computer = pushes?.owner(named: named) ?? named,
+              kept.all.contains(where: { $0.pin == computer }) else { return nil }
+        return computer
     }
 
     /// Forgets the shown computer's record; the kept computer shown most recently becomes the shown one.

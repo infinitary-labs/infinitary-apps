@@ -12,14 +12,14 @@ extension PhoneJourney {
     /// computer shows only its own cards, the sheet marks the other as answering or not as its home goes away and comes
     /// back with no switch, a keyboard's Return shows it, both stay kept through a relaunch and hand each home its own
     /// key again (each home let go of its registration first) under which it seals a new card, the push's tap shows its
-    /// computer with its card, and leaving each in turn ends on the first screen. Not proven here: a test cannot change
-    /// the simulator's own network, so the sheet's answer to the phone's network changing while it stays open (every
-    /// mark cleared on a lost path, a new look once a new one settles) is not driven; the home going away and back
-    /// proves the look each opening of the sheet makes.
+    /// computer with its card, and leaving each in turn ends on the first screen. A test cannot change the simulator's own
+    /// network, so the phone's path going and coming back while the sheet stays open comes from the app's stand-in
+    /// path monitor (`phone-path`); the real monitor's own readings are not driven.
     func testSeveralComputers() async throws {
         let standIn = try await home("push-state", method: "GET")
         app.launchEnvironment["INFINITARY_TEST_PUSH"] = "1"
         app.launchEnvironment["INFINITARY_TEST_PUSH_RELAY"] = try XCTUnwrap(standIn["relay"] as? String)
+        app.launchEnvironment["INFINITARY_TEST_NETWORK"] = "1"
         app.launchEnvironment["INFINITARY_TEST_PUSH_ADDRESS"] = (0..<32).map { _ in String(format: "%02x", UInt8.random(in: 0...255)) }.joined()
         try await launchFresh()
         try await join()
@@ -99,6 +99,13 @@ extension PhoneJourney {
         try await pressPhoneKey("i", modifiers: .command, in: app)
         try reachMark(row, "Answers now")
         XCTAssertEqual(computer.label, secondName, "A computer that answers again switches nothing")
+        // The phone's own network goes, as a private network turned off, and comes back, while the sheet stays open:
+        // the mark goes with it and comes back with the next look, and nothing switches.
+        _ = try await home("phone-path", body: "{\"usable\":false}")
+        try reachMark(row, "Not answering from here")
+        _ = try await home("phone-path", body: "{\"usable\":true}")
+        try reachMark(row, "Answers now")
+        XCTAssertEqual(computer.label, secondName, "A network change switches nothing")
         // Return on the row shows the first computer, with its own cards and not the second's.
         app.typeKey("\n", modifierFlags: [])
         XCTAssertTrue(row.waitForAbsence(timeout: 10), "Return on the row shows its computer and closes the sheet")

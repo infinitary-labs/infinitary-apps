@@ -85,17 +85,25 @@ public struct PhoneKeptMacsFiles: Sendable {
         return PhoneKeptMacs(shown: try JSONDecoder().decode(JoinedMac.self, from: Data(contentsOf: legacyURL)))
     }
 
-    /// Writes the whole list at once, then lets go of the one record from before, which this list now holds. The
-    /// write is the save: once it lands, it throws no more, so a caller never keeps the list from before while the
-    /// next launch reads this one. Leaving it out of backups and removing the record from before are tried again on
-    /// each save, and the record from before is never read once this one exists.
+    /// Writes the whole list at once, then lets go of the one record from before, which this list now holds. The new
+    /// list is written beside the old one, protected and left out of backups, and only then renamed over it, so the
+    /// list on disk is always whole and never one a backup may take (INF-5265's review). The rename is the save: once
+    /// it lands, it throws no more, so a caller never keeps the list from before while the next launch reads this one.
+    /// Removing the record from before is tried again on each save, and it is never read once this one exists.
     public func save(_ kept: PhoneKeptMacs) throws {
-        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try JSONEncoder().encode(Record(shown: kept.shown, others: kept.others))
-            .write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
-        var saved = url
-        var values = URLResourceValues(); values.isExcludedFromBackup = true
-        try? saved.setResourceValues(values)
+        let folder = url.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        var staged = folder.appendingPathComponent(".KeptMacs-\(UUID().uuidString).json")
+        do {
+            try JSONEncoder().encode(Record(shown: kept.shown, others: kept.others))
+                .write(to: staged, options: [.withoutOverwriting, .completeFileProtectionUntilFirstUserAuthentication])
+            var values = URLResourceValues(); values.isExcludedFromBackup = true
+            try staged.setResourceValues(values)
+            guard rename(staged.path, url.path) == 0 else { throw CocoaError(.fileWriteUnknown) }
+        } catch {
+            try? FileManager.default.removeItem(at: staged)
+            throw error
+        }
         try? FileManager.default.removeItem(at: legacyURL)
     }
 }

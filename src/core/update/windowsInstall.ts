@@ -71,17 +71,6 @@ export const WINDOWS_SHUTDOWN_WAIT_SECONDS = 300;
 /** How long the hand-over waits for a copy it opens to show its window on its data folder. */
 export const WINDOWS_REOPEN_READY_SECONDS = 120;
 
-/**
- * Windows' own split of a command line into its arguments
- * (`CommandLineToArgvW`), the split the program it started reads.
- */
-const ARGUMENT_SPLIT = [
-  '[DllImport("shell32.dll")] static extern System.IntPtr CommandLineToArgvW([MarshalAs(UnmanagedType.LPWStr)] string line, out int count);',
-  '[DllImport("kernel32.dll")] static extern System.IntPtr LocalFree(System.IntPtr memory);',
-  "public static string[] Split(string line) { int count; System.IntPtr argv = CommandLineToArgvW(line, out count); if (argv == System.IntPtr.Zero) return null;",
-  "try { string[] all = new string[count]; for (int i = 0; i < count; i++) all[i] = Marshal.PtrToStringUni(Marshal.ReadIntPtr(argv, i * System.IntPtr.Size)); return all; } finally { LocalFree(argv); } }",
-].join(" ");
-
 /** A PowerShell literal of `text`, in single quotes. */
 const literal = (text: string) => `'${text.replaceAll("'", "''")}'`;
 
@@ -100,9 +89,12 @@ const literal = (text: string) => `'${text.replaceAll("'", "''")}'`;
  * that copy followed and says what happened in the result file, which the
  * copy reads as it starts. Opening a copy first ends that data folder's
  * windows still open, as the installer would, and only windows: a command
- * or work run has none. A copy missing its program or its app, or one
- * that fails as it opens, is said in a message with where to download the
- * installer, which opens next.
+ * or work run has none. A copy counts as opened only once a new window
+ * shows on its data folder, the installer's own restart included; a copy
+ * missing its program or its app, or one that shows none in time, is said
+ * in a message with where to download the installer, which opens next. It
+ * is plain PowerShell, compiling nothing, so a computer that refuses code
+ * compiled as it runs still updates.
  */
 export function windowsHandOverScript(values: {
   pid: number;
@@ -138,61 +130,112 @@ export function windowsHandOverScript(values: {
     "  } catch { $script:channelKept = $false }",
     "}",
     `function Say([string]$outcome) { try { [IO.File]::WriteAllText($result, (ConvertTo-Json -Compress @{ outcome = $outcome; from = ${literal(values.result.from)}; to = ${literal(values.result.to)}; channelKept = $channelKept })) } catch {} }`,
-    `Add-Type -Namespace InfHandOver -Name Arguments -MemberDefinition ${literal(ARGUMENT_SPLIT)}`,
-    "function Canonical([string]$path) { if (-not $path) { return '' }; try { [IO.Path]::GetFullPath($path).TrimEnd('\\') } catch { $null } }",
+    // A command line split into its arguments after the program's own
+    // name, as Windows splits it for the program it starts: whitespace
+    // between arguments, quotes around spaces, and backslashes literal
+    // except before a quote. Plain PowerShell, so nothing is compiled.
+    "function ArgumentsOf([string]$line) {",
+    "  $parts = New-Object System.Collections.Generic.List[string]",
+    "  $i = 0; $n = $line.Length",
+    "  if ($n -gt 0 -and $line[0] -eq [char]34) { $i = $line.IndexOf([char]34, 1); if ($i -lt 0) { return ,$parts.ToArray() }; $i++ }",
+    "  else { while ($i -lt $n -and -not [char]::IsWhiteSpace($line[$i])) { $i++ } }",
+    "  while ($true) {",
+    "    while ($i -lt $n -and [char]::IsWhiteSpace($line[$i])) { $i++ }",
+    "    if ($i -ge $n) { break }",
+    "    $part = New-Object System.Text.StringBuilder; $quoted = $false",
+    "    while ($i -lt $n -and ($quoted -or -not [char]::IsWhiteSpace($line[$i]))) {",
+    "      $slashes = 0; while ($i -lt $n -and $line[$i] -eq [char]92) { $slashes++; $i++ }",
+    "      if ($i -lt $n -and $line[$i] -eq [char]34) {",
+    "        [void]$part.Append([char]92, [int][math]::Floor($slashes / 2))",
+    "        if ($slashes % 2 -eq 1) { [void]$part.Append([char]34) } else { $quoted = -not $quoted }",
+    "        $i++",
+    "      } else {",
+    "        [void]$part.Append([char]92, $slashes)",
+    "        if ($i -lt $n -and ($quoted -or -not [char]::IsWhiteSpace($line[$i]))) { [void]$part.Append($line[$i]); $i++ }",
+    "      }",
+    "    }",
+    "    $parts.Add($part.ToString())",
+    "  }",
+    "  ,$parts.ToArray()",
+    "}",
+    // A data folder in full, or $null for one that names no drive or share:
+    // a relative folder means the folder another process started in, which
+    // this one cannot know.
+    "function Canonical([string]$path) {",
+    "  if (-not $path) { return '' }",
+    "  if ($path -notmatch '^([A-Za-z]:\\\\|\\\\\\\\)') { return $null }",
+    "  try { [IO.Path]::GetFullPath($path).TrimEnd('\\') } catch { $null }",
+    "}",
     "$want = Canonical $dataDir",
     // The data folder a process was opened on, as Chromium reads its
-    // command line: the last --user-data-dir switch before a lone --, in
-    // full; '' for the person's own, and $null when its command line
-    // cannot be read, so the process is never taken for one on this folder.
+    // command line: the last user-data-dir switch (any prefix or case)
+    // before a lone --; '' for the person's own, and $null when its command
+    // line or folder cannot be read, so the process is never taken for one
+    // on this folder.
     "function FolderOf([string]$line) {",
     "  if (-not $line) { return $null }",
-    "  $parts = [InfHandOver.Arguments]::Split($line)",
-    "  if ($null -eq $parts) { return $null }",
     "  $folder = ''",
-    "  foreach ($part in ($parts | Select-Object -Skip 1)) {",
+    "  foreach ($part in (ArgumentsOf $line)) {",
     "    if ($part -eq '--') { break }",
     "    if ($part -match '^(--|-|/)user-data-dir=(.*)$') { $folder = Canonical $Matches[2]; if ($null -eq $folder) { return $null } }",
     "  }",
     "  $folder",
     "}",
-    // The copy's own top processes opened on this data folder, with their
-    // windows: a command or a work run shows none.
+    // The copy's own top processes opened on this data folder that show a
+    // window: a command or a work run shows none. Processes that cannot be
+    // read are none, so nothing is stopped and no window counts as opened.
     "function OnThisFolder {",
-    "  $all = @(Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $exe })",
-    "  $ids = @($all | ForEach-Object { $_.ProcessId })",
-    "  foreach ($p in $all) {",
-    "    if ($ids -contains $p.ParentProcessId) { continue }",
-    "    $folder = FolderOf ([string]$p.CommandLine)",
-    "    if ($null -eq $folder -or $folder -ne $want) { continue }",
-    "    $running = Get-Process -Id $p.ProcessId -ErrorAction SilentlyContinue",
-    "    if ($running -and $running.MainWindowHandle -ne [IntPtr]::Zero) { $running }",
+    "  try {",
+    "    $all = @(Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $exe })",
+    "    $ids = @($all | ForEach-Object { $_.ProcessId })",
+    "    foreach ($p in $all) {",
+    "      if ($ids -contains $p.ParentProcessId) { continue }",
+    "      $folder = FolderOf ([string]$p.CommandLine)",
+    "      if ($null -eq $folder -or $folder -ne $want) { continue }",
+    "      $running = Get-Process -Id $p.ProcessId -ErrorAction SilentlyContinue",
+    "      if ($running -and $running.MainWindowHandle -ne [IntPtr]::Zero) { $running }",
+    "    }",
+    "  } catch {}",
+    "}",
+    // Whether a window other than those in $before shows on this data
+    // folder within the wait: a copy that never shows one, or only the old
+    // window still there, has not opened again.
+    "function OpenedAgain($before) {",
+    `  $deadline = (Get-Date).AddSeconds(${ready})`,
+    "  while ((Get-Date) -lt $deadline) {",
+    "    if (@(OnThisFolder | Where-Object { $before -notcontains $_.Id }).Count -gt 0) { return $true }",
+    "    Start-Sleep -Seconds 1",
     "  }",
+    "  $false",
     "}",
     "function Recover {",
-    "  Add-Type -AssemblyName System.Windows.Forms",
-    `  [void][System.Windows.Forms.MessageBox]::Show(${literal(WINDOWS_HAND_OVER_WORDS.noCopy(values.page))}, 'Infinitary')`,
+    "  try {",
+    "    Add-Type -AssemblyName System.Windows.Forms",
+    `    [void][System.Windows.Forms.MessageBox]::Show(${literal(WINDOWS_HAND_OVER_WORDS.noCopy(values.page))}, 'Infinitary')`,
+    "  } catch {}",
     "  Start-Process $page",
     "}",
     "function Reopen {",
-    "  foreach ($window in @(OnThisFolder)) { Stop-Process -Id $window.Id -Force -ErrorAction SilentlyContinue; [void]$window.WaitForExit(10000) }",
+    "  $before = @(OnThisFolder | ForEach-Object { $_.Id })",
+    "  foreach ($id in $before) { Stop-Process -Id $id -Force -ErrorAction SilentlyContinue }",
     "  $app = Join-Path (Split-Path -Parent $exe) 'resources\\app.asar'",
     "  if (-not ((Test-Path -LiteralPath $exe) -and (Test-Path -LiteralPath $app))) { Recover; return }",
     "  try {",
     "    if ($dataDir) { Start-Process -FilePath $exe -ArgumentList ('\"--user-data-dir=' + $dataDir + '\"') } else { Start-Process -FilePath $exe }",
     "  } catch { Recover; return }",
-    `  $deadline = (Get-Date).AddSeconds(${ready})`,
-    "  while ((Get-Date) -lt $deadline) { if (@(OnThisFolder).Count -gt 0) { return }; Start-Sleep -Seconds 1 }",
-    "  Recover",
+    "  if (-not (OpenedAgain $before)) { Recover }",
     "}",
     `$old = Get-Process -Id ${values.pid} -ErrorAction SilentlyContinue`,
     `if ($old -and -not $old.WaitForExit(${wait * 1000})) { PutChannelBack; Say 'shutdown-timeout'; $old.WaitForExit(); Reopen; exit }`,
+    "$beforeInstall = @(OnThisFolder | ForEach-Object { $_.Id })",
     "$info = New-Object System.Diagnostics.ProcessStartInfo",
     `$info.FileName = ${literal(values.installer)}`,
     `$info.Arguments = ${literal(values.dataDir ? "--updated /S" : "--updated /S --force-run")}`,
     "$info.UseShellExecute = $false",
     "try { $installer = [System.Diagnostics.Process]::Start($info); $installer.WaitForExit(); $code = $installer.ExitCode } catch { $code = -1 }",
-    "if ($code -eq 0) { if ($dataDir) { Reopen }; exit }",
+    // The installer's own --force-run opens the person's own folder; a
+    // fresh window there shows it did, and none gets the recovery message.
+    "if ($code -eq 0) { if ($dataDir) { Reopen } elseif (-not (OpenedAgain $beforeInstall)) { Recover }; exit }",
     "PutChannelBack",
     "Say 'install-failed'",
     "Reopen",

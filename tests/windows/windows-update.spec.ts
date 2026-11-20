@@ -502,6 +502,16 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
           { timeout: 120_000 },
         )
         .toBe(1);
+      // The hand-over saw the installer's restart open a new window, so it
+      // ends without the recovery message.
+      const handOvers = [...seen]
+        .filter(
+          ([, p]) =>
+            p.name.toLowerCase() === "powershell.exe" && /-EncodedCommand/i.test(p.command),
+        )
+        .map(([pid]) => pid);
+      expect(handOvers.length).toBeGreaterThan(0);
+      await expect.poll(() => stillRunning(handOvers), { timeout: 60_000 }).toEqual([]);
       // The new window starts the command again through the same entry.
       await expect.poll(() => runTask(label)?.state, { timeout: 120_000 }).toBe("Running");
       if (evidence) screenshot(join(evidence, "new-window.png"));

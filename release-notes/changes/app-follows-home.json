@@ -5,7 +5,7 @@
       "kind": "feature",
       "area": "devices",
       "title": "The app on your other computers keeps up with your first mate's version",
-      "body": "When the Infinitary app on another computer is older than the computer your first mate runs on, it now gets that same version by itself and starts again on it once nobody is using it there. Its row in Settings → Devices says how far it has got, and Update app starts it again right away. When it cannot update by itself, its row and a card say why and what to do there.",
+      "body": "When the Infinitary app on another computer is older than the computer your first mate runs on, it now gets that same version by itself and starts again on it once nobody is using it there. Its row in Settings → Devices says how far it has got, and Update app gets it right away and starts it again as soon as nothing typed there is left unsent. When it cannot update by itself, its row and a card say why and what to do there.",
       "picture": {
         "dark": "app-follows-home-dark.webp",
         "light": "app-follows-home-light.webp",

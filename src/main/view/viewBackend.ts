@@ -263,6 +263,11 @@ export type ViewBackendOptions = {
    * Absent, someone always does, so the app starts again only when asked.
    */
   nobodyHere?: () => boolean;
+  /**
+   * Whether a window of this app holds words not yet sent, which the home's
+   * Update app waits for too. Absent, some always may, so it never starts again.
+   */
+  wordsLeft?: () => boolean;
 };
 
 /** What this Mac's window found of its work half, told to its home (`work-setup.md`). */
@@ -381,6 +386,7 @@ export class ViewBackend {
         });
       },
       nobodyHere: () => options.nobodyHere?.() ?? false,
+      wordsLeft: () => options.wordsLeft?.() ?? true,
     });
     const open = options.link ?? ((linkOptions) => new HomeLink(linkOptions));
     this.link = open({

@@ -12,7 +12,10 @@ import type { UpdateChecker } from "./updateChecker";
  * here uses it: none of its windows is in front and none holds words not
  * yet sent. Update on the home's Devices row (the captain's "i think we
  * should still provide a manual update flow in the devices view") has it
- * start again as soon as it has the version, whoever uses it. It tells the
+ * start again as soon as it has the version, even with a window in front,
+ * but never while words are left unsent there: those wait, and it starts
+ * again once they are sent or cleared (the captain's "start the update now;
+ * restart after the draft is resolved"). It tells the
  * home each step, and what it cannot do by itself, so the home's row and
  * card say it.
  */
@@ -25,6 +28,8 @@ export type AppFollowsHomeOptions = {
   tell: (report: AppFollowReport) => void;
   /** Whether nobody uses this app now: no window in front, no words left unsent. */
   nobodyHere: () => boolean;
+  /** Whether a window of this app holds words not yet sent, which even the row's Update waits for. */
+  wordsLeft: () => boolean;
   /** Runs `run` again and again while a download moves; answers its stop. */
   every?: (ms: number, run: () => void) => () => void;
 };
@@ -36,8 +41,10 @@ export class AppFollowsHome {
   /** The catching up under way, one at a time. */
   private running: Promise<void> | null = null;
   /**
-   * The row's Update was pressed: start again as soon as the version is here.
-   * It holds for the catching up under way, or the next one, and ends with it.
+   * The row's Update was pressed: start again as soon as the version is here
+   * and no words are left unsent. It holds for the catching up under way, or
+   * the next one, and for the version it got while that waits; it ends with
+   * them or with the connection.
    */
   private now = false;
   /** The home's version, ready to install, while it waits for nobody to use this app. */
@@ -75,7 +82,7 @@ export class AppFollowsHome {
     this.now = false;
   }
 
-  /** The row's Update on the home: catch up and start again as soon as the version is here. */
+  /** The row's Update on the home: catch up and start again as soon as the version is here and no words wait. */
   askedNow(): void {
     this.now = true;
     this.resume();
@@ -83,10 +90,11 @@ export class AppFollowsHome {
 
   /**
    * Something about who uses this app changed - a window left the front, or
-   * its words were sent: a version waiting for nobody to use it installs now.
+   * its words were sent: a version waiting for nobody to use it, or for the
+   * words a pressed Update waits for, installs now.
    */
   noticed(): void {
-    if (this.waiting && this.options.nobodyHere()) this.resume();
+    if (this.waiting && this.free(this.now)) this.resume();
   }
 
   /** This app no longer controls that home: its own channel's newest is its offer again. */
@@ -132,6 +140,14 @@ export class AppFollowsHome {
       }
     });
     this.running = run;
+  }
+
+  /**
+   * Whether the app may start again now: when the row's Update asked, once
+   * no words are left unsent; otherwise once nobody uses it at all.
+   */
+  private free(asked: boolean): boolean {
+    return asked ? !this.options.wordsLeft() : this.options.nobodyHere();
   }
 
   /** Whether an attempt still belongs to the connection there is now. */
@@ -186,7 +202,7 @@ export class AppFollowsHome {
       return;
     }
     this.waiting = home;
-    if (this.now || this.options.nobodyHere()) {
+    if (this.free(this.now)) {
       await this.install(home);
       return;
     }
@@ -195,28 +211,33 @@ export class AppFollowsHome {
 
   /**
    * Starts again on the version it has, and only that version: the home
-   * hears it restarting, or why it did not. Unless the row's Update asked,
-   * whether nobody uses the app is asked again once the crew's work is
-   * saved, before native staging and once staged, before it quits; false
-   * keeps it running and waiting, staged or not.
+   * hears it restarting, or why it did not. Whether it may start again
+   * (`free`) is asked first, then again once the crew's work is saved,
+   * before native staging and once staged, before it quits; false keeps it
+   * running and waiting, staged or not, with the row's press still held.
    */
   private async install(version: string): Promise<void> {
     const { installFollowed } = this.options.updates;
     if (this.waiting !== version || this.disposed || !installFollowed) return;
     const asked = this.now;
+    if (!this.free(asked)) {
+      this.tell({ version, step: "waiting" });
+      return;
+    }
     const connection = this.connection;
     this.waiting = null;
     this.now = false;
     this.tell({ version, step: "restarting" });
-    // Asked again before it quits: still this connection's, and asked for or nobody here.
+    // Asked again before it quits: still this connection's, and still free to start again.
     const result = await installFollowed(
       version,
-      () => this.current(connection) && (asked || this.options.nobodyHere()),
+      () => this.current(connection) && this.free(asked),
     );
     // A release quits to start again and never answers; an answer means it did not.
     if (result.ok || !this.current(connection)) return;
     if (result.later) {
       this.waiting = version;
+      this.now = asked;
       this.tell({ version, step: "waiting" });
       return;
     }

@@ -6,7 +6,8 @@ import type { UpdateChecker } from "./updateChecker";
 
 // INF-5372's plan, piece 2: the app on another computer updates "by itself" to "the home's
 // version" while nobody uses it, and the captain's "i think we should still provide a manual
-// update flow in the devices view" starts it again at once.
+// update flow in the devices view" starts it again at once, though after the words left there
+// (the captain's "start the update now; restart after the draft is resolved").
 
 const status = (currentVersion: string, more: Partial<UpdateStatus> = {}): UpdateStatus => ({
   currentVersion,
@@ -19,7 +20,9 @@ const status = (currentVersion: string, more: Partial<UpdateStatus> = {}): Updat
 });
 
 function app(options: { own?: string; home?: string | null; nobody?: boolean } = {}) {
-  let nobody = options.nobody ?? false;
+  // Someone at it: a window in front, or words typed there and not sent.
+  let front = !(options.nobody ?? false);
+  let words = false;
   let home = options.home === undefined ? "0.8.4-alpha.649" : options.home;
   const told: AppFollowReport[] = [];
   let ready: (result: AppFollowResult) => void = () => {};
@@ -47,7 +50,8 @@ function app(options: { own?: string; home?: string | null; nobody?: boolean } =
     updates,
     homeVersion: async () => home,
     tell: (report) => told.push(report),
-    nobodyHere: () => nobody,
+    nobodyHere: () => !front && !words,
+    wordsLeft: () => words,
     every: () => () => {},
   });
   const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -63,10 +67,17 @@ function app(options: { own?: string; home?: string | null; nobody?: boolean } =
       await settle();
     },
     leave: () => {
-      nobody = true;
+      front = false;
+      words = false;
     },
     back: () => {
-      nobody = false;
+      front = true;
+    },
+    type: () => {
+      words = true;
+    },
+    send: () => {
+      words = false;
     },
     homeRuns: (version: string) => {
       home = version;
@@ -96,15 +107,52 @@ describe("an app following the version of the computer it controls", () => {
     expect(stillWanted?.()).toBe(false);
   });
 
-  it("starts again as soon as the version is here after Update app, whoever uses it", async () => {
+  it("starts again as soon as the version is here after Update app, even with a window in front", async () => {
     const a = app();
     a.follows.askedNow();
     await a.settle();
     await a.ready({ ok: true });
     expect(a.install).toHaveBeenCalledTimes(1);
     expect(a.told.map((report) => report.step)).toEqual(["getting", "restarting"]);
-    // Asked from the row, it quits whoever uses it.
-    expect(a.install.mock.calls[0]?.[1]()).toBe(true);
+    // Asked from the row, it quits with a window in front, but not over words typed since.
+    const stillWanted = a.install.mock.calls[0]?.[1];
+    expect(stillWanted?.()).toBe(true);
+    a.type();
+    expect(stillWanted?.()).toBe(false);
+  });
+
+  it("gets the version at once after Update app, and starts again only once the words left there are sent", async () => {
+    const a = app();
+    a.type();
+    a.follows.askedNow();
+    await a.settle();
+    await a.ready({ ok: true });
+    expect(a.install).not.toHaveBeenCalled();
+    expect(a.told.map((report) => report.step)).toEqual(["getting", "waiting"]);
+    // The words are sent, and a window is still in front: the press still holds.
+    a.send();
+    a.follows.noticed();
+    await a.settle();
+    expect(a.install).toHaveBeenCalledTimes(1);
+    expect(a.told.at(-1)).toMatchObject({ step: "restarting" });
+  });
+
+  it("keeps the Update app press when its install kept the app running, and starts again once asked again", async () => {
+    const a = app();
+    a.install.mockImplementationOnce(async () => ({
+      ok: false,
+      problem: "Update later.",
+      later: true,
+    }));
+    a.follows.askedNow();
+    await a.settle();
+    // The install answered later, as one that found someone back at the app does.
+    await a.ready({ ok: true });
+    expect(a.install).toHaveBeenCalledTimes(1);
+    expect(a.told.at(-1)).toMatchObject({ step: "waiting" });
+    a.follows.noticed();
+    await a.settle();
+    expect(a.install).toHaveBeenCalledTimes(2);
   });
 
   it("lets an Update app press go with a catching up that failed, so a later one waits for nobody", async () => {
@@ -197,6 +245,7 @@ describe("an app following the version of the computer it controls", () => {
       homeVersion: async () => "0.8.4",
       tell: (report) => told.push(report),
       nobodyHere: () => true,
+      wordsLeft: () => false,
       every: () => () => {},
     });
     follows.connected();

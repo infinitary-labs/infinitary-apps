@@ -15,7 +15,9 @@ import { showCard, shownCard } from "./stack";
  * controls (docs/view.md, "Following the home's version"; docs/devices.md,
  * "Updating the app open there"). The captain asked that it update "by
  * itself" to "the home's version" while nobody uses it, and that "a manual
- * update flow in the devices view" stays. Data: two throwaway data folders;
+ * update flow in the devices view" stays, which starts the update at once
+ * and the restart once words typed there are no longer unsent ("start the
+ * update now; restart after the draft is resolved"). Data: two throwaway data folders;
  * the app's older version stood in (`INFINITARY_UPDATE_CURRENT_VERSION`) and
  * its update stood in (`INFINITARY_MAC_UPDATE_STAND_IN`,
  * src/main/host/macUpdateStandIn.ts), so nothing is downloaded or replaced
@@ -116,7 +118,7 @@ async function wordsLeft(page: Page): Promise<void> {
 const evidence = () =>
   test.info().repeatEachIndex === 0 ? process.env.INFINITARY_TASK_EVIDENCE_DIR : undefined;
 
-test("an app on another computer gets the first mate's computer's version by itself while nobody uses it, and Update app on its row starts it at once", async () => {
+test("an app on another computer gets the first mate's computer's version by itself while nobody uses it, and Update app on its row starts it again once its words are no longer unsent", async () => {
   test.setTimeout(300_000);
   const opened: LaunchedApp[] = [];
   const provider = await startMockProvider();
@@ -169,7 +171,7 @@ test("an app on another computer gets the first mate's computer's version by its
     await step(row, "restarting", m.devicesAppRestarting({ version }));
     await installing(installs, version, 2);
 
-    // Words unsent again: Update app on the row, by keys, starts it at once.
+    // Words unsent again: Update app on the row, by keys, keeps them, and starts it once they are gone.
     await view.close();
     await home.close();
     view = await launchApp({ userDataDir: viewDir, env: viewEnv(installs) });
@@ -184,11 +186,14 @@ test("an app on another computer gets the first mate's computer's version by its
       row.getByRole("button", { name: m.devicesUpdateAppNamed({ device: VIEW }) }),
     );
     await home.page.keyboard.press("Enter");
+    // The words there were never sent anywhere: they wait in its composer, and the app with them.
+    await expect(promptInput(view.page)).toHaveValue("check the harbour lights");
+    await step(row, "waiting", m.devicesAppWaiting({ version }));
+    expect(installed(installs)).toEqual([version, version]);
+    await promptInput(view.page).fill("");
     await step(row, "restarting", m.devicesAppRestarting({ version }));
     await installing(installs, version, 3);
     if (kept) await regionShot(row, join(kept, "app-update-pressed-row.png"));
-    // The words there were never sent anywhere: they wait in its composer.
-    await expect(promptInput(view.page)).toHaveValue("check the harbour lights");
   } finally {
     for (const app of opened.reverse()) await app.close().catch(() => {});
     await provider.close();

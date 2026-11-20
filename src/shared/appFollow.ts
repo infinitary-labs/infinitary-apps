@@ -7,7 +7,8 @@ import * as m from "./i18n/messages.generated.ts";
  * connection it reads the version the home runs and, while it is older, gets
  * that exact version through its own updater and starts it again while nobody
  * there uses it. It tells the home each step, and the home's Devices row
- * follows them; Update on that row has it start again at once.
+ * follows them; Update on that row has it catch up at once and start again
+ * once no words are left unsent there.
  */
 
 /** The contract change that adds the app's steps and the row's Update (`app-follows-home.md`). */
@@ -66,7 +67,8 @@ export type AppFollowResult =
 
 /**
  * The live frame a home sends the app open on one computer for its row's
- * Update: catch up now and start again as soon as it has the version. An
+ * Update: catch up now and start again as soon as it has the version and no
+ * words are left unsent there. An
  * app from before ignores it.
  */
 export const APP_UPDATE_LIVE = "inf:devices:update-app-now";

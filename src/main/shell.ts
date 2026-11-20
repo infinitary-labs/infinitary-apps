@@ -868,6 +868,7 @@ export class Shell {
       onSetUpWork: () => void this.checkWork(),
       ...(this.options.keyReminders ? { keyReminders: this.options.keyReminders } : {}),
       nobodyHere: () => !this.inFront && this.unsent.size === 0,
+      wordsLeft: () => this.unsent.size > 0,
     });
     this.mode = { kind: "view", view };
     if (this.inFront) view.front(true);

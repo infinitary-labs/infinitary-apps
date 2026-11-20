@@ -343,7 +343,7 @@ An app behind this computer's updates itself to this computer's version while no
 One that cannot says so in `--warn` with what to do there ("Its app cannot update to Infinitary 0.8.4 by itself.
 It updates only from its own window there, so update it there."), and one that tried says "Its app could not update to Infinitary 0.8.4 by itself.
 Update app tries again."
-While it gets the version, waits or failed, the row offers Update app (secondary, small, named "Update the app on Mac mini" for a screen reader), which has it start again as soon as it has the version, whoever uses it there.
+While it gets the version, waits or failed, the row offers Update app (secondary, small, named "Update the app on Mac mini" for a screen reader), which has it get the version at once and start again as soon as no words are left unsent there, even with its window in front.
 
 **Updating** starts with the summary "Updating Infinitary on Mac mini…", with no version line, no status and no Update or Remove until it is done (`AddAMac.prompt.md`).
 An update the app started by itself reads the same while Devices is open, from its first count or "Starting Infinitary on Mac mini…".

@@ -56,13 +56,16 @@ function neverStarted(record: TaskRecord): boolean {
  *
  * It refuses outright only the real limits: a task that is not here, a
  * decision, another settle of the same task still running, a task already
- * closed with no kept copy left, and a record that changed since the
- * captain reviewed it. A drop stops a working crewmate, closes the task's
- * own open pull request and waits for that close (filing the task that
- * closes it when the host refuses), and saves its commits and edits as
- * every close saves them. A copy whose work cannot be saved stays on disk
- * and the record says so; dropping the closed task again removes it. Open
- * parts stay planned and a started part keeps working.
+ * closed with neither a kept copy left nor a failure's pull request, and a
+ * record that changed since the captain reviewed it. A drop stops a working
+ * crewmate, closes the task's own open pull request and waits for that close
+ * (filing the task that closes it when the host refuses), and saves its
+ * commits and edits as every close saves them. A copy whose work cannot be
+ * saved stays on disk and the record says so; dropping the closed task again
+ * removes it. A failure leaves its pull request open, and discarding the
+ * failed task closes it, unless an open task, such as its retry, now
+ * delivers through it. Open parts stay planned and a started part keeps
+ * working.
  *
  * The captain's own drop passes every hold. The first mate dropping on its
  * own meets the open parts (`proceed_with_open` or the captain's recorded override
@@ -145,9 +148,15 @@ export class TaskDrop {
       // leaves its pull request open for a retry to build on; discarding the
       // failed task is the choice to close it.
       if (closed) {
-        const pull = failedWithPullRequest(record)
-          ? await this.closing.closeOpenPullRequest(taskId, { line: input.actor === "firstmate" })
-          : undefined;
+        const carrier = failedWithPullRequest(record) ? this.carrierOf(record) : undefined;
+        const pull = carrier
+          ? // i18n-exempt: the discard's answer to the first mate, not shown to a person
+            {
+              text: `Its PR #${record.delivery?.prNumber} stays open: ${carrier} delivers through it now.`,
+            }
+          : failedWithPullRequest(record)
+            ? await this.closing.closeOpenPullRequest(taskId, { line: input.actor === "firstmate" })
+            : undefined;
         if (keptCopy(record))
           await this.closing.closeTask(taskId, {
             status: "dropped",
@@ -158,8 +167,8 @@ export class TaskDrop {
         return {
           ok: true,
           text: discardedText(pull?.text),
-          ...(pull?.problem ? { problem: pull.problem } : {}),
-          ...(pull?.repair ? { followup: pull.repair } : {}),
+          ...(pull && "problem" in pull && pull.problem ? { problem: pull.problem } : {}),
+          ...(pull && "repair" in pull && pull.repair ? { followup: pull.repair } : {}),
         };
       }
       const pull = await this.closing.closeOpenPullRequest(taskId, {
@@ -214,6 +223,24 @@ export class TaskDrop {
       ...(input.via || input.panel ? { data: this.provenance(input) } : {}),
     });
     return { ok: true, text: discardedText() };
+  }
+
+  /**
+   * The open task that took over a failed task's pull request - a retry that
+   * built on it, as its brief lets it - named by its key, so discarding the
+   * failed task never closes the pull request that task delivers through.
+   */
+  private carrierOf(record: TaskRecord): string | undefined {
+    const number = record.delivery?.prNumber;
+    const carrier = this.host.tasks
+      .listLive()
+      .find(
+        (live) =>
+          live.id !== record.id &&
+          live.repoId === record.repoId &&
+          live.delivery?.prNumber === number,
+      );
+    return carrier ? carrier.key || carrier.id : undefined;
   }
 
   private provenance(input: DropInput): Record<string, unknown> {

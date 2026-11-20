@@ -16,8 +16,6 @@ import { contractChange, listsChange } from "../connection/contractChanges";
  */
 export const FOLLOWS_PROJECT_ADDRESS = contractChange("placed-project-address");
 
-/** The changes every crewmate turn on a computer may need: one whose hello lacks any takes no new work. */
-
 /**
  * The core's way to the computers that run work for this home
  * (docs/helper.md, "Holding a conversation"): the connection's `ask` and

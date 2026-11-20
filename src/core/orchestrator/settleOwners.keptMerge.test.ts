@@ -200,6 +200,28 @@ describe("CrewSupervisor", () => {
     expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "failed" });
   });
 
+  // The captain left building on the failed attempt's PR to the retry's crewmate.
+  it("leaves a failed task's PR open on discard while its retry delivers through it", async () => {
+    const { supervisor, tasks, crewmate, forge, closePullRequest, taskId } =
+      await withOpenPullRequest();
+    crewmate.failPrompt("The client exited.");
+    await tick();
+    const retry = await supervisor.intake.commission({
+      title: "Fresh attempt",
+      intent: intentOf("try a stronger model"),
+      shape: { escalate_from: tasks.get(taskId)?.key },
+    });
+    await tick();
+    // The retry built on it: its delivery names the same pull request.
+    seedDelivery(tasks, retry.taskId, { prNumber: 9 });
+    const carrier = tasks.get(retry.taskId)?.key;
+    expect(await supervisor.settling.settle.settleTask(taskId, "discard")).toBe(
+      `Discarded. Its PR #9 stays open: ${carrier} delivers through it now.`,
+    );
+    expect(closePullRequest).not.toHaveBeenCalled();
+    expect(forge.close).not.toHaveBeenCalled();
+  });
+
   describe("the captain's kept merge approval (FI3-304)", () => {
     // INF-1246: a continued pull request has live check facts, and its one
     // chrome click survives a conflict only for the declared unchanged work.

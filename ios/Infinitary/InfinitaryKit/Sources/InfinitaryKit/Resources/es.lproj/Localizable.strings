@@ -625,6 +625,7 @@
 "crewmateProgress" = "Progreso";
 "crewmateQueued" = "en cola";
 "crewmateReport" = "Informe";
+"crewmateRoutedAgain" = "%1$@ ya no está en ningún nivel de Configuración, así que esta tarea ahora usa %2$@";
 "crewmateRunning" = "en curso…";
 "crewmateSendsTo" = "para el tripulante";
 "crewmateShowCard" = "Mostrar la tarjeta";

@@ -707,6 +707,7 @@
   {"said":{"m":"crewmateProgress"},"words":"Progress"},
   {"said":{"m":"crewmateQueued"},"words":"queued"},
   {"said":{"m":"crewmateReport"},"words":"Report"},
+  {"said":{"m":"crewmateRoutedAgain","a":{"left":"‹left›","model":"‹model›"}},"words":"‹left› is on no level in Settings any more, so this task now uses ‹model›"},
   {"said":{"m":"crewmateRunning"},"words":"running…"},
   {"said":{"m":"crewmateSendsTo"},"words":"to the crewmate"},
   {"said":{"m":"crewmateShowCard"},"words":"Show the card"},

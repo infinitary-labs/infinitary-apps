@@ -43,6 +43,7 @@
   "crewmateProgress": "Progreso",
   "crewmateQueued": "en cola",
   "crewmateReport": "Informe",
+  "crewmateRoutedAgain": "{left} ya no está en ningún nivel de Configuración, así que esta tarea ahora usa {model}",
   "crewmateRunning": "en curso…",
   "crewmateSendsTo": "para el tripulante",
   "crewmateShowCard": "Mostrar la tarjeta",

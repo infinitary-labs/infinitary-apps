@@ -625,6 +625,7 @@
 "crewmateProgress" = "Fortschritt";
 "crewmateQueued" = "eingereiht";
 "crewmateReport" = "Bericht";
+"crewmateRoutedAgain" = "%1$@ ist in den Einstellungen auf keiner Stufe mehr, deshalb nutzt diese Aufgabe jetzt %2$@";
 "crewmateRunning" = "läuft …";
 "crewmateSendsTo" = "an das Crewmitglied";
 "crewmateShowCard" = "Karte anzeigen";

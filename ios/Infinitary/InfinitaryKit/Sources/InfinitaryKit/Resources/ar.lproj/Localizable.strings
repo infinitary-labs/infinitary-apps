@@ -625,6 +625,7 @@
 "crewmateProgress" = "التقدّم";
 "crewmateQueued" = "في قائمة الانتظار";
 "crewmateReport" = "التقرير";
+"crewmateRoutedAgain" = "لم يعد %1$@ في أي مستوى في الإعدادات، لذا تستخدم هذه المهمة الآن %2$@";
 "crewmateRunning" = "قيد التشغيل…";
 "crewmateSendsTo" = "إلى فرد الطاقم";
 "crewmateShowCard" = "عرض البطاقة";

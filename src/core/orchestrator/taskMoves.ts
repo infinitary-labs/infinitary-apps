@@ -3,6 +3,7 @@ import { rm } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, normalize, sep } from "node:path";
 import { preparedPublicationRemote } from "@shared/contributions";
 import { COMPUTER, HERE } from "@shared/deviceNames";
+import * as m from "@shared/i18n/messages.generated";
 import { offeringKey, parseOfferingKey, type Slot } from "@shared/modelSlots";
 import { AUTOMATIC_COMPUTER, type ComputerMove } from "@shared/placement";
 import { PROVIDER_CATALOG } from "@shared/providers";
@@ -30,6 +31,7 @@ import { briefCarriesPictures } from "./crewBrief";
 import type { MoveAsk, MoveTarget, TaskRuntime } from "./crewRuntime";
 import type { CrewmateSpec } from "./crewSession";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
+import { routesNamed } from "./namedModel";
 import { describeStatus } from "./settleService";
 import type { TaskPlacement } from "./taskPlacement";
 
@@ -394,6 +396,59 @@ export class TaskMoves {
       this.moving.delete(taskId);
       this.host.broadcastCrewCounts();
     }
+  }
+
+  /**
+   * The model a task's next conversation opens on when the one it routed to
+   * left every level (docs/routing.md, "A model that left every level"): a
+   * reopen or a restart routes again on the task's own shape, where it runs,
+   * records that choice and its account, and says so once. Undefined - the
+   * reopen keeps its routed model - while a level or a pin still holds it,
+   * when the task names it, when it never routed, or when routing again
+   * finds no other model. The newest routing row then names a held model,
+   * so a later reopen keeps it and says nothing more.
+   */
+  async routeAgainIfLeft(taskId: string): Promise<MoveTarget | undefined> {
+    const router = this.options.router;
+    const record = this.options.tasks.get(taskId);
+    const routed = router?.servedChoice(taskId);
+    if (!router || !record || !routed) return undefined;
+    const named = record.shape?.override_model_id;
+    if (named && routesNamed(named, routed.model)) return undefined;
+    if (router.holdsAtALevel(routed.model)) return undefined;
+    const machine = this.host.machineOf(taskId);
+    const pool =
+      machine === LOCAL_MACHINE_ID ? undefined : await this.options.machines?.served(machine);
+    if (machine !== LOCAL_MACHINE_ID && !pool) return undefined;
+    const images = briefCarriesPictures(this.options.tasks, taskId, record.shape ?? undefined);
+    return router.inOrder(async () => {
+      const prepared = await router.prepare({ ...(pool ? { pool } : {}), images });
+      const preview = router.preview(record.prompt, this.host.queuedShape(record), prepared);
+      const choice = preview.result.choice;
+      if (!choice || offeringKey(choice) === offeringKey(routed.model)) return undefined;
+      const left = this.host.modelName(routed.model);
+      const selecting =
+        machine === LOCAL_MACHINE_ID
+          ? this.options.accounts?.selectForSpawn(taskId, choice.provider, { model: choice.id })
+          : undefined;
+      const accountId = selecting instanceof Promise ? await selecting : selecting;
+      router.commit(taskId, preview);
+      const to = { provider: choice.provider, id: choice.id };
+      this.options.tasks.placement.recordMove(taskId, {
+        model: to,
+        accountId: accountId ?? null,
+        actor: "host",
+        text: m.crewmateRoutedAgain({ left, model: this.host.modelName(to) }),
+        data: { rerouted: { from: offeringKey(routed.model), to: offeringKey(to) } },
+      });
+      const level = preview.result.servedBucket ?? preview.result.bucket;
+      return {
+        model: to,
+        ...(accountId ? { accountId } : {}),
+        thinkingLevel: this.effortFor(record, to, level),
+        providerName: this.providerName(choice.provider),
+      };
+    });
   }
 
   /**

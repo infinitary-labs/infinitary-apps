@@ -533,6 +533,23 @@ export class Router {
   }
 
   /**
+   * Whether routing would still place `ref` at all (docs/routing.md, "A
+   * model that left every level"): a Settings pin names it, or a level in
+   * Settings → Intelligence → Models holds it. Only the person's own
+   * placement can leave a model out: with no slot record, or while the
+   * starter map or the listed models stand in for placements of the
+   * person's own (`ModelSlots.routable`), every model counts as held.
+   */
+  holdsAtALevel(ref: PiModelRef): boolean {
+    const key = servedModelKey(ref);
+    if (this.options.settings.getRoutingSettings().pins.some((pin) => servedModelKey(pin) === key))
+      return true;
+    const slots = this.options.slots;
+    if (!slots || slots.slotsOf(ref).length > 0) return true;
+    return slots.routable(this.options.availableModels()).placed !== true;
+  }
+
+  /**
    * One offering named the way the captain knows it, through the one
    * model-name lookup (`ModelSlots.nameOf`): its Settings row's name
    * ("Fable 5"), the raw id otherwise. The settle card's model fact reads

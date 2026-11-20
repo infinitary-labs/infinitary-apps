@@ -40,6 +40,7 @@
   "crewmateProgress": "Fortschritt",
   "crewmateQueued": "eingereiht",
   "crewmateReport": "Bericht",
+  "crewmateRoutedAgain": "{left} ist in den Einstellungen auf keiner Stufe mehr, deshalb nutzt diese Aufgabe jetzt {model}",
   "crewmateRunning": "läuft …",
   "crewmateSendsTo": "an das Crewmitglied",
   "crewmateShowCard": "Karte anzeigen",

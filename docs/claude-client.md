@@ -280,6 +280,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   A reattach asks for the model the session was asked for, never the one the client swapped in.
   So does a resume that names no model: the client (2.1.289) restores a resumed session's last model and keeps a fallback it finds in the transcript, so the session reads the first session-wide fallback in the app's copy and asks for its original model.
   A crewmate's reopen names one wherever it can (INF-1272): the supervisor asks for the model of the task's newest routing choice, its start's or its newest move's, at the effort a move works out - the captain's word on the task, else the model's Settings choice, else the level's default - here or on a computer that runs work (`CrewSessions.reopenedOn`).
+  A model no level holds any more is not asked for again: the task routes again first (`docs/routing.md`, "A model that left every level").
   A conversation that starts over after an update has no transcript to restore a model from, and the client opens it on its own default (Sonnet 5.5 on the installed 2.1.309), so without this a Fable task answered on another model and the timeline said it moved.
   A fallback is not a routing choice, so a reopen after one asks for the original model; a task that never routed opens as its session restores it.
   The crew contract's integration test holds it on the installed client: the new conversation's first request carries the model it was handed.

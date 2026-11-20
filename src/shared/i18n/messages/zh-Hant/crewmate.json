@@ -37,6 +37,7 @@
   "crewmateProgress": "進度",
   "crewmateQueued": "已排入佇列",
   "crewmateReport": "回報",
+  "crewmateRoutedAgain": "{left} 已不在設定中的任何等級裡，所以這個任務現在改用 {model}",
   "crewmateRunning": "執行中…",
   "crewmateSendsTo": "給船員",
   "crewmateShowCard": "顯示卡片",

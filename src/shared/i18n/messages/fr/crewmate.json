@@ -43,6 +43,7 @@
   "crewmateProgress": "Avancement",
   "crewmateQueued": "en attente",
   "crewmateReport": "Rapport",
+  "crewmateRoutedAgain": "{left} n’est plus dans aucun niveau des Réglages, donc cette tâche utilise désormais {model}",
   "crewmateRunning": "en cours…",
   "crewmateSendsTo": "à l’équipier",
   "crewmateShowCard": "Afficher la carte",

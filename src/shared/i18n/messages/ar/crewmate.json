@@ -52,6 +52,7 @@
   "crewmateProgress": "التقدّم",
   "crewmateQueued": "في قائمة الانتظار",
   "crewmateReport": "التقرير",
+  "crewmateRoutedAgain": "لم يعد {left} في أي مستوى في الإعدادات، لذا تستخدم هذه المهمة الآن {model}",
   "crewmateRunning": "قيد التشغيل…",
   "crewmateSendsTo": "إلى فرد الطاقم",
   "crewmateShowCard": "عرض البطاقة",

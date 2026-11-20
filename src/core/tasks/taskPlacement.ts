@@ -27,15 +27,16 @@ export class TaskPlacement {
   /**
    * A started task moved to another provider between turns (INF-849): the
    * record names the model and account that serve it from here on, and one
-   * timeline row and feed line, written as whoever asked, says so. Its key,
-   * branch, working copy and history stay.
+   * timeline row and feed line, written as whoever asked, says so - the
+   * host when the task routed again on its own because its model left every
+   * level. Its key, branch, working copy and history stay.
    */
   recordMove(
     id: string,
     input: {
       model: { provider: string; id: string };
       accountId: string | null;
-      actor: "captain" | "firstmate";
+      actor: "captain" | "firstmate" | "host";
       text: string;
       data: Record<string, unknown>;
     },

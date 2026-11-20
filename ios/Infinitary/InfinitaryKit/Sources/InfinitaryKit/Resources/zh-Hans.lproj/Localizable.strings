@@ -625,6 +625,7 @@
 "crewmateProgress" = "进度";
 "crewmateQueued" = "排队中";
 "crewmateReport" = "汇报";
+"crewmateRoutedAgain" = "%1$@ 已不在设置中的任何级别里，所以这个任务现在改用 %2$@";
 "crewmateRunning" = "运行中…";
 "crewmateSendsTo" = "发给船员";
 "crewmateShowCard" = "显示卡片";

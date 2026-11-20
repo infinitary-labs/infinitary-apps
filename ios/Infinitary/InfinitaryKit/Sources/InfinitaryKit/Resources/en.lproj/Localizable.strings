@@ -625,6 +625,7 @@
 "crewmateProgress" = "Progress";
 "crewmateQueued" = "queued";
 "crewmateReport" = "Report";
+"crewmateRoutedAgain" = "%1$@ is on no level in Settings any more, so this task now uses %2$@";
 "crewmateRunning" = "running…";
 "crewmateSendsTo" = "to the crewmate";
 "crewmateShowCard" = "Show the card";

@@ -47,7 +47,7 @@ Only models a person placed take turns (`ModelSlots.routable`'s `placed`); model
 A subscription in the same slot with a reading, or whose reading has not landed (above), still comes first, and an older model of a line among them sits out as same-line recency says.
 `Router` reads each one's newest chosen routing row (`DecisionStore.lastChosenIds`, seeking `decisions_routing_model_recent`) and passes them to the pure engine as `turns`.
 Every start, review, move, Automatic placement and named or pinned pick writes a routing row, so it counts as that model's turn, and each runs inside `Router.inOrder`, so the next one sees it; a restart keeps the turn because the record does.
-A preview writes nothing and never advances the turn; a resume keeps its model, the first mate's model is picked once and kept, and the decision-model walk (`orderCandidates`) keeps pool order.
+A preview writes nothing and never advances the turn; a resume keeps its model while a level holds it ("A model that left every level" below), the first mate's model is picked once and kept, and the decision-model walk (`orderCandidates`) keeps pool order.
 Such a choice records `decidedBy: runway-order` with `selection.turns`, and the models that took turns as candidates in the unknown band, so Why this model lists them and says they take turns.
 When routing finds no model for a local start, the local runtime can use its own default only if it serves a model of its own (`PiAuthService.servesAnyModel`).
 When routing chooses a model and no account can serve it, startup refuses unless the local runtime itself serves that exact standalone model.
@@ -75,6 +75,16 @@ A premium hint is never premium consent; without the captain's premium ask it fa
 `ongoing` declares that personal-workspace turns continue until explicitly finished, committing routine progress without a first-mate wake.
 The compatibility migration translates the retired `teach` kind into `ongoing: true`, `intelligence: high` and `kind: unclear` while keeping saved records and historical routing decisions.
 Lesson guidance and voice live only in the Lessons runbook (`docs/lessons.md`).
+
+## A model that left every level
+
+A running task's next conversation - a reopen after a quit, the restart after the model's context limit or repeated refusals, or the reopen after a move to another computer - asks for the model of its newest routing choice only while routing would still place that model (`Router.holdsAtALevel`): a level in Settings → Intelligence → Models holds it, or a Settings pin names it.
+It keeps a model the task names (`override_model_id`) whatever the levels hold.
+Only the person's own placements leave a model out: with no slot record, or while the starter map or the listed models stand in for them (`ModelSlots.routable`'s `placed`), every model counts as held.
+Otherwise the task routes again on its own shape where it runs, inside `Router.inOrder`, before its conversation opens (`TaskMoves.routeAgainIfLeft`).
+The new choice is written as a routing row and on the record with its account, the way a provider move is, and one timeline line and feed line, written as the host, names the model that left and the one it routed to.
+The newest routing row then names a held model, so a later reopen keeps it and says nothing more.
+When routing again finds no model, or the same one, the task keeps its routed model.
 
 ## A level's words
 

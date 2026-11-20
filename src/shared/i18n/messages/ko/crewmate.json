@@ -37,6 +37,7 @@
   "crewmateProgress": "진행 상황",
   "crewmateQueued": "대기 중",
   "crewmateReport": "보고",
+  "crewmateRoutedAgain": "{left}이(가) 설정의 어떤 수준에도 없어서 이 작업은 이제 {model}을(를) 사용합니다",
   "crewmateRunning": "실행 중…",
   "crewmateSendsTo": "선원에게",
   "crewmateShowCard": "카드 보기",

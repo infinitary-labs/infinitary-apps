@@ -655,6 +655,7 @@ public enum PhoneMessages {
     public static func `crewmateProgress`() -> String { PhoneWords.format("crewmateProgress", []) }
     public static func `crewmateQueued`() -> String { PhoneWords.format("crewmateQueued", []) }
     public static func `crewmateReport`() -> String { PhoneWords.format("crewmateReport", []) }
+    public static func `crewmateRoutedAgain`(`left`: String, `model`: String) -> String { PhoneWords.format("crewmateRoutedAgain", [`left`, `model`]) }
     public static func `crewmateRunning`() -> String { PhoneWords.format("crewmateRunning", []) }
     public static func `crewmateSendsTo`() -> String { PhoneWords.format("crewmateSendsTo", []) }
     public static func `crewmateShowCard`() -> String { PhoneWords.format("crewmateShowCard", []) }
@@ -4469,6 +4470,7 @@ extension PhoneWords {
         "crewmateProgress": [],
         "crewmateQueued": [],
         "crewmateReport": [],
+        "crewmateRoutedAgain": ["left", "model"],
         "crewmateRunning": [],
         "crewmateSendsTo": [],
         "crewmateShowCard": [],

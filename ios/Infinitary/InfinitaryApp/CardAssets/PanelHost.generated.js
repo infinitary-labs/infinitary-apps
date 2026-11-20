@@ -24044,6 +24044,35 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Report`;
   }
+  function crewmateRoutedAgain(input2) {
+    const left = input2.left;
+    const model = input2.model;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يعد ${left} في أي مستوى في الإعدادات، لذا تستخدم هذه المهمة الآن ${model}`;
+      case "de":
+        return `${left} ist in den Einstellungen auf keiner Stufe mehr, deshalb nutzt diese Aufgabe jetzt ${model}`;
+      case "es":
+        return `${left} ya no está en ningún nivel de Configuración, así que esta tarea ahora usa ${model}`;
+      case "fr":
+        return `${left} n’est plus dans aucun niveau des Réglages, donc cette tâche utilise désormais ${model}`;
+      case "ja":
+        return `${left} は設定のどのレベルにもなくなったため、このタスクは今後 ${model} を使います`;
+      case "ko":
+        return `${left}이(가) 설정의 어떤 수준에도 없어서 이 작업은 이제 ${model}을(를) 사용합니다`;
+      case "pt-BR":
+        return `${left} não está mais em nenhum nível dos Ajustes, então esta tarefa agora usa ${model}`;
+      case "zh-Hans":
+        return `${left} 已不在设置中的任何级别里，所以这个任务现在改用 ${model}`;
+      case "zh-Hant":
+        return `${left} 已不在設定中的任何等級裡，所以這個任務現在改用 ${model}`;
+      case "en-XA":
+        return `[${left} îš öñ ñö ļéṽéļ îñ Šéţţîñĝš áñý ɱöŕé, šö ţĥîš ţášķ ñöŵ ûšéš ${model} ~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${left}‮ is on no level in Settings any more, so this task now uses ‬${model}`;
+    }
+    return `${left} is on no level in Settings any more, so this task now uses ${model}`;
+  }
   function crewmateRunning() {
     switch (currentLanguage()) {
       case "ar":
@@ -87595,6 +87624,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     crewmateProgress,
     crewmateQueued,
     crewmateReport,
+    crewmateRoutedAgain,
     crewmateRunning,
     crewmateSendsTo,
     crewmateShowCard,
@@ -90406,6 +90436,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "crewmateProgress": [],
     "crewmateQueued": [],
     "crewmateReport": [],
+    "crewmateRoutedAgain": ["left", "model"],
     "crewmateRunning": [],
     "crewmateSendsTo": [],
     "crewmateShowCard": [],

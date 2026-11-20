@@ -613,6 +613,10 @@ export class CrewSessions {
       throw new Error(`Task ${taskId} has no session to resume. Spawn a follow-up instead.`);
     }
     if (this.retiredProviderOf(taskId)) throw new Error(retiredResumeText(taskId));
+    // A model that left every level is routed again before it opens, as a
+    // move to the model routing picks now (docs/routing.md, "A model that
+    // left every level"); a move already names its model.
+    const target = move ?? (await this.core.moves.routeAgainIfLeft(record.id));
     // A resume is an attachment point: re-check the recorded account and
     // move to a sibling (transcript intact) if it died or was removed.
     const previousProvider = this.core.options.router?.servedProvider(taskId);
@@ -628,8 +632,8 @@ export class CrewSessions {
       );
     // A task on a computer that runs work binds that computer's own
     // account again there; no account of this Mac's is chosen for it.
-    const selecting = move
-      ? { ...(move.accountId ? { accountId: move.accountId } : {}), changed: false }
+    const selecting = target
+      ? { ...(target.accountId ? { accountId: target.accountId } : {}), changed: false }
       : machine !== LOCAL_MACHINE_ID
         ? { changed: false }
         : custom
@@ -708,14 +712,14 @@ export class CrewSessions {
           machineId: machine,
           cwd,
           ...(fresh ? {} : { resumeToken: record.sessionFile }),
-          ...(move
-            ? { model: move.model, thinkingLevel: move.thinkingLevel }
+          ...(target
+            ? { model: target.model, thinkingLevel: target.thinkingLevel }
             : this.reopenedOn(record)),
           ...this.core.toolHooks.crewmateHooks(task, livePersonal),
         },
         attachment.accountId,
         record.model ?? undefined,
-        move?.providerName,
+        target?.providerName,
       );
     } catch (caught) {
       if (this.core.tasks.get(record.id) === task) this.core.tasks.delete(record.id);
@@ -730,7 +734,7 @@ export class CrewSessions {
     this.recordCrewSession(
       task,
       session,
-      task.conversationBegan ?? (move || fresh ? "move" : "resume"),
+      task.conversationBegan ?? (target || fresh ? "move" : "resume"),
     );
     if (fresh) this.recordRestart(task, machine, fresh);
     const opened = this.core.options.tasks.get(record.id)?.shape?.computer_move;
@@ -770,7 +774,9 @@ export class CrewSessions {
    * that starts over after an update has no transcript to restore a model
    * from, so without this it opens on the client's default. A client's
    * fallback is not a routing choice, so the reopen asks for the original
-   * again. A task that never routed opens as its session restores it.
+   * again. A task that never routed opens as its session restores it. A
+   * model that left every level was routed again before this
+   * (`TaskMoves.routeAgainIfLeft`), so the choice read here is held.
    */
   private reopenedOn(record: TaskRecord): Pick<CrewmateSpec, "model" | "thinkingLevel" | "quick"> {
     const routed = this.core.options.router?.servedChoice(record.id);

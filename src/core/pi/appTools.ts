@@ -332,7 +332,13 @@ export function createAppTools(delegate: AppToolsDelegate) {
           const answer = window
             ? await delegate.dispatch(line.change as CoreInvokeChannel, args, {
                 ...actor,
-                window: { ...window, read },
+                window: {
+                  ...window,
+                  read,
+                  ...(line.sets
+                    ? { sets: line.sets(line.value.parse(params.value) as Record<string, unknown>) }
+                    : {}),
+                },
               })
             : await asked(line.change as CoreInvokeChannel, args);
           // A window answers its whole value with the change, checked as it

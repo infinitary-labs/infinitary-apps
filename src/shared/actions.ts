@@ -100,6 +100,12 @@ export type ActionLine = {
   alwaysTrail?: boolean;
   /** Settings owned inside a shared request object (or its selector enum). */
   fields?: string[];
+  /**
+   * Of `fields`, those this value's request sets, when it sets fewer than
+   * all: what a window checks and sets of its own value (docs/view.md, "What
+   * the first mate asks of a window"). Absent, every one of `fields`.
+   */
+  sets?: (value: Record<string, unknown>) => string[];
   area:
     | "projects"
     | "appearance"
@@ -962,6 +968,20 @@ const actionLines = {
   panel: {
     // A reset takes the places saved before the arrangement existed too, as Settings → Panels does.
     fields: ["hiddenPanels", "arrangement", "morePick", "placements", "panelOrder"],
+    sets: (v) =>
+      v.reset === true
+        ? ["arrangement", "morePick", "placements", "panelOrder"]
+        : [
+            ...(v.pick === true
+              ? ["arrangement", "morePick"]
+              : v.rail !== undefined ||
+                  v.position !== undefined ||
+                  v.above !== undefined ||
+                  v.below !== undefined
+                ? ["arrangement"]
+                : []),
+            ...(v.visible === undefined ? [] : ["hiddenPanels"]),
+          ],
     area: "panels",
     tier: "asked",
     change: "inf:settings:layout:set",
@@ -1984,7 +2004,7 @@ export type ActionActor =
        * that controls this one, or this computer's own window for a key reminder.
        */
       /** A window's own setting: that computer's window, and its value as the first mate read it. */
-      window?: { deviceId: string; name: string; read?: unknown };
+      window?: { deviceId: string; name: string; read?: unknown; sets?: string[] };
     };
 /** Settings and Firstmate share this project-change path. */
 export function isProjectChange(action: ActionName): boolean {

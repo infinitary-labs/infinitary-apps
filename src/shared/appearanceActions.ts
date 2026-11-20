@@ -69,6 +69,10 @@ export const appearanceLines = {
   "card-size": {
     // Keep cards maximized turned on or off forgets the last maximize (cardsMaximized).
     fields: ["defaultCardSize", "keepCardsMaximized", "cardsMaximized"],
+    sets: (v) => [
+      ...(v.size === undefined ? [] : ["defaultCardSize"]),
+      ...(v.keepMaximized === undefined ? [] : ["keepCardsMaximized", "cardsMaximized"]),
+    ],
     area: "appearance",
     tier: "asked",
     change: "inf:settings:appearance:set",

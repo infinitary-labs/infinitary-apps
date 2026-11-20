@@ -114,10 +114,10 @@ export function createCatalogDispatch({
     // (docs/view.md, "What the first mate asks of a window"); every other is
     // answered here.
     const window = actor.kind === "firstmate" ? actor.window : undefined;
-    // A window sets only the action's fields, each with the value the first
-    // mate read (`changes`), and refuses when one moved there to another
-    // value since; it answers its own value from just before, which the
-    // trail reads (`windowBefore`).
+    // A window sets only the fields this request sets (`ActionLine.sets`),
+    // each with the value the first mate read (`changes`), and refuses when
+    // one moved there to another value since; it answers its own value from
+    // just before, which the trail reads (`windowBefore`).
     let changes: { field: string; was?: unknown }[] | undefined;
     let windowBefore: unknown;
     const call = (asked: string, callArgs: readonly unknown[]): Promise<unknown> =>
@@ -288,11 +288,13 @@ export function createCatalogDispatch({
       actor.action &&
       WINDOW_VALUE_OF[channel as WindowChannel]
     ) {
-      // Every field the action sets travels, those it leaves as read
-      // included, so one the window moved since is checked, never dropped.
+      // Every field this request sets travels, one it sets to the value read
+      // included, so one the window moved since is checked, never dropped;
+      // a field it leaves alone stays the window's own.
       const base = (before.get(actor.action) ?? {}) as Record<string, unknown>;
+      const sets = window.sets;
       changes = (ACTIONS[actor.action].fields ?? [])
-        .filter((field) => !field.includes("="))
+        .filter((field) => !field.includes("=") && (!sets || sets.includes(field)))
         .map((field) => ({ field, was: base[field] }));
     }
     if (names.length) automation.said = undefined;

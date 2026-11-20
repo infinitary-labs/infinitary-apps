@@ -22,6 +22,13 @@ import { ambientMusicValue, ambientOwnStylesValue, ambientPausedValue } from "./
 export const ambientLines = {
   "ambient-music": {
     fields: ["ambientMusic", "ambientPaused", "ambientVolume", "ambientStyle"],
+    // Playing or stopping sets the pause too; a volume or style only when named.
+    sets: (v) => [
+      "ambientMusic",
+      "ambientPaused",
+      ...(v.volume === undefined ? [] : ["ambientVolume"]),
+      ...(v.style === undefined ? [] : ["ambientStyle"]),
+    ],
     area: "appearance",
     tier: "asked",
     change: "inf:settings:appearance:set",

@@ -5,7 +5,7 @@ import type { DeviceView } from "@shared/devices";
 import type { IntegrationsView } from "@shared/integrations";
 import type { CoreInvokeChannel } from "@shared/ipc";
 import { knownPanels } from "@shared/panelArrangement";
-import type { Appearance } from "@shared/preferences";
+import type { Appearance, Layout } from "@shared/preferences";
 import type { SecretsView } from "@shared/secrets";
 import type { StandbyViews } from "@shared/standby";
 import type { UpdateStatus } from "@shared/update";
@@ -729,10 +729,13 @@ describe("the first mate's Settings actions, driven through the whole core", () 
     deviceId: string,
     own: {
       appearance: Appearance;
+      layout?: Layout;
       reminders?: boolean;
       update?: UpdateStatus;
       /** The window's own Settings edit, made after the first mate read its look. */
       editsAfterRead?: (appearance: Appearance) => Appearance;
+      /** The window's own Settings edit, made after the first mate read its layout. */
+      layoutEditsAfterRead?: (layout: Layout) => Layout;
     },
   ) =>
     vi
@@ -748,6 +751,11 @@ describe("the first mate's Settings actions, driven through the whole core", () 
             if (asked === "inf:settings:appearance:set") {
               own.appearance = args[0] as Appearance;
               return own.appearance;
+            }
+            if (asked === "inf:settings:layout:get" && own.layout) return own.layout;
+            if (asked === "inf:settings:layout:set") {
+              own.layout = args[0] as Layout;
+              return own.layout;
             }
             if ((asked === "inf:update:check" || asked === "inf:update:status") && own.update)
               return own.update;
@@ -770,6 +778,10 @@ describe("the first mate's Settings actions, driven through the whole core", () 
           if (own.editsAfterRead) {
             own.appearance = own.editsAfterRead(own.appearance);
             own.editsAfterRead = undefined;
+          }
+          if (own.layoutEditsAfterRead && own.layout) {
+            own.layout = own.layoutEditsAfterRead(own.layout);
+            own.layoutEditsAfterRead = undefined;
           }
         });
         return true;
@@ -852,6 +864,13 @@ describe("the first mate's Settings actions, driven through the whole core", () 
             .map((task) => task.title),
         };
       };
+      // Asked to play with no volume named while it moved from 40 to 70 there:
+      // it plays, keeping that volume.
+      theirs.appearance = { ...theirs.appearance, ambientMusic: false, ambientVolume: 40 };
+      theirs.editsAfterRead = (look) => ({ ...look, ambientVolume: 70 });
+      const played = await playThere({ on: true });
+      expect(theirs.appearance).toMatchObject({ ambientMusic: true, ambientVolume: 70 });
+      expect(played.lines).toHaveLength(1);
       // Asked to play at 40 while it moved from 40 to 70 there: nothing changes there.
       theirs.appearance = { ...theirs.appearance, ambientMusic: false, ambientVolume: 40 };
       theirs.editsAfterRead = (look) => ({ ...look, ambientVolume: 70 });
@@ -872,6 +891,46 @@ describe("the first mate's Settings actions, driven through the whole core", () 
       const started = await playThere({ on: true, volume: 60 });
       expect(theirs.appearance).toMatchObject({ ambientMusic: true, ambientVolume: 60 });
       expect(started.lines).toHaveLength(1);
+
+      // Its own Settings turn keep-maximized on after the read: the card size still changes.
+      theirs.appearance = {
+        ...theirs.appearance,
+        defaultCardSize: "usual",
+        keepCardsMaximized: false,
+      };
+      theirs.editsAfterRead = (look) => ({ ...look, keepCardsMaximized: true });
+      const sized = await tool("app_change").run({
+        action: "card-size",
+        value: { size: "wide" },
+        evidence: "Open cards wide on Studio.",
+        computer: "Studio",
+      });
+      expect(sized.text).not.toContain(WINDOW_ASK_WORDS.changedThere(["keepCardsMaximized"]));
+      expect(theirs.appearance).toMatchObject({
+        defaultCardSize: "wide",
+        keepCardsMaximized: true,
+      });
+
+      // Its own Settings hide another panel after the read: the move still runs, and
+      // the hidden panel stays hidden.
+      const [moved, other] = knownPanels(core.services.personal.snapshot());
+      if (!moved || !other) throw new Error("The core knows fewer than two panels");
+      theirs.layout = await core.dispatch("inf:settings:layout:get", []);
+      theirs.layoutEditsAfterRead = (layout) => ({
+        ...layout,
+        hiddenPanels: { ...layout.hiddenPanels, [other.id]: true },
+      });
+      const homeLayout = await core.dispatch("inf:settings:layout:get", []);
+      const move = await tool("app_change").run({
+        action: "panel",
+        value: { surface: moved.id, rail: moved.preferred.x === "left" ? "right" : "left" },
+        evidence: "Move it across on Studio.",
+        computer: "Studio",
+      });
+      expect(move.text).not.toContain("changed in this computer's own Settings");
+      expect(theirs.layout?.hiddenPanels[other.id]).toBe(true);
+      expect(theirs.layout?.arrangement).not.toEqual(homeLayout.arrangement);
+      expect(await core.dispatch("inf:settings:layout:get", [])).toEqual(homeLayout);
 
       // Check for updates there checks that Mac's own app, and says where.
       theirs.update = {

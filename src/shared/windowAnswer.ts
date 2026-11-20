@@ -61,7 +61,7 @@ export async function answerWindowAsk(
     const { channel, args, changes } = asked.data;
     const wholeRead = WINDOW_VALUE_OF[channel];
     if (changes && wholeRead) {
-      // A change to a shared value sets only its action's fields. Each
+      // A change to a shared value sets only the fields it names. Each
       // must still read as the first mate read it, or already as it asks;
       // one this window's own Settings moved elsewhere since refuses it, so
       // an edit made here is never undone. It answers its own value from

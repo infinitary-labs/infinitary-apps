@@ -1222,6 +1222,9 @@ async function openRolling(
   });
 }
 
+/** A line about the person's plugins for a developer, as the Claude sessions' log keeps it. */
+const notePlugins = (line: string) => console.warn(`[pi-session] ${line}`);
+
 /**
  * A rolling session with Pi's coding set: the spec's tools beside Pi's own
  * (a tool of the spec's that shares a builtin's name replaces it, and the
@@ -1270,7 +1273,13 @@ async function openCoding(
   const personal = read && {
     ...read,
     plugins: staged
-      ? await stagePluginTrees(read.plugins, join(staged, "plugin-files")).catch(() => [])
+      ? await stagePluginTrees(read.plugins, join(staged, "plugin-files"), notePlugins).catch(
+          (error: unknown) => {
+            // i18n-exempt: a line in the app's own log, for a developer.
+            notePlugins(`the plugin skills were not staged: ${String(error)}`);
+            return [];
+          },
+        )
       : [],
   };
   const runbookSkills =

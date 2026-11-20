@@ -206,7 +206,7 @@ export async function claudeProjectResources(
     }
     try {
       // The plugins' own files alone, then the plugins the client loads from them.
-      const trees = await stagePluginTrees(personal.plugins, join(staged, "plugin-files"));
+      const trees = await stagePluginTrees(personal.plugins, join(staged, "plugin-files"), note);
       const plugins = await stageClaudePlugins(trees, join(staged, "plugin-skills"), note);
       if (plugins.length > 0) project.pluginSkillsPlugins = plugins;
     } catch (error) {

@@ -289,9 +289,10 @@ export function forgetRunAgentFiles(
  * so no login starts a run here again. With `run`, a stop asked through the
  * folder is for that run alone, so a run started by hand there stays. On a
  * Mac or Linux the agent's job is ended whichever run it holds. Letting it
- * go for good (`forget`), a job the service manager would not end rejects,
- * so the joining window says so, unless the service manager says it holds no
- * such job, which is let go quietly; any other stop answers as it always has.
+ * go for good (`forget`), a job the service manager would not end, or a task
+ * Task Scheduler would not take away, rejects, so the joining window says so,
+ * unless the service manager says it holds no such job or the job is stopped,
+ * which is let go quietly; any other stop answers as it always has.
  */
 export async function stopRunAgent(
   context: RunAgentContext,
@@ -335,22 +336,24 @@ export async function stopRunAgent(
     await systemctl(["daemon-reload"]);
   }
   const out = await systemctl(["stop", context.label]);
-  if (
-    options.forget &&
-    !out.ok &&
-    !SYSTEMD_NOT_ACTIVE.has((await systemctl(["is-active", context.label])).code ?? -1)
-  )
-    throw new Error(`systemd did not stop the agent: ${out.output}`);
+  if (options.forget && !out.ok) {
+    // As background.ts reads a service's state: by its ActiveState, which says
+    // a unit waiting to start again is activating, never by is-active's status.
+    const state = await systemctl(["show", "--property=ActiveState", "--value", context.label]);
+    if (!state.ok || !SYSTEMD_STOPPED.has(state.output.trim()))
+      throw new Error(`systemd did not stop the agent: ${out.output}`);
+  }
 }
 
 /** launchctl's exit status for a service its domain does not hold (`launchctl print`). */
 const LAUNCHD_NO_SUCH_SERVICE = 113;
 /**
- * `systemctl is-active`'s exit statuses for a unit that is not running: 3
- * inactive or failed, 4 no such unit (systemctl(1), "Exit status"); any
- * other, a refused or timed-out ask included, says nothing of the unit.
+ * The ActiveState of a unit that is not running and will not start again on
+ * its own: inactive, which a unit systemd does not hold reads too, or failed
+ * (systemd.unit(5)); activating, its wait to start again included, and
+ * deactivating say it may still run.
  */
-const SYSTEMD_NOT_ACTIVE: ReadonlySet<number> = new Set([3, 4]);
+const SYSTEMD_STOPPED: ReadonlySet<string> = new Set(["inactive", "failed"]);
 
 /**
  * Restart it, on the notice over a window whose command runs and does not

@@ -47,7 +47,7 @@ const LAUNCHER = {
 const LABEL = "com.infinitary.app.dev.run";
 
 /** How the service manager answers a stop: refused while it still holds the job, or the job already gone. */
-type StopAnswer = "refused" | "gone" | "unreadable";
+type StopAnswer = "refused" | "gone" | "unreadable" | "restarting";
 
 function mac(answers: { bootstrap?: boolean; session?: boolean; stop?: StopAnswer } = {}) {
   const asked: string[][] = [];
@@ -102,10 +102,12 @@ function linux(answers: { session?: boolean; stop?: StopAnswer } = {}) {
       if (args.includes("--system")) return { ok: true, output: "inactive\n" };
       if (args[1] === "stop" && answers.stop)
         return { ok: false, output: `Failed to stop ${LABEL}.service: Access denied` };
-      if (args[1] === "is-active" && answers.stop === "gone")
-        return { ok: false, output: "inactive\n", code: 3 };
+      if (args[1] === "show" && answers.stop === "gone") return { ok: true, output: "inactive\n" };
+      // A unit waiting out RestartSec to start its run again.
+      if (args[1] === "show" && answers.stop === "restarting")
+        return { ok: true, output: "activating\n" };
       // A user manager that refused the ask, which says nothing of the unit.
-      if (args[1] === "is-active" && answers.stop === "unreadable")
+      if (args[1] === "show" && answers.stop === "unreadable")
         return { ok: false, output: "Failed to connect to bus: Connection refused", code: 1 };
       return { ok: true, output: "" };
     },
@@ -349,11 +351,22 @@ describe("the command the window starts, on Linux", () => {
   });
 
   // The review of INF-5409: a service systemd would not stop, and still runs, says so.
-  it("rejects when systemd keeps the agent's service running or cannot say, and not when it is not running", async () => {
+  it("rejects when systemd keeps the agent's service running, waiting to start again or cannot say, and not when it is stopped", async () => {
     const refused = linux({ stop: "refused" });
     await expect(stopRunAgent(refused.context, { forget: true })).rejects.toThrow("Access denied");
     const gone = linux({ stop: "gone" });
     await expect(stopRunAgent(gone.context, { forget: true })).resolves.toBeUndefined();
+    expect(gone.asked.at(-1)).toEqual([
+      "--user",
+      "show",
+      "--property=ActiveState",
+      "--value",
+      LABEL,
+    ]);
+    const restarting = linux({ stop: "restarting" });
+    await expect(stopRunAgent(restarting.context, { forget: true })).rejects.toThrow(
+      "Access denied",
+    );
     const unreadable = linux({ stop: "unreadable" });
     await expect(stopRunAgent(unreadable.context, { forget: true })).rejects.toThrow(
       "Access denied",
@@ -362,7 +375,7 @@ describe("the command the window starts, on Linux", () => {
   });
 });
 
-function windows(answers: { create?: boolean; running?: number } = {}) {
+function windows(answers: { create?: boolean; running?: number; remove?: boolean } = {}) {
   const asked: string[][] = [];
   // The run's process, as its record names it: ended by force, it is gone a moment later.
   const live = new Set<number>();
@@ -388,6 +401,8 @@ function windows(answers: { create?: boolean; running?: number } = {}) {
     schtasks: async (args) => {
       asked.push([...args]);
       if (args[0] === "/Create" && answers.create === false)
+        return { ok: false, output: "ERROR: Access is denied." };
+      if (args[0] === "/Delete" && answers.remove === false)
         return { ok: false, output: "ERROR: Access is denied." };
       return { ok: true, output: "SUCCESS" };
     },
@@ -465,6 +480,24 @@ describe("the command the window starts, on Windows", () => {
       pid: 4242,
       startedAt: "2026-10-25T17:00:00.000Z",
     });
+  });
+
+  // The review of INF-5409: a join that lets the agent go says so when Task Scheduler keeps its
+  // task, which would start a run at the next sign-in, and still asks only its own run to stop.
+  it("rejects a join's forget when Task Scheduler keeps the task, keeping its file", async () => {
+    const { context, asked } = windows({ remove: false });
+    await startRunAgent(context);
+    asked.length = 0;
+    const run = { pid: 4242, startedAt: "2026-10-25T17:00:00.000Z" };
+    await expect(stopRunAgent(context, { forget: true, run })).rejects.toThrow("Access is denied");
+    expect(asked).toEqual([
+      ["/Delete", "/TN", LABEL, "/F"],
+      ["/Query", "/TN", LABEL],
+    ]);
+    expect(runAgentInPlace(context)).toBe(true);
+    expect(
+      JSON.parse(readFileSync(join(context.dataDir, RUN_STOP_FOR_FILE), "utf8")),
+    ).toMatchObject({ pid: 4242 });
   });
 
   // The captain, on INF-4622's fix: "can we not give an option that's force restart the

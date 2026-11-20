@@ -24,7 +24,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 /** The supervisor and its job, in the stand-in's own program; `__STATE__` is its folder. */
 const PROGRAM = String.raw`
 const { spawn, spawnSync } = require("node:child_process");
-const { appendFileSync, existsSync, readFileSync, rmSync, writeFileSync, openSync } = require("node:fs");
+const { appendFileSync, existsSync, readFileSync, rmSync, writeFileSync, writeSync, openSync } = require("node:fs");
 const { join } = require("node:path");
 const STATE = __STATE__;
 const args = process.argv.slice(2);
@@ -79,7 +79,7 @@ function begin(job) {
   return 0;
 }
 const jobFile = (label) => join(STATE, label + ".job.json");
-// Running: its supervisor is there, as systemd's is-active answers for an active unit.
+// Running: its supervisor is there, as systemd shows an active unit.
 function running(label) {
   return existsSync(pidFile(label)) && alive(Number(readFileSync(pidFile(label), "utf8")));
 }
@@ -148,7 +148,10 @@ else if (args[0] === "--user" && args[1] === "restart") {
   end(args[2]);
   code = begin(unitJob(join(__UNITS__, args[2]), args[2]));
 }
-else if (args[0] === "--user" && args[1] === "is-active") code = running(args[2]) ? 0 : 3;
+// A job's ActiveState, as systemd shows it: active while its supervisor runs, inactive once stopped.
+else if (args[0] === "--user" && args[1] === "show" && args[2] === "--property=ActiveState" && existsSync(jobFile(args[4]))) {
+  writeSync(1, running(args[4]) ? "active\n" : "inactive\n");
+}
 else if (args[0] === "--user") code = 0;
 else code = 1;
 if (args[0] !== "__supervise") process.exit(code);

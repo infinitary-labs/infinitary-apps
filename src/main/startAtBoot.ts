@@ -439,7 +439,17 @@ async function windowsStartAtBoot(asked: BootAsked, context: BootContext): Promi
   if (!schtasks) return { code: 1, out: "", error: said(BOOT_WORDS.noTaskScheduler) };
   const file = runTaskFile(context.dataDir);
   if (asked.off) {
-    const was = await removeRunTask(schtasks, { label: context.label, file });
+    let was: boolean;
+    try {
+      was = await removeRunTask(schtasks, { label: context.label, file });
+    } catch (error) {
+      return {
+        code: 1,
+        out: "",
+        // The task's own refusal, which says it still starts at sign-in.
+        error: said([error instanceof Error ? error.message : String(error)]),
+      };
+    }
     const lines = was ? BOOT_WORDS.windowsOff(context.user) : BOOT_WORDS.wasOff(context.user);
     return { code: 0, out: said(lines), error: "" };
   }

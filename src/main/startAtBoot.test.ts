@@ -539,18 +539,20 @@ describe("starting at boot on a Mac", () => {
 });
 
 /** This user's Task Scheduler as it answers: whether it takes the task and whether it starts it now. */
-function taskScheduler(options: { creates?: boolean; runs?: boolean } = {}) {
+function taskScheduler(options: { creates?: boolean; runs?: boolean; removes?: boolean } = {}) {
   const calls: string[] = [];
   const schtasks: Launchctl = async (args) => {
     calls.push(`schtasks ${args.join(" ")}`);
     if (args[0] === "/Create") return { ok: options.creates ?? true, output: "" };
     if (args[0] === "/Run") return { ok: options.runs ?? true, output: "" };
+    if (args[0] === "/Delete" && options.removes === false)
+      return { ok: false, output: "ERROR: Access is denied." };
     return { ok: true, output: "" };
   };
   return { calls, schtasks };
 }
 
-function windows(options: { creates?: boolean; runs?: boolean } = {}) {
+function windows(options: { creates?: boolean; runs?: boolean; removes?: boolean } = {}) {
   const fake = taskScheduler(options);
   const { root, context: c } = context("on", {
     platform: "win32",
@@ -623,6 +625,18 @@ describe("starting at sign-in on Windows", () => {
     expect(calls.at(-1)).toBe(`schtasks /Delete /TN ${LABEL} /F`);
     const again = await runStartAtBoot({ off: true }, c);
     expect(lines(again.out)[0]).toBe(BOOT_WORDS.wasOff("ada")[0]);
+  });
+
+  // The review of INF-5409: a task Task Scheduler keeps still starts at sign-in, so --off says so.
+  it("fails --off and keeps the task file where Task Scheduler keeps the task", async () => {
+    const { context: c, file } = windows({ removes: false });
+    await runStartAtBoot({ off: false }, c);
+    const off = await runStartAtBoot({ off: true }, c);
+    expect(off.code).toBe(1);
+    expect(lines(off.error)).toEqual([
+      "Task Scheduler did not take Infinitary's task away, so it still starts at sign-in: ERROR: Access is denied.",
+    ]);
+    expect(existsSync(file)).toBe(true);
   });
 
   it("says so with no Task Scheduler to ask", async () => {

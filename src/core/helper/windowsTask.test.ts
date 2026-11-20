@@ -111,6 +111,27 @@ describe("the task", () => {
     expect(asked.at(-1)).toEqual(["/Delete", "/TN", LABEL, "/F"]);
     expect(await removeRunTask(program, { label: LABEL, file })).toBe(false);
   });
+
+  // The review of INF-5409: a task Task Scheduler keeps still starts at sign-in, so it says so.
+  it("keeps its file and rejects where Task Scheduler keeps the task, and not where it holds none", async () => {
+    const file = runTaskFile(scratchDir("windows-task-"));
+    const xml = runTaskXml({ launcher: LAUNCHER, account: "ada", atLogin: true });
+    const held =
+      (present: boolean): Launchctl =>
+      async (args) =>
+        args[0] === "/Delete"
+          ? { ok: false, output: "ERROR: Access is denied." }
+          : args[0] === "/Query"
+            ? { ok: present, output: "" }
+            : { ok: true, output: "SUCCESS" };
+    await registerRunTask(held(true), { label: LABEL, file, xml });
+    await expect(removeRunTask(held(true), { label: LABEL, file })).rejects.toThrow(
+      "Access is denied",
+    );
+    expect(existsSync(file)).toBe(true);
+    expect(await removeRunTask(held(false), { label: LABEL, file })).toBe(true);
+    expect(existsSync(file)).toBe(false);
+  });
 });
 
 describe("a stop asked of the run on Windows", () => {

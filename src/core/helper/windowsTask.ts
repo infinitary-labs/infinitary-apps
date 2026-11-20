@@ -319,14 +319,20 @@ export async function startRunTask(schtasks: Schtasks, label: string): Promise<b
  * Takes the task away and its file with it. A run it started keeps going
  * until it stops: Task Scheduler's own end of a task ends its program at
  * once, with no clean stop, so a stop is asked of the run itself instead.
+ * A task Task Scheduler would not take away, and still holds, keeps its file
+ * for a later removal and rejects, so its caller says it still starts.
  */
 export async function removeRunTask(
   schtasks: Schtasks,
   options: { label: string; file: string },
 ): Promise<boolean> {
   const was = existsSync(options.file);
+  const out = await schtasks(["/Delete", "/TN", options.label, "/F"]);
+  if (!out.ok && (await schtasks(["/Query", "/TN", options.label])).ok)
+    throw new Error(
+      `Task Scheduler did not take Infinitary's task away, so it still starts at sign-in: ${out.output}`,
+    );
   rmSync(options.file, { force: true });
-  await schtasks(["/Delete", "/TN", options.label, "/F"]);
   return was;
 }
 

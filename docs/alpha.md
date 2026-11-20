@@ -42,6 +42,7 @@ The host enables native replacement only for an installed release Mac, not a dev
   The full logical version, not only Get Info's numeric core, determines precedence.
   Selecting Stable while ahead waits for a newer compatible stable, with no downgrade.
   A missing channel feed offers nothing.
+  An app open on another computer follows the version its home runs instead, whatever its channel, by that version's own manifest (`docs/view.md`, "Following the home's version").
   The native library's channel setter enables downgrades, so the adapter explicitly disables them afterward.
 - **No identifier.**
   Unpatched, `electron-updater` keeps a random per-install ID in the data folder (`.updaterId`) and sends it as `x-user-staging-id` with every feed read, whatever the Diagnostics switch says.

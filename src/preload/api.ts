@@ -324,6 +324,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       takeOver: () => invoke("inf:devices:take-over"),
       setUpWork: () => invoke("inf:devices:set-up-work"),
       fixWork: (deviceId) => invoke("inf:devices:fix-work", deviceId),
+      updateApp: (deviceId) => invoke("inf:devices:update-app", deviceId),
       signIns: () => invoke("inf:devices:sign-ins"),
       onSignIns: (listener) => subscribe("inf:devices:sign-ins", listener),
       signIn: (deviceId, providerId, type, accountId) =>
@@ -612,6 +613,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       install: () => invoke("inf:update:install"),
       later: () => invoke("inf:update:later"),
       onAsked: (listener) => subscribe("inf:update:asked", listener),
+      unsent: (holds) => invoke("inf:update:unsent", holds),
       home: {
         status: () => invoke("inf:home-update:status"),
         install: () => invoke("inf:home-update:install"),

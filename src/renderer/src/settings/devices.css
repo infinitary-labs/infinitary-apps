@@ -106,7 +106,8 @@
   color: var(--fg-2);
 }
 
-.fm-devices-version[data-tone="warn"] {
+.fm-devices-version[data-tone="warn"],
+.fm-devices-summary[data-device-app-follow][data-tone="warn"] {
   color: var(--warn);
 }
 

@@ -135,6 +135,19 @@ export function registerIpc(options: IpcOptions): void {
     return { ok: true as const };
   });
 
+  // Whether a window holds words not yet sent, until it closes (docs/view.md,
+  // "Following the home's version").
+  const followedUnsent = new WeakSet<WebContents>();
+  handleInvoke("inf:update:unsent", rendererSource, (event, holds) => {
+    const sender = event.sender;
+    const id = sender.id;
+    if (!followedUnsent.has(sender)) {
+      followedUnsent.add(sender);
+      sender.once("destroyed", () => shell.windowUnsent(id, false));
+    }
+    shell.windowUnsent(id, holds);
+    return { ok: true as const };
+  });
   // The size and movement keys chosen by name in command search run their
   // keys' own handlers (docs/keyboard.md).
   handleInvoke("inf:keyboard:run", rendererSource, (event, command) => {

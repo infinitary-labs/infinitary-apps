@@ -1,3 +1,4 @@
+import type { AppFollowReason, AppFollowResult } from "@shared/appFollow";
 import { settingFrom } from "@shared/envSettings";
 import { isAlphaVersion, isNewerVersion, isStableVersion, parseSemver } from "@shared/semver";
 import type { UpdateChannel, UpdateInstallResult, UpdateStatus } from "@shared/update";
@@ -98,7 +99,22 @@ export type UpdateChecker = {
    * the work carries on; nothing happens once the copy is being replaced.
    */
   later?: () => Promise<UpdateStatus>;
+  /**
+   * Gets one exact version ready to install, the version of the computer
+   * this app controls (docs/view.md, "Following the home's version"); then
+   * `install` installs it. Absent where this copy cannot get one version by
+   * itself, which `cannotFollow` says.
+   */
+  follow?: (version: string) => Promise<AppFollowResult>;
 };
+
+/**
+ * What a copy with no `follow` answers when asked to get one exact version:
+ * why it cannot, by the kind of copy it is.
+ */
+export function cannotFollow(reason: AppFollowReason, problem?: string): AppFollowResult {
+  return { ok: false, reason, ...(problem ? { problem } : {}) };
+}
 
 export type CreateUpdateCheckerOptions = {
   currentVersion: string;
@@ -631,6 +647,9 @@ export function createInstalledUpdateChecker(
         await options.openExternal(releaseSource.releasesUrl);
       },
       install: async () => ({ ok: false, problem: cannotUpdate }),
+      // A Windows copy updates at that computer; an unconfirmed one cannot be replaced.
+      follow: async () =>
+        cannotFollow(app.platform === "win32" ? "own-window" : "installation", cannotUpdate),
     };
   }
   const saving = createUpdateSaving(options.work);
@@ -675,7 +694,17 @@ export function createInstalledUpdateChecker(
   // The process's fetch, looked up at each download rather than kept from startup.
   const fetchImpl: typeof fetch =
     options.fetchImpl ?? ((input, init) => globalThis.fetch(input, init));
-  return createUpdateChecker({
+  // Only a direct Mac copy gets one exact version by itself: a package
+  // manager installs Homebrew, Arch and NixOS copies, a deb, an rpm or an
+  // AppImage takes its channel's newest from its own window, and a run from
+  // source is no installation (docs/view.md, "Following the home's version").
+  const followReason: AppFollowReason =
+    installation?.kind === "homebrew" || linux?.package === "arch" || linux?.package === "nix"
+      ? "package-manager"
+      : linux
+        ? "own-window"
+        : "installation";
+  const checker = createUpdateChecker({
     currentVersion,
     // The installer's marker in this run's own data root: a dev or
     // isolated run never reads the installed app's subscription. An Arch or
@@ -728,4 +757,5 @@ export function createInstalledUpdateChecker(
     // on there to make it visible while developing; e2e opts out.
     simulateUpdate: !app.packaged && settingFrom(env, "SIMULATE_UPDATE") !== "0",
   });
+  return { ...checker, follow: async () => cannotFollow(followReason) };
 }

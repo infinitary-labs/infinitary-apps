@@ -1,5 +1,6 @@
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import type { AppFollowResult } from "@shared/appFollow";
 import { isAlphaVersion, isNewerVersion, isStableVersion } from "@shared/semver";
 import type { UpdateChannel, UpdateInstallResult, UpdateStatus } from "@shared/update";
 import { UPDATE_LATER, UPDATE_NOTICES, UPDATE_PROBLEMS } from "@shared/updateWords";
@@ -23,6 +24,12 @@ export type MacUpdateDriver = {
    * (`src/core/update/activeMark.ts`).
    */
   check: (channel: UpdateChannel, mark?: ActiveMark) => Promise<MacUpdateOffer | null>;
+  /**
+   * Reads one exact version's own published manifest, whatever channel
+   * offers it (docs/view.md, "Following the home's version"): its offer
+   * while it is newer than this copy, null when it is not published.
+   */
+  checkVersion?: (version: string) => Promise<MacUpdateOffer | null>;
   download: (
     offer: MacUpdateOffer,
     progress: (percent: number) => void,
@@ -34,6 +41,14 @@ export type MacUpdateDriver = {
    */
   install: () => Promise<void>;
 };
+
+/** What an install or a followed version answers while another is under way. */
+const ALREADY_INSTALLING = "The update is already installing.";
+/** What an install or a followed version answers once a channel change let it go. */
+const CHANNEL_CHANGED = "The channel changed, so the previous update was cancelled.";
+/** What an install or a followed version answers when it failed for a reason the host did not write. */
+const NOT_INSTALLED =
+  "The update could not be installed. Try again, or download the disk image from the releases page.";
 
 export function saveMacUpdateChannel(dataRoot: string, channel: UpdateChannel): void {
   mkdirSync(dataRoot, { recursive: true });
@@ -81,6 +96,14 @@ export function createMacUpdateChecker(options: {
    */
   let blocked: string | undefined;
   let offer: MacUpdateOffer | null = null;
+  /**
+   * The exact version this copy follows, the version of the computer it
+   * controls (`follow`): while set, the channel's feed is not read, so the
+   * offer stays that version, and Update and restart installs it.
+   */
+  let following: string | undefined;
+  /** The followed version downloaded and checked, ready to install with no download. */
+  let downloaded: string | undefined;
 
   function status(): UpdateStatus {
     const available = offer !== null && isNewerVersion(offer.version, options.currentVersion);
@@ -129,6 +152,8 @@ export function createMacUpdateChecker(options: {
   function read(force: boolean, pressed: boolean): Promise<UpdateStatus> {
     if (phase === "downloading" || phase === "installing" || phase === "ready")
       return Promise.resolve(status());
+    // A followed version is the offer: the channel's newest never replaces it.
+    if (following) return Promise.resolve(status());
     if (checking) {
       loud ||= pressed;
       return checking;
@@ -190,6 +215,8 @@ export function createMacUpdateChecker(options: {
     checking = undefined;
     checkedAt = undefined;
     offer = null;
+    following = undefined;
+    downloaded = undefined;
     percent = undefined;
     problem = undefined;
     phase = "idle";
@@ -215,14 +242,14 @@ export function createMacUpdateChecker(options: {
 
   async function installOnce(): Promise<UpdateInstallResult> {
     if (blocked) return { ok: false, problem: blocked };
-    if (isInstalling()) return { ok: false, problem: "The update is already installing." };
+    if (isInstalling()) return { ok: false, problem: ALREADY_INSTALLING };
     const consent = generation;
     // Update and restart installs the newest version: it reads the feed first, and a
-    // failed read installs the version already offered. A staged update reads nothing.
-    const current = await read(true, false);
-    if (consent !== generation)
-      return { ok: false, problem: "The channel changed, so the previous update was cancelled." };
-    if (isInstalling()) return { ok: false, problem: "The update is already installing." };
+    // failed read installs the version already offered. A staged update reads nothing,
+    // and neither does a followed version, which is the offer (`follow`).
+    const current = following ? status() : await read(true, false);
+    if (consent !== generation) return { ok: false, problem: CHANNEL_CHANGED };
+    if (isInstalling()) return { ok: false, problem: ALREADY_INSTALLING };
     if (!current.updateAvailable || !offer)
       return { ok: false, problem: "There is no newer update to install." };
     const wanted = offer;
@@ -233,7 +260,7 @@ export function createMacUpdateChecker(options: {
     problem = undefined;
     try {
       const alreadyStaged = current.phase === "ready";
-      if (!alreadyStaged)
+      if (!alreadyStaged && !(following && downloaded === wanted.version))
         await options.driver.download(
           wanted,
           (value) => {
@@ -243,7 +270,7 @@ export function createMacUpdateChecker(options: {
           controller.signal,
         );
       if (consent !== generation || controller.signal.aborted)
-        return { ok: false, problem: "The channel changed, so the previous update was cancelled." };
+        return { ok: false, problem: CHANNEL_CHANGED };
       phase = "installing";
       // The crew's work stops where nothing is lost before the copy is
       // replaced; Update later lets the update go first.
@@ -261,10 +288,10 @@ export function createMacUpdateChecker(options: {
       return { ok: true };
     } catch (error) {
       const message = controller.signal.aborted
-        ? "The channel changed, so the previous update was cancelled."
+        ? CHANNEL_CHANGED
         : error instanceof MacUpdateProblem
           ? error.message
-          : "The update could not be installed. Try again, or download the disk image from the releases page.";
+          : NOT_INSTALLED;
       if (consent === generation) {
         phase = error instanceof MacUpdateReadyProblem ? "ready" : "error";
         problem = message;
@@ -277,11 +304,83 @@ export function createMacUpdateChecker(options: {
     }
   }
 
+  /**
+   * Gets one exact version ready, the version of the computer this copy
+   * controls (docs/view.md, "Following the home's version"): reads that
+   * version's own manifest, downloads and checks it, and answers once it
+   * is ready to install. From then on the offer is that version, so Update
+   * and restart, here or asked from afar, installs it with no download.
+   */
+  async function follow(version: string): Promise<AppFollowResult> {
+    if (blocked) return { ok: false, reason: "installation", problem: blocked };
+    if (!options.driver.checkVersion) return { ok: false, reason: "installation" };
+    if (isInstalling() || phase === "ready") return { ok: false, failed: ALREADY_INSTALLING };
+    if (following === version && downloaded === version) return { ok: true };
+    // A channel read or download under way is let go: the followed version is the offer.
+    const consent = ++generation;
+    checking = undefined;
+    following = version;
+    downloaded = undefined;
+    let next: MacUpdateOffer | null;
+    try {
+      next = await options.driver.checkVersion(version);
+    } catch {
+      if (consent === generation) following = undefined;
+      return { ok: false, failed: UPDATE_PROBLEMS.checkFailed };
+    }
+    if (consent !== generation) return { ok: false, failed: CHANNEL_CHANGED };
+    if (!next || next.version !== version) {
+      following = undefined;
+      return { ok: false, reason: "unpublished" };
+    }
+    offer = next;
+    checkedAt = now();
+    problem = undefined;
+    const controller = new AbortController();
+    download = controller;
+    phase = "downloading";
+    percent = 0;
+    try {
+      await options.driver.download(
+        next,
+        (value) => {
+          if (consent === generation && Number.isFinite(value))
+            percent = Math.max(0, Math.min(100, value));
+        },
+        controller.signal,
+      );
+    } catch (error) {
+      const message = controller.signal.aborted
+        ? CHANNEL_CHANGED
+        : error instanceof MacUpdateProblem
+          ? error.message
+          : NOT_INSTALLED;
+      if (consent === generation) {
+        phase = "error";
+        problem = message;
+      }
+      if (error instanceof MacUpdateProblem) {
+        blocked = message;
+        return { ok: false, reason: "installation", problem: message };
+      }
+      return { ok: false, failed: message };
+    } finally {
+      if (download === controller) download = undefined;
+    }
+    if (consent !== generation || controller.signal.aborted)
+      return { ok: false, failed: CHANNEL_CHANGED };
+    downloaded = version;
+    phase = "idle";
+    percent = undefined;
+    return { ok: true };
+  }
+
   return {
     getStatus,
     checkNow,
     setChannel,
     install,
+    follow,
     later: async () => {
       // A save let go ends its install, which sets the phase it rests in: answer from there.
       if (saving.later()) await inFlight;

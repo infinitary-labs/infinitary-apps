@@ -26347,6 +26347,451 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Working…`;
   }
+  function devicesAppCannot(input2) {
+    const version2 = input2.version;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يستطيع تطبيقه أن يُحدِّث نفسه إلى Infinitary ${version2}.`;
+      case "de":
+        return `Seine App kann sich nicht selbst auf Infinitary ${version2} aktualisieren.`;
+      case "es":
+        return `Su app no puede actualizarse sola a Infinitary ${version2}.`;
+      case "fr":
+        return `Son app ne peut pas se mettre à jour seule vers Infinitary ${version2}.`;
+      case "ja":
+        return `そのアプリは Infinitary ${version2} へ自動でアップデートできません。`;
+      case "ko":
+        return `그 앱은 Infinitary ${version2}(으)로 스스로 업데이트할 수 없어요.`;
+      case "pt-BR":
+        return `O app dele não consegue se atualizar sozinho para o Infinitary ${version2}.`;
+      case "zh-Hans":
+        return `它的应用无法自行更新到 Infinitary ${version2}。`;
+      case "zh-Hant":
+        return `它的應用程式無法自行更新到 Infinitary ${version2}。`;
+      case "en-XA":
+        return `[Îţš áþþ çáññöţ ûþðáţé ţö Îñƒîñîţáŕý ${version2} ƀý îţšéļƒ. ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Its app cannot update to Infinitary ‬${version2}‮ by itself.‬`;
+    }
+    return `Its app cannot update to Infinitary ${version2} by itself.`;
+  }
+  function devicesAppCardFailed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `حاول أن يُحدِّث نفسه ولم ينجح. يحاول «تحديث التطبيق» في صفّه ضمن الإعدادات ← الأجهزة مرة أخرى.`;
+      case "de":
+        return `Sie hat versucht, sich selbst zu aktualisieren, und es hat nicht geklappt. „App aktualisieren“ in ihrer Zeile unter Einstellungen → Geräte versucht es noch einmal.`;
+      case "es":
+        return `Intentó actualizarse sola y no se completó. «Actualizar app» en su fila de Configuración → Dispositivos lo intenta de nuevo.`;
+      case "fr":
+        return `Elle a essayé de se mettre à jour seule, sans succès. « Mettre à jour l’app » sur sa ligne dans Réglages → Appareils réessaie.`;
+      case "ja":
+        return `自動でアップデートしようとしましたが、完了しませんでした。設定 → デバイスのその行にある「アプリをアップデート」でもう一度試します。`;
+      case "ko":
+        return `스스로 업데이트하려 했지만 완료되지 않았어요. 설정 → 기기의 해당 행에 있는 ‘앱 업데이트’로 다시 시도해요.`;
+      case "pt-BR":
+        return `Ele tentou se atualizar sozinho e não deu certo. “Atualizar app” na linha dele em Ajustes → Dispositivos tenta de novo.`;
+      case "zh-Hans":
+        return `它尝试自行更新，但没有成功。在“设置 → 设备”中它那一行的“更新应用”会再试一次。`;
+      case "zh-Hant":
+        return `它嘗試自行更新，但沒有成功。在「設定 → 裝置」中它那一列的「更新應用程式」會再試一次。`;
+      case "en-XA":
+        return `[Îţ ţŕîéð ţö ûþðáţé ƀý îţšéļƒ, áñð îţ ðîð ñöţ ĝö ţĥŕöûĝĥ. Ûþðáţé áþþ öñ îţš ŕöŵ îñ Šéţţîñĝš → Ðéṽîçéš ţŕîéš áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮It tried to update by itself, and it did not go through. Update app on its row in Settings → Devices tries again.‬`;
+    }
+    return `It tried to update by itself, and it did not go through. Update app on its row in Settings → Devices tries again.`;
+  }
+  function devicesAppCardGotIt() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فهمت`;
+      case "de":
+        return `Verstanden`;
+      case "es":
+        return `Entendido`;
+      case "fr":
+        return `Compris`;
+      case "ja":
+        return `了解`;
+      case "ko":
+        return `확인`;
+      case "pt-BR":
+        return `Entendi`;
+      case "zh-Hans":
+        return `知道了`;
+      case "zh-Hant":
+        return `知道了`;
+      case "en-XA":
+        return `[Ĝöţ îţ ~~]`;
+      case "ar-XB":
+        return `‮Got it‬`;
+    }
+    return `Got it`;
+  }
+  function devicesAppCardHas(input2) {
+    const app = input2.app;
+    const device = input2.device;
+    const home = input2.home;
+    switch (currentLanguage()) {
+      case "ar":
+        return `التطبيق المفتوح على ${device} لديه Infinitary ${app}، ونائب القبطان يعمل على Infinitary ${home}.`;
+      case "de":
+        return `Die auf ${device} geöffnete App hat Infinitary ${app}, und der erste Offizier läuft mit Infinitary ${home}.`;
+      case "es":
+        return `La app abierta en ${device} tiene Infinitary ${app}, y el primer oficial usa Infinitary ${home}.`;
+      case "fr":
+        return `L’app ouverte sur ${device} a Infinitary ${app}, et le second fonctionne sous Infinitary ${home}.`;
+      case "ja":
+        return `${device} で開いているアプリは Infinitary ${app} で、一等航海士は Infinitary ${home} で動いています。`;
+      case "ko":
+        return `${device}에서 열린 앱은 Infinitary ${app}이고, 일등항해사는 Infinitary ${home}에서 실행돼요.`;
+      case "pt-BR":
+        return `O app aberto em ${device} tem o Infinitary ${app}, e o imediato roda o Infinitary ${home}.`;
+      case "zh-Hans":
+        return `${device} 上打开的应用是 Infinitary ${app}，而大副运行的是 Infinitary ${home}。`;
+      case "zh-Hant":
+        return `${device} 上開啟的應用程式是 Infinitary ${app}，而大副執行的是 Infinitary ${home}。`;
+      case "en-XA":
+        return `[Ţĥé áþþ öþéñ öñ ${device} ĥáš Îñƒîñîţáŕý ${app}, áñð ţĥé ƒîŕšţ ɱáţé ŕûñš Îñƒîñîţáŕý ${home}. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The app open on ‬${device}‮ has Infinitary ‬${app}‮, and the first mate runs Infinitary ‬${home}‮.‬`;
+    }
+    return `The app open on ${device} has Infinitary ${app}, and the first mate runs Infinitary ${home}.`;
+  }
+  function devicesAppCardNotNow() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ليس الآن`;
+      case "de":
+        return `Nicht jetzt`;
+      case "es":
+        return `Ahora no`;
+      case "fr":
+        return `Pas maintenant`;
+      case "ja":
+        return `今はしない`;
+      case "ko":
+        return `나중에`;
+      case "pt-BR":
+        return `Agora não`;
+      case "zh-Hans":
+        return `暂不`;
+      case "zh-Hant":
+        return `暫時不要`;
+      case "en-XA":
+        return `[Ñöţ ñöŵ ~~~]`;
+      case "ar-XB":
+        return `‮Not now‬`;
+    }
+    return `Not now`;
+  }
+  function devicesAppCardOpen() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فتح الأجهزة`;
+      case "de":
+        return `Geräte öffnen`;
+      case "es":
+        return `Abrir Dispositivos`;
+      case "fr":
+        return `Ouvrir Appareils`;
+      case "ja":
+        return `デバイスを開く`;
+      case "ko":
+        return `기기 열기`;
+      case "pt-BR":
+        return `Abrir Dispositivos`;
+      case "zh-Hans":
+        return `打开设备`;
+      case "zh-Hant":
+        return `開啟裝置`;
+      case "en-XA":
+        return `[Öþéñ Ðéṽîçéš ~~~~]`;
+      case "ar-XB":
+        return `‮Open Devices‬`;
+    }
+    return `Open Devices`;
+  }
+  function devicesAppCardSaid(input2) {
+    const problem = input2.problem;
+    switch (currentLanguage()) {
+      case "ar":
+        return `قال: ${problem}`;
+      case "de":
+        return `Sie meldete: ${problem}`;
+      case "es":
+        return `Dijo: ${problem}`;
+      case "fr":
+        return `Elle a indiqué : ${problem}`;
+      case "ja":
+        return `表示された内容：${problem}`;
+      case "ko":
+        return `표시된 내용: ${problem}`;
+      case "pt-BR":
+        return `Ele disse: ${problem}`;
+      case "zh-Hans":
+        return `它的提示：${problem}`;
+      case "zh-Hant":
+        return `它的提示：${problem}`;
+      case "en-XA":
+        return `[Îţ šáîð: ${problem} ~~~]`;
+      case "ar-XB":
+        return `‮It said: ‬${problem}`;
+    }
+    return `It said: ${problem}`;
+  }
+  function devicesAppCardTitle(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تحديث التطبيق على ${device}`;
+      case "de":
+        return `Die App auf ${device} aktualisieren`;
+      case "es":
+        return `Actualizar la app en ${device}`;
+      case "fr":
+        return `Mettre à jour l’app sur ${device}`;
+      case "ja":
+        return `${device} のアプリをアップデート`;
+      case "ko":
+        return `${device}의 앱 업데이트`;
+      case "pt-BR":
+        return `Atualizar o app em ${device}`;
+      case "zh-Hans":
+        return `更新 ${device} 上的应用`;
+      case "zh-Hant":
+        return `更新 ${device} 上的應用程式`;
+      case "en-XA":
+        return `[Ûþðáţé ţĥé áþþ öñ ${device} ~~~~~~]`;
+      case "ar-XB":
+        return `‮Update the app on ‬${device}`;
+    }
+    return `Update the app on ${device}`;
+  }
+  function devicesAppFailed(input2) {
+    const version2 = input2.version;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يتمكّن تطبيقه من تحديث نفسه إلى Infinitary ${version2}. يحاول «تحديث التطبيق» مرة أخرى.`;
+      case "de":
+        return `Seine App konnte sich nicht selbst auf Infinitary ${version2} aktualisieren. „App aktualisieren“ versucht es noch einmal.`;
+      case "es":
+        return `Su app no pudo actualizarse sola a Infinitary ${version2}. «Actualizar app» lo intenta de nuevo.`;
+      case "fr":
+        return `Son app n’a pas pu se mettre à jour seule vers Infinitary ${version2}. « Mettre à jour l’app » réessaie.`;
+      case "ja":
+        return `そのアプリは Infinitary ${version2} へ自動でアップデートできませんでした。「アプリをアップデート」でもう一度試します。`;
+      case "ko":
+        return `그 앱이 Infinitary ${version2}(으)로 스스로 업데이트하지 못했어요. ‘앱 업데이트’로 다시 시도해요.`;
+      case "pt-BR":
+        return `O app dele não conseguiu se atualizar sozinho para o Infinitary ${version2}. “Atualizar app” tenta de novo.`;
+      case "zh-Hans":
+        return `它的应用未能自行更新到 Infinitary ${version2}。“更新应用”会再试一次。`;
+      case "zh-Hant":
+        return `它的應用程式未能自行更新到 Infinitary ${version2}。「更新應用程式」會再試一次。`;
+      case "en-XA":
+        return `[Îţš áþþ çöûļð ñöţ ûþðáţé ţö Îñƒîñîţáŕý ${version2} ƀý îţšéļƒ. Ûþðáţé áþþ ţŕîéš áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Its app could not update to Infinitary ‬${version2}‮ by itself. Update app tries again.‬`;
+    }
+    return `Its app could not update to Infinitary ${version2} by itself. Update app tries again.`;
+  }
+  function devicesAppGetting(input2) {
+    const percent = input2.percent;
+    const version2 = input2.version;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يُحدِّث تطبيقه نفسه إلى Infinitary ${version2}: نُزِّل ${percent}٪.`;
+      case "de":
+        return `Seine App aktualisiert sich selbst auf Infinitary ${version2}: ${percent} % geladen.`;
+      case "es":
+        return `Su app se actualiza sola a Infinitary ${version2}: ${percent} % descargado.`;
+      case "fr":
+        return `Son app se met à jour seule vers Infinitary ${version2} : ${percent} % téléchargés.`;
+      case "ja":
+        return `そのアプリは Infinitary ${version2} へ自動でアップデート中です：${percent}% ダウンロード済み。`;
+      case "ko":
+        return `그 앱이 Infinitary ${version2}(으)로 스스로 업데이트하는 중이에요: ${percent}% 내려받음.`;
+      case "pt-BR":
+        return `O app dele se atualiza sozinho para o Infinitary ${version2}: ${percent}% baixado.`;
+      case "zh-Hans":
+        return `它的应用正在自行更新到 Infinitary ${version2}：已下载 ${percent}%。`;
+      case "zh-Hant":
+        return `它的應用程式正在自行更新到 Infinitary ${version2}：已下載 ${percent}%。`;
+      case "en-XA":
+        return `[Îţš áþþ ûþðáţéš ţö Îñƒîñîţáŕý ${version2} ƀý îţšéļƒ: ${percent}% ðöŵñļöáðéð. ~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Its app updates to Infinitary ‬${version2}‮ by itself: ‬${percent}‮% downloaded.‬`;
+    }
+    return `Its app updates to Infinitary ${version2} by itself: ${percent}% downloaded.`;
+  }
+  function devicesAppRestarting(input2) {
+    const version2 = input2.version;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يُعاد تشغيل تطبيقه على Infinitary ${version2}.`;
+      case "de":
+        return `Seine App startet neu mit Infinitary ${version2}.`;
+      case "es":
+        return `Su app se reinicia con Infinitary ${version2}.`;
+      case "fr":
+        return `Son app redémarre sur Infinitary ${version2}.`;
+      case "ja":
+        return `そのアプリは Infinitary ${version2} で再起動します。`;
+      case "ko":
+        return `그 앱이 Infinitary ${version2}(으)로 다시 시작해요.`;
+      case "pt-BR":
+        return `O app dele reinicia no Infinitary ${version2}.`;
+      case "zh-Hans":
+        return `它的应用正以 Infinitary ${version2} 重新启动。`;
+      case "zh-Hant":
+        return `它的應用程式正以 Infinitary ${version2} 重新啟動。`;
+      case "en-XA":
+        return `[Îţš áþþ šţáŕţš áĝáîñ öñ Îñƒîñîţáŕý ${version2}. ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Its app starts again on Infinitary ‬${version2}‮.‬`;
+    }
+    return `Its app starts again on Infinitary ${version2}.`;
+  }
+  function devicesAppWaiting(input2) {
+    const version2 = input2.version;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لدى تطبيقه Infinitary ${version2} جاهزًا، ويُعاد تشغيله عليه حين لا يستخدمه أحد هناك.`;
+      case "de":
+        return `Seine App hat Infinitary ${version2} bereit und startet damit neu, sobald niemand sie dort benutzt.`;
+      case "es":
+        return `Su app tiene Infinitary ${version2} lista y se reinicia con ella cuando nadie la use allí.`;
+      case "fr":
+        return `Son app a Infinitary ${version2} prêt et redémarre dessus dès que personne ne l’utilise là-bas.`;
+      case "ja":
+        return `そのアプリは Infinitary ${version2} の準備ができており、そこで誰も使っていないときに再起動します。`;
+      case "ko":
+        return `그 앱은 Infinitary ${version2}이(가) 준비되어 있고, 그곳에서 아무도 쓰지 않을 때 다시 시작해요.`;
+      case "pt-BR":
+        return `O app dele tem o Infinitary ${version2} pronto e reinicia nele quando ninguém o estiver usando lá.`;
+      case "zh-Hans":
+        return `它的应用已准备好 Infinitary ${version2}，等那里没人使用时就会重新启动。`;
+      case "zh-Hant":
+        return `它的應用程式已準備好 Infinitary ${version2}，等那裡沒人使用時就會重新啟動。`;
+      case "en-XA":
+        return `[Îţš áþþ ĥáš Îñƒîñîţáŕý ${version2} ŕéáðý áñð šţáŕţš áĝáîñ öñ îţ öñçé ñöƀöðý ûšéš îţ ţĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Its app has Infinitary ‬${version2}‮ ready and starts again on it once nobody uses it there.‬`;
+    }
+    return `Its app has Infinitary ${version2} ready and starts again on it once nobody uses it there.`;
+  }
+  function devicesAppWhyInstallation(input2) {
+    const version2 = input2.version;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يستطيع أن يستبدل نفسه حيث ثُبِّت هناك، لذا ثبِّت Infinitary ${version2} هناك.`;
+      case "de":
+        return `Sie kann sich dort, wo sie installiert ist, nicht selbst ersetzen – installiere Infinitary ${version2} also dort.`;
+      case "es":
+        return `No puede reemplazarse donde está instalada allí, así que instala Infinitary ${version2} allí.`;
+      case "fr":
+        return `Elle ne peut pas se remplacer là où elle est installée : installe donc Infinitary ${version2} là-bas.`;
+      case "ja":
+        return `インストールされている場所では自分自身を置き換えられないため、そこで Infinitary ${version2} をインストールしてください。`;
+      case "ko":
+        return `그곳에 설치된 위치에서는 스스로를 바꿀 수 없으니, 그곳에서 Infinitary ${version2}을(를) 설치하세요.`;
+      case "pt-BR":
+        return `Ele não consegue se substituir onde está instalado lá, então instale o Infinitary ${version2} lá.`;
+      case "zh-Hans":
+        return `它无法在那里的安装位置替换自己，请在那里安装 Infinitary ${version2}。`;
+      case "zh-Hant":
+        return `它無法在那裡的安裝位置取代自己，請在那裡安裝 Infinitary ${version2}。`;
+      case "en-XA":
+        return `[Îţ çáññöţ ŕéþļáçé îţšéļƒ ŵĥéŕé îţ îš îñšţáļļéð ţĥéŕé, šö îñšţáļļ Îñƒîñîţáŕý ${version2} ţĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮It cannot replace itself where it is installed there, so install Infinitary ‬${version2}‮ there.‬`;
+    }
+    return `It cannot replace itself where it is installed there, so install Infinitary ${version2} there.`;
+  }
+  function devicesAppWhyOwnWindow() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يُحدَّث إلا من نافذته هناك، لذا حدِّثه هناك.`;
+      case "de":
+        return `Sie aktualisiert sich nur aus ihrem eigenen Fenster dort – aktualisiere sie also dort.`;
+      case "es":
+        return `Solo se actualiza desde su propia ventana allí, así que actualízala allí.`;
+      case "fr":
+        return `Elle ne se met à jour que depuis sa propre fenêtre là-bas : mets-la donc à jour là-bas.`;
+      case "ja":
+        return `そこにある自身のウインドウからしかアップデートできないため、そこでアップデートしてください。`;
+      case "ko":
+        return `그곳의 자체 창에서만 업데이트되니, 그곳에서 업데이트하세요.`;
+      case "pt-BR":
+        return `Ele só se atualiza pela própria janela lá, então atualize-o lá.`;
+      case "zh-Hans":
+        return `它只能在那里自己的窗口中更新，请在那里更新。`;
+      case "zh-Hant":
+        return `它只能在那裡自己的視窗中更新，請在那裡更新。`;
+      case "en-XA":
+        return `[Îţ ûþðáţéš öñļý ƒŕöɱ îţš öŵñ ŵîñðöŵ ţĥéŕé, šö ûþðáţé îţ ţĥéŕé. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮It updates only from its own window there, so update it there.‬`;
+    }
+    return `It updates only from its own window there, so update it there.`;
+  }
+  function devicesAppWhyPackageManager() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ثبّته مدير حزم هناك، لذا حدِّثه هناك بمدير الحزم ذاك.`;
+      case "de":
+        return `Ein Paketmanager hat sie dort installiert – aktualisiere sie also dort mit diesem Paketmanager.`;
+      case "es":
+        return `Un gestor de paquetes la instaló allí, así que actualízala allí con ese gestor de paquetes.`;
+      case "fr":
+        return `Un gestionnaire de paquets l’a installée là-bas : mets-la donc à jour là-bas avec ce gestionnaire de paquets.`;
+      case "ja":
+        return `そこではパッケージマネージャーがインストールしたため、そのパッケージマネージャーでアップデートしてください。`;
+      case "ko":
+        return `그곳에서는 패키지 관리자가 설치했으니, 그 패키지 관리자로 업데이트하세요.`;
+      case "pt-BR":
+        return `Um gerenciador de pacotes o instalou lá, então atualize-o lá com esse gerenciador de pacotes.`;
+      case "zh-Hans":
+        return `它在那里由软件包管理器安装，请在那里用该软件包管理器更新。`;
+      case "zh-Hant":
+        return `它在那裡由套件管理工具安裝，請在那裡用該套件管理工具更新。`;
+      case "en-XA":
+        return `[Å þáçķáĝé ɱáñáĝéŕ îñšţáļļéð îţ ţĥéŕé, šö ûþðáţé îţ ţĥéŕé ŵîţĥ ţĥáţ þáçķáĝé ɱáñáĝéŕ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A package manager installed it there, so update it there with that package manager.‬`;
+    }
+    return `A package manager installed it there, so update it there with that package manager.`;
+  }
+  function devicesAppWhyUnpublished(input2) {
+    const version2 = input2.version;
+    switch (currentLanguage()) {
+      case "ar":
+        return `Infinitary ${version2} ليس إصدارًا منشورًا، لذا ثبِّته هناك يدويًا.`;
+      case "de":
+        return `Infinitary ${version2} ist keine veröffentlichte Version – installiere sie also dort von Hand.`;
+      case "es":
+        return `Infinitary ${version2} no es una versión publicada, así que instálala allí a mano.`;
+      case "fr":
+        return `Infinitary ${version2} n’est pas une version publiée : installe-la donc là-bas à la main.`;
+      case "ja":
+        return `Infinitary ${version2} は公開されたバージョンではないため、そこで手動でインストールしてください。`;
+      case "ko":
+        return `Infinitary ${version2}은(는) 공개된 버전이 아니니, 그곳에서 직접 설치하세요.`;
+      case "pt-BR":
+        return `O Infinitary ${version2} não é uma versão publicada, então instale-o lá manualmente.`;
+      case "zh-Hans":
+        return `Infinitary ${version2} 不是已发布的版本，请在那里手动安装。`;
+      case "zh-Hant":
+        return `Infinitary ${version2} 不是已發布的版本，請在那裡手動安裝。`;
+      case "en-XA":
+        return `[Îñƒîñîţáŕý ${version2} îš ñöţ á þûƀļîšĥéð ṽéŕšîöñ, šö îñšţáļļ îţ ţĥéŕé ƀý ĥáñð. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Infinitary ‬${version2}‮ is not a published version, so install it there by hand.‬`;
+    }
+    return `Infinitary ${version2} is not a published version, so install it there by hand.`;
+  }
   function devicesCarriedOn(input2) {
     const to = input2.to;
     switch (currentLanguage()) {
@@ -27515,6 +27960,61 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `${name}‮ is out of reach‬`;
     }
     return `${name} is out of reach`;
+  }
+  function devicesUpdateApp() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تحديث التطبيق`;
+      case "de":
+        return `App aktualisieren`;
+      case "es":
+        return `Actualizar app`;
+      case "fr":
+        return `Mettre à jour l’app`;
+      case "ja":
+        return `アプリをアップデート`;
+      case "ko":
+        return `앱 업데이트`;
+      case "pt-BR":
+        return `Atualizar app`;
+      case "zh-Hans":
+        return `更新应用`;
+      case "zh-Hant":
+        return `更新應用程式`;
+      case "en-XA":
+        return `[Ûþðáţé áþþ ~~~~]`;
+      case "ar-XB":
+        return `‮Update app‬`;
+    }
+    return `Update app`;
+  }
+  function devicesUpdateAppNamed(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تحديث التطبيق على ${device}`;
+      case "de":
+        return `Die App auf ${device} aktualisieren`;
+      case "es":
+        return `Actualizar la app en ${device}`;
+      case "fr":
+        return `Mettre à jour l’app sur ${device}`;
+      case "ja":
+        return `${device} のアプリをアップデート`;
+      case "ko":
+        return `${device}의 앱 업데이트`;
+      case "pt-BR":
+        return `Atualizar o app em ${device}`;
+      case "zh-Hans":
+        return `更新 ${device} 上的应用`;
+      case "zh-Hant":
+        return `更新 ${device} 上的應用程式`;
+      case "en-XA":
+        return `[Ûþðáţé ţĥé áþþ öñ ${device} ~~~~~~]`;
+      case "ar-XB":
+        return `‮Update the app on ‬${device}`;
+    }
+    return `Update the app on ${device}`;
   }
   function devicesWorkCopyGone(input2) {
     const device = input2.device;
@@ -91274,6 +91774,22 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     crewmateWaitsForModel,
     crewmateWaitsForUpdate,
     crewmateWorking,
+    devicesAppCannot,
+    devicesAppCardFailed,
+    devicesAppCardGotIt,
+    devicesAppCardHas,
+    devicesAppCardNotNow,
+    devicesAppCardOpen,
+    devicesAppCardSaid,
+    devicesAppCardTitle,
+    devicesAppFailed,
+    devicesAppGetting,
+    devicesAppRestarting,
+    devicesAppWaiting,
+    devicesAppWhyInstallation,
+    devicesAppWhyOwnWindow,
+    devicesAppWhyPackageManager,
+    devicesAppWhyUnpublished,
     devicesCarriedOn,
     devicesCarryNotRemoved,
     devicesCarryRunsOn,
@@ -91314,6 +91830,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     devicesRemoteLineReadOnly,
     devicesRemoteLineReadingAgain,
     devicesRemoteOutOfReach,
+    devicesUpdateApp,
+    devicesUpdateAppNamed,
     devicesWorkCopyGone,
     devicesWorkSavedByNewer,
     dialogAdd,
@@ -94185,6 +94703,22 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "crewmateWaitsForModel": ["left"],
     "crewmateWaitsForUpdate": ["computer", "left"],
     "crewmateWorking": [],
+    "devicesAppCannot": ["version"],
+    "devicesAppCardFailed": [],
+    "devicesAppCardGotIt": [],
+    "devicesAppCardHas": ["app", "device", "home"],
+    "devicesAppCardNotNow": [],
+    "devicesAppCardOpen": [],
+    "devicesAppCardSaid": ["problem"],
+    "devicesAppCardTitle": ["device"],
+    "devicesAppFailed": ["version"],
+    "devicesAppGetting": ["percent", "version"],
+    "devicesAppRestarting": ["version"],
+    "devicesAppWaiting": ["version"],
+    "devicesAppWhyInstallation": ["version"],
+    "devicesAppWhyOwnWindow": [],
+    "devicesAppWhyPackageManager": [],
+    "devicesAppWhyUnpublished": ["version"],
     "devicesCarriedOn": ["to"],
     "devicesCarryNotRemoved": ["from", "why"],
     "devicesCarryRunsOn": ["from", "to"],
@@ -94225,6 +94759,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "devicesRemoteLineReadOnly": [],
     "devicesRemoteLineReadingAgain": [],
     "devicesRemoteOutOfReach": ["name"],
+    "devicesUpdateApp": [],
+    "devicesUpdateAppNamed": ["device"],
     "devicesWorkCopyGone": ["device"],
     "devicesWorkSavedByNewer": [],
     "dialogAdd": [],
@@ -103393,6 +103929,22 @@ ${FRAME_KEYBOARD_SCRIPT}
     }).optional()
   });
   const machineLoginOutcomeSchema = _enum(["signed-out", "kept", "not-signed-out"]);
+  const appFollowStepSchema = _enum(["getting", "waiting", "restarting", "cannot", "failed"]);
+  const appFollowReasonSchema = _enum([
+    "package-manager",
+    "own-window",
+    "installation",
+    "unpublished"
+  ]);
+  const appFollowReportSchema = strictObject({
+    version: string().min(1).max(64),
+    step: appFollowStepSchema,
+    percent: number().min(0).max(100).optional(),
+    reason: appFollowReasonSchema.optional(),
+    /** The app's own words for what stopped it, said after the home's. */
+    problem: string().min(1).max(400).optional()
+  });
+  strictObject({ deviceId: string().min(1).max(64) });
   const commandEndingSchema = _enum([
     "quit",
     "signal",
@@ -103554,7 +104106,13 @@ ${FRAME_KEYBOARD_SCRIPT}
   const deviceAppVersionSchema = strictObject({
     app: string().min(1).max(64).optional(),
     than: _enum(["older", "newer"]).optional(),
-    same: literal(true).optional()
+    same: literal(true).optional(),
+    /**
+     * Where that app stands in catching up with this computer's version, as
+     * it last told it (docs/view.md, "Following the home's version";
+     * `app-follows-home`): absent while it said nothing for this version.
+     */
+    follow: appFollowReportSchema.optional()
   });
   const sshStopReasonSchema = _enum([
     "host-unknown",

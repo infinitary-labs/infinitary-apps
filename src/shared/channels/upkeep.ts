@@ -108,6 +108,15 @@ export const upkeepChannels = {
     request: z.tuple([]),
     response: updateStatusSchema,
   },
+  // A window says whether it holds words not yet sent (docs/view.md,
+  // "Following the home's version"): an app catching up with the computer it
+  // controls starts again only while none of its windows holds any.
+  "inf:update:unsent": {
+    effect: "change",
+    surface: "host",
+    request: z.tuple([z.boolean()]),
+    response: okSchema,
+  },
   // The first mate's computer's own update, read and started from any paired
   // view, a phone or a Mac that controls this one (docs/view.md, "Updating the
   // first mate's computer"; `home-update.md`). Asked across every major, so

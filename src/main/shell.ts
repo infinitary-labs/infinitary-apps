@@ -231,6 +231,8 @@ export class Shell {
   private mode: HomeMode | ViewMode | BesideMode | null = null;
   /** Whether a window of this program is in front, as it last said (`windowFront`). */
   private inFront = false;
+  /** The windows that hold words not yet sent, as each last said (`windowUnsent`). */
+  private readonly unsent = new Set<number>();
   private coreStarted = false;
   /**
    * The times the window on this computer had to read everything again
@@ -550,6 +552,17 @@ export class Shell {
     }
   }
 
+  /**
+   * A window said whether it holds words not yet sent, or closed (docs/view.md,
+   * "Following the home's version"): an app catching up with the computer it
+   * controls starts again only while none does.
+   */
+  windowUnsent(windowId: number, holds: boolean): void {
+    if (holds) this.unsent.add(windowId);
+    else this.unsent.delete(windowId);
+    if (!holds && this.mode?.kind === "view") this.mode.view.noticed();
+  }
+
   /** The Mac woke. */
   resumed(): void {
     const core = this.core();
@@ -854,6 +867,7 @@ export class Shell {
       },
       onSetUpWork: () => void this.checkWork(),
       ...(this.options.keyReminders ? { keyReminders: this.options.keyReminders } : {}),
+      nobodyHere: () => !this.inFront && this.unsent.size === 0,
     });
     this.mode = { kind: "view", view };
     if (this.inFront) view.front(true);

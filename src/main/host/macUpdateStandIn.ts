@@ -9,7 +9,8 @@ import { settingFrom } from "@shared/envSettings";
  * it, the download finishes at once and the install, where a release would
  * quit and replace the copy, replaces nothing and never answers, so the
  * real update controller, the crew's save and every request around them run
- * as a release's would (tests/e2e/home-update.spec.ts). A packaged build
+ * as a release's would (tests/e2e/home-update.spec.ts,
+ * tests/e2e/app-follows-home.spec.ts). A packaged build
  * always uses the real driver.
  */
 export function macUpdateStandIn(
@@ -22,6 +23,11 @@ export function macUpdateStandIn(
   return {
     installation: parseMacInstallation(DIRECT_MAC_INSTALLATION),
     check: async () => ({ version, releaseUrl: releaseSource.releaseUrl(version) }),
+    // Every version is published here, so a copy following another computer gets its version.
+    checkVersion: async (exact) => ({
+      version: exact,
+      releaseUrl: releaseSource.releaseUrl(exact),
+    }),
     download: async (_offer, progress) => progress(100),
     // A release quits here to replace the copy and never answers; nothing is replaced and nothing quits.
     install: () => new Promise<void>(() => {}),

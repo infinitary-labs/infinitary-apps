@@ -1088,6 +1088,49 @@ describe("Settings -> Devices", () => {
     expect(render({ devices: [AIR] })).not.toContain("data-device-copy-versions");
   });
 
+  // INF-5372's plan, piece 2: the app updates by itself while nobody uses it, the row says each
+  // step, and the captain's "i think we should still provide a manual update flow in the devices view".
+  it("says each step of an app catching up, and offers Update app until it restarts or cannot", () => {
+    const said = (html: string) => words(html).replaceAll("&#x27;", "'");
+    const following = (follow: NonNullable<DeviceView["appVersion"]>["follow"]) =>
+      render({
+        devices: [{ ...AIR, appVersion: { app: "0.8.3", than: "older", follow } }],
+        onUpdateApp: noop,
+      });
+    const getting = following({ version: "0.8.4", step: "getting", percent: 40 });
+    expect(said(getting)).toContain(
+      "Its app updates to Infinitary 0.8.4 by itself: 40% downloaded.",
+    );
+    expect(getting).toContain('aria-label="Update the app on MacBook Air"');
+    const waiting = following({ version: "0.8.4", step: "waiting" });
+    expect(said(waiting)).toContain(
+      "Its app has Infinitary 0.8.4 ready and starts again on it once nobody uses it there.",
+    );
+    expect(waiting).toContain("data-device-update-app");
+    const restarting = following({ version: "0.8.4", step: "restarting" });
+    expect(said(restarting)).toContain("Its app starts again on Infinitary 0.8.4.");
+    expect(restarting).not.toContain("data-device-update-app");
+    const cannot = following({ version: "0.8.4", step: "cannot", reason: "own-window" });
+    expect(said(cannot)).toContain(
+      "Its app cannot update to Infinitary 0.8.4 by itself. It updates only from its own window there, so update it there.",
+    );
+    expect(cannot).not.toContain("data-device-update-app");
+    const failed = following({
+      version: "0.8.4",
+      step: "failed",
+      problem: "The network went away.",
+    });
+    expect(said(failed)).toContain("Its app could not update to Infinitary 0.8.4 by itself.");
+    expect(failed).toContain("data-device-update-app");
+    // An app from before says no step, and the row offers nothing new.
+    const before = render({
+      devices: [{ ...AIR, appVersion: { app: "0.8.3", than: "older" } }],
+      onUpdateApp: noop,
+    });
+    expect(before).not.toContain("data-device-app-follow");
+    expect(before).not.toContain("data-device-update-app");
+  });
+
   // INF-4260's plan, piece 10, and review INF-4743 (the captain's pick: say
   // to install the newer Infinitary on that PC): a Windows PC updates itself
   // only from its own Version row (INF-4258), and the home sends it no build

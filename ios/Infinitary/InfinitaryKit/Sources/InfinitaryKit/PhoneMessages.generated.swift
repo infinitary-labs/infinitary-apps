@@ -766,6 +766,22 @@ public enum PhoneMessages {
     public static func `crewmateWaitsForModel`(`left`: String) -> String { PhoneWords.format("crewmateWaitsForModel", [`left`]) }
     public static func `crewmateWaitsForUpdate`(`computer`: String, `left`: String) -> String { PhoneWords.format("crewmateWaitsForUpdate", [`computer`, `left`]) }
     public static func `crewmateWorking`() -> String { PhoneWords.format("crewmateWorking", []) }
+    public static func `devicesAppCannot`(`version`: String) -> String { PhoneWords.format("devicesAppCannot", [`version`]) }
+    public static func `devicesAppCardFailed`() -> String { PhoneWords.format("devicesAppCardFailed", []) }
+    public static func `devicesAppCardGotIt`() -> String { PhoneWords.format("devicesAppCardGotIt", []) }
+    public static func `devicesAppCardHas`(`app`: String, `device`: String, `home`: String) -> String { PhoneWords.format("devicesAppCardHas", [`app`, `device`, `home`]) }
+    public static func `devicesAppCardNotNow`() -> String { PhoneWords.format("devicesAppCardNotNow", []) }
+    public static func `devicesAppCardOpen`() -> String { PhoneWords.format("devicesAppCardOpen", []) }
+    public static func `devicesAppCardSaid`(`problem`: String) -> String { PhoneWords.format("devicesAppCardSaid", [`problem`]) }
+    public static func `devicesAppCardTitle`(`device`: String) -> String { PhoneWords.format("devicesAppCardTitle", [`device`]) }
+    public static func `devicesAppFailed`(`version`: String) -> String { PhoneWords.format("devicesAppFailed", [`version`]) }
+    public static func `devicesAppGetting`(`percent`: String, `version`: String) -> String { PhoneWords.format("devicesAppGetting", [`percent`, `version`]) }
+    public static func `devicesAppRestarting`(`version`: String) -> String { PhoneWords.format("devicesAppRestarting", [`version`]) }
+    public static func `devicesAppWaiting`(`version`: String) -> String { PhoneWords.format("devicesAppWaiting", [`version`]) }
+    public static func `devicesAppWhyInstallation`(`version`: String) -> String { PhoneWords.format("devicesAppWhyInstallation", [`version`]) }
+    public static func `devicesAppWhyOwnWindow`() -> String { PhoneWords.format("devicesAppWhyOwnWindow", []) }
+    public static func `devicesAppWhyPackageManager`() -> String { PhoneWords.format("devicesAppWhyPackageManager", []) }
+    public static func `devicesAppWhyUnpublished`(`version`: String) -> String { PhoneWords.format("devicesAppWhyUnpublished", [`version`]) }
     public static func `devicesCarriedOn`(`to`: String) -> String { PhoneWords.format("devicesCarriedOn", [`to`]) }
     public static func `devicesCarryNotRemoved`(`from`: String, `why`: String) -> String { PhoneWords.format("devicesCarryNotRemoved", [`from`, `why`]) }
     public static func `devicesCarryRunsOn`(`from`: String, `to`: String) -> String { PhoneWords.format("devicesCarryRunsOn", [`from`, `to`]) }
@@ -806,6 +822,8 @@ public enum PhoneMessages {
     public static func `devicesRemoteLineReadOnly`() -> String { PhoneWords.format("devicesRemoteLineReadOnly", []) }
     public static func `devicesRemoteLineReadingAgain`() -> String { PhoneWords.format("devicesRemoteLineReadingAgain", []) }
     public static func `devicesRemoteOutOfReach`(`name`: String) -> String { PhoneWords.format("devicesRemoteOutOfReach", [`name`]) }
+    public static func `devicesUpdateApp`() -> String { PhoneWords.format("devicesUpdateApp", []) }
+    public static func `devicesUpdateAppNamed`(`device`: String) -> String { PhoneWords.format("devicesUpdateAppNamed", [`device`]) }
     public static func `devicesWorkCopyGone`(`device`: String) -> String { PhoneWords.format("devicesWorkCopyGone", [`device`]) }
     public static func `devicesWorkSavedByNewer`() -> String { PhoneWords.format("devicesWorkSavedByNewer", []) }
     public static func `dialogAdd`() -> String { PhoneWords.format("dialogAdd", []) }
@@ -4745,6 +4763,22 @@ extension PhoneWords {
         "crewmateWaitsForModel": ["left"],
         "crewmateWaitsForUpdate": ["computer", "left"],
         "crewmateWorking": [],
+        "devicesAppCannot": ["version"],
+        "devicesAppCardFailed": [],
+        "devicesAppCardGotIt": [],
+        "devicesAppCardHas": ["app", "device", "home"],
+        "devicesAppCardNotNow": [],
+        "devicesAppCardOpen": [],
+        "devicesAppCardSaid": ["problem"],
+        "devicesAppCardTitle": ["device"],
+        "devicesAppFailed": ["version"],
+        "devicesAppGetting": ["percent", "version"],
+        "devicesAppRestarting": ["version"],
+        "devicesAppWaiting": ["version"],
+        "devicesAppWhyInstallation": ["version"],
+        "devicesAppWhyOwnWindow": [],
+        "devicesAppWhyPackageManager": [],
+        "devicesAppWhyUnpublished": ["version"],
         "devicesCarriedOn": ["to"],
         "devicesCarryNotRemoved": ["from", "why"],
         "devicesCarryRunsOn": ["from", "to"],
@@ -4785,6 +4819,8 @@ extension PhoneWords {
         "devicesRemoteLineReadOnly": [],
         "devicesRemoteLineReadingAgain": [],
         "devicesRemoteOutOfReach": ["name"],
+        "devicesUpdateApp": [],
+        "devicesUpdateAppNamed": ["device"],
         "devicesWorkCopyGone": ["device"],
         "devicesWorkSavedByNewer": [],
         "dialogAdd": [],

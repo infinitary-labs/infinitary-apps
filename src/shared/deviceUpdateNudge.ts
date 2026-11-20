@@ -1,3 +1,4 @@
+import { type AppFollowReport, appFollowWhy } from "./appFollow";
 import type { CardAction } from "./cards";
 import { HERE } from "./deviceNames";
 import {
@@ -8,6 +9,7 @@ import {
   installItThereWords,
   userDisplayName,
 } from "./devices";
+import * as m from "./i18n/messages.generated.ts";
 import { remoteLoginWords } from "./remoteLogin";
 
 /**
@@ -212,4 +214,69 @@ export function noNewWorkDayLine(label: string, subject: string): string {
 /** Start now's refusal for the same wait. */
 export function noNewWorkStartRefusal(handle: string, who: string, here: string): string {
   return `${handle} waits for ${who}, which takes no new work until it is updated. It never runs on ${here} instead.`;
+}
+
+/**
+ * The card that asks the captain to update the app open on another computer
+ * (docs/devices.md, "Updating the app open there"): it goes up only when that
+ * app said it cannot get this computer's version by itself, or that getting
+ * it did not go through; an app that follows by itself has no card.
+ */
+export type AppUpdateCardFacts = {
+  deviceId: string;
+  /** The computer the app is open on, as its row names it. */
+  device: string;
+  /** The app's own version. */
+  app: string;
+  /** This computer's version, the one the app follows. */
+  home: string;
+  follow: AppFollowReport;
+};
+
+/** The app card's id, beside the computer's own update card. */
+export function appUpdateCardId(deviceId: string): string {
+  return `card-app-update-${slug(deviceId)}`;
+}
+
+/** What names an app card's gap: both versions, and the step that raised it. */
+export function appUpdateGap(facts: Pick<AppUpdateCardFacts, "app" | "home" | "follow">): string {
+  return `app:${facts.home}>${facts.app}:${facts.follow.step}`;
+}
+
+export function appUpdateCard(facts: AppUpdateCardFacts): {
+  title: string;
+  meta: string;
+  body: string;
+  actions: CardAction[];
+} {
+  const { follow } = facts;
+  const gap = appUpdateGap(facts);
+  const paragraphs = [
+    m.devicesAppCardHas({ device: facts.device, app: facts.app, home: facts.home }),
+  ];
+  if (follow.step === "cannot")
+    paragraphs.push(
+      `${m.devicesAppCannot({ version: facts.home })} ${appFollowWhy(follow.reason ?? "installation", facts.home)}`,
+    );
+  else paragraphs.push(m.devicesAppCardFailed());
+  if (follow.problem) paragraphs.push(m.devicesAppCardSaid({ problem: follow.problem }));
+  const notNow = deviceUpdateActionId(DEVICE_UPDATE_ACTIONS.notNow, gap);
+  return {
+    title: m.devicesAppCardTitle({ device: facts.device }),
+    meta: facts.device,
+    body: paragraphs.map((text) => `<p>${escapeHtml(text)}</p>`).join("\n"),
+    // Nothing here installs a copy that cannot follow: it is updated there.
+    actions:
+      follow.step === "cannot"
+        ? [{ id: notNow, label: m.devicesAppCardGotIt(), default: true }]
+        : [
+            {
+              id: deviceUpdateActionId(DEVICE_UPDATE_ACTIONS.update, gap),
+              label: m.devicesAppCardOpen(),
+              default: true,
+              effect: { kind: "open", target: "devices" },
+            },
+            { id: notNow, label: m.devicesAppCardNotNow(), variant: "ghost" },
+          ],
+  };
 }

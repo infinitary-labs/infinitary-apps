@@ -1,8 +1,10 @@
+import { appFollowLine } from "@shared/appFollow";
 import { offersAddressChange, offersHomeMove, offersStandby } from "@shared/deviceActs";
 import { HERE } from "@shared/deviceNames";
 import {
   appBehind,
   approvesSecretUses,
+  appUpdateOffered,
   automaticStartupOf,
   automaticStartupWords,
   type DeviceView,
@@ -77,6 +79,7 @@ export function DeviceRow({
   moving,
   onTryAgain,
   onFixWork,
+  onUpdateApp,
   onAskChangeAddress,
   onAskMoveHome,
   standby,
@@ -140,6 +143,29 @@ export function DeviceRow({
       text: here(versions),
       tone: "warn",
       hook: { "data-device-copy-versions": "", "data-behind": "" },
+    });
+  // The app there following this computer's version (docs/devices.md, "Updating the app open
+  // there"): the step it is at, beside Update app, which gets the version now and starts it again
+  // once no words are left unsent there.
+  const follow = behind && !updatingHere ? device.appVersion?.follow : undefined;
+  if (follow)
+    notices.push({
+      id: "app-follow",
+      text: appFollowLine(follow),
+      tone: follow.step === "cannot" || follow.step === "failed" ? "warn" : undefined,
+      hook: { "data-device-app-follow": follow.step },
+      act:
+        onUpdateApp && device.appVersion && appUpdateOffered(device, device.appVersion) ? (
+          <Button
+            variant="secondary"
+            size="sm"
+            aria-label={m.devicesUpdateAppNamed({ device: label })}
+            data-device-update-app={device.id}
+            onClick={() => onUpdateApp(device.id)}
+          >
+            {m.devicesUpdateApp()}
+          </Button>
+        ) : undefined,
     });
   const acts = rowActs({
     device,

@@ -152,6 +152,16 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, ActionExceptio
     "other-computer",
     `A ${COMPUTER.one}'s own window telling its home what it found of its background work at each welcomed connection; nothing is set`,
   ],
+  "inf:devices:app-follow": [
+    "other-computer",
+    // i18n-exempt: a channel's coverage reason, read by the coverage check, never shown
+    `The app open on another ${COMPUTER.one} telling its home how it catches up with the home's version; nothing is set`,
+  ],
+  "inf:devices:update-app": [
+    "consent",
+    // i18n-exempt: a channel's coverage reason, read by the coverage check, never shown
+    `The captain's own Update app in Settings, asking the app open on another ${COMPUTER.one} to update to this one's version and start again; a model cannot grant it`,
+  ],
   "inf:devices:change-address": [
     "consent",
     `Reaches a ${COMPUTER.one} added by its address at another address on the captain's click in Settings, once a look there finds the same computer`,

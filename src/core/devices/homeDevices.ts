@@ -638,6 +638,7 @@ export async function startHomeDevices(options: {
         reachOf,
         emit: (view) => {
           emit("inf:devices", view);
+          updateNudge?.appsChanged(view);
           emit("inf:computers:presence", computerPresenceOf(view));
           deviceSignIns.reachChanged(view);
           deviceSetup?.reachChanged(view);

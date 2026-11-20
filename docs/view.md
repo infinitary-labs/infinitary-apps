@@ -306,6 +306,19 @@ The command `updates.home` (`docs/keyboard.md`) opens the row; the phone's own c
 A development or end-to-end run stands in a direct Mac copy's update with `INFINITARY_MAC_UPDATE_STAND_IN`, the version its feed offers (`src/main/host/macUpdateStandIn.ts`): the real update controller and the crew's save run, nothing is downloaded or replaced, and a packaged build always uses the real installer (`tests/e2e/home-update.spec.ts`).
 It stands in the window's opening beside a command's first mate with `INFINITARY_OPEN_WINDOW_STAND_IN`, a file where each ask is noted instead of asking macOS to open the app, so the journey opens the window as macOS would (`src/main/host/openWindowStandIn.ts`); a packaged build always asks macOS.
 
+## Following the home's version
+
+An app open on another computer follows the version its home runs, so a computer left on an older app catches up with nobody at it (`AppFollowsHome`, `src/core/update/appFollowsHome.ts`; the `app-follows-home` contract change).
+At each connection it reads the home's version from `inf:home-update:status`; while that is newer than its own, it gets that exact version through its own updater in the background, even when its own update channel is Stable and the home runs an alpha.
+A direct Mac copy reads the home's version's own release manifest (`feeds/versions/<version>.json`, `versionManifestUrl`) and downloads it as its own update would, with no new feed; a version the release source never published answers `unpublished`.
+Once it has the version, it starts again on it as soon as nobody uses it here: no window of it is in front and none holds words not yet sent, the message box's words, pictures and pastes or a reply under a card (`holdsUnsentWords`, `inf:update:unsent`).
+The restart runs the app's own install unchanged, so a running first mate's save and Update later still apply; an install that answers `later` waits for the next moment nobody uses it.
+It tells the home each step with `inf:devices:app-follow`: `getting` with how far, `waiting`, `restarting`, `cannot` with why, and `failed` with the app's own words (`appFollowReportSchema`, `src/shared/appFollow.ts`).
+A copy only its own window or a package manager updates - a Windows PC, a Linux package, a Homebrew copy - and one whose installation is unconfirmed or run from source answers `cannot` and changes nothing, so the home's card asks for it to be updated there (`docs/devices.md`, "Updating the app open there").
+Update app on the home's Devices row sends the live frame `inf:devices:update-app-now`, and the app catches up and starts again as soon as it has the version, whoever uses it.
+An app asks only a home that lists the change, and an app from before ignores the frame, so a mixed pair behaves as before.
+A development or end-to-end run stands in its installed version with `INFINITARY_UPDATE_CURRENT_VERSION`, which its connection's hello says too, and its update with `INFINITARY_MAC_UPDATE_STAND_IN` (`tests/e2e/app-follows-home.spec.ts`).
+
 ## Notifications
 
 A view posts the other Mac's card-worthy moments to this Mac's Notification Center as that Mac posts them to its own.

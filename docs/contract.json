@@ -69,6 +69,15 @@
           "not-reached"
         ],
         "unknown": "not-reached"
+      },
+      {
+        "members": [
+          "package-manager",
+          "own-window",
+          "installation",
+          "unpublished"
+        ],
+        "unknown": "installation"
       }
     ],
     "refusals": "The home checks more than these shapes can say, such as sizes in bytes and rules across fields. Its refusal comes back as the result's error."
@@ -6046,6 +6055,49 @@
                 "same": {
                   "type": "boolean",
                   "const": true
+                },
+                "follow": {
+                  "type": "object",
+                  "properties": {
+                    "version": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    },
+                    "step": {
+                      "type": "string",
+                      "enum": [
+                        "getting",
+                        "waiting",
+                        "restarting",
+                        "cannot",
+                        "failed"
+                      ]
+                    },
+                    "percent": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "reason": {
+                      "type": "string",
+                      "enum": [
+                        "package-manager",
+                        "own-window",
+                        "installation",
+                        "unpublished"
+                      ]
+                    },
+                    "problem": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 400
+                    }
+                  },
+                  "required": [
+                    "version",
+                    "step"
+                  ]
                 }
               }
             },
@@ -6466,6 +6518,49 @@
                   "same": {
                     "type": "boolean",
                     "const": true
+                  },
+                  "follow": {
+                    "type": "object",
+                    "properties": {
+                      "version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "step": {
+                        "type": "string",
+                        "enum": [
+                          "getting",
+                          "waiting",
+                          "restarting",
+                          "cannot",
+                          "failed"
+                        ]
+                      },
+                      "percent": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "reason": {
+                        "type": "string",
+                        "enum": [
+                          "package-manager",
+                          "own-window",
+                          "installation",
+                          "unpublished"
+                        ]
+                      },
+                      "problem": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 400
+                      }
+                    },
+                    "required": [
+                      "version",
+                      "step"
+                    ]
                   }
                 }
               },
@@ -6949,6 +7044,49 @@
                   "same": {
                     "type": "boolean",
                     "const": true
+                  },
+                  "follow": {
+                    "type": "object",
+                    "properties": {
+                      "version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "step": {
+                        "type": "string",
+                        "enum": [
+                          "getting",
+                          "waiting",
+                          "restarting",
+                          "cannot",
+                          "failed"
+                        ]
+                      },
+                      "percent": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "reason": {
+                        "type": "string",
+                        "enum": [
+                          "package-manager",
+                          "own-window",
+                          "installation",
+                          "unpublished"
+                        ]
+                      },
+                      "problem": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 400
+                      }
+                    },
+                    "required": [
+                      "version",
+                      "step"
+                    ]
                   }
                 }
               },
@@ -7992,6 +8130,49 @@
               "same": {
                 "type": "boolean",
                 "const": true
+              },
+              "follow": {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "step": {
+                    "type": "string",
+                    "enum": [
+                      "getting",
+                      "waiting",
+                      "restarting",
+                      "cannot",
+                      "failed"
+                    ]
+                  },
+                  "percent": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "reason": {
+                    "type": "string",
+                    "enum": [
+                      "package-manager",
+                      "own-window",
+                      "installation",
+                      "unpublished"
+                    ]
+                  },
+                  "problem": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 400
+                  }
+                },
+                "required": [
+                  "version",
+                  "step"
+                ]
               }
             }
           },
@@ -8377,6 +8558,49 @@
               "same": {
                 "type": "boolean",
                 "const": true
+              },
+              "follow": {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "step": {
+                    "type": "string",
+                    "enum": [
+                      "getting",
+                      "waiting",
+                      "restarting",
+                      "cannot",
+                      "failed"
+                    ]
+                  },
+                  "percent": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "reason": {
+                    "type": "string",
+                    "enum": [
+                      "package-manager",
+                      "own-window",
+                      "installation",
+                      "unpublished"
+                    ]
+                  },
+                  "problem": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 400
+                  }
+                },
+                "required": [
+                  "version",
+                  "step"
+                ]
               }
             }
           },
@@ -8721,6 +8945,49 @@
               "same": {
                 "type": "boolean",
                 "const": true
+              },
+              "follow": {
+                "type": "object",
+                "properties": {
+                  "version": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "step": {
+                    "type": "string",
+                    "enum": [
+                      "getting",
+                      "waiting",
+                      "restarting",
+                      "cannot",
+                      "failed"
+                    ]
+                  },
+                  "percent": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "reason": {
+                    "type": "string",
+                    "enum": [
+                      "package-manager",
+                      "own-window",
+                      "installation",
+                      "unpublished"
+                    ]
+                  },
+                  "problem": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 400
+                  }
+                },
+                "required": [
+                  "version",
+                  "step"
+                ]
               }
             }
           },
@@ -9052,6 +9319,100 @@
         ]
       }
     },
+    "inf:devices:app-follow": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "step": {
+                "type": "string",
+                "enum": [
+                  "getting",
+                  "waiting",
+                  "restarting",
+                  "cannot",
+                  "failed"
+                ]
+              },
+              "percent": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "reason": {
+                "type": "string",
+                "enum": [
+                  "package-manager",
+                  "own-window",
+                  "installation",
+                  "unpublished"
+                ]
+              },
+              "problem": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 400
+              }
+            },
+            "required": [
+              "version",
+              "step"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      }
+    },
+    "inf:devices:update-app": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "asked": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "asked"
+        ]
+      }
+    },
     "inf:devices:change-address": {
       "effect": "change",
       "reach": "views",
@@ -9209,6 +9570,49 @@
                   "same": {
                     "type": "boolean",
                     "const": true
+                  },
+                  "follow": {
+                    "type": "object",
+                    "properties": {
+                      "version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      "step": {
+                        "type": "string",
+                        "enum": [
+                          "getting",
+                          "waiting",
+                          "restarting",
+                          "cannot",
+                          "failed"
+                        ]
+                      },
+                      "percent": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "reason": {
+                        "type": "string",
+                        "enum": [
+                          "package-manager",
+                          "own-window",
+                          "installation",
+                          "unpublished"
+                        ]
+                      },
+                      "problem": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 400
+                      }
+                    },
+                    "required": [
+                      "version",
+                      "step"
+                    ]
                   }
                 }
               },
@@ -98141,6 +98545,49 @@
                 "same": {
                   "type": "boolean",
                   "const": true
+                },
+                "follow": {
+                  "type": "object",
+                  "properties": {
+                    "version": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    },
+                    "step": {
+                      "type": "string",
+                      "enum": [
+                        "getting",
+                        "waiting",
+                        "restarting",
+                        "cannot",
+                        "failed"
+                      ]
+                    },
+                    "percent": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "reason": {
+                      "type": "string",
+                      "enum": [
+                        "package-manager",
+                        "own-window",
+                        "installation",
+                        "unpublished"
+                      ]
+                    },
+                    "problem": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 400
+                    }
+                  },
+                  "required": [
+                    "version",
+                    "step"
+                  ]
                 }
               }
             },

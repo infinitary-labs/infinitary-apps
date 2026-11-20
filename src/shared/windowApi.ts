@@ -528,6 +528,13 @@ export type FirstmateApi = {
      * sets it up again; `asked` is false when no window of it is connected.
      */
     fixWork: (deviceId: string) => Promise<{ asked: boolean }>;
+    /**
+     * Update app on the row of an app behind this computer's version: that
+     * app, connected now, gets this computer's version and starts again on it
+     * (docs/devices.md, "Updating the app open there"); `asked` is false when
+     * no app of it is connected.
+     */
+    updateApp: (deviceId: string) => Promise<{ asked: boolean }>;
     /** Each computer that runs work, with what it last said of its own sign-ins. */
     signIns: () => Promise<DeviceSignIns[]>;
     onSignIns: (listener: (devices: DeviceSignIns[]) => void) => () => void;
@@ -886,6 +893,12 @@ export type FirstmateApi = {
     later: () => Promise<UpdateStatus>;
     /** A paired view started this computer's update (`inf:update:asked`): its name. */
     onAsked: (listener: (asked: UpdateAsked) => void) => () => void;
+    /**
+     * Whether this window holds words not yet sent: an app following its
+     * home's version waits to start again while one does (docs/view.md,
+     * "Following the home's version").
+     */
+    unsent: (holds: boolean) => Promise<{ ok: true }>;
     /**
      * The first mate's computer's own update, read and started from this Mac
      * while it controls that one (docs/view.md, "Updating the first mate's

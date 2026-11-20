@@ -667,3 +667,59 @@ describe("per-copy Mac installation routing", () => {
     expect(f.driver.install).not.toHaveBeenCalled();
   });
 });
+
+// INF-5372's plan, piece 2: an app on another computer gets "the home's version", so a Stable app can get an alpha.
+describe("following the version of the computer this copy controls", () => {
+  function following(version: string) {
+    const dataRoot = scratchDir("inf-mac-follow-");
+    saveMacUpdateChannel(dataRoot, "stable");
+    const f = fixture(version, dataRoot);
+    const checkVersion = vi.fn<NonNullable<MacUpdateDriver["checkVersion"]>>(async (exact) =>
+      offer(exact),
+    );
+    const checker = createMacUpdateChecker({
+      currentVersion: version,
+      dataRoot,
+      driver: { ...f.driver, checkVersion },
+      releasesUrl: releaseSource.releasesUrl,
+      openExternal: vi.fn(),
+    });
+    const { follow } = checker;
+    if (!follow) throw new Error("A direct Mac copy gets one exact version by itself");
+    return { ...f, checker, checkVersion, follow };
+  }
+
+  it("gets the home's alpha on a Stable copy and installs it with no second download or channel read", async () => {
+    const f = following("0.8.3");
+    expect(await f.follow("0.8.4-alpha.649")).toEqual({ ok: true });
+    expect(f.checkVersion).toHaveBeenCalledWith("0.8.4-alpha.649");
+    expect(f.driver.download).toHaveBeenCalledTimes(1);
+    expect(f.driver.download.mock.calls[0]?.[0].version).toBe("0.8.4-alpha.649");
+    const status = await f.checker.getStatus();
+    expect(status).toMatchObject({ latestVersion: "0.8.4-alpha.649", updateAvailable: true });
+    expect(await f.checker.install()).toEqual({ ok: true });
+    expect(f.driver.download).toHaveBeenCalledTimes(1);
+    expect(f.driver.install).toHaveBeenCalledTimes(1);
+    expect(f.driver.check).not.toHaveBeenCalled();
+  });
+
+  it("answers unpublished for a version the release source never published, downloading nothing", async () => {
+    const f = following("0.8.3");
+    f.checkVersion.mockResolvedValueOnce(null);
+    expect(await f.follow("0.8.4-dev.1")).toEqual({ ok: false, reason: "unpublished" });
+    expect(f.driver.download).not.toHaveBeenCalled();
+  });
+
+  it("answers that its installation cannot be replaced when the download says so", async () => {
+    const f = following("0.8.3");
+    f.driver.download.mockRejectedValueOnce(
+      new MacUpdateProblem("Copy Infinitary into Applications and open that copy before updating."),
+    );
+    expect(await f.follow("0.8.4")).toEqual({
+      ok: false,
+      reason: "installation",
+      problem: "Copy Infinitary into Applications and open that copy before updating.",
+    });
+    expect(f.driver.install).not.toHaveBeenCalled();
+  });
+});

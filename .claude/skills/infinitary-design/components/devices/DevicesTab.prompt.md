@@ -339,6 +339,11 @@ An app behind this computer's - older, or too old to say - turns the line into t
 A computer whose work runs this computer's version while its app does not adds "Its work runs Infinitary 0.8.4, as this computer does."
 A phone's app has versions of its own, never compared: "Its app has version 0.1.0 (212).", the version and build its own Settings shows.
 A copy out of reach or not open says nothing of its version, and while a computer updates the line gives way to the update's own.
+An app behind this computer's updates itself to this computer's version while nobody uses it there, and a line under its version says each step, `--text-sm --fg-2`: "Its app updates to Infinitary 0.8.4 by itself: 40% downloaded.", "Its app has Infinitary 0.8.4 ready and starts again on it once nobody uses it there.", "Its app starts again on Infinitary 0.8.4."
+One that cannot says so in `--warn` with what to do there ("Its app cannot update to Infinitary 0.8.4 by itself.
+It updates only from its own window there, so update it there."), and one that tried says "Its app could not update to Infinitary 0.8.4 by itself.
+Update app tries again."
+While it gets the version, waits or failed, the row offers Update app (secondary, small, named "Update the app on Mac mini" for a screen reader), which has it start again as soon as it has the version, whoever uses it there.
 
 **Updating** starts with the summary "Updating Infinitary on Mac mini…", with no version line, no status and no Update or Remove until it is done (`AddAMac.prompt.md`).
 An update the app started by itself reads the same while Devices is open, from its first count or "Starting Infinitary on Mac mini…".

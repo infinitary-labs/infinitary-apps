@@ -225,3 +225,51 @@ describe("the Mac update check's active mark", () => {
     expect(unspent.answered).not.toHaveBeenCalled();
   });
 });
+
+// INF-5372's plan, piece 2: an app on another computer gets "the home's version" from that
+// version's own published manifest, whatever channel it follows.
+describe("reading one exact version", () => {
+  // The manifest the download host publishes for that alpha, read from it unchanged.
+  const MANIFEST = {
+    schemaVersion: 1,
+    version: "0.8.3-alpha.639",
+    sourceCommit: "36d9c3fba85da8ed75bf48035609c939b7b1317d",
+    zip: {
+      asset: "Infinitary-0.8.3-alpha.639-universal.zip",
+      sha256: "ad97cb63e8304c7c3eaf685d4afbf8ab53d5f1523a99d368e0091084583b5877",
+      size: 536687137,
+      sha512: FEED.sha512,
+    },
+    dmg: {
+      asset: "Infinitary-0.8.3-alpha.639-mac-universal.dmg",
+      sha256: "4d9faa2cce74c5bd039ffe0ed4a41fa2fbfbfb27411bee5e1b8b10256d31e56c",
+      size: 524895876,
+    },
+  };
+
+  it("reads that version's manifest, then the channel's feed again on the next check", async () => {
+    feed.body = JSON.stringify(MANIFEST);
+    const driver = createMacUpdateDriver(async () => {});
+    expect(await driver.checkVersion?.(MANIFEST.version)).toMatchObject({
+      version: MANIFEST.version,
+    });
+    expect(feed.asked).toEqual([`${releaseSource.feedUrl}versions/${MANIFEST.version}.json`]);
+    feed.body = JSON.stringify(FEED);
+    expect(await driver.check("stable")).toMatchObject({ version: FEED.version });
+    expect(feed.asked.slice(1).map((url) => new URL(".", url).href)).toEqual([
+      releaseSource.feedUrl,
+    ]);
+  });
+
+  it("answers nothing for a version the release source never published", async () => {
+    feed.status = 404;
+    const driver = createMacUpdateDriver(async () => {});
+    expect(await driver.checkVersion?.("0.8.4-dev.1")).toBeNull();
+  });
+
+  it("refuses a manifest that names another version", async () => {
+    feed.body = JSON.stringify(MANIFEST);
+    const driver = createMacUpdateDriver(async () => {});
+    await expect(driver.checkVersion?.("0.8.3-alpha.640")).rejects.toThrow();
+  });
+});

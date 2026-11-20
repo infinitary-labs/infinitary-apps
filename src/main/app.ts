@@ -1228,7 +1228,12 @@ export async function startApp(
         },
         notifications: host.notifications,
         deviceName: () => ownName,
-        appVersion: app.getVersion(),
+        // A run that is not the packaged app may stand in its installed
+        // version, as its own updater does (`createInstalledUpdateChecker`), so
+        // its connection says the version it follows its home from.
+        appVersion:
+          (!app.isPackaged && settingFrom(process.env, "UPDATE_CURRENT_VERSION")?.trim()) ||
+          app.getVersion(),
         restartWindows: () => {
           for (const win of appWindows()) if (!win.isDestroyed()) win.webContents.reload();
         },

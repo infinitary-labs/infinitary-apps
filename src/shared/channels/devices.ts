@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { appFollowReportSchema } from "../appFollow";
 import {
   customApiAddressSchema,
   customApiConnectInputSchema,
@@ -323,6 +324,26 @@ export const deviceChannels = {
     response: okSchema,
   },
   "inf:devices:fix-work": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().min(1).max(64)]),
+    response: z.strictObject({ asked: z.boolean() }),
+  },
+  // The app open on another computer follows the home's version (docs/view.md,
+  // "Following the home's version"; `app-follows-home`): it tells the home
+  // each step of catching up, asked only as a view, which names the device;
+  // and the row's Update asks that app, over its own connection, to catch up
+  // and start again now. Update answers whether an app of that computer was
+  // connected to ask.
+  "inf:devices:app-follow": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([appFollowReportSchema]),
+    response: okSchema,
+  },
+  "inf:devices:update-app": {
     effect: "change",
     surface: "core",
     reach: "views",

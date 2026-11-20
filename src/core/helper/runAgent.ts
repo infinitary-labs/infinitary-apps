@@ -296,14 +296,15 @@ export function forgetRunAgentFiles(
  */
 export async function stopRunAgent(
   context: RunAgentContext,
-  options: { forget: boolean; force?: EndedRun; run?: RunInstance },
+  options: { forget: boolean; force?: EndedRun; run?: RunInstance | null },
 ): Promise<void> {
   if ("schtasks" in context) {
     // Task Scheduler's own end of a task ends its program with no clean stop,
     // so the run is asked to stop itself, as a signal asks it elsewhere; one
-    // that does not answer never reads that ask, so `force` ends it.
+    // that does not answer never reads that ask, so `force` ends it. A null
+    // `run` names no run: the task is taken away and no stop is asked.
     if (options.force) await endWindowsRun(context, options.force.pid);
-    else requestRunStop(context.dataDir, new Date(), options.run);
+    else if (options.run !== null) requestRunStop(context.dataDir, new Date(), options.run);
     if (options.forget)
       await removeRunTask(context.schtasks, {
         label: context.label,

@@ -532,7 +532,12 @@ export type FirstmateApi = {
      */
     setUpHere: (reads: SetUpReads) => Promise<SetUpHere>;
     openSharing: () => Promise<{ ok: true }>;
-    followAdded: () => Promise<{ followed: boolean; follows: boolean; joins: boolean }>;
+    followAdded: () => Promise<{
+      followed: boolean;
+      follows: boolean;
+      joins: boolean;
+      pastes: boolean;
+    }>;
     /**
      * Fix it on a Mac's row: its window, connected now, checks its work and
      * sets it up again; `asked` is false when no window of it is connected.

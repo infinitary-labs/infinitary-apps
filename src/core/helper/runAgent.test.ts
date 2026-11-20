@@ -486,6 +486,19 @@ describe("the command the window starts, on Windows", () => {
     });
   });
 
+  // The review of INF-4930: a window that joined while no run ran takes the task away and asks no
+  // stop at all, so a run started by hand meanwhile reads none.
+  it("takes the task away for a join that named no run, asking no stop", async () => {
+    const { context, asked } = windows();
+    await startRunAgent(context);
+    asked.length = 0;
+    await stopRunAgent(context, { forget: true, run: null });
+    expect(asked).toEqual([["/Delete", "/TN", LABEL, "/F"]]);
+    expect(runAgentInPlace(context)).toBe(false);
+    expect(existsSync(join(context.dataDir, RUN_STOP_FILE))).toBe(false);
+    expect(existsSync(join(context.dataDir, RUN_STOP_FOR_FILE))).toBe(false);
+  });
+
   // The review of INF-5409: a join that lets the agent go says so when Task Scheduler keeps its
   // task registered, and still asks only its own run to stop.
   it("rejects a join's forget when Task Scheduler keeps the task, keeping its file", async () => {

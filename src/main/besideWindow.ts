@@ -508,16 +508,18 @@ export class BesideWindow {
    * process and start, so a run started by hand in its place keeps going. On
    * a Mac or Linux the agent's launchd job or user service is let go too,
    * which ends whichever run that job holds, one it started again during the
-   * join included: it only ever runs the agent's own runs.
+   * join included: it only ever runs the agent's own runs. With `only` null,
+   * no run ran when the window joined: the agent is let go and no stop is
+   * asked or signalled, so a run started by hand meanwhile keeps going.
    */
-  async leave(only?: OwnedRun): Promise<void> {
+  async leave(only?: OwnedRun | null): Promise<void> {
     this.close();
     await this.options.beside.starter
-      ?.stop({ forget: true, ...(only ? { run: only } : {}) })
+      ?.stop({ forget: true, ...(only === undefined ? {} : { run: only }) })
       .catch((error: unknown) => {
         console.warn(`[shell] could not let the command's starter go: ${(error as Error).message}`);
       });
-    this.options.beside.stopCommand?.(only);
+    if (only !== null) this.options.beside.stopCommand?.(only);
   }
 
   close(): void {

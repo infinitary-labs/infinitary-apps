@@ -141,6 +141,7 @@ test("a window follows along beside the command its agent started, and never sto
         followed: false,
         follows: false,
         joins: false,
+        pastes: false,
       });
       expect(await roleOf(air.page)).toBe("home");
       expect(alive(pid)).toBe(true);
@@ -184,6 +185,7 @@ test("a window follows along beside the command its agent started, and never sto
         followed: false,
         follows: false,
         joins: false,
+        pastes: false,
       });
       expect(await roleOf(page)).toBe("home");
       expect(alive(replaced)).toBe(true);

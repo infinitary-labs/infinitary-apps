@@ -13,14 +13,14 @@ import { openSize, openWindow } from "./window";
  * join chips are unavailable from the mouse and the keyboard, with the line that says why. Before
  * the shell's first answer neither is offered either, and the set-up aside promises nothing, and a
  * later answer that a join works offers
- * both again. The
- * untouched profile's view is join-set-up.test.tsx.
+ * both again. While no command runs a pasted link's join alone is offered, since it stops none.
+ * The untouched profile's view is join-set-up.test.tsx.
  */
 
 test("beside a first mate started outside the window, an untouched first launch promises no switch or join", async () => {
   const home = freshHome();
   // The shell has not answered yet: whether a join works here is unknown.
-  const first = held<{ followed: boolean; follows: boolean; joins: boolean }>();
+  const first = held<{ followed: boolean; follows: boolean; joins: boolean; pastes: boolean }>();
   const bridge = fakeBridge(home);
   bridge.answer("inf:devices:follow-added", () => first.promise);
   await openSize();
@@ -50,8 +50,13 @@ test("beside a first mate started outside the window, an untouched first launch 
     await userEvent.click(button(aside, m.devicesJoinCancel()));
   }
   // The shell runs beside a command this window did not start: it neither follows nor joins.
-  bridge.answer("inf:devices:follow-added", { followed: false, follows: false, joins: false });
-  first.resolve({ followed: false, follows: false, joins: false });
+  bridge.answer("inf:devices:follow-added", {
+    followed: false,
+    follows: false,
+    joins: false,
+    pastes: false,
+  });
+  first.resolve({ followed: false, follows: false, joins: false, pastes: false });
   // The closed group offers neither join: both chips are unavailable, and Tab passes them by.
   await expect
     .poll(() => document.querySelector("[data-join-stays]")?.textContent)
@@ -70,9 +75,24 @@ test("beside a first mate started outside the window, an untouched first launch 
   expect(aside.textContent).not.toContain(m.devicesJoinSetUpWaiting());
   expect(aside.textContent).not.toContain(m.devicesJoinSetUpKept());
   await userEvent.click(button(aside, m.devicesJoinCancel()));
+  // No command runs and the window's own is about to start: a pasted link joins, stopping none,
+  // while Join by its address waits for the command, and no line says this computer stays.
+  bridge.answer("inf:devices:follow-added", {
+    followed: false,
+    follows: false,
+    joins: false,
+    pastes: true,
+  });
+  await expect.poll(chips, { timeout: 10_000 }).toEqual([false, true]);
+  expect(document.querySelector("[data-join-stays]")).toBeNull();
   // The command beside it ended and the window's own took its place: the shell's next answer
   // offers both joins again, from the keyboard too.
-  bridge.answer("inf:devices:follow-added", { followed: false, follows: true, joins: true });
+  bridge.answer("inf:devices:follow-added", {
+    followed: false,
+    follows: true,
+    joins: true,
+    pastes: true,
+  });
   await expect.poll(chips, { timeout: 10_000 }).toEqual([false, false]);
   expect(document.querySelector("[data-join-stays]")).toBeNull();
   (await shown("[data-join-set-up-chip]")).focus();

@@ -1152,21 +1152,37 @@ describe("the window beside a command's first mate", () => {
   });
 
   // The fourth window journey on Windows: a window that starts the command, opened while none
-  // runs, joins a home by its pasted link as it did before INF-4930 - there is no run to stop -
-  // and lets its starter go so nothing starts the command again.
-  it("joins another computer while no command runs, letting its starter go", async () => {
-    const pro = await otherMac();
+  // runs, joins a home by its pasted link as it did before INF-4930. The review of INF-4930: it
+  // names no run to stop, so a command started by hand while the link is claimed keeps going -
+  // its starter is let go with no stop asked or signalled - and with no first mate to ask, it
+  // neither joins by an address nor follows along.
+  it("joins by a pasted link while no command runs, stopping none started meanwhile", async () => {
+    const pro = await otherMac({}, { joinsFromAnotherMac: true });
     const command = commandRun();
+    const workDir = join(scratchDir("infinitary-shell-beside-work-"), "work");
     const at = besideShell(command.doorDir, {
       starts: true,
       records: stopped("signal", 0),
       ownedRun: () => null,
+      workDir,
     });
     await at.start();
-    expect(at.shell.followsAdded().joins).toBe(true);
-    await expect(at.shell.join(await pro.link())).resolves.toEqual({ ok: true });
+    expect(at.shell.followsAdded()).toEqual({ follows: false, joins: false, pastes: true });
+    await expect(at.shell.joinAt("kun@studio")).resolves.toEqual({ refused: "failed" });
+    await grantFrom(pro, workDir);
+    expect(await at.shell.followAdded()).toBe(false);
+    expect(at.shell.thisMac().role).not.toBe("view");
+    // The link is read as no run runs; a command started by hand takes the folder as it is claimed.
+    const joining = at.shell.join(await pro.link("mac"));
+    at.command.records = {
+      running: true,
+      run: { pid: 777, startedAt: JOINED.startedAt },
+      lastStop: null,
+    };
+    await expect(joining).resolves.toEqual({ ok: true });
     await expect.poll(() => at.shell.thisMac().role).toBe("view");
-    expect(at.starter.stop.mock.calls).toEqual([[{ forget: true }]]);
+    expect(at.starter.stop.mock.calls).toEqual([[{ forget: true, run: null }]]);
+    expect(at.starter.stops).toBe(0);
     expect(at.startCore).not.toHaveBeenCalled();
   });
 
@@ -1211,7 +1227,11 @@ describe("the window beside a command's first mate", () => {
       const at = besideShell(command.doorDir, { starts: true, ownedRun: () => owned, workDir });
       await at.start();
       // Beside one started by hand it neither follows nor offers a join that would stop it.
-      expect(at.shell.followsAdded()).toEqual({ follows: owned !== null, joins: owned !== null });
+      expect(at.shell.followsAdded()).toEqual({
+        follows: owned !== null,
+        joins: owned !== null,
+        pastes: owned !== null,
+      });
       await grantFrom(pro, workDir);
       expect(await at.shell.followAdded()).toBe(owned !== null);
       if (owned !== null) {
@@ -1247,7 +1267,7 @@ describe("the window beside a command's first mate", () => {
     expect(at.starter.stops).toBe(0);
     expect(at.starter.stop).not.toHaveBeenCalled();
     // Nor does it offer to join, which would stop the run started by hand.
-    expect(at.shell.followsAdded()).toEqual({ follows: false, joins: false });
+    expect(at.shell.followsAdded()).toEqual({ follows: false, joins: false, pastes: false });
     expect(await at.shell.join(await pro.link("mac"))).toEqual({ ok: false, refused: "other" });
     expect(at.starter.stop).not.toHaveBeenCalled();
   });

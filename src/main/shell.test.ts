@@ -1111,7 +1111,7 @@ describe("a Mac that controls another and runs its work", () => {
     expect(await mini.shell.followAdded()).toBe(false);
     expect(mini.shell.thisMac().role).toBe("home");
     expect(mini.own.dispose).not.toHaveBeenCalled();
-    expect(mini.shell.followsAdded()).toEqual({ follows: true, joins: true });
+    expect(mini.shell.followsAdded()).toEqual({ follows: true, joins: true, pastes: true });
 
     // The review of INF-5409: reopened with that grant still waiting, it stays its own first mate,
     // and a poll asks nothing more of it.

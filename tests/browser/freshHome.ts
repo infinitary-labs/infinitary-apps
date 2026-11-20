@@ -100,7 +100,7 @@ function homeAnswers({ plain, asked }: FreshHomeAnswers): Answers {
     },
     // Nobody added this computer meanwhile, so the first launch stays as it is; its own first
     // mate would follow along once added, and both other ways join from here.
-    "inf:devices:follow-added": { followed: false, follows: true, joins: true },
+    "inf:devices:follow-added": { followed: false, follows: true, joins: true, pastes: true },
     // A Mac opens its Sharing settings (src/main/ipc/index.ts).
     "inf:devices:open-sharing": { ok: true },
     "inf:voice:recognizer": { where: "window" },

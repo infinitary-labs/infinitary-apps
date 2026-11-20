@@ -445,27 +445,31 @@ export class Shell {
   }
 
   /**
-   * Whether this app may join another computer: as this computer's own
-   * first mate, or beside a command this window starts while the command
-   * running is its own agent's, whose first mate stops for good (docs/run.md,
-   * "Joining another computer"). Never beside one started by hand, which
-   * joining would stop.
+   * Whether this app's first mate answers a join here: as this computer's
+   * own, or beside a command this window starts while the command running is
+   * its own agent's, whose first mate stops for good (docs/run.md, "Joining
+   * another computer"). Join by its address and following along ask that
+   * first mate, so neither works while no command runs; a pasted link still
+   * does (`joinTarget`). Never beside one started by hand, which joining
+   * would stop.
    */
   private joinable(): boolean {
-    return this.joinTarget() !== null;
+    const target = this.joinTarget();
+    return target !== null && target.owned !== null;
   }
 
   /**
    * What joining would stop here, read once so the check and the stop name
-   * the same run: this app's own first mate (no run), or beside a command
-   * this window starts, the run its own agent started, or no run while none
-   * runs. Null where joining is refused (`joinable`).
+   * the same run: this app's own first mate (no `owned`), or beside a command
+   * this window starts, the run its own agent started, or `owned: null` while
+   * none runs, which stops no run however one starts meanwhile. Null where
+   * joining is refused.
    */
-  private joinTarget(): { owned?: OwnedRun } | null {
+  private joinTarget(): { owned?: OwnedRun | null } | null {
     const mode = this.mode;
     if (mode?.kind === "home") return {};
     if (mode?.kind !== "beside" || !mode.beside.startsCommand) return null;
-    if (mode.beside.noCommandRuns) return {};
+    if (mode.beside.noCommandRuns) return { owned: null };
     const owned = mode.beside.ownedRun;
     return owned ? { owned } : null;
   }
@@ -521,7 +525,8 @@ export class Shell {
   async followAdded(): Promise<boolean> {
     // Beside a command, only the run this window's starter owns stops by itself.
     const target = this.joinTarget();
-    if (!target || this.switching || !this.options.work) return false;
+    // While no command runs there is no first mate to ask whether anything was done here.
+    if (!target || target.owned === null || this.switching || !this.options.work) return false;
     // Only a grant waiting asks the first mate anything: most polls find none.
     const waiting = this.waitingGrant();
     if (!waiting) return false;
@@ -536,6 +541,7 @@ export class Shell {
     const again = this.joinTarget();
     if (
       !again ||
+      again.owned === null ||
       this.switching ||
       ((target.owned || again.owned) && !sameRun(again.owned, target.owned))
     )
@@ -552,13 +558,19 @@ export class Shell {
   /**
    * What this window does once its first mate's computer adds it: `follows`
    * when it would follow along (`followAdded`), able to join with this
-   * computer's work; and `joins` when Paste its link and Join by its address
-   * work here: as its own first mate, or beside a command its starter owns,
-   * never one started by hand (`joinable`). The window promises only these.
+   * computer's work; `joins` when Join by its address works here: as its
+   * own first mate, or beside a command its starter owns, never one started
+   * by hand (`joinable`); and `pastes` when Paste its link works, which a
+   * window that starts the command also may while none runs. The window
+   * promises only these.
    */
-  followsAdded(): { follows: boolean; joins: boolean } {
+  followsAdded(): { follows: boolean; joins: boolean; pastes: boolean } {
     const joins = this.joinable();
-    return { follows: joins && Boolean(this.options.work), joins };
+    return {
+      follows: joins && Boolean(this.options.work),
+      joins,
+      pastes: this.joinTarget() !== null,
+    };
   }
 
   /**
@@ -1124,7 +1136,7 @@ export class Shell {
     end("moved");
   }
 
-  private async stopHome(only?: OwnedRun): Promise<void> {
+  private async stopHome(only?: OwnedRun | null): Promise<void> {
     const mode = this.mode;
     if (mode?.kind === "beside") {
       this.mode = null;
@@ -1140,11 +1152,11 @@ export class Shell {
 
   /**
    * Opens the home whose grant was just kept, stopping this computer's own
-   * first mate, or beside a command only the run `owned`. The grant is kept
+   * first mate, or beside a command only the run `owned` (none for null). The grant is kept
    * already, so a first mate that does not stop cleanly still leaves the
    * window that home's view, the role a restart would give it.
    */
-  private switchToView(owned?: OwnedRun): Promise<void> {
+  private switchToView(owned?: OwnedRun | null): Promise<void> {
     return this.switchTo(async () => {
       // Answer the window first; the switch starts it over.
       await new Promise<void>((resolve) => setImmediate(resolve));

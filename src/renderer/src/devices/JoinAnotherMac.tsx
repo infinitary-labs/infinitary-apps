@@ -140,8 +140,12 @@ type AfterAdd = "waits" | "keeps" | "stays" | "unknown";
 function useFollowAdded(
   can: boolean,
   untouched: boolean,
-): { afterAdd: AfterAdd; joins: boolean | null } {
-  const [answer, setAnswer] = useState<{ follows: boolean; joins: boolean } | null>(null);
+): { afterAdd: AfterAdd; joins: boolean | null; pastes: boolean | null } {
+  const [answer, setAnswer] = useState<{
+    follows: boolean;
+    joins: boolean;
+    pastes: boolean;
+  } | null>(null);
   useEffect(() => {
     if (!can) return;
     let live = true;
@@ -150,7 +154,7 @@ function useFollowAdded(
     const ask = () => {
       void window.infinitary.devices.followAdded().then(
         (said) => {
-          if (live) setAnswer({ follows: said.follows, joins: said.joins });
+          if (live) setAnswer({ follows: said.follows, joins: said.joins, pastes: said.pastes });
         },
         // An answer that cannot be read leaves joining unknown, never allowed.
         () => {
@@ -165,14 +169,17 @@ function useFollowAdded(
       clearInterval(every);
     };
   }, [can]);
+  // While no command this window starts runs, only a pasted link joins: nothing to promise.
   const afterAdd: AfterAdd = !answer
     ? "unknown"
-    : !answer.joins
+    : !answer.pastes
       ? "stays"
-      : untouched && answer.follows
-        ? "waits"
-        : "keeps";
-  return { afterAdd, joins: answer?.joins ?? null };
+      : !answer.joins
+        ? "unknown"
+        : untouched && answer.follows
+          ? "waits"
+          : "keeps";
+  return { afterAdd, joins: answer?.joins ?? null, pastes: answer?.pastes ?? null };
 }
 
 /**
@@ -296,7 +303,7 @@ export function JoinAnotherMac({ onOpenChange, note, join, byAddress }: JoinAnot
   const setUpOffered = useSetUpOffered();
   const { here, unread } = useSetUpHere(step.step === "set-up");
   const firstRun = useShellStore((s) => s.firstRun);
-  const { afterAdd, joins } = useFollowAdded(
+  const { afterAdd, joins, pastes } = useFollowAdded(
     firstRun?.gateOpen === true,
     firstRun?.untouched === true,
   );
@@ -391,6 +398,7 @@ export function JoinAnotherMac({ onOpenChange, note, join, byAddress }: JoinAnot
       setUpOffered={setUpOffered}
       afterAdd={afterAdd}
       joins={joins}
+      pastes={pastes}
       onOpenSetUp={() => setStep({ step: "set-up" })}
       onOpenSharing={() => void window.infinitary.devices.openSharing().catch(() => undefined)}
       onContinue={toConfirm}
@@ -426,11 +434,18 @@ export type JoinAnotherMacViewProps = {
   /** This window opens the first mate once its computer adds this one: nothing was done here yet. */
   afterAdd?: AfterAdd;
   /**
-   * Whether Paste its link and Join by its address work here, as the shell
-   * last said: false beside a first mate started outside this window, null
-   * while not yet known. Absent, as a view drawn alone, they work.
+   * Whether Join by its address works here, as the shell last said: false
+   * beside a first mate started outside this window or while no command this
+   * window starts runs, null while not yet known. Absent, as a view drawn
+   * alone, it works.
    */
   joins?: boolean | null;
+  /**
+   * Whether Paste its link works here, as the shell last said: false beside
+   * a first mate started outside this window, null while not yet known.
+   * Absent, as a view drawn alone, it works.
+   */
+  pastes?: boolean | null;
   onOpenSetUp?: () => void;
   onOpenSharing?: () => void;
   /** A line under the chip, while it is closed: which Mac this app last left. */
@@ -479,8 +494,10 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
     // Only a computer its first mate's computer can add by its address offers it, first.
     const setUp = Boolean(props.setUpOffered);
     // Neither join is offered until the shell says it works here: beside a first
-    // mate started outside this window, joining would stop it.
+    // mate started outside this window, joining would stop it, and while no command
+    // this window starts runs, no first mate asks the other computer for a link.
     const joins = props.joins === undefined || props.joins === true;
+    const pastes = props.pastes === undefined || props.pastes === true;
     return (
       <div className="fm-join-group" data-join-another-mac="closed">
         <div className="fm-join-row" data-join-chips-alone={setUp ? "" : undefined}>
@@ -501,7 +518,7 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
               type="button"
               className="fm-connect-chip"
               data-join-chip=""
-              disabled={!joins}
+              disabled={!pastes}
               onClick={props.onOpen}
             >
               {plusIcon}
@@ -519,7 +536,7 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
             </button>
           </div>
         </div>
-        {props.joins === false && (
+        {props.pastes === false && (
           <p className="fm-join-sub" data-join-stays="">
             {m.devicesJoinStaysBeside()}
           </p>

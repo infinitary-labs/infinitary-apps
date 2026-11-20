@@ -35,7 +35,10 @@ const PROGRESS_EVERY_MS = 1_000;
 export class AppFollowsHome {
   /** The catching up under way, one at a time. */
   private running: Promise<void> | null = null;
-  /** The row's Update was pressed: start again as soon as the version is here. */
+  /**
+   * The row's Update was pressed: start again as soon as the version is here.
+   * It holds for the catching up under way, or the next one, and ends with it.
+   */
   private now = false;
   /** The home's version, ready to install, while it waits for nobody to use this app. */
   private waiting: string | null = null;
@@ -45,15 +48,14 @@ export class AppFollowsHome {
 
   constructor(private readonly options: AppFollowsHomeOptions) {}
 
-  /** A connection to the home was caught up: catch up with its version if it is newer. */
+  /**
+   * A connection to the home was caught up: read its version again and
+   * catch up with it if it is newer. A version already got ready is ready
+   * again with no download, and one the home no longer runs is let go.
+   */
   connected(): void {
     this.told = null;
-    if (this.waiting) {
-      // The home heard nothing of this app since the connection went: say it again.
-      this.tell({ version: this.waiting, step: "waiting" });
-      this.noticed();
-      return;
-    }
+    this.waiting = null;
     this.start();
   }
 
@@ -75,8 +77,11 @@ export class AppFollowsHome {
     if (this.waiting && this.options.nobodyHere()) void this.install(this.waiting);
   }
 
+  /** This app no longer controls that home: its own channel's newest is its offer again. */
   dispose(): void {
     this.disposed = true;
+    this.waiting = null;
+    this.options.updates.unfollow?.();
   }
 
   /** The catching up, once at a time; one asked meanwhile joins it. */
@@ -84,6 +89,8 @@ export class AppFollowsHome {
     if (this.running || this.disposed) return;
     const run = this.catchUp().finally(() => {
       if (this.running === run) this.running = null;
+      // A press holds only for this catching up: one that ended short of installing lets it go.
+      if (!this.waiting) this.now = false;
     });
     this.running = run;
   }
@@ -93,8 +100,12 @@ export class AppFollowsHome {
     const home = await this.options.homeVersion().catch(() => null);
     if (!home || this.disposed) return;
     const own = (await updates.getStatus()).currentVersion;
-    if (!isNewerVersion(home, own)) return;
-    if (!updates.follow) {
+    if (!isNewerVersion(home, own)) {
+      // The home runs this version or an older one again: nothing to follow.
+      updates.unfollow?.();
+      return;
+    }
+    if (!updates.follow || !updates.installFollowed) {
       this.tell({ version: home, step: "cannot", reason: "installation" });
       return;
     }
@@ -128,13 +139,19 @@ export class AppFollowsHome {
     this.tell({ version: home, step: "waiting" });
   }
 
-  /** Starts again on the version it has: the home hears it restarting, or why it did not. */
+  /**
+   * Starts again on the version it has, and only that version: the home
+   * hears it restarting, or why it did not. Unless the row's Update asked,
+   * whether nobody uses the app is asked again before it quits.
+   */
   private async install(version: string): Promise<void> {
-    if (this.waiting !== version || this.disposed) return;
+    const { installFollowed } = this.options.updates;
+    if (this.waiting !== version || this.disposed || !installFollowed) return;
+    const asked = this.now;
     this.waiting = null;
     this.now = false;
     this.tell({ version, step: "restarting" });
-    const result = await this.options.updates.install();
+    const result = await installFollowed(version, () => asked || this.options.nobodyHere());
     // A release quits to start again and never answers; an answer means it did not.
     if (result.ok || this.disposed) return;
     if (result.later) {

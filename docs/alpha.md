@@ -55,6 +55,7 @@ The host enables native replacement only for an installed release Mac, not a dev
   The adapter sets it on the library's request headers for that check alone and clears them, so a download never carries it.
 - **Consent before replacement.**
   Checking never downloads; Update and restart (Install on Linux, and Try again after an install that can pass) first reads the release source, so it installs the newest version on the channel, falling back to the version already offered when that read fails; a staged update reads nothing.
+  An app following the version of the computer it controls is the one exception: its offer is that exact version, read from its own manifest whatever the channel, and its install refuses any other (`docs/view.md`, "Following the home's version").
   It then downloads, checks the checksum, saves the crew's work ("Saving work before an update" below), stages through native signature verification, awaits core shutdown, and restarts.
   Automatic downloads and automatic installation on quit are disabled.
   The notice shows progress and bounded errors, with a link to the release page for recovery.

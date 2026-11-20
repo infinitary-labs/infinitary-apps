@@ -20,25 +20,32 @@ const status = (currentVersion: string, more: Partial<UpdateStatus> = {}): Updat
 
 function app(options: { own?: string; home?: string | null; nobody?: boolean } = {}) {
   let nobody = options.nobody ?? false;
+  let home = options.home === undefined ? "0.8.4-alpha.649" : options.home;
   const told: AppFollowReport[] = [];
   let ready: (result: AppFollowResult) => void = () => {};
   const follow = vi.fn<NonNullable<UpdateChecker["follow"]>>(
     () => new Promise((resolve) => (ready = resolve)),
   );
-  const install = vi.fn<UpdateChecker["install"]>(
+  const install = vi.fn<NonNullable<UpdateChecker["installFollowed"]>>(
     // A release quits to start again and never answers.
     () => new Promise<UpdateInstallResult>(() => {}),
   );
+  const unfollow = vi.fn();
   const updates: UpdateChecker = {
     getStatus: async () => status(options.own ?? "0.8.3"),
     checkNow: async () => status(options.own ?? "0.8.3"),
     openReleasePage: async () => {},
-    install,
+    // Only the followed version installs; the channel's install is never used.
+    install: async () => {
+      throw new Error("the channel's newest is never installed when following");
+    },
     follow,
+    installFollowed: install,
+    unfollow,
   };
   const follows = new AppFollowsHome({
     updates,
-    homeVersion: async () => (options.home === undefined ? "0.8.4-alpha.649" : options.home),
+    homeVersion: async () => home,
     tell: (report) => told.push(report),
     nobodyHere: () => nobody,
     every: () => () => {},
@@ -49,6 +56,7 @@ function app(options: { own?: string; home?: string | null; nobody?: boolean } =
     told,
     follow,
     install,
+    unfollow,
     settle,
     ready: async (result: AppFollowResult) => {
       ready(result);
@@ -56,6 +64,12 @@ function app(options: { own?: string; home?: string | null; nobody?: boolean } =
     },
     leave: () => {
       nobody = true;
+    },
+    back: () => {
+      nobody = false;
+    },
+    homeRuns: (version: string) => {
+      home = version;
     },
   };
 }
@@ -73,7 +87,13 @@ describe("an app following the version of the computer it controls", () => {
     a.follows.noticed();
     await a.settle();
     expect(a.install).toHaveBeenCalledTimes(1);
+    expect(a.install.mock.calls[0]?.[0]).toBe("0.8.4-alpha.649");
     expect(a.told.at(-1)).toEqual({ version: "0.8.4-alpha.649", step: "restarting" });
+    // Before it quits, the install asks again whether anybody came back.
+    const stillWanted = a.install.mock.calls[0]?.[1];
+    expect(stillWanted?.()).toBe(true);
+    a.back();
+    expect(stillWanted?.()).toBe(false);
   });
 
   it("starts again as soon as the version is here after Update app, whoever uses it", async () => {
@@ -83,6 +103,54 @@ describe("an app following the version of the computer it controls", () => {
     await a.ready({ ok: true });
     expect(a.install).toHaveBeenCalledTimes(1);
     expect(a.told.map((report) => report.step)).toEqual(["getting", "restarting"]);
+    // Asked from the row, it quits whoever uses it.
+    expect(a.install.mock.calls[0]?.[1]()).toBe(true);
+  });
+
+  it("lets an Update app press go with a catching up that failed, so a later one waits for nobody", async () => {
+    const a = app();
+    a.follows.askedNow();
+    await a.settle();
+    await a.ready({ ok: false, failed: "The download stopped." });
+    expect(a.told.at(-1)).toMatchObject({ step: "failed" });
+    a.follows.connected();
+    await a.settle();
+    await a.ready({ ok: true });
+    expect(a.install).not.toHaveBeenCalled();
+    expect(a.told.at(-1)).toMatchObject({ step: "waiting" });
+  });
+
+  it("reads the home's version again at each connection and follows its newer one", async () => {
+    const a = app();
+    a.follows.connected();
+    await a.settle();
+    await a.ready({ ok: true });
+    a.homeRuns("0.8.4-alpha.650");
+    a.follows.connected();
+    await a.settle();
+    expect(a.follow).toHaveBeenLastCalledWith("0.8.4-alpha.650");
+    await a.ready({ ok: true });
+    a.leave();
+    a.follows.noticed();
+    await a.settle();
+    expect(a.install.mock.calls.map((call) => call[0])).toEqual(["0.8.4-alpha.650"]);
+  });
+
+  it("stops following once it no longer controls that home, or the home runs its version", async () => {
+    const a = app();
+    a.follows.connected();
+    await a.settle();
+    await a.ready({ ok: true });
+    a.homeRuns("0.8.3");
+    a.follows.connected();
+    await a.settle();
+    expect(a.unfollow).toHaveBeenCalledTimes(1);
+    a.follows.dispose();
+    expect(a.unfollow).toHaveBeenCalledTimes(2);
+    a.leave();
+    a.follows.noticed();
+    await a.settle();
+    expect(a.install).not.toHaveBeenCalled();
   });
 
   it("does nothing while it runs the home's version or a newer one", async () => {

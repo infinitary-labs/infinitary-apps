@@ -37,9 +37,11 @@ export type MacUpdateDriver = {
   ) => Promise<void>;
   /**
    * After consent, download and the crew's saved work; owns native
-   * signature verification and graceful shutdown.
+   * signature verification and graceful shutdown. `stillWanted`, asked once
+   * staging is done and before shutdown starts, keeps the copy running when
+   * it answers false: the install answers `false`, staged, and nothing quits.
    */
-  install: () => Promise<void>;
+  install: (stillWanted?: () => boolean) => Promise<void | false>;
 };
 
 /** What an install or a followed version answers while another is under way. */
@@ -230,9 +232,9 @@ export function createMacUpdateChecker(options: {
   /** The install under way, which Update later waits on to answer where it rests. */
   let inFlight: Promise<UpdateInstallResult> | undefined;
 
-  function install(): Promise<UpdateInstallResult> {
-    if (inFlight) return installOnce();
-    const run = installOnce();
+  function install(stillWanted?: () => boolean): Promise<UpdateInstallResult> {
+    if (inFlight) return installOnce(stillWanted);
+    const run = installOnce(stillWanted);
     inFlight = run;
     void run.finally(() => {
       if (inFlight === run) inFlight = undefined;
@@ -240,7 +242,7 @@ export function createMacUpdateChecker(options: {
     return run;
   }
 
-  async function installOnce(): Promise<UpdateInstallResult> {
+  async function installOnce(stillWanted?: () => boolean): Promise<UpdateInstallResult> {
     if (blocked) return { ok: false, problem: blocked };
     if (isInstalling()) return { ok: false, problem: ALREADY_INSTALLING };
     const consent = generation;
@@ -278,12 +280,25 @@ export function createMacUpdateChecker(options: {
         if (consent === generation) phase = alreadyStaged ? "ready" : "idle";
         return { ok: false, later: true, problem: UPDATE_LATER };
       }
+      // Someone started using the app while the work was saved: it stays as it was.
+      if (stillWanted && !stillWanted()) {
+        saving.release();
+        if (consent === generation) phase = alreadyStaged ? "ready" : "idle";
+        return { ok: false, later: true, problem: UPDATE_LATER };
+      }
+      let restarted: void | false;
       try {
-        await options.driver.install();
+        restarted = await options.driver.install(stillWanted);
       } catch (error) {
         // Nothing replaced this copy: the work it stopped carries on.
         saving.release();
         throw error;
+      }
+      // Staged, and someone started using the app before it quit: it restarts later with no download.
+      if (restarted === false) {
+        saving.release();
+        if (consent === generation) phase = "ready";
+        return { ok: false, later: true, problem: UPDATE_LATER };
       }
       return { ok: true };
     } catch (error) {
@@ -314,8 +329,9 @@ export function createMacUpdateChecker(options: {
   async function follow(version: string): Promise<AppFollowResult> {
     if (blocked) return { ok: false, reason: "installation", problem: blocked };
     if (!options.driver.checkVersion) return { ok: false, reason: "installation" };
+    // A version already followed is ready again, staged too: installing it again downloads nothing.
+    if (following === version && (downloaded === version || phase === "ready")) return { ok: true };
     if (isInstalling() || phase === "ready") return { ok: false, failed: ALREADY_INSTALLING };
-    if (following === version && downloaded === version) return { ok: true };
     // A channel read or download under way is let go: the followed version is the offer.
     const consent = ++generation;
     checking = undefined;
@@ -375,12 +391,43 @@ export function createMacUpdateChecker(options: {
     return { ok: true };
   }
 
+  /**
+   * Installs the followed version, and only it: a channel change or another
+   * followed version since it got ready refuses, so the app never starts
+   * again on a version nobody asked it to follow.
+   */
+  function installFollowed(
+    version: string,
+    stillWanted: () => boolean,
+  ): Promise<UpdateInstallResult> {
+    if (following !== version || offer?.version !== version)
+      return Promise.resolve({ ok: false, problem: NOT_INSTALLED });
+    return install(stillWanted);
+  }
+
+  /** Stops following a version: the next read is the channel's own again. */
+  function unfollow(): void {
+    // A version being replaced, or staged for it, stays; its download in the background goes.
+    if (!following || phase === "installing" || phase === "ready") return;
+    generation++;
+    download?.abort();
+    download = undefined;
+    following = undefined;
+    downloaded = undefined;
+    offer = null;
+    checkedAt = undefined;
+    percent = undefined;
+    phase = "idle";
+  }
+
   return {
     getStatus,
     checkNow,
     setChannel,
-    install,
+    install: () => install(),
     follow,
+    installFollowed,
+    unfollow,
     later: async () => {
       // A save let go ends its install, which sets the phase it rests in: answer from there.
       if (saving.later()) await inFlight;

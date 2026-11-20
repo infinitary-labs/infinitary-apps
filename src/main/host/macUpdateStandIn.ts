@@ -30,6 +30,8 @@ export function macUpdateStandIn(
     }),
     download: async (_offer, progress) => progress(100),
     // A release quits here to replace the copy and never answers; nothing is replaced and nothing quits.
-    install: () => new Promise<void>(() => {}),
+    // Someone using the app by then keeps it running, as a release's staged update does.
+    install: (stillWanted) =>
+      stillWanted && !stillWanted() ? Promise.resolve(false) : new Promise<void>(() => {}),
   };
 }

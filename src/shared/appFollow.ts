@@ -28,9 +28,9 @@ export type AppFollowStep = z.infer<typeof appFollowStepSchema>;
  * Why an app cannot install the home's version by itself:
  * - `package-manager`: a package manager installs it there, such as Homebrew;
  * - `own-window`: this kind of copy updates only from its own window there,
- *   as a Windows PC or a Linux package does;
+ *   as a Linux package does;
  * - `installation`: the copy there cannot be replaced from its own updater,
- *   such as one not in Applications, or a run from source;
+ *   such as a Windows PC's, one not in Applications, or a run from source;
  * - `unpublished`: the home's version is not a published one.
  */
 export const appFollowReasonSchema = z.enum([

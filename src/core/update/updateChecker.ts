@@ -102,10 +102,19 @@ export type UpdateChecker = {
   /**
    * Gets one exact version ready to install, the version of the computer
    * this app controls (docs/view.md, "Following the home's version"); then
-   * `install` installs it. Absent where this copy cannot get one version by
-   * itself, which `cannotFollow` says.
+   * `installFollowed` installs it. A copy that cannot get one version by
+   * itself answers why, as `cannotFollow` says.
    */
   follow?: (version: string) => Promise<AppFollowResult>;
+  /**
+   * Installs the version `follow` got ready, and refuses when this copy no
+   * longer follows that version. `stillWanted` is asked again once the
+   * crew's work is saved and the update staged, before the app quits: false
+   * keeps the app running, staged, and answers `later`.
+   */
+  installFollowed?: (version: string, stillWanted: () => boolean) => Promise<UpdateInstallResult>;
+  /** Stops following a version, so the channel's own newest is the offer again. */
+  unfollow?: () => void;
 };
 
 /**
@@ -647,9 +656,8 @@ export function createInstalledUpdateChecker(
         await options.openExternal(releaseSource.releasesUrl);
       },
       install: async () => ({ ok: false, problem: cannotUpdate }),
-      // A Windows copy updates at that computer; an unconfirmed one cannot be replaced.
-      follow: async () =>
-        cannotFollow(app.platform === "win32" ? "own-window" : "installation", cannotUpdate),
+      // Neither a Windows copy nor an unconfirmed one replaces itself; its own words say why.
+      follow: async () => cannotFollow("installation", cannotUpdate),
     };
   }
   const saving = createUpdateSaving(options.work);

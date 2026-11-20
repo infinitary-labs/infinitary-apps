@@ -203,7 +203,7 @@ export function createMacUpdateDriver(prepareRestart: () => Promise<void>): MacU
           current.removeListener("download-progress", onProgress);
         }
       }),
-    install: async () => {
+    install: async (stillWanted) => {
       const current = await engine();
       // With autoInstallOnAppQuit=false, the library has only downloaded and checksummed the
       // ZIP. Native staging (including signature verification) starts only after consent.
@@ -231,6 +231,8 @@ export function createMacUpdateDriver(prepareRestart: () => Promise<void>): MacU
             reject(error);
           }
         });
+      // Staged: someone who started using the app meanwhile keeps it, and it restarts later.
+      if (stillWanted && !stillWanted()) return false;
       // Squirrel's quitAndInstall must not outrun the app's asynchronous task/session shutdown.
       try {
         await prepareRestart();

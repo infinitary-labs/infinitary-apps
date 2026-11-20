@@ -684,10 +684,16 @@ describe("following the version of the computer this copy controls", () => {
       releasesUrl: releaseSource.releasesUrl,
       openExternal: vi.fn(),
     });
-    const { follow } = checker;
-    if (!follow) throw new Error("A direct Mac copy gets one exact version by itself");
-    return { ...f, checker, checkVersion, follow };
+    const { follow, installFollowed } = checker;
+    if (!follow || !installFollowed)
+      throw new Error("A direct Mac copy gets one exact version by itself");
+    return { ...f, checker, checkVersion, follow, installFollowed };
   }
+  /** Whether nobody uses the app, answered in turn: after the save, then once staged. */
+  const stillWanted =
+    (...answers: boolean[]) =>
+    () =>
+      answers.shift() ?? true;
 
   it("gets the home's alpha on a Stable copy and installs it with no second download or channel read", async () => {
     const f = following("0.8.3");
@@ -697,10 +703,74 @@ describe("following the version of the computer this copy controls", () => {
     expect(f.driver.download.mock.calls[0]?.[0].version).toBe("0.8.4-alpha.649");
     const status = await f.checker.getStatus();
     expect(status).toMatchObject({ latestVersion: "0.8.4-alpha.649", updateAvailable: true });
-    expect(await f.checker.install()).toEqual({ ok: true });
+    expect(await f.installFollowed("0.8.4-alpha.649", () => true)).toEqual({ ok: true });
     expect(f.driver.download).toHaveBeenCalledTimes(1);
     expect(f.driver.install).toHaveBeenCalledTimes(1);
     expect(f.driver.check).not.toHaveBeenCalled();
+  });
+
+  it("installs only the version it follows: a channel change since refuses, installing nothing", async () => {
+    const f = following("0.8.3");
+    expect(await f.follow("0.8.4-alpha.649")).toEqual({ ok: true });
+    await f.checker.setChannel?.("alpha");
+    const refused = await f.installFollowed("0.8.4-alpha.649", () => true);
+    expect(refused.ok).toBe(false);
+    expect(f.driver.install).not.toHaveBeenCalled();
+    // Another version followed since refuses the first one too.
+    expect(await f.follow("0.8.5")).toEqual({ ok: true });
+    expect((await f.installFollowed("0.8.4-alpha.649", () => true)).ok).toBe(false);
+    expect(f.driver.install).not.toHaveBeenCalled();
+  });
+
+  it("stays as it was when someone uses the app by the time the crew's work is saved", async () => {
+    const f = following("0.8.3");
+    expect(await f.follow("0.8.4")).toEqual({ ok: true });
+    expect(await f.installFollowed("0.8.4", stillWanted(false))).toMatchObject({
+      ok: false,
+      later: true,
+    });
+    expect(f.driver.install).not.toHaveBeenCalled();
+    expect(await f.checker.getStatus()).toMatchObject({ phase: "idle", updateAvailable: true });
+  });
+
+  it("keeps running, staged, when someone uses the app by the time it is staged, then restarts with no download", async () => {
+    const f = following("0.8.3");
+    f.driver.install.mockImplementation(async (wanted) =>
+      wanted && !wanted() ? false : undefined,
+    );
+    expect(await f.follow("0.8.4")).toEqual({ ok: true });
+    expect(await f.installFollowed("0.8.4", stillWanted(true, false))).toMatchObject({
+      ok: false,
+      later: true,
+    });
+    expect((await f.checker.getStatus()).phase).toBe("ready");
+    // The next connection follows the same version: it is ready, staged, with nothing read again.
+    expect(await f.follow("0.8.4")).toEqual({ ok: true });
+    expect(await f.installFollowed("0.8.4", () => true)).toEqual({ ok: true });
+    expect(f.checkVersion).toHaveBeenCalledTimes(1);
+    expect(f.driver.download).toHaveBeenCalledTimes(1);
+    expect(f.driver.install).toHaveBeenCalledTimes(2);
+  });
+
+  it("tries the staged version again after a shutdown that failed, with no download", async () => {
+    const f = following("0.8.3");
+    f.driver.install.mockRejectedValueOnce(new MacUpdateReadyProblem("The update is staged."));
+    expect(await f.follow("0.8.4")).toEqual({ ok: true });
+    expect((await f.installFollowed("0.8.4", () => true)).ok).toBe(false);
+    expect((await f.checker.getStatus()).phase).toBe("ready");
+    expect(await f.follow("0.8.4")).toEqual({ ok: true });
+    expect(await f.installFollowed("0.8.4", () => true)).toEqual({ ok: true });
+    expect(f.driver.download).toHaveBeenCalledTimes(1);
+    expect(f.driver.install).toHaveBeenCalledTimes(2);
+  });
+
+  it("offers the channel's own newest again once it stops following", async () => {
+    const f = following("0.8.3");
+    expect(await f.follow("0.8.4-alpha.649")).toEqual({ ok: true });
+    f.checker.unfollow?.();
+    f.driver.check.mockResolvedValueOnce(offer("0.8.5"));
+    expect(await f.checker.getStatus()).toMatchObject({ latestVersion: "0.8.5" });
+    expect((await f.installFollowed("0.8.4-alpha.649", () => true)).ok).toBe(false);
   });
 
   it("answers unpublished for a version the release source never published, downloading nothing", async () => {

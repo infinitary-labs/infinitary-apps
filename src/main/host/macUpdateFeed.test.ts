@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingHttpHeaders, type Server } from "node:http";
 import { createRequire } from "node:module";
@@ -37,6 +38,10 @@ const feed = vi.hoisted(() => ({
   asked: [] as string[],
   received: [] as IncomingHttpHeaders[],
   status: 200,
+  /** The release's ZIP, served for a download's request; absent, the feed's body answers it. */
+  zip: undefined as Buffer | undefined,
+  /** Where the library told Squirrel to fetch a downloaded update from. */
+  staged: [] as string[],
 }));
 
 // A Mac new enough for in-app updates, with an installation the driver may replace, so a
@@ -72,7 +77,11 @@ vi.mock("electron", async () => {
       isInApplicationsFolder: () => true,
       once: () => {},
     },
-    autoUpdater: Object.assign(new EventEmitter(), { checkForUpdates: () => {} }),
+    // Squirrel's emitter: a finished download hands it the library's local copy of the ZIP.
+    autoUpdater: Object.assign(new EventEmitter(), {
+      checkForUpdates: () => {},
+      setFeedURL: (options: { url: string }) => feed.staged.push(options.url),
+    }),
     session: { fromPartition: () => ({}) },
     net: {
       request: (options: {
@@ -111,6 +120,12 @@ beforeAll(async () => {
   server = createServer((incoming, response) => {
     feed.received.push(incoming.headers);
     response.statusCode = feed.status;
+    if (feed.zip && incoming.url?.endsWith(".zip")) {
+      response.setHeader("content-type", "application/zip");
+      response.setHeader("content-length", String(feed.zip.length));
+      response.end(feed.zip);
+      return;
+    }
     response.setHeader("content-type", "text/yaml");
     response.end(feed.body);
   });
@@ -129,7 +144,25 @@ beforeEach(() => {
   feed.asked = [];
   feed.received = [];
   feed.status = 200;
+  feed.zip = undefined;
+  feed.staged = [];
 });
+
+/** A packaged copy's update settings, and a home of its own for the library's download cache. */
+function packagedCopy(): void {
+  const resources = scratchDir("mac-update-resources-");
+  writeFileSync(join(resources, "app-update.yml"), "updaterCacheDirName: infinitary-updater\n");
+  const resourcesPath = process.resourcesPath;
+  const packaged = process as { resourcesPath: string };
+  packaged.resourcesPath = resources;
+  onTestFinished(() => {
+    packaged.resourcesPath = resourcesPath;
+    vi.unstubAllEnvs();
+  });
+  const home = scratchDir("mac-update-home-");
+  vi.stubEnv("HOME", home);
+  vi.stubEnv("XDG_CACHE_HOME", join(home, ".cache"));
+}
 
 // INF-4948: Diagnostics' install ID is the one identifier that leaves for us
 // (docs/sharing.md). electron-updater sent its own per-install ID, kept in the
@@ -181,19 +214,7 @@ describe("the Mac update check's active mark", () => {
   const header = ACTIVE_MARK_HEADER.toLowerCase();
 
   it("rides the feed read alone, and is spent once the feed answered", async () => {
-    // A packaged copy's update settings, and a home of its own for the library's download cache.
-    const resources = scratchDir("mac-update-resources-");
-    writeFileSync(join(resources, "app-update.yml"), "updaterCacheDirName: infinitary-updater\n");
-    const resourcesPath = process.resourcesPath;
-    const packaged = process as { resourcesPath: string };
-    packaged.resourcesPath = resources;
-    onTestFinished(() => {
-      packaged.resourcesPath = resourcesPath;
-      vi.unstubAllEnvs();
-    });
-    const home = scratchDir("mac-update-home-");
-    vi.stubEnv("HOME", home);
-    vi.stubEnv("XDG_CACHE_HOME", join(home, ".cache"));
+    packagedCopy();
     // The library compares the feed's lowest macOS against this system's own kernel version,
     // which no stand-in reaches: off a Mac it would refuse the download before any request.
     const { minimumSystemVersion: _onMacOnly, ...anySystem } = FEED;
@@ -259,6 +280,53 @@ describe("reading one exact version", () => {
     expect(feed.asked.slice(1).map((url) => new URL(".", url).href)).toEqual([
       releaseSource.feedUrl,
     ]);
+  });
+
+  // The release's ZIP stood in by bytes of the published size's kind, named and checked
+  // by its own manifest: the download is the library's, through that version's offer.
+  function exactRelease(zip: Buffer, sha512 = createHash("sha512").update(zip).digest("base64")) {
+    feed.zip = zip;
+    feed.body = JSON.stringify({
+      ...MANIFEST,
+      zip: {
+        ...MANIFEST.zip,
+        sha256: createHash("sha256").update(zip).digest("hex"),
+        size: zip.length,
+        sha512,
+      },
+    });
+  }
+
+  it("downloads that version's own ZIP and checks it against its manifest", async () => {
+    packagedCopy();
+    const zip = Buffer.from("PK\u0003\u0004 the exact release ".repeat(512));
+    exactRelease(zip);
+    const driver = createMacUpdateDriver(async () => {});
+    const offer = await driver.checkVersion?.(MANIFEST.version);
+    if (!offer) throw new Error("the published version must be offered");
+    const progress: number[] = [];
+    await driver.download(offer, (percent) => progress.push(percent), new AbortController().signal);
+    // Checked against its manifest, it is handed on for Squirrel to stage at consent.
+    expect(feed.staged).toHaveLength(1);
+    expect(progress.length).toBeGreaterThan(0);
+    // One manifest read, then that version's own ZIP, and no channel feed.
+    expect(feed.asked.map((url) => new URL(url).pathname)).toEqual([
+      new URL(`versions/${MANIFEST.version}.json`, releaseSource.feedUrl).pathname,
+      expect.stringMatching(new RegExp(`/v${MANIFEST.version}/${MANIFEST.zip.asset}$`)),
+    ]);
+  });
+
+  it("refuses that version's ZIP when it does not match its manifest", async () => {
+    packagedCopy();
+    const zip = Buffer.from("PK\u0003\u0004 the exact release ".repeat(512));
+    exactRelease(zip, createHash("sha512").update("another file").digest("base64"));
+    const driver = createMacUpdateDriver(async () => {});
+    const offer = await driver.checkVersion?.(MANIFEST.version);
+    if (!offer) throw new Error("the published version must be offered");
+    await expect(driver.download(offer, () => {}, new AbortController().signal)).rejects.toThrow(
+      /sha512 checksum mismatch/,
+    );
+    expect(feed.staged).toEqual([]);
   });
 
   it("answers nothing for a version the release source never published", async () => {

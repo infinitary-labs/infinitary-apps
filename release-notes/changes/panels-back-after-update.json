@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "panels-back-after-update",
+      "kind": "fix",
+      "area": "updates",
+      "title": "Panels open again by themselves after an update",
+      "body": "Right after an update, Infinitary's window and your first mate can briefly be on different versions, and the side panels said they could not be opened. Once your first mate is back on the same version, the panels now open by themselves. Before, they kept saying they could not be opened until you closed and reopened the window.",
+      "noPicture": "The panels look as they always did; what changed is that a refused panel opens again on its own.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

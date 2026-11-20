@@ -17,6 +17,9 @@ struct PhonePushTests {
         let otherKey: Push
         let withdrawal: Withdrawal
         let otherKeyWithdrawal: Push
+        let secondKey: String
+        let second: Push
+        let secondWithdrawal: Withdrawal
     }
 
     private func sealed() throws -> Sealed {
@@ -104,7 +107,7 @@ struct PhonePushTests {
         var posts: [[String: String]] = []
         var handed: [PhonePushRegistration?] = []
         var keeps = true
-        var delivered: [(id: String, cardID: String?, push: String?)] = []
+        var delivered: [(id: String, cardID: String?, push: String?, computer: String?)] = []
         var removed: [String] = []
         var now = Date(timeIntervalSince1970: 1_795_000_000)
 
@@ -248,7 +251,7 @@ struct PhonePushTests {
         let outside = Outside()
         let key = PhonePushSeal.newKey()
         outside.held = PhonePushHeld(key: key, token: token, environment: .production, grant: grant(expiring: 20))
-        outside.delivered = [("n1", "card-7f3a9c1e-plan-launch-week", nil), ("n2", nil, nil)]
+        outside.delivered = [("n1", "card-7f3a9c1e-plan-launch-week", nil, nil), ("n2", nil, nil, nil)]
         let pushes = outside.pushes()
         await pushes.reached(takesPushes: true, hand: outside.hand)
         await pushes.opened()
@@ -312,12 +315,12 @@ struct PhonePushTests {
         let outside = Outside()
         outside.held = PhonePushHeld(key: fixture.key, token: token, environment: .production, grant: grant(expiring: 20))
         // The pushes the withdrawal names, an unseen card's, one that opened no card, and an older computer's push.
-        outside.delivered = [("n1", "card-7f3a9c1e-plan-launch-week", "Hs2pW9cXe4Rm"),
-                             ("n2", "card-5c02e4f1-pick-venue", "Xa0vB3nM6pQe"),
-                             ("n3", "card-2b81d0aa-review-onboarding", "q3Vn8yLk0TfA"),
-                             ("n4", nil, nil),
-                             ("n5", "card-7f3a9c1e-plan-launch-week", "b7JtQ0uZa1Nd"),
-                             ("n6", "card-7f3a9c1e-plan-launch-week", nil)]
+        outside.delivered = [("n1", "card-7f3a9c1e-plan-launch-week", "Hs2pW9cXe4Rm", nil),
+                             ("n2", "card-5c02e4f1-pick-venue", "Xa0vB3nM6pQe", nil),
+                             ("n3", "card-2b81d0aa-review-onboarding", "q3Vn8yLk0TfA", nil),
+                             ("n4", nil, nil, nil),
+                             ("n5", "card-7f3a9c1e-plan-launch-week", "b7JtQ0uZa1Nd", nil),
+                             ("n6", "card-7f3a9c1e-plan-launch-week", nil, nil)]
         let pushes = outside.pushes()
         #expect(!(await pushes.withdrawArrived(silent(fixture.otherKeyWithdrawal.sealed))))
         #expect(outside.removed.isEmpty)
@@ -333,8 +336,8 @@ struct PhonePushTests {
         let outside = Outside()
         outside.held = PhonePushHeld(key: fixture.key, token: token, environment: .production, grant: grant(expiring: 20))
         // A newer reply of the onboarding card: its own push, which the withdrawal does not name.
-        outside.delivered = [("n1", "card-7f3a9c1e-plan-launch-week", "Hs2pW9cXe4Rm"),
-                             ("n2", "card-2b81d0aa-review-onboarding", "Zr5kD1wYt8Lc")]
+        outside.delivered = [("n1", "card-7f3a9c1e-plan-launch-week", "Hs2pW9cXe4Rm", nil),
+                             ("n2", "card-2b81d0aa-review-onboarding", "Zr5kD1wYt8Lc", nil)]
         #expect(await outside.pushes().withdrawArrived(silent(fixture.withdrawal.sealed)))
         #expect(outside.removed == ["n1"])
     }
@@ -351,7 +354,7 @@ struct PhonePushTests {
         #expect(olderShown.push == "q3Vn8yLk0TfA")
         let outside = Outside()
         outside.held = PhonePushHeld(key: fixture.key, token: token, environment: .production, grant: grant(expiring: 20))
-        outside.delivered = [("n1", olderShown.cardID, olderShown.push), ("n2", newerShown.cardID, newerShown.push)]
+        outside.delivered = [("n1", olderShown.cardID, olderShown.push, nil), ("n2", newerShown.cardID, newerShown.push, nil)]
         #expect(await outside.pushes().withdrawArrived(silent(fixture.withdrawal.sealed)))
         #expect(outside.removed == ["n1"])
     }
@@ -384,10 +387,211 @@ struct PhonePushTests {
         let stage = [try card("card-7f3a9c1e-plan-launch-week", title: "Plan the launch week", seen: false),
                      try card("card-9d4e6b20-renew-certificate", title: "Renew the signing certificate", seen: true)]
         let outside = Outside()
-        outside.delivered = [("n1", "card-7f3a9c1e-plan-launch-week", nil), ("n2", "card-2b81d0aa-review-onboarding", nil),
-                             ("n3", nil, nil), ("n4", "card-9d4e6b20-renew-certificate", nil)]
-        await outside.pushes().clear(stage: stage, seen: \.currentUpdateSeen)
+        outside.delivered = [("n1", "card-7f3a9c1e-plan-launch-week", nil, nil), ("n2", "card-2b81d0aa-review-onboarding", nil, nil), ("n3", nil, nil, nil),
+                             ("n4", "card-9d4e6b20-renew-certificate", nil, nil)]
+        await outside.pushes().clear(stage: stage, seen: \.currentUpdateSeen, computer: studio.pin)
         // Kept: the unseen card on the stage. Gone: the card that left it, one naming no card, and the seen card.
         #expect(outside.removed == ["n2", "n3", "n4"])
+    }
+
+    // INF-5265 (docs/ios.md, "Several computers"): one phone keeps several computers, each sealing under its own key.
+    private let office = (pin: "c2VwYXJhdGUtb2ZmaWNlLXBpbg", name: "Work computer")
+    private let studio = (pin: "c2VwYXJhdGUtc3R1ZGlvLXBpbg", name: "Personal server")
+
+    /// The notification part tries each kept computer's key: the one that opens a push names its computer, shown as
+    /// the subtitle only while the phone keeps more than one.
+    @Test func opensEachComputersPushUnderItsOwnKeyAndNamesIt() throws {
+        let fixture = try sealed()
+        let held = PhonePushHeld(key: fixture.key, computers: [
+            PhonePushComputer(pin: studio.pin, name: studio.name, key: fixture.key),
+            PhonePushComputer(pin: office.pin, name: office.name, key: fixture.secondKey)])
+        let fromOffice = try #require(PhonePushSeal.notice(relayed(fixture.second.sealed), held: held))
+        #expect(fromOffice == PhonePushNotice(title: "Decision · billing", body: "Pick the export job's retry limit",
+                                              cardID: "card-41d6e0b2-export-retries", computer: office.pin, subtitle: office.name))
+        #expect(fromOffice.userInfo[PhonePushSeal.computerKey] as? String == office.pin)
+        #expect(fromOffice.userInfo[PhonePushSeal.cardKey] as? String == "card-41d6e0b2-export-retries")
+        let fromStudio = try #require(PhonePushSeal.notice(relayed(fixture.card.sealed), held: held))
+        #expect(fromStudio.computer == studio.pin && fromStudio.subtitle == studio.name)
+        // Sealed under neither key: the relay's own words stay.
+        #expect(PhonePushSeal.notice(relayed(fixture.otherKey.sealed), held: held) == nil)
+        // With one computer kept the notification shows no subtitle, as before, and still names its computer for a tap.
+        let one = PhonePushHeld(key: fixture.secondKey, computers: [PhonePushComputer(pin: office.pin, name: office.name, key: fixture.secondKey)])
+        let alone = try #require(PhonePushSeal.notice(relayed(fixture.second.sealed), held: one))
+        #expect(alone.subtitle == nil && alone.computer == office.pin)
+        #expect(PhonePushSeal.notice(relayed(fixture.card.sealed), held: one) == nil)
+        // A record kept before the phone kept several opens with its one key and names no computer.
+        let before = try #require(PhonePushSeal.notice(relayed(fixture.card.sealed), held: PhonePushHeld(key: fixture.key)))
+        #expect(before.computer == nil && before.subtitle == nil)
+    }
+
+    /// A phone with one computer moves to the list with no new key: that computer keeps the key it was handed. A second
+    /// computer gets a key of its own at its own welcome, sharing the address and grant.
+    @MainActor @Test func keepsTheOneComputersKeyAndGivesASecondItsOwn() async throws {
+        let outside = Outside()
+        let key = PhonePushSeal.newKey()
+        outside.held = PhonePushHeld(key: key, token: token, environment: .production, grant: grant(expiring: 20))
+        let pushes = outside.pushes()
+        pushes.kept([studio])
+        #expect(outside.held?.computers == [PhonePushComputer(pin: studio.pin, name: studio.name, key: key)])
+        #expect(outside.held?.key == key)
+        await pushes.opened()
+        await pushes.tokenArrived(address)
+        await pushes.reached(computer: studio.pin, takesPushes: true, hand: outside.hand)
+        #expect(outside.handed.last??.key == key)
+
+        pushes.left()
+        pushes.kept([office, studio])
+        let officeKey = try #require(outside.held?.computers?.first { $0.pin == office.pin }?.key)
+        #expect(officeKey != key)
+        #expect(outside.held?.key == key, "The first computer's key stays the record's own key")
+        await pushes.reached(computer: office.pin, takesPushes: true, hand: outside.hand)
+        #expect(outside.handed.last??.key == officeKey)
+        #expect(outside.handed.last??.grant == grant(expiring: 20))
+        #expect(outside.posts.isEmpty, "One address and grant for every computer: no new ask of the relay")
+        #expect(outside.unregistered == 0)
+        // Renamed on the computer: the name follows; the key does not change.
+        pushes.kept([(office.pin, "Work laptop"), studio])
+        #expect(outside.held?.computers?.first { $0.pin == office.pin } == PhonePushComputer(pin: office.pin, name: "Work laptop", key: officeKey))
+    }
+
+    /// A computer the phone keeps no key for yet is handed no registration, never another computer's key.
+    @MainActor @Test func handsNoKeyToAComputerItKeepsNone() async {
+        let outside = Outside()
+        outside.held = PhonePushHeld(key: PhonePushSeal.newKey(), token: token, environment: .production, grant: grant(expiring: 20))
+        let pushes = outside.pushes()
+        pushes.kept([studio])
+        await pushes.opened()
+        await pushes.tokenArrived(address)
+        await pushes.reached(computer: office.pin, takesPushes: true, hand: outside.hand)
+        #expect(outside.handed.isEmpty)
+    }
+
+    /// Reaching one computer clears only its own notifications for cards that left its stage; another computer's stay.
+    /// A notification shown before the phone kept a key per computer names none: it is the computer's kept then, and
+    /// one that opened no card, whose computer no one knows, stays while two are kept.
+    @MainActor @Test func clearsOnlyTheReachedComputersNotifications() async throws {
+        let outside = Outside()
+        outside.held = PhonePushHeld(key: PhonePushSeal.newKey(), token: token, environment: .production, grant: grant(expiring: 20))
+        let pushes = outside.pushes()
+        pushes.kept([studio])
+        pushes.kept([studio, office])
+        let stage = [try PhoneCard(.object([
+            "id": .string("card-7f3a9c1e-plan-launch-week"), "title": .string("Plan the launch week"), "author": .string("firstmate"),
+            "body": .string("<p>Three dates fit; pick one.</p>"), "actions": .array([]),
+            "lifecycleId": .string("plan-launch-week-life"), "currentUpdateId": .string("plan-launch-week-update"), "currentUpdateSeen": .bool(false)
+        ]))]
+        outside.delivered = [("n1", "card-7f3a9c1e-plan-launch-week", nil, studio.pin), ("n2", "card-2b81d0aa-review-onboarding", nil, studio.pin),
+                             ("n3", "card-41d6e0b2-export-retries", nil, office.pin), ("n4", nil, nil, nil),
+                             ("n5", "card-0e7e2c55-from-before", nil, nil)]
+        await pushes.clear(stage: stage, seen: { _ in false }, computer: studio.pin)
+        // n2 left the studio's stage and n5 came from the studio before; n3 is the office's; n4's computer is unknown.
+        #expect(outside.removed == ["n2", "n5"])
+        #expect(pushes.owner(named: nil) == studio.pin, "A tap on a notification from before shows the studio")
+        outside.removed = []
+        await pushes.clear(stage: [], seen: { _ in false }, computer: office.pin)
+        #expect(outside.removed == ["n3"])
+    }
+
+    /// A withdrawal opens under the key of the computer that sealed it and removes only that computer's notifications
+    /// of the pushes it names; another computer's notification stays even where its card and push read the same.
+    @MainActor @Test func aWithdrawalRemovesOnlyItsOwnComputersNotifications() async throws {
+        let fixture = try sealed()
+        let outside = Outside()
+        outside.held = PhonePushHeld(key: fixture.key, token: token, environment: .production, grant: grant(expiring: 20),
+                                     computers: [PhonePushComputer(pin: studio.pin, name: studio.name, key: fixture.key),
+                                                 PhonePushComputer(pin: office.pin, name: office.name, key: fixture.secondKey)])
+        outside.delivered = [("n1", "card-41d6e0b2-export-retries", "Zr5dK2mWq8Tc", office.pin),
+                             ("n2", "card-41d6e0b2-export-retries", "Zr5dK2mWq8Tc", studio.pin),
+                             ("n3", "card-7f3a9c1e-plan-launch-week", "Hs2pW9cXe4Rm", studio.pin),
+                             ("n4", "card-41d6e0b2-export-retries", "Qm4tY7aLp2Wx", office.pin)]
+        let pushes = outside.pushes()
+        #expect(await pushes.withdrawArrived(silent(fixture.secondWithdrawal.sealed)))
+        #expect(outside.removed == ["n1"])
+        outside.removed = []
+        // The studio's own withdrawal, under the first key, still removes the studio's pushes it names.
+        #expect(await pushes.withdrawArrived(silent(fixture.withdrawal.sealed)))
+        #expect(outside.removed == ["n3"])
+    }
+
+    /// Forgetting the computer the notifications from before came from removes them too, and no later notification
+    /// that names no computer is taken for it.
+    @MainActor @Test func forgettingTheComputerFromBeforeRemovesItsUntaggedNotifications() async {
+        let outside = Outside()
+        outside.held = PhonePushHeld(key: PhonePushSeal.newKey(), token: token, environment: .production, grant: grant(expiring: 20))
+        let pushes = outside.pushes()
+        pushes.kept([studio])
+        pushes.kept([office, studio])
+        outside.delivered = [("n1", "card-0e7e2c55-from-before", nil, nil), ("n2", "card-41d6e0b2-export-retries", nil, office.pin), ("n3", nil, nil, nil)]
+        await pushes.forgot(computer: studio.pin)
+        #expect(outside.removed == ["n1"])
+        #expect(outside.held?.untagged == nil)
+        #expect(pushes.owner(named: nil) == nil)
+    }
+
+    /// A list read as empty, such as before the phone read its kept computers, drops no computer's key: only
+    /// forgetting the last computer does.
+    @MainActor @Test func anEmptyListKeepsEveryKey() async throws {
+        let outside = Outside()
+        let key = PhonePushSeal.newKey()
+        outside.held = PhonePushHeld(key: key, token: token, environment: .production, grant: grant(expiring: 20))
+        let pushes = outside.pushes()
+        pushes.kept([])
+        #expect(outside.held?.computers == nil, "A record from before stays as it was until its computer is read")
+        pushes.kept([studio, office])
+        let before = try #require(outside.held)
+        pushes.kept([])
+        #expect(outside.held == before)
+    }
+
+    /// A computer's answer that it did not keep the grant drops that grant alone: a key kept meanwhile stays.
+    @MainActor @Test func aRefusedGrantKeepsAKeyKeptWhileItWasHanded() async throws {
+        let outside = Outside()
+        outside.held = PhonePushHeld(key: PhonePushSeal.newKey(), token: token, environment: .production, grant: grant(expiring: 20))
+        let pushes = outside.pushes()
+        pushes.kept([studio])
+        await pushes.opened()
+        await pushes.tokenArrived(address)
+        await pushes.reached(computer: studio.pin, takesPushes: true) { _ in
+            // The person joined another computer while this answer was on its way.
+            pushes.kept([self.office, self.studio])
+            return false
+        }
+        let held = try #require(outside.held)
+        #expect(held.grant == nil)
+        #expect(held.computers?.map(\.pin) == [studio.pin, office.pin])
+    }
+
+    /// Forgetting one of two computers drops only its key and its notifications; the address and grant stay for the
+    /// other. Forgetting the last gives up the address as before.
+    @MainActor @Test func forgettingOneOfSeveralKeepsTheAddress() async throws {
+        let outside = Outside()
+        let key = PhonePushSeal.newKey()
+        outside.held = PhonePushHeld(key: key, token: token, environment: .production, grant: grant(expiring: 20))
+        let pushes = outside.pushes()
+        pushes.kept([studio, office])
+        let officeKey = try #require(outside.held?.computers?.last?.key)
+        outside.delivered = [("n1", "card-7f3a9c1e-plan-launch-week", nil, studio.pin), ("n2", "card-41d6e0b2-export-retries", nil, office.pin)]
+
+        await pushes.forgot(computer: studio.pin)
+        #expect(outside.unregistered == 0)
+        #expect(outside.removed == ["n1"])
+        let held = try #require(outside.held)
+        #expect(held.computers == [PhonePushComputer(pin: office.pin, name: office.name, key: officeKey)])
+        #expect(held.key == officeKey, "The forgotten computer's key is kept nowhere")
+        #expect(held.token == token && held.grant == grant(expiring: 20))
+
+        outside.removed = []
+        await pushes.forgot(computer: office.pin)
+        #expect(outside.unregistered == 1)
+        #expect(outside.removed == ["n1", "n2"])
+        #expect(outside.held?.grant == nil && outside.held?.computers == [] && outside.held?.key != officeKey)
+    }
+
+    /// A push from a kept computer the phone does not show shows in front, since the in-app notice cannot show it.
+    @Test func aPushFromAComputerNotShownShowsInFront() {
+        let card = "card-41d6e0b2-export-retries"
+        #expect(PhonePush.showsInFront(contact: "in-reach", cardID: card, computer: office.pin, shown: studio.pin))
+        #expect(!PhonePush.showsInFront(contact: "in-reach", cardID: card, computer: studio.pin, shown: studio.pin))
+        #expect(!PhonePush.showsInFront(contact: "in-reach", cardID: card, computer: nil, shown: studio.pin))
     }
 }

@@ -77,6 +77,7 @@ import { phonePanelControls } from "./phonePanels";
 import { startPhonePushRelay } from "./phonePushRelay";
 import { seedRowMoves } from "./phoneRowMoves";
 import { phoneSceneFixture } from "./phoneScene";
+import { phoneSecondHome } from "./phoneSecondHome";
 import {
   PHONE_SETTINGS_SESSION_LATER,
   phoneSettingsState,
@@ -157,8 +158,10 @@ export async function startPhoneHome(
     ): Promise<PhoneKeyOutcome & { key: "tab" | "return" | "escape" }>;
   },
   // INF-3563: the Settings pages part's computer starts with accounts, projects, usage and automations to show.
-  options: { settings?: boolean } = {},
+  // INF-5265: a second computer beside it names itself (tests/helpers/phoneSecondHome.ts).
+  options: { settings?: boolean; name?: string } = {},
 ) {
+  const homeName = options.name ?? "Test Mac mini";
   const port = await claimedPort();
   process.env.INFINITARY_CONNECTION_LOOPBACK_PORT = String(port);
   process.env.INFINITARY_DNS_SD = standInDnsSd([]);
@@ -622,7 +625,7 @@ export async function startPhoneHome(
       devices,
       port,
       address: [],
-      name: () => "Test Mac mini",
+      name: () => homeName,
       protocolVersion,
       ...(viewFloor !== undefined ? { viewFloor } : {}),
       // Major 16 folded these names in: a home before it listed them, and the phone still reads one by them.
@@ -651,8 +654,9 @@ export async function startPhoneHome(
     return connection;
   };
   let connection = connect();
+  const secondHome = phoneSecondHome();
   takeOver = phoneTakeOverControls({
-    ...{ devicesDir: paths.devicesDir, name: "Test Mac mini", userData },
+    ...{ devicesDir: paths.devicesDir, name: homeName, userData },
     ...{ offline: () => connection.close(), routes: () => connection.routes() },
     online: async () => {
       connection = connect();
@@ -2706,6 +2710,36 @@ export async function startPhoneHome(
           };
           break;
         }
+        // INF-5265: a second computer beside this one, which the phone joins with a link of its own.
+        case "POST second-home":
+          result = await secondHome.start();
+          break;
+        // INF-5265: a card push as the phone's notification part leaves it once it opened the sealed card, naming the
+        // card and the computer it came from; a simulated push runs no notification part, so this stands in for it.
+        case "POST push-opened": {
+          if (!controls?.push)
+            throw new Error("Only the owned simulator launcher can push to the phone");
+          const opened = JSON.parse(await controlBody(request)) as {
+            cardId: string;
+            computer: string;
+            title: string;
+            subtitle: string;
+          };
+          await controls.push({
+            aps: {
+              alert: {
+                title: opened.title,
+                subtitle: opened.subtitle,
+                body: pushRelay.state().words,
+              },
+              sound: "default",
+            },
+            cardId: opened.cardId,
+            computer: opened.computer,
+          });
+          result = { ok: true };
+          break;
+        }
         case "POST disconnected": {
           // Home's animation first makes the scene inactive. Wait for the real socket to go,
           // rather than removing a still-connected phone and accidentally testing close 4401.
@@ -3363,6 +3397,7 @@ export async function startPhoneHome(
       await new Promise<void>((resolve) => control.close(() => resolve()));
       await ssh?.stop();
       await takeOver.stop();
+      await secondHome.stop();
       unreach();
       await connection.close();
       unsubscribe("net.server.socket", countAttempt);

@@ -10,19 +10,49 @@ public enum PhonePushEnvironment: String, Codable, Sendable {
     case production, development
 }
 
-/// What the phone keeps for its pushes, in the Keychain group the app shares with its notification part: the sealing
-/// key the part opens each push with, and the push address, its service and the relay's grant for them.
-public struct PhonePushHeld: Codable, Equatable, Sendable {
+/// INF-5265: one kept computer's sealing key, named for the notification part. Each computer seals for this phone
+/// under its own key, so the key that opens a push names the computer it came from.
+public struct PhonePushComputer: Codable, Equatable, Sendable {
+    /// The computer's pin, which names it in the phone's saved list and on each notification it opens.
+    public var pin: String
+    /// The computer's name, which a notification shows while the phone keeps more than one.
+    public var name: String
     /// 32 random bytes in base64url, for AES-256-GCM.
     public var key: String
+
+    public init(pin: String, name: String, key: String) { self.pin = pin; self.name = name; self.key = key }
+}
+
+/// What the phone keeps for its pushes, in the Keychain group the app shares with its notification part: the sealing
+/// key of each kept computer the part opens each push with, and the push address, its service and the relay's grant
+/// for them, which every kept computer shares.
+public struct PhonePushHeld: Codable, Equatable, Sendable {
+    /// 32 random bytes in base64url, for AES-256-GCM: the first kept computer's key, and the one key of a record kept
+    /// before the phone kept several computers, which an older build reads.
+    public var key: String
+    /// INF-5265: each kept computer's own key, or none in a record kept before; the app fills it once it reads its
+    /// saved computers (`PhonePushes.kept`).
+    public var computers: [PhonePushComputer]?
+    /// INF-5265: the computer the notifications shown before the phone kept a key per computer came from, which name
+    /// none: the one computer kept when the record moved to a key per computer. None once it is forgotten.
+    public var untagged: String?
     public var token: String?
     public var environment: PhonePushEnvironment?
     public var grant: String?
     /// When the phone last asked the relay for a grant: each ask costs one of Apple's few background pushes an hour.
     public var asked: Date?
 
-    public init(key: String, token: String? = nil, environment: PhonePushEnvironment? = nil, grant: String? = nil, asked: Date? = nil) {
+    public init(key: String, token: String? = nil, environment: PhonePushEnvironment? = nil, grant: String? = nil, asked: Date? = nil,
+                computers: [PhonePushComputer]? = nil) {
         self.key = key; self.token = token; self.environment = environment; self.grant = grant; self.asked = asked
+        self.computers = computers
+    }
+
+    /// The keys a push may be sealed under, each with the computer it names: every kept computer's, or the one key of a
+    /// record from before, which names none.
+    public var openers: [(key: String, computer: PhonePushComputer?)] {
+        guard let computers else { return [(key, nil)] }
+        return computers.map { ($0.key, $0) }
     }
 }
 
@@ -45,9 +75,18 @@ public struct PhonePushNotice: Equatable, Sendable {
     public let cardID: String
     /// Which push of the card it is (`PhonePushCard.push`).
     public let push: String?
+    /// INF-5265: the pin of the computer whose key opened it, or none for a record kept before.
+    public let computer: String?
+    /// The computer's name, shown under the title while the phone keeps more than one computer.
+    public let subtitle: String?
 
-    public init(title: String, body: String, cardID: String, push: String? = nil) {
-        self.title = title; self.body = body; self.cardID = cardID; self.push = push
+    public init(title: String, body: String, cardID: String, push: String? = nil, computer: String? = nil, subtitle: String? = nil) {
+        self.title = title; self.body = body; self.cardID = cardID; self.push = push; self.computer = computer
+        self.subtitle = subtitle
+    }
+
+    /// What the notification carries for the app (`PhonePushSeal.userInfo(for:)`).
+    public var userInfo: [AnyHashable: Any] { PhonePushSeal.userInfo(for: self) }
     }
 }
 
@@ -56,17 +95,22 @@ public enum PhonePushSeal {
     public static let cardKey = "cardId"
     /// The key `userInfo` names which push of the card a notification shows with (`PhonePushCard.push`).
     public static let pushKey = "push"
+    /// INF-5265: the key `userInfo` names the computer whose card it is, by its pin.
+    public static let computerKey = "computer"
 
-    /// What the notification part keeps on a notification it opened: the card it opens and which push of it this is.
+    /// What the notification part keeps on a notification it opened: the card it opens, which push of it this is and,
+    /// when known, its computer.
     public static func userInfo(for notice: PhonePushNotice) -> [AnyHashable: Any] {
         var info: [AnyHashable: Any] = [cardKey: notice.cardID]
         if let push = notice.push { info[pushKey] = push }
+        if let computer = notice.computer { info[computerKey] = computer }
         return info
     }
 
-    /// What the app reads back from a shown notification's `userInfo`: its card and which push of it, when it says.
-    public static func shown(_ userInfo: [AnyHashable: Any]) -> (cardID: String?, push: String?) {
-        (userInfo[cardKey] as? String, userInfo[pushKey] as? String)
+    /// What the app reads back from a shown notification's `userInfo`: its card, which push of it and its computer,
+    /// when it says.
+    public static func shown(_ userInfo: [AnyHashable: Any]) -> (cardID: String?, push: String?, computer: String?) {
+        (userInfo[cardKey] as? String, userInfo[pushKey] as? String, userInfo[computerKey] as? String)
     }
 
     /// A new sealing key: 32 random bytes in base64url.
@@ -93,6 +137,21 @@ public enum PhonePushSeal {
     public static func notice(_ userInfo: [AnyHashable: Any], key: String?) -> PhonePushNotice? {
         guard let sealed = userInfo["sealed"] as? String, let key, let card = open(sealed, key: key) else { return nil }
         return PhonePushNotice(title: card.title, body: card.body, cardID: card.cardId, push: card.push)
+    }
+
+    /// INF-5265: a push opened with each kept computer's key in turn. The key that opens it names its computer, and
+    /// while the phone keeps more than one computer that computer's name is the notification's subtitle. Nil when no
+    /// key opens it, and the notification keeps the relay's own words.
+    public static func notice(_ userInfo: [AnyHashable: Any], held: PhonePushHeld?) -> PhonePushNotice? {
+        guard let held, let sealed = userInfo["sealed"] as? String else { return nil }
+        let several = (held.computers?.count ?? 0) > 1
+        for opener in held.openers {
+            guard let card = open(sealed, key: opener.key) else { continue }
+            return PhonePushNotice(title: card.title, body: card.body, cardID: card.cardId, push: card.push,
+                                   computer: opener.computer?.pin,
+                                   subtitle: several ? opener.computer?.name : nil)
+        }
+        return nil
     }
 
     public static func base64url(_ data: Data) -> String {

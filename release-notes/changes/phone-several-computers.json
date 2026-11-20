@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "phone-several-computers",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Keep several computers on your iPhone and iPad",
+      "body": "Your iPhone and iPad can now keep every computer you join, such as one at home and one at work, and show one at a time. Open your computer from the top bar, then choose Add another computer to join one more without leaving the first. Tap a computer there to show it; the list marks the ones that answer from where you are, and your phone never switches on its own. With more than one kept, the top bar names the computer you are reading. Notifications come from every computer you keep, each naming its computer, and tapping one shows that computer and its card. Leave and Forget act on the computer shown.",
+      "noPicture": "The hero pair comes from the homes phone part's run of this change and replaces this reason before merge.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

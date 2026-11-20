@@ -69,10 +69,14 @@ public enum PhonePush {
     }
 
     /// The registration to hand, when the phone holds a grant for this address and service that has not expired.
-    public static func registration(_ held: PhonePushHeld, token: String, environment: PhonePushEnvironment, now: Date) -> PhonePushRegistration? {
+    /// INF-5265: the key is the one kept for `computer`, or the record's own key for a record kept before.
+    public static func registration(_ held: PhonePushHeld, token: String, environment: PhonePushEnvironment, now: Date,
+                                    computer: String? = nil) -> PhonePushRegistration? {
         guard held.token == token, held.environment == environment, let grant = held.grant,
               let expiry = expiry(grant), expiry > now, token.wholeMatch(of: tokenShape) != nil else { return nil }
-        return PhonePushRegistration(token: token, environment: environment, grant: grant, key: held.key)
+        // A computer the phone keeps no key for yet gets none, never another computer's key.
+        guard let key = computer.map({ pin in held.computers?.first { $0.pin == pin }?.key }) ?? held.key else { return nil }
+        return PhonePushRegistration(token: token, environment: environment, grant: grant, key: key)
     }
 
     /// Whether the phone asks the relay for a grant: it holds none for this address and service, or its grant expires
@@ -112,8 +116,11 @@ public enum PhonePush {
     /// Whether a push shows while Infinitary is in front. In reach, the in-app notice already shows the card; with no
     /// computer joined, it comes from a computer this phone forgot; and one the notification part could not open names
     /// no card. Away from its computer with Infinitary open, the in-app notice cannot show it, so the push shows.
-    public static func showsInFront(contact: String?, cardID: String?) -> Bool {
+    /// INF-5265: a push names its computer; one from a kept computer the phone does not show cannot be shown by the
+    /// in-app notice, so it shows. One that names no computer comes from the one kept before.
+    public static func showsInFront(contact: String?, cardID: String?, computer: String? = nil, shown: String? = nil) -> Bool {
         guard let contact, cardID != nil else { return false }
+        if let computer, computer != shown { return true }
         return contact != "in-reach"
     }
 
@@ -145,8 +152,9 @@ public struct PhonePushEffects {
     /// Whether this phone asked the person once already, and noting that it did.
     public var askedPerson: @MainActor () -> Bool
     public var noteAskedPerson: @MainActor () -> Void
-    /// The notifications shown now, each with the card it opens, and removing some by their ids.
-    public var delivered: @MainActor () async -> [(id: String, cardID: String?, push: String?)]
+    /// The notifications shown now, each with the card it opens, which push of it this is and the pin of its
+    /// computer, and removing some by their ids.
+    public var delivered: @MainActor () async -> [(id: String, cardID: String?, push: String?, computer: String?)]
     public var remove: @MainActor ([String]) -> Void
     public var now: @MainActor () -> Date
 
@@ -154,7 +162,8 @@ public struct PhonePushEffects {
                 registerForPushes: @escaping @MainActor () -> Void, unregisterForPushes: @escaping @MainActor () -> Void, post: @escaping @Sendable (URL, Data) async -> Int?,
                 load: @escaping @MainActor () -> PhonePushHeld?, save: @escaping @MainActor (PhonePushHeld) -> Void,
                 askedPerson: @escaping @MainActor () -> Bool, noteAskedPerson: @escaping @MainActor () -> Void,
-                delivered: @escaping @MainActor () async -> [(id: String, cardID: String?, push: String?)], remove: @escaping @MainActor ([String]) -> Void,
+                delivered: @escaping @MainActor () async -> [(id: String, cardID: String?, push: String?, computer: String?)],
+                remove: @escaping @MainActor ([String]) -> Void,
                 now: @escaping @MainActor () -> Date = { Date() }) {
         self.permission = permission; self.askPermission = askPermission; self.registerForPushes = registerForPushes
         self.unregisterForPushes = unregisterForPushes
@@ -165,7 +174,8 @@ public struct PhonePushEffects {
 
 /// The phone's pushes over a run: it asks the person once after joining, keeps its push address and grant current
 /// with as few asks of the relay as it can, and hands its computer the registration, or null while notifications for
-/// Infinitary are off in the phone's Settings, at each open and each welcome.
+/// Infinitary are off in the phone's Settings, at each open and each welcome. INF-5265: every kept computer shares the
+/// address and grant, and each has its own sealing key, handed at its own welcome.
 @MainActor @Observable public final class PhonePushes {
     public private(set) var permission: PhonePushPermission?
     /// The computer's welcome lists `phone-push`; one without it is named for an update in Settings.
@@ -183,6 +193,8 @@ public struct PhonePushEffects {
     @ObservationIgnored private var askedFor: (token: String, environment: PhonePushEnvironment)?
     /// Hands the computer a registration or null and answers whether it kept it; nil while it is not in reach.
     @ObservationIgnored private var hand: ((PhonePushRegistration?) async throws -> Bool)?
+    /// The pin of the computer `hand` reaches.
+    @ObservationIgnored private var reaching: String?
 
     public init(effects: PhonePushEffects, environment: PhonePushEnvironment) {
         self.effects = effects
@@ -197,11 +209,39 @@ public struct PhonePushEffects {
         await handOver()
     }
 
-    /// The computer's welcome reached In reach: `hand` asks `inf:devices:push` on this connection.
-    public func reached(takesPushes: Bool, takesWithdrawals: Bool = false,
+    /// INF-5265: the computers the phone keeps, by pin and name. Each gets its own key, named for the notification
+    /// part, and a forgotten one's key goes. A record kept before gives its one key to the one computer kept then, the
+    /// key that computer already holds, and a phone's first computer takes the record's key.
+    public func kept(_ kept: [(pin: String, name: String)]) {
+        // No computer kept is the last one forgotten, which `forgot` owns; here it would drop every key.
+        guard !kept.isEmpty else { return }
+        var held = keep()
+        let before = held
+        var computers = held.computers ?? []
+        if held.computers == nil, kept.count == 1 {
+            computers = [PhonePushComputer(pin: kept[0].pin, name: kept[0].name, key: held.key)]
+            held.untagged = kept[0].pin
+        }
+        computers.removeAll { computer in !kept.contains { $0.pin == computer.pin } }
+        if let untagged = held.untagged, !kept.contains(where: { $0.pin == untagged }) { held.untagged = nil }
+        for computer in kept {
+            if let index = computers.firstIndex(where: { $0.pin == computer.pin }) { computers[index].name = computer.name; continue }
+            computers.append(PhonePushComputer(pin: computer.pin, name: computer.name,
+                                               key: computers.isEmpty ? held.key : PhonePushSeal.newKey()))
+        }
+        held.computers = computers
+        if let first = computers.first { held.key = first.key }
+        guard held != before else { return }
+        self.held = held; effects.save(held)
+    }
+
+    /// The computer's welcome reached In reach: `hand` asks `inf:devices:push` on this connection, and hands the key
+    /// kept for `computer`.
+    public func reached(computer: String? = nil, takesPushes: Bool, takesWithdrawals: Bool = false,
                         hand: @escaping (PhonePushRegistration?) async throws -> Bool) async {
         homeTakesPushes = takesPushes
         homeTakesWithdrawals = takesWithdrawals
+        reaching = computer
         self.hand = takesPushes ? hand : nil
         if permission == nil { permission = await effects.permission() }
         // A computer joined after this phone forgot another, in the same sitting, needs an address before a grant.
@@ -211,7 +251,7 @@ public struct PhonePushEffects {
     }
 
     /// The connection ended, or this phone left its computer.
-    public func left() { hand = nil; update() }
+    public func left() { hand = nil; reaching = nil; update() }
 
     /// This phone forgot its computer (the captain's answer on INF-4794's review: "if i forget a computer, then the
     /// phone app should stop showing any push notifications from that home"). The phone gives up its push address,
@@ -219,14 +259,37 @@ public struct PhonePushEffects {
     /// Infinitary is in front, and it removes the notifications that computer's cards left. A forgotten computer may
     /// still show "A card is ready" while Infinitary is closed (the captain's pick, "Say plainly that a forgotten
     /// computer may still show these"): the relay cannot cancel its grant, and iOS may hand back the same address.
-    public func forgot() async {
+    /// INF-5265: forgetting one computer while the phone keeps others drops only that computer's key and its
+    /// notifications; the push address and grant stay, since the others still push to them.
+    public func forgot(computer: String? = nil) async {
         left()
+        var held = keep()
+        let rest = (held.computers ?? []).filter { $0.pin != computer }
+        if let computer, !rest.isEmpty {
+            // Committed before the wait for iOS's list, so a later join or forget starts from this record.
+            let before = held
+            held.computers = rest
+            held.key = rest[0].key
+            if held.untagged == computer { held.untagged = nil }
+            self.held = held; effects.save(held)
+            let shown = await effects.delivered().filter { owner(named: $0.computer, in: before) == computer }.map(\.id)
+            if !shown.isEmpty { effects.remove(shown) }
+            return
+        }
         token = nil; askedFor = nil
-        let fresh = PhonePushHeld(key: PhonePushSeal.newKey())
-        held = fresh; effects.save(fresh)
+        let fresh = PhonePushHeld(key: PhonePushSeal.newKey(), computers: [])
+        self.held = fresh; effects.save(fresh)
         effects.unregisterForPushes()
         let shown = await effects.delivered().map(\.id)
         if !shown.isEmpty { effects.remove(shown) }
+    }
+
+    /// INF-5265: the computer a shown notification came from: the one it names, or for one that names none, shown
+    /// before the phone kept a key per computer, the computer kept then (`PhonePushHeld.untagged`).
+    public func owner(named computer: String?) -> String? { owner(named: computer, in: keep()) }
+
+    private func owner(named computer: String?, in held: PhonePushHeld, alone: String? = nil) -> String? {
+        computer ?? held.untagged ?? alone
     }
 
     /// iOS gave the push address: a new one, or one with no grant that lasts, asks the relay for a grant.
@@ -266,13 +329,20 @@ public struct PhonePushEffects {
 
     /// A silent push from the relay carried a withdrawal: the notifications of the pushes it names go. Any other push of
     /// a named card, such as a newer reply Apple delivered before this slower silent push, stays, and so does a
-    /// notification that names no push. True when this phone's key opened it.
+    /// notification that names no push. True when one of this phone's keys opened it. INF-5265: each kept computer's
+    /// key is tried in turn, and the one that opens it names the computer whose notifications it may remove.
     @discardableResult public func withdrawArrived(_ userInfo: [AnyHashable: Any]) async -> Bool {
-        guard let withdrawal = PhonePush.withdrawal(inPush: userInfo, key: keep().key) else { return false }
+        let held = keep()
+        guard let opened = held.openers.lazy.compactMap({ opener in
+            PhonePush.withdrawal(inPush: userInfo, key: opener.key).map { ($0, opener.computer?.pin) }
+        }).first else { return false }
+        let (withdrawal, computer) = opened
+        let one = (held.computers?.count ?? 0) <= 1
         let named = Set(withdrawal.cards.flatMap { card in card.pushes.map { "\(card.cardId) \($0)" } })
         let gone = await effects.delivered().filter { shown in
-            guard let card = shown.cardID, let push = shown.push else { return false }
-            return named.contains("\(card) \(push)")
+            guard let card = shown.cardID, let push = shown.push, named.contains("\(card) \(push)") else { return false }
+            guard let computer else { return true }
+            return owner(named: shown.computer, in: held, alone: one ? computer : nil) == computer
         }.map(\.id)
         if !gone.isEmpty { effects.remove(gone) }
         return true
@@ -280,9 +350,16 @@ public struct PhonePushEffects {
 
     /// Removes the notifications for cards no longer on the stage or already seen, once the computer's cards are read
     /// and again whenever one is seen (INF-5209's plan, piece 1): a card seen anywhere needs no notification left on the phone.
-    public func clear(stage: [PhoneCard], seen: (PhoneCard) -> Bool) async {
+    /// INF-5265: only `computer`'s notifications (`owner(named:)`); one that opened no card names no computer, so it
+    /// goes only while the phone keeps one computer.
+    public func clear(stage: [PhoneCard], seen: (PhoneCard) -> Bool, computer: String) async {
         let due = Set(stage.filter { !seen($0) }.map(\.id))
-        let gone = await effects.delivered().filter { $0.cardID.map { !due.contains($0) } ?? true }.map(\.id)
+        let held = keep()
+        let one = (held.computers?.count ?? 0) <= 1
+        let gone = await effects.delivered().filter { shown in
+            guard let card = shown.cardID else { return one }
+            return owner(named: shown.computer, in: held, alone: one ? computer : nil) == computer && !due.contains(card)
+        }.map(\.id)
         if !gone.isEmpty { effects.remove(gone) }
     }
 
@@ -312,11 +389,15 @@ public struct PhonePushEffects {
         case .on:
             let held = keep()
             guard let token = token ?? held.token,
-                  var registration = PhonePush.registration(held, token: token, environment: environment, now: effects.now()) else { return }
+                  var registration = PhonePush.registration(held, token: token, environment: environment, now: effects.now(),
+                                                            computer: reaching) else { return }
             registration.withdrawals = homeTakesWithdrawals
             guard let kept = try? await hand(registration), !kept else { return }
-            // The computer did not keep the grant: the relay refused it this run, so the phone asks for a new one.
-            var forgotten = held; forgotten.grant = nil
+            // The computer did not keep the grant: the relay refused it this run, so the phone asks for a new one. The
+            // record is read again after the wait, and only that grant goes, so a key kept or forgotten meanwhile stays.
+            var forgotten = keep()
+            guard forgotten.grant == registration.grant else { return }
+            forgotten.grant = nil
             self.held = forgotten; effects.save(forgotten)
             await askRelay()
         }

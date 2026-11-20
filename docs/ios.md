@@ -46,12 +46,27 @@ A timeout or missing reply never repeats a pairing request: the Mac may already 
 An explicit `paired` refusal leaves a fresh invitation unspent, so that one confirmed invitation may use `again` once to recover the same phone identity.
 A wrong pin never sends the invitation to that address or replaces the saved pin.
 
-The only saved app record is `JoinedMac.json`: public Mac addresses, pin, device identifier and name.
-It has file protection and is excluded from backup; no invitation code, card, feed line or cursor is saved there.
+The saved app records are `JoinedMac.json`, the computer shown, and `KeptMacs.json`, every other kept computer with the one shown most recently first (`PhoneKeptMacs`): each holds public addresses, pin, device identifier and name.
+Both have file protection and are excluded from backup; no invitation code, card, feed line or cursor is saved there.
+The phone writes the others before the shown one, so a write cut between them leaves the shown computer listed twice, never one missing; a phone that saved one computer before has no `KeptMacs.json` and keeps that computer with no new join, key or question.
 The Keychain identity survives relaunch, Leave and local Forget; it is never replaced because the network is unavailable.
 Protected identity and saved-Mac reads start on activation, not prewarm, and a failed read is retried on activation or joining with a visible explanation if it still fails.
 A saved-Mac read suggests unlocking only for `CocoaError(.fileReadNoPermission)` or unavailable protected data; other temporary read failures retain the record and offer another attempt.
-An undecodable record, invalid pin or invalid address discards only the saved Mac, retains the phone's identity, explains the local reset and allows a fresh confirmed link.
+An undecodable record, invalid pin or invalid address discards only that computer, retains the phone's identity and the other kept computers, explains the local reset and allows a fresh confirmed link; an undecodable `KeptMacs.json` goes alone, and the shown computer stays.
+
+### Several computers
+
+One phone keeps every computer it joined and shows one at a time (INF-5265, the captain's approved plan on INF-5264), for a person whose computers cannot see each other, such as one at home and one at work, each behind its own VPN.
+A computer is named by its pin, which a home keeps through a move, so joining one again replaces its record rather than adding a second.
+Joining while a computer is shown keeps that one among the others and shows the new one; the join itself is the same confirmed link.
+The computer sheet lists the other kept computers under Your other computers, then **Add another computer**, which offers the first screen's three ways in.
+A tap on a computer shows it: the phone stops the shown computer's connection, saves the new order and connects to the one tapped.
+The phone never switches by itself (the captain's pick, "Stay on my choice"): on each open, each settled network change and each time the sheet opens, it sends each other kept computer the pinned, non-mutating `GET /connection` a join sends first, which opens no session, and marks the ones that answer 426 as Answers now and the rest as Not answering from here.
+The sheet opens with its first row focused, so on a keyboard the up and down arrows move among the rows, Return or Space presses one, and Command-I opens it.
+With more than one computer kept, the top bar's computer button names the computer shown beside its glyph, and VoiceOver reads that name in place of Your computer.
+Leave and Forget act on the computer shown; the kept computer shown most recently shows next, or the first screen when none is left.
+A computer that removes the phone is forgotten alone: while another is kept, it shows with a line saying the removed one removed this device; otherwise the Removed screen shows as before.
+The homes part (`PhoneJourney+Homes.swift`) joins the test home and a second real home in a process of its own (`tests/helpers/phoneSecondHome.ts`), switches by keys, taps a notification from the one not shown and leaves one; `PhoneKeptMacsTests` holds the saved list, its order and the move from one record.
 
 ### Joining by its address
 
@@ -145,13 +160,13 @@ An older home that omits the field leaves the saved alternatives unchanged.
 The computer sheet displays the last authenticated address actually reached, separately from the saved preference; before any successful connection it shows no reached address.
 The session records that address in the same step that turns the connection In reach, so nothing reads In reach beside the previous connection's address while the catch-up's reads are still being sent (`PhoneWeakLinkTests`).
 
-Leave is available in reach and asks for confirmation, sends the connection's Leave frame, waits for removal and forgets the saved Mac.
-Out of reach, **Forget this computer** asks for confirmation and clears the saved Mac and pin locally without claiming the Mac removed the phone.
+Leave is available in reach and asks for confirmation, sends the connection's Leave frame, waits for removal and forgets the computer shown.
+Out of reach, **Forget this computer** asks for confirmation and clears that computer and its pin locally without claiming it removed the phone; either way another kept computer shows next ("Several computers").
 Both choices live in the computer's sheet, opened by the top bar's right-hand computer button or Command-I; neither is an always-visible destructive toolbar action.
-That button is the computer glyph, with a dot in the warning color at its corner only while the computer is out of reach, and VoiceOver reads the reach as its value; the computer's name is in the sheet, not the bar.
+That button is the computer glyph, with a dot in the warning color at its corner only while the computer is out of reach, and VoiceOver reads the reach as its value; with one computer kept its name is in the sheet, not the bar, and with more than one the button names the computer shown.
 Out of reach, the sheet also offers Take over with each computer that keeps a copy of the record, as the welcome lists them, which asks one to take over after Face ID or the passcode (`PhoneTakeOverSection.swift`, `PhoneTakeOver.swift`; `docs/devices.md`, "Taking over from a phone").
 The phone then follows the home to the computer that took over by its higher number, and refuses the old home's lower number and a second home with the same number.
-A removal close or repeated authenticated refusal clears cards and feed, forgets the Mac, and offers joining with a new link on a screen shaped like the first one, with one prominent Join again.
+A removal close or repeated authenticated refusal clears cards and feed and forgets that computer; with no other computer kept it offers joining with a new link on a screen shaped like the first one, with one prominent Join again.
 A failed address with no HTTP response does not erase an earlier authenticated refusal; a welcome or a different HTTP response does.
 Neither reconnection nor discovery queues or retries a mutation.
 
@@ -430,7 +445,7 @@ The launch screen, which iOS draws before the app runs, keeps the device's own a
 While Appearance is open the control holds focus and the left and right arrow keys move the choice, with no command of its own; an unseen shortcut under the sheet never hears an unmodified arrow.
 `PhoneLookTests` holds the saved choice, and the join-read part chooses Dark on a light simulator, sees it drawn dark before and after a relaunch, and chooses Device again by keyboard.
 Both sit on the system's glass with the same headings and spacing: the computer's sheet opens at half height and can be pulled up, and Settings opens at full height, since its nine sections do not fit half a screen.
-Leave, or Forget while out of reach, is the computer sheet's second section under its own heading.
+Leave, or Forget while out of reach, is the computer sheet's last section under its own heading, after the other kept computers and Add another computer.
 While the computer's Secrets are set up and open, Settings → Devices also shows Secrets approvals: the Approves secret uses switch, the code to compare with the computer's card, or that this device can allow uses, and Set up approvals again in place of the switch for a damaged record.
 The phone reads its approvals again at each Secrets change the computer announces and each time it reaches the computer, from the connection itself rather than a view's restart, which SwiftUI skips when several changes arrive in one frame: each change starts a read of its own, and only the newest read's answer is shown.
 While the keyboard is open, Done takes Settings' place in the leading slot and the Hide keyboard command (Shift-Command-K) dismisses it without sending or clearing the draft.
@@ -750,27 +765,35 @@ Once after joining a computer whose welcome lists `phone-push`, the phone asks i
 Turn on goes on to iOS's own question; Not now is kept, so the phone does not ask again, and Settings → Devices → Notifications offers Turn on later.
 That row says whether notifications are on, or off in the device's own Settings with Change in Settings opening Infinitary's page there; a computer without the change is named for an update, as the Google row does.
 
-The phone keeps one record in a push keychain group it shares with its notification part (`PhonePushStore`), apart from the app's own group, so the part reaches no other key the phone keeps, on this device only and readable after the first unlock: its sealing key, its push address and service, the relay's grant and when it last asked for one.
+The phone keeps one record in a push keychain group it shares with its notification part (`PhonePushStore`), apart from the app's own group, so the part reaches no other key the phone keeps, on this device only and readable after the first unlock: a sealing key for each kept computer with its pin and name, its push address and service, the relay's grant and when it last asked for one.
+One push address and grant serve every kept computer, and each computer gets its own sealing key, handed at its welcome, so no computer can open another's pushes (INF-5265).
+A phone that kept one computer's key before keeps that key for that computer, and a computer joined next gets a new one; the phone hands a computer only its own key, never another's.
 It asks the relay's `POST /v1/register` only when it holds no unexpired grant for its current address and service, when its grant has three days left, or when its computer answers `{ "kept": false }`, and at most once an hour, since each ask costs one of Apple's few background pushes.
 The grant arrives as a background push (`UIBackgroundModes` `remote-notification`), and the phone keeps it and hands it on.
 Its service is read from the build's provisioning profile: a development build names `development`, and a TestFlight or App Store build, which carries none, is `production`.
 
 On each welcome, and each time Infinitary opens, the phone hands its computer `inf:devices:push`: its registration while notifications are on and it holds a grant, or null while they are off in the device's Settings, so its computer forgets the address and sends nothing (the captain's pick on INF-4792's review, "Phone tells its computer to stop sending when notifications are off").
 
-The notification part (`InfinitaryNotifications`, a notification service extension) opens each push with the key from the push keychain group and shows its title and body as the computer wrote them: in bold what the card asks and its project, then the work's name and, on the next line, what it does (`docs/phone-push.md`, "What is sealed").
+The notification part (`InfinitaryNotifications`, a notification service extension) opens each push with each kept computer's key from the push keychain group in turn, and shows its title and body as the computer wrote them: in bold what the card asks and its project, then the work's name and, on the next line, what it does (`docs/phone-push.md`, "What is sealed").
 It links only `InfinitaryPush`, the small library that opens a push (`PhonePushSeal`), so it stays well inside iOS's memory limit for the part.
+With more than one computer kept, it names the computer whose key opened the push as the notification's subtitle, and keeps that computer's pin beside the card it names.
 A push it cannot open keeps the relay's own words, "A card is ready", and opens no card.
-While Infinitary is in front and in reach of its computer, a push shows nothing and the in-app notice shows the card instead; away from its computer, where the in-app notice cannot show it, the push shows (`PhonePush.showsInFront`, the captain's pick on INF-4794's review, "Show the notification when open but out of reach").
-Forgetting a computer tries to stop its notifications (the captain's answer on INF-4794's review, "if i forget a computer, then the phone app should stop showing any push notifications from that home"): the phone gives up its push address, makes a new key and drops its grant, and removes that computer's notifications (`PhonePushes.forgot`).
+While Infinitary is in front and in reach of its computer, a push shows nothing and the in-app notice shows the card instead; away from its computer, where the in-app notice cannot show it, the push shows (`PhonePush.showsInFront`, the captain's pick on INF-4794's review, "Show the notification when open but out of reach"), and so does a push from a kept computer that is not shown.
+Forgetting the last computer the phone keeps tries to stop its notifications (the captain's answer on INF-4794's review, "if i forget a computer, then the phone app should stop showing any push notifications from that home"): the phone gives up its push address, makes a new key and drops its grant, and removes that computer's notifications (`PhonePushes.forgot`).
 A push from that computer then opens to no card, so it shows nothing while Infinitary is in front.
 A forgotten computer may still show notifications while Infinitary is closed, each reading only the relay's "A card is ready" and opening no card (the captain's pick on INF-4794's review, "Say plainly that a forgotten computer may still show these").
 The relay cannot cancel a grant, which is a signed expiry date, and iOS does not promise a new address when the phone asks again, so a forgotten computer keeps reaching the phone for up to 30 days whenever iOS hands back the same address.
 When iOS gives a new address, Apple stops delivering to the old one, the relay answers that computer `410` and it forgets the address.
 Hiding these too would take Apple's notification filtering entitlement, which Apple grants only on request.
-The next computer the phone joins gets a new grant and key, and a new address when iOS gives one.
-A tap opens Infinitary on that card on Home, as the notice's tap does, from the stack or from Past once it left the stage, waiting for the computer's cards when Infinitary was closed.
-Once the cards are read, notifications for cards no longer on the stage, or whose newest version was seen anywhere (`ReadOnlySession.hasSeen`), are removed, and again whenever a card's seen mark changes while in reach (`PhonePushes.clear`).
+The next computer the phone joins after that gets a new grant and key, and a new address when iOS gives one.
+Forgetting or leaving one computer while others stay kept drops only that computer's key and removes only its notifications; the push address and grant stay for the others, so that computer, which keeps the address, reaches the phone only with pushes no kept key opens.
+A tap opens Infinitary on that card on Home, as the notice's tap does, from the stack or from Past once it left the stage, waiting for the computer's cards when Infinitary was closed; a card from a kept computer that is not shown shows that computer first, and a tap waits while a join is under way, opening the card only on its own computer, never on another.
+Once the cards are read, that computer's notifications for cards no longer on its stage, or whose newest version was seen anywhere (`ReadOnlySession.hasSeen`), are removed, and again whenever a card's seen mark changes while in reach (`PhonePushes.clear`); no other computer's are.
+A notification names the computer it came from; one shown before the phone kept a key per computer names none and belongs to the computer kept then (`PhonePushHeld.untagged`), which forgetting that computer removes.
+One that opened no card names no computer, so it is removed on reach only while the phone keeps one computer.
+The push record learns the kept computers only once the phone has read them after the first unlock, so a wake before that drops no computer's key.
 A computer whose welcome lists `phone-push-withdraw` hears in the registration that this phone takes withdrawals: once a card it pushed was seen, answered or closed, it sends a silent sealed withdrawal through the relay, and `PhoneAppDelegate` removes the notifications it names while Infinitary is in the background, without opening it (`PhonePushes.withdrawArrived`; `docs/phone-push.md`, "Withdrawals").
+The phone opens a withdrawal with each kept computer's key in turn, and the key that opens it names the one computer whose notifications it may remove.
 This is best effort: Apple does not promise to deliver a silent push, delivers none to an app the person swiped away, and the computer sends a phone at most one withdrawal every 20 minutes after the first, so a notification may stay until a later withdrawal or until Infinitary opens, which removes the notifications for cards no longer on the stage or already seen.
 A withdrawal names which pushes of each card it withdraws, by the name each push carries, which the notification part keeps with the notification and the app reads back (`PhonePushSeal.userInfo`, `PhonePushSeal.shown`), so another push of the same card, such as its author's reply, keeps its notification even when Apple delivers it before the slower withdrawal.
 A simulator refuses a background push, so a TestFlight build on a real phone shows a withdrawal end to end.
@@ -781,7 +804,7 @@ The push part (`PhoneJourney+Push.swift`) asks once, allows iOS's question, wait
 The part then has the test home let go of the registration and opens Infinitary again: its welcome hands the grant it holds, with no second ask of the relay and no second question.
 A simulated push runs no notification part (a known limit of Xcode's simulator), so that notification keeps the relay's words; `PhonePushTests` owns opening the sealed card, its title and line, the card it names and where a tap finds that card, and a TestFlight build on a real phone shows them end to end.
 A simulator refuses a background push, so the stand-in relay answers the phone's ask with its grant instead, and the simulator build takes that answer as the relay's push.
-`PhonePushTests` covers opening the computer's sealed pushes and withdrawals (`Fixtures/PhonePush.json`, sealed by `sealCardPush` and `sealWithdrawal`), removing only the notifications of the pushes a withdrawal names and keeping another push of the same card, what the notification part keeps on a notification being what the app reads back, saying it takes withdrawals only to a computer that lists them, where a tap finds its card (after In reach, on the stack or in Past), when a push shows in front, forgetting a computer, when the phone asks the relay, the handover on each welcome and open, null while notifications are off, the one ask, and removing notifications for cards that left the stage or were seen.
+`PhonePushTests` covers opening each kept computer's sealed pushes and withdrawals under its own key and naming it (two keys in the fixture), a key for each kept computer, clearing, withdrawing and forgetting by computer, notifications from before a key per computer, a list read as empty, a refused grant while a key was kept, opening the computer's sealed pushes and withdrawals (`Fixtures/PhonePush.json`, sealed by `sealCardPush` and `sealWithdrawal`), removing only the notifications of the pushes a withdrawal names and keeping another push of the same card, what the notification part keeps on a notification being what the app reads back, saying it takes withdrawals only to a computer that lists them, where a tap finds its card (after In reach, on the stack or in Past), when a push shows in front, forgetting a computer, when the phone asks the relay, the handover on each welcome and open, null while notifications are off, the one ask, and removing notifications for cards that left the stage or were seen.
 
 ## Google in Settings
 

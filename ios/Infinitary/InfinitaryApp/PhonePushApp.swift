@@ -51,17 +51,25 @@ import UserNotifications
     /// from its computer, where the in-app notice cannot show it (`PhonePush.showsInFront`).
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
                                             willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
-        let card = notification.request.content.userInfo[PhonePush.cardKey] as? String
-        let shows = await MainActor.run { PhonePush.showsInFront(contact: self.model.connection?.contact, cardID: card) }
+        let info = notification.request.content.userInfo
+        let card = info[PhonePush.cardKey] as? String
+        let computer = info[PhonePushSeal.computerKey] as? String
+        // INF-5265: a card from a kept computer that is not shown always shows, since no stage shows it.
+        let shows = await MainActor.run {
+            PhonePush.showsInFront(contact: self.model.connection?.contact, cardID: card,
+                                   computer: computer, shown: self.model.kept.shown?.pin)
+        }
         return shows ? [.banner, .list, .sound] : []
     }
 
-    /// A tap opens Infinitary on that card, as the in-app pill's tap does.
+    /// A tap opens Infinitary on that card, as the in-app pill's tap does, showing its computer first (INF-5265).
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
                                             withCompletionHandler completionHandler: @escaping () -> Void) {
-        let card = response.notification.request.content.userInfo[PhonePush.cardKey] as? String
+        let info = response.notification.request.content.userInfo
+        let card = info[PhonePush.cardKey] as? String
+        let computer = info[PhonePushSeal.computerKey] as? String
         completionHandler()
-        if let card { Task { @MainActor in self.model.openCard(card) } }
+        if let card { Task { @MainActor in self.model.openCard(card, computer: computer) } }
     }
 }
 
@@ -109,7 +117,7 @@ extension PhonePushes {
             delivered: {
                 await center.deliveredNotifications().map {
                     let shown = PhonePushSeal.shown($0.request.content.userInfo)
-                    return ($0.request.identifier, shown.cardID, shown.push)
+                    return ($0.request.identifier, shown.cardID, shown.push, shown.computer)
                 }
             },
             remove: { center.removeDeliveredNotifications(withIdentifiers: $0) },

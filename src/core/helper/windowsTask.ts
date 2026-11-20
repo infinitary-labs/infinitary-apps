@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { writePrivate } from "../devices/identity";
 import type { Launchctl, Launcher } from "./background";
@@ -320,9 +320,10 @@ export async function startRunTask(schtasks: Schtasks, label: string): Promise<b
  * until it stops: Task Scheduler's own end of a task ends its program at
  * once, with no clean stop, so a stop is asked of the run itself instead.
  * A task Task Scheduler would not take away keeps its file for a later
- * removal and rejects, so its caller says so, unless Task Scheduler's whole
- * list, read in full, names no such task: a refused or unread ask proves
- * nothing, and a task still registered may or may not start at sign-in.
+ * removal and rejects, so its caller says so, unless Task Scheduler's own
+ * record of that exact task is certainly not there (`taskRecord`): a list of
+ * tasks leaves out one this account cannot read, and a task still registered
+ * may or may not start at sign-in.
  */
 export async function removeRunTask(
   schtasks: Schtasks,
@@ -330,24 +331,37 @@ export async function removeRunTask(
 ): Promise<boolean> {
   const was = existsSync(options.file);
   const out = await schtasks(["/Delete", "/TN", options.label, "/F"]);
-  if (!out.ok) {
-    const list = await schtasks(["/Query", "/FO", "CSV", "/NH"]);
-    if (!list.ok)
-      throw new Error(
-        `Task Scheduler did not take Infinitary's task away, and could not say whether it is still registered: ${out.output}`,
-      );
-    if (listsTask(list.output, options.label))
-      throw new Error(
-        `Task Scheduler did not take Infinitary's task away, so it is still registered: ${out.output}`,
-      );
-  }
+  const record = out.ok ? "gone" : taskRecord(options.label);
+  if (record === "there")
+    throw new Error(
+      `Task Scheduler did not take Infinitary's task away, so it is still registered: ${out.output}`,
+    );
+  if (record === "unknown")
+    throw new Error(
+      `Task Scheduler did not take Infinitary's task away, and could not say whether it is still registered: ${out.output}`,
+    );
   rmSync(options.file, { force: true });
   return was;
 }
 
-/** Whether `schtasks /Query /FO CSV /NH`'s list names a task in the root folder by `label`: its first field is `"\<label>"`. */
-function listsTask(csv: string, label: string): boolean {
-  return csv.split(/\r?\n/).some((line) => line.startsWith(`"\\${label}"`));
+/**
+ * Task Scheduler's own record of a task in its root folder, the file
+ * `%SystemRoot%\System32\Tasks\<label>`: gone only where Windows answers
+ * that no such file is there; one this account may not read, or a Windows
+ * folder no setting names, is there or unknown, never gone.
+ */
+export function taskRecord(
+  label: string,
+  env: NodeJS.ProcessEnv = process.env,
+): "gone" | "there" | "unknown" {
+  const root = env.SystemRoot || env.SYSTEMROOT;
+  if (!root) return "unknown";
+  try {
+    statSync(join(root, "System32/Tasks", label));
+    return "there";
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "ENOENT" ? "gone" : "unknown";
+  }
 }
 
 /**

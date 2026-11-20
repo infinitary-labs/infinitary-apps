@@ -1,6 +1,6 @@
-import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { Launchctl } from "./background";
 import {
@@ -113,44 +113,45 @@ describe("the task", () => {
   });
 
   // The review of INF-5409: a task Task Scheduler would not take away, or may still hold, is said,
-  // and its file kept; only a full list of Task Scheduler's tasks without it lets the file go.
-  it("keeps its file and rejects where Task Scheduler keeps the task or cannot list its tasks", async () => {
+  // and its file kept; only Task Scheduler's own record of that task, certainly not there, lets
+  // the file go, since a list of tasks leaves out one this account cannot read.
+  it("keeps its file and rejects unless Task Scheduler's record of the task is certainly gone", async () => {
     const file = runTaskFile(scratchDir("windows-task-"));
     const xml = runTaskXml({ launcher: LAUNCHER, account: "ada", atLogin: true });
-    // `schtasks /Query /FO CSV /NH` as Windows answers it: one line per task, its path first.
-    const other = '"\\Microsoft\\Windows\\Defrag\\ScheduledDefrag","N/A","Ready"';
-    const ours = `"\\${LABEL}","N/A","Ready"`;
-    const refused =
-      (list: { ok: boolean; output: string }): Launchctl =>
-      async (args) =>
+    // Windows' own folder, as `%SystemRoot%` names it, with Task Scheduler's record of the task.
+    const systemRoot = scratchDir("windows-root-");
+    const tasks = join(systemRoot, "System32", "Tasks");
+    mkdirSync(tasks, { recursive: true });
+    writeFileSync(join(tasks, LABEL), "<Task/>");
+    vi.stubEnv("SystemRoot", systemRoot);
+    try {
+      const refused: Launchctl = async (args) =>
         args[0] === "/Delete"
           ? { ok: false, output: "ERROR: Access is denied." }
-          : args[0] === "/Query"
-            ? list
-            : { ok: true, output: "SUCCESS" };
-    await registerRunTask(refused({ ok: true, output: "" }), { label: LABEL, file, xml });
-    await expect(
-      removeRunTask(refused({ ok: true, output: `\r\n${other}\r\n${ours}\r\n` }), {
-        label: LABEL,
-        file,
-      }),
-    ).rejects.toThrow("so it is still registered: ERROR: Access is denied.");
-    expect(existsSync(file)).toBe(true);
-    // A list Task Scheduler would not give, as a refused or timed-out ask answers, proves nothing.
-    await expect(
-      removeRunTask(refused({ ok: false, output: "ERROR: Access is denied." }), {
-        label: LABEL,
-        file,
-      }),
-    ).rejects.toThrow("could not say whether it is still registered");
-    expect(existsSync(file)).toBe(true);
-    expect(
-      await removeRunTask(refused({ ok: true, output: `\r\n${other}\r\n` }), {
-        label: LABEL,
-        file,
-      }),
-    ).toBe(true);
-    expect(existsSync(file)).toBe(false);
+          : { ok: true, output: "SUCCESS" };
+      await registerRunTask(refused, { label: LABEL, file, xml });
+      await expect(removeRunTask(refused, { label: LABEL, file })).rejects.toThrow(
+        "so it is still registered: ERROR: Access is denied.",
+      );
+      expect(existsSync(file)).toBe(true);
+      // A record this account may not read is not a record that is gone.
+      if (process.platform !== "win32" && process.getuid?.() !== 0) {
+        chmodSync(tasks, 0o000);
+        try {
+          await expect(removeRunTask(refused, { label: LABEL, file })).rejects.toThrow(
+            "could not say whether it is still registered",
+          );
+        } finally {
+          chmodSync(tasks, 0o700);
+        }
+        expect(existsSync(file)).toBe(true);
+      }
+      rmSync(join(tasks, LABEL));
+      expect(await removeRunTask(refused, { label: LABEL, file })).toBe(true);
+      expect(existsSync(file)).toBe(false);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });
 

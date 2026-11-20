@@ -57,6 +57,8 @@ stopEachTest();
 function shell(
   joinedDir = join(scratchDir("infinitary-shell-"), "joined"),
   work?: ShellOptions["work"],
+  /** The rest of the shell's options, such as a run's `headless`. */
+  more: Partial<ShellOptions> = {},
 ) {
   const own = ownCore();
   // This Mac's Notification Center, and whether its window is in front.
@@ -95,6 +97,7 @@ function shell(
     }),
   );
   const made = new Shell({
+    ...more,
     joined,
     ...(work ? { work } : {}),
     startCore,
@@ -1167,6 +1170,56 @@ describe("a Mac that controls another and runs its work", () => {
         ).toEqual([]);
       }
     }
+  });
+
+  // The review of INF-5409: a command with no window never opens a grant waiting in the work
+  // folder, which the window beside it opens by following along, so the two never both take it and
+  // the command never ends as a view for its service manager to start again.
+  it("leaves a grant waiting to the window when it runs with no window", async () => {
+    const pro = await otherMac({}, { joinsFromAnotherMac: true });
+    const dataDir = workDir();
+    const grant = await claimLink(await pro.link("mac"), {
+      kind: "mac",
+      name: "Mac mini",
+      user: sam,
+    });
+    new JoinedHome(dataDir).join(grant, Date.now());
+    const run = shell(undefined, { dataDir }, { headless: true });
+    run.own.dispatch.mockImplementation((async (channel: string) =>
+      channel === "inf:app:first-run"
+        ? { gateOpen: true, firstTurnAt: null, untouched: true }
+        : { ownCore: channel }) as never);
+    await run.shell.start();
+    expect(run.shell.thisMac().role).toBe("home");
+    expect(run.shell.core()).not.toBeNull();
+    expect(run.joined.read()).toBeNull();
+    expect(run.own.dispose).not.toHaveBeenCalled();
+    expect(
+      run.own.dispatch.mock.calls.filter(([channel]) => channel === "inf:app:first-run"),
+    ).toEqual([]);
+  });
+
+  // The review of INF-5409: the grant is kept before the switch, so a first mate whose connection
+  // does not close cleanly still stops, and the window starts as that home's view.
+  it("opens as the home's view when its own first mate does not stop cleanly", async () => {
+    const pro = await otherMac({}, { joinsFromAnotherMac: true });
+    const dataDir = workDir();
+    const grant = await claimLink(await pro.link("mac"), {
+      kind: "mac",
+      name: "Mac mini",
+      user: sam,
+    });
+    new JoinedHome(dataDir).join(grant, Date.now());
+    const mini = shell(undefined, { dataDir });
+    mini.own.dispatch.mockImplementation((async (channel: string) =>
+      channel === "inf:app:first-run"
+        ? { gateOpen: true, firstTurnAt: null, untouched: true }
+        : { ownCore: channel }) as never);
+    mini.closeConnection.mockRejectedValueOnce(new Error("the connection did not close"));
+    await mini.shell.start();
+    expect(mini.shell.thisMac().role).toBe("view");
+    expect(mini.joined.read()?.grant.deviceId).toBe(grant.deviceId);
+    expect(mini.own.dispose).toHaveBeenCalledTimes(1);
   });
 
   it("stays its own Firstmate when the work here only runs work", async () => {

@@ -109,6 +109,13 @@ export type ShellOptions = {
    * for a move that failed after it stopped. Absent, the app starts again.
    */
   endRun?: (how: "moved" | "restart") => void;
+  /**
+   * A first mate started by a command with no window: it never opens a grant
+   * waiting in the work folder, which only a window opens, following along
+   * beside it, so the command and the window never both take it (docs/view.md,
+   * "Following along").
+   */
+  headless?: boolean;
   /** Serves a started core to paired devices, and to this computer's window through the local door. */
   startConnection: (core: Core) => HomeConnection;
   /**
@@ -286,18 +293,14 @@ export class Shell {
     await this.becomeHome();
     // A grant that waited while it was closed opens the window only where
     // nothing was done here, as this computer's own first mate reads it at its
-    // first launch; the switch finishes before startup reads this app's role.
-    if (!this.waitingGrant()) return;
+    // first launch; the switch finishes before startup reads this app's role,
+    // and a switch that could not open the view fails the start.
+    if (this.options.headless || !this.waitingGrant()) return;
     const followed = await this.followAdded().catch((error: unknown) => {
       console.warn(`[shell] could not follow the computer that added this one: ${String(error)}`);
       return false;
     });
-    if (followed)
-      await this.switching?.catch((error: unknown) =>
-        console.warn(
-          `[shell] could not open as the computer that added this one: ${String(error)}`,
-        ),
-      );
+    if (followed) await this.switching;
   }
 
   /** The running core, while this app holds Firstmate itself. */
@@ -407,12 +410,9 @@ export class Shell {
     const joinedAt = this.now();
     this.options.joined.join(grant, joinedAt);
     // Its work is set up as the window starts over as the other Mac's (`checkWork`).
-    void this.switchTo(async () => {
-      // Answer the window first; the switch starts it over.
-      await new Promise<void>((resolve) => setImmediate(resolve));
-      await this.stopHome(target.owned);
-      this.becomeView();
-    });
+    void this.switchToView(target.owned).catch((error: unknown) =>
+      console.warn(`[shell] could not open as the computer joined: ${String(error)}`),
+    );
     return { ok: true };
   }
 
@@ -542,12 +542,9 @@ export class Shell {
     const joined = this.openFromWork();
     if (!joined) return false;
     this.followWork(joined);
-    void this.switchTo(async () => {
-      // Answer the window first; the switch starts it over.
-      await new Promise<void>((resolve) => setImmediate(resolve));
-      await this.stopHome(target.owned);
-      this.becomeView();
-    });
+    void this.switchToView(target.owned).catch((error: unknown) =>
+      console.warn(`[shell] could not open as the computer joined: ${String(error)}`),
+    );
     return true;
   }
 
@@ -1140,9 +1137,30 @@ export class Shell {
     this.mode = null;
     mode.detach();
     mode.window?.close();
-    await mode.connection.close();
-    await mode.stopSsh();
-    await mode.core.dispose();
+    // Its core stops even when its connection or SSH does not close cleanly.
+    try {
+      await mode.connection.close();
+      await mode.stopSsh();
+    } finally {
+      await mode.core.dispose();
+    }
+  }
+
+  /**
+   * Opens the home whose grant was just kept, stopping this computer's own
+   * first mate, or beside a command only the run `owned`. The grant is kept
+   * already, so a first mate that does not stop cleanly still leaves the
+   * window that home's view, the role a restart would give it.
+   */
+  private switchToView(owned?: OwnedRun): Promise<void> {
+    return this.switchTo(async () => {
+      // Answer the window first; the switch starts it over.
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      await this.stopHome(owned).catch((error: unknown) =>
+        console.warn(`[shell] the first mate here did not stop cleanly: ${String(error)}`),
+      );
+      this.becomeView();
+    });
   }
 
   /** One switch at a time; every window starts over once it is done. */

@@ -5,6 +5,7 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { Launchctl } from "./background";
 import {
   RUN_STOP_FILE,
+  RUN_STOP_FOR_FILE,
   readRunTask,
   registerRunTask,
   removeRunTask,
@@ -143,11 +144,28 @@ describe("a stop asked of the run on Windows", () => {
         { pid: own.pid, startedAt: "2026-10-25T17:00:00.000Z" },
       ]) {
         expect(requestRunStop(dataDir, new Date(), other)).toBe(true);
-        await expect.poll(() => existsSync(join(dataDir, RUN_STOP_FILE))).toBe(false);
+        // It goes in a file of its own, which a run from an earlier version never reads.
+        expect(existsSync(join(dataDir, RUN_STOP_FILE))).toBe(false);
+        await expect.poll(() => existsSync(join(dataDir, RUN_STOP_FOR_FILE))).toBe(false);
         expect(stops).toBe(0);
       }
       requestRunStop(dataDir, new Date(), own);
       await expect.poll(() => stops).toBe(1);
+    } finally {
+      end();
+    }
+  });
+
+  // The review of INF-5409: a request naming a run is never for a reader that knows no run of its
+  // own, such as a work run.
+  it("leaves a run that knows no identity alone for a request naming a run", async () => {
+    const dataDir = scratchDir("windows-stop-");
+    let stops = 0;
+    const end = watchRunStop(dataDir, new Date(Date.now() - 1_000), () => (stops += 1), 10);
+    try {
+      requestRunStop(dataDir, new Date(), { pid: 5151, startedAt: "2026-10-25T17:05:00.000Z" });
+      await expect.poll(() => existsSync(join(dataDir, RUN_STOP_FOR_FILE))).toBe(false);
+      expect(stops).toBe(0);
     } finally {
       end();
     }
@@ -171,18 +189,26 @@ describe("a stop asked of the run on Windows", () => {
   // reading it as a run starts throws nothing.
   it("reads a stop file that holds no request as no stop", async () => {
     const dataDir = scratchDir("windows-stop-");
-    for (const content of ["null", "42", '"stop"']) {
-      writeFileSync(join(dataDir, RUN_STOP_FILE), content);
-      let stops = 0;
-      const end = watchRunStop(dataDir, new Date(Date.now() - 1_000), () => (stops += 1), 10);
-      try {
-        await new Promise((resolve) => setTimeout(resolve, 30));
-        expect(stops).toBe(0);
-        expect(existsSync(join(dataDir, RUN_STOP_FILE))).toBe(false);
-      } finally {
-        end();
+    const own = { pid: 5151, startedAt: "2026-10-25T17:05:00.000Z" };
+    for (const name of [RUN_STOP_FILE, RUN_STOP_FOR_FILE])
+      for (const content of ["null", "42", '"stop"']) {
+        writeFileSync(join(dataDir, name), content);
+        let stops = 0;
+        const end = watchRunStop(
+          dataDir,
+          new Date(Date.now() - 1_000),
+          () => (stops += 1),
+          10,
+          own,
+        );
+        try {
+          await new Promise((resolve) => setTimeout(resolve, 30));
+          expect(stops).toBe(0);
+          expect(existsSync(join(dataDir, name))).toBe(false);
+        } finally {
+          end();
+        }
       }
-    }
   });
 
   it("leaves a run alone for a request older than its own start, and takes that request away", async () => {

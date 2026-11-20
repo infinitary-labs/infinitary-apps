@@ -7,6 +7,7 @@ import { RUN_MARKER, RunMarkerSchema } from "../../src/main/runCommand";
 import { runLabelOf } from "../../src/shared/codeNames";
 import { scratchDir } from "../helpers/scratchDirs";
 import { endCommands, run, runEnv } from "./commandRun";
+import { GITHUB_STUB_KEY, seedGitHubSignIn } from "./githubStub";
 import { type LaunchedApp, launchApp } from "./launch";
 import { type ServiceManagerStandIn, serviceManagerStandIn } from "./serviceManagerStandIn";
 
@@ -22,6 +23,9 @@ import { type ServiceManagerStandIn, serviceManagerStandIn } from "./serviceMana
  * terminal starts it. The grant is the one an address add leaves, written by the same join the
  * work's own setup runs. Completion: the process each command runs as, whether it still runs,
  * the shell's own answer on following along, and whether the window became that home's view.
+ * A grant written before either process starts is taken by the window alone: its command, run
+ * with no window, never takes one, so a fresh home follows along once with no restart, and a home
+ * where a sign-in was saved stays home, its command running on after the window quits.
  */
 
 const LABEL = runLabelOf("dev");
@@ -212,6 +216,78 @@ test("a window follows along beside the command its agent started, and never sto
           ),
         )
         .toBe(true);
+      await air.close();
+      air = undefined;
+      standIn.stopAll();
+      endCommands();
+    });
+
+    await test.step("a grant waiting before either starts: the window's own command never takes it, the window follows along once, and nothing starts the command again", async () => {
+      const userDataDir = scratchDir("infinitary-follow-cold-");
+      const homeDir = scratchDir("infinitary-follow-cold-home-");
+      standIn = serviceManagerStandIn(homeDir);
+      const deviceId = await addedByAddress(join(userDataDir, "work"));
+      air = await launchApp({
+        userDataDir,
+        homeDir,
+        env: {
+          ...standIn.env,
+          INFINITARY_WINDOW_STARTS_RUN: "1",
+          INFINITARY_DEVICE_NAME: "Mac mini",
+        },
+      });
+      const { page } = air;
+      await expect.poll(() => roleOf(page), { timeout: 90_000 }).toBe("view");
+      // The window's agent started one command, which the window stopped as it followed along.
+      await expect.poll(() => standIn?.runs(LABEL).length, { timeout: 30_000 }).toBe(1);
+      const [owned] = standIn.runs(LABEL);
+      await expect.poll(() => alive(owned as number), { timeout: 30_000 }).toBe(false);
+      await expect.poll(() => standIn?.running(LABEL)).toBe(false);
+      expect(standIn.runs(LABEL)).toHaveLength(1);
+      await expect
+        .poll(async () =>
+          (await pro.page.evaluate(() => window.infinitary.devices.list())).some(
+            (device) => device.id === deviceId && device.inReach,
+          ),
+        )
+        .toBe(true);
+      await air.close();
+      air = undefined;
+      standIn.stopAll();
+      endCommands();
+    });
+
+    await test.step("a grant waiting before either starts, beside a sign-in saved here: the window stays home and its command keeps running after it quits", async () => {
+      const userDataDir = scratchDir("infinitary-follow-kept-");
+      const homeDir = scratchDir("infinitary-follow-kept-home-");
+      standIn = serviceManagerStandIn(homeDir);
+      // A GitHub Enterprise sign-in saved here before any database, which only its file's presence answers.
+      seedGitHubSignIn(userDataDir, GITHUB_STUB_KEY, "git.example.com");
+      await addedByAddress(join(userDataDir, "work"));
+      air = await launchApp({
+        userDataDir,
+        homeDir,
+        env: {
+          ...standIn.env,
+          INFINITARY_WINDOW_STARTS_RUN: "1",
+          INFINITARY_DEVICE_NAME: "Mac mini",
+        },
+      });
+      const { page } = air;
+      await welcomed(page);
+      const owned = commandPid(userDataDir);
+      expect(standIn.runs(LABEL)).toEqual([owned]);
+      // Something was set up here, so the window does not take the computer over in place.
+      expect(await page.evaluate(() => window.infinitary.devices.followAdded())).toMatchObject({
+        followed: false,
+      });
+      expect(await roleOf(page)).toBe("home");
+      await air.close();
+      air = undefined;
+      // The window quit; the command its agent started keeps running, and its agent keeps it.
+      expect(alive(owned)).toBe(true);
+      expect(standIn.running(LABEL)).toBe(true);
+      expect(standIn.runs(LABEL)).toEqual([owned]);
     });
   } finally {
     await air?.close();

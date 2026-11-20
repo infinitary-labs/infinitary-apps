@@ -24,6 +24,7 @@ import {
 } from "./runAgent";
 import {
   RUN_STOP_FILE,
+  RUN_STOP_FOR_FILE,
   readRunTask,
   registerRunTask,
   runTaskFile,
@@ -373,8 +374,11 @@ describe("the command the window starts, on Windows", () => {
     });
     expect(asked).toEqual([["/Delete", "/TN", LABEL, "/F"]]);
     expect(runAgentInPlace(context)).toBe(false);
-    // The review of INF-5409: a window that joined asks only its own run, by its process and start.
-    expect(JSON.parse(readFileSync(join(context.dataDir, RUN_STOP_FILE), "utf8"))).toMatchObject({
+    // The review of INF-5409: a window that joined asks only its own run, by its process and start,
+    // in the file only a run that knows itself reads.
+    expect(
+      JSON.parse(readFileSync(join(context.dataDir, RUN_STOP_FOR_FILE), "utf8")),
+    ).toMatchObject({
       pid: 4242,
       startedAt: "2026-10-25T17:00:00.000Z",
     });

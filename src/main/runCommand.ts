@@ -320,14 +320,16 @@ export function ownedRun(
 export function stopRunningCommand(
   dataDir: string,
   alive: (pid: number) => boolean = processAlive,
-  signal: (run: OwnedRun) => void = hostPlatform() === "win32"
-    ? (run) => {
+  signal: (pid: number, only?: OwnedRun) => void = hostPlatform() === "win32"
+    ? (_pid, only) => {
         // Windows ends a signalled program at once, so the run is asked
-        // through its folder, by its process and start, which another run there ignores.
-        if (!requestRunStop(dataDir, new Date(), run))
+        // through its folder: by its process and start where only that run
+        // stops, which another run there ignores, and for whichever runs
+        // there on Stop, which a run from an earlier version reads too.
+        if (!requestRunStop(dataDir, new Date(), only))
           throw new Error("The stop could not be asked.");
       }
-    : (run) => process.kill(run.pid, "SIGTERM"),
+    : (pid) => process.kill(pid, "SIGTERM"),
   /** Stops only this run: another the folder's note names now is left running. */
   only?: OwnedRun,
 ): boolean {
@@ -340,7 +342,7 @@ export function stopRunningCommand(
   }
   if (only !== undefined && !sameRun(only, marker)) return false;
   try {
-    signal({ pid: marker.pid, startedAt: marker.startedAt });
+    signal(marker.pid, only);
     return true;
   } catch {
     return false;

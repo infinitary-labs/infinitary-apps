@@ -127,36 +127,43 @@ type AfterAdd = "waits" | "keeps" | "stays";
  * too what it would do: it follows along only while nothing was done here
  * (`FirstRunView.untouched`) and, beside a command, only from one this
  * window's starter owns; otherwise this window keeps its own first mate,
- * and beside a command started elsewhere it cannot join at all. A profile
- * with something done is asked too, so the shell keeps that answer after a
- * restart.
+ * and beside a command started elsewhere it cannot join at all. Until the
+ * shell answers, joining is unknown and not offered; the window keeps
+ * asking, so the answer follows a command that ends or is replaced. A
+ * profile with something done is asked too, so the shell keeps that answer
+ * after a restart.
  */
-function useFollowAdded(can: boolean, untouched: boolean): AfterAdd {
+function useFollowAdded(
+  can: boolean,
+  untouched: boolean,
+): { afterAdd: AfterAdd; joins: boolean | null } {
   const [answer, setAnswer] = useState<{ follows: boolean; joins: boolean } | null>(null);
   useEffect(() => {
     if (!can) return;
     let live = true;
-    let every: ReturnType<typeof setInterval> | undefined;
+    // Asked on and on, so the answer follows the command beside it: one that
+    // ends, or one started in its place, changes whether a join works here.
     const ask = () => {
-      void window.infinitary.devices
-        .followAdded()
-        .then((said) => {
-          if (!live) return;
-          setAnswer({ follows: said.follows, joins: said.joins });
-          // Beside a command started elsewhere, nothing here would follow or join.
-          if (!said.joins) clearInterval(every);
-        })
-        .catch(() => undefined);
+      void window.infinitary.devices.followAdded().then(
+        (said) => {
+          if (live) setAnswer({ follows: said.follows, joins: said.joins });
+        },
+        // An answer that cannot be read leaves joining unknown, never allowed.
+        () => {
+          if (live) setAnswer(null);
+        },
+      );
     };
     ask();
-    every = setInterval(ask, FOLLOW_EVERY_MS);
+    const every = setInterval(ask, FOLLOW_EVERY_MS);
     return () => {
       live = false;
       clearInterval(every);
     };
   }, [can]);
-  if (answer && !answer.joins) return "stays";
-  return untouched && (answer?.follows ?? true) ? "waits" : "keeps";
+  const afterAdd: AfterAdd =
+    answer && !answer.joins ? "stays" : untouched && (answer?.follows ?? true) ? "waits" : "keeps";
+  return { afterAdd, joins: answer?.joins ?? null };
 }
 
 /**
@@ -280,7 +287,10 @@ export function JoinAnotherMac({ onOpenChange, note, join, byAddress }: JoinAnot
   const setUpOffered = useSetUpOffered();
   const { here, unread } = useSetUpHere(step.step === "set-up");
   const firstRun = useShellStore((s) => s.firstRun);
-  const afterAdd = useFollowAdded(firstRun?.gateOpen === true, firstRun?.untouched === true);
+  const { afterAdd, joins } = useFollowAdded(
+    firstRun?.gateOpen === true,
+    firstRun?.untouched === true,
+  );
   const setStep = (next: Step) => {
     setStepState(next);
     onOpenChange?.(next.step !== "closed");
@@ -371,6 +381,7 @@ export function JoinAnotherMac({ onOpenChange, note, join, byAddress }: JoinAnot
       unread={unread}
       setUpOffered={setUpOffered}
       afterAdd={afterAdd}
+      joins={joins}
       onOpenSetUp={() => setStep({ step: "set-up" })}
       onOpenSharing={() => void window.infinitary.devices.openSharing().catch(() => undefined)}
       onContinue={toConfirm}
@@ -405,6 +416,12 @@ export type JoinAnotherMacViewProps = {
   setUpOffered?: boolean;
   /** This window opens the first mate once its computer adds this one: nothing was done here yet. */
   afterAdd?: AfterAdd;
+  /**
+   * Whether Paste its link and Join by its address work here, as the shell
+   * last said: false beside a first mate started outside this window, null
+   * while not yet known. Absent, as a view drawn alone, they work.
+   */
+  joins?: boolean | null;
   onOpenSetUp?: () => void;
   onOpenSharing?: () => void;
   /** A line under the chip, while it is closed: which Mac this app last left. */
@@ -452,8 +469,9 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
   if (step.step === "closed") {
     // Only a computer its first mate's computer can add by its address offers it, first.
     const setUp = Boolean(props.setUpOffered);
-    // Beside a first mate started outside this window, joining would stop it: neither join works.
-    const joins = props.afterAdd !== "stays";
+    // Neither join is offered until the shell says it works here: beside a first
+    // mate started outside this window, joining would stop it.
+    const joins = props.joins === undefined || props.joins === true;
     return (
       <div className="fm-join-group" data-join-another-mac="closed">
         <div className="fm-join-row" data-join-chips-alone={setUp ? "" : undefined}>
@@ -492,7 +510,7 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
             </button>
           </div>
         </div>
-        {!joins && (
+        {props.joins === false && (
           <p className="fm-join-sub" data-join-stays="">
             {m.devicesJoinStaysBeside()}
           </p>

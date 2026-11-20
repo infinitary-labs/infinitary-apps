@@ -10,7 +10,6 @@ import {
   keepsStarterBesideGrant,
   lockHolder,
   markRunning,
-  type OwnedRun,
   ownedRun,
   programIdentity,
   runCommand,
@@ -105,12 +104,18 @@ describe("a window opened beside a run", () => {
   it("stops the command that runs the folder, and signals nothing when none does", () => {
     const dataDir = scratchDir("infinitary-run-marker-");
     const signalled: number[] = [];
-    const signal = (run: OwnedRun) => void signalled.push(run.pid);
+    const targets: unknown[] = [];
+    const signal = (pid: number, only?: unknown) => {
+      signalled.push(pid);
+      targets.push(only);
+    };
     expect(stopRunningCommand(dataDir, () => true, signal)).toBe(false);
     markRunning(dataDir, 4242, new Date("2026-10-25T17:00:00Z"));
     symlinkSync(`${hostname()}-4242`, join(dataDir, "SingletonLock"));
     expect(stopRunningCommand(dataDir, (pid) => pid === 4242, signal)).toBe(true);
     expect(signalled).toEqual([4242]);
+    // Stop names no run, so on Windows it is asked of whichever runs there, an earlier version's too.
+    expect(targets).toEqual([undefined]);
     expect(stopRunningCommand(dataDir, () => false, signal)).toBe(false);
     expect(signalled).toEqual([4242]);
   });
@@ -172,7 +177,7 @@ describe("a window opened beside a run", () => {
     expect(ownedRun(dataDir, alive)).toBeNull();
     // A stop for the run it followed along from signals nothing to the one that replaced it.
     const signalled: number[] = [];
-    const signal = (run: OwnedRun) => void signalled.push(run.pid);
+    const signal = (pid: number) => void signalled.push(pid);
     expect(stopRunningCommand(dataDir, alive, signal, owned ?? undefined)).toBe(false);
     // Nor to one by hand that came back with the same process number.
     running.add(4242);
@@ -181,10 +186,22 @@ describe("a window opened beside a run", () => {
     expect(ownedRun(dataDir, alive)).toBeNull();
     expect(stopRunningCommand(dataDir, alive, signal, owned ?? undefined)).toBe(false);
     expect(signalled).toEqual([]);
-    // The run it owns stops.
+    // The run it owns stops, asked by that run's process and start.
     markRunning(dataDir, 4242, new Date("2026-10-25T17:00:00Z"), undefined, true);
-    expect(stopRunningCommand(dataDir, alive, signal, owned ?? undefined)).toBe(true);
+    const targets: unknown[] = [];
+    expect(
+      stopRunningCommand(
+        dataDir,
+        alive,
+        (pid, only) => {
+          signal(pid);
+          targets.push(only);
+        },
+        owned ?? undefined,
+      ),
+    ).toBe(true);
     expect(signalled).toEqual([4242]);
+    expect(targets).toEqual([owned]);
   });
 
   it("reads a note a crashed run left as nothing running", () => {

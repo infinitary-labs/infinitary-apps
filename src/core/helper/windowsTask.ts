@@ -339,12 +339,20 @@ export async function removeRunTask(
  */
 export const RUN_STOP_FILE = "run-stop.json";
 
+/**
+ * A stop asked of one run alone, by its process and start: a file of its own,
+ * which a run from an earlier version never reads, so only the run it names
+ * acts on it (`watchRunStop`).
+ */
+export const RUN_STOP_FOR_FILE = "run-stop-for.json";
+
 /** One run on a data folder: its process and the start its own note keeps, so a reused process number is another run. */
 export type RunInstance = { pid: number; startedAt: string };
 
 /**
  * Asks the run on this data folder to stop cleanly; with `run`, only that
- * run, so another there, a process number reused included, leaves it alone.
+ * run, in a file only a run that knows itself reads, so another there, a
+ * process number reused or an earlier version included, leaves it alone.
  * False where the request could not be written.
  */
 export function requestRunStop(
@@ -353,10 +361,13 @@ export function requestRunStop(
   run?: RunInstance,
 ): boolean {
   try {
-    writePrivate(
-      join(dataDir, RUN_STOP_FILE),
-      `${JSON.stringify({ at: now.toISOString(), ...(run ? { pid: run.pid, startedAt: run.startedAt } : {}) })}\n`,
-    );
+    if (run)
+      writePrivate(
+        join(dataDir, RUN_STOP_FOR_FILE),
+        `${JSON.stringify({ at: now.toISOString(), pid: run.pid, startedAt: run.startedAt })}\n`,
+      );
+    else
+      writePrivate(join(dataDir, RUN_STOP_FILE), `${JSON.stringify({ at: now.toISOString() })}\n`);
     return true;
   } catch {
     return false;
@@ -368,10 +379,11 @@ export const RUN_STOP_READ_MS = 1_000;
 
 /**
  * A run on Windows reads whether a stop was asked of it once a second and
- * stops once one written after its own start is there; a request left from
- * before it started is taken away, as is one naming another run than `run`,
- * this one, and one that is not a request at all. A request naming no run
- * is for whichever runs here. Answers what ends the reading.
+ * stops once one written after its own start is there: one for whichever
+ * runs here (`RUN_STOP_FILE`), or one naming this run, `run`, by its process
+ * and start (`RUN_STOP_FOR_FILE`). A request left from before it started, one
+ * naming another run, one naming a run when this one knows no identity, and
+ * a file that holds no request are taken away. Answers what ends the reading.
  */
 export function watchRunStop(
   dataDir: string,
@@ -380,21 +392,34 @@ export function watchRunStop(
   every: number = RUN_STOP_READ_MS,
   run?: RunInstance,
 ): () => void {
-  const file = join(dataDir, RUN_STOP_FILE);
-  const asked = (): boolean => {
+  /** The request in `name`, taken away once read; null where there is none. */
+  const take = (name: string): Record<string, unknown> | null => {
+    const file = join(dataDir, name);
     let request: unknown;
     try {
       request = JSON.parse(readFileSync(file, "utf8"));
     } catch {
-      return false;
+      return null;
     }
     rmSync(file, { force: true });
-    if (typeof request !== "object" || request === null) return false;
-    const { at, pid, startedAt: started } = request as Record<string, unknown>;
-    const when = typeof at === "string" ? Date.parse(at) : Number.NaN;
-    const named = pid !== undefined || started !== undefined;
-    const forThis = !named || !run || (pid === run.pid && started === run.startedAt);
-    return forThis && Number.isFinite(when) && when >= startedAt.getTime();
+    return typeof request === "object" && request !== null
+      ? (request as Record<string, unknown>)
+      : null;
+  };
+  const after = (request: Record<string, unknown>): boolean => {
+    const when = typeof request.at === "string" ? Date.parse(request.at) : Number.NaN;
+    return Number.isFinite(when) && when >= startedAt.getTime();
+  };
+  const asked = (): boolean => {
+    const anyRun = take(RUN_STOP_FILE);
+    const named = take(RUN_STOP_FOR_FILE);
+    const forThis =
+      named !== null &&
+      run !== undefined &&
+      named.pid === run.pid &&
+      named.startedAt === run.startedAt &&
+      after(named);
+    return forThis || (anyRun !== null && after(anyRun));
   };
   if (asked()) {
     stop();

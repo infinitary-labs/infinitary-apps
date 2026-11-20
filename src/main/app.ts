@@ -1195,6 +1195,8 @@ export async function startApp(
         // nothing here starts it again, at login or after (docs/devices.md,
         // "Moving the first mate"). One whose move failed, or that the
         // captain started here again, ends for its starter to start again.
+        // A run never opens a grant waiting in the work folder; the window beside it does.
+        ...(windowless ? { headless: true } : {}),
         ...(windowless
           ? {
               endRun: (how: "moved" | "restart") => {

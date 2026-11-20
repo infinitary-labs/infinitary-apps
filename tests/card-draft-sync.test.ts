@@ -299,7 +299,7 @@ describe("DraftSync", () => {
     expect(laptop.local.words).toBe("");
   });
 
-  it("waits for the pause after a request comes back, never sending the next keys at once", async () => {
+  it("waits for the pause after a request comes back or a welcome, never sending the next keys at once", async () => {
     const { at, time, desk } = twoWindows();
     desk.hold = true;
     desk.edit({ words: "Keep" });
@@ -310,7 +310,11 @@ describe("DraftSync", () => {
     desk.release();
     await settle();
     desk.edit({ words: "Keep th" });
-    await time.advance(DRAFT_QUIET_MS - 1);
+    // The link comes back mid-pause: its welcome sends nothing before the pause ends.
+    await time.advance(100);
+    desk.welcome();
+    await settle();
+    await time.advance(DRAFT_QUIET_MS - 101);
     expect(desk.requests).toHaveLength(1);
     await time.advance(1);
     expect(desk.requests.map((change) => change.words)).toEqual(["Keep", "Keep th"]);

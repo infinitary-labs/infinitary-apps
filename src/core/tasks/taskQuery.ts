@@ -202,6 +202,11 @@ export type TaskQueryRow = {
    * version (docs/task-graph.md, "A part that starts at approval").
    */
   start_at_approval?: string;
+  /**
+   * The blocked_by tasks whose merge it needs, not only their code: each
+   * waits for its merge on batched pull requests too.
+   */
+  needs_merge?: string[];
   /** The branch name the first mate wrote, which the app adds a code to when it starts. */
   branch?: string;
   /** The JSON Schema its report's result must fit (INF-799). By-key only. */
@@ -556,6 +561,7 @@ function toRow(
     ...(record.shape?.start_at_approval
       ? { start_at_approval: record.shape.start_at_approval }
       : {}),
+    ...(record.shape?.needs_merge?.length ? { needs_merge: record.shape.needs_merge } : {}),
     ...(record.shape?.branch ? { branch: record.shape.branch } : {}),
     ...(cardBody && record.shape?.result_schema
       ? { result_schema: record.shape.result_schema }

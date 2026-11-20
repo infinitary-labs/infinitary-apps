@@ -78,6 +78,8 @@ export type TaskToolsDelegate = {
     branch?: string;
     /** The blocked_by task whose approved merge starts it, before it starts; empty clears it. */
     startAtApproval?: string;
+    /** The blocked_by tasks whose merge it needs, before it starts; empty clears it. */
+    needsMerge?: string[];
     /** Whether the work is the first mate's own, not the captain's ask (INF-1467). */
     internalStep?: boolean;
     /** A program's new bound on its task() calls (INF-799), on the captain's words. */
@@ -230,7 +232,13 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       start_at_approval: Type.Optional(
         Type.String({
           description:
-            "The plan-marked blocked_by task whose approved merge version starts this task.",
+            "The blocked_by task whose approved merge version starts this task, when several could.",
+        }),
+      ),
+      needs_merge: Type.Optional(
+        Type.Array(Type.String(), {
+          description:
+            "On batched pull requests each blocked_by starts this task at its approval. List those it needs merged, not only their code, such as for a release.",
         }),
       ),
       branch: Type.Optional(Type.String({ description: "As spawn_crewmate's branch." })),
@@ -256,6 +264,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         ...(params.start_at_approval?.trim()
           ? { start_at_approval: params.start_at_approval.trim() }
           : {}),
+        ...(params.needs_merge?.length ? { needs_merge: params.needs_merge } : {}),
         ...(params.branch?.trim() ? { branch: params.branch.trim() } : {}),
       };
       const intent = parseSpawnIntent({
@@ -346,6 +355,12 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       start_at_approval: Type.Optional(
         Type.String({
           description: "As create_task's start_at_approval, before start; empty clears it.",
+        }),
+      ),
+      needs_merge: Type.Optional(
+        Type.Array(Type.String(), {
+          description:
+            "As create_task's needs_merge, before start; replaces the list, empty clears.",
         }),
       ),
       program_bound: Type.Optional(Type.Integer()),
@@ -688,6 +703,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         ...(params.start_at_approval !== undefined
           ? { startAtApproval: params.start_at_approval }
           : {}),
+        ...(params.needs_merge !== undefined ? { needsMerge: params.needs_merge } : {}),
         ...(params.internal_step !== undefined ? { internalStep: params.internal_step } : {}),
         ...(params.program_bound !== undefined ? { programBound: params.program_bound } : {}),
         ...(params.crew_speed !== undefined ? { speed: params.crew_speed } : {}),
@@ -728,7 +744,8 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
     label: "Link tasks",
     description: [
       "Record a typed edge between tasks (ids or keys). blocks: `to` neither starts nor merges",
-      "until `from` closes, and a cycle is refused as text. related: work neither task is waiting on.",
+      "until `from` closes; on batched pull requests `to` starts at `from`'s merge approval unless",
+      "its needs_merge names `from` (add such a wait with update_task blocked_by and needs_merge together), and a cycle is refused as text. related: work neither task is waiting on.",
       "discovered-from: `from` was found while doing `to`. replaced-by: `to` does `from`'s work now;",
       "link every move of work to another task (drop, takeover, fresh task): `from`'s waits",
       "and those on it move to `to`. remove true unlinks.",

@@ -1513,43 +1513,26 @@ export class TaskStore {
   }
 
   /**
-   * Open, unheld, when-ready work that declared the prerequisite it starts
-   * at the approval of (`shape.start_at_approval`, docs/task-graph.md, "A
-   * part that starts at approval") and still waits on a `blocks` edge from
-   * work that is not `done`. `TaskGraph.listReady` keeps each one whose only
-   * such wait is that prerequisite, approved to merge.
+   * Open, unheld, when-ready work that still waits on a `blocks` edge from
+   * work that is not `done`: the parts that may start at an earlier part's
+   * approval (docs/task-graph.md, "A part that starts at approval").
+   * `TaskGraph.listReady` keeps each one whose waits left that approval
+   * answers.
    */
   listAwaitingApproval(): TaskRecord[] {
-    const marked = this.shapes.exists()
-      ? this.getMany(
-          prepared(
-            this.db,
-            "SELECT task_id FROM task_placement_requests WHERE json_type(value_json, '$.start_at_approval') = 'text'",
-          )
-            .pluck()
-            .all() as string[],
-        )
-      : this.list().filter((record) => record.shape?.start_at_approval);
-    return marked
-      .filter(
-        (record) =>
-          record.status === "open" &&
-          record.kind === "work" &&
-          !record.gate &&
-          record.startPolicy === "when-ready" &&
-          this.waitsOnUnmerged(record.id),
+    const rows = this.db
+      .prepare(
+        `SELECT t.* FROM ${this.readTable()} t
+         WHERE t.status = 'open' AND t.kind = 'work'
+           AND t.gate_kind IS NULL AND t.start_policy = 'when-ready'
+           AND EXISTS (
+             SELECT 1 FROM task_links l JOIN tasks b ON b.id = l.from_id
+             WHERE l.to_id = t.id AND l.type = 'blocks'
+               AND b.status <> 'done')
+         ORDER BY t.priority, t.created_at, t.seq`,
       )
-      .sort((a, b) => a.priority - b.priority || a.createdAt - b.createdAt);
-  }
-
-  private waitsOnUnmerged(id: string): boolean {
-    return Boolean(
-      prepared(
-        this.db,
-        `SELECT 1 FROM task_links AS link JOIN tasks AS blocker ON blocker.id = link.from_id
-         WHERE link.to_id = ? AND link.type = 'blocks' AND blocker.status <> 'done' LIMIT 1`,
-      ).get(id),
-    );
+      .all() as Row[];
+    return this.read(rows);
   }
 
   /**

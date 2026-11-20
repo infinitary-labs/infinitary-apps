@@ -19,7 +19,7 @@ import type { RouteResult } from "../routing/router";
 import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
 import type { TaskLinkType } from "../storage/taskLinkStore";
 import type { TaskGate, TaskRecord, TaskStartPolicy } from "../storage/taskRecords";
-import { startAtApprovalNotABlocker } from "../tasks/taskFieldEdits";
+import { needsMergeKeys, startAtApprovalNotABlocker } from "../tasks/taskFieldEdits";
 import { TaskGraphRefusal } from "../tasks/taskGraph";
 import type { SavedOrigin } from "../tasks/taskOrigin";
 import { TaskService } from "../tasks/taskService";
@@ -718,11 +718,13 @@ export class TaskIntake {
       : undefined;
     if (typeof program === "string") throw new TaskGraphRefusal(`Nothing was filed. ${program}`);
     const startAt = this.startAtApproval(input.shape?.start_at_approval, placement.blockedBy);
+    const needsMerge = this.needsMerge(input.shape?.needs_merge, placement.blockedBy, startAt);
     const shape = withDeliverable(
       {
         ...workShape(this.options.tasks, input.shape),
         ...handOff,
         ...(startAt ? { start_at_approval: startAt } : {}),
+        ...(needsMerge.length ? { needs_merge: needsMerge } : {}),
         ...(program ? { program } : {}),
       },
       input.intent,
@@ -786,6 +788,32 @@ export class TaskIntake {
     if (!task || !blockedBy.includes(task.id))
       throw new TaskGraphRefusal(`Nothing was filed. ${startAtApprovalNotABlocker(named)}`);
     return task.key || task.id;
+  }
+
+  /**
+   * The waits a planned task needs merged, not only their code, by key
+   * (docs/task-graph.md, "A part that starts at approval"): each one of its
+   * own `blocked_by`, and not the one its start mark names. Refused in
+   * words otherwise, and nothing is filed.
+   */
+  private needsMerge(
+    names: readonly string[] | undefined,
+    blockedBy: readonly string[],
+    startAt: string | undefined,
+  ): string[] {
+    try {
+      return needsMergeKeys(
+        names ?? [],
+        (ref) => this.options.tasks.resolve(ref),
+        (id) => blockedBy.includes(id),
+        startAt,
+      );
+    } catch (caught) {
+      if (caught instanceof TaskGraphRefusal)
+        // i18n-exempt: a tool answer served to the first mate, not shown to a person
+        throw new TaskGraphRefusal(`Nothing was filed. ${caught.message}`);
+      throw caught;
+    }
   }
 
   /**

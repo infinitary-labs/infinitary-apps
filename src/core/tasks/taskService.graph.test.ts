@@ -176,7 +176,7 @@ describe("the task graph (task-system P2)", () => {
       expect(tasks.graph.approvedBase(later)).toBeUndefined();
 
       approve(tasks, first.id);
-      // Only the marked link opens; an unmarked one still waits for the merge.
+      // Only the batched wait opens; one outside batched pull requests still waits for the merge.
       expect(tasks.graph.listReady().map((r) => r.id)).toEqual(["later"]);
       expect(tasks.graph.approvedBase(tasks.get("later")!)).toMatchObject({
         task: { id: "first" },
@@ -237,6 +237,163 @@ describe("the task graph (task-system P2)", () => {
       approve(tasks, second.id, "revoked");
       expect(TaskGraph.mergedAt(tasks.get(first.id)!)).toBe(APPROVED);
       expect(TaskGraph.mergedAt(tasks.get(second.id)!)).toBeUndefined();
+    });
+
+    /** The ready sweep's start, as the host takes it: claimed, then built on the approved base. */
+    const startOn = (tasks: TaskService, id: string) => {
+      const base = tasks.graph.approvedBase(tasks.get(id)!);
+      if (!base) throw new Error(`${id} has no approved base`);
+      tasks.starts.dispatch(id, {
+        workspace: { repoDir: "", worktreeDir: "", branch: "" },
+        accountId: null,
+        assignee: "crewmate",
+      });
+      tasks.placement.setBuiltOn(id, { task: base.task.key, branch: base.branch, head: base.head });
+      return base;
+    };
+
+    // INF-5269's plan, part 2, the captain's "default-on" answer: on batched pull requests
+    // every dependency starts the later task at its approval, down a whole chain, with no mark.
+    it("starts each part of an unmarked chain at the approval of the part under it, three deep", () => {
+      const { tasks, work } = setup();
+      const first = work("first", { startPolicy: "on-request" });
+      const second = work("second", {
+        blockedBy: ["first"],
+        shape: { ...BATCHED, kind: "implement" },
+      });
+      // The third part waits on both, as a plan files it; the second part carries the first.
+      const third = work("third", {
+        blockedBy: ["first", "second"],
+        shape: { ...BATCHED, kind: "implement" },
+      });
+      expect(tasks.graph.listReady().map((r) => r.id)).toEqual([]);
+
+      approve(tasks, first.id);
+      expect(tasks.graph.listReady().map((r) => r.id)).toEqual(["second"]);
+      expect(tasks.graph.waitingOn(third.id).map((r) => r.id)).toEqual(["second"]);
+      expect(startOn(tasks, second.id).task.id).toBe(first.id);
+      // A third part with no approved base under it waits: the second part is not approved yet.
+      expect(tasks.graph.approvedBase(tasks.get(third.id)!)).toBeUndefined();
+
+      approve(tasks, second.id);
+      expect(tasks.graph.listReady().map((r) => r.id)).toEqual(["third"]);
+      const base = startOn(tasks, third.id);
+      expect(base.task.id).toBe(second.id);
+      // Neither unmerged part under it holds the started part's close, so its merge card can go up.
+      expect(tasks.graph.blockersHoldingClose(third.id)).toEqual([]);
+      expect(tasks.graph.blockersHoldingClose(second.id)).toEqual([]);
+
+      // Once the bottom part's approval ends, the parts above it wait for it again.
+      approve(tasks, first.id, "revoked");
+      expect(tasks.graph.blockersHoldingClose(second.id).map((r) => r.id)).toEqual([first.id]);
+      expect(tasks.graph.blockersHoldingClose(third.id).map((r) => r.id)).toEqual([first.id]);
+    });
+
+    it("waits for the merge of a dependency filed as needing it, and elsewhere than batched pull requests", () => {
+      const { tasks, work } = setup();
+      const first = work("first", { startPolicy: "on-request" });
+      work("release", {
+        blockedBy: ["first"],
+        shape: { ...BATCHED, kind: "implement", needs_merge: [first.key] },
+      });
+      work("direct", { blockedBy: ["first"], shape: { kind: "implement" } });
+      approve(tasks, first.id);
+      expect(tasks.graph.listReady().map((r) => r.id)).toEqual([]);
+      expect(tasks.graph.waitingOn("release").map((r) => r.id)).toEqual(["first"]);
+      expect(tasks.graph.waitingOn("direct").map((r) => r.id)).toEqual(["first"]);
+
+      tasks.close(first.id, { status: "done", reason: "merged", actor: "host" });
+      expect(
+        tasks.graph
+          .listReady()
+          .map((r) => r.id)
+          .sort(),
+      ).toEqual(["direct", "release"]);
+    });
+
+    it("keeps a part waiting on the part under its base when it needs that part merged", () => {
+      const { tasks, work } = setup();
+      const first = work("first", { startPolicy: "on-request" });
+      const second = work("second", {
+        blockedBy: ["first"],
+        shape: { ...BATCHED, kind: "implement" },
+      });
+      work("third", {
+        blockedBy: ["first", "second"],
+        shape: { ...BATCHED, kind: "implement", needs_merge: [first.key] },
+      });
+      approve(tasks, first.id);
+      startOn(tasks, second.id);
+      approve(tasks, second.id);
+      expect(tasks.graph.listReady().map((r) => r.id)).toEqual([]);
+      expect(tasks.graph.waitingOn("third").map((r) => r.id)).toEqual(["first"]);
+    });
+
+    // The independent review's finding: a merge wait the filer declared moves with its wait,
+    // whichever side of it is replaced or carried on, so the move never starts it at an approval.
+    it("keeps a declared merge wait when the wait moves to a replacement or a carrier", () => {
+      const { tasks, work } = setup();
+      const shape = { ...BATCHED, kind: "implement" } as const;
+      const old = work("old", { startPolicy: "on-request", shape });
+      const fresh = work("fresh", { startPolicy: "on-request", shape });
+      const release = work("release", {
+        blockedBy: ["old"],
+        shape: { ...shape, needs_merge: [old.key] },
+      });
+      const replace = (from: string, to: string) =>
+        tasks.dropWithChildren(from, { reason: "moved", actor: "firstmate", replacedBy: to });
+      replace(old.id, fresh.id);
+      expect(tasks.graph.blockers(release.id).map((r) => r.id)).toEqual([fresh.id]);
+      expect(tasks.get(release.id)?.shape?.needs_merge).toEqual([fresh.key]);
+      approve(tasks, fresh.id);
+      expect(tasks.graph.listReady().map((r) => r.id)).toEqual([]);
+      expect(tasks.graph.waitingOn(release.id).map((r) => r.id)).toEqual([fresh.id]);
+
+      // The waiter itself replaced: its successor keeps the merge wait.
+      const next = work("next", { startPolicy: "on-request", shape });
+      replace(release.id, next.id);
+      expect(tasks.get(next.id)?.shape?.needs_merge).toEqual([fresh.key]);
+      expect(tasks.get(release.id)?.shape?.needs_merge).toBeUndefined();
+
+      // A shipped slice's carrier takes the wait on, and the merge wait with it.
+      const carrier = work("carrier", { startPolicy: "on-request", shape });
+      expect(tasks.graph.carryWait(fresh.id, next.id, carrier.id, "host", 1)).toBe(true);
+      expect(tasks.get(next.id)?.shape?.needs_merge).toEqual([carrier.key]);
+      approve(tasks, carrier.id);
+      tasks.updateFields(next.id, { startPolicy: "when-ready" }, "firstmate");
+      expect(tasks.graph.listReady().map((r) => r.id)).toEqual([]);
+    });
+
+    // The review's finding: a merge need goes with the wait it names, so adding that wait
+    // back later starts the release at the approval, as any dependency does.
+    it("takes a removed wait out of the merge waits, so adding it back starts at approval", () => {
+      const { tasks, work } = setup();
+      const first = work("first", { startPolicy: "on-request" });
+      const release = work("release", {
+        blockedBy: ["first"],
+        shape: { ...BATCHED, kind: "implement", needs_merge: [first.key] },
+      });
+      expect(tasks.graph.unlink(first.id, release.id, "blocks", "firstmate")).toBe(true);
+      expect(tasks.get(release.id)?.shape?.needs_merge).toBeUndefined();
+      tasks.graph.link(first.id, release.id, "blocks", "firstmate");
+      approve(tasks, first.id);
+      expect(tasks.graph.listReady().map((r) => r.id)).toEqual([release.id]);
+    });
+
+    // The captain's default-on rule: a start mark whose wait merged no longer chooses, and
+    // the part starts at the approval of its other wait.
+    it("follows the default rule once the wait its start mark names has merged", () => {
+      const { tasks, work } = setup();
+      const first = work("first", { startPolicy: "on-request" });
+      const second = work("second", { startPolicy: "on-request" });
+      work("later", {
+        blockedBy: ["first", "second"],
+        shape: { ...BATCHED, kind: "implement", start_at_approval: "first" },
+      });
+      tasks.close(first.id, { status: "done", reason: "merged", actor: "host" });
+      approve(tasks, second.id);
+      expect(tasks.graph.listReady().map((r) => r.id)).toEqual(["later"]);
+      expect(tasks.graph.approvedBase(tasks.get("later")!)?.task.id).toBe(second.id);
     });
 
     it("keeps waiting while another prerequisite is unfinished", () => {

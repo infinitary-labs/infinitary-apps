@@ -627,7 +627,7 @@ describe("the task graph (R1)", () => {
     expect(live).toContain(`${a.key} "A"`);
     expect(live).toContain(`${c.key} "C"`);
     expect(live).toContain(
-      "It starts when that work closes. When only part of that work gives what it needs, split that part into its own task or fold this task into it; remove a wait with link_tasks remove only when it names the wrong task.",
+      "It starts when that work closes, or on batched pull requests when the work it builds on is approved to merge, unless its needs_merge names that work. When only part of that work gives what it needs, split that part into its own task or fold this task into it; remove a wait with link_tasks remove only when it names the wrong task.",
     );
     expect(live).not.toContain("to start it sooner");
     expect(live).toContain("Dropping a blocker never clears its wait.");

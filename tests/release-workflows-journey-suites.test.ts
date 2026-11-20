@@ -2,7 +2,9 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { requestJobs } from "../scripts/affected-phone";
 import { legacyJobName } from "../scripts/ci-job-names.mjs";
+import { PHONE_PART_TIMES, PHONE_PARTS } from "../scripts/phone-test-plan";
 import { hostEnv } from "../src/core/hostEnv";
 import {
   loadYamlFile,
@@ -233,92 +235,50 @@ describe("budgeted pull-request journey workflow (INF-658)", () => {
 // INF-4496's fix 2: every gate reads and keeps its run's earlier passes in the file the workflow names.
 const PASSES = "/runner/temp/phone-passes/passes.json";
 
-// INF-2582 direction A (the captain's "A: wait once and trim the soak" and "iPhone only; iPad
-// waits for the release check"): the chooser's reached parts go to the iPhone alone, and its
-// edited parts' two further passes ride the same gate. The selections are real chooser outputs'
-// shapes: a complete selection, one with edited tests, one that leaves reached parts to the iPhone,
-// a proper subset, and a proper subset whose one edited part repeats (INF-2811).
-// INF-2970's fix 1: each device's job runs the same selection on its own device; the gate itself
-// leaves the iPhone-only parts and the further passes off the iPad (scripts/phone-test-plan.ts).
+// INF-5387's plan, piece 2: a dealt job's gate runs exactly the passes the chooser dealt it, of one device or several,
+// from one build, with every device's evidence in its own folder; only the request's first job runs the phone's Swift
+// package tests, since its Mac part reuses their build. The jobs are the chooser's for today's complete request.
 it.each(
-  [
-    { mode: "in-turn", parts: "cards-form", full: "true", iphone: "", repeat: "", selected: [] },
+  requestJobs(
     {
-      mode: "together",
-      parts: "cards-form talk-tasks",
-      full: "true",
-      iphone: "",
-      repeat: "cards-form",
-      selected: ["--repeat-part", "cards-form"],
+      devices: ["every"],
+      kept: PHONE_PARTS.map((part) => part.name),
+      iphoneOnly: [],
+      ipadParts: [],
+      duoParts: [],
+      repeats: [],
+      repeatTests: {},
+      full: true,
+      named: false,
     },
-    {
-      mode: "",
-      parts: "join-read talk-tasks rest",
-      full: "true",
-      iphone: "join-read rest",
-      repeat: "talk-tasks",
-      selected: [
-        "--iphone-part",
-        "join-read",
-        "--part",
-        "talk-tasks",
-        "--iphone-part",
-        "rest",
-        "--repeat-part",
-        "talk-tasks",
-      ],
-    },
-    {
-      mode: "",
-      parts: "join-read talk-tasks",
-      full: "false",
-      iphone: "",
-      repeat: "",
-      selected: ["--part", "join-read", "--part", "talk-tasks"],
-    },
-    {
-      mode: "",
-      parts: "talk-drafts",
-      full: "false",
-      iphone: "",
-      repeat: "talk-drafts",
-      selected: ["--part", "talk-drafts", "--repeat-part", "talk-drafts"],
-    },
-  ].flatMap((selection) =>
-    [
-      { device: "ipad", args: ["--device", "ipad"] },
-      { device: "duo", args: ["--device", "duo"] },
-      { device: "iphone", args: ["--device", "iphone"] },
-    ].map((each) => ({ ...selection, ...each })),
-  ),
-)(
-  "runs the $device directly for $mode/$full/$iphone/$repeat without a local clone",
-  ({ mode, parts, full, iphone, repeat, selected, device, args }) => {
-    const phone = loadYamlFile(".github/workflows/phone.yml") as {
-      jobs: Record<string, { steps: { id?: string; run?: string }[] }>;
-    };
-    const command = phone.jobs["native-phone"]!.steps.find((step) => step.id === "both")!.run!;
-    const call = recordedWorkflowCall(command, {
-      PHONE_VIRTUAL_MAC: mode,
-      PHONE_DEVICE: device,
-      PHONE_PARTS: parts,
-      PHONE_FULL: full,
-      PHONE_IPHONE_PARTS: iphone,
-      PHONE_REPEAT_PARTS: repeat,
-      PHONE_PASSES: PASSES,
-    });
-    expect(call.slice(0, -1)).toEqual([
-      "node",
-      "scripts/test-phone.ts",
-      ...args,
-      ...selected,
-      "--passes",
-      PASSES,
-      "--evidence",
-    ]);
-    expect(call.at(-1)).toMatch(new RegExp(`/phone/${device}$`));
-  },
-);
+    JSON.parse(readFileSync(join(root, PHONE_PART_TIMES), "utf8")),
+  ).map((job) => ({ key: job.key, passes: job.passes })),
+)("runs exactly the passes of dealt $key", ({ key, passes }) => {
+  const phone = loadYamlFile(".github/workflows/phone.yml") as {
+    jobs: Record<string, { steps: { id?: string; run?: string; env?: Record<string, string> }[] }>;
+  };
+  const gate = phone.jobs["native-phone"]!.steps.find((step) => step.id === "both")!;
+  const matrix = { key, passes };
+  const env = (name: string) =>
+    workflowString(gate.env![name]!, { matrix, runner: { temp: "/runner/temp" } });
+  const call = recordedWorkflowCall(gate.run!, {
+    PHONE_DEVICE: env("PHONE_DEVICE"),
+    PHONE_PLAN: env("PHONE_PLAN"),
+    PHONE_FIRST_JOB: env("PHONE_FIRST_JOB"),
+    PHONE_PASSES: PASSES,
+  });
+  // The recorder writes one line an argument, and GitHub's toJSON writes the plan over several.
+  const end = call.findIndex((arg) => arg.startsWith("--") && arg !== "--plan");
+  expect(call.slice(0, 3)).toEqual(["node", "scripts/test-phone.ts", "--plan"]);
+  expect(JSON.parse(call.slice(3, end).join("\n"))).toEqual(passes);
+  expect(call.slice(end, -1)).toEqual([
+    ...(key === "job-1" ? [] : ["--skip-package-tests"]),
+    "--passes",
+    PASSES,
+    "--evidence",
+  ]);
+  expect(call.at(-1)).toMatch(/\/phone$/);
+});
 
 // INF-2582 direction A: a call of one device checks every part on that device, with full discovery, its evidence in
 // its own folder; an unknown device starts nothing.
@@ -333,10 +293,6 @@ it.each([
   const command = phone.jobs["native-phone"]!.steps.find((step) => step.id === "both")!.run!;
   const call = recordedWorkflowCall(command, {
     PHONE_DEVICE: device,
-    PHONE_PARTS: "",
-    PHONE_FULL: "",
-    PHONE_IPHONE_PARTS: "",
-    PHONE_REPEAT_PARTS: "",
     PHONE_PASSES: PASSES,
   });
   expect(call.slice(0, -1)).toEqual([
@@ -359,10 +315,6 @@ it("runs every part on every device in one gate for the job of every device", ()
   const command = phone.jobs["native-phone"]!.steps.find((step) => step.id === "both")!.run!;
   const call = recordedWorkflowCall(command, {
     PHONE_DEVICE: "every",
-    PHONE_PARTS: "",
-    PHONE_FULL: "",
-    PHONE_IPHONE_PARTS: "",
-    PHONE_REPEAT_PARTS: "",
     PHONE_PASSES: PASSES,
   });
   expect(call.slice(0, -1)).toEqual([

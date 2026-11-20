@@ -178,12 +178,12 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       needs: {},
       vars: {},
       env: {},
-      matrix: { device: "every" },
+      matrix: { device: "every", key: "every" },
     };
     const native = phone.jobs["native-phone"];
     expect(workflowValue(native?.if ?? "", released)).toBe(true);
     const scope = native?.steps.find((step) => step.id === "scope");
-    const request = native?.steps.find((step) => step.id === "request-select");
+    const request = phone.jobs.request?.steps.find((step) => step.id === "request-select");
     // A crewmate's request chooses parts; the release's call never does.
     expect(workflowValue(request?.if ?? "", released)).toBe(false);
     const selection = {
@@ -197,11 +197,11 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     };
     const gate = native?.steps.find((step) => step.id === "both");
     expect(workflowValue(gate?.if ?? "", chosen)).toBe(true);
-    expect(workflowString(gate?.env?.PHONE_PARTS ?? "", chosen)).toBe("");
+    // INF-2582 direction A: the release leaves no part to the iPhone alone and runs no further pass: it is dealt no
+    // plan, so its gate runs every part on every device (INF-5387's plan, piece 2).
+    expect(workflowString(gate?.env?.PHONE_PLAN ?? "", chosen)).toBe("");
+    expect(workflowString(gate?.env?.PHONE_DEVICE ?? "", chosen)).toBe("every");
     expect(workflowString(gate?.env?.INFINITARY_PHONE_STOP_EARLY ?? "", chosen)).toBe("0");
-    // INF-2582 direction A: the release leaves no part to the iPhone alone.
-    expect(workflowString(gate?.env?.PHONE_IPHONE_PARTS ?? "", chosen)).toBe("");
-    expect(workflowString(gate?.env?.PHONE_REPEAT_PARTS ?? "", chosen)).toBe("");
   });
 
   /**

@@ -46,7 +46,7 @@ exec ${JSON.stringify(process.execPath)} ${JSON.stringify(join(root, "workload")
   );
   const events: string[] = [];
   const children: { stop(): void; result: Promise<number | null> }[] = [];
-  function launch(name: string, kind: Kind, fail = false, parts = "") {
+  function launch(name: string, kind: Kind, fail = false, plan = "") {
     // INF-2202: release checks now call the combined unsigned gate, not host steps.
     const release = kind === "release-phone";
     const phoneWorkflow = release
@@ -80,7 +80,7 @@ exec ${JSON.stringify(process.execPath)} ${JSON.stringify(join(root, "workload")
         CHECK_FAIL: fail ? "yes" : "",
         CHECK_VMM: kind === "placed-phone" ? "1" : "0",
         PHONE_VIRTUAL_MAC: kind === "virtual-phone" ? "together" : "",
-        PHONE_PARTS: parts,
+        PHONE_PLAN: plan,
         // INF-2970's fix 1: each device runs in its own job; the lock facts hold for either.
         PHONE_DEVICE: "iphone",
       },
@@ -193,18 +193,21 @@ describe.skipIf(process.platform === "win32")("Mac check commands without admiss
       }
     },
   );
-  // INF-2101: changing the VM default preserves requests for named parts, not just full gates.
-  // Run the same real workflow command used above, with the Cards/rest request the sampler reaches.
+  // INF-2101: changing the VM default preserves requests for named parts, not just full gates. Run the same real
+  // workflow command used above, with a dealt job of the Cards/rest request the sampler reaches (INF-5387's plan,
+  // piece 2), which is not the request's first.
   it.each(["phone", "placed-phone"] as const)("preserves selected parts on %s", async (kind) => {
     const f = fixture();
     try {
-      const phone = f.launch("selected", kind, false, "cards rest");
+      const passes = [
+        { device: "iphone", part: "cards-form", round: 1 },
+        { device: "iphone", part: "rest", round: 1 },
+      ];
+      const phone = f.launch("selected", kind, false, JSON.stringify(passes));
       const args = JSON.parse((await phone.wait(/^args:/)).slice(5)) as string[];
-      expect(args.flatMap((arg, index) => (arg === "--part" ? [args[index + 1]] : []))).toEqual([
-        "cards",
-        "rest",
-      ]);
-      expect(args.at(-1)).toMatch(/\/phone\/iphone$/);
+      expect(JSON.parse(args[args.indexOf("--plan") + 1]!)).toEqual(passes);
+      expect(args).toContain("--skip-package-tests");
+      expect(args.at(-1)).toMatch(/\/phone$/);
       phone.release();
       expect(await phone.result).toBe(0);
     } finally {

@@ -18,7 +18,7 @@ import { ciModeRefusal } from "./checks-mode.ts";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 import { takeHeavyRunPlace } from "./heavy-run-place.ts";
 import { startPhoneActivity } from "./phone-activity.ts";
-import { keepPhonePasses, phonePassesLeft, readPhonePasses } from "./phone-test-plan.ts";
+import { keepPhonePasses, phonePassesLeft, readPhonePasses, readPhonePlan } from "./phone-test-plan.ts";
 import { finishPhoneCheck, joinPhoneObserver, keepPhoneDiagnostic, runEveryCheck } from "./phone-checks.ts";
 import { keepPhoneFailureLogs, runPhoneLog } from "./phone-failure-logs.ts";
 import { GATE_SIMULATOR, removePhoneLeftovers, SCRATCH_PREFIX } from "./phone-leftovers.ts";
@@ -74,6 +74,10 @@ const { values } = parseArgs({ options: {
   // INF-4496's fix 2: the record of the passes this run's earlier attempts passed; the gate skips them and keeps
   // this attempt's passes in it too (`phonePassesLeft`, `keepPhonePasses`).
   passes: { type: "string" },
+  // INF-5387's plan, piece 2: one job a manual request dealt to this phone Mac, its passes as JSON (`dealPhonePasses`),
+  // run exactly as listed; and whether this job leaves the package tests to the request's first job.
+  plan: { type: "string" },
+  "skip-package-tests": { type: "boolean", default: false },
   // INF-4326: one part on the Mac itself (PHONE_PARTS' `mac`), with the package build the gate's package tests made.
   mac: { type: "boolean", default: false },
   "swift-build": { type: "string" },
@@ -101,6 +105,10 @@ if (values.mac && (values.xctestrun || values.part?.length !== 1 || !partOnMac(v
   throw new Error("--mac runs exactly one Mac part, with the gate's package build");
 if (values.test && !values.xctestrun && !values.mac) throw new Error("--test needs the gate's built test plan");
 if (values.passes && (values.xctestrun || values.mac)) throw new Error("--passes belongs to the gate, not one part");
+if (values.plan && (values.part || values["iphone-part"] || values["repeat-part"] || values["repeat-tests"] || values.test || values.device
+  || values["every-device"] || values.both || values.ipad || values.xctestrun || values.mac || values.waits || values.tools))
+  throw new Error("--plan names the job's passes itself, so it takes no parts, devices or selection");
+if (values["skip-package-tests"] && !values.plan) throw new Error("--skip-package-tests belongs to a dealt job's --plan");
 // A part the gate started, on its device's simulator or on the Mac.
 const onePartOnly = !!(values.xctestrun || values.mac);
 const repeatTests: Record<string, string[]> = JSON.parse(values["repeat-tests"] || "{}");
@@ -108,13 +116,16 @@ for (const [part, tests] of Object.entries(repeatTests)) {
   if (!Array.isArray(tests) || tests.some((test) => typeof test !== "string")) throw new Error("Repeat tests must be arrays of identifiers");
   phoneTestSelection(part, tests);
 }
-const devices: PhoneDevice[] = values["every-device"] ? [...PHONE_DEVICES] : values.device ? [...new Set(values.device as PhoneDevice[])]
+const planned = values.plan ? readPhonePlan(values.plan) : undefined;
+const devices: PhoneDevice[] = planned ? PHONE_DEVICES.filter((device) => planned.some((job) => job.device === device))
+  : values["every-device"] ? [...PHONE_DEVICES] : values.device ? [...new Set(values.device as PhoneDevice[])]
   : values.both ? ["iphone", "ipad"] : [values.ipad ? "ipad" : "iphone"];
-// A gate of several devices keeps a folder of evidence per device, as piece 1 did.
-const perDevice = devices.length > 1;
+// A gate of several devices keeps a folder of evidence per device, as piece 1 did, and so does every dealt job, so the
+// jobs of one request keep one layout.
+const perDevice = devices.length > 1 || !!planned;
 // Every part on every device unless parts are named.
 const named = !!(values.part || values["iphone-part"]);
-const jobs: PhoneJob[] = phonePasses(devices, only ? { parts: ["rest"] } : {
+const jobs: PhoneJob[] = planned ?? phonePasses(devices, only ? { parts: ["rest"] } : {
   parts: named ? values.part ?? [] : PHONE_PARTS.map((part) => part.name),
   iphoneOnly: values["iphone-part"], repeats: values["repeat-part"], repeatTests });
 // INF-4241 piece 6: a part runs only on the devices its row of PHONE_PARTS names, so a gate whose parts none of its
@@ -801,6 +812,9 @@ try {
     // INF-1596: a killed run never deleted its simulator or scratch folder; neither stops this gate.
     await removePhoneLeftovers(run, env).catch((error: Error) =>
       console.log(`Leftovers of earlier phone checks were not removed: ${error.message}`));
+  }
+  // INF-5387's plan, piece 2: a request's dealt jobs run the package tests once, in its first job.
+  if (!onePartOnly && !values["skip-package-tests"]) {
     // A failed check here is reported, and the simulator tests still run (INF-663). INF-2125 piece 3: the
     // generated files' checks are `pnpm check`'s, which every pull request runs on Linux.
     const testing = Date.now();

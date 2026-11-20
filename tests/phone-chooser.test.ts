@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   appScreenEdits,
   before,
+  chooseRequest,
   deviceParts,
   diffHunks,
   GENERATED_CARD_WORDS,
@@ -11,6 +12,7 @@ import {
   ipadParts,
   iphoneOnlyParts,
   ownEdits,
+  type PartReach,
   type PartTable,
   PHONE_BUDGET_MS,
   partFamily,
@@ -19,14 +21,30 @@ import {
   phoneDecision,
   phoneRepeatPlan,
   placeParts,
+  type RequestSelection,
   requestBase,
   requestDevicePlan,
   requestedParts,
+  requestJobs,
+  requestPasses,
   swiftFunctions,
   UI_TESTS,
 } from "../scripts/affected-phone";
 import { phoneFileOwners, unownedPhoneFiles } from "../scripts/phone-part-owners";
-import { devicePartNames, PHONE_PARTS, partDevices, phonePasses } from "../scripts/phone-test-plan";
+import {
+  devicePartNames,
+  PHONE_DEVICES,
+  PHONE_PART_TIMES,
+  PHONE_PARTS,
+  type PhoneDevice,
+  type PhoneJob,
+  partDevices,
+  partOnMac,
+  partSelection,
+  phonePasses,
+  phonePassMs,
+  readPhonePlan,
+} from "../scripts/phone-test-plan";
 
 // INF-827 (the captain's approved INF-828 plan: "Run only the parts a change reaches; skip
 // changes to unused setup" and "A journeys-style budget, with the rest checked later on main",
@@ -1145,5 +1163,138 @@ describe("a phone re-run after a pass", () => {
     expect(ownEdits(texts[last!.ios]!, texts[now!.ios]!.replace(dropped, ""))).toEqual([
       `${kit}/Sources/InfinitaryKit/Resources/en.lproj/Localizable.strings`,
     ]);
+  });
+});
+
+// INF-5387's plan, piece 2 (the captain's "how can we make them last <30m at max", and the approved plan's "A unit
+// test holds that the dealt jobs equal today's pass list exactly"): a manual request's passes are dealt into jobs of at
+// most 19 recorded minutes. Today's pass list is what phone.yml's job of each device ran before: its gate step built
+// arguments from the chooser's outputs, and scripts/test-phone.ts built the passes from them. Both are transcribed here
+// as they stood, and the selections are the chooser's own for generated changes over the real part table.
+describe("a request dealt into jobs", () => {
+  const RECORDED = JSON.parse(readFileSync(PHONE_PART_TIMES, "utf8"));
+  // phone.yml's gate step for one device job, before the request was dealt: the arguments it handed test-phone.
+  function gateArguments(selection: RequestSelection, device: string): string[] {
+    const env = {
+      parts: selection.kept,
+      iphoneParts: selection.iphoneOnly,
+      // The job read the chooser's own parts for its device, its completeness and its further passes only when the
+      // request named no parts ("Read the chosen parts" ran only then).
+      deviceParts: selection.named
+        ? []
+        : device === "ipad"
+          ? selection.ipadParts
+          : device === "duo"
+            ? selection.duoParts
+            : [],
+      full: !selection.named && selection.full,
+      repeats: selection.named ? [] : selection.repeats,
+    };
+    let list = env.parts;
+    let iphoneOnly = env.iphoneParts;
+    if (env.deviceParts.length) [list, iphoneOnly] = [env.deviceParts, []];
+    let parts = list.flatMap((part) => [
+      iphoneOnly.includes(part) ? "--iphone-part" : "--part",
+      part,
+    ]);
+    if (env.full && !env.iphoneParts.length) parts = [];
+    for (const part of env.repeats) parts.push("--repeat-part", part);
+    if (Object.keys(selection.repeatTests).length)
+      parts.push("--repeat-tests", JSON.stringify(selection.repeatTests));
+    return [...(device === "every" ? ["--every-device"] : ["--device", device]), ...parts];
+  }
+  // scripts/test-phone.ts's passes from those arguments.
+  function gatePasses(args: string[]): PhoneJob[] {
+    const values = (flag: string) =>
+      args.flatMap((arg, index) => (arg === flag ? [args[index + 1]!] : []));
+    const devices: PhoneDevice[] = args.includes("--every-device")
+      ? [...PHONE_DEVICES]
+      : (values("--device") as PhoneDevice[]);
+    const named = values("--part").length > 0 || values("--iphone-part").length > 0;
+    return phonePasses(devices, {
+      parts: named ? values("--part") : PHONE_PARTS.map((part) => part.name),
+      iphoneOnly: values("--iphone-part"),
+      repeats: values("--repeat-part"),
+      repeatTests: JSON.parse(values("--repeat-tests")[0] ?? "{}"),
+    });
+  }
+  // The job of each device the chooser named ran its gate only when it had parts (the scope step).
+  const todaysPasses = (selection: RequestSelection) =>
+    selection.devices
+      .filter(
+        (device) =>
+          selection.named ||
+          device === "every" ||
+          device === "iphone" ||
+          (device === "ipad" ? selection.ipadParts : selection.duoParts).length,
+      )
+      .flatMap((device) => gatePasses(gateArguments(selection, device)));
+  const names = (passes: readonly PhoneJob[]) => passes.map((pass) => JSON.stringify(pass)).sort();
+  // A small deterministic generator, so a failure names its selection again on every run.
+  function* selections(count: number): Generator<{ label: string; selection: RequestSelection }> {
+    let seed = 5387;
+    const next = () => {
+      seed = (seed * 48271) % 2147483647;
+      return seed / 2147483647;
+    };
+    const every = PHONE_PARTS.map((part) => part.name);
+    const repeatable = every.filter((part) => !partOnMac(part));
+    for (let index = 0; index < count; index++) {
+      const all = next() < 0.15;
+      const kept = all ? every : every.filter(() => next() < 0.2);
+      const reach = kept.map((part) => {
+        const edited = repeatable.includes(part) && next() < 0.3;
+        return {
+          part,
+          distance: edited ? 0 : next() < 0.5 ? 1 : 2,
+          why: edited ? "its test code changed" : "the change reaches it",
+          // A test the part runs by name, as the chooser names an edited test.
+          ...(edited && next() < 0.3
+            ? {
+                repeatTests: partSelection(part)
+                  .filter((arg) => arg.startsWith("-only-testing:"))
+                  .map((arg) => arg.slice("-only-testing:".length)),
+              }
+            : {}),
+        } as PartReach;
+      });
+      const mode = next();
+      const explicit = mode < 0.25;
+      const named = explicit && mode < 0.15 && kept.length > 0;
+      const device = next() < 0.2 ? PHONE_DEVICES[Math.floor(next() * PHONE_DEVICES.length)]! : "";
+      const screens = !explicit && next() < 0.3;
+      yield {
+        label: JSON.stringify({ kept, explicit, named, device, screens }),
+        selection: chooseRequest(kept, explicit ? [] : reach, { explicit, named, device, screens }),
+      };
+    }
+  }
+  it("deals exactly today's passes, none lost and none doubled, over generated selections", () => {
+    let dealtRequests = 0;
+    for (const { label, selection } of selections(300)) {
+      const today = todaysPasses(selection);
+      expect(names(requestPasses(selection)), label).toEqual(names(today));
+      const jobs = requestJobs(selection, RECORDED);
+      expect(names(jobs.flatMap((job) => job.passes)), label).toEqual(names(today));
+      // Each job's gate reads its passes back whole.
+      for (const job of jobs)
+        expect(readPhonePlan(JSON.stringify(job.passes)), label).toEqual(job.passes);
+      if (jobs.length > 1) dealtRequests++;
+    }
+    // The generated selections include requests dealt into several jobs, not only single ones.
+    expect(dealtRequests).toBeGreaterThan(10);
+  });
+  it("deals today's complete request into five jobs of at most 19 recorded minutes", () => {
+    const complete = chooseRequest(EVERY_PART, [], { explicit: true });
+    const jobs = requestJobs(complete, RECORDED);
+    const minutes = (passes: readonly PhoneJob[]) =>
+      passes.reduce((sum, pass) => sum + phonePassMs(pass, RECORDED), 0) / 60_000;
+    const total = minutes(jobs.flatMap((job) => job.passes));
+    expect(jobs.length).toBe(Math.ceil(total / 19));
+    for (const job of jobs) expect(minutes(job.passes)).toBeLessThanOrEqual(19);
+    expect(jobs.map((job) => job.key)).toEqual(jobs.map((_, index) => `job-${index + 1}`));
+    // The Mac part reuses the package tests' build, so it rides the first job, which runs them.
+    expect(jobs[0]!.passes.some((pass) => partOnMac(pass.part))).toBe(true);
+    expect(jobs[0]!.label).toMatch(new RegExp(`^job 1 of ${jobs.length}: `));
   });
 });

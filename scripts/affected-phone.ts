@@ -5,7 +5,8 @@ import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { PART_OWNERS, phoneFileOwners } from "./phone-part-owners.ts";
 import {
-  devicePartNames, PHONE_DEVICES, PHONE_JOURNEY, PHONE_PARTS, type PhoneDevice, partDevices, partIdentifier, partTimes,
+  dealPhonePasses, devicePartNames, PHONE_DEVICES, PHONE_JOURNEY, PHONE_PART_TIMES, PHONE_PARTS, type PhoneDealtJob, type PhoneDevice,
+  type PhoneJob, type PhonePassTimes, partDevices, partIdentifier, partTimes, phonePasses,
 } from "./phone-test-plan.ts";
 
 export { partTimes };
@@ -773,6 +774,76 @@ export function requestDevicePlan(parts: readonly string[], reach: readonly Part
   return { iphoneOnly, devices: [...devices].sort() };
 }
 
+/** What the chooser hands phone.yml's jobs for a manual request: today's devices, the kept parts, the parts the iPhone
+ * runs alone, each other device's parts, the edited parts' further passes with their named tests, whether the selection
+ * is complete, and whether the request named its parts. */
+export type RequestSelection = {
+  devices: readonly string[]; kept: readonly string[]; iphoneOnly: readonly string[]; ipadParts: readonly string[];
+  duoParts: readonly string[]; repeats: readonly string[]; repeatTests: Record<string, readonly string[]>; full: boolean;
+  named: boolean;
+};
+
+/** A manual request's selection from its kept parts and how far the change reaches each: `explicit` for a request that
+ * did not choose its parts from the change, `named` for one that named them, `device` for one that names its device and
+ * `screens` for a change to the phone app's screens. */
+export function chooseRequest(kept: readonly string[], reach: readonly PartReach[], {
+  explicit = false, named = false, device = "", screens = false,
+}: { explicit?: boolean; named?: boolean; device?: string; screens?: boolean } = {}): RequestSelection {
+  const repeats = phoneRepeatPlan(kept, reach);
+  const { iphoneOnly, devices } = requestDevicePlan(kept, reach, { explicit, device, screens });
+  return {
+    devices, kept, iphoneOnly, ipadParts: ipadParts(kept, iphoneOnly, screens), duoParts: deviceParts("duo", kept, iphoneOnly, screens),
+    repeats: repeats.repeatParts, full: repeats.full, named,
+    repeatTests: Object.fromEntries(reach.filter((each) => each.repeatTests?.length).map((each) => [each.part, each.repeatTests!])),
+  };
+}
+
+/**
+ * INF-5387's plan, piece 2: a manual request's passes, exactly the ones its jobs ran before the request was dealt into
+ * jobs, when phone.yml ran one job for each of `devices` and each job's gate built its passes from what the chooser
+ * named. A device job's list was the kept parts, or its own parts for the iPad's and the Duo's, of which the iPhone ran
+ * its iPhone-only parts alone; a complete selection with no iPhone-only part ran every part instead. A request that named
+ * its parts read none of the chooser's further passes or completeness, so it ran no further pass. The gate
+ * (`scripts/test-phone.ts`) then built each job's passes with `phonePasses`, the job of every device from every device.
+ * `devices` names only devices with parts, as a device job with none ended before its gate.
+ */
+export function requestPasses(selection: RequestSelection): PhoneJob[] {
+  const repeats = selection.named ? [] : selection.repeats;
+  const full = !selection.named && selection.full;
+  return selection.devices.flatMap((device) => {
+    const devices: PhoneDevice[] = device === EVERY_DEVICE ? [...PHONE_DEVICES] : [device as PhoneDevice];
+    const list = device === "ipad" ? selection.ipadParts : device === "duo" ? selection.duoParts : selection.kept;
+    const alone = device === "ipad" || device === "duo" ? [] : selection.iphoneOnly;
+    const every = full && !selection.iphoneOnly.length;
+    return phonePasses(devices, {
+      parts: every ? PHONE_PARTS.map((part) => part.name) : list.filter((part) => !alone.includes(part)),
+      iphoneOnly: every ? undefined : list.filter((part) => alone.includes(part)),
+      repeats, repeatTests: selection.repeatTests,
+    });
+  });
+}
+
+/** One of phone.yml's dealt jobs, as the chooser's `jobs` output names it: its key, its check's name and its passes. */
+export type RequestJob = { key: string; label: string; passes: PhoneJob[] };
+
+/** INF-5387's plan, piece 2: a manual request's passes dealt into jobs of at most the job budget's recorded minutes. */
+export function requestJobs(selection: RequestSelection, times: PhonePassTimes): RequestJob[] {
+  const dealt = dealPhonePasses(requestPasses(selection), times);
+  return dealt.map((job) => ({ key: `job-${job.number}`, label: dealtJobLabel(job, dealt.length), passes: job.passes }));
+}
+
+/** Whether a request's first failed pass ends its other passes and jobs: a complete selection or one with edited-part
+ * passes; a request that named its parts never stopped early. */
+export const requestStopsEarly = (selection: RequestSelection) =>
+  !selection.named && (selection.full || selection.repeats.length > 0);
+
+/** A dealt job's name in its check's name: its number of all of them and the devices it checks. */
+export function dealtJobLabel(job: PhoneDealtJob, of: number): string {
+  const names: Record<PhoneDevice, string> = { ipad: "iPad", duo: "iPhone Duo", iphone: "iPhone" };
+  const devices = PHONE_DEVICES.filter((device) => job.passes.some((pass) => pass.device === device));
+  return `job ${job.number} of ${of}: ${devices.map((device) => names[device]).join(", ")}`;
+}
+
 /**
  * INF-3379 (the captain's "compute the base from the branch's merge point with main and ignore an older base"): a
  * request's base older than the branch's merge point with main would count main's own changes since that base as
@@ -926,19 +997,26 @@ function main(): void {
   // INF-4241 piece 9: an affected request whose change edits the phone app's screens adds the short Duo and iPad
   // passes; a request that keeps no part runs nothing anywhere.
   const screens = explicit || !kept.length ? [] : appScreenEdits(paths ?? []);
-  const { iphoneOnly, devices } = requestDevicePlan(kept, placement, {
-    explicit, device: values.device, screens: screens.length > 0,
+  const selection = chooseRequest(kept, placement, {
+    explicit, named: values.coverage !== undefined && values.coverage !== "", device: values.device, screens: screens.length > 0,
   });
+  const { iphoneOnly, devices } = selection;
   console.log(`devices=${JSON.stringify(devices)}`);
-  console.log(`full=${repeats.full}`);
-  console.log(`repeat_parts=${repeats.repeatParts.join(" ")}`);
-  console.log(`repeat_tests=${JSON.stringify(Object.fromEntries(placement.filter((each) => each.repeatTests?.length).map((each) => [each.part, each.repeatTests])))}`);
+  console.log(`full=${selection.full}`);
+  console.log(`repeat_parts=${selection.repeats.join(" ")}`);
+  console.log(`repeat_tests=${JSON.stringify(selection.repeatTests)}`);
   console.log(`iphone_parts=${iphoneOnly.join(" ")}`);
-  console.log(`ipad_parts=${ipadParts(kept, iphoneOnly, screens.length > 0).join(" ")}`);
-  console.log(`duo_parts=${deviceParts("duo", kept, iphoneOnly, screens.length > 0).join(" ")}`);
+  console.log(`ipad_parts=${selection.ipadParts.join(" ")}`);
+  console.log(`duo_parts=${selection.duoParts.join(" ")}`);
   const run = values.coverage === undefined ? decision.run : kept.length > 0;
   console.log(`run=${run}`);
   console.log(`parts=${kept.join(" ")}`);
+  // INF-5387's plan, piece 2: the request's passes dealt into jobs, one phone Mac each (`phone.yml`'s matrix).
+  const passTimes = JSON.parse(readFileSync(join(root, PHONE_PART_TIMES), "utf8")) as PhonePassTimes;
+  const jobs = run ? requestJobs(selection, passTimes) : [];
+  console.log(`jobs=${JSON.stringify(jobs)}`);
+  // A request that stops at its first failed pass stops its other jobs too.
+  console.log(`stop_early=${requestStopsEarly(selection)}`);
   if (values.placement) writeFileSync(values.placement, `${JSON.stringify({ run, base: base.base, ...(base.ignored ? { ignoredBase: base.ignored } : {}), ...(since ? { since: since.commit, ownEdits: since.files } : {}), inputs: decision.reasons, parts: placement, coverage: kept, iphoneOnly, screens, repeats }, null, 2)}\n`);
   const row = (each: Placement) =>
     `- ${each.kept ? "Runs" : "Left"}: ${each.part}, distance ${each.distance}, ${each.minutes === undefined ? "no time" : `${each.minutes.toFixed(1)} minutes`}: ${each.reason}; ${each.why}`;
@@ -952,10 +1030,10 @@ function main(): void {
       ...(explicit || !kept.length ? [] : [screens.length
         ? `The change edits the phone app's screens (${screens.join(", ")}), so the iPad and the iPhone Duo run their short passes.`
         : "The change edits none of the phone app's screens, so the iPad and the iPhone Duo run only the parts whose test code changed."]),
-      `On the iPad: ${ipadParts(kept, iphoneOnly, screens.length > 0).join(" ") || "none"}.`,
-      `On the iPhone Duo: ${deviceParts("duo", kept, iphoneOnly, screens.length > 0).join(" ") || "none"}.`,
-      `Two additional passes on the iPhone, in the same job (the iPad runs each of its own parts once): ${repeats.repeatParts.join(" ") || "none"}.`,
-      "", ...(placement.length ? ["#### Parts", "", ...placement.map(row), ""] : [])].join("\n"));
+      `On the iPad: ${selection.ipadParts.join(" ") || "none"}.`,
+      `On the iPhone Duo: ${selection.duoParts.join(" ") || "none"}.`,
+      `Two additional passes on the iPhone (the iPad and the Duo run each of their own parts once): ${repeats.repeatParts.join(" ") || "none"}.`,
+      "", ...(jobs.length ? ["#### Jobs", "", ...jobs.map((job) => `- ${job.label}: ${job.passes.map((pass) => `${pass.part}${pass.round > 1 ? ` round ${pass.round}` : ""} (${pass.device})`).join(", ")}`), ""] : []), ...(placement.length ? ["#### Parts", "", ...placement.map(row), ""] : [])].join("\n"));
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();

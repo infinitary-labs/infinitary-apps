@@ -31,7 +31,11 @@ name: phone
 # INF-4241 piece 8: the iPhone Duo is a third device, checked in the four flat sizes its hinge gives
 # it. A call that names no device, as the phone release's does, and a request of every part on every
 # device run one job, matrix device "every", whose gate runs every device's lanes from one build on
-# one phone Mac and keeps one part-times.json; a narrower request keeps a job a device.
+# one phone Mac and keeps one part-times.json.
+# INF-5387's plan, piece 2: a manual request that chooses its parts on Linux runs them as dealt jobs instead: the
+# chooser builds the passes its device jobs ran and deals them into jobs of at most 19 recorded minutes
+# (scripts/affected-phone.ts, `dealPhonePasses`), one phone Mac each, side by side, each stopped at 25 minutes.
+# The phone release's call and a wait-clock or tool request keep a job of their device, or of every device.
 on:
   workflow_call:
     inputs:
@@ -130,15 +134,11 @@ jobs:
     # The phone release's call, which passes its resolved source, runs it on GitHub's hosted Ubuntu. INF-5387's plan,
     # piece 1: a request's chooser takes the fast gate line the journeys' chooser takes, since a phone Mac waits on it.
     runs-on: ${{ inputs.source_commit != '' && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').gate || vars.LINUX_RUNNER && format('{0}-gate', vars.LINUX_RUNNER) || 'ubuntu-24.04' }}
+    # INF-5387's plan, piece 2: the dealt jobs, each with its key, its name and its passes, and whether the first
+    # failed job cancels the others. The chooser's parts, devices and passes stay in its summary and placement.
     outputs:
-      devices: ${{ steps.request-select.outputs.devices }}
-      parts: ${{ steps.request-select.outputs.parts }}
-      ipad_parts: ${{ steps.request-select.outputs.ipad_parts }}
-      duo_parts: ${{ steps.request-select.outputs.duo_parts }}
-      iphone_parts: ${{ steps.request-select.outputs.iphone_parts }}
-      repeat_parts: ${{ steps.request-select.outputs.repeat_parts }}
-      repeat_tests: ${{ steps.request-select.outputs.repeat_tests }}
-      full: ${{ steps.request-select.outputs.full }}
+      jobs: ${{ steps.request-select.outputs.jobs }}
+      stop_early: ${{ steps.request-select.outputs.stop_early }}
     steps:
       - name: Validate and record the manual phone request
         env:
@@ -211,28 +211,31 @@ jobs:
   # Each job's name leads with the caller's trigger (scripts/ci-job-names.mjs).
   native-phone:
     needs: request
-    name: ${{ inputs.evidence_run != '' && 'Manual request · Phone checks not requested' || format(inputs.waits && '{0} · Wait-clock tests ({1})' || inputs.tools && '{0} · Tool tests ({1})' || '{0} · Phone checks ({1})', inputs.trigger || 'Manual request', matrix.device == 'ipad' && 'iPad' || matrix.device == 'duo' && 'iPhone Duo' || matrix.device == 'every' && 'every device' || 'iPhone') }}
-    if: inputs.evidence_run == '' && needs.request.outputs.devices != '[]'
-    # INF-2970's fix 1: one job per device, each on its own phone Mac; a call or a request may
-    # name its one device (INF-3205). INF-4241 piece 8: a call that names none, and a request of every
-    # part on every device, run one job of every device from one build.
-    # One device failing never cancels another, so each reports its own parts.
+    name: ${{ inputs.evidence_run != '' && 'Manual request · Phone checks not requested' || format(inputs.waits && '{0} · Wait-clock tests ({1})' || inputs.tools && '{0} · Tool tests ({1})' || '{0} · Phone checks ({1})', inputs.trigger || 'Manual request', matrix.label || matrix.device == 'ipad' && 'iPad' || matrix.device == 'duo' && 'iPhone Duo' || matrix.device == 'every' && 'every device' || 'iPhone') }}
+    if: inputs.evidence_run == '' && needs.request.outputs.jobs != '[]'
+    # INF-5387's plan, piece 2: a request the Linux chooser chose runs one job for each job it dealt, each on its own
+    # phone Mac, with `key` (job-1, job-2, ...) naming its groups, saved passes and artifacts, `label` its name and
+    # `passes` what its gate runs. A call, and a wait-clock or tool request, run one job of the device it names, or of
+    # every device from one build (INF-4241 piece 8), keyed by that device, as before.
+    # A request that stops at its first failed pass (`stop_early`: a complete selection or edited-part passes) cancels
+    # its other jobs at the first failed one; otherwise every job runs to its end and reports its own passes.
     strategy:
-      fail-fast: false
+      fail-fast: ${{ needs.request.outputs.stop_early == 'true' }}
       matrix:
-        device: ${{ fromJSON(needs.request.outputs.devices || (inputs.device && format('["{0}"]', inputs.device) || '["every"]')) }}
+        include: ${{ fromJSON(needs.request.outputs.jobs || format('[{{"device":"{0}","key":"{0}"}}]', inputs.device || 'every')) }}
     # Required: no override or local fallback. The fleet serves this label only
     # from the two vBoxx VMs; a missing mapping supplies no runnable destination.
     runs-on: ${{ fromJSON(vars.MAC_QUEUES).phone }}
-    # Each run, attempt and device waits only for a free vBoxx place, not another run's group.
+    # Each run, attempt and job waits only for a free vBoxx place, not another run's group.
     concurrency:
-      group: ${{ format('phone-{0}-{1}-{2}', github.run_id, github.run_attempt, matrix.device) }}
+      group: ${{ format('phone-{0}-{1}-{2}', github.run_id, github.run_attempt, matrix.key) }}
       queue: max
       cancel-in-progress: false
-    # Retain the job limit for setup, checks, cleanup and evidence upload: 165 minutes for the
-    # ordinary pass, and 90 more for each of the two edited-part passes, which ran as jobs of
-    # 165 minutes each before INF-2582. The device gate has its own limit, 90 minutes a pass.
-    timeout-minutes: 345
+    # INF-5387's plan, piece 2: a dealt job of at most 19 recorded minutes ends near 13 minutes on a phone Mac with two
+    # simulators and 19 on one with one, setup included, so it is stopped at 25. A call keeps its limit for setup,
+    # checks, cleanup and evidence upload: 165 minutes for the ordinary pass, and 90 more for each of the two
+    # edited-part passes, which ran as jobs of 165 minutes each before INF-2582. The device gate has its own limit.
+    timeout-minutes: ${{ matrix.passes && 25 || 345 }}
     defaults:
       run:
         working-directory: Application Support/firstmate
@@ -255,24 +258,12 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 24
-      # The Linux request job already chose parts before any phone Mac is reserved.
-      - id: request-select
-        name: Read the chosen parts
-        if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.parts && !inputs.waits && !inputs.tools && inputs.evidence_run == ''
-        run: |
-          printf 'parts=%s\nipad_parts=%s\nduo_parts=%s\niphone_parts=%s\nrepeat_parts=%s\nfull=%s\n' "$PARTS" "$IPAD_PARTS" "$DUO_PARTS" "$IPHONE_PARTS" "$REPEAT_PARTS" "$FULL" >> "$GITHUB_OUTPUT"
-        env:
-          PARTS: ${{ needs.request.outputs.parts }}
-          IPAD_PARTS: ${{ needs.request.outputs.ipad_parts }}
-          DUO_PARTS: ${{ needs.request.outputs.duo_parts }}
-          IPHONE_PARTS: ${{ needs.request.outputs.iphone_parts }}
-          REPEAT_PARTS: ${{ needs.request.outputs.repeat_parts }}
-          FULL: ${{ needs.request.outputs.full }}
       - id: scope
         name: Decide whether the device gate runs
         run: echo "gate=$GATE" >> "$GITHUB_OUTPUT"
         env:
-          GATE: ${{ !inputs.affected || inputs.parts != '' || (matrix.device == 'ipad' && steps.request-select.outputs.ipad_parts != '') || (matrix.device == 'duo' && steps.request-select.outputs.duo_parts != '') || (matrix.device != 'ipad' && matrix.device != 'duo' && steps.request-select.outputs.parts != '') }}
+          # A dealt job always holds passes; a call names no affected parts.
+          GATE: ${{ matrix.passes && true || !inputs.affected || inputs.parts != '' }}
       # Install directly in the placed guest, never in a nested local clone.
       - uses: ./Application Support/firstmate/.github/actions/pnpm
         if: ${{ steps.scope.outputs.gate == 'true' }}
@@ -311,20 +302,20 @@ jobs:
       # once (INF-1438) and each part on its own test home; any failing part fails it.
       # INF-2970's fix 1: each phone Mac runs its job's one device, or every device in the one job
       # of a full check (INF-4241 piece 8). Release calls run every part each device's rows of
-      # PHONE_PARTS name (INF-4241 piece 6), the Duo's with the hinge its row names;
-      # affected requests use reached parts. INF-4241 piece 3 (INF-4308, the captain's "Build on two
-      # at once"): the gate runs as many simulated devices of that device as the Mac's processors and
-      # memory hold, two on a 10-core, 9 GB compute VM, and shares the parts among them by their
+      # PHONE_PARTS name (INF-4241 piece 6), the Duo's with the hinge its row names.
+      # INF-5387's plan, piece 2: a manual request's dealt job runs the passes the chooser dealt it, of one device
+      # or several, from one build. INF-4241 piece 3 (INF-4308, the captain's "Build on two
+      # at once"): the gate runs as many simulated devices as the Mac's processors and
+      # memory hold, two on a 10-core, 9 GB compute VM, and shares a device's parts among its simulators by their
       # recorded times (scripts/phone-part-times.json); INF-2101's one at a time came from 4-core VMs.
       # INF-2582 direction A, as INF-4241 piece 9 amends it: on an affected request a part the change only
       # reaches runs on the iPhone, a part whose test code changed runs on every device its row names, and
       # a change to the phone app's screens adds the iPad's and the Duo's short passes; an edited part then
-      # runs twice more in the iPhone job's same step (INF-2732), on the build and simulator it started,
-      # so each device's job waits for a phone Mac once, however few parts it selects (INF-2811). Each pass keeps the 90 minutes INF-2052 gave the gate.
+      # runs twice more on the iPhone (INF-2732), each further pass dealt like any other (scripts/affected-phone.ts).
       # INF-1343: a complete branch selection stops at its first failed part, so a failing check
       # frees its Mac at once, and so does any request with edited-part passes, whose failed pass
-      # stops the later ones (INF-2811); other proper-subset requests and the phone release keep
-      # full discovery.
+      # stops the later ones (INF-2811), and with them the request's other jobs (`fail-fast`); other proper-subset
+      # requests and the phone release keep full discovery.
       # INF-2052 (the captain's choice "Raise the limit for running the parts from 60 to 90 minutes"):
       # a full check with the Mac mini to itself passed in 59 minutes before INF-2052's other changes;
       # two full checks at once, one per virtual Mac, starved each other past their parts' 20-minute
@@ -338,62 +329,51 @@ jobs:
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
           path: ${{ runner.temp }}/phone-passes
-          key: ${{ format('phone-passes-{0}-{1}-{2}', github.run_id, matrix.device, github.run_attempt) }}
-          restore-keys: ${{ format('phone-passes-{0}-{1}-', github.run_id, matrix.device) }}
+          key: ${{ format('phone-passes-{0}-{1}-{2}', github.run_id, matrix.key, github.run_attempt) }}
+          restore-keys: ${{ format('phone-passes-{0}-{1}-', github.run_id, matrix.key) }}
       - id: both
         name: Read and recover on iPhone and iPad
-        # The iPad and the Duo run each part once; the iPhone also runs the edited parts' two more passes.
-        timeout-minutes: ${{ matrix.device != 'ipad' && matrix.device != 'duo' && steps.request-select.outputs.repeat_parts != '' && 270 || 90 }}
+        # A dealt job's gate is stopped at 21 minutes, inside its job's 25, so an over-long gate fails the job and its
+        # results, cleanup and evidence upload still run; a call's gate keeps 90 minutes.
+        timeout-minutes: ${{ matrix.passes && 21 || 90 }}
         if: ${{ steps.scope.outputs.gate == 'true' }}
         run: |
-          parts=()
-          # INF-4241 piece 9: the iPad's or the Duo's own job beside the iPhone's runs the parts the chooser named for
-          # it, which hold that device's short pass when the change edits the phone app's screens.
-          list="$PHONE_PARTS"; iphone_only="$PHONE_IPHONE_PARTS"
-          if [ -n "$PHONE_DEVICE_PARTS" ]; then list="$PHONE_DEVICE_PARTS"; iphone_only=""; fi
-          for part in $list; do
-            case " $iphone_only " in
-              *" $part "*) parts+=(--iphone-part "$part") ;;
-              *) parts+=(--part "$part") ;;
-            esac
-          done
-          # A complete selection on both devices runs every part, and keeps their times.
-          if [ "$PHONE_FULL" = true ] && [ -z "$PHONE_IPHONE_PARTS" ]; then parts=(); fi
-          # The gate leaves the iPhone-only parts and the further passes off the iPad itself.
-          for part in $PHONE_REPEAT_PARTS; do parts+=(--repeat-part "$part"); done
-          if [ -n "$PHONE_REPEAT_TESTS" ]; then parts+=(--repeat-tests "$PHONE_REPEAT_TESTS"); fi
           evidence="$RUNNER_TEMP/phone"
+          # INF-5387's plan, piece 2: a dealt job runs exactly its passes, each device's in a folder of its own, and
+          # only the request's first job runs the phone's Swift package tests.
+          if [ -n "$PHONE_PLAN" ]; then
+            package=(); [ "$PHONE_FIRST_JOB" = true ] || package=(--skip-package-tests)
+            node scripts/test-phone.ts --plan "$PHONE_PLAN" "${package[@]}" --passes "$PHONE_PASSES" --evidence "$evidence"
+            exit
+          fi
           case "$PHONE_DEVICE" in
             every) device=(--every-device) ;;
             ipad|duo|iphone) device=(--device "$PHONE_DEVICE"); evidence="$evidence/$PHONE_DEVICE" ;;
             *) echo "Unknown phone device: $PHONE_DEVICE" >&2; exit 1 ;;
           esac
-          node scripts/test-phone.ts "${device[@]}" "${parts[@]}" --passes "$PHONE_PASSES" --evidence "$evidence"
+          node scripts/test-phone.ts "${device[@]}" --passes "$PHONE_PASSES" --evidence "$evidence"
         env:
           PHONE_DEVICE: ${{ matrix.device }}
+          PHONE_PLAN: ${{ matrix.passes && toJSON(matrix.passes) || '' }}
+          PHONE_FIRST_JOB: ${{ matrix.key == 'job-1' }}
           PHONE_PASSES: ${{ runner.temp }}/phone-passes/passes.json
-          PHONE_FULL: ${{ steps.request-select.outputs.full }}
-          PHONE_PARTS: ${{ inputs.parts || steps.request-select.outputs.parts }}
-          PHONE_IPHONE_PARTS: ${{ needs.request.outputs.iphone_parts }}
-          PHONE_DEVICE_PARTS: ${{ matrix.device == 'ipad' && steps.request-select.outputs.ipad_parts || matrix.device == 'duo' && steps.request-select.outputs.duo_parts || '' }}
-          PHONE_REPEAT_PARTS: ${{ steps.request-select.outputs.repeat_parts }}
-          PHONE_REPEAT_TESTS: ${{ needs.request.outputs.repeat_tests }}
           INFINITARY_PHONE_WAITS_ONLY: ${{ inputs.waits && '1' || '0' }}
           INFINITARY_PHONE_TOOLS_ONLY: ${{ inputs.tools && '1' || '0' }}
           INFINITARY_STARVE_CHECK: ${{ inputs.starve && '1' || '0' }}
           INFINITARY_PERF_BUDGETS: ${{ inputs.perf && '1' || '0' }}
           PHONE_RECORDING: ${{ inputs.recording && '1' || '' }}
           INFINITARY_PHONE_GUEST_OBSERVER: ${{ inputs.guest_observer && '1' || '0' }}
-          INFINITARY_PHONE_STOP_EARLY: ${{ (steps.request-select.outputs.full == 'true' || steps.request-select.outputs.repeat_parts != '') && '1' || '0' }}
+          INFINITARY_PHONE_STOP_EARLY: ${{ needs.request.outputs.stop_early == 'true' && '1' || '0' }}
           INFINITARY_PHONE_PACKAGE_CACHE: ${{ runner.temp }}/swift-packages
-      # A failed attempt keeps the run's passes for a rerun of this job; a save that fails never fails the check.
+      # A failed attempt keeps the run's passes for a rerun of this job; a save that fails never fails the check. A dealt
+      # job another job's failure cancelled keeps its own too, since a rerun of the failed jobs reruns it.
       - name: Keep the passes for a rerun of this job
-        if: ${{ always() && steps.both.outcome == 'failure' }}
+        if: ${{ always() && (steps.both.outcome == 'failure' || steps.both.outcome == 'cancelled') }}
         continue-on-error: true
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
           path: ${{ runner.temp }}/phone-passes
-          key: ${{ format('phone-passes-{0}-{1}-{2}', github.run_id, matrix.device, github.run_attempt) }}
+          key: ${{ format('phone-passes-{0}-{1}-{2}', github.run_id, matrix.key, github.run_attempt) }}
       - name: Save the Swift packages from main
         # The gate fetched them once it started, passing or failing; a save that fails never fails main's check.
         if: ${{ always() && github.ref == 'refs/heads/main' && steps.swift-packages.outputs.cache-hit != 'true' && (steps.both.outcome == 'success' || steps.both.outcome == 'failure') }}
@@ -412,7 +392,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: phone-logs-${{ matrix.device }}
+          name: phone-logs-${{ matrix.key }}
           path: |
             ${{ runner.temp }}/phone/**/*.log
             ${{ runner.temp }}/phone/**/part-times.json
@@ -423,7 +403,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: phone-simulator-logs-${{ matrix.device }}
+          name: phone-simulator-logs-${{ matrix.key }}
           path: ${{ runner.temp }}/phone/**/simulator-live.log
           if-no-files-found: ignore
           retention-days: 3
@@ -445,7 +425,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: phone-pictures-${{ matrix.device }}
+          name: phone-pictures-${{ matrix.key }}
           path: ${{ runner.temp }}/phone-pictures
           if-no-files-found: ignore
           retention-days: 3
@@ -457,7 +437,7 @@ jobs:
         if: failure() || inputs.recording
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: phone-results-${{ matrix.device }}
+          name: phone-results-${{ matrix.key }}
           path: ${{ runner.temp }}/phone/
           if-no-files-found: ignore
           retention-days: ${{ inputs.recording && 3 || 1 }}

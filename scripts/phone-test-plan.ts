@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { PHONE_JOB_BUDGET_MS, recordedPartMs } from "./phone-deadlines.ts";
 import type { PhoneHinge } from "./phone-hinge.ts";
 
 // INF-662 piece 1: the phone check builds once and gives each device's tests their own
@@ -354,6 +355,84 @@ export function phonePasses(devices: PhoneDevice[], { parts = [], iphoneOnly = [
       ? PHONE_REPEAT_ROUNDS.flatMap((round) => phoneJobs([device], repeats).map((job) => ({ ...job, round, ...(repeatTests[job.part]?.length ? { tests: repeatTests[job.part] } : {}) })))
       : []),
   ]);
+}
+
+/** A full gate's part-times.json as it reads: each part's milliseconds on each device it ran on. */
+export type PhonePassTimes = Record<string, Partial<Record<PhoneDevice, number>>>;
+
+/** A pass's recorded time: its part's on its device, else its part's longer device time, else the median recorded part
+ * (`recordedPartMs`). A later round counts as its part's ordinary pass. */
+export function phonePassMs({ device, part }: PhoneJob, times: PhonePassTimes,
+  longer: ReadonlyMap<string, number> | undefined = partTimes(JSON.stringify(times))): number {
+  const own = times[part]?.[device];
+  return typeof own === "number" && own > 0 ? own : recordedPartMs(part, longer);
+}
+
+/** One job a manual request deals to its own phone Mac: its number, counted from one, and its passes in plan order.
+ * The first job also runs the phone's Swift package tests, once for the request, and holds the Mac part when one is
+ * dealt, since that part reuses their build. */
+export type PhoneDealtJob = { number: number; passes: PhoneJob[] };
+
+/** INF-5387's plan, piece 2: deals a request's passes into jobs of at most `budget` recorded milliseconds, each run on
+ * its own phone Mac. The count is the passes' recorded time over the budget, rounded up, and one more while the
+ * dealing leaves a job of more than one pass past it; a pass longer than the budget by itself runs alone. Passes go longest
+ * first to the lightest job, as `phoneLanePlan` shares a device's parts among its simulators, except that a pass goes
+ * to a job already holding its device, whose simulators it then reuses, when that leaves no job longer than the
+ * lightest choice would. Every pass is dealt exactly once, and each job keeps its passes in plan order. */
+export function dealPhonePasses(passes: readonly PhoneJob[], times: PhonePassTimes,
+  budget: number = PHONE_JOB_BUDGET_MS): PhoneDealtJob[] {
+  const longer = partTimes(JSON.stringify(times));
+  const ms = passes.map((pass) => phonePassMs(pass, times, longer));
+  const order = passes.map((_, index) => index).sort((a, b) => ms[b]! - ms[a]! || a - b);
+  const total = ms.reduce((sum, each) => sum + each, 0);
+  const deal = (count: number) => {
+    const jobs = Array.from({ length: count }, () => ({ load: 0, indices: [] as number[] }));
+    const lighter = <Job extends { load: number }>(best: Job, job: Job) => job.load < best.load ? job : best;
+    for (const index of order) {
+      const lightest = jobs.reduce(lighter);
+      // Never past the budget, so a pass longer than it by itself raises no other job's bound.
+      const longest = Math.min(budget, Math.max(lightest.load + ms[index]!, total / count, ...jobs.map((job) => job.load)));
+      const holders = jobs.filter((job) => job.load + ms[index]! <= longest
+        && job.indices.some((each) => passes[each]!.device === passes[index]!.device));
+      const chosen = holders.length ? holders.reduce(lighter) : lightest;
+      chosen.load += ms[index]!;
+      chosen.indices.push(index);
+    }
+    return jobs;
+  };
+  let count = Math.max(1, Math.ceil(total / budget));
+  let jobs = deal(count);
+  // A job past the budget holding one pass is that pass alone; only a job past it with more passes needs another job.
+  while (jobs.some((job) => job.load > budget && job.indices.length > 1) && count < passes.length) jobs = deal(++count);
+  const dealt = jobs.filter((job) => job.indices.length).map((job) => job.indices.toSorted((a, b) => a - b));
+  // The job that holds the Mac part comes first, beside the package tests whose build it reuses.
+  const onMac = (indices: number[]) => indices.some((index) => partOnMac(passes[index]!.part));
+  return dealt.sort((a, b) => Number(onMac(b)) - Number(onMac(a)) || a[0]! - b[0]!)
+    .map((indices, at) => ({ number: at + 1, passes: indices.map((index) => passes[index]!) }));
+}
+
+/** A dealt job's passes as the gate reads them from `--plan` (`dealPhonePasses`): each a device and a part its row of
+ * PHONE_PARTS runs there, its round (a further round on the iPhone alone) and any named tests the part owns, every pass
+ * once. Anything else is refused before a simulator starts. */
+export function readPhonePlan(text: string): PhoneJob[] {
+  const read = JSON.parse(text) as unknown;
+  if (!Array.isArray(read) || !read.length) throw new Error("A dealt phone job's plan lists its passes, at least one");
+  const jobs = read.map((pass: unknown): PhoneJob => {
+    const { device, part, round, tests } = (pass ?? {}) as Record<string, unknown>;
+    if (!(PHONE_DEVICES as readonly unknown[]).includes(device) || typeof part !== "string")
+      throw new Error(`A dealt phone pass names a device and a part: ${JSON.stringify(pass)}`);
+    if (!partDevices(part).includes(device as PhoneDevice)) throw new Error(`The ${part} part does not run on the ${String(device)}`);
+    if (!(round === 1 || (device === "iphone" && (PHONE_REPEAT_ROUNDS as readonly unknown[]).includes(round))))
+      throw new Error(`A dealt phone pass of ${part} on the ${String(device)} has no round ${String(round)}`);
+    if (tests !== undefined && (!Array.isArray(tests) || tests.some((test) => typeof test !== "string")))
+      throw new Error(`A dealt phone pass's tests are identifiers: ${JSON.stringify(pass)}`);
+    if (tests) phoneTestSelection(part, tests as string[]);
+    return { device: device as PhoneDevice, part, round: round as number, ...(tests ? { tests: tests as string[] } : {}) };
+  });
+  const names = jobs.map(phonePassName);
+  const twice = names.find((name, index) => names.indexOf(name) !== index);
+  if (twice) throw new Error(`A dealt phone job lists ${twice} twice`);
+  return jobs;
 }
 
 /** A pass's name in the gate's log and in its failure: the part on its device, and its round after the first. */

@@ -824,10 +824,15 @@ The runner's diagnostic inputs also select it: `scripts/phone-guest-observer.ts`
 Setup the device gates never run does not select it: the chooser itself, the local test home `scripts/phone-test-home.ts`, and the virtual Mac scripts `scripts/virtual-mac/phone.sh`, `phone-job.sh` and `vm.sh`.
 Changes to general shared modules, connection/device code, packages or the lockfile alone do not select the native gate.
 The chooser runs in the Linux `request` job before a phone Mac is reserved; it reads the comparison of the request's branch with its base, and an unreadable comparison selects the gate rather than silently skipping it.
-That job publishes the selection, keeps `phone-placement` and creates only the device jobs with work to run.
+That job publishes the selection, keeps `phone-placement` and deals the selection's passes into jobs, creating only jobs with passes to run.
 When the chooser selects no gate, as for a change only to the generated contract's version line, the job ends before it installs anything.
-The `native-phone` job runs once per device of a narrower request, the iPad, the iPhone Duo and the iPhone each in its own job on its own phone Mac at once, with fail-fast off (INF-2970's fix 1).
-A request of every part on every device, and the phone release's call, run one job instead, matrix device `every`, whose gate runs every device's lanes from one build (INF-4241 piece 8).
+A manual request that chooses its parts runs one `native-phone` job for each job the chooser dealt, each on its own phone Mac at once (INF-5387's plan, piece 2, after the captain's "how can we make them last <30m at max").
+The chooser builds the passes the request's devices run (`requestPasses` in `scripts/affected-phone.ts`), each a device, a part, a round and any named tests, and deals them into jobs of at most 19 recorded minutes (`dealPhonePasses` in `scripts/phone-test-plan.ts`, `PHONE_JOB_BUDGET_MS` in `scripts/phone-deadlines.ts`).
+The job count is the passes' recorded minutes over 19, rounded up, and one more while a job of more than one pass would be past 19; a pass longer than 19 minutes by itself runs in a job of its own, and no other job passes 19.
+Passes go longest first to the lightest job, a pass of a part with no recorded time counting as the median part, and a pass joins a job already holding its device, whose simulators it then reuses, when that leaves no job longer than the lightest choice would.
+A job may hold several devices, and its name gives its number and devices, such as `job 2 of 5: iPad, iPhone`.
+`tests/phone-chooser.test.ts` holds, over generated selections, that the dealt jobs together hold exactly the passes a job of each of the request's devices would run, none lost and none doubled.
+The phone release's call, and a wait-clock or tool request, keep one job of the device they name, or of every device, matrix device `every`, whose gate runs every device's lanes from one build (INF-4241 piece 8).
 Each runs the disposable `scripts/test-phone.ts` gate for its devices only on the required `MAC_QUEUES.phone` queue ("Each Mac job's kind and size"), without an override or fallback.
 When the job fails, or a run on request records, it keeps native result bundles, logs, published-client results and connection readings in the `phone-results` artifact.
 The same command logs also live in the smaller `phone-logs` artifact, independently of the result bundles.
@@ -835,7 +840,7 @@ Each part's live simulator log lives in `phone-simulator-logs`, never in `phone-
 The pictures the journeys took live in the small `phone-pictures` artifact, exported from the result bundles by device and part.
 A failure on any device fails its job and the run, and a complete branch selection or a request with edited-part passes stops at the first failed part ("The phone check on request").
 That gate checks and builds once, starts as many simulators of its device as the phone Mac holds, and runs the phone journey's parts on them, each part with its own test home and a clean app (`docs/ios.md`, "Disposable verification").
-Each placed guest runs simulators of its job's one device only.
+Each placed guest runs simulators of only the devices its job holds.
 
 ### The phone parts a request runs
 
@@ -869,12 +874,13 @@ The phone queue is served from every Mac place the placement service runs, the t
 Desktop journey jobs from different pull requests remain parallel.
 Desktop journeys and native phone gates run directly, without a command lease, so real and virtual Macs can check concurrently.
 The phone workflow keeps its configured concurrency groups; they do not exclude desktop checks or a local phone command.
-The native job's limit is 165 minutes for setup, the ordinary pass, cleanup and evidence upload, and 90 more for each of a request's two edited-part passes; the iPad's gate step keeps one pass's 90 minutes, since the further passes run on the iPhone; there is no command-admission wait.
+A dealt job is stopped at 25 minutes and its gate step at 21, so a gate past its limit fails the job, whose results, cleanup and evidence upload still run: a job of 19 recorded minutes ends near 13 minutes on a phone Mac with two simulators and near 19 on one with one, setup included.
+The phone release's call keeps its job's 345 minutes, 165 for setup, the ordinary pass, cleanup and evidence upload and 90 for each of two further passes it never runs, and its gate step's 90; there is no command-admission wait.
 `pnpm test:phone` checks the configured execution mode, then runs `scripts/test-phone.ts` directly.
 `tests/mac-check-lock.test.ts` executes the workflow and package command strings with held workloads to verify overlap, failure status and cancellation.
 `tests/phone-ci.test.ts` evaluates the required queue, rejects missing configuration and proves former overrides cannot change routing or suppress guest setup.
 The device gate runs as many simulators of its one device as the phone Mac's processors and memory hold, two on today's compute Mac VMs, and shares the device's parts among them by their recorded times (INF-4241 piece 3; `docs/ios.md`, "Disposable verification").
-This applies to requested checks and unsigned TestFlight checks, with the same tests, failure propagation and allowances; a request runs each device in its own job and the TestFlight call gives each device its own call, so each device takes its own phone Mac.
+This applies to requested checks and unsigned TestFlight checks, with the same tests, failure propagation and allowances; a request's dealt jobs each take their own phone Mac, and the TestFlight call runs every device in its one job.
 The fixture, simulator identity and unsigned Xcode configuration are described in `docs/ios.md`, "Disposable verification".
 
 ### The phone check on request
@@ -891,11 +897,11 @@ Each file's edit is its removed and added lines without their positions, so main
 The `request` job fetches that version by its id when bringing the branch up to date left it on no branch; a version it cannot read leaves the whole change compared, as before, and the summary and `phone-placement` (`since`, `ownEdits`) name the version and the files counted.
 This selection reuses `PART_OWNERS` and the Swift declaration reach reader, without a timing budget.
 Shared production inputs select every declared consumer; unreadable comparisons or test changes retain conservative full coverage.
-An affected request with no reached parts skips every device's gate, and one that edits none of the phone app's screens and whose every kept part runs on the iPhone alone, or is not a part about the iPad or the Duo, skips that device's (the chooser's `ipad_parts` and `duo_parts`, which each device's own job runs); the Linux job's summary and `phone-placement` artifact record the selection before any device job starts.
+An affected request with no reached parts deals no job, and one that edits none of the phone app's screens and whose every kept part runs on the iPhone alone, or is not a part about the iPad or the Duo, deals none of that device's passes (the chooser's `ipad_parts` and `duo_parts`); the Linux job's summary and `phone-placement` artifact record the selection, and the summary each dealt job's passes, before any job on a phone Mac starts.
 Explicit `parts` still overrides automatic selection for diagnostic runs.
-The optional `device` input, `ipad`, `duo` or `iphone`, starts that device's job alone; empty, its default, starts every device's (INF-3205).
-That job runs with every other input as it would beside the other devices', so a replacement proof of one device sends the original request's inputs with `device`, at the branch's current version, which a rerun of the original run cannot reach since it keeps the original version.
-An iPad request whose change edits no screen and whose every kept part runs on the iPhone alone checks nothing, as the iPad's job of a both-device request would; so does one that names only parts the iPad does not run.
+The optional `device` input, `ipad`, `duo` or `iphone`, deals that device's passes alone; empty, its default, deals every device's (INF-3205).
+Those passes are the ones that device runs beside the other devices', so a replacement proof of one device sends the original request's inputs with `device`, at the branch's current version, which a rerun of the original run cannot reach since it keeps the original version.
+An iPad request whose change edits no screen and whose every kept part runs on the iPhone alone checks nothing, as a both-device request deals the iPad nothing; so does one that names only parts the iPad does not run.
 To reproduce a known failure, send its one named `parts` value and `device` (`iphone`, `ipad` or `duo`); named diagnostic parts do not add repeat rounds.
 A retry after a failed request names only the failing part and its device this way, never the whole affected selection again, and the whole affected selection runs once more only at the final version ("A retry after a failed phone request").
 The iPad and the Duo run only the parts whose row in `PHONE_PARTS` names each, on every route (`docs/ios.md`, "Which parts run on which device"); the screenless weak-link suite is not one of them, and its own edited test code still gets its three iPhone rounds.
@@ -903,17 +909,16 @@ The `request` job refuses any other device, on every route, before a phone Mac i
 The chooser compares ordinary coverage with the complete live part table, independent of order, and keeps `coverage`, `iphoneOnly`, `screens` and `repeats` in `phone-placement`.
 INF-2582 direction A (the captain's choice "A: wait once and trim the soak"), with INF-4241's middle rule (the captain's "today's rule, plus the short Duo and iPad passes when the change edits the phone app's screens") in place of its "iPhone only; iPad waits for the release check", shapes the gate of an affected request in four ways.
 A part the change only reaches runs on the iPhone (the chooser's `iphone_parts`); a part whose test code changed, or every part of a change the chooser could not read, runs on each device its row names.
-A change that edits the phone app's screens, a hand-written Swift file under `ios/Infinitary/InfinitaryApp/` (`appScreenEdits` in `scripts/affected-phone.ts`), also runs the iPad's and the Duo's short passes: every part whose row names that device, once, in that device's own job, whether the change reaches it or not; a regenerated file (`.generated.swift`, or any file not in Swift) and translated words do not count, and named `parts` never add them.
+A change that edits the phone app's screens, a hand-written Swift file under `ios/Infinitary/InfinitaryApp/` (`appScreenEdits` in `scripts/affected-phone.ts`), also runs the iPad's and the Duo's short passes: every part whose row names that device, once, whether the change reaches it or not; a regenerated file (`.generated.swift`, or any file not in Swift) and translated words do not count, and named `parts` never add them.
 Otherwise a part about the iPad or the Duo that the change only reaches waits for the next phone release on those devices.
-Its selection runs once, then only parts whose test's own code changed run twice more on the iPhone alone in the iPhone job's same gate step (the iPad runs each once, INF-2732), on the build and simulator it started, so each device's job waits for a phone Mac once (`phonePasses` in `scripts/phone-test-plan.ts`).
+Its selection runs once, then only parts whose test's own code changed run twice more on the iPhone alone (the iPad runs each once, INF-2732), each further pass dealt into the request's jobs like any other (`phonePasses` in `scripts/phone-test-plan.ts`).
 This holds for a proper subset as for a complete selection (INF-2811), so a branch that edits one part's test code gets all three of that part's iPhone runs from its one affected request.
 Named `parts` and every-part requests run their parts on every device their rows name.
 Shared helpers and setup reach their consumers without repeating them; changed test bodies, signatures and helpers used by only one part retain three rounds.
 For a part containing a suite, the chooser carries exact changed-test identifiers into the two further rounds, so the other tests run only in ordinary coverage.
 An unreadable test identity conservatively repeats its containing part; each exact selection must witness every selected test starting.
 Unreadable test changes retain all-parts repeats; a product-only shared input does not invent edited tests.
-The iPhone runs a later pass only after its own ordinary pass, each pass of a part starts from a fresh test home and app, and in a complete selection or a request with edited-part passes the first failure stops every later part and pass, with no retries.
-Each pass keeps 90 minutes of the gate step's limit.
+Within a job the iPhone runs a later pass only after its own ordinary pass, each pass of a part starts from a fresh test home and app, and in a complete selection or a request with edited-part passes the first failure stops every later part and pass, with no retries, and the first failed job cancels the request's other jobs (`fail-fast`).
 A later pass writes its part's folder beside the ordinary one, named `<part>-round-<n>`, so its logs, pictures and failure results ride the ordinary artifacts.
 An unavailable CI route leaves missing proof, never an automatic complete local fallback.
 Neither route starts a release, TestFlight or App Store step.
@@ -922,7 +927,8 @@ Inside the gate a failed Swift package test no longer skips the simulator tests 
 Every request uses `MAC_QUEUES.phone`, currently `mini-mac-phone`; no `mac_runner` input, `PHONE_VIRTUAL_MAC` switch or generic-Mac variable can redirect it.
 Do not use local mini borrows for phone proof.
 The same-source unsigned call from `ios-release.yml` passes its resolved `source_commit` and no device, so one job runs every device's parts without repeats from one build on one phone Mac (INF-4241 piece 8, the plan's "a phone release runs the full check"); it must succeed before host signing starts.
-Each job, on request or in a call, names its device, or every device, in its job name and in each artifact (`phone-logs-ipad`, `phone-results-every` and so on), and keeps each device's evidence under its device's folder; a job of one device writes that device's `part-times.json` there, and the job of every device one `part-times.json` with every device's times.
+Each job names its key, a dealt job's number (`job-1`, `job-2` and so on) or a call's device, or every device, in each artifact (`phone-logs-job-2`, `phone-results-every` and so on), and keeps each device's evidence under its device's folder; a gate that ran every part of a device writes that device's `part-times.json` there, and the job of every device one `part-times.json` with every device's times, so a dealt job, which runs only some parts, usually writes none and the phone release keeps the times current.
+Only a request's first job runs the phone's Swift package tests, once for the request, and it holds the Mac part when one is dealt, since that part reuses their build.
 Two phone guests on the one rented computer reported memory pressure warnings in 5 of 29 readings while both ran (INF-2409).
 Status-only TestFlight requests start no phone or signing job.
 
@@ -1057,9 +1063,9 @@ A change sent back again requests it again after that repair, whatever an earlie
 
 ### A retry after a failed phone request
 
-A failed phone request is retried by rerunning its failed device job (`POST /repos/{owner}/{repo}/actions/runs/{id}/rerun-failed-jobs`) when nothing in the change needs repairing, such as a part that failed for a reason outside the change (INF-4496's fix 2).
+A failed phone request is retried by rerunning its failed jobs (`POST /repos/{owner}/{repo}/actions/runs/{id}/rerun-failed-jobs`) when nothing in the change needs repairing, such as a part that failed for a reason outside the change (INF-4496's fix 2).
 The rerun checks the same version, and its gate runs only the passes that did not pass in the run's earlier attempts: the failed part, and the parts an early stop left unrun or stopped.
-Each failed attempt keeps the names of every pass the run has passed so far in the Actions cache, under a key of its run, device and attempt, and the rerun restores the newest (`readPhonePasses`, `phonePassesLeft` and `keepPhonePasses` in `scripts/phone-test-plan.ts`).
+Each failed attempt keeps the names of every pass the run has passed so far in the Actions cache, under a key of its run, job and attempt, and the rerun restores the newest (`readPhonePasses`, `phonePassesLeft` and `keepPhonePasses` in `scripts/phone-test-plan.ts`); a dealt job that another job's failure cancelled keeps its own too, since the rerun of the failed jobs reruns it.
 Together the attempts have then passed every pass of the selection at that version, so the rerun's pass turns the run's failed check green and is the change's proof, and nobody reruns the whole failed job.
 A record the cache no longer holds runs the whole job again, as before; a rerun of a job whose every pass already passed runs none.
 When the failure needs a repair, the repair makes a new version, which a rerun cannot reach.

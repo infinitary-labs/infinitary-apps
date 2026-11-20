@@ -4,9 +4,17 @@ import { matchesGlob } from "node:path";
 import { data, Evaluator, Lexer, Parser } from "@actions/expressions";
 import { describe, expect, it } from "vitest";
 import { importsOf } from "../scripts/affected-journeys";
-import { GENERATED_CONTRACT, phoneDecision } from "../scripts/affected-phone";
+import {
+  chooseRequest,
+  GENERATED_CONTRACT,
+  phoneDecision,
+  type RequestSelection,
+  requestJobs,
+  requestPasses,
+  requestStopsEarly,
+} from "../scripts/affected-phone";
 import { legacyJobName } from "../scripts/ci-job-names.mjs";
-import { PHONE_DEVICES, PHONE_PARTS } from "../scripts/phone-test-plan";
+import { PHONE_DEVICES, PHONE_PART_TIMES, PHONE_PARTS } from "../scripts/phone-test-plan";
 import { workflowString, workflowValue } from "./helpers/releaseWorkflows";
 
 // INF-79 / INF-136: the captain requested a Mac mini lane for phone changes; since INF-2139 it
@@ -25,58 +33,37 @@ function gateCondition(): string {
     .env!.GATE.replace(/^\$\{\{\s*|\s*\}\}$/g, "");
   return `(${workflow.jobs["native-phone"].if}) && (${scope})`;
 }
-// Whether the device gate starts: a default request never consults the chooser (run ""); an
-// affected request keeps parts only when the chooser's decision runs, since
-// scripts/affected-phone.ts writes an empty parts list otherwise.
-// INF-2970's fix 1: each device's job reads its own parts; the iPad's leave out what the iPhone runs alone.
-function eligible(
-  run: boolean | "",
-  evidenceRun = "",
-  device = "iphone",
-  ipadParts = run ? "rest" : "",
-): string {
-  const steps = new data.Dictionary({
-    key: "request-select",
-    value: new data.Dictionary({
-      key: "outputs",
-      value: new data.Dictionary(
-        { key: "parts", value: new data.StringData(run ? "rest" : "") },
-        { key: "ipad_parts", value: new data.StringData(ipadParts) },
-      ),
+// INF-5387's plan, piece 2: the recorded part times the chooser deals a request's passes by, and a request's selection
+// as the chooser reads it, here of the iPhone's reached parts.
+const TIMES = JSON.parse(readFileSync(PHONE_PART_TIMES, "utf8"));
+const EVERY_PART = PHONE_PARTS.map((part) => part.name);
+const selection = (over: Partial<RequestSelection> = {}): RequestSelection => ({
+  devices: ["iphone"],
+  kept: ["rest"],
+  iphoneOnly: [],
+  ipadParts: [],
+  duoParts: [],
+  repeats: [],
+  repeatTests: {},
+  full: false,
+  named: false,
+  ...over,
+});
+// Today's complete request, every part on every device, as the chooser deals it.
+const FULL = selection({ devices: ["every"], kept: EVERY_PART, full: true });
+const FULL_JOBS = requestJobs(FULL, TIMES);
+// Whether the device gate starts in a request's first job: the chooser deals no job when its decision does not run
+// (scripts/affected-phone.ts), and a default request (run "") chooses every part.
+function eligible(run: boolean | "", evidenceRun = ""): string {
+  const jobs = run === false ? [] : run === "" ? FULL_JOBS : requestJobs(selection(), TIMES);
+  return String(
+    holds(gateCondition(), {
+      github: { event_name: "workflow_dispatch" },
+      needs: { request: { outputs: { jobs: JSON.stringify(jobs) } } },
+      matrix: jobs[0] ?? {},
+      inputs: { evidence_run: evidenceRun, affected: run !== "", parts: "" },
     }),
-  });
-  const github = new data.Dictionary({
-    key: "event_name",
-    value: new data.StringData("workflow_dispatch"),
-  });
-  const ast = new Parser(
-    new Lexer(`!!(${gateCondition()})`).lex().tokens,
-    ["steps", "github", "inputs", "env", "matrix", "needs"],
-    [],
-  ).parse();
-  return new Evaluator(
-    ast,
-    new data.Dictionary(
-      { key: "steps", value: steps },
-      { key: "needs", value: new data.Dictionary() },
-      {
-        key: "matrix",
-        value: new data.Dictionary({ key: "device", value: new data.StringData(device) }),
-      },
-      { key: "env", value: new data.Dictionary() },
-      { key: "github", value: github },
-      {
-        key: "inputs",
-        value: new data.Dictionary(
-          { key: "evidence_run", value: new data.StringData(evidenceRun) },
-          { key: "affected", value: new data.BooleanData(run !== "") },
-          { key: "parts", value: new data.StringData("") },
-        ),
-      },
-    ),
-  )
-    .evaluate()
-    .coerceString();
+  );
 }
 
 // INF-2202: old switch values must no longer redirect, suppress setup or create clones.
@@ -93,21 +80,11 @@ type Step = {
   "timeout-minutes"?: number;
   env?: Record<string, string>;
 };
-type Plain = { [key: string]: string | boolean | Plain };
+type Plain = { [key: string]: string | boolean | Plain | readonly unknown[] };
 const STATUS = ["success", "always", "cancelled", "failure"];
 
 function toData(value: Plain): data.Dictionary {
-  const dictionary = new data.Dictionary();
-  for (const [key, item] of Object.entries(value))
-    dictionary.add(
-      key,
-      typeof item === "string"
-        ? new data.StringData(item)
-        : typeof item === "boolean"
-          ? new data.BooleanData(item)
-          : toData(item),
-    );
-  return dictionary;
+  return JSON.parse(JSON.stringify(value), data.reviver) as data.Dictionary;
 }
 
 // Whether a workflow expression holds, as GitHub reads its truthiness.
@@ -169,7 +146,7 @@ function stepsThatRun(
   inputs: Plain = {},
   github: Plain = BRANCH_REQUEST,
   outputs: Record<string, Plain> = {},
-  device = "iphone",
+  matrix: Plain = { device: "iphone", key: "iphone" },
 ): Step[] {
   const seen: Plain = {};
   const ran: Step[] = [];
@@ -183,7 +160,7 @@ function stepsThatRun(
         vars: { PHONE_VIRTUAL_MAC: virtualMac },
         inputs,
         github,
-        matrix: { device },
+        matrix,
       },
       { failed },
     );
@@ -376,18 +353,20 @@ describe("the native gate on an affected request", () => {
     ];
     const vars = { PHONE_VIRTUAL_MAC: TOGETHER, MAC_RUNNER: "mini-mac-any" };
     const native = workflow.jobs[NATIVE_JOB].concurrency;
-    // INF-2582 and INF-2970's fix 1: a run's two device jobs share a run and attempt, and each waits for its own guest.
+    // INF-2582 and INF-2970's fix 1: a run's jobs share a run and attempt, and each waits for its own guest; INF-5387's
+    // plan, piece 2: so does each job a request was dealt into.
     const groups = runs.flatMap((github) =>
-      ["ipad", "iphone"].map((device) =>
+      FULL_JOBS.map((job) =>
         workflowString(native.group, {
           github,
           vars,
           inputs: { mac_runner: "mini-mac-real" },
-          matrix: { device },
+          matrix: job,
         }),
       ),
     );
-    expect(new Set(groups).size).toBe(runs.length * 2);
+    expect(FULL_JOBS.length).toBeGreaterThan(1);
+    expect(new Set(groups).size).toBe(runs.length * FULL_JOBS.length);
     expect(native.queue).toBe("max");
     expect(native["cancel-in-progress"]).toBe(false);
   });
@@ -398,8 +377,8 @@ describe("the native gate on an affected request", () => {
   it("checks the devices PHONE_PARTS names, in the request, its matrix and the phone release", () => {
     const devices = [...PHONE_DEVICES].sort();
     const native = workflow.jobs[NATIVE_JOB];
-    expect(workflowValue(native.strategy.matrix.device, { inputs: {}, needs: {} })).toEqual([
-      "every",
+    expect(workflowValue(native.strategy.matrix.include, { inputs: {}, needs: {} })).toEqual([
+      { device: "every", key: "every" },
     ]);
     const gate = (native.steps as Step[]).find(isGate)!.run!;
     expect(gate).toContain("every) device=(--every-device)");
@@ -437,19 +416,29 @@ describe("the native gate on an affected request", () => {
   // limit from 60 to 90 minutes for every part on both devices; alone, a full check passed in 59.
   // INF-2582: the two edited-part passes run in the same gate, each with the same 90 minutes, and the job
   // keeps 165 minutes for the ordinary pass and 90 more for each further pass.
-  // INF-2970's fix 1: the iPad's job runs each part once, so its gate keeps one pass's limit.
-  it("caps every route at ninety minutes a pass, within the job's own limit", () => {
-    const passes = (repeat: string, device = "iphone") =>
-      workflowValue(String(stepsThatRun(OFF).find(isGate)?.["timeout-minutes"]), {
-        steps: { "request-select": { outputs: { repeat_parts: repeat } } },
-        matrix: { device },
-      });
+  // INF-5387's plan, piece 2: the edited-part passes ride a request's dealt jobs, a dealt job is stopped at 25 minutes
+  // and its gate at 21; a call, which runs no further pass, keeps its gate's 90 and its job's limit.
+  it("caps a call's gate at ninety minutes and a dealt job's gate at 21, each within its job's limit", () => {
+    const limits = (matrix: Plain) => {
+      const contexts = { matrix };
+      return [
+        workflowValue(
+          String(
+            stepsThatRun(OFF, false, {}, BRANCH_REQUEST, {}, matrix).find(isGate)?.[
+              "timeout-minutes"
+            ],
+          ),
+          contexts,
+        ),
+        workflowValue(String(workflow.jobs[NATIVE_JOB]["timeout-minutes"]), contexts),
+      ];
+    };
     for (const route of [OFF, IN_TURN, TOGETHER])
       expect(stepsThatRun(route).filter(isGate)).toHaveLength(1);
-    expect(passes("")).toBe(90);
-    expect(passes("talk-tasks")).toBe(90 * 3);
-    expect(passes("talk-tasks", "ipad")).toBe(90);
-    expect(workflow.jobs[NATIVE_JOB]["timeout-minutes"]).toBe(165 + 90 * 2);
+    for (const device of ["every", "ipad", "duo", "iphone"])
+      expect(limits({ device, key: device })).toEqual([90, 165 + 90 * 2]);
+    // The gate stops first, so an over-long one fails its job, which still keeps its results.
+    for (const job of FULL_JOBS) expect(limits(job)).toEqual([21, 25]);
   });
   it("runs only on request or a reusable call, never on a pull request", () => {
     // INF-2139 (captain: "let's pull journeys and phone checks off PRs now"); the phone
@@ -516,8 +505,8 @@ describe("the native gate on an affected request", () => {
       );
       expect(names(ran)).toContain("Install without reading this Mac's signing material");
       expect(ran.filter(isGate)).toHaveLength(1);
-      expect(ran.find(isGate)?.env?.PHONE_PARTS).toBe(
-        "${{ inputs.parts || steps.request-select.outputs.parts }}",
+      expect(ran.find(isGate)?.env?.PHONE_PLAN).toBe(
+        "${{ matrix.passes && toJSON(matrix.passes) || '' }}",
       );
     }
     // The shell execution and both-device arguments belong to release-workflows-journey-suites.test.ts.
@@ -607,15 +596,16 @@ describe("the phone check's Swift packages", () => {
 
 // INF-4496's fix 2 (the captain's "Let a passing phone retry clear the failed run it retried, so nobody reruns
 // the whole failed job"): a rerun of a failed device job reads the passes its run's earlier attempts kept, so
-// its gate runs only the rest, and its pass turns that same run green.
+// its gate runs only the rest, and its pass turns that same run green. INF-5387's plan, piece 2: each dealt job keeps
+// and restores its own, by its key.
 describe("a rerun of a failed phone job", () => {
   const steps = workflow.jobs[NATIVE_JOB].steps as (Step & { with?: Plain })[];
   const restore = steps.find((step) => step.id === "earlier-passes")!;
   const keep = steps.find((step) => step.name === KEEP_PASSES)!;
   const gate = steps.find(isGate)!;
-  const at = (run_id: string, run_attempt: string, device = "iphone") => ({
+  const at = (run_id: string, run_attempt: string, key = "job-1") => ({
     github: { run_id, run_attempt },
-    matrix: { device },
+    matrix: { key },
   });
   const key = (step: Step & { with?: Plain }, field: string, contexts: Plain) =>
     workflowString(String(step.with?.[field]), contexts);
@@ -626,14 +616,15 @@ describe("a rerun of a failed phone job", () => {
       kept === key(restore, "key", rerun) || kept.startsWith(key(restore, "restore-keys", rerun))
     );
   };
-  it("restores what an earlier attempt of the same run and device kept, and nothing of another", () => {
+  it("restores what an earlier attempt of the same run and job kept, and nothing of another", () => {
     expect(restores(at("43796100185", "1"), at("43796100185", "2"))).toBe(true);
     expect(restores(at("43796100185", "2"), at("43796100185", "3"))).toBe(true);
     // Each attempt keeps its own record, so a later one never overwrites an earlier one's key.
     expect(key(keep, "key", at("43796100185", "1"))).not.toBe(
       key(keep, "key", at("43796100185", "2")),
     );
-    expect(restores(at("43796100185", "1", "ipad"), at("43796100185", "2"))).toBe(false);
+    expect(restores(at("43796100185", "1", "job-2"), at("43796100185", "2"))).toBe(false);
+    expect(restores(at("43796100185", "1", "job-1"), at("43796100185", "2", "job-10"))).toBe(false);
     expect(restores(at("4379610018", "1"), at("43796100185", "2"))).toBe(false);
     expect(restores(at("43796100185", "1"), at("4379610018", "2"))).toBe(false);
   });
@@ -648,7 +639,7 @@ describe("a rerun of a failed phone job", () => {
       ),
     ).toBe(true);
   });
-  it("restores only on a rerun with a gate to run, and keeps the record only when the gate failed", () => {
+  it("restores only on a rerun with a gate to run, and keeps the record when the gate failed or was cancelled", () => {
     const gateRuns = { scope: { outputs: { gate: "true" } } };
     for (const [attempt, gateStep, restored] of [
       ["1", gateRuns, false],
@@ -656,13 +647,19 @@ describe("a rerun of a failed phone job", () => {
       ["2", { scope: { outputs: { gate: "" } } }, false],
     ] as const)
       expect(holds(condition(restore), { ...at("1", attempt), steps: gateStep })).toBe(restored);
+    // A dealt job another job's failure cancelled keeps its passes too, since a rerun of the failed jobs reruns it.
     for (const [outcome, kept] of [
       ["failure", true],
+      ["cancelled", true],
       ["success", false],
       ["skipped", false],
     ] as const)
       expect(
-        holds(condition(keep), { steps: { both: { outcome } } }, { failed: outcome === "failure" }),
+        holds(
+          condition(keep),
+          { steps: { both: { outcome } } },
+          { failed: outcome === "failure", cancelled: outcome === "cancelled" },
+        ),
       ).toBe(kept);
   });
 });
@@ -672,21 +669,31 @@ describe("a rerun of a failed phone job", () => {
 // belongs to a complete branch selection and its edited-part passes, and since INF-2811 to any
 // request with edited-part passes, whose failed pass stops the later ones.
 describe("a failing phone check", () => {
+  // INF-5387's plan, piece 2: the chooser decides it, and the first failed job of such a request cancels the others.
   it("stops at its first failed part for a complete selection or edited-part passes, and only then", () => {
     const gate = stepsThatRun(OFF).find(isGate) as Step;
-    const stopEarly = gate.env?.INFINITARY_PHONE_STOP_EARLY?.replace(/^\$\{\{\s*|\s*\}\}$/g, "");
-    for (const [full, repeat, value] of [
-      ["true", "", "1"],
-      ["true", "join-read", "1"],
-      ["false", "talk-drafts", "1"],
-      ["false", "", "0"],
-      ["", "", "0"],
-    ] as const)
-      expect(
-        holds(`(${stopEarly}) == '${value}'`, {
-          steps: { "request-select": { outputs: { full, repeat_parts: repeat } } },
-        }),
-      ).toBe(true);
+    const native = workflow.jobs[NATIVE_JOB];
+    for (const [chosen, stops] of [
+      [FULL, true],
+      [{ ...FULL, iphoneOnly: ["join-read"] }, true],
+      [selection({ kept: ["talk-drafts"], repeats: ["talk-drafts"] }), true],
+      [selection(), false],
+      // A request that names its parts reads neither the selection's completeness nor its further passes.
+      [{ ...FULL, named: true }, false],
+      [selection({ repeats: ["rest"], named: true }), false],
+    ] as const) {
+      const contexts = {
+        needs: { request: { outputs: { stop_early: String(requestStopsEarly(chosen)) } } },
+      };
+      expect(requestStopsEarly(chosen)).toBe(stops);
+      expect(workflowString(gate.env!.INFINITARY_PHONE_STOP_EARLY!, contexts)).toBe(
+        stops ? "1" : "0",
+      );
+      expect(workflowValue(String(native.strategy["fail-fast"]), contexts)).toBe(stops);
+    }
+    // A call chooses nothing, so it never stops early.
+    expect(workflowString(gate.env!.INFINITARY_PHONE_STOP_EARLY!, { needs: {} })).toBe("0");
+    expect(workflowValue(String(native.strategy["fail-fast"]), { needs: {} })).toBe(false);
   });
   it("keeps the whole results only when the job failed or recorded, and its logs and pictures always", () => {
     for (const virtualMac of [OFF, TOGETHER]) {
@@ -713,15 +720,15 @@ describe("a failing phone check", () => {
   // kept: a failed full gate's (run 41145496442) and two failed parts' log readings (run 40937645392).
   it("keeps each part's simulator log in its own artifact and every other log with the small ones", () => {
     const temp = "/runner/temp";
-    // INF-2970's fix 1: each device's job names its artifacts for its device.
+    // INF-2970's fix 1: each job names its artifacts for its key, its device or its dealt number (INF-5387's plan, piece 2).
     const uploaded = (name: string, files: string[]) => {
       const step = (workflow.jobs[NATIVE_JOB].steps as (Step & { with?: Plain })[]).find(
         (each) =>
           each.uses?.startsWith("actions/upload-artifact") &&
           workflowString(String(each.with?.name ?? ""), {
             inputs: {},
-            matrix: { device: "iphone" },
-          }) === `${name}-iphone`,
+            matrix: FULL_JOBS[1]!,
+          }) === `${name}-job-2`,
       );
       const lines = String(step?.with?.path)
         .split("\n")
@@ -783,121 +790,99 @@ describe("the phone check on request", () => {
     expect(eligible(true)).toBe("true");
     expect(eligible(false)).toBe("false");
   });
-  it("starts the device gate in each device's job", () => {
-    // INF-2970's fix 1: each device's job runs its own gate, and neither stops the other.
+  it("starts the device gate in each device's job and each dealt job", () => {
+    // INF-2970's fix 1: each device's job runs its own gate; INF-5387's plan, piece 2: so does each dealt job.
+    const matrices: Plain[] = [
+      ...["ipad", "duo", "iphone", "every"].map((device) => ({ device, key: device })),
+      ...FULL_JOBS,
+    ];
     for (const virtualMac of [OFF, IN_TURN, TOGETHER])
-      for (const device of ["ipad", "duo", "iphone", "every"])
+      for (const matrix of matrices)
         expect(
-          names(stepsThatRun(virtualMac, false, {}, BRANCH_REQUEST, {}, device).filter(isGate)),
+          names(stepsThatRun(virtualMac, false, {}, BRANCH_REQUEST, {}, matrix).filter(isGate)),
         ).toEqual([BOTH]);
+    // A call, or a wait-clock or tool request, runs the job of the device it names, or of every device.
     expect(
       ["", "ipad", "duo", "iphone"].map((device) =>
-        workflowValue(workflow.jobs[NATIVE_JOB].strategy.matrix.device, {
+        workflowValue(workflow.jobs[NATIVE_JOB].strategy.matrix.include, {
           inputs: { device },
           needs: {},
         }),
       ),
-    ).toEqual([["every"], ["ipad"], ["duo"], ["iphone"]]);
-    expect(workflow.jobs[NATIVE_JOB].strategy["fail-fast"]).toBe(false);
+    ).toEqual(["every", "ipad", "duo", "iphone"].map((device) => [{ device, key: device }]));
   });
 });
 
-// INF-3205: a replacement proof of one device runs that device's job alone at the branch's current
-// version, with the part selection it would have beside the other device's, and nothing else.
+// INF-3205: a replacement proof of one device runs that device's passes alone at the branch's current version, with
+// the part selection it would have beside the other devices', and nothing else. INF-5387's plan, piece 2: the chooser
+// deals those passes into the request's jobs, so the selection is read where the chooser makes it.
 describe("a request that names one device", () => {
   const PLACEMENT = "Keep the chosen and left parts";
   const native = workflow.jobs[NATIVE_JOB];
-  const chosen = {
-    "request-select": {
-      parts: "join-read talk-tasks rest",
-      ipad_parts: "talk-tasks rest",
-      duo_parts: "fold",
-      iphone_parts: "join-read",
-      repeat_parts: "talk-tasks",
-      full: "true",
-    },
-  };
-  // Each device job a request starts, by the native job's own matrix.
-  const devices = (inputs: Plain) =>
-    workflowValue(native.strategy.matrix.device, { inputs, needs: {} }) as string[];
-  // The gate's limit and environment in a device's job, with the chooser's parts above.
-  function gate(inputs: Plain, device: string) {
-    const ran = stepsThatRun(OFF, false, inputs, BRANCH_REQUEST, chosen, device);
-    const step = ran.find(isGate)!;
-    const choosing = ran.some((each) => each.id === "request-select");
-    const contexts = {
-      github: BRANCH_REQUEST,
-      needs: { request: { outputs: chosen["request-select"] } },
-      inputs,
-      matrix: { device },
-      runner: { temp: "/runner/temp" },
-      steps: { "request-select": { outputs: choosing ? chosen["request-select"] : {} } },
-    };
-    return {
-      steps: names(ran).filter((name) => name !== PLACEMENT),
-      timeout: workflowValue(String(step["timeout-minutes"]), contexts),
-      env: Object.fromEntries(
-        Object.entries(step.env!).map(([key, value]) => [key, workflowString(value, contexts)]),
-      ),
-    };
-  }
-  it("starts only the named device's job, and the job of every device when it names none", () => {
-    expect(devices({ affected: true })).toEqual(["every"]);
-    expect(devices({ affected: true, device: "" })).toEqual(["every"]);
-    expect(devices({ affected: true, device: "duo" })).toEqual(["duo"]);
-    expect(devices({ affected: true, device: "ipad" })).toEqual(["ipad"]);
-    expect(devices({ affected: true, device: "iphone" })).toEqual(["iphone"]);
+  // A change whose test code edits talk-tasks and only reaches join-read and rest, with the phone app's screens edited.
+  const reach = [
+    { part: "join-read", distance: 1, why: "reached" },
+    { part: "talk-tasks", distance: 0, why: "edited", repeat: true },
+    { part: "rest", distance: 1, why: "reached" },
+  ] as const;
+  const kept = reach.map((each) => each.part);
+  const chosen = (device = "") => chooseRequest(kept, reach, { device, screens: true });
+  const devicesOf = (jobs: { passes: { device: string }[] }[]) =>
+    [...new Set(jobs.flatMap((job) => job.passes.map((pass) => pass.device)))].sort();
+  it("deals only the named device's passes, and every device's when it names none", () => {
+    expect(devicesOf(requestJobs(chosen(), TIMES))).toEqual([...PHONE_DEVICES].sort());
+    for (const device of PHONE_DEVICES) {
+      expect(chosen(device).devices).toEqual([device]);
+      expect(devicesOf(requestJobs(chosen(device), TIMES))).toEqual([device]);
+    }
+    // A call, and a wait-clock or tool request, run the job of the device it names, or of every device.
+    for (const device of ["", ...PHONE_DEVICES])
+      expect(
+        workflowValue(native.strategy.matrix.include, { inputs: { device }, needs: {} }),
+      ).toEqual([{ device: device || "every", key: device || "every" }]);
   });
-  it.each([
-    { affected: true },
-    { affected: false, parts: "cards-form" },
-    { affected: false, waits: true },
-    { affected: false, task: "INF-3205", reason: "Replacement proof" },
-  ] as Plain[])(
-    "runs the iPad's gate as a both-device request's iPad job does for %j",
-    (inputs) => {
-      const alone = gate({ ...inputs, device: "ipad" }, "ipad");
-      expect(alone).toEqual(gate(inputs, "ipad"));
-      // The iPad still runs each part once and never the iPhone's further passes.
-      expect(alone.timeout).toBe(90);
-      expect(alone.env.PHONE_DEVICE).toBe("ipad");
+  it.each(PHONE_DEVICES.map((device) => [device]))(
+    "runs the %s's passes as a request of every device runs them",
+    (device) => {
+      const alone = requestPasses(chosen(device));
+      expect(alone).toEqual(requestPasses(chosen()).filter((pass) => pass.device === device));
+      // The iPad and the Duo still run each part once and never the iPhone's further passes.
+      if (device !== "iphone") expect(alone.every((pass) => pass.round === 1)).toBe(true);
+      else
+        expect(alone.filter((pass) => pass.round > 1).map((pass) => pass.part)).toEqual([
+          "talk-tasks",
+          "talk-tasks",
+        ]);
     },
   );
-  // INF-4241 piece 9: the iPad's and the Duo's jobs run the parts the chooser named for them, which hold a short
-  // pass the iPhone does not run when the change edits the phone app's screens; the iPhone's job keeps its own.
-  it("hands each other device's job its own parts and the iPhone's job the reached parts", () => {
-    for (const inputs of [{ affected: true }, { affected: true, device: "ipad" }] as Plain[])
-      expect(gate(inputs, "ipad").env.PHONE_DEVICE_PARTS).toBe("talk-tasks rest");
-    expect(gate({ affected: true }, "duo").env.PHONE_DEVICE_PARTS).toBe("fold");
-    expect(gate({ affected: true }, "iphone").env).toMatchObject({
-      PHONE_DEVICE_PARTS: "",
-      PHONE_PARTS: "join-read talk-tasks rest",
-      PHONE_IPHONE_PARTS: "join-read",
-    });
-    // Named parts skip the chooser, and every device's job runs them.
-    expect(gate({ affected: false, parts: "cards-form" }, "ipad").env.PHONE_DEVICE_PARTS).toBe("");
+  // INF-4241 piece 9: the iPad's and the Duo's passes are the parts the chooser named for them, which hold a short pass
+  // the iPhone does not run when the change edits the phone app's screens; the iPhone runs the reached parts.
+  it("hands each other device its own parts and the iPhone the reached parts", () => {
+    const passes = requestPasses(chosen());
+    const parts = (device: string) =>
+      [...new Set(passes.filter((pass) => pass.device === device).map((pass) => pass.part))].sort();
+    expect(parts("iphone")).toEqual([...kept].sort());
+    expect(parts("ipad")).toEqual([...chosen().ipadParts].sort());
+    expect(parts("duo")).toEqual([...chosen().duoParts].sort());
+    expect(chosen().iphoneOnly).toEqual(["join-read", "rest"]);
+    // With no screen edited, the iPad runs only the edited part, and the Duo, which has no row for it, nothing.
+    const plain = requestPasses(chooseRequest(kept, reach));
+    expect(plain.filter((pass) => pass.device === "ipad").map((pass) => pass.part)).toEqual([
+      "talk-tasks",
+    ]);
+    expect(plain.filter((pass) => pass.device === "duo")).toEqual([]);
   });
-  it("chooses the parts in the named device's job as in a both-device request", () => {
-    const request = (native.steps as Step[]).find((step) => step.id === "request-select")!;
-    for (const device of ["", "ipad", "iphone"])
-      expect(
-        holds(condition(request), {
-          github: BRANCH_REQUEST,
-          inputs: { affected: true, parts: "", device },
-          matrix: { device: device || "ipad" },
-        }),
-      ).toBe(true);
-    // An iPad request whose kept parts all run on the iPhone alone ends before its gate, as the
-    // iPad's job beside the iPhone's does; named parts still run.
-    for (const parts of ["", "rest"])
-      expect(
-        holds(gateCondition(), {
-          github: BRANCH_REQUEST,
-          inputs: { affected: true, parts, device: "ipad" },
-          matrix: { device: "ipad" },
-          steps: { "request-select": { outputs: { parts: "rest", ipad_parts: "" } } },
-        }),
-      ).toBe(parts !== "");
+  // An iPad request whose kept parts all run on the iPhone alone deals no job, so it takes no phone Mac.
+  it("deals no job for a device whose kept parts all run on the iPhone alone", () => {
+    const reached = [{ part: "rest", distance: 1, why: "reached" }] as const;
+    const alone = chooseRequest(["rest"], reached, { device: "ipad" });
+    expect(requestJobs(alone, TIMES)).toEqual([]);
+    expect(holds(native.if, { inputs: {}, needs: { request: { outputs: { jobs: "[]" } } } })).toBe(
+      false,
+    );
+    // Named parts still run on the named device.
+    const named = chooseRequest(["rest"], [], { explicit: true, named: true, device: "ipad" });
+    expect(devicesOf(requestJobs(named, TIMES))).toEqual(["ipad"]);
   });
   it("keeps the part selection in the Linux request job before reserving a phone Mac", () => {
     const keeps = (workflow.jobs.request.steps as Step[]).find((step) => step.name === PLACEMENT)!;
@@ -916,68 +901,70 @@ it("exports existing native evidence without starting simulators", () => {
 
 // INF-1258: the captain picked touched parts only for crewmate requests, not PR/nightly gates.
 describe("affected request routing", () => {
-  const steps = workflow.jobs[NATIVE_JOB].steps as Step[];
-  const request = steps.find((step) => step.id === "request-select")!;
+  const request = (workflow.jobs.request.steps as Step[]).find(
+    (step) => step.id === "request-select",
+  )!;
+  const gate = (workflow.jobs[NATIVE_JOB].steps as Step[]).find(isGate)!;
   it("accounts for affected, full and explicit requests without changing main", () => {
-    for (const [event, affected, parts, expected] of [
-      ["workflow_dispatch", true, "", true],
-      ["workflow_dispatch", false, "", true],
-      // INF-2259: explicit diagnostic parts never silently become a complete
-      // verification request, even when they name the whole live part table.
-      ["workflow_dispatch", true, "cards", false],
-      ["workflow_dispatch", true, PHONE_PARTS.map((part) => part.name).join(" "), false],
-    ] as const) {
-      // Boolean inputs must remain BooleanData, not the truthy string "false".
+    // INF-5387's plan, piece 2: the chooser deals every manual request's passes, named parts included.
+    // Boolean inputs must remain BooleanData, not the truthy string "false".
+    for (const [affected, parts] of [
+      [true, ""],
+      [false, ""],
+      [true, "cards"],
+      [true, EVERY_PART.join(" ")],
+    ] as const)
       expect(
         holds(condition(request), {
-          github: { event_name: event },
+          github: { event_name: "workflow_dispatch" },
           inputs: { affected, parts },
         }),
-      ).toBe(expected);
-    }
+      ).toBe(true);
+    // INF-2259: explicit diagnostic parts never silently become a complete verification request, even when they name
+    // the whole live part table: they run no further pass and never stop early.
+    const named = chooseRequest(EVERY_PART, [], { explicit: true, named: true });
+    expect(requestPasses(named).every((pass) => pass.round === 1)).toBe(true);
+    expect(requestStopsEarly(named)).toBe(false);
   });
-  it("passes selected parts into the device gate and honors explicit diagnostic parts", () => {
-    const expression = (workflow.jobs[NATIVE_JOB].steps as Step[])
-      .find((step) => step.id === "both")!
-      .env!.PHONE_PARTS!.replace(/^\$\{\{\s*|\s*\}\}$/g, "");
-    const ast = new Parser(new Lexer(expression).lex().tokens, ["inputs", "steps"], []).parse();
-    for (const [parts, chosen, expected] of [
-      ["", "cards", "cards"],
-      ["join", "cards", "join"],
-      ["", "", ""],
-    ])
-      expect(
-        new Evaluator(
-          ast,
-          toData({
-            inputs: { parts: parts! },
-            steps: { "request-select": { outputs: { parts: chosen! } } },
-          }),
-        )
-          .evaluate()
-          .coerceString(),
-      ).toBe(expected);
+  it("passes each dealt job's passes into its gate and honors explicit diagnostic parts", () => {
+    for (const job of FULL_JOBS)
+      expect(JSON.parse(workflowString(gate.env!.PHONE_PLAN!, { matrix: job }))).toEqual(
+        job.passes,
+      );
+    expect(
+      workflowString(gate.env!.PHONE_PLAN!, { matrix: { device: "every", key: "every" } }),
+    ).toBe("");
+    const named = chooseRequest(["cards-form"], [], { explicit: true, named: true });
+    expect(requestJobs(named, TIMES).flatMap((job) => job.passes)).toEqual([
+      { device: "iphone", part: "cards-form", round: 1 },
+    ]);
   });
-  // INF-2970's fix 1 with INF-2582's "iPhone only; iPad waits for the release check": the iPad's job
-  // ends before its gate when every kept part runs on the iPhone alone.
-  it("skips the iPad's gate when the iPhone runs every kept part alone", () => {
-    expect(eligible(true, "", "ipad", "")).toBe("false");
-    expect(eligible(true, "", "iphone", "")).toBe("true");
-    expect(eligible(true, "", "ipad", "rest")).toBe("true");
-    expect(eligible("", "", "ipad", "")).toBe("true");
+  // INF-2970's fix 1 with INF-2582's "iPhone only; iPad waits for the release check": no iPad pass is dealt when
+  // every kept part runs on the iPhone alone.
+  it("deals no iPad pass when the iPhone runs every kept part alone", () => {
+    const reached = chooseRequest(["rest"], [{ part: "rest", distance: 1, why: "reached" }]);
+    expect(
+      requestJobs(reached, TIMES).flatMap((job) => job.passes.map((pass) => pass.device)),
+    ).toEqual(["iphone"]);
+    const edited = chooseRequest(["rest"], [{ part: "rest", distance: 0, why: "edited" }]);
+    expect(
+      new Set(requestJobs(edited, TIMES).flatMap((job) => job.passes.map((pass) => pass.device))),
+    ).toEqual(new Set(["ipad", "iphone"]));
   });
   it("starts selected requests, skips an empty affected request, and keeps default full runs", () => {
-    for (const [affected, parts, chosen, expected] of [
-      [true, "", "cards", true],
-      [true, "", "", false],
-      [false, "", "", true],
-      [true, "join", "", true],
+    const reached = requestJobs(selection(), TIMES);
+    for (const [affected, parts, jobs, expected] of [
+      [true, "", reached, true],
+      [true, "", [], false],
+      [false, "", FULL_JOBS, true],
+      [true, "join", reached, true],
     ] as const)
       expect(
         holds(gateCondition(), {
           github: { event_name: "workflow_dispatch" },
           inputs: { affected, parts },
-          steps: { "request-select": { outputs: { parts: chosen } } },
+          needs: { request: { outputs: { jobs: JSON.stringify(jobs) } } },
+          matrix: jobs[0] ?? {},
         }),
       ).toBe(expected);
   });
@@ -985,10 +972,9 @@ describe("affected request routing", () => {
 
 // INF-2259: full ordinary coverage and exactly two further edited-test passes, at one workflow
 // version, never retries after a failure. INF-2582 direction A (the captain's "A: wait once and
-// trim the soak"): both further passes run in the ordinary job's gate, on its build and simulators,
-// so a request waits for a phone Mac once; scripts/phone-test-plan.ts orders the passes.
+// trim the soak"): both further passes run on the iPhone; scripts/phone-test-plan.ts orders the passes, and since
+// INF-5387's plan, piece 2, the chooser deals them into the request's jobs like any other pass.
 describe("complete-selection phone CI repeats", () => {
-  const gate = () => (workflow.jobs[NATIVE_JOB].steps as Step[]).find(isGate)!;
   it("runs no job on a phone Mac but the one native job", () => {
     const onPhoneMac = Object.entries(workflow.jobs as Record<string, { "runs-on": string }>)
       .filter(([, job]) => String(job["runs-on"]).includes("MAC_QUEUES).phone"))
@@ -996,42 +982,38 @@ describe("complete-selection phone CI repeats", () => {
     expect(onPhoneMac).toEqual([NATIVE_JOB]);
     expect(workflow.jobs[NATIVE_JOB].outputs).toBeUndefined();
   });
-  it("hands the chooser's edited parts and iPhone-only parts to the one gate", () => {
-    const chosen = {
-      inputs: { parts: "" },
-      needs: { request: { outputs: { iphone_parts: "join-read rest" } } },
-      steps: {
-        "request-select": {
-          outputs: {
-            parts: "join-read talk-tasks rest",
-            iphone_parts: "join-read rest",
-            repeat_parts: "talk-tasks",
-            full: "true",
-          },
-        },
-      },
-    };
-    expect(workflowString(gate().env!.PHONE_PARTS!, chosen)).toBe("join-read talk-tasks rest");
-    expect(workflowString(gate().env!.PHONE_IPHONE_PARTS!, chosen)).toBe("join-read rest");
-    expect(workflowString(gate().env!.PHONE_REPEAT_PARTS!, chosen)).toBe("talk-tasks");
-    expect(workflowString(gate().env!.INFINITARY_PHONE_STOP_EARLY!, chosen)).toBe("1");
+  it("deals the chooser's edited parts and iPhone-only parts into the request's jobs", () => {
+    const chosen = { ...FULL, iphoneOnly: ["join-read", "rest"], repeats: ["talk-tasks"] };
+    const passes = requestJobs(chosen, TIMES).flatMap((job) => job.passes);
+    for (const part of ["join-read", "rest"])
+      expect(passes.filter((pass) => pass.part === part).map((pass) => pass.device)).toEqual([
+        "iphone",
+      ]);
+    expect(
+      passes
+        .filter((pass) => pass.part === "talk-tasks")
+        .map((pass) => `${pass.device} ${pass.round}`)
+        .sort(),
+    ).toEqual(["ipad 1", "iphone 1", "iphone 2", "iphone 3"]);
+    expect(requestStopsEarly(chosen)).toBe(true);
   });
 });
 
-// Approved cut 4: the Linux request's matrix prevents an empty device from taking a phone Mac.
-it("uses the preselected device matrix and skips native work when Linux selects none", () => {
+// Approved cut 4: the Linux request's jobs keep an empty request from taking a phone Mac. INF-5387's plan, piece 2:
+// one job for each job the chooser dealt.
+it("uses the dealt jobs and skips native work when Linux selects none", () => {
   const native = workflow.jobs[NATIVE_JOB];
-  for (const devices of [["iphone"], ["ipad"], ["duo", "ipad", "iphone"], ["every"]]) {
-    const needs = { request: { outputs: { devices: JSON.stringify(devices) } } };
-    expect(workflowValue(native.strategy.matrix.device, { inputs: {}, needs })).toEqual(devices);
+  for (const jobs of [requestJobs(selection(), TIMES), FULL_JOBS]) {
+    const needs = { request: { outputs: { jobs: JSON.stringify(jobs) } } };
+    expect(workflowValue(native.strategy.matrix.include, { inputs: {}, needs })).toEqual(jobs);
     expect(holds(native.if, { inputs: {}, needs })).toBe(true);
   }
-  expect(holds(native.if, { inputs: {}, needs: { request: { outputs: { devices: "[]" } } } })).toBe(
+  expect(holds(native.if, { inputs: {}, needs: { request: { outputs: { jobs: "[]" } } } })).toBe(
     false,
   );
   // A release call has no manual selection and runs every device in one job (INF-4241 piece 8).
-  expect(workflowValue(native.strategy.matrix.device, { inputs: {}, needs: {} })).toEqual([
-    "every",
+  expect(workflowValue(native.strategy.matrix.include, { inputs: {}, needs: {} })).toEqual([
+    { device: "every", key: "every" },
   ]);
 });
 

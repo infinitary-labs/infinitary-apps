@@ -10,6 +10,7 @@
  * folder.
  */
 
+import { execFileSync } from "node:child_process";
 import { describe, expect, it, vi } from "vitest";
 import {
   completionBody,
@@ -21,6 +22,8 @@ import {
 import {
   APPROVED,
   approved,
+  gitRepo,
+  KeptForge,
   REPAIRED,
   repair,
   repairTurn,
@@ -367,9 +370,87 @@ describe("a kept merge whose outcome is unknown on a host naming no version (INF
   );
 
   // INF-5193: the app quit after the captain's click sent the merge, so
-  // the click is still pending at the next launch; the kept run reads that
-  // merge back and the click is not sent again.
-  it("reads a merge a quit interrupted back at launch on a host naming no version, and sends it once", async () => {
+  // the click is still pending at the next launch; it is not sent again,
+  // whether its approval still stands (the kept run reads that merge back,
+  // by the host's own reference to it) or was withdrawn after it left.
+  it.each(["stands", "was withdrawn"] as const)(
+    "reads a merge a quit interrupted back at launch on a host naming no version while its approval %s, and sends it once",
+    async (approval) => {
+      const h = await approved();
+      h.forge.mergeNamesNoVersion = true;
+      h.forge.refuse = new ForgeMergeUnconfirmed("The host took the merge", "7/merge-task-1");
+      h.supervisor.cardActions.act(h.card.id, "merge");
+      await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("outcome"));
+      expect(h.authorization()?.attempt?.task).toBe("7/merge-task-1");
+      h.forge.refuse = undefined;
+      h.crewmate.finishPrompt();
+      await tick();
+      expect(h.forge.sends).toBe(1);
+      if (approval === "was withdrawn")
+        h.supervisor.settling.approvals.endAuthorization(
+          h.taskId,
+          "revoked",
+          "the captain withdrew it",
+        );
+      await h.supervisor.disposeAll();
+      const seen = h.tasks.timeline(h.taskId).length;
+      h.tasks.delivery.setPendingSettle(h.taskId, {
+        mode: "merge-pr",
+        actor: "captain",
+        requestedAt: Date.now(),
+        proceedWithOpen: false,
+      });
+      const tasks = new TaskService({ db: h.db, strict: true });
+      const delivery = createChangeDelivery({ tasks, repos: h.repos, forgeFor: () => h.forge });
+      const resumed = fakeCrewmate();
+      const supervisor = reboot(
+        { paths: h.paths, db: h.db, workspace: h.workspace },
+        vi.fn(async () => resumed),
+        {
+          repos: h.repos,
+          tasks,
+          mergePullRequest: (id, guard, beforeDispatch) =>
+            delivery.merges.merge(id, guard, beforeDispatch),
+          readPull: (id, number, mergeTask, place) =>
+            delivery.merges.pullState(id, number, mergeTask, place),
+        },
+      );
+      supervisor.setFirstmateHooks({ notifyOp: vi.fn(), retryConverse: vi.fn() });
+      await vi.waitFor(() => expect(tasks.get(h.taskId)?.pendingSettle).toBeNull());
+      await tick();
+      expect(tasks.get(h.taskId)?.delivery?.mergeAuthorization).toMatchObject({
+        status: approval === "stands" ? "standing" : "revoked",
+        attempt: { head: APPROVED, task: "7/merge-task-1" },
+      });
+      expect(h.forge.sends).toBe(1);
+      // The interrupted click is retired, never replayed into a refusal.
+      expect(
+        tasks
+          .timeline(h.taskId)
+          .slice(seen)
+          .some(
+            (event) => event.data?.refused === "merge-pr" || event.text.includes("Cannot merge"),
+          ),
+      ).toBe(false);
+      if (approval === "stands") {
+        h.forge.merged = true;
+        await supervisor.settling.kept.runMergeAuthorization(h.taskId);
+        await vi.waitFor(() =>
+          expect(tasks.get(h.taskId)?.delivery?.mergeAuthorization?.status).toBe("consumed"),
+        );
+        expect(h.forge.sends).toBe(1);
+      }
+      resumed.finishPrompt();
+      await tick();
+      await supervisor.disposeAll();
+    },
+  );
+
+  // INF-5193: the first mate's own merge call, permitted with autonomy on,
+  // runs under no kept approval, so on a host whose merge names no version it
+  // is refused at the send: it could neither see a merge sent earlier whose
+  // outcome is unknown nor record its own.
+  it("refuses the first mate's own merge on a host naming no version, while an earlier merge is unknown, and sends nothing", async () => {
     const h = await approved();
     h.forge.mergeNamesNoVersion = true;
     h.forge.refuse = new ForgeMergeUnconfirmed("The host took the merge", "7/merge-task-1");
@@ -378,44 +459,58 @@ describe("a kept merge whose outcome is unknown on a host naming no version (INF
     h.forge.refuse = undefined;
     h.crewmate.finishPrompt();
     await tick();
+    vi.spyOn(h.supervisor.facts, "taskAutonomy").mockReturnValue(true);
+    const text = await h.supervisor.settling.settle.settleTask(h.taskId, "merge-pr");
+    expect(text).toContain("only under the captain's merge approval");
     expect(h.forge.sends).toBe(1);
-    await h.supervisor.disposeAll();
-    h.tasks.delivery.setPendingSettle(h.taskId, {
-      mode: "merge-pr",
-      actor: "captain",
-      requestedAt: Date.now(),
-      proceedWithOpen: false,
-    });
-    const tasks = new TaskService({ db: h.db, strict: true });
-    const delivery = createChangeDelivery({ tasks, repos: h.repos, forgeFor: () => h.forge });
-    const resumed = fakeCrewmate();
-    const supervisor = reboot(
-      { paths: h.paths, db: h.db, workspace: h.workspace },
-      vi.fn(async () => resumed),
-      {
-        repos: h.repos,
-        tasks,
-        mergePullRequest: (id, guard, beforeDispatch) =>
-          delivery.merges.merge(id, guard, beforeDispatch),
-        readPull: (id, number, mergeTask) => delivery.merges.pullState(id, number, mergeTask),
-      },
-    );
-    supervisor.setFirstmateHooks({ notifyOp: vi.fn(), retryConverse: vi.fn() });
-    await vi.waitFor(() => expect(tasks.get(h.taskId)?.pendingSettle).toBeNull());
-    await tick();
-    expect(tasks.get(h.taskId)?.delivery?.mergeAuthorization).toMatchObject({
+    expect(h.authorization()).toMatchObject({
       status: "standing",
+      attempt: { head: APPROVED, task: "7/merge-task-1" },
+    });
+    // A kept approval's own send refuses at that boundary too, while it
+    // holds a merge sent earlier that was never read back.
+    const standing = h.authorization();
+    if (!standing) throw new Error("Missing approval");
+    expect(
+      h.supervisor.settling.approvals.guardOf(h.taskId, standing, false).beforeDispatch(APPROVED),
+    ).toContain("still being read back");
+    expect(h.authorization()?.attempt?.task).toBe("7/merge-task-1");
+    await h.supervisor.disposeAll();
+  });
+
+  // INF-5193: the read-back of a merge whose outcome is unknown asks the
+  // repository the approval pinned, never another managed project whose
+  // pull request of the same number is the one selected now.
+  it("reads an unknown merge back in the repository its approval pinned, not another project's pull request of the same number", async () => {
+    const other = new KeptForge();
+    other.merged = true;
+    const h = await approved({
+      referenced: true,
+      forgeFor: (repo, own) => (repo?.origin?.includes("/o/other") ? other : own),
+    });
+    h.forge.mergeNamesNoVersion = true;
+    h.forge.refuse = new ForgeMergeUnconfirmed("The host took the merge", "7/merge-task-1");
+    h.supervisor.cardActions.act(h.card.id, "merge");
+    await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("outcome"));
+    h.forge.refuse = undefined;
+    h.crewmate.finishPrompt();
+    await tick();
+    // Another managed project, whose pull request #7 merged, is selected now.
+    const { dir } = gitRepo("other");
+    execFileSync("git", ["-C", dir, "remote", "add", "origin", "https://github.com/o/other.git"]);
+    const { repo } = await h.repos.setup({ kind: "adopt", path: dir, name: "other" });
+    const first = h.authorization()?.review;
+    if (!first) throw new Error("Missing review");
+    seedDelivery(h.tasks, h.taskId, {
+      checkTarget: { ...first, id: "review-other", repoId: repo.id, name: "other" },
+    });
+    await h.supervisor.settling.kept.runMergeAuthorization(h.taskId);
+    expect(h.authorization()).toMatchObject({
+      status: "standing",
+      waiting: { on: "outcome" },
       attempt: { head: APPROVED },
     });
     expect(h.forge.sends).toBe(1);
-    h.forge.merged = true;
-    await supervisor.settling.kept.runMergeAuthorization(h.taskId);
-    await vi.waitFor(() =>
-      expect(tasks.get(h.taskId)?.delivery?.mergeAuthorization?.status).toBe("consumed"),
-    );
-    expect(h.forge.sends).toBe(1);
-    resumed.finishPrompt();
-    await tick();
-    await supervisor.disposeAll();
+    await h.supervisor.disposeAll();
   });
 });

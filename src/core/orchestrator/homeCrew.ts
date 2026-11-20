@@ -299,8 +299,8 @@ export function startHomeCrew({
     sendTakenIntegrationAsk: (rowId, taken, choice) => integrations.sendTaken(rowId, taken, choice),
     panelAskAnswered: (askId, choice) => panelAsks.answered(askId, choice === "deny"),
     reviewGate: (taskId, reviewId) => changeDelivery.reviews.reviewGate(taskId, reviewId),
-    readPull: (taskId, prNumber, mergeTask) =>
-      changeDelivery.merges.pullState(taskId, prNumber, mergeTask),
+    readPull: (taskId, prNumber, mergeTask, place) =>
+      changeDelivery.merges.pullState(taskId, prNumber, mergeTask, place),
     mergedStory: (taskId, pull) => changeDelivery.merges.mergedStory(taskId, pull),
     closePullRequest: (taskId) => changeDelivery.merges.close(taskId),
     checkCi: (taskId) => changeDelivery.checks.readForOffer(taskId),

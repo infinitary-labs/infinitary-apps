@@ -331,7 +331,8 @@ export async function approved(
       service().merges.merge(id, guard, beforeDispatch),
     mergeReview: (id, reviewId, guard) => service().reviews.mergeReview(id, reviewId, guard),
     reviewGate: (id, reviewId) => service().reviews.reviewGate(id, reviewId),
-    readPull: (id, prNumber, mergeTask) => service().merges.pullState(id, prNumber, mergeTask),
+    readPull: (id, prNumber, mergeTask, place) =>
+      service().merges.pullState(id, prNumber, mergeTask, place),
     mergedStory: (id, pull) => service().merges.mergedStory(id, pull),
     openChange: (id, input) => service().publication.open(id, input),
     checkChange: (id, input) => service().checkTool.checkForCrew(id, input),

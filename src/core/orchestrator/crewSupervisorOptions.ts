@@ -395,12 +395,16 @@ export type CrewSupervisorOptions = {
    * "Panels"): the panel's next call hears it, never the first mate.
    */
   panelAskAnswered?: (askId: string, choice: IntegrationApprovalChoice) => void;
-  /** The pinned pull request by its number, for a kept approval's reconcile. */
-  /** `mergeTask` asks the host how a merge it took and had not confirmed ended (`ForgePull.mergeTaskRefused`). */
+  /**
+   * The pinned pull request by its number, for a kept approval's reconcile,
+   * in the repository it pinned (`place`) when named. `mergeTask` asks the
+   * host how a merge it took and had not confirmed ended (`ForgePull.mergeTaskRefused`).
+   */
   readPull?: (
     taskId: string,
     prNumber: number,
     mergeTask?: string,
+    place?: { host: string; owner: string; name: string },
   ) => Promise<ForgePull | undefined>;
   /** The merge card a pull request read merged outside the app can show, or why none (INF-3799). */
   mergedStory?: (taskId: string, pull: ForgePull) => MergedStory | undefined;

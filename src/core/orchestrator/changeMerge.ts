@@ -225,15 +225,23 @@ export class MergeWithdrawn extends ForgeError {
  * host whose merge names no version they run inside the merge as the request
  * leaves, after every read before it, and the hook is returned for
  * `Forge.putIn`; elsewhere they run now. Newer guidance (`held`) or a check
- * that answers why stops the merge (`MergeWithdrawn`).
+ * that answers why stops the merge (`MergeWithdrawn`). On a host whose merge
+ * names no version only a kept approval's merge (`kept`) is sent: its attempt
+ * record is what reads back a merge whose outcome is unknown.
  */
 export function atDispatch(
   forge: Forge,
+  kept: boolean,
   held: () => string | undefined,
   check: () => string | undefined,
   onSent: () => void,
 ): (() => void) | undefined {
   const run = () => {
+    if (!kept && forge.mergeNamesNoVersion)
+      // i18n-exempt: served to the first mate in the merge answer, stays English
+      throw new MergeWithdrawn(
+        `${forge.place} merges whatever version the branch is at when it takes the merge, so the app sends it only under the captain's merge approval from the merge card, or the app's under autonomy, which reads back a merge whose outcome is unknown before sending again`,
+      );
     const hold = held();
     if (hold) throw new MergeWithdrawn(hold, true);
     const why = check();
@@ -527,6 +535,7 @@ export class ChangeMerge {
       if (held) return { ok: false, text: `Cannot merge yet: ${held}.`, stop: "guidance" };
       const leaving = atDispatch(
         forge,
+        guard !== undefined,
         () => guard?.held?.(),
         () => guard?.beforeDispatch(change.headSha) ?? boundary?.beforeDispatch(change.headSha),
         () => {
@@ -975,6 +984,7 @@ export class ChangeMerge {
     taskId: string,
     prNumber: number,
     mergeTask?: string,
+    place?: { host: string; owner: string; name: string },
   ): Promise<ForgePull | undefined> {
     const record = this.options.tasks.get(taskId);
     const repo = record?.repoId ? this.options.repos.get(record.repoId) : undefined;
@@ -983,10 +993,17 @@ export class ChangeMerge {
     // Reading a named pull request needs the project's saved host identity,
     // not a local branch or folder (nor an in-reach work computer): the
     // task's own project, or the other managed one the task opened that
-    // number in (INF-2510).
-    const elsewhere = this.projectOfNumber(record, prNumber);
+    // number in (INF-2510). A kept approval's read names the repository it
+    // pinned (`place`), so a number another project shares never answers it.
+    const pinned = place
+      ? [repo, ...this.options.repos.list()]
+          .map((item) => publicationRepo(record, item))
+          .find((item) => requestAtRepo(item, place))
+      : undefined;
+    if (place && !pinned) return undefined;
+    const elsewhere = pinned ? undefined : this.projectOfNumber(record, prNumber);
     if (elsewhere === null) return undefined;
-    const forge = this.options.forgeFor(elsewhere ?? publicationRepo(record, repo));
+    const forge = this.options.forgeFor(pinned ?? elsewhere ?? publicationRepo(record, repo));
     if (!forge.pull) return undefined;
     const pull = await this.context.pullOf(forge, prNumber);
     // A merge the host took and had not confirmed, still open: the host's

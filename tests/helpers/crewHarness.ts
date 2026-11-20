@@ -7,7 +7,6 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { ForgePull } from "@core/forge";
 import type { KnowledgeService } from "@core/knowledge/knowledgeService";
 import { type CrewmateSpec, crewmateSessionSpec } from "@core/orchestrator/crewSession";
 import { CrewSupervisor } from "@core/orchestrator/crewSupervisor";
@@ -289,11 +288,7 @@ export type SetupExtras = {
   mergePullRequest?: CrewSupervisorOptions["mergePullRequest"];
   mergeReview?: CrewSupervisorOptions["mergeReview"];
   reviewGate?: CrewSupervisorOptions["reviewGate"];
-  readPull?: (
-    taskId: string,
-    prNumber: number,
-    mergeTask?: string,
-  ) => Promise<ForgePull | undefined>;
+  readPull?: CrewSupervisorOptions["readPull"];
   mergedStory?: CrewSupervisorOptions["mergedStory"];
   openChange?: (
     taskId: string,

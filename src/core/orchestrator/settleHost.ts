@@ -203,12 +203,16 @@ export type SettleServiceHost = {
   /** The active naming runbook's rule, which names the footers a story's squash carries. */
   namingRule?: () => NamingRule | null;
   closePullRequest?: (taskId: string) => Promise<PrOutcome>;
-  /** The pinned pull request by its number, for a kept approval's reconcile (FI3-304). */
-  /** `mergeTask` asks the host how a merge it took and had not confirmed ended (`ForgePull.mergeTaskRefused`). */
+  /**
+   * The pinned pull request by its number, for a kept approval's reconcile
+   * (FI3-304), in the repository it pinned (`place`) when named. `mergeTask`
+   * asks the host how a merge it took and had not confirmed ended (`ForgePull.mergeTaskRefused`).
+   */
   readPull?: (
     taskId: string,
     prNumber: number,
     mergeTask?: string,
+    place?: { host: string; owner: string; name: string },
   ) => Promise<ForgePull | undefined>;
   /**
    * The merge card a pull request `readPull` read merged can show, or why it

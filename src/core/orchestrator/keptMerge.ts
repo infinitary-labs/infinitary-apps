@@ -333,7 +333,7 @@ export class KeptMerge {
       const number = authorization.target.prNumber;
       pull =
         readPull && number !== undefined
-          ? await readPull(taskId, number, authorization.attempt?.task)
+          ? await readPull(taskId, number, authorization.attempt?.task, authorization.target)
           : undefined;
     } catch {
       pull = undefined;

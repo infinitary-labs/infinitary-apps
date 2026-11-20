@@ -253,12 +253,12 @@ export class SettleService {
   resumePendingSettles(): void {
     for (const record of this.host.tasks.listLive()) {
       if (!record.pendingSettle) continue;
-      // The quit came after the merge left: the kept run reads it back at
-      // boot and sends nothing until it resolves, so it is not sent again.
-      if (
-        record.pendingSettle.mode === "merge-pr" &&
-        standingAuthorization(record.delivery)?.attempt
-      ) {
+      // The quit came after the merge left: the click is not sent again,
+      // whether its approval still stands or ended since. A standing one's
+      // kept run reads that merge back at boot; an ended one keeps it for
+      // the next approval of its pull request to read back first.
+      const kept = record.delivery?.mergeAuthorization;
+      if (record.pendingSettle.mode === "merge-pr" && (kept?.attempt || kept?.unsettled?.length)) {
         this.host.tasks.delivery.setPendingSettle(record.id, null);
         continue;
       }
@@ -420,6 +420,7 @@ export class SettleService {
         ...(result.plain ? { plain: result.plain } : {}),
         ...(result.notGreen ? { notGreen: true } : {}),
         ...(result.stop ? { stop: result.stop } : {}),
+        ...(result.mergeTask ? { mergeTask: result.mergeTask } : {}),
         ...(result.skip ? { skip: result.skip } : {}),
         ...(refusal ? { refusal } : {}),
       };

@@ -708,6 +708,9 @@ export class KeptApproval {
    */
   guardOf(taskId: string, authorization: MergeAuthorization, unattended: boolean) {
     const head = candidateHead(authorization);
+    // The attempt this guard records; any other on the approval is a merge
+    // sent earlier whose outcome was never read back.
+    let sent: string | undefined;
     const guard: MergeGuard = {
       head,
       prNumber: authorization.target.prNumber,
@@ -756,10 +759,14 @@ export class KeptApproval {
           return "a new merge card is up";
         }
         if (mark) return undefined;
+        if (now.attempt && now.attempt.token !== sent)
+          // i18n-exempt: served in the merge answer, stays English
+          return "a merge sent earlier is still being read back, so nothing is sent again until it is";
+        sent = randomUUID();
         this.host.tasks.delivery.recordPermissionRecords(taskId, {
           mergeAuthorization: {
             ...now,
-            attempt: { token: randomUUID(), head: dispatchHead, at: this.host.now() },
+            attempt: { token: sent, head: dispatchHead, at: this.host.now() },
           },
         });
         return undefined;

@@ -882,6 +882,7 @@ export class MergeReviews {
       const way = await wayToSend(forge, change);
       const leaving = atDispatch(
         forge,
+        guard !== undefined,
         () => guard?.held?.(),
         () => guard?.beforeDispatch(candidate.headSha),
         () => {

@@ -614,7 +614,8 @@ When the control holding focus goes away, as when the shown card pages, is answe
 Focus that rests anywhere else, such as in a side panel, stays there when a card changes: the card stack never asks for the main message.
 Closing something that opened over the work returns focus where it was: command search gives back the control it remembered ("Command search"), and leaving Settings lands by the fact from before Settings opened, in the main message when no card is left.
 A pointer click that removes its own control, such as Got it, leaves the caret in the main message.
-A card the person points at, and a card the first mate brings forward, still take focus ("Cards and frames"); sending, starting a draft, dictation and recall still focus the main message.
+A card the person points at, and a card the first mate brings forward, still take focus ("Cards and frames"); sending, starting a draft and recall still focus the main message.
+Dictation writes into the field that has focus, the main message when none of the four that take it does, and leaves focus where it was (`docs/composer.md`, "Where the words go").
 
 ## Command search
 
@@ -856,6 +857,6 @@ A not-typing binding has no menu accelerator, which would otherwise bypass the t
 Not-typing bindings may share a message-editing key because their places do not overlap; two window commands still cannot share a key.
 
 When such a binding is installed, the last unused Escape in a main message or card reply moves focus to the shown card, or the bare stage if there is none, preserving the draft.
-The reply's key isolation (`CardThread.tsx`) lends only an unused, non-composing Escape to that chain while such keys are installed; all other reply keys remain isolated from dictation.
+The reply's key isolation (`CardThread.tsx`) lends only an unused, non-composing Escape to that chain while such keys are installed; every other reply key but the dictation key stays the reply's own.
 All earlier Escape actions retain priority, and maps without a not-typing binding retain the old chain.
 The unfocused empty main message shows its Go to the main message key in its existing placeholder, with no mode indicator.

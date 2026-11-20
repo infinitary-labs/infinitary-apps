@@ -604,6 +604,7 @@
   {"said":{"m":"composerLines","a":{"count":1}},"words":"1 line"},
   {"said":{"m":"composerLines","a":{"count":2}},"words":"2 lines"},
   {"said":{"m":"composerLines","a":{"count":1234}},"words":"1,234 lines"},
+  {"said":{"m":"composerTooLongShorten"},"words":"Too long to send. Shorten it first."},
   {"said":{"m":"composerWordsOnly"},"words":"Only words can go until Infinitary is updated. Remove the pictures and files to send this."},
   {"said":{"m":"crewAPart"},"words":"A part"},
   {"said":{"m":"crewFirstmateLabel","a":{"state":"‹state›"}},"words":"First mate - ‹state›"},

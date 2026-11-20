@@ -50,6 +50,7 @@ A closed task reads as it ran: no status line and no prompt, only `This task is 
 **Keys.**
 The transcript is one Tab stop that scrolls by the arrows and the page keys, with `--focus-ring-inset`; each fold, Show the card, a picture and Stop are Tab stops after it, and Enter or Space presses them.
 In the prompt, Enter sends, ⌃C stops the running turn, and Esc hides the card as it does anywhere on a task's card.
+The dictation key records into the prompt while it has focus, the dictation mark under it (`../voice/VoiceInput.prompt.md`, "Dictating into another field"); Esc then abandons the recording first, and the card stays.
 Show Crewmate in command search shows this tab (`docs/keyboard.md`).
 
 **Words.**

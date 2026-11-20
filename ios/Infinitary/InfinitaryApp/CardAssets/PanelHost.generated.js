@@ -21302,6 +21302,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `${count} lines`;
     }
   }
+  function composerTooLongShorten() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `النص أطول من أن يُرسل. اختصره أولًا.`;
+      case "de":
+        return `Zu lang zum Senden. Kürze es zuerst.`;
+      case "es":
+        return `Demasiado largo para enviar. Acórtalo primero.`;
+      case "fr":
+        return `Trop long pour être envoyé. Raccourcissez-le d’abord.`;
+      case "ja":
+        return `長すぎて送信できません。先に短くしてください。`;
+      case "ko":
+        return `너무 길어서 보낼 수 없어요. 먼저 줄여 주세요.`;
+      case "pt-BR":
+        return `Longo demais para enviar. Encurte primeiro.`;
+      case "zh-Hans":
+        return `太长了，无法发送。请先缩短。`;
+      case "zh-Hant":
+        return `太長了，無法傳送。請先縮短。`;
+      case "en-XA":
+        return `[Ţöö ļöñĝ ţö šéñð. Šĥöŕţéñ îţ ƒîŕšţ. ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Too long to send. Shorten it first.‬`;
+    }
+    return `Too long to send. Shorten it first.`;
+  }
   function composerWordsOnly() {
     switch (currentLanguage()) {
       case "ar":
@@ -83575,6 +83602,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     commandWhatsNewShow,
     commandWhatsNewShowWords,
     composerLines,
+    composerTooLongShorten,
     composerWordsOnly,
     crewAPart,
     crewFirstmateLabel,
@@ -86261,6 +86289,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "commandWhatsNewShow": [],
     "commandWhatsNewShowWords": [],
     "composerLines": ["count"],
+    "composerTooLongShorten": [],
     "composerWordsOnly": [],
     "crewAPart": [],
     "crewFirstmateLabel": ["state"],

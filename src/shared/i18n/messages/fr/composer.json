@@ -5,5 +5,6 @@
     "many": "{count} lignes",
     "other": "{count} lignes"
   },
+  "composerTooLongShorten": "Trop long pour être envoyé. Raccourcissez-le d’abord.",
   "composerWordsOnly": "Seuls des mots peuvent partir tant qu’Infinitary n’est pas mis à jour. Retirez les images et les fichiers pour envoyer ceci."
 }

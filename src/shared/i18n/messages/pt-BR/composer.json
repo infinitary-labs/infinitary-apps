@@ -5,5 +5,6 @@
     "many": "{count} linhas",
     "other": "{count} linhas"
   },
+  "composerTooLongShorten": "Longo demais para enviar. Encurte primeiro.",
   "composerWordsOnly": "Só palavras podem ir até o Infinitary ser atualizado. Remova as imagens e os arquivos para enviar isto."
 }

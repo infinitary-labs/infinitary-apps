@@ -542,6 +542,7 @@
 "commandUsageUnitWords" = "用量, 費用, 美元, 估計";
 "commandWhatsNewShow" = "顯示新功能";
 "commandWhatsNewShowWords" = "發布, 說明, 變更, 版本";
+"composerTooLongShorten" = "太長了，無法傳送。請先縮短。";
 "composerWordsOnly" = "在 Infinitary 更新之前只能傳送文字。請移除圖片和檔案後再傳送。";
 "crewAPart" = "一個部分";
 "crewFirstmateLabel" = "大副 - %1$@";

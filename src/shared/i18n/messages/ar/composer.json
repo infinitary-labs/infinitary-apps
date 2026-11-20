@@ -8,5 +8,6 @@
     "many": "{count} سطرًا",
     "other": "{count} سطر"
   },
+  "composerTooLongShorten": "النص أطول من أن يُرسل. اختصره أولًا.",
   "composerWordsOnly": "يمكن إرسال الكلمات فقط حتى يتم تحديث Infinitary. أزل الصور والملفات لإرسال هذه الرسالة."
 }

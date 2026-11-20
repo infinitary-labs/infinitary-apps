@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "dictation-into-the-focused-field",
+      "kind": "improvement",
+      "title": "Dictation writes where you are typing",
+      "body": "The dictation key now records into the field you are typing in: a card's reply, a note's comment or a crewmate's message box. Your words go in where the cursor is, and the field keeps the focus. The recording mark and any microphone message appear under that field. When no other field has the focus, your words still go in the main message box. Words longer than a field allows stay whole, and the field says to shorten them before sending.",
+      "area": "message-box",
+      "picture": {
+        "dark": "dictation-into-the-focused-field-dark.webp",
+        "light": "dictation-into-the-focused-field-light.webp",
+        "alt": "A card's reply holds a draft while the dictation key records, with the recording mark and its Esc hint under the reply"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -542,6 +542,7 @@
 "commandUsageUnitWords" = "jetons, coût, dollars, estimation";
 "commandWhatsNewShow" = "Afficher les nouveautés";
 "commandWhatsNewShowWords" = "version, notes, nouveautés, modifications";
+"composerTooLongShorten" = "Trop long pour être envoyé. Raccourcissez-le d’abord.";
 "composerWordsOnly" = "Seuls des mots peuvent partir tant qu’Infinitary n’est pas mis à jour. Retirez les images et les fichiers pour envoyer ceci.";
 "crewAPart" = "Une partie";
 "crewFirstmateLabel" = "Second – %1$@";

@@ -544,6 +544,8 @@ The host draws the popover outside the authored frame, with the excerpt, an opti
 The popover stays below modal views, keeping its draft while the picture viewer or command search covers it.
 Enter in the comment field queues the note, and Command+Enter queues and sends all queued notes (Ctrl+Enter on Linux).
 Escape closes an empty popover; with a comment it explains that Cancel discards it.
+The dictation key records into the comment while it has focus, at its caret, with the mark row and microphone lines under it; Esc while it records abandons the recording and keeps the comment (`docs/composer.md`, "Where the words go").
+Typing stops at the comment's 4,000 characters; dictated words past them stay whole, the count and the too-long words show in the hint row, and Queue, Enter and a press outside queue nothing until it is trimmed.
 A press anywhere outside the popover closes it and keeps its words: a new note with words is queued, an empty new note is dropped, and a queued note keeps its edit.
 Picking another part with Point at on does the same before the new part opens; Cancel is the only control that drops typed words.
 A press outside never sends, and a card choice clicked in that press stays held because a note now waits.

@@ -1,13 +1,18 @@
 import { type CardNote, noteLabel } from "@shared/cardNotes";
 import { notePart } from "@shared/cardNoteTargets";
 import { CARD_REPLY_MAX_CHARS } from "@shared/cards";
+import { limitBand } from "@shared/composer";
 import * as m from "@shared/i18n/messages.generated";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useDictationField } from "../app/dictationField";
 import { useCommandKeys } from "../app/keyHints";
 import { useShellStore } from "../app/store";
+import { VoiceNotice } from "../app/VoiceNotice";
 import { Button, IconButton } from "../design";
+import { ComposerCount } from "../design/core/ComposerField";
 import { thisDesktop } from "../design/core/desktop";
+import { DictationMark } from "../design/voice/VoiceInput";
 import {
   focusPointAt,
   type NoteReveal,
@@ -201,6 +206,17 @@ function AnnotationPopover({ cardId, collect }: { cardId: string; collect?: Coll
   const field = useRef<HTMLTextAreaElement>(null);
   const pop = useRef<HTMLDivElement>(null);
   const [hint, setHint] = useState(false);
+  // The dictation key writes into the comment while it has focus (docs/composer.md, "Voice").
+  const dictation = useDictationField(
+    field,
+    () => useShellStore.getState().annotationPick?.note.comment ?? "",
+    (comment) =>
+      useShellStore.setState((s) =>
+        s.annotationPick
+          ? { annotationPick: { ...s.annotationPick, note: { ...s.annotationPick.note, comment } } }
+          : {},
+      ),
+  );
   const [height, setHeight] = useState(240);
   useLayoutEffect(() => {
     field.current?.focus();
@@ -226,8 +242,10 @@ function AnnotationPopover({ cardId, collect }: { cardId: string; collect?: Coll
     useShellStore.setState({ annotationPick: null });
     focusPointAt(cardId);
   };
+  // Typing stops at the limit; dictated words past it stay whole, and nothing queues until trimmed.
+  const over = limitBand(pick.note.comment.length, CARD_REPLY_MAX_CHARS) === "over";
   const queue = (send: boolean) => {
-    if (useShellStore.getState().sendingReplies[cardId]) return;
+    if (useShellStore.getState().sendingReplies[cardId] || over) return;
     queueNote(cardId, pick.note);
     if (send) void useShellStore.getState().sendReply(cardId, collect);
     else focusPointAt(cardId);
@@ -245,12 +263,14 @@ function AnnotationPopover({ cardId, collect }: { cardId: string; collect?: Coll
       style={{ left, top }}
       onKeyDown={(event) => {
         if (event.nativeEvent.isComposing) return;
+        if (dictation.keyDown(event)) return;
         // Enter in the comment queues; on a focused button it presses that button.
         if (event.key === "Enter" && !event.shiftKey) {
           event.stopPropagation();
           if (event.target === field.current) {
             event.preventDefault();
-            queue(event.metaKey || event.ctrlKey);
+            // While the comment records, Enter sends nothing, as in every field that records.
+            if (!dictation.recording) queue(event.metaKey || event.ctrlKey);
           }
         }
         if (event.key === "Escape") {
@@ -283,6 +303,7 @@ function AnnotationPopover({ cardId, collect }: { cardId: string; collect?: Coll
         aria-label={m.cardNoteCommentLabel()}
         placeholder={m.cardNotePlaceholder()}
         maxLength={CARD_REPLY_MAX_CHARS}
+        readOnly={dictation.recording}
         value={pick.note.comment}
         onChange={(event) => {
           setHint(false);
@@ -291,9 +312,26 @@ function AnnotationPopover({ cardId, collect }: { cardId: string; collect?: Coll
           });
         }}
       />
+      <DictationMark
+        recording={dictation.recording}
+        transcribing={dictation.transcribing}
+        onAbandon={() => {
+          useShellStore.getState().abandonRecording();
+          field.current?.focus();
+        }}
+        onAccept={() => useShellStore.getState().acceptRecording()}
+      />
       <p className="inf-annotation-hint" role="status">
-        {hint ? m.cardNoteDiscardHint() : m.cardAnnotationKeys({ sendKey })}
+        <span>
+          {over
+            ? m.composerTooLongShorten()
+            : hint
+              ? m.cardNoteDiscardHint()
+              : m.cardAnnotationKeys({ sendKey })}
+        </span>
+        <ComposerCount length={pick.note.comment.length} max={CARD_REPLY_MAX_CHARS} />
       </p>
+      <VoiceNotice width="100%" field={dictation.field} />
       <div className="inf-annotation-actions">
         {queued && (
           // Remove sits apart at the row's start, away from Cancel and Queue.
@@ -311,7 +349,13 @@ function AnnotationPopover({ cardId, collect }: { cardId: string; collect?: Coll
         <Button variant="ghost" onClick={cancel}>
           {m.cardNoteCancel()}
         </Button>
-        <Button onClick={() => queue(false)}>{m.cardNoteQueue()}</Button>
+        <Button
+          off={over}
+          note={over ? m.composerTooLongShorten() : undefined}
+          onClick={() => queue(false)}
+        >
+          {m.cardNoteQueue()}
+        </Button>
       </div>
     </div>,
     document.body,

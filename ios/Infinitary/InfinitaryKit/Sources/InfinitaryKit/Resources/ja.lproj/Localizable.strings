@@ -542,6 +542,7 @@
 "commandUsageUnitWords" = "トークン, 費用, ドル, 見積もり";
 "commandWhatsNewShow" = "新機能を表示";
 "commandWhatsNewShowWords" = "リリース, ノート, 変更, バージョン";
+"composerTooLongShorten" = "長すぎて送信できません。先に短くしてください。";
 "composerWordsOnly" = "Infinitary が更新されるまで、送れるのは文字だけです。送るには画像とファイルを取り除いてください。";
 "crewAPart" = "パート";
 "crewFirstmateLabel" = "一等航海士 - %1$@";

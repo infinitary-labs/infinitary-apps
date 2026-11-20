@@ -45,6 +45,7 @@ import type { DecisionModelId, DecisionsSettings, DecisionsView } from "./decisi
 import type { DecisionUseRequest } from "./decisionUses";
 import type {
   DeviceAddresses,
+  DeviceCarryOn,
   DeviceInvite,
   DeviceInviteRequest,
   DeviceRemoveWhen,
@@ -426,6 +427,12 @@ export type FirstmateApi = {
     remove: (deviceId: string, when?: DeviceRemoveWhen) => Promise<DeviceView>;
     /** Keep it: a computer waiting to be removed once it is back stays. */
     keep: (deviceId: string) => Promise<DeviceView>;
+    /**
+     * Carry its tasks on (docs/devices.md, "Joined again"): the started
+     * tasks of a computer out of reach continue on `to`, and it is removed
+     * once they have; the answer says each task that stayed, and why.
+     */
+    carryOn: (from: string, to: string) => Promise<DeviceCarryOn>;
     /** Moving the first mate to a computer that runs work (docs/devices.md, "Moving the first mate"). */
     homeMove: {
       /** The Ready list: each gap on that computer before the move. */

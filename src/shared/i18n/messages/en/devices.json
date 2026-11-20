@@ -1,4 +1,11 @@
 {
+  "devicesCarriedOn": "The tasks of a computer out of reach continue on {to}, and that entry is off your list.",
+  "devicesCarryNotRemoved": "The tasks of {from} moved, but it could not come off your list: {why}",
+  "devicesCarryStayed": {
+    "plural": "count",
+    "one": "{count} task stayed on {from}, out of reach, so it stays on your list.",
+    "other": "{count} tasks stayed on {from}, out of reach, so it stays on your list."
+  },
   "devicesJoinAddressChip": "Join by its address",
   "devicesJoinAddressSub": "The account and {computer}, as you sign in to it with SSH. {mustBeOn}",
   "devicesJoinCancel": "Cancel",

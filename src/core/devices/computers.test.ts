@@ -28,7 +28,7 @@ import { type WorkDeviceLink, WorkDevices } from "../placed/workDevices";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { RepoRegistry } from "../workspace/repoRegistry";
-import { Computers, type DeviceUpdateEvent } from "./computers";
+import { Computers, type ComputersOptions, type DeviceUpdateEvent } from "./computers";
 import { createKeyIdentity, type KeyIdentity } from "./identity";
 import { DevicePairing, type DevicePairingOptions } from "./pairing";
 
@@ -167,7 +167,11 @@ afterEach(() => {
  * with the connection listening there, and another Mac that joined with a
  * command after dialing this Mac at that address, as its command said.
  */
-function homeAt(address: string, home?: { app?: string; contract: string }) {
+function homeAt(
+  address: string,
+  home?: { app?: string; contract: string },
+  more: Partial<ComputersOptions> = {},
+) {
   const userData = scratchDir("infinitary-computers-");
   const clock = manualClock();
   let interfaces = network(address);
@@ -204,6 +208,7 @@ function homeAt(address: string, home?: { app?: string; contract: string }) {
     schedule: clock.schedule,
     bootedAt: () => 0,
     ...(home ? { home } : {}),
+    ...more,
   });
   const key = createKeyIdentity("Mac mini");
   const { link } = pairing.invite({ kind: "work", command: "another-mac" });
@@ -748,5 +753,128 @@ describe("your devices after a task changes", () => {
     tasks.close("there-0", { status: "dropped", reason: "cancelled", actor: "host" });
     expect(tasksOn(pushed.at(-1))).toBe(21);
     expect(computers.list().find((device) => device.id === deviceId)?.tasks).toBe(21);
+  });
+});
+
+/**
+ * A computer that joined again under a new key (docs/devices.md, "Joined
+ * again"; INF-5468's piece 1): its data folder gone, Mac mini joins as a
+ * new entry while its earlier one is out of reach with a task started
+ * there. The real pairing, task record and `Computers`; the move of each
+ * task stands in for `TaskMoves.requestComputerMove`, whose own tests own
+ * the move itself.
+ */
+describe("a computer that joins again under a new key", () => {
+  const ADDRESS = "192.168.65.2";
+
+  /** Mac mini joins again as `user` with a fresh key, a minute after its first join. */
+  function joinAgain(home: ReturnType<typeof homeAt>, user = "sam") {
+    home.clock.advance(60_000);
+    const joined = home.pairing.claim(
+      {
+        code: parsePairingLink(home.pairing.invite({ kind: "work", command: "another-mac" }).link)
+          .code,
+        kind: "work",
+        name: "Mac mini",
+        user: { name: user, uid: 501 },
+      },
+      shown(createKeyIdentity("Mac mini"), `::ffff:${ADDRESS}`),
+    );
+    if (!joined.ok) throw new Error(joined.reason);
+    home.connection.tell({ deviceId: joined.grant.deviceId, contact: "in-reach" });
+    return joined.grant.deviceId;
+  }
+
+  function started(home: ReturnType<typeof homeAt>, id: string) {
+    seedTask(home.tasks, {
+      id,
+      title: "Fix the footer",
+      status: "running",
+      intent: { goal: "Fix the footer", userWords: "the footer is broken" },
+      deviceId: home.deviceId,
+    });
+  }
+
+  it("names the earlier entry on the new one only for the same name and user", () => {
+    const home = homeAt(ADDRESS);
+    started(home, "footer");
+    const again = joinAgain(home);
+    const other = joinAgain(home, "builder");
+    const row = (id: string) => home.computers.list().find((device) => device.id === id);
+    expect(row(again)?.earlier).toEqual([home.deviceId]);
+    expect(row(other)?.earlier).toBeUndefined();
+    expect(row(home.deviceId)).toMatchObject({ inReach: false, tasks: 1, carriesOn: true });
+    expect(row(again)?.carriesOn).toBeUndefined();
+  });
+
+  it("carries every task on to the new entry, then removes the earlier one", async () => {
+    const asked: [string, string][] = [];
+    let tasks: TaskService | undefined;
+    const home = homeAt(ADDRESS, undefined, {
+      // The move finishes at once: the task runs on the new entry.
+      carryTask: async (taskId, to) => {
+        asked.push([taskId, to]);
+        tasks?.placement.setDevice(taskId, to);
+        return { ok: true, text: "moving" };
+      },
+    });
+    tasks = home.tasks;
+    started(home, "footer");
+    started(home, "header");
+    const again = joinAgain(home);
+
+    const answer = await home.computers.carryOn(home.deviceId, again);
+    await vi.waitFor(() => expect(home.lines).toHaveLength(1));
+
+    expect(answer).toEqual({ moving: 2, stayed: [] });
+    expect(asked).toEqual([
+      ["footer", again],
+      ["header", again],
+    ]);
+    expect(home.tasks.get("footer")?.deviceId).toBe(again);
+    expect(home.computers.list().map((device) => device.id)).toEqual([again]);
+    expect(home.lines.at(-1)).toMatchObject({ deviceId: again, stage: "done", tone: "info" });
+  });
+
+  it("keeps the earlier entry and says why when a task cannot move", async () => {
+    const problems: string[] = [];
+    const home = homeAt(ADDRESS, undefined, {
+      carryTask: async () => ({ ok: false, text: "The footer task holds no commit here." }),
+      onProblem: (text) => problems.push(text),
+    });
+    started(home, "footer");
+    const again = joinAgain(home);
+
+    const answer = await home.computers.carryOn(home.deviceId, again);
+
+    expect(answer).toEqual({ moving: 0, stayed: ["The footer task holds no commit here."] });
+    const earlier = home.computers.list().find((device) => device.id === home.deviceId);
+    expect(earlier).toMatchObject({ carriesOn: true, tasks: 1 });
+    expect(earlier?.carrying).toBeUndefined();
+    expect(problems).toEqual([]);
+  });
+
+  it("keeps the earlier entry when a move it started ends with the task still there", async () => {
+    const problems: string[] = [];
+    const home = homeAt(ADDRESS, undefined, {
+      carryTask: async () => ({ ok: true, text: "moving" }),
+      onProblem: (text) => problems.push(text),
+    });
+    started(home, "footer");
+    const again = joinAgain(home);
+
+    await home.computers.carryOn(home.deviceId, again);
+
+    expect(home.computers.list().map((device) => device.id)).toContain(home.deviceId);
+    expect(problems).toHaveLength(1);
+  });
+
+  it("refuses a computer in reach, and a destination out of reach", async () => {
+    const home = homeAt(ADDRESS, undefined, { carryTask: async () => ({ ok: true, text: "" }) });
+    started(home, "footer");
+    const again = joinAgain(home);
+    await expect(home.computers.carryOn(again, home.deviceId)).rejects.toThrow(/in reach/);
+    home.connection.tell({ deviceId: again, contact: "gone" });
+    await expect(home.computers.carryOn(home.deviceId, again)).rejects.toThrow(/out of reach/);
   });
 });

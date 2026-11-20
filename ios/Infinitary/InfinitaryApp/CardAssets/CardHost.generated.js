@@ -23082,6 +23082,158 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Working…`;
   }
+  function devicesCarriedOn(input2) {
+    const to = input2.to;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تكمل مهام حاسوب خارج المتناول على ${to}، وخرج ذلك الإدخال من قائمتك.`;
+      case "de":
+        return `Die Aufgaben eines Computers außer Reichweite laufen auf ${to} weiter, und dieser Eintrag ist von deiner Liste verschwunden.`;
+      case "es":
+        return `Las tareas de una computadora fuera de alcance continúan en ${to}, y esa entrada salió de tu lista.`;
+      case "fr":
+        return `Les tâches d'un ordinateur hors de portée continuent sur ${to}, et cette entrée a quitté votre liste.`;
+      case "ja":
+        return `連絡がつかないコンピューターのタスクが${to}で続き、その項目はリストから外れました。`;
+      case "ko":
+        return `연락 닿지 않는 컴퓨터의 작업이 ${to}에서 이어지며, 그 항목은 목록에서 빠졌습니다.`;
+      case "pt-BR":
+        return `As tarefas de um computador fora de alcance continuam em ${to}, e essa entrada saiu da sua lista.`;
+      case "zh-Hans":
+        return `一台无法联系的电脑的任务在${to}上继续，那个条目已从你的列表中移除。`;
+      case "zh-Hant":
+        return `一台連絡不上的電腦的任務在${to}上繼續，那個項目已從你的清單中移除。`;
+      case "en-XA":
+        return `[Ţĥé ţášķš öƒ á çöɱþûţéŕ öûţ öƒ ŕéáçĥ çöñţîñûé öñ ${to}, áñð ţĥáţ éñţŕý îš öƒƒ ýöûŕ ļîšţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The tasks of a computer out of reach continue on ‬${to}‮, and that entry is off your list.‬`;
+    }
+    return `The tasks of a computer out of reach continue on ${to}, and that entry is off your list.`;
+  }
+  function devicesCarryNotRemoved(input2) {
+    const from = input2.from;
+    const why = input2.why;
+    switch (currentLanguage()) {
+      case "ar":
+        return `نُقلت مهام ${from}، لكن تعذّر إخراجه من قائمتك: ${why}`;
+      case "de":
+        return `Die Aufgaben von ${from} wurden verschoben, aber der Eintrag konnte nicht von deiner Liste entfernt werden: ${why}`;
+      case "es":
+        return `Las tareas de ${from} se movieron, pero no pudo salir de tu lista: ${why}`;
+      case "fr":
+        return `Les tâches de ${from} ont été déplacées, mais il n'a pas pu quitter votre liste : ${why}`;
+      case "ja":
+        return `${from}のタスクは移りましたが、リストから外せませんでした：${why}`;
+      case "ko":
+        return `${from}의 작업은 옮겨졌지만 목록에서 뺄 수 없었습니다: ${why}`;
+      case "pt-BR":
+        return `As tarefas de ${from} foram movidas, mas ele não pôde sair da sua lista: ${why}`;
+      case "zh-Hans":
+        return `${from}的任务已移走，但无法把它从你的列表中移除：${why}`;
+      case "zh-Hant":
+        return `${from}的任務已移走，但無法把它從你的清單中移除：${why}`;
+      case "en-XA":
+        return `[Ţĥé ţášķš öƒ ${from} ɱöṽéð, ƀûţ îţ çöûļð ñöţ çöɱé öƒƒ ýöûŕ ļîšţ: ${why} ~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The tasks of ‬${from}‮ moved, but it could not come off your list: ‬${why}`;
+    }
+    return `The tasks of ${from} moved, but it could not come off your list: ${why}`;
+  }
+  function devicesCarryStayed(input2) {
+    const count = formatNumber(input2.count);
+    const from = input2.from;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `لم تبقَ أي مهمة على ${from}.`;
+          case "one":
+            return `بقيت مهمة واحدة على ${from}، وهو خارج المتناول، لذا يبقى في قائمتك.`;
+          case "two":
+            return `بقيت مهمتان على ${from}، وهو خارج المتناول، لذا يبقى في قائمتك.`;
+          case "few":
+            return `بقيت ${count} مهام على ${from}، وهو خارج المتناول، لذا يبقى في قائمتك.`;
+          case "many":
+            return `بقيت ${count} مهمة على ${from}، وهو خارج المتناول، لذا يبقى في قائمتك.`;
+          default:
+            return `بقيت ${count} مهمة على ${from}، وهو خارج المتناول، لذا يبقى في قائمتك.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} Aufgabe ist auf ${from} geblieben, außer Reichweite, also bleibt der Eintrag auf deiner Liste.`;
+          default:
+            return `${count} Aufgaben sind auf ${from} geblieben, außer Reichweite, also bleibt der Eintrag auf deiner Liste.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} tarea se quedó en ${from}, fuera de alcance, así que sigue en tu lista.`;
+          case "many":
+            return `${count} de tareas se quedaron en ${from}, fuera de alcance, así que sigue en tu lista.`;
+          default:
+            return `${count} tareas se quedaron en ${from}, fuera de alcance, así que sigue en tu lista.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} tâche est restée sur ${from}, hors de portée, donc il reste sur votre liste.`;
+          case "many":
+            return `${count} tâches sont restées sur ${from}, hors de portée, donc il reste sur votre liste.`;
+          default:
+            return `${count} tâches sont restées sur ${from}, hors de portée, donc il reste sur votre liste.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count}件のタスクが連絡がつかない${from}に残ったため、リストに残ります。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `작업 ${count}개가 연락 닿지 않는 ${from}에 남아 있어 목록에 남습니다.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} tarefa ficou em ${from}, fora de alcance, então ele continua na sua lista.`;
+          case "many":
+            return `${count} tarefas ficaram em ${from}, fora de alcance, então ele continua na sua lista.`;
+          default:
+            return `${count} tarefas ficaram em ${from}, fora de alcance, então ele continua na sua lista.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `有 ${count} 个任务留在无法联系的${from}上，所以它仍在你的列表中。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `有 ${count} 項任務留在連絡不上的${from}上，所以它仍在你的清單中。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} ţášķ šţáýéð öñ ${from}, öûţ öƒ ŕéáçĥ, šö îţ šţáýš öñ ýöûŕ ļîšţ. ~~~~~~~~~~~~~~~~~~~]`;
+          default:
+            return `[${count} ţášķš šţáýéð öñ ${from}, öûţ öƒ ŕéáçĥ, šö îţ šţáýš öñ ýöûŕ ļîšţ. ~~~~~~~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ task stayed on ‬${from}‮, out of reach, so it stays on your list.‬`;
+          default:
+            return `${count}‮ tasks stayed on ‬${from}‮, out of reach, so it stays on your list.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} task stayed on ${from}, out of reach, so it stays on your list.`;
+      default:
+        return `${count} tasks stayed on ${from}, out of reach, so it stays on your list.`;
+    }
+  }
   function devicesJoinAddressChip() {
     switch (currentLanguage()) {
       case "ar":
@@ -46962,6 +47114,526 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Cancel‬`;
     }
     return `Cancel`;
+  }
+  function settingsDevicesCarryAsk(input2) {
+    const count = formatNumber(input2.count);
+    const to = input2.to;
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `لا تكمل أي مهمة على ${to}.`;
+          case "one":
+            return `تكمل مهمته على ${to}، من آخر إيداع أحضره هذا الحاسوب.`;
+          case "two":
+            return `تكمل مهمتاه على ${to}، كل منهما من آخر إيداع أحضره هذا الحاسوب.`;
+          case "few":
+            return `تكمل مهامه الـ${count} على ${to}، كل منها من آخر إيداع أحضره هذا الحاسوب.`;
+          case "many":
+            return `تكمل مهامه الـ${count} على ${to}، كل منها من آخر إيداع أحضره هذا الحاسوب.`;
+          default:
+            return `تكمل مهامه الـ${count} على ${to}، كل منها من آخر إيداع أحضره هذا الحاسوب.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Seine Aufgabe läuft auf ${to} weiter, ab dem letzten Commit, den dieser Computer geholt hat.`;
+          default:
+            return `Seine ${count} Aufgaben laufen auf ${to} weiter, jede ab dem letzten Commit, den dieser Computer geholt hat.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Su tarea continúa en ${to}, desde la última confirmación que esta computadora trajo.`;
+          case "many":
+            return `Sus ${count} de tareas continúan en ${to}, cada una desde la última confirmación que esta computadora trajo.`;
+          default:
+            return `Sus ${count} tareas continúan en ${to}, cada una desde la última confirmación que esta computadora trajo.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Sa tâche continue sur ${to}, à partir du dernier commit que cet ordinateur a rapporté.`;
+          case "many":
+            return `Ses ${count} tâches continuent sur ${to}, chacune à partir du dernier commit que cet ordinateur a rapporté.`;
+          default:
+            return `Ses ${count} tâches continuent sur ${to}, chacune à partir du dernier commit que cet ordinateur a rapporté.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count}件のタスクが${to}で続きます。それぞれ、このコンピューターが持ち帰った最後のコミットから続きます。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `작업 ${count}개가 ${to}에서 이어집니다. 각각 이 컴퓨터가 가져온 마지막 커밋부터 이어집니다.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `A tarefa dele continua em ${to}, a partir do último commit que este computador trouxe.`;
+          case "many":
+            return `As ${count} tarefas dele continuam em ${to}, cada uma a partir do último commit que este computador trouxe.`;
+          default:
+            return `As ${count} tarefas dele continuam em ${to}, cada uma a partir do último commit que este computador trouxe.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `它的 ${count} 个任务在${to}上继续，每个都从这台电脑带回的最后一次提交开始。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `它的 ${count} 項任務在${to}上繼續，每項都從這台電腦帶回的最後一次提交開始。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Îţš ţášķ çöñţîñûéš öñ ${to}, ƒŕöɱ ţĥé ļášţ çöɱɱîţ ţĥîš çöɱþûţéŕ ƀŕöûĝĥţ ĥöɱé. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+          default:
+            return `[Îţš ${count} ţášķš çöñţîñûé öñ ${to}, éáçĥ ƒŕöɱ ţĥé ļášţ çöɱɱîţ ţĥîš çöɱþûţéŕ ƀŕöûĝĥţ ĥöɱé. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮Its task continues on ‬${to}‮, from the last commit this computer brought home.‬`;
+          default:
+            return `‮Its ‬${count}‮ tasks continue on ‬${to}‮, each from the last commit this computer brought home.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `Its task continues on ${to}, from the last commit this computer brought home.`;
+      default:
+        return `Its ${count} tasks continue on ${to}, each from the last commit this computer brought home.`;
+    }
+  }
+  function settingsDevicesCarryAskNone() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا تعمل عليه أي مهمة الآن.`;
+      case "de":
+        return `Gerade läuft keine Aufgabe darauf.`;
+      case "es":
+        return `Ahora no se ejecuta ninguna tarea en ella.`;
+      case "fr":
+        return `Aucune tâche n'y tourne pour l'instant.`;
+      case "ja":
+        return `いまこのコンピューターで動いているタスクはありません。`;
+      case "ko":
+        return `지금 이 컴퓨터에서 실행되는 작업이 없습니다.`;
+      case "pt-BR":
+        return `Nenhuma tarefa roda nele agora.`;
+      case "zh-Hans":
+        return `现在没有任务在它上面运行。`;
+      case "zh-Hant":
+        return `現在沒有任務在它上面執行。`;
+      case "en-XA":
+        return `[Ñö ţášķ ŕûñš öñ îţ ñöŵ. ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮No task runs on it now.‬`;
+    }
+    return `No task runs on it now.`;
+  }
+  function settingsDevicesCarryConfirm() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إكمالها`;
+      case "de":
+        return `Weiterführen`;
+      case "es":
+        return `Continuarlas`;
+      case "fr":
+        return `Les poursuivre`;
+      case "ja":
+        return `続ける`;
+      case "ko":
+        return `이어서 진행`;
+      case "pt-BR":
+        return `Continuar`;
+      case "zh-Hans":
+        return `继续这些任务`;
+      case "zh-Hant":
+        return `繼續這些任務`;
+      case "en-XA":
+        return `[Çáŕŕý ţĥéɱ öñ ~~~~~]`;
+      case "ar-XB":
+        return `‮Carry them on‬`;
+    }
+    return `Carry them on`;
+  }
+  function settingsDevicesCarryEarlier(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `إدخال سابق بهذا الاسم والمستخدم خارج المتناول، ولا مهام تنتظر.`;
+          case "one":
+            return `إدخال سابق بهذا الاسم والمستخدم خارج المتناول، ومهمة واحدة تنتظر.`;
+          case "two":
+            return `إدخال سابق بهذا الاسم والمستخدم خارج المتناول، ومهمتان تنتظران.`;
+          case "few":
+            return `إدخال سابق بهذا الاسم والمستخدم خارج المتناول، و${count} مهام تنتظر.`;
+          case "many":
+            return `إدخال سابق بهذا الاسم والمستخدم خارج المتناول، و${count} مهمة تنتظر.`;
+          default:
+            return `إدخال سابق بهذا الاسم والمستخدم خارج المتناول، و${count} مهمة تنتظر.`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Ein früherer Eintrag mit diesem Namen und Benutzer ist außer Reichweite, mit ${count} wartenden Aufgabe.`;
+          default:
+            return `Ein früherer Eintrag mit diesem Namen und Benutzer ist außer Reichweite, mit ${count} wartenden Aufgaben.`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Una entrada anterior con este nombre y usuario está fuera de alcance, con ${count} tarea esperando.`;
+          case "many":
+            return `Una entrada anterior con este nombre y usuario está fuera de alcance, con ${count} de tareas esperando.`;
+          default:
+            return `Una entrada anterior con este nombre y usuario está fuera de alcance, con ${count} tareas esperando.`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Une entrée plus ancienne avec ce nom et cet utilisateur est hors de portée, avec ${count} tâche en attente.`;
+          case "many":
+            return `Une entrée plus ancienne avec ce nom et cet utilisateur est hors de portée, avec ${count} tâches en attente.`;
+          default:
+            return `Une entrée plus ancienne avec ce nom et cet utilisateur est hors de portée, avec ${count} tâches en attente.`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `同じ名前とユーザーの以前の項目が連絡がつきません。${count}件のタスクが待っています。`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `같은 이름과 사용자의 이전 항목이 연락 닿지 않음 상태이며, 작업 ${count}개가 기다리고 있습니다.`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `Uma entrada anterior com este nome e usuário está fora de alcance, com ${count} tarefa esperando.`;
+          case "many":
+            return `Uma entrada anterior com este nome e usuário está fora de alcance, com ${count} tarefas esperando.`;
+          default:
+            return `Uma entrada anterior com este nome e usuário está fora de alcance, com ${count} tarefas esperando.`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `同名同用户的一个较早条目无法联系，有 ${count} 个任务在等待。`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `同名同使用者的一個較早項目連絡不上，有 ${count} 項任務在等待。`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[Åñ éáŕļîéŕ éñţŕý ŵîţĥ ţĥîš ñáɱé áñð ûšéŕ îš öûţ öƒ ŕéáçĥ, ŵîţĥ ${count} ţášķ ŵáîţîñĝ. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+          default:
+            return `[Åñ éáŕļîéŕ éñţŕý ŵîţĥ ţĥîš ñáɱé áñð ûšéŕ îš öûţ öƒ ŕéáçĥ, ŵîţĥ ${count} ţášķš ŵáîţîñĝ. ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `‮An earlier entry with this name and user is out of reach, with ‬${count}‮ task waiting.‬`;
+          default:
+            return `‮An earlier entry with this name and user is out of reach, with ‬${count}‮ tasks waiting.‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `An earlier entry with this name and user is out of reach, with ${count} task waiting.`;
+      default:
+        return `An earlier entry with this name and user is out of reach, with ${count} tasks waiting.`;
+    }
+  }
+  function settingsDevicesCarryEarlierProjects() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إدخال سابق بهذا الاسم والمستخدم خارج المتناول، وما زالت مشاريع تعمل عليه.`;
+      case "de":
+        return `Ein früherer Eintrag mit diesem Namen und Benutzer ist außer Reichweite, und Projekte laufen noch darauf.`;
+      case "es":
+        return `Una entrada anterior con este nombre y usuario está fuera de alcance, y todavía hay proyectos que se ejecutan en ella.`;
+      case "fr":
+        return `Une entrée plus ancienne avec ce nom et cet utilisateur est hors de portée, et des projets y tournent encore.`;
+      case "ja":
+        return `同じ名前とユーザーの以前の項目が連絡がつきません。まだプロジェクトがそこで動きます。`;
+      case "ko":
+        return `같은 이름과 사용자의 이전 항목이 연락 닿지 않음 상태이며, 아직 프로젝트가 그곳에서 실행됩니다.`;
+      case "pt-BR":
+        return `Uma entrada anterior com este nome e usuário está fora de alcance, e ainda há projetos rodando nela.`;
+      case "zh-Hans":
+        return `同名同用户的一个较早条目无法联系，仍有项目在它上面运行。`;
+      case "zh-Hant":
+        return `同名同使用者的一個較早項目連絡不上，仍有專案在它上面執行。`;
+      case "en-XA":
+        return `[Åñ éáŕļîéŕ éñţŕý ŵîţĥ ţĥîš ñáɱé áñð ûšéŕ îš öûţ öƒ ŕéáçĥ, áñð þŕöĵéçţš šţîļļ ŕûñ öñ îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮An earlier entry with this name and user is out of reach, and projects still run on it.‬`;
+    }
+    return `An earlier entry with this name and user is out of reach, and projects still run on it.`;
+  }
+  function settingsDevicesCarryFailed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر إكمال مهامه. يُرجى المحاولة مرة أخرى.`;
+      case "de":
+        return `Seine Aufgaben konnten nicht weitergeführt werden. Bitte versuche es erneut.`;
+      case "es":
+        return `No se pudieron continuar sus tareas. Inténtalo de nuevo.`;
+      case "fr":
+        return `Impossible de poursuivre ses tâches. Veuillez réessayer.`;
+      case "ja":
+        return `タスクを続けられませんでした。もう一度お試しください。`;
+      case "ko":
+        return `작업을 이어갈 수 없었습니다. 다시 시도하세요.`;
+      case "pt-BR":
+        return `Não foi possível continuar as tarefas dele. Tente de novo.`;
+      case "zh-Hans":
+        return `无法继续它的任务。请重试。`;
+      case "zh-Hant":
+        return `無法繼續它的任務。請再試一次。`;
+      case "en-XA":
+        return `[Çöûļð ñöţ çáŕŕý îţš ţášķš öñ. Þļéášé ţŕý áĝáîñ. ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Could not carry its tasks on. Please try again.‬`;
+    }
+    return `Could not carry its tasks on. Please try again.`;
+  }
+  function settingsDevicesCarryHere() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إكمال مهامه هنا`;
+      case "de":
+        return `Seine Aufgaben hier weiterführen`;
+      case "es":
+        return `Continuar sus tareas aquí`;
+      case "fr":
+        return `Poursuivre ses tâches ici`;
+      case "ja":
+        return `タスクをここで続ける`;
+      case "ko":
+        return `여기서 작업 이어가기`;
+      case "pt-BR":
+        return `Continuar as tarefas dele aqui`;
+      case "zh-Hans":
+        return `在这里继续它的任务`;
+      case "zh-Hant":
+        return `在這裡繼續它的任務`;
+      case "en-XA":
+        return `[Çáŕŕý îţš ţášķš öñ ĥéŕé ~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Carry its tasks on here‬`;
+    }
+    return `Carry its tasks on here`;
+  }
+  function settingsDevicesCarryHereNamed(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `إكمال مهام الإدخال السابق على ${device}`;
+      case "de":
+        return `Die Aufgaben des früheren Eintrags auf ${device} weiterführen`;
+      case "es":
+        return `Continuar las tareas de la entrada anterior en ${device}`;
+      case "fr":
+        return `Poursuivre les tâches de l'entrée plus ancienne sur ${device}`;
+      case "ja":
+        return `以前の項目のタスクを${device}で続ける`;
+      case "ko":
+        return `이전 항목의 작업을 ${device}에서 이어가기`;
+      case "pt-BR":
+        return `Continuar as tarefas da entrada anterior em ${device}`;
+      case "zh-Hans":
+        return `在${device}上继续较早条目的任务`;
+      case "zh-Hant":
+        return `在${device}上繼續較早項目的任務`;
+      case "en-XA":
+        return `[Çáŕŕý ţĥé éáŕļîéŕ éñţŕý'š ţášķš öñ ţö ${device} ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Carry the earlier entry's tasks on to ‬${device}`;
+    }
+    return `Carry the earlier entry's tasks on to ${device}`;
+  }
+  function settingsDevicesCarryLeft(input2) {
+    const from = input2.from;
+    switch (currentLanguage()) {
+      case "ar":
+        return `ما يحتفظ به ${from} وحده يبقى هناك: الإيداعات اللاحقة، والتعديلات غير المودعة، والملفات التي لا يتتبعها git، وملفات مجلدات مهامه هناك.`;
+      case "de":
+        return `Was nur ${from} hat, bleibt dort: spätere Commits, nicht committete Änderungen, Dateien, die git nicht verfolgt, und die Dateien in seinen Aufgabenordnern dort.`;
+      case "es":
+        return `Lo que solo tiene ${from} se queda allí: las confirmaciones posteriores, los cambios sin confirmar, los archivos que git no sigue y los archivos de sus carpetas de tarea allí.`;
+      case "fr":
+        return `Ce que seul ${from} détient y reste : les commits suivants, les modifications non commitées, les fichiers que git ne suit pas et les fichiers de ses dossiers de tâche là-bas.`;
+      case "ja":
+        return `${from}だけが持っているものはそこに残ります：それ以降のコミット、コミットしていない編集、gitが追跡していないファイル、そしてそこのタスクフォルダーのファイルです。`;
+      case "ko":
+        return `${from}에만 있는 것은 그곳에 남습니다: 그 이후의 커밋, 커밋하지 않은 편집, git이 추적하지 않는 파일, 그리고 그곳의 작업 폴더에 있는 파일입니다.`;
+      case "pt-BR":
+        return `O que só ${from} tem fica lá: commits posteriores, edições sem commit, arquivos que o git não acompanha e os arquivos das pastas de tarefa dele lá.`;
+      case "zh-Hans":
+        return `只有${from}持有的内容留在那里：之后的提交、未提交的修改、git 不跟踪的文件，以及那里任务文件夹中的文件。`;
+      case "zh-Hant":
+        return `只有${from}持有的內容留在那裡：之後的提交、未提交的修改、git 不追蹤的檔案，以及那裡任務資料夾中的檔案。`;
+      case "en-XA":
+        return `[Ŵĥáţ öñļý ${from} ĥöļðš šţáýš ţĥéŕé: çöɱɱîţš áƒţéŕ ţĥáţ öñé, éðîţš ñöţ çöɱɱîţţéð, ƒîļéš ĝîţ ðöéš ñöţ ţŕáçķ, áñð ţĥé ƒîļéš îñ îţš ţášķ ƒöļðéŕš ţĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮What only ‬${from}‮ holds stays there: commits after that one, edits not committed, files git does not track, and the files in its task folders there.‬`;
+    }
+    return `What only ${from} holds stays there: commits after that one, edits not committed, files git does not track, and the files in its task folders there.`;
+  }
+  function settingsDevicesCarryPick(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أين تكمل مهام ${device}؟`;
+      case "de":
+        return `Wo sollen die Aufgaben von ${device} weiterlaufen?`;
+      case "es":
+        return `¿Dónde deben continuar las tareas de ${device}?`;
+      case "fr":
+        return `Où les tâches de ${device} doivent-elles continuer ?`;
+      case "ja":
+        return `${device}のタスクをどこで続けますか？`;
+      case "ko":
+        return `${device}의 작업을 어디서 이어갈까요?`;
+      case "pt-BR":
+        return `Onde as tarefas de ${device} devem continuar?`;
+      case "zh-Hans":
+        return `${device}的任务要在哪里继续？`;
+      case "zh-Hant":
+        return `${device}的任務要在哪裡繼續？`;
+      case "en-XA":
+        return `[Ŵĥéŕé šĥöûļð ţĥé ţášķš öƒ ${device} çöñţîñûé? ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Where should the tasks of ‬${device}‮ continue?‬`;
+    }
+    return `Where should the tasks of ${device} continue?`;
+  }
+  function settingsDevicesCarryThen(input2) {
+    const from = input2.from;
+    const to = input2.to;
+    switch (currentLanguage()) {
+      case "ar":
+        return `ثم يخرج ${from}، الذي هو خارج المتناول، من قائمتك، وتعمل مشاريعه على ${to}.`;
+      case "de":
+        return `Danach verschwindet ${from}, außer Reichweite, von deiner Liste, und seine Projekte laufen auf ${to}.`;
+      case "es":
+        return `Después, ${from}, fuera de alcance, sale de tu lista, y sus proyectos se ejecutan en ${to}.`;
+      case "fr":
+        return `Ensuite, ${from}, hors de portée, quitte votre liste, et ses projets tournent sur ${to}.`;
+      case "ja":
+        return `そのあと、連絡がつかない${from}はリストから外れ、そのプロジェクトは${to}で動きます。`;
+      case "ko":
+        return `그다음 연락 닿지 않는 ${from}은 목록에서 빠지고, 그 프로젝트는 ${to}에서 실행됩니다.`;
+      case "pt-BR":
+        return `Depois, ${from}, fora de alcance, sai da sua lista, e os projetos dele rodam em ${to}.`;
+      case "zh-Hans":
+        return `然后无法联系的${from}会从你的列表中移除，它的项目在${to}上运行。`;
+      case "zh-Hant":
+        return `然後連絡不上的${from}會從你的清單中移除，它的專案在${to}上執行。`;
+      case "en-XA":
+        return `[Ţĥéñ ${from}, öûţ öƒ ŕéáçĥ, çöɱéš öƒƒ ýöûŕ ļîšţ, áñð îţš þŕöĵéçţš ŕûñ öñ ${to}. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Then ‬${from}‮, out of reach, comes off your list, and its projects run on ‬${to}‮.‬`;
+    }
+    return `Then ${from}, out of reach, comes off your list, and its projects run on ${to}.`;
+  }
+  function settingsDevicesCarryTo() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `نقل مهامه إلى…`;
+      case "de":
+        return `Seine Aufgaben verschieben nach…`;
+      case "es":
+        return `Mover sus tareas a…`;
+      case "fr":
+        return `Déplacer ses tâches vers…`;
+      case "ja":
+        return `タスクの移動先…`;
+      case "ko":
+        return `작업 옮길 곳…`;
+      case "pt-BR":
+        return `Mover as tarefas dele para…`;
+      case "zh-Hans":
+        return `把它的任务移到…`;
+      case "zh-Hant":
+        return `把它的任務移到…`;
+      case "en-XA":
+        return `[Ṁöṽé îţš ţášķš ţö… ~~~~~~]`;
+      case "ar-XB":
+        return `‮Move its tasks to…‬`;
+    }
+    return `Move its tasks to…`;
+  }
+  function settingsDevicesCarryToNamed(input2) {
+    const device = input2.device;
+    switch (currentLanguage()) {
+      case "ar":
+        return `نقل مهام ${device} إلى حاسوب آخر`;
+      case "de":
+        return `Die Aufgaben von ${device} auf einen anderen Computer verschieben`;
+      case "es":
+        return `Mover las tareas de ${device} a otra computadora`;
+      case "fr":
+        return `Déplacer les tâches de ${device} vers un autre ordinateur`;
+      case "ja":
+        return `${device}のタスクを別のコンピューターに移す`;
+      case "ko":
+        return `${device}의 작업을 다른 컴퓨터로 옮기기`;
+      case "pt-BR":
+        return `Mover as tarefas de ${device} para outro computador`;
+      case "zh-Hans":
+        return `把${device}的任务移到另一台电脑`;
+      case "zh-Hant":
+        return `把${device}的任務移到另一台電腦`;
+      case "en-XA":
+        return `[Ṁöṽé ţĥé ţášķš öƒ ${device} ţö áñöţĥéŕ çöɱþûţéŕ ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Move the tasks of ‬${device}‮ to another computer‬`;
+    }
+    return `Move the tasks of ${device} to another computer`;
+  }
+  function settingsDevicesCarrying(input2) {
+    const to = input2.to;
+    switch (currentLanguage()) {
+      case "ar":
+        return `جارٍ نقل مهامه إلى ${to}…`;
+      case "de":
+        return `Seine Aufgaben werden nach ${to} verschoben…`;
+      case "es":
+        return `Moviendo sus tareas a ${to}…`;
+      case "fr":
+        return `Déplacement de ses tâches vers ${to}…`;
+      case "ja":
+        return `タスクを${to}に移しています…`;
+      case "ko":
+        return `작업을 ${to}(으)로 옮기는 중…`;
+      case "pt-BR":
+        return `Movendo as tarefas dele para ${to}…`;
+      case "zh-Hans":
+        return `正在把它的任务移到${to}…`;
+      case "zh-Hant":
+        return `正在把它的任務移到${to}…`;
+      case "en-XA":
+        return `[Ṁöṽîñĝ îţš ţášķš ţö ${to}… ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Moving its tasks to ‬${to}‮…‬`;
+    }
+    return `Moving its tasks to ${to}…`;
   }
   function settingsDevicesChangeAddress() {
     switch (currentLanguage()) {
@@ -84235,6 +84907,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     crewmateUnreadable,
     crewmateWaiting,
     crewmateWorking,
+    devicesCarriedOn,
+    devicesCarryNotRemoved,
+    devicesCarryStayed,
     devicesJoinAddressChip,
     devicesJoinAddressSub,
     devicesJoinCancel,
@@ -85040,6 +85715,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsDevicesBringingWork,
     settingsDevicesBringingWorkOf,
     settingsDevicesCancel,
+    settingsDevicesCarryAsk,
+    settingsDevicesCarryAskNone,
+    settingsDevicesCarryConfirm,
+    settingsDevicesCarryEarlier,
+    settingsDevicesCarryEarlierProjects,
+    settingsDevicesCarryFailed,
+    settingsDevicesCarryHere,
+    settingsDevicesCarryHereNamed,
+    settingsDevicesCarryLeft,
+    settingsDevicesCarryPick,
+    settingsDevicesCarryThen,
+    settingsDevicesCarryTo,
+    settingsDevicesCarryToNamed,
+    settingsDevicesCarrying,
     settingsDevicesChangeAddress,
     settingsDevicesChangeAddressFailed,
     settingsDevicesChangeAddressNamed,
@@ -86945,6 +87634,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "crewmateUnreadable": [],
     "crewmateWaiting": [],
     "crewmateWorking": [],
+    "devicesCarriedOn": ["to"],
+    "devicesCarryNotRemoved": ["from", "why"],
+    "devicesCarryStayed": ["count", "from"],
     "devicesJoinAddressChip": [],
     "devicesJoinAddressSub": ["computer", "mustBeOn"],
     "devicesJoinCancel": [],
@@ -87750,6 +88442,20 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsDevicesBringingWork": [],
     "settingsDevicesBringingWorkOf": ["projects"],
     "settingsDevicesCancel": [],
+    "settingsDevicesCarryAsk": ["count", "to"],
+    "settingsDevicesCarryAskNone": [],
+    "settingsDevicesCarryConfirm": [],
+    "settingsDevicesCarryEarlier": ["count"],
+    "settingsDevicesCarryEarlierProjects": [],
+    "settingsDevicesCarryFailed": [],
+    "settingsDevicesCarryHere": [],
+    "settingsDevicesCarryHereNamed": ["device"],
+    "settingsDevicesCarryLeft": ["from"],
+    "settingsDevicesCarryPick": ["device"],
+    "settingsDevicesCarryThen": ["from", "to"],
+    "settingsDevicesCarryTo": [],
+    "settingsDevicesCarryToNamed": ["device"],
+    "settingsDevicesCarrying": ["to"],
     "settingsDevicesChangeAddress": [],
     "settingsDevicesChangeAddressFailed": [],
     "settingsDevicesChangeAddressNamed": ["device"],

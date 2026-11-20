@@ -215,6 +215,21 @@ There is no code to scan beside a link until the iPhone app exists (captain's pi
 
 Only the captain's own click in this computer's window removes a device; the first mate never does.
 
+### Joined again
+
+A computer that runs work and joined again under a new key - its saved work deleted, or Infinitary installed fresh - is a new row, and its earlier row stays out of reach with its tasks.
+Under the new row's summary, one `--text-sm --fg-2` line reads "An earlier entry with this name and user is out of reach, with 2 tasks waiting."
+("…, and projects still run on it." when only projects do), and a small secondary "Carry its tasks on here" stands with the row's buttons, its accessible name "Carry the earlier entry's tasks on to Mac mini".
+Any row out of reach that still holds a started task carries a small secondary "Move its tasks to…" before Remove, its accessible name "Move the tasks of Mac mini to another computer".
+Either one turns the row it was pressed on into one question in place, like Remove's:
+
+- From the new row, "Its 2 tasks continue on Mac mini, each from the last commit this computer brought home." over "What only Mac mini holds stays there: commits after that one, edits not committed, files git does not track, and the files in its task folders there." and "Then Mac mini, out of reach, comes off your list, and its projects run on Mac mini."
+- From the row out of reach, "Where should the tasks of Mac mini continue?" over grouped pills, one per computer in reach and This Mac, unpicked; the same lines appear once one is picked.
+- A ghost Cancel, focused so Enter moves nothing, and a primary "Carry them on", disabled until a destination is picked.
+
+After the yes the row out of reach reads "Moving its tasks to Mac mini…" and offers nothing, then leaves the list once every task has moved; the feed says "The tasks of a computer out of reach continue on Mac mini, and that entry is off your list."
+A task the move refuses stands under the tab as the problem, one line each, and the row stays.
+
 **Moving your first mate** (INF-4207 piece 5, captain: "let me move my home from macbook to mac mini").
 A computer that runs work, in reach, on this computer's version and not being updated or removed, carries a small ghost "Move your first mate here" before Remove, its accessible name "Move your first mate to Mac mini".
 Shown only where the first mate lives, never in a window of another computer.

@@ -601,6 +601,8 @@
 "crewmateUnreadable" = "No se pudieron leer las notas de este tripulante.";
 "crewmateWaiting" = "Esperándote";
 "crewmateWorking" = "Trabajando…";
+"devicesCarriedOn" = "Las tareas de una computadora fuera de alcance continúan en %1$@, y esa entrada salió de tu lista.";
+"devicesCarryNotRemoved" = "Las tareas de %1$@ se movieron, pero no pudo salir de tu lista: %2$@";
 "devicesJoinAddressChip" = "Unirse por su dirección";
 "devicesJoinAddressSub" = "La cuenta y la %1$@, tal como inicias sesión en ella con SSH. %2$@";
 "devicesJoinCancel" = "Cancelar";
@@ -2322,6 +2324,18 @@
 "settingsDevicesBringingWork" = "Trayendo su trabajo sin fusionar a esta computadora…";
 "settingsDevicesBringingWorkOf" = "Trayendo a esta computadora el trabajo sin fusionar de %1$@…";
 "settingsDevicesCancel" = "Cancelar";
+"settingsDevicesCarryAskNone" = "Ahora no se ejecuta ninguna tarea en ella.";
+"settingsDevicesCarryConfirm" = "Continuarlas";
+"settingsDevicesCarryEarlierProjects" = "Una entrada anterior con este nombre y usuario está fuera de alcance, y todavía hay proyectos que se ejecutan en ella.";
+"settingsDevicesCarryFailed" = "No se pudieron continuar sus tareas. Inténtalo de nuevo.";
+"settingsDevicesCarryHere" = "Continuar sus tareas aquí";
+"settingsDevicesCarryHereNamed" = "Continuar las tareas de la entrada anterior en %1$@";
+"settingsDevicesCarryLeft" = "Lo que solo tiene %1$@ se queda allí: las confirmaciones posteriores, los cambios sin confirmar, los archivos que git no sigue y los archivos de sus carpetas de tarea allí.";
+"settingsDevicesCarryPick" = "¿Dónde deben continuar las tareas de %1$@?";
+"settingsDevicesCarryThen" = "Después, %1$@, fuera de alcance, sale de tu lista, y sus proyectos se ejecutan en %2$@.";
+"settingsDevicesCarryTo" = "Mover sus tareas a…";
+"settingsDevicesCarryToNamed" = "Mover las tareas de %1$@ a otra computadora";
+"settingsDevicesCarrying" = "Moviendo sus tareas a %1$@…";
 "settingsDevicesChangeAddress" = "Cambiar dirección";
 "settingsDevicesChangeAddressFailed" = "No se pudo cambiar la dirección con la que se llega a esta computadora.";
 "settingsDevicesChangeAddressNamed" = "Cambiar la dirección de %1$@";

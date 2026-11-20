@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
 import type { ActionActor } from "@shared/actions";
 import { takesDownload, takesUpdate } from "@shared/contractFeatures";
+import { HERE } from "@shared/deviceNames";
 import {
   awayWord,
   type ComputerReach,
   type DeviceAppVersion,
+  type DeviceCarryOn,
   type DeviceFold,
   type DeviceOtherVersion,
   type DeviceRemovalStage,
@@ -32,6 +34,7 @@ import {
   type RemoteLoginUpdateOptions,
   remoteLoginWords,
 } from "@shared/remoteLogin";
+import { RUNS_ON_THIS_MAC } from "@shared/repos";
 import { compareSemver } from "@shared/semver";
 import { devicePlace } from "@shared/signIns";
 import {
@@ -118,6 +121,12 @@ export type ComputersOptions = {
    * (`TaskPlacement.runsOnChanged`), as one whose computer was forgotten does.
    */
   runsOnMoved?: (taskId: string) => void;
+  /**
+   * The captain's move of one started task off a computer out of reach to
+   * `to`, leaving behind what only that computer holds
+   * (`TaskMoves.requestComputerMove` with `leaveBehind`); a refusal is text.
+   */
+  carryTask?: (taskId: string, to: string) => Promise<{ ok: boolean; text: string }>;
   /** Every closed task's work there comes here (`PlacedSessions.bringHome`); rejects when some could not. */
   bringHome: (deviceId: string) => Promise<void>;
   /**
@@ -202,6 +211,8 @@ const COUNT_EVERY_MS = 1_000;
 export class Computers {
   /** Removals under way, with the projects each computer ran when it began. */
   private readonly removing = new Map<string, Removing>();
+  /** Computers out of reach whose tasks are being carried on, with where they go (`carryOn`). */
+  private readonly carrying = new Map<string, string>();
   /** Computers being updated over the connection now. */
   private readonly updating = new Set<string>();
   /** When the connection the row calls connected began, cleared once it is not. */
@@ -228,7 +239,10 @@ export class Computers {
     // changed since a computer last reached it may read differently now.
     options.work.onListening(() => this.changed());
     options.repos.onRunsOn(() => this.changed());
-    options.tasks.onChange(() => this.changed());
+    options.tasks.onChange(() => {
+      this.settleCarries();
+      this.changed();
+    });
   }
 
   /** Every device on the list, oldest first, with what the home reads of each right now. */
@@ -246,6 +260,16 @@ export class Computers {
     const listening = work.listening();
     // What each app open now said of its version, read once for the whole list.
     const apps = this.appVersions(devices);
+    // Entries that run work, out of reach and holding work, which a later
+    // entry with the same name and user may be the same computer joined
+    // again (docs/devices.md, "Joined again").
+    const away = devices.filter(
+      (device) =>
+        deviceRunsWork(device.kind) &&
+        !work.inReach(device.id) &&
+        !work.version(device.id) &&
+        ((running.get(device.id) ?? 0) > 0 || projects.some((repo) => repo.runsOn === device.id)),
+    );
     return devices.map((device) => {
       const app = apps.get(device.id);
       if (!deviceRunsWork(device.kind)) {
@@ -273,6 +297,20 @@ export class Computers {
       const removal: DeviceRemovalStage | undefined =
         removing?.stage ?? (pairing.removingWhenBack(device.id) ? "when-back" : undefined);
       const stranded = !inReach && !version && pairing.addressChanged(device.id, listening);
+      const carrying = this.carrying.get(device.id);
+      const earlier = away
+        .filter(
+          (other) =>
+            other.id !== device.id &&
+            other.name === device.name &&
+            device.user !== undefined &&
+            other.user === device.user &&
+            other.pairedAt < device.pairedAt &&
+            !this.removing.has(other.id) &&
+            !this.carrying.has(other.id),
+        )
+        .map((other) => other.id);
+      const tasksThere = running.get(device.id) ?? 0;
       return {
         ...device,
         inReach,
@@ -296,6 +334,11 @@ export class Computers {
           removing?.runs ??
           projects.filter((repo) => repo.runsOn === device.id).map((repo) => repo.name),
         ...(removal ? { removal } : {}),
+        ...(earlier.length > 0 ? { earlier } : {}),
+        ...(!inReach && !version && tasksThere > 0 && !removal && !carrying
+          ? { carriesOn: true as const }
+          : {}),
+        ...(carrying ? { carrying } : {}),
         ...(ssh ? { ssh } : {}),
         // A Mac that also controls this Firstmate says so while Firstmate is open there.
         ...(deviceControls(device.kind) ? { controlling: work.controlling(device.id) } : {}),
@@ -483,6 +526,107 @@ export class Computers {
     });
     this.changed();
     return this.viewOf(kept.id) ?? kept;
+  }
+
+  /**
+   * Carry its tasks on (docs/devices.md, "Joined again"): `from`, a computer
+   * out of reach, hands its work to `to` - another computer in reach, or
+   * this Mac. Each project and unstarted task whose Runs on names it names
+   * `to`; each task started there moves without what only `from` holds, as
+   * the captain's own move does; and once every one has moved, `from` is
+   * removed now (`settleCarries`). A task that cannot move stays there, and
+   * so does `from`, with a line saying why.
+   */
+  async carryOn(from: string, to: string): Promise<DeviceCarryOn> {
+    const { pairing, work, tasks, repos } = this.options;
+    const devices = pairing.list();
+    const source = devices.find((device) => device.id === from);
+    if (!source || !deviceRunsWork(source.kind))
+      throw new Error("No computer that runs work has that id.");
+    const label = deviceLabel(source);
+    if (work.inReach(from) || work.version(from))
+      throw new Error(`${label} is in reach: move its tasks one by one, or remove it.`);
+    if (this.removing.has(from)) throw new Error(`${label} is being removed already.`);
+    if (this.carrying.has(from)) throw new Error(`${label}'s tasks are moving already.`);
+    const carry = this.options.carryTask;
+    if (!carry) throw new Error(`${HERE.This} cannot move tasks between computers.`);
+    const target = devices.find((device) => device.id === to);
+    if (to === from || (to !== RUNS_ON_THIS_MAC && (!target || !deviceRunsWork(target.kind))))
+      throw new Error("Choose another computer that runs work, or this one.");
+    if (target && !work.inReach(to)) throw new Error(`${deviceLabel(target)} is out of reach.`);
+    const toName = target ? deviceLabel(target) : HERE.this;
+    // Runs on first, so nothing new starts on the computer out of reach.
+    for (const repo of repos.list())
+      if (repo.runsOn === from) repos.setRunsOn(repo.id, to === RUNS_ON_THIS_MAC ? null : to);
+    for (const taskId of tasks.placement.moveRunsOn(from, to, toName))
+      this.options.runsOnMoved?.(taskId);
+    const started = tasks
+      .list()
+      .filter((record) => record.deviceId === from && record.status === "active");
+    const stayed: string[] = [];
+    let moving = 0;
+    for (const record of started) {
+      const answer = await carry(record.id, to).catch((caught: unknown) => ({
+        ok: false,
+        text: caught instanceof Error ? caught.message : String(caught),
+      }));
+      if (answer.ok) moving += 1;
+      else stayed.push(answer.text);
+    }
+    // Only an entry whose every task moved goes: it is removed once they have.
+    if (stayed.length === 0) {
+      this.carrying.set(from, to);
+      this.settleCarries();
+    }
+    this.changed();
+    return { moving, stayed };
+  }
+
+  /**
+   * A carry whose moves are over: with no task started there any more, the
+   * computer out of reach is removed now, as Remove now does; with one
+   * still there, its move refused or ended unfinished, the computer stays
+   * on the list and the feed says so.
+   */
+  private settleCarries(): void {
+    if (this.carrying.size === 0) return;
+    const counts = this.options.tasks.activeCountsByDevice();
+    // A move still under way, in any phase, has not settled where its task runs.
+    const moving = this.options.tasks
+      .listWithComputerMove()
+      .filter((record) => record.status === "active");
+    for (const [from, to] of [...this.carrying]) {
+      const left = counts.get(from) ?? 0;
+      if (left > 0 && moving.some((record) => record.shape?.computer_move?.from === from)) continue;
+      this.carrying.delete(from);
+      const device = this.options.pairing.list().find((entry) => entry.id === from);
+      if (!device) continue;
+      const target = this.options.pairing.list().find((entry) => entry.id === to);
+      const toName = target ? deviceLabel(target) : HERE.this;
+      if (left > 0) {
+        this.options.onProblem(m.devicesCarryStayed({ count: left, from: deviceLabel(device) }));
+        continue;
+      }
+      void this.removeNow(device)
+        .then(() =>
+          this.options.emitUpdate?.({
+            type: "device_update",
+            deviceId: to,
+            name: toName,
+            stage: "done",
+            text: m.devicesCarriedOn({ to: toName }),
+            tone: "info",
+          }),
+        )
+        .catch((caught: unknown) =>
+          this.options.onProblem(
+            m.devicesCarryNotRemoved({
+              from: deviceLabel(device),
+              why: caught instanceof Error ? caught.message : String(caught),
+            }),
+          ),
+        );
+    }
   }
 
   /** Keep it: a computer waiting to be removed once it is back stays on the list. */

@@ -1,4 +1,10 @@
 {
+  "devicesCarriedOn": "一台連絡不上的電腦的任務在{to}上繼續，那個項目已從你的清單中移除。",
+  "devicesCarryNotRemoved": "{from}的任務已移走，但無法把它從你的清單中移除：{why}",
+  "devicesCarryStayed": {
+    "plural": "count",
+    "other": "有 {count} 項任務留在連絡不上的{from}上，所以它仍在你的清單中。"
+  },
   "devicesJoinAddressChip": "用位址加入",
   "devicesJoinAddressSub": "帳號和 {computer}，照你用 SSH 登入它時的寫法輸入。{mustBeOn}",
   "devicesJoinCancel": "取消",

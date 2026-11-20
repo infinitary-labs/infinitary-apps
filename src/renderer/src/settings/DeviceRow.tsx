@@ -1,4 +1,5 @@
 import { offersAddressChange, offersHomeMove, offersStandby } from "@shared/deviceActs";
+import { HERE } from "@shared/deviceNames";
 import {
   appBehind,
   approvesSecretUses,
@@ -13,13 +14,14 @@ import {
 } from "@shared/devices";
 import * as m from "@shared/i18n/messages.generated";
 import { remoteLoginWords } from "@shared/remoteLogin";
+import { RUNS_ON_THIS_MAC } from "@shared/repos";
 import { runsForAnotherFirstmate, sshConnectionWords } from "@shared/sshConnection";
 import type { StandbyView } from "@shared/standby";
 import { Fragment, useState } from "react";
-import { Button, Input } from "../design";
+import { Button, GroupedPills, Input } from "../design";
 import { sshMustBeOn } from "../devices/NearbyList";
 import { useHereAs } from "../devices/useFirstMatePlace";
-import type { DevicesTabViewProps } from "./devicesState";
+import type { CarryAsk, DevicesTabViewProps } from "./devicesState";
 import {
   addingWords,
   deviceDetail,
@@ -67,6 +69,7 @@ function CopyVersions({ device }: { device: DeviceView }) {
 
 export function DeviceRow({
   device,
+  devices,
   signIns,
   now,
   updating,
@@ -76,6 +79,7 @@ export function DeviceRow({
   onAskRemove,
   onUpdate,
   onKeep,
+  onAskCarry,
   onMake,
   moving,
   onTryAgain,
@@ -136,6 +140,7 @@ export function DeviceRow({
   const settling =
     device.removal === "bringing-work" ||
     device.removal === "cleaning-up" ||
+    device.carrying !== undefined ||
     updatingHere ||
     finding !== undefined ||
     moved !== undefined;
@@ -149,6 +154,11 @@ export function DeviceRow({
   const stopped = settling ? null : sshStoppedLine(device);
   // A Mac that left for another Firstmate is not coming back: Remove only.
   const left = runsForAnotherFirstmate(device.ssh);
+  // Joined again under a new key: the earlier entry out of reach, and what it holds.
+  const earlier =
+    settling || !device.inReach
+      ? undefined
+      : devices.find((each) => device.earlier?.includes(each.id));
   const other = device.otherVersion;
   return (
     <div
@@ -179,21 +189,30 @@ export function DeviceRow({
               ? addingWords(finding, label)
               : moved
                 ? remoteLoginWords.reachingRow(moved.address)
-                : updatingHere
-                  ? copy?.download
-                    ? remoteLoginWords.downloading(
-                        label,
-                        copy.download.received,
-                        copy.download.total,
-                      )
-                    : copy?.state === "sending"
-                      ? remoteLoginWords.sendingRow(label, copy.sent ?? 0)
-                      : copy?.state === "starting"
-                        ? remoteLoginWords.startingRow(label)
-                        : remoteLoginWords.updatingRow(device)
-                  : deviceSummary(device, own),
+                : device.carrying
+                  ? m.settingsDevicesCarrying({ to: carryName(devices, device.carrying) })
+                  : updatingHere
+                    ? copy?.download
+                      ? remoteLoginWords.downloading(
+                          label,
+                          copy.download.received,
+                          copy.download.total,
+                        )
+                      : copy?.state === "sending"
+                        ? remoteLoginWords.sendingRow(label, copy.sent ?? 0)
+                        : copy?.state === "starting"
+                          ? remoteLoginWords.startingRow(label)
+                          : remoteLoginWords.updatingRow(device)
+                    : deviceSummary(device, own),
           )}
         </span>
+        {earlier && (
+          <span className="fm-devices-summary" data-device-earlier={earlier.id}>
+            {earlier.tasks
+              ? m.settingsDevicesCarryEarlier({ count: earlier.tasks })
+              : m.settingsDevicesCarryEarlierProjects()}
+          </span>
+        )}
         {startupProblem && !settling && (
           <span className="fm-devices-summary" data-device-startup="">
             {startup === "unavailable"
@@ -237,6 +256,28 @@ export function DeviceRow({
         <span className="fm-devices-state" data-tone={state.tone}>
           {state.text}
         </span>
+      )}
+      {earlier && onAskCarry && (
+        <Button
+          variant="secondary"
+          size="sm"
+          aria-label={m.settingsDevicesCarryHereNamed({ device: label })}
+          data-device-carry-here={earlier.id}
+          onClick={() => onAskCarry({ row: device.id, from: earlier.id, to: device.id })}
+        >
+          {m.settingsDevicesCarryHere()}
+        </Button>
+      )}
+      {device.carriesOn && !settling && onAskCarry && (
+        <Button
+          variant="secondary"
+          size="sm"
+          aria-label={m.settingsDevicesCarryToNamed({ device: label })}
+          data-device-carry-to={device.id}
+          onClick={() => onAskCarry({ row: device.id, from: device.id })}
+        >
+          {m.settingsDevicesCarryTo()}
+        </Button>
       )}
       {back && (
         <Button
@@ -421,6 +462,109 @@ export function AddressChange({
         </Button>
       </div>
     </form>
+  );
+}
+
+/** The name a carry's destination goes by: a computer on the list, or this one. */
+function carryName(devices: readonly DeviceView[], id: string): string {
+  const device = devices.find((each) => each.id === id);
+  return device ? deviceLabel(device) : HERE.this;
+}
+
+/**
+ * Carry its tasks on's one question, in place of the row it was asked
+ * from (docs/devices.md, "Joined again"), with Cancel focused so Enter
+ * never moves anything: where the tasks of a computer out of reach
+ * continue, from what this computer holds, what stays behind on it, and
+ * that it then comes off the list. Asked from the computer that joined
+ * again, the destination is that one; asked from the computer out of
+ * reach, the captain picks one in reach, or this computer.
+ */
+export function CarryQuestion({
+  ask,
+  devices,
+  busy,
+  onAskCarry,
+  onCarry,
+}: DevicesTabViewProps & { ask: CarryAsk }) {
+  const here = useHereAs();
+  const [picked, setPicked] = useState(ask.to ?? "");
+  const from = devices.find((each) => each.id === ask.from);
+  if (!from) return null;
+  const choices = ask.to
+    ? []
+    : [
+        ...devices
+          .filter(
+            (each) =>
+              each.id !== from.id &&
+              deviceRunsWork(each.kind) &&
+              each.inReach === true &&
+              each.removal === undefined &&
+              each.carrying === undefined,
+          )
+          .map((each) => ({ value: each.id, label: deviceLabel(each) })),
+        { value: RUNS_ON_THIS_MAC, label: here(HERE.This) },
+      ];
+  const to = picked ? here(carryName(devices, picked)) : "";
+  const fromName = deviceLabel(from);
+  const count = from.tasks ?? 0;
+  return (
+    <div className="fm-devices-row" data-device-carrying={ask.row}>
+      <span className="fm-devices-dot" />
+      <span className="fm-devices-text">
+        {!ask.to && (
+          <span className="fm-devices-question" id={`carry-pick-${from.id}`}>
+            {m.settingsDevicesCarryPick({ device: fromName })}
+          </span>
+        )}
+        {!ask.to && (
+          <span className="fm-devices-aside-actions" data-device-carry-pick="">
+            <GroupedPills
+              name={m.settingsDevicesCarryPick({ device: fromName })}
+              htmlName={`carry-${from.id}`}
+              value={picked}
+              options={choices}
+              onChange={setPicked}
+            />
+          </span>
+        )}
+        {to && (
+          <span className="fm-devices-question" data-device-carry-ask="">
+            {count > 0
+              ? here(m.settingsDevicesCarryAsk({ count, to }))
+              : m.settingsDevicesCarryAskNone()}
+          </span>
+        )}
+        {to && count > 0 && (
+          <span className="fm-devices-question">
+            {m.settingsDevicesCarryLeft({ from: fromName })}
+          </span>
+        )}
+        {to && (
+          <span className="fm-devices-question">
+            {m.settingsDevicesCarryThen({ from: fromName, to })}
+          </span>
+        )}
+      </span>
+      <Button
+        variant="ghost"
+        size="sm"
+        autoFocus
+        disabled={busy === "carry"}
+        onClick={() => onAskCarry?.(null)}
+      >
+        {m.settingsDevicesCancel()}
+      </Button>
+      <Button
+        size="sm"
+        disabled={!picked || busy === "carry"}
+        data-device-carry-confirm=""
+        onClick={() => picked && onCarry?.(from.id, picked)}
+      >
+        {m.settingsDevicesCarryConfirm()}
+      </Button>
+    </div>
   );
 }
 

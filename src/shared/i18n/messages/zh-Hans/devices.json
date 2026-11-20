@@ -1,4 +1,10 @@
 {
+  "devicesCarriedOn": "一台无法联系的电脑的任务在{to}上继续，那个条目已从你的列表中移除。",
+  "devicesCarryNotRemoved": "{from}的任务已移走，但无法把它从你的列表中移除：{why}",
+  "devicesCarryStayed": {
+    "plural": "count",
+    "other": "有 {count} 个任务留在无法联系的{from}上，所以它仍在你的列表中。"
+  },
   "devicesJoinAddressChip": "通过地址加入",
   "devicesJoinAddressSub": "账户和 {computer}，按你用 SSH 登录它时的写法填写。{mustBeOn}",
   "devicesJoinCancel": "取消",

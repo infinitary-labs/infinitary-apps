@@ -324,6 +324,28 @@
   "settingsDevicesBringingWork": "Seine nicht zusammengeführte Arbeit kommt auf diesen Computer …",
   "settingsDevicesBringingWorkOf": "Die nicht zusammengeführte Arbeit von {projects} kommt auf diesen Computer …",
   "settingsDevicesCancel": "Abbrechen",
+  "settingsDevicesCarryAsk": {
+    "plural": "count",
+    "one": "Seine Aufgabe läuft auf {to} weiter, ab dem letzten Commit, den dieser Computer geholt hat.",
+    "other": "Seine {count} Aufgaben laufen auf {to} weiter, jede ab dem letzten Commit, den dieser Computer geholt hat."
+  },
+  "settingsDevicesCarryAskNone": "Gerade läuft keine Aufgabe darauf.",
+  "settingsDevicesCarryConfirm": "Weiterführen",
+  "settingsDevicesCarryEarlier": {
+    "plural": "count",
+    "one": "Ein früherer Eintrag mit diesem Namen und Benutzer ist außer Reichweite, mit {count} wartenden Aufgabe.",
+    "other": "Ein früherer Eintrag mit diesem Namen und Benutzer ist außer Reichweite, mit {count} wartenden Aufgaben."
+  },
+  "settingsDevicesCarryEarlierProjects": "Ein früherer Eintrag mit diesem Namen und Benutzer ist außer Reichweite, und Projekte laufen noch darauf.",
+  "settingsDevicesCarryFailed": "Seine Aufgaben konnten nicht weitergeführt werden. Bitte versuche es erneut.",
+  "settingsDevicesCarryHere": "Seine Aufgaben hier weiterführen",
+  "settingsDevicesCarryHereNamed": "Die Aufgaben des früheren Eintrags auf {device} weiterführen",
+  "settingsDevicesCarryLeft": "Was nur {from} hat, bleibt dort: spätere Commits, nicht committete Änderungen, Dateien, die git nicht verfolgt, und die Dateien in seinen Aufgabenordnern dort.",
+  "settingsDevicesCarryPick": "Wo sollen die Aufgaben von {device} weiterlaufen?",
+  "settingsDevicesCarryThen": "Danach verschwindet {from}, außer Reichweite, von deiner Liste, und seine Projekte laufen auf {to}.",
+  "settingsDevicesCarryTo": "Seine Aufgaben verschieben nach…",
+  "settingsDevicesCarryToNamed": "Die Aufgaben von {device} auf einen anderen Computer verschieben",
+  "settingsDevicesCarrying": "Seine Aufgaben werden nach {to} verschoben…",
   "settingsDevicesChangeAddress": "Adresse ändern",
   "settingsDevicesChangeAddressFailed": "Konnte nicht ändern, wo dieser Computer erreicht wird.",
   "settingsDevicesChangeAddressNamed": "Adresse von {device} ändern",

@@ -13139,6 +13139,23 @@ ${events}` : prompt;
      */
     removal: deviceRemovalStageSchema.optional(),
     /**
+     * A computer that runs work, joined again under a new key (docs/devices.md,
+     * "Joined again"): the ids of earlier entries that run work, are out of
+     * reach, have its name and user, joined before it, and still hold tasks
+     * or projects. A fact the home states; only the captain's click acts on it.
+     */
+    earlier: array(string().min(1).max(64)).max(16).optional(),
+    /**
+     * Out of reach with started tasks: the home can carry them on to another
+     * computer (`inf:devices:carry-on`). Absent from a home without that change.
+     */
+    carriesOn: literal(true).optional(),
+    /**
+     * Its tasks are being carried on to this computer, by id
+     * (`RUNS_ON_THIS_MAC` for the home), until it is removed.
+     */
+    carrying: string().min(1).max(64).optional(),
+    /**
      * A Mac whose window is connected while its work is not in reach: whether
      * its work is being set up, or why it is not running or has not reached
      * this computer (`work-setup`, docs/devices.md, "A Mac that has not
@@ -13146,6 +13163,10 @@ ${events}` : prompt;
      * not said.
      */
     workSetup: deviceWorkSetupSchema.optional()
+  });
+  strictObject({
+    moving: number().int().nonnegative(),
+    stayed: array(string().min(1).max(2e3)).max(500)
   });
   deviceViewSchema.pick({
     id: true,

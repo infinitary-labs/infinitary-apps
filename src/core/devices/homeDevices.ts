@@ -134,7 +134,7 @@ export type HomeDevices = {
 export type DevicesCrew = {
   supervisor: Pick<
     CrewSupervisor,
-    "sessions" | "updates" | "cards" | "placement" | "observeRequiredActionDevice"
+    "sessions" | "updates" | "cards" | "placement" | "moves" | "observeRequiredActionDevice"
   >;
   placed: Pick<PlacedSessions, "bringHome">;
   repos: RepoRegistry;
@@ -595,6 +595,10 @@ export async function startHomeDevices(options: {
         stopTasks: (deviceId) => supervisor.sessions.stopTasksOn(deviceId),
         runsOnMoved: (taskId) => supervisor.placement.runsOnChanged(taskId),
         bringHome: (deviceId) => placed.bringHome(deviceId),
+        // Carry its tasks on (docs/devices.md, "Joined again"): the captain's
+        // move off a computer out of reach, leaving behind what only it holds.
+        carryTask: (taskId, to) =>
+          supervisor.moves.requestComputerMove(taskId, to, "captain", [], true),
         // Its crew pauses for its update and carries on after (docs/helper.md, "Updated by its home").
         pauseTasks: (deviceId) => supervisor.updates.pauseForUpdate(deviceId),
         resumeTasks: (deviceId) => supervisor.updates.resumeAfterUpdate(deviceId),

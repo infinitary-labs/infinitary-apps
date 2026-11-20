@@ -26,7 +26,7 @@ import { thisDesktop } from "../design/core/desktop";
 import { useHereAs } from "../devices/useFirstMatePlace";
 import { isView, updateThereWords } from "../devices/viewWords";
 import { ControllingTab } from "./ControllingTab";
-import { AddressChange, DeviceRow, RemoveQuestion } from "./DeviceRow";
+import { AddressChange, CarryQuestion, DeviceRow, RemoveQuestion } from "./DeviceRow";
 import {
   AddChooser,
   AddingRow,
@@ -50,6 +50,7 @@ import { TakeoverAddresses } from "./TakeoverAddresses";
 import "./devices.css";
 import {
   type Busy,
+  type CarryAsk,
   type DevicesTabViewProps,
   joinedNoticeClears,
   type LinkPanel,
@@ -176,6 +177,7 @@ function HomeDevicesTab() {
   const [signIns, setSignIns] = useState<DeviceSignIns[]>([]);
   const [addresses, setAddresses] = useState<DeviceAddresses | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [carrying, setCarrying] = useState<CarryAsk | null>(null);
   const [changing, setChanging] = useState<string | null>(null);
   const [choosing, setChoosing] = useState(false);
   const [askingAddress, setAskingAddress] = useState(false);
@@ -391,6 +393,26 @@ function HomeDevicesTab() {
         await window.infinitary.devices.remove(deviceId, when);
       } catch (caught) {
         setProblem(caught instanceof Error ? caught.message : m.settingsDevicesRemoveFailed());
+      } finally {
+        setBusy(null);
+        refresh();
+      }
+    },
+    [refresh],
+  );
+
+  // Carry its tasks on (docs/devices.md, "Joined again"): the tasks that
+  // stayed, if any, are said with why; the rows follow the rest.
+  const carry = useCallback(
+    async (from: string, to: string) => {
+      setProblem(null);
+      setBusy("carry");
+      setCarrying(null);
+      try {
+        const answer = await window.infinitary.devices.carryOn(from, to);
+        if (answer.stayed.length > 0) setProblem(answer.stayed.join("\n"));
+      } catch (caught) {
+        setProblem(caught instanceof Error ? caught.message : m.settingsDevicesCarryFailed());
       } finally {
         setBusy(null);
         refresh();
@@ -724,6 +746,7 @@ function HomeDevicesTab() {
       panel={shown}
       now={now}
       removing={removing}
+      carrying={carrying}
       changing={changing}
       moving={moving}
       choosing={choosing}
@@ -808,6 +831,8 @@ function HomeDevicesTab() {
       onUpdate={beginUpdate}
       onRemove={(id, when) => void remove(id, when)}
       onKeep={(id) => void keep(id)}
+      onAskCarry={setCarrying}
+      onCarry={(from, to) => void carry(from, to)}
       onTryAgain={(id) => void tryAgain(id)}
       onFixWork={(id) => void fixWork(id)}
       onAskChangeAddress={setChanging}
@@ -844,9 +869,15 @@ export function DevicesTabView(
   // A question can hold selection only while its inspector can still render it.
   const packageOwner = devices.find((device) => device.id === props.packageUpdate?.id)?.id;
   const cancelWorker = () => props.onCancelWorkerUpdate?.();
-  const question = [packageOwner, props.removing, changing, standbyAsking, homeMove.asking].find(
-    (id) => devices.some((device) => device.id === id),
-  );
+  const carryRow = props.carrying?.row;
+  const question = [
+    packageOwner,
+    props.removing,
+    carryRow,
+    changing,
+    standbyAsking,
+    homeMove.asking,
+  ].find((id) => devices.some((device) => device.id === id));
   const selected = devices.find((device) => device.id === (question ?? props.selection));
   const selectedPeer = selected && !localUsers.includes(selected) ? selected : null;
   const inspector = useRef<HTMLDivElement>(null);
@@ -874,16 +905,18 @@ export function DevicesTabView(
       replacement?.focus();
     }
   }, [question]);
-  const ask = (open: (id: string | null) => void) => (id: string | null) => {
-    if (id && packageOwner) return;
-    if (
-      id &&
-      document.activeElement instanceof HTMLElement &&
-      inspector.current?.contains(document.activeElement)
-    )
-      trigger.current = document.activeElement;
-    open(id);
-  };
+  const ask =
+    <T,>(open: (id: T | null) => void) =>
+    (id: T | null) => {
+      if (id && packageOwner) return;
+      if (
+        id &&
+        document.activeElement instanceof HTMLElement &&
+        inspector.current?.contains(document.activeElement)
+      )
+        trigger.current = document.activeElement;
+      open(id);
+    };
   const keepCopy = (deviceId: string) => {
     setStandbyProblem(null);
     void window.infinitary.devices.standby
@@ -955,6 +988,7 @@ export function DevicesTabView(
               return;
             }
             if (question === props.removing) props.onAskRemove(null);
+            else if (question === carryRow) props.onAskCarry?.(null);
             else if (question === changing) props.onAskChangeAddress(null);
             else if (question === standbyAsking) setStandbyAsking(null);
             else homeMove.ask(null);
@@ -984,6 +1018,8 @@ export function DevicesTabView(
             <Fragment key={device.id}>
               {props.removing === device.id ? (
                 <RemoveQuestion device={device} {...props} />
+              ) : props.carrying && carryRow === device.id ? (
+                <CarryQuestion {...props} ask={props.carrying} />
               ) : changing === device.id ? (
                 <AddressChange device={device} {...props} />
               ) : (
@@ -993,6 +1029,7 @@ export function DevicesTabView(
                     device={device}
                     busy={packageOwner ? "link" : props.busy}
                     onAskRemove={ask(props.onAskRemove)}
+                    onAskCarry={props.onAskCarry ? ask(props.onAskCarry) : undefined}
                     onAskChangeAddress={ask(props.onAskChangeAddress)}
                     onAskMoveHome={fromAView ? undefined : ask(homeMove.ask)}
                     standby={standbys.get(device.id)}

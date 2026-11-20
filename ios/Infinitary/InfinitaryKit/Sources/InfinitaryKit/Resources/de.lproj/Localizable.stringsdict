@@ -387,6 +387,22 @@
       <string>+%1$ld Zeilen</string>
     </dict>
   </dict>
+  <key>devicesCarryStayed</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>%1$ld Aufgabe ist auf %2$@ geblieben, außer Reichweite, also bleibt der Eintrag auf deiner Liste.</string>
+      <key>other</key>
+      <string>%1$ld Aufgaben sind auf %2$@ geblieben, außer Reichweite, also bleibt der Eintrag auf deiner Liste.</string>
+    </dict>
+  </dict>
   <key>feedBatchFormedMany</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -1585,6 +1601,38 @@
       <string>Jedes Mal, wenn neue Ereignisse eintreffen. Infinitary schaut jede Minute nach.</string>
       <key>other</key>
       <string>Jedes Mal, wenn neue Ereignisse eintreffen. Infinitary schaut alle %1$ld Minuten nach.</string>
+    </dict>
+  </dict>
+  <key>settingsDevicesCarryAsk</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Seine Aufgabe läuft auf %2$@ weiter, ab dem letzten Commit, den dieser Computer geholt hat.</string>
+      <key>other</key>
+      <string>Seine %1$ld Aufgaben laufen auf %2$@ weiter, jede ab dem letzten Commit, den dieser Computer geholt hat.</string>
+    </dict>
+  </dict>
+  <key>settingsDevicesCarryEarlier</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Ein früherer Eintrag mit diesem Namen und Benutzer ist außer Reichweite, mit %1$ld wartenden Aufgabe.</string>
+      <key>other</key>
+      <string>Ein früherer Eintrag mit diesem Namen und Benutzer ist außer Reichweite, mit %1$ld wartenden Aufgaben.</string>
     </dict>
   </dict>
   <key>settingsDevicesRemoveRunsAfter</key>

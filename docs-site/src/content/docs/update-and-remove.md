@@ -86,3 +86,15 @@ If this computer runs work for another, press **Leave** in Settings → **Device
   For an AppImage, delete the file.
 
 Your saved work stays in `~/Library/Application Support/infinitary` on a Mac, and in `~/.config/infinitary` on Linux.
+
+### What deletes your saved work
+
+These delete that folder, and what Infinitary kept there goes with it:
+
+- `brew uninstall --zap`.
+- An uninstaller app that also removes an app's support files.
+- Moving the folder itself to the Trash, or deleting it.
+
+On a computer that runs work for another, that folder holds the computer's own key, its working copies and its tasks' files.
+Without it, the computer joins again as a new entry, and work it had not brought home stays lost.
+See [A computer is listed twice](/troubleshooting/#a-computer-is-listed-twice).

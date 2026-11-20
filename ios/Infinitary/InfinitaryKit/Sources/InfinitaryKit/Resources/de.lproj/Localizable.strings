@@ -601,6 +601,8 @@
 "crewmateUnreadable" = "Die Unterhaltung dieses Crewmitglieds konnte nicht gelesen werden.";
 "crewmateWaiting" = "Wartet auf dich";
 "crewmateWorking" = "Arbeitet …";
+"devicesCarriedOn" = "Die Aufgaben eines Computers außer Reichweite laufen auf %1$@ weiter, und dieser Eintrag ist von deiner Liste verschwunden.";
+"devicesCarryNotRemoved" = "Die Aufgaben von %1$@ wurden verschoben, aber der Eintrag konnte nicht von deiner Liste entfernt werden: %2$@";
 "devicesJoinAddressChip" = "Über die Adresse beitreten";
 "devicesJoinAddressSub" = "Das Konto und der %1$@, so wie du dich per SSH dort anmeldest. %2$@";
 "devicesJoinCancel" = "Abbrechen";
@@ -2322,6 +2324,18 @@
 "settingsDevicesBringingWork" = "Seine nicht zusammengeführte Arbeit kommt auf diesen Computer …";
 "settingsDevicesBringingWorkOf" = "Die nicht zusammengeführte Arbeit von %1$@ kommt auf diesen Computer …";
 "settingsDevicesCancel" = "Abbrechen";
+"settingsDevicesCarryAskNone" = "Gerade läuft keine Aufgabe darauf.";
+"settingsDevicesCarryConfirm" = "Weiterführen";
+"settingsDevicesCarryEarlierProjects" = "Ein früherer Eintrag mit diesem Namen und Benutzer ist außer Reichweite, und Projekte laufen noch darauf.";
+"settingsDevicesCarryFailed" = "Seine Aufgaben konnten nicht weitergeführt werden. Bitte versuche es erneut.";
+"settingsDevicesCarryHere" = "Seine Aufgaben hier weiterführen";
+"settingsDevicesCarryHereNamed" = "Die Aufgaben des früheren Eintrags auf %1$@ weiterführen";
+"settingsDevicesCarryLeft" = "Was nur %1$@ hat, bleibt dort: spätere Commits, nicht committete Änderungen, Dateien, die git nicht verfolgt, und die Dateien in seinen Aufgabenordnern dort.";
+"settingsDevicesCarryPick" = "Wo sollen die Aufgaben von %1$@ weiterlaufen?";
+"settingsDevicesCarryThen" = "Danach verschwindet %1$@, außer Reichweite, von deiner Liste, und seine Projekte laufen auf %2$@.";
+"settingsDevicesCarryTo" = "Seine Aufgaben verschieben nach…";
+"settingsDevicesCarryToNamed" = "Die Aufgaben von %1$@ auf einen anderen Computer verschieben";
+"settingsDevicesCarrying" = "Seine Aufgaben werden nach %1$@ verschoben…";
 "settingsDevicesChangeAddress" = "Adresse ändern";
 "settingsDevicesChangeAddressFailed" = "Konnte nicht ändern, wo dieser Computer erreicht wird.";
 "settingsDevicesChangeAddressNamed" = "Adresse von %1$@ ändern";

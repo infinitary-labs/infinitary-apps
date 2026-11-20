@@ -324,6 +324,28 @@
   "settingsDevicesBringingWork": "Bringing its unmerged work to this computer…",
   "settingsDevicesBringingWorkOf": "Bringing {projects}'s unmerged work to this computer…",
   "settingsDevicesCancel": "Cancel",
+  "settingsDevicesCarryAsk": {
+    "plural": "count",
+    "one": "Its task continues on {to}, from the last commit this computer brought home.",
+    "other": "Its {count} tasks continue on {to}, each from the last commit this computer brought home."
+  },
+  "settingsDevicesCarryAskNone": "No task runs on it now.",
+  "settingsDevicesCarryConfirm": "Carry them on",
+  "settingsDevicesCarryEarlier": {
+    "plural": "count",
+    "one": "An earlier entry with this name and user is out of reach, with {count} task waiting.",
+    "other": "An earlier entry with this name and user is out of reach, with {count} tasks waiting."
+  },
+  "settingsDevicesCarryEarlierProjects": "An earlier entry with this name and user is out of reach, and projects still run on it.",
+  "settingsDevicesCarryFailed": "Could not carry its tasks on. Please try again.",
+  "settingsDevicesCarryHere": "Carry its tasks on here",
+  "settingsDevicesCarryHereNamed": "Carry the earlier entry's tasks on to {device}",
+  "settingsDevicesCarryLeft": "What only {from} holds stays there: commits after that one, edits not committed, files git does not track, and the files in its task folders there.",
+  "settingsDevicesCarryPick": "Where should the tasks of {device} continue?",
+  "settingsDevicesCarryThen": "Then {from}, out of reach, comes off your list, and its projects run on {to}.",
+  "settingsDevicesCarryTo": "Move its tasks to…",
+  "settingsDevicesCarryToNamed": "Move the tasks of {device} to another computer",
+  "settingsDevicesCarrying": "Moving its tasks to {to}…",
   "settingsDevicesChangeAddress": "Change address",
   "settingsDevicesChangeAddressFailed": "Could not change where this computer is reached.",
   "settingsDevicesChangeAddressNamed": "Change the address of {device}",

@@ -68,6 +68,7 @@ Until it is made, Infinitary's work is read where it is, in Firstmate 3000's fol
 | `file-reach/` | A file of this computer's set aside while the home reads it for the files command, at 0600, let go once read and emptied when the run starts (`docs/files.md`) |
 
 The folder is 0700 and every file in it 0600.
+Deleting the folder deletes the computer's key, its working copies and what its task folders held, so the computer joins again as a new entry and its earlier one stays on the home's list out of reach (`docs/devices.md`, "Joined again").
 One process at a time works from it (`src/core/helper/lock.ts`): `join` and `run` take `running.lock`, a second is refused, and a lock whose process is gone, or that was written before this computer last started (its number may belong to anyone now), is taken over.
 
 ## Its commands
@@ -1238,6 +1239,8 @@ Nothing moves on its own, and a move between two computers in reach is unchanged
 - **The first mate hears it when the captain asks.**
   No wake carries a task stranded on a computer out of reach.
   The crew line's `away` (`CrewStatusEntry.away`, and the task index's `away`) says the computer is out of reach, which commit this computer holds and that `move_task` with `leave_behind` continues it on the captain's yes.
+- **Every task of one computer at once.**
+  Settings -> Devices carries every task of a computer out of reach on to another with one question, the same move for each, then removes the old entry (`docs/devices.md`, "Joined again").
 
 ## Its own sign-ins
 

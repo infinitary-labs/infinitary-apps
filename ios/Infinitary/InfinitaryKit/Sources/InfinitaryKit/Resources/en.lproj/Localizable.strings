@@ -601,6 +601,8 @@
 "crewmateUnreadable" = "This crewmate's session could not be read.";
 "crewmateWaiting" = "Waiting on you";
 "crewmateWorking" = "Working…";
+"devicesCarriedOn" = "The tasks of a computer out of reach continue on %1$@, and that entry is off your list.";
+"devicesCarryNotRemoved" = "The tasks of %1$@ moved, but it could not come off your list: %2$@";
 "devicesJoinAddressChip" = "Join by its address";
 "devicesJoinAddressSub" = "The account and %1$@, as you sign in to it with SSH. %2$@";
 "devicesJoinCancel" = "Cancel";
@@ -2322,6 +2324,18 @@
 "settingsDevicesBringingWork" = "Bringing its unmerged work to this computer…";
 "settingsDevicesBringingWorkOf" = "Bringing %1$@'s unmerged work to this computer…";
 "settingsDevicesCancel" = "Cancel";
+"settingsDevicesCarryAskNone" = "No task runs on it now.";
+"settingsDevicesCarryConfirm" = "Carry them on";
+"settingsDevicesCarryEarlierProjects" = "An earlier entry with this name and user is out of reach, and projects still run on it.";
+"settingsDevicesCarryFailed" = "Could not carry its tasks on. Please try again.";
+"settingsDevicesCarryHere" = "Carry its tasks on here";
+"settingsDevicesCarryHereNamed" = "Carry the earlier entry's tasks on to %1$@";
+"settingsDevicesCarryLeft" = "What only %1$@ holds stays there: commits after that one, edits not committed, files git does not track, and the files in its task folders there.";
+"settingsDevicesCarryPick" = "Where should the tasks of %1$@ continue?";
+"settingsDevicesCarryThen" = "Then %1$@, out of reach, comes off your list, and its projects run on %2$@.";
+"settingsDevicesCarryTo" = "Move its tasks to…";
+"settingsDevicesCarryToNamed" = "Move the tasks of %1$@ to another computer";
+"settingsDevicesCarrying" = "Moving its tasks to %1$@…";
 "settingsDevicesChangeAddress" = "Change address";
 "settingsDevicesChangeAddressFailed" = "Could not change where this computer is reached.";
 "settingsDevicesChangeAddressNamed" = "Change the address of %1$@";

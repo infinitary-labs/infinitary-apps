@@ -601,6 +601,8 @@
 "crewmateUnreadable" = "无法读取这名船员的对话。";
 "crewmateWaiting" = "等你处理";
 "crewmateWorking" = "处理中…";
+"devicesCarriedOn" = "一台无法联系的电脑的任务在%1$@上继续，那个条目已从你的列表中移除。";
+"devicesCarryNotRemoved" = "%1$@的任务已移走，但无法把它从你的列表中移除：%2$@";
 "devicesJoinAddressChip" = "通过地址加入";
 "devicesJoinAddressSub" = "账户和 %1$@，按你用 SSH 登录它时的写法填写。%2$@";
 "devicesJoinCancel" = "取消";
@@ -2322,6 +2324,18 @@
 "settingsDevicesBringingWork" = "正在把它未合并的工作转到这台电脑…";
 "settingsDevicesBringingWorkOf" = "正在把 %1$@ 未合并的工作转到这台电脑…";
 "settingsDevicesCancel" = "取消";
+"settingsDevicesCarryAskNone" = "现在没有任务在它上面运行。";
+"settingsDevicesCarryConfirm" = "继续这些任务";
+"settingsDevicesCarryEarlierProjects" = "同名同用户的一个较早条目无法联系，仍有项目在它上面运行。";
+"settingsDevicesCarryFailed" = "无法继续它的任务。请重试。";
+"settingsDevicesCarryHere" = "在这里继续它的任务";
+"settingsDevicesCarryHereNamed" = "在%1$@上继续较早条目的任务";
+"settingsDevicesCarryLeft" = "只有%1$@持有的内容留在那里：之后的提交、未提交的修改、git 不跟踪的文件，以及那里任务文件夹中的文件。";
+"settingsDevicesCarryPick" = "%1$@的任务要在哪里继续？";
+"settingsDevicesCarryThen" = "然后无法联系的%1$@会从你的列表中移除，它的项目在%2$@上运行。";
+"settingsDevicesCarryTo" = "把它的任务移到…";
+"settingsDevicesCarryToNamed" = "把%1$@的任务移到另一台电脑";
+"settingsDevicesCarrying" = "正在把它的任务移到%1$@…";
 "settingsDevicesChangeAddress" = "更改地址";
 "settingsDevicesChangeAddressFailed" = "无法更改这台电脑的连接地址。";
 "settingsDevicesChangeAddressNamed" = "更改 %1$@ 的地址";

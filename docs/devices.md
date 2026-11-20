@@ -658,6 +658,30 @@ The home has no identity for a computer beyond its keys, so each step below rest
 - **Removed while its window holds it.**
   Removing the entry a window holds never returns that window to its first screen while the Mac's work still runs for the same home as another entry: the window takes that entry's grant at once and carries on, saying so in Settings -> Devices (`docs/view.md`, "A Mac that runs work").
   An entry waiting to be removed once it is back that only its window holds - its work out of reach and no working copy kept there - is removed when that window connects (`Computers.viewContact`).
+- **Joined again under a new key.**
+  A computer whose data folder was deleted, or whose Infinitary was reinstalled, joins with a new key, so the home cannot prove it is the earlier entry; see "Joined again" below.
+
+## Joined again
+
+A computer that runs work and joins again under a new key is a new entry, and its earlier one stays on the list out of reach, with its tasks and the projects that run on it.
+The home never treats the two as one computer on its own: a name and a user prove nothing a key would.
+
+- **The earlier entry.**
+  Each entry in reach lists in `earlier` the work entries out of reach with the same name, the same user and an earlier join, that still hold a task or a project (`Computers.list`).
+  Settings -> Devices says so under the new entry's row, with one button, Carry its tasks on here.
+- **Any entry out of reach.**
+  An entry out of reach that still holds a started task is marked `carriesOn`, and its row offers Move its tasks to..., which asks where: another computer in reach, or this Mac.
+- **The question.**
+  Both buttons open one question in place of the row, saying how many tasks continue, that each continues from the last commit the first mate's computer holds, what stays on the old entry - commits after that one, edits not committed, files git does not track and the files in its task folders there - and that the old entry then comes off the list.
+- **Carrying on.**
+  The captain's yes sends `inf:devices:carry-on` with both ids (`Computers.carryOn`).
+  Each project whose Runs on named the old entry names the new one, and each live task's Runs on follows (`TaskService.placement.moveRunsOn`).
+  Each started task moves with the move off a computer out of reach (`TaskMoves.requestComputerMove` with its leave-behind flag; `docs/task-moves.md`), and each one that move refuses is named in the answer, with why.
+- **Removing the old entry.**
+  When every task moved, the row reads that its tasks are moving, and once no task is left on the old entry and no move from it is still under way, it is removed with Remove now (above, "Remove"), and the feed says its tasks continue on the new entry.
+  A task left with no move under way keeps the old entry on the list, and the feed says how many stayed.
+- **What it does not do.**
+  It does not bring back what only the old folder held, read the Trash, merge two data folders or attach the old key again.
 
 ## Finding the home again
 
@@ -1344,6 +1368,7 @@ A computer that runs work never loses work that never merged to a removal (`Comp
 | `inf:devices:invite` | views | `device-invite`, tier `hands` |
 | `inf:devices:remove` | views | `device-remove`, tier `hands`; a computer that runs work out of reach takes `when-back` or `now` |
 | `inf:devices:fold` | views | none: only a Mac's own window folds its entry into the one its work keeps ("One computer, one entry") |
+| `inf:devices:carry-on` | views | none: the captain's yes under Carry its tasks on moves an entry out of reach's tasks and projects to another computer, then removes it ("Joined again") |
 | `inf:devices:keep` | views | none: it takes back the captain's own wait to remove a computer once it is back |
 | `inf:devices:try-again` | views | none: the captain's Try again, or the `devices.try-again` command, tries this Mac's own SSH connection once more and sets nothing |
 | `inf:devices:change-address` | views | none: the captain's Change address reaches a computer added by its address somewhere else, once a look there finds the same computer |

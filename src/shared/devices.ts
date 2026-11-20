@@ -649,6 +649,23 @@ export const deviceViewSchema = z.strictObject({
    */
   removal: deviceRemovalStageSchema.optional(),
   /**
+   * A computer that runs work, joined again under a new key (docs/devices.md,
+   * "Joined again"): the ids of earlier entries that run work, are out of
+   * reach, have its name and user, joined before it, and still hold tasks
+   * or projects. A fact the home states; only the captain's click acts on it.
+   */
+  earlier: z.array(z.string().min(1).max(64)).max(16).optional(),
+  /**
+   * Out of reach with started tasks: the home can carry them on to another
+   * computer (`inf:devices:carry-on`). Absent from a home without that change.
+   */
+  carriesOn: z.literal(true).optional(),
+  /**
+   * Its tasks are being carried on to this computer, by id
+   * (`RUNS_ON_THIS_MAC` for the home), until it is removed.
+   */
+  carrying: z.string().min(1).max(64).optional(),
+  /**
    * A Mac whose window is connected while its work is not in reach: whether
    * its work is being set up, or why it is not running or has not reached
    * this computer (`work-setup`, docs/devices.md, "A Mac that has not
@@ -658,6 +675,17 @@ export const deviceViewSchema = z.strictObject({
   workSetup: deviceWorkSetupSchema.optional(),
 });
 export type DeviceView = z.infer<typeof deviceViewSchema>;
+
+/**
+ * What Carry its tasks on answered (docs/devices.md, "Joined again"): how
+ * many started tasks began moving, and one line for each that stayed, with
+ * why. With none staying, the earlier entry is removed once they have moved.
+ */
+export const deviceCarryOnSchema = z.strictObject({
+  moving: z.number().int().nonnegative(),
+  stayed: z.array(z.string().min(1).max(2_000)).max(500),
+});
+export type DeviceCarryOn = z.infer<typeof deviceCarryOnSchema>;
 
 /** Public scene facts only: no addresses, sign-ins, setup or removal authority. */
 export const computerPresenceSchema = deviceViewSchema.pick({

@@ -579,6 +579,30 @@
       <string>+%1$ld سطر</string>
     </dict>
   </dict>
+  <key>devicesCarryStayed</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>لم تبقَ أي مهمة على %2$@.</string>
+      <key>one</key>
+      <string>بقيت مهمة واحدة على %2$@، وهو خارج المتناول، لذا يبقى في قائمتك.</string>
+      <key>two</key>
+      <string>بقيت مهمتان على %2$@، وهو خارج المتناول، لذا يبقى في قائمتك.</string>
+      <key>few</key>
+      <string>بقيت %1$ld مهام على %2$@، وهو خارج المتناول، لذا يبقى في قائمتك.</string>
+      <key>many</key>
+      <string>بقيت %1$ld مهمة على %2$@، وهو خارج المتناول، لذا يبقى في قائمتك.</string>
+      <key>other</key>
+      <string>بقيت %1$ld مهمة على %2$@، وهو خارج المتناول، لذا يبقى في قائمتك.</string>
+    </dict>
+  </dict>
   <key>feedBatchFormedMany</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -2377,6 +2401,54 @@
       <string>في كل مرة تصل فيها أحداث جديدة. يتحقق Infinitary كل %1$ld دقيقة.</string>
       <key>other</key>
       <string>في كل مرة تصل فيها أحداث جديدة. يتحقق Infinitary كل %1$ld دقيقة.</string>
+    </dict>
+  </dict>
+  <key>settingsDevicesCarryAsk</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>لا تكمل أي مهمة على %2$@.</string>
+      <key>one</key>
+      <string>تكمل مهمته على %2$@، من آخر إيداع أحضره هذا الحاسوب.</string>
+      <key>two</key>
+      <string>تكمل مهمتاه على %2$@، كل منهما من آخر إيداع أحضره هذا الحاسوب.</string>
+      <key>few</key>
+      <string>تكمل مهامه الـ%1$ld على %2$@، كل منها من آخر إيداع أحضره هذا الحاسوب.</string>
+      <key>many</key>
+      <string>تكمل مهامه الـ%1$ld على %2$@، كل منها من آخر إيداع أحضره هذا الحاسوب.</string>
+      <key>other</key>
+      <string>تكمل مهامه الـ%1$ld على %2$@، كل منها من آخر إيداع أحضره هذا الحاسوب.</string>
+    </dict>
+  </dict>
+  <key>settingsDevicesCarryEarlier</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>إدخال سابق بهذا الاسم والمستخدم خارج المتناول، ولا مهام تنتظر.</string>
+      <key>one</key>
+      <string>إدخال سابق بهذا الاسم والمستخدم خارج المتناول، ومهمة واحدة تنتظر.</string>
+      <key>two</key>
+      <string>إدخال سابق بهذا الاسم والمستخدم خارج المتناول، ومهمتان تنتظران.</string>
+      <key>few</key>
+      <string>إدخال سابق بهذا الاسم والمستخدم خارج المتناول، و%1$ld مهام تنتظر.</string>
+      <key>many</key>
+      <string>إدخال سابق بهذا الاسم والمستخدم خارج المتناول، و%1$ld مهمة تنتظر.</string>
+      <key>other</key>
+      <string>إدخال سابق بهذا الاسم والمستخدم خارج المتناول، و%1$ld مهمة تنتظر.</string>
     </dict>
   </dict>
   <key>settingsDevicesRemoveRunsAfter</key>

@@ -1,4 +1,10 @@
 {
+  "devicesCarriedOn": "연락 닿지 않는 컴퓨터의 작업이 {to}에서 이어지며, 그 항목은 목록에서 빠졌습니다.",
+  "devicesCarryNotRemoved": "{from}의 작업은 옮겨졌지만 목록에서 뺄 수 없었습니다: {why}",
+  "devicesCarryStayed": {
+    "plural": "count",
+    "other": "작업 {count}개가 연락 닿지 않는 {from}에 남아 있어 목록에 남습니다."
+  },
   "devicesJoinAddressChip": "주소로 참여",
   "devicesJoinAddressSub": "SSH로 로그인할 때 쓰는 계정과 {computer}예요. {mustBeOn}",
   "devicesJoinCancel": "취소",

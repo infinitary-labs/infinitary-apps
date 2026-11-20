@@ -1,4 +1,10 @@
 {
+  "devicesCarriedOn": "連絡がつかないコンピューターのタスクが{to}で続き、その項目はリストから外れました。",
+  "devicesCarryNotRemoved": "{from}のタスクは移りましたが、リストから外せませんでした：{why}",
+  "devicesCarryStayed": {
+    "plural": "count",
+    "other": "{count}件のタスクが連絡がつかない{from}に残ったため、リストに残ります。"
+  },
   "devicesJoinAddressChip": "アドレスで参加",
   "devicesJoinAddressSub": "SSH でサインインするときと同じ形式のアカウントと {computer}。{mustBeOn}",
   "devicesJoinCancel": "キャンセル",

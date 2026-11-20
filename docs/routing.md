@@ -78,13 +78,13 @@ Lesson guidance and voice live only in the Lessons runbook (`docs/lessons.md`).
 
 ## A model that left every level
 
-A running task's next conversation - a reopen after a quit, the restart after the model's context limit or repeated refusals, or the reopen after a move to another computer - asks for the model of its newest routing choice only while routing would still place that model (`Router.holdsAtALevel`): a level in Settings → Intelligence → Models holds it, or a Settings pin names it.
-It keeps a model the task names (`override_model_id`) whatever the levels hold.
+A running task's next conversation on this Mac - a reopen after a quit, or the restart after the model's context limit or repeated refusals - asks for the model of its newest routing choice only while routing would still place that model (`Router.holdsAtALevel`): a level in Settings → Intelligence → Models holds it, or a Settings pin names it.
 Only the person's own placements leave a model out: with no slot record, or while the starter map or the listed models stand in for them (`ModelSlots.routable`'s `placed`), every model counts as held.
-Otherwise the task routes again on its own shape where it runs, inside `Router.inOrder`, before its conversation opens (`TaskMoves.routeAgainIfLeft`).
-The new choice is written as a routing row and on the record with its account, the way a provider move is, and one timeline line and feed line, written as the host, names the model that left and the one it routed to.
+Otherwise the task routes again on its own shape before its conversation opens (`TaskMoves.routeAgainIfLeft`), inside `Router.inOrder`, as its start did: a review still prefers a provider other than its builder's (R9).
+The new routing row, the record's model and account, and one timeline and feed line naming the model that left and the one the task uses now commit in one transaction, the line saved as a fact any language words; the conversation then opens as a reopen does, on the newest routing choice and its effort.
 The newest routing row then names a held model, so a later reopen keeps it and says nothing more.
-When routing again finds no model, or the same one, the task keeps its routed model.
+The task keeps its routed model when it names that model (`override_model_id`), when a custom connection serves it, which never moves to another server on its own, when routing again finds no other model, only one below a level the task requires, or none an account here serves, or when a move, a stop or a quit took the task while it routed.
+A task on a computer that runs work, and the reopen after a move to another computer, keep the model as before ("Pictures" above, `docs/helper.md`, "Moving a started task").
 
 ## A level's words
 

@@ -2,8 +2,9 @@ import { existsSync, mkdirSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, normalize, sep } from "node:path";
 import { preparedPublicationRemote } from "@shared/contributions";
+import { isCustomApiProvider } from "@shared/customApi";
 import { COMPUTER, HERE } from "@shared/deviceNames";
-import * as m from "@shared/i18n/messages.generated";
+import { englishOf, said } from "@shared/i18n/said";
 import { offeringKey, parseOfferingKey, type Slot } from "@shared/modelSlots";
 import { AUTOMATIC_COMPUTER, type ComputerMove } from "@shared/placement";
 import { PROVIDER_CATALOG } from "@shared/providers";
@@ -399,55 +400,86 @@ export class TaskMoves {
   }
 
   /**
-   * The model a task's next conversation opens on when the one it routed to
-   * left every level (docs/routing.md, "A model that left every level"): a
-   * reopen or a restart routes again on the task's own shape, where it runs,
-   * records that choice and its account, and says so once. Undefined - the
-   * reopen keeps its routed model - while a level or a pin still holds it,
-   * when the task names it, when it never routed, or when routing again
-   * finds no other model. The newest routing row then names a held model,
-   * so a later reopen keeps it and says nothing more.
+   * A task's next conversation on this Mac when the model it routed to left
+   * every level (docs/routing.md, "A model that left every level"): before a
+   * reopen or a restart opens it, the task routes again on its own shape,
+   * as its start did - a review still away from its builder's provider
+   * (R9) - and the new routing row, the record's model and account and one
+   * timeline and feed line commit together. It answers the account and
+   * provider the conversation opens with; the reopen then asks for the
+   * newest routing choice as any reopen does. Undefined keeps the routed
+   * model: a level or a pin still holds it, the task names it, it never
+   * routed, a custom connection serves it (it never moves server on its
+   * own), the task runs on a computer that runs work, or routing again finds
+   * no other model, only one below the level the task requires, or none an
+   * account here serves. The newest row then names a held model, so a later
+   * reopen keeps it and says nothing more.
    */
-  async routeAgainIfLeft(taskId: string): Promise<MoveTarget | undefined> {
+  async routeAgainIfLeft(
+    taskId: string,
+  ): Promise<{ accountId?: string; providerName: string } | undefined> {
     const router = this.options.router;
-    const record = this.options.tasks.get(taskId);
-    const routed = router?.servedChoice(taskId);
-    if (!router || !record || !routed) return undefined;
-    const named = record.shape?.override_model_id;
-    if (named && routesNamed(named, routed.model)) return undefined;
-    if (router.holdsAtALevel(routed.model)) return undefined;
-    const machine = this.host.machineOf(taskId);
-    const pool =
-      machine === LOCAL_MACHINE_ID ? undefined : await this.options.machines?.served(machine);
-    if (machine !== LOCAL_MACHINE_ID && !pool) return undefined;
-    const images = briefCarriesPictures(this.options.tasks, taskId, record.shape ?? undefined);
+    if (!router || this.host.machineOf(taskId) !== LOCAL_MACHINE_ID) return undefined;
+    const left = (record: TaskRecord | undefined) => {
+      const routed = router.servedChoice(taskId);
+      if (!record || record.status !== "active" || !routed) return undefined;
+      if (isCustomApiProvider(routed.model.provider)) return undefined;
+      const named = record.shape?.override_model_id;
+      if (named && routesNamed(named, routed.model)) return undefined;
+      return router.holdsAtALevel(routed.model) ? undefined : routed.model;
+    };
+    const asked = this.options.tasks.get(taskId);
+    if (!left(asked)) return undefined;
     return router.inOrder(async () => {
-      const prepared = await router.prepare({ ...(pool ? { pool } : {}), images });
-      const preview = router.preview(record.prompt, this.host.queuedShape(record), prepared);
-      const choice = preview.result.choice;
-      if (!choice || offeringKey(choice) === offeringKey(routed.model)) return undefined;
-      const left = this.host.modelName(routed.model);
-      const selecting =
-        machine === LOCAL_MACHINE_ID
-          ? this.options.accounts?.selectForSpawn(taskId, choice.provider, { model: choice.id })
-          : undefined;
-      const accountId = selecting instanceof Promise ? await selecting : selecting;
-      router.commit(taskId, preview);
-      const to = { provider: choice.provider, id: choice.id };
-      this.options.tasks.placement.recordMove(taskId, {
-        model: to,
-        accountId: accountId ?? null,
-        actor: "host",
-        text: m.crewmateRoutedAgain({ left, model: this.host.modelName(to) }),
-        data: { rerouted: { from: offeringKey(routed.model), to: offeringKey(to) } },
+      const record = this.options.tasks.get(taskId);
+      const from = left(record);
+      if (!record || !from) return undefined;
+      const shape = this.host.queuedShape(record);
+      const builder = shape.kind === "review" ? shape.basis : undefined;
+      const avoidProvider = builder ? router.servedProvider(builder) : undefined;
+      const images = briefCarriesPictures(this.options.tasks, taskId, record.shape ?? undefined);
+      const prepared = await router.prepare({
+        ...(avoidProvider ? { avoidProvider } : {}),
+        images,
       });
-      const level = preview.result.servedBucket ?? preview.result.bucket;
-      return {
-        model: to,
-        ...(accountId ? { accountId } : {}),
-        thinkingLevel: this.effortFor(record, to, level),
-        providerName: this.providerName(choice.provider),
-      };
+      const preview = router.preview(record.prompt, shape, prepared);
+      const choice = preview.result.choice;
+      if (!choice || offeringKey(choice) === offeringKey(from)) return undefined;
+      if (preview.requiresReasoningWait) return undefined;
+      const to = { provider: choice.provider, id: choice.id };
+      const selecting = this.options.accounts?.selectForSpawn(taskId, to.provider, {
+        model: to.id,
+      });
+      const accountId = selecting instanceof Promise ? await selecting : selecting;
+      if (this.options.accounts && !accountId && this.options.accountlessServes?.(to) !== true)
+        return undefined;
+      // Nothing moved it meanwhile: a move, a stop or a quit while the account was chosen.
+      const current = this.options.tasks.get(taskId);
+      if (this.host.disposed() || this.isMoving(taskId) || !current) return undefined;
+      const still = left(current);
+      if (!still || offeringKey(still) !== offeringKey(from)) return undefined;
+      const fact = said("crewmateRoutedAgain", {
+        left: this.host.modelName(from),
+        model: this.host.modelName(to),
+      });
+      this.options.tasks.atomic(
+        () => {
+          router.commit(taskId, preview);
+          this.options.tasks.placement.recordMove(taskId, {
+            model: to,
+            accountId: accountId ?? null,
+            actor: "host",
+            text: englishOf(fact),
+            data: {
+              rerouted: { from: offeringKey(from), to: offeringKey(to) },
+              said: fact,
+              feedLine: true,
+            },
+          });
+        },
+        () => {},
+      );
+      return { ...(accountId ? { accountId } : {}), providerName: this.providerName(to.provider) };
     });
   }
 

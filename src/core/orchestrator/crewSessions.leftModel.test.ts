@@ -8,6 +8,7 @@
  * real Router and a real ModelSlots record, so taking a model off its levels
  * is the same `setSlotMembership` call the Models board makes.
  */
+import { englishOf, said } from "@shared/i18n/said";
 import { offeringKey, SLOTS } from "@shared/modelSlots";
 import { expect, it, vi } from "vitest";
 import {
@@ -136,7 +137,15 @@ it("routes a reopened task again, once and said once, when its model left every 
   expect(reopened?.model).toEqual(terra);
   expect(routedModels(h, taskId)).toEqual([sol.id, terra.id]);
   expect(h.tasks.get(taskId)?.model).toBe(offeringKey(terra));
-  expect(reroutedNotes(h, taskId)).toHaveLength(1);
+  // The line names both models as Settings does, saved as a fact any language words.
+  const line = said("crewmateRoutedAgain", {
+    left: h.router?.modelLabel(sol) ?? "",
+    model: h.router?.modelLabel(terra) ?? "",
+  });
+  expect(reroutedNotes(h, taskId)).toEqual([englishOf(line)]);
+  expect(
+    h.tasks.timeline(taskId).find((entry) => entry.data && "rerouted" in entry.data)?.data?.said,
+  ).toEqual(line);
 
   // The next reopen finds Terra on a level: it keeps it, and says nothing more.
   const again = await relaunchAndSteer(h, taskId);

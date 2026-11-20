@@ -613,10 +613,6 @@ export class CrewSessions {
       throw new Error(`Task ${taskId} has no session to resume. Spawn a follow-up instead.`);
     }
     if (this.retiredProviderOf(taskId)) throw new Error(retiredResumeText(taskId));
-    // A model that left every level is routed again before it opens, as a
-    // move to the model routing picks now (docs/routing.md, "A model that
-    // left every level"); a move already names its model.
-    const target = move ?? (await this.core.moves.routeAgainIfLeft(record.id));
     // A resume is an attachment point: re-check the recorded account and
     // move to a sibling (transcript intact) if it died or was removed.
     const previousProvider = this.core.options.router?.servedProvider(taskId);
@@ -630,6 +626,14 @@ export class CrewSessions {
       throw new Error(
         "This task’s custom connection was disconnected. It cannot resume on another server automatically.",
       );
+    // A model that left every level routes again before a reopen here opens
+    // (docs/routing.md, "A model that left every level"); a move names its
+    // model, and a move to another computer opens on the model it moved with.
+    const routedAgain =
+      move || fresh?.changed === "computer"
+        ? undefined
+        : await this.core.moves.routeAgainIfLeft(record.id);
+    const target = move ?? routedAgain;
     // A task on a computer that runs work binds that computer's own
     // account again there; no account of this Mac's is chosen for it.
     const selecting = target
@@ -712,8 +716,8 @@ export class CrewSessions {
           machineId: machine,
           cwd,
           ...(fresh ? {} : { resumeToken: record.sessionFile }),
-          ...(target
-            ? { model: target.model, thinkingLevel: target.thinkingLevel }
+          ...(move
+            ? { model: move.model, thinkingLevel: move.thinkingLevel }
             : this.reopenedOn(record)),
           ...this.core.toolHooks.crewmateHooks(task, livePersonal),
         },

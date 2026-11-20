@@ -5,9 +5,15 @@
       "kind": "fix",
       "area": "crewmates",
       "title": "A running task stops using a model you took off every level",
-      "body": "When you take a model off every level in Settings, a task that was running on it now picks another model the next time its conversation opens, such as after you quit and reopen the app or when its conversation grows too long for the model and starts over. Its timeline says once which model it moved to. A task you started on a model by name keeps that model.",
-      "noPicture": "No view changes; the task's existing timeline shows one more line naming the model it moved to.",
-      "provenance": { "origin": "change" }
+      "body": "When you take a model off every level in Settings, a task that was running on it on this Mac now picks another model the next time its conversation opens, such as after you quit and reopen the app or when its conversation grows too long for the model and starts over. Its activity says once which model it moved to. A task you started on a model by name keeps that model.",
+      "picture": {
+        "dark": "reopen-routes-off-removed-model-dark.webp",
+        "light": "reopen-routes-off-removed-model-light.webp",
+        "alt": "A task record's Activity tab with the line saying Claude Fable 5.2 is on no level in Settings any more, so the task now uses Claude Opus 5.5"
+      },
+      "provenance": {
+        "origin": "change"
+      }
     }
   ],
   "exclusions": []

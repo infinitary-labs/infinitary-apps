@@ -2,17 +2,24 @@
 // site from dist/ on this computer, opens every page in a browser that may
 // reach only that server, and fails on
 // - a page that does not answer or does not draw its title,
+// - a page that does not name its language and direction, itself as its
+//   canonical address, and its version in every shipped language and
+//   x-default as alternates (docs/docs-site.md, "Languages"),
 // - a request to any other host,
 // - a cookie,
 // - a link between pages, or to a heading, that leads nowhere,
 // - a picture that does not draw,
 // - search that draws no search box, or finds nothing, with the network limited to the site itself,
+//   in English and, from each shipped language's home page, for a word of
+//   one of its page titles, finding that language's own pages,
 // - the wordmark drawn in anything but the text color,
 // - a first visit that does not follow the visitor's system to dark or light
 //   (Starlight opens dark unless the system asks for light; Chromium cannot
 //   stand in for a system that states no preference, so that case is not here).
 //
 //   pnpm --dir docs-site build && pnpm --dir docs-site check
+//
+// Pages open side by side, a few at a time.
 //
 // SCREENSHOTS=<folder> also saves the home, Install and First launch pages in dark and light there.
 //
@@ -22,13 +29,14 @@
 // pages still come from dist/, so build the version that address serves. A
 // page that the site's security policy blocks anything on fails there.
 
-import { createReadStream } from "node:fs";
+import { createReadStream, readFileSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { createServer } from "node:http";
 import { extname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { chromium } from "playwright";
+import { pagesFolder, segmentOf, shippedLanguages, SOURCE_LANGUAGE, textDirection } from "../languages.ts";
 
 const DIST = fileURLToPath(new URL("../dist/", import.meta.url));
 const SITE_ORIGIN = "https://docs.getinfinitary.com";
@@ -45,6 +53,9 @@ const TYPES = {
   ".png": "image/png",
   ".webp": "image/webp",
 };
+
+/** How many pages the check opens at once. */
+const SIDE_BY_SIDE = 6;
 
 const failures = [];
 const fail = (message) => failures.push(message);
@@ -98,6 +109,73 @@ const pages = (await files(DIST))
   .filter((file) => file.endsWith(".html"))
   .map((file) => `/${file.replace(/(^|\/)index\.html$/, "$1")}`);
 
+/** The shipped languages, each with its address prefix ("/" for English, "/ar/" for Arabic). */
+const LANGUAGES = shippedLanguages().map((tag) => ({
+  tag,
+  prefix: tag === SOURCE_LANGUAGE ? "/" : `/${segmentOf(tag)}/`,
+}));
+
+/** The language a site address is in: the one whose prefix it starts with, English for the rest. */
+function languageOf(path) {
+  return LANGUAGES.find(({ tag, prefix }) => tag !== SOURCE_LANGUAGE && path.startsWith(prefix)) ?? LANGUAGES[0];
+}
+
+/** The same page's address in another language. */
+function inLanguage(path, language) {
+  return `${language.prefix}${path.slice(languageOf(path).prefix.length)}`;
+}
+
+/** What a page says about its language, read in the page. */
+function languageMarks() {
+  return {
+    lang: document.documentElement.lang,
+    dir: document.documentElement.dir,
+    canonical: document.querySelector('link[rel="canonical"]')?.getAttribute("href") ?? null,
+    alternates: Object.fromEntries(
+      [...document.querySelectorAll('link[rel="alternate"][hreflang]')].map((link) => [
+        link.getAttribute("hreflang"),
+        link.getAttribute("href"),
+      ]),
+    ),
+    // The header and the phone-width menu each draw the same select; read one.
+    menu: [...(document.querySelector("starlight-lang-select select")?.options ?? [])].map((option) =>
+      option.textContent.trim(),
+    ),
+  };
+}
+
+/** How a page's language marks fall short (docs/docs-site.md, "Languages"). */
+function languageProblems(path, marks) {
+  const language = languageOf(path);
+  const problems = [];
+  const wantDir = textDirection(language.tag);
+  if (marks.lang !== language.tag) problems.push(`${path} says its language is ${marks.lang}, not ${language.tag}`);
+  if (marks.dir !== wantDir) problems.push(`${path} runs ${marks.dir}, not ${wantDir}`);
+  if (marks.canonical !== `${SITE_ORIGIN}${path}`) problems.push(`${path} names ${marks.canonical} as its address`);
+  const want = Object.fromEntries([
+    ...LANGUAGES.map((other) => [other.tag, `${SITE_ORIGIN}${inLanguage(path, other)}`]),
+    ["x-default", `${SITE_ORIGIN}${inLanguage(path, LANGUAGES[0])}`],
+  ]);
+  for (const [tag, href] of Object.entries(want)) {
+    if (marks.alternates[tag] !== href) problems.push(`${path} names ${marks.alternates[tag]} as its ${tag} version, not ${href}`);
+  }
+  for (const tag of Object.keys(marks.alternates)) {
+    if (!(tag in want)) problems.push(`${path} names a ${tag} version the site does not ship`);
+  }
+  if (LANGUAGES.length > 1 && marks.menu.length !== LANGUAGES.length) {
+    problems.push(`${path}'s language menu lists ${marks.menu.join(", ")}`);
+  }
+  return problems;
+}
+
+/** A word to search for in a language: the longest in the title of its Install page, which every language has. */
+function searchWord(language) {
+  if (language.tag === SOURCE_LANGUAGE) return "Discord";
+  const page = readFileSync(join(pagesFolder(language.tag), "install.md"), "utf8");
+  const title = /^title:\s*"?(.+?)"?\s*$/m.exec(page)?.[1] ?? "";
+  return title.split(/\s+/).sort((a, b) => b.length - a.length)[0] ?? "";
+}
+
 const browser = await chromium.launch();
 
 /** A browser context whose only reachable host is the local server; anything else fails the check. */
@@ -116,32 +194,49 @@ async function siteOnlyContext(options = {}) {
 
 try {
   const context = await siteOnlyContext({ colorScheme: "dark" });
-  const page = await context.newPage();
-  page.on("pageerror", (error) => fail(`${page.url()} threw: ${error.message}`));
-  // A script, style or font the site's security policy blocks shows only as a console error.
-  page.on("console", (message) => {
-    if (message.type() === "error" && /Content Security Policy/i.test(message.text())) {
-      fail(`${page.url()} was blocked by its security policy: ${message.text().slice(0, 160)}`);
-    }
-  });
+  const watch = (page) => {
+    page.on("pageerror", (error) => fail(`${page.url()} threw: ${error.message}`));
+    // A script, style or font the site's security policy blocks shows only as a console error.
+    page.on("console", (message) => {
+      if (message.type() === "error" && /Content Security Policy/i.test(message.text())) {
+        fail(`${page.url()} was blocked by its security policy: ${message.text().slice(0, 160)}`);
+      }
+    });
+    return page;
+  };
+  const tabs = await Promise.all(Array.from({ length: SIDE_BY_SIDE }, async () => watch(await context.newPage())));
+  const page = tabs[0];
+  /** Runs each item through a tab of its own, SIDE_BY_SIDE at a time. */
+  const sideBySide = async (items, visit) => {
+    let next = 0;
+    await Promise.all(
+      tabs.map(async (tab) => {
+        while (next < items.length) await visit(tab, items[next++]);
+      }),
+    );
+  };
   const links = [];
 
-  for (const path of pages) {
-    const response = await page.goto(origin + path, { waitUntil: "load" });
+  await sideBySide(pages, async (tab, path) => {
+    const response = await tab.goto(origin + path, { waitUntil: "load" });
     if (response?.status() !== 200) fail(`${path} answered ${response?.status()}`);
-    const title = (await page.locator("main h1").first().textContent())?.trim();
+    const title = (await tab.locator("main h1").first().textContent())?.trim();
     if (!title) fail(`${path} drew no title`);
-    if (await page.evaluate(() => document.cookie)) fail(`${path} set a cookie`);
-    const broken = await page.$$eval("main img", (images) =>
+    if (await tab.evaluate(() => document.cookie)) fail(`${path} set a cookie`);
+    const broken = await tab.$$eval("main img", (images) =>
       images.filter((image) => !image.complete || image.naturalWidth === 0).map((image) => image.getAttribute("src")),
     );
     for (const src of broken) fail(`${path} shows a picture that does not draw: ${src}`);
-    for (const href of await page.$$eval("a[href]", (as) => as.map((a) => a.getAttribute("href")))) {
+    for (const href of await tab.$$eval("a[href]", (as) => as.map((a) => a.getAttribute("href")))) {
       links.push({ from: path, href });
     }
-  }
+    if (path !== "/404.html") {
+      for (const problem of languageProblems(path, await tab.evaluate(languageMarks))) fail(problem);
+    }
+  });
 
   // Every link that stays on this site leads to a page, and a #heading to a heading on it.
+  const headingLinks = new Map();
   for (const { from, href } of links) {
     if (href === null || /^(mailto:|tel:)/.test(href)) continue;
     const url = new URL(href, origin + from);
@@ -153,13 +248,19 @@ try {
       continue;
     }
     if (url.hash && file.endsWith(".html")) {
-      await page.goto(origin + url.pathname, { waitUntil: "load" });
-      const id = decodeURIComponent(url.hash.slice(1));
-      if (!(await page.evaluate((target) => document.getElementById(target) !== null, id))) {
-        fail(`${from} links to ${href}, but that page has no ${url.hash}`);
-      }
+      const target = `${url.pathname}${url.hash}`;
+      if (!headingLinks.has(target)) headingLinks.set(target, []);
+      headingLinks.get(target).push({ from, href, pathname: url.pathname, hash: url.hash });
     }
   }
+  await sideBySide([...headingLinks.values()], async (tab, refs) => {
+    const { pathname, hash } = refs[0];
+    await tab.goto(origin + pathname, { waitUntil: "load" });
+    const id = decodeURIComponent(hash.slice(1));
+    if (!(await tab.evaluate((target) => document.getElementById(target) !== null, id))) {
+      for (const { from, href } of refs) fail(`${from} links to ${href}, but that page has no ${hash}`);
+    }
+  });
 
   const unknown = await page.goto(`${origin}/no-such-page/`);
   if (unknown?.status() !== 404 || !(await page.locator("main h1").count())) {
@@ -193,6 +294,24 @@ try {
       fail('Searching for "Discord" found nothing');
     }
   }
+
+  // Then in each language from its own home page.
+  await sideBySide(LANGUAGES, async (tab, language) => {
+    const word = searchWord(language);
+    await tab.goto(`${origin}${language.prefix}`, { waitUntil: "load" });
+    await tab.locator("site-search button[data-open-modal]").first().click();
+    await tab.locator("site-search input").first().fill(word);
+    const result = tab.locator(".pagefind-ui__result-link").first();
+    try {
+      await result.waitFor({ state: "visible", timeout: 10_000 });
+      const href = (await result.getAttribute("href")) ?? "";
+      if (languageOf(new URL(href, origin).pathname).tag !== language.tag) {
+        fail(`Searching for "${word}" on ${language.prefix} led to ${href}, a page in another language`);
+      }
+    } catch {
+      fail(`Searching for "${word}" on ${language.prefix} found nothing`);
+    }
+  });
 
   if ((await context.cookies()).length > 0) fail("The site stored a cookie");
   await context.close();

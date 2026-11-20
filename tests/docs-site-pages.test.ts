@@ -13,6 +13,7 @@ import {
   whatsNewPage,
 } from "../scripts/docs-site-whats-new.ts";
 import { NOTE_AREAS } from "../src/core/releaseNotes/catalog";
+import * as current from "../src/shared/i18n/current";
 import * as keyboard from "../src/shared/keyboard";
 import * as keymap from "../src/shared/keymap";
 import * as presets from "../src/shared/keyPresets";
@@ -82,6 +83,26 @@ describe("the Keyboard page", () => {
     const find = manifest.commands.find((command) => command.key !== undefined);
     expect(find).toBeDefined();
     expect(rows.get(find?.label ?? "")?.mac).toEqual([find?.key]);
+  });
+
+  // INF-5272's plan, piece 1: each shipped language's Keyboard page reads
+  // each command exactly as the app shows it in that language.
+  it("words each command in the page's language, as the app words it there", () => {
+    const arabic = keyboardPage({ ...modules, current } as KeyboardModules, "ar");
+    const rows = tabRows(arabic, presets.PRESET_LABELS[presets.NEW_PROFILE_PRESET]);
+    const labels = current.inLanguage("ar", () =>
+      keyboard.allCommandIds(panels).flatMap((id) => {
+        const entry = keyboard.commandEntry(id, panels, "mac");
+        return entry && !(keyboard.isCatalogCommand(id) && catalog[id]?.section)
+          ? [entry.label]
+          : [];
+      }),
+    );
+    expect(labels).toContain(
+      current.inLanguage("ar", () => keyboard.KEYBOARD_COMMANDS["commands.search"].label),
+    );
+    expect(labels).not.toContain(keyboard.KEYBOARD_COMMANDS["commands.search"].label);
+    for (const label of labels) expect(rows.has(label), label).toBe(true);
   });
 
   it("leaves out a command whose Settings section a build may not offer", () => {

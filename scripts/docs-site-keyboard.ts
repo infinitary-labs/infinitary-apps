@@ -1,5 +1,6 @@
-import { readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { join, relative } from "node:path";
+import { pagesFolder, SOURCE_LANGUAGE, shippedLanguages, wordsOf } from "../docs-site/languages.ts";
 import { staleGeneratedFile } from "./github-errors.ts";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 
@@ -13,11 +14,28 @@ import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
  * preset suggests that another command already holds is left out here as it
  * is in the app.
  *
- *   node scripts/docs-site-keyboard.ts           writes the page
- *   node scripts/docs-site-keyboard.ts --check   fails when the page is out of step
+ * Each shipped language gets its own page (docs/docs-site.md, "Languages"):
+ * the commands read as the app's catalog words them in that language, and
+ * the page's own sentences come from the language's words file.
+ *
+ *   node scripts/docs-site-keyboard.ts           writes every language's page
+ *   node scripts/docs-site-keyboard.ts --check   fails when a page is out of step
  */
 
-export const KEYBOARD_PAGE = "docs-site/src/content/docs/keyboard.mdx";
+/** A language's Keyboard page, from the repository's top. */
+export function keyboardPagePath(tag: string): string {
+  return relative(REPO_ROOT, join(pagesFolder(tag), "keyboard.mdx"));
+}
+
+/**
+ * The words a language other than English needs beyond English's words file:
+ * the places a command works, which the English page reads from the app.
+ */
+export const SCOPE_WORD_KEYS = {
+  window: "keyboard.scope.window",
+  "message-field": "keyboard.scope.message-field",
+  "main-message": "keyboard.scope.main-message",
+} as const;
 
 /** The app's own panels whose commands read as the window's, in the order the app adds them. */
 const OWN_PANELS = ["src/panels/now/manifest.json", "src/panels/knowledge/manifest.json"];
@@ -56,6 +74,8 @@ export type KeyboardModules = {
     NEW_PROFILE_PRESET: string;
   };
   panelCards: { parseSuggestedKey: (text: string) => Chord | null };
+  /** The process's language, so a page's commands read in its language; English when absent. */
+  current?: { inLanguage: <T>(tag: string, word: () => T) => T };
 };
 
 /** The app's own panels' commands, as the window installs them (`panelCommandsOf`). */
@@ -88,14 +108,14 @@ export type KeyRow = { id: string; label: string; scope: Scope; mac: string[]; l
  * lists them. A command that acts in a Settings section some builds do not
  * offer (`section`) is left out, as those builds leave it out.
  */
-export function presetRows(modules: KeyboardModules, preset: string): KeyRow[] {
+export function presetRows(modules: KeyboardModules, preset: string, notTyping = " when not typing"): KeyRow[] {
   const panels = ownPanelCommands(modules);
   const saved = modules.keymap.presetKeymap(preset);
   const mac = modules.keymap.resolveBindings(saved, panels, "mac");
   const linux = modules.keymap.resolveBindings(saved, panels, "ctrl");
   const words = (binding: Binding, system: System) =>
     `<kbd>${cell(modules.keyboard.bindingLabel(binding, system))}</kbd>` +
-    (binding.when === "not-typing" ? " when not typing" : "");
+    (binding.when === "not-typing" ? notTyping : "");
   return modules.keyboard.allCommandIds(panels).flatMap((id): KeyRow[] => {
     const catalog = modules.keyboard.isCatalogCommand(id)
       ? modules.keyboard.KEYBOARD_COMMANDS[id]
@@ -123,66 +143,82 @@ function keys(list: string[]): string {
   return list.length === 0 ? "—" : list.join(", ");
 }
 
-function table(rows: KeyRow[]): string[] {
+function table(rows: KeyRow[], words: Record<string, string>): string[] {
   return [
-    "| Command | Mac | Linux |",
+    `| ${words["keyboard.column.command"]} | ${words["keyboard.column.mac"]} | ${words["keyboard.column.linux"]} |`,
     "| --- | --- | --- |",
     ...rows.map((row) => `| ${cell(row.label)} | ${keys(row.mac)} | ${keys(row.linux)} |`),
   ];
 }
 
-/** The whole page, from the app's modules. */
-export function keyboardPage(modules: KeyboardModules): string {
+/** A heading's id on the English page (github-slugger's, for the plain words these headings use). */
+function englishId(heading: string): string {
+  return heading.toLowerCase().replace(/[^a-z0-9 -]/g, "").replace(/ /g, "-");
+}
+
+/**
+ * The whole page in one language, from the app's modules. A translated
+ * page's headings keep the English page's ids, so a link to one works in
+ * every language.
+ */
+export function keyboardPage(modules: KeyboardModules, tag: string = SOURCE_LANGUAGE): string {
+  if (tag !== SOURCE_LANGUAGE && !modules.current) {
+    throw new Error(`The Keyboard page in ${tag} needs the app's language module`);
+  }
+  return modules.current ? modules.current.inLanguage(tag, () => pageIn(modules, tag)) : pageIn(modules, tag);
+}
+
+function pageIn(modules: KeyboardModules, tag: string): string {
+  const english = wordsOf(SOURCE_LANGUAGE);
+  const words = wordsOf(tag);
+  const heading = (key: string) =>
+    tag === SOURCE_LANGUAGE ? `## ${words[key]}` : `## ${words[key]} {#${englishId(english[key] ?? "")}}`;
+  const scopeWords = (scope: Scope) =>
+    tag === SOURCE_LANGUAGE ? modules.keymap.SCOPE_WORDS[scope] : (words[SCOPE_WORD_KEYS[scope]] ?? "");
+  const notTyping = ` ${words["keyboard.notTyping"]}`;
   const { PRESET_IDS, PRESET_LABELS, NEW_PROFILE_PRESET } = modules.presets;
   const ordered = [NEW_PROFILE_PRESET, ...PRESET_IDS.filter((id) => id !== NEW_PROFILE_PRESET)];
   const scopes: Scope[] = ["window", "message-field", "main-message"];
   const tabs = ordered.flatMap((preset) => {
-    const rows = presetRows(modules, preset);
+    const rows = presetRows(modules, preset, notTyping);
     const sections = scopes.flatMap((scope) => {
       const here = rows.filter((row) => row.scope === scope);
-      return here.length === 0
-        ? []
-        : ["", `**${cell(modules.keymap.SCOPE_WORDS[scope])}**`, "", ...table(here)];
+      return here.length === 0 ? [] : ["", `**${cell(scopeWords(scope))}**`, "", ...table(here, words)];
     });
     return [`<TabItem label="${PRESET_LABELS[preset]}">`, ...sections, "", "</TabItem>"];
   });
-  const presetNames = ordered.map((id) => PRESET_LABELS[id]).join(", ");
+  const presetNames = ordered.map((id) => PRESET_LABELS[id]).join(words["keyboard.separator"]);
+  const fill = (key: string) =>
+    (words[key] ?? "")
+      .replace("{presets}", presetNames)
+      .replace("{preset}", PRESET_LABELS[NEW_PROFILE_PRESET] ?? NEW_PROFILE_PRESET);
   return [
     "---",
-    "title: Keyboard",
-    "description: Every command you can run from the keyboard in Infinitary, and its keys in each preset on a Mac and on Linux.",
+    `title: ${words["keyboard.title"]}`,
+    `description: ${words["keyboard.description"]}`,
     "---",
     "",
     "{/* Written by node scripts/docs-site-keyboard.ts from the app's own command list. Do not edit by hand. */}",
     "",
     "import { TabItem, Tabs } from '@astrojs/starlight/components';",
     "",
-    "Everything in Infinitary works from the keyboard.",
-    "Tab moves between controls, and the arrows move inside a list.",
+    fill("keyboard.intro"),
     "",
-    "## Command search",
+    heading("keyboard.search.heading"),
     "",
-    "Press <kbd>⌘K</kbd> on a Mac, or <kbd>Ctrl+K</kbd> on Linux, to open command search.",
-    "Type a few words, choose a command with the arrows and press Enter.",
-    "Every command on this page is there, with its key beside it, including the ones that have no key.",
+    fill("keyboard.search"),
     "",
-    "## Presets",
+    heading("keyboard.presets.heading"),
     "",
-    `Infinitary comes with sets of keys called presets: ${presetNames}.`,
-    `A new installation starts on ${PRESET_LABELS[NEW_PROFILE_PRESET]}.`,
-    "Legacy is offered only if you used Infinitary before presets existed.",
-    "Choose a preset in **Settings**, under **Keyboard**.",
+    fill("keyboard.presets"),
     "",
-    "## Change a key",
+    heading("keyboard.change.heading"),
     "",
-    "In **Settings**, under **Keyboard**, every command has **Record**, **Remove** and **Reset**.",
-    "Press **Record**, then the keys you want, then Enter to save them.",
-    "If another command already uses those keys, Infinitary says which one before anything changes.",
+    fill("keyboard.change"),
     "",
-    "## Every command and its keys",
+    heading("keyboard.every.heading"),
     "",
-    "A dash means the command has no key yet: run it from command search, or give it a key of your own.",
-    "Two keys with a space between them are pressed one after the other.",
+    fill("keyboard.every"),
     "",
     "<Tabs syncKey=\"keyboard-preset\">",
     ...tabs,
@@ -199,16 +235,18 @@ export async function loadKeyboardModules(): Promise<{ modules: KeyboardModules;
     keymap: await runner.import("/src/shared/keymap.ts"),
     presets: await runner.import("/src/shared/keyPresets.ts"),
     panelCards: await runner.import("/src/shared/plugins/panelCards.ts"),
+    current: await runner.import("/src/shared/i18n/current.ts"),
   };
   return { modules, close: runner.close };
 }
 
 if (process.argv[1]?.endsWith("docs-site-keyboard.ts")) {
   const { modules, close } = await loadKeyboardModules();
-  const page = keyboardPage(modules);
+  const pages = shippedLanguages().map((tag) => ({ path: keyboardPagePath(tag), page: keyboardPage(modules, tag) }));
   await close();
-  const path = join(REPO_ROOT, KEYBOARD_PAGE);
-  if (!process.argv.includes("--check")) writeFileSync(path, page);
-  else if (readFileSync(path, "utf8") !== page)
-    throw staleGeneratedFile(KEYBOARD_PAGE, "node scripts/docs-site-keyboard.ts");
+  for (const { path, page } of pages) {
+    const full = join(REPO_ROOT, path);
+    if (!process.argv.includes("--check")) writeFileSync(full, page);
+    else if (!existsSync(full) || readFileSync(full, "utf8") !== page) throw staleGeneratedFile(path, "node scripts/docs-site-keyboard.ts");
+  }
 }

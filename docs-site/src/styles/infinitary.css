@@ -8,11 +8,19 @@
  */
 @import "../../../.claude/skills/infinitary-design/tokens/colors.css";
 @import "../../../.claude/skills/infinitary-design/tokens/fonts.css";
+/*
+ * The type tokens give each script Space Grotesk does not draw the visitor's
+ * own typeface for it, by the page's lang, with tracking at zero
+ * (docs/docs-site.md, "Languages"). They sit in the lowest layer, below all
+ * of Starlight's, so only their custom properties and Arabic's zero tracking
+ * reach the site, never the app window's own body and link rules.
+ */
+@import "../../../.claude/skills/infinitary-design/tokens/typography.css" layer(starlight.base.tokens);
 
 :root,
 :root[data-theme="light"] {
-  --sl-font: "Space Grotesk", system-ui, sans-serif;
-  --sl-font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --sl-font: var(--font-ui);
+  --sl-font-mono: var(--font-mono);
 
   --sl-color-accent-low: var(--accent-dim);
   --sl-color-accent: var(--accent-strong);

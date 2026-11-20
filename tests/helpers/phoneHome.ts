@@ -20,7 +20,12 @@ import { AFTER_MERGE_LEAD } from "@shared/afterMerge";
 import { cardFileId, cardFileStoredName } from "@shared/cardFiles";
 import { CARD_LEAVE } from "@shared/cardLeave";
 import { cardLogUrl } from "@shared/cardPictures";
-import { ANYTHING_ELSE_ANSWER, type CardMessage, PAST_CARD_WORDS_LEAD } from "@shared/cards";
+import {
+  ANYTHING_ELSE_ANSWER,
+  type CardAnswer,
+  type CardMessage,
+  PAST_CARD_WORDS_LEAD,
+} from "@shared/cards";
 import {
   FOLDED_INTO_16_SINCE,
   MESSAGES_WHILE_READING,
@@ -276,6 +281,8 @@ export async function startPhoneHome(
   };
   const views = new Set<string>();
   const cardRequests: { channel: string; args: unknown }[] = [];
+  /** INF-5445 piece 2: each change the phone sent to a card's draft, as it arrived. */
+  const draftChanges: unknown[] = [];
   let leaks = 0;
   const cardIDs = {
     choice: "",
@@ -548,6 +555,8 @@ export async function startPhoneHome(
           ].includes(channel)
         )
           cardRequests.push({ channel, args });
+        if (channel === "inf:cards:draft")
+          draftChanges.push(structuredClone((args as unknown[])[1]));
         if (
           ["inf:converse", "inf:task:run", "inf:task:steer", "inf:task:interrupt"].includes(channel)
         ) {
@@ -1936,6 +1945,87 @@ export async function startPhoneHome(
           core.services.supervisor.cards.closeOut({ kind: "firstmate" }, "turn-end");
           core.services.supervisor.cards.flushBroadcast();
           result = { title, defaultLine: "Default: Friday" };
+          break;
+        }
+        // INF-5445 piece 2: a decision with two required questions, whose draft the phone shares with every other screen.
+        case "POST draft-card": {
+          for (const card of await core.dispatch("inf:cards:list", []))
+            await core.dispatch(
+              card.noteDone && !card.noteDone.closesTask
+                ? "inf:cards:note-done"
+                : "inf:cards:close",
+              [card.id],
+            );
+          const title = "Book the harbour survey";
+          core.services.supervisor.addFirstmateCard({
+            id: "phone-draft-card",
+            title,
+            body: `<p>The harbour survey needs two answers before the crew books the boat.</p>
+              <fieldset data-inf-options-only><legend>Which day should the survey run?</legend>
+              <label><input type="radio" name="day" required value="tuesday"> Tuesday</label>
+              <label><input type="radio" name="day" required value="thursday"> Thursday</label></fieldset>
+              <fieldset data-inf-options-only><legend>Which boat goes out?</legend>
+              <label><input type="radio" name="boat" required value="pilot"> The pilot boat</label>
+              <label><input type="radio" name="boat" required value="launch"> The survey launch</label></fieldset>`,
+            actions: [
+              { id: "book", label: "Book the survey", default: true },
+              { id: "wait", label: "Not now" },
+            ],
+          });
+          core.services.supervisor.cards.closeOut({ kind: "firstmate" }, "turn-end");
+          core.services.supervisor.cards.flushBroadcast();
+          draftChanges.length = 0;
+          result = { title, cardId: "phone-draft-card" };
+          break;
+        }
+        // The card's draft as the computer keeps it, and each change the phone sent to it.
+        case "GET draft-state": {
+          const draft =
+            core.services.cardDrafts.read().find((one) => one.cardId === "phone-draft-card") ??
+            null;
+          result = { draft, changes: structuredClone(draftChanges) };
+          break;
+        }
+        // Waits until the card's draft holds these values for each named question and these words, on the computer's own
+        // events, then answers as draft-state does.
+        case "POST draft-wait": {
+          let body = "";
+          for await (const chunk of request) body += chunk.toString();
+          const want = JSON.parse(body) as { answers?: Record<string, string[]>; words?: string };
+          const read = () =>
+            core.services.cardDrafts.read().find((one) => one.cardId === "phone-draft-card");
+          const holds = () => {
+            const draft = read();
+            if (!draft) return false;
+            if (want.words !== undefined && draft.words !== want.words) return false;
+            return Object.entries(want.answers ?? {}).every(([name, values]) => {
+              const answer = draft.answers.find((one) => one.name === name);
+              return JSON.stringify(answer?.values) === JSON.stringify(values);
+            });
+          };
+          await until(holds);
+          result = { draft: read() ?? null, changes: structuredClone(draftChanges) };
+          break;
+        }
+        // Another screen changes the card's draft, as a window on a Mac would: the given answers and words, at the
+        // revision the computer keeps now.
+        case "POST draft-elsewhere": {
+          let body = "";
+          for await (const chunk of request) body += chunk.toString();
+          const { answers, words } = JSON.parse(body) as { answers?: CardAnswer[]; words?: string };
+          const card = core.services.supervisor.cards
+            .snapshot()
+            .find((one) => one.id === "phone-draft-card")!;
+          const now = core.services.cardDrafts.read().find((one) => one.cardId === card.id);
+          result = await core.dispatch("inf:cards:draft", [
+            card.id,
+            {
+              since: now?.revision ?? 0,
+              ...(card.lifecycleId ? { lifecycle: card.lifecycleId } : {}),
+              ...(answers ? { answers } : {}),
+              ...(words !== undefined ? { words } : {}),
+            },
+          ]);
           break;
         }
         // INF-3427: a decision whose text box sits at the end of a body longer than the room the keyboard leaves.

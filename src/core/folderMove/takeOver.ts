@@ -1,9 +1,11 @@
 import { execFile } from "node:child_process";
-import { readFileSync, readlinkSync } from "node:fs";
+import { existsSync, readFileSync, readlinkSync } from "node:fs";
 import { basename, join } from "node:path";
-import { APP_IDENTITIES, SPELLINGS } from "@shared/codeNames";
+import { APP_IDENTITIES, SPELLINGS, type Spelling } from "@shared/codeNames";
+import type { BuildFlavor } from "@shared/userDataFolders";
 import { readInstalled, type Service } from "../helper/background";
 import { folderHolder, holderAlive, processAlive, STOPPED_RUN_WAIT_MS } from "../helper/lock";
+import { loginAgentFile } from "../helper/runAgent";
 import { hostEnv } from "../hostEnv";
 
 /**
@@ -43,6 +45,12 @@ export type TakeOverDeps = {
   kill?: (pid: number, signal: NodeJS.Signals) => void;
   /** Lets go of an agent so its service manager does not start its run again (`pauseInBackground`); absent where nothing is set up in the background. */
   unloadAgent?: (service: Service) => Promise<void>;
+  /** Starts an agent let go again when the move does not go ahead (`resumeInBackground`). */
+  resumeAgent?: (service: Service) => Promise<void>;
+  /** The start entry a run of the older copy may have (`olderRunAgent`): let go before a forced end, which it would count as a failure and start the run again. */
+  runAgent?: Service;
+  /** Told once the holder is known to be one of ours with no window, before it is asked to stop. */
+  stopping?: (copy: OlderCopy) => Promise<unknown> | undefined;
   /** Whether this process is the run of the agent under that label (`runsUnderAgent`). */
   runsUnder?: (label: string) => boolean;
   /** How long the older copy has to let the folder go. */
@@ -52,12 +60,12 @@ export type TakeOverDeps = {
 export type TakeOver =
   /** Nothing holds the older folder now. */
   | { kind: "free" }
-  /** The older copy let the folder go; `unloaded` names the agent let go first. */
-  | { kind: "stopped"; copy: OlderCopy; unloaded?: string }
+  /** The older copy let the folder go; `unloaded` is the agent let go first. */
+  | { kind: "stopped"; copy: OlderCopy; unloaded?: Service }
   /** Left as it is: an older copy with its window open, or a process that is not ours or cannot be read. */
   | { kind: "left"; why: "window" | "not-ours" }
   /** Asked to stop, it still holds the folder: only the person's click forces it. */
-  | { kind: "still-running"; pid: number; copy: OlderCopy };
+  | { kind: "still-running"; pid: number; copy: OlderCopy; unloaded?: Service };
 
 /**
  * The names our programs run under: each spelling's Mac app for each flavor,
@@ -70,6 +78,26 @@ export const OUR_PROGRAMS: readonly string[] = [
   "infinitary",
   "firstmate-3000",
 ];
+
+/**
+ * The start entry a run of the older copy may have: the run agent the
+ * window or `start-at-boot` sets up, under that identity's bundle id and
+ * `.run` (`runLabelOf`, src/core/helper/runAgent.ts); none on other systems.
+ */
+export function olderRunAgent(options: {
+  spelling: Spelling;
+  flavor: BuildFlavor;
+  platform: NodeJS.Platform;
+  homeDir: string;
+  unitsDir: string;
+}): Service | undefined {
+  const label = `${APP_IDENTITIES[options.spelling].bundleId}${options.flavor === "dev" ? ".dev" : ""}.run`;
+  if (options.platform === "darwin")
+    return { label, file: loginAgentFile({ homeDir: options.homeDir, label }) };
+  if (options.platform === "linux")
+    return { label, file: join(options.unitsDir, `${label}.service`) };
+  return undefined;
+}
 
 /** How often the step reads whether the older copy let go. */
 const READ_EVERY_MS = 100;
@@ -173,8 +201,12 @@ export function runsUnderAgent(
   readGroup: () => string = () => readFileSync("/proc/self/cgroup", "utf8"),
 ): boolean {
   if (env.XPC_SERVICE_NAME === label) return true;
+  // A systemd agent's label is its unit's name, `.service` included.
+  const unit = label.endsWith(".service") ? label : `${label}.service`;
   try {
-    return readGroup().includes(`/${label}.service`);
+    return readGroup()
+      .split("\n")
+      .some((line) => line.endsWith(`/${unit}`) || line.includes(`/${unit}/`));
   } catch {
     return false;
   }
@@ -221,45 +253,56 @@ async function identify(
  * Takes over from the older copy holding `from`: lets go of the agent the
  * older folder's work recorded when the holder is that work's run - never
  * the agent this process itself runs under - then sends the ordinary stop
- * and waits for the folder to be let go. A run a command started has no
- * agent to let go: its start entry starts it again only after a failure,
- * never after a clean stop (docs/run.md).
+ * and waits for the folder to be let go. A run's own start entry stays: it
+ * starts the run again only after a failure, never after this clean stop
+ * (docs/run.md); a forced end lets it go first (`stopOlderCopyNow`).
  */
 export async function takeOverOlderCopy(from: string, deps: TakeOverDeps): Promise<TakeOver> {
   const found = await identify(from, deps);
   if (found.kind !== "ours") return found;
   const { pid, copy } = found;
-  let unloaded: string | undefined;
-  if (copy === "work" && deps.unloadAgent) {
-    const { service } = readInstalled(join(from, "work"));
-    if (service && !(deps.runsUnder ?? runsUnderAgent)(service.label)) {
-      try {
-        await deps.unloadAgent(service);
-        unloaded = service.label;
-      } catch {
-        // The ordinary stop below still asks the run itself.
-      }
-    }
-  }
+  await deps.stopping?.(copy);
+  const unloaded =
+    copy === "work" ? await letAgentGo(readInstalled(join(from, "work")).service, deps) : undefined;
   signal(deps, pid, "SIGTERM");
+  const agent = unloaded ? { unloaded } : {};
   if (!(await letGo(from, pid, deps, deps.waitMs ?? STOPPED_RUN_WAIT_MS)))
-    return { kind: "still-running", pid, copy };
-  return { kind: "stopped", copy, ...(unloaded ? { unloaded } : {}) };
+    return { kind: "still-running", pid, copy, ...agent };
+  return { kind: "stopped", copy, ...agent };
+}
+
+/** Lets go of `service` when it is set up and is not the agent this process runs under; the agent let go. */
+async function letAgentGo(service: Service | null | undefined, deps: TakeOverDeps) {
+  if (!service || !deps.unloadAgent) return undefined;
+  if ((deps.runsUnder ?? runsUnderAgent)(service.label)) return undefined;
+  try {
+    await deps.unloadAgent(service);
+    return service;
+  } catch {
+    // The ordinary stop still asks the run itself.
+    return undefined;
+  }
 }
 
 /**
  * Ends the older copy that did not stop, on the person's click: only while
  * the same process still holds the folder and is still one of ours with no
- * window. Whether the folder is free now.
+ * window. A run's start entry is let go first, since it counts a forced end
+ * as a failure and would start the run again at once. Whether the folder is
+ * free now, and the start entry let go.
  */
 export async function stopOlderCopyNow(
   from: string,
   pid: number,
   deps: TakeOverDeps,
-): Promise<boolean> {
+): Promise<{ free: boolean; unloaded?: Service }> {
   const found = await identify(from, deps);
-  if (found.kind === "free") return true;
-  if (found.kind !== "ours" || found.pid !== pid) return false;
+  if (found.kind === "free") return { free: true };
+  if (found.kind !== "ours" || found.pid !== pid) return { free: false };
+  // Only a start entry set up on this computer: none is the common case.
+  const entry = found.copy === "run" && deps.runAgent && existsSync(deps.runAgent.file);
+  const unloaded = entry ? await letAgentGo(deps.runAgent, deps) : undefined;
   signal(deps, pid, "SIGKILL");
-  return letGo(from, pid, deps, deps.waitMs ?? STOPPED_RUN_WAIT_MS);
+  const free = await letGo(from, pid, deps, deps.waitMs ?? STOPPED_RUN_WAIT_MS);
+  return { free, ...(unloaded ? { unloaded } : {}) };
 }

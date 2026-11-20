@@ -8,7 +8,8 @@ import { ownComputerName } from "@core/devices/computerName";
 import { homeFinder } from "@core/devices/findHome";
 import { JoinedHome } from "@core/devices/joinedHome";
 import { dueMove } from "@core/folderMove/due";
-import { pauseInBackground, startInBackground } from "@core/helper/background";
+import { olderRunAgent } from "@core/folderMove/takeOver";
+import { pauseInBackground, resumeInBackground, startInBackground } from "@core/helper/background";
 import { windowFromWork } from "@core/helper/fromWindow";
 import { forgetRunAgentFiles, userUnitsDir } from "@core/helper/runAgent";
 import { watchRunStop } from "@core/helper/windowsTask";
@@ -751,6 +752,22 @@ export async function startApp(
       }
       if (move) {
         const serviceManager = work.serviceManager;
+        // The start entry a run of the older copy may have, let go before Stop it now ends it.
+        const olderRun = olderRunAgent({
+          spelling: work.place.folderSpelling,
+          flavor: work.place.flavor,
+          platform: hostPlatform(),
+          homeDir: homedir(),
+          unitsDir: userUnitsDir(process.env, homedir()),
+        });
+        const olderBackground = serviceManager && {
+          flavor: work.place.flavor,
+          dataDir: join(move.from, "work"),
+          spelling: work.place.folderSpelling,
+          homeDir: homedir(),
+          uid: process.getuid?.() ?? userInfo().uid,
+          ...serviceManager,
+        };
         await runHandOver(move, {
           names: { from: appNameOfFolder(move.from), to: appNameOfFolder(move.to) },
           hidden: hideWindow,
@@ -764,22 +781,13 @@ export async function startApp(
           takeOver: {
             platform: hostPlatform(),
             hostname: hostname(),
-            ...(serviceManager
+            ...(olderBackground
               ? {
-                  unloadAgent: (service) =>
-                    pauseInBackground(
-                      {
-                        flavor: work.place.flavor,
-                        dataDir: join(move.from, "work"),
-                        spelling: work.place.folderSpelling,
-                        homeDir: homedir(),
-                        uid: process.getuid?.() ?? userInfo().uid,
-                        ...serviceManager,
-                      },
-                      service,
-                    ),
+                  unloadAgent: (service) => pauseInBackground(olderBackground, service),
+                  resumeAgent: (service) => resumeInBackground(olderBackground, service),
                 }
               : {}),
+            ...(olderRun ? { runAgent: olderRun } : {}),
           },
           startAtLogin: () => {
             // A development run's rehearsal leaves this computer's login items alone.

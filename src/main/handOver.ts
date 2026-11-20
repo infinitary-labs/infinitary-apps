@@ -1,6 +1,7 @@
 import type { FolderMove } from "@core/folderMove/due";
 import { type MoveChoice, type MoveDeps, type MoveProgress, runMove } from "@core/folderMove/move";
 import { stopOlderCopyNow, type TakeOverDeps, takeOverOlderCopy } from "@core/folderMove/takeOver";
+import type { Service } from "@core/helper/background";
 import { nativeTheme } from "electron";
 import {
   actionOf,
@@ -87,10 +88,24 @@ export async function runHandOver(move: FolderMove, options: HandOverOptions): P
       ),
     );
   };
+  // Agents the take-over let go: started again whenever the hand-over ends
+  // without moving, so the older copy's work runs as it did.
+  const paused: Service[] = [];
+  let left = false;
+  const leave = async () => {
+    if (left) return;
+    left = true;
+    for (const service of paused.splice(0))
+      await options.takeOver?.resumeAgent?.(service).catch(() => {});
+    options.quit();
+  };
+  let closed = false;
+  let takingOver = false;
   win.on("closed", () => {
     if (finished) return;
+    closed = true;
     if (moving) quitWhileMoving();
-    else options.quit();
+    else if (!takingOver) void leave();
   });
   let answer: ((action: HandOverAction) => void) | undefined;
   win.webContents.on("will-navigate", (event, url) => {
@@ -192,9 +207,11 @@ export async function runHandOver(move: FolderMove, options: HandOverOptions): P
         moving = false;
       });
       if (stop.signal.aborted) {
-        if (outcome.kind === "moved" && outcome.startAtLogin) options.startAtLogin();
-        finished = true;
-        options.quit();
+        if (outcome.kind === "moved") {
+          if (outcome.startAtLogin) options.startAtLogin();
+          finished = true;
+          options.quit();
+        } else await leave();
         return;
       }
       if (outcome.kind === "ask") {
@@ -204,7 +221,7 @@ export async function runHandOver(move: FolderMove, options: HandOverOptions): P
           choice = action;
           continue;
         }
-        options.quit();
+        await leave();
         return;
       }
       if (outcome.kind === "refused") {
@@ -213,18 +230,40 @@ export async function runHandOver(move: FolderMove, options: HandOverOptions): P
           outcome.refusal.reason === "old-work-running";
         if (held && options.takeOver && !tookOver) {
           tookOver = true;
-          await show({ kind: "stopping" });
-          const taken = await takeOverOlderCopy(move.from, options.takeOver);
+          takingOver = true;
+          // The stopping words show only once the holder is one of ours with no window.
+          const taken = await takeOverOlderCopy(move.from, {
+            ...options.takeOver,
+            stopping: () => show({ kind: "stopping" }),
+          }).finally(() => {
+            takingOver = false;
+          });
+          if (taken.kind !== "free" && taken.kind !== "left" && taken.unloaded)
+            paused.push(taken.unloaded);
+          if (closed) {
+            await leave();
+            return;
+          }
           if (taken.kind === "free" || taken.kind === "stopped") continue;
           if (taken.kind === "still-running") {
             await show({ kind: "wont-stop" });
             const action = await nextAction();
             if (action !== "force") {
-              options.quit();
+              await leave();
               return;
             }
             await show({ kind: "stopping" });
-            await stopOlderCopyNow(move.from, taken.pid, options.takeOver);
+            takingOver = true;
+            const forced = await stopOlderCopyNow(move.from, taken.pid, options.takeOver).finally(
+              () => {
+                takingOver = false;
+              },
+            );
+            if (forced.unloaded) paused.push(forced.unloaded);
+            if (closed) {
+              await leave();
+              return;
+            }
             continue;
           }
         }
@@ -234,7 +273,7 @@ export async function runHandOver(move: FolderMove, options: HandOverOptions): P
           tookOver = false;
           continue;
         }
-        options.quit();
+        await leave();
         return;
       }
       if (outcome.kind === "moved") {

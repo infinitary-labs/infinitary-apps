@@ -8,7 +8,13 @@ import { pauseInBackground, writeInstalled } from "../helper/background";
 import { moveWork } from "../helper/moveWork";
 import { helperPlace } from "../helper/place";
 import { isProfileRetired } from "../storage/retiredProfile";
-import { stopOlderCopyNow, type TakeOverDeps, takeOverOlderCopy } from "./takeOver";
+import {
+  olderRunAgent,
+  runsUnderAgent,
+  stopOlderCopyNow,
+  type TakeOverDeps,
+  takeOverOlderCopy,
+} from "./takeOver";
 
 /**
  * Taking over from the older copy that holds the saved work (INF-5468's
@@ -111,7 +117,7 @@ function olderFolder() {
       ),
     waitMs: 5000,
   };
-  return { appData, homeDir, from, work, asked, deps };
+  return { appData, homeDir, from, work, asked, deps, service: { label: OLDER_LABEL, file } };
 }
 
 const holders: Holder[] = [];
@@ -132,7 +138,7 @@ describe("taking over from the older copy that holds the saved work", () => {
     expect(await takeOverOlderCopy(at.from, at.deps)).toEqual({
       kind: "stopped",
       copy: "work",
-      unloaded: OLDER_LABEL,
+      unloaded: at.service,
     });
     expect(at.asked).toEqual([["bootout", `gui/502/${OLDER_LABEL}`]]);
     expect(await holder.ended).toEqual({ code: 0, signal: null });
@@ -191,8 +197,90 @@ describe("taking over from the older copy that holds the saved work", () => {
     });
     expect(stillRunning(holder)).toBe(true);
     expect(holder.said()).toEqual(["holding", "asked to stop"]);
-    expect(await stopOlderCopyNow(at.from, holder.child.pid as number, at.deps)).toBe(true);
+    expect(await stopOlderCopyNow(at.from, holder.child.pid as number, at.deps)).toEqual({
+      free: true,
+    });
     expect(await holder.ended).toEqual({ code: null, signal: "SIGKILL" });
+  });
+
+  it("lets go of a run's start entry before Stop it now, which it would count as a failure", async () => {
+    const at = olderFolder();
+    const runAgent = olderRunAgent({
+      spelling: "fm",
+      flavor: "release",
+      platform: "darwin",
+      homeDir: at.homeDir,
+      unitsDir: join(at.homeDir, ".config", "systemd", "user"),
+    });
+    if (!runAgent) throw new Error("A Mac has a run agent's place.");
+    mkdirSync(join(at.homeDir, "Library", "LaunchAgents"), { recursive: true });
+    writeFileSync(runAgent.file, "<plist/>\n");
+    const deps = { ...at.deps, runAgent, waitMs: 500 };
+    const holder = await started(at.from, ["run"], { stubborn: true });
+    expect((await takeOverOlderCopy(at.from, deps)).kind).toBe("still-running");
+    expect(at.asked).toEqual([]);
+    expect(await stopOlderCopyNow(at.from, holder.child.pid as number, deps)).toEqual({
+      free: true,
+      unloaded: runAgent,
+    });
+    expect(at.asked).toEqual([["bootout", `gui/502/${runAgent.label}`]]);
+    expect(await holder.ended).toEqual({ code: null, signal: "SIGKILL" });
+  });
+
+  it("knows the systemd agent it runs under by the unit name the agent is recorded with", () => {
+    // A user service's line in /proc/self/cgroup, and the label the systemd adapter records.
+    const group = `0::/user.slice/user-1000.slice/user@1000.service/app.slice/${OLDER_LABEL}.service\n`;
+    expect(runsUnderAgent(`${OLDER_LABEL}.service`, {}, () => group)).toBe(true);
+    expect(runsUnderAgent(OLDER_LABEL, {}, () => group)).toBe(true);
+    expect(runsUnderAgent(`${workLabelOf("inf", "release")}.service`, {}, () => group)).toBe(false);
+  });
+
+  it("starts the older work's agent again when its run does not stop for the work run's move", async () => {
+    const at = olderFolder();
+    writeFileSync(join(at.work, "home.json"), '{"grant":"the home it joined"}\n', { mode: 0o600 });
+    const holder = await started(at.from, ["work", "run"], { stubborn: true });
+    const place = helperPlace({
+      packaged: true,
+      flavor: "release",
+      appData: at.appData,
+      env: {},
+      spelling: "inf",
+    });
+    const moved = await moveWork({
+      place,
+      background: (dataDir, spelling) => ({
+        flavor: "release",
+        dataDir,
+        spelling,
+        homeDir: at.homeDir,
+        uid: 502,
+        launchctl: async (args) => {
+          at.asked.push([...args]);
+          return { ok: true, output: "" };
+        },
+      }),
+      launcher: { executable: "/opt/infinitary/infinitary", args: [] },
+      env: {},
+      deps: {
+        platform: "linux",
+        claudeConfigDir: scratchDir("infinitary-take-over-claude-"),
+        hostname: HOSTNAME,
+      },
+      takeOver: {
+        platform: process.platform,
+        programs: PROGRAMS,
+        runsUnder: () => false,
+        waitMs: 500,
+      },
+      log: () => {},
+    });
+    expect(moved).toEqual({ kind: "later" });
+    expect(stillRunning(holder)).toBe(true);
+    expect(at.asked).toEqual([
+      ["bootout", `gui/502/${OLDER_LABEL}`],
+      ["bootstrap", "gui/502", at.service.file],
+    ]);
+    expect(isProfileRetired(at.from)).toBe(false);
   });
 
   it("brings the work over from a work run instead of ending to be started again", async () => {

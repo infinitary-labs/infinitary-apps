@@ -8,7 +8,9 @@ import {
   moveInBackground,
   pauseInBackground,
   readInstalled,
+  resumeInBackground,
   rewriteInBackground,
+  type Service,
 } from "./background";
 import { fetchedLauncher } from "./join";
 import { type HelperPlace, workFolderNow } from "./place";
@@ -82,22 +84,34 @@ export async function moveWork(options: MoveWorkOptions): Promise<MovedWork> {
   ) {
     const { takeOverOlderCopy } = await import("../folderMove/takeOver");
     const background = options.background(place.dataDir, place.folderSpelling);
-    const taken = await takeOverOlderCopy(move.from, {
+    const deps: TakeOverDeps = {
       platform: options.deps.platform,
       hostname: options.deps.hostname,
       ...(options.deps.alive ? { alive: options.deps.alive } : {}),
-      ...(background ? { unloadAgent: (service) => pauseInBackground(background, service) } : {}),
+      ...(background
+        ? {
+            unloadAgent: (service) => pauseInBackground(background, service),
+            resumeAgent: (service) => resumeInBackground(background, service),
+          }
+        : {}),
       ...options.takeOver,
-    });
+    };
+    const taken = await takeOverOlderCopy(move.from, deps);
+    // The agent let go starts again when the move does not go ahead, so the older work runs as it did.
+    const resume = async (service: Service | undefined) => {
+      if (service) await deps.resumeAgent?.(service).catch(() => {});
+    };
     if (taken.kind === "stopped") {
       // i18n-exempt: a note in the work's own log, which a person reading a fault reads in English
       log(
-        `stopped the older copy's ${taken.copy === "work" ? "background work" : "run"} holding ${move.from}${taken.unloaded ? `, after letting its agent ${taken.unloaded} go` : ""}`,
+        `stopped the older copy's ${taken.copy === "work" ? "background work" : "run"} holding ${move.from}${taken.unloaded ? `, after letting its agent ${taken.unloaded.label} go` : ""}`,
       );
       outcome = await runMove(move, options.deps);
+      if (outcome.kind !== "moved") await resume(taken.unloaded);
     } else if (taken.kind === "still-running") {
       // i18n-exempt: a note in the work's own log, which a person reading a fault reads in English
       log(`the older copy holding ${move.from} did not stop when asked`);
+      await resume(taken.unloaded);
       return { kind: "later" };
     }
   }

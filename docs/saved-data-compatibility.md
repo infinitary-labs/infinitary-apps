@@ -130,11 +130,13 @@ The hand-over and the work run take over from it before the move instead of refu
 
 1. It reads the process the lock names and confirms by its program that it is Infinitary or Firstmate 3000, on a Mac from `ps` and on Linux from `/proc/<pid>/cmdline`; `work run` among its arguments is background work, `run` a command's run, and neither a window.
 2. For background work it lets go of the agent the older folder's `installed.json` records, as an update's pause does (`pauseInBackground`), so the service manager does not start that run again, unless this process is that agent's own run (`runsUnderAgent`).
-   A command's run has no agent to let go: its start entry starts it again only after a failure, never after a clean stop (`docs/run.md`).
+   A run's own start entry, the run agent the window or `start-at-boot` sets up, stays: it starts the run again only after a failure, never after a clean stop (`docs/run.md`).
 3. It sends the ordinary stop, which saves and exits, and waits up to fifteen seconds for the lock to be let go (`STOPPED_RUN_WAIT_MS`), then makes the move.
 
-The window says "Stopping Firstmate 3000's background work" meanwhile.
-A copy that has not let go by then is never ended without the person: the window says it has not stopped and offers Stop it now, which ends it at once, beside Quit, and the work run ends for its background to start it again.
+Once the holder is known to be one of ours with no window, the window says "Stopping Firstmate 3000's background work" meanwhile.
+A copy that has not let go by then is not ended by Infinitary without the person, though the service manager ends background work that ignores its stop after its own wait: the window says it has not stopped and offers Stop it now beside Quit, and the work run ends for its background to start it again.
+Stop it now first lets go of a run's start entry (`olderRunAgent`), which would count the forced end as a failure and start the run again, then ends the run at once.
+Whenever the hand-over or the work run ends without moving - Quit, a closed window, a later refusal or the question about both folders - the agents the take-over let go start again (`resumeInBackground`), so the older copy runs as it did.
 An older copy with its window open keeps the person's own Quit and the refusal's words, and a process that is not ours, or whose program cannot be read (Windows), is never stopped, so the refusal stands.
 Once taken over, a copy that holds the folder again shows the refusal, and Try again takes over once more.
 

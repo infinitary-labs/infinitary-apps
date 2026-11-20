@@ -10,10 +10,10 @@ import {
   scheduleDetailsWords,
 } from "./automation";
 import { type BatchAnswer, batchAnswerSchema } from "./batches";
-import type { DeviceMake } from "./cards";
 import { type AppCostLimitView, costLimitSchema, formatUsd } from "./costLimit";
 import { crewSpeedSchema, SPEED_NAMES } from "./crewSpeed";
 import { type DecisionAnswerer, type DecisionsView, decisionAnswererSchema } from "./decisions";
+import type { DeviceMake } from "./deviceArrival";
 import { addressFormOffer, deviceInviteLine } from "./deviceInvite";
 import { anotherUserHere, COMPUTER, HERE } from "./deviceNames";
 import {

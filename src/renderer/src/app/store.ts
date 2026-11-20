@@ -1,4 +1,4 @@
-import type { DeviceArrival } from "@shared/cards";
+import type { DeviceArrival } from "@shared/deviceArrival";
 import type { ThisMac } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
 import type { CrewWord, FirstRunView } from "@shared/firstRun";

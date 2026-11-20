@@ -29,9 +29,10 @@
 // pages still come from dist/, so build the version that address serves. A
 // page that the site's security policy blocks anything on fails there.
 
-import { createReadStream, readFileSync } from "node:fs";
+import { createReadStream, readFileSync, realpathSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { createServer } from "node:http";
+import { createRequire } from "node:module";
 import { extname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
@@ -191,6 +192,24 @@ function languageProblems(path, marks) {
   return problems;
 }
 
+/**
+ * The English words of the search window Starlight builds with (Pagefind's
+ * default UI, which keeps them in its bundle rather than exporting them): its
+ * clear button and each form of its result count, with the count and the
+ * searched word taken out, as a page shows them.
+ */
+function pagefindEnglish() {
+  const starlight = realpathSync(fileURLToPath(new URL("../node_modules/@astrojs/starlight/dist/translations/en.js", import.meta.url)));
+  const bundle = readFileSync(createRequire(starlight).resolve("@pagefind/default-ui"), "utf8");
+  const block = /translations\/en\.json[\s\S]*?var strings\d* = (\{[\s\S]*?\n\});/.exec(bundle)?.[1] ?? "";
+  const strings = Object.fromEntries([...block.matchAll(/^\s*(\w+): "(.*)",?$/gm)].map(([, key, value]) => [key, value]));
+  if (!strings.clear_search || !strings.one_result || !strings.many_results) {
+    throw new Error("Pagefind's English search words could not be read from its bundle");
+  }
+  const bare = (template) => template.replace("[SEARCH_TERM]", "").replace("[COUNT]", "").trim();
+  return { clear: strings.clear_search, counts: new Set([bare(strings.one_result), bare(strings.many_results)]) };
+}
+
 /** A word to search for in a language: the longest in the title of its Install page, which every language has. */
 function searchWord(language) {
   if (language.tag === SOURCE_LANGUAGE) return "Discord";
@@ -326,7 +345,7 @@ try {
   }
 
   // Then in each language from its own home page,
-  // and its window speaks that language: its result count and clear button are not English's.
+  // and its window speaks that language: its result count, in either form, and clear button are not Pagefind's English.
   const searchWords = new Map();
   await sideBySide(LANGUAGES, async (tab, language) => {
     const word = searchWord(language);
@@ -347,10 +366,10 @@ try {
       fail(`Searching for "${word}" on ${language.prefix} found nothing`);
     }
   });
-  const englishSearch = searchWords.get(SOURCE_LANGUAGE);
+  const englishSearch = pagefindEnglish();
   for (const [tag, words] of searchWords) {
-    if (tag === SOURCE_LANGUAGE || !englishSearch) continue;
-    if (words.count === englishSearch.count || words.clear === englishSearch.clear) {
+    if (tag === SOURCE_LANGUAGE) continue;
+    if (englishSearch.counts.has(words.count) || words.clear === englishSearch.clear) {
       fail(`Search on /${segmentOf(tag)}/ shows its result count or clear button in English ("${words.count}", "${words.clear}")`);
     }
   }

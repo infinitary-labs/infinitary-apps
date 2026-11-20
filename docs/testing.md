@@ -734,8 +734,9 @@ Once every check ended, the `failures` job reads every other failed job - the co
 The last job passes only when every test group's confirm that ran passed and the later confirm passed or had nothing left to run.
 A failed job whose log names no test file failed for something no rerun of a test answers, so nothing runs again, first or later.
 When a confirm fails, it keeps everything under `test-results/` on the run for 7 days, as `confirm-failures-linux-<n>` from the test group's own confirm (its place among the eight, from 0) and `confirm-later-failures-mac` or `confirm-later-failures-linux` from the later one: each failed journey's error context, trace and screenshot, as `e2e-failures-<lane>` keeps the sweep's ("A red verify's evidence"), so a failure that shows only in the confirm can still be read.
-A batch with a failed check holds, whatever its confirm said: the app merges only a pull request whose every check passed, and the failed job stays failed on it (`docs/forge.md`, "A held batch").
+A batch with a failed check holds, whatever its confirm said: the app reads every check the host reports, and the failed job stays failed on it (`docs/forge.md`, "A held batch").
 The confirm is the repair's evidence ("A held batch's repair"): a green one says the failed files passed three rounds on the same version, and its run's summary names what failed, a flaky test that still needs an owner who fixes its root cause.
+When the confirm passed and its last job passed, the repair declares that version passed with `check_change`'s `batch.passed`, and the batch merges as it is; a test-only fix for the flaky test goes to the next batch.
 A red confirm says the failure repeats, and it fixes forward (INF-2948, the captain: "whenever we meet a failure, we pause the sweeps until a fix arrives, then we rerun the sweep with everything queued + the fix, if there's another error, repeat"): the changes approved meanwhile wait in line behind the held batch until its repair answers it.
 
 `main.yml`'s `sort` job reads a push that merged a batch pull request from that pull request's own run (`scripts/batch.mjs`, `scripts/batch-pull.mjs`).
@@ -755,7 +756,7 @@ The fleet never cancels a running batch or a running main check unless the capta
 
 ## A held batch's repair
 
-A batch whose check failed holds, and its repair follows the app's `batch-repair` skill (`docs/forge.md`, "A held batch"): a batch of one wakes its own crewmate, and a batch of several gets one repair task, which accounts for every failed test against every change and then sends changes back, fixes forward, or runs the failed checks again for a flake that still gets an owner.
+A batch whose check failed holds, and its repair follows the app's `batch-repair` skill (`docs/forge.md`, "A held batch"): a batch of one wakes its own crewmate, and a batch of several gets one repair task, which accounts for every failed test against every change and then sends changes back, fixes forward, merges a version a rerun passed, or runs the failed checks again for a flake that still gets an owner.
 Once the cause is found it fixes forward by default, sending a change back only when that change's code under test must change, the fix needs a decision, or the fix is not small; a test that still expects behavior a change replaced on purpose is brought up to date in the fix, never weakened, skipped or deleted.
 The batch's run holds what the repair reads: its failed jobs, the test files the test groups' confirms and the `failures` job read from their logs, and whether each confirm passed or failed on them.
 A file the repair's computer cannot run, such as a journey where journeys run only through CI, is judged from its log and the changes' diffs, or run through `journeys.yml` with `files` on a branch the repair pushes at the batch's version.

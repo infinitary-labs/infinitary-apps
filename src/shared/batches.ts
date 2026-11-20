@@ -110,6 +110,14 @@ export const openBatchSchema = z.object({
    * batch stays held until another declared fix is approved or Try again.
    */
   awaits: z.string().optional(),
+  /**
+   * Its repair's judgment that the held version passed on a rerun of its
+   * failed checks, such as the project's own rerun of the failed tests: at
+   * `head`, the failed checks named in `checks` are answered, and the batch
+   * merges once every other check passed. A fix declared meanwhile goes to
+   * the next batch. A combine at a new version drops it.
+   */
+  passed: z.object({ head: z.string(), checks: z.array(z.string()) }).optional(),
 });
 export type OpenBatch = z.infer<typeof openBatchSchema>;
 
@@ -249,6 +257,12 @@ export type BatchAnswer = z.infer<typeof batchAnswerSchema>;
 export const batchDeclarationSchema = z.object({
   fix: z.boolean().optional(),
   sendBack: z.array(z.object({ task: z.string(), reason: z.string() })).optional(),
+  /**
+   * The held version, a full commit id, when a rerun passed its failed
+   * checks: it merges at that version once its other checks pass, and a
+   * fix declared beside it or meanwhile goes to the next batch.
+   */
+  passed: z.string().optional(),
   evidence: z.string(),
 });
 export type BatchDeclaration = z.infer<typeof batchDeclarationSchema>;

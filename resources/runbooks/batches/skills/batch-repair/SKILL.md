@@ -1,6 +1,6 @@
 ---
 name: batch-repair
-description: Repair a held batch of the captain's approved changes - account for every failed test against every change in the batch, then send back the changes at fault, fix forward, or run the failed checks again for a flake that still gets an owner. Read before repairing a held batch.
+description: Repair a held batch of the captain's approved changes - account for every failed test against every change in the batch, then send back the changes at fault, fix forward, merge a version that passed on a rerun, or run the failed checks again for a flake that still gets an owner. Read before repairing a held batch.
 ---
 
 # Repairing a held batch
@@ -54,9 +54,15 @@ The tests, test data, generated files, check lists, pinned versions and comments
 - **Both at once.** When some changes must go back and the rest can be fixed forward, give `batch.sendBack` and `batch.fix` in the same declaration.
   The named changes leave, and the batch stays held at its version, combining nothing, until your fix is approved, even once every change has left it; then it is combined once, with the fix and every change waiting in line, without the changes sent back.
   Build that fix on the held version too: the batch takes only its own difference, never the work of a change sent back.
-- **Run the failed checks again, for a flake.** Only when the accounting shows that no change in the batch caused the failure and the evidence shows it is intermittent.
+- **Merge the version that passed on a rerun.** When a rerun already passed every failed test on the held version, such as a step of the batch's own run that runs the failed tests again, or the failed checks run again where the project lives, the version merges as it is.
+  Declare it with `check_change` `batch.passed`, naming the held version by its full commit id: the failed checks it held for are answered at that version, and the batch merges once every other check passed.
+  A check that fails later, one you did not answer, holds it again.
+  A fix that only changes tests, such as one for the flaky test that failed, does not hold the batch: declare it beside (`batch.fix` with `batch.passed`), or later as usual, and once approved it goes to the next batch with the changes waiting in line.
+  Never beside `batch.sendBack`: the held version still carries the changes sent back.
+  When a change's code under test must change, the version does not pass as it is, whatever a rerun said: fix forward or send it back.
+- **Run the failed checks again, for a flake.** Only when the accounting shows that no change in the batch caused the failure and the evidence shows it is intermittent, and no rerun has passed them yet.
   Run the failed checks again where the project lives with `github_write`, recording the judgment first with `check_change` `rerun`: on GitHub, `POST /repos/{owner}/{repo}/actions/runs/{run_id}/rerun-failed-jobs`; on GitLab, `POST /projects/{id}/jobs/{job_id}/retry`.
-  Once they pass, the batch merges by itself.
+  Once they pass, the batch merges by itself, even when a fix of yours was approved meanwhile: that fix goes to the next batch.
   A flake still gets an owner: name the flaky test, its evidence and its owner (the app, the test or the runner) in your report, and file it with `file_followup` unless a task already owns it.
   Do not add retries or sleeps, or weaken, skip or delete a test to make the batch pass.
 

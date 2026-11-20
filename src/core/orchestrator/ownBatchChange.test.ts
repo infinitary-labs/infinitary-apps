@@ -1260,6 +1260,53 @@ describe("a repair's answer to its project's held batch", () => {
     expect(at.forge.batchHead).not.toBe(before);
     expect(at.forge.batch?.title).toBe("chore: merge 4 approved changes");
   });
+
+  // Intent: the captain's fix 2 from the daily velocity review: "Merge a held batch once its
+  // version passes, even on a rerun, and send a test-only fix declared meanwhile to the next
+  // batch." The project's own rerun passed the failed test, while the host still reads it failed.
+  it("declares the held version passed on its rerun beside its own fix: the batch merges as it is, and the fix goes next", async () => {
+    const at = await held();
+    const version = at.forge.batchHead;
+    expect(
+      await at.service.checkTool.checkForCrew(TASK, {
+        batch: { passed: version, fix: true, evidence },
+      }),
+    ).toBe(BATCH_DECLARATION_WORDS.passedRecorded(true));
+    expect(at.batches.record(REPO).fixes).toEqual([TASK]);
+    (at.forge.batch as NonNullable<BatchHostForge["batch"]>).readiness = "clean";
+    await at.pass();
+    expect(at.open()).toBeUndefined();
+    expect(at.batches.record(REPO).receipts.map((receipt) => receipt.taskId)).toEqual([
+      "parser01",
+      "export02",
+      "legend03",
+    ]);
+
+    await at.confirmed();
+    await at.service.merges.merge(TASK, at.guard());
+    await at.pass();
+    expect(at.open()?.members).toMatchObject([{ taskId: TASK, fix: true }]);
+  });
+
+  it("refuses passed for a version the batch is not held at, or beside a send-back", async () => {
+    const at = await held();
+    const tool = at.service.checkTool;
+    expect(await tool.checkForCrew(TASK, { batch: { passed: PARSER_HEAD, evidence } })).toBe(
+      BATCH_DECLARATION_WORDS.passed["other-version"],
+    );
+    expect(
+      await tool.checkForCrew(TASK, {
+        batch: {
+          passed: at.forge.batchHead,
+          sendBack: [{ task: "parser01", reason: "its date test fails" }],
+          evidence,
+        },
+      }),
+    ).toBe(BATCH_DECLARATION_WORDS.passedSentBack);
+    expect(at.open()?.passed).toBeUndefined();
+    expect(at.open()?.members).toHaveLength(3);
+    expect(at.batches.record(REPO).fixes).toBeUndefined();
+  });
 });
 
 describe("the words a batch gives a task", () => {

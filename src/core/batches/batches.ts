@@ -186,6 +186,9 @@ export function batchTitle(
     : composedName(`merge ${members.length} approved changes`, naming);
 }
 
+/** Why a repair's judgment that the held version passed on a rerun was refused (`declarePassed`). */
+export type BatchPassedRefusal = "not-held" | "other-version" | "not-checks" | "sent-back";
+
 export type BatchHeld = {
   repo: RepoView;
   batch: OpenBatch;
@@ -375,6 +378,36 @@ export class Batches {
         return record;
       }
       return declared(record, taskId);
+    });
+    if (!refused) void this.pass(repoId);
+    return refused;
+  }
+
+  /**
+   * A repair judged that the held batch's version `head` passed on a rerun
+   * of its failed checks: those checks are answered at that version, and the
+   * batch merges once every other check passed, before any declared fix,
+   * which goes to the next batch; `fix` declares the repair's own change
+   * that fix in the same write. Refused, by why, when the batch is not
+   * held for its checks at that version, or when it waits for a fix after a
+   * send-back, since its version still carries the changes sent back.
+   */
+  async declarePassed(
+    repoId: string,
+    head: string,
+    /** The repair's own task, when it declares its change the fix in the same answer. */
+    fix?: string,
+  ): Promise<BatchPassedRefusal | undefined> {
+    let refused: BatchPassedRefusal | undefined;
+    await this.write(repoId, (record) => {
+      const open = record.open;
+      if (!open?.hold) refused = "not-held";
+      else if (open.hold.head !== head || open.head !== head) refused = "other-version";
+      else if (open.hold.reason !== "checks") refused = "not-checks";
+      else if (open.awaits !== undefined) refused = "sent-back";
+      if (refused || !open?.hold) return record;
+      const next = { ...record, open: { ...open, passed: { head, checks: open.hold.checks } } };
+      return fix ? declared(next, fix) : next;
     });
     if (!refused) void this.pass(repoId);
     return refused;
@@ -671,7 +704,10 @@ export class Batches {
       return held.record;
     }
     // A held batch's approved fix joins it, and the changes waiting in line join with it.
-    if (fixWaits(record)) return this.recombine(repo, record, "line");
+    // A batch held for its checks reads them first: a version that passes on a rerun
+    // merges as it is, and the fix goes to the next batch.
+    if (fixWaits(record) && open.hold?.reason !== "checks")
+      return this.recombine(repo, record, "line");
     if (this.described.get(repo.id) !== open.head) await this.describe(repo, open, forge);
     const change: ForgeChange = {
       number: pull.number,
@@ -689,17 +725,25 @@ export class Batches {
     // The same reading a change's own pull request takes: every check passed
     // or skipped is green, and a reading where no check ran - none at all, or
     // only skipped ones - is green only where every member's own version was
-    // declared to run none.
+    // declared to run none. The failed checks the repair judged passed on a
+    // rerun are answered at this version; any other check, one that fails
+    // later included, still counts.
+    const answered = open.passed?.head === open.head ? open.passed.checks : [];
+    const items = checks.items.map((item) =>
+      isRedCheckState(item.state) && answered.includes(item.name)
+        ? { ...item, state: "success" as const }
+        : item,
+    );
     const summary = checkSnapshotSummary({
       headSha: open.head,
-      items: checks.items,
+      items,
       ...(checks.complete !== undefined ? { complete: checks.complete } : {}),
       ...(checks.problem ? { problem: checks.problem } : {}),
       absenceDeclared: open.members.every((member) =>
         this.options.runsNoChecks(member.taskId, member.head),
       ),
     });
-    const failed = checks.items.filter((item) => isRedCheckState(item.state));
+    const failed = items.filter((item) => isRedCheckState(item.state));
     if (summary.overall === "red") {
       const never = notRun(checks);
       const held = hold(record, {
@@ -709,6 +753,9 @@ export class Batches {
         checks: failed.map((item) => item.name),
         ...(never ? { notRun: never } : {}),
       });
+      // Failed again with its approved fix waiting: the fix joins now, and no repair is woken.
+      if (fixWaits(held.record))
+        return this.recombine(repo, this.save(repo.id, held.record), "line");
       if (held.fresh) this.heldNow(repo, this.save(repo.id, held.record));
       else if (held.record !== record) this.save(repo.id, held.record);
       return held.record;

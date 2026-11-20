@@ -2,7 +2,7 @@ import { currentCheckStatus } from "@shared/checkSnapshot";
 import type { ForgePull } from "../forge";
 import type { MergeAuthorization, MergeWait } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
-import { mergedReceipt } from "./changeMerge";
+import { mergedReceipt, otherMergedFacts } from "./changeMerge";
 import type { KeptApproval } from "./keptApproval";
 import {
   candidateHead,
@@ -320,8 +320,9 @@ export class KeptMerge {
    * An attempt token outlived its answer - the app quit or the answer
    * never came (FI3-304 section 5). The pinned pull request decides: merged
    * means the approval is spent and the task closes once; closed ends it;
-   * open at the same head clears the token and runs every gate again; an
-   * unreadable one waits.
+   * open clears the token and runs every gate again, except on a host whose
+   * merge names no version, where open proves nothing and it waits like an
+   * unreadable one, never sending again.
    */
   private async reconcileAttempt(taskId: string, authorization: MergeAuthorization): Promise<void> {
     const readPull = this.host.readPull;
@@ -342,7 +343,10 @@ export class KeptMerge {
       return;
     }
     const now = this.host.now();
-    if (!pull) {
+    // An open read cannot show that a merge sent to a host naming no version
+    // did not go in (a 202 still merging, or an answer that never came): it
+    // stays read-only, and only a read showing how it ended moves it.
+    if (!pull || (pull.state === "open" && !pull.merged && pull.mergeNamesNoVersion)) {
       const retries = (current.retries ?? 0) + 1;
       this.approvals.patchStanding(taskId, {
         waiting: { on: "outcome", head: candidateHead(current), at: now },
@@ -377,6 +381,15 @@ export class KeptMerge {
     const lease = this.locks.claim(taskId, "merge-pr");
     try {
       const authorization = standingAuthorization(this.host.tasks.get(taskId)?.delivery);
+      const named = this.host.tasks.get(taskId);
+      // The version it merged against the approved one, said as the merge
+      // said it at once (INF-5193): a push after approval is told.
+      const other = otherMergedFacts(
+        placeOf(this.host.repos, named, "") || null,
+        changeName(named, pull.number),
+        pull.headSha,
+        authorization ? candidateHead(authorization) : undefined,
+      );
       // A kept approval of a reviewed pull request merged it (INF-2490):
       // its merge card declared what follows (INF-2744).
       if (authorization?.review) {
@@ -386,7 +399,8 @@ export class KeptMerge {
           authorization.review,
           {
             ok: true,
-            text: `Merged ${changeName(this.host.tasks.get(taskId), pull.number)} on ${placeOf(this.host.repos, this.host.tasks.get(taskId))}.${then === "continue" ? " The task stays open." : ""}`,
+            text: `Merged ${changeName(named, pull.number)} on ${placeOf(this.host.repos, named)}.${other.told}${then === "continue" ? " The task stays open." : ""}`,
+            ...other.line,
             receipt: mergedReceipt(pull),
           },
           then,
@@ -398,7 +412,7 @@ export class KeptMerge {
       }
       this.approvals.consumeStanding(taskId, mergedReceipt(pull));
       const record = this.host.tasks.get(taskId);
-      const text = `Merged ${changeName(record, pull.number)} on ${placeOf(this.host.repos, record)}.`;
+      const text = `Merged ${changeName(record, pull.number)} on ${placeOf(this.host.repos, record)}.${other.told}`;
       // Something else on the task still open keeps it open (INF-2525).
       const stillOpen = record
         ? await this.settle.stillOpen(record, pull.number, authorization?.after)
@@ -420,6 +434,7 @@ export class KeptMerge {
         reason: "merged",
         actor: authorization?.issuer === "autonomy" ? "host" : "captain",
         text,
+        ...(other.line ? { data: { line: other.line.line, lineSaid: other.line.lineSaid } } : {}),
         delivery: { landedMode: "pr", ...(pull.mergedSha ? { mergedSha: pull.mergedSha } : {}) },
       });
       this.settle.reportOutcome(

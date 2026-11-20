@@ -361,25 +361,34 @@ export class BitbucketForge implements Forge {
         throw new ForgeBaseMoved(caught.message);
       throw caught;
     }
-    // A 202 is Bitbucket still merging in the background: the pull request
-    // is read, and one that has not merged yet is an outcome not yet known,
-    // which only a later read settles; nothing is sent again.
+    // Once the request went out, nothing read after it can say the merge
+    // failed: a 202 (Bitbucket still merging in the background), a read
+    // that fails or an answer that names no version is an outcome not yet
+    // known, which only a later read of the pull request settles; nothing
+    // is sent again.
+    const unknown = (why: string) =>
+      new ForgeError(
+        "transient",
+        `${this.place} was asked to merge #${id} and ${why}; nothing is sent again until a read shows how it ended.`,
+      );
     let merged = answer.status === 202 ? null : (answer.body as PullRequestJson | null);
-    if (merged?.state !== "MERGED") {
-      merged = await this.pullRequest(id);
-      if (merged.state !== "MERGED")
-        throw answer.status === 202
-          ? new ForgeError(
-              "transient",
-              `${this.place} accepted the merge of #${id} and has not finished it; nothing is sent again until a read shows how it ended.`,
-            )
-          : new ForgeError("refused", `${this.place} did not confirm the merge of #${id}`);
+    let sha: string | undefined;
+    let mergedHead: string | undefined;
+    try {
+      if (merged?.state !== "MERGED") merged = await this.pullRequest(id);
+      if (merged.state === "MERGED") {
+        sha = await this.fullCommit(merged.merge_commit?.hash).catch(() => undefined);
+        // The version merged is read, never assumed.
+        mergedHead = await this.fullCommit(merged.source?.commit?.hash);
+      }
+    } catch {
+      // i18n-exempt: served to the crewmate in the merge answer, stays English
+      throw unknown("its answer could not be read");
     }
-    const sha = await this.fullCommit(merged.merge_commit?.hash).catch(() => undefined);
-    // The version merged is read, never assumed: an answer that does not name
-    // it leaves the merge unverified, for a read of the pull request to settle.
-    const mergedHead = await this.fullCommit(merged.source?.commit?.hash);
-    if (!mergedHead) throw unreadableError(this.place, `the version #${id} merged`);
+    // i18n-exempt: served to the crewmate in the merge answer, stays English
+    if (merged.state !== "MERGED") throw unknown("has not finished it");
+    // i18n-exempt: served to the crewmate in the merge answer, stays English
+    if (!mergedHead) throw unknown("did not name the version it merged");
     return { ...(sha ? { sha } : {}), mergedHead };
   }
 
@@ -435,6 +444,7 @@ export class BitbucketForge implements Forge {
       readiness,
       mergeable: null,
       mergeableState: readiness,
+      mergeNamesNoVersion: true,
     };
   }
 

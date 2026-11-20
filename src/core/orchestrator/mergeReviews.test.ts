@@ -1293,5 +1293,27 @@ describe('a review\'s click on a host whose merge names no version (docs/forge.m
     expect(outcome).toMatchObject({ ok: true, receipt: { head: newer } });
     expect(outcome.text).toContain(newer);
     expect(reviews().find((item) => item.id === review.id)?.receipt?.head).toBe(newer);
+    expect(outcome.line).toContain("#23");
+  });
+
+  it("records and tells a merge already made at a later push on a host whose merge names no version", async () => {
+    const { service, forge, task, host, prepare, reviews } = await onGitHub();
+    Object.assign(forge, { mergeNamesNoVersion: true });
+    host.pull = openPull({ branch: "their/reading" });
+    forge.atHead[HEAD] = [{ name: "build", state: "success" }];
+    const review = await prepare();
+    const newer = "9a8b7c6d5e4f30211203f4e5d6c7b8a9f0e1d2c3";
+    host.pull = openPull({
+      branch: "their/reading",
+      state: "closed",
+      merged: true,
+      headSha: newer,
+      mergedSha: "c0ffee00d15ea5e0b16b00b5ca5cade0ddba11ed",
+    });
+    const outcome = await service.reviews.mergeReview(task.id, review.id);
+    expect(outcome).toMatchObject({ ok: true, receipt: { head: newer, already: true } });
+    expect(outcome.text).toContain(newer);
+    expect(outcome.line).toContain("#23");
+    expect(reviews().find((item) => item.id === review.id)?.receipt?.head).toBe(newer);
   });
 });

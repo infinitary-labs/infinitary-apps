@@ -235,12 +235,18 @@ describe("a Bitbucket Cloud pull request", () => {
         }),
       pullRequest({}),
     ],
+    [
+      "an accepted merge whose pull request cannot be read after it",
+      () => new Response(JSON.stringify({ task_id: "merge-2" }), { status: 202 }),
+      null,
+    ],
   ])("leaves %s unknown, sending the merge once", async (_case, answer, after) => {
     const { forge, sent } = standIn({
       [`GET ${REPO}/refs/branches/${encodeURIComponent(BRANCH)}?fields=target.hash`]: () =>
         Response.json({ target: { hash: HEAD } }),
       [`POST ${REPO}/pullrequests/7/merge`]: answer,
-      [`GET ${REPO}/pullrequests/7`]: () => Response.json(after),
+      [`GET ${REPO}/pullrequests/7`]: () =>
+        after ? Response.json(after) : Response.json({ type: "error" }, { status: 404 }),
       ...commits(HEAD, MERGED),
     });
     const outcome = await forge.putIn(change, HEAD).catch((error: unknown) => error);

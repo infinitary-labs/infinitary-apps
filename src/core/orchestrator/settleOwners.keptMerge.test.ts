@@ -379,6 +379,38 @@ describe("CrewSupervisor", () => {
       await h.supervisor.disposeAll();
     });
 
+    // INF-5193 (the review of Bitbucket's merge): a merge sent to a host
+    // whose merge names no version may still go in after an open read, so
+    // the attempt stays read-only across runs until a read shows it merged.
+    it("keeps an unknown merge on a host naming no version read-only, then spends the approval once it reads merged", async () => {
+      const h = await approved({ referenced: true });
+      h.forge.mergeNamesNoVersion = true;
+      h.forge.refuse = new ForgeError(
+        "transient",
+        "The host accepted the merge and has not finished it",
+      );
+      h.supervisor.cardActions.act(h.card.id, "merge");
+      await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("outcome"));
+      expect(h.authorization()?.attempt?.head).toBe(APPROVED);
+      h.forge.refuse = undefined;
+      h.crewmate.finishPrompt();
+      await tick();
+      await h.supervisor.settling.kept.runMergeAuthorization(h.taskId);
+      expect(h.forge.sends).toBe(1);
+      expect(h.authorization()).toMatchObject({
+        status: "standing",
+        attempt: { head: APPROVED },
+        waiting: { on: "outcome" },
+      });
+      h.forge.merged = true;
+      await h.supervisor.settling.kept.runMergeAuthorization(h.taskId);
+      await vi.waitFor(() =>
+        expect(h.tasks.get(h.taskId)?.delivery?.mergeAuthorization?.status).toBe("consumed"),
+      );
+      expect(h.forge.sends).toBe(1);
+      await h.supervisor.disposeAll();
+    });
+
     it("INF-1246 a late watch reading cannot overwrite a newer selected pull request", async () => {
       const h = await approved({ referenced: true });
       const target = h.tasks.get(h.taskId)?.delivery?.checkTarget;

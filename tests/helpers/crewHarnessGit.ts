@@ -121,6 +121,8 @@ export class KeptForge implements Forge {
   /** The pull request's description, as GitHub shows it. */
   body = "";
   sends = 0;
+  /** The host's merge names no version, as Bitbucket's does (`Forge.mergeNamesNoVersion`). */
+  mergeNamesNoVersion?: true;
   async listProjects() {
     return [];
   }
@@ -193,6 +195,7 @@ export class KeptForge implements Forge {
       headSha: this.headSha,
       base: "main",
       readiness: this.readiness,
+      ...(this.mergeNamesNoVersion ? { mergeNamesNoVersion: true as const } : {}),
       ...(this.referencedBranch
         ? { branch: this.referencedBranch, headRepo: "o/r", title: "fix: ship the meter" }
         : {}),

@@ -4,7 +4,7 @@
       "id": "bitbucket-pull-requests",
       "kind": "feature",
       "title": "Bitbucket projects now open pull requests",
-      "body": "When a crewmate finishes work on a Bitbucket project, it now opens a pull request on bitbucket.org instead of only pushing a branch. The merge card reads the builds on its version as its checks. Your click squash-merges it only while the branch is still at that version, and never while Bitbucket reports a conflict, a draft or a rule holding it. If a push lands in the moment Bitbucket merges, it goes in too and the task says so. Projects you already added work this way from their next task.",
+      "body": "When a crewmate finishes work on a Bitbucket project, it now opens a pull request on bitbucket.org instead of only pushing a branch. The merge card reads the builds on its version as its checks. Before your click squash-merges it, the app reads that the branch is still at that version and that Bitbucket reports no conflict, draft or rule holding it. A push in the moment after that read goes in too, and the task says so. Projects you already added work this way from their next task.",
       "area": "projects",
       "picture": {
         "dark": "bitbucket-pull-requests-dark.webp",

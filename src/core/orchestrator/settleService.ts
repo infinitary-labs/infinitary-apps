@@ -838,6 +838,8 @@ export class SettleService {
     return this.closeMerged(record, closeActor(actor), {
       ok: true,
       text: result.text,
+      ...(result.line ? { line: result.line } : {}),
+      ...(result.lineSaid ? { lineSaid: result.lineSaid } : {}),
       ...(result.receipt ? { receipt: result.receipt } : {}),
     });
   }

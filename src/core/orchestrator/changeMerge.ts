@@ -268,7 +268,11 @@ export class ChangeMerge {
         if (after.merged) return after.merged;
         if (after.closed) return after.closed;
         if (after.open !== true || attempt.noResend) {
-          return { ...stripAttempt(attempt), stop: after.open === false ? "moved" : "outcome" };
+          return {
+            ...stripAttempt(attempt),
+            // A send whose host names no version may still go in: never "moved".
+            stop: after.open === false && !attempt.noResend ? "moved" : "outcome",
+          };
         }
       }
       if (attempt.noResend) break;
@@ -1255,7 +1259,7 @@ export class ChangeMerge {
             ? said("mergedChangeOn", { change: label, place })
             : said("mergedChangeWhereItLives", { change: label });
       const line = englishOf(lineSaid);
-      const told = newer ? ` ${otherMergedWords(forge, newer, change.headSha)}` : "";
+      const { told } = otherMergedFacts(place, label, newer, change.headSha);
       return { text: `${line}.${url ? ` ${url}` : ""}${told}`, line, lineSaid };
     }
     const title = this.options.tasks.get(taskId)?.title ?? forge.label(change);
@@ -1340,10 +1344,16 @@ function closedUnmerged(forge: Forge, pull: ForgePull): PrOutcome {
 }
 
 function alreadyMerged(forge: Forge, pull: ForgePull, approved?: string): PrOutcome {
-  const newer = approved === undefined ? undefined : otherMerged(approved, pull.headSha);
+  const other = otherMergedFacts(
+    forge.place,
+    numberLabel(forge, pull.number),
+    pull.headSha,
+    approved,
+  );
   return {
     ok: true,
-    text: `${numberLabel(forge, pull.number)} is already merged ${placeWords(forge)}.${newer ? ` ${otherMergedWords(forge, newer, approved ?? "")}` : ""}`,
+    text: `${numberLabel(forge, pull.number)} is already merged ${placeWords(forge)}.${other.told}`,
+    ...other.line,
     receipt: mergedReceipt(pull),
   };
 }
@@ -1353,10 +1363,27 @@ export function otherMerged(approved: string, merged: string | undefined): strin
   return merged !== undefined && merged !== approved ? merged : undefined;
 }
 
-/** What the crewmate hears when another version merged than the one the captain approved. */
-export function otherMergedWords(forge: Forge, merged: string, approved: string): string {
-  // i18n-exempt: served to the crewmate in the merge answer, stays English
-  return `${forge.place ?? "The host"} merged version ${merged}, not the approved version ${approved}: a push landed after the merge was approved, and its work is merged without approval. The task's merge line tells the captain.`;
+/**
+ * Every merged result's one reading of the version that went in against the
+ * approved one: when they differ, the words the crewmate hears (`told`, with
+ * its leading space) and the merge's Activity line saying a push made after
+ * the approved version went in too, which the captain sees. Empty when they
+ * match or either is unknown.
+ */
+export function otherMergedFacts(
+  place: string | null,
+  change: string,
+  merged: string | undefined,
+  approved: string | undefined,
+): { told: string; line?: { line: string; lineSaid: Said } } {
+  const newer = approved === undefined ? undefined : otherMerged(approved, merged);
+  if (!newer) return { told: "" };
+  const lineSaid = place ? said("mergedChangeNewerOn", { change, place }) : undefined;
+  return {
+    // i18n-exempt: served to the crewmate in the merge answer, stays English
+    told: ` ${place ?? "The host"} merged version ${newer}, not the approved version ${approved}: a push landed after the merge was approved, and its work is merged without approval. The task's merge line tells the captain.`,
+    ...(lineSaid ? { line: { line: englishOf(lineSaid), lineSaid } } : {}),
+  };
 }
 
 /** The receipt of a pull request found already merged: the head it merged at, and its commit. */

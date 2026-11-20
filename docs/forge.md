@@ -304,8 +304,9 @@ Integrations lists one Bitbucket row with its sign-in's health and account, and 
 
 ## Bitbucket pull requests
 
-A Bitbucket project's direct-pr task delivers the way a GitHub or GitLab one does: the crewmate pushes its branch and calls `open_change`, the checks gate and `check_change` read the build statuses on its version, the check watch follows them, and the captain's merge, or a kept merge approval, squash-merges the pull request while its branch is still at the checked version.
-Bitbucket's merge holds to no version, so a push in the moment it merges goes in with it, and the app says so rather than promising the checked version alone.
+A Bitbucket project's direct-pr task delivers the way a GitHub or GitLab one does: the crewmate pushes its branch and calls `open_change`, the checks gate and `check_change` read the build statuses on its version, the check watch follows them, and the captain's merge, or a kept merge approval, squash-merges the pull request.
+Before it sends the merge, the app reads that the branch is still at the checked version and that Bitbucket reports no conflict, draft or blocking rule.
+Bitbucket's merge itself holds to no version, so a push in the moment after that read goes in with it, and the app says so rather than promising the checked version alone.
 A Bitbucket project added before the app opened pull requests there delivers this way from its next task, with no setting to change; without a sign-in, `open_change` and the merge answer the same refusal as on GitHub, whose ways are signing in and keeping the project on this Mac.
 `BitbucketForge` (`providers/bitbucket/bitbucketForge.ts`) reaches the project at `/repositories/<workspace>/<name>` through `BitbucketClient`, whose writes (`request`, `write`) send JSON with the same token, bounds and refusals as its reads.
 
@@ -323,11 +324,12 @@ A Bitbucket project added before the app opened pull requests there delivers thi
 - **Its merge** (`putIn`) checks the title against the active naming runbook, then reads the branch: Bitbucket's merge takes no version, so a branch that moved past the checked version sends nothing and is refused.
   Before that, every merge reads the pull request's readiness, the captain's own click included (`Forge.mergeNamesNoVersion`): an owner's sign-in may merge past a rule Bitbucket does not enforce, so a conflict, a draft or a blocking rule sends no merge.
   It then asks `POST /pullrequests/<N>/merge` with `merge_strategy: squash` and the message `<title>`, a blank line and the story's plain summary.
-  A 409, a ref that moved during the merge, reads as the base moving; any other answer but merged is refused.
-  A 202 is Bitbucket still merging in the background: the pull request is read, and one not merged yet is an outcome the app does not know.
-  A merge request whose answer is unknown, a 202, a lost answer or one that names no merged version, is never sent again: the pull request is read back, and only a merge read there settles it.
-  A push that lands between the branch read and the merge is merged with it, since nothing holds the merge to the read version: the answer names the version Bitbucket merged (`MergeAnswer.mergedHead`), the receipt records that version, and the merge line says the merge included a push made after the approved version instead of hiding it.
-  The same holds for a merge found already made, and for a pull request named by its number (`check_change pull`).
+  A 409, a ref that moved during the merge, reads as the base moving.
+  Once the request went out, nothing read after it counts as a refusal: a 202 (Bitbucket still merging in the background), a read that fails and an answer that names no merged version are each an outcome the app does not know.
+  Such a merge is never sent again: a kept merge approval keeps its attempt and waits on the outcome, and every later reconcile (`keptMerge`'s `reconcileAttempt`, on the tick and after a restart) only reads the pull request, since an open pull request on a host whose merge names no version (`ForgePull.mergeNamesNoVersion`) cannot show that nothing went in; a read showing it merged closes the task once, and one showing it closed ends the approval.
+  Bitbucket's own task-status address for a 202 is not kept, so the reconcile reads the pull request itself.
+  A push that lands between the branch read and the merge is merged with it, since nothing holds the merge to the read version: the answer names the version Bitbucket merged (`MergeAnswer.mergedHead`), the receipt records that version, and the task's merge line in Activity says another version than the approved one merged instead of hiding it.
+  The same line and receipt come from one place (`otherMergedFacts`) for a merge confirmed at once, one a reconcile finds made, one found already made, and a pull request named by its number (`check_change pull`), whose reviewed close keeps the line.
 - **Its words** name the host: "Merged #4 on Bitbucket." and the host's own words for a conflict.
 - **Its allowance** is Bitbucket's hourly request limit; a 429 that names its wait (`Retry-After`) is a spent allowance until then (`ForgeAllowanceSpent`), never a sign-out.
 

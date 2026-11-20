@@ -37,7 +37,7 @@ import {
   type MergeGuard,
   type MergeStop,
   otherMerged,
-  otherMergedWords,
+  otherMergedFacts,
   type PrOutcome,
   readDecided,
   readinessStop,
@@ -779,16 +779,29 @@ export class MergeReviews {
         const located = this.context.locate(taskId, "check", review);
         if (!("said" in located) && located.forge.pull) {
           const pull = await located.forge.pull(review.number).catch(() => undefined);
-          if (pull?.merged && pull.headSha === candidate.headSha) {
+          // A host whose merge names no version may have merged a later push:
+          // that merge is the one made, recorded and told as such.
+          if (
+            pull?.merged &&
+            (pull.headSha === candidate.headSha || located.forge.mergeNamesNoVersion)
+          ) {
+            const label = numberLabel(located.forge, review.number);
+            const other = otherMergedFacts(
+              located.forge.place,
+              label,
+              pull.headSha,
+              candidate.headSha,
+            );
             const receipt = this.storeReviewReceipt(
               taskId,
               review.id,
-              candidate.headSha,
+              pull.headSha,
               pull.mergedSha,
             );
             return {
               ok: true,
-              text: `${numberLabel(located.forge, review.number)} is already merged${located.forge.place ? ` on ${located.forge.place}` : ""}.`,
+              text: `${label} is already merged${located.forge.place ? ` on ${located.forge.place}` : ""}.${other.told}`,
+              ...other.line,
               receipt: { ...receipt, already: true },
             };
           }
@@ -817,9 +830,11 @@ export class MergeReviews {
     // no version, a push after the read may have gone in instead, and is told.
     const merged = (sha?: string, head?: string): PrOutcome => {
       const newer = otherMerged(candidate.headSha, head);
+      const other = otherMergedFacts(forge.place, forge.label(change), head, candidate.headSha);
       return {
         ok: true,
-        text: `Merged ${forge.label(change)}${forge.place ? ` on ${forge.place}` : ""}.${newer ? ` ${otherMergedWords(forge, newer, candidate.headSha)}` : ""}`,
+        text: `Merged ${forge.label(change)}${forge.place ? ` on ${forge.place}` : ""}.${other.told}`,
+        ...other.line,
         receipt: this.storeReviewReceipt(
           taskId,
           review.id,

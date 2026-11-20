@@ -238,6 +238,11 @@ export type ForgePull = {
   readiness: ForgeReadiness;
   mergeable?: boolean | null;
   mergeableState?: string;
+  /**
+   * Its host's merge names no version (`Forge.mergeNamesNoVersion`): an open
+   * read after a merge was sent cannot show that nothing went in.
+   */
+  mergeNamesNoVersion?: true;
 };
 
 /**

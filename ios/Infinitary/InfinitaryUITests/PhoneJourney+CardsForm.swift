@@ -128,7 +128,16 @@ extension PhoneJourney {
         let pager = app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch
         let first = pager.label
         waitForBodiesBeside()
-        app.staticTexts["card-title"].swipeLeft()
+        // INF-5406: the swipe from the head presses on the title's far end and drags from rest to its near end, as the
+        // body's swipe below does. XCTest's own swipe moves past the row's first 10 points in its first touch move; when a
+        // busy runner holds the app's main thread through the whole swipe, its touches reach the app together, UIKit
+        // measures the row's travel from where it recognized the swipe, at its end, and the row glides back. Held the same
+        // way, this press and drag keeps its whole travel, and it lifts well within the half second that tells a swipe from
+        // a rest even when its touches arrive late.
+        let title = app.staticTexts["card-title"]
+        title.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5))
+            .press(forDuration: 0.05, thenDragTo: title.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.5)),
+                   withVelocity: .fast, thenHoldForDuration: 0)
         settleOn(chart, leaving: first, pager: pager)
         waitForShownBodyRevealed()
         verifyArrivedReady(chart)

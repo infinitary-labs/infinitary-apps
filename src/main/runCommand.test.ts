@@ -17,7 +17,7 @@ import {
   runOptions,
   stopRunningCommand,
 } from "./runCommand";
-import { startedByAgent } from "./runEnvironment";
+import { startedByAgent, takeRunAgentMark } from "./runEnvironment";
 
 /**
  * Infinitary started by a command (docs/run.md; INF-1228's approved plan,
@@ -61,6 +61,20 @@ describe("the words after run", () => {
     expect(runOptions(["--settings", "a.json", "b.json"])).toBeNull();
     expect(runOptions(["--setting", "a.json"])).toBeNull();
     expect(runOptions(["now"])).toBeNull();
+  });
+
+  // The review of INF-5409: Windows' Task Scheduler sets no variable, so this app's own task names
+  // its agent with a word, which a run reads as the mark the variable carries elsewhere.
+  it("takes --agent and its label, which this app's own task writes after its settings", () => {
+    expect(runOptions(["--agent", "com.infinitary.app.run"])).toEqual({
+      agent: "com.infinitary.app.run",
+    });
+    expect(runOptions(["--settings", "a.json", "--agent", "com.infinitary.app.run"])).toEqual({
+      settings: "a.json",
+      agent: "com.infinitary.app.run",
+    });
+    expect(runOptions(["--agent"])).toBeNull();
+    expect(runOptions(["--agent", "a", "--agent", "b"])).toBeNull();
   });
 
   // INF-4680's start cuts: a run asks the person's login shell while the
@@ -111,23 +125,29 @@ describe("a window opened beside a run", () => {
       return dataDir;
     };
     const alive = (pid: number) => pid === 4242;
-    // The agent's own definition marks the runs it starts with its label (`runAgentEnv`); a
-    // terminal's run carries no mark, or another agent's.
-    const byAgent = startedByAgent({ env: { [RUN_AGENT_ENV]: label }, label });
-    const byHand = startedByAgent({ env: {}, label });
+    // The agent's own definition marks the runs it starts with its label (`runAgentEnv`), and
+    // Windows' task with its `--agent` word; a terminal's run carries no mark, or another agent's.
+    const env: NodeJS.ProcessEnv = { [RUN_AGENT_ENV]: label, PATH: "/usr/bin" };
+    const byAgent = startedByAgent({ mark: takeRunAgentMark(env), label });
+    const byHand = startedByAgent({ mark: undefined, label });
     expect([byAgent, byHand]).toEqual([true, false]);
-    expect(startedByAgent({ env: { [RUN_AGENT_ENV]: "com.infinitary.app.dev.run" }, label })).toBe(
-      false,
-    );
+    expect(startedByAgent({ mark: undefined, word: label, label })).toBe(true);
+    expect(startedByAgent({ mark: "com.infinitary.app.dev.run", label })).toBe(false);
+    // The review of INF-5409: the run takes the mark as it starts, so a run started from inside
+    // it - a crewmate's shell, with the environment every program it starts inherits - is not its
+    // agent's.
+    expect(env).toEqual({ PATH: "/usr/bin" });
+    expect(startedByAgent({ mark: takeRunAgentMark({ ...env }), label })).toBe(false);
     expect(keepsStarterBesideGrant(runs(byAgent), true, alive)).toBe(true);
     expect(keepsStarterBesideGrant(runs(byHand), true, alive)).toBe(false);
     // With no grant waiting, the window keeps its starter as it always has.
     expect(keepsStarterBesideGrant(runs(byHand), false, alive)).toBe(true);
   });
 
-  // The review of INF-5409: following along stops only the run this window's starter owns, by its
-  // process number: the one this window started or its own agent's, never a later one by hand.
-  it("owns only the run this window started or its agent did, and stops only that run", () => {
+  // The review of INF-5409: joining and following along stop only the run this window's starter
+  // owns, the one its own agent started as that run's note says, by its process and start; never
+  // a run started by hand, whatever process number it has.
+  it("owns only the run its agent started, and stops only that run", () => {
     const dataDir = scratchDir("infinitary-run-marker-");
     const running = new Set([4242]);
     const alive = (pid: number) => running.has(pid);
@@ -135,24 +155,31 @@ describe("a window opened beside a run", () => {
       rmSync(join(dataDir, "SingletonLock"), { force: true });
       symlinkSync(`${hostname()}-${pid}`, join(dataDir, "SingletonLock"));
     };
-    markRunning(dataDir, 4242, new Date("2026-10-25T17:00:00Z"));
+    markRunning(dataDir, 4242, new Date("2026-10-25T17:00:00Z"), undefined, true);
     holds(4242);
-    // This window started 4242.
-    expect(ownedRun(dataDir, 4242, alive)).toBe(4242);
-    expect(ownedRun(dataDir, undefined, alive)).toBeNull();
+    const owned = ownedRun(dataDir, alive);
+    expect(owned).toEqual({ pid: 4242, startedAt: "2026-10-25T17:00:00.000Z" });
     // It ended, and the person started one by hand on the same folder.
     running.clear();
     running.add(5151);
     markRunning(dataDir, 5151, new Date("2026-10-25T17:05:00Z"));
     holds(5151);
-    expect(ownedRun(dataDir, 4242, alive)).toBeNull();
+    expect(ownedRun(dataDir, alive)).toBeNull();
     // A stop for the run it followed along from signals nothing to the one that replaced it.
     const signalled: number[] = [];
-    expect(stopRunningCommand(dataDir, alive, (pid) => void signalled.push(pid), 4242)).toBe(false);
+    const signal = (pid: number) => void signalled.push(pid);
+    expect(stopRunningCommand(dataDir, alive, signal, owned ?? undefined)).toBe(false);
+    // Nor to one by hand that came back with the same process number.
+    running.add(4242);
+    markRunning(dataDir, 4242, new Date("2026-10-25T17:06:00Z"));
+    holds(4242);
+    expect(ownedRun(dataDir, alive)).toBeNull();
+    expect(stopRunningCommand(dataDir, alive, signal, owned ?? undefined)).toBe(false);
     expect(signalled).toEqual([]);
-    // The agent's own run is owned whoever started the window.
-    markRunning(dataDir, 5151, new Date("2026-10-25T17:06:00Z"), undefined, true);
-    expect(ownedRun(dataDir, undefined, alive)).toBe(5151);
+    // The run it owns stops.
+    markRunning(dataDir, 4242, new Date("2026-10-25T17:00:00Z"), undefined, true);
+    expect(stopRunningCommand(dataDir, alive, signal, owned ?? undefined)).toBe(true);
+    expect(signalled).toEqual([4242]);
   });
 
   it("reads a note a crashed run left as nothing running", () => {

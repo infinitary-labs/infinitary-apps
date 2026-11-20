@@ -101,12 +101,21 @@ export function runTaskXml(options: {
   account: string;
   atLogin: boolean;
   settings?: string;
+  /**
+   * The label of this app's own agent the task is, which its run reads as
+   * Task Scheduler sets no variable (`--agent`, src/main/runCommand.ts).
+   */
+  agent?: string;
 }): string {
   return taskXml({
     launcher: options.launcher,
     account: options.account,
     atLogin: options.atLogin,
-    words: ["run", ...(options.settings ? ["--settings", options.settings] : [])],
+    words: [
+      "run",
+      ...(options.settings ? ["--settings", options.settings] : []),
+      ...(options.agent ? ["--agent", options.agent] : []),
+    ],
     description: "Starts Infinitary with no window (docs/run.md).",
     again: false,
   });
@@ -330,10 +339,17 @@ export async function removeRunTask(
  */
 export const RUN_STOP_FILE = "run-stop.json";
 
-/** Asks the run on this data folder to stop cleanly; false where the request could not be written. */
-export function requestRunStop(dataDir: string, now: Date = new Date()): boolean {
+/**
+ * Asks the run on this data folder to stop cleanly; with `pid`, only the run
+ * that process is, so another run there leaves it alone. False where the
+ * request could not be written.
+ */
+export function requestRunStop(dataDir: string, now: Date = new Date(), pid?: number): boolean {
   try {
-    writePrivate(join(dataDir, RUN_STOP_FILE), `${JSON.stringify({ at: now.toISOString() })}\n`);
+    writePrivate(
+      join(dataDir, RUN_STOP_FILE),
+      `${JSON.stringify({ at: now.toISOString(), ...(pid === undefined ? {} : { pid }) })}\n`,
+    );
     return true;
   } catch {
     return false;
@@ -346,24 +362,28 @@ export const RUN_STOP_READ_MS = 1_000;
 /**
  * A run on Windows reads whether a stop was asked of it once a second and
  * stops once one written after its own start is there; a request left from
- * before it started is taken away. Answers what ends the reading.
+ * before it started is taken away, as is one naming another process than
+ * `pid`, the run's own. Answers what ends the reading.
  */
 export function watchRunStop(
   dataDir: string,
   startedAt: Date,
   stop: () => void,
   every: number = RUN_STOP_READ_MS,
+  pid?: number,
 ): () => void {
   const file = join(dataDir, RUN_STOP_FILE);
   const asked = (): boolean => {
-    let at: number;
+    let request: { at?: string; pid?: unknown };
     try {
-      at = Date.parse((JSON.parse(readFileSync(file, "utf8")) as { at?: string }).at ?? "");
+      request = JSON.parse(readFileSync(file, "utf8")) as { at?: string; pid?: unknown };
     } catch {
       return false;
     }
     rmSync(file, { force: true });
-    return Number.isFinite(at) && at >= startedAt.getTime();
+    const at = Date.parse(request.at ?? "");
+    const forThis = request.pid === undefined || pid === undefined || request.pid === pid;
+    return forThis && Number.isFinite(at) && at >= startedAt.getTime();
   };
   if (asked()) {
     stop();

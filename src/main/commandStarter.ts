@@ -35,9 +35,10 @@ export type CommandStarter = {
   inPlace: () => boolean;
   /**
    * Lets the agent go, which stops its run; with `forget` no login starts it
-   * again, and with `force` a run that does not answer is ended rather than asked.
+   * again, with `force` a run that does not answer is ended rather than asked,
+   * and with `run` a stop asked through the folder is for that process alone.
    */
-  stop: (options: { forget: boolean; force?: EndedRun }) => Promise<void>;
+  stop: (options: { forget: boolean; force?: EndedRun; run?: number }) => Promise<void>;
   /**
    * Restart it: ends the run, the process its record names, by force and
    * starts it again; false where it could not start again.

@@ -38,19 +38,30 @@ export function runCommand(argv: readonly string[], defaultApp: boolean): string
   return words?.[0] === "run" ? words.slice(1) : null;
 }
 
-/** What a run was asked for: the settings file it names, if any (./runSettings.ts). */
-export type RunOptions = { settings?: string };
+/**
+ * What a run was asked for: the settings file it names, if any
+ * (./runSettings.ts), and the label of this app's own agent that started
+ * it, where its service manager sets no variable (Windows' Task Scheduler,
+ * `runTaskXml`): the same mark `RUN_AGENT_ENV` carries elsewhere.
+ */
+export type RunOptions = { settings?: string; agent?: string };
 
 /**
- * The words after `run`: nothing, or `--settings <file>`. Anything else is a
- * mistake, answered with the usage, so a misspelled word never starts a run
+ * The words after `run`: nothing, `--settings <file>`, or with `--agent
+ * <label>` after it, which only this app's own task writes. Anything else is
+ * a mistake, answered with the usage, so a misspelled word never starts a run
  * that ignores it.
  */
 export function runOptions(args: readonly string[]): RunOptions | null {
-  if (args.length === 0) return {};
-  const [word, file, ...rest] = args;
-  if (word === "--settings" && file && rest.length === 0) return { settings: file };
-  return null;
+  const options: RunOptions = {};
+  for (let at = 0; at < args.length; at += 2) {
+    const [word, value] = [args[at], args[at + 1]];
+    if (!value) return null;
+    if (word === "--settings" && options.settings === undefined) options.settings = value;
+    else if (word === "--agent" && options.agent === undefined) options.agent = value;
+    else return null;
+  }
+  return options;
 }
 
 /**
@@ -267,26 +278,33 @@ export function runByOwnAgent(
   dataDir: string,
   alive: (pid: number) => boolean = processAlive,
 ): boolean {
-  return ownedRun(dataDir, undefined, alive) !== null;
+  return ownedRun(dataDir, alive) !== null;
+}
+
+/** One run, by its process and the start its own note keeps, so a reused process number is another. */
+export type OwnedRun = Pick<RunMarker, "pid" | "startedAt">;
+
+/** Whether two readings name the same run. */
+export function sameRun(a: OwnedRun | null | undefined, b: OwnedRun | null | undefined): boolean {
+  return Boolean(a && b && a.pid === b.pid && a.startedAt === b.startedAt);
 }
 
 /**
- * The process number of the command running on this folder now, when this
- * app's starter owns it: its own agent started it, or it is `started`, the
- * one this window started. Null for any other, a command started by hand
- * after this window's own ended included.
+ * The command running on this folder now, when this app's own agent started
+ * it: the run itself wrote so in its note, from the mark its agent gave it
+ * (`startedByAgent`). Null for any other, a command started by hand after
+ * this window's own ended included, and one an agent from before that mark.
  */
 export function ownedRun(
   dataDir: string,
-  started: number | undefined,
   alive: (pid: number) => boolean = processAlive,
-): number | null {
+): OwnedRun | null {
   if (!runningByCommand(dataDir, alive)) return null;
   try {
     const marker = RunMarkerSchema.parse(
       JSON.parse(readFileSync(join(dataDir, RUN_MARKER), "utf8")),
     );
-    return marker.agent === true || marker.pid === started ? marker.pid : null;
+    return marker.agent === true ? { pid: marker.pid, startedAt: marker.startedAt } : null;
   } catch {
     return null;
   }
@@ -302,22 +320,25 @@ export function stopRunningCommand(
   dataDir: string,
   alive: (pid: number) => boolean = processAlive,
   signal: (pid: number) => void = hostPlatform() === "win32"
-    ? () => {
-        // Windows ends a signalled program at once, so the run is asked through its folder.
-        if (!requestRunStop(dataDir)) throw new Error("The stop could not be asked.");
+    ? (pid) => {
+        // Windows ends a signalled program at once, so the run is asked
+        // through its folder, by its process, which another run there ignores.
+        if (!requestRunStop(dataDir, new Date(), pid))
+          throw new Error("The stop could not be asked.");
       }
     : (pid) => process.kill(pid, "SIGTERM"),
   /** Stops only this run: another the folder's note names now is left running. */
-  only?: number,
+  only?: OwnedRun,
 ): boolean {
   if (!runningByCommand(dataDir, alive)) return false;
-  let pid: number;
+  let marker: RunMarker;
   try {
-    pid = RunMarkerSchema.parse(JSON.parse(readFileSync(join(dataDir, RUN_MARKER), "utf8"))).pid;
+    marker = RunMarkerSchema.parse(JSON.parse(readFileSync(join(dataDir, RUN_MARKER), "utf8")));
   } catch {
     return false;
   }
-  if (only !== undefined && pid !== only) return false;
+  if (only !== undefined && !sameRun(only, marker)) return false;
+  const { pid } = marker;
   try {
     signal(pid);
     return true;

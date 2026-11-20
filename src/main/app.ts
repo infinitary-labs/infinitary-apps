@@ -1,3 +1,4 @@
+import { statSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { homedir, hostname, tmpdir, userInfo } from "node:os";
 import { basename, join } from "node:path";
@@ -427,7 +428,8 @@ function createMainWindow(
 }
 
 /** The app started as `<app> run` (./runCommand.ts): the words after `run`. */
-export type RunStart = { args: readonly string[] };
+/** A run's words after `run`, and the mark its agent gave it (`takeRunAgentMark`), already taken. */
+export type RunStart = { args: readonly string[]; agentMark?: string };
 
 /** The signals that stop a run: Ctrl-C, its starter stopping it, its terminal closing. */
 const STOP_SIGNALS = ["SIGINT", "SIGTERM", "SIGHUP"] as const;
@@ -668,8 +670,6 @@ export async function startApp(
   let besideRun = !windowless && runningByCommand(dataDir);
   // When this window started the command it opens beside, until that one welcomes it.
   let startedAt: number | undefined;
-  // The command this window started, by its process number: its starter owns that run alone.
-  let startedRun: number | undefined;
   // A window already running its first mate here holds the folder's lock:
   // this launch only focuses it, and a command started now could not open it.
   // Where the lock names no holder (Windows' own lock), a held one is a window's too.
@@ -690,7 +690,6 @@ export async function startApp(
   if (!besideRun && starter && !heldByWindow && gitForRun) {
     startedAt = Date.now();
     besideRun = await starter.start();
-    if (besideRun) startedRun = readRunStatus(dataDir).run?.pid;
     if (!besideRun) {
       // It runs its first mate itself: the agent never starts a run beside it.
       startedAt = undefined;
@@ -769,7 +768,11 @@ export async function startApp(
                 await app.whenReady();
                 return readElectronKeychainStatus(join(mainDir, "keychainProcessMain.js"), path);
               }).then(observed),
-        startedByAgent({ env: process.env, label: runLabelOf(work.place.flavor) }),
+        startedByAgent({
+          mark: run?.agentMark,
+          word: options.agent,
+          label: runLabelOf(work.place.flavor),
+        }),
       );
       leaveRun = (end) => {
         try {
@@ -812,11 +815,18 @@ export async function startApp(
       // Windows ends a program another one signals with no clean stop, so a
       // stop is asked through the data folder there (docs/run.md, "On Windows").
       if (hostPlatform() === "win32")
-        watchRunStop(app.getPath("userData"), runStartedAt, () => {
-          if (stopping) return;
-          runEnd = { reason: "signal", exitCode: 0, lines: [RUN_WORDS.stopAsked] };
-          stopRun();
-        });
+        // A stop asked of another run by its process leaves this one going.
+        watchRunStop(
+          app.getPath("userData"),
+          runStartedAt,
+          () => {
+            if (stopping) return;
+            runEnd = { reason: "signal", exitCode: 0, lines: [RUN_WORDS.stopAsked] };
+            stopRun();
+          },
+          undefined,
+          process.pid,
+        );
       // The last line once the core stopped, then the process ends with its code.
       let ended = false;
       app.on("will-quit", (event) => {
@@ -1128,6 +1138,14 @@ export async function startApp(
         keyReminders: () => keyReminders,
         keySystem: desktop.keys,
         joined: new JoinedHome(join(dataDir, "joined")),
+        // Its own first mate's database: a record started here (src/core/services.ts).
+        recordHere: () => {
+          try {
+            return statSync(join(dataDir, "firstmate.db"), { throwIfNoEntry: false }) !== undefined;
+          } catch {
+            return true;
+          }
+        },
         // Beside a run: its local door, its pictures, and this window's own look.
         ...(besideRun
           ? {
@@ -1155,7 +1173,7 @@ export async function startApp(
                 programReplaced,
                 ...(starter ? { starter } : {}),
                 ...(startedAt === undefined ? {} : { startedAt }),
-                ownedRun: () => ownedRun(dataDir, startedRun),
+                ownedRun: () => ownedRun(dataDir),
                 stopCommand: (only) => stopRunningCommand(dataDir, undefined, undefined, only),
               },
             }

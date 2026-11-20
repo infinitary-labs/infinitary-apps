@@ -342,7 +342,13 @@ describe("the command the window starts, on Windows", () => {
     await startRunAgent(context);
     const text = readFileSync(file).subarray(2).toString("utf16le");
     expect(text).toBe(
-      runTaskXml({ launcher: context.launcher, account: context.account, atLogin: true, settings }),
+      runTaskXml({
+        launcher: context.launcher,
+        account: context.account,
+        atLogin: true,
+        settings,
+        agent: LABEL,
+      }),
     );
     expect(readRunTask(file)).toEqual({ atLogin: true, settings });
   });
@@ -361,9 +367,13 @@ describe("the command the window starts, on Windows", () => {
     expect(asked).toEqual([]);
     expect(existsSync(join(context.dataDir, RUN_STOP_FILE))).toBe(true);
     expect(runAgentInPlace(context)).toBe(true);
-    await stopRunAgent(context, { forget: true });
+    await stopRunAgent(context, { forget: true, run: 4242 });
     expect(asked).toEqual([["/Delete", "/TN", LABEL, "/F"]]);
     expect(runAgentInPlace(context)).toBe(false);
+    // The review of INF-5409: a window that joined asks only its own run, by its process.
+    expect(JSON.parse(readFileSync(join(context.dataDir, RUN_STOP_FILE), "utf8"))).toMatchObject({
+      pid: 4242,
+    });
   });
 
   // The captain, on INF-4622's fix: "can we not give an option that's force restart the

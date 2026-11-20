@@ -295,8 +295,10 @@ describe("health, through the five rules", () => {
     expect(asked).toBe(0);
     // The review of INF-5409: the file is there, so a first launch counts it, without reading it.
     expect(signIns.present("github.com")).toBe(true);
+    expect(signIns.presentHosts()).toEqual(["github.com"]);
     rmSync(join(h.root, "github.com", "sign-in.json"));
     expect(signIns.present("github.com")).toBe(false);
+    expect(signIns.presentHosts()).toEqual([]);
   });
 
   it("with nothing signed in, checks nothing and says nothing", async () => {

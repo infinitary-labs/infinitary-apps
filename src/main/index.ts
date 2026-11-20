@@ -10,6 +10,7 @@ import { linkCommand, runLinkCommand } from "./linkCommand";
 import { hasNoScreen, NO_SCREEN_WORDS } from "./noScreen";
 import { installMainProcessErrorHandlers } from "./processErrors";
 import { askLoginShellEarly, runCommand } from "./runCommand";
+import { takeRunAgentMark } from "./runEnvironment";
 import { statusCommand } from "./runStatus";
 import { helpCommand, startAtBootCommand } from "./startAtBoot";
 import { workCommand } from "./workCommand";
@@ -133,12 +134,14 @@ if (work) {
   // Started by a command with no window (./runCommand.ts, docs/run.md): the
   // app's own start, which on Linux awaits a display of its own first. The
   // person's login shell is asked now, while the app's code loads.
+  // Its agent's mark is taken first, so nothing this run starts inherits it.
+  const agentMark = takeRunAgentMark(process.env);
   askLoginShellEarly(run);
   await armFreezeRecorder();
   const loaded = await cacheCompiledCode();
   const { startApp } = await import("./app");
   loaded?.();
-  await startApp(dirname(fileURLToPath(import.meta.url)), { args: run });
+  await startApp(dirname(fileURLToPath(import.meta.url)), { args: run, agentMark });
 } else if (hasNoScreen(hostPlatform(), process.env, process.argv)) {
   // The window cannot open with no screen: say what to do instead, with no crash.
   process.stderr.write(`${NO_SCREEN_WORDS.join("\n")}\n`);

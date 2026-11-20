@@ -37,6 +37,7 @@ import type { WorkSetupReport } from "@shared/workSetup";
 import { type BesideOptions, BesideWindow } from "./besideWindow";
 import type { PictureSource } from "./frames/frameProtocol";
 import { InstalledKeymap, type SizeCommandHandlers } from "./keyboard";
+import { type OwnedRun, sameRun } from "./runCommand";
 import { LocalWindow, type LocalWindowOptions } from "./view/localWindow";
 import { ViewBackend, type ViewBackendOptions } from "./view/viewBackend";
 import { type PreferenceSource, sizeCommands } from "./windowSize";
@@ -81,6 +82,14 @@ export type ShellOptions = {
   joined: JoinedHome;
   /** This computer's key reminder, once the window's profile has one (`./keyReminders.ts`). */
   keyReminders?: () => WindowKeyReminders | null;
+  /**
+   * Whether this computer's own first mate keeps a record here already, read
+   * without starting it: true where that cannot be told. With none, nothing
+   * can have been done here, so a grant waiting in the work folder opens the
+   * window at once; with one, the first mate starts and its own first launch
+   * says whether anything was (docs/view.md, "Following along").
+   */
+  recordHere: () => boolean;
   /**
    * This user's work folder (docs/helper.md, "Where it keeps its data"): a
    * Mac that runs its home's work keeps its grant there, which this app
@@ -276,11 +285,22 @@ export class Shell {
       await this.becomeBeside(this.options.beside);
       return;
     }
-    const joined = this.options.joined.read() ?? this.openFromWork();
+    // A grant waiting opens the window only where nothing was done here: with
+    // no record, at once; with one, once its own first launch says so.
+    const waiting = this.options.joined.read() ? null : this.waitingGrant();
+    const joined =
+      this.options.joined.read() ??
+      (waiting && !this.options.recordHere() ? this.openFromWork() : null);
     if (joined) {
       this.followWork(joined);
       this.becomeView();
-    } else await this.becomeHome();
+      return;
+    }
+    await this.becomeHome();
+    if (waiting)
+      await this.followAdded().catch((error: unknown) =>
+        console.warn(`[shell] could not follow the computer that added this one: ${String(error)}`),
+      );
   }
 
   /** The running core, while this app holds Firstmate itself. */
@@ -368,6 +388,9 @@ export class Shell {
    */
   async join(text: string): Promise<JoinOutcome> {
     if (!this.joinable() || this.switching) return { ok: false, refused: "other" };
+    // Beside a command, the run this window's starter owns now: only it stops.
+    const owned =
+      this.mode?.kind === "beside" ? (this.mode.beside.ownedRun ?? undefined) : undefined;
     let kind: string;
     try {
       kind = parsePairingLink(text).kind;
@@ -391,7 +414,7 @@ export class Shell {
     void this.switchTo(async () => {
       // Answer the window first; the switch starts it over.
       await new Promise<void>((resolve) => setImmediate(resolve));
-      await this.stopHome();
+      await this.stopHome(owned);
       this.becomeView();
     });
     return { ok: true };
@@ -427,12 +450,17 @@ export class Shell {
 
   /**
    * Whether this app may join another computer: as this computer's own
-   * first mate, or beside a command this window starts, whose first mate
-   * stops for good (docs/run.md, "Joining another computer").
+   * first mate, or beside a command this window starts while the command
+   * running is its own agent's, whose first mate stops for good (docs/run.md,
+   * "Joining another computer"). Never beside one started by hand, which
+   * joining would stop.
    */
   private joinable(): boolean {
     return (
-      this.mode?.kind === "home" || (this.mode?.kind === "beside" && this.mode.beside.startsCommand)
+      this.mode?.kind === "home" ||
+      (this.mode?.kind === "beside" &&
+        this.mode.beside.startsCommand &&
+        this.mode.beside.ownedRun !== null)
     );
   }
 
@@ -487,8 +515,8 @@ export class Shell {
   async followAdded(): Promise<boolean> {
     if (!this.joinable() || this.switching || !this.options.work) return false;
     // Beside a command, only the run this window's starter owns stops by itself.
-    const owned = this.mode?.kind === "beside" ? this.mode.beside.ownedRun : undefined;
-    if (owned === null) return false;
+    const owned =
+      this.mode?.kind === "beside" ? (this.mode.beside.ownedRun ?? undefined) : undefined;
     // Only a grant waiting asks the first mate anything: most polls find none.
     const waiting = this.waitingGrant();
     if (!waiting) return false;
@@ -501,7 +529,7 @@ export class Shell {
     if (firstRun?.untouched !== true) return false;
     // Asked again after the wait: a join, a switch or another run may have started meanwhile.
     if (!this.joinable() || this.switching) return false;
-    if (this.mode?.kind === "beside" && this.mode.beside.ownedRun !== owned) return false;
+    if (this.mode?.kind === "beside" && !sameRun(this.mode.beside.ownedRun, owned)) return false;
     const joined = this.openFromWork();
     if (!joined) return false;
     this.followWork(joined);
@@ -516,18 +544,14 @@ export class Shell {
 
   /**
    * What this window does once its first mate's computer adds it: `follows`
-   * when it would follow along (`followAdded`), able to join, with this
-   * computer's work and, beside a command, only one its starter owns; and
-   * `joins` when Paste its link and Join by its address work here. The window
-   * promises only these.
+   * when it would follow along (`followAdded`), able to join with this
+   * computer's work; and `joins` when Paste its link and Join by its address
+   * work here: as its own first mate, or beside a command its starter owns,
+   * never one started by hand (`joinable`). The window promises only these.
    */
   followsAdded(): { follows: boolean; joins: boolean } {
     const joins = this.joinable();
-    const follows =
-      joins &&
-      Boolean(this.options.work) &&
-      (this.mode?.kind !== "beside" || this.mode.beside.ownedRun !== null);
-    return { follows, joins };
+    return { follows: joins && Boolean(this.options.work), joins };
   }
 
   /**
@@ -1096,7 +1120,7 @@ export class Shell {
     end("moved");
   }
 
-  private async stopHome(only?: number): Promise<void> {
+  private async stopHome(only?: OwnedRun): Promise<void> {
     const mode = this.mode;
     if (mode?.kind === "beside") {
       this.mode = null;

@@ -328,7 +328,12 @@ export class JoinedHome {
     this.write(KEPT_OWN_FILE, { version: 1, deviceId });
   }
 
-  /** The grant this app kept its own first mate beside (`keepOwn`), or null. */
+  /**
+   * The grant this app kept its own first mate beside (`keepOwn`), or null.
+   * A note that cannot be read is null too: it only spares a check, since
+   * nothing adopts a grant without confirming nothing was done here first
+   * (`Shell.start`, `Shell.followAdded`; docs/view.md, "Following along").
+   */
   keptOwnDeviceId(): string | null {
     const path = join(this.dir, KEPT_OWN_FILE);
     if (!existsSync(path)) return null;

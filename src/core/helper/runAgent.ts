@@ -158,7 +158,13 @@ function registerWindowsTask(
   return registerRunTask(context.schtasks, {
     label: context.label,
     file: runTaskFile(context.dataDir),
-    xml: runTaskXml({ launcher: context.launcher, account: context.account, atLogin, settings }),
+    xml: runTaskXml({
+      launcher: context.launcher,
+      account: context.account,
+      atLogin,
+      settings,
+      agent: context.label,
+    }),
   });
 }
 
@@ -279,18 +285,19 @@ export function forgetRunAgentFiles(
  * Lets the agent go, which stops its run: for a window that runs its first
  * mate itself after all, so the agent never starts the run beside it, and,
  * with `forget`, for a window that joined a first mate on another computer,
- * so no login starts a run here again.
+ * so no login starts a run here again. With `run`, a stop asked through the
+ * folder is for that process alone, so a run started by hand there stays.
  */
 export async function stopRunAgent(
   context: RunAgentContext,
-  options: { forget: boolean; force?: EndedRun },
+  options: { forget: boolean; force?: EndedRun; run?: number },
 ): Promise<void> {
   if ("schtasks" in context) {
     // Task Scheduler's own end of a task ends its program with no clean stop,
     // so the run is asked to stop itself, as a signal asks it elsewhere; one
     // that does not answer never reads that ask, so `force` ends it.
     if (options.force) await endWindowsRun(context, options.force.pid);
-    else requestRunStop(context.dataDir);
+    else requestRunStop(context.dataDir, new Date(), options.run);
     if (options.forget)
       await removeRunTask(context.schtasks, {
         label: context.label,

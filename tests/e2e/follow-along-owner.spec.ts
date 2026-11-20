@@ -14,7 +14,8 @@ import { type ServiceManagerStandIn, serviceManagerStandIn } from "./serviceMana
  * Following along beside a command (docs/view.md, "Following along"; the review of INF-5409):
  * when the computer where the first mate lives adds this one by its address, it leaves a grant in
  * this computer's work folder, and a window beside an empty command's first mate follows along,
- * stopping that command, only when the command is the one its own starter owns. Data: a home app
+ * stopping that command, only when the command is the one its own starter owns, and offers no join
+ * beside one started by hand. Data: a home app
  * on this computer, each window's throwaway data folder and HOME, and a stand-in for this
  * account's service manager that really runs the command the window's agent starts
  * (tests/e2e/serviceManagerStandIn.ts); a command started by hand is the built app's `run`, as a
@@ -160,11 +161,12 @@ test("a window follows along beside the command its agent started, and never sto
       expect(replaced).toBe(byHand.child.pid);
       await welcomed(page);
       await addedByAddress(join(userDataDir, "work"));
-      // The window still holds its starter, so it could join, but this run is not the one it owns.
+      // The window still holds its starter, but this run is not the one it owns: it neither
+      // follows along nor offers a join, either of which would stop the run started by hand.
       expect(await page.evaluate(() => window.infinitary.devices.followAdded())).toEqual({
         followed: false,
         follows: false,
-        joins: true,
+        joins: false,
       });
       expect(await roleOf(page)).toBe("home");
       expect(alive(replaced)).toBe(true);

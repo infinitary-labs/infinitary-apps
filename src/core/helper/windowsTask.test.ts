@@ -65,6 +65,10 @@ describe("the task", () => {
     expect(xml).toContain("<DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>");
     expect(xml).toContain(`<Command>${LAUNCHER.executable}</Command>`);
     expect(xml).toContain("<Arguments>run</Arguments>");
+    // This app's own task names its agent, as a variable does elsewhere.
+    expect(
+      runTaskXml({ launcher: LAUNCHER, account: "ada", atLogin: true, agent: LABEL }),
+    ).toContain(`<Arguments>run --agent ${LABEL}</Arguments>`);
   });
 
   it("keeps a settings file with a space, a quote and an ampersand, read back as written", () => {
@@ -120,6 +124,23 @@ describe("a stop asked of the run on Windows", () => {
       requestRunStop(dataDir);
       await new Promise((resolve) => setTimeout(resolve, 50));
       expect(stops).toBe(1);
+    } finally {
+      end();
+    }
+  });
+
+  // The review of INF-5409: a window that joined or followed along asks its own run to stop by its
+  // process, and a run started by hand in its place reads that request as another's.
+  it("leaves a run alone for a request naming another process, and takes that request away", async () => {
+    const dataDir = scratchDir("windows-stop-");
+    let stops = 0;
+    const end = watchRunStop(dataDir, new Date(Date.now() - 1_000), () => (stops += 1), 10, 5151);
+    try {
+      expect(requestRunStop(dataDir, new Date(), 4242)).toBe(true);
+      await expect.poll(() => existsSync(join(dataDir, RUN_STOP_FILE))).toBe(false);
+      expect(stops).toBe(0);
+      requestRunStop(dataDir, new Date(), 5151);
+      await expect.poll(() => stops).toBe(1);
     } finally {
       end();
     }

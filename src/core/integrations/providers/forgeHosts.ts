@@ -17,7 +17,11 @@ export function forgeIntegrationId(kind: ServerIntegrationKind, host: string): s
 export function forgeHostIntegration(
   kind: ServerIntegrationKind,
   options: {
-    signIns: GithubIntegrationOptions["signIns"] & { view: () => ForgesView };
+    signIns: GithubIntegrationOptions["signIns"] & {
+      view: () => ForgesView;
+      /** The hosts with a sign-in file, read without any file's contents; null where unknown. */
+      presentHosts: () => string[] | null;
+    };
     gateway: (host: string) => GithubIntegrationOptions["gateway"];
   },
 ): IntegrationBinding {
@@ -59,11 +63,14 @@ export function forgeHostIntegration(
           .connections()
           .map((connection) => ({ ...connection, host: row.host, name: rowName(row.host) }));
       }),
-    saved: () =>
-      hosts().some((row) => {
-        const one = binding(forgeIntegrationId(kind, row.host));
-        return one.saved?.() ?? one.connections().length > 0;
-      }),
+    // From the store's own listing, never a view: no sign-in file is read to
+    // tell whether one is here. A server's kind is inside its file, so any
+    // host this kind could list counts, and a folder that cannot be listed too.
+    saved: () => {
+      const present = options.signIns.presentHosts();
+      if (present === null) return true;
+      return present.some((host) => facts.publicHostIsServerRow || host !== facts.publicHost);
+    },
     check: async (id) => {
       await binding(id).check?.(id);
     },

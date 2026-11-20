@@ -15,7 +15,7 @@ On screen the mode is called "started by a command", beside Settings' "Start at 
 
 `<app> run`, where `<app>` is `Infinitary.app/Contents/MacOS/Infinitary` on a Mac, `infinitary` from a Linux package, the AppImage file itself, or `electron . run` in a checkout.
 Chromium's own switches may stand before `run`, as they may before `work` (`commandWords`, `src/main/workCommand.ts`); `<app> work run` is the work mode's own command, never this one (`docs/helper.md`).
-`<app> run --settings <file>` names a settings file ("A settings file" below); any other word after `run` prints how to use it and exits 2.
+`<app> run --settings <file>` names a settings file ("A settings file" below); `--agent <label>` after it is the mark this app's own Windows task gives its run ("On Windows" below); any other word after `run` prints how to use it and exits 2.
 
 The main entry (`src/main/index.ts`) reads the words before anything of the app loads (`runCommand`, `src/main/runCommand.ts`) and starts the app itself (`startApp`, `src/main/app.ts`) with no window:
 
@@ -231,6 +231,7 @@ On a Mac the file in `~/Library/LaunchAgents` is the agent `start-at-boot` write
 A login item the window had before moves to the command the first time the window starts beside it, and the window's own is turned off.
 
 **Joining another computer** from beside the command: the command's first mate is this computer's own, so joining stops it and lets the agent go, its files and the Linux service with it, and the window becomes a view of the other computer (`Shell.join`, `src/main/shell.ts`).
+It is offered only while the command running is the one the window's agent started, and stops only that run; beside a command started by hand it is not offered (`docs/view.md`, "Following along").
 Joining by its address works there too, as an installed app's first launch offers it (INF-1827, INF-4935): the command's first mate keeps this computer's SSH trust and Infinitary's own key, so the window asks it each step with `inf:devices:link-at`, and it signs in to the other computer and answers the link to the window's program alone, never its page (`BesideWindow.linkAt`, `PROGRAM_ONLY_CHANNELS`).
 The window then joins with the held link as a pasted one joins, stopping the command as above.
 A command from before that request does not list the `join-by-address-beside` change, and the window says it could not ask that computer for a link.
@@ -379,7 +380,8 @@ It starts the run now unless another Infinitary holds the data folder, and other
 Task Scheduler never starts a run again after it ends, so a crash, or an update's 75 from a package installed by hand, waits for the next sign-in or the window, which offers Start it here at once (`entryRestarts`); after the app's own update the installer opens that window.
 `--settings <file>` and its refusal are as on Linux.
 `--off` deletes the task and leaves a run going alone, since Task Scheduler's own end of a task ends its program at once, with no clean stop.
-For the same reason nothing on Windows signals the run: a stop is asked by writing `run-stop.json` in the data folder, which the run reads once a second and honours only when it was written after the run started (`requestRunStop`, `watchRunStop`).
+For the same reason nothing on Windows signals the run: a stop is asked by writing `run-stop.json` in the data folder, which the run reads once a second and honours only when it was written after the run started and, where it names a process, names this run's (`requestRunStop`, `watchRunStop`).
+The task this app registers runs `run --agent <label>`, since Task Scheduler sets no variable for the mark a Mac's and Linux's agents give their runs (`runTaskXml`, `docs/view.md`, "Following along").
 An installed app's window on a PC with no Git yet starts no command: a run cannot ask, so the window offers Git for Windows and runs its own first mate that time, and the next window starts the command (`docs/windows.md`, "Git for Windows").
 A development run may stand in `schtasks` with `INFINITARY_SCHTASKS`; an installed app reads `%SystemRoot%\System32\schtasks.exe`.
 

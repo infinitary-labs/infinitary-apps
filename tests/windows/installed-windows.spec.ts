@@ -339,7 +339,8 @@ test("the Windows installer installs for this person, offers Git, starts the com
       await expect.poll(() => runTask(label)?.state, { timeout: 120_000 }).toBe("Running");
       const task = runTask(label);
       expect(task?.execute.toLowerCase()).toBe(executable.toLowerCase());
-      expect(task?.arguments).toBe("run");
+      // The task names its agent, which its run reads as the mark Task Scheduler gives no variable for.
+      expect(task?.arguments).toBe(`run --agent ${label}`);
       expect(task?.userId.toLowerCase().endsWith(user.toLowerCase())).toBe(true);
       expect(task?.logonType).toBe("Interactive");
       expect(task?.signInTriggers).toBe(signInTriggers);

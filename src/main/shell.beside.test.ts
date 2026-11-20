@@ -20,6 +20,7 @@ import {
 } from "../../tests/helpers/shellStandIns";
 import type { StartEntry } from "./besideRun";
 import { BesideWindow } from "./besideWindow";
+import type { OwnedRun } from "./runCommand";
 import type { RunStatus } from "./runStatus";
 import { Shell } from "./shell";
 
@@ -38,6 +39,8 @@ stopEachTest();
 // touches the desktop.
 describe("the window beside a command's first mate", () => {
   const JOINED = { pid: 41, startedAt: "2026-11-01T08:00:00.000Z" };
+  /** The run this app's own agent started, which its window's starter owns. */
+  const OWNED: OwnedRun = JOINED;
   /** The command's own records in its data folder, as the window reads them. */
   type Records = Pick<RunStatus, "running" | "run" | "lastStop">;
   const stopped = (
@@ -159,10 +162,10 @@ describe("the window beside a command's first mate", () => {
       /** This user's work folder, where a home that added this computer leaves its grant. */
       workDir?: string;
       /**
-       * The process number of the command running when it is the starter's own - this window or
-       * this app's agent started it - or null for one started by hand; asked each time.
+       * The command running when it is the starter's own - this app's agent started it - or null
+       * for one started by hand; asked each time. With a starter, the agent's run by default.
        */
-      ownedRun?: () => number | null;
+      ownedRun?: () => OwnedRun | null;
     } = {},
   ) {
     const startCore = vi.fn(async () => ownCore().core);
@@ -198,10 +201,11 @@ describe("the window beside a command's first mate", () => {
       login: false,
       stops: 0,
       /** Which run each stop asked to stop, when it named one. */
-      stopped: [] as (number | undefined)[],
+      stopped: [] as (OwnedRun | undefined)[],
     };
     const made = new Shell({
       joined: new JoinedHome(join(scratchDir("infinitary-shell-beside-"), "joined"), () => {}),
+      recordHere: () => false,
       openPage,
       beside: {
         door: doorDir,
@@ -222,10 +226,10 @@ describe("the window beside a command's first mate", () => {
         installsUpdates: options.installsUpdates ?? false,
         programReplaced: () => command.programReplaced,
         ...(options.starts ? { starter } : {}),
-        ...(options.ownedRun === undefined ? {} : { ownedRun: options.ownedRun }),
+        ownedRun: options.ownedRun ?? (() => OWNED),
         ...(options.startedAt === undefined ? {} : { startedAt: options.startedAt }),
         ...(options.answerWaitMs === undefined ? {} : { answerWaitMs: options.answerWaitMs }),
-        stopCommand: (only?: number) => {
+        stopCommand: (only?: OwnedRun) => {
           starter.stops += 1;
           starter.stopped.push(only);
           return command.records.running === true;
@@ -1124,8 +1128,9 @@ describe("the window beside a command's first mate", () => {
     await at.start();
     await expect(at.shell.join(await pro.link())).resolves.toEqual({ ok: true });
     await expect.poll(() => at.shell.thisMac().role).toBe("view");
-    expect(at.starter.stop.mock.calls).toEqual([[{ forget: true }]]);
-    expect(at.starter.stops).toBe(1);
+    // The review of INF-5409: it stops the run its agent started, by that run's process.
+    expect(at.starter.stop.mock.calls).toEqual([[{ forget: true, run: OWNED.pid }]]);
+    expect(at.starter.stopped).toEqual([OWNED]);
     expect(at.startCore).not.toHaveBeenCalled();
   });
 
@@ -1152,8 +1157,8 @@ describe("the window beside a command's first mate", () => {
     ]);
     await expect(at.shell.joinHeld("join")).resolves.toEqual({ ok: true });
     await expect.poll(() => at.shell.thisMac().role).toBe("view");
-    expect(at.starter.stop.mock.calls).toEqual([[{ forget: true }]]);
-    expect(at.starter.stops).toBe(1);
+    expect(at.starter.stop.mock.calls).toEqual([[{ forget: true, run: OWNED.pid }]]);
+    expect(at.starter.stopped).toEqual([OWNED]);
     expect(at.startCore).not.toHaveBeenCalled();
   });
 
@@ -1163,18 +1168,22 @@ describe("the window beside a command's first mate", () => {
   // that run alone, by its process number.
   it("follows along beside the command its own agent started, never beside one started by hand", async () => {
     const pro = await otherMac({}, { joinsFromAnotherMac: true });
-    for (const owned of [null, 4321]) {
+    for (const owned of [null, { pid: 4321, startedAt: "2026-11-20T18:00:00.000Z" }]) {
       const command = untouchedCommand();
       await command.open().settled();
       const workDir = join(scratchDir("infinitary-shell-beside-work-"), "work");
       const at = besideShell(command.doorDir, { starts: true, ownedRun: () => owned, workDir });
       await at.start();
-      expect(at.shell.followsAdded()).toEqual({ follows: owned !== null, joins: true });
+      // Beside one started by hand it neither follows nor offers a join that would stop it.
+      expect(at.shell.followsAdded()).toEqual({ follows: owned !== null, joins: owned !== null });
       await grantFrom(pro, workDir);
       expect(await at.shell.followAdded()).toBe(owned !== null);
       if (owned !== null) {
         await expect.poll(() => at.shell.thisMac().role).toBe("view");
         expect(at.starter.stopped).toEqual([owned]);
+        // Its agent's stop names that run too, so a stop asked through the folder (Windows) is
+        // ignored by a run started by hand that took its place at the last moment.
+        expect(at.starter.stop.mock.calls).toEqual([[{ forget: true, run: owned.pid }]]);
       } else {
         expect(at.shell.thisMac().role).not.toBe("view");
         expect(at.starter.stops).toBe(0);
@@ -1187,7 +1196,7 @@ describe("the window beside a command's first mate", () => {
   // asks its first mate whether anything was done here is never stopped.
   it("stays beside a command started by hand that replaced the owned one during the wait", async () => {
     const pro = await otherMac({}, { joinsFromAnotherMac: true });
-    let running: number | null = 4321;
+    let running: OwnedRun | null = { pid: 4321, startedAt: "2026-11-20T18:00:00.000Z" };
     const command = untouchedCommand(() => {
       // The owned run ended and one the person started by hand took its place.
       running = null;
@@ -1200,6 +1209,10 @@ describe("the window beside a command's first mate", () => {
     expect(await at.shell.followAdded()).toBe(false);
     expect(at.shell.thisMac().role).not.toBe("view");
     expect(at.starter.stops).toBe(0);
+    expect(at.starter.stop).not.toHaveBeenCalled();
+    // Nor does it offer to join, which would stop the run started by hand.
+    expect(at.shell.followsAdded()).toEqual({ follows: false, joins: false });
+    expect(await at.shell.join(await pro.link("mac"))).toEqual({ ok: false, refused: "other" });
     expect(at.starter.stop).not.toHaveBeenCalled();
   });
 

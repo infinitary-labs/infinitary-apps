@@ -15,13 +15,30 @@ export const RunEnvironmentSchema = z.object({
 export type RunEnvironment = z.infer<typeof RunEnvironmentSchema>;
 
 /**
- * Whether this run was started by this app's own agent, the one the window
- * and `start-at-boot` set up under `label`: each sets `RUN_AGENT_ENV` to its
- * label for the run it starts. A run started by hand carries no such mark,
- * nor does one an agent from before this mark started.
+ * Takes the mark this app's own agent gave the run out of its environment
+ * (`RUN_AGENT_ENV`) and answers it: the run reads it once, as it starts, and
+ * no program it starts inherits it, so a run started from inside it, by a
+ * crewmate's shell say, never reads as the agent's own.
  */
-export function startedByAgent(options: { env: NodeJS.ProcessEnv; label: string }): boolean {
-  return options.env[RUN_AGENT_ENV] === options.label;
+export function takeRunAgentMark(env: NodeJS.ProcessEnv): string | undefined {
+  const mark = env[RUN_AGENT_ENV];
+  delete env[RUN_AGENT_ENV];
+  return mark;
+}
+
+/**
+ * Whether this run was started by this app's own agent, the one the window
+ * and `start-at-boot` set up under `label`: each gives the run it starts its
+ * label, as the variable `takeRunAgentMark` took or, from Windows' Task
+ * Scheduler, which sets none, as the run's `--agent` word. A run started by
+ * hand carries no such mark, nor does one an agent from before this mark started.
+ */
+export function startedByAgent(options: {
+  mark: string | undefined;
+  word?: string | undefined;
+  label: string;
+}): boolean {
+  return options.mark === options.label || options.word === options.label;
 }
 
 /** No display variable proves only that Linux has no display to open, not that a Mac cannot draw. */

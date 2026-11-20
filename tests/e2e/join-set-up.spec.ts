@@ -29,12 +29,21 @@ test("set up from the first mate's computer is reached with Tab and opens this c
   test.skip(!SSH_SERVER_AVAILABLE, "needs the system's own SSH server to stand this computer's in");
   // This computer's SSH server: a throwaway one on loopback that answers for each of its addresses.
   const sshd = await startSshServer();
+  // The server is released however the app's launch or close ends.
+  try {
+    await setUpJourney(sshd.port);
+  } finally {
+    await sshd.stop();
+  }
+});
+
+async function setUpJourney(sshPort: number): Promise<void> {
   const app = await launchApp({
     env: {
       INFINITARY_STAND_IN_ADDRESSES: `${LOCAL},${PRIVATE}`,
       INFINITARY_STAND_IN_NETWORK_NAME: "sams-mac-mini.local",
       INFINITARY_STAND_IN_USER: USER,
-      INFINITARY_STAND_IN_OWN_SSH_PORT: String(sshd.port),
+      INFINITARY_STAND_IN_OWN_SSH_PORT: String(sshPort),
     },
   });
   try {
@@ -90,6 +99,5 @@ test("set up from the first mate's computer is reached with Tab and opens this c
     await expect(setUp).toBeVisible();
   } finally {
     await app.close();
-    await sshd.stop();
   }
-});
+}

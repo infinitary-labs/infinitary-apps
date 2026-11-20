@@ -450,6 +450,7 @@ async function windowsStartAtBoot(asked: BootAsked, context: BootContext): Promi
     account: context.account ?? context.user,
     atLogin: true,
     settings,
+    agent: context.label,
   });
   let registered: boolean;
   try {

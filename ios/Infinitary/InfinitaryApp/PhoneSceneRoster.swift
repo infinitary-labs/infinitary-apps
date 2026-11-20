@@ -470,7 +470,7 @@ final class PhoneSceneMotion: @unchecked Sendable {
                 let steps = 48
                 let rings = program.rings.map { ring in
                     (0...steps).map { i -> (point: CGPoint, near: Bool) in
-                        let at = Program.point(ring, 2 * .pi * Double(i) / Double(steps))
+                        let at = PhoneSceneRoster.Program.point(ring, 2 * .pi * Double(i) / Double(steps))
                         return (CGPoint(x: rootPoint.x + at.x, y: rootPoint.y + at.y), at.z > 0)
                     }
                 }

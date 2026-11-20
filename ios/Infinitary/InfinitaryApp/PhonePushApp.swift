@@ -54,10 +54,12 @@ import UserNotifications
         let info = notification.request.content.userInfo
         let card = info[PhonePush.cardKey] as? String
         let computer = info[PhonePushSeal.computerKey] as? String
-        // INF-5265: a card from a kept computer that is not shown always shows, since no stage shows it.
+        // INF-5265: a card from a kept computer that is not shown always shows, since no stage shows it. One that
+        // names no computer is the one kept before's (`PhonePushes.owner`), as its tap and its clearing take it.
         let shows = await MainActor.run {
             PhonePush.showsInFront(contact: self.model.connection?.contact, cardID: card,
-                                   computer: computer, shown: self.model.kept.shown?.pin)
+                                   computer: self.model.pushes?.owner(named: computer) ?? computer,
+                                   shown: self.model.kept.shown?.pin)
         }
         return shows ? [.banner, .list, .sound] : []
     }
@@ -109,7 +111,7 @@ extension PhonePushes {
                 }
                 return status
             },
-            load: { PhonePushStore.load() },
+            load: { try PhonePushStore.read() },
             save: { PhonePushStore.save($0) },
             // iOS forgets its own answer when Infinitary is installed again; the person's Not now is kept here.
             askedPerson: { UserDefaults.standard.bool(forKey: asked) },

@@ -191,6 +191,8 @@ export async function startPhoneHome(
   writeFileSync(paths.modelsPath, JSON.stringify(models));
   if (options.settings) seedPhoneSettings(root, userData);
   let secretConfirms = 0;
+  /** INF-5265: the cards `homes-card` made on this home. */
+  let homesCards = 0;
   // The invented token the stand-in calendar receives; no request leaves this process.
   const SECRET_TOKEN = "ya29.invented-phone-calendar-token";
   const secretSends: string[] = [];
@@ -2705,12 +2707,28 @@ export async function startPhoneHome(
           result = pushReading();
           break;
         }
-        // INF-5265: waits up to half a minute for this home to have sent a card sealed to its stand-in relay.
+        // INF-5265: waits up to half a minute for this home to have sent its stand-in relay more sealed cards than
+        // `after`, the count a part read before (none when it names none).
         case "POST push-sent": {
+          const text = await controlBody(request);
+          const after = text ? (JSON.parse(text) as { after: number }).after : 0;
           const deadline = Date.now() + 30_000;
-          while (pushRelay.state().pushes === 0 && Date.now() < deadline)
+          while (pushRelay.state().pushes <= after && Date.now() < deadline)
             await new Promise((resolve) => setTimeout(resolve, 250));
           result = pushReading();
+          break;
+        }
+        // INF-5265: a new card on this home each time, which its phone sender seals for the phone's registration.
+        case "POST homes-card": {
+          homesCards += 1;
+          const title = `A card from this computer, number ${homesCards}`;
+          core.services.supervisor.addFirstmateCard({
+            id: `phone-homes-${homesCards}`,
+            title,
+            body: "<p>This computer has a new card for the phone.</p>",
+            actions: [{ id: "ok", label: "Got it", default: true }],
+          });
+          result = { title };
           break;
         }
         // INF-4794: the home lets go of the phone's registration, as it does when the phone hands null, so the

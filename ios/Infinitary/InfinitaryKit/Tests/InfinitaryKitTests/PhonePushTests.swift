@@ -1,4 +1,5 @@
 import Foundation
+import Security
 import Testing
 @testable import InfinitaryKit
 
@@ -107,6 +108,8 @@ struct PhonePushTests {
         var posts: [[String: String]] = []
         var handed: [PhonePushRegistration?] = []
         var keeps = true
+        /// The Keychain cannot read the record now, as before the phone's first unlock.
+        var locked = false
         var delivered: [(id: String, cardID: String?, push: String?, computer: String?)] = []
         var removed: [String] = []
         var now = Date(timeIntervalSince1970: 1_795_000_000)
@@ -124,7 +127,11 @@ struct PhonePushTests {
                 askPermission: { self.askedIOS += 1; self.permission = self.allowsWhenAsked ? .on : .off; return self.allowsWhenAsked },
                 registerForPushes: { self.registered += 1 }, unregisterForPushes: { self.unregistered += 1 },
                 post: posted,
-                load: { self.held }, save: { self.held = $0 },
+                load: {
+                    if self.locked { throw PhonePushStore.Unreadable(status: errSecInteractionNotAllowed) }
+                    return self.held
+                },
+                save: { if !self.locked { self.held = $0 } },
                 askedPerson: { self.askedPerson }, noteAskedPerson: { self.askedPerson = true },
                 delivered: { self.delivered }, remove: { self.removed += $0 },
                 now: { self.now }), environment: environment)
@@ -392,7 +399,10 @@ struct PhonePushTests {
         let outside = Outside()
         outside.delivered = [("n1", "card-7f3a9c1e-plan-launch-week", nil, nil), ("n2", "card-2b81d0aa-review-onboarding", nil, nil), ("n3", nil, nil, nil),
                              ("n4", "card-9d4e6b20-renew-certificate", nil, nil)]
-        await outside.pushes().clear(stage: stage, seen: \.currentUpdateSeen, computer: studio.pin)
+        // The one computer kept: these notifications, shown before the phone kept a key per computer, are its own.
+        let pushes = outside.pushes()
+        pushes.kept([studio])
+        await pushes.clear(stage: stage, seen: \.currentUpdateSeen, computer: studio.pin)
         // Kept: the unseen card on the stage. Gone: the card that left it, one naming no card, and the seen card.
         #expect(outside.removed == ["n2", "n3", "n4"])
     }
@@ -553,19 +563,67 @@ struct PhonePushTests {
         #expect(pushes.owner(named: nil) == nil)
     }
 
-    /// A list read as empty, such as before the phone read its kept computers, drops no computer's key: only
-    /// forgetting the last computer does.
-    @MainActor @Test func anEmptyListKeepsEveryKey() async throws {
+    /// The list the app read is the phone's own (INF-5265's review): a computer missing from it was forgotten even if
+    /// the app stopped before it let go of that computer's key, so its key and its notifications go now; an empty list
+    /// lets go of the push address too, as forgetting the last computer does, and once only.
+    @MainActor @Test func aListReadAfterAForgetCutShortLetsGoOfTheForgottenKeys() async throws {
         let outside = Outside()
-        let key = PhonePushSeal.newKey()
-        outside.held = PhonePushHeld(key: key, token: token, environment: .production, grant: grant(expiring: 20))
+        outside.held = PhonePushHeld(key: PhonePushSeal.newKey(), token: token, environment: .production, grant: grant(expiring: 20))
         let pushes = outside.pushes()
-        pushes.kept([])
-        #expect(outside.held?.computers == nil, "A record from before stays as it was until its computer is read")
         pushes.kept([studio, office])
-        let before = try #require(outside.held)
-        pushes.kept([])
-        #expect(outside.held == before)
+        let officeKey = try #require(outside.held?.computers?.last?.key)
+        outside.delivered = [("n1", "card-7f3a9c1e-plan-launch-week", nil, studio.pin), ("n2", "card-41d6e0b2-export-retries", nil, office.pin),
+                             ("n3", nil, nil, nil)]
+
+        await pushes.kept([office])?.value
+        #expect(outside.held?.computers == [PhonePushComputer(pin: office.pin, name: office.name, key: officeKey)])
+        #expect(outside.held?.grant == grant(expiring: 20) && outside.unregistered == 0)
+        #expect(outside.removed == ["n1"])
+
+        outside.removed = []
+        await pushes.kept([])?.value
+        #expect(outside.held?.computers == [] && outside.held?.grant == nil && outside.held?.token == nil)
+        #expect(outside.unregistered == 1)
+        #expect(outside.removed == ["n1", "n2", "n3"])
+        #expect(pushes.kept([]) == nil && outside.unregistered == 1, "An empty list read again changes nothing")
+    }
+
+    /// A record the Keychain cannot read now, as before the first unlock, is never taken for none: nothing new is
+    /// made or saved over it, and once it can be read every computer keeps its key.
+    @MainActor @Test func aRecordItCannotReadNowKeepsEveryKey() async throws {
+        let outside = Outside()
+        outside.held = PhonePushHeld(key: PhonePushSeal.newKey(), token: token, environment: .production, grant: grant(expiring: 20))
+        outside.pushes().kept([studio, office])
+        let saved = try #require(outside.held)
+        outside.locked = true
+        let pushes = outside.pushes()
+        pushes.kept([studio])
+        #expect(pushes.owner(named: nil) == nil)
+        await pushes.tokenArrived(address)
+        #expect(await pushes.pushArrived(outside.grantPush(grant(expiring: 30))) == false)
+        await pushes.forgot(computer: office.pin)
+        #expect(outside.held == saved)
+        outside.locked = false
+        await pushes.reached(computer: office.pin, takesPushes: true, hand: outside.hand)
+        await pushes.opened()
+        #expect(outside.handed.last??.key == saved.computers?.last?.key)
+    }
+
+    /// Forgetting a computer that is not shown leaves the handover with the one shown, so a new grant still reaches it.
+    @MainActor @Test func forgettingAComputerNotShownKeepsTheShownOnesHandover() async throws {
+        let outside = Outside()
+        outside.held = PhonePushHeld(key: PhonePushSeal.newKey(), token: token, environment: .production, grant: grant(expiring: 20))
+        let pushes = outside.pushes()
+        pushes.kept([studio, office])
+        await pushes.opened()
+        await pushes.tokenArrived(address)
+        await pushes.reached(computer: studio.pin, takesPushes: true, hand: outside.hand)
+        let studioKey = try #require(outside.held?.computers?.first?.key)
+        await pushes.forgot(computer: office.pin)
+        let handed = outside.handed.count
+        #expect(await pushes.pushArrived(outside.grantPush(grant(expiring: 30))))
+        #expect(outside.handed.count == handed + 1)
+        #expect(outside.handed.last??.grant == grant(expiring: 30) && outside.handed.last??.key == studioKey)
     }
 
     /// A computer's answer that it did not keep the grant drops that grant alone: a key kept meanwhile stays.

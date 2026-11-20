@@ -85,14 +85,17 @@ public struct PhoneKeptMacsFiles: Sendable {
         return PhoneKeptMacs(shown: try JSONDecoder().decode(JoinedMac.self, from: Data(contentsOf: legacyURL)))
     }
 
-    /// Writes the whole list at once, then lets go of the one record from before, which this list now holds.
+    /// Writes the whole list at once, then lets go of the one record from before, which this list now holds. The
+    /// write is the save: once it lands, it throws no more, so a caller never keeps the list from before while the
+    /// next launch reads this one. Leaving it out of backups and removing the record from before are tried again on
+    /// each save, and the record from before is never read once this one exists.
     public func save(_ kept: PhoneKeptMacs) throws {
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         try JSONEncoder().encode(Record(shown: kept.shown, others: kept.others))
             .write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
         var saved = url
         var values = URLResourceValues(); values.isExcludedFromBackup = true
-        try saved.setResourceValues(values)
-        if FileManager.default.fileExists(atPath: legacyURL.path) { try FileManager.default.removeItem(at: legacyURL) }
+        try? saved.setResourceValues(values)
+        try? FileManager.default.removeItem(at: legacyURL)
     }
 }

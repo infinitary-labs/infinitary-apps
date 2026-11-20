@@ -10,8 +10,12 @@ extension PhoneJourney {
     /// once it opened a card (`push-opened`); each home's own sealed send is read at its relay, and `PhonePushTests`
     /// owns opening each computer's sealed card under its own key. Completion: the bar names the computer shown, each
     /// computer shows only its own cards, the sheet marks the other as answering or not as its home goes away and comes
-    /// back with no switch, a keyboard's Return shows it, both stay kept with their keys through a relaunch, the push's
-    /// tap shows its computer with its card, and leaving each in turn ends on the first screen.
+    /// back with no switch, a keyboard's Return shows it, both stay kept through a relaunch and hand each home its own
+    /// key again (each home let go of its registration first) under which it seals a new card, the push's tap shows its
+    /// computer with its card, and leaving each in turn ends on the first screen. Not proven here: a test cannot change
+    /// the simulator's own network, so the sheet's answer to the phone's network changing while it stays open (every
+    /// mark cleared on a lost path, a new look once a new one settles) is not driven; the home going away and back
+    /// proves the look each opening of the sheet makes.
     func testSeveralComputers() async throws {
         let standIn = try await home("push-state", method: "GET")
         app.launchEnvironment["INFINITARY_TEST_PUSH"] = "1"
@@ -73,7 +77,7 @@ extension PhoneJourney {
         // Each computer shows its own cards: a card on the second shows there, and its home sends it sealed to its relay.
         _ = try await homeAt(secondControl, "review-finding")
         XCTAssertTrue(cardHeading("Review the phone connection finding").waitForPresence(timeout: 30), app.debugDescription)
-        try await sentSealed(secondControl)
+        try await sentSealed(secondControl, after: 0)
 
         // By keys: Command-I opens the sheet on the first computer's row, marked as answering.
         try await pressPhoneKey("i", modifiers: .command, in: app)
@@ -104,13 +108,23 @@ extension PhoneJourney {
         XCTAssertTrue(cardHeading("Your phone is reading your Mac").waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertFalse(cardHeading("Review the phone connection finding").exists, "The second computer's card is not the first's")
 
-        // Both computers stay kept through a relaunch, the one shown last still shown, each keeping its key.
+        // Both computers stay kept through a relaunch, the one shown last still shown, each keeping its key. Each home
+        // first lets go of the registration it holds, so what it holds after is what the relaunched phone handed it.
+        let firstCleared = try await home("push-cleared")
+        let firstSent = try XCTUnwrap(firstCleared["pushes"] as? Int)
+        let secondCleared = try await homeAt(secondControl, "push-cleared")
+        let secondSent = try XCTUnwrap(secondCleared["pushes"] as? Int)
+        XCTAssertEqual(firstCleared["registered"] as? Bool, false, "\(firstCleared)")
+        XCTAssertEqual(secondCleared["registered"] as? Bool, false, "\(secondCleared)")
         app.terminate(); try await launchPhoneApp(app)
         reach("Live", timeout: 30)
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "label == %@", "Test Mac mini"), object: computer, timeout: 10),
                        .completed, app.debugDescription)
         let relaunched = try await home("push-registered", budget: 90)
         XCTAssertEqual(relaunched["keys"] as? [String], firstKeys, "The first computer keeps its key through a relaunch")
+        // The key it handed again still seals: a new card on the first computer goes to its relay sealed.
+        _ = try await home("homes-card")
+        try await sentSealed(control, after: firstSent)
         tapOnPhone(app.buttons["computer-details"], repeatDiscarded: false)
         XCTAssertTrue(row.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertEqual(row.label, secondName, "The second computer is still kept after the relaunch")
@@ -141,6 +155,8 @@ extension PhoneJourney {
         reach("Live", timeout: 30)
         let secondAgain = try await homeAt(secondControl, "push-registered", budget: 90)
         XCTAssertEqual(secondAgain["keys"] as? [String], secondKeys, "The second computer keeps its key through the relaunch")
+        _ = try await homeAt(secondControl, "homes-card")
+        try await sentSealed(secondControl, after: secondSent)
 
         // Leaving the shown computer shows the other, and the bar goes back to its one icon.
         try leaveShown()
@@ -162,10 +178,11 @@ extension PhoneJourney {
                        .completed, "The row says \(words): \(row.debugDescription)")
     }
 
-    /// A home's relay has taken a sealed card from it: the home waits for it (`push-sent`).
-    private func sentSealed(_ control: String) async throws {
-        let state = try await homeAt(control, "push-sent", budget: 60)
-        XCTAssertGreaterThan(state["pushes"] as? Int ?? 0, 0, "The home sent its card sealed to its relay: \(state)")
+    /// A home's relay has taken a sealed card from it beyond the `after` it took before: the home waits for it
+    /// (`push-sent`).
+    private func sentSealed(_ control: String, after: Int) async throws {
+        let state = try await homeAt(control, "push-sent", body: "{\"after\":\(after)}", budget: 60)
+        XCTAssertGreaterThan(state["pushes"] as? Int ?? 0, after, "The home sent its card sealed to its relay: \(state)")
         XCTAssertEqual((state["problems"] as? [String])?.isEmpty, true, "\(state)")
     }
 
@@ -182,9 +199,11 @@ extension PhoneJourney {
     }
 
     /// A command to the second computer's control, as `home` sends one to the test home's.
-    private func homeAt(_ control: String, _ command: String, method: String = "POST", budget: TimeInterval = 60) async throws -> [String: Any] {
+    private func homeAt(_ control: String, _ command: String, method: String = "POST", body: String? = nil,
+                        budget: TimeInterval = 60) async throws -> [String: Any] {
         var request = URLRequest(url: try XCTUnwrap(URL(string: control + "/" + command)), timeoutInterval: budget)
         request.httpMethod = method
+        request.httpBody = body.map { Data($0.utf8) }
         let (data, response) = try await phoneTestSession.data(for: request)
         XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, String(data: data, encoding: .utf8) ?? "")
         return try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])

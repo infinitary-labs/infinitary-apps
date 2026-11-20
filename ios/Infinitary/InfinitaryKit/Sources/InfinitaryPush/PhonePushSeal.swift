@@ -88,7 +88,6 @@ public struct PhonePushNotice: Equatable, Sendable {
 
     /// What the notification carries for the app (`PhonePushSeal.userInfo(for:)`).
     public var userInfo: [AnyHashable: Any] { PhonePushSeal.userInfo(for: self) }
-    }
 }
 
 public enum PhonePushSeal {
@@ -180,12 +179,26 @@ public enum PhonePushStore {
          kSecAttrAccessGroup as String: group, kSecAttrSynchronizable as String: false]
     }
 
-    public static func load() -> PhonePushHeld? {
+    /// The Keychain could not read the record now, such as before the phone's first unlock: it may hold one.
+    public struct Unreadable: Error {
+        public let status: OSStatus
+        public init(status: OSStatus) { self.status = status }
+    }
+
+    /// The held record, or nil when none is kept (or the one kept is damaged, which a new one replaces). It throws
+    /// when the Keychain cannot answer now, so the app never takes a record it could not read for a missing one and
+    /// writes a new one over the computers' keys (INF-5265's review).
+    public static func read() throws -> PhonePushHeld? {
         var item: CFTypeRef?
         var ask = query; ask[kSecReturnData as String] = true
-        guard SecItemCopyMatching(ask as CFDictionary, &item) == errSecSuccess, let data = item as? Data else { return nil }
+        let status = SecItemCopyMatching(ask as CFDictionary, &item)
+        if status == errSecItemNotFound { return nil }
+        guard status == errSecSuccess, let data = item as? Data else { throw Unreadable(status: status) }
         return try? JSONDecoder().decode(PhonePushHeld.self, from: data)
     }
+
+    /// The held record when it can be read now, for the notification part, which only reads it.
+    public static func load() -> PhonePushHeld? { (try? read()) ?? nil }
 
     public static func save(_ held: PhonePushHeld) {
         guard let data = try? JSONEncoder().encode(held) else { return }

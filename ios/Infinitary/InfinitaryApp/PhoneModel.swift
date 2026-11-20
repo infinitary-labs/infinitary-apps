@@ -184,6 +184,7 @@ struct AddressJoin: Equatable {
             keptPushes()
             problem = PhoneMessages.phoneModelForgotDamaged()
             if let next = kept.shown, Self.usable(next) { connect(next) }
+            openTapped()
             return true
         } catch {
             problem = needsUnlock(error) ? PhoneMessages.phoneModelForgetUnlock()
@@ -382,11 +383,12 @@ struct AddressJoin: Equatable {
         pushes?.left()
     }
 
-    /// Connects to the computer the list shows now, or to none.
+    /// Connects to the computer the list shows now, or to none, and opens a tap that waited for it.
     private func showKept() {
         close()
         if let mac = kept.shown { connect(mac) }
         lookAtOthers()
+        openTapped()
     }
 
     /// Lets go of a forgotten computer's pushes: its key and notifications, and the push address too once it was the
@@ -485,8 +487,9 @@ struct AddressJoin: Equatable {
                 // Not forgotten: the removed screen stays on this computer, and its Forget tries again.
                 problem = PhoneMessages.phoneModelForgetTryLeave(); removed = true; return
             }
-            // INF-5265: while another computer is kept, it shows, and a line says this one removed the phone.
-            guard kept.shown != nil else { removed = true; return }
+            // INF-5265: while another computer is kept, it shows, and a line says this one removed the phone. The last
+            // one lets go of its pushes now too, not only once the Removed screen's Forget is pressed.
+            guard kept.shown != nil else { removed = true; forgotPushes(pin); return }
             Task { @MainActor in
                 self.forgotPushes(pin)
                 guard self.connection === session else { return }
@@ -521,22 +524,22 @@ struct AddressJoin: Equatable {
     func dismissRemoved() { forgetMac() }
 
     /// A notification's tap: the card opens on Home once the joined computer's cards are read. INF-5265: a card from
-    /// another kept computer shows that computer first, and opens only there: a tap waits while a join is under way or
-    /// the list is not read yet, and a card from a computer no longer kept opens nowhere.
+    /// another kept computer shows that computer first, and opens only on that computer's own connection: a tap waits
+    /// while a join is under way, the list is not read yet or the connection is still the one before, and a card from
+    /// a computer no longer kept, or from no known computer, opens nowhere.
     func openCard(_ id: String, computer: String? = nil) {
-        tapped = (id, computer ?? pushes?.owner(named: nil))
+        tapped = (id, computer)
         _ = restore()
         openTapped()
     }
 
     private func openTapped() {
-        guard let (card, computer) = tapped, restored, !busy else { return }
-        if let computer {
-            guard kept.all.contains(where: { $0.pin == computer }) else { tapped = nil; return }
-            guard show(computer) else { return }
-        } else if !kept.others.isEmpty { tapped = nil; return }
+        guard let (card, named) = tapped, restored, !busy else { return }
         tapped = nil
-        connection?.openCard(card)
+        // The owner is read once the list was read, from the push record the list was handed to.
+        guard let computer = pushes?.owner(named: named) ?? named, kept.all.contains(where: { $0.pin == computer }) else { return }
+        guard show(computer), let session = connection, session.mac.pin == computer else { tapped = (card, named); return }
+        session.openCard(card)
     }
 
     /// Forgets the shown computer's record; the kept computer shown most recently becomes the shown one.

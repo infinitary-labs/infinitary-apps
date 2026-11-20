@@ -230,7 +230,10 @@ export function pressDialogButton(pid: number, button: string, treeFile?: string
 }
 
 /** A picture of the whole screen, for the check's evidence. */
-/** The words of every window `pid` shows, as Windows' accessibility tree reads them. */
+/**
+ * The words of every window `pid` shows, as Windows' accessibility tree
+ * reads them: each part's name, its text and its buttons' labels alike.
+ */
 export function dialogWords(pid: number): string[] {
   return psList<string>(
     `
@@ -239,7 +242,7 @@ export function dialogWords(pid: number): string[] {
     $byProcess = New-Object System.Windows.Automation.PropertyCondition($A::ProcessIdProperty, [int]$env:DIALOG_PID)
     foreach ($window in $A::RootElement.FindAll('Children', $byProcess)) {
       foreach ($e in $window.FindAll('Descendants', [System.Windows.Automation.Condition]::TrueCondition)) {
-        if ($e.Current.ControlType -eq [System.Windows.Automation.ControlType]::Text -and $e.Current.Name) { $e.Current.Name }
+        if ($e.Current.Name) { $e.Current.Name }
       }
     }`,
     { DIALOG_PID: String(pid) },

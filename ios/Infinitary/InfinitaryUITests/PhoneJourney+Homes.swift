@@ -75,8 +75,12 @@ extension PhoneJourney {
         picture("homes-bar")
 
         // Each computer shows its own cards: a card on the second shows there, and its home sends it sealed to its relay.
+        // A card that arrives keeps the shown one in place and counts as new, so the pager reaches it once it is counted.
         _ = try await homeAt(secondControl, "review-finding")
-        XCTAssertTrue(cardHeading("Review the phone connection finding").waitForPresence(timeout: 30), app.debugDescription)
+        let pager = app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "label ENDSWITH %@", " of 2"), object: pager, timeout: 30),
+                       .completed, "The second computer's card arrives: \(app.debugDescription)")
+        showCard("Review the phone connection finding")
         try await sentSealed(secondControl, after: 0)
 
         // By keys: Command-I opens the sheet on the first computer's row, marked as answering.

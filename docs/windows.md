@@ -160,7 +160,7 @@ It runs only on request: nothing a batch or an alpha runs asks for it.
 Their release source names no published place, so nothing they find or download comes from a real release, and they stay on the run as the installer does.
 `update` is a matrix of one fresh machine per channel and round (`rounds`, as for `check`), set up as `check`'s is; it installs the channel's older version as a double-click does and runs `tests/windows/windows-update.spec.ts`.
 Every round takes the same test installers the run built once.
-Rounds start in order, two machines at a time, and with more than one round a failed round cancels every round not yet finished, of either channel; one round keeps both channels' jobs to the end.
+With more than one round the jobs run one at a time, in order, and a failed round cancels every round after it, none of which has started; one round runs both channels side by side, each to its end.
 With more than one round each job's name ends `; round N`.
 The journey serves the feed itself on the machine's loopback addresses (`tests/windows/updateFeed.ts`), with a certificate it makes in this person's own store and trusts for them alone as one of their own roots, answering Yes to the Security Warning Windows shows first, and sets `NODE_USE_SYSTEM_CA=1` in their environment, where the command Task Scheduler starts reads it; it takes both away when it ends.
 The certificate is its own authority (basic constraints CA true, allowed to sign certificates) naming `localhost` and both loopback addresses, as the Mac's update check's is: the installed app refused a plain self-signed server certificate the runner's own Node accepted.

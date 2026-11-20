@@ -386,13 +386,14 @@ jobs:
     # On request only (docs/windows.md, "The update check"): each channel's
     # older test version installed on its own fresh Windows 11 machine,
     # updated by the app itself from the machine's own feed. Each round is a
-    # fresh machine on the same test installers; rounds start in order, two
-    # machines at a time, and with more than one round a failed round cancels
-    # every round after it. One round keeps both channels' jobs to the end.
+    # fresh machine on the same test installers. With more than one round the
+    # jobs run one at a time, in order, and a failed round cancels every round
+    # after it, none of which has started; one round runs both channels side
+    # by side, each to its end.
     if: ${{ !inputs.hosted && inputs.update_check }}
     strategy:
       fail-fast: ${{ needs.build.outputs.rounds != '[1]' }}
-      max-parallel: 2
+      max-parallel: ${{ needs.build.outputs.rounds != '[1]' && 1 || 2 }}
       matrix:
         round: ${{ fromJSON(needs.build.outputs.rounds) }}
         channel: [alpha, stable]

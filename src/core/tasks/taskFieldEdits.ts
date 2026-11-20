@@ -38,6 +38,41 @@ export function startAtApprovalNotABlocker(named: string): string {
   return `start_at_approval names ${named}, which is not one of this task's blocked_by: name the prerequisite whose approved merge starts it, and list it in blocked_by too.`;
 }
 
+/**
+ * The refusal when needs_merge names a task that is not one of the task's
+ * own blocked_by, or the one its start_at_approval names: filing and
+ * editing refuse it in the same words.
+ */
+export function needsMergeRefusal(named: string, startMark: boolean): string {
+  // i18n-exempt: a tool answer served to the first mate, not shown to a person
+  return startMark
+    ? `needs_merge names ${named}, which start_at_approval names too: a task starts at a wait's approval or needs its merge, not both.`
+    : `needs_merge names ${named}, which is not one of this task's blocked_by: name only waits whose merge it needs, and list each in blocked_by too.`;
+}
+
+/**
+ * The waits a task needs merged, by key, from the names given: each one of
+ * its own `blocks` prerequisites (`isWait`) and not the one its start mark
+ * names. Refused in words otherwise.
+ */
+export function needsMergeKeys(
+  names: readonly string[],
+  resolve: (ref: string) => { id: string; key: string } | undefined,
+  isWait: (id: string) => boolean,
+  startMark: string | undefined,
+): string[] {
+  const marked = startMark ? resolve(startMark)?.id : undefined;
+  const keys: string[] = [];
+  for (const name of names.map((entry) => entry.trim()).filter(Boolean)) {
+    const task = resolve(name);
+    if (!task || !isWait(task.id)) throw new TaskGraphRefusal(needsMergeRefusal(name, false));
+    if (task.id === marked) throw new TaskGraphRefusal(needsMergeRefusal(name, true));
+    const key = task.key || task.id;
+    if (!keys.includes(key)) keys.push(key);
+  }
+  return keys;
+}
+
 /** Edit the plain fields of a record; one `note` event lists what changed. */
 export function updateTaskFields(
   { writer, projects, service }: TaskFieldEditContext,
@@ -126,6 +161,10 @@ export function updateTaskFields(
       throw new TaskGraphRefusal(
         "start_at_approval can only change on open work that has not started.",
       );
+    }
+    if (patch.needsMerge !== undefined && !unstarted) {
+      // i18n-exempt: a tool answer served to the first mate, not shown to a person
+      throw new TaskGraphRefusal("needs_merge can only change on open work that has not started.");
     }
 
     if (
@@ -242,6 +281,22 @@ export function updateTaskFields(
       if (mark !== current?.start_at_approval) {
         update.shape = withShapeKey(current, "start_at_approval", mark);
         changes.push(mark ? `starts at ${mark}'s approval` : "start_at_approval cleared");
+      }
+    }
+    if (patch.needsMerge !== undefined || patch.startAtApproval !== undefined) {
+      const current = update.shape ?? record.shape;
+      const waits = new Set(writer.links.listTo(id, "blocks").map((link) => link.fromId));
+      // Checked again when only the start mark moves, so the two never name one wait.
+      const keys = needsMergeKeys(
+        patch.needsMerge ?? current?.needs_merge ?? [],
+        (ref) => service.resolve(ref),
+        (wait) => waits.has(wait),
+        current?.start_at_approval,
+      );
+      const before = current?.needs_merge ?? [];
+      if (keys.join("\n") !== before.join("\n")) {
+        update.shape = withShapeKey(current, "needs_merge", keys.length ? keys : undefined);
+        changes.push(`needs_merge ${keys.length ? keys.join(", ") : "[]"}`);
       }
     }
     const branch = patch.branch?.trim() || undefined;

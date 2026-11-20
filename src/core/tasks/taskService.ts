@@ -1,8 +1,8 @@
 import type { TaskLifecycleOp } from "@shared/cards";
 import type { ChangeRecord } from "@shared/change";
-import { type OverridableHold } from "@shared/holds";
+import type { OverridableHold } from "@shared/holds";
 import type { ReasoningChoice } from "@shared/modelSlots";
-import { type PlacementRequirements } from "@shared/placement";
+import type { PlacementRequirements } from "@shared/placement";
 import { TASK_CARD_VIA } from "@shared/provenance";
 import { DROP_BEFORE_START } from "@shared/recordDrop";
 import type { RepoView } from "@shared/repos";
@@ -20,7 +20,7 @@ import type { DropEffects } from "@shared/tasks";
 import { savedTaskTitle } from "@shared/taskTitle";
 import { THROUGH_THE_COMMAND, type Through } from "@shared/through";
 import type { RepetitionNotice, ToolObservation } from "@shared/toolCompletion";
-import { type BriefPart, type SpawnIntent } from "../orchestrator/intentBrief";
+import type { BriefPart, SpawnIntent } from "../orchestrator/intentBrief";
 import { isHostRaisedShape } from "../storage/changeStore";
 import type { AppDatabase } from "../storage/db";
 import type { ProjectRecord, ProjectStore } from "../storage/projectStore";
@@ -148,6 +148,8 @@ export type UpdateTaskPatch = {
    * empty clears it.
    */
   startAtApproval?: string;
+  /** The blocked_by tasks whose merge it needs, before it starts; empty clears it. */
+  needsMerge?: string[];
   /**
    * Whether open work that has not started is the first mate's own, not the
    * captain's ask (`shape.internal_step`, INF-1467): set when it starts a

@@ -350,7 +350,8 @@ export const HELD_WORK_WORDS = "Started work waits on this task through your lin
  * A report wake names the started work waiting on its task through any
  * recorded wait (INF-735, INF-3167), and is this rule's one home: a wait
  * on a step's report ends when that step reports it, not days later at a
- * close. Every wait holds the waiter until this task closes, so the
+ * close. Every wait holds the waiter until this task closes, except work
+ * built on this task in a batched project, which an approval releases, so the
  * Firstmate ends a wait that was only on this finding and closes a step
  * whose report was the whole of what the work needed. Whether the report
  * carries what the work waits for is the Firstmate's judgment.
@@ -358,7 +359,7 @@ export const HELD_WORK_WORDS = "Started work waits on this task through your lin
 function waitingText(waiting: WakeKeyedTask[] | undefined): string {
   if (!waiting?.length) return "";
   const named = waiting.map((task) => `${task.key} "${task.title}"`).join(", ");
-  return ` ${HELD_WORK_WORDS} ${named}. Every wait holds that work until this task closes. If this report carries what such work needs, such as a finding or an answer, pass it on now with steer_crewmate; then, when this task is a step whose report was all that work needed, close it with settle_task done, why answered, which ends the wait, and when only this finding was needed of a task that goes on, remove the wait with link_tasks remove. Any other wait ends when this task closes.`;
+  return ` ${HELD_WORK_WORDS} ${named}. Every wait holds that work until this task closes, except that on batched pull requests work built on this task stops waiting once this task is approved to merge, and merges after it. If this report carries what such work needs, such as a finding or an answer, pass it on now with steer_crewmate; then, when this task is a step whose report was all that work needed, close it with settle_task done, why answered, which ends the wait, and when only this finding was needed of a task that goes on, remove the wait with link_tasks remove. Any other wait ends when this task closes.`;
 }
 
 /**

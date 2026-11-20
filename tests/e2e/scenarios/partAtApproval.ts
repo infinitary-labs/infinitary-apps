@@ -5,20 +5,24 @@ import { MOCK_GITHUB_STORY, preparedRevision, prepareMockStory } from "./changeS
 import { mergeShellCall, mergeShellTurn } from "./mergeShell";
 
 /**
- * Hermetic replay for INF-4517 piece 3, a plan part that starts when the
- * part before it is approved to merge, not a claim that a live model
- * obeys: one prompt has the first mate start the first part and file the
- * second as a when-ready part blocked by it and marked to start at its
- * approval. Each crewmate commits one file, prepares its story, confirms it
- * with open_change, reads its pushed branch's checks and puts up its merge
- * card. The second part's shell first requires the first part's file, so it
- * builds only in a working copy on the first part's approved version, and
- * gives that version as its story's base. Nothing here merges: the journey
- * presses each card, and the app combines the approved changes.
+ * Hermetic replay for a chain of plan parts that each start when the part
+ * before it is approved to merge (INF-4517 piece 3, and INF-5269's plan,
+ * part 2: every dependency on batched pull requests, with no mark), not a
+ * claim that a live model obeys: one prompt has the first mate start the
+ * first part, file the second as a when-ready part blocked by it, the
+ * third blocked by both, and a release blocked by the first that needs it
+ * merged. No dependency carries a start mark. Each part's crewmate commits
+ * one file, prepares its story, confirms it with open_change, reads its
+ * pushed branch's checks and puts up its merge card. A later part's shell
+ * first requires every earlier part's file, so it builds only in a working
+ * copy on the approved version under it, and gives that version as its
+ * story's base. The release's crewmate is not scripted. Nothing here
+ * merges: the journey presses each card, and the app combines the approved
+ * changes.
  */
 export const PART_AT_APPROVAL_MARKER = "exercise a part at approval";
 
-export const PARTS = ["first", "second"] as const;
+export const PARTS = ["first", "second", "third"] as const;
 export type Part = (typeof PARTS)[number];
 
 /** The prompt that starts the first part and files the second behind it, in `project`. */
@@ -28,6 +32,9 @@ export const partAtApprovalPrompt = (project: string) =>
 /** A part's task title, as the first mate files it. */
 export const partTask = (project: string, part: Part) =>
   `${project} ${PART_AT_APPROVAL_MARKER} ${part}`;
+
+/** The release's task title: it needs the first part merged, not only its code. */
+export const releaseTask = (project: string) => `${project} release the meter`;
 
 /** A part's checked title: its merge card's title and its commit's subject. */
 export const partTitle = (part: Part) => `feat(${part}): add the ${part} part`;
@@ -44,13 +51,18 @@ function partMove(body: string, firstmate: boolean): ScenarioAnswer | undefined 
   if (!user.includes(PART_AT_APPROVAL_MARKER)) return undefined;
   if (pending) return { text: "" };
   if (firstmate) return firstmateMove(body, user, results);
-  const part: Part = user.includes(`${PART_AT_APPROVAL_MARKER} second`) ? "second" : "first";
+  // A later part's brief names the part under it too: the latest part it names is its own.
+  const part: Part =
+    [...PARTS].reverse().find((name) => user.includes(`${PART_AT_APPROVAL_MARKER} ${name}`)) ??
+    "first";
   const title = partTitle(part);
-  // The second part needs the first part's file: without it the command fails and no story follows.
-  const command =
-    part === "first"
-      ? `printf 'first\\n' > first.txt && git add first.txt && git commit -m "${title}" && git rev-parse main HEAD`
-      : `test -f first.txt && printf 'second\\n' > second.txt && git add second.txt && git commit -m "${title}" && git rev-parse HEAD~1 HEAD`;
+  // A later part needs every earlier part's file: without them the command fails and no story follows.
+  const earlier = PARTS.slice(0, PARTS.indexOf(part));
+  const command = [
+    ...earlier.map((name) => `test -f ${name}.txt`),
+    `printf '${part}\\n' > ${part}.txt && git add ${part}.txt && git commit -m "${title}"`,
+    part === "first" ? "git rev-parse main HEAD" : "git rev-parse HEAD~1 HEAD",
+  ].join(" && ");
   const steps: ScriptedCall[] = [
     mergeShellCall(body, command),
     prepareMockStory(title, results[0], {
@@ -109,21 +121,23 @@ function firstmateMove(body: string, user: string, results: string[]): ScenarioA
         },
       ],
     };
-  if (results.length === 1) {
-    const first = /(?:Recorded|Queued) task (\S+);/.exec(results[0] ?? "")?.[1] ?? "missing";
-    return {
-      calls: [
-        {
-          name: "create_task",
-          args: {
-            ...intent("second"),
-            blocked_by: [first],
-            start_policy: "when-ready",
-            start_at_approval: first,
-          },
-        },
-      ],
-    };
-  }
+  const first = /(?:Recorded|Queued) task (\S+);/.exec(results[0] ?? "")?.[1] ?? "missing";
+  const second = /Planned (\S+) /.exec(results[1] ?? "")?.[1] ?? "missing";
+  // No dependency carries a start mark: on batched pull requests each starts at the approval.
+  const filings = [
+    { ...intent("second"), blocked_by: [first] },
+    { ...intent("third"), blocked_by: [first, second] },
+    {
+      title: releaseTask(project),
+      goal: "Release the meter",
+      user_words: "release the meter",
+      repo_id: repoId,
+      blocked_by: [first],
+      needs_merge: [first],
+    },
+  ];
+  const filing = filings[results.length - 1];
+  if (filing)
+    return { calls: [{ name: "create_task", args: { ...filing, start_policy: "when-ready" } }] };
   return { text: "Filed." };
 }

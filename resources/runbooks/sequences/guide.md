@@ -60,9 +60,9 @@ it.
   can name (smaller review, isolated risk, parallel work, my control at a gate); never
   separate a change from its checks, never cut along files or layers, and never cut a
   bounded piece into smaller ones. Each piece gets a real title, outcome,
-  checks and the pieces it truly needs; list order is not a dependency. Mark a piece to start
-  when the piece before it is approved to merge only when it needs that piece's code and that
-  piece is settled once I approve it.
+  checks and the pieces it truly needs; list order is not a dependency. Say for each
+  dependency whether the piece needs only that piece's code, so it may start once I approve
+  that piece, or needs it merged first, such as a release.
 - An idea too large for one plan step gets a parent whose goal describes the end state, as
   it will look once reached. Every decision that can already be put into words becomes its
   own plan step, taken one after another, each starting on my choice in the one before; the
@@ -77,9 +77,10 @@ it.
 - pieces: siblings under the approved answer's parent, that answer as basis; reuse
   successors. File every piece the plan names on approval, the last one included, each in
   the project the plan names. Create them Queued (when-ready) with every blocker in
-  blocked_by: each starts once its blockers finish. For a piece the plan marks to start at
-  approval, name that blocker in start_at_approval too: on batched pull requests it starts on the
-  approved version and merges behind it; elsewhere it waits for the merge. A piece whose steps come later (a plan
+  blocked_by: each starts once its blockers finish. On batched pull requests a piece starts
+  when I approve the blocker it builds on, on the approved version, and merges behind it, down a
+  whole chain; name each blocker the plan says it needs merged in needs_merge. Elsewhere it
+  waits for the merge. A piece whose steps come later (a plan
   for each part first) is filed on request now, blocked by the steps that exist; add each
   new step to its blockers as you file it. Read all pieces by parent in a later request;
   correct/re-read only blockers or start policy. Backlog waits for my word; never bypass

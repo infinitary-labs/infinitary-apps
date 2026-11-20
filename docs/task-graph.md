@@ -14,7 +14,7 @@ P0 made a task a durable record, P1 made every captain ask land on one; P2 gives
   The move is refused into a removed project, and into a project whose repository has no remote when a task it would take asks to ship as a pull request.
   A parent may carry a crewmate or be a pure container - a planned row that never dispatches on its own.
   **Discovery is not containment**: a follow-up a crewmate files is never a child of the task it was found on (see "Follow-ups are not children" below).
-- **Links** (`task_links`, primary key `(from, to, type)`): `blocks` - `to` is not ready until `from` closes successfully (`done`; dropped never clears), and does not close while `from` is still live work, whoever recorded the edge (INF-3167, the captain's choice A: every wait holds the start and the merge until the other task closes).
+- **Links** (`task_links`, primary key `(from, to, type)`): `blocks` - `to` is not ready until `from` closes successfully (`done`; dropped never clears), and does not close while `from` is still live work, whoever recorded the edge (INF-3167, the captain's choice A: every wait holds the start and the merge until the other task closes), except on batched pull requests, where `to` starts at `from`'s merge approval unless `to` needs it merged ("A part that starts at approval" below).
   The `holds_merge` mark a must-merge-first filing or a required action's prerequisite still writes on that edge is history: no reader branches on it, and no second kind of wait exists.
   `related` is informational; `discovered-from` - `from` was found while doing `to`, provenance with no effect on readiness or closing; `replaced-by` - `to` does `from`'s work now (a drop, a takeover or a fresh task), with no effect on readiness or closing either.
   Each link reads on both ends, and the links decide which tasks read another's milestones (`docs/task-record.md`, "Whom an event concerns").
@@ -40,7 +40,7 @@ The successor inherits the predecessor's parent only while that parent is still 
 
 ## The ready query
 
-`TaskStore.listReady()` is the sweep's dispatch list: open work, no gate, `start_policy = when-ready`, no `blocks` edge from a task that is not `done`; priority first, then age.
+`TaskStore.listReady()` is the sweep's dispatch list: open work, no gate, `start_policy = when-ready`, no `blocks` edge from a task that is not `done`; priority first, then age; `TaskGraph.listReady` adds the work an approval starts ("A part that starts at approval").
 `CrewWatch.sweepGates` runs it on the shared 60 s tick, after any close (`closeTask` sweeps), after any graph change (`graphChanged`), on quota refresh, and once at boot.
 The quit (`CrewSupervisor.disposeAll`) runs no new sweep and starts nothing, a start still waiting before its claim included, and it waits, at most `QUIT_SETTLE_MS`, for a sweep already running to end, so a host closes its database only after the sweep's last write; the next launch's sweep starts what the quit left.
 A start the quit stops part way, whoever began it - the sweep, a computer's new sign-in, the captain's Start or the first mate - did not fail: `dispatchQueuedTask` neither settles nor tells its failure, since the database may already be closed, and the next launch starts it, a claimed row that began nothing back in the queue first (`TaskStarts.releaseUnstartedDispatches`).
@@ -49,20 +49,26 @@ When completed blockers release a queued task, its Starting line in Activity nam
 
 ## A part that starts at approval
 
-A planned part may start when the part before it is approved to merge, instead of when it merges.
-The first mate marks it on `create_task` with `start_at_approval`, naming one of the part's own `blocked_by`; the mark is kept on the part's shape, and a link without it waits for the merge as before.
-Before the part starts, `update_task` sets the mark the same way, naming one of its `blocked_by` (a wait the same call adds counts), or clears it with an empty name; a name that is not one of its waits is refused in filing's words, and a started part's mark no longer changes.
-The tasks reader shows the mark as `start_at_approval` in the part's row and in its by-key read.
-`TaskGraph.listReady` adds to the ready query each marked part whose only unfinished wait is that prerequisite, while the prerequisite is live and its merge approval is standing or spent by the merge closing it (`TaskGraph.approvedBase`, `TaskStore.listAwaitingApproval`, sought through the `task_placement_requests_start_at_approval` index).
-This holds only where the part's delivery is batched pull requests, since the batch line is what holds its merge behind the prerequisite; elsewhere the mark waits for the merge, as an unmarked link does.
-While that approval holds, the wait neither holds the part's start nor its close; once the approval ends, the wait holds again.
+On batched pull requests a part that waits on another part starts when that part is approved to merge, instead of when it merges.
+Every dependency does this unless the first mate filed it as needing the merge: `needs_merge` on `create_task` names the `blocked_by` the part needs merged, not only their code, such as for a release, and `update_task` replaces or clears that list before the part starts.
+A name that is not one of the part's waits, or the one its start mark names, is refused, and nothing is filed or changed.
+`start_at_approval` names which wait the start follows when several could; it is one of the part's own `blocked_by`, set on `create_task` or, before the part starts, on `update_task` (a wait the same call adds counts), and an empty name clears it.
+It chooses only while it names an unfinished wait; once that work merged or the wait was removed, the part follows the rule above among its other waits.
+Without the mark the start follows the unfinished wait in the part's own project whose recorded base carries the most of the others.
+Removing a wait takes its task out of `needs_merge` in the same write, and moving a wait to a replacement or a carrier moves the name with it (`TaskGraph.unlink`, `TaskGraph.moveWait`).
+The tasks reader shows `start_at_approval` and `needs_merge` in the part's row and in its by-key read.
+`TaskGraph.listReady` adds to the ready query each part whose unfinished waits are that prerequisite and the parts its recorded base carries, while the prerequisite is live and its merge approval is standing or spent by the merge closing it (`TaskGraph.approvedBase`, `TaskStore.listAwaitingApproval`).
+A part the prerequisite was started on (its `built_on`), the part that one was started on, and so on down, are carried while each is live, approved to merge and not named in `needs_merge` (`TaskGraph.carriedBy`): the prerequisite's branch holds their work and the batch line merges each one ahead of it.
+So a chain goes on at each approval with no depth limit: the third part starts when the second is approved while the first two are unmerged, even when it waits on both.
+This holds only where the part's delivery is batched pull requests, since the batch line is what holds its merge behind the prerequisite; elsewhere every wait holds until the merge.
+While that approval holds, the wait and the waits it carries neither hold the part's start nor its close; once an approval ends, the wait on that part holds again.
 The part starts in a working copy built on the approved version, fetched from the prerequisite's pushed branch (`WorkspaceService.approvedBaseAt`), and records it as `built_on`; a part placed on a computer that runs work starts only where its prerequisite's working copy is.
 Its brief names that version, says it is not merged yet, and tells it not to bring its branch up to date onto the default branch while the prerequisite waits.
 Its review, its line count and its story read its difference against that version while the part's version builds on it and has taken in nothing newer from the default branch, whether or not the prerequisite merged since, since a squash merge never puts that version on the default branch (`TaskGraph.startedOn`, `WorkspaceService.builtOnAt`).
 A part on a computer that runs work is read there the same way: the revision read carries the approved version and answers the one it read from, and a computer without that change reads from the default branch, so its review brief names no approved version.
 If the prerequisite loses its approval before it merges, the idle ladder tells the part's crewmate once for each approval that ends (`base-approval-ended`), unless the prerequisite closed: a closed prerequisite is never approved again, and the batch line leaves the part out in words while its branch carries that unmerged work.
 A prerequisite counts as merged only when it closed done by a merge, which spent its approval (`TaskGraph.mergedAt`).
-A started part's close is released by the approval only when its `built_on` names that prerequisite.
+A started part's close is released by the approval only when its `built_on` names that prerequisite, and a part started before it was approved keeps waiting for the merge.
 Its approved merge waits in the batch line behind its prerequisite (docs/forge.md, "Batches of your own").
 
 ## Gates on active rows
@@ -116,9 +122,9 @@ That wait is a soft hold (`waits`): the captain's recorded override passes it, a
 A **dropped** blocker clears a close, and only a close - for readiness it is a wait that can never end and the first mate answers the dead-gate wake, but that wake names open rows only, so an active task held by a dropped blocker would strand with no way out.
 A `discard` abandons the work rather than completing it, so a wait never forbids it; only containment does, and only on the first mate's own drop (`closeGateRefusal`, `settleRefusals.ts`): the captain's own drop keeps open parts planned (`docs/task-record.md`, "One drop").
 A crewmate's merge card is refused at emit time while that same rule would refuse the click (`CrewmateCards.addCrewmateCard`; open children stay a click-time choice because the captain can override them).
-The `link_tasks` description says a blocks link holds the start and the merge until `from` closes.
+The `link_tasks` description says a blocks link holds the start and the merge until `from` closes, and that on batched pull requests the start comes at `from`'s merge approval unless `to`'s `needs_merge` names `from`.
 It says `related` is for work neither task is waiting on.
-The first mate records every wait between tasks as `blocks` that turn, from the task whose close gives what the waiter needs, so Tasks draws the arrow and the wait holds; when only part of a task would give it, it splits that part into its own step or folds the waiter into that task, never recording a wait that holds nothing (INF-3167).
+The first mate records every wait between tasks as `blocks` that turn, from the task whose close gives what the waiter needs, so Tasks draws the arrow and the wait holds, and adds a wait whose merge an unstarted waiter needs with `update_task` `blocked_by` and `needs_merge` in one call, since on batched pull requests a link alone starts it at the other task's approval, possibly at once; when only part of a task would give it, it splits that part into its own step or folds the waiter into that task, never recording a wait that holds nothing (INF-3167).
 A click refused by a wait reads in plain words on the feed (captain, 2026-10-01: a second Merge click was needed after a tracking-only wait).
 Because every live edge gates closing, `flagsOf` reports `blocked` for **active** rows too: a task its crewmate works past a recorded wait must say it is held rather than look free until the merge refuses.
 When the captain's recorded override passed that hold (`overridePasses`, `docs/delivery-rigor.md` "The holds"), the row reads free, as its Blocked by and the close gate do.

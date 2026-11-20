@@ -52,10 +52,10 @@ Relations:
 Every relation below is one kind of the checked relationship contract, with its own rule in `TASK_RELATIONSHIP_RULES` ([`../src/core/tasks/taskRelationships.ts`](../src/core/tasks/taskRelationships.ts)); only `blocks` holds a start ([task record](../docs/task-record.md), "Relationships").
 
 - Parent (`parent_id`, one per task) means containment; a child inherits its parent's project and repository, and the ancestor walk refuses a cycle.
-- `blocks`: the target is not ready until the source is `done`; a dropped blocker never clears readiness and becomes a dead wait the first mate resolves.
+- `blocks`: the target is not ready until the source is `done`, except on batched pull requests, where it starts at the source's merge approval unless the target needs it merged (below); a dropped blocker never clears readiness and becomes a dead wait the first mate resolves.
 - `related` is informational; `discovered-from` is provenance; `replaced-by` records that a task's work moved to another, and a task closed through it reads done, carried on by that task, rather than dropped; none of the three affects readiness or closing.
 - Basis: a task names one task whose answer it builds on, a `basis` row of `task_references`; whether it holds is derived at every read, never stored, and a name that names no task yet is kept.
-- Start at approval: `start_at_approval` on the shape names one of a task's own `blocked_by`; on batched pull requests that wait releases the start at the named task's merge approval instead of its merge, and it is set when filing or by `update_task` before the start ([task graph](../docs/task-graph.md), "A part that starts at approval").
+- Start at approval: on batched pull requests a `blocks` wait releases the start at the source's merge approval instead of its merge, with the waits that source's recorded base carries, down a whole chain; `needs_merge` on the shape names the `blocked_by` that still wait for the merge, and `start_at_approval` names which wait the start follows when several could, while that wait is unfinished; both are set when filing or by `update_task` before the start ([task graph](../docs/task-graph.md), "A part that starts at approval").
 - Branch inheritance: a parent moves no code; `branch_from` names a task in the same project whose last commit the working copy starts at, a `branch-source` row, and it is the one relation that moves code.
 - Retry provenance: a stronger-model retry names the attempt it retries, a `retry-of` row; the escalation stamp beside it stays on the shape as a fact of how it ran.
 - Typed result: `result_schema` on the shape makes the report's `result` a checked JSON object, delivered to the first mate and to any task whose basis names it.
@@ -74,7 +74,7 @@ Retiring the working copy and branch on close belongs to [projects-and-working-c
 The first mate creates, links, starts and drops tasks within the captain's authorization; on-request filing needs no `blocked_by` declaration, so related work can be filed and linked before anything starts.
 `create_task` or `update_task` setting `when-ready` must declare `blocked_by` in the same call (`[]` declares none).
 A crewmate only files follow-ups, writes progress and reads; it never edits another task.
-`internal_step`, `basis`, `result_schema`, `branch_from` and `start_at_approval` are the first mate's declarations; the host stores and checks typed facts and infers no judgment from titles, kinds or words.
+`internal_step`, `basis`, `result_schema`, `branch_from`, `start_at_approval` and `needs_merge` are the first mate's declarations; the host stores and checks typed facts and infers no judgment from titles, kinds or words.
 The one exception is a step the app files when a merge card that listed it merges: the app marks it `internal_step` itself, from the typed fact that the captain clicked a merge, not the step (INF-4574).
 Overriding a soft hold needs the captain's words in that turn.
 

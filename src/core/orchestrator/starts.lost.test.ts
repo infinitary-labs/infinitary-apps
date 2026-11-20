@@ -362,6 +362,7 @@ describe("a task that branches from work kept here", () => {
             task: { ...source, deviceId: MACHINE },
             branch: "fm/task-approved",
             head: "a".repeat(40),
+            carried: new Set<string>(),
           }
         : undefined,
     );

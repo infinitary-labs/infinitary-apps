@@ -186,12 +186,23 @@ import XCTest
                                   reaction: (CharacterMotion, CharacterMachine.Emote)? = nil) async throws -> Data {
         // Warmup and sample end on display callbacks, not a sleeping guess about when drawing starts.
         // A static waiter does not send this shared XCTestCase extension's non-Sendable self.
+        // The warmup counts the target's own drawn frames, not only display ticks: its pose warms per drawn
+        // frame, and a cold process's first draws (a shader compiled on first use) can miss display ticks.
         let runLoop = NativeSceneRunLoopTrace()
+        CharacterFrameMetrics.shared.start(source: source, drawing: drawing)
         let warmup = DisplaySample(ticks: 60)
-        let warmupResult = await warmup.complete(within: 20)
+        var warmupResult = await warmup.complete(within: 20)
         warmup.stop()
+        var warmupDeadline = PhoneWaitDeadline(20, graded: gradesBudgets)
+        while warmupResult == .completed && CharacterFrameMetrics.shared.count < 60 {
+            if warmupDeadline.expired() { warmupResult = .timedOut; break }
+            let more = DisplaySample(ticks: 1)
+            warmupResult = await more.complete(within: 20)
+            more.stop()
+        }
+        let warmupFrames = CharacterFrameMetrics.shared.finish().count
         let heartbeat = runLoop.finish()
-        let warmupDiagnostic = "source=\(source) " + warmup.diagnostic(phase: "warmup", result: warmupResult, heartbeat: heartbeat)
+        let warmupDiagnostic = "source=\(source) warmup_frames=\(warmupFrames) " + warmup.diagnostic(phase: "warmup", result: warmupResult, heartbeat: heartbeat)
         XCTAssertEqual(warmupResult, .completed, "The display completes the warmup callbacks; \(warmupDiagnostic)")
         let sampleRunLoop = NativeSceneRunLoopTrace(phase: "sample")
         CharacterFrameMetrics.shared.start(source: source, drawing: drawing)
@@ -222,7 +233,7 @@ import XCTest
         func p95(_ values: [Double]) -> Double { values.isEmpty ? 0 : values[min(values.count - 1, Int(Double(values.count) * 0.95))] }
         let summary = "source=\(source) state=\(state.rawValue) frames=\(frames.count) fps=\(Double(max(0, frames.count - 1)) / max(duration, 0.001)) interval_p95_ms=\(p95(intervals) * 1000) interval_max_ms=\((intervals.last ?? 0) * 1000) draw_p95_ms=\(p95(work) * 1000) display_p95_ms=\(p95(displayIntervals) * 1000) display_ticks=\(sample.timestamps.count)"
         let minimumHeat = frames.map(\.heat).min().map { String($0) } ?? "unknown"
-        let warmupSummary = "source=\(source) ticks=\(warmup.timestamps.count) completed=\(warmupResult == .completed) sample_completed=\(sampleResult == .completed) minimum_heat=\(minimumHeat)"
+        let warmupSummary = "source=\(source) ticks=\(warmup.timestamps.count) warmup_frames=\(warmupFrames) completed=\(warmupResult == .completed) sample_completed=\(sampleResult == .completed) minimum_heat=\(minimumHeat)"
         print("NATIVE_SCENE_WARMUP \(warmupSummary)")
         let warmupProof = XCTAttachment(string: warmupSummary + "\ntimestamp\n" + warmup.timestamps.map { String($0) }.joined(separator: "\n"))
         warmupProof.name = "native-scene-\(source)-warmup"; warmupProof.lifetime = .keepAlways; add(warmupProof)

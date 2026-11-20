@@ -44,7 +44,7 @@ describe("the cask republication workflow", () => {
   const ranSteps = (
     ref: string,
     inputs: Record<string, unknown>,
-    repository = "infinitary-labs/infinitary",
+    repository = releaseSource.repository,
   ): Step[] | null => {
     const contexts = { github: { ref, repository }, inputs };
     const active = [publish, preview].filter((job) => workflowValue(job.if, contexts) === true);

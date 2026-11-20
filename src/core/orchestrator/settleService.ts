@@ -26,7 +26,7 @@ import {
   keptNote,
   standingAuthorization,
 } from "./mergeAuthorization";
-import { asksAbout } from "./reviewCard";
+import { asksAbout, openReviewQuestions } from "./reviewCard";
 import type { SettleOutcome, SettleServiceHost } from "./settleHost";
 import type { SettleLease, SettleLocks } from "./settleLocks";
 import {
@@ -1139,6 +1139,10 @@ export class SettleService {
       // The one merge gate, before anything merges or lands.
       const held = this.mergeRefusal(record, mode, actor);
       if (held) return { ok: false, text: held.text, refusal: held };
+      // The review's questions wait on the captain, whoever merges: his own
+      // click too (INF-5396's audit, finding 2).
+      const asked = this.reviewQuestionsHold(record);
+      if (asked) return asked;
     }
     if (mode === "merge-pr") {
       return this.mergePrTaskOnce(taskId, actor, guard, boundary, after);
@@ -1148,6 +1152,26 @@ export class SettleService {
     }
 
     throw new Error(`Task ${taskId}: ${mode} is not a merge or a land.`);
+  }
+
+  /**
+   * The review's questions still waiting on the captain hold every merge of
+   * the task, his click included, until he answers them or his words pass
+   * the open decisions (INF-5396's audit, finding 2). A kept approval waits
+   * on them and runs once a card about the task moves.
+   */
+  private reviewQuestionsHold(record: TaskRecord): SettleOutcome | undefined {
+    const asked = openReviewQuestions(this.host.cards.values(), record.id, this.host.tasks);
+    if (!asked.length || overridePasses(record.delivery, "decisions", record.delivery?.headSha))
+      return undefined;
+    const names = asked.map((card) => `"${card.title}"`).join(", ");
+    const one = asked.length === 1;
+    return {
+      ok: false,
+      // i18n-exempt: a refusal served to the first mate, not shown to a person
+      text: `Cannot merge yet: the review's open ${one ? "question" : "questions"} ${names} ${one ? "waits" : "wait"} for the captain's answer, and the merge waits for it. ${softHoldWords("decisions", "firstmate")}`,
+      stop: "questions",
+    };
   }
 
   /**

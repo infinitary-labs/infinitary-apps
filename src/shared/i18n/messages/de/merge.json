@@ -8,5 +8,6 @@
   "mergeHeldOther": "Nachdem diese Karte erschienen ist, wurde ein anderer Pull Request zur aktuellen Änderung dieser Aufgabe. Zusammenführen ist wieder verfügbar, sobald die Karte ihn zeigt.",
   "mergeHeldPushed": "Nachdem diese Karte erschienen ist, wurde eine neuere Version gepusht. Zusammenführen ist wieder verfügbar, sobald die Karte die neuere Version zeigt.",
   "mergeSetByFirstMate": "Von deinem ersten Offizier für diese Aufgabe festgelegt.",
-  "mergeSetInProject": "In den Einstellungen dieses Projekts festgelegt."
+  "mergeSetInProject": "In den Einstellungen dieses Projekts festgelegt.",
+  "mergeWaitsForReview": "Das Zusammenführen wartet auf deine Antworten zu diesen Review-Fragen:"
 }

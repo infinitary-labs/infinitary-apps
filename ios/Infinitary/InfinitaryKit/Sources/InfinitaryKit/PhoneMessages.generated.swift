@@ -783,6 +783,7 @@ public enum PhoneMessages {
     public static func `keptHostQueue`(`place`: String) -> String { PhoneWords.format("keptHostQueue", [`place`]) }
     public static func `keptHostRemoved`(`place`: String) -> String { PhoneWords.format("keptHostRemoved", [`place`]) }
     public static func `keptProtected`(`place`: String) -> String { PhoneWords.format("keptProtected", [`place`]) }
+    public static func `keptQuestions`() -> String { PhoneWords.format("keptQuestions", []) }
     public static func `keptQueueOwn`() -> String { PhoneWords.format("keptQueueOwn", []) }
     public static func `keptRefused`(`place`: String) -> String { PhoneWords.format("keptRefused", [`place`]) }
     public static func `keptRepair`() -> String { PhoneWords.format("keptRepair", []) }
@@ -1030,6 +1031,7 @@ public enum PhoneMessages {
     public static func `mergeHeldPushed`() -> String { PhoneWords.format("mergeHeldPushed", []) }
     public static func `mergeSetByFirstMate`() -> String { PhoneWords.format("mergeSetByFirstMate", []) }
     public static func `mergeSetInProject`() -> String { PhoneWords.format("mergeSetInProject", []) }
+    public static func `mergeWaitsForReview`() -> String { PhoneWords.format("mergeWaitsForReview", []) }
     public static func `mergedAt`(`at`: String) -> String { PhoneWords.format("mergedAt", [`at`]) }
     public static func `mergedChangeOn`(`change`: String, `place`: String) -> String { PhoneWords.format("mergedChangeOn", [`change`, `place`]) }
     public static func `mergedChangeOnHost`(`change`: String) -> String { PhoneWords.format("mergedChangeOnHost", [`change`]) }
@@ -4469,6 +4471,7 @@ extension PhoneWords {
         "keptHostQueue": ["place"],
         "keptHostRemoved": ["place"],
         "keptProtected": ["place"],
+        "keptQuestions": [],
         "keptQueueOwn": [],
         "keptRefused": ["place"],
         "keptRepair": [],
@@ -4716,6 +4719,7 @@ extension PhoneWords {
         "mergeHeldPushed": [],
         "mergeSetByFirstMate": [],
         "mergeSetInProject": [],
+        "mergeWaitsForReview": [],
         "mergedAt": ["at"],
         "mergedChangeOn": ["change", "place"],
         "mergedChangeOnHost": ["change"],

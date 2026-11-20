@@ -56,7 +56,7 @@ import { HostCardStack } from "./hostCardStack";
 import { PutOffs } from "./putOffs";
 import type { WakeCard } from "./reportWakes";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
-import { asksAbout, reviewedTaskOf } from "./reviewCard";
+import { asksAbout, openReviewQuestions, reviewedTaskOf } from "./reviewCard";
 import { type MergeBehind, settleCardFacts } from "./settleCardFacts";
 import { type OpenMergeAction, openMergeActionIn } from "./settleHost";
 import { withMergeLine } from "./settleWords";
@@ -285,6 +285,10 @@ export class CardService {
             }
           : {}),
         followups: () => this.host.followupNotice(taskId),
+        reviewQuestions: () =>
+          openReviewQuestions(this.cards.values(), taskId, this.host.tasks).map(
+            (question) => question.title,
+          ),
       });
     };
     for (const [id, card] of this.cards) {
@@ -1588,8 +1592,9 @@ export class CardService {
     this.host.cardPlaced?.(card);
     if (card.taskId) {
       this.syncGates(card);
-      // Its merge card's line follows what else is open (INF-2525).
-      this.refreshSettleFacts([card.taskId]);
+      // Its merge card's line follows what else is open (INF-2525), and a
+      // reviewer's question its builder's merge card (INF-5396's audit, finding 2).
+      this.refreshSettleFacts(this.factsTasksOf(card, card.taskId));
       return;
     }
     if (card.author !== "host" || cardWord(card) !== "decision") return;
@@ -1605,6 +1610,12 @@ export class CardService {
    * The captain gate of the card's task, and of the builder a reviewer's
    * card asks about (INF-5004), so its idle clock restarts when it leaves.
    */
+  /** The tasks whose merge cards a card's coming or going redraws: its own, and the builder its reviewer asks about. */
+  private factsTasksOf(card: Card, taskId: string): string[] {
+    const asked = reviewedTaskOf(card, this.host.tasks);
+    return asked ? [taskId, asked] : [taskId];
+  }
+
   private syncGates(card: Card): void {
     if (!card.taskId) return;
     this.host.syncCaptainGate(card.taskId, this.host.now());
@@ -1616,7 +1627,7 @@ export class CardService {
   private left(card: Card): void {
     if (card.taskId) {
       this.syncGates(card);
-      this.refreshSettleFacts([card.taskId]);
+      this.refreshSettleFacts(this.factsTasksOf(card, card.taskId));
       return;
     }
     const row = this.host.tasks.capture.openCardTaskFor(card.id);

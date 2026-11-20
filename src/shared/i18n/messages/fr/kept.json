@@ -9,6 +9,7 @@
   "keptHostQueue": "En attente de la file de fusion : {place} a placé cette version dans la file de fusion de votre projet. Votre fusion est conservée. {place} la fusionnera une fois les vérifications de la file réussies.",
   "keptHostRemoved": "Fusion impossible pour l’instant : {place} a retiré cette version de la file de fusion de votre projet sans la fusionner. Votre fusion est conservée. Une version corrigée par son équipier retournera dans la file.",
   "keptProtected": "Fusion impossible pour l’instant : {place} la retient pour une revue requise ou une autre règle de la branche principale. Votre fusion est conservée et s’exécutera dès que {place} l’autorisera.",
+  "keptQuestions": "Fusion impossible pour l’instant : la revue attend encore votre réponse. Votre fusion est conservée et s’exécutera dès que vous aurez répondu.",
   "keptQueueOwn": "En attente de la vérification groupée : cette version est fusionnée avec vos autres modifications approuvées, en une seule demande de tirage groupée. Votre fusion est conservée. L’app fusionne le lot une fois ses vérifications réussies.",
   "keptRefused": "Fusion impossible pour l’instant : {place} l’a refusée. Votre fusion est conservée et s’exécutera de nouveau dès que son équipier aura corrigé la cause.",
   "keptRepair": "Fusion impossible pour l’instant : elle a changé après la carte que vous avez approuvée. Votre fusion est conservée et s’exécutera dès que son équipier aura montré que le travail est toujours celui que vous avez approuvé.",

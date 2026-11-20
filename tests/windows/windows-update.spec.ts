@@ -156,6 +156,10 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
       thumbprint = made.thumbprint;
       // Before the window starts the command: Task Scheduler gives it this person's environment.
       trustSystemStore(true);
+      // A window a person opens after the change carries it too, as
+      // Explorer takes in the changed environment; this check opens its
+      // window from its own.
+      process.env.NODE_USE_SYSTEM_CA = "1";
       feed = await startUpdateFeed({ channel, installers, pfx: made.pfx, passphrase });
       // Node, as the app's own runs it, reads the feed with only the person's
       // trust. The reader is its own process, read without blocking this
@@ -332,5 +336,6 @@ test("Infinitary on Windows updates itself from its channel, refusing a wrong ch
     await feed?.close().catch(() => undefined);
     if (thumbprint) await removeFeedCertificate(thumbprint, within).catch(() => undefined);
     trustSystemStore(false);
+    delete process.env.NODE_USE_SYSTEM_CA;
   }
 });

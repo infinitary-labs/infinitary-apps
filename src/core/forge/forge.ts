@@ -533,6 +533,13 @@ export interface Forge {
      * `mergeWays` to read, and a host that has them refuses it.
      */
     way: MergeWay | undefined,
+    /**
+     * On a host whose merge names no version (`mergeNamesNoVersion`), runs
+     * once as the merge request leaves, after every read before it; a throw
+     * stops the request with nothing sent. Other hosts never run it, so
+     * their caller runs its check before the call.
+     */
+    beforeSend?: () => void,
   ): Promise<MergeAnswer | undefined>;
   /**
    * Whether the host's own merge queue holds this change now. Read, never

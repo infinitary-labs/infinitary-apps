@@ -224,7 +224,7 @@ export async function startBitbucketStub() {
     rest: string,
     url: URL,
     body: Record<string, unknown>,
-    send: (status: number, answer: unknown) => void,
+    send: (status: number, answer: unknown, headers?: Record<string, string>) => void,
   ): boolean => {
     const notFound = () => send(404, { type: "error", error: { message: "Resource not found" } });
     const branchRead = /^\/refs\/branches\/(.+)$/.exec(rest);
@@ -353,8 +353,9 @@ export async function startBitbucketStub() {
           error: { message: "You can't merge until you resolve all merge conflicts." },
         });
       } else if (mergesLater) {
-        // The merge runs in the background: the pull request stays open for now.
-        send(202, { task_id: "merge-1" });
+        // The merge runs in the background: the pull request stays open for
+        // now, and the Location names the task to ask about it.
+        send(202, null, { location: `${url.pathname}/task-status/merge-1` });
       } else {
         // Bitbucket merges whatever the branch holds when the merge arrives.
         merges.push({
@@ -381,9 +382,9 @@ export async function startBitbucketStub() {
     const method = req.method ?? "GET";
     requests.push(`${method} ${url.pathname}`);
     const body = method === "GET" ? {} : await read(req);
-    const send = (status: number, answer: unknown) => {
-      res.writeHead(status, { "content-type": "application/json" });
-      res.end(JSON.stringify(answer));
+    const send = (status: number, answer: unknown, headers: Record<string, string> = {}) => {
+      res.writeHead(status, { "content-type": "application/json", ...headers });
+      res.end(answer === null ? "" : JSON.stringify(answer));
     };
     if (req.headers.authorization !== `Bearer ${accepted}`) {
       send(401, {

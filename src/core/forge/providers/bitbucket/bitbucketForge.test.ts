@@ -265,24 +265,67 @@ describe("a Bitbucket Cloud pull request", () => {
     expect(sent.some((request) => request.method === "POST")).toBe(false);
   });
 
-  it("keeps Bitbucket's reference to a merge still running and reads its failure there", async () => {
+  it("runs the caller's last check as the merge request leaves, and sends nothing when it stops", async () => {
+    const { forge, sent } = standIn({
+      [`GET ${REPO}/refs/branches/${encodeURIComponent(BRANCH)}?fields=target.hash`]: () =>
+        Response.json({ target: { hash: HEAD } }),
+    });
+    const order: string[] = [];
+    const outcome = await forge
+      .putIn(change, HEAD, "squash", () => {
+        order.push(`check after ${sent.length} read(s)`);
+        throw new ForgeError("refused", "the captain's merge approval ended", true);
+      })
+      .catch((error: unknown) => error);
+    expect(order).toEqual(["check after 1 read(s)"]);
+    expect(outcome).toMatchObject({ beforeSend: true });
+    expect(sent.some((request) => request.method === "POST")).toBe(false);
+  });
+
+  // Atlassian's description of the task-status read: a 202 names the task
+  // only in its Location, and a 400 is a failed merge, a pull request that
+  // left its queue unmerged, or a task of another pull request.
+  const STATUS = `${API}${REPO}/pullrequests/7/merge/task-status`;
+  it.each([
+    ["this pull request's task", `${STATUS}/merge-1`, "7/merge-1"],
+    [
+      "another pull request's task",
+      `${API}${REPO}/pullrequests/8/merge/task-status/merge-1`,
+      undefined,
+    ],
+    [
+      "another repository's task",
+      `${API}/repositories/field-team/other/pullrequests/7/merge/task-status/merge-1`,
+      undefined,
+    ],
+    ["no Location", null, undefined],
+  ])("keeps a 202's reference only when its Location names %s", async (_case, location, kept) => {
     const { forge } = standIn({
       [`GET ${REPO}/refs/branches/${encodeURIComponent(BRANCH)}?fields=target.hash`]: () =>
         Response.json({ target: { hash: HEAD } }),
       [`POST ${REPO}/pullrequests/7/merge`]: () =>
-        new Response(JSON.stringify({ task_id: "merge-1" }), { status: 202 }),
+        new Response(null, { status: 202, headers: location ? { Location: location } : {} }),
       [`GET ${REPO}/pullrequests/7`]: () => Response.json(pullRequest({})),
-      [`GET ${REPO}/pullrequests/7/merge/task-status/merge-1`]: () =>
-        Response.json({ type: "error", error: { message: "Merge failed" } }, { status: 400 }),
-      [`GET ${REPO}/pullrequests/7/merge/task-status/merge-2`]: () =>
-        Response.json({ task_status: "PENDING" }),
       ...commits(HEAD),
     });
     const outcome = await forge.putIn(change, HEAD).catch((error: unknown) => error);
     expect(outcome).toBeInstanceOf(ForgeMergeUnconfirmed);
-    expect(outcome).toMatchObject({ mergeTask: "merge-1" });
-    expect(await forge.mergeTaskFailed(7, "merge-1")).toBe(true);
-    expect(await forge.mergeTaskFailed(7, "merge-2")).toBe(false);
+    expect((outcome as ForgeMergeUnconfirmed).mergeTask).toBe(kept);
+  });
+
+  it("reads a kept task's 400 as failed, a pending one as not, and asks nothing for another pull request's", async () => {
+    const { forge, sent } = standIn({
+      [`GET ${REPO}/pullrequests/7/merge/task-status/merge-1`]: () =>
+        Response.json({ type: "error", error: { message: "Merge failed" } }, { status: 400 }),
+      [`GET ${REPO}/pullrequests/7/merge/task-status/merge-2`]: () =>
+        Response.json({ task_status: "PENDING" }),
+    });
+    expect(await forge.mergeTaskFailed(7, "7/merge-1")).toBe(true);
+    expect(await forge.mergeTaskFailed(7, "7/merge-2")).toBe(false);
+    const asked = sent.length;
+    expect(await forge.mergeTaskFailed(7, "8/merge-1")).toBe(false);
+    expect(await forge.mergeTaskFailed(7, "merge-1")).toBe(false);
+    expect(sent).toHaveLength(asked);
   });
 
   it("replaces only the description, leaving a title a person changed since", async () => {

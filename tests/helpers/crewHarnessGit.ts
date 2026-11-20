@@ -155,7 +155,19 @@ export class KeptForge implements Forge {
   inQueue = false;
   /** How many times that queue was read. */
   queueReads = 0;
-  async putIn(_change: ForgeChange, headSha: string): Promise<MergeAnswer> {
+  /** Runs while the merge reads what it reads before its request leaves. */
+  beforeLeaving: () => Promise<void> = async () => {};
+  async putIn(
+    _change: ForgeChange,
+    headSha: string,
+    _way?: unknown,
+    beforeSend?: () => void,
+  ): Promise<MergeAnswer> {
+    // A failure before the request leaves sends nothing, as the host says.
+    await this.beforeLeaving();
+    if (this.refuse?.beforeSend) throw this.refuse;
+    // A host whose merge names no version runs the caller's last check as the request leaves.
+    if (this.mergeNamesNoVersion) beforeSend?.();
     this.sends += 1;
     if (this.refuse) throw this.refuse;
     if (this.hostQueue) {

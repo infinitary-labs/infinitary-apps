@@ -205,6 +205,36 @@ export type MergeAttempt = PrOutcome & {
   noResend?: boolean;
 };
 
+/** An approval that ended at its last check before the merge request left: nothing was sent. */
+export class MergeWithdrawn extends ForgeError {
+  constructor(why: string) {
+    super("refused", why, true);
+    this.name = "MergeWithdrawn";
+  }
+}
+
+/**
+ * The approval's last check before a merge, and the attempt it records
+ * (`check`, then `onSent`), at the moment the request leaves: on a host whose
+ * merge names no version it runs inside the merge as the request leaves, after
+ * every read before it, and the hook is returned for `Forge.putIn`; elsewhere
+ * it runs now. A check that answers why stops the merge (`MergeWithdrawn`).
+ */
+export function atDispatch(
+  forge: Forge,
+  check: () => string | undefined,
+  onSent: () => void,
+): (() => void) | undefined {
+  const run = () => {
+    const why = check();
+    if (why) throw new MergeWithdrawn(why);
+    onSent();
+  };
+  if (forge.mergeNamesNoVersion) return run;
+  run();
+  return undefined;
+}
+
 /** What a merge says of a change that joins this person's batch. */
 export const BATCH_MERGE_WORDS = {
   needsCard:
@@ -485,17 +515,16 @@ export class ChangeMerge {
       const way = await wayToSend(forge, publishedChange);
       const held = guard?.held?.();
       if (held) return { ok: false, text: `Cannot merge yet: ${held}.`, stop: "guidance" };
-      const withdrawn =
-        guard?.beforeDispatch(change.headSha) ?? boundary?.beforeDispatch(change.headSha);
-      if (withdrawn) {
-        return {
-          ok: false,
-          text: `Cannot merge: ${withdrawn}${withdrawn.endsWith(".") ? "" : "."}`,
-          stop: "withdrawn",
-        };
-      }
-      dispatched = true;
-      const receipt = await forge.putIn(publishedChange, publishedChange.headSha, way);
+      const leaving = atDispatch(
+        forge,
+        () => guard?.beforeDispatch(change.headSha) ?? boundary?.beforeDispatch(change.headSha),
+        () => {
+          dispatched = true;
+        },
+      );
+      const receipt = leaving
+        ? await forge.putIn(publishedChange, publishedChange.headSha, way, leaving)
+        : await forge.putIn(publishedChange, publishedChange.headSha, way);
       if (receipt?.queued) return hostQueued(forge, change);
       // A host whose merge names no version says which one it merged: a
       // push between the app's read and the merge went in too, is told, and
@@ -514,6 +543,13 @@ export class ChangeMerge {
           : {}),
       };
     } catch (caught) {
+      if (caught instanceof MergeWithdrawn) {
+        return {
+          ok: false,
+          text: `Cannot merge: ${caught.message}${caught.message.endsWith(".") ? "" : "."}`,
+          stop: "withdrawn",
+        };
+      }
       const message = caught instanceof Error ? caught.message : String(caught);
       const repoId = this.options.tasks.get(taskId)?.repoId;
       const stop = guard ? await this.refusalStop(forge, guard, caught, message) : undefined;

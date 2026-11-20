@@ -330,6 +330,7 @@ export class BitbucketForge implements Forge {
     change: ForgeChange,
     headSha: string,
     way: MergeWay = "squash",
+    beforeSend?: () => void,
   ): Promise<MergeAnswer | undefined> {
     if (this.location.source) throw new ForgeError("permission", CONTRIBUTION_MERGE_REFUSAL);
     const id = numbered(change, this.place);
@@ -364,6 +365,9 @@ export class BitbucketForge implements Forge {
           close_source_branch: false,
         },
         () => {
+          // The caller's last check runs here, after the branch read and the
+          // sign-in: a throw sends nothing.
+          beforeSend?.();
           left = true;
         },
       );
@@ -375,8 +379,9 @@ export class BitbucketForge implements Forge {
       throw caught;
     }
     // Bitbucket's own reference to a merge still running (a 202), which a
-    // later read asks how it ended.
-    const task = answer.status === 202 ? mergeTaskOf(answer) : undefined;
+    // later read asks how it ended: only one its Location names under this
+    // pull request is kept.
+    const task = answer.status === 202 ? this.mergeTaskOf(answer.location, id) : undefined;
     // Once the request went out, nothing read after it can say the merge
     // failed: a 202 (Bitbucket still merging in the background), a read
     // that fails or an answer that names no version is an outcome not yet
@@ -411,14 +416,19 @@ export class BitbucketForge implements Forge {
 
   /**
    * Bitbucket's word on a merge it took with a 202
-   * (`GET /pullrequests/<N>/merge/task-status/<task>`): a 400 is the merge
-   * failing; a pending or finished one is not a failure.
+   * (`GET /pullrequests/<N>/merge/task-status/<task>`). Bitbucket answers
+   * 400 for a merge that failed or left its queue unmerged, and also for a
+   * task of another pull request, so only a reference kept from this pull
+   * request's own answer (`mergeTaskOf`) reads a 400 as failed; anything
+   * else, pending and an unknown task included, is not a failure.
    */
   async mergeTaskFailed(number: number, task: string): Promise<boolean> {
+    const kept = /^(\d+)\/(.+)$/.exec(task);
+    if (!kept || Number(kept[1]) !== number) return false;
     try {
       await this.client.request(
         "GET",
-        `${this.pullRequestPath(number)}/merge/task-status/${encodeURIComponent(task)}`,
+        `${this.pullRequestPath(number)}/merge/task-status/${encodeURIComponent(kept[2] ?? "")}`,
       );
       return false;
     } catch (caught) {
@@ -627,6 +637,31 @@ export class BitbucketForge implements Forge {
     return `/repositories/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`;
   }
 
+  /**
+   * The merge task a 202's Location names (`.../repositories/<workspace>/<name>/pullrequests/<N>/merge/task-status/<task>`),
+   * kept as `<N>/<task>` only when it names this repository and pull request.
+   */
+  private mergeTaskOf(location: string | null, id: number): string | undefined {
+    if (!location) return undefined;
+    let path: string;
+    try {
+      path = new URL(location, this.options.apiBaseUrl).pathname;
+    } catch {
+      return undefined;
+    }
+    const named =
+      /\/repositories\/([^/]+)\/([^/]+)\/pullrequests\/(\d+)\/merge\/task-status\/([^/]+)\/?$/.exec(
+        path,
+      );
+    if (!named) return undefined;
+    const [, owner, name, number, task] = named;
+    const same = (a: string | undefined, b: string | undefined) =>
+      decodeURIComponent(a ?? "").toLowerCase() === (b ?? "").toLowerCase();
+    if (!same(owner, this.location.owner) || !same(name, this.location.name)) return undefined;
+    if (Number(number) !== id || !task) return undefined;
+    return `${id}/${decodeURIComponent(task)}`;
+  }
+
   private pullRequestPath(id: number): string {
     return `${this.repositoryPath()}/pullrequests/${id}`;
   }
@@ -644,14 +679,6 @@ function sentNothing(caught: unknown): unknown {
     return caught;
   const message = caught instanceof Error ? caught.message : String(caught);
   return new ForgeError(caught instanceof ForgeError ? caught.failure : "transient", message, true);
-}
-
-/** The task a 202 names, from its body (`task_id`) or the last part of its Location. */
-function mergeTaskOf(answer: { body: unknown; location: string | null }): string | undefined {
-  const named = (answer.body as { task_id?: unknown } | null)?.task_id;
-  if (typeof named === "string" && named) return named;
-  const last = answer.location?.split("?")[0]?.split("/").filter(Boolean).at(-1);
-  return last && answer.location?.includes("/task-status/") ? decodeURIComponent(last) : undefined;
 }
 
 function unreadableError(place: string, what: string): ForgeError {

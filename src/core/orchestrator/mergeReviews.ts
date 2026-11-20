@@ -31,6 +31,7 @@ import {
   reviewOf,
 } from "./changeContext";
 import {
+  atDispatch,
   branchInProject,
   type ChangeMerge,
   hostQueued,
@@ -38,6 +39,7 @@ import {
   type MergeAttempt,
   type MergeGuard,
   type MergeStop,
+  MergeWithdrawn,
   otherMerged,
   otherMergedFacts,
   type PrOutcome,
@@ -878,13 +880,21 @@ export class MergeReviews {
       }
       // The merge the project allows, read where it lives before anything is sent.
       const way = await wayToSend(forge, change);
-      const stopped = guard?.beforeDispatch(candidate.headSha);
-      if (stopped) return { ok: false, stop: "withdrawn", text: stopped };
-      dispatched = true;
-      const sent = await forge.putIn(change, candidate.headSha, way);
+      const leaving = atDispatch(
+        forge,
+        () => guard?.beforeDispatch(candidate.headSha),
+        () => {
+          dispatched = true;
+        },
+      );
+      const sent = leaving
+        ? await forge.putIn(change, candidate.headSha, way, leaving)
+        : await forge.putIn(change, candidate.headSha, way);
       if (sent?.queued) return hostQueued(forge, change);
       return merged(sent?.sha, sent?.mergedHead);
     } catch (caught) {
+      if (caught instanceof MergeWithdrawn)
+        return { ok: false, stop: "withdrawn", text: caught.message };
       const message = caught instanceof Error ? caught.message : String(caught);
       // A request the host says never left sent nothing, whatever was marked.
       const sent = dispatched && !(caught instanceof ForgeError && caught.beforeSend);

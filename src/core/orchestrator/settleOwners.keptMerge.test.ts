@@ -430,21 +430,66 @@ describe("CrewSupervisor", () => {
       },
     );
 
+    // INF-5193: on a host whose merge names no version, the approval's last
+    // check and its attempt record run as the request leaves, so a merge
+    // interrupted while it still reads holds no attempt, and an approval
+    // that ends during those reads sends nothing.
+    it.each([
+      ["the task's own pull request", false],
+      ["a numbered pull request", true],
+    ])(
+      "records the attempt for %s only as the merge request leaves on a host naming no version",
+      async (_case, referenced) => {
+        const h = await approved({ referenced });
+        h.forge.mergeNamesNoVersion = true;
+        let release: () => void = () => {};
+        let reading = false;
+        h.forge.beforeLeaving = () =>
+          new Promise<void>((resolve) => {
+            reading = true;
+            release = resolve;
+          });
+        let answered = false;
+        const putIn = h.forge.putIn.bind(h.forge);
+        h.forge.putIn = async (...args) => {
+          try {
+            return await putIn(...args);
+          } finally {
+            answered = true;
+          }
+        };
+        h.supervisor.cardActions.act(h.card.id, "merge");
+        await vi.waitFor(() => expect(reading).toBe(true));
+        expect(h.authorization()?.attempt).toBeUndefined();
+        h.supervisor.settling.approvals.endAuthorization(
+          h.taskId,
+          "superseded",
+          "a new merge card is up",
+        );
+        release();
+        expect(h.authorization()?.status).toBe("superseded");
+        await vi.waitFor(() => expect(answered).toBe(true));
+        expect(h.forge.sends).toBe(0);
+        expect(h.authorization()?.attempt).toBeUndefined();
+        await h.supervisor.disposeAll();
+      },
+    );
+
     // INF-5193: the host's own reference to a merge it took is kept, and
     // its word that the merge failed lets the approval try again.
     it("asks the host how a merge it took ended, and tries again once it says the merge failed", async () => {
       const h = await approved({ referenced: true });
       h.forge.mergeNamesNoVersion = true;
-      h.forge.refuse = new ForgeMergeUnconfirmed("The host took the merge", "merge-task-1");
+      h.forge.refuse = new ForgeMergeUnconfirmed("The host took the merge", "7/merge-task-1");
       h.supervisor.cardActions.act(h.card.id, "merge");
-      await vi.waitFor(() => expect(h.authorization()?.attempt?.task).toBe("merge-task-1"));
+      await vi.waitFor(() => expect(h.authorization()?.attempt?.task).toBe("7/merge-task-1"));
       h.forge.refuse = undefined;
       h.crewmate.finishPrompt();
       await tick();
       await h.supervisor.settling.kept.runMergeAuthorization(h.taskId);
       expect(h.forge.sends).toBe(1);
-      expect(h.authorization()?.attempt?.task).toBe("merge-task-1");
-      h.forge.failedTasks.add("merge-task-1");
+      expect(h.authorization()?.attempt?.task).toBe("7/merge-task-1");
+      h.forge.failedTasks.add("7/merge-task-1");
       await h.supervisor.settling.kept.runMergeAuthorization(h.taskId);
       await vi.waitFor(() =>
         expect(h.tasks.get(h.taskId)?.delivery?.mergeAuthorization?.status).toBe("consumed"),

@@ -65,13 +65,14 @@ export const CHECK_CHANGE_TOOL_DESCRIPTION = [
 /**
  * The batch parameter's own words: the answers to a held batch a Claude
  * crewmate must see are here (docs/forge.md, "Batches of your own"). What
- * follows each answer, and a flake's rerun and owner, are the batch-repair
+ * follows each answer, and a flake's owner, are the batch-repair
  * skill's, which the repair task's brief names.
  */
 export const BATCH_DECLARATION_DESCRIPTION = [
   "From the task repairing a held batch in your project (batch-repair skill): fix true makes your own change its fix, which joins the batch and ends the hold once approved;",
   "sendBack names each change at fault by task key, with the reason its crewmate reads; it keeps its approval, and its crewmate's repair goes back in line if declared unchanged or comes back on a new merge card if changed;",
-  "evidence accounts for every failed test against every change. Give fix, sendBack, or both (then the batch stays held until your fix joins). A flake takes neither.",
+  "passed, never beside sendBack, names the held version when a rerun passed its failed checks: it merges once its other checks pass, and a fix you declare goes to the next batch;",
+  "evidence accounts for every failed test against every change. Give fix, sendBack, passed, or fix with one of them (with sendBack, the batch stays held until your fix joins).",
 ].join(" ");
 
 /**
@@ -450,6 +451,7 @@ export const CHECK_CHANGE_TOOL = crewmateTool({
           sendBack: Type.Optional(
             Type.Array(Type.Object({ task: Type.String(), reason: Type.String() })),
           ),
+          passed: Type.Optional(Type.String()),
           evidence: Type.String(),
         },
         { description: BATCH_DECLARATION_DESCRIPTION },

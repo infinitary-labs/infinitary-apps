@@ -1592,6 +1592,97 @@ describe("a held batch", () => {
     expect(home.heard.combinedOn.at(-1)).toEqual([first.head]);
   });
 
+  // Intent: the captain's fix 2 from the daily velocity review: "Merge a held batch once its
+  // version passes, even on a rerun, and send a test-only fix declared meanwhile to the next
+  // batch." The held version passes on a rerun after its fix was approved: it merges as it is.
+  it("merges a held version whose failed checks pass on a rerun after its fix was approved, and the fix forms the next batch", async () => {
+    const home = await heldBatch();
+    const held = home.open();
+    expect(await home.batches.declareFix(REPO, FIX.taskId)).toBeUndefined();
+    await home.pass();
+    expect(home.open().hold).toBeDefined();
+    // The failed checks pass on their rerun, and the fix is approved before the next pass.
+    home.host.report([passed("build"), passed("unit-tests"), passed("lint")]);
+    home.host.ready("clean");
+    home.approve(FIX);
+    await home.pass();
+    expect(home.host.merges.map((merge) => merge.head)).toEqual([held.head]);
+    expect(home.place(PARSER)).toMatchObject({ state: "merged" });
+    // The fix did not join the merged batch: it forms the next one, still the fix.
+    expect(home.members()).toEqual(["t-fix"]);
+    expect(home.open().members[0]?.fix).toBe(true);
+    expect(home.heard.combinedOn.at(-1)).toEqual([held.head]);
+  });
+
+  it("takes the approved fix at once when the held version's checks still fail, and wakes no repair again", async () => {
+    const home = await heldBatch();
+    const held = home.open();
+    expect(await home.batches.declareFix(REPO, FIX.taskId)).toBeUndefined();
+    // The repair ran the failed checks again; they are still running when the fix is approved.
+    home.host.report([passed("build"), running("unit-tests"), running("lint")]);
+    await home.pass();
+    expect(home.open().hold).toBeUndefined();
+    home.approve(FIX);
+    home.host.report([passed("build"), failed("unit-tests"), passed("lint")]);
+    await home.pass();
+    expect(home.members()).toEqual(["t-parser", "t-export", "t-fix"]);
+    expect(home.open().head).not.toBe(held.head);
+    expect(home.host.merges).toEqual([]);
+    expect(home.heard.held).toHaveLength(1);
+  });
+
+  // Intent: the same fix 2: the version passed on the project's own rerun of its failed tests,
+  // while the host still reads the first attempt's jobs failed, so the repair declares it.
+  it("merges a held version its repair declared passed on a rerun, and sends the fix declared with it to the next batch", async () => {
+    const home = await heldBatch();
+    const held = home.open();
+    expect(await home.batches.declarePassed(REPO, held.head, FIX.taskId)).toBeUndefined();
+    expect(home.record().fixes).toEqual([FIX.taskId]);
+    // The host still reads the failed jobs; a check still running is waited for.
+    home.host.report([passed("build"), failed("unit-tests"), failed("lint"), running("journeys")]);
+    home.host.ready("clean");
+    await home.pass();
+    expect(home.host.merges).toEqual([]);
+    expect(home.open().hold).toBeUndefined();
+
+    home.approve(FIX);
+    home.host.report([passed("build"), failed("unit-tests"), failed("lint"), passed("journeys")]);
+    await home.pass();
+    expect(home.host.merges.map((merge) => merge.head)).toEqual([held.head]);
+    expect(home.members()).toEqual(["t-fix"]);
+    expect(home.open().members[0]?.fix).toBe(true);
+  });
+
+  it("holds a version declared passed when a check it did not answer fails", async () => {
+    const home = await heldBatch();
+    const held = home.open();
+    expect(await home.batches.declarePassed(REPO, held.head)).toBeUndefined();
+    home.host.report([passed("build"), failed("unit-tests"), failed("lint"), failed("journeys")]);
+    home.host.ready("clean");
+    await home.pass();
+    expect(home.host.merges).toEqual([]);
+    expect(home.open().hold).toMatchObject({ head: held.head, checks: ["journeys"] });
+  });
+
+  it("refuses a passed declaration for another version, a batch not held for its checks, or one waiting for its fix after a send-back", async () => {
+    const home = await heldBatch();
+    const held = home.open();
+    expect(await home.batches.declarePassed(REPO, PARSER.head)).toBe("other-version");
+    await home.batches.answer(
+      REPO,
+      {
+        action: "send-back",
+        head: held.head,
+        changes: [{ taskId: "t-parser", reason: "its date test fails" }],
+      },
+      FIX.taskId,
+    );
+    expect(await home.batches.declarePassed(REPO, held.head)).toBe("sent-back");
+    expect(home.open().passed).toBeUndefined();
+    const fresh = await batchOfTwo();
+    expect(await fresh.batches.declarePassed(REPO, fresh.open().head)).toBe("not-held");
+  });
+
   it("refuses a fix declaration when no batch of the project is held", async () => {
     const home = await batchOfTwo();
     expect(await home.batches.declareFix(REPO, "t-fix")).toBe(

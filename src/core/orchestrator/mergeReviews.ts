@@ -882,8 +882,7 @@ export class MergeReviews {
       const way = await wayToSend(forge, change);
       const leaving = atDispatch(
         forge,
-        guard !== undefined,
-        () => guard?.held?.(),
+        guard,
         () => guard?.beforeDispatch(candidate.headSha),
         () => {
           dispatched = true;
@@ -898,7 +897,7 @@ export class MergeReviews {
       if (caught instanceof MergeWithdrawn)
         return {
           ok: false,
-          stop: caught.guidance ? "guidance" : "withdrawn",
+          stop: caught.stop,
           text: caught.message,
         };
       const message = caught instanceof Error ? caught.message : String(caught);

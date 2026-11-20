@@ -168,6 +168,14 @@ export type MergeGuard = {
    * version once more; without one only the captain's own click does.
    */
   handed?: () => { answered: boolean } | undefined;
+  /**
+   * A merge of this pull request sent earlier, from this task or another,
+   * whose outcome was never read back: nothing is sent until it is, and the
+   * merge waits on that outcome (`stop: "outcome"`).
+   */
+  unresolved?: () => string | undefined;
+  /** Where the approved pull request lives: what a read-back reads, never the selected project. */
+  place?: { host: string; owner: string; name: string };
   beforeDispatch: (head: string, mark?: boolean) => string | undefined;
 };
 
@@ -206,13 +214,14 @@ export type MergeAttempt = PrOutcome & {
 };
 
 /**
- * An approval that ended, or newer guidance that held it (`guidance`), at its
- * last check before the merge request left: nothing was sent.
+ * An approval that ended, newer guidance that held it (`guidance`), or a
+ * merge sent earlier whose outcome is unread (`outcome`), at its last check
+ * before the merge request left: nothing was sent.
  */
 export class MergeWithdrawn extends ForgeError {
   constructor(
     why: string,
-    readonly guidance = false,
+    readonly stop: "withdrawn" | "guidance" | "outcome" = "withdrawn",
   ) {
     super("refused", why, true);
     this.name = "MergeWithdrawn";
@@ -225,25 +234,27 @@ export class MergeWithdrawn extends ForgeError {
  * host whose merge names no version they run inside the merge as the request
  * leaves, after every read before it, and the hook is returned for
  * `Forge.putIn`; elsewhere they run now. Newer guidance (`held`) or a check
- * that answers why stops the merge (`MergeWithdrawn`). On a host whose merge
- * names no version only a kept approval's merge (`kept`) is sent: its attempt
- * record is what reads back a merge whose outcome is unknown.
+ * that answers why stops the merge (`MergeWithdrawn`), and so does a merge
+ * of the pull request sent earlier whose outcome is unread (`unresolved`). On a
+ * host whose merge names no version only a kept approval's merge (`guard`) is
+ * sent: its attempt record is what reads back a merge whose outcome is unknown.
  */
 export function atDispatch(
   forge: Forge,
-  kept: boolean,
-  held: () => string | undefined,
+  guard: Pick<MergeGuard, "held" | "unresolved"> | undefined,
   check: () => string | undefined,
   onSent: () => void,
 ): (() => void) | undefined {
   const run = () => {
-    if (!kept && forge.mergeNamesNoVersion)
+    if (!guard && forge.mergeNamesNoVersion)
       // i18n-exempt: served to the first mate in the merge answer, stays English
       throw new MergeWithdrawn(
         `${forge.place} merges whatever version the branch is at when it takes the merge, so the app sends it only under the captain's merge approval from the merge card, or the app's under autonomy, which reads back a merge whose outcome is unknown before sending again`,
       );
-    const hold = held();
-    if (hold) throw new MergeWithdrawn(hold, true);
+    const earlier = guard?.unresolved?.();
+    if (earlier) throw new MergeWithdrawn(earlier, "outcome");
+    const hold = guard?.held?.();
+    if (hold) throw new MergeWithdrawn(hold, "guidance");
     const why = check();
     if (why) throw new MergeWithdrawn(why);
     onSent();
@@ -535,8 +546,7 @@ export class ChangeMerge {
       if (held) return { ok: false, text: `Cannot merge yet: ${held}.`, stop: "guidance" };
       const leaving = atDispatch(
         forge,
-        guard !== undefined,
-        () => guard?.held?.(),
+        guard,
         () => guard?.beforeDispatch(change.headSha) ?? boundary?.beforeDispatch(change.headSha),
         () => {
           dispatched = true;
@@ -564,9 +574,9 @@ export class ChangeMerge {
       };
     } catch (caught) {
       if (caught instanceof MergeWithdrawn) {
-        if (caught.guidance)
+        if (caught.stop !== "withdrawn")
           // i18n-exempt: served to the crewmate in the merge answer, stays English
-          return { ok: false, text: `Cannot merge yet: ${caught.message}.`, stop: "guidance" };
+          return { ok: false, text: `Cannot merge yet: ${caught.message}.`, stop: caught.stop };
         return {
           ok: false,
           text: `Cannot merge: ${caught.message}${caught.message.endsWith(".") ? "" : "."}`,
@@ -995,11 +1005,7 @@ export class ChangeMerge {
     // task's own project, or the other managed one the task opened that
     // number in (INF-2510). A kept approval's read names the repository it
     // pinned (`place`), so a number another project shares never answers it.
-    const pinned = place
-      ? [repo, ...this.options.repos.list()]
-          .map((item) => publicationRepo(record, item))
-          .find((item) => requestAtRepo(item, place))
-      : undefined;
+    const pinned = place ? this.pinnedRepo(record, repo, place) : undefined;
     if (place && !pinned) return undefined;
     const elsewhere = pinned ? undefined : this.projectOfNumber(record, prNumber);
     if (elsewhere === null) return undefined;
@@ -1108,20 +1114,50 @@ export class ChangeMerge {
    * merge at the approved head is the merge; a closed one ends the approval;
    * an open one at the approved head may be tried again.
    */
+  /** The managed repository a kept approval pinned its pull request in. */
+  private pinnedRepo(
+    record: TaskRecord,
+    repo: RepoView,
+    place: { host: string; owner: string; name: string },
+  ): RepoView | undefined {
+    return [repo, ...this.options.repos.list()]
+      .map((item) => publicationRepo(record, item))
+      .find((item) => requestAtRepo(item, place));
+  }
+
+  /**
+   * The forge a read-back reads: the repository the approval pinned when it
+   * names one, so a number another project shares never answers it, and the
+   * task's located project otherwise.
+   */
+  private pinnedForge(
+    taskId: string,
+    place: { host: string; owner: string; name: string } | undefined,
+  ): Forge | undefined {
+    if (!place) {
+      const located = this.context.locate(taskId);
+      return "said" in located ? undefined : located.forge;
+    }
+    const record = this.options.tasks.get(taskId);
+    const repo = record?.repoId ? this.options.repos.get(record.repoId) : undefined;
+    const pinned = record && repo ? this.pinnedRepo(record, repo, place) : undefined;
+    return pinned ? this.options.forgeFor(pinned) : undefined;
+  }
+
   private async readBack(
     taskId: string,
     guard: MergeGuard,
   ): Promise<{ merged?: PrOutcome; closed?: PrOutcome; open?: boolean }> {
-    const located = this.context.locate(taskId);
-    if ("said" in located || guard.prNumber === undefined) return {};
+    const forge = this.pinnedForge(taskId, guard.place);
+    if (!forge || guard.prNumber === undefined) return {};
     let pull: ForgePull;
     try {
-      pull = await this.context.pullOf(located.forge, guard.prNumber);
+      pull = await this.context.pullOf(forge, guard.prNumber);
     } catch {
       return {};
     }
-    if (pull.merged) return { merged: alreadyMerged(located.forge, pull, guard.head) };
-    if (pull.state !== "open") return { closed: closedUnmerged(located.forge, pull) };
+    if (pull.merged) return { merged: alreadyMerged(forge, pull, guard.head) };
+    if (pull.state !== "open") return { closed: closedUnmerged(forge, pull) };
     return { open: pull.headSha === guard.head };
   }
 

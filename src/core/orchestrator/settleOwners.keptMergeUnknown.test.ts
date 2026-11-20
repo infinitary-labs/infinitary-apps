@@ -30,6 +30,7 @@ import {
 } from "../../../tests/helpers/crewHarnessGit";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { ForgeError, ForgeMergeUnconfirmed } from "../forge";
+import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { createChangeDelivery } from "./changeDelivery";
 import { otherMergedFacts } from "./changeMerge";
@@ -373,7 +374,7 @@ describe("a kept merge whose outcome is unknown on a host naming no version (INF
   // the click is still pending at the next launch; it is not sent again,
   // whether its approval still stands (the kept run reads that merge back,
   // by the host's own reference to it) or was withdrawn after it left.
-  it.each(["stands", "was withdrawn"] as const)(
+  it.each(["stands", "was withdrawn", "was ended by guidance"] as const)(
     "reads a merge a quit interrupted back at launch on a host naming no version while its approval %s, and sends it once",
     async (approval) => {
       const h = await approved();
@@ -392,6 +393,16 @@ describe("a kept merge whose outcome is unknown on a host naming no version (INF
           "revoked",
           "the captain withdrew it",
         );
+      if (approval === "was ended by guidance") {
+        await h.supervisor.steer.steerCrewmate(h.taskId, "Add a footer as well", "captain");
+        await h.declare({
+          captainGuidance: {
+            mark: 1,
+            impact: "changed-work",
+            evidence: "The captain asks for more work.",
+          },
+        });
+      }
       await h.supervisor.disposeAll();
       const seen = h.tasks.timeline(h.taskId).length;
       h.tasks.delivery.setPendingSettle(h.taskId, {
@@ -419,7 +430,11 @@ describe("a kept merge whose outcome is unknown on a host naming no version (INF
       await vi.waitFor(() => expect(tasks.get(h.taskId)?.pendingSettle).toBeNull());
       await tick();
       expect(tasks.get(h.taskId)?.delivery?.mergeAuthorization).toMatchObject({
-        status: approval === "stands" ? "standing" : "revoked",
+        status: {
+          stands: "standing",
+          "was withdrawn": "revoked",
+          "was ended by guidance": "invalidated",
+        }[approval],
         attempt: { head: APPROVED, task: "7/merge-task-1" },
       });
       expect(h.forge.sends).toBe(1);
@@ -467,14 +482,116 @@ describe("a kept merge whose outcome is unknown on a host naming no version (INF
       status: "standing",
       attempt: { head: APPROVED, task: "7/merge-task-1" },
     });
-    // A kept approval's own send refuses at that boundary too, while it
-    // holds a merge sent earlier that was never read back.
-    const standing = h.authorization();
-    if (!standing) throw new Error("Missing approval");
-    expect(
-      h.supervisor.settling.approvals.guardOf(h.taskId, standing, false).beforeDispatch(APPROVED),
-    ).toContain("still being read back");
-    expect(h.authorization()?.attempt?.task).toBe("7/merge-task-1");
+    await h.supervisor.disposeAll();
+  });
+
+  // INF-5193: a kept approval's own send refuses at the send while it holds
+  // a merge sent earlier that was never read back, and that refusal is a
+  // wait on the outcome that keeps the earlier attempt; a stop before the
+  // send, such as a moved branch, keeps it too, since only the attempt a
+  // send recorded itself is spent by its answer.
+  it.each(["at the send", "at a moved branch"] as const)(
+    "keeps a merge sent earlier whose outcome is unknown when a later run under the same approval stops %s",
+    async (where) => {
+      const h = await approved();
+      h.forge.mergeNamesNoVersion = true;
+      h.forge.refuse = new ForgeMergeUnconfirmed("The host took the merge", "7/merge-task-1");
+      h.supervisor.cardActions.act(h.card.id, "merge");
+      await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("outcome"));
+      h.forge.refuse = undefined;
+      h.crewmate.finishPrompt();
+      await tick();
+      const earlier = h.authorization()?.attempt;
+      expect(earlier?.task).toBe("7/merge-task-1");
+      if (where === "at a moved branch") h.forge.headSha = REPAIRED;
+      const result = await h.supervisor.settling.settle.reportCardSettle(h.taskId, "merge-pr");
+      expect(result).toMatchObject({
+        ok: false,
+        stop: where === "at the send" ? "outcome" : "moved",
+      });
+      if (where === "at the send") expect(result.text).toContain("still being read back");
+      expect(h.forge.sends).toBe(1);
+      expect(h.authorization()).toMatchObject({ status: "standing", attempt: earlier });
+      await h.supervisor.disposeAll();
+    },
+  );
+
+  // INF-5193: a second task that approves the same pull request sends no
+  // merge while another task holds a merge of it whose outcome is unknown.
+  it("sends no merge of a pull request another task sent a merge of whose outcome is unknown", async () => {
+    const h = await approved();
+    h.forge.mergeNamesNoVersion = true;
+    // The other task's approval of this pull request, its merge sent
+    // while the click's own merge still reads.
+    h.forge.beforeLeaving = async () => {
+      const standing = h.authorization();
+      if (!standing) throw new Error("Missing approval");
+      seedTask(h.tasks, { id: "task-earlier", title: "Earlier work", status: "idle" });
+      seedDelivery(h.tasks, "task-earlier", {
+        mergeAuthorization: {
+          ...standing,
+          id: "approval-earlier",
+          attempt: { token: "sent-earlier", head: APPROVED, at: Date.now() },
+        },
+      });
+    };
+    h.supervisor.cardActions.act(h.card.id, "merge");
+    await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("outcome"));
+    expect(h.forge.sends).toBe(0);
+    expect(h.authorization()?.attempt).toBeUndefined();
+    expect(h.tasks.get("task-earlier")?.delivery?.mergeAuthorization?.attempt?.token).toBe(
+      "sent-earlier",
+    );
+    h.crewmate.finishPrompt();
+    await tick();
+    await h.supervisor.disposeAll();
+  });
+
+  // INF-5193: the read right after a merge whose answer never came asks the
+  // repository the approval pinned, never another managed project whose
+  // pull request of the same number was selected while the merge was out.
+  it("reads a merge whose answer never came back at once in the repository its approval pinned", async () => {
+    const other = new KeptForge();
+    other.merged = true;
+    const h = await approved({
+      forgeFor: (repo, own) => (repo?.origin?.includes("/o/other") ? other : own),
+    });
+    h.forge.mergeNamesNoVersion = true;
+    const { dir } = gitRepo("other");
+    execFileSync("git", ["-C", dir, "remote", "add", "origin", "https://github.com/o/other.git"]);
+    const { repo } = await h.repos.setup({ kind: "adopt", path: dir, name: "other" });
+    h.forge.refuse = new ForgeError("transient", "The answer never came");
+    const putIn = h.forge.putIn.bind(h.forge);
+    h.forge.putIn = async (...args) => {
+      try {
+        return await putIn(...args);
+      } finally {
+        seedDelivery(h.tasks, h.taskId, {
+          checkTarget: {
+            id: "review-other",
+            repoId: repo.id,
+            kind: "github",
+            host: "github.com",
+            owner: "o",
+            name: "other",
+            number: h.tasks.get(h.taskId)?.delivery?.prNumber ?? 0,
+            headSha: APPROVED,
+            base: "main",
+            branch: "other-work",
+            method: "squash",
+            title: "Other work",
+            at: Date.now(),
+          },
+        });
+      }
+    };
+    h.supervisor.cardActions.act(h.card.id, "merge");
+    await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("outcome"));
+    expect(h.authorization()).toMatchObject({ status: "standing", attempt: { head: APPROVED } });
+    expect(h.forge.sends).toBe(1);
+    h.forge.refuse = undefined;
+    h.crewmate.finishPrompt();
+    await tick();
     await h.supervisor.disposeAll();
   });
 

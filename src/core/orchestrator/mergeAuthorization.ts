@@ -194,7 +194,10 @@ export function putInFront(
 }
 
 /** The same pull request on the same host, owner and repository. */
-function samePullTarget(a: MergeAuthorization["target"], b: MergeAuthorization["target"]): boolean {
+export function samePullTarget(
+  a: MergeAuthorization["target"],
+  b: MergeAuthorization["target"],
+): boolean {
   return a.host === b.host && a.owner === b.owner && a.name === b.name && a.prNumber === b.prNumber;
 }
 

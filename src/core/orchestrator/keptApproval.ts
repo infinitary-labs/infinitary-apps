@@ -23,6 +23,7 @@ import {
   outstandingGuidance,
   putInFront,
   retryAfter,
+  samePullTarget,
   standingAuthorization,
   taskPull,
 } from "./mergeAuthorization";
@@ -716,6 +717,12 @@ export class KeptApproval {
       prNumber: authorization.target.prNumber,
       unattended,
       approvedAt: authorization.at,
+      place: authorization.target,
+      unresolved: () =>
+        this.unresolvedSend(taskId, authorization.target, sent)
+          ? // i18n-exempt: served in the merge answer, stays English
+            "a merge of this pull request sent earlier is still being read back, so nothing is sent again until it is"
+          : undefined,
       // The captain's guidance since his click holds the merge without
       // spending the approval, read right before the last look (FI3-662).
       held: () => {
@@ -759,9 +766,6 @@ export class KeptApproval {
           return "a new merge card is up";
         }
         if (mark) return undefined;
-        if (now.attempt && now.attempt.token !== sent)
-          // i18n-exempt: served in the merge answer, stays English
-          return "a merge sent earlier is still being read back, so nothing is sent again until it is";
         sent = randomUUID();
         this.host.tasks.delivery.recordPermissionRecords(taskId, {
           mergeAuthorization: {
@@ -773,6 +777,34 @@ export class KeptApproval {
       },
     };
     return guard;
+  }
+
+  /**
+   * Whether a merge of this pull request (`samePullTarget`) was sent, from
+   * this task or another live one, and its outcome never read back: an
+   * approval's attempt or an unsettled entry carried past it, other than
+   * the attempt this send recorded (`own`).
+   */
+  private unresolvedSend(
+    taskId: string,
+    target: MergeAuthorization["target"],
+    own: string | undefined,
+  ): boolean {
+    const records = [
+      this.host.tasks.get(taskId),
+      ...this.host.tasks.listLive().filter((record) => record.id !== taskId),
+    ];
+    return records.some((record) => {
+      const kept = record?.delivery?.mergeAuthorization;
+      if (!kept) return false;
+      const sends = [
+        ...(kept.attempt ? [{ target: kept.target, attempt: kept.attempt }] : []),
+        ...(kept.unsettled ?? []),
+      ];
+      return sends.some(
+        (item) => item.attempt.token !== own && samePullTarget(item.target, target),
+      );
+    });
   }
 
   /**
@@ -841,7 +873,9 @@ export class KeptApproval {
         retries,
         retryAt,
         ...(handed ? { handed } : {}),
-        ...(result.stop !== "outcome"
+        // Only the attempt this run recorded is spent by its answer: one
+        // standing from before it is a merge still to read back.
+        ...(result.stop !== "outcome" && current.attempt?.token !== authorization.attempt?.token
           ? { attempt: undefined }
           : current.attempt && result.mergeTask
             ? { attempt: { ...current.attempt, task: result.mergeTask } }

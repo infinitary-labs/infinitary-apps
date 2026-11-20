@@ -405,9 +405,6 @@ export class SettleService {
         ? { beforeDispatch, unattended: actor !== "captain" || guard?.unattended === true }
         : undefined,
     );
-    // The answer came: an attempt token has done its job, whatever it said.
-    if (guard && result.stop !== "outcome")
-      this.approvals.patchStanding(taskId, { attempt: undefined });
     if (!result.ok) {
       // The project's host needs the app's sign-in (git integration PR
       // 1.2): a typed refusal whose ways are the sign-in and keeping the

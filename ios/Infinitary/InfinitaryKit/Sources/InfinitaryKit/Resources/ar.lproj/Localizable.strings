@@ -603,6 +603,7 @@
 "crewmateWorking" = "جارٍ العمل…";
 "devicesCarriedOn" = "تكمل مهام حاسوب خارج المتناول على %1$@، وخرج ذلك الإدخال من قائمتك.";
 "devicesCarryNotRemoved" = "نُقلت مهام %1$@، لكن تعذّر إخراجه من قائمتك: %2$@";
+"devicesCarryRunsOn" = "يعمل على: %2$@، حيث تكمل الآن مهام %1$@، الذي هو خارج المتناول";
 "devicesJoinAddressChip" = "الانضمام بعنوانه";
 "devicesJoinAddressSub" = "الحساب و%1$@، كما تسجّل الدخول إليه عبر SSH. %2$@";
 "devicesJoinCancel" = "إلغاء";

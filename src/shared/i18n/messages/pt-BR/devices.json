@@ -1,6 +1,7 @@
 {
   "devicesCarriedOn": "As tarefas de um computador fora de alcance continuam em {to}, e essa entrada saiu da sua lista.",
   "devicesCarryNotRemoved": "As tarefas de {from} foram movidas, mas ele não pôde sair da sua lista: {why}",
+  "devicesCarryRunsOn": "Roda em: {to}, onde as tarefas de {from}, fora de alcance, continuam agora",
   "devicesCarryStayed": {
     "plural": "count",
     "one": "{count} tarefa ficou em {from}, fora de alcance, então ele continua na sua lista.",

@@ -603,6 +603,7 @@
 "crewmateWorking" = "作業中…";
 "devicesCarriedOn" = "連絡がつかないコンピューターのタスクが%1$@で続き、その項目はリストから外れました。";
 "devicesCarryNotRemoved" = "%1$@のタスクは移りましたが、リストから外せませんでした：%2$@";
+"devicesCarryRunsOn" = "実行先：%2$@。連絡がつかない%1$@のタスクはここで続きます";
 "devicesJoinAddressChip" = "アドレスで参加";
 "devicesJoinAddressSub" = "SSH でサインインするときと同じ形式のアカウントと %1$@。%2$@";
 "devicesJoinCancel" = "キャンセル";

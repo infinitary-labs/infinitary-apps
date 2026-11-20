@@ -23336,6 +23336,35 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `The tasks of ${from} moved, but it could not come off your list: ${why}`;
   }
+  function devicesCarryRunsOn(input2) {
+    const from = input2.from;
+    const to = input2.to;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يعمل على: ${to}، حيث تكمل الآن مهام ${from}، الذي هو خارج المتناول`;
+      case "de":
+        return `Läuft auf: ${to}, wo die Aufgaben von ${from}, außer Reichweite, jetzt weiterlaufen`;
+      case "es":
+        return `Se ejecuta en: ${to}, donde continúan ahora las tareas de ${from}, fuera de alcance`;
+      case "fr":
+        return `Tourne sur : ${to}, où les tâches de ${from}, hors de portée, continuent maintenant`;
+      case "ja":
+        return `実行先：${to}。連絡がつかない${from}のタスクはここで続きます`;
+      case "ko":
+        return `실행 위치: ${to}. 연락 닿지 않는 ${from}의 작업이 이제 여기서 이어집니다`;
+      case "pt-BR":
+        return `Roda em: ${to}, onde as tarefas de ${from}, fora de alcance, continuam agora`;
+      case "zh-Hans":
+        return `运行于：${to}，无法联系的${from}的任务现在在这里继续`;
+      case "zh-Hant":
+        return `執行於：${to}，連絡不上的${from}的任務現在在這裡繼續`;
+      case "en-XA":
+        return `[Ŕûñš öñ: ${to}, ŵĥéŕé ţĥé ţášķš öƒ ${from}, öûţ öƒ ŕéáçĥ, çöñţîñûé ñöŵ ~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Runs on: ‬${to}‮, where the tasks of ‬${from}‮, out of reach, continue now‬`;
+    }
+    return `Runs on: ${to}, where the tasks of ${from}, out of reach, continue now`;
+  }
   function devicesCarryStayed(input2) {
     const count = formatNumber(input2.count);
     const from = input2.from;
@@ -85106,6 +85135,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     crewmateWorking,
     devicesCarriedOn,
     devicesCarryNotRemoved,
+    devicesCarryRunsOn,
     devicesCarryStayed,
     devicesJoinAddressChip,
     devicesJoinAddressSub,
@@ -87833,6 +87863,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "crewmateWorking": [],
     "devicesCarriedOn": ["to"],
     "devicesCarryNotRemoved": ["from", "why"],
+    "devicesCarryRunsOn": ["from", "to"],
     "devicesCarryStayed": ["count", "from"],
     "devicesJoinAddressChip": [],
     "devicesJoinAddressSub": ["computer", "mustBeOn"],

@@ -418,9 +418,16 @@ export class TaskPlacement {
   /**
    * One computer's two entries became one (docs/devices.md, "One computer,
    * one entry"): each live task's own Runs on that names the entry that went
-   * names the one kept instead. Answers their ids.
+   * names the one kept instead. Answers their ids. A caller moving them for
+   * another reason, such as carrying a computer's tasks on (docs/devices.md,
+   * "Joined again"), passes the record `line` that says why.
    */
-  moveRunsOn(from: string, into: string, words: string): string[] {
+  moveRunsOn(
+    from: string,
+    into: string,
+    words: string,
+    line = `Runs on: ${words}, the one row its computer keeps now`,
+  ): string[] {
     const at = this.writer.now();
     const run = this.writer.write(() =>
       this.writer.store.listByStatus("open", "active").flatMap((record) => {
@@ -434,7 +441,7 @@ export class TaskPlacement {
           at,
           actor: "host",
           kind: "note",
-          text: `Runs on: ${words}, the one row its computer keeps now`,
+          text: line,
         });
         return [record.id];
       }),

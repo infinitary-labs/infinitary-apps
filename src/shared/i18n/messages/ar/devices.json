@@ -1,6 +1,7 @@
 {
   "devicesCarriedOn": "تكمل مهام حاسوب خارج المتناول على {to}، وخرج ذلك الإدخال من قائمتك.",
   "devicesCarryNotRemoved": "نُقلت مهام {from}، لكن تعذّر إخراجه من قائمتك: {why}",
+  "devicesCarryRunsOn": "يعمل على: {to}، حيث تكمل الآن مهام {from}، الذي هو خارج المتناول",
   "devicesCarryStayed": {
     "plural": "count",
     "zero": "لم تبقَ أي مهمة على {from}.",

@@ -603,6 +603,7 @@
 "crewmateWorking" = "处理中…";
 "devicesCarriedOn" = "一台无法联系的电脑的任务在%1$@上继续，那个条目已从你的列表中移除。";
 "devicesCarryNotRemoved" = "%1$@的任务已移走，但无法把它从你的列表中移除：%2$@";
+"devicesCarryRunsOn" = "运行于：%2$@，无法联系的%1$@的任务现在在这里继续";
 "devicesJoinAddressChip" = "通过地址加入";
 "devicesJoinAddressSub" = "账户和 %1$@，按你用 SSH 登录它时的写法填写。%2$@";
 "devicesJoinCancel" = "取消";

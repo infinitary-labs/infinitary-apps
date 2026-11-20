@@ -821,8 +821,21 @@ describe("a computer that joins again under a new key", () => {
     tasks = home.tasks;
     started(home, "footer");
     started(home, "header");
+    // One not started yet names the earlier entry as where it runs.
+    seedTask(home.tasks, {
+      id: "waits",
+      title: "Fix the menu",
+      status: "queued",
+      shape: { kind: "fix", runs_on_ask: home.deviceId },
+    });
     const again = joinAgain(home);
 
+    const label = (id: string) => {
+      const row = home.computers.list().find((device) => device.id === id);
+      if (!row) throw new Error("not on the list");
+      return deviceLabel(row);
+    };
+    const said = m.devicesCarryRunsOn({ to: label(again), from: label(home.deviceId) });
     const answer = await home.computers.carryOn(home.deviceId, again);
     await vi.waitFor(() => expect(home.lines).toHaveLength(1));
 
@@ -833,6 +846,10 @@ describe("a computer that joins again under a new key", () => {
     ]);
     expect(home.tasks.get("footer")?.deviceId).toBe(again);
     expect(home.computers.list().map((device) => device.id)).toEqual([again]);
+    // Its Runs on follows, and its record says why: the carry, not a fold.
+    expect(home.tasks.get("waits")?.shape?.runs_on_ask).toBe(again);
+    expect(home.moved).toContain("waits");
+    expect(home.tasks.timeline("waits").map((event) => event.text)).toContain(said);
     expect(home.lines.at(-1)).toMatchObject({ deviceId: again, stage: "done", tone: "info" });
   });
 

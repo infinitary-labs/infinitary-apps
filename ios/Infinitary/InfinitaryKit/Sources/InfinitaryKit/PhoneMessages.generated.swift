@@ -632,6 +632,7 @@ public enum PhoneMessages {
     public static func `crewmateWorking`() -> String { PhoneWords.format("crewmateWorking", []) }
     public static func `devicesCarriedOn`(`to`: String) -> String { PhoneWords.format("devicesCarriedOn", [`to`]) }
     public static func `devicesCarryNotRemoved`(`from`: String, `why`: String) -> String { PhoneWords.format("devicesCarryNotRemoved", [`from`, `why`]) }
+    public static func `devicesCarryRunsOn`(`from`: String, `to`: String) -> String { PhoneWords.format("devicesCarryRunsOn", [`from`, `to`]) }
     public static func `devicesCarryStayed`(`count`: Int, `from`: String) -> String { PhoneWords.format("devicesCarryStayed", [`count`, `from`]) }
     public static func `devicesJoinAddressChip`() -> String { PhoneWords.format("devicesJoinAddressChip", []) }
     public static func `devicesJoinAddressSub`(`computer`: String, `mustBeOn`: String) -> String { PhoneWords.format("devicesJoinAddressSub", [`computer`, `mustBeOn`]) }
@@ -4362,6 +4363,7 @@ extension PhoneWords {
         "crewmateWorking": [],
         "devicesCarriedOn": ["to"],
         "devicesCarryNotRemoved": ["from", "why"],
+        "devicesCarryRunsOn": ["from", "to"],
         "devicesCarryStayed": ["count", "from"],
         "devicesJoinAddressChip": [],
         "devicesJoinAddressSub": ["computer", "mustBeOn"],

@@ -558,7 +558,8 @@ export class Computers {
     // Runs on first, so nothing new starts on the computer out of reach.
     for (const repo of repos.list())
       if (repo.runsOn === from) repos.setRunsOn(repo.id, to === RUNS_ON_THIS_MAC ? null : to);
-    for (const taskId of tasks.placement.moveRunsOn(from, to, toName))
+    const carried = m.devicesCarryRunsOn({ to: toName, from: label });
+    for (const taskId of tasks.placement.moveRunsOn(from, to, toName, carried))
       this.options.runsOnMoved?.(taskId);
     const started = tasks
       .list()

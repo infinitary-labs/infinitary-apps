@@ -681,6 +681,7 @@
   {"said":{"m":"crewmateWorking"},"words":"Working…"},
   {"said":{"m":"devicesCarriedOn","a":{"to":"‹to›"}},"words":"The tasks of a computer out of reach continue on ‹to›, and that entry is off your list."},
   {"said":{"m":"devicesCarryNotRemoved","a":{"from":"‹from›","why":"‹why›"}},"words":"The tasks of ‹from› moved, but it could not come off your list: ‹why›"},
+  {"said":{"m":"devicesCarryRunsOn","a":{"from":"‹from›","to":"‹to›"}},"words":"Runs on: ‹to›, where the tasks of ‹from›, out of reach, continue now"},
   {"said":{"m":"devicesCarryStayed","a":{"count":0,"from":"‹from›"}},"words":"0 tasks stayed on ‹from›, out of reach, so it stays on your list."},
   {"said":{"m":"devicesCarryStayed","a":{"count":1,"from":"‹from›"}},"words":"1 task stayed on ‹from›, out of reach, so it stays on your list."},
   {"said":{"m":"devicesCarryStayed","a":{"count":2,"from":"‹from›"}},"words":"2 tasks stayed on ‹from›, out of reach, so it stays on your list."},

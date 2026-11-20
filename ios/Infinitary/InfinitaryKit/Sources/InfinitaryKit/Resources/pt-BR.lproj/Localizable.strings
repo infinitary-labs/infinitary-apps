@@ -603,6 +603,7 @@
 "crewmateWorking" = "Trabalhando…";
 "devicesCarriedOn" = "As tarefas de um computador fora de alcance continuam em %1$@, e essa entrada saiu da sua lista.";
 "devicesCarryNotRemoved" = "As tarefas de %1$@ foram movidas, mas ele não pôde sair da sua lista: %2$@";
+"devicesCarryRunsOn" = "Roda em: %2$@, onde as tarefas de %1$@, fora de alcance, continuam agora";
 "devicesJoinAddressChip" = "Entrar pelo endereço";
 "devicesJoinAddressSub" = "A conta e o %1$@, do jeito que você faz login nele com SSH. %2$@";
 "devicesJoinCancel" = "Cancelar";

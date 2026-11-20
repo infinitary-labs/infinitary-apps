@@ -603,6 +603,7 @@
 "crewmateWorking" = "Working…";
 "devicesCarriedOn" = "The tasks of a computer out of reach continue on %1$@, and that entry is off your list.";
 "devicesCarryNotRemoved" = "The tasks of %1$@ moved, but it could not come off your list: %2$@";
+"devicesCarryRunsOn" = "Runs on: %2$@, where the tasks of %1$@, out of reach, continue now";
 "devicesJoinAddressChip" = "Join by its address";
 "devicesJoinAddressSub" = "The account and %1$@, as you sign in to it with SSH. %2$@";
 "devicesJoinCancel" = "Cancel";

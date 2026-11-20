@@ -219,9 +219,9 @@ async function crewAtNodes(page: Page): Promise<string[]> {
 }
 
 /**
- * Point at a crewmate the constellation seats at its node: its name is drawn
+ * Point at a crewmate circling its program's ring: its name is drawn
  * above it and is part of it, so the pointer goes to the name, and finds it
- * only while the stage shows names. The seat glides with its task's mark, so
+ * only while the stage shows names. The seat circles and glides with its task's mark, so
  * the pointer follows the name until the crewmate is the one being read.
  */
 async function pointAtSeatedCrewmate(
@@ -248,7 +248,7 @@ async function pointAtSeatedCrewmate(
         return crewInspecting(page);
       },
       {
-        message: `Crewmate ${id} at its constellation node is not under the pointer`,
+        message: `Crewmate ${id} on its program's ring is not under the pointer`,
         timeout: 15_000,
       },
     )

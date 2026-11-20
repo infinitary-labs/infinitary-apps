@@ -138,14 +138,14 @@ All clusters and their controls hide with the character frame under cards.
 ## Visible seats
 
 On desktop, iPhone and iPad, each main orbit spaces only the occupants drawn on it (INF-1375, approved A: keep small circles and close the gaps).
-A crewmate on a relationship circle or program branch keeps its logical orbit membership for allocation, capacity and radius, but takes no angular seat there.
+A crewmate on a relationship circle or program ring keeps its logical orbit membership for allocation, capacity and radius, but takes no angular seat there.
 A visible program ring remains a first-orbit occupant.
 A fallback crewmate drawn on its main orbit participates in that orbit's spacing.
 Each orbit preserves its survivors' circular order and turns their spacing as little as possible; a return enters the widest visible gap instead of restoring a reservation.
 Existing easing carries the changed seats, and Reduce Motion resolves placement and any bounds fallback in one settled frame.
 Bounds resolution keeps a rejected companion group (one whose blocker is itself past the scene reach) on its main orbit for the remainder of that frame, so closing a gap cannot cause repeated circle/fallback attempts in one frame.
 The desktop's `offMain` set and the phone's drawing seat books carry resolved drawing occupancy, separately from logical crew counts.
-Tilt, speed, orbit growth, computer grouping, branch geometry, inspection and arrows remain unchanged; equal angles still project to unequal screen distances.
+Tilt, speed, orbit growth, computer grouping, program rings, inspection and arrows remain unchanged; equal angles still project to unequal screen distances.
 No guide, ghost marker, label or setting is added.
 
 ## Active adversarial review cue
@@ -175,45 +175,46 @@ Reduced motion paints one settled frame.
 
 ## A task with parts
 
-A task that runs a program the host runs (`shape.program`, `docs/programs.md`) draws as a branching constellation, the captain's INF-799 choice ("the branches are the program's own graph"), with the settings the captain staged on that plan: branches of 60 px, 70 degrees of spread, and a finished tree that folds into its root.
-The constellation draws only the program's running parts, each as its crewmate on a branch (INF-1037, the captain: "i feel 'not started' and 'finished' parts should not be rendered there").
+A task that runs a program the host runs (`shape.program`, `docs/programs.md`) draws as moons, the captain's INF-5365 choice among the prototyped looks: its running parts circle its mark on a tilted ring, and a gem inside the mark gains wires as parts finish.
+The settings the captain staged on that preview live in `CONSTELLATION` (`constellation.ts`): a first ring of at least 40 px tilted 40 degrees, turning 26 degrees a second, a second ring past ten parts, and a faint ring line.
+`scripts/generate-phone-scene.ts` carries every number of it, and the gem's wire order, to the iPhone and iPad.
+It draws only the program's running parts, each as its crewmate on a ring (INF-1037, the captain: "i feel 'not started' and 'finished' parts should not be rendered there").
 A finished or unstarted part draws nothing, and the ring's summary counts them.
-The program's shape and the demo's parts and pace were the preview's only.
-`constellation.ts` reads it from the board alone (`programsOf`): a parent the board marks as a program (`TaskView.program`) with work children, and the recorded `blocks` links among those children, closed ones included.
-A running part hangs from the running siblings it waits on (`runningParts`), and otherwise from the root.
-A part is not ready until the parts it waits on finish (`docs/task-graph.md`), so a running part almost always hangs straight from the root; it hangs from another running part only under a wait the captain released.
-A link to a task outside the parent is not a branch, a host-commissioned review is the builder's cue and never a part, and nothing is inferred from a title, an order or a script.
-Any other parent, such as a task that only holds a plan and its build, or one with a crewmate of its own, draws no constellation, and its children orbit as single crewmates (INF-999).
-A home that sends no `program` draws no constellation on a newer view (`src/shared/contract-changes/task-program.md`).
-A basis or a branch-from that is not also a recorded wait draws no branch, since the board does not carry them; a program's runner files each part's inputs as its waits.
+`constellation.ts` reads it from the board alone (`programsOf`): a parent the board marks as a program (`TaskView.program`) with work children.
+A host-commissioned review is the builder's cue and never a part, and nothing is inferred from a title, an order or a script.
+Any other parent, such as a task that only holds a plan and its build, or one with a crewmate of its own, draws no program, and its children orbit as single crewmates (INF-999).
+A home that sends no `program` draws no program on a newer view (`src/shared/contract-changes/task-program.md`).
 
-The root is a small hollow ring with a seat of its own on the first orbit, the one a lone crewmate takes, so it never jumps when the second opens (INF-999, INF-1179): the first orbit's spacing counts each root as an occupant beside its crewmates, so a program first draws at the widest gap, a newcomer enters at the widest gap among crew and roots, and every seat re-spaces evenly as programs come and go, each root gliding on a spring to its new seat.
-With several work computers a program draws a copy of its ring in the group of each computer that runs its parts, each copy with the crewmates running there (INF-1037, the captain's choice A), so every crewmate stays where its work runs.
-A computer's copy goes once its parts there finish; with none running anywhere, between stages, the rings stay where they were drawn, or one draws at home.
+The mark is a small hollow ring with a seat of its own on the first orbit, the one a lone crewmate takes, so it never jumps when the second opens (INF-999, INF-1179): the first orbit's spacing counts each mark as an occupant beside its crewmates, so a program first draws at the widest gap, a newcomer enters at the widest gap among crew and marks, and every seat re-spaces evenly as programs come and go, each mark gliding on a spring to its new seat.
+With several work computers a program draws a copy of its mark in the group of each computer that runs its parts, each copy with the crewmates running there (INF-1037, the captain's choice A), so every crewmate stays where its work runs.
+Each copy's gem shows the whole program's share finished, read where the program's parts are all known.
+A computer's copy goes once its parts there finish; with none running anywhere, between stages, the marks stay where they were drawn, or one draws at home.
 Every copy is the same task: pointing at either opens its summary beside it, and the keyboard reaches one (`programMarks`, `markOf`).
 `constellation.test.ts` holds two marks of different tasks on the first orbit more than a glyph's width apart at boot, for a minute of frames, and through a newcomer and a new program; crew on the other planes cross it on screen by design.
-`layoutProgram` lays the parts in layers outward from it: the first layer 60 px out and each later one 0.82 of the one before, each layer spread evenly across 70 degrees round the root's outward direction and ordered by its parents' mean angle, so a chain stays straight and a barrier's join sits between its branches.
-Running crewmates keep their full size and stay a glyph's width (25 px on screen) apart: a crowded layer widens its fan, up to 180 degrees, and past that moves outward.
-A remote computer's group draws at half the scene's size with its glyphs at nearly full size, so its layout asks for the same room on screen.
-When a node would leave the stage the whole graph scales about its root.
-The layers, distances and turns depend only on the parts and the gap, so they are kept per parts list, and each frame places only the moving coordinates (INF-1073).
-A live part's crewmate keeps its spark, solid, heat, label, summary and departure; once it has arrived it glides to its node on the springs a waiting crewmate's circle uses, without reserving angular space on the main orbit, and any wait arrow between two parts gives way to their branch.
-A running part whose crewmate has not arrived yet draws no branch.
-A seated part never circles a blocker, but its wait arrow to a task outside its parent stays, so the arrows into a busy blocker count every live waiter.
-A branch has the wait arrow's weight, `--fg-3` at 0.28 and 1 px, and lights in the accent at 0.7 and 1.4 px while a result rides it.
 
-A part's report is its result: its packet climbs its branches by first parents to the root instead of flying to the first mate, and the root lights as it lands; a part that has just finished starts its packet from its crewmate as it leaves.
-A part that starts under a running part's released wait takes a packet down that branch.
-The parent's own report, when it has no crewmate here, is a packet from the root into the first mate.
-When the parent closes done the tree folds into its root over the fall home's time, and the root then falls into the first mate as the one result home; a dropped parent fades where it stands.
+`moonRings` gives up to ten running parts one ring, and more two, the first holding the odd one.
+A ring's radius is at least 40 px, wide enough for 30 px of arc a part, and a second ring sits at least 26 px past the first, tilted 18 degrees less on a different line of nodes.
+`layoutProgram` places the parts in the order filed, evenly round their ring, the first ring turning one way and the second the other, so the running crewmates stay apart without a fan to widen.
+A remote computer's group draws at half the scene's size with its glyphs at nearly full size, so its layout asks for the same room on screen.
+When a part would leave the stage the whole program scales about its mark.
+A part on the near half of its ring draws in front of the mark and its line brighter, 0.3 against 0.13 in the quiet color, 1 px.
+A live part's crewmate keeps its spark, solid, heat, label, summary and departure; once it has arrived it glides to its place on the springs a waiting crewmate's circle uses, without reserving angular space on the main orbit.
+A seated part never circles a blocker, and every wait arrow it has stays, to another part or a task outside its parent, so the arrows into a busy blocker count every live waiter.
+
+The gem is the high tier's icosahedron, 10 px, turning half a radian a second inside the mark.
+It has one wire for each thirtieth of the program finished, at least one, in an order that closes faces as it grows (`GEM_WIRES`), and is whole when the program is done.
+A part's report is its result: its packet flies straight from its crewmate to the mark instead of to the first mate, and the mark lights as it lands, the newest wire white-hot for a moment; a part that has just finished starts its packet from its crewmate as it leaves.
+The parent's own report, when it has no crewmate here, is a packet from the mark into the first mate.
+When the parent closes done its rings fold into the mark over the fall home's time, the gem whole, and the mark then falls into the first mate as the one result home; a dropped parent fades where it stands.
 A program first draws once one of its parts is underway, and keeps the planes while its next parts are filed.
-Reduced motion paints one settled frame, and the pointer's slowdown and pause apply as to every crewmate.
-Every mark names its task (`marks.ts`, INF-999): the root ring is pointed at, summarised and opened as a crewmate is, and has a button of its own (`data-crew-mark`) the keyboard reaches, so nothing painted is a mark without a name.
+Reduced motion paints one settled frame, the rings at their start and the gem still, and the pointer's slowdown and pause apply as to every crewmate.
+Every mark names its task (`marks.ts`, INF-999): the mark is pointed at, summarised and opened as a crewmate is, and has a button of its own (`data-crew-mark`) the keyboard reaches, so nothing painted is a mark without a name.
 A part's summary carries a Part of row naming its program's key, which opens the program's record.
-The ring's summary carries the program's parts (INF-1037, the captain: "Add a row such as '20 finished, 5 running, 0 waiting' when pointing at the ring" and "make the hover preview for a ring a bit richer than just the counts"): a Parts row with the count of each state (`programProgress`, `partsCountWords`), one bar with each state's share, and a Running row naming each running part by its key, which opens its record, with the computer it runs on as its Tasks row says it.
+The mark's summary carries the program's parts (INF-1037, the captain: "Add a row such as '20 finished, 5 running, 0 waiting' when pointing at the ring" and "make the hover preview for a ring a bit richer than just the counts"): a Parts row with the count of each state (`programProgress`, `partsCountWords`), one bar with each state's share, and a Running row naming each running part by its key, which opens its record, with the computer it runs on as its Tasks row says it.
 A dropped part counts in none.
-The near crew canvas publishes each program's branches as `data-constellation` and the parts seated at their nodes as `data-constellation-crew`, compare-before-write.
-`constellation.test.ts` checks the graph read from a board, the layout and its room between crewmates, the seats, the packets, the fold home, the settled frame and the ring's counts; `computers.test.ts` checks a ring on each of two computers with only its own crewmates, a ring kept between stages, and pointing at either copy; `tests/e2e/program-constellation.spec.ts` seeds a review program beside an umbrella task that draws none, reads its running branches off the painted stage, and reads a part's Part of row and the ring's own summary with its counts and running keys, and `tests/e2e/crew-board-delta.spec.ts` links two running parts above the delta trigger.
+The near crew canvas publishes each program's ring count and gem share as `data-constellation` and the parts circling it as `data-constellation-crew`, compare-before-write.
+`constellation.test.ts` checks the program read from a board, the rings and their room between crewmates, the seats, the packets, the gem, the fold home, the settled frame and the summary's counts; `computers.test.ts` checks a mark on each of two computers with only its own crewmates and the whole program's gem, a mark kept between stages, and pointing at either copy; `tests/e2e/program-constellation.spec.ts` seeds a review program beside an umbrella task that draws none, reads its ring and gem off the painted stage, and reads a part's Part of row and the mark's own summary with its counts and running keys, and `tests/e2e/crew-board-delta.spec.ts` links two running parts above the delta trigger and reads the arrow between them.
+The phone's `PhoneSceneRosterTests` compares each running part's place on the ring to the desktop's `layoutProgram`.
 
 ## Tier solids
 
@@ -532,7 +533,7 @@ The character publishes the warp it plays to `crew/warp.ts`'s shared `crewWarp` 
 Every warp lends the crew a lead on the orbit's clock, as the rush does (`WARP_LEAD` seconds of their own pace per unit of warp distance), so the crew travel faster on their evenly spaced slots and the lead stays where the warp leaves it.
 The tunnel opens every orbit face-on and draws it in a little, and each rider trembles, comes in front and trails light outward; the sphere's riders dive into its wormhole one after another and come back out; the corkscrew's riders peel off into a spiral line behind the first mate, through the hourglass's throat.
 Each of those moves is scaled by the warp's envelope and applied in screen space after a crewmate is seated, so at the end every crewmate is back on its own seat.
-A rider is an orbiting crewmate not drawn on a constellation; spawns, departures and other computers' clusters keep their own motion.
+A rider is an orbiting crewmate not circling a program; spawns, departures and other computers' clusters keep their own motion.
 A warp cut short by attention lets the crew go home over 0.6 s (`WARP_RELEASE_MS`).
 Reduced motion plays no warp.
 The near crew canvas publishes the warp it draws as `data-crew-warp`, compare-before-write, and its travel speed as `data-crew-travel`.
@@ -544,7 +545,7 @@ The near crew canvas publishes the warp it draws as `data-crew-warp`, compare-be
 
 A crewmate whose task the Tasks panel lists under Pinned leaves its orbit and hangs as a fixed star in the sky (captain's INF-3634 plan, chosen on a playable preview: the constellation, the glint, every listed crewmate, and the filled pin in its summary).
 `crewSignal.ts`'s `pinnedCrewOf` reads the list from the board the way the Tasks panel does: pins oldest first, each pinned task's open parts under it by priority, and only tasks with a crewmate in orbit.
-A program's running part stays on its branch and is not a star.
+A program's running part stays on its ring and is not a star.
 `CrewOrbit.setPinned(ids)` takes that order, and `ComputerOrbits` hands it to every local orbit.
 The places come from `fixedStars.ts`'s `skyPlaces`: a loose zigzag grown both ways from the upper-left diagonal, each star at its own share of the room between the widest reach of either occupied orbit plus 50 px and 240 px from the center on each axis.
 Neighbours in a corner sit 11 to 12 degrees apart and alternate nearer and farther out on both sides of the diagonal; where the arc cannot grow both ways, it slides along the corner to stay in its room.

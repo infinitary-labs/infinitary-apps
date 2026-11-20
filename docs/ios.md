@@ -523,11 +523,11 @@ The phone draws the desktop's orbits at `PhoneSceneRoster.ringScale`, derived so
 Crew glyphs keep the desktop's size: home's crowded glyph (`PLANES_GLYPH_PX`), and in another computer's cluster the smaller glyph `CLUSTER_LAYOUT` names, smaller again once that cluster holds more than its `crowdedCrew` (INF-1854).
 Crew sit on the desktop's growing two-orbit ring (`docs/crew-orbits.md`): the first orbit widens with each crewmate up to its seats, the next arrival opens the second orbit inside it, and no third orbit opens.
 `PhoneSceneRoster.SeatBook` remembers each crewmate's orbit and seat across board reads as the desktop's orbit does, logical membership counting every running part for allocation and growth, and each computer's area follows its first orbit's size.
-`PhoneSceneMotion` keeps separate drawing seat books: only visible main-orbit occupants take angular seats, including program rings but excluding branch parts and circling crew (INF-1375, approved A).
+`PhoneSceneMotion` keeps separate drawing seat books: only visible main-orbit occupants take angular seats, including program rings but excluding program parts and circling crew (INF-1375, approved A).
 `PhoneSceneCompanions` reads published wait/review facts and reproduces the desktop's eligibility, three-companion limit, perpendicular 64-scene-pixel circles, 24°/second travel, the circle that shrinks near the scene's edge (`PhoneSceneCompanions.radius`, INF-1532) and bounds fallback at the phone/computer scale.
 Returning crew open a seat among visible survivors on the same logical orbit; a fallback crew member takes part in main-orbit spacing.
 A re-spaced or resized orbit glides its crew around it, and neither orbits nor another computer's center are outlined.
-A crewmate the Tasks list shows under Pinned, a program's parts on their branches left out, hangs as a fixed star (INF-3634, `docs/crew-orbits.md`, "Fixed stars"): `PhoneFixedStars` places the desktop's constellation from the desktop's own numbers, each computer's group over its own orbits at its share, and the group's area grows to hold it.
+A crewmate the Tasks list shows under Pinned, a program's parts on their rings left out, hangs as a fixed star (INF-3634, `docs/crew-orbits.md`, "Fixed stars"): `PhoneFixedStars` places the desktop's constellation from the desktop's own numbers, each computer's group over its own orbits at its share, and the group's area grows to hold it.
 A star gives up its drawing seat but keeps its orbit, eases there and back at the desktop's rates, neither circles nor is circled, rides no warp, and wears the desktop's glint, joined to its corner's neighbours by a hairline under the crew; a settled frame holds it still.
 The crew summary shows a filled pin beside a pinned task's key.
 `PhoneOrbitSeatsTests` replays the desktop's own seat choices, recorded by `scripts/generate-phone-scene.ts`.
@@ -542,7 +542,7 @@ The touch-down is the one the tap recognizer receives as the finger lands, never
 Where two squares overlap, each point belongs to the nearer center (`PhoneTouchCell`), so a tap on a crewmate's own center always reaches it.
 Selection has an accent outline and an accessibility value; Tab brings it into view without relying on SwiftUI's platform-focus reporting.
 Escape, editing, a preview, a task record, leaving Home or backgrounding stops browsing and releases that responder, so the unmodified commands do not take over other controls.
-Each crewmate retains the published tier, work posture, computer and review identity; programs draw only their live parts, with their actual dependency branches.
+Each crewmate retains the published tier, work posture, computer and review identity; programs draw only their live parts, circling each program's mark on the desktop's tilted moon rings, with the gem inside the mark wired by the whole program's share finished.
 A crewmate whose task is in the phone's Waiting on you group wears the desktop's beacon, the ring that breathes round it, from the same generated numbers (`captain`), and holds it whole at mid light on a still frame (`docs/crew-orbits.md`, INF-1543).
 A crewmate's summary opens in the system's standard sheet (INF-1926): it is the desktop's crew summary in its words, order and marks at 14 points, the board row at once and then the task record's own read, polled each second while it is open.
 Like the desktop's, it stays short (INF-2528): the status keeps its short reason, Blocked by names keys only, and the footer is one row, the model with its intelligence badge, then the change with its checks as one state and its time (`#813 running for 11m`); a long model name gives way first, down to its label's width, then a long branch name, each ending in an ellipsis inside the row, and a review takes a second row.
@@ -551,13 +551,13 @@ What it leaves out is on the native task record's Info, as the Mac's record show
 The sheet closes the standard way, by a tap beside it, a swipe down or Escape, with no close mark; while it is open the scene stands still where it is, and the crewmate it describes wears the desktop's corner brackets.
 A running part, a blocker, the task a review checks or a part's program shows its own summary in the same sheet, and Open task swaps the sheet for the existing native task record, or on a foldable's pages closes it and opens the record in the Tasks panel's place.
 The computer preview names the computer's work and its state.
-A crowded program fan widens up to the desktop's widest spread and then moves its layer outward, keeping the desktop's projected spacing without shrinking the parts.
+More than ten running parts take the desktop's second ring, turning the other way, keeping the desktop's spacing without shrinking the parts, and a part's report flies to its program's mark.
 A program seen running keeps its ring on each observed computer between stages, without finished, unstarted or remote-placeholder dots.
 Its summary counts finished, running and waiting work, shows their shares and names each running part and where it runs.
 The panned extent stays stable while work departs, and cross-computer flights reach the first mate with the desktop's distance-based timing.
 `PhoneSceneViewport` alone owns placement: it centers home on entry or reconnection and preserves the viewed world point as the roster or viewport changes; the scroller's resize anchor does not add another adjustment.
 Initial rosters and reconnects settle in place; an unreachable computer freezes its unknown activity, and hidden scenes discard transient report, steer, failure and usage effects.
-Seats and program topology are prepared with the roster, outside the display callback; only the drawing subtree reads the clock.
+Seats and program rings are prepared with the roster, outside the display callback; only the drawing subtree reads the clock.
 No joining time is invented.
 Joining still confirms the link's computer address, not a name obtained before authenticating that computer.
 The details sheet names the connected view's ability to answer cards, send messages and control tasks, or explains read-only access when the Mac requires an update.

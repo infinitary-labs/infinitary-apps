@@ -922,10 +922,12 @@ export function CrewOrbit({
       if (near.canvas.dataset.planeCounts !== counts) near.canvas.dataset.planeCounts = counts;
       const orbiting = planeCrew.map((ids) => ids.join(" ")).join("|");
       if (near.canvas.dataset.planeCrew !== orbiting) near.canvas.dataset.planeCrew = orbiting;
-      // Each task with parts by its branches, and the parts whose crewmate is
-      // drawn at its node, so a journey reads the constellation it painted.
+      // Each task with parts by the rings its parts circle on and its gem's
+      // share finished, and the parts whose crewmate circles its mark, so a
+      // journey reads the programs it painted.
       const constellation = frame.programs
-        .map((p) => `${p.id}=${p.branches.map((b) => `${b.fromId}>${b.toId}`).join(" ")}`)
+        // i18n-exempt: a journey's reading, never shown.
+        .map((p) => `${p.id}=rings:${p.rings.length} gem:${p.gem.toFixed(2)}`)
         .join("|");
       if (near.canvas.dataset.constellation !== constellation)
         near.canvas.dataset.constellation = constellation;

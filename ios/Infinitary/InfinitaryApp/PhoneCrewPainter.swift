@@ -15,9 +15,7 @@ enum PhoneCrewPainter {
             path.addLine(to: at); path.addLine(to: CGPoint(x: at.x - cos(angle + 0.5) * 6, y: at.y - sin(angle + 0.5) * 6))
             context.stroke(path, with: .color((review ? palette.hot : palette.dim).color(0.5)), style: StrokeStyle(lineWidth: 1, dash: review ? [] : [3, 4]))
         }
-        for mark in frame.marks {
-            context.stroke(circle(mark.point, CharacterCatalog.shared.program["rootMarkPx"]!), with: .color(palette.acc.color(0.8)), lineWidth: 1.2)
-        }
+        for mark in frame.marks { program(mark, in: &context, palette: palette) }
         // The hairline joining the fixed stars lies under them (INF-3634).
         if !frame.starJoins.isEmpty {
             let byID = Dictionary(frame.glyphs.map { ($0.task.id, $0) }, uniquingKeysWith: { first, _ in first })
@@ -32,6 +30,32 @@ enum PhoneCrewPainter {
         for (point, strength) in frame.packets {
             context.fill(circle(point, 5), with: .radialGradient(PenGradient(colors: [palette.acc.color(0.6 * strength), palette.acc.color(0)]), center: point, startRadius: 0, endRadius: 5))
             context.fill(circle(point, 2), with: .color(palette.acc.color(strength)))
+        }
+    }
+    /// A program as the desktop's drawConstellation draws it: the faint rings its running parts circle on, brighter in
+    /// front of the mark, the mark, and the gem inside it, one wire for each share of the program finished.
+    private static func program(_ mark: PhoneSceneMotion.Mark, in context: inout ScenePen, palette: CharacterPainter.Palette) {
+        let tuning = CharacterCatalog.shared.program
+        for line in mark.rings {
+            for i in line.indices.dropFirst() {
+                var path = Path(); path.move(to: line[i - 1].point); path.addLine(to: line[i].point)
+                context.stroke(path, with: .color(palette.dim.color(line[i - 1].near ? tuning["ringLineNear"]! : tuning["ringLineFar"]!)), lineWidth: 1)
+            }
+        }
+        context.stroke(circle(mark.point, tuning["rootMarkPx"]!), with: .color(palette.acc.color(0.8)), lineWidth: 1.2)
+        guard mark.gem > 0 else { return }
+        let solid = CharacterCatalog.shared.solids["high"]!, px = tuning["gemPx"]!
+        let (ca, sa, cb, sb) = (cos(mark.spin), sin(mark.spin), cos(mark.spin * 0.6), sin(mark.spin * 0.6))
+        let at: [(CGPoint, Double)] = solid.v.map { v in
+            let x1 = v[0] * ca - v[2] * sa, z1 = v[0] * sa + v[2] * ca
+            return (CGPoint(x: mark.point.x + x1 * px, y: mark.point.y + (v[1] * cb - z1 * sb) * px), v[1] * sb + z1 * cb)
+        }
+        let wires = CharacterCatalog.shared.gemWires
+        let count = max(1, Int((Double(wires.count) * min(1, mark.gem)).rounded()))
+        for wire in wires.prefix(count) {
+            let (a, za) = at[wire[0]], (b, zb) = at[wire[1]]
+            var path = Path(); path.move(to: a); path.addLine(to: b)
+            context.stroke(path, with: .color(palette.acc.color(min(1, (0.34 + 0.1 * (za + zb)) * palette.boost))), lineWidth: 1)
         }
     }
     /// Keyboard browsing's accent outline round the selected crewmate's 44-point square, and the desktop's corner

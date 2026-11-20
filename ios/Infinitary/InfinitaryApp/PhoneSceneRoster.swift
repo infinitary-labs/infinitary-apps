@@ -44,7 +44,7 @@ struct PhoneSceneRoster {
         let programs: [Program]
         let ordinary: [PhoneTask]
         let programParts: Set<String>
-        /// Its crew the Tasks list shows under Pinned, in that list's order, a program's parts on their branches left out:
+        /// Its crew the Tasks list shows under Pinned, in that list's order, a program's parts on their rings left out:
         /// each hangs as a fixed star (INF-3634), giving up its seat but keeping its orbit.
         let pinned: [String]
         /// The constellation its stars hang in, in desktop scene pixels from its center, and how far it reaches on screen.
@@ -60,48 +60,51 @@ struct PhoneSceneRoster {
         var extent: Double { max(radius, skyReach) }
         var width: Double { extent * 2 + 80 }
     }
+    /// One tilted ring a program's running parts circle on, as the desktop's moonRings.
+    struct MoonRing { let radius: Double; let tilt: Double; let node: Double; let count: Int }
     struct Program: Identifiable {
         let task: PhoneTask
         let parts: [PhoneTask]
-        let parents: [String: [String]]
-        let branches: [(id: String, distance: Double, angle: Double)]
+        /// How much of the whole program has finished, 0 to 1: the gem's wires, as the desktop's programShare.
+        let share: Double
+        let rings: [MoonRing]
         var id: String { task.id }
-        init(_ task: PhoneTask, parts: [PhoneTask], links: [PhoneBoard.Link]) {
+        init(_ task: PhoneTask, parts: [PhoneTask], all: [PhoneTask]) {
             self.task = task; self.parts = parts
-            let live = Set(parts.map(\.id))
-            let parents = Dictionary(grouping: links.filter { $0.type == "blocks" && live.contains($0.fromId) && live.contains($0.toId) }, by: \.toId).mapValues { $0.map(\.fromId) }
-            self.parents = parents
-            var memo: [String: Int] = [:]
-            func layer(_ id: String, seen: Set<String> = []) -> Int {
-                if let known = memo[id] { return known }
-                if seen.contains(id) { return 1 }
-                let value = 1 + (parents[id] ?? []).map { layer($0, seen: seen.union([id])) }.max(default: 0)
-                memo[id] = value; return value
+            let whole = all.filter { $0.parentId == task.id && $0.kind == "work" && $0.reviewOf == nil && ["active", "open", "done"].contains($0.status) }
+            share = task.status == "done" ? 1 : whole.isEmpty ? 0 : Double(whole.filter { $0.status == "done" }.count) / Double(whole.count)
+            rings = Self.moonRings(parts.count)
+        }
+        static func moonRings(_ count: Int) -> [MoonRing] {
+            guard count > 0 else { return [] }
+            let t = CharacterCatalog.shared.program
+            let counts = Double(count) > t["secondRingPastParts"]! ? [(count + 1) / 2, count / 2] : [count]
+            var rings: [MoonRing] = [], reach = 0.0
+            for (j, n) in counts.enumerated() {
+                let radius = max(t["ringPx"]!, Double(n) * t["partArcPx"]! / (2 * .pi), j > 0 ? reach + t["ringStepPx"]! : 0)
+                reach = radius
+                rings.append(MoonRing(radius: radius, tilt: max(0, t["tiltDeg"]! - Double(j) * t["secondTiltDropDeg"]!) * .pi / 180,
+                                      node: j == 0 ? t["firstNodeRad"]! : t["secondNodeRad"]!, count: n))
             }
-            let tuning = CharacterCatalog.shared.program
-            let levels = Dictionary(grouping: parts, by: { layer($0.id) })
-            var placed: [(id: String, distance: Double, angle: Double)] = [], angles: [String: Double] = [:]
-            var distance = 0.0
-            let widest = tuning["widestSpreadDeg"]! * .pi / 180, gap = tuning["crewGapPx"]!
-            for level in levels.keys.sorted() {
-                distance += tuning["branchPx"]! * pow(tuning["branchDecay"]!, Double(level - 1))
-                let siblings = levels[level]!, steps = siblings.count - 1
-                if steps > 0 { distance = max(distance, gap / (2 * sin(widest / Double(steps) / 2))) }
-                let spread = steps > 0 ? max(tuning["spreadDeg"]! * .pi / 180, Double(steps) * 2 * asin(min(1, gap / (2 * distance)))) : 0
-                let rankings: [(part: PhoneTask, index: Int, angle: Double)] = siblings.enumerated().map { index, part in
-                    let parentAngles: [Double] = (parents[part.id] ?? []).map { angles[$0] ?? 0 }
-                    let totalAngle: Double = parentAngles.reduce(0.0, +)
-                    let meanAngle: Double = parentAngles.isEmpty ? 0.0 : totalAngle / Double(parentAngles.count)
-                    return (part: part, index: index, angle: meanAngle)
-                }
-                let ordered = rankings.sorted { $0.angle == $1.angle ? $0.index < $1.index : $0.angle < $1.angle }
-                for (index, sibling) in ordered.enumerated() {
-                    let angle = steps > 0 ? spread * (Double(index) / Double(steps) - 0.5) : 0
-                    angles[sibling.part.id] = angle
-                    placed.append((sibling.part.id, distance, angle))
+            return rings
+        }
+        /// A point on `ring` at angle `theta`, from the mark: x and y on the screen, z toward the viewer.
+        static func point(_ ring: MoonRing, _ theta: Double) -> (x: Double, y: Double, z: Double) {
+            let across = ring.radius * cos(theta), along = ring.radius * sin(theta), flat = along * cos(ring.tilt)
+            return (across * cos(ring.node) - flat * sin(ring.node), across * sin(ring.node) + flat * cos(ring.node), along * sin(ring.tilt))
+        }
+        /// Where each running part circles `seconds` in, in the order filed, the first ring turning one way and the second the other.
+        func places(at seconds: Double) -> [(id: String, x: Double, y: Double, z: Double)] {
+            let turn = seconds * CharacterCatalog.shared.program["speedDegS"]! * .pi / 180
+            var placed: [(id: String, x: Double, y: Double, z: Double)] = [], index = 0
+            for (j, ring) in rings.enumerated() {
+                for i in 0..<ring.count where index < parts.count {
+                    let theta = 2 * .pi * Double(i) / Double(ring.count) + (j == 0 ? turn : 0.5 - turn)
+                    let at = Self.point(ring, theta)
+                    placed.append((parts[index].id, at.x, at.y, at.z)); index += 1
                 }
             }
-            branches = placed
+            return placed
         }
     }
     let tasks: [PhoneTask]
@@ -133,14 +136,14 @@ struct PhoneSceneRoster {
         computers = ids.map { id in
             let members = grouped[id] ?? [], observed = presence.first { $0.id == id }
             let roots = programs.filter { program in members.contains { $0.parentId == program.id && $0.reviewOf == nil } || retainedPrograms[program.id]?.contains(id) == true }
-                .map { root in Program(root, parts: members.filter { $0.parentId == root.id && $0.reviewOf == nil }, links: board?.links ?? []) }
+                .map { root in Program(root, parts: members.filter { $0.parentId == root.id && $0.reviewOf == nil }, all: all) }
             let ordinary = members.filter { task in task.reviewOf != nil || !roots.contains { $0.id == task.parentId } }
             // Every crewmate holds a seat, a program's parts included, and each program ring one on the first orbit.
             var book = previous.map { $0[id] ?? SeatBook() } ?? SeatBook(crew: members.map(\.id), marks: roots.map(\.id))
             if previous != nil { book.update(crew: members.map(\.id), marks: roots.map(\.id)) }
             let share = id == "home" ? 1 : CharacterCatalog.shared.ring["remoteShare"]!
-            // A program keeps room for its live branches; no unstarted, finished or remote placeholder dot is added.
-            let programReach = roots.flatMap(\.branches).map(\.distance).max() ?? 0
+            // A program keeps room for its rings; no unstarted, finished or remote placeholder dot is added.
+            let programReach = roots.flatMap(\.rings).map(\.radius).max() ?? 0
             // The area follows the first orbit's current size.
             let radius = book.isEmpty ? 140 : Self.planeRadius(0, counts: book.counts) * share + programReach
             let parts = Set(roots.flatMap { $0.parts.map(\.id) }), ids = Set(members.map(\.id))
@@ -245,7 +248,7 @@ final class PhoneSceneMotion: @unchecked Sendable {
         var task: PhoneTask
         var point: CGPoint
         var center: CGPoint
-        /// Its place on the orbits; a program part drawn on its branch has none.
+        /// Its place on the orbits; a program part drawn on its ring has none.
         var orbit: PhoneSceneRoster.Orbit?
         var depth = 0.5, spin = 0.0, alpha = 1.0, unfold = 1.0, work = 0.0, flicker = 0.0, nudge = 0.0
         var unknown = false, programPart = false
@@ -270,7 +273,11 @@ final class PhoneSceneMotion: @unchecked Sendable {
     }
     struct Packet { let id: UUID; let taskID: String; let report: Bool; let started: Double }
     struct Mark: Identifiable {
-        let task: PhoneTask; let computerID: String; let center: CGPoint; let point: CGPoint; let parts: [String]; let parents: [String: [String]]
+        let task: PhoneTask; let computerID: String; let center: CGPoint; let point: CGPoint; let parts: [String]
+        /// Its rings as drawn round the mark, each point marked near when it lies in front of the mark.
+        let rings: [[(point: CGPoint, near: Bool)]]
+        /// How much of the gem is wired, and its turn.
+        let gem: Double; let spin: Double
         var id: String { computerID + ":" + task.id }
     }
     struct Frame {
@@ -456,12 +463,20 @@ final class PhoneSceneMotion: @unchecked Sendable {
                 }
                 markPlaces[markID] = root
                 let (rootPoint, _) = place(root.orbit, around: root.center)
-                for branch in program.branches {
-                    let angle = atan2(rootPoint.y - root.center.y, rootPoint.x - root.center.x) + branch.angle
-                    positions[branch.id] = (CGPoint(x: rootPoint.x + cos(angle) * branch.distance, y: rootPoint.y + sin(angle) * branch.distance), 0.65, nil)
+                // Each running part circles its program's mark on a tilted ring, nearer when it swings in front.
+                for place in program.places(at: localTime) {
+                    positions[place.id] = (CGPoint(x: rootPoint.x + place.x, y: rootPoint.y + place.y), 0.65 + place.z / 512, nil)
+                }
+                let steps = 48
+                let rings = program.rings.map { ring in
+                    (0...steps).map { i -> (point: CGPoint, near: Bool) in
+                        let at = Program.point(ring, 2 * .pi * Double(i) / Double(steps))
+                        return (CGPoint(x: rootPoint.x + at.x, y: rootPoint.y + at.y), at.z > 0)
+                    }
                 }
                 marks.append(Mark(task: program.task, computerID: computer.id, center: root.center, point: rootPoint,
-                                  parts: program.parts.map(\.id), parents: program.parents))
+                                  parts: program.parts.map(\.id), rings: rings, gem: program.share,
+                                  spin: localTime * CharacterCatalog.shared.program["gemSpinRadS"]!))
             }
             for task in computer.tasks {
                 guard let (point, depth, place) = positions[task.id] else { continue }
@@ -586,13 +601,6 @@ final class PhoneSceneMotion: @unchecked Sendable {
                 }
             }
         }
-        for mark in marks {
-            for id in mark.parts {
-                guard let part = byID[id] else { continue }
-                let parents = (mark.parents[id] ?? []).compactMap { byID[$0]?.point }
-                for start in parents.isEmpty ? [mark.point] : parents { links.append((start, part.point, false)) }
-            }
-        }
         packets.removeAll { packet in
             guard let glyph = byID[packet.taskID] else { return true }
             return now - packet.started >= Self.duration(orbit["packetMs"]!, glyph: glyph, home: firstmate)
@@ -600,7 +608,9 @@ final class PhoneSceneMotion: @unchecked Sendable {
         let flying = packets.compactMap { packet -> (CGPoint, Double)? in
             guard let glyph = byID[packet.taskID], !glyph.unknown else { return nil }
             let progress = clamp01((now - packet.started) / Self.duration(orbit["packetMs"]!, glyph: glyph, home: firstmate))
-            return (Self.travel(from: packet.report ? glyph.point : firstmate, to: packet.report ? firstmate : glyph.point, at: easeInOut(progress)), sin(progress * .pi))
+            // A part's report goes to its program's ring, which carries the program's word home.
+            let home = marks.first { $0.computerID == PhoneSceneRoster.computerID(glyph.task) && $0.parts.contains(packet.taskID) }?.point ?? firstmate
+            return (Self.travel(from: packet.report ? glyph.point : home, to: packet.report ? home : glyph.point, at: easeInOut(progress)), sin(progress * .pi))
         }
         let lit = Set(glyphs.filter { $0.star > 0.01 }.map(\.task.id))
         latest = Frame(glyphs: glyphs, marks: marks, packets: flying, links: links,

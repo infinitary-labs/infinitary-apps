@@ -117,6 +117,34 @@ const ICOSA_V: Vec3[] = [-1, 1].flatMap((a) =>
 const ICOSA_E = edgesOf(ICOSA_V);
 
 /**
+ * The gem's wires in the order a program's finished parts add them (the
+ * captain's INF-5365 answer, "Build a gem round it"): the icosahedron's
+ * edges, each next one closing the most faces with the wires before it, so
+ * the gem grows as one piece rather than scattered strokes.
+ */
+export const GEM_WIRES: readonly Edge[] = (() => {
+  const left = [...ICOSA_E];
+  const wires: Edge[] = [];
+  const has = (a: number, b: number) =>
+    wires.some(([p, q]) => (p === a && q === b) || (p === b && q === a));
+  while (left.length > 0) {
+    let best = 0;
+    let bestScore = -1;
+    for (const [i, [a, b]] of left.entries()) {
+      let score = 0;
+      for (let c = 0; c < ICOSA_V.length; c++) if (has(a, c) && has(b, c)) score += 3;
+      if (wires.some(([p, q]) => p === a || q === a || p === b || q === b)) score++;
+      if (score > bestScore) {
+        bestScore = score;
+        best = i;
+      }
+    }
+    wires.push(...left.splice(best, 1));
+  }
+  return wires;
+})();
+
+/**
  * The geodesic sphere: the icosahedron with every face split into four and
  * the new corners pushed out to the sphere. Its first 12 vertices are the
  * icosahedron's own, and only those carry a node - a node on each of 42
@@ -694,15 +722,14 @@ export function drawPacket(
   ctx.fill();
 }
 
-/** How far a branch keeps clear of what it joins: a crewmate, the mark. */
-const BRANCH = { crewPx: 14, markPx: CONSTELLATION.rootMarkPx + 2 } as const;
-
 /**
- * A task with parts as its constellation (INF-799): a branch for every link
- * a running part hangs from, at the wait arrow's weight and lit in the
- * accent while a result rides it, and the program's mark, a hollow ring that
- * lights as a result lands. Each running part is its crewmate, painted by
- * `drawCrewmate`; a finished or unstarted part draws nothing (INF-1037).
+ * A task with parts (INF-5365, "Moons"): the faint rings its running parts
+ * circle on, brighter on their near half, and the program's mark, a hollow
+ * ring that lights as a result lands. Once a part has finished, a gem turns
+ * round the mark with a wire for each share of the parts finished, the
+ * newest lit as a result lands, whole when the program is done. Each running
+ * part is its crewmate, painted by `drawCrewmate`; a finished or unstarted
+ * part draws nothing (INF-1037).
  */
 export function drawConstellation(
   ctx: CanvasRenderingContext2D,
@@ -713,48 +740,73 @@ export function drawConstellation(
 ): void {
   if (program.alpha <= 0.01) return;
   const quiet = colors.quiet ?? colors.accent;
-  const ends = new Map<string, { x: number; y: number; clear: number }>();
-  ends.set(program.id, { x: program.x, y: program.y, clear: BRANCH.markPx });
-  for (const node of program.nodes)
-    ends.set(node.id, { x: node.x, y: node.y, clear: BRANCH.crewPx });
   ctx.save();
   ctx.globalAlpha = program.alpha;
-  for (const branch of program.branches) {
-    const a = ends.get(branch.fromId);
-    const b = ends.get(branch.toId);
-    if (!a || !b) continue;
-    let dx = b.x - a.x;
-    let dy = b.y - a.y;
-    const length = Math.hypot(dx, dy);
-    if (length <= a.clear + b.clear) continue;
-    dx /= length;
-    dy /= length;
-    ctx.strokeStyle = rgba(branch.lit ? colors.accent : quiet, branch.lit ? 0.7 : 0.28);
-    ctx.lineWidth = branch.lit ? 1.4 : 1;
-    ctx.beginPath();
-    ctx.moveTo(cx + a.x + dx * a.clear, cy + a.y + dy * a.clear);
-    ctx.lineTo(cx + b.x - dx * b.clear, cy + b.y - dy * b.clear);
-    ctx.stroke();
-  }
+  ctx.lineWidth = 1;
+  for (const line of program.rings)
+    for (let i = 1; i < line.length; i++) {
+      const a = line[i - 1];
+      const b = line[i];
+      if (!a || !b) continue;
+      ctx.strokeStyle = rgba(
+        quiet,
+        a.near ? CONSTELLATION.ringLineNear : CONSTELLATION.ringLineFar,
+      );
+      ctx.beginPath();
+      ctx.moveTo(cx + a.x, cy + a.y);
+      ctx.lineTo(cx + b.x, cy + b.y);
+      ctx.stroke();
+    }
   const x = cx + program.x;
   const y = cy + program.y;
   const r = CONSTELLATION.rootMarkPx;
+  const gem = program.gem > 0;
   if (program.lit > 0.01) {
-    const glow = ctx.createRadialGradient(x, y, 0, x, y, r * 3);
+    const reach = gem ? CONSTELLATION.gemPx * 2.6 : r * 3;
+    const glow = ctx.createRadialGradient(x, y, 0, x, y, reach);
     glow.addColorStop(0, rgba(colors.accent, 0.3 * program.lit));
     glow.addColorStop(1, rgba(colors.accent, 0));
     ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.arc(x, y, r * 3, 0, TAU);
+    ctx.arc(x, y, reach, 0, TAU);
     ctx.fill();
   }
   ctx.strokeStyle = rgba(
     mix(quiet, colors.accent, program.lit),
     (0.5 + 0.5 * program.lit) * colors.boost,
   );
-  ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.arc(x, y, r, 0, TAU);
   ctx.stroke();
+  if (gem) {
+    const ca = Math.cos(program.spin);
+    const sa = Math.sin(program.spin);
+    const cb = Math.cos(program.spin * 0.6);
+    const sb = Math.sin(program.spin * 0.6);
+    const at = ICOSA_V.map(([p, q, w]) => {
+      const x1 = p * ca - w * sa;
+      const z1 = p * sa + w * ca;
+      return {
+        x: x + x1 * CONSTELLATION.gemPx,
+        y: y + (q * cb - z1 * sb) * CONSTELLATION.gemPx,
+        z: q * sb + z1 * cb,
+      };
+    });
+    const wires = Math.max(1, Math.round(GEM_WIRES.length * Math.min(1, program.gem)));
+    for (const [i, [p, q]] of GEM_WIRES.slice(0, wires).entries()) {
+      const a = at[p];
+      const b = at[q];
+      if (!a || !b) continue;
+      const newest = i === wires - 1 ? program.lit * 0.6 : 0;
+      ctx.strokeStyle = rgba(
+        mix(colors.accent, WHITE_HOT, newest),
+        Math.min(1, (0.34 + 0.1 * (a.z + b.z) + 0.4 * program.lit) * colors.boost),
+      );
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+    }
+  }
   ctx.restore();
 }

@@ -398,13 +398,13 @@ describe("CrewOrbit's waits, reviews and constellations", () => {
     expect(frame.links).toContainEqual({ fromId: "reviewer", toId: "other", kind: "wait" });
   });
 
-  it("points a waiter at a part seated in a constellation, never circling it", () => {
+  it("points a waiter at a part circling its program, never circling it", () => {
     const plain = planes();
     const m = planes();
     for (const model of [plain, m]) {
       for (const id of ["waiter", "part-a"]) model.spawn(id, "working", 0, true);
       model.setPrograms(
-        [{ id: "survey", state: "live", parts: [{ id: "part-a", parents: [], state: "live" }] }],
+        [{ id: "survey", state: "live", parts: [{ id: "part-a", state: "live" }] }],
         0,
       );
     }
@@ -414,21 +414,27 @@ describe("CrewOrbit's waits, reviews and constellations", () => {
     expect(frame.links).toContainEqual({ fromId: "waiter", toId: "part-a", kind: "wait" });
   });
 
-  it("carries a part's report up its branches to the mark, and the program's own report home", () => {
+  // INF-5365: with no branches, a part's result flies straight to its program's mark.
+  it("carries a part's report straight to the mark, and the program's own report home", () => {
     const m = planes();
     for (const id of ["part-a", "part-b"]) m.spawn(id, "working", 0, true);
     const parts = [
-      { id: "part-a", parents: [], state: "live" as const },
-      { id: "part-b", parents: ["part-a"], state: "live" as const },
+      { id: "part-a", state: "live" as const },
+      { id: "part-b", state: "live" as const },
     ];
     m.setPrograms([{ id: "survey", state: "live", parts }], 0);
     m.update(400, true);
 
     m.signal("part-b", "report", 400);
-    const climbing = m.update(400 + DEFAULT_ORBIT.packetMs * 0.3);
-    expect(climbing.packets).toHaveLength(1);
-    const branches = climbing.programs.find((p) => p.id === "survey")?.branches ?? [];
-    expect(branches.filter((b) => b.lit).length).toBeGreaterThan(0);
+    const flying = m.update(400 + DEFAULT_ORBIT.packetMs * 0.3);
+    expect(flying.packets).toHaveLength(1);
+    // The packet lies on the line from the part's crewmate to the mark.
+    const mark = flying.programs.find((p) => p.id === "survey");
+    const part = flying.crew.find((c) => c.id === "part-b");
+    const packet = flying.packets[0];
+    if (!mark || !part || !packet) throw new Error("Missing the mark, the part or its packet");
+    const cross = (mark.x - part.x) * (packet.y - part.y) - (mark.y - part.y) * (packet.x - part.x);
+    expect(Math.abs(cross) / Math.hypot(mark.x - part.x, mark.y - part.y)).toBeLessThan(1);
     run(m, 400 + DEFAULT_ORBIT.packetMs * 0.3 + 16, 400 + DEFAULT_ORBIT.packetMs * 2);
     expect(m.update(400 + DEFAULT_ORBIT.packetMs * 2 + 16).packets).toEqual([]);
 
@@ -439,24 +445,20 @@ describe("CrewOrbit's waits, reviews and constellations", () => {
     expect(m.takeCues()).toContainEqual({ kind: "receive" });
   });
 
-  it("sends a packet down from its parents to a part that starts later", () => {
+  // INF-5365, the captain's answer: a wait between two parts is the ordinary
+  // wait arrow, so nothing rides down to a part that starts after another.
+  it("sends nothing to a part that starts after another part", () => {
     const m = planes();
     for (const id of ["part-a", "part-b"]) m.spawn(id, "working", 0, true);
-    const first = { id: "part-a", parents: [], state: "live" as const };
+    const first = { id: "part-a", state: "live" as const };
     m.setPrograms([{ id: "survey", state: "live", parts: [first] }], 0);
     m.update(200, true);
     expect(m.update(216).packets).toEqual([]);
 
     m.setPrograms(
-      [
-        {
-          id: "survey",
-          state: "live",
-          parts: [first, { id: "part-b", parents: ["part-a"], state: "live" }],
-        },
-      ],
+      [{ id: "survey", state: "live", parts: [first, { id: "part-b", state: "live" }] }],
       232,
     );
-    expect(m.update(232 + DEFAULT_ORBIT.packetMs * 0.3).packets).toHaveLength(1);
+    expect(m.update(232 + DEFAULT_ORBIT.packetMs * 0.3).packets).toEqual([]);
   });
 });

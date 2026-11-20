@@ -232,9 +232,7 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
         const board = await core.dispatch("inf:tasks:board", []);
         const progress = programProgress(board.tasks, program);
         liveParts = progress.running.map((task) => task.id);
-        const reading = programsOf(board.tasks, board.links).find(
-          (reading) => reading.id === program,
-        );
+        const reading = programsOf(board.tasks).find((reading) => reading.id === program);
         if (!reading) throw new Error("The published board did not include the running program");
         const desktopLayouts = ["home", computer].map((computerID) => {
           const local = new Set(
@@ -246,7 +244,7 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
           return {
             computerID,
             places: Object.fromEntries(
-              layoutProgram(nodes, { x: 0, y: 0 }, Number.POSITIVE_INFINITY),
+              layoutProgram(nodes, { x: 0, y: 0 }, Number.POSITIVE_INFINITY).places,
             ),
           };
         });

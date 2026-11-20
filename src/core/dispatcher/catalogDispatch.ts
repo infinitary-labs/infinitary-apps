@@ -95,7 +95,7 @@ export function createCatalogDispatch({
         (rawArgs as [string, RepoPolicyPatch])[1]?.origin !== undefined
       )
         throw new Error("Where a project lives changes only on the app’s exact-change card.");
-      const refusal = actionRefusal(line, actor);
+      const refusal = actionRefusal(line, actor) ?? line.refuses?.(rawArgs as unknown[]) ?? null;
       if (refusal) throw new Error(refusal);
     }
     const args = parseInvokeRequest(channel, rawArgs);
@@ -146,8 +146,9 @@ export function createCatalogDispatch({
         args[0] === (services.firstmate.boundAccount() ?? services.settings.getFirstmateAccount())
       )
         throw new Error("The first mate cannot disconnect the account it is running on.");
+      // Several lines share one request: each changes only its own fields.
       const fields = ACTIONS[actor.action].fields;
-      if (fields) {
+      if (fields && ACTION_NAMES.filter((name) => ACTIONS[name].change === channel).length > 1) {
         const previous =
           channel === "inf:settings:decisions:set" ? (old as { settings: unknown }).settings : old;
         const omit = (value: unknown) =>
@@ -195,9 +196,16 @@ export function createCatalogDispatch({
         const sat = arrangePanels(oldLayout, knownPanels(services.personal.snapshot()));
         for (const id of movedPanels(sat, newLayout.arrangement)) changed.add(id);
       }
-      if (actor.kind === "firstmate") {
-        if (changed.size > 1) throw new Error("Change one panel at a time.");
-      }
+      // The first mate moves one panel at a time, or puts every one back
+      // where it asks to be, as Settings → Panels' Reset does.
+      const reset =
+        newLayout.arrangement !== undefined &&
+        sameArrangement(
+          newLayout.arrangement,
+          defaultArrangement(knownPanels(services.personal.snapshot())),
+        );
+      if (actor.kind === "firstmate" && !reset && changed.size > 1)
+        throw new Error("Change one panel at a time.");
       const surfaces = listSurfaces(oldLayout, services.personal.snapshot(), gatesOf(services));
       // An app panel waiting on its gate has its place too, and Settings → Panels moves it.
       const known = new Set([
@@ -219,6 +227,13 @@ export function createCatalogDispatch({
         : ACTIONS[name].current
           ? await handlers[ACTIONS[name].current as keyof CoreHandlers]()
           : null;
+      // An act's trail is what it did, read from its request and answer.
+      const trailOf = ACTIONS[name].trailOf;
+      if (trailOf) {
+        const said = trailOf(args, result, before.get(name));
+        if (said) trail(name, said, actor);
+        continue;
+      }
       if (
         !ACTIONS[name].alwaysTrail &&
         name !== "refresh-usage" &&

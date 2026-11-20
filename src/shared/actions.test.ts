@@ -3,21 +3,32 @@ import { z } from "zod";
 import {
   ACTION_EXCEPTIONS,
   ACTION_FIELD_EXCEPTIONS,
+  EXCEPTION_GROUNDS,
+  groundlessExcuses,
+  HOST_ACTION_EXCEPTIONS,
   settingFields,
+  unaccountedChanges,
   uncoveredSettings,
 } from "./actionCoverage";
 import { ACTION_NAMES, ACTIONS, actionRefusal } from "./actions";
 import { deviceUpdateBody } from "./deviceUpdateNudge";
-import { CORE_INVOKE_CHANNELS, type CoreInvokeChannel, invokeContract } from "./ipc";
+import {
+  CORE_INVOKE_CHANNELS,
+  type CoreInvokeChannel,
+  HOST_INVOKE_CHANNELS,
+  invokeContract,
+} from "./ipc";
 import { remoteLoginWords } from "./remoteLogin";
 
 // The action inventory checks these request schemas through ipc's channel groups.
 // Literal project-relative paths declare indirect coverage to directUnitReach;
 // channel definitions themselves already have explicit contract edges there.
 const inventoryFiles = [
+  "src/shared/appearanceActions.ts",
   "src/shared/decisions.ts",
   "src/shared/preferences.ts",
   "src/shared/quota.ts",
+  "src/shared/settingsActs.ts",
   "src/shared/sharing.ts",
   "src/shared/update.ts",
 ] as const;
@@ -156,6 +167,87 @@ describe("action permissions and channel parity", () => {
       }),
     ).toBe("Activity moved to the right rail, top; hidden");
   });
+  // INF-5354: Settings → Intelligence's Restore, as the first mate asks it. The
+  // saved pins come only from the Off choice's migration (migrateAlwaysRoute),
+  // which keeps the routing row in this shape.
+  it("restores the saved model pins after the current ones, once each, and clears them", () => {
+    const kept = { provider: "codex", id: "gpt-5.5" };
+    const saved = { provider: "claude", id: "claude-opus-5-5" };
+    const migrated = { dynamicRouting: true, pins: [kept], dormantPins: [saved, kept] };
+    expect(ACTIONS["model-pins"].toRequest({ restore: true }, migrated, (path) => path)).toEqual([
+      { dynamicRouting: true, pins: [kept, saved], dormantPins: [] },
+    ]);
+    expect(() =>
+      ACTIONS["model-pins"].toRequest(
+        { restore: true },
+        { ...migrated, dormantPins: [] },
+        (path) => path,
+      ),
+    ).toThrow("No saved pins to restore.");
+  });
+  // INF-5350 and INF-5339: what app_state reads of each line is only what its
+  // action needs, never the Diagnostics install ID, a live sign-in code, the
+  // login at a computer's address or what an MCP server runs.
+  it("hands the first mate none of the captain's private values in any line's state", () => {
+    const installId = "3f8e2a6c-9b1d-4e7f-a2c5-6d0b9e4f1a37";
+    const userCode = "WDJB-MJHT";
+    const login = "sam@mini.local";
+    const runs = "npx -y @acme/notes-server --token-file /Users/sam/.notes-token";
+    const views: Partial<Record<CoreInvokeChannel, unknown>> = {
+      "inf:settings:sharing:get": {
+        diagnostics: { enabled: true, installId, milestones: [], pending: [] },
+        contribution: { enabled: false },
+        termsPublished: false,
+        termsVersion: "1",
+        diagnosticsDestination: null,
+        askPending: false,
+      },
+      "inf:forges:list": {
+        signIns: [
+          {
+            host: "github.com",
+            name: "GitHub",
+            login: "sam-codes",
+            state: "ok",
+            projects: 3,
+            since: 1,
+          },
+        ],
+        hosts: [],
+        flow: {
+          host: "github.com",
+          userCode,
+          verificationUri: "https://github.com/login/device",
+          expiresAt: 2,
+        },
+        ended: null,
+      },
+      "inf:devices:list": [
+        { id: "mini", kind: "mac", name: "Mac mini", remoteLogin: login, inReach: true },
+      ],
+      "inf:integrations:list": {
+        integrations: [
+          {
+            id: "notes",
+            kind: "mcp",
+            name: "Notes",
+            account: null,
+            health: "ok",
+            paused: false,
+            runs,
+            actions: [],
+          },
+        ],
+      },
+    };
+    for (const name of ACTION_NAMES) {
+      const view = ACTIONS[name].current && views[ACTIONS[name].current as CoreInvokeChannel];
+      if (view === undefined || view === null) continue;
+      const read = JSON.stringify(ACTIONS[name].readValue(view));
+      for (const secret of [installId, userCode, login, runs])
+        expect(read, `${name} reads ${secret}`).not.toContain(secret);
+    }
+  });
   it("accounts for every changing core channel, with no stale inventory entries", () => {
     const changing = CORE_INVOKE_CHANNELS.filter(
       (channel) => invokeContract[channel].effect === "change",
@@ -163,34 +255,64 @@ describe("action permissions and channel parity", () => {
     const covered = new Set(
       ACTION_NAMES.flatMap((name) => [ACTIONS[name].change, ...(ACTIONS[name].channels ?? [])]),
     );
-    for (const channel of changing)
-      expect(
-        covered.has(channel as CoreInvokeChannel) || ACTION_EXCEPTIONS[channel],
-        channel,
-      ).toBeTruthy();
-    for (const channel of Object.keys(ACTION_EXCEPTIONS)) {
-      expect(changing).toContain(channel);
-      expect(covered.has(channel as CoreInvokeChannel)).toBe(false);
-    }
+    expect(unaccountedChanges(changing, covered as Set<string>, ACTION_EXCEPTIONS)).toEqual([]);
   });
   it("accounts for each setting inside a shared request, with no stale field claims", () => {
     for (const channel of CORE_INVOKE_CHANNELS) {
       const lines = ACTION_NAMES.map((name) => ACTIONS[name]).filter(
         (line) => line.change === channel,
       );
-      if (lines.length < 2 && !lines.some((line) => line.fields)) continue;
+      if (!lines.length) continue;
+      // Every field of a claimed object or selector request, even one line's (INF-5354).
       const fields = settingFields(invokeContract[channel].request);
       const claimed = lines.flatMap((line) => line.fields ?? []);
       const exceptions = ACTION_FIELD_EXCEPTIONS[channel] ?? {};
-      expect(fields.length, channel).toBeGreaterThan(0);
+      if (!fields.length) {
+        expect(claimed, channel).toEqual([]);
+        continue;
+      }
       expect(uncoveredSettings(fields, claimed, exceptions), channel).toEqual([]);
       for (const field of claimed) expect(fields, `${channel}.${field}`).toContain(field);
-      for (const [field, reason] of Object.entries(exceptions)) {
+      for (const [field, [ground, why]] of Object.entries(exceptions)) {
         expect(fields, channel).toContain(field);
         expect(claimed, channel).not.toContain(field);
-        expect(reason.trim()).not.toBe("");
+        expect(EXCEPTION_GROUNDS, `${channel}.${field}`).toContain(ground);
+        expect(why.trim()).not.toBe("");
       }
     }
+    for (const channel of Object.keys(ACTION_FIELD_EXCEPTIONS))
+      expect(
+        ACTION_NAMES.some((name) => ACTIONS[name].change === channel),
+        channel,
+      ).toBe(true);
+  });
+  it("accounts for every changing request the window's own program answers", () => {
+    const changing = HOST_INVOKE_CHANNELS.filter(
+      (channel) => invokeContract[channel].effect === "change",
+    );
+    expect(unaccountedChanges(changing, new Set(), HOST_ACTION_EXCEPTIONS)).toEqual([]);
+    // A new window request that changes something is refused until it has its ground.
+    expect(
+      unaccountedChanges(
+        [...changing, "inf:window:uncatalogued"],
+        new Set(),
+        HOST_ACTION_EXCEPTIONS,
+      ),
+    ).toEqual(["inf:window:uncatalogued"]);
+  });
+  it("names each excuse's ground from the closed set", () => {
+    const fields = Object.values(ACTION_FIELD_EXCEPTIONS).flatMap((each) =>
+      Object.entries(each ?? {}),
+    );
+    expect(groundlessExcuses({ ...ACTION_EXCEPTIONS, ...HOST_ACTION_EXCEPTIONS })).toEqual([]);
+    expect(groundlessExcuses(Object.fromEntries(fields))).toEqual([]);
+    // "The captain's click" alone is no ground (INF-5354).
+    expect(
+      groundlessExcuses({
+        "inf:app:quit": ["the captain's click", "Ends the window's program"],
+        "inf:app:start-here": ["destructive", " "],
+      }),
+    ).toEqual(["inf:app:quit", "inf:app:start-here"]);
   });
   it("rejects a new setting in every shared object channel until catalogued or named as an exception", () => {
     for (const channel of [
@@ -212,7 +334,7 @@ describe("action permissions and channel parity", () => {
       expect(
         uncoveredSettings(fields, claimed, {
           ...exceptions,
-          uncatalogued: "Explicit captain-only control",
+          uncatalogued: ["consent", "Explicit captain-only control"],
         }),
       ).toEqual([]);
     }

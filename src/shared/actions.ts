@@ -2,6 +2,7 @@ import { cutText } from "@shared/textCut";
 import { z } from "zod";
 import type { AccountView } from "./accounts";
 import { ambientLines } from "./ambientActions";
+import { appearanceLines } from "./appearanceActions";
 import {
   type AutomationList,
   type AutomationRule,
@@ -24,6 +25,7 @@ import {
   LINK_SAY,
   userDisplayName,
 } from "./devices";
+import { type DictationKey, type DictationSettings, dictationKeySchema } from "./dictation";
 import { FONT_SLOTS, type FontChoices, type FontSlot, fontFamilySchema } from "./fonts";
 import { hostOfAddress, kindByName } from "./forge";
 import { isServerIntegration, SERVER_INTEGRATION_KINDS, signInHost } from "./forgeKinds";
@@ -46,19 +48,19 @@ import { type CoreInvokeChannel, invokeContract } from "./ipc";
 import type { KeptJobsView } from "./keptJobs";
 import { type KnowledgeDirections, knowledgeDirectionChangeSchema } from "./knowledge";
 import { reasoningChoiceSchema, slotSchema } from "./modelSlots";
-import { arrangePanels, movePanel } from "./panelArrangement";
-import { AUTOMATIC_COMPUTER } from "./placement";
 import {
-  type Appearance,
-  type Layout,
-  themeSchema,
-  uiSizeSchema,
-  washStrengthSchema,
-} from "./preferences";
+  type ArrangedPanel,
+  arrangePanels,
+  defaultArrangement,
+  movePanel,
+  pickToEdge,
+} from "./panelArrangement";
+import { AUTOMATIC_COMPUTER } from "./placement";
+import { type Appearance, type Layout, themeSchema } from "./preferences";
 import { normalizePrivateSite, type PrivateSitesView } from "./privateSites";
 import { projectSetupProposalSchema } from "./projectSetup";
 import { catalogEntry } from "./providers";
-import type { RoutingSettings } from "./quota";
+import { type RoutingSettings, servedModelKey } from "./quota";
 import { reasoningWord } from "./reasoning";
 import type { ReleaseNotesView } from "./releaseTracking";
 import { remoteLoginAddressSchema, remoteLoginWords } from "./remoteLogin";
@@ -71,16 +73,15 @@ import {
   runsOnSaid,
 } from "./repos";
 import { savedResetLines } from "./savedResetActions";
+import { settingsActs } from "./settingsActs";
 import {
   costLimitValue,
-  crewModelNamesValue,
   enabledValue,
   fontsValue,
   panelsSwitchValue,
-  sizeValue,
   themeValue,
-  washValue,
 } from "./settingValues";
+import type { SharingView } from "./sharing";
 import { showLines } from "./showActions";
 import { type DeviceSignIns, signInPlace } from "./signIns";
 import type { ProjectView } from "./tasks";
@@ -161,6 +162,26 @@ export type ActionLine = {
    * reads it. Absent, a run says `done` of where it settled.
    */
   settled?: (from: Record<string, unknown>, to: Record<string, unknown>) => string;
+  /**
+   * The trail of a line whose request does more than this line's act, or
+   * whose act leaves no value to compare: the value its feed line says, from
+   * the request, the handler's answer and the line's value read before, or
+   * null when this request was not the line's act (a secret action other
+   * than ending a read), so it leaves no line of this one's.
+   */
+  trailOf?: (
+    args: readonly unknown[],
+    result: unknown,
+    before: unknown,
+  ) => Record<string, unknown> | null;
+  /** What the handler's answer tells the first mate beside the value read after, for an act. */
+  answers?: (result: unknown) => Record<string, unknown>;
+  /**
+   * A line that runs only part of its request's acts: why the first mate's
+   * request asks another of them, or null when it is this line's act. The
+   * dispatcher checks it before every first mate request on the channel.
+   */
+  refuses?: (args: readonly unknown[]) => string | null;
 };
 /**
  * The card the host files for the captain when the Firstmate asks for a
@@ -275,6 +296,7 @@ function automationValue(current: unknown, brief = false): Record<string, unknow
             projectId: rule.projectId,
             nextFire: rule.nextFire,
             captainRequested: rule.captainRequested,
+            ...(rule.stopped ? { stopped: rule.stopped } : {}),
           },
     ),
     ...(list.state === "unavailable" ? { unavailable: list.reason } : {}),
@@ -310,7 +332,9 @@ function owned(
     line,
     alwaysTrail: true,
     toRequest: (v) => v.args as unknown[],
-    readValue: (c) => ({ state: c }),
+    // What it reads stays the captain's: an owned line hands the first mate
+    // nothing of it unless it names a field (INF-5350).
+    readValue: () => ({}),
     done: () => done,
   };
 }
@@ -521,6 +545,7 @@ const actionLines = {
   // conversation, and words typed on a paired view - which reach the
   // Firstmate as the captain's - can neither add a device nor remove one.
   "device-invite": {
+    fields: ["kind", "command"],
     area: "general",
     tier: "hands",
     handover: "devices",
@@ -539,7 +564,9 @@ const actionLines = {
         : v.how === "another-user"
           ? [{ kind: "work", command: "another-user" }]
           : [{ kind: "mac", ...(v.how === "phone" ? { phone: true } : {}) }],
-    readValue: (c) => ({ devices: c }),
+    readValue: (c) => ({
+      devices: (c as DeviceView[]).map(({ id, kind, name }) => ({ id, kind, name })),
+    }),
     done: () => "made a ten-minute link to add a device",
     offer: (v, _current, here) => {
       const name = typeof v.name === "string" ? v.name : null;
@@ -719,7 +746,8 @@ const actionLines = {
           id,
           kind,
           name,
-          ...(remoteLogin ? { remoteLogin } : {}),
+          // Whether it was added by its address, never the login there (INF-5350).
+          ...(remoteLogin ? { byAddress: true } : {}),
           ...(deviceRunsWork(kind) ? { inReach: Boolean(inReach || otherVersion) } : {}),
           ...(otherVersion ? { otherVersion } : {}),
         }),
@@ -931,28 +959,48 @@ const actionLines = {
     },
   },
   panel: {
-    fields: ["hiddenPanels", "arrangement"],
+    // A reset takes the places saved before the arrangement existed too, as Settings → Panels does.
+    fields: ["hiddenPanels", "arrangement", "morePick", "placements", "panelOrder"],
     area: "panels",
     tier: "asked",
     change: "inf:settings:layout:set",
     current: "inf:settings:layout:get",
     value: z
       .strictObject({
-        surface: z.string().trim().min(1).max(64),
+        surface: z.string().trim().min(1).max(64).optional(),
         rail: z.enum(["left", "right"]).optional(),
         position: z.enum(["top", "bottom"]).optional(),
         above: z.string().trim().min(1).max(64).optional(),
         below: z.string().trim().min(1).max(64).optional(),
         visible: z.boolean().optional(),
+        pick: z.literal(true).optional(),
+        reset: z.literal(true).optional(),
+      })
+      .refine((v) => (v.reset === true) !== (v.surface !== undefined), {
+        message: "panel takes a surface, or reset alone",
       })
       .refine(
         (v) =>
+          v.reset === true ||
           v.rail !== undefined ||
           v.position !== undefined ||
           v.above !== undefined ||
           v.below !== undefined ||
-          v.visible !== undefined,
-        { message: "panel needs rail, position, above, below, or visible" },
+          v.visible !== undefined ||
+          v.pick !== undefined,
+        { message: "panel needs rail, position, above, below, visible or pick" },
+      )
+      .refine((v) => v.reset === undefined || Object.keys(v).every((key) => key === "reset"), {
+        message: "reset takes nothing else",
+      })
+      .refine(
+        (v) =>
+          v.pick === undefined ||
+          (v.rail === undefined &&
+            v.position === undefined &&
+            v.above === undefined &&
+            v.below === undefined),
+        { message: "pick moves the panel itself; leave out rail, position, above and below" },
       )
       .refine((v) => v.above === undefined || v.below === undefined, {
         message: "panel takes above or below, not both",
@@ -963,7 +1011,7 @@ const actionLines = {
           (v.rail === undefined && v.position === undefined),
         { message: "above or below already names the rail and position; leave those out" },
       ),
-    line: "Move, hide or show one panel by its surface id when asked. rail and position move it to that slot's middle; above or below put it just above or below another panel. Removal stays in personalize.",
+    line: "Move, hide or show one panel by its surface id when asked. rail and position move it to that slot's middle; above or below put it just above or below another panel; pick is a full rail's More pick, which moves it to its slot's edge and keeps its header on screen. reset alone puts every panel back where it asks to be, as Settings → Panels' Reset to defaults; shown, hidden and collapsed stay. Removal stays in personalize.",
     // actionRequest resolves the surface, the panel it goes next to and
     // every surface before adapting (INF-2344: one saved arrangement).
     toRequest: (v, c) => {
@@ -974,14 +1022,24 @@ const actionLines = {
         declaredOrder: number;
         place?: number;
       };
-      const { layout, surface, neighbour, surfaces } = c as {
+      const { layout, surface, neighbour, surfaces, known } = c as {
         layout: Layout;
-        surface: Surface;
+        surface?: Surface;
         neighbour?: Surface;
         surfaces: Surface[];
+        known: ArrangedPanel[];
       };
+      if (v.reset === true) {
+        const { morePick: _pick, panelOrder: _order, ...rest } = layout;
+        return [{ ...rest, placements: {}, arrangement: defaultArrangement(known) }];
+      }
+      if (!surface) throw new Error("Name the panel's surface.");
       const next = { ...layout, hiddenPanels: { ...layout.hiddenPanels } };
-      const moves = v.rail !== undefined || v.position !== undefined || neighbour !== undefined;
+      const moves =
+        v.rail !== undefined ||
+        v.position !== undefined ||
+        neighbour !== undefined ||
+        v.pick === true;
       // The create-your-own-panel slot is the only surface with no place.
       if (moves && surface.place === undefined)
         throw new Error(
@@ -989,13 +1047,16 @@ const actionLines = {
         );
       if (neighbour && neighbour.place === undefined)
         throw new Error(`${neighbour.id} is not a panel to move next to; name a panel.`);
-      if (moves) {
-        const arrangement = arrangePanels(
-          layout,
-          surfaces
-            .filter((each) => each.place !== undefined)
-            .map((each) => ({ id: each.id, preferred: each.preferred, order: each.declaredOrder })),
-        );
+      const arrangement = arrangePanels(
+        layout,
+        surfaces
+          .filter((each) => each.place !== undefined)
+          .map((each) => ({ id: each.id, preferred: each.preferred, order: each.declaredOrder })),
+      );
+      if (v.pick === true) {
+        next.arrangement = pickToEdge(arrangement, surface.id);
+        next.morePick = surface.id;
+      } else if (moves) {
         const target = neighbour
           ? neighbour.placement
           : { x: v.rail ?? surface.placement.x, y: v.position ?? surface.placement.y };
@@ -1016,6 +1077,7 @@ const actionLines = {
     readValue: (c) => ({
       hiddenPanels: (c as Layout).hiddenPanels,
       arrangement: (c as Layout).arrangement ?? null,
+      morePick: (c as Layout).morePick ?? null,
     }),
     done: (v) => `${v.surface} ${v.description}`,
   },
@@ -1235,6 +1297,7 @@ const actionLines = {
     },
   },
   "integration-add-mcp": {
+    fields: ["name", "runs"],
     area: "integrations",
     tier: "asked",
     change: "inf:integrations:add",
@@ -1291,7 +1354,14 @@ const actionLines = {
     }),
     line: "Only the captain changes action allowances, in Settings or on approval cards.",
     toRequest: (v) => [v.id, v.action, v.allowed],
-    readValue: (c) => ({ integrations: (c as IntegrationsView).integrations }),
+    // Never what an MCP server runs or the inbox's door: Settings alone shows them (INF-5339).
+    readValue: (c) => ({
+      integrations: (c as IntegrationsView).integrations.map((row) => ({
+        id: row.id,
+        name: row.name,
+        rules: row.actions.map(({ name, rule }) => ({ name, rule })),
+      })),
+    }),
     done: (v) => `Changed approval for ${v.id}'s ${v.action}`,
   },
   "integration-key": guidance(
@@ -1332,7 +1402,12 @@ const actionLines = {
         );
       return [v.host];
     },
-    readValue: (c) => ({ hosts: c }),
+    // The hosts it is signed in to, never a sign-in's code or who it is there (INF-5350).
+    readValue: (c) => ({
+      signedIn: ((c as Pick<ForgesView, "signIns"> | null)?.signIns ?? []).map(
+        ({ host, state }) => ({ host, state }),
+      ),
+    }),
     done: (v) =>
       `${v.host === "github.com" ? "GitHub" : v.host} signed out${v.where ? ` ${v.where}` : ""}`,
   },
@@ -1364,12 +1439,16 @@ const actionLines = {
     }),
     done: (v) => `contribution ${v.enabled ? "on" : "off"}`,
   },
-  "sharing-ask": owned(
-    "inf:settings:sharing:ask",
-    "inf:settings:sharing:get",
-    "Answering the sharing ask stays yours in Settings → General.",
-    "sharing ask answered",
-  ),
+  "sharing-ask": {
+    ...owned(
+      "inf:settings:sharing:ask",
+      "inf:settings:sharing:get",
+      "Answering the sharing ask stays yours in Settings → General.",
+      "sharing ask answered",
+    ),
+    fields: ["contribute", "not-now"],
+    readValue: (c) => ({ askPending: (c as SharingView).askPending }),
+  },
   purge: owned(
     "inf:retention:purge",
     "inf:app:healthcheck",
@@ -1388,14 +1467,27 @@ const actionLines = {
     done: (v) => `panels ${v.enabled ? "on" : "off"}`,
   },
   dictation: {
-    ...owned(
-      "inf:settings:dictation:set",
-      "inf:settings:dictation:get",
-      "Dictation choices stay yours in Settings → General.",
-      "dictation changed",
-    ),
-    alwaysTrail: false,
-    readValue: (c) => c as Record<string, unknown>,
+    fields: ["enabled", "key"],
+    area: "general",
+    tier: "own-words",
+    change: "inf:settings:dictation:set",
+    current: "inf:settings:dictation:get",
+    value: z
+      .strictObject({ enabled: z.boolean().optional(), key: dictationKeySchema.optional() })
+      .refine((v) => v.enabled !== undefined || v.key !== undefined, {
+        message: "dictation needs enabled or key",
+      }),
+    line: "Turn hold-to-talk dictation on or off, or choose its key (AltRight, MetaRight or ControlRight: the right-hand Option, Command or Control on a Mac), on the captain's typed words.",
+    toRequest: (v, c) => [
+      {
+        enabled: (v.enabled as boolean | undefined) ?? (c as DictationSettings).enabled,
+        key: (v.key as DictationKey | undefined) ?? (c as DictationSettings).key,
+      },
+    ],
+    readValue: (c) => ({
+      enabled: (c as DictationSettings).enabled,
+      key: (c as DictationSettings).key,
+    }),
     done: (v) => `dictation ${v.enabled ? "on" : "off"}, ${v.key}`,
   },
   "firstmate-model": {
@@ -1477,17 +1569,41 @@ const actionLines = {
     done: (v) => `crew slots reset for ${v.provider ?? "all providers"}`,
   },
   "model-pins": {
-    fields: ["pins"],
+    fields: ["pins", "dormantPins"],
     area: "intelligence",
     tier: "asked",
     change: "inf:settings:routing:set",
     current: "inf:settings:routing:get",
-    value: z.strictObject({
-      pins: z.array(z.strictObject({ provider: z.string().min(1), id: z.string().min(1) })),
+    value: z
+      .strictObject({
+        pins: z
+          .array(z.strictObject({ provider: z.string().min(1), id: z.string().min(1) }))
+          .optional(),
+        restore: z.literal(true).optional(),
+      })
+      .refine((v) => (v.pins === undefined) !== (v.restore === undefined), {
+        message: "model-pins takes pins, or restore alone",
+      }),
+    line: "Replace the ordered model pins that Infinitary tries first. restore true puts back the saved pins (dormant) after the current ones, as Settings → Intelligence's Restore does.",
+    toRequest: (v, c) => {
+      const routing = c as RoutingSettings;
+      if (v.restore !== true) return [{ ...routing, pins: v.pins }];
+      const dormant = routing.dormantPins ?? [];
+      if (dormant.length === 0) throw new Error("No saved pins to restore.");
+      const kept = new Set(routing.pins.map(servedModelKey));
+      const back = [...new Map(dormant.map((pin) => [servedModelKey(pin), pin])).values()];
+      return [
+        {
+          ...routing,
+          pins: [...routing.pins, ...back.filter((pin) => !kept.has(servedModelKey(pin)))],
+          dormantPins: [],
+        },
+      ];
+    },
+    readValue: (c) => ({
+      pins: (c as RoutingSettings).pins,
+      dormant: (c as RoutingSettings).dormantPins ?? [],
     }),
-    line: "Replace the ordered model pins that Infinitary tries first.",
-    toRequest: (v, c) => [{ ...(c as RoutingSettings), pins: v.pins }],
-    readValue: (c) => ({ pins: (c as RoutingSettings).pins }),
     done: (v) =>
       `model pins ${(v.pins as { provider: string; id: string }[]).map((p) => `${p.provider}/${p.id}`).join(", ") || "cleared"}`,
   },
@@ -1699,44 +1815,7 @@ const actionLines = {
     readValue: enabledValue,
     done: (v) => `global instructions and skills ${v.enabled ? "on" : "off"}`,
   },
-  "window-wash": {
-    fields: ["washStrength"],
-    area: "appearance",
-    tier: "asked",
-    change: "inf:settings:appearance:set",
-    current: "inf:settings:appearance:get",
-    value: z.strictObject({ strength: washStrengthSchema }),
-    line: "Window wash opacity, 0–100 percent, when asked.",
-    toRequest: (v, current) => [{ ...(current as Appearance), washStrength: v.strength }],
-    readValue: washValue,
-    done: (v) => `window wash ${v.strength}%`,
-    settled: (from, to) => `window wash ${from.strength}% → ${to.strength}%`,
-  },
-  "window-size": {
-    fields: ["size"],
-    area: "appearance",
-    tier: "asked",
-    change: "inf:settings:appearance:set",
-    current: "inf:settings:appearance:get",
-    value: z.strictObject({ size: uiSizeSchema }),
-    line: "Whole-window size, 100, 110, 125 or 150 percent, when asked: larger makes text and everything around it bigger. The size keys and the View menu step through the same sizes.",
-    toRequest: (v, current) => [{ ...(current as Appearance), size: v.size }],
-    readValue: sizeValue,
-    done: (v) => `window size ${v.size}%`,
-    settled: (from, to) => `window size ${from.size}% → ${to.size}%`,
-  },
-  "crew-model-names": {
-    fields: ["showCrewModelNames"],
-    area: "appearance",
-    tier: "asked",
-    change: "inf:settings:appearance:set",
-    current: "inf:settings:appearance:get",
-    value: z.strictObject({ visible: z.boolean() }),
-    line: "Show or hide crew model names when asked.",
-    toRequest: (v, current) => [{ ...(current as Appearance), showCrewModelNames: v.visible }],
-    readValue: crewModelNamesValue,
-    done: (v) => `crew model names ${v.visible ? "shown" : "hidden"}`,
-  },
+  ...appearanceLines,
   "panel-collapse": {
     fields: ["collapsedPanels"],
     area: "panels",
@@ -1760,6 +1839,7 @@ const actionLines = {
   // Settings → Automation's own changes (docs/automation.md, "One owner").
   // The words are the Scheduler's, and the trail is the dispatcher's.
   "automation-edit": {
+    fields: ["id", "name", "spec", "prompt", "projectId", "enable", "reconnect"],
     area: "automation",
     tier: "asked",
     change: "inf:automation:save",
@@ -1771,8 +1851,9 @@ const actionLines = {
       prompt: z.string().trim().min(1).optional(),
       projectId: z.string().min(1).nullable().optional(),
       enable: z.boolean().optional(),
+      reconnect: z.literal(true).optional(),
     }),
-    line: `Edit one automation by id when asked: its name, spec, prompt or projectId (null takes it off); what you leave out stays. enable true turns a draft or a paused one on. ${scheduleDetailsWords()}`,
+    line: `Edit one automation by id when asked: its name, spec, prompt or projectId (null takes it off); what you leave out stays. enable true turns a draft or a paused one on. reconnect true has an event rule that waits (stopped) listen to what its integration's id is connected to now. ${scheduleDetailsWords()}`,
     toRequest: (v, current) => {
       const rule = automationRule(current, v.id);
       const projectId =
@@ -1785,6 +1866,7 @@ const actionLines = {
           prompt: (v.prompt as string | undefined) ?? rule.prompt,
           ...(projectId ? { projectId } : {}),
           ...(v.enable === true ? { enable: true } : {}),
+          ...(v.reconnect === true ? { reconnect: true } : {}),
         },
       ];
     },
@@ -1876,6 +1958,7 @@ const actionLines = {
   ...ambientLines,
   ...handoverLines,
   ...showLines,
+  ...settingsActs,
 } as const satisfies Record<string, ActionLine>;
 export type ActionName = keyof typeof actionLines;
 /** The value an action accepts, as its line's schema reads it (unknown where a line is built generically). */

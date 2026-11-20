@@ -390,11 +390,15 @@ describe("the core, driven with no Electron in the process", () => {
       "integration-remove",
       "delete-outside",
       "forge-sign-out",
+      "dictation",
       "account-keep-going",
       "account-use-reset",
       "account-use-saved-resets",
       "account-disconnect",
       "projects-folder",
+      "panel-retry",
+      "private-site-remove",
+      "secret-end-read",
     ]);
   });
 

@@ -14,6 +14,7 @@ import {
   OWN_WORDS_ACTIONS,
 } from "@shared/actions";
 import type { KeymapSnapshot } from "@shared/keymap";
+import { knownPanels } from "@shared/panelArrangement";
 import type { Layout } from "@shared/preferences";
 import { runbookGatesOf } from "@shared/surfaces";
 import { Type } from "typebox";
@@ -99,13 +100,15 @@ export async function actionRequest(
         );
       return found;
     };
-    const surface = find(value.surface as string);
+    // A reset names no surface: every panel goes back where it asks to be.
+    const surface = value.surface === undefined ? undefined : find(value.surface as string);
     // "Put Rolling alpha above Mac CI": the panel it goes next to.
     const next = (value.above ?? value.below) as string | undefined;
     current = {
       layout: current,
       surface,
       surfaces,
+      known: knownPanels(personal),
       ...(next !== undefined ? { neighbour: find(next) } : {}),
     };
   }
@@ -238,9 +241,15 @@ export function createAppTools(delegate: AppToolsDelegate) {
             params.value,
             params.evidence as string,
           );
-          await delegate.dispatch(line.change, args, actor);
+          const answer = await delegate.dispatch(line.change, args, actor);
           const result = await delegate.dispatch(line.current, []);
-          return { text: JSON.stringify({ action, current: actionValue(action, result) }) };
+          return {
+            text: JSON.stringify({
+              action,
+              ...(line.answers ? { answer: line.answers(answer) } : {}),
+              current: actionValue(action, result),
+            }),
+          };
         } catch (error) {
           if (error instanceof SignInRequiredError)
             return { text: renderSignInRefusal(error.refusal) };

@@ -98,7 +98,7 @@ It takes an eligible account of the provider of the first mate's model and refus
 Each shared request's setting fields are claimed by action lines (`fields`), or named in `ACTION_FIELD_EXCEPTIONS`.
 Parity reads the request schema itself: adding a field to appearance, layout, presence, routing or decisions without a claim or named exception fails the check.
 Sharing's selector enum is checked per choice too.
-Usage's unit (a view choice inside Settings → Usage), default card size (a view choice in Settings → Appearance), decision format version and captain-only outbound consent are explicit exceptions.
+The decision format version and captain-only outbound consent are explicit exceptions.
 The first mate's shared-object boundary uses these same field claims to preserve every unrelated value; the one-panel limit remains separate.
 The tool's own-words action list is derived from the catalog tiers, including guidance actions.
 
@@ -110,7 +110,6 @@ Release-page opening records every successful request; signing out of a project 
 Sharing, its ask, purge, panels consent, recovery and ask-first merge remain captain-owned.
 Hand-over actions offer a card opening the relevant Settings section, never submit credentials.
 Voice download runs through core dispatch over a host capability; model-file serving remains desktop-owned, and a host without that capability refuses the request.
-The subsequently added dictation choices are inventoried as captain-owned, not a new first mate capability.
 Existing task/card/panel-removal abilities remain their only execution paths.
 Captain sign-in/key/consent actions also leave a trail, with no credentials in that trail.
 
@@ -120,6 +119,11 @@ Both actors get an attributed feed line and operation for each applied change, t
 No-ops and refusals add no success trail.
 Shared appearance/layout channels enforce the named action's field boundary; panel arrangement resolves defaults, preserves collapse, refuses unknown surfaces and a full target rail, and stores only placement deviations.
 Sign-in refusals' "Keep it on this computer" way now points at `app_change project-settings` too.
+
+The Settings parity piece (INF-5354) gives the first mate what a person can do in Settings, through the same requests, wherever no ground keeps it the captain's (primitives/app-actions.md, "What stays outside the catalog").
+`ambient-music` pauses and plays again (`on` true takes a pause away, as the Settings switch does); `card-size`, `language` and `usage-unit` claim their appearance fields; `dictation` is `own-words`; `panel` takes `pick` (a full rail's More pick) and `reset` alone; `model-pins` takes `restore`.
+New acts run Settings' own buttons when asked: `update-channel`, `update-check`, `inbox-link`, `panel-ask-again`, `decision-use-off` (off only), `device-keep`, `home-move-cancel`, `copy-stop` (stop only), `device-fix-work`, `device-try-again` and `kept-job-check`; `panel-retry`, `private-site-remove` and `secret-end-read` (ending a read only) take the captain's typed words.
+Every changing request, the window's own included, is a line or an excuse with a ground from a closed set, and every field of a claimed request is claimed or excused.
 
 `window-size` (FI3-524, `asked`) claims the appearance row's size: 100, 110, 125 or 150 percent.
 The Size picker, the size keys, the View menu and command search make the same change as the captain, so a run of them leaves one attributed feed line and operation, and the first mate makes it when asked.

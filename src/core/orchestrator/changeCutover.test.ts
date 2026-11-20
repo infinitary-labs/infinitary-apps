@@ -2,6 +2,7 @@ import { join } from "node:path";
 import type { StagedChangePresentation } from "@shared/changePresentation";
 import type { HostedPresentationDestination } from "@shared/presentationDestination";
 import { describe, expect, it, vi } from "vitest";
+import { fakeCrewmate, setup as setupCrew } from "../../../tests/helpers/crewHarness";
 import {
   FakeForge,
   insertDirectPrTask,
@@ -10,10 +11,13 @@ import {
   setup,
 } from "../../../tests/helpers/prCiHarness";
 import { original, repaired, storyFixture } from "../../../tests/helpers/savedStory";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import type { ForgePull } from "../forge";
 import { git } from "../workspace/git";
 import { seedProject } from "../workspace/seedProject";
+import { createChangeDelivery } from "./changeDelivery";
+import { ChangePresentations } from "./changePresentations";
 import { BATCH_OPEN_WORDS } from "./changePublication";
 import { approvableOffer } from "./mergeAuthorization";
 
@@ -250,6 +254,130 @@ describe("saved stories at the approved cutover (INF-5135 and INF-5411)", () => 
     },
   );
 
+  it("keeps a story pinned to its unchanged publication address", async () => {
+    const where = storyForge();
+    const { tasks, repos, service, readHead } = setup({ forge: where.forge });
+    await insertDirectPrTask(tasks, repos);
+    const task = tasks.get("ab12cd34");
+    if (!task?.repoId) throw new Error("The fixture needs a managed project.");
+    repos.configure(task.repoId, { origin: formerAddress });
+    seedDelivery(tasks, task.id, { publicationOrigin: formerAddress });
+    readHead.mockResolvedValue(original);
+    expect(await service.publication.prepareStory(task.id, staged(original))).toMatchObject({
+      revision: 1,
+    });
+    repos.configure(task.repoId, { origin: newAddress });
+    expect(tasks.delivery.changePresentation(task.id)?.revisions.at(-1)?.destination).toEqual(
+      formerDestination,
+    );
+    expect(
+      observe(
+        "prepare again at the unchanged pinned destination",
+        await service.publication.prepareStory(task.id, staged(original)),
+      ),
+    ).toMatchObject({ revision: 2 });
+  });
+
+  it.each(["address-bound", "legacy unbound"])(
+    "refuses the former plain Git card and sends only a fresh click (%s)",
+    async (offerStyle) => {
+      const merge = vi.fn(async () => ({ ok: true, text: "Merged the pushed branch." }));
+      const { db, tasks, repos, supervisor } = setupCrew(fakeCrewmate(), {
+        mergePullRequest: merge,
+      });
+      const from = "https://git.example.com/library/field-notes.git";
+      const to = "https://git.example.com/library/field-notes-next.git";
+      const repo = seedProject(db, {
+        id: "plain-cutover",
+        path: scratchDir("plain-cutover-"),
+        name: "field-notes",
+        delivery: "direct-pr",
+        origin: from,
+      });
+      const id = "ab12cd34";
+      const branch = "fm/keep-field-notes";
+      insertTask(tasks, { id, repoId: repo.id, repoDir: repo.path, branch });
+      vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
+      const forge = Object.assign(new FakeForge({ kind: "git", place: null }), {
+        change: { branch, headSha: original, url: null },
+        branchHead: async () => original,
+        storyDestination: async () => ({
+          kind: "branch" as const,
+          origin: repos.get(repo.id)?.origin ?? "",
+        }),
+      });
+      const presentations = new ChangePresentations({
+        tasks,
+        mediaDir: () => repo.path,
+        head: async () => original,
+      });
+      const { publication } = createChangeDelivery({
+        tasks,
+        repos,
+        presentations,
+        forgeFor: () => forge,
+        validateRange: async () => {},
+      });
+      const prepare = async () => {
+        const story = staged(original);
+        expect(await publication.prepareStory(id, story)).toMatchObject({ revision: 1 });
+        expect(await publication.open(id, { title: story.title, presentation: 1 })).toContain(
+          branch,
+        );
+        expect(tasks.delivery.changePresentation(id)?.completion).toMatchObject({
+          revision: 1,
+          head: original,
+        });
+      };
+      const show = (card: string) =>
+        supervisor.addFirstmateCard({
+          id: card,
+          taskId: id,
+          title: "Merge the pushed branch",
+          body: "<p>Merge the saved change.</p>",
+          actions: [
+            {
+              id: "merge",
+              label: "Merge",
+              default: true,
+              effect: { kind: "merge", after: "continue" },
+            },
+          ],
+        });
+      await prepare();
+      const former = show("former-plain-merge");
+      const offers = tasks.get(id)?.delivery?.completionOffers;
+      expect(offers?.at(-1)?.destination?.origin).toBe(from);
+      if (offerStyle === "legacy unbound") {
+        seedDelivery(tasks, id, {
+          completionOffers: offers?.map(({ destination, ...offer }) => offer),
+        });
+      }
+      repos.configure(repo.id, { origin: to });
+      await prepare();
+      expect(() => {
+        try {
+          supervisor.cardActions.act(former, "merge");
+        } catch (error) {
+          observe(`former ${offerStyle} plain merge click`, (error as Error).message);
+          throw error;
+        }
+      }).toThrow("so I did not merge");
+      expect(merge).not.toHaveBeenCalled();
+      expect(tasks.get(id)?.delivery?.mergeClick).toBeUndefined();
+      const fresh = show("fresh-plain-merge");
+      supervisor.cardActions.act(fresh, "merge");
+      await vi.waitFor(() => expect(merge).toHaveBeenCalledTimes(1));
+      const click = tasks.get(id)?.delivery?.mergeClick;
+      expect(
+        observe("fresh plain merge click", {
+          cardId: click?.cardId,
+          dispatches: merge.mock.calls.length,
+        }),
+      ).toEqual({ cardId: fresh, dispatches: 1 });
+    },
+  );
+
   it("confirms the pushed story from home after refreshing an unrelated fetched main", async () => {
     const where = storyForge();
     const { db, tasks, repos, service, readHead, paths } = setup({
@@ -283,7 +411,10 @@ describe("saved stories at the approved cutover (INF-5135 and INF-5411)", () => 
     await commit(next, story.title);
     const head = await git(next, ["rev-parse", "HEAD"]);
     await git(home, ["fetch", "-q", next, `refs/heads/${branch}:refs/heads/${branch}`]);
-    await git(home, ["config", `url.${next}.insteadOf`, newAddress]);
+    // Only a disposable URL: its user info must not be copied into a failure response.
+    const credentialed = newAddress.replace("https://", "https://fixture:placeholder@");
+    const missing = `url.${join(paths, "not-a-repo")}.insteadOf`;
+    await git(home, ["config", missing, credentialed]);
     await git(home, ["remote", "add", "origin", formerAddress]);
     const repoId = "cutover-project";
     seedProject(db, {
@@ -299,7 +430,7 @@ describe("saved stories at the approved cutover (INF-5135 and INF-5411)", () => 
     expect(await service.publication.prepareStory(id, staged(oldBase))).toMatchObject({
       revision: 1,
     });
-    repos.configure(repoId, { origin: newAddress });
+    repos.configure(repoId, { origin: credentialed });
     where.destination(nextDestination);
     where.pushed(head);
     readHead.mockResolvedValue(head);
@@ -315,7 +446,15 @@ describe("saved stories at the approved cutover (INF-5135 and INF-5411)", () => 
       BATCH_OPEN_WORDS.confirmed(branch),
     );
     expect(await git(home, ["rev-parse", "refs/remotes/origin/main"])).toBe(oldBase);
-    await git(home, ["remote", "set-url", "origin", newAddress]);
+    await git(home, ["remote", "set-url", "origin", credentialed]);
+    const failure = await open();
+    expect(observe("failed fetch diagnostic", failure)).toContain(
+      "Could not refresh the approved project's default branch from origin.",
+    );
+    expect(failure).not.toContain("placeholder");
+    expect(failure).not.toContain("not-a-repo");
+    await git(home, ["config", "--unset", missing]);
+    await git(home, ["config", `url.${next}.insteadOf`, credentialed]);
     expect(observe("publication from home", await open())).toBe(BATCH_OPEN_WORDS.confirmed(branch));
     expect(
       observe(

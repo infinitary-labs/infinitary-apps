@@ -448,7 +448,7 @@ export class ChangeContext {
         if ((error as { code?: unknown }).code !== 1 || !repoId || !approvedOrigin) throw error;
         // After a repository cutover the fetched ref can still belong to unrelated history.
         // Never fetch a changed checkout address before it has been approved.
-        const configured = await git(dir, ["config", "--get", "remote.origin.url"]).catch(
+        const configured = await git(dir, ["config", "--get-all", "remote.origin.url"]).catch(
           () => undefined,
         );
         if (
@@ -458,12 +458,15 @@ export class ChangeContext {
           throw error;
         await git(
           dir,
-          ["fetch", "--quiet", "--no-tags", approvedOrigin, `+refs/heads/${name}:${fetched}`],
+          ["fetch", "--quiet", "--no-tags", "origin", `+refs/heads/${name}:${fetched}`],
           {
             env: { GIT_TERMINAL_PROMPT: "0" },
             timeoutMs: 30_000,
           },
-        );
+        ).catch(() => {
+          // Git's transport diagnostics can include the configured URL and its sign-in.
+          throw new Error("Could not refresh the approved project's default branch from origin.");
+        });
         return git(dir, ["merge-base", head, fetched]);
       }));
     await requireNamedRange(dir, base, head, this.options.namingRule?.() ?? null);

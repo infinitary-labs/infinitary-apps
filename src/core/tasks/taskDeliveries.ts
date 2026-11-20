@@ -440,7 +440,9 @@ export class TaskDeliveries {
         return (
           !story ||
           !storyAtOrigin(story.destination, former) ||
-          storyAtOrigin(story.destination, next)
+          storyAtOrigin(story.destination, next) ||
+          (task.delivery?.publicationOrigin != null &&
+            storyAtOrigin(story.destination, task.delivery.publicationOrigin))
         );
       });
       if (kept.length === ledgers.length) continue;

@@ -145,7 +145,10 @@ export class ChangePublication {
                 approvedAddress: {
                   origin: repo.origin,
                   current: () => this.options.repos.get(repo.id)?.origin === repo.origin,
-                  recover: !repo.contribution && !(fork && isForkReview(fork)),
+                  recover:
+                    !repo.contribution &&
+                    !located.record.delivery?.publicationOrigin &&
+                    !(fork && isForkReview(fork)),
                 },
               }
             : {}),

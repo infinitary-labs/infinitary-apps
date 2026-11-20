@@ -19,6 +19,7 @@ import {
   validationRevision,
   validationStateRevision,
 } from "@shared/liveValidation";
+import { opensPullRequest } from "@shared/repos";
 import { compareSemver } from "@shared/semver";
 import type { ServedWakeOrigin } from "@shared/servedFrame";
 import {
@@ -838,7 +839,11 @@ export class CrewSupervisor {
     const repoId = record?.delivery?.checkTarget?.repoId ?? record?.repoId;
     const repo = repoId ? this.options.repos.get(repoId) : undefined;
     const origin =
-      record && repo && hasChangeRequests(repo.host?.kind)
+      record &&
+      repo &&
+      (hasChangeRequests(repo.host?.kind) ||
+        (offer.presentationRevision !== undefined &&
+          opensPullRequest(this.facts.taskDelivery(taskId))))
         ? publicationRepo(record, repo).origin
         : undefined;
     const destination = previous

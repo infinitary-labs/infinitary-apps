@@ -206,15 +206,17 @@ export class ChangePresentations {
           const address = how.approvedAddress;
           const former = kept?.revisions.at(-1)?.destination;
           // An address already moved by an older build has no retirement event. Recover only
-          // an ordinary hosted story, and only after reading the currently approved destination.
+          // an ordinary remote story, and only after reading the currently approved destination.
           const retired =
             address?.recover &&
             former &&
-            hostedPresentation(former) &&
-            !former.media &&
             kept?.forkNumber === undefined &&
-            hostedPresentation(destination) &&
-            !destination.media &&
+            (hostedPresentation(former) && hostedPresentation(destination)
+              ? !former.media && !destination.media
+              : !hostedPresentation(former) &&
+                former.kind === "branch" &&
+                !hostedPresentation(destination) &&
+                destination.kind === "branch") &&
             storyAtOrigin(destination, address.origin) &&
             !storyAtOrigin(former, address.origin);
           const current = retired ? undefined : kept;

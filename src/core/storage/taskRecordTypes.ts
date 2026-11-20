@@ -100,7 +100,7 @@ export type CompletionOffer = {
    * card's offer, and any offer that approves no head, names it here alone.
    */
   shownFor?: number;
-  /** Hosted destination as shown; absence cannot authorize a numbered request. */
+  /** Project address as shown; absence cannot authorize a numbered request. */
   destination?: { repoId: string; origin: string; branch: string };
   /** The merge card declared the task continues after this merge (INF-2744). */
   continues?: true;

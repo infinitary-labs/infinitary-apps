@@ -22,6 +22,7 @@ A captain click carries the declaration from the version the captain actually ch
 This operation is not a card-only row, a crewmate or a child that holds the code task's close.
 The successful `merged` or `landed` close creates it in the same transaction, with a source/offer/action receipt that prevents duplicate activation.
 Local merges, direct changes, automatic merges and recognition of an outside merge share that close.
+A merge whose task continues creates it at the merge too, and the crewmate's merge-continued wake names each action's task, so the crewmate asks the captain for none of them again.
 Refused or unknown merges leave declarations pending; discard creates no actionable obligation.
 The first mate can declare immediately required actions on an attached or standalone card using the same primitive.
 

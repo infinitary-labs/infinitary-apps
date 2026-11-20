@@ -12574,7 +12574,15 @@ ${events}` : prompt;
      * even once every member has left. Empty once that task closed first: the
      * batch stays held until another declared fix is approved or Try again.
      */
-    awaits: string().optional()
+    awaits: string().optional(),
+    /**
+     * Its repair's judgment that the held version passed on a rerun of its
+     * failed checks, such as the project's own rerun of the failed tests: at
+     * `head`, the failed checks named in `checks` are answered, and the batch
+     * merges once every other check passed. A fix declared meanwhile goes to
+     * the next batch. A combine at a new version drops it.
+     */
+    passed: object({ head: string(), checks: array(string()) }).optional()
   });
   const batchReceiptSchema = object({
     taskId: string(),
@@ -12670,6 +12678,12 @@ ${events}` : prompt;
   object({
     fix: boolean().optional(),
     sendBack: array(object({ task: string(), reason: string() })).optional(),
+    /**
+     * The held version, a full commit id, when a rerun passed its failed
+     * checks: it merges at that version once its other checks pass, and a
+     * fix declared beside it or meanwhile goes to the next batch.
+     */
+    passed: string().optional(),
     evidence: string()
   });
   const CHANGE_REQUEST_KINDS = ["github", "gitlab"];

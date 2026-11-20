@@ -522,6 +522,15 @@ describe("CrewSupervisor", () => {
         expect(h.tasks.get(h.taskId)?.delivery?.mergeAuthorization?.status).toBe("invalidated"),
       );
       expect(h.forge.sends).toBe(1);
+      // The end holds the merge: even with the task's autonomy on, the app
+      // may not send another one; only the captain's click can.
+      editPolicies(h, { autonomy: true });
+      const record = h.tasks.get(h.taskId);
+      if (!record) throw new Error("Missing task");
+      expect(h.supervisor.settling.settle.mergeRefusal(record, "merge-pr", "app")).toBeDefined();
+      expect(
+        h.supervisor.settling.settle.mergeRefusal(record, "merge-pr", "captain"),
+      ).toBeUndefined();
       await h.supervisor.disposeAll();
     });
 

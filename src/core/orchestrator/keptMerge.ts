@@ -368,15 +368,16 @@ export class KeptMerge {
     }
     // The host refused the read of the merge it took: the merge may have
     // failed, or the task may not be this pull request's, and nothing says
-    // which. Nothing is sent again; the approval ends, so whether to merge
-    // again is a new merge card's.
+    // which. Nothing is sent again; the approval ends holding the task's
+    // merge (`mergeHold`), so autonomy cannot send another one: only the
+    // captain's own click on a merge card merges again.
     if (pull.state === "open" && pull.mergeTaskRefused) {
       this.approvals.endAuthorization(
         taskId,
         "invalidated",
         // i18n-exempt: joins the approval's English timeline note (`endAuthorization`), like every end reason
         "the host refused the read of the merge it took, so whether it failed is not known; nothing was sent again",
-        { feed: true },
+        { feed: true, holds: true },
       );
       this.reportEnded(taskId, record.title);
       return;

@@ -1,7 +1,12 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { UpdateChannel } from "@shared/update";
-import { UPDATE_LATER, UPDATE_NOTICES, UPDATE_PROBLEMS } from "@shared/updateWords";
+import {
+  UPDATE_LATER,
+  UPDATE_NOTICES,
+  UPDATE_PROBLEMS,
+  WINDOWS_HAND_OVER_WORDS,
+} from "@shared/updateWords";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { thisDeviceSystem } from "../platform";
@@ -889,7 +894,11 @@ describe("updates on Windows", () => {
     };
   }
 
-  function windows(channel: UpdateChannel, channels: Record<string, unknown>) {
+  function windows(
+    channel: UpdateChannel,
+    channels: Record<string, unknown>,
+    handOver?: { problem: string },
+  ) {
     const installed: WindowsInstallPlan[] = [];
     const work = {
       save: vi.fn<CrewWorkForUpdate["save"]>(async () => "saved"),
@@ -901,6 +910,7 @@ describe("updates on Windows", () => {
       currentVersion: "0.8.3-alpha.1",
       channel: () => channel,
       windows: { chip: "x64" },
+      ...(handOver ? { windowsHandOverProblem: handOver.problem } : {}),
       buildsUrl: BUILDS,
       fetchImpl: (async () => Response.json({ schemaVersion: 1, channels })) as typeof fetch,
       openExternal: () => {},
@@ -932,7 +942,12 @@ describe("updates on Windows", () => {
     expect(await f.updates.install()).toEqual({ ok: true });
     expect(f.order).toEqual(["saved", "installer"]);
     expect(f.installed).toEqual([
-      { version: "0.8.3-alpha.4", channel: "alpha", download: setupOf("0.8.3-alpha.4") },
+      {
+        version: "0.8.3-alpha.4",
+        channel: "alpha",
+        download: setupOf("0.8.3-alpha.4"),
+        page: target("0.8.3-alpha.4").releaseUrl,
+      },
     ]);
   });
 
@@ -941,7 +956,12 @@ describe("updates on Windows", () => {
     expect((await f.updates.getStatus()).latestVersion).toBe("0.8.4");
     expect(await f.updates.install()).toEqual({ ok: true });
     expect(f.installed).toEqual([
-      { version: "0.8.4", channel: "stable", download: setupOf("0.8.4") },
+      {
+        version: "0.8.4",
+        channel: "stable",
+        download: setupOf("0.8.4"),
+        page: target("0.8.4").releaseUrl,
+      },
     ]);
   });
 
@@ -960,6 +980,20 @@ describe("updates on Windows", () => {
       problem: "There is no update this app can install itself.",
     });
     expect(f.installed).toEqual([]);
+  });
+
+  // The captain's choices on the review: a hand-over that did not finish
+  // keeps this copy and says so, with Try again, until the next attempt.
+  it("says what the hand-over did not finish beside the offer until the next attempt", async () => {
+    const problem = WINDOWS_HAND_OVER_WORDS.installFailed;
+    const f = windows("alpha", { alpha: entry("0.8.3-alpha.4") }, { problem });
+    expect(await f.updates.getStatus()).toMatchObject({
+      updateAvailable: true,
+      problem,
+      install: { asksPassword: false, restarts: true },
+    });
+    expect(await f.updates.install()).toEqual({ ok: true });
+    expect((await f.updates.checkNow()).problem).toBeUndefined();
   });
 
   it("lets the saved work carry on when the download is refused", async () => {

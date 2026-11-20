@@ -571,8 +571,8 @@ export type HostCapabilities = {
    */
   relaunch?: (execPath?: string) => void;
   /**
-   * Ends this program for a Windows installer, which opens the new copy
-   * itself (docs/alpha.md "Updates on Windows"): a window quits, and a
+   * Ends this program for a Windows installer, whose hand-over opens the
+   * new copy (docs/alpha.md "Updates on Windows"): a window quits, and a
    * command ends with 75 as for any update. Absent on a host that cannot.
    */
   endForInstaller?: () => void;

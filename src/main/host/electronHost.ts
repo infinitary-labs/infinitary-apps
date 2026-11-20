@@ -203,7 +203,7 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
         if (!isolatedUserDataDir) app.relaunch(execPath ? { execPath, args: [] } : undefined);
         app.quit();
       }),
-    // A Windows installer opens the new copy itself: a window only quits,
+    // A Windows installer's hand-over opens the new copy: a window only quits,
     // and a command ends as its own update ends it, for its starter.
     endForInstaller: () => {
       if (options.relaunch) options.relaunch();

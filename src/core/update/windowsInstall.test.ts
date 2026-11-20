@@ -8,8 +8,11 @@ import { buildDownloadUrl, UPDATE_CHANNEL_MARKER } from "./updateChannels";
 import {
   createWindowsInstaller,
   RUN_INSTALLER_SCRIPT,
+  takeWindowsHandOverResult,
+  WINDOWS_HAND_OVER_RESULT,
   WINDOWS_UPDATES_FOLDER,
   type WindowsInstallPlan,
+  windowsHandOverScript,
 } from "./windowsInstall";
 
 // INF-4258, as INF-5230's plan re-scoped INF-4243's piece 7: a Windows copy
@@ -18,6 +21,9 @@ import {
 
 const INSTALLER = "the new installer's bytes";
 const VERSION = "0.8.4-alpha.3";
+const RUNNING = "0.8.4-alpha.2";
+const EXECUTABLE = "C:\\Users\\person\\AppData\\Local\\Programs\\Infinitary\\Infinitary.exe";
+const PAGE = "https://example.invalid/releases/alpha";
 
 /**
  * The script's process as `spawn` returns one: Windows started the
@@ -37,8 +43,15 @@ function child(outcome: Outcome) {
   return emitter;
 }
 
+const name = `Infinitary-${VERSION}-windows-x64-setup.exe`;
+
 function installer(
-  options: { body?: () => Response; spawns?: Outcome; onSpawn?: (dataRoot: string) => void } = {},
+  options: {
+    body?: () => Response;
+    spawns?: Outcome;
+    onSpawn?: (dataRoot: string) => void;
+    openedOn?: string;
+  } = {},
 ) {
   const dataRoot = join(scratchDir("inf-windows-install-"), "data");
   mkdirSync(dataRoot, { recursive: true });
@@ -46,8 +59,7 @@ function installer(
   const spawnImpl = vi.fn((..._args: unknown[]) => {
     order.push("spawn");
     // The installer the child is handed is the checked download, whole.
-    const env = (_args[2] as { env: NodeJS.ProcessEnv }).env;
-    order.push(readFileSync(env.INFINITARY_UPDATE_INSTALLER as string, "utf8"));
+    order.push(readFileSync(join(updatesIn(dataRoot), name), "utf8"));
     options.onSpawn?.(dataRoot);
     return child(options.spawns ?? "started");
   });
@@ -60,9 +72,11 @@ function installer(
     env: () => ({ SystemRoot: "C:\\Windows" }),
     end,
     pid: 4242,
+    currentVersion: RUNNING,
+    executable: EXECUTABLE,
+    ...(options.openedOn ? { openedOn: options.openedOn } : {}),
     spawnImpl: spawnImpl as never,
   });
-  const name = `Infinitary-${VERSION}-windows-x64-setup.exe`;
   const plan: WindowsInstallPlan = {
     version: VERSION,
     channel: "alpha",
@@ -70,6 +84,7 @@ function installer(
       url: buildDownloadUrl(VERSION, name),
       sha256: createHash("sha256").update(INSTALLER).digest("hex"),
     },
+    page: PAGE,
   };
   const saved = vi.fn(async () => {
     order.push("saved");
@@ -93,16 +108,50 @@ describe("the in-app Windows update", () => {
       join("C:\\Windows", "System32", "WindowsPowerShell", "v1.0", "powershell.exe"),
     );
     expect(args).toEqual(["-NoProfile", "-NonInteractive", "-Command", RUN_INSTALLER_SCRIPT]);
-    // It waits for this program to end and runs the installer as a silent update.
-    expect(spawned.env.INFINITARY_UPDATE_WAIT).toBe("4242");
-    expect(spawned.env.INFINITARY_UPDATE_INSTALLER).toBe(join(updatesIn(f.dataRoot), f.name));
-    expect(RUN_INSTALLER_SCRIPT).toContain("'--updated','/S','--force-run'");
+    // The hand-over it starts waits for this program, runs this download and
+    // opens this copy again, saying what it kept as this version.
+    expect(
+      Buffer.from(spawned.env.INFINITARY_UPDATE_HAND_OVER as string, "base64").toString("utf16le"),
+    ).toBe(
+      windowsHandOverScript({
+        pid: 4242,
+        installer: join(updatesIn(f.dataRoot), f.name),
+        executable: EXECUTABLE,
+        resultFile: join(f.dataRoot, WINDOWS_HAND_OVER_RESULT),
+        result: { from: RUNNING, to: VERSION },
+        page: PAGE,
+      }),
+    );
     // The new copy follows the channel it came from.
     expect(JSON.parse(readFileSync(join(f.dataRoot, UPDATE_CHANNEL_MARKER), "utf8"))).toEqual({
       schemaVersion: 1,
       channel: "alpha",
       version: VERSION,
     });
+  });
+
+  it("hands over the data folder the copy was opened on, to open it again there", async () => {
+    const openedOn = join(scratchDir("inf-windows-profile-"), "a person's other folder");
+    const f = installer({ openedOn });
+    await f.install(f.plan, f.saved);
+    const [, , spawned] = f.spawnImpl.mock.calls[0] as [
+      string,
+      string[],
+      { env: NodeJS.ProcessEnv },
+    ];
+    expect(
+      Buffer.from(spawned.env.INFINITARY_UPDATE_HAND_OVER as string, "base64").toString("utf16le"),
+    ).toBe(
+      windowsHandOverScript({
+        pid: 4242,
+        installer: join(updatesIn(f.dataRoot), f.name),
+        executable: EXECUTABLE,
+        dataDir: openedOn,
+        resultFile: join(f.dataRoot, WINDOWS_HAND_OVER_RESULT),
+        result: { from: RUNNING, to: VERSION },
+        page: PAGE,
+      }),
+    );
   });
 
   it("refuses an installer whose bytes do not match the published checksum", async () => {
@@ -199,5 +248,25 @@ describe("the in-app Windows update", () => {
     expect(f.end).not.toHaveBeenCalled();
     expect(existsSync(join(f.dataRoot, UPDATE_CHANNEL_MARKER))).toBe(false);
     expect(readdirSync(f.dataRoot)).toEqual([]);
+  });
+});
+
+describe("what the hand-over said of an update it did not finish", () => {
+  const said = (dataRoot: string, result: unknown) =>
+    writeFileSync(join(dataRoot, WINDOWS_HAND_OVER_RESULT), `\uFEFF${JSON.stringify(result)}`);
+
+  it("is read once, by the copy it kept", () => {
+    const dataRoot = scratchDir("inf-windows-hand-over-");
+    said(dataRoot, { outcome: "install-failed", from: RUNNING, to: VERSION });
+    expect(takeWindowsHandOverResult(dataRoot, RUNNING)).toBe("install-failed");
+    expect(takeWindowsHandOverResult(dataRoot, RUNNING)).toBeNull();
+    expect(existsSync(join(dataRoot, WINDOWS_HAND_OVER_RESULT))).toBe(false);
+  });
+
+  it("says nothing to a copy installed since", () => {
+    const dataRoot = scratchDir("inf-windows-hand-over-");
+    said(dataRoot, { outcome: "shutdown-timeout", from: RUNNING, to: VERSION });
+    expect(takeWindowsHandOverResult(dataRoot, VERSION)).toBeNull();
+    expect(existsSync(join(dataRoot, WINDOWS_HAND_OVER_RESULT))).toBe(false);
   });
 });

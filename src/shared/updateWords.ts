@@ -35,6 +35,19 @@ export function updateResumedWords(computer?: string): string {
   return `Your last turn stopped part way while Infinitary${computer ? ` on ${computer}` : ""} was updated; it is back now.`;
 }
 
+/**
+ * What a Windows copy says, once it opens again, of an update its hand-over
+ * did not finish (docs/alpha.md, "Updates on Windows"): this copy was kept.
+ */
+export const WINDOWS_HAND_OVER_WORDS = {
+  shutdownTimeout:
+    "Infinitary took more than five minutes to close, so the update stopped and nothing was installed.",
+  installFailed: "The installer stopped before it finished, so this copy was kept.",
+  /** Shown by the hand-over itself when the installer stopped and left no copy to open. */
+  noCopy: (page: string) =>
+    `Infinitary could not finish its update and could not open again. Download the installer from ${page} and run it; your tasks and settings are kept.`,
+} as const;
+
 /** The crew's work around this computer's own update, in the update notice and on the Version row. */
 export const UPDATE_WORK_WORDS = {
   saving: "Saving work before the update. Running work finishes first, so nothing is lost.",

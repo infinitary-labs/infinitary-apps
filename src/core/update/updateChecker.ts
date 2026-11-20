@@ -40,8 +40,10 @@ import {
 } from "./updateWork";
 import {
   createWindowsInstaller,
+  takeWindowsHandOverResult,
   type WindowsInstallation,
   type WindowsInstallPlan,
+  windowsHandOverProblem,
 } from "./windowsInstall";
 
 // Direct Mac copies use the consented native updater; Homebrew copies keep reading
@@ -137,6 +139,12 @@ export type CreateUpdateCheckerOptions = {
   windows?: WindowsInstallation;
   /** Runs an offered Windows installer (`createWindowsInstaller`); absent, nothing installs. */
   installWindows?: (plan: WindowsInstallPlan, beforeReplace?: () => Promise<void>) => Promise<void>;
+  /**
+   * What the Windows hand-over said of the last update it did not finish
+   * (`takeWindowsHandOverResult`): the Version row says it beside Try
+   * again until the next install starts.
+   */
+  windowsHandOverProblem?: string;
   /** Saves the crew's work before an installed build replaces this copy. */
   saving?: UpdateSaving;
   /**
@@ -214,6 +222,7 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
   // The offer each channel's last good status was read from, for install().
   const lastOffer = new Map<string, Offer | null>();
   let installing = false;
+  let handOverProblem = options.windowsHandOverProblem;
 
   const statusFor = (channel: UpdateChannel, tap: TapNames, offer: Offer | null): UpdateStatus => {
     const updateAvailable = offer ? isNewerVersion(offer.version, options.currentVersion) : false;
@@ -227,9 +236,10 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
     };
     if (windows) {
       // One click: the installer runs with no question and starts the new copy.
+      const said = handOverProblem ? { problem: handOverProblem } : {};
       return offer?.download && updateAvailable && options.installWindows
-        ? { ...status, install: { asksPassword: false, restarts: true } }
-        : status;
+        ? { ...status, ...said, install: { asksPassword: false, restarts: true } }
+        : { ...status, ...said };
     }
     if (!linux || !offer?.download) return status;
     const inApp = linux.package ? INSTALLS_IN_APP[linux.package] : undefined;
@@ -470,7 +480,12 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
       return (beforeReplace) => installLinux(plan, beforeReplace);
     }
     if (windows && installWindows) {
-      const plan: WindowsInstallPlan = { version: offer.version, channel, download };
+      const plan: WindowsInstallPlan = {
+        version: offer.version,
+        channel,
+        download,
+        page: offer.url ?? releasesPageFor(channel, TAP),
+      };
       return (beforeReplace) => installWindows(plan, beforeReplace);
     }
     return null;
@@ -485,6 +500,8 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
     }
     if (installing) return { ok: false, problem: "The update is already installing." };
     installing = true;
+    // A new attempt answers for itself.
+    handOverProblem = undefined;
     let later = false;
     try {
       // The crew's work stops where nothing is lost before the copy is replaced.
@@ -534,8 +551,8 @@ export type InstalledUpdateCheckerOptions = {
    */
   relaunch?: (execPath?: string) => void;
   /**
-   * Ends this program for a Windows installer, which opens the new copy
-   * itself; absent, a Windows installation names its update and installs
+   * Ends this program for a Windows installer, whose hand-over opens the
+   * new copy; absent, a Windows installation names its update and installs
    * nothing. Only the copy's own first mate is handed one: a window
    * controlling another computer also runs that computer's work, which the
    * installer would end mid-run.
@@ -551,6 +568,11 @@ export type InstalledUpdateCheckerOptions = {
    */
   work?: CrewWorkForUpdate;
 };
+
+/** Whether this program was opened on a data folder of its own choosing (`--user-data-dir`). */
+export function openedOnSwitch(argv: readonly string[]): boolean {
+  return argv.some((arg) => arg === "--user-data-dir" || arg.startsWith("--user-data-dir="));
+}
 
 /**
  * The update checker for the app installed on this computer: its version,
@@ -635,6 +657,11 @@ export function createInstalledUpdateChecker(
     app.platform === "win32" && (app.packaged || overrides.windowsInstaller)
       ? { chip: thisDeviceSystem(app.platform).chip ?? process.arch }
       : undefined;
+  // An update the hand-over did not finish, said once by the copy it kept.
+  const windowsHandOver =
+    windows && options.endForInstaller
+      ? takeWindowsHandOverResult(app.userDataDir, currentVersion)
+      : null;
   // The process's fetch, looked up at each download rather than kept from startup.
   const fetchImpl: typeof fetch =
     options.fetchImpl ?? ((input, init) => globalThis.fetch(input, init));
@@ -656,6 +683,7 @@ export function createInstalledUpdateChecker(
     ...(overrides.releasesUrl ? { releasesUrl: overrides.releasesUrl } : {}),
     ...(linux ? { linux } : {}),
     ...(windows ? { windows } : {}),
+    ...(windowsHandOver ? { windowsHandOverProblem: windowsHandOverProblem(windowsHandOver) } : {}),
     ...(overrides.buildsUrl ? { buildsUrl: overrides.buildsUrl } : {}),
     // An installed Linux copy marks its reads of the download server's builds file.
     ...(linux && app.packaged ? { activeMarks: createActiveMarks(app.userDataDir) } : {}),
@@ -676,6 +704,10 @@ export function createInstalledUpdateChecker(
             fetchImpl,
             env: () => hostEnv(),
             end: options.endForInstaller,
+            currentVersion,
+            executable: process.execPath,
+            // A copy opened on another data folder opens on it again.
+            ...(openedOnSwitch(process.argv) ? { openedOn: app.userDataDir } : {}),
           }),
         }
       : {}),

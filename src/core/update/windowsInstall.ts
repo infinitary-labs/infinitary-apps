@@ -1,7 +1,9 @@
 import { spawn } from "node:child_process";
+import { readFileSync, rmSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import { basename, join } from "node:path";
 import type { UpdateChannel } from "@shared/update";
+import { WINDOWS_HAND_OVER_WORDS } from "@shared/updateWords";
 import { windowsPowerShell } from "../storage/ownerOnly";
 import type { BuildDownload } from "./updateChannels";
 import {
@@ -18,12 +20,14 @@ import {
  * channel's installer from the builds file, under `windows`, this PC's
  * chip and `exe`; this module installs it. It downloads the installer and
  * keeps it only when its bytes match the published SHA-256, lets the
- * crew's work be saved, and hands the installer to Windows PowerShell,
- * which waits for this program to end and then runs it silently, as an
- * update (`--updated /S --force-run`), outside the task that started a
- * command, so it outlives this program. The installer replaces the copy for
- * this person alone, with no administrator, keeps the data folder, and
- * opens the new copy through its Start menu entry, as the Start menu does.
+ * crew's work be saved, and hands the installer to a hidden Windows
+ * PowerShell outside the task that started a command, so it outlives this
+ * program (`windowsHandOverScript`). It waits for this program to end and
+ * runs the installer silently, as an update, and opens the new copy on the
+ * same data folder; the installer replaces the copy for this person alone,
+ * with no administrator, and keeps the data folder. An update it does not
+ * finish keeps this copy, opens it again, and this copy says so on its
+ * Version row (`takeWindowsHandOverResult`).
  *
  * Nothing here checks who published the installer yet: until the Windows
  * package is signed, an update trusts the download site and its checksum,
@@ -41,37 +45,141 @@ export type WindowsInstallPlan = {
   version: string;
   channel: UpdateChannel;
   download: BuildDownload;
+  /** The release's page, where a hand-over that left no copy sends the person. */
+  page: string;
 };
 
 /** The folder in the data root the installer downloads into. */
 export const WINDOWS_UPDATES_FOLDER = "updates";
 
+/** The file the hand-over leaves in the data root when it did not finish the update. */
+export const WINDOWS_HAND_OVER_RESULT = "update-result.json";
+
+/** What the hand-over says of an update it did not finish, for the copy it kept. */
+export type WindowsHandOverResult = {
+  outcome: "shutdown-timeout" | "install-failed";
+  /** The version the hand-over kept, which says it when it opens. */
+  from: string;
+  to: string;
+};
+
+/** How the hand-over waits for this program to end before it gives up on the update. */
+export const WINDOWS_SHUTDOWN_WAIT_SECONDS = 300;
+
+/** A PowerShell literal of `text`, in single quotes. */
+const literal = (text: string) => `'${text.replaceAll("'", "''")}'`;
+
 /**
- * What runs the installer. A command Task Scheduler started is in that
+ * The hand-over: the hidden Windows PowerShell that outlives this program
+ * and updates it (docs/alpha.md, "Updates on Windows"). It waits up to five
+ * minutes for this program to end; one still running then has not finished
+ * saving, so it installs nothing, says so for the kept copy, and opens that
+ * copy again once it ends. Otherwise it runs the installer silently as an
+ * update and reads how it ended. A finished installer opens the new copy:
+ * the person's own data folder through the Start menu entry, as the
+ * installer's own `--force-run` does, and a data folder the copy was opened
+ * on (`--user-data-dir`) opened again on that folder. An installer that
+ * stopped leaves the copy in place, which the hand-over opens again and
+ * which then says so; one that left no copy is said in a message with
+ * where to download the installer, which opens next.
+ */
+export function windowsHandOverScript(values: {
+  pid: number;
+  installer: string;
+  executable: string;
+  /** The data folder the copy was opened on, absent for the person's own. */
+  dataDir?: string;
+  resultFile: string;
+  result: Omit<WindowsHandOverResult, "outcome">;
+  page: string;
+}): string {
+  const said = (outcome: WindowsHandOverResult["outcome"]) =>
+    literal(JSON.stringify({ outcome, ...values.result }));
+  return [
+    "$ErrorActionPreference = 'Stop'",
+    `$exe = ${literal(values.executable)}`,
+    `$dataDir = ${literal(values.dataDir ?? "")}`,
+    `$result = ${literal(values.resultFile)}`,
+    "function Say([string]$what) { try { [IO.File]::WriteAllText($result, $what) } catch {} }",
+    // The copy's windows on this data folder still open end first, as the
+    // installer ends them, so the copy opens fresh and starts its command
+    // again; a command or a work run is never one of them.
+    "function OnThisFolder($p) { if ($dataDir) { $p.CommandLine.Contains('--user-data-dir=' + $dataDir) } else { -not $p.CommandLine.Contains('--user-data-dir') } }",
+    "function Reopen {",
+    "  $all = @(Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $exe -and $_.CommandLine })",
+    "  $ids = @($all | ForEach-Object { $_.ProcessId })",
+    "  $all | Where-Object { $ids -notcontains $_.ParentProcessId -and $_.CommandLine -notmatch '\\s\"?run\"?(\\s|$)' -and (OnThisFolder $_) } | ForEach-Object { taskkill /PID $_.ProcessId /T /F | Out-Null }",
+    "  if ($dataDir) { Start-Process -FilePath $exe -ArgumentList ('\"--user-data-dir=' + $dataDir + '\"') } else { Start-Process -FilePath $exe }",
+    "}",
+    `$old = Get-Process -Id ${values.pid} -ErrorAction SilentlyContinue`,
+    `if ($old -and -not $old.WaitForExit(${WINDOWS_SHUTDOWN_WAIT_SECONDS * 1000})) { Say ${said("shutdown-timeout")}; $old.WaitForExit(); Reopen; exit }`,
+    "$info = New-Object System.Diagnostics.ProcessStartInfo",
+    `$info.FileName = ${literal(values.installer)}`,
+    `$info.Arguments = ${literal(values.dataDir ? "--updated /S" : "--updated /S --force-run")}`,
+    "$info.UseShellExecute = $false",
+    "try { $installer = [System.Diagnostics.Process]::Start($info); $installer.WaitForExit(); $code = $installer.ExitCode } catch { $code = -1 }",
+    "if ($code -eq 0) { if ($dataDir) { Reopen }; exit }",
+    `Say ${said("install-failed")}`,
+    "if (Test-Path -LiteralPath $exe) { Reopen; exit }",
+    "Add-Type -AssemblyName System.Windows.Forms",
+    `[void][System.Windows.Forms.MessageBox]::Show(${literal(WINDOWS_HAND_OVER_WORDS.noCopy(values.page))}, 'Infinitary')`,
+    `Start-Process ${literal(values.page)}`,
+  ].join("\n");
+}
+
+/**
+ * What starts the hand-over. A command Task Scheduler started is in that
  * task's group of processes, which Windows ends with the command, and a
  * detached child stays in it: a hand-over started directly died with the
  * command before the installer ran. So this script, run directly, only asks
  * Windows' own process service (`Win32_Process.Create`) to start the
- * hand-over, which then belongs to no task and outlives this program. The
- * hand-over waits for the app's own process to end, so nothing of the old
- * copy is running when the installer replaces it, then starts the installer
- * as an update. Paths and the process number ride this script's environment,
- * never the command's text; the script quotes them into the hand-over's
- * script itself. A wait that runs past five minutes starts the installer
- * anyway, which ends what is left of the old copy itself. It exits 1 when
- * Windows refused to start the hand-over.
+ * hand-over (`windowsHandOverScript`, riding this script's environment
+ * encoded, never the command's text), which then belongs to no task and
+ * outlives this program. It exits 1 when Windows refused to start it.
  */
 export const RUN_INSTALLER_SCRIPT = [
   "$ErrorActionPreference = 'Stop'",
-  "$wait = [int]$env:INFINITARY_UPDATE_WAIT",
-  '$installer = $env:INFINITARY_UPDATE_INSTALLER.Replace("\'", "\'\'")',
-  "$handOver = \"Wait-Process -Id $wait -Timeout 300 -ErrorAction SilentlyContinue; Start-Process -FilePath '$installer' -ArgumentList '--updated','/S','--force-run'\"",
-  "$encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($handOver))",
+  "$encoded = $env:INFINITARY_UPDATE_HAND_OVER",
   "$shell = Join-Path $PSHOME 'powershell.exe'",
   "$hidden = New-CimInstance -ClassName Win32_ProcessStartup -ClientOnly -Property @{ ShowWindow = [uint16]0 }",
   '$started = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = "`"$shell`" -NoProfile -NonInteractive -WindowStyle Hidden -EncodedCommand $encoded"; ProcessStartupInformation = $hidden }',
   "if ($started.ReturnValue -ne 0) { exit 1 }",
 ].join("\n");
+
+/**
+ * What the hand-over said of an update it did not finish, for this copy,
+ * read once: the file goes as it is read, and one written for another
+ * version (a copy installed since) says nothing.
+ */
+export function takeWindowsHandOverResult(
+  dataRoot: string,
+  currentVersion: string,
+): WindowsHandOverResult["outcome"] | null {
+  const file = join(dataRoot, WINDOWS_HAND_OVER_RESULT);
+  let text: string;
+  try {
+    text = readFileSync(file, "utf8");
+  } catch {
+    return null;
+  }
+  rmSync(file, { force: true });
+  try {
+    const result = JSON.parse(text.replace(/^\uFEFF/, "")) as Partial<WindowsHandOverResult>;
+    if (result.from !== currentVersion) return null;
+    return result.outcome === "shutdown-timeout" || result.outcome === "install-failed"
+      ? result.outcome
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/** What the Version row says of an update the hand-over did not finish. */
+export function windowsHandOverProblem(outcome: WindowsHandOverResult["outcome"]): string {
+  return outcome === "shutdown-timeout"
+    ? WINDOWS_HAND_OVER_WORDS.shutdownTimeout
+    : WINDOWS_HAND_OVER_WORDS.installFailed;
+}
 
 export type WindowsInstallerOptions = {
   /** The run's own userData: the downloads folder and the channel marker. */
@@ -85,8 +193,14 @@ export type WindowsInstallerOptions = {
    * update, with 75.
    */
   end: () => void;
-  /** This program's process, which the installer waits for. */
+  /** This program's process, which the hand-over waits for. */
   pid?: number;
+  /** The version running, which a hand-over that did not finish keeps. */
+  currentVersion: string;
+  /** The program the hand-over opens again: this copy's own. */
+  executable: string;
+  /** The data folder this copy was opened on (`--user-data-dir`), absent for the person's own. */
+  openedOn?: string;
   spawnImpl?: typeof spawn;
 };
 
@@ -104,7 +218,7 @@ export function createWindowsInstaller(
   // opened this copy; gone by now, or at the next update.
   const leftover = rm(folder, { recursive: true, force: true }).catch(() => undefined);
 
-  function handOver(file: string): Promise<void> {
+  function handOver(file: string, plan: WindowsInstallPlan): Promise<void> {
     return new Promise((resolve, reject) => {
       const env = options.env();
       let child: ReturnType<typeof spawn>;
@@ -115,8 +229,18 @@ export function createWindowsInstaller(
           {
             env: {
               ...env,
-              INFINITARY_UPDATE_WAIT: String(options.pid ?? process.pid),
-              INFINITARY_UPDATE_INSTALLER: file,
+              INFINITARY_UPDATE_HAND_OVER: Buffer.from(
+                windowsHandOverScript({
+                  pid: options.pid ?? process.pid,
+                  installer: file,
+                  executable: options.executable,
+                  ...(options.openedOn ? { dataDir: options.openedOn } : {}),
+                  resultFile: join(options.dataRoot, WINDOWS_HAND_OVER_RESULT),
+                  result: { from: options.currentVersion, to: plan.version },
+                  page: plan.page,
+                }),
+                "utf16le",
+              ).toString("base64"),
             },
             stdio: "ignore",
             windowsHide: true,
@@ -164,7 +288,7 @@ export function createWindowsInstaller(
         );
       }
       remembered = true;
-      await handOver(file);
+      await handOver(file, plan);
     } catch (caught) {
       await rm(folder, { recursive: true, force: true }).catch(() => undefined);
       if (remembered) {

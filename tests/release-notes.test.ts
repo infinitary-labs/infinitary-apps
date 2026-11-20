@@ -420,6 +420,54 @@ describe("the pull request's notes step", () => {
   });
 });
 
+/**
+ * The batch's own step (batch-checks.yml, `batch --base`): the captain's ask
+ * on a held batch's repair, "we simply rely on them being covered by the
+ * batch's checks run", moves the notes step of a branch built on the batch's
+ * version into the batch's run, which reads every change of the batch, one
+ * commit each, by the alpha's coverage rule.
+ */
+describe("the batch's notes step", () => {
+  it("refuses a batch with a change that adds no note or exclusion, naming it, and passes one the alpha would cover", () => {
+    const { f } = released();
+    f.git("checkout", "-q", "-b", "infinitary-batch/1");
+    f.commit("feat: noted", { "src.txt": "1", "release-notes/changes/noted.json": note("noted") });
+    f.commit("chore: excluded", {
+      "tool.txt": "1",
+      "release-notes/changes/tooling.json": {
+        exclusions: [{ id: "tooling", reason: "Tooling only." }],
+      },
+    });
+    expect(f.cli("batch", "--base", "main")).toContain("each of this batch's 2 change(s)");
+    // A held batch's fix, whose own check skipped the notes step, joins the
+    // batch with no note of its own.
+    f.commit("fix: the held batch's repair", { "src.txt": "2" });
+    expect(() => f.cli("batch", "--base", "main")).toThrow(
+      /this batch's changes below add no file under release-notes\/changes\/ with a note or an exclusion \(1 of 3\):\n\s+[0-9a-f]{12} fix: the held batch's repair\n/,
+    );
+    // A malformed note fails it too.
+    f.git("reset", "-q", "--hard", "HEAD^");
+    const { area: _area, ...noArea } = note("bad").entries[0] as Record<string, unknown>;
+    f.commit("fix: the held batch's repair", {
+      "src.txt": "2",
+      "release-notes/changes/repair.json": { entries: [noArea] },
+    });
+    expect(() => f.cli("batch", "--base", "main")).toThrow(/area/);
+    f.git("reset", "-q", "--hard", "HEAD^");
+    f.commit("fix: the held batch's repair", {
+      "src.txt": "2",
+      "release-notes/changes/repair.json": note("repair"),
+    });
+    expect(f.cli("batch", "--base", "main")).toContain("each of this batch's 3 change(s)");
+    // Merged by rebase, one commit per change, the batch passes the alpha's
+    // coverage check.
+    f.git("checkout", "-q", "main");
+    f.git("rebase", "-q", "infinitary-batch/1");
+    const source = f.git("rev-parse", "HEAD");
+    expect(f.cli("check", "--source", source, "--reviewed", source)).toContain("all covered");
+  });
+});
+
 describe("a stable promotion", () => {
   function alphaThenStable() {
     const { f } = released();

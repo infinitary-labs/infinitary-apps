@@ -19,6 +19,15 @@
  *     exclusion - the file that credits the change's squash commit at the next
  *     alpha - and the ledger passes `ledgerProblems`. ci.yml runs it first.
  *
+ *   node scripts/release-notes.ts batch --base <ref>
+ *     A batch pull request's check (batch-checks.yml's notes job), with full
+ *     history: each commit since the merge base of <ref> and HEAD - one per
+ *     approved change the batch combined - is covered by a note or an
+ *     exclusion as `check` counts it for the alpha, and the ledger passes
+ *     `ledgerProblems`. A branch built on a batch's version, as a held
+ *     batch's fix is, skips `change` in its own check (ci.yml), so the batch
+ *     is where its note is read.
+ *
  *   node scripts/release-notes.ts check --source <sha> [--channel alpha|stable]
  *       [--version <v>] [--promoted-from <alpha>] [--reviewed <sha>] [--rehearsal]
  *     Everything a release needs before it verifies or signs: the validation
@@ -538,6 +547,29 @@ function change(repo: Repo, flags: Map<string, string | true>): string {
   return `this change adds ${declared.map((item) => item.path).join(", ")}, and the release-notes ledger is consistent`;
 }
 
+/**
+ * A batch - one commit per approved change since `--base`'s merge base with
+ * HEAD, kept as they are when it merges - leaves each commit covered by a note
+ * or an exclusion, as the alpha's check counts it, and the ledger consistent:
+ * `change` for every change of the batch at once, on the commits that reach
+ * the default branch.
+ */
+function batch(repo: Repo, flags: Map<string, string | true>): string {
+  repo.assertFullHistory();
+  const base = repo.git("merge-base", need(flags, "base"), "HEAD");
+  const problems = ledgerProblems(repo.root);
+  if (problems.length > 0) throw new Refusal(problems);
+  const range = repo.commits(base, "HEAD");
+  const missing = uncoveredCommits(range, coveredCommits(load(repo).files, repo.addedBy));
+  if (missing.length > 0)
+    throw new Refusal([
+      `this batch's changes below add no file under ${NOTES_DIR}/changes/ with a note or an exclusion (${missing.length} of ${range.length}):`,
+      ...missing.map((commit) => `  ${commit.sha.slice(0, 12)} ${commit.subject}`),
+      "Add a plain-language note for a change a person notices, or an exclusion with a reason for internal work, in a new file on that change's branch (docs/release-notes.md).",
+    ]);
+  return `each of this batch's ${range.length} change(s) adds its note or exclusion, and the release-notes ledger is consistent`;
+}
+
 function previousRelease(
   repo: Repo,
   loaded: Loaded,
@@ -998,6 +1030,8 @@ export function run(argv: string[]): string {
     }
     case "change":
       return change(repo, flags);
+    case "batch":
+      return batch(repo, flags);
     case "check":
       return check(repo, flags);
     case "installer-source":
@@ -1016,7 +1050,7 @@ export function run(argv: string[]): string {
       return archive(repo, flags);
     default:
       throw new Refusal([
-        "usage: release-notes.ts validate | change | check | desktop-changes | installer-source | generate | stable-highlights | manifest | verify-package | archive",
+        "usage: release-notes.ts validate | change | batch | check | desktop-changes | installer-source | generate | stable-highlights | manifest | verify-package | archive",
       ]);
   }
 }

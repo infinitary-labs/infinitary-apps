@@ -58,6 +58,34 @@ function pool(
 }
 
 describe("AccountSelector", () => {
+  // INF-5438 round 6 finding 9: a wait for a model compares what a pick reads
+  // of each account - here one account's window for one model, spent and
+  // then recovered - so the wait ends when that account can serve again.
+  it("reads one account's window for one model recovering as a change, as the pick does", async () => {
+    const reading = (percent: number): QuotaSnapshotView => {
+      const view = snapshot([{ accountId: "acct_a", percent: 80 }]);
+      const row = view.providers[0];
+      if (!row) throw new Error("no row");
+      row.windows = [
+        ...row.windows,
+        { id: "model:gpt-6.1-terra:7d", label: "Terra weekly", percentRemaining: percent },
+      ];
+      return view;
+    };
+    let latest = reading(0);
+    const selector = new AccountSelector({
+      pool: pool([{ id: "acct_a" }]),
+      quota: { latest: () => latest },
+      flagshipAccountId: () => null,
+      decisions: new DecisionStore(openInMemoryDatabase()),
+    });
+    const spent = selector.servingState();
+    latest = reading(0);
+    expect(selector.servingState()).toBe(spent);
+    latest = reading(40);
+    expect(selector.servingState()).not.toBe(spent);
+  });
+
   it("selects the best-headroom account at spawn and records the decision", async () => {
     const db = openInMemoryDatabase();
     const accounts = pool([{ id: "acct_a" }, { id: "acct_b" }]);

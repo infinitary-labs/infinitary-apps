@@ -66,13 +66,23 @@ export type RoutedAgain = {
   providerName: string;
   /**
    * The move is recorded only once a conversation opened on this model -
-   * here, or as a computer that runs work answers: `commit` writes it then,
-   * and answers false when a stop, a close or another move took the task
-   * meanwhile. A conversation that opened on another model, or one
-   * reattached to on the old model, records nothing.
+   * here, or as a computer that runs work answers - with what opened:
+   * `commit` writes it then, the account that computer says it bound
+   * recorded as the one that serves it. It answers "stale" when a stop, a
+   * close or another move took the task meanwhile, "again" when Settings
+   * changed so this is no longer the model routing picks, and "wait" when
+   * the conversation opened on another model or an account there that does
+   * not serve it. Only "committed" lets the conversation take work: on any
+   * other answer it is let go, and a new one routes again or waits.
    */
-  commit: () => boolean;
+  commit: (opened: OpenedOn) => RerouteOutcome;
 };
+
+/** What a rerouted conversation opened on: its model, and the account a computer that runs work says it bound. */
+export type OpenedOn = { model?: { provider: string; id: string }; account?: string };
+
+/** What a rerouted conversation's open came to (`RoutedAgain.commit`). */
+export type RerouteOutcome = "committed" | "stale" | "again" | "wait";
 
 /**
  * A new conversation does not open: the model the task routed to left
@@ -452,9 +462,10 @@ export class TaskMoves {
    * model chosen was named and served (at the start or by a move), or it
    * never routed. "wait" says no other model on the levels that one of the
    * computer's accounts serves can take it: the conversation does not
-   * open, the task's lane holds (`waitsForModel`) and it says so once; an
-   * open that only reattaches to a conversation open there (`attach`) keeps
-   * its model instead and waits for nothing. "stale" says a stop, a quit, a
+   * open, the task's lane holds (`waitsForModel`) and it says so once. An
+   * older computer that holds a conversation open there (`attach`) could
+   * bring the removed model back, so it waits too; while this Mac's accounts
+   * have not said what they serve, it waits saying nothing. "stale" says a stop, a quit, a
    * close or another move took the task while it waited, so the reopen
    * opens nothing; the account it picked is recorded only with the move it
    * commits.
@@ -475,7 +486,7 @@ export class TaskMoves {
       !!routed &&
       !routed.named &&
       // A pool known to be empty: only a pin or a level holds it.
-      !router.holdsAtALevel(routed.model, []);
+      router.holdsAtALevel(routed.model, []) !== true;
     if (!may) this.modelWaits.delete(taskId);
     return may;
   }
@@ -487,7 +498,11 @@ export class TaskMoves {
       machine?: string;
       /** This open is a move's own, so that move does not supersede it. */
       ownMove?: boolean;
-      /** The open may reattach to a conversation open there, which no wait holds. */
+      /**
+       * An older computer holds a conversation open there, so its open may
+       * reattach to it or open it again on the model it had: when the model
+       * left every level, nothing is asked of it, and the task waits.
+       */
       attach?: boolean;
     } = {},
   ): Promise<RoutedAgain | "stale" | "wait" | undefined> {
@@ -503,12 +518,28 @@ export class TaskMoves {
       if (!record || record.status !== "active" || !routed) return undefined;
       // The newest model named and served - at the start or by a move - is kept.
       if (routed.named) return undefined;
-      return router.holdsAtALevel(routed.model, pool?.available) ? undefined : routed.model;
+      // Undefined: what this Mac's accounts serve is not read yet.
+      return router.holdsAtALevel(routed.model, pool?.available) === false
+        ? routed.model
+        : undefined;
     };
     const asked = left(this.options.tasks.get(taskId));
     if (!asked) {
+      // Whether the defaults standing in for levels hold it is not known
+      // until this Mac's accounts said what they serve: nothing opens on it
+      // meanwhile, and the lane holds, saying nothing, until they have.
+      const routed = router.servedChoice(taskId);
+      if (routed && router.holdsAtALevel(routed.model, pool?.available) === undefined) {
+        this.modelWaits.set(taskId, this.modelsNow(taskId, machine));
+        return "wait";
+      }
       this.modelWaits.delete(taskId);
       return undefined;
+    }
+    // An older computer's open may only bring back the removed model there.
+    if (asking.attach) {
+      this.waitForModel(taskId, asked, machine);
+      return "wait";
     }
     // A stop, a quit, a close or a move - to another model or computer -
     // while this waited supersedes the reopen that asked: it opens nothing.
@@ -586,12 +617,31 @@ export class TaskMoves {
           left: this.host.modelName(from),
           model: this.host.modelName(to),
         });
-        const commit = () => {
-          if (stale()) return false;
+        const commit = (opened: OpenedOn): RerouteOutcome => {
+          if (stale()) return "stale";
+          // What Settings holds now, after the open: a level that took the
+          // old model back keeps it, and a replacement that left its level
+          // meanwhile gives way to the one routing picks now.
+          if (!left(this.options.tasks.get(taskId))) return "again";
+          const current = look();
+          if (!current || offeringKey(current.to) !== offeringKey(to)) return "again";
+          // That computer's own account, as it says it bound it: the one
+          // routing chose, its provider's, or none it names.
+          const served = pool ? opened.account : accountId;
+          const eligible =
+            !pool ||
+            opened.account === undefined ||
+            opened.account === binding ||
+            opened.account === pool.accounts.get(to.provider);
+          if (!opened.model || offeringKey(opened.model) !== offeringKey(to) || !eligible) {
+            this.waitForModel(taskId, from, machine);
+            return "wait";
+          }
+          const { accountId: _guessed, ...evaluated } = current.preview;
           this.options.tasks.atomic(
             () => {
               pick?.record();
-              router.commit(taskId, now.preview);
+              router.commit(taskId, served ? { ...evaluated, accountId: served } : evaluated);
               this.options.tasks.placement.recordMove(taskId, {
                 model: to,
                 accountId: accountId ?? null,
@@ -607,7 +657,7 @@ export class TaskMoves {
             () => pick?.selected(),
           );
           this.modelWaits.delete(taskId);
-          return true;
+          return "committed";
         };
         const level = now.preview.result.servedBucket ?? now.preview.result.bucket;
         const chosen =
@@ -624,8 +674,6 @@ export class TaskMoves {
       }
       if (stale()) return "stale";
       if (!left(this.options.tasks.get(taskId))) return undefined;
-      // A conversation open there, which this open may only reattach to, keeps its model.
-      if (asking.attach) return undefined;
       this.waitForModel(taskId, from, machine);
       return "wait";
     });
@@ -691,7 +739,7 @@ export class TaskMoves {
       this.options.router?.routingState() ?? "",
       machine === LOCAL_MACHINE_ID
         ? (this.options.accounts?.servingState?.() ?? "")
-        : (this.options.machines?.servedState?.(machine) ?? ""),
+        : `${this.options.machines?.servedState?.(machine) ?? ""}\n${this.options.machines?.reattachOnly?.(machine) === true}`,
     ].join("\n");
   }
 

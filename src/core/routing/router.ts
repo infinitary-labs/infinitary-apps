@@ -559,20 +559,22 @@ export class Router {
    * Settings → Intelligence → Models holds it, or, while the starter map or
    * the listed models stand in for placements of the person's own
    * (`ModelSlots.routable`), those defaults include it among `available` -
-   * this Mac's models, or a computer's own pool. With no slot record, or
-   * nothing yet known to be available on this Mac, every model counts as
-   * held; a pool known to be empty - a computer's, or this Mac's once every
-   * account said what it serves - holds none but a pin or level.
+   * this Mac's models, or a computer's own pool. With no slot record every
+   * model counts as held; a pool known to be empty - a computer's, or this
+   * Mac's once every account said what it serves - holds none but a pin or
+   * level. Undefined: this Mac's pool is empty and not read yet, so whether
+   * the defaults hold it is not known until it is.
    */
-  holdsAtALevel(ref: PiModelRef, available?: readonly PiModelRef[]): boolean {
+  holdsAtALevel(ref: PiModelRef, available?: readonly PiModelRef[]): boolean | undefined {
     const key = servedModelKey(ref);
     if (this.options.settings.getRoutingSettings().pins.some((pin) => servedModelKey(pin) === key))
       return true;
     const slots = this.options.slots;
     if (!slots || slots.slotsOf(ref).length > 0) return true;
     const models = [...(available ?? this.options.availableModels())];
-    // Nothing known here yet holds it; a computer's pool known to be empty does not.
-    if (models.length === 0) return available === undefined && this.options.poolRead?.() !== true;
+    // Nothing read here yet: not known; a pool known to be empty holds it not.
+    if (models.length === 0)
+      return available === undefined && this.options.poolRead?.() !== true ? undefined : false;
     const routable = slots.routable(models);
     if (routable.placed === true) return false;
     return routable.models.some((model) => servedModelKey(model) === key);
@@ -589,6 +591,7 @@ export class Router {
     const available = this.options.availableModels();
     return JSON.stringify([
       this.options.settings.getRoutingSettings(),
+      this.options.poolRead?.() ?? null,
       this.options.slots?.state() ?? null,
       (this.options.quota.latestModels()?.models ?? []).map(
         (model) => `${model.provider}/${model.id}:${model.effectivePercentRemaining === 0}`,

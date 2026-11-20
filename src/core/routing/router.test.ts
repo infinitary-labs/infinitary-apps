@@ -490,7 +490,7 @@ describe("Router", () => {
   // INF-5438 finding 5: once every account here said what it serves - the
   // last sign-in removed - an empty pool holds no model but a pin or level;
   // a pool not read yet still holds every model.
-  it("holds a model on no level once this Mac's pool is read and empty, and every model while it is unread", () => {
+  it("holds a model on no level once this Mac's pool is read and empty, and cannot say while it is unread", () => {
     const db = openInMemoryDatabase();
     const settings = new SettingsStore(db);
     const slots = new ModelSlots({ settings, accounts: () => [], quotaModels: () => undefined });
@@ -504,7 +504,8 @@ describe("Router", () => {
       poolRead: () => read,
     });
     const sol = { provider: "openai-codex", id: "gpt-6.1-sol" };
-    expect(router.holdsAtALevel(sol)).toBe(true);
+    // An unread pool is not membership: the answer is unknown, so a caller defers.
+    expect(router.holdsAtALevel(sol)).toBeUndefined();
     read = true;
     expect(router.holdsAtALevel(sol)).toBe(false);
   });

@@ -16,6 +16,7 @@ import { ComputerBehindError } from "../connection/contractChanges";
 import { renderDirections } from "../knowledge/directions";
 import { capWithOverflow } from "../overflow";
 import { crewmateHandoverDir } from "../paths";
+import { NotOpenThere } from "../placed/crewMachines";
 import { startedProgramBranches } from "../program/programRunner";
 import {
   type ControlProfile,
@@ -348,6 +349,10 @@ export class CrewTurns {
       // waits for that, open, and is never closed failed for it.
       if (caught instanceof ComputerBehindError && !task.turn.pause && !task.turn.closing)
         this.core.updates.waitForUpdateThere(task, caught);
+      // Its conversation did not open there again before its model took the
+      // turn: its words go back unspent, as for a turn an update stopped first.
+      if (caught instanceof NotOpenThere && !task.turn.pause && !task.turn.closing)
+        task.turn.hold({ unstarted: true });
       if (!task.turn.pause) this.core.restarts.recordRestartOutcome(task.id, "stopped", message);
       if (task.turn.closing) {
         this.core.sessions.finish(task, "cancelled");

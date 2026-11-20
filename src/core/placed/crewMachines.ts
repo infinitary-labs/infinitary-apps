@@ -26,6 +26,19 @@ import type { PlacedCopy } from "./placedCopies";
 export const REATTACH_ONLY_OPEN = contractChange("reattach-only-open");
 
 /**
+ * A prompt or steer waited for its conversation to open there again, and it
+ * did not: it is sent back to its lane unspent, and the task's next turn
+ * opens its conversation through the ordinary resume.
+ */
+export class NotOpenThere extends Error {
+  constructor(taskId: string) {
+    // i18n-exempt: an internal signal the turn catches; no person reads it.
+    super(`Task ${taskId}'s conversation did not open there again, so its words wait.`);
+    this.name = "NotOpenThere";
+  }
+}
+
+/**
  * A reattach-only open found no conversation to keep there: nothing opened,
  * and the home routes the new conversation and asks for it
  * (`reattach-only-open.md`).
@@ -70,12 +83,13 @@ export type PlacedHost = {
    * model that left every level"): another that computer serves, with its
    * own account there and the effort it opens at, and `commit`, which
    * records the move once that computer answers a conversation opened on
-   * it. "wait" when none can take it, so it does not open on the one that
-   * left; "stale" when a stop, a close or a move took the task meanwhile,
-   * so nothing is sent. Undefined, answered at once when nothing can have
-   * left, keeps the model it opened with. With `attach`, the conversation
-   * is open there and the open may reattach to it, so no wait holds it and
-   * it keeps its model when none can take it.
+   * it, with the model and account it opened on, and answers "committed"
+   * only then (`RoutedAgain.commit`). "wait" when none can take it, so it
+   * does not open on the one that left; "stale" when a stop, a close or a
+   * move took the task meanwhile, so nothing is sent. Undefined, answered
+   * at once when nothing can have left, keeps the model it opened with.
+   * With `attach`, an older computer's open may bring back the model there,
+   * so a model that left every level waits instead.
    */
   reopenModel?(
     taskId: string,
@@ -87,13 +101,22 @@ export type PlacedHost = {
             model: { provider: string; id: string };
             accountId?: string;
             thinking: { level: "low" | "medium" | "high" | "xhigh" | "off"; quick?: boolean };
-            commit(): boolean;
+            commit(opened: {
+              model?: { provider: string; id: string };
+              account?: string;
+            }): "committed" | "stale" | "again" | "wait";
           }
         | "wait"
         | "stale"
         | undefined
       >
     | undefined;
+  /**
+   * Whether the task's routed model may have left every level, read at once
+   * (`TaskMoves.mayRouteAgain`): an older computer is then asked nothing
+   * that could open it again on that model before the home routes it.
+   */
+  modelMayHaveLeft?(taskId: string): boolean;
   /**
    * The conversation this crewmate holds did not open there again - no
    * model there can take it, or the one that can runs on the other backend

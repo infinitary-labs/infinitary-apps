@@ -6,7 +6,7 @@ import { isAbsolute, join } from "node:path";
 import { fileSizeWords } from "@shared/attachments";
 import { isCustomApiProvider } from "@shared/customApi";
 import { COMPUTER, HERE, HOME } from "@shared/deviceNames";
-import { offeringKey, parseOfferingKey } from "@shared/modelSlots";
+import { parseOfferingKey } from "@shared/modelSlots";
 import { PERSONAL_READ_FIELD, type PersonalRead, personalReadOf } from "@shared/personalSet";
 import type { InterruptEventData, TASK_CARD_VIA } from "@shared/provenance";
 import { isRetiredProvider } from "@shared/providers";
@@ -340,11 +340,13 @@ export class CrewSessions {
    * A restart that waited for a model (`ModelWaitError`), still on the lane:
    * its reason replaces the conversation the record still names, so the
    * open that follows starts fresh as that restart asked, after a relaunch
-   * too.
+   * too. A row the delivery that opens it already claimed counts too, as no
+   * crewmate is held to hold it otherwise.
    */
   private waitingRestart(record: TaskRecord): CrewmateRestart | undefined {
     if (!record.sessionFile) return undefined;
-    for (const row of this.core.options.inbox.allFor(record.id)) {
+    const inbox = this.core.options.inbox;
+    for (const row of [...inbox.allFor(record.id), ...inbox.inFlight(record.id)]) {
       const facts = row.facts;
       if (facts?.kind !== "conversation-restart") continue;
       const restart = facts.restart;
@@ -672,7 +674,8 @@ export class CrewSessions {
       !fresh &&
       machine !== LOCAL_MACHINE_ID &&
       this.core.options.machines?.reattachOnly?.(machine) === true;
-    // An older computer's open may reattach to a conversation open there.
+    // An older computer's open may reattach to a conversation open there,
+    // or open it again on the model it had: a removed model waits instead.
     const attach =
       !known &&
       !reattaching &&
@@ -821,11 +824,27 @@ export class CrewSessions {
       throw caught;
     }
     task.session = session;
-    // The move is recorded once the conversation opened on its model; one
-    // that opened on another, or reattached to on the old model, records nothing.
-    const opened = session.modelRef();
-    if (rerouted && opened && offeringKey(opened) === offeringKey(rerouted.model))
-      rerouted.commit();
+    // The move is recorded once the conversation opened on its model and an
+    // account that serves it; any other open takes no work: it is let go,
+    // and the task routes again or waits.
+    if (rerouted) {
+      const model = session.modelRef();
+      const account = this.core.options.machines?.servingAccount(session);
+      const outcome = rerouted.commit({
+        ...(model ? { model } : {}),
+        ...(account ? { account } : {}),
+      });
+      if (outcome !== "committed") {
+        if (this.core.tasks.get(record.id) === task) this.core.tasks.delete(record.id);
+        this.disposeSession(task);
+        if (outcome === "again") return this.openResumed(taskId, move, restart, known);
+        if (outcome === "stale")
+          throw new Error("This task's crewmate was let go while its conversation opened.");
+        if (fresh && fresh.changed !== "computer")
+          this.recordRestart(record.id, record.key || record.id, machine, fresh);
+        throw new ModelWaitError(this.core.moves.modelWaitWords(record.id));
+      }
+    }
     this.endIfLetGo(task);
     task.unsubscribe = await this.core.toolHooks.follow(task, session);
     this.endIfLetGo(task);

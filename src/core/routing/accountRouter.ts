@@ -1,6 +1,6 @@
 import type { QuotaSnapshotView } from "@shared/quota";
 import { quotaEntryForPiProvider } from "../quota/auth";
-import { effectiveFromProvider } from "../quota/catalog";
+import { effectiveFromProvider, spentScopes } from "../quota/catalog";
 import type { DecisionStore } from "../storage/decisionStore";
 import { type AccountCandidate, selectAccount } from "./accountPolicy";
 import type { PlacedWorkData, PlacedWorkScores } from "./placedWork";
@@ -61,9 +61,17 @@ export class AccountSelector {
 
   constructor(private readonly options: AccountSelectorOptions) {}
 
-  /** What a pick reads of the accounts, as one comparable string (`AccountAttachment.servingState`). */
+  /**
+   * What a pick reads of the accounts, as one comparable string
+   * (`AccountAttachment.servingState`): each account's state and the models
+   * it lists, and whether each of its own allowance scopes is spent and
+   * whether it answers on credits as read now (`spentScopes`), so a reset
+   * that passes changes it with no new reading.
+   */
   servingState(): string {
     const pool = this.options.pool;
+    const rows = this.options.quota.latest()?.providers ?? [];
+    const now = Date.now();
     return JSON.stringify([
       pool
         .list()
@@ -73,6 +81,9 @@ export class AccountSelector {
           account.enabled,
           pool.connectedSync(account.id) ?? null,
           pool.withheldReason(account.id) ?? null,
+          rows
+            .filter((row) => row.accountId === account.id)
+            .map((row) => [row.provider, spentScopes(row, now)]),
         ]),
       this.options.accountModels?.() ?? null,
     ]);

@@ -80,9 +80,18 @@ export class PlacedAccounts
     return { ...pool, ...(modelAccounts ? { modelAccounts } : {}), deviceId: machine };
   }
 
-  /** What that computer last said of its sign-ins, as one comparable string. */
+  /**
+   * What that computer last said of its sign-ins, and each account's
+   * cut-off as it stands now, as one comparable string: a cut-off whose
+   * reset passed changes it with no new report.
+   */
   servedState(machine: string): string {
-    return JSON.stringify(this.options.saidSignIns?.(machine) ?? null);
+    const said = this.options.saidSignIns?.(machine) ?? null;
+    const now = this.options.now();
+    return JSON.stringify([
+      said,
+      said?.accounts.map((row) => [row.id, standingCutOff(row, now)?.class ?? null]) ?? null,
+    ]);
   }
 
   servingAccount(session: ModelSession): string | undefined {

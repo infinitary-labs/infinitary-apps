@@ -11,6 +11,7 @@ import {
   said,
   world,
 } from "../../../tests/helpers/placedWorld";
+import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { backlogLeftLine } from "../orchestrator/hostOps";
 import { crewmatePlacedDir } from "../paths";
 import { PlacedLedger } from "./placedLedger";
@@ -126,7 +127,7 @@ describe("reopening after a work computer restarts, when the task's model left e
     await at.start(taskId);
     const home = at.home();
     await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
-    const commit = vi.fn(() => true);
+    const commit = vi.fn(() => "committed" as const);
     const asked = vi.spyOn(home.supervisor, "reopenModel").mockResolvedValue({
       model: { provider: PROVIDER, id: OTHER_MODEL },
       thinking: { level: "off" },
@@ -213,7 +214,7 @@ describe("reopening after a work computer restarts, when the task's model left e
       }
       return ask(device, channel, args);
     });
-    const commit = vi.fn(() => true);
+    const commit = vi.fn(() => "committed" as const);
     const routed = vi
       .spyOn(home.supervisor.moves, "routeAgainIfLeft")
       .mockImplementation(async () => {
@@ -250,12 +251,134 @@ describe("reopening after a work computer restarts, when the task's model left e
       model: { provider: PROVIDER, id: OTHER_MODEL },
       thinkingLevel: "low",
       providerName: "Stub",
-      commit: () => true,
+      commit: () => "committed" as const,
     });
 
     await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
     await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Still on the first model.");
     expect(routed).not.toHaveBeenCalled();
     expect(api.requests.at(-1)?.body.model).toBe(MODEL);
+  });
+
+  // INF-5438 round 6 finding 6: words sent while a reopen routes wait for
+  // that open; one that does not open sends them nowhere, and they reach the
+  // model once, in the conversation the next turn opens after the let-go.
+  it("holds words sent while a reopen routes, and sends them only once a conversation opens", async () => {
+    const at = await world();
+    const taskId = "t-unready";
+    model([{ text: "Started." }, { text: "Carrying on." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const routing = gate();
+    const asked = vi.spyOn(home.supervisor, "reopenModel").mockImplementation(async () => {
+      await routing.held;
+      // It opened, but routing changed meanwhile and now waits.
+      return {
+        model: { provider: PROVIDER, id: OTHER_MODEL },
+        thinking: { level: "low" },
+        commit: () => "wait" as const,
+      };
+    });
+    const requests = api.requests.length;
+    const atLetGo: number[] = [];
+    const letGo = home.supervisor.placedLetGo.bind(home.supervisor);
+    vi.spyOn(home.supervisor, "placedLetGo").mockImplementation((id) => {
+      atLetGo.push(api.requests.length);
+      return letGo(id);
+    });
+    try {
+      await at.restartComputer();
+      await expect.poll(() => asked.mock.calls.length).toBe(1);
+      await home.supervisor.steer.steerCrewmate(taskId, "Carry on.", "captain");
+      routing.open();
+      await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Carrying on.");
+      // Nothing reached the model before the conversation that did not open was let go.
+      expect(atLetGo[0]).toBe(requests);
+      // One request carried the words: the one the new conversation answered.
+      expect(
+        api.requests.slice(requests).map((request) => said(request).includes("Carry on.")),
+      ).toEqual([true]);
+      expect(home.inbox.allFor(taskId)).toEqual([]);
+    } finally {
+      routing.open();
+    }
+  });
+
+  // INF-5438 round 6 finding 4: the move records the account that computer
+  // says it bound, never the one the home guessed.
+  it("hands the move what that computer answers it opened on, never the account the home guessed", async () => {
+    const at = await world();
+    const taskId = "t-bound";
+    model([{ text: "Started on it." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const opened: { model?: unknown; accountId?: unknown }[] = [];
+    const ask = home.devices.ask.bind(home.devices);
+    vi.spyOn(home.devices, "ask").mockImplementation(async (device, channel, args) => {
+      const answer = await ask(device, channel, args);
+      if (channel === "inf:session:open") {
+        const state = (answer as { state?: { model?: unknown; accountId?: unknown } }).state;
+        if (state) opened.push({ model: state.model, accountId: state.accountId });
+      }
+      return answer;
+    });
+    const commit = vi.fn(() => "committed" as const);
+    vi.spyOn(home.supervisor, "reopenModel").mockResolvedValue({
+      model: { provider: PROVIDER, id: OTHER_MODEL },
+      accountId: "a-guess-the-home-made",
+      thinking: { level: "low" },
+      commit,
+    });
+
+    await at.restartComputer();
+    await expect.poll(() => commit.mock.calls.length).toBe(1);
+    const there = opened.at(-1);
+    expect(there?.accountId).not.toBe("a-guess-the-home-made");
+    expect(commit).toHaveBeenCalledWith({
+      model: there?.model,
+      ...(there?.accountId ? { account: there.accountId } : {}),
+    });
+  });
+
+  // INF-5438 round 6 finding 5: an older computer reopens a conversation by
+  // itself after it removes words from outside, on the model it had; while
+  // that model may have left every level, it is asked nothing until it updates.
+  it("asks an older computer no cleanup that would reopen a model that may have left every level", async () => {
+    const older = CONTRACT_CHANGES.names.filter((name) => name !== "reattach-only-open");
+    const at = await world(undefined, { changes: older });
+    const taskId = "t-older";
+    model([{ text: "Started." }]);
+    await at.start(taskId);
+    const home = at.home();
+    await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+    const record = home.tasks.get(taskId);
+    if (!record) throw new Error("no task record");
+    const orders: string[] = [];
+    const ask = home.devices.ask.bind(home.devices);
+    vi.spyOn(home.devices, "ask").mockImplementation((device, channel, args) => {
+      orders.push(channel);
+      return ask(device, channel, args);
+    });
+    // Gmail answers read over 30 days ago are due.
+    const due = {
+      kinds: [
+        { label: "Gmail", until: Date.now() - 30 * 86_400_000, note: "[removed after 30 days]" },
+      ],
+      legacy: [],
+    };
+    const left = vi.spyOn(home.supervisor.moves, "mayRouteAgain").mockReturnValue(true);
+    expect(await home.placed.deleteOutside(record, due)).toEqual({
+      computer: expect.any(String),
+      until: "update",
+    });
+    expect(orders).not.toContain("inf:session:delete-outside");
+    // Once its model is held again, the order goes as before.
+    left.mockReturnValue(false);
+    expect(await home.placed.deleteOutside(record, due)).not.toEqual(
+      expect.objectContaining({ until: "update" }),
+    );
+    expect(orders).toContain("inf:session:delete-outside");
   });
 });

@@ -4,6 +4,7 @@ import { formatDurationShort } from "@shared/quotaSignals";
 import { cutText } from "@shared/textCut";
 import { capWithOverflow } from "../overflow";
 import { errorText } from "../personal/errorText";
+import { NotOpenThere } from "../placed/crewMachines";
 import type { AnsweredRead } from "../session/openReads";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import {
@@ -447,8 +448,10 @@ export class CrewWatch {
           ids,
           pictures.images,
         );
-      } catch {
-        this.core.options.inbox.release(ids);
+      } catch (caught) {
+        // A conversation that did not open there again: they go back unspent.
+        if (caught instanceof NotOpenThere) this.core.options.inbox.reparkUndelivered(ids);
+        else this.core.options.inbox.release(ids);
       }
       return;
     }

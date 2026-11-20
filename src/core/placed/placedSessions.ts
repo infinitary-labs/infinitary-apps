@@ -12,7 +12,6 @@ import type { FmEvent } from "@shared/events";
 import { said, saidLine } from "@shared/i18n/said";
 import type { InvokeRequest, InvokeResponse, WorkInvokeChannel } from "@shared/ipc";
 import { keepsAtClose, leftoversOf } from "@shared/leftoverPrograms";
-import { backendForProvider } from "@shared/providers";
 import type { ComputerSignIns, signInPlace } from "@shared/signIns";
 import {
   type PlacedEventRecord,
@@ -63,6 +62,7 @@ import {
   type AnsweredWait,
   type CrewMachines,
   NeedsNewConversation,
+  NotOpenThere,
   type PlacedBrowserSink,
   type PlacedHost,
   REATTACH_ONLY_OPEN,
@@ -73,7 +73,13 @@ import { answerCall, type CallbackReach, NotHeldHere, replayReport } from "./pla
 import { PlacedCopies, type PlacedCopy } from "./placedCopies";
 import { type CallLine, PlacedLedger, reportOf } from "./placedLedger";
 import { PlacedSession } from "./placedSession";
-import { confirmedSpec, sameModel } from "./placedSpecs";
+import {
+  askReopen,
+  confirmedSpec,
+  type ReopenProgress,
+  reopenedSpec,
+  sameModel,
+} from "./placedSpecs";
 import { NO_PLACED_TASK, type PlacedWork } from "./placedWork";
 import { RecordCopy } from "./recordCopy";
 import { sendSourceFile } from "./sourceFiles";
@@ -245,8 +251,11 @@ type Placed = {
   adopting: Promise<void> | undefined;
   /** When that opening began. */
   adoptingSince: number | undefined;
-  /** An open there again (`reopen`) under way, which a prompt or steer waits for. */
-  reopening: Promise<void> | undefined;
+  /**
+   * An open there again (`reopen`) under way, which a prompt or steer waits
+   * for: true once that computer confirmed the conversation open.
+   */
+  reopening: Promise<boolean> | undefined;
   /** What the home keeps of it: each callback's answer, each change begun, its place. */
   readonly ledger: PlacedLedger;
   calling: Map<string, Promise<unknown>>;
@@ -996,22 +1005,35 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     const recordDir = spec.shape.record.dir;
     placed.record.dir = recordDir;
     // The spec of the conversation open there: one that kept another model
-    // than this asked for keeps the spec it opened with.
+    // than this asked for keeps the spec it opened with, and one adopted
+    // after this Mac restarted has none until a reopen confirms one.
     const { reattach: _reattach, ...opened } = placedSpec;
-    if (!placed.spec || sameModel(state.model, opened.model))
-      placed.spec = confirmedSpec(opened, state);
+    if (sameModel(state.model, opened.model)) placed.spec = confirmedSpec(opened, state);
     placed.reopenOwed = state.streaming;
+    // The conversation as it lives there: a live one kept on another backend
+    // than this asked for resumes and is followed as that backend's.
+    const live =
+      state.backend === backend
+        ? controlProfile
+        : {
+            ...(this.options.profiles[state.backend] ?? state.controlProfile),
+            backgroundWork: "client" as const,
+          };
     let turnOrigin: string | undefined;
     const session: PlacedSession = new PlacedSession(
       {
         task,
-        backend,
+        backend: state.backend,
         recordDir,
         callbacks: spec.callbacks,
         order: async <C extends WorkOrderChannel>(channel: C, args: unknown) => {
-          // A reopen asks first and routes before it opens: words wait for that open.
-          if (channel === "inf:session:prompt" || channel === "inf:session:steer")
-            await placed.reopening;
+          // A reopen asks first and routes before it opens: words wait for
+          // that open, and go back to their lane unspent if it did not open.
+          if (
+            (channel === "inf:session:prompt" || channel === "inf:session:steer") &&
+            (await placed.reopening) === false
+          )
+            throw new NotOpenThere(task);
           if (channel === "inf:session:prompt")
             turnOrigin = await this.copies.followProject(deviceId, task, turnOrigin);
           return this.options.devices.ask(deviceId, channel, args) as Promise<WorkOrderResponse<C>>;
@@ -1031,7 +1053,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
           }
         },
       },
-      controlProfile,
+      live,
       state,
     );
     placed.session = session;
@@ -1198,73 +1220,53 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     // A computer that keeps only what it holds when asked opens nothing new
     // before the home routed it (`reattach-only-open.md`); an older one may.
     const reattachOnly = this.listsChange(deviceId, REATTACH_ONLY_OPEN);
-    let routed: Awaited<ReturnType<NonNullable<PlacedHost["reopenModel"]>>>;
-    let asked: PlacedSpec = opened;
-    const reopening = (async () => {
-      if (reattachOnly && !openedThere) {
-        const kept = openAnswerSchema.parse(await ask({ ...opened, reattach: true }));
-        if (kept.state || !ours()) return kept;
-      }
-      if (!ours()) return undefined;
-      // A new conversation opens there: a model that left every level opens
-      // on another that computer serves, or not at all until one can take
-      // it (docs/routing.md, "A model that left every level"). An older
-      // computer's open may reattach, so it waits for no model.
-      routed = await this.host?.reopenModel?.(
-        placed.task,
-        deviceId,
-        !reattachOnly && (owed || openedThere),
-      );
-      if (routed === "stale" || !ours()) return undefined;
-      if (
-        routed === "wait" ||
-        (routed && backendForProvider(routed.model.provider) !== opened.binding.backend)
-      ) {
-        // Nothing opens in this session: the task's next turn opens a new
-        // conversation through the ordinary resume, which routes it again.
-        this.host?.letGo?.(placed.task);
-        return undefined;
-      }
-      // An older computer opened it again by itself, on the model it had.
-      if (!routed && openedThere) return undefined;
-      asked = routed
-        ? placedSpecSchema.parse({
-            ...opened,
-            binding: {
-              backend: opened.binding.backend,
-              ...(routed.accountId ? { accountId: routed.accountId } : {}),
-              provider: routed.model.provider,
-            },
-            model: routed.model,
-            thinking: routed.thinking,
-          })
-        : opened;
-      return openAnswerSchema.parse(await ask(asked));
-    })()
+    const progress: ReopenProgress = { asked: opened, anew: false };
+    const asking = askReopen(progress, {
+      reattachOnly,
+      openedThere,
+      ours,
+      ask: async (spec) => openAnswerSchema.parse(await ask(spec)),
+      route: (attach) =>
+        this.host?.reopenModel?.(placed.task, deviceId, attach && (owed || openedThere)),
+      letGo: () => this.host?.letGo?.(placed.task),
+    });
+    // True once the conversation is open there for this session's words.
+    const reopening: Promise<boolean> = asking
       .then((answer) => {
+        if (answer === "open") return true;
         const state = answer?.state;
-        if (!state) return;
+        if (!state) return false;
         placed.reopenOwed = state.streaming;
+        const spec = reopenedSpec(progress.asked, state, progress.routed, ours(), () =>
+          this.host?.letGo?.(placed.task),
+        );
+        if (spec === false) return false;
+        if (spec) placed.spec = spec;
         session.reopened(state);
-        // The spec and the move follow only a conversation that opened on
-        // the model asked; one kept on the old model changes neither.
-        if (sameModel(state.model, asked.model)) {
-          placed.spec = confirmedSpec(asked, state);
-          if (routed && typeof routed === "object" && ours()) routed.commit();
-        }
         if (!session.letGo) this.host?.reopened(placed.task);
+        return true;
       })
       .catch((caught: unknown) => {
-        // An owed open that failed stays owed, asked again at the next end.
-        if (owed) placed.reopenOwed = true;
         this.log(`could not open ${placed.task} there again: ${errorText(caught)}`);
+        // A conversation that needed opening anew stays unopened: the next
+        // turn opens it through the ordinary resume.
+        if (progress.anew) {
+          if (ours()) this.host?.letGo?.(placed.task);
+          return false;
+        }
+        // An owed open that failed stays owed, asked again at the next end;
+        // the conversation it asked about is still open there.
+        if (owed) placed.reopenOwed = true;
+        return owed;
       });
     placed.adoptingSince = this.options.now();
-    placed.adopting = placed.reopening = reopening.finally(() => {
+    const settled = reopening.finally(() => {
       placed.adopting = undefined;
       placed.adoptingSince = undefined;
       placed.reopening = undefined;
     });
+    placed.reopening = settled;
+    placed.adopting = settled.then(() => undefined);
     return placed.adopting;
   }
 
@@ -1624,6 +1626,12 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     if (!this.options.devices.inReach(deviceId)) return { computer, until: "reach" };
     if (!this.options.devices.takesCurrentWork(deviceId)) return { computer, until: "update" };
     if (files.length > 0 && !this.takesOutsideFiles(deviceId)) return { computer, until: "update" };
+    // An older computer opens the conversation again by itself, on the model
+    // it had: while that model may have left every level, it waits for its
+    // update, so the home routes the open first (`reattach-only-open.md`).
+    const holdsReopen = this.listsChange(deviceId, REATTACH_ONLY_OPEN);
+    if (!holdsReopen && this.host?.modelMayHaveLeft?.(record.id) === true)
+      return { computer, until: "update" };
     let answer: WorkOrderResponse<"inf:session:delete-outside">;
     try {
       answer = workOrders["inf:session:delete-outside"].response.parse(
@@ -1635,7 +1643,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
             legacy: due.legacy,
             ...(files.length > 0 ? { files: [...files] } : {}),
             // The home opens it again after routing it (`reattach-only-open.md`).
-            ...(this.listsChange(deviceId, REATTACH_ONLY_OPEN) ? { holdReopen: true } : {}),
+            ...(holdsReopen ? { holdReopen: true } : {}),
           },
         ]),
       );

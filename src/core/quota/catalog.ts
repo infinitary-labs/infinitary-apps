@@ -117,6 +117,31 @@ export function effectiveFromProvider(
   };
 }
 
+/**
+ * What an account pick reads of one account row, as read at `nowMs`
+ * (`effectiveFromProvider`): whether each scope - every model's, then each a
+ * model window names - is spent, and whether the account answers on credits.
+ * A wait compares it, so a window's reset that passes changes it with no new
+ * reading.
+ */
+export function spentScopes(provider: QuotaProviderView, nowMs: number): unknown[] {
+  if (provider.status !== "ok" || provider.stale) return [];
+  const view = providerScopes(provider, nowMs);
+  return [
+    answersOnCredits(provider),
+    ...[view.allModels, ...view.scopes].flatMap((scope) =>
+      scope
+        ? [
+            [
+              scope.scope,
+              scope.effectivePercentRemaining !== undefined && scope.effectivePercentRemaining <= 0,
+            ],
+          ]
+        : [],
+    ),
+  ];
+}
+
 /** Included allowance first, then credits, then a spent allowance. */
 function creditsRank(effective: EffectiveView): number {
   return allowanceSpent(effective) ? 2 : effective.onCredits ? 1 : 0;

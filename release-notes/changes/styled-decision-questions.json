@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "styled-decision-questions",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Every decision card counts your picks the same way",
+      "body": "A decision card drawn with its own styling now shows how many questions you picked and how many will send their Default, tags each Default, and lets you step through its questions. It used to say every question was answered before you picked anything.",
+      "picture": {
+        "dark": "styled-decision-questions-dark.webp",
+        "light": "styled-decision-questions-light.webp",
+        "alt": "A plan card with two unpicked questions, each tagged Default, and a footer reading 0 of 2 picked, 2 defaults beside its question arrows"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

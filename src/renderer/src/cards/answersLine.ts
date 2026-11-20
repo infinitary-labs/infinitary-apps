@@ -8,7 +8,8 @@ import * as m from "@shared/i18n/messages.generated";
  * many questions the captain may skip are left to send their Default
  * (INF-4425, "2 defaults"); then how many answers differ from what the card
  * proposed, only when any do: "1 of 3 picked · 2 defaults · 1 changed". A
- * preview body counts its settings answered and has no defaults.
+ * playable preview body (`isPlayableBody`) counts its settings answered and
+ * has no defaults.
  */
 export function answersLine(
   count: {

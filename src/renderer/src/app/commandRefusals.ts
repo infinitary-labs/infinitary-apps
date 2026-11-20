@@ -1,4 +1,4 @@
-import { cardTakesReplies, isPreviewBody } from "@shared/cards";
+import { cardTakesReplies, isPlayableBody } from "@shared/cards";
 import * as m from "@shared/i18n/messages.generated";
 import {
   type CARD_CHOICE_COMMANDS,
@@ -192,8 +192,8 @@ function pageRefusal(s: RefusalState): string | null {
 /**
  * Moving between the shown card's questions (docs/keyboard.md, "Moving
  * between a card's questions"): a card whose body asks some, while no
- * recording keeps focus where its words will go. A preview's settings are
- * its own controls', and a card still being written has no reading yet.
+ * recording keeps focus where its words will go. A playable preview's
+ * settings are its own controls', and a card still being written has no reading yet.
  */
 function questionRefusal(s: RefusalState): string | null {
   const refused = cardRefusal(s);
@@ -201,7 +201,7 @@ function questionRefusal(s: RefusalState): string | null {
   if (s.recording) return m.refuseARecordingIsRunning();
   const entry = shownEntry(s);
   const asked = entry && !isHeldEntry(entry) ? s.cardAnswers?.[entry.id]?.of : undefined;
-  return asked && entry && !isHeldEntry(entry) && !isPreviewBody(entry.body)
+  return asked && entry && !isHeldEntry(entry) && !isPlayableBody(entry.body)
     ? null
     : m.refuseThisCardAsksNoQuestions();
 }

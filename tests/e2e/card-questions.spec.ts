@@ -987,6 +987,70 @@ test("a question the captain may skip tags its Default, rings it until touched, 
 });
 
 /**
+ * A decision whose body brings its own style sheet asks its questions as
+ * every other decision does (INF-5452; the captain: "we need to make this
+ * consistent with regular decision cards"). Only a body that runs controls
+ * of its own is a playable preview whose controls are settings.
+ *
+ * Promised result: the footer counts picks with its Defaults line, each
+ * skippable question tags its Default, and the count steps through the
+ * questions. Data: a first mate plan card shaped like the one the captain
+ * read - a leading style sheet, figures, and two skippable radio questions
+ * with a Recommended option each. Completion signal: the footer's words
+ * after a pick. Platform: the hermetic launcher; in-frame picks are
+ * dispatched clicks. Shared resources: none; the test owns its userData.
+ */
+const STYLED_TITLE = "Two calls settle the plugin skills plan";
+
+test("a decision whose body brings a style sheet counts picks and Defaults like every decision", async () => {
+  const userDataDir = scratchDir("infinitary-styled-questions-");
+  const db = openDatabase(userDataDir);
+  new CardStore(db).upsert({
+    id: "card-fm-styled-questions",
+    title: STYLED_TITLE,
+    author: "firstmate",
+    priority: 50,
+    meta: "firstmate",
+    status: "ready",
+    createdAt: Date.now(),
+    body: `<style>.pf fieldset label{display:block;margin:6px 0}.pf .lit{fill:var(--accent-dim)}</style>
+      <div class="pf"><p>One change gives crewmates the skills of turned-on plugins.</p>
+      <figure aria-label="Where skills come from"><svg viewBox="0 0 750 40" width="100%"><rect class="lit" width="200" height="30"/><text x="10" y="20">Plugins</text></svg></figure>
+      <fieldset><legend>1. What travels with a plugin's skills?</legend>
+      <label><input type="radio" name="plugin_files" value="skill-folders"> Only its skill folders</label>
+      <label><input type="radio" name="plugin_files" value="own-files" data-inf-recommended> Its own files too</label>
+      <label><input type="radio" name="plugin_files" value="other" data-inf-write-in> Something else</label></fieldset>
+      <fieldset><legend>2. Whose plugins?</legend>
+      <label><input type="radio" name="plugin_sources" value="claude-code" data-inf-recommended> Claude Code only</label>
+      <label><input type="radio" name="plugin_sources" value="both"> Claude Code and Codex</label>
+      <label><input type="radio" name="plugin_sources" value="other" data-inf-write-in> Something else</label></fieldset></div>`,
+    actions: [
+      { id: "abandon", label: "Abandon", variant: "secondary" },
+      { id: "build", label: "Approve and build", default: true, variant: "primary" },
+    ],
+  });
+  db.close();
+  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  const { page } = launched;
+  try {
+    await showCard(page, STYLED_TITLE);
+    const frame = cardBody(page, STYLED_TITLE);
+    // Nothing is picked: both questions are left to send their Default.
+    await expect(frame.locator("input:checked")).toHaveCount(0);
+    await expect(frame.locator("[data-inf-default-label]")).toHaveCount(2);
+    await expect(answersLine(page)).toHaveText(pickedLine(0, 2, 0, { defaults: 2 }));
+    // The count is the stepper through the two questions.
+    const entry = shownEntry(page);
+    await expect(entry.locator('[data-card-question-step="next"]')).toBeVisible();
+    // A pick counts as one, and its question no longer sends a Default.
+    await pick(frame, 'input[value="both"]');
+    await expect(answersLine(page)).toHaveText(pickedLine(1, 2, 1, { defaults: 1 }));
+  } finally {
+    await launched.close();
+  }
+});
+
+/**
  * Moving between a card's questions by keys alone (INF-3963's approved plan;
  * the captain: "a user to easily switch between decisions, and change
  * their options all using keyboards smoothly"). ⌘J goes to the next

@@ -10,6 +10,7 @@ import {
   cardWord,
   compareStack,
   HOST_OPS,
+  isPlayableBody,
   isPreviewBody,
   legacyActionEffect,
   MERGE_CLOSES_WORDS,
@@ -247,6 +248,21 @@ describe("isPreviewBody", () => {
     expect(isPreviewBody('<figure><canvas width="40"></canvas><script>a()</script></figure>')).toBe(
       true,
     );
+  });
+
+  // INF-5452 (the captain: "we need to make this consistent with regular
+  // decision cards"): a style sheet makes a body a preview for the prose
+  // rules, but only controls of its own make its questions settings.
+  it("reads only a body that runs controls of its own as playable", () => {
+    const styledPlan =
+      '<style>.pf fieldset label{display:block}</style><div class="pf"><p>Two calls.</p>' +
+      '<fieldset><legend>Whose plugins?</legend><label><input type="radio" name="sources" value="claude" data-inf-recommended> Claude Code only</label></fieldset></div>';
+    expect(isPreviewBody(styledPlan)).toBe(true);
+    expect(isPlayableBody(styledPlan)).toBe(false);
+    expect(isPlayableBody(`${styledPlan}<script>draw()</script>`)).toBe(true);
+    expect(isPlayableBody('<canvas width="40"></canvas>')).toBe(true);
+    expect(isPlayableBody(`<p>Press Next run.</p>${MOVING}`)).toBe(false);
+    expect(isPlayableBody("<p>A decision, in prose.</p>")).toBe(false);
   });
 
   it("reads tags as the browser does: script text and comments close nothing", () => {

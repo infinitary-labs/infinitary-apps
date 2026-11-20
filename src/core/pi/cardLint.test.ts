@@ -449,14 +449,14 @@ describe("lintCardShape (both boundaries)", () => {
   it("leaves a preview body to the frame, and still holds it to the action rules", () => {
     const prototype: EmittedCard = {
       title: "Course preview",
-      body: "<style>.hold{color:#f00}</style><button data-inf-action='hold'>Hold</button>",
+      body: "<button data-inf-action='hold'>Hold</button><script>document.querySelector('button').focus();</script>",
       actions: [
         { id: "hold", label: "Hold", default: true },
         { id: "turn", label: "Turn back" },
       ],
     };
     // A preview's controls carry its current settings, so the question
-    // rules do not read it (isPreviewBody).
+    // rules do not read it (isPlayableBody).
     const picked =
       '<fieldset><legend>Course</legend><label><input type="radio" name="course" value="north" required checked> North</label></fieldset>';
     expect(lintCardShape({ ...prototype, body: `${prototype.body}${picked}` })).toBeUndefined();
@@ -471,6 +471,14 @@ describe("lintCardShape (both boundaries)", () => {
     expect(lintCardShape({ ...prototype, body: `<p>Hold the course.</p>${picked}` })).toContain(
       'the required question "course" arrives already answered',
     );
+    // So is one that only brings a style sheet: it runs no controls of its
+    // own, so its questions are questions (INF-5452).
+    expect(
+      lintCardShape({
+        ...prototype,
+        body: `<style>.hold{color:#f00}</style><p>Hold the course.</p>${picked}`,
+      }),
+    ).toContain('the required question "course" arrives already answered');
   });
 
   it("holds a body whose scripts only move its figures to the question rules (FI3-796)", () => {

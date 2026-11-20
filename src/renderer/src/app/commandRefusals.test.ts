@@ -380,8 +380,10 @@ describe("why a window command cannot run now", () => {
   // questions, in keys, refused where there is nothing to step through.
   it("moves between a card's questions only on a shown card whose body asks some", () => {
     const decision = card("d", { body: "<fieldset><legend>Who?</legend></fieldset>" });
-    // A playable preview draws with its own style: its settings are its own controls'.
-    const preview = card("p", { body: `<style>p{color:red}</style>${decision.body}` });
+    // A playable preview runs controls of its own: its settings are its own controls'.
+    const preview = card("p", { body: `${decision.body}<script>draw()</script>` });
+    // A style sheet alone keeps a decision a decision (INF-5452).
+    const styled = card("s", { body: `<style>p{color:red}</style>${decision.body}` });
     const reading = { answered: 0, picked: 0, of: 2, changed: 0, answers: [] };
     const asking = { ...HOME, cards: [decision], cardAnswers: { d: reading } };
     for (const id of [
@@ -396,6 +398,9 @@ describe("why a window command cannot run now", () => {
       expect(
         commandRefusal(id, { ...HOME, cards: [preview], cardAnswers: { p: reading } }, CLEAR),
       ).toBe(m.refuseThisCardAsksNoQuestions());
+      expect(
+        commandRefusal(id, { ...HOME, cards: [styled], cardAnswers: { s: reading } }, CLEAR),
+      ).toBeNull();
       expect(commandRefusal(id, { ...asking, recording: true }, CLEAR)).toBe(
         m.refuseARecordingIsRunning(),
       );

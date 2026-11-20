@@ -893,13 +893,17 @@ export class SettleService {
           candidateHead(authorization) === result.receipt?.head
         )
           this.approvals.consumeStanding(taskId, result.receipt);
-        else if (review && authorization?.review?.id === review.id)
+        else if (review && authorization?.review?.id === review.id) {
+          // The merge's outcome is known, so its send reserves the pull
+          // request no more (INF-5193), as a spent approval's does.
+          this.approvals.patchStanding(taskId, { attempt: undefined });
           this.approvals.endAuthorization(
             taskId,
             "invalidated",
             "the pull request merged at a different version",
             { feed: true },
           );
+        }
         this.host.tasks.delivery.activateRequiredActions(taskId);
         this.host.tasks.delivery.activateAfterMergeSteps(
           taskId,

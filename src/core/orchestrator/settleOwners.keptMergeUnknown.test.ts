@@ -292,6 +292,39 @@ describe("a kept merge whose outcome is unknown on a host naming no version (INF
     await h.supervisor.disposeAll();
   });
 
+  // INF-5193 (the review of Bitbucket's proof): a numbered pull request that
+  // merged at a push made during its merge ends the approval with its outcome
+  // known, so its send reserves the pull request no more and is told once.
+  it("releases a numbered pull request's send once it merged at a later push, and tells it once", async () => {
+    const h = await approved({ referenced: true });
+    h.forge.mergeNamesNoVersion = true;
+    const putIn = h.forge.putIn.bind(h.forge);
+    h.forge.putIn = async (...args) => {
+      const answer = await putIn(...args);
+      // A push landed between the read and the host's merge, which took it.
+      h.forge.headSha = REPAIRED;
+      return { ...answer, mergedHead: REPAIRED };
+    };
+    h.supervisor.cardActions.act(h.card.id, "merge");
+    await vi.waitFor(() =>
+      expect(h.authorization()).toMatchObject({
+        status: "invalidated",
+        reason: "the pull request merged at a different version",
+      }),
+    );
+    expect(h.authorization()?.attempt).toBeUndefined();
+    expect(h.tasks.unresolvedMergeSends().map((record) => record.id)).not.toContain(h.taskId);
+    await h.supervisor.settling.kept.reconcileUnsettledSends(Date.now());
+    const told = otherMergedFacts("GitHub", "#7", REPAIRED, APPROVED).told.trim();
+    expect(
+      h.tasks
+        .timeline(h.taskId)
+        .filter((event) => event.kind === "note" && event.text.includes(told)),
+    ).toHaveLength(1);
+    expect(h.forge.sends).toBe(1);
+    await h.supervisor.disposeAll();
+  });
+
   // INF-5193 (the review of Bitbucket's merge): a merge whose outcome is
   // unknown outlives an approval that guidance or a repair ends, and the
   // captain's click on the next merge card reads it back and sends nothing.

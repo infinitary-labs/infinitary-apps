@@ -79,7 +79,14 @@ async function send(page: Page, text: string) {
   await input.press("Enter");
 }
 
-test("a crewmate opens a pull request on bitbucket.org, its build statuses read as the checks, and the captain's click squash-merges that version", async () => {
+/**
+ * A crewmate's task on bitbucket.org whose pull request is open and whose
+ * merge card is up, published by the app once the build statuses passed, so
+ * the captain's click carries a kept merge approval: Bitbucket's merge names
+ * no version to hold it to, so only such an approval's merge is sent
+ * (`docs/forge.md`, "Bitbucket pull requests").
+ */
+async function openedOnBitbucket() {
   const userDataDir = scratchDir("infinitary-bitbucket-delivery-");
   const bare = join(userDataDir, "bitbucket-field-notes.git");
   git("init", "--bare", "--initial-branch=main", bare);
@@ -115,7 +122,6 @@ test("a crewmate opens a pull request on bitbucket.org, its build statuses read 
     userDataDir,
     env: bitbucket.env,
   });
-  const pictures = process.env.INFINITARY_BITBUCKET_PICTURES;
   try {
     const { page } = launched;
     await resizeWindow(launched.app, page, { width: 1280, height: 800 });
@@ -124,10 +130,7 @@ test("a crewmate opens a pull request on bitbucket.org, its build statuses read 
       .toEqual({ kind: "bitbucket", name: "bitbucket.org" });
     const title = `field-notes ${GITHUB_CHANGE_PROMPT_MARKER}`;
     await send(page, `${SPAWN_PROMPT_MARKER} ${title}`);
-
-    // The completion card cleared the checks gate on Bitbucket's build statuses.
-    const cardTitle = MOCK_GITHUB_CHANGE_CARD_TITLE;
-    const card = shownCard(page, cardTitle);
+    const card = shownCard(page, MOCK_GITHUB_CHANGE_CARD_TITLE);
     await expect(card).toBeVisible({ timeout: 45_000 });
     const task = (await page.evaluate(() => window.infinitary.tasks.board())).tasks.find(
       (row) => row.title === title,
@@ -135,6 +138,55 @@ test("a crewmate opens a pull request on bitbucket.org, its build statuses read 
     if (!task) throw new Error("The crewmate's task is missing");
     const branch = task.repo?.branch ?? "";
     expect(branch).not.toBe("");
+    const detail = () => page.evaluate((id) => window.infinitary.tasks.detail(id), task.id);
+    return {
+      launched,
+      page,
+      bitbucket,
+      bare,
+      card,
+      task,
+      branch,
+      detail,
+      /** Push one more commit to the task's branch where the project lives, as another computer would. */
+      push: (subject: string) => {
+        const tree = git("-C", bare, "rev-parse", `refs/heads/${branch}^{tree}`);
+        const next = git(
+          "-C",
+          bare,
+          "-c",
+          "user.name=Test",
+          "-c",
+          "user.email=test@localhost",
+          "commit-tree",
+          tree,
+          "-p",
+          `refs/heads/${branch}`,
+          "-m",
+          subject,
+        );
+        git("-C", bare, "update-ref", `refs/heads/${branch}`, next);
+        return next;
+      },
+      close: async () => {
+        await launched.close();
+        await bitbucket.close();
+      },
+    };
+  } catch (caught) {
+    await launched.close();
+    await bitbucket.close();
+    throw caught;
+  }
+}
+
+test("a crewmate opens a pull request on bitbucket.org, its build statuses read as the checks, and the captain's click squash-merges that version", async () => {
+  // The completion card cleared the checks gate on Bitbucket's build statuses.
+  const opened = await openedOnBitbucket();
+  const { launched, page, bitbucket, bare, card, task, branch } = opened;
+  const cardTitle = MOCK_GITHUB_CHANGE_CARD_TITLE;
+  const pictures = process.env.INFINITARY_BITBUCKET_PICTURES;
+  try {
     const sentUp = git("-C", bare, "rev-parse", `refs/heads/${branch}`);
     expect(bitbucket.requests()).toContain(`POST ${API_PROJECT}/pullrequests`);
     // The checks are the statuses on the version the crewmate pushed, by its full id.
@@ -187,8 +239,7 @@ test("a crewmate opens a pull request on bitbucket.org, its build statuses read 
       .poll(() => page.evaluate((id) => window.infinitary.tasks.detail(id), task.id))
       .toMatchObject({ status: "done", closedReason: "merged" });
   } finally {
-    await launched.close();
-    await bitbucket.close();
+    await opened.close();
   }
 });
 
@@ -390,18 +441,6 @@ const REFUSALS: {
     stoppedBy: (stop, readiness) => stop.notes.includes(` as ${readiness}`),
   },
   {
-    // Bitbucket's 202 is a merge it has not finished: the pull request is
-    // read, and a merge request whose outcome is not known is never resent.
-    change: "a merge Bitbucket accepted and has not finished",
-    arrange: (bitbucket) => {
-      bitbucket.mergeLater(true);
-      return "#1";
-    },
-    asksBitbucket: true,
-    crewVerdict: "ready",
-    stoppedBy: (stop, label) => stop.problem.includes(label),
-  },
-  {
     change: "a failed build",
     arrange: (bitbucket) => {
       bitbucket.setStatuses([
@@ -467,26 +506,46 @@ for (const refusal of REFUSALS) {
   });
 }
 
+// Bitbucket's 202 is a merge it has not finished: the pull request is read,
+// and a merge request whose outcome is not known is never resent. Only a
+// kept approval's merge reaches the send, so the click is on the card the
+// app published.
+test("a merge Bitbucket accepted and has not finished merges nothing yet, is not sent again, and leaves the task open", async () => {
+  const opened = await openedOnBitbucket();
+  try {
+    const { page, task, detail, bitbucket } = opened;
+    bitbucket.mergeLater(true);
+    await page.getByRole("button", { name: MERGE_WORDS["merge-pr"], exact: true }).click();
+    await expect
+      .poll(async () => stopOf(await detail()).problem)
+      .toContain(task.delivery?.changeLabel ?? "#1");
+    expect(bitbucket.merges()).toEqual([]);
+    expect(bitbucket.requests().filter((request) => request.endsWith("/merge"))).toHaveLength(1);
+    await expect(putInLine(page, task.key)).toHaveCount(0);
+    expect(await detail()).toMatchObject({ status: "active", closedReason: null });
+  } finally {
+    await opened.close();
+  }
+});
+
 test("a push that lands while Bitbucket merges is merged with the approved version, and the merge line says so", async () => {
-  let newer = "";
-  const merge = await seededMerge((bitbucket, repo) => {
+  const opened = await openedOnBitbucket();
+  try {
+    const { page, task, detail, bitbucket } = opened;
+    let newer = "";
     // Bitbucket merges whatever the branch holds when its merge runs.
     bitbucket.onMergeRequest(() => {
-      if (newer) return;
-      repo.push("feat: a note pushed during the merge");
-      newer = repo.head();
+      if (!newer) newer = opened.push("feat: a note pushed during the merge");
     });
-  }, "ready");
-  try {
-    const { page, key, detail, bitbucket } = merge;
-    await expect(putInLine(page, key)).toBeVisible({ timeout: 30_000 });
+    await page.getByRole("button", { name: MERGE_WORDS["merge-pr"], exact: true }).click();
+    await expect(putInLine(page, task.key)).toBeVisible({ timeout: 30_000 });
     expect(bitbucket.merges()).toEqual([expect.objectContaining({ id: 1, head: newer })]);
-    await expect(putInLine(page, key)).toContainText(
+    await expect(putInLine(page, task.key)).toContainText(
       englishOf(said("mergedChangeNewerOn", { change: "#1", place: "Bitbucket" })),
     );
     await expect.poll(detail).toMatchObject({ status: "done", closedReason: "merged" });
   } finally {
-    await merge.close();
+    await opened.close();
   }
 });
 

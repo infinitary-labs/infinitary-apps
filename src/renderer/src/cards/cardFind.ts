@@ -80,6 +80,12 @@ let following: ResizeObserver | null = null;
  * brings it into sight in its turn instead of dropping it.
  */
 let revealing = false;
+/**
+ * Counts the paints. A newer paint stands for every older one: a frame
+ * answers an older paint's mark with no box once a newer mark replaced it,
+ * and that late answer must not say the newer match is no longer on its way.
+ */
+let paints = 0;
 /** Counts the person's steps, so a step taken while a read is out is brought into sight by that read. */
 let steps = 0;
 /** Where focus goes when the field closes: what had it before ⌘F, or the magnifying glass. */
@@ -278,6 +284,7 @@ export function bringIntoView(element: Element, top: number, bottom: number): vo
  * into sight when `reveal`: a closed folded section holding it opens.
  */
 function paint(current: number, reveal: boolean, from: number): void {
+  const painting = ++paints;
   following?.disconnect();
   following = null;
   revealing = false;
@@ -320,7 +327,7 @@ function paint(current: number, reveal: boolean, from: number): void {
     void controllerOf(part.frame)
       ?.findMark(part.seq, spans, index)
       .then((box) => {
-        if (from !== generation || !reveal || index < 0) return;
+        if (painting !== paints || from !== generation || !reveal || index < 0) return;
         if (!box) {
           revealing = false;
           return;

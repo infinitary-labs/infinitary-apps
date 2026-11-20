@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { ActionLine } from "./actions";
 import { choosableLanguages } from "./i18n/start";
+import type { KeyReminders } from "./keyReminders";
 import {
   AMBIENT_STYLES,
   type AmbientStyle,
@@ -131,5 +132,16 @@ export const appearanceLines = {
     toRequest: (v, current) => [{ ...(current as Appearance), usageUnit: v.unit }],
     readValue: (current) => ({ unit: (current as Appearance).usageUnit ?? "tokens" }),
     done: (v) => `usage shown in ${v.unit}`,
+  },
+  "key-reminders": {
+    area: "appearance",
+    tier: "asked",
+    change: "inf:keyboard:reminders:set",
+    current: "inf:keyboard:reminders",
+    value: z.strictObject({ on: z.boolean() }),
+    line: "Turn the key reminder on or off, as Settings → Keyboard's switch, when asked: after a click on a control that has a key, it names the key for a few seconds. Each computer's window keeps its own; computer names which, this one's when omitted.",
+    toRequest: (v) => [v.on],
+    readValue: (current) => ({ on: (current as KeyReminders | null)?.on ?? null }),
+    done: (v) => `key reminders ${v.on ? "on" : "off"}`,
   },
 } as const satisfies Record<string, ActionLine>;

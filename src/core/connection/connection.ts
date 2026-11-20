@@ -506,9 +506,10 @@ export type HomeConnection = {
   routes(): Promise<void>;
   /**
    * A live frame to each welcomed window of one Mac (`role` view), such as
-   * its Devices row's Fix it (`work-setup`); false when none is connected.
+   * its Devices row's Fix it (`work-setup`), or only to those that listed
+   * `change`; false when none is connected.
    */
-  liveToView(deviceId: string, channel: string, payload: unknown): boolean;
+  liveToView(deviceId: string, channel: string, payload: unknown, change?: string): boolean;
   /** Resolves once listening reflects the latest change to what is paired. */
   settled(): Promise<void>;
   /** Stops listening and following pairing, then drains device closes with a two-second grace. */
@@ -1896,13 +1897,14 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
     },
     moved: (payload) => liveToAll(HOME_MOVED_LIVE, payload),
     goodbye: () => liveToAll(HOME_GOODBYE_LIVE, {}),
-    liveToView: (deviceId, channel, payload) => {
+    liveToView: (deviceId, channel, payload, change) => {
       const windows = [...(run?.clients ?? [])].filter(
         (client) =>
           client.welcomed &&
           !client.closing &&
           client.role === "view" &&
-          client.device.id === deviceId,
+          client.device.id === deviceId &&
+          (change === undefined || (client.changes?.includes(change) ?? false)),
       );
       for (const client of windows)
         client.out.send(

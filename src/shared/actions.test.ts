@@ -19,6 +19,7 @@ import {
   invokeContract,
 } from "./ipc";
 import { remoteLoginWords } from "./remoteLogin";
+import { secretActionSchema } from "./secrets";
 
 // The action inventory checks these request schemas through ipc's channel groups.
 // Literal project-relative paths declare indirect coverage to directUnitReach;
@@ -265,6 +266,12 @@ describe("action permissions and channel parity", () => {
       if (!lines.length) continue;
       // Every field of a claimed object or selector request, even one line's (INF-5354).
       const fields = settingFields(invokeContract[channel].request);
+      // A request's one line that names no fields owns the whole request.
+      const whole = lines.length === 1 && !lines[0]?.fields;
+      if (whole) {
+        expect(ACTION_FIELD_EXCEPTIONS[channel], channel).toBeUndefined();
+        continue;
+      }
       const claimed = lines.flatMap((line) => line.fields ?? []);
       const exceptions = ACTION_FIELD_EXCEPTIONS[channel] ?? {};
       if (!fields.length) {
@@ -290,12 +297,14 @@ describe("action permissions and channel parity", () => {
     const changing = HOST_INVOKE_CHANNELS.filter(
       (channel) => invokeContract[channel].effect === "change",
     );
-    expect(unaccountedChanges(changing, new Set(), HOST_ACTION_EXCEPTIONS)).toEqual([]);
+    // A window's own request a line claims, such as the key reminder, the first mate asks of that window.
+    const claimed = new Set<string>(ACTION_NAMES.map((name) => ACTIONS[name].change ?? ""));
+    expect(unaccountedChanges(changing, claimed, HOST_ACTION_EXCEPTIONS)).toEqual([]);
     // A new window request that changes something is refused until it has its ground.
     expect(
       unaccountedChanges(
         [...changing, "inf:window:uncatalogued"],
-        new Set(),
+        claimed,
         HOST_ACTION_EXCEPTIONS,
       ),
     ).toEqual(["inf:window:uncatalogued"]);
@@ -338,6 +347,19 @@ describe("action permissions and channel parity", () => {
         }),
       ).toEqual([]);
     }
+  });
+  it("refuses a new variant of a claimed union request until it has a line or a ground", () => {
+    const channel = "inf:secrets:action";
+    const claimed = ACTIONS["secret-end-read"].fields ?? [];
+    const exceptions = ACTION_FIELD_EXCEPTIONS[channel];
+    const extended = z.discriminatedUnion("kind", [
+      ...secretActionSchema.options,
+      z.strictObject({ kind: z.literal("uncatalogued"), what: z.string() }),
+    ]);
+    expect(uncoveredSettings(settingFields(z.tuple([extended])), claimed, exceptions)).toEqual([
+      "what",
+      "kind=uncatalogued",
+    ]);
   });
   it("rejects an uncatalogued sharing choice on the existing selector channel", () => {
     const selector = invokeContract["inf:settings:sharing:set"].request.def.items[0];

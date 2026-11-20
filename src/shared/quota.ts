@@ -452,6 +452,23 @@ export function servedModelKey(model: { provider: string; id: string }): `${stri
 }
 
 /**
+ * Restore, as Settings → Intelligence and the first mate's model-pins restore
+ * write it: the saved (dormant) pins go back after the current ones, each
+ * once, and nothing stays saved.
+ */
+export function restoredPins(routing: RoutingSettings): RoutingSettings {
+  const kept = new Set(routing.pins.map(servedModelKey));
+  const back = [
+    ...new Map((routing.dormantPins ?? []).map((pin) => [servedModelKey(pin), pin])).values(),
+  ];
+  return {
+    ...routing,
+    pins: [...routing.pins, ...back.filter((pin) => !kept.has(servedModelKey(pin)))],
+    dormantPins: [],
+  };
+}
+
+/**
  * Whether Infinitary reads an allowance for this provider id. Sensed providers
  * (Codex, Grok, Claude, Kimi Code, Copilot) get a pending "reading…" row until the first
  * sensor pass lands; everyone else (OpenRouter today) keeps the no-reader

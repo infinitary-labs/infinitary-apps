@@ -33,10 +33,12 @@ import type { RepoPolicyPatch, RepoSetupResult, RepoView } from "@shared/repos";
 import type { RunbookView } from "@shared/runbooks";
 import { devicePlace } from "@shared/signIns";
 import { type AppPanelGates, runbookGatesOf } from "@shared/surfaces";
+import { isWindowChannel, WINDOW_ONLY_CHANNELS } from "@shared/windowAsks";
 import { addedPrivateSite } from "../browser/privateSites";
 import type { CoreServices } from "../coreServices";
 import { actionValue } from "../pi/appTools";
 import { listSurfaces, type SurfaceView } from "../pi/personalizeTool";
+import type { ViewWindows } from "../viewWindows";
 import { CHANGES_THERE } from "./accountHandlers";
 import { accountTrail } from "./accountTrail";
 import type { createActionTrail } from "./actionTrail";
@@ -73,6 +75,7 @@ export function createCatalogDispatch({
   runOf,
   trail,
   automation,
+  viewWindows,
 }: {
   services: CoreServices;
   handlers: CoreHandlers;
@@ -80,6 +83,8 @@ export function createCatalogDispatch({
   trail: ReturnType<typeof createActionTrail>["trail"];
   /** What the Scheduler said of this change, set by the automation handlers. */
   automation: { said: string | undefined };
+  /** The windows the first mate asks their own Settings (`../viewWindows.ts`). */
+  viewWindows: ViewWindows;
 }) {
   const dispatch = async <C extends Exclude<CoreInvokeChannel, WorkInvokeChannel>>(
     channel: C,
@@ -97,23 +102,35 @@ export function createCatalogDispatch({
         throw new Error("Where a project lives changes only on the app’s exact-change card.");
       const refusal = actionRefusal(line, actor) ?? line.refuses?.(rawArgs as unknown[]) ?? null;
       if (refusal) throw new Error(refusal);
+      if (actor.window && !isWindowChannel(channel))
+        throw new Error(`${actor.action} changes the first mate's computer, never a window's own.`);
     }
+    // A window's own request, the first mate asked of that computer's window
+    // (docs/view.md, "What the first mate asks of a window"); every other is
+    // answered here.
+    const window = actor.kind === "firstmate" ? actor.window : undefined;
+    const call = (asked: string, callArgs: readonly unknown[]): Promise<unknown> =>
+      window && isWindowChannel(asked)
+        ? viewWindows.ask(window, asked, callArgs)
+        : WINDOW_ONLY_CHANNELS.has(asked)
+          ? Promise.reject(new Error("A key reminder is asked of a window."))
+          : Promise.resolve(
+              (handlers[asked as keyof CoreHandlers] as (...a: unknown[]) => unknown)(...callArgs),
+            );
     const args = parseInvokeRequest(channel, rawArgs);
-    const handler = handlers[channel] as (
-      ...handlerArgs: InvokeRequest<C>
-    ) => Promise<InvokeResponse<C>> | InvokeResponse<C>;
     const names = ACTION_NAMES.filter(
       (name) =>
         ACTIONS[name].change === channel ||
         (ACTIONS[name].alwaysTrail && ACTIONS[name].channels?.includes(channel)),
     );
+    // An act run on a read (Check for updates) changes nothing to compare:
+    // its trail is its own answer, so it reads nothing before or after.
+    const reads = invokeContract[channel].effect !== "change";
     const before = new Map<ActionName, unknown>();
     for (const name of names)
       before.set(
         name,
-        ACTIONS[name].current
-          ? await handlers[ACTIONS[name].current as keyof CoreHandlers]()
-          : null,
+        ACTIONS[name].current && !reads ? await call(ACTIONS[name].current as string, []) : null,
       );
     // A change to a computer that runs work's own account or project sign-in
     // is read from what that computer says, not this Mac's.
@@ -178,7 +195,10 @@ export function createCatalogDispatch({
       }
     }
     if (channel === "inf:settings:layout:set") {
-      const oldLayout = services.preferences.get().layout;
+      // A window's own layout is the one it read before.
+      const oldLayout = (
+        window ? before.get(names[0] as ActionName) : services.preferences.get().layout
+      ) as Layout;
       const newLayout = args[0] as typeof oldLayout;
       const fields = ["collapsedPanels", "hiddenPanels"] as const;
       const changed = new Set(
@@ -208,7 +228,9 @@ export function createCatalogDispatch({
         sameArrangement(
           newLayout.arrangement,
           defaultArrangement(knownPanels(services.personal.snapshot())),
-        );
+        ) &&
+        isDeepStrictEqual(newLayout.hiddenPanels, oldLayout.hiddenPanels) &&
+        isDeepStrictEqual(newLayout.collapsedPanels, oldLayout.collapsedPanels);
       if (actor.kind === "firstmate" && !reset && changed.size > 1)
         throw new Error("Change one panel at a time.");
       const surfaces = listSurfaces(oldLayout, services.personal.snapshot(), gatesOf(services));
@@ -225,13 +247,8 @@ export function createCatalogDispatch({
       }
     }
     if (names.length) automation.said = undefined;
-    const result = await handler(...args);
+    const result = (await call(channel, args)) as InvokeResponse<C>;
     for (const name of names) {
-      const after = there
-        ? stateThere(name)
-        : ACTIONS[name].current
-          ? await handlers[ACTIONS[name].current as keyof CoreHandlers]()
-          : null;
       // An act's trail is what it did, read from its request and answer.
       const trailOf = ACTIONS[name].trailOf;
       if (trailOf) {
@@ -239,6 +256,11 @@ export function createCatalogDispatch({
         if (said) trail(name, said, actor);
         continue;
       }
+      const after = there
+        ? stateThere(name)
+        : ACTIONS[name].current
+          ? await call(ACTIONS[name].current as string, [])
+          : null;
       if (
         !ACTIONS[name].alwaysTrail &&
         name !== "refresh-usage" &&
@@ -319,7 +341,9 @@ export function createCatalogDispatch({
           : [];
         // Reset to defaults, or any change that moved several panels at
         // once, is one line, never one per panel.
+        let said = false;
         if (moved.length > 1 && next.arrangement) {
+          said = true;
           const reset = sameArrangement(
             next.arrangement,
             defaultArrangement(knownPanels(snapshot)),
@@ -357,11 +381,31 @@ export function createCatalogDispatch({
           )
             descriptions.push(`moved to ${whereNow(surface, surfaces)}`);
           if (start.hidden !== now.hidden) descriptions.push(now.hidden ? "hidden" : "shown");
+          said = true;
           trail(name, { surface: surface.title, description: descriptions.join("; ") }, actor, {
             target: surface.id,
             from: was,
             to: now,
           });
+        }
+        // A More pick of a panel already at its edge, or a reset that took
+        // only a More pick or older saved places, moved nothing on screen
+        // and is still one line.
+        if (!said) {
+          const pick = next.morePick && next.morePick !== old.morePick ? next.morePick : undefined;
+          const picked = pick ? surfaces.find((surface) => surface.id === pick) : undefined;
+          const reset =
+            next.arrangement !== undefined &&
+            sameArrangement(next.arrangement, defaultArrangement(knownPanels(snapshot))) &&
+            (old.morePick !== undefined || Object.keys(old.placements ?? {}).length > 0);
+          if (picked)
+            trail(name, { surface: picked.title, description: "is the More pick" }, actor);
+          else if (reset)
+            trail(
+              name,
+              { surface: "Panels", description: "put back where each asks to be" },
+              actor,
+            );
         }
       } else if (name === "panel-collapse") {
         const old = actionValue(name, before.get(name)).collapsedPanels as Record<string, boolean>;

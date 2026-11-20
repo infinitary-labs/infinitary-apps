@@ -5,7 +5,7 @@
       "kind": "feature",
       "area": "firstmate",
       "title": "Your first mate can change more of Settings for you",
-      "body": "Ask your first mate to play music you paused, set how cards open, pick the language or the unit Usage shows, put your panels back where they started, check for updates, switch the update channel, turn a decision model use off, check a kept job, or stop keeping a copy on another computer. Each change leaves a line in Activity. Signing in, consent and deleting things stay with you, and what your first mate reads about Settings no longer includes your Diagnostics install ID, a sign-in code in progress or account names.",
+      "body": "Ask your first mate to play music you paused, set how cards open, pick the language or the unit Usage shows, put your panels back where they started, check for updates, switch the update channel, turn a decision model use off, check a kept job, or stop keeping a copy on another computer. On a Mac that controls another, it changes that Mac's own look, panels, updates and key reminders when you ask it to. Each change leaves a line in Activity. Signing in, consent and deleting things stay with you, and what your first mate reads about Settings no longer includes your Diagnostics install ID, a sign-in code in progress or account names.",
       "noPicture": "This changes what the first mate can do when asked, not how any view looks.",
       "provenance": { "origin": "change" }
     }

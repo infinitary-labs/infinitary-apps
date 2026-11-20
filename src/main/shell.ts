@@ -38,6 +38,7 @@ import type { PictureSource } from "./frames/frameProtocol";
 import { InstalledKeymap, type SizeCommandHandlers } from "./keyboard";
 import { LocalWindow, type LocalWindowOptions } from "./view/localWindow";
 import { ViewBackend, type ViewBackendOptions } from "./view/viewBackend";
+import type { WindowKeyReminders } from "./view/windowAsks";
 import { type PreferenceSource, sizeCommands } from "./windowSize";
 
 /**
@@ -78,6 +79,8 @@ type BesideMode = { kind: "beside"; beside: BesideWindow };
 
 export type ShellOptions = {
   joined: JoinedHome;
+  /** This computer's key reminder, once the window's profile has one (`./keyReminders.ts`). */
+  keyReminders?: () => WindowKeyReminders | null;
   /**
    * This user's work folder (docs/helper.md, "Where it keeps its data"): a
    * Mac that runs its home's work keeps its grant there, which this app
@@ -649,6 +652,7 @@ export class Shell {
             if (!replayedPointing(channel, payload, replayed))
               this.options.broadcast(channel, payload);
           },
+          ...(this.options.keyReminders ? { keyReminders: this.options.keyReminders } : {}),
           // A gap the first mate could not replay: the window reads everything again.
           onReload: () => this.readAgainHere(),
           // A drop the link dialed through: the window asks its one-time reads again.
@@ -848,6 +852,7 @@ export class Shell {
         void this.checkWork();
       },
       onSetUpWork: () => void this.checkWork(),
+      ...(this.options.keyReminders ? { keyReminders: this.options.keyReminders } : {}),
     });
     this.mode = { kind: "view", view };
     if (this.inFront) view.front(true);

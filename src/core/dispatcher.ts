@@ -12,6 +12,7 @@ import {
   HOME_CAPABILITIES,
   type InvokeRequest,
   type InvokeResponse,
+  invokeContract,
   isWorkInvokeChannel,
   PROTOCOL_VERSION,
   parseInvokeRequest,
@@ -24,6 +25,7 @@ import { type AuthPromptView, providerServesRole } from "@shared/providers";
 import { releaseNoteToShow } from "@shared/releaseTracking";
 import type { RemoteLoginRefusedAnswer } from "@shared/remoteLogin";
 import { opensPullRequest, repoRemovalRefusal } from "@shared/repos";
+import { isWindowChannel } from "@shared/windowAsks";
 import { resolveWorkComputer } from "@shared/workComputer";
 import { WORK_SETUP_ONLY } from "@shared/workSetup";
 import { asAView, askedFromAView } from "./askedFromAView";
@@ -67,6 +69,7 @@ import { recentFeed } from "./tasks/taskFeed";
 import { taskRowChannels } from "./tasks/taskRowChannels";
 import { dispatcherHomeUpdates } from "./update/homeUpdateWiring";
 import { createUpdateHold } from "./update/updateHold";
+import { ViewWindows } from "./viewWindows";
 import { projectPageFile } from "./workspace/projectPage";
 
 /**
@@ -172,11 +175,20 @@ export type CoreDispatcherOptions = {
   homeMove?: OutgoingHomeMove;
   /** The live copies on other computers (docs/devices.md, "Keeping a copy on another computer"). */
   standbys?: Standbys;
+  /** The windows the first mate asks; a test hands its own. */
+  viewWindows?: ViewWindows;
 };
 
 export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispatch {
   const { services, host, emit, ownWindow } = options;
   const browserViews = new BrowserViews(() => services.browsers);
+  /** The windows the first mate asks their own Settings (`./viewWindows.ts`). */
+  const viewWindows =
+    options.viewWindows ??
+    new ViewWindows({
+      liveToView: (deviceId, channel, payload, change) =>
+        services.workDevices.liveToView(deviceId, channel, payload, change),
+    });
   /** The panel library as this run read it, which its build fixed (`inf:plugins:library`). */
   let panelLibrary: Promise<PanelLibraryFile[]> | undefined;
   /**
@@ -735,6 +747,10 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       return { startAtLogin: startsAtLogin, showInDock: services.settings.getShowInDock() };
     },
 
+    // Answered below, where the window that answers is known.
+    "inf:view:answer": () => {
+      throw new Error("A window's answer is heard only from that window.");
+    },
     "inf:own-window:answer": (id, answer) => {
       ownWindow?.answer(id, answer);
       return { ok: true as const };
@@ -1516,7 +1532,14 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
   const { runOf, trail } = createActionTrail(services, options);
 
   // Each request's guard, before and after reads and trail line (`dispatcher/catalogDispatch.ts`).
-  const dispatch = createCatalogDispatch({ services, handlers, runOf, trail, automation });
+  const dispatch = createCatalogDispatch({
+    services,
+    handlers,
+    runOf,
+    trail,
+    automation,
+    viewWindows,
+  });
 
   // A rapid succession of Settings writes is one ordered trail. Without
   // this seam, awaited snapshots can attribute the next write to both calls.
@@ -1609,6 +1632,20 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       return services.computers.foldAsked(rawArgs, actor) as Promise<InvokeResponse<C>>;
     if (channel === "inf:devices:work-setup")
       return services.computers.workSetupAsked(rawArgs, actor) as Promise<InvokeResponse<C>>;
+    if (channel === "inf:view:answer") {
+      const [id, answer] = parseInvokeRequest("inf:view:answer", rawArgs);
+      return Promise.resolve(viewWindows.answered(id, answer, actor) as InvokeResponse<C>);
+    }
+    // A read the first mate asks of a window's own computer (`./viewWindows.ts`).
+    if (
+      actor?.kind === "firstmate" &&
+      actor.window &&
+      isWindowChannel(channel) &&
+      invokeContract[channel].effect === "read"
+    )
+      return viewWindows.ask(actor.window, channel, rawArgs as unknown[]) as Promise<
+        InvokeResponse<C>
+      >;
     if (actor?.kind === "device")
       return Promise.reject(
         new Error(`${channel} is not a request a computer that runs work asks.`),
@@ -1633,7 +1670,10 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     rawArgs: unknown,
     actor?: ActionActor,
   ): Promise<InvokeResponse<C>> {
+    // A read an act runs (Check for updates) writes nothing, so it waits
+    // behind no Settings write.
     if (
+      invokeContract[channel].effect !== "change" ||
       !ACTION_NAMES.some(
         (name) =>
           ACTIONS[name].change === channel ||

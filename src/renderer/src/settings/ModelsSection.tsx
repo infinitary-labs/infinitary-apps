@@ -8,7 +8,7 @@ import { modelNames } from "@shared/modelDisplayName";
 import type { ModelSlotsView, ReasoningChoice, Slot } from "@shared/modelSlots";
 import { SLOTS } from "@shared/modelSlots";
 import type { RoutingSettings } from "@shared/quota";
-import { allowanceProviderOf, servedModelKey } from "@shared/quota";
+import { allowanceProviderOf, restoredPins, servedModelKey } from "@shared/quota";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../design";
 import { DecisionsGroup } from "./DecisionsGroup";
@@ -122,12 +122,7 @@ export function ModelsSection({
 
   const restorePins = () => {
     if (!routing) return;
-    const keys = new Set(routing.pins.map(servedModelKey));
-    onSaveRouting({
-      ...routing,
-      pins: [...routing.pins, ...dormant.filter((pin) => !keys.has(servedModelKey(pin)))],
-      dormantPins: [],
-    });
+    onSaveRouting(restoredPins(routing));
   };
 
   const pinRefFor = (model: { provider: string; id: string }) => ({

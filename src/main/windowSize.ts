@@ -50,7 +50,7 @@ function sizeChanger(door: SizeDoor) {
         const size = steppedSize(current, direction);
         if (size === current || !line.change) return;
         await door.dispatch(
-          line.change,
+          line.change as "inf:settings:appearance:set",
           line.toRequest({ size }, appearance, (path) => path),
         );
       })

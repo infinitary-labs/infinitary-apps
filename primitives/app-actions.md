@@ -48,6 +48,7 @@ The captain's click alone is no ground: a control with none of these is a catalo
 - Settle: a run of the captain's own steps on one setting is one feed line and one operation, rewritten in place until `SETTLE_MS` (10 seconds) pass, another line enters Activity, or another setting changes; a run that returns to its start is withdrawn (`TaskService.archive.withdrawOperation`).
 - Each first mate change stays its own line and operation, so the answer check finds one action per captain message (`docs/task-capture.md`).
 - Propose: a `proposes` line (such as `project-setup`) changes nothing; the host puts up its own card from typed facts, and only that card's button runs the change.
+- A window's own setting: a line on a window's own request (`WINDOW_CHANNELS`, its look, layout, update and key reminder) is marked `window: true` in `app_state`, and `app_change`'s `computer` names the Mac that controls this one whose window it changes; the core asks that window, which answers as its own Settings would (`ViewWindows`, docs/view.md, "What the first mate asks of a window"), and the trail names the computer.
 - Hand over: a `hands` line the first mate asks for becomes a host-written card (`HandoverOffer`) whose button opens the relevant Settings section; it never submits credentials.
 - A hand-over card opens the exact place: its open effect names the Settings `section` and the `item` that section shows on arrival, a project in Projects, a computer in Devices, a page in Secrets, `inbox` in Integrations or `kept:<id>` in Automation, the same `item` a panel's `point.openSettings` passes.
 - Only a card's own arrival carries an act the captain's click starts, such as `phone` (make a phone's link) or a computer's GitHub sign-in; an `item` only chooses and shows, so every control there stays the captain's.
@@ -103,7 +104,8 @@ The captain's click alone is no ground: a control with none of these is a catalo
 
 - [`src/shared/actions.test.ts`](../src/shared/actions.test.ts): action permissions, channel parity and per-field claims.
 - [`src/core/core.settings.test.ts`](../src/core/core.settings.test.ts): dispatch, refusals and settled runs.
-- [`src/core/core.settingsParity.test.ts`](../src/core/core.settingsParity.test.ts): the first mate's Settings acts and their refusals in the whole core.
+- [`src/core/core.settingsParity.test.ts`](../src/core/core.settingsParity.test.ts): the first mate's Settings acts and their refusals in the whole core, and a window's own setting changed at the named computer's window.
+- [`src/core/viewWindows.test.ts`](../src/core/viewWindows.test.ts) and [`src/main/view/windowAsks.test.ts`](../src/main/view/windowAsks.test.ts): an ask answered only by the window asked, and how a window answers.
 - [`src/core/preferences/shellPreferences.test.ts`](../src/core/preferences/shellPreferences.test.ts): the one presentation writer.
 - [`tests/e2e/activity-runs.spec.ts`](../tests/e2e/activity-runs.spec.ts): a run of steps is one Activity line.
 

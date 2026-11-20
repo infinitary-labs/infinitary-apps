@@ -69,17 +69,25 @@ export const settingsActs = {
       latest: (current as UpdateStatus).latestVersion,
       available: (current as UpdateStatus).updateAvailable,
     }),
-    trailOf: (_args, result) => ({
-      latest: (result as UpdateStatus).latestVersion,
-      available: (result as UpdateStatus).updateAvailable,
-    }),
+    // A check that failed says so, never the status it read before.
+    trailOf: (_args, result) =>
+      (result as UpdateStatus).problem
+        ? { failed: true }
+        : {
+            latest: (result as UpdateStatus).latestVersion,
+            available: (result as UpdateStatus).updateAvailable,
+          },
     answers: (result) => ({
       latest: (result as UpdateStatus).latestVersion,
       available: (result as UpdateStatus).updateAvailable,
       ...((result as UpdateStatus).problem ? { problem: (result as UpdateStatus).problem } : {}),
     }),
     done: (v) =>
-      v.available ? `checked for updates: ${v.latest} is ready` : "checked for updates: up to date",
+      v.failed
+        ? "could not check for updates"
+        : v.available
+          ? `checked for updates: ${v.latest} is ready`
+          : "checked for updates: up to date",
   },
   "inbox-link": {
     area: "integrations",
@@ -123,7 +131,7 @@ export const settingsActs = {
       integration: z.string().min(1).max(200),
       action: z.string().min(1).max(200),
     }),
-    line: "Ask again for a panel's integration call that waits on the captain or that he turned down, as its Ask again does, when asked: the approval card shows again.",
+    line: "Ask again for a panel's integration call that waits on the captain or that the captain turned down, as its Ask again does, when asked: the approval card shows again.",
     toRequest: (v) => [v.surface, v.integration, v.action],
     readValue: (current) => ({
       asks: (current as PersonalSnapshot).extensions.flatMap((panel) =>
@@ -147,7 +155,7 @@ export const settingsActs = {
     change: "inf:decisions:use:set",
     current: "inf:settings:decisions",
     value: z.strictObject({ use: z.string().min(1).max(200) }),
-    line: "Turn off one way the app asks a decision model, by its use id, when asked. Turning one on stays with the captain in Settings, since it may need his approval.",
+    line: "Turn off one way the app asks a decision model, by its use id, when asked. Turning one on stays with the captain in Settings, since it may need the captain's approval.",
     toRequest: (v) => [{ id: v.use, on: false }],
     refuses: (args) => {
       const [request] = args as [Record<string, unknown> | undefined];
@@ -175,12 +183,21 @@ export const settingsActs = {
     line: "Take a private site off Settings → Integrations → Private sites, in the captain's own words: task browsers stop reaching it.",
     toRequest: (v) => [v.site],
     readValue: (current) => ({ privateSites: (current as PrivateSitesView).sites }),
-    trailOf: (args, result) => ((result as PrivateSiteChange).ok ? { site: args[0] } : null),
+    // Removing a site the list never held answers ok too, and is no line.
+    trailOf: (_args, result, before) => {
+      const change = result as PrivateSiteChange;
+      const gone = change.ok
+        ? (before as PrivateSitesView).sites.find((site) => !change.sites.includes(site))
+        : undefined;
+      return gone ? { site: gone } : null;
+    },
     answers: (result) =>
       (result as PrivateSiteChange).ok ? {} : { text: (result as { text: string }).text },
     done: (v) => `removed ${String(v.site)} from private sites`,
   },
   "secret-end-read": {
+    // One variant of Settings' secret request; every other stays the captain's (`refuses`).
+    fields: ["kind", "kind=end-read", "id"],
     area: "general",
     tier: "own-words",
     change: "inf:secrets:action",
@@ -251,8 +268,13 @@ export const settingsActs = {
         state,
       })),
     }),
-    trailOf: (args, result) =>
-      args[1] === false && (result as { ok: boolean }).ok ? okText(result) : null,
+    // Stopping a copy no computer keeps answers ok too, and is no line.
+    trailOf: (args, result, before) =>
+      args[1] === false &&
+      (result as { ok: boolean }).ok &&
+      (before as StandbyViews).standbys.some((copy) => copy.deviceId === args[0])
+        ? okText(result)
+        : null,
     answers: okText,
     done: (v) => String(v.text),
   },

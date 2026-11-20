@@ -141,6 +141,10 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, ActionExceptio
     "credential",
     `Updates Infinitary on a ${COMPUTER.one} added by its address on the captain's click; device-update only offers the card, and the feed says each step`,
   ],
+  "inf:view:answer": [
+    "window",
+    "A window's own answer to what the first mate asked of it; the asked change is that line's",
+  ],
   "inf:devices:work-setup": [
     "other-computer",
     `A ${COMPUTER.one}'s own window telling its home what it found of its background work at each welcomed connection; nothing is set`,
@@ -363,6 +367,10 @@ export const ACTION_FIELD_EXCEPTIONS: Partial<
   Record<CoreInvokeChannel, Record<string, ActionException>>
 > = {
   "inf:settings:layout:set": {
+    moved: [
+      "not-a-setting",
+      "The panel a drag in the window moved, which names the captain's own Activity line",
+    ],
     focusedProjectId: [
       "window",
       "The window's project focus is the captain's pick in the top bar's pill or a project chip, and only a hint to the first mate (docs/project-focus.md)",
@@ -384,6 +392,30 @@ export const ACTION_FIELD_EXCEPTIONS: Partial<
       "Turning a use on shows the answering model's approval again; decision-use-off only turns one off",
     ],
     agreed: ["consent", "A use's disclosure the captain agreed to before it asks"],
+  },
+  "inf:secrets:action": {
+    "kind=unlock": ["credential", "Unlocking Secrets takes the captain's own password"],
+    "kind=review-use": ["consent", "A use of a secret waits on the captain's own review"],
+    "kind=cancel-use": [
+      "consent",
+      "Withdrawing a use the captain reviewed is the captain's own answer",
+    ],
+    "kind=save-rules": ["consent", "Which tasks may use which secret is the captain's consent"],
+    "kind=forget": ["destructive", "Forgetting a secret deletes it"],
+    "kind=delete-history": ["destructive", "Deleting the record of secret uses"],
+    "kind=backup-recovery": ["credential", "A recovery backup holds the key to every secret"],
+    "kind=restore-recovery": ["credential", "Restoring takes the captain's recovery key"],
+    "kind=start-over": ["destructive", "Starting over deletes every secret"],
+    "kind=forget-device": ["destructive", "Forgetting a computer ends its access to Secrets"],
+    "kind=ask-phone": ["credential", "The paired phone approves with the captain's own hand"],
+    "kind=cancel-phone": ["credential", "Withdraws a phone approval the captain started"],
+    "kind=answer": ["credential", "A pass code the captain types"],
+    request: ["consent", "Names a use the captain reviews or withdraws"],
+    rules: ["consent", "Which tasks may use which secret"],
+    ref: ["destructive", "The secret a forget deletes"],
+    device: ["destructive", "The computer a forget ends"],
+    paired: ["credential", "The phone the captain approves on"],
+    pass: ["credential", "The pass code the captain types"],
   },
   "inf:devices:invite": {
     phone: [
@@ -474,10 +506,6 @@ export const HOST_ACTION_EXCEPTIONS: Partial<Record<HostInvokeChannel, ActionExc
     "window",
     "The keys installed in this computer's window, saved and installed whole there (docs/keyboard.md)",
   ],
-  "inf:keyboard:reminders:set": [
-    "window",
-    "The key reminder's switch belongs to this computer's window profile, whichever first mate it follows (docs/keyboard.md, \"The key reminder\")",
-  ],
   "inf:keyboard:panels": ["window", "The panels' commands the window installs with the catalog's"],
   "inf:keyboard:offer": [
     "window",
@@ -508,13 +536,31 @@ export const HOST_ACTION_EXCEPTIONS: Partial<Record<HostInvokeChannel, ActionExc
   "inf:frames:unmount": ["window", "Takes back a frame the window served"],
 };
 
-/** Read the actual request schema, not a second inventory of settings. */
+/**
+ * Read the actual request schema, not a second inventory of settings: every
+ * field of every argument, and of every variant of a union, so a selector's
+ * object after it or a new variant cannot pass unclaimed. A selector
+ * request (a choice, then its value) names its choices as fields.
+ */
 export function settingFields(request: { toJSONSchema: () => unknown }): string[] {
-  const schema = request.toJSONSchema() as {
-    prefixItems?: { properties?: Record<string, unknown>; enum?: string[] }[];
+  type Node = {
+    properties?: Record<string, { const?: unknown }>;
+    enum?: unknown[];
+    anyOf?: Node[];
+    oneOf?: Node[];
+    allOf?: Node[];
   };
-  const first = schema.prefixItems?.[0];
-  return first?.properties ? Object.keys(first.properties) : (first?.enum ?? []);
+  const schema = request.toJSONSchema() as { prefixItems?: Node[] };
+  const items = schema.prefixItems ?? [];
+  // A variant of a union keyed by its kind is a field of its own, kind=<its kind>.
+  const fieldsOf = (node: Node): string[] => [
+    ...Object.keys(node.properties ?? {}),
+    ...(node.properties?.kind?.const !== undefined ? [`kind=${node.properties.kind.const}`] : []),
+    ...[...(node.anyOf ?? []), ...(node.oneOf ?? []), ...(node.allOf ?? [])].flatMap(fieldsOf),
+  ];
+  const fields = [...new Set(items.flatMap(fieldsOf))];
+  if (fields.length) return fields;
+  return (items[0]?.enum ?? []).map(String);
 }
 
 export function uncoveredSettings(

@@ -51,16 +51,16 @@ import { reasoningChoiceSchema, slotSchema } from "./modelSlots";
 import {
   type ArrangedPanel,
   arrangePanels,
-  defaultArrangement,
   movePanel,
   pickToEdge,
+  resetLayout,
 } from "./panelArrangement";
 import { AUTOMATIC_COMPUTER } from "./placement";
 import { type Appearance, type Layout, themeSchema } from "./preferences";
 import { normalizePrivateSite, type PrivateSitesView } from "./privateSites";
 import { projectSetupProposalSchema } from "./projectSetup";
 import { catalogEntry } from "./providers";
-import { type RoutingSettings, servedModelKey } from "./quota";
+import { type RoutingSettings, restoredPins } from "./quota";
 import { reasoningWord } from "./reasoning";
 import type { ReleaseNotesView } from "./releaseTracking";
 import { remoteLoginAddressSchema, remoteLoginWords } from "./remoteLogin";
@@ -109,7 +109,8 @@ export type ActionLine = {
     | "automation"
     | "integrations";
   tier: ActionTier;
-  change: CoreInvokeChannel | null;
+  /** A core request, or a window's own that only a window answers (`WINDOW_ONLY_CHANNELS`). */
+  change: CoreInvokeChannel | "inf:keyboard:reminders:set" | null;
   channels?: CoreInvokeChannel[];
   handover?: "settings" | "subscriptions" | "projects" | "devices";
   /**
@@ -143,7 +144,7 @@ export type ActionLine = {
   ) => HandoverOffer;
   /** A second read an offer needs beside `current`, as the Settings row it opens reads it. */
   offerReads?: CoreInvokeChannel;
-  current: CoreInvokeChannel | null;
+  current: CoreInvokeChannel | "inf:keyboard:reminders" | null;
   value: z.ZodType;
   line: string;
   toRequest: (
@@ -1029,10 +1030,7 @@ const actionLines = {
         surfaces: Surface[];
         known: ArrangedPanel[];
       };
-      if (v.reset === true) {
-        const { morePick: _pick, panelOrder: _order, ...rest } = layout;
-        return [{ ...rest, placements: {}, arrangement: defaultArrangement(known) }];
-      }
+      if (v.reset === true) return [resetLayout(layout, known)];
       if (!surface) throw new Error("Name the panel's surface.");
       const next = { ...layout, hiddenPanels: { ...layout.hiddenPanels } };
       const moves =
@@ -1078,6 +1076,8 @@ const actionLines = {
       hiddenPanels: (c as Layout).hiddenPanels,
       arrangement: (c as Layout).arrangement ?? null,
       morePick: (c as Layout).morePick ?? null,
+      // Places saved before the arrangement existed, which a reset takes too.
+      placements: (c as Layout).placements,
     }),
     done: (v) => `${v.surface} ${v.description}`,
   },
@@ -1588,17 +1588,8 @@ const actionLines = {
     toRequest: (v, c) => {
       const routing = c as RoutingSettings;
       if (v.restore !== true) return [{ ...routing, pins: v.pins }];
-      const dormant = routing.dormantPins ?? [];
-      if (dormant.length === 0) throw new Error("No saved pins to restore.");
-      const kept = new Set(routing.pins.map(servedModelKey));
-      const back = [...new Map(dormant.map((pin) => [servedModelKey(pin), pin])).values()];
-      return [
-        {
-          ...routing,
-          pins: [...routing.pins, ...back.filter((pin) => !kept.has(servedModelKey(pin)))],
-          dormantPins: [],
-        },
-      ];
+      if (!routing.dormantPins?.length) throw new Error("No saved pins to restore.");
+      return [restoredPins(routing)];
     },
     readValue: (c) => ({
       pins: (c as RoutingSettings).pins,
@@ -1987,6 +1978,12 @@ export type ActionActor =
        * move that reads two ways is told the way it was asked (INF-2344).
        */
       target?: string;
+      /**
+       * The computer whose own window the first mate asks, for a window's own
+       * request (docs/view.md, "What the first mate asks of a window"): a Mac
+       * that controls this one, or this computer's own window for a key reminder.
+       */
+      window?: { deviceId: string; name: string };
     };
 /** Settings and Firstmate share this project-change path. */
 export function isProjectChange(action: ActionName): boolean {

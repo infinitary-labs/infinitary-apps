@@ -137,6 +137,17 @@ export function arrangePanels(layout: Layout, panels: readonly ArrangedPanel[]):
   return next;
 }
 
+/**
+ * Reset to defaults, as Settings → Panels and the first mate's panel reset
+ * write it: every panel back where it asks to be, in its own order. Shown,
+ * hidden and collapsed stay; the More pick and the places saved before the
+ * arrangement existed go too, so an older build agrees.
+ */
+export function resetLayout(layout: Layout, panels: readonly ArrangedPanel[]): Layout {
+  const { morePick: _pick, panelOrder: _order, ...rest } = layout;
+  return { ...rest, placements: {}, arrangement: defaultArrangement(panels) };
+}
+
 /** Every panel where it asks to be, in its declared order: what Reset to defaults writes. */
 export function defaultArrangement(panels: readonly ArrangedPanel[]): PanelArrangement {
   const next = emptyArrangement();

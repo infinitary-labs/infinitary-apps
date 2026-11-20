@@ -99,7 +99,7 @@ Each shared request's setting fields are claimed by action lines (`fields`), or 
 Parity reads the request schema itself: adding a field to appearance, layout, presence, routing or decisions without a claim or named exception fails the check.
 Sharing's selector enum is checked per choice too.
 The decision format version and captain-only outbound consent are explicit exceptions.
-The first mate's shared-object boundary uses these same field claims to preserve every unrelated value; the one-panel limit remains separate.
+The first mate's shared-object boundary uses these same field claims to preserve every unrelated value; the one-panel limit remains separate, and a reset to defaults that keeps every panel's visibility and collapse is its one exception.
 The tool's own-words action list is derived from the catalog tiers, including guidance actions.
 
 Piece 3 makes parity strict: every changing core channel is a catalog line, an existing-ability reference, or a named non-setting exception.
@@ -124,6 +124,7 @@ The Settings parity piece (INF-5354) gives the first mate what a person can do i
 `ambient-music` pauses and plays again (`on` true takes a pause away, as the Settings switch does); `card-size`, `language` and `usage-unit` claim their appearance fields; `dictation` is `own-words`; `panel` takes `pick` (a full rail's More pick) and `reset` alone; `model-pins` takes `restore`.
 New acts run Settings' own buttons when asked: `update-channel`, `update-check`, `inbox-link`, `panel-ask-again`, `decision-use-off` (off only), `device-keep`, `home-move-cancel`, `copy-stop` (stop only), `device-fix-work`, `device-try-again` and `kept-job-check`; `panel-retry`, `private-site-remove` and `secret-end-read` (ending a read only) take the captain's typed words.
 Every changing request, the window's own included, is a line or an excuse with a ground from a closed set, and every field of a claimed request is claimed or excused.
+A window's own setting (its look, layout, update and key reminder, `window: true` in `app_state`) is changed at the window `app_change`'s `computer` names, a Mac that controls this one, or this computer's when it is omitted (docs/view.md, "What the first mate asks of a window").
 
 `window-size` (FI3-524, `asked`) claims the appearance row's size: 100, 110, 125 or 150 percent.
 The Size picker, the size keys, the View menu and command search make the same change as the captain, so a run of them leaves one attributed feed line and operation, and the first mate makes it when asked.

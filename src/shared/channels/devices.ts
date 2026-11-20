@@ -56,6 +56,7 @@ import {
   standbyReadySchema,
   standbyViewsSchema,
 } from "../standby";
+import { windowAnswerSchema, windowAskSchema } from "../windowAsks";
 import { workSetupReportSchema } from "../workSetup";
 import { type ChannelDeclaration, okSchema } from "./common";
 
@@ -305,6 +306,15 @@ export const deviceChannels = {
   // view, which names the device; and the row's Fix it asks that window,
   // over its own connection, to set its work up again. Fix it answers
   // whether a window of that Mac was connected to ask.
+  // A window's answer to what the first mate asked of it (`inf:view:ask`,
+  // docs/view.md, "What the first mate asks of a window"), by the ask's id.
+  "inf:view:answer": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([windowAskSchema.shape.id, windowAnswerSchema]),
+    response: okSchema,
+  },
   "inf:devices:work-setup": {
     effect: "change",
     surface: "core",

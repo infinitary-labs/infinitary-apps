@@ -2,6 +2,7 @@ import { dirname, join } from "node:path";
 import { workLabelOf } from "@shared/codeNames";
 import type { MoveDeps } from "../folderMove/move";
 import type { TakeOverDeps } from "../folderMove/takeOver";
+import { isProfileRetired } from "../storage/retiredProfile";
 import {
   type BackgroundContext,
   type Launcher,
@@ -78,6 +79,11 @@ export async function moveWork(options: MoveWorkOptions): Promise<MovedWork> {
   // The move itself loads only when one is due.
   const { runMove } = await import("../folderMove/move");
   let outcome = await runMove(move, options.deps);
+  // Starts the agent a take-over let go again, for a run that ends without
+  // the work before anything was committed: on `stay` this run carries the
+  // work from the older folder itself, and once committed the older folder
+  // is a frozen recovery copy that nothing should start on again.
+  let resumeOnLater = async () => {};
   if (
     outcome.kind === "refused" &&
     (outcome.refusal.reason === "old-work-running" || outcome.refusal.reason === "old-app-open")
@@ -97,17 +103,17 @@ export async function moveWork(options: MoveWorkOptions): Promise<MovedWork> {
       ...options.takeOver,
     };
     const taken = await takeOverOlderCopy(move.from, deps);
-    // The agent let go starts again when the move does not go ahead, so the older work runs as it did.
     const resume = async (service: Service | undefined) => {
-      if (service) await deps.resumeAgent?.(service).catch(() => {});
+      if (service && !isProfileRetired(move.from))
+        await deps.resumeAgent?.(service).catch(() => {});
     };
     if (taken.kind === "stopped") {
       // i18n-exempt: a note in the work's own log, which a person reading a fault reads in English
       log(
         `stopped the older copy's ${taken.copy === "work" ? "background work" : "run"} holding ${move.from}${taken.unloaded ? `, after letting its agent ${taken.unloaded.label} go` : ""}`,
       );
+      resumeOnLater = () => resume(taken.unloaded);
       outcome = await runMove(move, options.deps);
-      if (outcome.kind !== "moved") await resume(taken.unloaded);
     } else if (taken.kind === "still-running") {
       // i18n-exempt: a note in the work's own log, which a person reading a fault reads in English
       log(`the older copy holding ${move.from} did not stop when asked`);
@@ -117,8 +123,10 @@ export async function moveWork(options: MoveWorkOptions): Promise<MovedWork> {
   }
   if (outcome.kind === "refused") {
     const { refusal } = outcome;
-    if (refusal.reason === "busy" || refusal.reason === "old-work-running")
+    if (refusal.reason === "busy" || refusal.reason === "old-work-running") {
+      await resumeOnLater();
       return { kind: "later" };
+    }
     // Committed and not finished: the next run finishes it.
     if (refusal.reason === "failed" && refusal.committed) {
       log(`the move of ${move.from} stopped after it was committed: ${refusal.detail}`);

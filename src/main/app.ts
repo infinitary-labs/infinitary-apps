@@ -759,6 +759,7 @@ export async function startApp(
           platform: hostPlatform(),
           homeDir: homedir(),
           unitsDir: userUnitsDir(process.env, homedir()),
+          dataDir: move.from,
         });
         const olderBackground = serviceManager && {
           flavor: work.place.flavor,

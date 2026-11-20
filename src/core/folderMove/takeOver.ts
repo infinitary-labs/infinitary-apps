@@ -5,7 +5,7 @@ import { APP_IDENTITIES, SPELLINGS, type Spelling } from "@shared/codeNames";
 import type { BuildFlavor } from "@shared/userDataFolders";
 import { readInstalled, type Service } from "../helper/background";
 import { folderHolder, holderAlive, processAlive, STOPPED_RUN_WAIT_MS } from "../helper/lock";
-import { loginAgentFile } from "../helper/runAgent";
+import { loginAgentFile, sessionAgentFile } from "../helper/runAgent";
 import { hostEnv } from "../hostEnv";
 
 /**
@@ -90,10 +90,16 @@ export function olderRunAgent(options: {
   platform: NodeJS.Platform;
   homeDir: string;
   unitsDir: string;
+  /** The older data folder, where a Mac's run agent's file is kept while Start at login is off. */
+  dataDir: string;
 }): Service | undefined {
   const label = `${APP_IDENTITIES[options.spelling].bundleId}${options.flavor === "dev" ? ".dev" : ""}.run`;
-  if (options.platform === "darwin")
-    return { label, file: loginAgentFile({ homeDir: options.homeDir, label }) };
+  if (options.platform === "darwin") {
+    // Either file of a Mac's agent, as `runAgentInPlace` reads it: the login one first.
+    const login = loginAgentFile({ homeDir: options.homeDir, label });
+    const session = sessionAgentFile({ dataDir: options.dataDir });
+    return { label, file: !existsSync(login) && existsSync(session) ? session : login };
+  }
   if (options.platform === "linux")
     return { label, file: join(options.unitsDir, `${label}.service`) };
   return undefined;

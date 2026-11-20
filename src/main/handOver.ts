@@ -2,6 +2,7 @@ import type { FolderMove } from "@core/folderMove/due";
 import { type MoveChoice, type MoveDeps, type MoveProgress, runMove } from "@core/folderMove/move";
 import { stopOlderCopyNow, type TakeOverDeps, takeOverOlderCopy } from "@core/folderMove/takeOver";
 import type { Service } from "@core/helper/background";
+import { isProfileRetired } from "@core/storage/retiredProfile";
 import { nativeTheme } from "electron";
 import {
   actionOf,
@@ -95,8 +96,10 @@ export async function runHandOver(move: FolderMove, options: HandOverOptions): P
   const leave = async () => {
     if (left) return;
     left = true;
+    // Once the move committed, the older folder is a frozen recovery copy: nothing starts on it again.
+    const retired = isProfileRetired(move.from);
     for (const service of paused.splice(0))
-      await options.takeOver?.resumeAgent?.(service).catch(() => {});
+      if (!retired) await options.takeOver?.resumeAgent?.(service).catch(() => {});
     options.quit();
   };
   let closed = false;
@@ -206,6 +209,8 @@ export async function runHandOver(move: FolderMove, options: HandOverOptions): P
       ).finally(() => {
         moving = false;
       });
+      // The work is in: a close from here on lets the app open on it, as relaunch does.
+      if (outcome.kind === "moved") finished = true;
       if (stop.signal.aborted) {
         if (outcome.kind === "moved") {
           if (outcome.startAtLogin) options.startAtLogin();

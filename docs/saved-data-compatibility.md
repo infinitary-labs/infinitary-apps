@@ -135,8 +135,10 @@ The hand-over and the work run take over from it before the move instead of refu
 
 Once the holder is known to be one of ours with no window, the window says "Stopping Firstmate 3000's background work" meanwhile.
 A copy that has not let go by then is not ended by Infinitary without the person, though the service manager ends background work that ignores its stop after its own wait: the window says it has not stopped and offers Stop it now beside Quit, and the work run ends for its background to start it again.
-Stop it now first lets go of a run's start entry (`olderRunAgent`), which would count the forced end as a failure and start the run again, then ends the run at once.
-Whenever the hand-over or the work run ends without moving - Quit, a closed window, a later refusal or the question about both folders - the agents the take-over let go start again (`resumeInBackground`), so the older copy runs as it did.
+Stop it now first lets go of a run's start entry (`olderRunAgent`), from whichever file launchd loaded it - the login one, or the older data folder's while Start at login is off - which would count the forced end as a failure and start the run again, then ends the run at once.
+Whenever the hand-over ends without moving before anything was committed - Quit, a closed window, a later refusal or the question about both folders - the agents the take-over let go start again (`resumeInBackground`), so the older copy runs as it did.
+The work run starts them again only when it ends without the work, to be started again itself; when it carries the work on from the older folder instead, the older agent stays let go, so the two do not take turns at the folder.
+Once the move committed, the older folder is a frozen recovery copy, and nothing starts on it again.
 An older copy with its window open keeps the person's own Quit and the refusal's words, and a process that is not ours, or whose program cannot be read (Windows), is never stopped, so the refusal stands.
 Once taken over, a copy that holds the folder again shows the refusal, and Try again takes over once more.
 

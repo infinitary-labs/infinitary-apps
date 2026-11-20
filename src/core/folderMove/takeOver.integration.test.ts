@@ -7,6 +7,7 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { pauseInBackground, writeInstalled } from "../helper/background";
 import { moveWork } from "../helper/moveWork";
 import { helperPlace } from "../helper/place";
+import { SESSION_AGENT_FILE } from "../helper/runAgent";
 import { isProfileRetired } from "../storage/retiredProfile";
 import {
   olderRunAgent,
@@ -205,16 +206,19 @@ describe("taking over from the older copy that holds the saved work", () => {
 
   it("lets go of a run's start entry before Stop it now, which it would count as a failure", async () => {
     const at = olderFolder();
+    // With Start at login off, the window's run agent is loaded from the older data folder's file.
+    const session = join(at.from, SESSION_AGENT_FILE);
+    writeFileSync(session, "<plist/>\n");
     const runAgent = olderRunAgent({
       spelling: "fm",
       flavor: "release",
       platform: "darwin",
       homeDir: at.homeDir,
       unitsDir: join(at.homeDir, ".config", "systemd", "user"),
+      dataDir: at.from,
     });
+    expect(runAgent?.file).toBe(session);
     if (!runAgent) throw new Error("A Mac has a run agent's place.");
-    mkdirSync(join(at.homeDir, "Library", "LaunchAgents"), { recursive: true });
-    writeFileSync(runAgent.file, "<plist/>\n");
     const deps = { ...at.deps, runAgent, waitMs: 500 };
     const holder = await started(at.from, ["run"], { stubborn: true });
     expect((await takeOverOlderCopy(at.from, deps)).kind).toBe("still-running");

@@ -46,7 +46,7 @@ Copy it again on your other computer."
 A link joins only by being pasted here: nothing on either computer opens one from a web page or a document.
 
 **By its address.**
-The second chip opens the same aside: "Join by its address" at `--text-base --fg-1` weight 500, then the `--text-sm --fg-2` line "The account and computer, as you sign in to it with SSH.", followed by Devices' own "Remote Login must be on there."
+"+ Join by its address" opens the same aside: "Join by its address" at `--text-base --fg-1` weight 500, then the `--text-sm --fg-2` line "The account and computer, as you sign in to it with SSH.", followed by Devices' own "Remote Login must be on there."
 (on Linux, "Its SSH server, or Remote Login on a Mac, must be on.").
 A mono `Input` with the placeholder "kun@studio", beside it the narrow mono "Port" field from Devices' "By its address" (`DevicesTab.prompt.md`), a small primary "Continue" that stays disabled while the address is empty, and a ghost "Cancel".
 A Mac and a Linux computer join alike.

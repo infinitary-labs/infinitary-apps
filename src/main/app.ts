@@ -635,6 +635,11 @@ export async function startApp(
   // Start it here. A Mac's login agent `start-at-boot` writes is the window's
   // own, so the window starts the run with it as it does on Linux.
   const joinedHere = new JoinedHome(join(dataDir, "joined"));
+  // A grant an address add left in the work folder opens this window as a
+  // view, except while the command the window started still runs its empty
+  // first mate: the window keeps that command's starter, so it opens beside
+  // it and follows along, stopping it (docs/view.md, "Following along").
+  const startedRunGoesOn = !windowless && runningByCommand(dataDir);
   const starter =
     windowless ||
     move ||
@@ -642,7 +647,7 @@ export async function startApp(
     ownStartEntry(dataDir) === "mac-daemon" ||
     dataFolderRefusal(dataDir, privacy) ||
     joinedHere.read() ||
-    windowFromWork(work.place.dataDir, joinedHere.leftDeviceId())
+    (!startedRunGoesOn && windowFromWork(work.place.dataDir, joinedHere.leftDeviceId()))
       ? null
       : commandStarter({
           work,
@@ -652,7 +657,7 @@ export async function startApp(
           switched: userDataChoice.kind === "switch",
           packaged: app.isPackaged,
         });
-  let besideRun = !windowless && runningByCommand(dataDir);
+  let besideRun = startedRunGoesOn;
   // When this window started the command it opens beside, until that one welcomes it.
   let startedAt: number | undefined;
   // A window already running its first mate here holds the folder's lock:

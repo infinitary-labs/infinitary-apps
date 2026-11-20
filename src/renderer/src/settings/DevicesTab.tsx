@@ -352,10 +352,6 @@ function HomeDevicesTab() {
   const make = useCallback(
     async (what: DevicePanelMake, copy = false) => {
       setProblem(null);
-      // The link or the command replaces + A computer's address form, as Cancel would.
-      addressTry.current += 1;
-      setAskingAddress(false);
-      setAddressRefusal(null);
       setBusy("link");
       try {
         // One link or command in the panel at a time: a new one closes the one it replaces.

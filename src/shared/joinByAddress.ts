@@ -136,12 +136,17 @@ export const setUpHereSchema = z.strictObject({
   user: z.string().min(1).max(64).nullable(),
   /** Its private network address, such as Tailscale's (100.64.0.0/10). */
   privateAddress: z.string().min(1).max(64).nullable(),
-  /** Its name on the local network, such as `studio.local`. */
+  /**
+   * Its name on the local network, such as `studio.local`, on a Mac; its
+   * local network address elsewhere, where nothing may announce a name.
+   */
   localName: z.string().min(1).max(255).nullable(),
-  /** Whether this computer's SSH server, Remote Login on a Mac, answers. */
+  /** Whether this computer's SSH server, Remote Login on a Mac, answers on its own loopback. */
   remoteLogin: z.enum(["on", "off", "unknown"]),
-  /** The check line its first mate's computer asks the person to compare. */
+  /** The check line its first mate's computer asks the person to compare, as `lineAt` answers. */
   line: z.string().min(1).max(160).nullable(),
+  /** The address shown whose key `line` is: the private network address first, else the local one. */
+  lineAt: z.string().min(1).max(255).nullable(),
   /** A Mac opens its Sharing settings, where Remote Login is turned on. */
   opensSharing: z.boolean(),
 });

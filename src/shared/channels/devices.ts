@@ -620,7 +620,8 @@ export const deviceChannels = {
   "inf:devices:set-up-here": {
     effect: "read",
     surface: "host",
-    request: z.tuple([]),
+    // Details: the account, addresses and keys too, read only while the aside is open.
+    request: z.tuple([z.boolean()]),
     response: setUpHereSchema,
   },
   "inf:devices:open-sharing": {

@@ -487,7 +487,9 @@ export class Shell {
   async followAdded(): Promise<boolean> {
     if (!this.joinable() || this.switching || !this.options.work) return false;
     const firstRun = await this.dispatch("inf:app:first-run", []).catch(() => null);
-    if (!firstRun?.gateOpen || firstRun.firstTurnAt !== null) return false;
+    // Only a profile with nothing done here: no turn, sign-in, connection,
+    // ask, task, card or project (`FirstRunView.untouched`).
+    if (firstRun?.untouched !== true) return false;
     // Asked again after the wait: a join or a switch may have started meanwhile.
     if (!this.joinable() || this.switching) return false;
     const joined = this.openFromWork();

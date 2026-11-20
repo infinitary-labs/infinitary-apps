@@ -22,6 +22,7 @@ test("a Windows PC keeps the two chips, with no set up from the first mate's com
     localName: null,
     remoteLogin: "unknown",
     line: null,
+    lineAt: null,
     opensSharing: false,
   };
   const bridge = fakeBridge({ ...home, "inf:devices:set-up-here": windows });

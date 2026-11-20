@@ -1,12 +1,13 @@
 import { join } from "node:path";
 import { importChosenFile, inspectPath } from "@core/attachments";
 import type { BrowserViewer } from "@core/browser/browserViews";
-import { setUpHere } from "@core/devices/setUpHere";
+import { setUpHere, setUpStandIns } from "@core/devices/setUpHere";
 import { saveAllIntoDownloads, saveIntoDownloads } from "@core/files/downloadsSave";
 import type { HostCapabilities } from "@core/index";
 import { isAllowedOpenExternalUrl } from "@core/openExternal";
 import { hostPlatform } from "@core/platform";
 import { writePrivateFile } from "@core/secrets/custody";
+import { readStandIns } from "@core/standIns";
 import { CHOSEN_FILES_MAX } from "@shared/attachments";
 import * as m from "@shared/i18n/messages.generated";
 import {
@@ -135,7 +136,11 @@ export function registerIpc(options: IpcOptions): void {
   });
   handleInvoke("inf:devices:take-over", rendererSource, () => shell.takeOver());
   // Set up from your first mate's computer, at the first launch (docs/view.md, "Joining").
-  handleInvoke("inf:devices:set-up-here", rendererSource, () => setUpHere());
+  // A development or end-to-end run reads its own stand-ins; an installed app reads none.
+  const setUpRead = setUpStandIns(readStandIns(host.app.packaged, process.env));
+  handleInvoke("inf:devices:set-up-here", rendererSource, (details) =>
+    setUpHere({ ...setUpRead, eligibilityOnly: !details }),
+  );
   handleInvoke("inf:devices:open-sharing", rendererSource, async () => {
     if (hostPlatform() === "darwin") await host.openExternal(SHARING_SETTINGS_URL);
     return { ok: true as const };

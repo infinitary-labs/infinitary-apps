@@ -21,6 +21,8 @@ export type FirstRunOptions = {
   usable: () => boolean;
   /** Prior use (`hasPriorActivity`): asks, tasks, cards (including resolved), or user projects. */
   hasActivity: () => boolean;
+  /** Any saved sign-in or connection, working or not (docs/view.md, "A Mac that runs work"). */
+  hasAccounts?: () => boolean;
   /** The profile has had a crewmate (a task on the board), so its colors need no teaching. */
   hasCrewHistory: () => boolean;
   /** A task of the captain's has closed done (`TaskService.hasFinishedTask`). */
@@ -186,10 +188,21 @@ export class FirstRunService {
       console.warn("[first-run] introduction could not be committed:", error);
     }
     const freshCheck = open ? this.options.freshCheck?.() : undefined;
+    const record = this.options.settings.getFirstRun();
+    // Nothing done here yet: no turn, no saved sign-in or connection, and no
+    // ask, task, card or project. Only then may a home that added this
+    // computer take it over in place (docs/view.md, "A Mac that runs work").
+    const untouched =
+      open &&
+      record.firstTurnAt === null &&
+      !freshCheck &&
+      !this.options.hasAccounts?.() &&
+      !this.options.hasActivity();
     return {
-      ...this.options.settings.getFirstRun(),
+      ...record,
       gateOpen: open,
       ...(freshCheck ? { freshCheck } : {}),
+      ...(untouched ? { untouched: true as const } : {}),
     };
   }
 

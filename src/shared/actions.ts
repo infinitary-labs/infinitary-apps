@@ -201,6 +201,12 @@ export type HandoverOffer = {
   /** The button that closes the card and does nothing. */
   decline: string;
   /**
+   * The facts its title, paragraphs and buttons were worded from, when they
+   * are the app's catalog words: the card keeps them (`cardWordsMark`,
+   * `saidMark`), so each view words it in its own language.
+   */
+  said?: { title: Said; paragraphs: Said[]; label: Said; decline: Said };
+  /**
    * What the section does on arrival (`openEffectSchema`): a phone's link,
    * or the exact place it opens (`section`, and the `item` it shows), and
    * whether the act there is only on the first mate's own computer (`fromHome`).
@@ -558,7 +564,7 @@ const actionLines = {
       how: z.enum(["link", "command", "another-user", "address", "phone"]).optional(),
       address: remoteLoginAddressSchema.optional(),
     }),
-    line: `Add a device when the captain asks: app_change offers the captain one card whose button makes it in Settings → Devices. When they have not said which way, never pick one for them: first ask them on one decision card, with every way as an option - the ${COMPUTER.one}'s address over Remote Login, a link, a command, or another user on ${HERE.this} - recommending the address, because ${HERE.this} then keeps that ${COMPUTER.one} updated and reaches it by itself, with no visit there after setup; say a link suits a ${COMPUTER.one} they sit at or a Windows PC, and a command one where they can type in Terminal but Remote Login is off; then pass their choice. how "address" with the address they gave, such as sam@mini.local: ${HERE.this} sets that ${COMPUTER.one} up over Remote Login with their own SSH key. how "address" with no address, when they chose it without naming one: a card that opens the address form, with the ${COMPUTER.many} on their network to pick from. how "link" (the default): a one-use link to paste into Infinitary on a ${COMPUTER.one} they sit at. how "command": a command they run once in Terminal on a ${COMPUTER.one} with no screen, which gets Infinitary from ${HERE.this}. Each of those three adds a ${COMPUTER.one} that can control you from Infinitary opened there and can run the work of projects set to run on it. how "phone": a one-use link whose code they scan inside Infinitary on their phone, which then shows their cards. how "another-user": a command they run once as another macOS user on ${HERE.this}, so work runs as that user, with sign-ins of its own, and cannot control you; like every user on a ${COMPUTER.one}, that user can still read files in their home folder outside private folders such as Documents. Only the captain's click makes a link or a command, or reaches a ${COMPUTER.one}, and you never see a link or a command. Pass the ${COMPUTER.one}'s name as the captain said it.`,
+    line: `Add a device when the captain asks: app_change offers the captain one card whose button makes it in Settings → Devices. When they have not said which way, never pick one for them: first ask them on one decision card, with every way as an option - the ${COMPUTER.one}'s address over Remote Login, a link, a command, or another user on ${HERE.this} - recommending the address (where ${HERE.this} is a Windows PC, its address card offers a link instead), because ${HERE.this} then keeps that ${COMPUTER.one} updated and reaches it by itself, with no visit there after setup; say a link suits a ${COMPUTER.one} they sit at or a Windows PC, and a command one where they can type in Terminal but Remote Login is off; then pass their choice. how "address" with the address they gave, such as sam@mini.local: ${HERE.this} sets that ${COMPUTER.one} up over Remote Login with their own SSH key. how "address" with no address, when they chose it without naming one: a card that opens the address form, with the ${COMPUTER.many} on their network to pick from. how "link" (the default): a one-use link to paste into Infinitary on a ${COMPUTER.one} they sit at. how "command": a command they run once in Terminal on a ${COMPUTER.one} with no screen, which gets Infinitary from ${HERE.this}. Each of those three adds a ${COMPUTER.one} that can control you from Infinitary opened there and can run the work of projects set to run on it. how "phone": a one-use link whose code they scan inside Infinitary on their phone, which then shows their cards. how "another-user": a command they run once as another macOS user on ${HERE.this}, so work runs as that user, with sign-ins of its own, and cannot control you; like every user on a ${COMPUTER.one}, that user can still read files in their home folder outside private folders such as Documents. Only the captain's click makes a link or a command, or reaches a ${COMPUTER.one}, and you never see a link or a command. Pass the ${COMPUTER.one}'s name as the captain said it.`,
     alwaysTrail: true,
     toRequest: (v) =>
       v.how === "command" || v.how === "address"
@@ -572,24 +578,29 @@ const actionLines = {
     done: () => "made a ten-minute link to add a device",
     offer: (v, _current, here) => {
       const name = typeof v.name === "string" ? v.name : null;
-      if (v.how === "address") {
+      // A Windows PC adds no computer by its address (its own ssh keeps no
+      // control connection): there the address way offers the link instead.
+      if (v.how === "address" && here.platform !== "win32") {
         // Chosen without an address: the form, with the computers nearby to pick from.
-        if (typeof v.address !== "string")
+        if (typeof v.address !== "string") {
+          const words = {
+            title: name
+              ? said("devicesAddressFormTitleNamed", { device: name })
+              : said("devicesAddressFormTitle"),
+            paragraphs: [said("devicesAddressFormSetUp"), said("devicesAddressFormOpen")],
+            label: said("devicesAddressFormOpenButton"),
+            decline: said("devicesAddressFormNotNow"),
+          };
           return {
             cardId: "app-device-invite",
-            title: englishOf(
-              name
-                ? said("devicesAddressFormTitleNamed", { device: name })
-                : said("devicesAddressFormTitle", { computer: COMPUTER.one }),
-            ),
-            paragraphs: [
-              englishOf(said("devicesAddressFormSetUp", { here: HERE.this })),
-              englishOf(said("devicesAddressFormOpen", { computers: COMPUTER.many })),
-            ],
-            label: englishOf(said("devicesAddressFormOpenButton")),
-            decline: englishOf(said("devicesAddressFormNotNow")),
+            title: englishOf(words.title),
+            paragraphs: words.paragraphs.map(englishOf),
+            label: englishOf(words.label),
+            decline: englishOf(words.decline),
+            said: words,
             arrival: { addressForm: true },
           };
+        }
         return {
           cardId: "app-device-invite",
           title: `Add the ${COMPUTER.one} at ${v.address}`,

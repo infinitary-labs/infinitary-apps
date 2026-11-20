@@ -1,9 +1,9 @@
 import { ACTIONS } from "@shared/actions";
 import { DECLINE_ACTION_ID } from "@shared/cardLeave";
 import type { Card } from "@shared/cards";
-import { COMPUTER, HERE } from "@shared/deviceNames";
 import { inLanguage } from "@shared/i18n/current";
 import * as m from "@shared/i18n/messages.generated";
+import { wordedCardText, wordSaidMarks } from "@shared/i18n/said";
 import { remoteLoginWords } from "@shared/remoteLogin";
 import { SECRETS_AREAS } from "@shared/secrets";
 import { parseServedInput } from "@shared/servedFrame";
@@ -320,9 +320,20 @@ describe("FirstmateAgent", () => {
       /offered on/,
     );
     const form = card(m.devicesAddressFormTitleNamed({ device: "Mac mini" }));
-    expect(form.body).toBe(
-      `<p>${m.devicesAddressFormSetUp({ here: HERE.this })}</p>\n<p>${m.devicesAddressFormOpen({ computers: COMPUTER.many })}</p>`,
+    // The card keeps its words' facts, so a view in another language words it there.
+    expect(wordSaidMarks(form.body ?? "")).toContain(
+      `>${m.devicesAddressFormSetUp()}</p>\n<p data-inf-said=`,
     );
+    expect(wordSaidMarks(form.body ?? "")).toContain(`>${m.devicesAddressFormOpen()}</p>`);
+    expect(wordedCardText(form.title, form.body)).toBe(
+      m.devicesAddressFormTitleNamed({ device: "Mac mini" }),
+    );
+    inLanguage("fr", () => {
+      expect(wordSaidMarks(form.body ?? "")).toContain(`>${m.devicesAddressFormOpen()}</p>`);
+      expect(wordedCardText(form.title, form.body)).toBe(
+        m.devicesAddressFormTitleNamed({ device: "Mac mini" }),
+      );
+    });
     expect(form.actions.find((action) => action.default)).toMatchObject({
       label: m.devicesAddressFormOpenButton(),
       effect: { kind: "open", target: "devices", addressForm: true },

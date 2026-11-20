@@ -24,6 +24,8 @@ import { useEffect, useRef, useState } from "react";
 import { Button, Input, MicroLabel, StatusDot } from "../design";
 import { thisDesktop } from "../design/core/desktop";
 import { focusWithRing } from "../design/focus";
+import { useCopied } from "../settings/DevicesLinks";
+import { SettingError } from "../settings/settingRows";
 import { NearbyList, PortField, sshMustBeOn } from "./NearbyList";
 import { JOIN_CONFIRM_WORDS, JOIN_RUNS_WORK, joinRefusalWords } from "./viewWords";
 import "./joinAnotherMac.css";
@@ -34,8 +36,12 @@ import * as m from "@shared/i18n/messages.generated";
 
 /**
  * Joining Firstmate on another Mac from this app's first launch (design
- * skill `components/devices/JoinAnotherMac`, docs/view.md): two chips under
- * the provider chips, and the aside each opens. Paste its link: paste the
+ * skill `components/devices/JoinAnotherMac`, docs/view.md): the chips under
+ * the provider chips - Set up from your first mate's computer first, where
+ * this computer can be added by its address, then Paste its link and Join
+ * by its address - and the aside each opens. Set up from your first mate's
+ * computer: this computer's address to type there, and the wait until that
+ * computer adds this one. Paste its link: paste the
  * link, confirm the address it names, reach that Mac, or say why this Mac
  * did not join. A link joins only by being pasted here, and only after the
  * person confirms; it lives in this component's memory and nowhere else.
@@ -131,26 +137,52 @@ function useFollowAdded(): void {
 }
 
 /**
- * This computer as its first mate's computer reaches it: read once for the
- * chips, which leave out the address way where it sets nothing up, and
- * again while the Set up aside is open.
+ * Whether the address way sets this computer up, read once for the chips
+ * with no account, address or key, so the chip never waits for a key.
+ */
+function useSetUpOffered(): boolean {
+  const [offered, setOffered] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void window.infinitary.devices
+      .setUpHere(false)
+      .then((read) => {
+        if (live) setOffered(read.offered);
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, []);
+  return offered;
+}
+
+/**
+ * This computer as its first mate's computer reaches it, read only while
+ * the Set up aside is open: one read at a time, the next a moment after the
+ * last answered, so an older answer never replaces a newer one.
  */
 function useSetUpHere(open: boolean): SetUpHere | null {
   const [here, setHere] = useState<SetUpHere | null>(null);
   useEffect(() => {
+    if (!open) return;
     let live = true;
+    let next: ReturnType<typeof setTimeout> | undefined;
     const read = () =>
       void window.infinitary.devices
-        .setUpHere()
+        .setUpHere(true)
         .then((read) => {
           if (live) setHere(read);
         })
-        .catch(() => undefined);
+        .catch(() => undefined)
+        .finally(() => {
+          if (live) next = setTimeout(read, SET_UP_RENEW_MS);
+        });
     read();
-    const renew = open ? setInterval(read, SET_UP_RENEW_MS) : null;
     return () => {
       live = false;
-      if (renew) clearInterval(renew);
+      clearTimeout(next);
+      setHere(null);
     };
   }, [open]);
   return here;
@@ -204,6 +236,7 @@ export function JoinAnotherMac({ onOpenChange, note, join, byAddress }: JoinAnot
   /** The address as asked, with its port: each later step asks it again. */
   const asked = useRef("");
   const nearby = useNearby(step.step === "address");
+  const setUpOffered = useSetUpOffered();
   const here = useSetUpHere(step.step === "set-up");
   useFollowAdded();
   const setStep = (next: Step) => {
@@ -293,6 +326,7 @@ export function JoinAnotherMac({ onOpenChange, note, join, byAddress }: JoinAnot
       onValue={setValue}
       onOpen={() => setStep({ step: "paste", notALink: false })}
       here={here}
+      setUpOffered={setUpOffered}
       onOpenSetUp={() => setStep({ step: "set-up" })}
       onOpenSharing={() => void window.infinitary.devices.openSharing().catch(() => undefined)}
       onContinue={toConfirm}
@@ -321,6 +355,8 @@ export type JoinAnotherMacViewProps = {
   step: Step;
   /** This computer as its first mate's computer reaches it; null until read. */
   here?: SetUpHere | null;
+  /** Set up from your first mate's computer leads the chips: the address way sets this computer up. */
+  setUpOffered?: boolean;
   onOpenSetUp?: () => void;
   onOpenSharing?: () => void;
   /** A line under the chip, while it is closed: which Mac this app last left. */
@@ -367,7 +403,7 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
   const { step, value } = props;
   if (step.step === "closed") {
     // Only a computer its first mate's computer can add by its address offers it, first.
-    const setUp = Boolean(props.here?.offered);
+    const setUp = Boolean(props.setUpOffered);
     return (
       <div className="fm-join-group" data-join-another-mac="closed">
         <div className="fm-join-row" data-join-chips-alone={setUp ? "" : undefined}>
@@ -381,7 +417,7 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
                 onClick={props.onOpenSetUp}
               >
                 {plusIcon}
-                <span>{m.devicesJoinSetUpChip({ computer: COMPUTER.one })}</span>
+                <span>{m.devicesJoinSetUpChip()}</span>
               </button>
             )}
             <button
@@ -544,30 +580,23 @@ export function JoinAnotherMacView(props: JoinAnotherMacViewProps) {
 
 /** One address to type on the first mate's computer, with its own Copy. */
 function CopyLine({ text, name, autoFocus }: { text: string; name: string; autoFocus: boolean }) {
-  const [copied, setCopied] = useState(false);
-  useEffect(() => {
-    if (!copied) return;
-    const reset = setTimeout(() => setCopied(false), 1500);
-    return () => clearTimeout(reset);
-  }, [copied]);
+  const [copied, copy] = useCopied();
   return (
-    <div className="fm-join-copy" data-join-set-up-address={name}>
-      <code className="fm-devices-link">{text}</code>
-      <Button
-        variant="secondary"
-        size="sm"
-        type="button"
-        autoFocus={autoFocus}
-        onClick={() =>
-          void navigator.clipboard
-            .writeText(text)
-            .then(() => setCopied(true))
-            .catch(() => undefined)
-        }
-      >
-        {copied ? m.settingsDevicesCopied() : m.devicesJoinSetUpCopy()}
-      </Button>
-    </div>
+    <>
+      <div className="fm-join-copy" data-join-set-up-address={name}>
+        <code className="fm-devices-link">{text}</code>
+        <Button
+          variant="secondary"
+          size="sm"
+          type="button"
+          autoFocus={autoFocus}
+          onClick={() => void copy(text)}
+        >
+          {copied === "copied" ? m.settingsDevicesCopied() : m.devicesJoinSetUpCopy()}
+        </Button>
+      </div>
+      {copied === "failed" && <SettingError error={m.devicesJoinSetUpCopyFailed()} />}
+    </>
   );
 }
 
@@ -589,22 +618,18 @@ function SetUpStep(props: JoinAnotherMacViewProps & { here: SetUpHere | null }) 
         ? m.devicesJoinSetUpOn()
         : m.devicesJoinSetUpSshOn()
       : mac
-        ? m.devicesJoinSetUpOff({ here: HERE.this })
-        : m.devicesJoinSetUpSshOff({ here: HERE.this });
+        ? m.devicesJoinSetUpOff()
+        : m.devicesJoinSetUpSshOff();
   // Focus lands on the first address to copy, or on Cancel before this computer is read.
   const first = here?.privateAddress ? "private" : here?.localName ? "local" : null;
   return (
     <div data-join-set-up="">
-      <p className="fm-join-head">
-        {m.devicesJoinSetUpHead({ here: HERE.this, computer: COMPUTER.one })}
-      </p>
-      <p className="fm-join-sub">{m.devicesJoinSetUpSub({ here: HERE.this })}</p>
+      <p className="fm-join-head">{m.devicesJoinSetUpHead()}</p>
+      <p className="fm-join-sub">{m.devicesJoinSetUpSub()}</p>
       {here?.privateAddress && (
         <>
           <CopyLine name="private" text={at(here.privateAddress)} autoFocus={first === "private"} />
-          <p className="fm-join-sub fm-join-under">
-            {m.devicesJoinSetUpPrivate({ computers: COMPUTER.many })}
-          </p>
+          <p className="fm-join-sub fm-join-under">{m.devicesJoinSetUpPrivate()}</p>
         </>
       )}
       {here?.localName && (
@@ -630,10 +655,10 @@ function SetUpStep(props: JoinAnotherMacViewProps & { here: SetUpHere | null }) 
           )}
         </div>
       )}
-      {here?.line && here.remoteLogin === "on" && (
+      {here?.line && here.lineAt && (
         <>
           <p className="fm-join-sub fm-join-under">
-            {m.devicesJoinSetUpCompare({ computer: COMPUTER.one })}
+            {m.devicesJoinSetUpCompare({ address: at(here.lineAt) })}
           </p>
           <div className="fm-devices-check" data-join-set-up-line="">
             {here.line}
@@ -641,7 +666,7 @@ function SetUpStep(props: JoinAnotherMacViewProps & { here: SetUpHere | null }) 
         </>
       )}
       <p className="fm-join-sub fm-join-waiting" role="status">
-        {m.devicesJoinSetUpWaiting({ computer: COMPUTER.one })}
+        {m.devicesJoinSetUpWaiting()}
       </p>
       <div className="fm-join-buttons">
         <Button

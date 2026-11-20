@@ -13374,7 +13374,13 @@ ${events}` : prompt;
     name: string().min(1).max(253).optional(),
     firewall: deviceFirewallSchema.optional(),
     /** On a Windows home, its firewall that may keep devices out; absent when none is known to. */
-    windowsFirewall: windowsFirewallSchema.optional()
+    windowsFirewall: windowsFirewallSchema.optional(),
+    /**
+     * False on a home that cannot set a computer up by its address (a Windows
+     * PC): + A computer offers the link and the command instead of the address
+     * form. Absent where it can.
+     */
+    addsByAddress: literal(false).optional()
   });
   strictObject({
     /** The address that answered last, dialed first. */

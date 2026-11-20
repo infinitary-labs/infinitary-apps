@@ -79,9 +79,9 @@ Nothing reaches the feed or the record until the join itself.
 ### Following along
 
 While the first-launch group is up, the window asks `inf:devices:follow-added` every few seconds, and the shell itself decides (`Shell.followAdded`).
-When the stage still carries the gate, nobody has given this computer's own first mate a task (`inf:app:first-run`'s `gateOpen` and `firstTurnAt`), and the work folder holds a grant an address add left there (`windowFromWork`), the window becomes a view of that home with no relaunch: the empty first mate beside it stops, as a pasted link's join stops it, and every window starts over as the other computer's.
-A window opened beside a command's first mate that it may join follows the same way (`joinable`).
-A computer whose own first mate has a subscription or a turn stays as it is.
+When nothing was done on this computer - the gate is still up, with no turn, no saved sign-in or connection, and no ask, task, card or project (`inf:app:first-run`'s `untouched`, `FirstRunService`) - and the work folder holds a grant an address add left there (`windowFromWork`), the window becomes a view of that home with no relaunch: the empty first mate beside it stops, as a pasted link's join stops it, and every window starts over as the other computer's.
+A window opened beside a command's first mate that it may join follows the same way (`joinable`), and so does one reopened while the command it started still runs: the grant in the work folder does not take that command's starter from it.
+A computer whose own first mate has a sign-in, a connection, a project or a turn stays as it is, even while its gate is up.
 
 ## A Mac that runs work
 

@@ -10031,6 +10031,10 @@
               "blockRule",
               "blockAll"
             ]
+          },
+          "addsByAddress": {
+            "type": "boolean",
+            "const": false
           }
         },
         "required": [
@@ -10185,6 +10189,10 @@
               "blockRule",
               "blockAll"
             ]
+          },
+          "addsByAddress": {
+            "type": "boolean",
+            "const": false
           }
         },
         "required": [
@@ -64975,6 +64983,10 @@
               "label",
               "models"
             ]
+          },
+          "untouched": {
+            "type": "boolean",
+            "const": true
           }
         },
         "required": [
@@ -65099,6 +65111,10 @@
               "label",
               "models"
             ]
+          },
+          "untouched": {
+            "type": "boolean",
+            "const": true
           }
         },
         "required": [
@@ -99757,6 +99773,10 @@
               "blockRule",
               "blockAll"
             ]
+          },
+          "addsByAddress": {
+            "type": "boolean",
+            "const": false
           }
         },
         "required": [

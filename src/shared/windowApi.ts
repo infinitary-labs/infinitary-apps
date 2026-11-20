@@ -530,7 +530,7 @@ export type FirstmateApi = {
      * following along once that computer added this one, while nothing was
      * done here (`followed` false otherwise).
      */
-    setUpHere: () => Promise<SetUpHere>;
+    setUpHere: (details: boolean) => Promise<SetUpHere>;
     openSharing: () => Promise<{ ok: true }>;
     followAdded: () => Promise<{ followed: boolean }>;
     /**

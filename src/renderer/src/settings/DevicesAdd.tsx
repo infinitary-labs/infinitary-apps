@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button, Input } from "../design";
 import { focusWithRing } from "../design/focus";
 import { NearbyList, PortField, sshMustBeOn } from "../devices/NearbyList";
-import { useHereAs } from "../devices/useFirstMatePlace";
+import { useFirstMateName, useHereAs } from "../devices/useFirstMatePlace";
 import type { DevicesTabViewProps } from "./devicesState";
 import { type AddingMac, addingWords } from "./devicesWords";
 
@@ -23,6 +23,56 @@ import { type AddingMac, addingWords } from "./devicesWords";
  */
 
 /**
+ * The link and the command, each with when to use it, under + A computer's
+ * address form, and in its place on a home that adds no computer by its
+ * address (a Windows PC, `DeviceAddresses.addsByAddress`).
+ */
+function OtherWays({
+  busy,
+  onMake,
+  onCancelAddress,
+  alone,
+}: DevicesTabViewProps & { alone: boolean }) {
+  // Choosing one here closes the address form, as its Cancel would, and drops a try still running.
+  const instead = (what: "link" | "command") => {
+    onCancelAddress();
+    onMake(what);
+  };
+  return (
+    <div className="fm-devices-other-ways" data-device-other-ways="">
+      <div className="fm-devices-question">
+        {alone ? m.settingsDevicesAddWays() : m.settingsDevicesAddOtherWays()}
+      </div>
+      <div className="fm-devices-other-way">
+        <Button
+          variant="secondary"
+          size="sm"
+          type="button"
+          autoFocus={alone}
+          disabled={busy === "link"}
+          onClick={() => instead("link")}
+        >
+          {m.settingsDevicesAddByLink()}
+        </Button>
+        <span className="fm-devices-aside-say">{m.settingsDevicesAddByLinkWhen()}</span>
+      </div>
+      <div className="fm-devices-other-way">
+        <Button
+          variant="secondary"
+          size="sm"
+          type="button"
+          disabled={busy === "link"}
+          onClick={() => instead("command")}
+        >
+          {m.settingsDevicesAddByCommand()}
+        </Button>
+        <span className="fm-devices-aside-say">{m.settingsDevicesAddByCommandWhen()}</span>
+      </div>
+    </div>
+  );
+}
+
+/**
  * + A computer's address form (design skill `components/devices/DevicesTab`,
  * captain's pick on INF-4926): the one thing the captain supplies, the
  * address they use with SSH. Computers nearby stand under it; picking one
@@ -31,22 +81,38 @@ import { type AddingMac, addingWords } from "./devicesWords";
  * computer that cannot turn Remote Login on, each with when to use it. A
  * worker's package update draws the same form with its own words and neither.
  */
-export function AddressQuestion({
-  busy,
-  onMake,
-  addressDraft,
-  portDraft,
-  addressRefusal,
-  packageUpdate,
-  adding,
-  nearby,
-  devices,
-  onAddressDraft,
-  onPortDraft,
-  onAddAt,
-  onCancelAddress,
-}: DevicesTabViewProps) {
+export function AddressQuestion(props: DevicesTabViewProps) {
+  // A Windows PC's first mate adds no computer by its address: only the link and the command.
+  if (!props.packageUpdate && props.addresses?.addsByAddress === false)
+    return (
+      <div className="fm-devices-aside" data-device-address-question="">
+        <OtherWays {...props} alone />
+        <div className="fm-devices-aside-actions">
+          <Button variant="ghost" size="sm" type="button" onClick={props.onCancelAddress}>
+            {m.settingsDevicesCancel()}
+          </Button>
+        </div>
+      </div>
+    );
+  return <AddressForm {...props} />;
+}
+
+function AddressForm(props: DevicesTabViewProps) {
+  const {
+    addressDraft,
+    portDraft,
+    addressRefusal,
+    packageUpdate,
+    adding,
+    nearby,
+    devices,
+    onAddressDraft,
+    onPortDraft,
+    onAddAt,
+    onCancelAddress,
+  } = props;
   const here = useHereAs();
+  const homeName = useFirstMateName();
   // The address with the port typed beside it, or null while either is not one.
   const typed = addressAtPort(addressDraft, portDraft);
   const trying = adding.some((mac) => mac.address === typed);
@@ -83,7 +149,11 @@ export function AddressQuestion({
           : m.settingsDevicesAddressSay({ sshOn: sshMustBeOn() })}
       </div>
       {!packageUpdate && (
-        <div className="fm-devices-aside-say">{here(m.settingsDevicesAddressKeeps())}</div>
+        <div className="fm-devices-aside-say">
+          {homeName
+            ? m.settingsDevicesAddressKeepsThere({ name: homeName })
+            : m.settingsDevicesAddressKeeps()}
+        </div>
       )}
       {addressRefusal && (
         <div role="alert">
@@ -155,35 +225,7 @@ export function AddressQuestion({
           }}
         />
       )}
-      {!packageUpdate && (
-        <div className="fm-devices-other-ways" data-device-other-ways="">
-          <div className="fm-devices-question">{m.settingsDevicesAddOtherWays()}</div>
-          <div className="fm-devices-other-way">
-            <Button
-              variant="secondary"
-              size="sm"
-              type="button"
-              disabled={busy === "link"}
-              onClick={() => onMake("link")}
-            >
-              {m.settingsDevicesAddByLink()}
-            </Button>
-            <span className="fm-devices-aside-say">{m.settingsDevicesAddByLinkWhen()}</span>
-          </div>
-          <div className="fm-devices-other-way">
-            <Button
-              variant="secondary"
-              size="sm"
-              type="button"
-              disabled={busy === "link"}
-              onClick={() => onMake("command")}
-            >
-              {m.settingsDevicesAddByCommand()}
-            </Button>
-            <span className="fm-devices-aside-say">{m.settingsDevicesAddByCommandWhen()}</span>
-          </div>
-        </div>
-      )}
+      {!packageUpdate && <OtherWays {...props} alone={false} />}
     </form>
   );
 }

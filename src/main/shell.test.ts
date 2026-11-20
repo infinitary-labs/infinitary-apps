@@ -1041,7 +1041,7 @@ describe("a Mac that controls another and runs its work", () => {
     const pro = await otherMac({}, { joinsFromAnotherMac: true });
     const dataDir = workDir();
     const mini = shell(undefined, { dataDir });
-    const firstRun = { gateOpen: true, firstTurnAt: null as number | null };
+    const firstRun = { gateOpen: true, firstTurnAt: null, untouched: true };
     mini.own.dispatch.mockImplementation((async (channel: string) =>
       channel === "inf:app:first-run" ? firstRun : { ownCore: channel }) as never);
     await mini.shell.start();
@@ -1071,10 +1071,11 @@ describe("a Mac that controls another and runs its work", () => {
     const pro = await otherMac({}, { joinsFromAnotherMac: true });
     const dataDir = workDir();
     const mini = shell(undefined, { dataDir });
-    // The person signed in and gave this computer's own first mate a task.
+    // The person saved a sign-in or a project here, though the first launch is still up: its core
+    // answers the gate open with no turn yet, and without `untouched`.
     mini.own.dispatch.mockImplementation((async (channel: string) =>
       channel === "inf:app:first-run"
-        ? { gateOpen: false, firstTurnAt: Date.UTC(2026, 10, 20) }
+        ? { gateOpen: true, firstTurnAt: null }
         : { ownCore: channel }) as never);
     await mini.shell.start();
     const grant = await claimLink(await pro.link("mac"), {

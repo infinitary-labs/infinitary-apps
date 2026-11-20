@@ -120,6 +120,7 @@ export function startFirstLaunch(options: {
       }),
     hasActivity: () =>
       hasPriorActivity({ tasks: options.tasks, cards: options.cards, repos: options.repos }),
+    hasAccounts: () => vault.list().length > 0,
     ...crewFacts(options.tasks),
     createWelcome: (consume) => {
       // The welcome takes no reply - the message box under it is where to

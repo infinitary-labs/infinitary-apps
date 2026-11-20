@@ -95,6 +95,7 @@ function homeAnswers({ plain, asked }: FreshHomeAnswers): Answers {
       localName: "sams-mac-mini.local",
       remoteLogin: "on",
       line: "ED25519 SHA256:3Ld3ZbyQh4Gq0n8yY0xV1m2kq3c9tRrJ6Hc5wqv0aXk",
+      lineAt: "100.86.12.40",
       opensSharing: true,
     },
     // Nobody added this computer meanwhile, so the first launch stays as it is.

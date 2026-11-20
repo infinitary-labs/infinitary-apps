@@ -37,6 +37,21 @@ const inventoryFiles = [
 void inventoryFiles;
 
 describe("action permissions and channel parity", () => {
+  // The review of INF-4926's plan: a Windows PC's first mate adds no computer by its address, so
+  // the address way's card there makes a link, while a Mac's opens the address form.
+  it("offers a link for the address way where the first mate's computer is a Windows PC", () => {
+    const invite = ACTIONS["device-invite"];
+    expect(invite.offer?.({ how: "address" }, [], { platform: "darwin" })).toMatchObject({
+      arrival: { addressForm: true },
+    });
+    expect(invite.offer?.({ how: "address" }, [], { platform: "win32" })).toMatchObject({
+      arrival: { make: "link" },
+    });
+    expect(
+      invite.offer?.({ how: "address", address: "sam@mini.local" }, [], { platform: "win32" }),
+    ).toMatchObject({ arrival: { make: "link" } });
+  });
+
   // INF-3116, answer A: the first mate only offers the app's Allow card for
   // a private site; the captain's click on it adds the checked name.
   it("offers a private site on the app's Allow card, checked, and never one already listed", () => {

@@ -1,9 +1,9 @@
 # Windows
 
-Infinitary on Windows is one unsigned internal installer for x64 PCs, built and checked by `.github/workflows/windows.yml`.
-It is not published: no release carries it, nothing signs it, and no update reaches it.
+Infinitary on Windows is one unsigned installer for x64 PCs, built and checked by `.github/workflows/windows.yml`.
+Every alpha publishes it as an unsigned early build for testers ("Published on every alpha" below); a stable carries none, nothing signs it yet, and no update reaches it.
 The installed app offers no update either: it never reads the release source, and the Version row says Infinitary does not update itself on Windows yet (`createInstalledUpdateChecker` in `src/core/update/updateChecker.ts`).
-Windows on Arm, signing, updates and a published download are later pieces of the Windows plan.
+Windows on Arm, signing, updates and a stable Windows build are later pieces of the Windows plan.
 The earlier hosted investigation and what it observed are `docs/windows-feasibility.md`.
 
 ## What is built
@@ -89,7 +89,7 @@ A Windows PC that keeps a copy offers Take over while the home is out of reach, 
 
 `windows.yml` has two jobs.
 `build` runs on the PC's Windows places, a fresh standard account removed when the job ends (`vars.WINDOWS_RUNNER`, default `shell-pc-windows`).
-It installs, builds and packages the installer, and keeps it on the run with its `SHA256SUMS` as the `windows-installer` artifact; nothing uploads it anywhere else.
+It installs, builds and packages the installer, and keeps it on the run with its `SHA256SUMS` as the `windows-installer` artifact, and hands its line of `SHA256SUMS` to a calling workflow as the `sums` output; only an alpha's upload job publishes it.
 Both jobs first unpack Git for Windows' portable build, pinned by its SHA-256, and put it first on their own steps' search path, so the job's bash, git and curl are that release's: the places' own Git 2.45.2 has a curl that refuses a plain download (exit 43), and the fresh machine has no Git.
 Each job's checkout then waits while GitHub refuses the job's token and checks out once more, as every checkout a release reaches does (`docs/testing.md`, "GitHub refusing a job's token"); the wait runs in that Git Bash, in the PowerShell job too.
 The project's composite actions are bash, which that Git Bash runs; the pnpm action writes a `.cmd` shim beside each sh one on Windows, so PowerShell steps find `pnpm` too.
@@ -103,7 +103,7 @@ The machine must have a standard person signed in at its desktop with Explorer r
 The portable Git sits in the job's temporary folder and on its own steps' search path only, so the app, opened through Explorer, never sees it.
 Its PowerShell steps run in Windows PowerShell 5.1, the one Windows ships, since the machine has no PowerShell 7.
 The machine has no Python or compiler either, so the job installs the project's packages without their build scripts and compiles only the message catalogs the journey reads; the journey runs the installed app, never a build of its own.
-The job checks the installer against the build's `SHA256SUMS`, runs it silently as a double-click does (`/S --force-run`), and runs `tests/windows/installed-windows.spec.ts` with `playwright.windows.config.ts`.
+The job checks the installer against the `sums` line the build job reported, not only the artifact's own `SHA256SUMS`, refuses an artifact holding any other file, runs that one checked file by its full path silently as a double-click does (`/S --force-run`), and runs `tests/windows/installed-windows.spec.ts` with `playwright.windows.config.ts`.
 The job's git never asks for a sign-in, since a prompt on the machine's desktop waits for a press nobody makes, and the journey's config keeps Playwright from reading git, which on a batch's pull request run would fetch the base commit without credentials.
 The job uploads its evidence even when its timeout cancels it.
 That journey checks, in order:
@@ -136,3 +136,17 @@ The shared font notice is a desktop input, not a phone-only file; see [What a pu
 An unreadable change runs the check.
 It also runs on request (`workflow_dispatch`).
 An outside contributor's pull request that reaches Windows-relevant files builds the installer on GitHub's hosted `windows-2025` instead and skips this check, which waits for the batch (`contributors.yml`; `docs/public-ci.md`, "Outside contributors").
+
+## Published on every alpha
+
+An alpha publishes the installer its own Windows check built, installed and ran, and no other: `release.yml`'s upload job downloads the `windows-installer` artifact and refuses it unless its bytes match the `sums` line the windows job handed over.
+It goes beside the alpha's other downloads, under the same rules: on the release record and on Cloudflare under `releases/v<version>/`, each with a `.sha256` sidecar, never on a Homebrew tap.
+A retry keeps an installer a place already holds only when its bytes are the ones this run's Windows check built and checked; any other copy stops the release before anything is written, the record's zip included, so testers only ever get checked bytes.
+The publication job fetches it back from the record and, without a credential, from Cloudflare, and checks each copy against the upload job's list before any feed moves.
+The builds file then names it at `channels.alpha.systems.windows.x64.exe` ("Builds by system and chip" in `docs/alpha.md`), and the feed writer runs the app's own builds reader on the next file before the feed switches, so a Windows entry can never make an installed copy refuse the whole file.
+Both the Cloudflare upload and the feed writer are the workflow's own copies, never the release source's, so an alpha cut from an older commit publishes and names its installer too; the download origin they use is still the release source's, the one the fetch-back reads.
+A live alpha refuses to publish when download storage is not configured, since storage is the only place testers can download the installer.
+A rehearsal checks and lists the installer and writes it into its rehearsed builds file, and publishes no release download; like any rehearsal it still keeps its run's artifacts and sends the Mac app and disk image to Apple for notarization.
+A stable promotion builds no Windows installer: when it hands its version to alpha, alpha's entry names no Windows build until the next alpha.
+The alpha's release notes call it an unsigned early build: Windows warns before it runs, and a PC with Smart App Control on blocks it until the signed build.
+This gives the downloads page the entry it reads; the page lists the installer once its own change is deployed.

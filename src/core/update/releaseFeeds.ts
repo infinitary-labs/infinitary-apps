@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { PUBLIC_RELEASE_NAMES } from "./releaseSource";
 import { advanceBuilds, advanceUpdateTargets, type Publication } from "./tapPublication";
-import { buildDownloadUrl } from "./updateChannels";
+import { buildDownloadUrl, parseBuilds } from "./updateChannels";
 
 const digest = z.string().regex(/^[0-9a-f]{64}$/);
 const asset = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/);
@@ -15,6 +15,8 @@ export const releaseManifestSchema = z
     sourceCommit: z.string().regex(/^[0-9a-f]{40}$/),
     zip: archiveSchema.extend({ sha512: z.string().regex(/^[A-Za-z0-9+/]{86}==$/) }).strict(),
     dmg: archiveSchema,
+    /** An alpha's Windows installer, the one its Windows check tested (docs/windows.md). */
+    windows: archiveSchema.optional(),
   })
   .strict();
 export type ReleaseManifest = z.infer<typeof releaseManifestSchema>;
@@ -58,7 +60,10 @@ export function releaseFeedFiles(options: {
     manifest.zip.asset !== publication.assetName ||
     manifest.zip.sha256 !== publication.sha256 ||
     !manifest.zip.asset.endsWith(".zip") ||
-    !manifest.dmg.asset.endsWith(".dmg")
+    !manifest.dmg.asset.endsWith(".dmg") ||
+    (manifest.windows &&
+      (publication.channel !== "alpha" ||
+        manifest.windows.asset !== `Infinitary-${manifest.version}-windows-x64-setup.exe`))
   ) {
     throw new Error(
       "The installer manifest does not describe this publication's finalized artifacts.",
@@ -93,7 +98,23 @@ export function releaseFeedFiles(options: {
           sha256: manifest.dmg.sha256,
         };
       }
+      // Only the alpha it was built for names the Windows installer: a
+      // stable handed to alpha carries none (docs/windows.md).
+      if (manifest.windows && channel === publication.channel) {
+        entry.systems.windows = {
+          x64: {
+            exe: {
+              url: buildDownloadUrl(manifest.version, manifest.windows.asset, PUBLIC_RELEASE_NAMES),
+              sha256: manifest.windows.sha256,
+            },
+          },
+        };
+      }
     }
+    // The reader every installed copy runs is the last word, before the feed
+    // switches: a file it refuses would hide every build, Mac and Linux too.
+    if (!parseBuilds(builds, PUBLIC_RELEASE_NAMES))
+      throw new Error("The next builds file does not validate.");
     files[PUBLIC_RELEASE_NAMES.targetsFile] = `${JSON.stringify(advanced.targets, null, 2)}\n`;
     files[PUBLIC_RELEASE_NAMES.buildsFile] = `${JSON.stringify(builds, null, 2)}\n`;
     files[`versions/${manifest.version}.json`] = `${JSON.stringify(manifest, null, 2)}\n`;

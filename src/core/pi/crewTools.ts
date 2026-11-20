@@ -736,11 +736,8 @@ export function createCrewTools(delegate: CrewDelegate) {
     parameters: Type.Object({
       task_id: Type.String({ description: "Task id from context or spawn" }),
       message: Type.String({ description: "What the crewmate should know or do next" }),
-      response_mode: Type.Optional(
-        stringEnum(["expected", "guidance-only"], {
-          description: "Default expected; guidance-only explicitly requires no response.",
-        }),
-      ),
+      // Its default and guidance-only behavior are in the tool description.
+      response_mode: Type.Optional(stringEnum(["expected", "guidance-only"])),
       response_context: Type.Optional(
         Type.Object(
           {

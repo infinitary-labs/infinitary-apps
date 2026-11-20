@@ -100,7 +100,8 @@ jobs:
     # service's account places), removed when the job ends; GitHub's hosted
     # Windows with hosted.
     runs-on: ${{ inputs.hosted && 'windows-2025' || vars.WINDOWS_RUNNER || 'shell-pc-windows' }}
-    timeout-minutes: 45
+    # The update check builds four installers and uploads about a gigabyte.
+    timeout-minutes: ${{ inputs.update_check && 90 || 45 }}
     # Each job's own group, which a merge batch's stop enters to cancel it
     # once the code checks failed (scripts/batch-stop.mjs); nothing else
     # enters it.
@@ -244,6 +245,8 @@ jobs:
           name: windows-installer
           path: windows-installer/
           if-no-files-found: error
+          # An installer is already compressed.
+          compression-level: 0
           retention-days: ${{ inputs.version && 3 || 1 }}
 
   check:

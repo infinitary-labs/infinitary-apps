@@ -7,20 +7,28 @@ import { PassThrough } from "node:stream";
 import { finished, pipeline } from "node:stream/promises";
 import { logTime } from "../tests/helpers/phonePhotos.ts";
 import type { phoneWebContentStartup } from "../tests/helpers/phoneWebContent.ts";
+import { budgetTimer } from "../tests/helpers/budgets.ts";
 import { keepPhoneDiagnostic } from "./phone-checks.ts";
+import { PHONE_COMMAND_BUDGET_MS, phoneMinutes } from "./phone-deadlines.ts";
 
 /** INF-1885: log show can exceed V8's largest string. Keep both pipes on disk with
  * backpressure, and join the child and writer even when collection fails. */
-export async function runPhoneLog({ command, args, cwd, env, children, log }: {
+export async function runPhoneLog({ command, args, cwd, env, children, log, budget = PHONE_COMMAND_BUDGET_MS }: {
   command: string;
   args: string[];
   cwd: string;
   env: NodeJS.ProcessEnv;
   children: Set<ChildProcess>;
   log: string;
+  /** INF-5387 piece 1: a log read past this, as one from a frozen simulator can be, is ended and fails naming it. */
+  budget?: number;
 }): Promise<void> {
   const child = spawn(command, args, { cwd, env, stdio: ["ignore", "pipe", "pipe"] });
   children.add(child);
+  const deadline = budgetTimer(() => {
+    failed(new Error(`${command} ${args.slice(0, 2).join(" ")} did not finish within its ${phoneMinutes(budget)}-minute deadline, so the check ended it`));
+    child.kill("SIGKILL");
+  }, budget);
   const merged = new PassThrough();
   let problem: Error | undefined;
   const failed = (error: Error) => {
@@ -44,6 +52,7 @@ export async function runPhoneLog({ command, args, cwd, env, children, log }: {
     if (problem) throw new Error(`Could not keep ${log}: ${problem.message}`, { cause: problem });
     if (status !== 0) throw new Error(`${command} failed (${status}); see ${log}`);
   } finally {
+    deadline.cancel();
     children.delete(child);
   }
 }

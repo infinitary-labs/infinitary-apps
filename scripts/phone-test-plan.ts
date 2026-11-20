@@ -160,16 +160,18 @@ export function partIdentifier(part: { test: string } | { suite: string }): stri
 }
 
 /** INF-1083: ordinary XCTest must still stop a stuck test, not wait for the job limit.
- * Twenty minutes bounds each ordinary test while the outer gate keeps its own ninety-minute cap.
+ * INF-5387 piece 1: each ordinary test's allowance is its part's deadline (`phonePartBudget`), in whole seconds, so a
+ * test that hangs while it runs ends with XCTest's own diagnosis; the part's xcodebuild has its own deadline after it.
  * Quiet grading keeps Xcode's original allowances. Neither mode disables its timeouts.
  * INF-2052 (the captain's choice "Also stop Xcode collecting diagnostics after a failed part"): after a failed test
  * Xcode waited 600 seconds for the simulator's diagnostics and timed out with none, in each failed part of run
  * 41196507458; the gate keeps its own failure logs.
  */
-export function phoneExecutionArguments(grades: boolean): string[] {
+export function phoneExecutionArguments(grades: boolean, allowanceSeconds: number): string[] {
+  const allowance = String(Math.ceil(allowanceSeconds));
   return ["-test-timeouts-enabled", "YES", "-collect-test-diagnostics", "never", ...(grades ? [] : [
-    "-default-test-execution-time-allowance", "1200",
-    "-maximum-test-execution-time-allowance", "1200",
+    "-default-test-execution-time-allowance", allowance,
+    "-maximum-test-execution-time-allowance", allowance,
   ])];
 }
 

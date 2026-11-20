@@ -127,8 +127,9 @@ jobs:
   # INF-3205: every route refuses a device other than the ones here, before a phone Mac is taken.
   request:
     name: ${{ format('{0} · Check phone check request', inputs.trigger || 'Manual request') }}
-    # The phone release's call, which passes its resolved source, runs it on GitHub's hosted Ubuntu.
-    runs-on: ${{ inputs.source_commit != '' && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').light || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
+    # The phone release's call, which passes its resolved source, runs it on GitHub's hosted Ubuntu. INF-5387's plan,
+    # piece 1: a request's chooser takes the fast gate line the journeys' chooser takes, since a phone Mac waits on it.
+    runs-on: ${{ inputs.source_commit != '' && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').gate || vars.LINUX_RUNNER && format('{0}-gate', vars.LINUX_RUNNER) || 'ubuntu-24.04' }}
     outputs:
       devices: ${{ steps.request-select.outputs.devices }}
       parts: ${{ steps.request-select.outputs.parts }}

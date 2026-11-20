@@ -986,6 +986,15 @@ A local gate asks its computer's load line for 4 processors and 8 GiB with one s
 Before every part the gate uninstalls the previous part's app and UI test runner, resets the simulator's Keychain and permission answers, sets light appearance and the default type size, detaches the hardware keyboard, and checks the app is gone; a simulator Xcode shut down after a failed part boots again.
 The parent owns each simulator from create to delete, and passes it to the part's own process with `--simulator` beside `--xctestrun`; a lane whose simulator cannot start leaves its parts to the device's other lanes, or unstarted when it has none, and the gate names them.
 A boot, the first or a boot again, has `PHONE_BOOT_BUDGET_MS` on the load clock to finish (`phoneSimulatorBooted` in `scripts/phone-simulator.ts`, INF-3689); a boot still running then is stopped, and its lane or part fails, naming the simulator and the last step `simctl bootstatus` printed, instead of waiting for the job's own time limit.
+Every other command the gate runs has a deadline on the same load clock too (`scripts/phone-deadlines.ts`, INF-5387's plan, piece 1), clean-up on a frozen simulator included.
+A part has twice its time in `scripts/phone-part-times.json`, and at least three minutes (`phonePartBudget`); a part with no recorded time counts as the median part.
+The part's `xcodebuild` has that and one command deadline more, and the gate gives the part's own process one more again for its clean-up.
+The build has `PHONE_BUILD_BUDGET_MS`, the package tests `PHONE_PACKAGE_TESTS_BUDGET_MS`, and every other command, each `simctl` call, log read and diagnostic's close among them, `PHONE_COMMAND_BUDGET_MS`; each rests on recorded times (`scripts/limits.ts`).
+A command past its deadline is ended with every process under it, and the gate keeps what it waited on in `hung-<command>-<time>.txt` beside its log: its processes, a sample of each and its simulator's state.
+It fails naming the command and its minutes, and nothing is retried; a failed part then stops the others at the first failure as any failed part does.
+A diagnostic whose close passes its deadline is left and the rest of the clean-up goes on; the gate ends every process it still holds at its end, and the job still uploads its evidence.
+A simulator whose delete fails or passes its deadline is not tried again at the gate's end: the next gate on that Mac removes it, as below.
+So a screenshot that freezes a simulator, as one did for 3 hours 50 minutes in run 44682920550 when the test program could not start again, fails its check in minutes.
 A run that is killed, by a task stop or a restart, never reaches its own cleanup, so before its checks each gate removes what earlier runs left (`scripts/phone-leftovers.ts`, INF-1596).
 It deletes each simulator named `Infinitary isolated test`, shut down or booted, and each `infinitary-native-` scratch folder in its temporary folder that came into being before the earliest phone check process still running began.
 A gate makes both only after its process starts, so a running check's simulator and folder are never touched, nor a person's own simulator or another prefix's folder; the reading needs no record or age, so leftovers of runs before the sweep go the same way.
@@ -1023,7 +1032,7 @@ On ordinary runs it samples the same load clock as journeys, with 25 ms ticks, a
 Each wait ends by 20 times its budget on the monotonic wall clock, at most ten minutes; direct predicate evaluation preserves INF-975's short-window fix.
 The phone launcher starts the Node load clock for its failure timers too, and the disposable control server keeps idle connections for a finite capped interval so a queued POST survives a frozen home.
 A graded run keeps each original wall-clock budget, and the launcher writes that reading into every test target's own test plan.
-XCTest timeouts are enabled in both modes: ordinary tests have 1200-second default and maximum allowances, while graded tests use Xcode's own allowances.
+XCTest timeouts are enabled in both modes: an ordinary test's default and maximum allowance is its part's deadline (`phonePartBudget`, below), while graded tests use Xcode's own allowances.
 `PhoneWaitsTests` observes a real delayed file across a stalled reader, fails a missing file, expires a stalled clock at its wall cap and checks direct short-window observation.
 Its delayed file is written by a thread of its own, never a Swift task, and the reader's stall ends only after that write, so busy shared task threads cannot hold the write past the wall cap (INF-1396).
 Message-box, card-reply and address-sheet typing share `focusForPhoneTyping`: one tap, dismissal of iOS's first-use typing guide if shown, then observation of the field's actual keyboard focus before typing.
